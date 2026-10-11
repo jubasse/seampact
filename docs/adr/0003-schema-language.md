@@ -217,7 +217,7 @@ The closed set (FR-3):
 | `uuid` | string | `8-4-4-4-12` hex digits | RFC 9562 UUID text, either case on input, lowercase on emit |
 | `date-time` | string | RFC 3339 with a time offset | an instant; a value without an offset is refused |
 | `date` | string | RFC 3339 `full-date` | a calendar date |
-| `int64` | integer | a JSON string of decimal digits | a 64-bit signed integer; a string on the wire in every target, so no JavaScript reader loses precision. Targets type it as their 64-bit integer, or as a string where none exists |
+| `int64` | integer | a JSON string of decimal digits by default | a 64-bit signed integer. By default a string on the wire in every target, so no JavaScript reader loses precision; `conventions.int64: number` sends a JSON number instead (A36), and a client target that cannot read it exactly fails `generate` (FR-14). Targets type it as their 64-bit integer, or as a string where none exists |
 | `decimal` | string | `-?(0\|[1-9][0-9]*)(\.[0-9]+)?` | an exact decimal; range refinements compare numerically and targets use their decimal type |
 | a named format | string, integer | per its declaration | declared by a pack or base, below |
 
@@ -284,7 +284,7 @@ Every named schema becomes a named type in every target. An inline schema gets a
 - Phase 1's authoring JSON Schema refuses every keyword marked refused here, with this ADR's reason in the diagnostic.
 - The validator targets (zod, yup, class-validator, VineJS, Bean Validation, Laravel, Symfony) each need code for: code-point string lengths, int64 and decimal strings, the regex anchoring rules, unknown-key refusal on input and stripping on emit. The shared payload table tests each case in CI (SCN-028).
 - Contracts lose some expressiveness: conditional schemas, `anyOf`, tuples and inline enums must be rewritten as tagged unions, separate schemas or catalogue enums. A refused keyword comes back only with a consumer and an ADR.
-- `int64` on the wire is a string even for targets that could hold a 64-bit number, which costs one conversion in Java and PHP and buys one wire form for every client.
+- `int64` on the wire is a string by default even for targets that could hold a 64-bit number, which costs one conversion in Java and PHP and buys one wire form for every client; an api that sends numbers says so in its conventions.
 - A30 keeps schemas free of wire-format fields, so the same contract can switch formats through its conventions without touching a schema.
 
 ## Traceability

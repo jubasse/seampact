@@ -700,6 +700,30 @@ items:
     frs: [FR-6, FR-2]
     scenario: SCN-011
     targets: [core, fetch]
+  - id: CHK-112
+    source: "A36"
+    fact: The reference contract compiles with every core default overridden (format, paging style, error codes, header names, path version, query encoding, int64 wire form, deprecation header names, operation ids and paths), and with none of the opt-ins (no pack, no idempotency, no CSRF); no convention is applied that the contract or a pack cannot rename or turn off.
+    frs: [FR-10, FR-42, FR-6]
+    scenario: SCN-048
+    targets: [core]
+  - id: CHK-113
+    source: "A37"
+    fact: Each app has its own seampact.config.yaml that works alone; a monorepo root config lists the apps and shares contract sources with them.
+    frs: [FR-17, FR-39]
+    scenario: SCN-094
+    targets: [core]
+  - id: CHK-114
+    source: "A37"
+    fact: The app config switches each target's artefacts on or off, and a config with no codegen target generates only the OpenAPI documents.
+    frs: [FR-11, FR-39]
+    scenario: SCN-049
+    targets: [core]
+  - id: CHK-115
+    source: "A37"
+    fact: The published compatibility matrix (targets, validators, clients, adapters, framework versions) validates the app config, and an incompatible combination is refused before generation with a diagnostic naming the working alternatives.
+    frs: [FR-39, FR-14]
+    scenario: SCN-094
+    targets: [core]
 not_in_checklist:
   - source: "A4, A16"
     reason: Process decisions (FAVIR framing, read-only Arthome research); nothing to test in the product.

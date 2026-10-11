@@ -130,7 +130,7 @@ Every derived element carries `derivedFrom: { derivation, from }` with a derivat
 | `paging.gone` | a paging style with a `since` role | 410 | `gone` |
 | `batch.read` | the `batch` op | `safe`, the ids input with `maxIds`, the table shape, batch defaults | none |
 | `budget.timeout` | `budget` | `budgetMs` | none |
-| `deprecation.headers` | `deprecated` | `Deprecation`, `Sunset` and `Link` (successor) response headers | none |
+| `deprecation.headers` | `deprecated` | the deprecation, sunset and successor `Link` response headers, named by `conventions.deprecation` (RFC 9745, RFC 8594 and `successor-version` by default) | none |
 | `upstream.maturity` | `upstream` | `maturity` from the owning service | none |
 | `api.gateway` | `api.role: gateway` | 502, 503, 504 on every operation | `upstreamUnavailable`, `serviceUnavailable`, `upstreamTimeout` |
 | `api.service` | `api.kind: service` | 504 on every operation | `deadlineExceeded` |

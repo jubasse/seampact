@@ -13,7 +13,7 @@ Forces:
 - One fact, one place (lesson 1). A grammar that lets the same fact be written twice needs a gate to hold the copies together.
 - Deny by default, and a reason on every exception (brief section 7, FR-4).
 - Nothing ahead of use (lesson 5): a keyword exists only if a checklist item or an amendment needs it.
-- The core imposes no house convention: no header name, error code, right name, envelope or wire format (A20, A25, A30). These come from the contract's base file or from convention packs.
+- The core imposes nothing (A36, after A20, A25, A30): no header name, error code, right name, envelope, page shape, wire format, versioning scheme, query encoding or implementation. Where the compiler needs a value to work, it has a default the contract can rename or replace, and everything else comes from the contract's base file or from opt-in convention packs. What the grammar does demand is explicitness: every route states its access, every exception its reason.
 - Inline and included content must compile to the same bytes (FR-1, FR-9).
 - The YAML must mean the same thing to every parser, in every language (FR-1).
 
@@ -322,7 +322,7 @@ Settings written on the collection node apply to all its routes; settings writte
 | `delete` | collection, single | `DELETE /tasks/{taskId}` | `delete` + singular | none (a versioned delete reads its version from the query or a header) | `204`, or `200` with `output` (SCN-040) |
 | `batch` | collection | `POST /tasks/batch` | `get` + plural + `Batch` (`getTasksBatch`) | `{ ids }`, at most `maxIds`, or a declared `input` | `200`, a table of `item` keyed by id |
 
-The plural is the collection's name; the singular is the id parameter's name without its trailing `Id` (`taskId` gives `task`), or the whole parameter name when it has no such suffix. For a single, the noun is the single's name. Any op's settings may override `method`, `path`, `operationId`, `input`, `output`, `responses` and every node setting. `create` and `update` have no default input, because the item schema holds fields a client never sends; the missing input is a compile error naming the op. No other shorthand exists until a consumer needs one (lesson 5).
+The plural is the collection's name; the singular is the id parameter's name without its trailing `Id` (`taskId` gives `task`), or the whole parameter name when it has no such suffix. For a single, the noun is the single's name. The methods, paths, operation ids and statuses above are defaults (A36): any op's settings may override `method`, `path`, `operationId`, `input`, `output`, `responses` and every node setting. `create` and `update` have no default input, because the item schema holds fields a client never sends; the missing input is a compile error naming the op. No other shorthand exists until a consumer needs one (lesson 5).
 
 A `batch` op is a safe read sent as POST: the IR marks it safe, so CSRF, idempotency and cache derivations treat it as a read. Its `maxIds`, body limit and budget default to `conventions.batch` (FR-32, SCN-084).
 
@@ -357,7 +357,7 @@ assign:
 | `method` | `get`, `post`, `put`, `patch` or `delete` |
 | `path`, `pathParams` | the segment and the schemas of its extra placeholders (all required) |
 | `operationId` | replaces the derived id |
-| `query` | a fields map, or a schema name; an object-typed field is exploded into top-level keys, and any undeclared key is refused (FR-30) |
+| `query` | a fields map, or a schema name; an object-typed field and a list are encoded as `conventions.query` says, and any undeclared key is refused (FR-30) |
 | `headers` | request headers: a fields map keyed by header name |
 | `input` | the body schema (`application/json`) |
 | `output` | the body of the single success response, always the whole payload: its status is the op's default, or `200` |
@@ -369,7 +369,7 @@ assign:
 | `examples` | named examples (section 12) |
 | `summary`, `description` | docs |
 
-Query wire kinds (number, boolean, list, text, object) derive from each field's schema type and need no keyword (FR-30, SCN-081).
+Query wire kinds (number, boolean, list, text, object) derive from each field's schema type and need no keyword (FR-30, SCN-081). How a list and an object travel is a convention with a default (A36): `conventions.query.lists` is `repeat` (`tag=a&tag=b`, the default) or `comma` (`tag=a,b`), and `conventions.query.objects` is `explode` (an object's members as top-level keys, the default) or `deepObject` (`filter[state]=open`).
 
 `responses` maps a status to `{ body, headers, description }`; `headers` is a fields map of response headers keyed by name. It serves several 2xx on one route (SCN-038), a `202` with `Location` and `Retry-After` (SCN-039) and a `DELETE` answering 200 with a body (SCN-040). Only success responses are written here; error responses come from error codes (section 11).
 
@@ -616,7 +616,7 @@ scopes: { org: subdomain, project: path.projectId }
 - `internal: true`: keeps the route out of documents with `internal: exclude` (product apis only, SCN-044).
 - `upstream: [streaming, catalog]`: services from the `services` catalogue, the owning service first. The operation's maturity derives from the owning service, otherwise from `api.maturity` (FR-34).
 - `maturity: { level: experimental, reason: "<reason>" }`: a stated maturity. On a node it departs from the derived level, so it takes a reason; on the api, `maturity` is a bare level, the default every operation derives from. A stated level equal to the derived one is reported by the lint rule `seampact/redundant-maturity`, silenced through `lint.allow` (SCN-087, SCN-018).
-- `deprecated: { sunset: '2027-06-30', successor: getTask }`: derives the Deprecation, Sunset and successor Link headers (FR-13, SCN-051); `successor` only on a route.
+- `deprecated: { sunset: '2027-06-30', successor: getTask }`: derives the deprecation, sunset and successor headers (FR-13, SCN-051); `successor` only on a route. Their names default to RFC 9745's `Deprecation`, RFC 8594's `Sunset` and a `Link` with relation `successor-version`, and `conventions.deprecation` renames them (A36).
 - `tags: [tasks]`.
 
 ```yaml
@@ -764,6 +764,9 @@ conventions:
 | `cache.families` | freshness families and their max-age | empty: each family a `cache.freshness` names is required |
 | `restrictedInput` | `reject` or `strip`: a restricted field sent without its right (A21); overridable per field (ADR 0003) | `reject` |
 | `outputEnums` | `enum` or `open`: how the emitter writes an output enum (FR-29) | `enum` |
+| `query` | `{ lists, objects }`: how a query list and an object field travel (section 7) | `{ lists: repeat, objects: explode }` |
+| `int64` | `string` or `number`: the wire form of an `int64` value (ADR 0003 section 8) | `string` |
+| `deprecation` | `{ header, sunsetHeader, successorRel }`: the names of the deprecation headers (section 10) | `Deprecation`, `Sunset`, `successor-version` |
 | `rateLimit` | `{ header, param, unit }`: the header written on a 429 from a bucket rule, carrying the denial's integer millisecond `param` in `unit` (`s`, rounded up, or `ms`) | unset: a 429 carries no retry header |
 | `degradedHeader` | the header listing degraded parts | unset: required for a `degradable` route whose format has no `degraded` meta field |
 | `rights.pattern` | a pattern every right name must also match (section 2) | unset: the core pattern only (A20) |
@@ -1444,7 +1447,7 @@ listChanges:
 
 ## Traceability
 
-- FRs: FR-1, FR-2, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9 (byte identity, modeline), FR-10 (extension keys, pack keywords), FR-13, FR-20 (keywords), FR-22, FR-23 (sort keys, filteredBy), FR-24, FR-27, FR-28, FR-29 (catalogue), FR-30, FR-31, FR-32, FR-33, FR-34, FR-41, FR-42.
+- FRs: FR-1, FR-2, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9 (byte identity, modeline), FR-10 (extension keys, pack keywords), FR-13, FR-20 (keywords), FR-22, FR-23 (sort keys, filteredBy), FR-24, FR-27, FR-28, FR-29 (catalogue), FR-30, FR-31, FR-32, FR-33, FR-34, FR-41, FR-42. Amendments A20, A21, A23, A25, A30 to A36.
 - CHK items enabled: CHK-004 to CHK-020, CHK-021 to CHK-023, CHK-027 to CHK-046, CHK-048, CHK-050 to CHK-058, CHK-073, CHK-086, CHK-087, CHK-089, CHK-090, CHK-092 to CHK-095, CHK-100.
 
 ## Self-check: scenarios and keywords

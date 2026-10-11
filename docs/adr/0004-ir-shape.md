@@ -264,7 +264,7 @@ type ValueSource = { in: 'path' | 'query' | 'header' | 'body' | 'principal' | 's
 - `requires` is a union tagged by `kind`, keeping the declared order (FR-5, SCN-009). Each item's `params` are values already validated against the right's or rule's params schema.
 - `errors` lists every code the operation can answer, declared or derived, each code once (SCN-011). The status of each is read from the registry; a target builds its status union from `responses` and the statuses of `errors`. The undeclared-status 500 is listed like any other code.
 - Operation references carry the declaration kind (ADR 0014), so hook requests and `relays` stay valid when other kinds exist.
-- Query parameters carry their wire form: `{ name, type, required, wire: { kind: 'number' | 'boolean' | 'list' | 'text' | 'object'; style: 'form'; explode: boolean }, default?, origin }` (FR-30).
+- Query parameters carry their wire form: `{ name, type, required, wire: { kind: 'number' | 'boolean' | 'list' | 'text' | 'object'; style: 'form' | 'deepObject'; explode: boolean }, default?, origin }` (FR-30).
 
 ```ts
 interface Cache {
