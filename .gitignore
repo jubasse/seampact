@@ -4,3 +4,4 @@ coverage/
 *.tsbuildinfo
 .work/
 .DS_Store
+.favir/
