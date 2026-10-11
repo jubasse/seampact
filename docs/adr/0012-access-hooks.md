@@ -60,6 +60,8 @@ Each target registers hooks through its framework's own mechanism (A30): provide
 
 No target ships a default hook, and nothing falls back to allow.
 
+An app that serves several apis (a public api and a service api in one NestJS app, each with its own server target in the app config, ADR 0011) gets one boundary per api. Each api's hooks are typed from its own IR, so an identity that both apis declare through a shared file gives two authenticate interfaces, which one class may implement; each api's boot check covers that api's operations; and the generated modules, providers and route tables carry the api's name, so the two never collide.
+
 ### The boot check
 
 Before the application accepts a request, the generated boot check refuses to start, listing every problem at once with the operation id, the name and the fix, when:
@@ -95,10 +97,19 @@ Each target places the steps in its framework's mechanisms, in this order. In sp
 - On output, a field whose right the caller lacks is absent, never null. On a public route it is always absent unless its right is guest-enabled (FR-23).
 - On input, a restricted field sent without the right is refused with 403 and the field pointer by default, or stripped; the policy is set per api in the conventions and may be overridden per field (A21).
 - The boundary asks the decide hook with the field purpose and the subject derived from the right's declaration (ADR 0003 section 6): the route's resolved scope for a scope right; for a resource right, the holder's id property on output and the route's default subject on input and for sort keys. On output it also passes the holder object as the loaded record. It never walks schemas at run time: the IR lists each operation's field rights with their subject source (FR-23).
+- An output field whose subject cannot be found on a route (a scope right on a route outside that scope) is always absent there, without a decide call (ADR 0003 section 6).
 
-### Records owned by the caller
+### Errors the handler answers
 
-`owner: caller` (ADR 0002 section 6) derives a 404 for another caller's id, but the boundary cannot know who owns a record. No hook is added for it: the handler, or the optional record loader above, answers the `notFound` role through a typed `notFound` result the target generates for that operation, and the boundary renders it in the api's error format. The generated test helper checks the declared 404 (SCN-004).
+A handler answers any code its operation lists through a typed error result that the target generates per operation, and the boundary renders it in the operation's wire format. That covers the codes declared or attached on the route and its nodes (`tasks.locked`), and the derived roles only the application can decide: `notFound` on a member route, whose id may not exist (ADR 0006 section 5), and `stateConflict` for a stale version. In TypeScript, for illustration:
+
+```ts
+return { error: 'tasks.locked', params: { lockedBy: lock.userId } };   // typed from updateTask's error union
+```
+
+A code the operation does not list is a type error, and at run time a 500, as for a hook's undeclared denial.
+
+`owner: caller` (ADR 0002 section 6) derives a 404 for another caller's id, but the boundary cannot know who owns a record. No hook is added for it: the handler, or the optional record loader above, answers the `notFound` role with that typed result. The generated test helper checks the declared 404 (SCN-004).
 
 ### Open tenancy
 
