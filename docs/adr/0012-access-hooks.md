@@ -67,7 +67,7 @@ Before the application accepts a request, the generated boot check refuses to st
 - a right or rule used by a bound operation has no decider;
 - a scope used by a bound operation has no resolver;
 - a contract operation has no bound handler;
-- a framework route is absent from the generated route table and not allow-listed with a reason in the consumer config (ADR 0011);
+- a framework route is absent from the generated route table and not allow-listed with a reason in the app config (ADR 0011);
 - a decider's params check refuses the params of a requirement;
 - the installed hooks package is outside the range the generated code needs.
 
