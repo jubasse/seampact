@@ -62,13 +62,13 @@ export interface PassContext {
 | Pass | Writes |
 |---|---|
 | tree | `api`, `conventions`, `packs`, `formats`, `pagings`, `schemas`, `scalars`, `enums`, `services`, `extensionKeys`; per operation: `id`, `name`, `surface`, `op`, `method`, `path`, `safe`, declared `params`, `input` (schema and media), declared `responses` and their `shape`, `owner`, `concurrency` (declared), `paging` (kind, limits, sort keys without rights), `degradable`, `budgetMs`, `deprecated`, `relays`, `upstream`, `maturity` (stated), `internal`, `tags`, `examples`, `format`, `docs`, `extensions`, `origin` |
-| access | `schemes`, `headers`, `identities`, `rights`, `rules`, `scopes`, `buckets`; per operation: `access`, `callerKinds`, `principalRequires`, `scopes`, `requires`, `bindings`, `fieldRights`, `paging.sortKeys[].right`, `filteredBy`, `csrf`, `input.rawBody`, rule proofs added to `input`; requirements and rights derived by pack entries |
+| access | `schemes`, `headers`, `identities`, `rights`, `rules`, `scopes`, `buckets`; per operation: `access`, `callerKinds`, `principalRequires`, `scopes`, `requires`, `bindings`, `fieldRights`, `paging.sortKeys[].right`, `filteredBy`, `csrf`, `input.rawBody`, `unknownKeys` on the input of a signed identity's routes, rule proofs added to `input`; requirements and rights derived by pack entries |
 | derive | `errors`; per operation: `errors`, derived `params`, derived `responses` and headers, `input.bodyLimitBytes`, `idempotency`, `concurrency.derivedFrom`, `cache`, `maturity` (derived), `deadlineHeader`, `features`; error codes attached by pack entries |
 | link | nothing |
 
 What each pass checks, besides its writes:
 
-- tree: path versions and prefixes (and `pathVersion.omit`), operation id uniqueness, `ops` inputs, version fields of `concurrency`, list routes and their paging style or its absence (A31), templates against the slot catalogue and each operation's payload (ADR 0002 sections 13 and 14), examples parsed against their schemas (FR-3), enum sources, reasons and narrowings (FR-29), degradable paths optional (FR-32), schema shapes (ADR 0003).
+- tree: path versions and prefixes (and `pathVersion.omit`), operation id uniqueness, `ops` inputs, version fields of `concurrency`, list routes and their paging style or its absence (A31), templates against the slot catalogue and each operation's payload (ADR 0002 sections 13 and 14), examples parsed against their schemas (FR-3), enum sources, reasons and narrowings (FR-29), degradable paths optional (FR-32), schema shapes (ADR 0003), `unknownKeys` on input uses only, header-tagged unions only as a route's whole input and their header not declared again.
 - access: deny by default (FR-4), every exception's reason, pack `derive` selectors and templates, right names against `conventions.rights.pattern`, identity header uses against their declarations, service api rules (FR-8), guest rights on public routes, subject sources against id schemas, scope subjects and nesting (FR-22, FR-24), sortable rights against field rights (FR-23), body proofs on body-less routes and bucket key sources against the route's input and access (FR-41), field-right subjects (FR-23), scheme references (FR-27).
 - derive: error registry redefinitions (FR-6) and conflicting node declarations (A35), role bindings to unregistered codes or codes that cannot receive the role's required data, deprecation successors, bucket limits (a warning).
 - link: the `relays` superset (operation id, path shape after the prefix, body, paging, success responses, and the public codes minus the gateway's own), naming both operations and the missing element, or the missing api (FR-8, SCN-014).
@@ -123,6 +123,8 @@ Every derived element carries `derivedFrom: { derivation, from }` with a derivat
 | `identity.deadline` | a `deadline` identity header | `deadlineHeader`, 504 | `deadlineExceeded` |
 | `identity.versionToken` | a `versionToken` identity header | the response header on every success, the optional request header on writes, the declared stale code | declared |
 | `signed.identity` | a signed identity | `input.rawBody`, no CSRF, no idempotency key, 401 | `unauthenticated` |
+| `identity.unknownKeys` | a signed identity with `unknownKeys` | `unknownKeys` on the input of each of its routes | none |
+| `union.headerTag` | a route whose input is a header-tagged union (ADR 0003 section 3) | the required tag header parameter, its values the union's tags; 400 on a missing or unknown tag | `schemaInvalid` |
 | `cache.headers` | `cache` on a GET | `Cache-Control` per caller kind, `Vary` (the credential headers of the identity's schemes, then `cache.vary`) | none |
 | `cache.etag` | `cache.etag` | `ETag` response header, `If-None-Match` parameter, a 304 response | none |
 | `cache.sensitive` | a response whose payload holds a sensitive field | `cache.noStore` | none |

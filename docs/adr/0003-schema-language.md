@@ -133,18 +133,44 @@ TaskDone:
 
 Behaviour (FR-3, SCN-033, CHK-024): strict on server input (a tag outside the mapping is refused with 400), emitted as `oneOf` plus `discriminator` with `propertyName` and `mapping` in OpenAPI, and read by every client target with an explicit unknown-variant branch that keeps the raw value (a TypeScript union plus an `unknown` case; a sealed hierarchy plus `Unknown` in Kotlin and Java; an `Unknown` class in PHP).
 
+A variant may be an `allOf` of object schemas, which is an object schema once merged (section 1): variants that share fields write them once in a named schema and merge it.
+
+A union used as a route's whole `input` may read its tag from a request header instead of a body property, for senders that name the payload type outside the body (GitHub sends every event to one URL and names it in `X-GitHub-Event`):
+
+```yaml
+# hooks/schemas.yaml (excerpt)
+GithubEvent:
+  discriminator: { from: header.X-GitHub-Event }
+  oneOf:
+    push: GithubPushEvent
+    ping: GithubPingEvent
+```
+
+`discriminator: { from: header.<Name> }` takes the tag from that header, and the variants keep their own shape: no tag property is added to them. The compiler adds the header to the route's request headers, required, with the tags as its values; declaring it in the route's `headers` too is a compile error ("remove it; the discriminator adds it"). On input, a missing header or a value outside the mapping is refused with 400, and the body is validated against the variant the header names. Only a request has headers, so such a union is allowed only as the whole `input` of a route; in any other position (a property, an item, an output, a variant) it is a compile error. The OpenAPI emitter writes `oneOf` without `discriminator`, plus `x-seampact-discriminator: { in: header, name: X-GitHub-Event }`, and the header parameter with its enum; a client target takes the variant name with the body and sets the header from it.
+
 ### 4. Direction
 
 Every use of a schema is input or output, known from where it appears: `input`, `query`, `pathParams`, request `headers` and rule proofs are input; `output`, `responses`, error params and response headers are output; a principal is output of the authenticate hook. The IR records, per named schema, the directions it is used in, and the compiler propagates direction through references, so a schema used both ways is checked both ways (FR-3, CHK-047, CHK-049).
 
 | | Input (strict) | Output |
 |---|---|---|
-| unknown object keys | refused with 400, every issue reported at once | stripped by the server on emit; kept or ignored by a client on read, never an error |
+| unknown object keys | refused with 400, every issue reported at once, unless the use ignores them (below) | stripped by the server on emit; kept or ignored by a client on read, never an error |
 | unknown enum member | refused | kept by a client as an unknown member, or mapped to the enum's `fallback` |
 | unknown union tag | refused | the client's unknown-variant branch |
 | missing required field | refused | a server bug: the server boundary answers 500 from the `undeclaredStatus` role rather than emit it |
 
 No target ever freezes an output enum or union: a server adding a member or a variant is an additive change (ADR 0005).
+
+Strict input is a default with a reasoned exception (A36). A third-party sender whose payloads grow without notice (a GitHub push carries more than a hundred fields, Stripe adds fields to its events) would otherwise force a contract to declare and track every field it never reads:
+
+```yaml
+# hooks/routes.yaml (excerpt: route settings)
+input:
+  $ref: GithubEvent
+  unknownKeys: { ignore: "GitHub adds payload fields without notice; the handler reads six." }
+```
+
+`unknownKeys: { ignore: "<reason>" }` sits on an object schema, a union, or beside a `$ref` (section 6), and acts on input uses only: on a named schema used both ways, an output use is unaffected. Unknown keys of that object, and of every object reached from it in that use (properties, items, map values, variants), are dropped before the handler, never answered with an error and never passed on. Everything else stays strict: a declared field of the wrong type, an unknown enum member or union tag, a missing required field. A signed identity may set it once for the body input of every route under it, with its own reason (ADR 0002 section 9). Query parameters stay strict (FR-30). The shared payload table of the validator targets holds the case: an input with unknown keys at the root and in a nested object is accepted, and the value the handler receives has neither.
 
 Enums are emitted per direction (FR-29): on input always as `enum`; on output as `enum` or, with `conventions.outputEnums: open`, as a string with the members in `x-seampact-enum` (and the fallback in `x-seampact-enum-fallback`). Arthome's documents use the open form, which is why it is a convention and not fixed.
 
@@ -166,7 +192,8 @@ These keywords are not JSON Schema. Each compiles to an explicit IR field. On a 
 | `nullable: true` | any schema | section 5 |
 | `sensitive: true` | a property or a scalar schema | the value is secret: `format: password` in OpenAPI, redacted by generated serializers in logs, traces and idempotency storage, and `Cache-Control: no-store` on any response carrying it (CHK-026, SCN-054) |
 | `restrictedTo` | a property | the property is visible or writable only with a right (below) |
-| `discriminator` | a union | section 3 |
+| `discriminator` | a union | section 3: a property name, or `{ from: header.<Name> }` on a route's whole input |
+| `unknownKeys: { ignore: <reason> }` | an object schema, a union or a reference, on input | unknown keys are dropped instead of refused, in this object and every object below it (section 4) |
 | `lint: { allow: { <rule>: <reason> } }` | a schema or property | silences one lint rule there, with a reason (ADR 0002 section 12) |
 | `x-<prefix>-<key>` | where the extension's `at` allows | a consumer extension (ADR 0002 section 12) |
 
@@ -282,7 +309,7 @@ Every named schema becomes a named type in every target. An inline schema gets a
 ## Consequences
 
 - Phase 1's authoring JSON Schema refuses every keyword marked refused here, with this ADR's reason in the diagnostic.
-- The validator targets (zod, yup, class-validator, VineJS, Bean Validation, Laravel, Symfony) each need code for: code-point string lengths, int64 and decimal strings, the regex anchoring rules, unknown-key refusal on input and stripping on emit. The shared payload table tests each case in CI (SCN-028).
+- The validator targets (zod, yup, class-validator, VineJS, Bean Validation, Laravel, Symfony) each need code for: code-point string lengths, int64 and decimal strings, the regex anchoring rules, unknown-key refusal on input (and dropping under `unknownKeys: ignore`), header-tagged unions, and stripping on emit. The shared payload table tests each case in CI (SCN-028).
 - Contracts lose some expressiveness: conditional schemas, `anyOf`, tuples and inline enums must be rewritten as tagged unions, separate schemas or catalogue enums. A refused keyword comes back only with a consumer and an ADR.
 - `int64` on the wire is a string by default even for targets that could hold a 64-bit number, which costs one conversion in Java and PHP and buys one wire form for every client; an api that sends numbers says so in its conventions.
 - A30 keeps schemas free of wire-format fields, so the same contract can switch formats through its conventions without touching a schema.

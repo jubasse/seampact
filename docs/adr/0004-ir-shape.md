@@ -120,6 +120,7 @@ interface Identity {
   id; kind: 'credential' | 'signed';
   schemes: { read: SchemeId[]; write: SchemeId[]; optionalRead: SchemeId[] } | { signed: SchemeId };
   principal: SchemaRef | { variants: Record<VariantId, SchemaRef> };
+  unknownKeys?: { ignore: Reason };         // signed identities only
   errors: ErrorCode[];
   headers: { header: HeaderId; for: 'all' | 'reads' | 'writes'; required: boolean; schema?: TypeUse;
              from?: ValueSource; stale?: ErrorCode; origin }[];   // uses of the headers catalogue
@@ -153,7 +154,8 @@ Every params of a right, rule or error is a `SchemaRef` to a named object schema
 type Schema =                                // a tagged union on 'kind'
   | { kind: 'object'; properties: Property[] }
   | { kind: 'map'; keys?: TypeUse; values: TypeUse }
-  | { kind: 'union'; discriminator: string; variants: { tag: string; schema: SchemaId }[] }
+  | { kind: 'union'; tag: { in: 'body'; property: string } | { in: 'header'; name: string };   // header: a route's whole input only
+      variants: { tag: string; schema: SchemaId }[] }
   ;                                          // each with id, name, directions, examples, docs, extensions, origin
 interface Property {
   name: string; type: TypeUse; optional: boolean; nullable: boolean;
@@ -161,14 +163,16 @@ interface Property {
   docs; extensions; origin;
 }
 type TypeUse =                               // what a property, item, body or parameter is
-  | { kind: 'ref'; schema: SchemaId }        // objects, maps and unions are always named
+  | { kind: 'ref'; schema: SchemaId;         // objects, maps and unions are always named
+      unknownKeys?: { ignore: Reason; origin?: Origin; derivedFrom?: DerivedFrom } }   // input uses only (ADR 0003 section 4)
   | { kind: 'enum'; enum: EnumId; narrowedTo?: { values: string[]; reason: Reason } }
   | { kind: 'scalar'; type: 'string' | 'integer' | 'number' | 'boolean'; format?: string; refinements: Refinements }
   | { kind: 'array'; items: TypeUse; minItems?: number; maxItems?: number };
 ```
 
 - Objects, maps and unions are always named schemas, hoisted to `schemas` with the deterministic name of ADR 0007; scalars, enum uses and arrays stay inline in their use. Generated code therefore never holds an anonymous structural type (FR-3).
-- `allOf` is already merged. A union holds its discriminator and each variant's tag; the variant schema does not hold the tag property, which targets add inside the union only (ADR 0003 section 3).
+- `allOf` is already merged. A union holds where its tag is read (a body property, or a request header for a union that is a route's whole input) and each variant's tag; the variant schema does not hold the tag property, which targets add inside a body-tagged union only (ADR 0003 section 3).
+- `unknownKeys` sits on the use of a schema, never on the schema: an `unknownKeys` written on an inline object moves to the use of its hoisted schema, and one inherited from a signed identity sits on the operation's input with `derivedFrom`. It covers every object reached from that use.
 - A pattern refinement holds the normalised form of ADR 0003 section 9, never the written text alone.
 - `directions` lists `input` and `output` as the schema is used; targets generate per-direction validators from it (ADR 0003 section 4).
 - `nullable` and `optional` are two members (FR-3, SCN-005).

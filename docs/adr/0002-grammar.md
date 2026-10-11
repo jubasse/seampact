@@ -199,6 +199,7 @@ No keyword of the grammar is a word that YAML 1.1 reads as a boolean (`on`, `off
 | `concurrency.version` | body, query, header (`header.If-Match` reads a strong entity tag) |
 | bucket `key` | address, address prefix, principal, body |
 | signature `key` | path, query, header |
+| union `discriminator.from` | header (a route's whole input, ADR 0003 section 3) |
 
 ### 5. The api file
 
@@ -440,7 +441,26 @@ schemes:
     key: { value: stripe }
 ```
 
-`name` is the header carrying the signature, as for a header scheme. `format` holds `{sig}` and optionally `{ts}`; `payload` holds `{rawBody}` and optionally `{ts}`. `tolerance` is required when `{ts}` is used and refused otherwise. `key` is the one way to name the key identifier the application's secret lookup receives (FR-20): `{ value: <literal> }`, or `{ from: <path, query or header source> }`.
+`name` is the header carrying the signature, as for a header scheme. `format` holds `{sig}` and optionally `{ts}`; `payload` holds `{rawBody}` and optionally `{ts}`. `tolerance` is required when `{ts}` is used and refused otherwise. `key` is the one way to name the key identifier the application's secret lookup receives (FR-20): `{ value: <literal> }`, or `{ from: <path, query or header source> }`. A `from` source is read per route: every route under an identity whose scheme reads `key.from` must have that parameter (a path placeholder, a declared query field or request header), and a route without it is a compile error naming the route, the identity and the source.
+
+```yaml
+# shared/base.yaml (excerpt): one secret per workspace, GitHub style
+schemes:
+  githubSignature:
+    kind: signature
+    name: X-Hub-Signature-256
+    format: 'sha256={sig}'
+    algorithm: hmac-sha256
+    payload: '{rawBody}'
+    encoding: hex
+    key: { from: path.workspaceId }
+identities:
+  github:
+    kind: signed
+    scheme: githubSignature
+    principal: WebhookCaller
+    unknownKeys: { ignore: "GitHub adds payload fields without notice." }
+```
 
 #### Identities
 
@@ -470,6 +490,7 @@ identities:
 | `schemes.optionalRead` | extra schemes accepted on optional-auth reads only (FR-27, SCN-076) |
 | `scheme` | `signed` only: the one `signature` scheme; the compiler forces a raw body and removes CSRF and idempotency keys (FR-20, SCN-026) |
 | `principal` | the principal schema, or `{ variants: { <name>: <schema> } }` for an identity accepting several credential kinds; hooks and handlers narrow on the variant name |
+| `unknownKeys` | `signed` only: `{ ignore: "<reason>" }`; the body input of every route of the identity drops unknown keys instead of refusing them (ADR 0003 section 4), for a sender whose payloads grow without notice |
 | `errors` | codes attached to every route of the identity, as a list of codes |
 | `headers` | the identity headers it uses, below |
 
