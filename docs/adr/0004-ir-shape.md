@@ -168,7 +168,8 @@ type TypeUse =                               // what a property, item, body or p
 ```
 
 - Objects, maps and unions are always named schemas, hoisted to `schemas` with the deterministic name of ADR 0007; scalars, enum uses and arrays stay inline in their use. Generated code therefore never holds an anonymous structural type (FR-3).
-- `allOf` is already merged; a union variant already holds its tag property.
+- `allOf` is already merged. A union holds its discriminator and each variant's tag; the variant schema does not hold the tag property, which targets add inside the union only (ADR 0003 section 3).
+- A pattern refinement holds the normalised form of ADR 0003 section 9, never the written text alone.
 - `directions` lists `input` and `output` as the schema is used; targets generate per-direction validators from it (ADR 0003 section 4).
 - `nullable` and `optional` are two members (FR-3, SCN-005).
 

@@ -129,7 +129,7 @@ TaskDone:
   properties: { taskId: TaskId }
 ```
 
-`oneOf` is a mapping from tag value to variant, and `discriminator` names the tag property. This is the only union. The mapping is written once: the list of variants and the mapping of OpenAPI are both derived from it, which removes a copy that could drift. Every variant is an object schema, named or inline (an inline variant is named from the union and the tag, ADR 0007). A variant does not declare the tag property itself; the compiler adds it as a required string with the tag value. A variant used in several unions must have the same tag value in each.
+`oneOf` is a mapping from tag value to variant, and `discriminator` names the tag property. This is the only union. The mapping is written once: the list of variants and the mapping of OpenAPI are both derived from it, which removes a copy that could drift. Every variant is an object schema, named or inline (an inline variant is named from the union and the tag, ADR 0007); a variant may hold no property but its tag (`cancelled: { type: object }`), which is common. A variant does not declare the tag property itself. The union adds it, as a required string with the tag value, inside the union only: a named variant used on its own, or in another union with another discriminator or tag, keeps its own shape there.
 
 Behaviour (FR-3, SCN-033, CHK-024): strict on server input (a tag outside the mapping is refused with 400), emitted as `oneOf` plus `discriminator` with `propertyName` and `mapping` in OpenAPI, and read by every client target with an explicit unknown-variant branch that keeps the raw value (a TypeScript union plus an `unknown` case; a sealed hierarchy plus `Unknown` in Kotlin and Java; an `Unknown` class in PHP).
 
@@ -175,12 +175,10 @@ A lint rule flags a property whose name looks like a credential (`password`, `se
 `restrictedTo` (FR-23, A21):
 
 ```yaml
-# shared/schemas.yaml (excerpt)
+# tasks/schemas.yaml (excerpt)
 UpdateTask:
   type: object
-  required: [expectedVersion]
   properties:
-    expectedVersion: { type: integer, minimum: 1 }
     title: { type: string, minLength: 1, maxLength: 200 }
     effort: { type: integer, minimum: 0, restrictedTo: tasks.seeEffort }
     note: { type: string, maxLength: 2000, restrictedTo: { right: tasks.annotate, input: strip } }
@@ -223,7 +221,11 @@ The closed set (FR-3):
 | `decimal` | string | `-?(0\|[1-9][0-9]*)(\.[0-9]+)?` | an exact decimal; range refinements compare numerically and targets use their decimal type |
 | a named format | string, integer | per its declaration | declared by a pack or base, below |
 
-A plain `integer` without format is a JSON number in the safe range of an IEEE double (from -(2^53 - 1) to 2^53 - 1); a larger value needs `int64`. `password` is not authorable: it is what `sensitive` emits.
+A plain `integer` without format is a JSON number in the safe range of an IEEE double (from -(2^53 - 1) to 2^53 - 1); a larger value needs `int64`. On input, an integer accepts any JSON number whose value is whole (`1.0` and `1e2` read as 1 and 100, since a JavaScript or PHP decoder cannot tell them from `1` and `100`) and refuses a fraction; a target whose decoder truncates (Jackson's float-to-int coercion) checks the value is whole first. `password` is not authorable: it is what `sensitive` emits.
+
+`date-time` follows RFC 3339 `date-time`: on input, `T` and `Z` in either case, a fraction of 1 to 9 digits, any offset; a leap second (`:60`) is refused, because most target libraries refuse it. On emit, `T` and `Z` are uppercase and the fraction is written as the value holds it, without trailing zeros.
+
+`int64` and `decimal` are strings, so JSON Schema's numeric keywords cannot carry their refinements. The OpenAPI emitter writes them as `type: string` with the format and its pattern (`^-?(0|[1-9][0-9]*)$` for `int64`, the wire form above for `decimal`), and the numeric refinements as `x-seampact-minimum`, `x-seampact-maximum`, `x-seampact-exclusiveMinimum`, `x-seampact-exclusiveMaximum` and `x-seampact-multipleOf`; every target checks them numerically.
 
 Named formats (`money`, `email`, `countryCode` and the like) are declared in a `scalars` catalogue, which this ADR adds to the catalogues of ADR 0002 section 1. A named format is a base type plus refinements, so every target can check it with the portable keywords alone, and a target may map it to a native type through its options:
 
@@ -243,16 +245,25 @@ A field then writes `{ format: money }`: its type is the scalar's, and writing `
 
 ### 9. Portable regular expressions
 
-`pattern` (and a scalar's pattern) accepts the subset that ECMAScript (with the `u` flag), java.util.regex, PCRE2 (PHP) and RE2 read the same way:
+`pattern` (and a scalar's pattern) accepts a subset that ECMAScript (with the `u` flag), java.util.regex, PCRE2 (PHP, with the `u` modifier) and RE2 can all read. The engines still disagree on what `.`, `\s` and `$` match, so the compiler parses every pattern and stores a normalised form in the IR, which each target translates for its engine; no target compiles the written text as is.
 
-- kept: literal characters and escapes of metacharacters, `.`, classes `[...]` with ranges and negation, `\d`, `\w`, `\s` and their negations (ASCII meanings), quantifiers `*`, `+`, `?`, `{n}`, `{n,}`, `{n,m}` (greedy), alternation `|`, groups `(...)` and `(?:...)`, anchors `^` and `$`;
-- refused: backreferences, lookahead and lookbehind, named groups, lazy and possessive quantifiers, `\b`, Unicode property escapes (`\p{...}`), inline flags, and anything outside the list.
+- Kept: literal characters; classes `[...]` with ranges and negation; `\d`, `\w`, `\s` and their negations; `.`; quantifiers `*`, `+`, `?`, `{n}`, `{n,}`, `{n,m}` (greedy); alternation `|`; groups `(...)` and `(?:...)`; anchors `^` and `$`.
+- Escapes: only a metacharacter may be escaped (`\.`, `\*`, `\+`, `\?`, `\(`, `\)`, `\[`, `\]`, `\{`, `\}`, `\|`, `\\`, `\^`, `\$`, `\/`), plus `\-` inside a class. A literal `{`, `}` or `]` must be escaped everywhere, and a literal `-` inside a class except as its first or last character. ECMAScript with `u` refuses the other escapes and the lone brackets.
+- Refused: backreferences, lookahead and lookbehind, named groups, lazy and possessive quantifiers, `\b`, Unicode property escapes (`\p{...}`), inline flags, and anything outside the lists above.
 
-Semantics are JSON Schema's: a pattern matches anywhere in the string unless anchored. Each target must reproduce them exactly, which needs care in two places: Java's `matches()` anchors the whole string (targets use `find()`), and `$` before a final newline matches in Java and PCRE but not in ECMAScript (targets translate `$` to `\z`). The shared payload table of the validator targets covers both cases.
+The normalised meanings, matched per code point:
+
+| Written | Means | Why |
+|---|---|---|
+| `.` | any code point except `\n`, `\r`, U+0085, U+2028, U+2029 | ECMAScript, Java, PCRE2 and RE2 each exclude a different set |
+| `\d`, `\w`, `\s` | `[0-9]`, `[A-Za-z0-9_]`, `[\t\n\v\f\r ]` (ASCII); negations likewise | ECMAScript's `\s` holds Unicode spaces, RE2's lacks `\v` |
+| `^`, `$` | the start and the end of the string, never before a final newline | written `^` and `$` for ECMAScript (no `m` flag) and RE2, `\A` and `\z` for Java and PCRE2 |
+
+Semantics are JSON Schema's: a pattern matches anywhere in the string unless anchored, so Java targets use `find()`, never `matches()`. The shared payload table of the validator targets holds a case for each line above: `.` against U+0085 and U+2028, `\s` against `\v` and U+00A0, `$` before a final newline, an escaped `\-` in a class, an escaped `{`, and a recursive schema (section 2).
 
 ### 10. Defaults
 
-`default` is allowed on an optional input property or query field, and nowhere else. The server boundary applies it after validation, so the handler receives the field as present and its type is not optional. A route with `relays` passes the value through as received, without applying defaults, because the default belongs to the service that answers (Arthome's rule, research section 6). Client targets do not fill defaults; they document them. This answers the question FR-30 leaves to an ADR.
+`default` is allowed on an optional input property or query field, and nowhere else. On a named schema used in both directions, it applies to input uses only and is ignored on output. A default is parsed against its schema at compile time with the strict input rules, like an example. The server boundary applies it after validation, so the handler receives the field as present and its type is not optional. A route with `relays` passes the value through as received, without applying defaults, because the default belongs to the service that answers (Arthome's rule, research section 6). Client targets do not fill defaults; they document them. This answers the question FR-30 leaves to an ADR.
 
 ### 11. Examples
 
