@@ -139,7 +139,7 @@ Before generating, and in `seampact check`, a runner verifies a bundle source:
 
 The config schema accepts a bundle source without `integrity`, so pinning is a copy: leave the key out, run `seampact check`, copy the value it prints. A missing pin, or one that differs from the manifest's integrity, fails and prints the actual value; a file whose hash differs from the manifest fails, naming the file. Native plugins run the same three steps in Kotlin or PHP.
 
-Relays (FR-8) may point at an api in a pinned bundle, named in `workspace.imports` (ADR 0002 section 1): workspace compilation reads that bundle's IR, after the same check, for the superset check.
+Relays (FR-8) may point at an api in a pinned bundle, named in `workspace.imports` (ADR 0002 section 1): workspace compilation reads that bundle's IR, after the same check, to copy the public operation into the relay route and check the superset (ADR 0002 section 7).
 
 ### Refusing local sources on shared branches
 
