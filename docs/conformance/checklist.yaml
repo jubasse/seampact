@@ -61,8 +61,8 @@ items:
     scenario: SCN-076
     targets: [server]
   - id: CHK-007
-    source: "14 Access"
-    fact: Read and write schemes differ per identity, and a cookie write derives the CSRF header and 403 api.csrf_invalid.
+    source: "14 Access; A34"
+    fact: Read and write schemes differ per identity, and a write on a cookie scheme that declares csrf derives the CSRF header and 403 api.csrf_invalid; a cookie scheme without csrf derives none (A34).
     frs: [FR-4, FR-27]
     scenario: SCN-008
     targets: [core, server]
@@ -74,7 +74,7 @@ items:
     targets: [core]
   - id: CHK-009
     source: "14 Access"
-    fact: Every exception (public, optionalAuth with a refused credential treated as anonymous, csrfExempt, idempotency exemption, allow-lists, stated maturity, local enum, guest right) carries a reason.
+    fact: Every exception (public, optionalAuth with a refused credential treated as anonymous, csrf exemption, idempotency exemption, allow-lists, stated maturity, local enum, guest right) carries a reason.
     frs: [FR-4]
     scenario: SCN-007
     targets: [core]
@@ -202,14 +202,14 @@ items:
     targets: [server]
   # ---------- 14 Reads and writes ----------
   - id: CHK-030
-    source: "14 Reads and writes"
-    fact: Cursor paging with the per-api default, maxLimit and the page envelope.
+    source: "14 Reads and writes; A31"
+    fact: Cursor paging through a declared paging style (A31) with the per-api default style, maxLimit, and the page body, headers and Link relations the style maps.
     frs: [FR-31]
     scenario: SCN-012
     targets: [server, fetch]
   - id: CHK-031
-    source: "14 Reads and writes"
-    fact: Page-number paging.
+    source: "14 Reads and writes; A31"
+    fact: Page-number paging with the parameter names and page base (one or zero) its paging style declares.
     frs: [FR-31]
     scenario: SCN-083
     targets: [server, fetch]
@@ -268,20 +268,20 @@ items:
     scenario: SCN-004
     targets: [core, server]
   - id: CHK-041
-    source: "14 Reads and writes"
-    fact: expectedVersion in the body derives 409 state.conflict on update and delete.
+    source: "14 Reads and writes; A33"
+    fact: A body-sourced version (expectedVersion) is added by the compiler to the update body and to the delete query, never to a DELETE body, and a stale value answers 409 state.conflict on both (A33).
     frs: [FR-2]
     scenario: SCN-003
     targets: [core, server]
   - id: CHK-042
-    source: "14 Reads and writes"
-    fact: expectedVersion in the query, and a member action opting into the version.
+    source: "14 Reads and writes; A33"
+    fact: A version read from the query or from If-Match, and a member action opting into the version (A33).
     frs: [FR-2]
     scenario: SCN-031
     targets: [core, server]
   - id: CHK-043
-    source: "14 Reads and writes"
-    fact: Writes carry idempotency keys checked against the store interface (replay, 409), with written exemptions.
+    source: "14 Reads and writes; A34"
+    fact: With conventions.idempotency set, writes carry idempotency keys checked against the store interface (replay, 409), with written exemptions; without it, no key is derived (A34).
     frs: [FR-7]
     scenario: SCN-042
     targets: [server, fetch]
@@ -664,6 +664,42 @@ items:
     frs: [FR-42, FR-10]
     scenario: SCN-048
     targets: [core, server, fetch]
+  - id: CHK-106
+    source: "A31"
+    fact: A paged list names a paging style whose roles map to query names, body members, headers and Link relations; a paged list with neither a style nor a pack is a compile error naming both fixes.
+    frs: [FR-31, FR-42]
+    scenario: SCN-012
+    targets: [core, server, fetch]
+  - id: CHK-107
+    source: "A32"
+    fact: The first-party format packs (api-platform, laravel, spring, jsonapi, hal) each compile the reference contract, and every server target that claims one passes that pack's HTTP suite profile.
+    frs: [FR-42, FR-10, FR-35]
+    scenario: SCN-100
+    targets: [core, server, fetch]
+  - id: CHK-108
+    source: "A33"
+    fact: The /v{version} path prefix is a default; pathVersion omit on an api or a surface keeps it out, and with the default a literal version segment is refused.
+    frs: [FR-2]
+    scenario: SCN-032
+    targets: [core]
+  - id: CHK-109
+    source: "A33"
+    fact: Generated types list properties in authored order, and moving properties into an $include keeps that order and the IR bytes.
+    frs: [FR-9, FR-38]
+    scenario: SCN-001
+    targets: [core, fetch, nestjs, spring-boot]
+  - id: CHK-110
+    source: "A34"
+    fact: A contract with no pack compiles, each derived error answering its role's default code, and each default code is renamable by the conventions or a pack.
+    frs: [FR-6]
+    scenario: SCN-011
+    targets: [core, server]
+  - id: CHK-111
+    source: "A35"
+    fact: Error codes declared or attached on any tree node (api, collection, single, scope node, route) reach every operation below it with the attaching node as origin; a conflicting redeclaration is a compile error; errorRoles renames a derived code for a subtree.
+    frs: [FR-6, FR-2]
+    scenario: SCN-011
+    targets: [core, fetch]
 not_in_checklist:
   - source: "A4, A16"
     reason: Process decisions (FAVIR framing, read-only Arthome research); nothing to test in the product.
