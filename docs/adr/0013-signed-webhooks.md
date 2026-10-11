@@ -18,28 +18,31 @@ A signed identity is an identity like any other: deny by default still applies, 
 
 | Field | v1 values | Meaning |
 |---|---|---|
-| header | a header name | where the signature travels |
+| name | a header name | where the signature travels, as `name` does for a header scheme |
 | format | a template with `{ts}` and `{sig}` | how the header value is laid out |
 | algorithm | `hmac-sha256` | the MAC; the IR enum is open for later algorithms |
 | payload | a template with `{ts}` and `{rawBody}` and literal text | the bytes that are signed |
 | encoding | `hex` or `base64` | how the MAC is written in the header |
 | tolerance | a duration | maximum distance between the signed timestamp and now; required when the format has `{ts}`, refused otherwise |
-| key id | `none`, a header, or a path parameter | which secret set to use |
+| key | `{ value: <literal> }` (one fixed key id), or `{ from: <path, query or header source> }` | the key id the application's secret lookup receives, to choose the secret set |
 
 ```yaml
-# illustration only, syntax per ADR 0002
+# illustration, syntax per ADR 0002 section 9
+schemes:
+  stripeSignature:
+    kind: signature
+    name: Stripe-Signature
+    format: 't={ts},v1={sig}'
+    algorithm: hmac-sha256
+    payload: '{ts}.{rawBody}'
+    encoding: hex
+    tolerance: 5m
+    key: { value: stripe }
 identities:
   paymentProvider:
     kind: signed
-    scheme:
-      header: Stripe-Signature
-      format: "t={ts},v1={sig}"
-      algorithm: hmac-sha256
-      payload: "{ts}.{rawBody}"
-      encoding: hex
-      tolerance: 5m
-      keyId: none
-    principal: { $ref: '#/schemas/WebhookCaller' }
+    scheme: stripeSignature
+    principal: WebhookCaller
 ```
 
 Header parsing is fixed by the format:
@@ -61,7 +64,7 @@ The body is still validated against the route's input schema after authenticatio
 
 ### Where the verification happens
 
-The generated boundary captures the raw body, parses the signature header and calls the identity's authenticate hook with the raw bytes and the parsed fields (timestamp, candidate signatures, key id). The hook answers the principal or the declared 401. The boundary does not verify the MAC itself, because the secret store and the policy (one secret, several during rotation, one per tenant) belong to the application.
+The generated boundary captures the raw body, parses the signature header and calls the identity's authenticate hook with the raw bytes and the parsed fields (timestamp, candidate signatures, and the key id from the scheme's `key`). The hook answers the principal or the declared 401. The boundary does not verify the MAC itself, because the secret store and the policy (one secret, several during rotation, one per tenant) belong to the application.
 
 Each ecosystem has an optional helper that implements the declared scheme behind the hook: `@seampact/signed-webhooks` (npm, every Node server target), `io.github.jubasse:seampact-signed-webhooks` (JVM) and `seampact/signed-webhooks` (Composer). The application gives it a secret lookup, from key id to the list of currently valid secrets; the helper never stores a secret. It:
 1. rebuilds the signed payload from the template, using the raw bytes exactly as received;

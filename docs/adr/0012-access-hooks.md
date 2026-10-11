@@ -17,7 +17,7 @@ Rights, rules, scopes and identities are declared with the grammar of ADR 0002 a
 Every server target generates exactly three hook interfaces (FR-25). Each is typed from the contract: the generated request types name the identity, right, rule or scope and carry its declared params, principal and error codes.
 
 **Authenticate**, one per identity. It receives:
-- the identity name and the credentials found in the locations the identity's schemes declare for this request (read or write schemes), including the CSRF companion value on a cookie write;
+- the identity name and the credentials found in the locations the identity's schemes declare for this request (read or write schemes), including the CSRF companion value on a write through a cookie scheme that declares `csrf` (opt-in, A34);
 - for a signed identity, the raw body and the parsed signature fields (ADR 0013);
 - a read-only view of the request (method, path, headers, client address) and the operation reference;
 - the operation's extension metadata (A20).
@@ -26,7 +26,7 @@ It answers a typed principal (tagged with its variant when the identity declares
 
 **Decide**, for every requirement, right or rule. It receives:
 - the kind (right or rule), the name and the typed params declared at the use site;
-- the principal, null only for a guest-enabled right on a public or optional-auth route (FR-22);
+- the principal, or null for an anonymous caller on a public or optional-auth route: always possible for a rule, and for a right only when it is guest-enabled, since a non-guest right on such a route is a compile error (FR-22, SCN-036, SCN-063);
 - the subject reference, when the right has one: the subject type and the id taken from its declared source; plus the loaded record when the application registers a loader for that resource type, in which case the handler receives the same record;
 - the resolved scopes, outermost first;
 - the rule's proof, when the rule declares one (FR-41), and for a throttle requirement the bucket with its key sources and limits;
@@ -94,7 +94,11 @@ Each target places the steps in its framework's mechanisms, in this order. In sp
 
 - On output, a field whose right the caller lacks is absent, never null. On a public route it is always absent unless its right is guest-enabled (FR-23).
 - On input, a restricted field sent without the right is refused with 403 and the field pointer by default, or stripped; the policy is set per api in the conventions and may be overridden per field (A21).
-- The boundary asks the decide hook with the field purpose and the holder object as the subject record, and never walks schemas at run time: the IR lists each operation's field rights (FR-23).
+- The boundary asks the decide hook with the field purpose and the subject derived from the right's declaration (ADR 0003 section 6): the route's resolved scope for a scope right; for a resource right, the holder's id property on output and the route's default subject on input and for sort keys. On output it also passes the holder object as the loaded record. It never walks schemas at run time: the IR lists each operation's field rights with their subject source (FR-23).
+
+### Records owned by the caller
+
+`owner: caller` (ADR 0002 section 6) derives a 404 for another caller's id, but the boundary cannot know who owns a record. No hook is added for it: the handler, or the optional record loader above, answers the `notFound` role through a typed `notFound` result the target generates for that operation, and the boundary renders it in the api's error format. The generated test helper checks the declared 404 (SCN-004).
 
 ### Open tenancy
 
