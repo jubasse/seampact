@@ -24,7 +24,7 @@ A signed identity is an identity like any other: deny by default still applies, 
 | payload | a template with `{ts}` and `{rawBody}` and literal text | the bytes that are signed |
 | encoding | `hex` or `base64` | how the MAC is written in the header |
 | tolerance | a duration | maximum distance between the signed timestamp and now; required when the format has `{ts}`, refused otherwise |
-| key | `{ value: <literal> }` (one fixed key id), or `{ from: <path, query or header source> }` | the key id the application's secret lookup receives, to choose the secret set |
+| key | `{ value: <literal> }` (one fixed key id), or `{ from: <path, query or header source> }` | the key id the application's secret lookup receives, to choose the secret set; a `from` source must exist on every route of the identity, and a route without it is a compile error naming the route, the identity and the source |
 
 ```yaml
 # illustration, syntax per ADR 0002 section 9
@@ -61,6 +61,40 @@ On every route whose identity is signed (FR-20):
 - a cookie scheme cannot be combined with a signed identity (compile error).
 
 The body is still validated against the route's input schema after authentication, in the normal check order (ADR 0012).
+
+### Third-party payloads
+
+A vendor adds fields to its payloads without notice, and some vendors name the payload type outside the body. Two features of the schema language (ADR 0003 sections 3 and 4) receive such a payload without declaring the vendor's whole schema:
+
+- `unknownKeys: { ignore: "<reason>" }` on the signed identity drops unknown keys from the body of every route under it, at every depth, instead of answering 400. Declared fields stay strictly checked, and the handler never sees the dropped keys. Strict input stays the default: the identity states why it departs from it.
+- A union whose tag comes from a request header types a body that an event header selects, as GitHub does with `X-GitHub-Event`. A header value outside the mapping answers 400, so a contract lists every event it subscribes to, `ping` included.
+
+```yaml
+# illustration, syntax per ADR 0002 sections 7 and 9 and ADR 0003 section 3
+schemes:
+  githubSignature:
+    kind: signature
+    name: X-Hub-Signature-256
+    format: 'sha256={sig}'
+    algorithm: hmac-sha256
+    payload: '{rawBody}'
+    encoding: hex
+    key: { from: path.workspaceId }
+identities:
+  github:
+    kind: signed
+    scheme: githubSignature
+    principal: WebhookCaller
+    unknownKeys: { ignore: "GitHub adds payload fields without notice." }
+schemas:
+  GithubEvent:
+    discriminator: { from: header.X-GitHub-Event }
+    oneOf:
+      push: GithubPushEvent
+      ping: GithubPingEvent
+```
+
+A route `github: { method: post, path: 'github/{workspaceId}', pathParams: { workspaceId: WorkspaceId }, identity: github, input: GithubEvent, responses: { 204: {} } }` then accepts GitHub's push and ping deliveries, keyed by the workspace's secret.
 
 ### Where the verification happens
 
