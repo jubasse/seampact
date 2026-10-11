@@ -62,6 +62,29 @@ These run with no Node.js installed.
 | Symfony | `seampact/symfony` as a development dependency, and `seampact/hooks` |
 | API Platform | `seampact/api-platform` as a development dependency, and `seampact/hooks` |
 
+### Which generators combine
+
+Every generator renders the default format and every format and paging style your contract or a pack declares, including your own page shapes: formats are data in the contract, not code in a generator. What differs is how each one plugs into its framework and what it links to. Supported framework versions are listed per release in `@seampact/spec`'s `compatibility/matrix.json`, and the CLI refuses a combination the matrix does not list.
+
+| Generator | Produces | Links to | Formats mapped onto |
+|---|---|---|---|
+| `codegen-ts` | types | nothing | not applicable: payload types only |
+| `codegen-zod`, `codegen-yup` | validators (Standard Schema) | provides `validators` | not applicable: payloads only |
+| `codegen-class-validator` | DTO classes with decorators | provides `validators` | not applicable: payloads only |
+| `codegen-fetch` | typed client | provides `client` | the client's response readers |
+| `codegen-nestjs` | server boundary | `validators`: zod, yup or class-validator | exception filters and interceptors |
+| `codegen-fastify`, `codegen-express` | server boundary | `validators`: zod or yup | route hooks, middleware |
+| `codegen-adonis` | server boundary with VineJS validators | nothing | middleware and exception handler |
+| `codegen-react` | TanStack Query hooks | `client`: fetch | through the fetch client |
+| `codegen-vue` | composables | `client`: fetch | through the fetch client |
+| `codegen-angular` | injectable services over `HttpClient` | nothing | its own response readers |
+| Spring Boot plugin | server boundary with Bean Validation | nothing | `ProblemDetail`, Spring Data `Page` |
+| `seampact/laravel` | server boundary with Form Requests | nothing | API Resources and paginators |
+| `seampact/symfony` | server boundary with Validator constraints | nothing | normalizers |
+| `seampact/api-platform` | resources and DTOs | nothing | API Platform's serializer, JSON-LD and Hydra |
+
+In an app config, a link names the other entry's `id`: `link: { validators: validators }` for a server, `link: { client: client }` for React or Vue.
+
 ### Optional packages
 
 | Package | Use it when |
