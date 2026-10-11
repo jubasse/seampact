@@ -240,9 +240,9 @@ type Access =
 type Requirement =
   | { kind: 'right'; right: RightId; params?: unknown;
       subject?: { source: ValueSource; defaulted: boolean };
-      origin?: Origin; derivedFrom?: DerivedFrom }
+      entry?: string; origin?: Origin; derivedFrom?: DerivedFrom }   // entry: the 'requirements' entry it was written through
   | { kind: 'rule'; rule: RuleId; params?: unknown; bucket?: BucketId;
-      origin?: Origin; derivedFrom?: DerivedFrom };
+      entry?: string; origin?: Origin; derivedFrom?: DerivedFrom };
 
 interface Response {
   status: number;

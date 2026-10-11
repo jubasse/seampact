@@ -56,7 +56,7 @@ There are five kinds of file. The loader knows each by its top-level keys.
 | pack | `pack`, any catalogue, `conventions`, `formats`, `extensions`, `derive` | `packs` from an api or base, `extends` from a pack |
 | fragment | whatever the include site expects | `$include` or a file `$ref` |
 
-The catalogues are `schemas`, `enums`, `scalars` (named formats, ADR 0003 section 8), `errors`, `schemes`, `headers` (identity headers, section 9), `identities`, `rights`, `rules`, `scopes`, `buckets`, `services` and `pagings` (section 14). `formats` (section 13) is keyed by name like a catalogue. Each maps a name to one declaration. Everything a contract references by name lives in one of them.
+The catalogues are `schemas`, `enums`, `scalars` (named formats, ADR 0003 section 8), `errors`, `schemes`, `headers` (identity headers, section 9), `identities`, `rights`, `rules`, `requirements` (named requirement items, section 9), `scopes`, `buckets`, `services` and `pagings` (section 14). `formats` (section 13) is keyed by name like a catalogue. Each maps a name to one declaration. Everything a contract references by name lives in one of them.
 
 Paths in `extends`, `packs`, `$include`, `$ref` and `$file` are relative to the file that contains them, use forward slashes, must stay inside the workspace root, and must match the case of the file on disk. The last two rules keep compilation identical on case-insensitive file systems and stop a contract from reading files outside its repository.
 
@@ -172,7 +172,7 @@ No keyword of the grammar is a word that YAML 1.1 reads as a boolean (`on`, `off
 | Element | Pattern | Examples |
 |---|---|---|
 | schemas, enums | `^[A-Z][A-Za-z0-9]*$` | `Task`, `TaskId` |
-| apis, surfaces, tree nodes, operation ids, identities, schemes, headers, scopes, rules, buckets, services, wire formats, paging styles, pack entries, cache families, documents | `^[a-z][A-Za-z0-9_]*$` | `tasks`, `viewer_or_device`, `five_minutes` |
+| apis, surfaces, tree nodes, operation ids, identities, schemes, headers, scopes, rules, requirements, buckets, services, wire formats, paging styles, pack entries, cache families, documents | `^[a-z][A-Za-z0-9_]*$` | `tasks`, `viewer_or_device`, `five_minutes` |
 | scalars (named formats) | `^[a-z][A-Za-z0-9]*(-[a-z0-9]+)*$` | `money`, `iri-reference` |
 | rights | `^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*)*$` | `roles`, `tasks.update` |
 | error codes | `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$` | `api.forbidden`, `state.conflict` |
@@ -434,7 +434,7 @@ Every node may set the settings below; its descendants inherit them, and the IR 
 | `headers`, `query` | added; one name declared twice is an error |
 | `upstream`, `maturity`, `internal`, `deprecated`, `budget`, `bodyLimit`, `cache`, `csrf`, `idempotency`, extension keys | the nearest wins |
 
-`owner`, `concurrency`, `ops`, `id`, `item`, `path`, `pathParams`, `paging`, `sortable`, `filteredBy`, `degradable`, `relays`, `examples`, `lint` and docs are not inherited: each applies to the node or element it is written on. Three inherited settings have limits: `deprecated.successor` is written on a route only, since one successor cannot serve several operations; `cache` applies to the GET routes below it and is refused on a non-GET route; a stated `maturity`, written on the route or inherited, wins over the one derived from `upstream`. An inherited requirement cannot be removed below; a route that needs fewer requirements belongs elsewhere in the tree. This keeps every requirement of a route visible in its ancestry.
+`owner`, `concurrency`, `ops`, `id`, `item`, `path`, `pathParams`, `paging`, `sortable`, `filteredBy`, `degradable`, `relays`, `examples`, `lint` and docs are not inherited: each applies to the node or element it is written on. Three inherited settings have limits: `deprecated.successor` is written on a route only, since one successor cannot serve several operations; `cache` applies to the GET routes below it and is refused on a non-GET route; a stated `maturity`, written on the route or inherited, wins over the one derived from `upstream`. An inherited requirement cannot be removed below; a route that needs fewer requirements belongs elsewhere in the tree. This keeps every requirement of a route visible in its ancestry. Requirements stack, they are not refined: `{ right: projectAccess, params: { level: read } }` on a `member` scope plus `{ right: projectAccess, params: { level: admin } }` on one of its routes asks the decide hook twice, in that order, and the route runs only when both allow. Where the second call matters, write the requirement on each route rather than on the scope; a `requirements` entry (section 9) keeps that to one name per route.
 
 ### 9. Access, identities, rights, rules, scopes
 
@@ -582,6 +582,22 @@ requires:
 | `params` | the values of the right's or rule's typed params |
 | `subject` | rights only: a value source; see below |
 | `bucket` | rules declared with `bucket: true` only: a bucket name |
+
+A requirement written on several routes is named once in the `requirements` catalogue and used by its name, a plain string in `requires`:
+
+```yaml
+# tasks/api.yaml (excerpt)
+requirements:
+  channelEditor: { right: roles, params: { allowed: [owner, editor] } }
+  writeThrottle: { rule: throttle, bucket: write }
+```
+
+```yaml
+# tasks/api.yaml (excerpt: route settings)
+requires: [writeThrottle, channelEditor, { right: tasks.update }]
+```
+
+An entry holds one requirement item, with the keys above. In `requires`, a plain string always names an entry and a mapping is always an item, so an entry never hides a right of the same name. The IR holds the expanded item, with `entry` naming the catalogue entry it was written through (ADR 0004), and every rule of this section applies to it as if it were written at the use.
 
 The check order is fixed (FR-5, ADR 0012): transport refusals, authentication, principal requirements, scopes in nesting order, requirements in the order of this list, input validation, restricted input fields and sort keys, bindings, the handler. A requirement may sit on a public or optional-auth route; its hook then receives a null principal for an anonymous caller (SCN-036). A rule may always; a right only when it is guest-enabled (below).
 
@@ -1116,6 +1132,7 @@ Laravel's paginator also writes `meta.links`, a numbered list of page links. It 
 | `create` input defaults | `create` and `update` require `input` | the item schema holds fields a client never sends |
 | `requires: [{ roles: {...} }]` | `{ right: roles, params: {...} }` or `{ rule: ... }` | rights and rules are two catalogues (A18); a subject must not mix with params |
 | `on: pathParam` in rule params | `subject` with a value-source grammar | one grammar for every value read from the request |
+| the same requirement written in full on every route | a `requirements` catalogue of named items, used by name | YAML anchors are refused (P5), and a role-gated api repeats the same right and params on many routes |
 | `throttles:` | `buckets:` plus a rule with `bucket: true` | the bucket is what is counted; throttling is the rule (FR-41) |
 | `identities.*.schemes.write: [session+csrf]` | `csrf` on the cookie scheme | CSRF is derived from the scheme, stated once (FR-27) |
 | identity scheme names as strings | typed `schemes` catalogue | schemes are checked and emitted (FR-27) |
@@ -1314,6 +1331,10 @@ api:
 schemas:
   $include: ./schemas.yaml
 
+requirements:
+  channelEditor: { right: roles, params: { allowed: [owner, editor] } }
+  writeThrottle: { rule: throttle, bucket: write }
+
 surfaces:
   app:
     prefix: /v{version}
@@ -1344,9 +1365,7 @@ surfaces:
                 get: {}
                 create:
                   input: CreateTask
-                  requires:
-                    - { rule: throttle, bucket: write }
-                    - { right: roles, params: { allowed: [owner, editor] } }
+                  requires: [writeThrottle, channelEditor]
                 update:
                   input: UpdateTask
                   requires: [{ right: tasks.update }]
@@ -1358,7 +1377,7 @@ surfaces:
                 routes:
                   assign:
                     method: post
-                    requires: [{ right: roles, params: { allowed: [owner, editor] } }]
+                    requires: [channelEditor]
                     input:
                       type: object
                       required: [userId]
@@ -1434,7 +1453,7 @@ What the example shows, by route:
 - Errors: the base declares only `api.schema_invalid` (its `Issues` carry no `in`, so the role is bound with a params template) and `api.rate_limited` (an example, and a nature left to its status). Every other derived error answers its role's default code (A34), and `api.internal`, `api.not_found` and `api.forbidden` are default codes attached by name.
 
 - `listTasks` (`GET /v1/channels/{channelId}/tasks`): identity `user` from the surface, scope `channel` from the member path of `channels`, the base's `cursor` style (the item array as the body, the next page in a `Link` header) capped at 50, the restricted sort key `effort` (it inherits `tasks.seeEffort` from `Task.effort`), `filteredBy`.
-- `createTask`: `throttle` then `roles` in that order, a body, an idempotency key from the conventions, CSRF from `sessionCookie` on a write.
+- `createTask`: the `writeThrottle` and `channelEditor` entries, so `throttle` then `roles` in that order, a body, an idempotency key from the conventions, CSRF from `sessionCookie` on a write.
 - `updateTask`: `tasks.update` with the subject defaulting to `path.taskId`, the version read from `body.expectedVersion` and compared to `Task.version`, 409 `state.conflict`.
 - `archiveTask`: a member action that opts into the version, kept out of the `public` document.
 - `searchTasks`: an included route, idempotency exempt with its reason, a 300 ms budget, a named example.
@@ -1493,7 +1512,7 @@ listChanges:
 - Phase 1 writes the authoring JSON Schema from sections 1 to 13 of this ADR; a keyword not listed here is refused by it, and the grammar snapshot test (SM-6) fails when a core keyword is added without an ADR reference.
 - The loader implements sections 1 to 4 (composition, the byte-identity rule, pitfalls); the compiler passes implement sections 5 to 13 as ADR 0006 assigns them.
 - Contracts carry no house convention: header names, right names, page shapes and wire formats all come from the base or from packs. Derived errors have default codes in the core (A34), each renamable, so a contract with no pack compiles; a paged list still needs a paging style (A31).
-- The grammar has three shorthands only: a string for a schema reference, `ops` as a list, and `paging` as a style name. Each yields the same IR as its long form.
+- The grammar has four shorthands only: a string for a schema reference, `ops` as a list, `paging` as a style name, and a string in `requires` for a `requirements` entry. Each yields the same IR as its long form, the last one with the entry's name.
 - An inherited requirement cannot be removed below; a contract that needs it must restructure its tree. Revisit only with a consumer that cannot.
 - Not modelled until a consumer needs it: media types other than JSON (and the raw body of a signed identity), a base extending a base, shorthands beyond `ops`.
 
@@ -1516,7 +1535,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-006 | `examples`, `$file` (12, 2); refused keyword `if` (ADR 0003). The scenario's "TaskPage" example is the list payload, the item array, which the emitter wraps through the format |
 | SCN-007 | `access.public`, `optionalAuth`, `csrf.exempt`, `idempotency.exempt`, `lint.allow`, `maturity.reason`, enum `reason`, right `guest` (9 to 12). Every route lives under a surface, so the scenario's "route outside any surface" reads as a route under a surface with no identity |
 | SCN-008 | `schemes` with `csrf`, `identities.schemes.write`, `csrf.exempt` (9) |
-| SCN-009 | `identity`, `principal.requires`, `scopes`, `requires` (rule and right), `input`, `bindings` (9) |
+| SCN-009 | `identity`, `principal.requires`, `scopes`, `requires` (rule and right, a `requirements` entry), `input`, `bindings` (9) |
 | SCN-010 | `bindings` with body and path sources (9) |
 | SCN-011 | `errors` declared in the catalogue or on a node, attached with `{}` or narrowed with `{ example }`, `conventions.errors.every`, `errorRoles` (11) |
 | SCN-012 | `pagings` (`cursor`, `limit`, `sort` roles), `conventions.paging.default`, `paging.<style>.maxLimit`, `sortable`, `restrictedTo` (10, 14, ADR 0003) |
