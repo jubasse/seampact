@@ -446,7 +446,7 @@ Every node may set the settings below; its descendants inherit them, and the IR 
 | `scopes` | added; entering a scope twice is an error |
 | `principal.requires` | union |
 | `bindings` | added; one key bound to two different values is an error |
-| `errors` | union, each attachment within its reach (section 11); a code declared on a node joins the api registry; an example narrowed by the nearest node wins |
+| `errors` | union, each attachment within its `reach` and `for` (section 11); a code declared on a node joins the api registry; an example narrowed by the nearest node wins |
 | `errorRoles` | per role, the nearest wins, over `conventions.errors.derived` |
 | `tags` | union |
 | `headers`, `query` | added; one name declared twice is an error. `query` reaches safe routes only: a write route below a node's `query` does not get it |
@@ -741,24 +741,27 @@ Codes are declared at every level of the tree (A35): in the `errors` catalogue (
 - `{ example }`: attaches it and narrows its example to this subtree's case;
 - a declaration (it holds `status`): declares the code and attaches it.
 
-Each of the three may add `reach`, below.
+Each of the three may add `reach` and `for`, below.
 
 ```yaml
 # tasks/api.yaml (excerpt: node settings of tasks)
 errors:
   state.conflict: {}
   tasks.not_found: { status: 404, title: 'No such task in this channel.' }
-  tasks.locked:
-    status: 423
-    title: 'Another editor holds the task.'
-    params: { lockedBy: UserId }
-    reach: resource
   api.rate_limited: { example: { retryAfterMs: 30000 } }
-errorRoles:
-  notFound: tasks.not_found
+member:
+  errorRoles:
+    notFound: tasks.not_found
+  errors:
+    tasks.locked:
+      status: 423
+      title: 'Another editor holds the task.'
+      params: { lockedBy: UserId }
+      reach: resource
+      for: writes
 ```
 
-A node's codes attach to the operations below it; children add codes or narrow an example, never remove one (section 8). How far "below" goes is the attachment's reach. `subtree`, the default (A35), attaches the code to every operation below the node, child resources included. `resource` stops at the resource boundary: the code reaches the node's own `ops` and the routes of its `collection`, `member` and `routes` maps, but no child node with `kind` (a nested collection or single) and nothing below one. `conventions.errors.reach` sets the api's default; `reach` on one attachment overrides it. Above, `tasks.locked` reaches `updateTask` and `assignTask`, not the routes of a `comments` collection nested under a task, so their error unions list only what they can answer. `conventions.errors.every` attaches codes to every operation. Codes are api-wide, whatever level declares them: a code declared on a node joins the api's registry and any other node may attach it by name. Declaring a code a second time with a different definition is a compile error naming both locations; re-attaching it, here or below, is how it is reused. Rights, rules, scopes and identities list the codes they may answer, attached with `derivedFrom` in the IR. The IR records, for each operation's code, the node it was attached at, and for each declaration where it was declared (ADR 0004).
+A node's codes attach to the operations below it; children add codes or narrow an example, never remove one (section 8). How far "below" goes is the attachment's reach. `subtree`, the default (A35), attaches the code to every operation below the node, child resources included. `resource` stops at the resource boundary: the code reaches the node's own `ops` and the routes of its `collection`, `member` and `routes` maps, but no child node with `kind` (a nested collection or single) and nothing below one. `conventions.errors.reach` sets the api's default; `reach` on one attachment overrides it. `for` narrows an attachment to `reads` (the safe routes, a `batch` read included) or `writes` (every other route); `all` is the default, as for an identity header's `for` (section 9). Above, `tasks.locked`, attached on `member` for writes with `reach: resource`, reaches `updateTask` and `assignTask` but not `getTask`, nor the routes of a `comments` collection nested under a task, so each error union lists only what its route can answer. `conventions.errors.every` attaches codes to every operation. Codes are api-wide, whatever level declares them: a code declared on a node joins the api's registry and any other node may attach it by name. Declaring a code a second time with a different definition is a compile error naming both locations; re-attaching it, here or below, is how it is reused. Rights, rules, scopes and identities list the codes they may answer, attached with `derivedFrom` in the IR. The IR records, for each operation's code, the node it was attached at, and for each declaration where it was declared (ADR 0004).
 
 `nature` is a closed set that tells a client whether retrying can help: `refused` (retrying the same request cannot succeed), `unavailable` (retrying later may succeed) and `failed` (the server failed). No layer adds a nature, so every client keeps one retry rule and the authoring schema refuses any other value with the allowed list (SCN-037).
 
@@ -766,7 +769,7 @@ A node's codes attach to the operations below it; children add codes or narrow a
 
 Derived errors answer roles, never fixed codes: `unauthenticated` (401), `csrfInvalid`, `forbidden`, `sortKeyForbidden` (403), `notFound` (404), `schemaInvalid` (400), `payloadTooLarge` (413), `unsupportedMediaType` (415), `stateConflict`, `idempotencyKeyReused`, `idempotencyInProgress` (409), `gone` (410), `rateLimited` (429), `undeclaredStatus` (500), `upstreamUnavailable` (502), `serviceUnavailable` (503), `upstreamTimeout`, `deadlineExceeded` (504). The derivation table that uses them is ADR 0006 section 5.
 
-Every role has a default code in the core (`api.schema_invalid`, `api.forbidden` and the others of ADR 0006 section 6), registered when used and rendered through the api's format, so a contract with no pack compiles (A34). A role is renamed for the whole api by `conventions.errors.derived`, or for a subtree by `errorRoles` on any node, the nearest binding winning (A35). Above, every route of the tasks subtree that derives `notFound` answers `tasks.not_found`: the member routes of a collection derive it because the client chose the id (ADR 0006 section 5), and the handler answers it, as any code its operation lists, through a typed error result (ADR 0012). A binding is a code, or `{ code, params }`:
+Every role has a default code in the core (`api.schema_invalid`, `api.forbidden` and the others of ADR 0006 section 6), registered when used and rendered through the api's format, so a contract with no pack compiles (A34). A role is renamed for the whole api by `conventions.errors.derived`, or for a subtree by `errorRoles` on any node, the nearest binding winning (A35). Above, every member route of `tasks` answers `tasks.not_found` for the `notFound` role: a route below a collection's `member` scope derives it for an id the client chose and no scope reads (ADR 0006 section 5), and the handler answers it, as any code its operation lists, through a typed error result (ADR 0012). The binding sits on `member`, not on the collection node: `listTasks` and `createTask` hold only parent ids in their path, and a binding there would rename the 404 of a missing parent too. A binding is a code, or `{ code, params }`:
 
 ```yaml
 # shared/base.yaml (excerpt)
@@ -1491,7 +1494,7 @@ What the example shows, by route:
 
 - Errors: the base declares only `api.schema_invalid` (its `Issues` carry no `in`, so the role is bound with a params template) and `api.rate_limited` (an example, and a nature left to its status). Every other derived error answers its role's default code (A34), and `api.internal`, `api.not_found` and `api.forbidden` are default codes attached by name.
 
-- `listTasks` (`GET /v1/channels/{channelId}/tasks`): identity `user` from the surface, scope `channel` from the member path of `channels`, the base's `cursor` style (the item array as the body, the next page in a `Link` header) capped at 50, the restricted sort key `effort` (it inherits `tasks.seeEffort` from `Task.effort`), `filteredBy`.
+- `listTasks` (`GET /v1/channels/{channelId}/tasks`): identity `user` from the surface, scope `channel` from the member path of `channels`, the base's `cursor` style (the item array as the body, the next page in a `Link` header) capped at 50, the restricted sort key `effort` (it inherits `tasks.seeEffort` from `Task.effort`), `filteredBy`. A missing channel answers the scope's `api.not_found` only: the `channel` scope reads `path.channelId`, so `member.notFound` derives no second 404 for it (ADR 0006 section 5).
 - `createTask`: the `writeThrottle` and `channelEditor` entries, so `throttle` then `roles` in that order, a body, an idempotency key from the conventions, CSRF from `sessionCookie` on a write.
 - `updateTask`: `tasks.update` with the subject defaulting to `path.taskId`, the version read from `body.expectedVersion` and compared to `Task.version`, 409 `state.conflict`.
 - `archiveTask`: a member action that opts into the version, kept out of the `public` document.
@@ -1597,7 +1600,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-008 | `schemes` with `csrf`, `identities.schemes.write`, `csrf.exempt` (9) |
 | SCN-009 | `identity`, `principal.requires`, `scopes`, `requires` (rule and right, a `requirements` entry), `input`, `bindings` (9) |
 | SCN-010 | `bindings` with body and path sources (9) |
-| SCN-011 | `errors` declared in the catalogue or on a node, attached with `{}` or narrowed with `{ example }`, `conventions.errors.every`, `errorRoles` (11) |
+| SCN-011 | `errors` declared in the catalogue or on a node, attached with `{}` or narrowed with `{ example }`, `reach`, `for`, `conventions.errors.every`, `errorRoles` (11) |
 | SCN-012 | `pagings` (`cursor`, `limit`, `sort` roles), `conventions.paging.default`, `paging.<style>.maxLimit`, `sortable`, `restrictedTo` (10, 14, ADR 0003) |
 | SCN-013 | `cache.freshness`, `cache.etag`, `conventions.cache.families` (10, 13) |
 | SCN-014 | `workspace.apis`, `api.kind: service`, a relay route (`relays`), role bindings that differ between the two apis, `workspace.imports` (1, 5, 7) |

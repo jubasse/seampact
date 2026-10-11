@@ -696,7 +696,7 @@ items:
     targets: [core, server]
   - id: CHK-111
     source: "A35"
-    fact: Error codes declared or attached on any tree node (api, collection, single, scope node, route) reach every operation below it with the attaching node as origin; a conflicting redeclaration is a compile error; errorRoles renames a derived code for a subtree.
+    fact: Error codes declared or attached on any tree node (api, collection, single, scope node, route) reach every operation below it with the attaching node as origin, limited by the attachment's reach (subtree or resource) and for (all, reads or writes); a conflicting redeclaration is a compile error; errorRoles renames a derived code for a subtree.
     frs: [FR-6, FR-2]
     scenario: SCN-011
     targets: [core, fetch]
@@ -724,6 +724,12 @@ items:
     frs: [FR-39, FR-14]
     scenario: SCN-105
     targets: [core]
+  - id: CHK-116
+    source: "14 Errors and enums"
+    fact: A route below a collection member scope derives the notFound 404 only for a member id that no scope of the route reads; a list nested under scoped parents answers the scopes' codes and no second 404.
+    frs: [FR-6, FR-24]
+    scenario: SCN-069
+    targets: [core, fetch]
 not_in_checklist:
   - source: "A4, A16"
     reason: Process decisions (FAVIR framing, read-only Arthome research); nothing to test in the product.
