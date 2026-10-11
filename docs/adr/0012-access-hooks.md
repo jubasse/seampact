@@ -98,10 +98,11 @@ Each target places the steps in its framework's mechanisms, in this order. In sp
 - On input, a restricted field sent without the right is refused with 403 and the field pointer by default, or stripped; the policy is set per api in the conventions and may be overridden per field (A21).
 - The boundary asks the decide hook with the field purpose and the subject derived from the right's declaration (ADR 0003 section 6): the route's resolved scope for a scope right; for a resource right, the holder's id property on output and the route's default subject on input and for sort keys. On output it also passes the holder object as the loaded record. It never walks schemas at run time: the IR lists each operation's field rights with their subject source (FR-23).
 - An output field whose subject cannot be found on a route (a scope right on a route outside that scope) is always absent there, without a decide call (ADR 0003 section 6).
+- A relay route has no field rights (ADR 0002 section 7): the service app sends every field and asks no decider about a member's right, and the public operation, in the gateway, projects the output and checks the input for its own caller.
 
 ### Errors the handler answers
 
-A handler answers any code its operation lists through a typed error result that the target generates per operation, and the boundary renders it in the operation's wire format. That covers the codes declared or attached on the route and its nodes (`tasks.locked`), and the derived roles only the application can decide: `notFound` on a member route, whose id may not exist (ADR 0006 section 5), and `stateConflict` for a stale version. In TypeScript, for illustration:
+A handler answers any code its operation lists through a typed error result that the target generates per operation, and the boundary renders it in the operation's wire format. That covers the codes declared or attached on the route and its nodes (`tasks.locked`), and the derived roles only the application can decide: `notFound` on a member route, whose id may not exist and that no scope reads (ADR 0006 section 5), and `stateConflict` for a stale version. In TypeScript, for illustration:
 
 ```ts
 return { error: 'tasks.locked', params: { lockedBy: lock.userId } };   // typed from updateTask's error union
@@ -155,5 +156,5 @@ Other libraries plug in through the same hooks, as application code or community
 ## Traceability
 
 - FRs: FR-4, FR-5, FR-19 (spring-boot check placement), FR-22, FR-23, FR-24, FR-25, FR-26, FR-27, FR-41, FR-10 (metadata reaches the boundary); amendments A18, A20, A21, A23, A24, A25, A30.
-- Checklist items enabled: CHK-004, CHK-006, CHK-007 (identities, variants, CSRF), CHK-014 (order and boot refusal), CHK-015, CHK-016 (throttle bucket and proof reach the hook), CHK-017, CHK-018, CHK-019, CHK-020, CHK-025, CHK-033, CHK-062, CHK-063, CHK-086, CHK-087, CHK-090, CHK-091, CHK-092, CHK-093, CHK-094, CHK-096, CHK-097, CHK-098, CHK-099.
+- Checklist items enabled: CHK-004, CHK-006, CHK-007 (identities, variants, CSRF), CHK-014 (order and boot refusal), CHK-015, CHK-016 (throttle bucket and proof reach the hook), CHK-017, CHK-018, CHK-019, CHK-020, CHK-025, CHK-033, CHK-062, CHK-063, CHK-086, CHK-087, CHK-090, CHK-091, CHK-092, CHK-093, CHK-094, CHK-096, CHK-097, CHK-098, CHK-099, CHK-116 (no second 404 for a scoped id), CHK-117 (no field rights on a relay route).
 - Success metric: SM-8.
