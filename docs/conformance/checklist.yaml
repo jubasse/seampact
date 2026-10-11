@@ -215,7 +215,7 @@ items:
     targets: [server, fetch]
   - id: CHK-032
     source: "14 Reads and writes; A22"
-    fact: changesSince paging answers changes with a completeness flag and 410 on a stale token, over an opaque token or an instant.
+    fact: A changes-since paging style (since, nextSince and complete roles) answers changes with the completeness flag and 410 on a stale token, over an opaque token or an instant.
     frs: [FR-31]
     scenario: SCN-082
     targets: [server, fetch]

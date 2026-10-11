@@ -42,7 +42,7 @@ workspace:
 ```
 
 - `workspace.apis` maps each api name to its api file. The names must equal each file's `api.name`. All apis of a workspace compile together, which is how `relays` reaches a sibling api (FR-8).
-- `workspace.imports` names an api held in a pinned contract bundle, so a `relays` can target it without its sources. An entry takes one source form of the consumer config's `sources` (ADR 0011: `package` with `version`, `release`, or `git`), `api`, the api's name inside the bundle, and `integrity`, which is required. The bundle passes ADR 0011's pinned-bundle check before its IR is read; a missing `integrity` fails and prints the actual value, so pinning is a copy.
+- `workspace.imports` names an api held in a pinned contract bundle, so a `relays` can target it without its sources. An entry takes one source form of the app config's `sources` (ADR 0011: `package` with `version`, `release`, or `git`), `api`, the api's name inside the bundle, and `integrity`, which is required. The bundle passes ADR 0011's pinned-bundle check before its IR is read; a missing `integrity` fails and prints the actual value, so pinning is a copy.
 
 There are five kinds of file. The loader knows each by its top-level keys.
 
@@ -233,7 +233,7 @@ extends: ../shared/base.yaml
 
 A service api (FR-8, section 9 of the brief) states `caller: { identity: service, right: callerService }`. Every route of it runs under that identity, which its surfaces need not repeat and no node may change; a public or optional-auth route is a compile error; a route whose `requires` does not include `caller.right` is a compile error (SCN-014, SCN-045). The names are the contract's own (A20): the core knows only that this api has a caller identity and a caller right.
 
-`documents` declares named OpenAPI documents. Each entry takes `surfaces` (the surfaces it covers, default all) and `internal` (`include`, the default, or `exclude`). An api with no `documents` emits one document holding every route (SCN-044). Where each document is written is consumer configuration (ADR 0011).
+`documents` declares named OpenAPI documents. Each entry takes `surfaces` (the surfaces it covers, default all) and `internal` (`include`, the default, or `exclude`). An api with no `documents` emits one document holding every route (SCN-044). Where each document is written is app configuration (ADR 0011).
 
 ### 6. Surfaces and the tree
 
@@ -1452,7 +1452,7 @@ listChanges:
 
 ## Self-check: scenarios and keywords
 
-Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Scenarios about targets, distribution or CI only (SCN-015, SCN-017, SCN-020 to SCN-025, SCN-027, SCN-028, SCN-049, SCN-052 to SCN-061, SCN-074, SCN-075, SCN-089 to SCN-095, SCN-098, SCN-099) use no syntax beyond what their fixture contract borrows from the rows below. SCN-072 (framework route allow-list) is consumer configuration, ADR 0011 and 0012.
+Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Scenarios about targets, distribution or CI only (SCN-015, SCN-017, SCN-020 to SCN-025, SCN-027, SCN-028, SCN-049, SCN-052 to SCN-061, SCN-074, SCN-075, SCN-089 to SCN-095, SCN-098, SCN-099) use no syntax beyond what their fixture contract borrows from the rows below. SCN-072 (framework route allow-list) is app configuration, ADR 0011 and 0012.
 
 | Scenario | Keywords (section) |
 |---|---|
