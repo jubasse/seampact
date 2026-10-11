@@ -248,7 +248,7 @@ interface Response {
   status: number;
   media?: string;                            // absent for an empty body (204, 304)
   body?: TypeUse;                            // the unwrapped payload
-  shape: 'item' | 'table' | 'list' | 'page' | 'empty';   // 'page': the paging style's response; the others: the format's shape
+  shape: 'item' | 'table' | 'list' | 'page' | 'empty';   // the format's shape; for 'page', with the paging style's members or body
   headers: { name: string; type: TypeUse; required: boolean; semantic?: string; origin?: Origin; derivedFrom?: DerivedFrom }[];
   origin?: Origin; derivedFrom?: DerivedFrom;
 }
@@ -296,7 +296,7 @@ interface WireFormat {
   id: FormatId; origin;
   media: string;                             // 'application/json', 'application/ld+json'
   absent: 'omit' | 'null';
-  success: { item: Shape; table: Shape; list: Shape };   // defaults filled: body '$payload', no headers
+  success: { item: Shape; table: Shape; list: Shape; page: Shape };   // defaults filled: body '$payload' ('$items' for page), no headers
   meta: Record<string, { type: TypeUse; fill: 'now' | 'traceId' | 'degraded' | 'handler' | ValueSource }>;
   error: { media: string; body: Template; headers: HeaderTemplate[] };   // 'application/problem+json' for 'bare'
 }
@@ -309,7 +309,9 @@ interface PagingStyle {
   absent: 'omit' | 'null';
   request: { role: 'cursor' | 'page' | 'offset' | 'since' | 'limit' | 'sort';
              in: 'query' | 'header'; name: string; base?: 0 | 1; style?: 'signed' | 'pair' | 'keyed' }[];
-  response: { body: Template; headers: HeaderTemplate[]; links: { rel: string; role: UrlRole }[] };
+  response: { body?: Template;               // the whole page body; absent when the style adds 'meta' to the format's page
+              meta: { name: string; value: Template }[];   // members joining the format's page $meta
+              headers: HeaderTemplate[]; links: { rel: string; role: UrlRole }[] };
   handlerResult: ('nextCursor' | 'previousCursor' | 'total' | 'more' | 'nextSince' | 'complete')[];
 }
 type UrlRole = 'self' | 'first' | 'previous' | 'next' | 'last';
@@ -323,7 +325,7 @@ type Template =
   | { kind: 'each'; of: Slot; as: Template };
 ```
 
-An `object` template either wraps (the payload under a member, `{ data: $payload, meta: $meta }`) or merges (`merge: 'payload'`, the payload's own members beside the format's members, as JSON-LD puts `@context`, `@id` and `@type` beside an item's fields). An `each` template maps every element of an array slot, as Hydra's `member`, JSON:API's resource objects and HAL's `_embedded` need. Each response records its media type and its `shape`, so a target finds the template without guessing: `item`, `table` and `list` read the format, `page` reads the operation's paging style. The IR stores the unwrapped payload and the format and style references only; nothing restates the envelope (FR-42). `handlerResult` lists what the handler returns beside the items, so a target types the handler's page result without reading templates. The slot catalogue, the roles and who fills each one are ADR 0002 sections 13 and 14; the members of the `bare` error body (RFC 9457) are ADR 0006 section 7.
+An `object` template either wraps (the payload under a member, `{ data: $payload, meta: $meta }`) or merges (`merge: 'payload'`, the payload's own members beside the format's members, as JSON-LD puts `@context`, `@id` and `@type` beside an item's fields). An `each` template maps every element of an array slot, as Hydra's `member`, JSON:API's resource objects and HAL's `_embedded` need. Each response records its media type and its `shape`, so a target finds the template without guessing: `item`, `table` and `list` read the format; `page` reads the operation's paging style's `body` when it has one, and otherwise the format's `page` shape with the style's `meta` members in its `$meta`. The IR stores the unwrapped payload and the format and style references only; nothing restates the envelope (FR-42). `handlerResult` lists what the handler returns beside the items, so a target types the handler's page result without reading templates. The slot catalogue, the roles and who fills each one are ADR 0002 sections 13 and 14; the members of the `bare` error body (RFC 9457) are ADR 0006 section 7.
 
 ### 9. Canonical ids and ordering
 

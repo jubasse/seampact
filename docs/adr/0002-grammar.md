@@ -864,6 +864,7 @@ formats:
       item: { body: { data: $payload, meta: $meta } }
       table: { body: { data: $payload, meta: $meta } }
       list: { body: { data: $payload, meta: $meta } }
+      page: { body: { data: $items, meta: $meta } }
     meta:
       servedAt: { fill: now }
       degraded: { fill: degraded }
@@ -875,11 +876,11 @@ formats:
 |---|---|
 | `media` | the media type of success bodies; `application/json` by default |
 | `absent` | what a slot with no value writes: `omit` (default) or `null` |
-| `success.item`, `success.table`, `success.list` | one per response shape: `{ body, headers }`. `body` is a template, `$payload` by default; `headers` maps a header name to a template. `item` is one record or any non-list body, `table` the id-keyed object of a `batch` read, `list` an unpaged list. A paged list takes its shape from its paging style (section 14) |
+| `success.item`, `success.table`, `success.list`, `success.page` | one per response shape: `{ body, headers }`. `body` is a template, `$payload` by default (`$items` for `page`); `headers` maps a header name to a template. `item` is one record or any non-list body, `table` the id-keyed object of a `batch` read, `list` an unpaged list, `page` a paged list, whose paging style adds members to it or replaces its body (section 14) |
 | `meta` | the meta fields, each `{ fill, schema }`: `fill` is `now`, `traceId`, `degraded`, a `principal.<field>` source, or `handler` (which then needs `schema`) |
 | `error` | `{ media, body, headers }`; `media` defaults to the format's. A format without `error` uses the `bare` error |
 
-A shape left out uses its default (`body: $payload`, no headers), so `bare` writes only its error.
+A shape left out uses its default (`body: $payload`, or `$items` for a page, and no headers), so `bare` writes only its error.
 
 #### Templates
 
@@ -905,7 +906,8 @@ The slots are a closed set:
 | Slot | Value | Where |
 |---|---|---|
 | `$payload` | what the handler returns: the item, the id-keyed table, or the array of an unpaged list | success shapes |
-| `$meta` | the object of the format's `meta` fields | success shapes, paging styles |
+| `$meta` | the object of the format's `meta` fields; in `success.page`, joined by the `meta` members of the paging style (section 14) | success shapes, paging styles |
+| `$items` | the page's records, as the handler returns them | `success.page`, paging styles |
 | `$status` | the HTTP status | everywhere |
 | `$self` | the URL of what the body describes: the member URL of a collection item (built from `$id`), the current page of a paged list, the request URL otherwise | everywhere |
 | `$path` | the request path, without the query | everywhere |
@@ -944,10 +946,26 @@ pagings:
 | Key | Meaning |
 |---|---|
 | `request` | request roles, each `{ query: <name> }` or `{ header: <name> }`; `page` also takes `base` (`1` by default, or `0`), `sort` takes `style` |
-| `response.body` | the page body, a template whose slots are the response roles; `$items` appears exactly once |
+| `response.meta` | members added to the format's page: each maps a member name to a template over the response roles, and joins the `$meta` slot of the format's `success.page` |
+| `response.body` | instead of `meta`: the whole page body, replacing the format's `success.page` body; a template whose slots are the response roles and `$meta`, with `$items` exactly once |
 | `response.headers` | response headers, each a template (`X-Total-Count: $total`) |
 | `response.links` | RFC 8288 relations written in one `Link` header, each mapped to a URL role (`next: $next`) |
 | `absent` | as on a format; `omit` by default |
+
+A style without `body` keeps the format's page shape and adds to it, so the wrapper stays the format's and a style survives a change of format. Under `@seampact/pack-laravel`, whose page shape is `{ data: $items, meta: $meta }`:
+
+```yaml
+# shared/base.yaml (excerpt)
+pagings:
+  pages:
+    request:
+      page: { query: page }
+      limit: { query: perPage }
+    response:
+      meta: { page: $page, lastPage: $totalPages, perPage: $limit, total: $total }
+```
+
+A page of `pages` is `{ data: [...], meta: { page, lastPage, perPage, total } }`, plus the format's own `meta` fields when it declares some (a `servedAt` filled with `now`); a member named by both the format and the style is a compile error naming both. A style with `meta` under a format whose page shape writes no `$meta`, such as `bare` (`$items`), is a compile error naming the style and the format, with the fix "write `response.body`". A style with `body` replaces the page body, as Hydra, HAL and JSON:API need; inside it, `$meta` holds the format's `meta` fields only, and those fields appear in a page only where a template writes `$meta`. `headers` and `links` add to the page in both cases.
 
 Request roles. A style has exactly one position role (`cursor`, `page`, `offset` or `since`), which sets its kind:
 
@@ -973,7 +991,7 @@ Response roles, each a slot of the body, a header or a link:
 | `self`, `first`, `previous`, `next`, `last` | page URLs: the request URL with its position replaced | boundary | `last` page and offset only |
 | `nextSince`, `complete` | the token for the next call, and whether every change up to it is included | handler | since |
 
-The handler result is typed from the roles the style uses: the items, plus `nextCursor`, `previousCursor`, `total`, `nextSince` and `complete` when used. A page or offset style without `total` asks the handler for a `more` flag, which drives `next`. A role used outside its kinds, `last` or `totalPages` without `total`, a sort key on a style without a `sort` role, and a request name already used by the route's `query` are compile errors naming the style. The route sets the limits (`maxLimit`, `defaultLimit`), or they come from `conventions.paging`.
+The handler result is typed from the roles the style uses: the items, plus `nextCursor`, `previousCursor`, `nextSince` and `complete` when used, and `total` when the style uses `total`, `totalPages` or `last`, whether or not a template writes `$total` (a `lastPage` member without the total is that case). A page or offset style that needs no total asks the handler for a `more` flag, which drives `next`. A role used outside its kinds, a sort key on a style without a `sort` role, and a request name already used by the route's `query` are compile errors naming the style. The route sets the limits (`maxLimit`, `defaultLimit`), or they come from `conventions.paging`.
 
 ### 15. The presets of the first-party packs
 
@@ -1066,6 +1084,7 @@ formats:
       item: { body: { data: $payload } }
       table: { body: { data: $payload } }
       list: { body: { data: $payload } }
+      page: { body: { data: $items, meta: $meta } }
 pagings:
   laravelPages:
     absent: null

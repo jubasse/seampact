@@ -184,7 +184,7 @@ Codes declared on tree nodes (A35) are collected by the derive pass: it walks ev
 
 The default wire format (A30), as fixed members so every target writes the same bytes. ADR 0002 section 15 writes it as format data.
 
-- Success: the bare payload for every shape: the item, the id-keyed object of a table, the array of an unpaged list. `bare` declares no paging style: a paged list takes its whole shape, body and headers, from the paging style it names, and a paged list with neither a style nor a pack fails to compile (A31, ADR 0002 section 10).
+- Success: the bare payload for every shape: the item, the id-keyed object of a table, the array of an unpaged list, and the item array of a page. `bare` declares no paging style and no `$meta`: a paged list adds the headers and links of the style it names, or takes the style's whole body, and a paged list with neither a style nor a pack fails to compile (A31, ADR 0002 sections 10 and 14).
 - Error: `Content-Type: application/problem+json` (RFC 9457), with members:
 
 | Member | Value |
