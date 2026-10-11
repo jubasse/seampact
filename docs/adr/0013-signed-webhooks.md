@@ -6,7 +6,7 @@ Status: accepted
 
 Inbound signed webhooks are in v1, minimal (amendment A5). A third-party caller, such as a payment provider or a media server, has no user token; it proves itself by signing the request with a shared secret. The first consumer is a Stripe-style scheme: a header carrying a timestamp and an HMAC-SHA256 of `"{timestamp}.{raw body}"`, a five-minute tolerance, and a raw body requirement (`.work/arthome-research.md` section 14).
 
-Authentication stays neutral (A25, ADR 0012): the generated boundary must not force a verification implementation on the application. FR-20 asks for a signed identity kind, a declared scheme, and an optional runtime helper that implements the scheme behind the authenticate hook, with test vectors computed by an independent tool.
+Authentication stays neutral (A25, ADR 0012): the generated boundary must not force a verification implementation on the application. A40 settles the tension between A5's "minimal" and A36: a sender whose signature no template describes must still fit, so the scheme has a neutral form that leaves verification to the application. FR-20 asks for a signed identity kind, a declared scheme, and an optional runtime helper that implements the scheme behind the authenticate hook, with test vectors computed by an independent tool.
 
 The keywords are defined by the grammar (ADR 0002). YAML below is illustration only, syntax per ADR 0002.
 
@@ -14,7 +14,9 @@ The keywords are defined by the grammar (ADR 0002). YAML below is illustration o
 
 ### A signed identity kind with a declared scheme
 
-A signed identity is an identity like any other: deny by default still applies, and its routes resolve to it. Its scheme declares:
+A signed identity is an identity like any other: deny by default still applies, and its routes resolve to it. Its scheme's `verify` is `template`, the default, or `application`.
+
+With `verify: template`, the scheme declares:
 
 | Field | v1 values | Meaning |
 |---|---|---|
@@ -49,6 +51,28 @@ Header parsing is fixed by the format:
 - A format made of comma-separated `name={placeholder}` items is parsed as comma-separated `name=value` pairs. The pair bound to `{sig}` may repeat; each value is a candidate signature, which supports secret rotation. Pairs whose name is not in the format are ignored (Stripe's `v0`, for example). The `{ts}` pair must appear exactly once and be a whole number of Unix seconds.
 - A format made of a literal prefix and `{sig}` (`sha256={sig}`) is parsed by removing the prefix.
 - A header that is missing or does not parse answers 401 at once; the authenticate hook is not called.
+
+### The neutral form: `verify: application`
+
+Standard Webhooks (Svix, and so Clerk) signs `{id}.{timestamp}.{body}` with the id and the timestamp in two other headers and space-separated `v1,<sig>` values; Slack signs `v0:{ts}:{body}` with the timestamp in `X-Slack-Request-Timestamp`; Discord uses Ed25519. No template of the table above describes them, and A25 says any library plugs in behind the hook. With `verify: application`, the scheme keeps `name` (the signature header) and lists in `headers` the other headers the hook needs; `format`, `algorithm`, `payload`, `encoding` and `tolerance` are refused, and `key` is optional (ADR 0002 section 9):
+
+```yaml
+# illustration, syntax per ADR 0002 section 9
+schemes:
+  clerkWebhook:
+    kind: signature
+    verify: application
+    name: svix-signature
+    headers: [svix-id, svix-timestamp]
+identities:
+  clerk:
+    kind: signed
+    scheme: clerkWebhook
+    principal: WebhookCaller
+    unknownKeys: { ignore: "Clerk adds event fields without notice." }
+```
+
+The boundary captures the raw body, answers 401 when the signature header is missing, and otherwise calls the authenticate hook with the raw bytes, the signature header and the declared headers exactly as received. The application verifies with the sender's own library (`svix`, Slack's SDK, an Ed25519 routine) or its own code, and answers the principal or the 401. Everything the compiler derives below applies to both forms. A Slack sender posting a form body is a signed identity on a route with `inputMedia: form` (ADR 0002 section 7): the hook verifies over the raw bytes, then the boundary decodes the form.
 
 Outbound webhooks, vendor presets (`preset: stripe`) and schemes without a signature are out of v1 (FR-20). The real media-server hook may carry no signature at all; that would be a new scheme kind, added through the open IR enum without a breaking change (ADR 0005).
 
@@ -98,16 +122,16 @@ A route `github: { method: post, path: 'github/{workspaceId}', pathParams: { wor
 
 ### Where the verification happens
 
-The generated boundary captures the raw body, parses the signature header and calls the identity's authenticate hook with the raw bytes and the parsed fields (timestamp, candidate signatures, and the key id from the scheme's `key`). The hook answers the principal or the declared 401. The boundary does not verify the MAC itself, because the secret store and the policy (one secret, several during rotation, one per tenant) belong to the application.
+For a template scheme, the generated boundary captures the raw body, parses the signature header and calls the identity's authenticate hook with the raw bytes and the parsed fields (timestamp, candidate signatures, and the key id from the scheme's `key`). The hook answers the principal or the declared 401. The boundary does not verify the MAC itself, because the secret store and the policy (one secret, several during rotation, one per tenant) belong to the application.
 
-Each ecosystem has an optional helper that implements the declared scheme behind the hook: `@seampact/signed-webhooks` (npm, every Node server target), `io.github.jubasse:seampact-signed-webhooks` (JVM) and `seampact/signed-webhooks` (Composer). The application gives it a secret lookup, from key id to the list of currently valid secrets; the helper never stores a secret. It:
+Each ecosystem has an optional helper that implements a template scheme behind the hook: `@seampact/signed-webhooks` (npm, every Node server target), `io.github.jubasse:seampact-signed-webhooks` (JVM) and `seampact/signed-webhooks` (Composer). The application gives it a secret lookup, from key id to the list of currently valid secrets; the helper never stores a secret. It:
 1. rebuilds the signed payload from the template, using the raw bytes exactly as received;
 2. computes the MAC with each valid secret;
 3. decodes each candidate signature with the declared encoding; a candidate that does not decode, or has the wrong length, fails;
 4. compares in constant time (`crypto.timingSafeEqual`, `MessageDigest.isEqual`, `hash_equals`); one match passes;
 5. refuses when the distance between the timestamp and now exceeds the tolerance, in either direction; the clock is injectable for tests.
 
-Raw body capture uses each framework's own facility (A30): the `rawBody` option in NestJS, a buffer content-type parser on the route in Fastify, `express.raw` on the route in Express, `request.raw()` in AdonisJS, a byte-array body in the generated Spring controller, `getContent()` in Laravel and Symfony. No middleware may re-serialize the body before capture.
+Raw body capture uses each framework's own facility (A30): the `rawBody` option in NestJS, a buffer content-type parser on the route in Fastify, `express.raw` on the route in Express, `request.raw()` in AdonisJS, the generated servlet filter in Spring (no controller is generated, ADR 0012), `getContent()` in Laravel and Symfony. No middleware may re-serialize the body before capture.
 
 ### Test vectors
 
@@ -146,9 +170,9 @@ Signatures shortened with `...` in the table are the full values listed above.
 - A signed webhook route is declared like any route and gets the same boundary, check order and HTTP suite cases.
 - An application that already verifies signatures with a vendor SDK keeps doing so inside its authenticate hook; the helper is optional.
 - The raw body requirement constrains each target's body handling on these routes only.
-- A scheme beyond HMAC over a template (asymmetric signatures, no signature with a network allow-list) needs a new scheme kind, which the open IR enum allows without a breaking change.
+- A sender whose signature no template describes (Standard Webhooks, Slack, Ed25519) uses `verify: application` and its own verification library inside the hook. A route with no signature at all (a network allow-list) still needs a new scheme kind, which the open IR enum allows without a breaking change.
 
 ## Traceability
 
-- FRs: FR-20, FR-25 (verification behind the authenticate hook), FR-16 (signed webhooks in every server target), FR-35 (suite cases); amendments A5, A25, A30.
-- Checklist item enabled: CHK-073 (a bad or stale signature answers 401 before the handler, with a raw body and no CSRF or idempotency key).
+- FRs: FR-20, FR-25 (verification behind the authenticate hook), FR-16 (signed webhooks in every server target), FR-35 (suite cases); amendments A5, A25, A30, A39 (form bodies), A40 (the neutral form).
+- Checklist items enabled: CHK-073 (a bad or stale signature answers 401 before the handler, with a raw body and no CSRF or idempotency key), CHK-131 (`verify: application`), CHK-150 (a signed form body).
