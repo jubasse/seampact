@@ -663,7 +663,7 @@ scopes: { org: subdomain, project: path.projectId }
 - `cache: { freshness: minute, anonymous: public, vary: [Accept-Language], etag: true }`. `freshness` is a family from `conventions.cache.families` or `never` (no-store); `anonymous` (`public` or `private`) applies to anonymous callers only, since an identified caller always gets private; `etag: true` generates conditional GET (FR-33, SCN-013, SCN-086). The `Vary` entries for credentials (`Cookie`, `Authorization`, an API-key header) are derived from the schemes of the route's identity; `vary` lists only the other request headers the response depends on.
 - `budget: 300ms`: the client's default timeout and the deadline sent on an identity with a `deadline` header (SCN-043, SCN-078).
 - `bodyLimit: 2MiB`: overrides `conventions.bodyLimit` (SCN-041).
-- `idempotency: { exempt: "<reason>" }`: a write without the idempotency key (SCN-042).
+- `idempotency: { exempt: "<reason>" }`: a write without the idempotency key (SCN-042). The generated clients send the key: a client target creates a fresh key per call (a UUID v4) unless the caller passes one, and reuses it when the client itself retries that call, so a retried write runs once.
 - `internal: true`: keeps the route out of documents with `internal: exclude` (product apis only, SCN-044).
 - `upstream: [streaming, catalog]`: services from the `services` catalogue, the owning service first. The operation's maturity derives from the owning service, otherwise from `api.maturity` (FR-34).
 - `maturity: { level: experimental, reason: "<reason>" }`: a stated maturity. On a node it departs from the derived level, so it takes a reason; on the api, `maturity` is a bare level, the default every operation derives from. A stated level equal to the derived one is reported by the lint rule `seampact/redundant-maturity`, silenced through `lint.allow` (SCN-087, SCN-018).
@@ -796,7 +796,7 @@ conventions:
   format: bare
   pathCase: kebab
   paging: { default: cursor, maxLimit: 100 }
-  idempotency: { header: Idempotency-Key, replayHeader: Idempotency-Replayed, lifetime: 24h }
+  idempotency: { header: Idempotency-Key, replayHeader: Idempotency-Replayed, lifetime: 24h, methods: [post] }
   bodyLimit: 1MiB
   batch: { maxIds: 200, bodyLimit: 2MiB, budget: 150ms }
   cache: { families: { minute: 60s, five_minutes: 300s } }
@@ -815,7 +815,7 @@ conventions:
 | `paging.default` | the paging style of a list without `paging` (section 14) | none: a list with neither is a compile error naming both fixes (A31) |
 | `paging.maxLimit` | the largest `limit` a request may send | none: required when a list uses a style with a `limit` role and sets no `maxLimit` |
 | `paging.defaultLimit` | the limit of a request that sends none, and the page size of a style without `limit` | `maxLimit`; required for a style without `limit` |
-| `idempotency` | `{ header, replayHeader, lifetime }`: enables the idempotency key on every non-safe route that is not exempt (FR-7, A34) | unset: no key is derived, and an `idempotency.exempt` is a compile error naming the unused reason |
+| `idempotency` | `{ header, replayHeader, lifetime, methods, required }`: enables the idempotency key on every non-safe route whose method `methods` lists and that is not exempt (FR-7, A34). `methods` lists `post`, `put`, `patch` and `delete`, all four by default, so a POST-only policy is `methods: [post]`. `required` is `true` by default: a request without the key answers 400 from the `schemaInvalid` role; with `false` it runs without replay protection | unset: no key is derived, and an `idempotency.exempt` on a route the key does not reach is a compile error naming the unused reason |
 | `bodyLimit` | the default request body limit | `1MiB` |
 | `batch` | `{ maxIds, bodyLimit, budget }` for `batch` ops | `maxIds` required when a `batch` op sets none; `bodyLimit` from `bodyLimit`; no budget |
 | `cache.families` | freshness families and their max-age | empty: each family a `cache.freshness` names is required |
