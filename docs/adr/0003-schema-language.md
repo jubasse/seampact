@@ -86,7 +86,8 @@ Every keyword of the 2020-12 vocabularies, kept or refused. A refused keyword is
 | Keyword | Decision | Reason |
 |---|---|---|
 | `format` | kept, closed set | section 8: the portable formats plus named formats declared by packs; any other value is refused, so every target validates the same strings |
-| `contentEncoding`, `contentMediaType`, `contentSchema` | refused | binary and embedded documents are not modelled until a consumer needs them |
+| `contentMediaType`, `contentSchema` | kept, restricted | on a `string` field of a form or multipart input only, with `contentMediaType: application/json`: the text is parsed and validated against `contentSchema` (ADR 0002 section 7, A39). Files are the `file` shape (section 2), not a string with a media type, because a file has a size limit and several accepted types |
+| `contentEncoding` | refused | base64 inside JSON has no consumer; files travel as multipart parts or downloads |
 | `title`, `description` | kept | docs; `description` may be a `$file` |
 | `default` | kept, with a semantics | section 10 |
 | `deprecated` | kept | emitted to OpenAPI and read by the diff |
@@ -106,6 +107,7 @@ A schema is one of:
 - a merged object: `allOf` of object schemas;
 - a derived object: `pick` or `omit` of another object schema (below);
 - an opaque value: `{ opaque: "<reason>" }` (below);
+- a file: `{ file: { media: [<media type or range>], maxSize: <size> } }`, both keys optional, only as a field (or the items of an array field) of a multipart input, or as a whole response body, a download (ADR 0002 section 7). Targets type it as their framework's upload object on input and as content with a media type on output; OpenAPI shows it as `type: string` with `contentMediaType`;
 - a reference: a string, or `$ref`, to a named schema.
 
 An object needs at least one property, except a union variant, which may hold only its tag (section 3). A schema with no recognisable shape, such as `{}`, is refused: a free-form value is written as an opaque value, with its reason.
@@ -205,7 +207,7 @@ GithubEvent:
 
 ### 4. Direction
 
-Every use of a schema is input or output, known from where it appears: `input`, `query`, `pathParams`, request `headers` and rule proofs are input; `output`, `responses`, error params and response headers are output; a principal is output of the authenticate hook. The IR records, per named schema, the directions it is used in, and the compiler propagates direction through references, so a schema used both ways is checked both ways (FR-3, CHK-047, CHK-049).
+Every use of a schema is input or output, known from where it appears: `input` (JSON, form or multipart), `query`, `pathParams`, request `headers` and rule proofs are input; `output`, `responses`, error params and response headers are output; a principal is output of the authenticate hook. The IR records, per named schema, the directions it is used in, and the compiler propagates direction through references, so a schema used both ways is checked both ways (FR-3, CHK-047, CHK-049).
 
 | | Input (strict) | Output |
 |---|---|---|
@@ -374,7 +376,7 @@ Every named schema becomes a named type in every target. An inline schema gets a
 ### 13. What a schema never holds
 
 - Envelope, page or error-body fields: they come from the wire format (A30, ADR 0002 section 13). A handler returns the unwrapped payload; the IR stores it and a reference to the format.
-- Validator idioms: no transform, coercion, custom message, async check or library-specific keyword. Query decoding (strings to numbers and booleans, lone values to lists) is IR data, not a schema behaviour (FR-30).
+- Validator idioms: no transform, coercion, custom message, async check or library-specific keyword. Query and form decoding (strings to numbers and booleans, lone values to lists) is IR data, not a schema behaviour (FR-30).
 - Authorization: a schema names a right through `restrictedTo`; it never decides one.
 
 ## Consequences

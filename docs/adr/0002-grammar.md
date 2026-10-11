@@ -175,7 +175,7 @@ The loader applies P1 to P4 to every plain scalar (keys and values) with these e
 
 In data positions (examples), null is written `null`; `~`, `Null`, `NULL` and an empty value are refused there too. A `$ref` resolves by name, so a cycle through it is a recursive schema, which is legal and independent of the file layout (ADR 0003 section 2).
 
-No keyword of the grammar is a word that YAML 1.1 reads as a boolean (`on`, `off`, `yes`, `no`), so a keyword never needs quoting. Prose is another matter: in a flow mapping (`{ ... }`), a plain value ends at `, ` or `: `, so `{ title: No such workspace, or not a member. }` holds two keys. Quote prose (`title`, `summary`, `reason` and every docs string) in a flow mapping, or write it in block style; the examples of the ADRs do. A plain mapping key is a string, except in a mapping keyed by HTTP status (`responses`), where keys are plain integers from 200 to 299: only success responses are written. Error statuses come from codes (section 11), 304 is derived from `cache.etag`, and other 3xx responses are not modelled until a consumer needs them.
+No keyword of the grammar is a word that YAML 1.1 reads as a boolean (`on`, `off`, `yes`, `no`), so a keyword never needs quoting. Prose is another matter: in a flow mapping (`{ ... }`), a plain value ends at `, ` or `: `, so `{ title: No such workspace, or not a member. }` holds two keys. Quote prose (`title`, `summary`, `reason` and every docs string) in a flow mapping, or write it in block style; the examples of the ADRs do. A plain mapping key is a string, except in a mapping keyed by HTTP status (`responses`), where keys are plain integers: a success from 200 to 299, or a redirect, 301, 302, 303, 307 or 308 (section 7). Error statuses come from codes (section 11), and 304 is derived from `cache.etag`.
 
 One comment has a meaning, to editors only: the modeline, the first line of a contract file, fragments included (FR-9, SCN-046). It is optional, and `compile` never reads or checks it. `@seampact/spec` publishes an authoring schema per file kind (workspace, api, base, pack) and per fragment kind, that is, per mapping an include site may expect: a tree node, a name-keyed catalogue file (`schemas`, `errors`, `rights` and the other catalogues), a node's `errors` map, `conventions`, a schema. A fragment's kind is the one its include site expects. `seampact init` writes the modeline of each file it creates, and `seampact init --modelines` writes or corrects the modeline of every file of an existing workspace, taking each fragment's kind from its include site.
 
@@ -406,7 +406,8 @@ assign:
 | `operationId` | replaces the derived id |
 | `query` | a fields map, or a schema name; an object-typed field and a list are encoded as `conventions.query` says, and an undeclared key is refused (FR-30) unless `unknownQuery` says otherwise (below). Written on a node, it reaches the safe routes below it only (section 8) |
 | `headers` | request headers: a fields map keyed by header name |
-| `input` | the body schema (`application/json`) |
+| `input` | the body schema, in the media `inputMedia` names |
+| `inputMedia` | `json` (the default, `application/json`), `form` (`application/x-www-form-urlencoded`) or `multipart` (`multipart/form-data`); see "Bodies beyond JSON" below |
 | `output` | the body of the single success response, always the whole payload: its status is the op's default, or `200` |
 | `item` | instead of `output`, on a route that is a list: the schema of one record (section 10) |
 | `responses` | several responses keyed by status, instead of `output` |
@@ -425,7 +426,7 @@ An undeclared query key is refused by default. Tracking parameters (`utm_*`), ca
 unknownQuery: { ignore: "Marketing links add utm_* parameters to every page." }
 ```
 
-`responses` maps a status to `{ body, headers, description }`; `headers` is a fields map of response headers keyed by name. It serves several 2xx on one route (SCN-038), a `202` with `Location` and `Retry-After` (SCN-039) and a `DELETE` answering 200 with a body (SCN-040). Only success responses are written here; error responses come from error codes (section 11).
+`responses` maps a status to `{ body, headers, description }`; `headers` is a fields map of response headers keyed by name. It serves several 2xx on one route (SCN-038), a `202` with `Location` and `Retry-After` (SCN-039), a `DELETE` answering 200 with a body (SCN-040), and redirects (below). Only success and redirect responses are written here; error responses come from error codes (section 11).
 
 ```yaml
 # tasks/api.yaml (excerpt: a member route)
@@ -435,6 +436,60 @@ export:
     202:
       headers: { Location: Url, Retry-After: RetryAfterSeconds }
 ```
+
+#### Bodies beyond JSON
+
+Uploads, downloads, form posts and redirects are part of the contract, typed like any body (A39), and every target renders them with its framework's own mechanism (ADR 0012).
+
+```yaml
+# tasks/api.yaml (excerpt: member routes of tasks, and a hook)
+attach:
+  method: post
+  inputMedia: multipart
+  bodyLimit: 25MiB
+  input:
+    type: object
+    required: [file]
+    properties:
+      file: { file: { media: [image/png, image/jpeg, application/pdf], maxSize: 20MiB } }
+      caption: { type: string, maxLength: 200 }
+      meta:
+        type: string
+        contentMediaType: application/json
+        contentSchema: AttachmentMeta
+  output: Attachment
+download:
+  method: get
+  output: { file: { media: [application/pdf, text/csv] } }
+slackCommand:
+  method: post
+  identity: slack
+  inputMedia: form
+  input: SlackCommand
+  output: SlackReply
+```
+
+- `inputMedia: form` reads an `application/x-www-form-urlencoded` body. `input` is then an object whose fields decode like query fields (section 7: numbers, booleans, lists and objects as `conventions.query` says), plus text fields holding JSON (below). Slack's slash commands and its interactivity `payload` arrive this way.
+- `inputMedia: multipart` reads a `multipart/form-data` body. Its fields are those of a form, plus files: a field whose schema is `{ file: { media, maxSize } }`, or an array of them (`maxItems` bounds the count). `media` lists the accepted media types or ranges (`image/*`), checked against each part's declared `Content-Type`; `maxSize` bounds one file. A file outside `media` or above `maxSize` is an input issue (400 from `schemaInvalid`, rule `media` or `maxSize`); a body above the route's `bodyLimit` is 413, and a `bodyLimit` smaller than a file's `maxSize` is a compile error naming both. The handler receives each file as the framework's own upload object (name, media type, size, content), its client file name untrusted text.
+- A text field of a form or multipart body may hold JSON: `contentMediaType: application/json` with `contentSchema`, the JSON Schema keywords for it (ADR 0003 section 1). The text is parsed and validated against the schema with the input rules, and the handler receives the parsed value.
+- A file as `output`, or as the `body` of a `responses` entry, is a download: the handler returns the content (bytes or a stream), its media type when `media` lists several, and optionally a file name and `disposition` (`attachment` by default, or `inline`), which the boundary writes as `Content-Disposition`. A download bypasses the wire format: it is never wrapped. With `cache.etag`, the handler also returns the entity tag, since the boundary does not buffer a stream to hash it.
+- A redirect is a `responses` entry keyed 301, 302, 303, 307 or 308, with no body; the compiler adds its `Location` header, required and typed as a `uri-reference`, and the handler returns the status (when the route has several) and the location. That covers an OAuth callback (302 to the app) and a `303 See Other` after a POST. Generated clients return the status and the location instead of following the redirect where the platform allows it; a browser fetch follows it, so a browser client documents a redirect route as one to navigate to.
+
+```yaml
+# tasks/api.yaml (excerpt: an OAuth callback and a form post)
+oauthCallback:
+  method: get
+  access: { public: "The provider redirects the browser here before any session exists." }
+  query: { code: { type: string }, state: { type: string } }
+  responses: { 302: {} }
+submitFeedback:
+  method: post
+  inputMedia: form
+  input: Feedback
+  responses: { 303: {} }
+```
+
+Form and multipart writes are writes like any other: CSRF on a cookie scheme that declares it, and the idempotency key when enabled, apply to them. A request body of raw bytes (an image sent with `PUT`) is not modelled until a consumer needs it (lesson 5).
 
 #### Relays
 
@@ -454,7 +509,7 @@ surfaces:
 A relay route is marked by `relays: <api>.<operationId>`, naming an operation of a sibling api of the workspace or of an api in `workspace.imports` (section 1). It sits in a surface root's `routes`, and its name is the public operation id, which is also its own; a different name is a compile error naming both, unless the route sets `operationId`. That is how a service api relays two operations of the same id, one from a sibling api and one from an import: `getBillingTask: { relays: billing.getTask, operationId: getBillingTask }`. The link step pairs the two operations by `relays`, whatever the id. The public operation's shape is copied, each copied element carrying `derivedFrom` with the derivation `relay.route` and the public operation's origin:
 
 - the method, and the path after the public surface's prefix, appended to this surface's prefix (`/internal/v1/channels/{channelId}/tasks/{taskId}`), with the schemas of its path parameters;
-- the query parameters, the declared request headers, the body input (with its `unknownKeys`), the success responses with their shapes and headers, the paging style and limits of a list, its sort keys without their rights, `concurrency`, and the wire format;
+- the query parameters, the declared request headers, the body input (with its media and its `unknownKeys`), the success responses with their shapes and headers, the paging style and limits of a list, its sort keys without their rights, `concurrency`, and the wire format;
 - the codes the public operation answers from its domain rather than from its access: those attached through `errors` on its nodes or by a pack entry, and its `notFound` code (`member.notFound`, `owner.caller`), each with its declaration.
 
 The schemas, enums, scalars, formats, paging styles and error declarations the copies use join this api's IR. A name this api already declares must be the same declaration (a shared file, section 2); a different one is a compile error naming both.
@@ -482,7 +537,7 @@ Every node may set the settings below; its descendants inherit them, and the IR 
 | `headers`, `query` | added; one name declared twice is an error. `query` reaches safe routes only: a write route below a node's `query` does not get it |
 | `upstream`, `maturity`, `internal`, `deprecated`, `budget`, `bodyLimit`, `cache`, `csrf`, `idempotency`, `format`, `unknownQuery`, extension keys | the nearest wins |
 
-`owner`, `concurrency`, `ops`, `id`, `idProperty`, `singular`, `resourceType`, `item`, `path`, `pathParams`, `paging`, `sortable`, `filteredBy`, `degradable`, `relays`, `examples` and docs are not inherited (`lint.allow` is, section 12): each applies to the node or element it is written on. Three inherited settings have limits: `deprecated.successor` is written on a route only, since one successor cannot serve several operations; `cache` applies to the GET routes below it and is refused on a non-GET route; a stated `maturity`, written on the route or inherited, wins over the one derived from `upstream`. An inherited requirement cannot be removed below; a route that needs fewer requirements belongs elsewhere in the tree. This keeps every requirement of a route visible in its ancestry. Since the tree is the URL, "elsewhere" is a sibling group (section 6) whose multi-segment `path` reaches the same URL without the requiring node:
+`owner`, `concurrency`, `ops`, `inputMedia`, `id`, `idProperty`, `singular`, `resourceType`, `item`, `path`, `pathParams`, `paging`, `sortable`, `filteredBy`, `degradable`, `relays`, `examples` and docs are not inherited (`lint.allow` is, section 12): each applies to the node or element it is written on. Three inherited settings have limits: `deprecated.successor` is written on a route only, since one successor cannot serve several operations; `cache` applies to the GET routes below it and is refused on a non-GET route; a stated `maturity`, written on the route or inherited, wins over the one derived from `upstream`. An inherited requirement cannot be removed below; a route that needs fewer requirements belongs elsewhere in the tree. This keeps every requirement of a route visible in its ancestry. Since the tree is the URL, "elsewhere" is a sibling group (section 6) whose multi-segment `path` reaches the same URL without the requiring node:
 
 ```yaml
 # tasks/api.yaml (excerpt: under a surface's routes)
@@ -1748,7 +1803,7 @@ A right never reads the body (section 4): it is decided before the body is valid
 - Contracts carry no house convention: header names, right names, page shapes and wire formats all come from the base or from packs. Derived errors have default codes in the core (A34), each renamable, so a contract with no pack compiles; a paged list still needs a paging style (A31).
 - The grammar has four shorthands only: a string for a schema reference, `ops` as a list, `paging` as a style name, and a string in `requires` for a `requirements` entry. Each yields the same IR as its long form, the last one with the entry's name.
 - An inherited requirement cannot be removed below; a contract that needs it must restructure its tree. Revisit only with a consumer that cannot.
-- Not modelled until a consumer needs it: media types other than JSON (and the raw body of a signed identity), a base extending a base, shorthands beyond `ops`.
+- Bodies are JSON, forms, multipart uploads and file downloads, and responses include redirects (A39). Not modelled until a consumer needs it: a raw-bytes request body (beyond a signed identity's raw body), range requests, a base extending a base, shorthands beyond `ops`.
 - YAML stays the only authoring medium (A38). A one-shot importer from an OpenAPI document into this grammar is planned for v3.
 
 ## Traceability
@@ -1789,10 +1844,10 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-035 | `identity` inheritance, `routes` (8, 6) |
 | SCN-036 | `access.public`, `requires` with `bucket`, `buckets` (9) |
 | SCN-037 | `errors` (`status`, `nature`, `family`, `params`, `example`); the base natures and the `natures` catalogue; the error code pattern (11, 4) |
-| SCN-038 | `responses` with several 2xx and `headers` (7) |
+| SCN-038 | `responses` with several 2xx and `headers`; redirect statuses with their derived `Location` (7, 3) |
 | SCN-039 | `responses` 202 with `Location`, `Retry-After` (7) |
 | SCN-040 | `ops.delete` with `output` (6) |
-| SCN-041 | `conventions.bodyLimit`, `bodyLimit`, `conventions.batch` (13, 10) |
+| SCN-041 | `conventions.bodyLimit`, `bodyLimit`, `conventions.batch`; `inputMedia: multipart` with `file` fields and their `maxSize`, `inputMedia: form`, a file download (13, 10, 7) |
 | SCN-042 | `conventions.idempotency` (`enforce` included), `idempotency.exempt` (13, 10) |
 | SCN-043 | `budget` (10) |
 | SCN-044 | `api.documents` with `internal: exclude`, `internal: true` (5, 10) |

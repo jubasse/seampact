@@ -177,8 +177,10 @@ type TypeUse =                               // what a property, item, body or p
       unknownKeys?: { policy: 'refuse' | 'ignore' | 'keep'; reason?: Reason;   // input uses only (ADR 0003 section 4)
                       origin?: Origin; derivedFrom?: DerivedFrom } }          // origin: the use or 'conventions.input'
   | { kind: 'opaque'; reason: Reason; origin: Origin }   // any JSON value, unchecked (ADR 0003 section 2)
+  | { kind: 'file'; media: string[]; maxSizeBytes?: number }   // a multipart field or a download (A39)
   | { kind: 'enum'; enum: EnumId; narrowedTo?: { values: string[]; reason?: Reason } }
-  | { kind: 'scalar'; type: 'string' | 'integer' | 'number' | 'boolean'; format?: string; refinements: Refinements }
+  | { kind: 'scalar'; type: 'string' | 'integer' | 'number' | 'boolean'; format?: string; refinements: Refinements;
+      content?: { media: 'application/json'; schema: TypeUse } }   // a form or multipart text field holding JSON
   | { kind: 'array'; items: TypeUse; minItems?: number; maxItems?: number };
 ```
 
@@ -222,7 +224,10 @@ interface Operation {
   scopes: { scope: ScopeId; source: ValueSource | { resolver: true }; origin: Origin }[];   // resolution order
   requires: Requirement[];                   // pack-derived (pack, then entry order), then ancestors', then the route's own (ADR 0002 section 8)
   bindings: { from: ValueSource; to: ValueSource; origin: Origin }[];
-  input?: { media: string; schema: TypeUse; bodyLimitBytes: number; rawBody: boolean; origin };
+  input?: { media: string;                   // 'application/json', 'application/x-www-form-urlencoded', 'multipart/form-data'
+            schema: TypeUse; bodyLimitBytes: number; rawBody: boolean;
+            fields?: { name: string; wire: QueryWire | { kind: 'file' } | { kind: 'json' } }[];   // form and multipart: per top-level field
+            origin };
   responses: Response[];                     // success and derived non-error responses (304), sorted by status
   errors: { code: ErrorCode; example?: unknown; derivedFrom?: DerivedFrom; origin?: Origin }[];   // origin: the node that attached it (A35)
   fieldRights: FieldRight[];                 // empty on a relay route: the public operation projects (ADR 0002 section 7)
@@ -262,9 +267,9 @@ type Requirement =
 
 interface Response {
   status: number;
-  media?: string;                            // absent for an empty body (204, 304)
-  body?: TypeUse;                            // the unwrapped payload
-  shape: 'item' | 'table' | 'list' | 'page' | 'empty';   // the format's shape; for 'page', with the paging style's members or body
+  media?: string;                            // absent for an empty body (204, 304, a redirect); a download's media list is in its file type
+  body?: TypeUse;                            // the unwrapped payload, or a file for a download
+  shape: 'item' | 'table' | 'list' | 'page' | 'empty' | 'binary' | 'redirect';   // the format's shape; 'binary' and 'redirect' bypass the format
   headers: { name: string; type: TypeUse; required: boolean; semantic?: string; origin?: Origin; derivedFrom?: DerivedFrom }[];
   origin?: Origin; derivedFrom?: DerivedFrom;
 }
@@ -285,7 +290,7 @@ type ValueSource = { in: 'path' | 'query' | 'header' | 'body' | 'principal' | 's
 - `requires` is a union tagged by `kind`, keeping the declared order (FR-5, SCN-009). Each item's `params` are values already validated against the right's or rule's params schema.
 - `errors` lists every code the operation can answer, declared or derived, each code once (SCN-011). The status of each is read from the registry; a target builds its status union from `responses` and the statuses of `errors`. The undeclared-status 500 is listed like any other code.
 - Operation references carry the declaration kind (ADR 0014), so hook requests and `relays` stay valid when other kinds exist.
-- Query parameters carry their wire form: `{ name, type, required, wire: { kind: 'number' | 'boolean' | 'list' | 'text' | 'object'; style: 'form' | 'deepObject'; explode: boolean; brackets: boolean }, default?, origin }` (FR-30); `brackets` marks a list sent as `name[]` (ADR 0002 section 7), which the document writes as a parameter named `name[]`.
+- Query parameters carry their wire form: `{ name, type, required, wire: { kind: 'number' | 'boolean' | 'list' | 'text' | 'object'; style: 'form' | 'deepObject'; explode: boolean; brackets: boolean }, default?, origin }` (FR-30). That `wire` value is the `QueryWire` that form and multipart fields reuse; `brackets` marks a list sent as `name[]` (ADR 0002 section 7), which the document writes as a parameter named `name[]`.
 
 ```ts
 interface Cache {
@@ -407,9 +412,9 @@ The table is what the emitter can write; the app config chooses, per document, w
 | `concurrency` | the version as an ordinary parameter or body property, `ETag` on the responses carrying the item, plus `x-seampact-concurrency: { version, field }` |
 | `idempotency` | the key header parameter and the replay response header, plus `x-seampact-idempotency: { header, replayHeader, lifetimeMs, required, enforce }`, or `{ exempt: <reason> }` |
 | `owner` | `x-seampact-owner: caller` |
-| `input` | the request body with the format's media type. Component schemas carry no `additionalProperties: false`, since one schema serves both directions: strict input is the default every reader of a seampact document assumes, and an ignoring or keeping use writes `x-seampact-unknown-keys: { ignore: <reason> }` or `{ keep: <reason> }` on the request body |
+| `input` | the request body with its media type: the format's for JSON; `application/x-www-form-urlencoded` with an `encoding` entry per list or object field (`style: form`, `explode` as the conventions say); `multipart/form-data` with each file field as `type: string` with `contentMediaType` (the media list in the part's `encoding.contentType`) and `x-seampact-max-size`, and each JSON text field with `contentMediaType: application/json` and `contentSchema`. Component schemas carry no `additionalProperties: false`, since one schema serves both directions: strict input is the default every reader of a seampact document assumes, and an ignoring or keeping use writes `x-seampact-unknown-keys: { ignore: <reason> }` or `{ keep: <reason> }` on the request body |
 | `unknownQuery` | `x-seampact-unknown-query: { ignore: <reason> }` on an operation that ignores undeclared query keys |
-| `responses` | the success responses, each body the format's shape written out around a reference to the payload schema, with the format's media type |
+| `responses` | the success responses, each body the format's shape written out around a reference to the payload schema, with the format's media type; a download as one content entry per media type, each `{ schema: { type: string, contentMediaType } }`, with `Content-Disposition`; a redirect as its status with the `Location` header and no content |
 | `errors` | one response per error status, its `description` the list of its codes, its body the format's error body; each code is a component schema of that body for the code's params, named by the code (`api.forbidden`), with `x-seampact-nature`. Several codes on one status are a `oneOf`, with a `discriminator` on the member the format writes `$code` to when it is a top-level member (`code` under `bare`). The response carries `x-seampact-errors: [{ code, derivedFrom, origin }]`: each code's derivation, or the node that attached it |
 | `examples` | the route examples, wrapped through the format and the paging style (ADR 0002 section 12), in the `examples` of the request body or of the response for their status or code |
 | `cache` | the `Cache-Control` response header (its directives from the family) with `x-seampact-cache-control: { anonymous, identified }`, one value per caller kind, plus `ETag`, `If-None-Match` and the 304 when `etag` is set |
