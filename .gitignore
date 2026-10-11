@@ -5,3 +5,4 @@ coverage/
 .work/
 .DS_Store
 .favir/
+.vitest/
