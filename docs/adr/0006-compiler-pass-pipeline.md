@@ -110,7 +110,8 @@ Every derived element carries `derivedFrom: { derivation, from }` with a derivat
 | `csrf.cookieWrite` | a non-safe operation whose write schemes include a cookie scheme that declares `csrf` (opt-in, A34), not `csrf.exempt` | the CSRF header parameter, 403 | `csrfInvalid` |
 | `idempotency.write` | a non-safe operation when `conventions.idempotency` is set (opt-in, A34), not exempt, not under a signed identity | the key header parameter, the replay response header, two 409s | `idempotencyKeyReused`, `idempotencyInProgress` |
 | `concurrency.version` | `update`, `delete`, or `concurrency: inherit`, on a versioned resource | the version parameter, typed like `field` and added after the authored fields (a body source on a DELETE becomes the query parameter of the same name, A33), `ETag` from `field` with `header.If-Match`, 409 | `stateConflict` |
-| `owner.caller` | a member route of a collection with `owner: caller` | 404, answered by the handler through its typed `notFound` result | `notFound` |
+| `member.notFound` | a route below a collection's `member` scope, nested resources included: its path holds an id the client chose | 404, answered by the handler through its typed error result (ADR 0012) | `notFound` |
+| `owner.caller` | a member route of a collection with `owner: caller` | 404 for another caller's id, answered by the handler through its typed error result | `notFound` |
 | `principal.requires` | `principal.requires` | 403 | `forbidden` |
 | `binding.mismatch` | `bindings` | 403 | `forbidden` |
 | `requirement.errors` | each requirement | the right's or rule's codes | declared |
@@ -152,7 +153,7 @@ The Data column lists what the boundary produces for each role. A datum marked r
 
 | Role | Default code | Status | Nature | Data, and the default code's params |
 |---|---|---|---|---|
-| `schemaInvalid` | `api.schema_invalid` | 400 | refused | `issues` (required): a list of `{ in, pointer, rule }` |
+| `schemaInvalid` | `api.schema_invalid` | 400 | refused | `issues` (required): a list of `{ in, pointer, rule }`, where `in` is `path`, `query`, `header` or `body` |
 | `unauthenticated` | `api.unauthenticated` | 401 | refused | none |
 | `forbidden` | `api.forbidden` | 403 | refused | `pointer`: the restricted input field; required on an operation with a rejected restricted input field, absent otherwise |
 | `csrfInvalid` | `api.csrf_invalid` | 403 | refused | none |
@@ -175,7 +176,7 @@ A rule with `bucket: true` declares its own codes; when it declares none, it ans
 
 #### Error declarations on the tree
 
-Codes declared on tree nodes (A35) are collected by the derive pass: it walks every node's `errors` through `inherited`, registers each declaration in `errors` with the node as its origin, and refuses a code declared twice with different definitions, naming both locations. An attachment (`{}` or `{ example }`) of a code that no layer and no node declares, and that is not a default code, is a compile error naming the code. Per operation, `errors` is the union of the codes attached at the api level (`conventions.errors.every`), at every ancestor and at the route, plus the derived ones; each keeps the origin of the node that attached it, and the nearest narrowed example wins.
+Codes declared on tree nodes (A35) are collected by the derive pass: it walks every node's `errors` through `inherited`, registers each declaration in `errors` with the node as its origin, and refuses a code declared twice with different definitions, naming both locations. An attachment (`{}` or `{ example }`) of a code that no layer and no node declares, and that is not a default code, is a compile error naming the code. Per operation, `errors` is the union of the codes attached at the api level (`conventions.errors.every`), at every ancestor whose attachment reaches it (`reach`, ADR 0002 section 11) and at the route, plus the derived ones; each keeps the origin of the node that attached it, and the nearest narrowed example wins.
 
 ### 7. The `bare` format
 

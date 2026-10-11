@@ -394,7 +394,7 @@ Every node may set the settings below; its descendants inherit them, and the IR 
 | `scopes` | added; entering a scope twice is an error |
 | `principal.requires` | union |
 | `bindings` | added; one key bound to two different values is an error |
-| `errors` | union; a code declared on a node joins the api registry; an example narrowed by the nearest node wins |
+| `errors` | union, each attachment within its reach (section 11); a code declared on a node joins the api registry; an example narrowed by the nearest node wins |
 | `errorRoles` | per role, the nearest wins, over `conventions.errors.derived` |
 | `tags` | union |
 | `headers`, `query` | added; one name declared twice is an error |
@@ -672,18 +672,24 @@ Codes are declared at every level of the tree (A35): in the `errors` catalogue (
 - `{ example }`: attaches it and narrows its example to this subtree's case;
 - a declaration (it holds `status`): declares the code and attaches it.
 
+Each of the three may add `reach`, below.
+
 ```yaml
 # tasks/api.yaml (excerpt: node settings of tasks)
 errors:
-  api.not_found: {}
-  tasks.not_found: { status: 404, title: No such task in this channel. }
-  tasks.locked: { status: 423, title: Another editor holds the task., params: { lockedBy: UserId } }
+  state.conflict: {}
+  tasks.not_found: { status: 404, title: 'No such task in this channel.' }
+  tasks.locked:
+    status: 423
+    title: 'Another editor holds the task.'
+    params: { lockedBy: UserId }
+    reach: resource
   api.rate_limited: { example: { retryAfterMs: 30000 } }
 errorRoles:
   notFound: tasks.not_found
 ```
 
-A node's codes attach to every operation below it; children add codes or narrow an example, never remove one (section 8). `conventions.errors.every` attaches codes to every operation. Codes are api-wide, whatever level declares them: a code declared on a node joins the api's registry and any other node may attach it by name. Declaring a code a second time with a different definition is a compile error naming both locations; re-attaching it, here or below, is how it is reused. Rights, rules, scopes and identities list the codes they may answer, attached with `derivedFrom` in the IR. The IR records, for each operation's code, the node it was attached at, and for each declaration where it was declared (ADR 0004).
+A node's codes attach to the operations below it; children add codes or narrow an example, never remove one (section 8). How far "below" goes is the attachment's reach. `subtree`, the default (A35), attaches the code to every operation below the node, child resources included. `resource` stops at the resource boundary: the code reaches the node's own `ops` and the routes of its `collection`, `member` and `routes` maps, but no child node with `kind` (a nested collection or single) and nothing below one. `conventions.errors.reach` sets the api's default; `reach` on one attachment overrides it. Above, `tasks.locked` reaches `updateTask` and `assignTask`, not the routes of a `comments` collection nested under a task, so their error unions list only what they can answer. `conventions.errors.every` attaches codes to every operation. Codes are api-wide, whatever level declares them: a code declared on a node joins the api's registry and any other node may attach it by name. Declaring a code a second time with a different definition is a compile error naming both locations; re-attaching it, here or below, is how it is reused. Rights, rules, scopes and identities list the codes they may answer, attached with `derivedFrom` in the IR. The IR records, for each operation's code, the node it was attached at, and for each declaration where it was declared (ADR 0004).
 
 `nature` is a closed set that tells a client whether retrying can help: `refused` (retrying the same request cannot succeed), `unavailable` (retrying later may succeed) and `failed` (the server failed). No layer adds a nature, so every client keeps one retry rule and the authoring schema refuses any other value with the allowed list (SCN-037).
 
@@ -691,7 +697,7 @@ A node's codes attach to every operation below it; children add codes or narrow 
 
 Derived errors answer roles, never fixed codes: `unauthenticated` (401), `csrfInvalid`, `forbidden`, `sortKeyForbidden` (403), `notFound` (404), `schemaInvalid` (400), `payloadTooLarge` (413), `unsupportedMediaType` (415), `stateConflict`, `idempotencyKeyReused`, `idempotencyInProgress` (409), `gone` (410), `rateLimited` (429), `undeclaredStatus` (500), `upstreamUnavailable` (502), `serviceUnavailable` (503), `upstreamTimeout`, `deadlineExceeded` (504). The derivation table that uses them is ADR 0006 section 5.
 
-Every role has a default code in the core (`api.schema_invalid`, `api.forbidden` and the others of ADR 0006 section 6), registered when used and rendered through the api's format, so a contract with no pack compiles (A34). A role is renamed for the whole api by `conventions.errors.derived`, or for a subtree by `errorRoles` on any node, the nearest binding winning (A35). A binding is a code, or `{ code, params }`:
+Every role has a default code in the core (`api.schema_invalid`, `api.forbidden` and the others of ADR 0006 section 6), registered when used and rendered through the api's format, so a contract with no pack compiles (A34). A role is renamed for the whole api by `conventions.errors.derived`, or for a subtree by `errorRoles` on any node, the nearest binding winning (A35). Above, every route of the tasks subtree that derives `notFound` answers `tasks.not_found`: the member routes of a collection derive it because the client chose the id (ADR 0006 section 5), and the handler answers it, as any code its operation lists, through a typed error result (ADR 0012). A binding is a code, or `{ code, params }`:
 
 ```yaml
 # shared/base.yaml (excerpt)
@@ -792,6 +798,7 @@ conventions:
 | `degradedHeader` | the header listing degraded parts | unset: required for a `degradable` route whose format has no `degraded` meta field |
 | `rights.pattern` | a pattern every right name must also match (section 2) | unset: the core pattern only (A20) |
 | `errors.every` | codes attached to every operation (section 11) | empty |
+| `errors.reach` | `subtree` or `resource`: how far a code attached on a node reaches (section 11) | `subtree` (A35) |
 | `errors.derived` | role bindings (section 11) | the default codes of ADR 0006 section 6 (A34) |
 
 The core imposes no wire format (A30). `format: bare`, the default, is itself written as format data below: every success body is the bare payload, and an error is an RFC 9457 `application/problem+json` body whose members are fixed in ADR 0006 section 7. `bare` has no paging style, because the core imposes no page shape either (A31, section 14). Every other format (an envelope like Arthome's, JSON:API, HAL, JSON-LD and Hydra, Laravel resources and paginators, Spring Page and ProblemDetail) is declared in `formats`, usually by a convention pack, and selected with `conventions.format`; each target maps it onto its framework's own mechanism (FR-42, SCN-048, SCN-100).
