@@ -32,13 +32,13 @@ npm, scope `@seampact` (A1, A27):
 
 | Package | Role | Content |
 |---|---|---|
-| `spec` | core | authoring JSON Schema, IR JSON Schema and TypeScript types, pack and app-config schemas, naming algorithm and vectors, the compatibility matrix |
+| `spec` | core | authoring JSON Schemas, one per file kind and per fragment kind, for editor modelines (ADR 0002 section 3), IR JSON Schema and TypeScript types, pack and app-config schemas, naming algorithm and vectors, the compatibility matrix |
 | `compiler` | core | loader, pass pipeline, packs, workspace mode, bundle writing and verification |
-| `openapi` | core | OpenAPI 3.1 emitter and the `x-seampact-*` extension schemas |
+| `openapi` | core | OpenAPI 3.1 emitter and the JSON Schemas of the `x-seampact-*` extensions it writes, one per row of the OpenAPI mapping (ADR 0004 section 12) |
 | `lint` | core | lint plugin API and core rules |
 | `diff` | core | compatibility classifier and release gate |
 | `codegen-core` | core | `defineTarget`, file writer, formatting hook, provider seam, version checks |
-| `cli` | core | `init`, `compile`, `check`, `lint`, `diff`, `generate`, `bundle` |
+| `cli` | core | `init`, `compile`, `check`, `lint`, `diff`, `generate`, `bundle`, `explain`; `compile --editor-schemas` writes the workspace's editor schemas into `.seampact/schemas/`, which no package ships |
 | `codegen-ts`, `codegen-zod`, `codegen-yup`, `codegen-class-validator`, `codegen-fetch` | target | types, validators, typed client (FR-15) |
 | `codegen-nestjs`, `codegen-fastify`, `codegen-express`, `codegen-adonis` | target | server boundaries (FR-16, FR-19) |
 | `codegen-react`, `codegen-angular`, `codegen-vue` | target | frontend clients (FR-19) |
@@ -133,6 +133,6 @@ A target maps the contract onto its framework's idiomatic mechanisms (A30): Nest
 
 ## Traceability
 
-- FRs: FR-14, FR-39, FR-25 and FR-26 (adapters optional and separate), FR-16 (runtime helpers), FR-36 (checks on packed installs); amendments A2, A24, A25, A27, A30, A32, A37.
-- Checklist items enabled: CHK-071 (the CLI pulls no target and names a missing one), CHK-077 (version ranges checked), CHK-081 (nestjs with zod and with class-validator), CHK-096 and CHK-097 (adapters as separate packages), CHK-098 (a target passes with no adapter installed), CHK-107 (format packs), CHK-114 and CHK-115 (artefact switches, OpenAPI-only setups, the compatibility matrix).
+- FRs: FR-14, FR-39, FR-25 and FR-26 (adapters optional and separate), FR-16 (runtime helpers), FR-36 (checks on packed installs), FR-9 and FR-11 (published authoring and extension schemas); amendments A2, A24, A25, A27, A30, A32, A37, A38.
+- Checklist items enabled: CHK-071 (the CLI pulls no target and names a missing one), CHK-077 (version ranges checked), CHK-081 (nestjs with zod and with class-validator), CHK-096 and CHK-097 (adapters as separate packages), CHK-098 (a target passes with no adapter installed), CHK-107 (format packs), CHK-114 and CHK-115 (artefact switches, OpenAPI-only setups, the compatibility matrix), CHK-120 (the published `x-seampact-*` schemas), CHK-122 (editor schemas), CHK-123 (`explain`).
 - Success metrics: SM-5, SM-8.

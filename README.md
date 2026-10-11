@@ -29,10 +29,10 @@ You install the core, then only the generators your project uses. Installing the
 
 | Package | What it does |
 |---|---|
-| `@seampact/cli` | the `seampact` command: `init`, `compile`, `check`, `lint`, `diff`, `generate`, `bundle` |
+| `@seampact/cli` | the `seampact` command: `init`, `compile`, `check`, `lint`, `diff`, `generate`, `bundle`, and `explain`, which prints one operation whole with where each part comes from |
 | `@seampact/compiler` | reads the YAML, reports errors with file, line and column, and produces the IR |
-| `@seampact/spec` | the JSON Schemas of the YAML files and of the IR, with their TypeScript types |
-| `@seampact/openapi` | writes one OpenAPI 3.1 document per api |
+| `@seampact/spec` | the JSON Schemas of the YAML files, one per file and fragment kind for your editor, and of the IR, with their TypeScript types |
+| `@seampact/openapi` | writes one OpenAPI 3.1 document per api, with what OpenAPI cannot say as published `x-seampact-*` extensions |
 | `@seampact/lint` | lint rules over the IR, and the API to write your own |
 | `@seampact/diff` | classifies changes between two versions as additive or breaking, per direction |
 | `@seampact/codegen-core` | the API code generators are written against |
@@ -106,7 +106,7 @@ A contract repository publishes a bundle: the YAML sources, the compiled IR and 
 ## What seampact does not do
 
 - Generate business logic, persistence, an authentication check or an authorization decision.
-- Provide a server framework, or a TypeScript API to write contracts: YAML is the only way to declare one.
+- Provide a server framework, or a TypeScript API to write contracts: YAML is the only way to declare one. An importer from an existing OpenAPI document is planned for v3.
 - Impose right names, roles, a permission model, a tenancy scheme, a wire format or a code style.
 - Model WebSocket, Server-Sent Events, gRPC or GraphQL. The IR leaves room for them; see [ADR 0014](docs/adr/0014-room-for-real-time-and-rpc.md).
 
