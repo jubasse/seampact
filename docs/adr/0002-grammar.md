@@ -282,6 +282,8 @@ surfaces:
 
 `prefix` is the surface's leading path. `{version}` is replaced by `api.version`. A prefix with no `{version}` gets `/v{version}` in front of it. A literal version segment such as `/v1` is then refused, with the mismatch stated when it differs from `api.version` (FR-2, SCN-032); the version is held once, on the api.
 
+A path in the contract is the path a client sends after the api's base URL. Where a framework adds its own prefix (a NestJS global prefix, Laravel's `/api` route group, a servlet context path, API Platform's route prefix), that prefix is deployment, not contract: the server target's `mount` in the app config states it and the boot check compares it with the framework's (ADR 0011, ADR 0012), a client takes its base URL at run time, and a document may list `servers` through its app-config options. A contract therefore never writes `/api` into a prefix to match one server.
+
 The path version is a default, not a rule (A33). `conventions.pathVersion` is `prefix` (the default) or `none`, so a pack can make "no path version" a house default, and `pathVersion` on one surface overrides it. With `none` the prefix is used exactly as written and may not hold `{version}`. That serves an api versioned by a header, a media type or a date (declared with its own headers or formats) and a webhook path a third party fixes:
 
 ```yaml
