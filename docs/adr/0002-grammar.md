@@ -112,6 +112,19 @@ conventions:
 
 Templates in `derive` use `{resource}`, the name of the collection or single the route belongs to (`tasks`), and `{op}`, the `ops` name, or the route's name for a route that did not come from `ops`. Every element an entry produces carries `derivedFrom` naming `pack.<pack>.<entry>` (ADR 0006).
 
+A contract's own derivations go in a local pack, referenced by path, since a base holds no `derive`; it declares the codes it attaches, because a pack sees only itself and the packs it extends (below):
+
+```yaml
+# packs/plank.yaml: a local pack, applied with packs: [./packs/plank.yaml]
+pack: { name: plank, version: 1.0.0, extends: [] }
+errors:
+  workspace.plan_limit_reached: { status: 409, title: 'The workspace plan allows no more of these.' }
+derive:
+  - entry: planLimit
+    select: { op: [create] }
+    attachErrors: [workspace.plan_limit_reached]
+```
+
 `conventions.rights.pattern` is the right-naming setting of ADR 0008: a regular expression that every right name, declared or derived, must match besides the core pattern of section 4.
 
 #### Layers and overrides
@@ -161,7 +174,11 @@ The loader applies P1 to P4 to every plain scalar (keys and values) with these e
 
 In data positions (examples), null is written `null`; `~`, `Null`, `NULL` and an empty value are refused there too. A `$ref` resolves by name, so a cycle through it is a recursive schema, which is legal and independent of the file layout (ADR 0003 section 2).
 
-No keyword of the grammar is a word that YAML 1.1 reads as a boolean (`on`, `off`, `yes`, `no`), so a keyword never needs quoting. A plain mapping key is a string, except in a mapping keyed by HTTP status (`responses`), where keys are plain integers from 200 to 299: only success responses are written. Error statuses come from codes (section 11), 304 is derived from `cache.etag`, and other 3xx responses are not modelled until a consumer needs them. A `# yaml-language-server: $schema=...` comment is the only comment with a meaning, and only to editors: `seampact init` writes it (FR-9, SCN-046).
+No keyword of the grammar is a word that YAML 1.1 reads as a boolean (`on`, `off`, `yes`, `no`), so a keyword never needs quoting. Prose is another matter: in a flow mapping (`{ ... }`), a plain value ends at `, ` or `: `, so `{ title: No such workspace, or not a member. }` holds two keys. Quote prose (`title`, `summary`, `reason` and every docs string) in a flow mapping, or write it in block style; the examples of the ADRs do. A plain mapping key is a string, except in a mapping keyed by HTTP status (`responses`), where keys are plain integers from 200 to 299: only success responses are written. Error statuses come from codes (section 11), 304 is derived from `cache.etag`, and other 3xx responses are not modelled until a consumer needs them. One comment has a meaning, to editors only: the modeline that `seampact init` writes as the first line of each workspace, api, base and pack file (FR-9, SCN-046). Its path is relative to the file and points at the installed `@seampact/spec`; a fragment file holds part of a mapping that no schema checks alone, so it gets none:
+
+```yaml
+# yaml-language-server: $schema=../node_modules/@seampact/spec/schemas/contract.schema.json
+```
 
 ### 4. Scalars, names and value sources
 
@@ -305,6 +322,7 @@ tasks:
 | Key | On | Meaning |
 |---|---|---|
 | `id` | collection | a fields map with one entry: the member id path parameter and its schema |
+| `singular` | collection | the noun of member operation ids, instead of the one derived from `id` (below) |
 | `item` | collection, single | the schema of one record; a collection without `ops` that need it may omit it, and a single with neither `item` nor `ops` only groups its `routes` (`me` in the worked example) |
 | `owner` | collection, single | `caller`: see write semantics |
 | `concurrency` | collection, single | `{ version: <body or query source>, field: <item field> }`; on a member route, `concurrency: inherit` |
@@ -328,11 +346,11 @@ Settings written on the collection node apply to all its routes; settings writte
 | `delete` | collection, single | `DELETE /tasks/{taskId}` | `delete` + singular | none (a versioned delete reads its version from the query or a header) | `204`, or `200` with `output` (SCN-040) |
 | `batch` | collection | `POST /tasks/batch` | `get` + plural + `Batch` (`getTasksBatch`) | `{ ids }`, at most `maxIds`, or a declared `input` | `200`, a table of `item` keyed by id |
 
-The plural is the collection's name; the singular is the id parameter's name without its trailing `Id` (`taskId` gives `task`), or the whole parameter name when it has no such suffix. For a single, the noun is the single's name. The methods, paths, operation ids and statuses above are defaults (A36): any op's settings may override `method`, `path`, `operationId`, `input`, `output`, `responses` and every node setting. `create` and `update` have no default input, because the item schema holds fields a client never sends; the missing input is a compile error naming the op. No other shorthand exists until a consumer needs one (lesson 5).
+The plural is the collection's name; the singular is the collection's `singular` when set, otherwise the id parameter's name without its trailing `Id` (`taskId` gives `task`), or the whole parameter name when it has no such suffix. `singular` keeps the id named like the item's property when the noun differs: `members` with `id: { userId: UserId }` and `singular: member` gives `listMembers` and `getMember`, and `userId` still matches `Member.userId` for the `$id` slots and the batch table. For a single, the noun is the single's name. The methods, paths, operation ids and statuses above are defaults (A36). An op mapping takes every route key of section 7 except `relays`, every inherited setting of section 8, and `maxIds` for `batch`, so any op may override its method, path, operation id, input, output and responses. `create` and `update` have no default input, because the item schema holds fields a client never sends; the missing input is a compile error naming the op. No other shorthand exists until a consumer needs one (lesson 5).
 
 A `batch` op is a safe read sent as POST: the IR marks it safe, so CSRF, idempotency and cache derivations treat it as a read. Its `maxIds`, body limit and budget default to `conventions.batch` (FR-32, SCN-084).
 
-Operation ids of other routes: a route under `member` is its name plus the singular (`assign` gives `assignTask`); under `collection`, its name plus the plural (`search` gives `searchTasks`); under a single, its name plus the single's name; under a surface root, its name. `operationId` replaces the derived id. Operation ids are unique across the api; a clash is a compile error naming both routes. Names are stored as word segments (ADR 0007).
+Operation ids of other routes: a route under `member` is its name plus the singular (`assign` gives `assignTask`); under `collection`, its name plus the plural (`search` gives `searchTasks`); under a single, its name plus the single's name; under a surface root, its name. `operationId` replaces the derived id. Operation ids are unique across the api; a clash is a compile error naming both routes. Names are stored as word segments (ADR 0007). A derived id reads as a verb and a noun when the route name is a verb (`assign`, `search`, `archive`); a noun route gives an awkward one (`activity` under a workspace member gives `activityWorkspace`, a hook named `github` gives `github`), so name routes with verbs, or set `operationId`.
 
 #### Write semantics
 
@@ -363,7 +381,7 @@ assign:
 | `method` | `get`, `post`, `put`, `patch` or `delete` |
 | `path`, `pathParams` | the segment and the schemas of its extra placeholders (all required) |
 | `operationId` | replaces the derived id |
-| `query` | a fields map, or a schema name; an object-typed field and a list are encoded as `conventions.query` says, and any undeclared key is refused (FR-30) |
+| `query` | a fields map, or a schema name; an object-typed field and a list are encoded as `conventions.query` says, and any undeclared key is refused (FR-30). Written on a node, it reaches the safe routes below it only (section 8) |
 | `headers` | request headers: a fields map keyed by header name |
 | `input` | the body schema (`application/json`) |
 | `output` | the body of the single success response, always the whole payload: its status is the op's default, or `200` |
@@ -431,10 +449,10 @@ Every node may set the settings below; its descendants inherit them, and the IR 
 | `errors` | union, each attachment within its reach (section 11); a code declared on a node joins the api registry; an example narrowed by the nearest node wins |
 | `errorRoles` | per role, the nearest wins, over `conventions.errors.derived` |
 | `tags` | union |
-| `headers`, `query` | added; one name declared twice is an error |
-| `upstream`, `maturity`, `internal`, `deprecated`, `budget`, `bodyLimit`, `cache`, `csrf`, `idempotency`, extension keys | the nearest wins |
+| `headers`, `query` | added; one name declared twice is an error. `query` reaches safe routes only: a write route below a node's `query` does not get it |
+| `upstream`, `maturity`, `internal`, `deprecated`, `budget`, `bodyLimit`, `cache`, `csrf`, `idempotency`, `format`, extension keys | the nearest wins |
 
-`owner`, `concurrency`, `ops`, `id`, `item`, `path`, `pathParams`, `paging`, `sortable`, `filteredBy`, `degradable`, `relays`, `examples`, `lint` and docs are not inherited: each applies to the node or element it is written on. Three inherited settings have limits: `deprecated.successor` is written on a route only, since one successor cannot serve several operations; `cache` applies to the GET routes below it and is refused on a non-GET route; a stated `maturity`, written on the route or inherited, wins over the one derived from `upstream`. An inherited requirement cannot be removed below; a route that needs fewer requirements belongs elsewhere in the tree. This keeps every requirement of a route visible in its ancestry. Requirements stack, they are not refined: `{ right: projectAccess, params: { level: read } }` on a `member` scope plus `{ right: projectAccess, params: { level: admin } }` on one of its routes asks the decide hook twice, in that order, and the route runs only when both allow. Where the second call matters, write the requirement on each route rather than on the scope; a `requirements` entry (section 9) keeps that to one name per route.
+`owner`, `concurrency`, `ops`, `id`, `singular`, `item`, `path`, `pathParams`, `paging`, `sortable`, `filteredBy`, `degradable`, `relays`, `examples`, `lint` and docs are not inherited: each applies to the node or element it is written on. Three inherited settings have limits: `deprecated.successor` is written on a route only, since one successor cannot serve several operations; `cache` applies to the GET routes below it and is refused on a non-GET route; a stated `maturity`, written on the route or inherited, wins over the one derived from `upstream`. An inherited requirement cannot be removed below; a route that needs fewer requirements belongs elsewhere in the tree. This keeps every requirement of a route visible in its ancestry. Requirements stack, they are not refined: `{ right: projectAccess, params: { level: read } }` on a `member` scope plus `{ right: projectAccess, params: { level: admin } }` on one of its routes asks the decide hook twice, in that order, and the route runs only when both allow. Where the second call matters, write the requirement on each route rather than on the scope; a `requirements` entry (section 9) keeps that to one name per route.
 
 ### 9. Access, identities, rights, rules, scopes
 
@@ -683,6 +701,7 @@ scopes: { org: subdomain, project: path.projectId }
 - `cache: { freshness: minute, anonymous: public, vary: [Accept-Language], etag: true }`. `freshness` is a family from `conventions.cache.families` or `never` (no-store); `anonymous` (`public` or `private`) applies to anonymous callers only, since an identified caller always gets private; `etag: true` generates conditional GET (FR-33, SCN-013, SCN-086). The `Vary` entries for credentials (`Cookie`, `Authorization`, an API-key header) are derived from the schemes of the route's identity; `vary` lists only the other request headers the response depends on.
 - `budget: 300ms`: the client's default timeout and the deadline sent on an identity with a `deadline` header (SCN-043, SCN-078).
 - `bodyLimit: 2MiB`: overrides `conventions.bodyLimit` (SCN-041).
+- `format: { use: bare, reason: "<reason>" }`: the wire format of the routes below, instead of `conventions.format`, for an endpoint whose body a third party fixes (a load balancer's health probe, a vendor's callback). It names any declared format and takes a reason, because it departs from the api's format.
 - `idempotency: { exempt: "<reason>" }`: a write without the idempotency key (SCN-042). The generated clients send the key: a client target creates a fresh key per call (a UUID v4) unless the caller passes one, and reuses it when the client itself retries that call, so a retried write runs once.
 - `internal: true`: keeps the route out of documents with `internal: exclude` (product apis only, SCN-044).
 - `upstream: [streaming, catalog]`: services from the `services` catalogue, the owning service first. The operation's maturity derives from the owning service, otherwise from `api.maturity` (FR-34).
@@ -773,7 +792,7 @@ enums:
   Answer: { values: ['yes', 'no'], reason: A survey answer. }
 ```
 
-An enum declares `values` (strings, unique) and either `source` or, for a local enum, `reason` (FR-29). `source: { vocabulary: <name> }` names an external vocabulary: the name is a free label for the reader, with no declaration and no pattern. `source: { enum: <Enum> }` takes another enum's values as its own, so `values` is omitted; a subset at one use is a narrowing (ADR 0003 section 7), not a new enum. `fallback` names the member a client decoder maps an unknown value to (SCN-080). Narrowing happens at a use, inside a schema (ADR 0003). Members such as `yes` and `no` must be quoted (section 3).
+An enum declares `values` (strings, unique) and either `source` or, for a local enum, `reason` (FR-29). `conventions.enums.reason` gives the reason of every local enum that states none, so an api whose enums are all its own product rules says so once. `source: { vocabulary: <name> }` names an external vocabulary: the name is a free label for the reader, with no declaration and no pattern. `source: { enum: <Enum> }` takes another enum's values as its own, so `values` is omitted; a subset at one use is a narrowing (ADR 0003 section 7), not a new enum. `fallback` names the member a client decoder maps an unknown value to (SCN-080). Narrowing happens at a use, inside a schema (ADR 0003). Members such as `yes` and `no` must be quoted (section 3).
 
 Examples are named, on a route, and parsed against their schema at compile time (FR-3, SCN-006):
 
@@ -841,6 +860,7 @@ conventions:
 | `cache.families` | freshness families and their max-age | empty: each family a `cache.freshness` names is required |
 | `restrictedInput` | `reject` or `strip`: a restricted field sent without its right (A21); overridable per field (ADR 0003) | `reject` |
 | `outputEnums` | `enum` or `open`: how the emitter writes an output enum (FR-29) | `enum` |
+| `enums.reason` | the reason of every local enum without its own (section 12) | unset: each local enum states its reason |
 | `query` | `{ lists, objects }`: how a query list and an object field travel (section 7) | `{ lists: repeat, objects: explode }` |
 | `int64` | `string` or `number`: the wire form of an `int64` value (ADR 0003 section 8) | `string` |
 | `deprecation` | `{ header, sunsetHeader, successorRel }`: the names of the deprecation headers (section 10) | `Deprecation`, `Sunset`, `successor-version` |
@@ -1077,7 +1097,7 @@ pagings:
 ```
 
 ```yaml
-# @seampact/pack-laravel: API Resources and paginators (excerpt)
+# @seampact/pack-laravel: API Resources and paginators; errors stay the bare problem+json (excerpt)
 formats:
   laravel:
     success:
@@ -1132,7 +1152,7 @@ formats:
       body: { type: $code, title: $title, status: $status, detail: $detail, instance: $instance, code: $code, nature: $nature, traceId: $traceId, $merge: $params }
 ```
 
-Laravel's paginator also writes `meta.links`, a numbered list of page links. It is not a role until a consumer needs it (lesson 5): the laravel target writes the declared shape through `ResourceCollection::paginationInformation`, Laravel's own customisation point (A30).
+The laravel pack covers success bodies and paginators only. Laravel's validation error (`{ message, errors: { <field>: [...] } }`) groups the issues by field, which the template language does not express, so a laravel api answers problem+json errors until a consumer needs that body (lesson 5). Laravel's paginator also writes `meta.links`, a numbered list of page links. It is not a role until a consumer needs it (lesson 5): the laravel target writes the declared shape through `ResourceCollection::paginationInformation`, Laravel's own customisation point (A30).
 
 ## Departures from brief 5.3
 
@@ -1524,7 +1544,28 @@ listChanges:
   method: get
   paging: { changes: { token: opaque } }      # the style of section 14
   item: Change
+github:
+  method: post
+  path: 'github/{workspaceId}'                # quoted: braces open a flow mapping
+  pathParams: { workspaceId: WorkspaceId }
+  identity: github                            # signed, reads its key from path.workspaceId
+  input: GithubEvent                          # tagged by X-GitHub-Event (ADR 0003 section 3)
+  responses: { 204: {} }
+move:
+  method: post
+  summary: 'Move the task to another project of the workspace.'
+  requires: [{ right: tasks.update }]
+  input: MoveTask                             # holds targetProjectId
+  output: Task
+  errors: { api.forbidden: {} }               # the handler checks the target project
+health:
+  method: get
+  access: { public: "Probes call it before any user exists." }
+  format: { use: bare, reason: "The load balancer reads a bare body." }
+  output: Health
 ```
+
+A right never reads the body (section 4): it is decided before the body is validated. A check on a resource the body names, such as `move`'s target project, is the handler's: the route attaches the code the handler denies with, here `api.forbidden`, and the handler answers it as a typed error result (ADR 0012).
 
 ## Consequences
 
