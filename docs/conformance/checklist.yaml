@@ -754,6 +754,24 @@ items:
     frs: [FR-11]
     scenario: SCN-049
     targets: [core]
+  - id: CHK-121
+    source: "14 Access"
+    fact: The lint rule seampact/subtree-exception warns on a public, optionalAuth, csrf or idempotency exemption written on a node that is neither a route nor a surface root, naming the routes it reaches; compile --strict fails on it and lint.allow with a reason silences it.
+    frs: [FR-12, FR-4]
+    scenario: SCN-018
+    targets: [core]
+  - id: CHK-122
+    source: "A38"
+    fact: Every contract file and fragment gets a modeline from init or init --modelines, chosen by its include site, and compile --editor-schemas writes per-kind schemas specialised with the workspace's declared names, so an editor flags an undeclared identity, right, requirement, enum, error code, paging style or schema name.
+    frs: [FR-9]
+    scenario: SCN-046
+    targets: [core]
+  - id: CHK-123
+    source: "A38"
+    fact: seampact explain <api>.<operationId> prints the operation's access, scopes, requirements, inputs, headers and every error code, each with its derivation and the file and line that caused it.
+    frs: [FR-2, FR-6]
+    scenario: SCN-011
+    targets: [core]
 not_in_checklist:
   - source: "A4, A16"
     reason: Process decisions (FAVIR framing, read-only Arthome research); nothing to test in the product.

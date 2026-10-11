@@ -174,10 +174,16 @@ The loader applies P1 to P4 to every plain scalar (keys and values) with these e
 
 In data positions (examples), null is written `null`; `~`, `Null`, `NULL` and an empty value are refused there too. A `$ref` resolves by name, so a cycle through it is a recursive schema, which is legal and independent of the file layout (ADR 0003 section 2).
 
-No keyword of the grammar is a word that YAML 1.1 reads as a boolean (`on`, `off`, `yes`, `no`), so a keyword never needs quoting. Prose is another matter: in a flow mapping (`{ ... }`), a plain value ends at `, ` or `: `, so `{ title: No such workspace, or not a member. }` holds two keys. Quote prose (`title`, `summary`, `reason` and every docs string) in a flow mapping, or write it in block style; the examples of the ADRs do. A plain mapping key is a string, except in a mapping keyed by HTTP status (`responses`), where keys are plain integers from 200 to 299: only success responses are written. Error statuses come from codes (section 11), 304 is derived from `cache.etag`, and other 3xx responses are not modelled until a consumer needs them. One comment has a meaning, to editors only: the modeline that `seampact init` writes as the first line of each workspace, api, base and pack file (FR-9, SCN-046). Its path is relative to the file and points at the installed `@seampact/spec`; a fragment file holds part of a mapping that no schema checks alone, so it gets none:
+No keyword of the grammar is a word that YAML 1.1 reads as a boolean (`on`, `off`, `yes`, `no`), so a keyword never needs quoting. Prose is another matter: in a flow mapping (`{ ... }`), a plain value ends at `, ` or `: `, so `{ title: No such workspace, or not a member. }` holds two keys. Quote prose (`title`, `summary`, `reason` and every docs string) in a flow mapping, or write it in block style; the examples of the ADRs do. A plain mapping key is a string, except in a mapping keyed by HTTP status (`responses`), where keys are plain integers from 200 to 299: only success responses are written. Error statuses come from codes (section 11), 304 is derived from `cache.etag`, and other 3xx responses are not modelled until a consumer needs them.
+
+One comment has a meaning, to editors only: the modeline, the first line of every contract file, fragments included (FR-9, SCN-046). `@seampact/spec` publishes an authoring schema per file kind (workspace, api, base, pack) and per fragment kind, that is, per mapping an include site may expect: a tree node, a name-keyed catalogue file (`schemas`, `errors`, `rights` and the other catalogues), a node's `errors` map, `conventions`, a schema. A fragment's kind is the one its include site expects. `seampact init` writes the modeline of each file it creates, and `seampact init --modelines` writes or corrects the modeline of every file of an existing workspace, taking each fragment's kind from its include site.
+
+Those schemas check keywords only. `seampact compile --editor-schemas` checks names too: it writes to `.seampact/schemas/` the same schemas specialised for the workspace, where every position that names a declaration (`identity`, `right`, a `requires` entry, `enum`, an error code, `paging`, a schema reference) lists the names the workspace declares, each described by the file and line that declares it. An editor then flags a misspelt name and offers the declared ones as you type; `compile --watch` keeps them current. `init` writes them once, adds `.seampact/` to `.gitignore`, and points the modelines there, relative to each file; a fresh checkout runs `compile --editor-schemas` once. A modeline may point at the installed `@seampact/spec` instead, which checks keywords only. No language server is needed for this; go-to-definition and rename wait for a consumer that asks (lesson 5). The included route of the worked example, `tasks/routes/tasks/search.yaml`, would start:
 
 ```yaml
-# yaml-language-server: $schema=../node_modules/@seampact/spec/schemas/contract.schema.json
+# yaml-language-server: $schema=../../../.seampact/schemas/node.schema.json
+method: post
+requires: [{ right: tasks.reed }]   # flagged: the right must be one of callerService, roles, tasks.read, tasks.seeEffort, tasks.update
 ```
 
 ### 4. Scalars, names and value sources
@@ -453,6 +459,8 @@ Every node may set the settings below; its descendants inherit them, and the IR 
 | `upstream`, `maturity`, `internal`, `deprecated`, `budget`, `bodyLimit`, `cache`, `csrf`, `idempotency`, `format`, extension keys | the nearest wins |
 
 `owner`, `concurrency`, `ops`, `id`, `singular`, `item`, `path`, `pathParams`, `paging`, `sortable`, `filteredBy`, `degradable`, `relays`, `examples`, `lint` and docs are not inherited: each applies to the node or element it is written on. Three inherited settings have limits: `deprecated.successor` is written on a route only, since one successor cannot serve several operations; `cache` applies to the GET routes below it and is refused on a non-GET route; a stated `maturity`, written on the route or inherited, wins over the one derived from `upstream`. An inherited requirement cannot be removed below; a route that needs fewer requirements belongs elsewhere in the tree. This keeps every requirement of a route visible in its ancestry. Requirements stack, they are not refined: `{ right: projectAccess, params: { level: read } }` on a `member` scope plus `{ right: projectAccess, params: { level: admin } }` on one of its routes asks the decide hook twice, in that order, and the route runs only when both allow. Where the second call matters, write the requirement on each route rather than on the scope; a `requirements` entry (section 9) keeps that to one name per route.
+
+Inheritance by position has one trap. When the last key of a block is written one level too far left, the file is still valid YAML and the key becomes a setting of the enclosing node, reaching every route below it; a dedent in the middle of a block is a parse error, so only a last key is at risk. For an exception, that silently widens it from one route to a subtree while its reason stays present. The lint rule `seampact/subtree-exception`, a warning that `compile --strict` fails, therefore reports every `access.public`, `access.optionalAuth`, `csrf.exempt` and `idempotency.exempt` written on a node that is neither a route nor a surface root, naming the routes it reaches. An exception meant for a subtree keeps it with `lint.allow` and a reason (section 12). A code attached one level too high is not an exception: it shows in `seampact explain` (section 16) and in the diff of the committed OpenAPI document, where each response lists its codes with the node that attached them (ADR 0004 section 12).
 
 ### 9. Access, identities, rights, rules, scopes
 
@@ -1157,6 +1165,36 @@ formats:
 
 The laravel pack covers success bodies and paginators only. Laravel's validation error (`{ message, errors: { <field>: [...] } }`) groups the issues by field, which the template language does not express, so a laravel api answers problem+json errors until a consumer needs that body (lesson 5). Laravel's paginator also writes `meta.links`, a numbered list of page links. It is not a role until a consumer needs it (lesson 5): the laravel target writes the declared shape through `ResourceCollection::paginationInformation`, Laravel's own customisation point (A30).
 
+### 16. Seeing an operation whole: `seampact explain`
+
+One fact, one place, has a price: what a route requires and answers is spread over the tree on purpose. `updateTask` takes its identity from the surface, its scope from `channels`, its version from `tasks`, its codes from the conventions, the rights and the derivations, and only the compiler sees the whole. `seampact explain <api>.<operationId>` prints it. It compiles the workspace like `compile`, then writes the operation from the IR as YAML in the grammar's own words, each line commented with where it came from: the derivation that produced it (ADR 0006 section 5) and the file and line of the declaration or node that caused it, read through the side table (ADR 0004 section 11). The api name may be left out when the workspace has one api.
+
+```yaml
+# seampact explain tasks.updateTask
+operationId: updateTask                          # ops.update, tasks/api.yaml:51
+method: patch                                    # the default of the update op
+path: /v1/channels/{channelId}/tasks/{taskId}
+identity: user                                   # surfaces.app, tasks/api.yaml:23
+schemes: [sessionCookie, bearer]                 # identities.user.schemes.write, shared/base.yaml:24
+csrf: X-Csrf-Token                               # csrf.cookieWrite, schemes.sessionCookie, shared/base.yaml:3
+scopes: { channel: path.channelId }              # channels.member, tasks/api.yaml:35
+requires:
+  - { right: tasks.update, subject: path.taskId }   # tasks/api.yaml:53; the subject defaults to the member id
+input: UpdateTask                                # tasks/api.yaml:52; concurrency.version adds expectedVersion
+concurrency: { version: body.expectedVersion, field: version }   # tasks, tasks/api.yaml:41
+headers: { Idempotency-Key: required }           # idempotency.write, shared/base.yaml:86
+errors:
+  - { status: 400, code: api.schema_invalid }    # input.invalid, idempotency.write; bound at shared/base.yaml:95
+  - { status: 401, code: api.unauthenticated }   # identity.authenticate; the role's default code
+  - { status: 403, code: api.csrf_invalid }      # csrf.cookieWrite; the role's default code
+  - { status: 403, code: api.forbidden }         # requirement.errors, rights.tasks.update, shared/base.yaml:49
+  - { status: 404, code: api.not_found }         # member.notFound for path.taskId; requirement.errors; scope.errors, scopes.channel, shared/base.yaml:39
+  - { status: 409, code: state.conflict }        # concurrency.version
+  # and the two idempotency 409s, 413, 415, and 500 api.internal from conventions.errors.every
+```
+
+The output is a view, never an input: it is not a contract file, and nothing reads it back. It is deterministic, so two runs diff cleanly in review, while `seampact diff` still classifies the change (ADR 0005). It needs no new IR member: every element already carries `origin` or `derivedFrom` (ADR 0004 section 6).
+
 ## Departures from brief 5.3
 
 | Sketch | Final | Reason |
@@ -1572,7 +1610,7 @@ A right never reads the body (section 4): it is decided before the body is valid
 
 ## Consequences
 
-- Phase 1 writes the authoring JSON Schema from sections 1 to 13 of this ADR; a keyword not listed here is refused by it, and the grammar snapshot test (SM-6) fails when a core keyword is added without an ADR reference.
+- Phase 1 writes the authoring JSON Schemas, one per file and fragment kind (section 3), from sections 1 to 13 of this ADR; a keyword not listed here is refused by it, and the grammar snapshot test (SM-6) fails when a core keyword is added without an ADR reference.
 - The loader implements sections 1 to 4 (composition, the byte-identity rule, pitfalls); the compiler passes implement sections 5 to 13 as ADR 0006 assigns them.
 - Contracts carry no house convention: header names, right names, page shapes and wire formats all come from the base or from packs. Derived errors have default codes in the core (A34), each renamable, so a contract with no pack compiles; a paged list still needs a paging style (A31).
 - The grammar has four shorthands only: a string for a schema reference, `ops` as a list, `paging` as a style name, and a string in `requires` for a `requirements` entry. Each yields the same IR as its long form, the last one with the entry's name.
@@ -1600,12 +1638,12 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-008 | `schemes` with `csrf`, `identities.schemes.write`, `csrf.exempt` (9) |
 | SCN-009 | `identity`, `principal.requires`, `scopes`, `requires` (rule and right, a `requirements` entry), `input`, `bindings` (9) |
 | SCN-010 | `bindings` with body and path sources (9) |
-| SCN-011 | `errors` declared in the catalogue or on a node, attached with `{}` or narrowed with `{ example }`, `reach`, `for`, `conventions.errors.every`, `errorRoles` (11) |
+| SCN-011 | `errors` declared in the catalogue or on a node, attached with `{}` or narrowed with `{ example }`, `reach`, `for`, `conventions.errors.every`, `errorRoles`; `seampact explain` shows each code's origin (11, 16) |
 | SCN-012 | `pagings` (`cursor`, `limit`, `sort` roles), `conventions.paging.default`, `paging.<style>.maxLimit`, `sortable`, `restrictedTo` (10, 14, ADR 0003) |
 | SCN-013 | `cache.freshness`, `cache.etag`, `conventions.cache.families` (10, 13) |
 | SCN-014 | `workspace.apis`, `api.kind: service`, a relay route (`relays`, `operationId` to rename it), role bindings that differ between the two apis, `workspace.imports` (1, 5, 7) |
 | SCN-016 | `extensions` (`at`, `schema`), the extension key pattern, `x-<prefix>-<key>` (12, 4) |
-| SCN-018 | `lint.allow`, `maturity`; `sensitive` (12, 10, ADR 0003) |
+| SCN-018 | `lint.allow`, `maturity`, the `seampact/subtree-exception` rule; `sensitive` (12, 10, 8, ADR 0003) |
 | SCN-019 | `api.compat.policy` (5) |
 | SCN-026 | `schemes` of `kind: signature` (`name`, `format`, `algorithm`, `payload`, `encoding`, `tolerance`, `key`), `identities` of `kind: signed` (9) |
 | SCN-029 | `extends`, duplicate definitions (2) |
@@ -1625,7 +1663,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-043 | `budget` (10) |
 | SCN-044 | `api.documents` with `internal: exclude`, `internal: true` (5, 10) |
 | SCN-045 | `api.caller.right`, `rights.callerService.params` (5, 9) |
-| SCN-046 | `# yaml-language-server` modeline (3) |
+| SCN-046 | `# yaml-language-server` modeline on every file and fragment, `init --modelines`, `compile --editor-schemas` (3) |
 | SCN-047 | `packs`, pack file keys, `pack` manifest (1, 2) |
 | SCN-048 | `formats` (`success.item`, `success.table`, `meta.fill`, `error`), a `pagings` style for the list, templates, `conventions.format`, `ops.batch` (13, 14, 6) |
 | SCN-050 | `api.maturity`, `api.compat` (5) |

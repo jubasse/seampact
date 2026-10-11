@@ -97,6 +97,7 @@ tasks/api.yaml:42:9: error seampact/access/deny-by-default: route 'exportTasks' 
 - Diagnostics are sorted by file, line, column, then rule, so the output is deterministic.
 - Warnings do not fail `compile`; `compile --strict`, which CI uses, fails on them.
 - Lint rules (FR-12) report through the same structure, with ids `<plugin>/<rule>`.
+- `seampact explain` (ADR 0002 section 16) turns the same origins and `derivedFrom` into file and line comments on an operation's every element, so the answer to "where does this code come from" is the one the diagnostics use.
 
 ### 5. The derivation table
 
