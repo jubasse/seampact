@@ -211,7 +211,7 @@ interface Operation {
   input?: { media: string; schema: TypeUse; bodyLimitBytes: number; rawBody: boolean; origin };
   responses: Response[];                     // success and derived non-error responses (304), sorted by status
   errors: { code: ErrorCode; example?: unknown; derivedFrom?: DerivedFrom; origin?: Origin }[];   // origin: the node that attached it (A35)
-  fieldRights: FieldRight[];
+  fieldRights: FieldRight[];                 // empty on a relay route: the public operation projects (ADR 0002 section 7)
   idempotency?: { header: string; replayHeader: string; lifetimeMs: number; derivedFrom } | { exempt: Reason; origin };
   concurrency?: { version: ValueSource; field: string; derivedFrom };   // per operation: a DELETE reads a body source from the query
   owner?: { kind: 'caller'; origin };

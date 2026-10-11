@@ -338,7 +338,7 @@ items:
   # ---------- 14 Lifecycle ----------
   - id: CHK-052
     source: "14 Lifecycle"
-    fact: A relay route takes its shape and domain codes from the public operation it serves, and the compiler checks across the workspace that it answers every public code outside the gateway's own.
+    fact: A relay route takes its shape and domain codes from the public operation it serves, and the compiler checks across the workspace that it answers every public code outside the gateway's own; operationId renames a relay route, which is still paired by relays.
     frs: [FR-8]
     scenario: SCN-014
     targets: [core]
@@ -730,6 +730,12 @@ items:
     frs: [FR-6, FR-24]
     scenario: SCN-069
     targets: [core, fetch]
+  - id: CHK-117
+    source: "14 Lifecycle"
+    fact: A relay route has no field rights, on output or input; the service sends every restricted field without a decide call, and the public operation projects it for its caller.
+    frs: [FR-8, FR-23]
+    scenario: SCN-014
+    targets: [core, server]
 not_in_checklist:
   - source: "A4, A16"
     reason: Process decisions (FAVIR framing, read-only Arthome research); nothing to test in the product.
