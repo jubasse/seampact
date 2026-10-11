@@ -36,6 +36,7 @@ interface ContractIR {
   irVersion: 1;
   irRevision: number;                       // ADR 0005
   kinds: DeclarationKind[];                 // the declaration kinds present: ['httpOperation'] in 1.0
+  features: Feature[];                      // must-understand features used by any operation (ADR 0005); empty at 1.0
   api: Api;
   packs: PackRef[];                         // packs applied, in application order: { name, version }
   conventions: Conventions;                 // resolved values, each with its origin
@@ -180,6 +181,7 @@ interface Operation {
   id: string;  name: Name;                   // 'assignTask'
   surface: SurfaceId;
   op?: 'list' | 'get' | 'create' | 'update' | 'delete' | 'batch';   // the ops shorthand it came from
+  features: Feature[];                       // must-understand features this operation uses (ADR 0005)
   method: 'get' | 'post' | 'put' | 'patch' | 'delete';
   path: string;                              // '/v1/channels/{channelId}/tasks/{taskId}/assign'
   safe: boolean;                             // a GET, or a batch read sent as POST
@@ -297,7 +299,7 @@ An `object` template either wraps (the payload under a member, `{ data: $payload
 
 | Kept in written or semantic order | Sorted |
 |---|---|
-| `requires`; `scopes` (resolution order); `upstream` (owner first); enum `values`; `bucket.key`; a union's variants (by tag); template members; `examples` values of a schema; `packs` (application order) | `operations` (by id); `properties` (by name); `errors` (by status, then code); `responses` (by status); `params` (by name); `tags`, `vary`, `callerKinds`, `directions`, `kinds`; `fieldRights` (by schema, then pointer, then direction); `sortKeys` (by key); `bindings` (by source) |
+| `requires`; `scopes` (resolution order); `upstream` (owner first); enum `values`; `bucket.key`; a union's variants (by tag); template members; `examples` values of a schema; `packs` (application order) | `operations` (by id); `properties` (by name); `errors` (by status, then code); `responses` (by status); `params` (by name); `tags`, `vary`, `callerKinds`, `directions`, `kinds`, `features`; `fieldRights` (by schema, then pointer, then direction); `sortKeys` (by key); `bindings` (by source) |
 
 Object properties are sorted by name because ADR 0002 makes mapping key order meaningless: generated types list fields alphabetically.
 
