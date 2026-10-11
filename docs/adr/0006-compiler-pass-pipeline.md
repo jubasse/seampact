@@ -69,7 +69,7 @@ export interface PassContext {
 What each pass checks, besides its writes:
 
 - tree: path versions and prefixes, operation id uniqueness, `ops` inputs, version fields of `concurrency`, list routes and their paging style or its absence (A31), templates against the slot catalogue and each operation's payload (ADR 0002 sections 13 and 14), examples parsed against their schemas (FR-3), enum sources, reasons and narrowings (FR-29), degradable paths optional (FR-32), schema shapes (ADR 0003).
-- access: deny by default (FR-4), every exception's reason, pack `derive` selectors and templates, right names against `conventions.rights.pattern`, identity header uses against their declarations, service api rules (FR-8), guest rights on public routes, subject sources against id schemas, scope subjects and nesting (FR-22, FR-24), sortable rights against field rights (FR-23), body proofs on body-less routes (FR-41), scheme references (FR-27).
+- access: deny by default (FR-4), every exception's reason, pack `derive` selectors and templates, right names against `conventions.rights.pattern`, identity header uses against their declarations, service api rules (FR-8), guest rights on public routes, subject sources against id schemas, scope subjects and nesting (FR-22, FR-24), sortable rights against field rights (FR-23), body proofs on body-less routes and bucket key sources against the route's input and access (FR-41), field-right subjects (FR-23), scheme references (FR-27).
 - derive: error registry redefinitions (FR-6) and conflicting node declarations (A35), role bindings to unregistered codes or codes that cannot receive the role's required data, deprecation successors, bucket limits (a warning).
 - link: the `relays` superset (operation id, path shape after the prefix, body, paging, success responses, and the public codes minus the gateway's own), naming both operations and the missing element, or the missing api (FR-8, SCN-014).
 
@@ -107,15 +107,15 @@ Every derived element carries `derivedFrom: { derivation, from }` with a derivat
 | `body.limit` | a request body | `input.bodyLimitBytes` (route, then `batch`, then `conventions.bodyLimit`, 1 MiB by default), 413 | `payloadTooLarge` |
 | `body.media` | a request body | 415 | `unsupportedMediaType` |
 | `identity.authenticate` | identity or optional access | credential parameters of the accepted schemes, 401 | `unauthenticated` |
-| `csrf.cookieWrite` | a non-safe operation whose write schemes include a cookie scheme with `csrf`, not `csrfExempt` | the CSRF header parameter, 403 | `csrfInvalid` |
-| `idempotency.write` | a non-safe operation, not exempt, not under a signed identity | the key header parameter, the replay response header, two 409s | `idempotencyKeyReused`, `idempotencyInProgress` |
+| `csrf.cookieWrite` | a non-safe operation whose write schemes include a cookie scheme that declares `csrf` (opt-in, A34), not `csrf.exempt` | the CSRF header parameter, 403 | `csrfInvalid` |
+| `idempotency.write` | a non-safe operation when `conventions.idempotency` is set (opt-in, A34), not exempt, not under a signed identity | the key header parameter, the replay response header, two 409s | `idempotencyKeyReused`, `idempotencyInProgress` |
 | `concurrency.version` | `update`, `delete`, or `concurrency: inherit`, on a versioned resource | 409 | `stateConflict` |
-| `owner.caller` | a member route of a collection with `owner: caller` | 404 | `notFound` |
+| `owner.caller` | a member route of a collection with `owner: caller` | 404, answered by the handler through its typed `notFound` result | `notFound` |
 | `principal.requires` | `principal.requires` | 403 | `forbidden` |
 | `binding.mismatch` | `bindings` | 403 | `forbidden` |
 | `requirement.errors` | each requirement | the right's or rule's codes | declared |
 | `scope.errors` | each scope of the operation | the scope's membership codes | declared |
-| `fieldRight.restricted` | a `restrictedTo` property reachable from the operation's input or output | a `fieldRights` entry per pointer and direction; on input with `reject`, 403 | `forbidden` |
+| `fieldRight.restricted` | a `restrictedTo` property reachable from the operation's input or output | a `fieldRights` entry per pointer and direction, with the subject derived from the right's declaration (ADR 0003 section 6); on input with `reject`, 403 | `forbidden` |
 | `sortKey.restricted` | a sortable key with a right, given or inherited from its field | the key's right, 403 | `sortKeyForbidden` |
 | `rule.proof` | a requirement on a rule with `proof` | the proof field added once to the input, sensitive | none |
 | `rule.bucket` | a requirement with `bucket` | the rule's codes, the retry header on 429 (`conventions.rateLimit`: its `param` in its `unit`) | `rateLimited` |
@@ -123,7 +123,7 @@ Every derived element carries `derivedFrom: { derivation, from }` with a derivat
 | `identity.deadline` | a `deadline` identity header | `deadlineHeader`, 504 | `deadlineExceeded` |
 | `identity.versionToken` | a `versionToken` identity header | the response header on every success, the optional request header on writes, the declared stale code | declared |
 | `signed.identity` | a signed identity | `input.rawBody`, no CSRF, no idempotency key, 401 | `unauthenticated` |
-| `cache.headers` | `cache` on a GET | `Cache-Control` per caller kind, `Vary` | none |
+| `cache.headers` | `cache` on a GET | `Cache-Control` per caller kind, `Vary` (the credential headers of the identity's schemes, then `cache.vary`) | none |
 | `cache.etag` | `cache.etag` | `ETag` response header, `If-None-Match` parameter, a 304 response | none |
 | `cache.sensitive` | a response whose payload holds a sensitive field | `cache.noStore` | none |
 | `paging.params` | a list with a paging style | the style's request parameters (with `maxLimit` bounds and, for `since`, the token type), the sort parameter when `sortable`, the `page` response shape with the style's headers and `Link` relations, 400 above `maxLimit` | `schemaInvalid` |

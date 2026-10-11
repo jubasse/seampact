@@ -110,8 +110,8 @@ interface HeaderDecl {
 
 interface Scheme {
   id; kind: 'cookie' | 'header' | 'bearer' | 'signature';
-  name?: string; format?: string; csrf?: SchemeId;
-  signature?: { header; format; algorithm; payload; encoding: 'hex' | 'base64'; toleranceMs?: number;
+  name?: string; bearerFormat?: string; csrf?: SchemeId;   // name: the cookie or header, or the signature header
+  signature?: { format; algorithm; payload; encoding: 'hex' | 'base64'; toleranceMs?: number;
                 key: { value: string } | { from: ValueSource } };
   origin;
 }
@@ -227,7 +227,7 @@ interface Operation {
 
 type Access =
   | { kind: 'identity'; identity: IdentityId; schemes: SchemeId[]; origin }
-  | { kind: 'optional'; identity: IdentityId; schemes: SchemeId[]; reason: Reason; refusedAsAnonymous?: Reason; origin }
+  | { kind: 'optional'; identity: IdentityId; schemes: SchemeId[]; reason: Reason; origin }   // a refused credential is anonymous
   | { kind: 'public'; reason: Reason; origin };
 
 type Requirement =
@@ -248,7 +248,8 @@ interface Response {
 
 interface FieldRight {                       // FR-23: materialised so targets never walk schemas
   schema: SchemaId; pointer: string;         // '/effort', '/items/*/effort'
-  right: RightId; params?: unknown; subject: 'holder' | 'scope';
+  right: RightId; params?: unknown;
+  subject?: { source: ValueSource | { holderField: string } };   // derived from the right's declaration; absent for a right without subject
   direction: 'input' | 'output'; inputPolicy?: 'reject' | 'strip'; derivedFrom: DerivedFrom;
 }
 

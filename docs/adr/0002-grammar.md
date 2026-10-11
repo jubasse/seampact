@@ -299,7 +299,7 @@ Operation ids of other routes: a route under `member` is its name plus the singu
 
 Kept from Arthome (brief 5.2, FR-2):
 
-- `owner: caller`: the caller owns the records. On a collection, another caller's id answers 404 (derived), with no version and no 409; on a single, nothing is derived (SCN-004).
+- `owner: caller`: the caller owns the records. On a collection, another caller's id answers 404 (derived), with no version and no 409; on a single, nothing is derived (SCN-004). The boundary cannot know who owns a record, so the handler (or the optional record loader of ADR 0012) answers it: the target gives the handler a typed `notFound` result for the `notFound` role, no hook is added, and the generated test helper checks the declared 404.
 - Otherwise a write may be versioned: `concurrency: { version: body.expectedVersion, field: version }`. `update` and `delete` inherit it; a member route only with `concurrency: inherit` (SCN-003, SCN-031). The route's input must hold the `version` field (a body field or a query parameter) and the item schema must hold `field`; either missing is a compile error naming the field. A stale write derives `409` from the `stateConflict` role. `If-Match` is not supported until a consumer needs it.
 - DELETE when the record disappears; an action (`POST .../archive`) when it stays with a new state.
 
@@ -355,7 +355,7 @@ Every node may set the settings below; its descendants inherit them, and the IR 
 
 | Setting | Merge rule down the tree |
 |---|---|
-| `identity`, `access` | the nearest wins; `access` and `identity` replace each other |
+| `identity`, `access` | the nearest wins for each; a node setting `identity` without `access` makes the identity required below it (section 9) |
 | `requires` | appended: requirements derived by pack entries first (packs in application order, entries in written order), then the ancestors' from the root down, then the node's own; the same right or rule twice with equal params is an error, except that a derived requirement equal to a written one is dropped and the written one stays |
 | `scopes` | added; entering a scope twice is an error |
 | `principal.requires` | union |
@@ -364,7 +364,7 @@ Every node may set the settings below; its descendants inherit them, and the IR 
 | `errorRoles` | per role, the nearest wins, over `conventions.errors.derived` |
 | `tags` | union |
 | `headers`, `query` | added; one name declared twice is an error |
-| `upstream`, `maturity`, `internal`, `deprecated`, `budget`, `bodyLimit`, `cache`, `csrfExempt`, `idempotency`, extension keys | the nearest wins |
+| `upstream`, `maturity`, `internal`, `deprecated`, `budget`, `bodyLimit`, `cache`, `csrf`, `idempotency`, extension keys | the nearest wins |
 
 `owner`, `concurrency`, `ops`, `paging`, `sortable`, `filteredBy`, `degradable`, `relays`, `examples` and docs are not inherited. An inherited requirement cannot be removed below; a route that needs fewer requirements belongs elsewhere in the tree. This keeps every requirement of a route visible in its ancestry.
 
@@ -374,11 +374,10 @@ Every node may set the settings below; its descendants inherit them, and the IR 
 
 - `identity: <name>`: the route requires that identity. A surface usually sets it once.
 - `access: { public: "<reason>" }`: no authentication; the principal is null.
-- `access: { optionalAuth: "<reason>" }`: an anonymous caller or the inherited identity. A presented credential that fails answers 401.
-- `access: { optionalAuth: "<reason>", refusedAsAnonymous: "<reason>" }`: a refused credential is treated as anonymous instead of 401 (Arthome's sign-out).
-- `csrfExempt: "<reason>"`: no CSRF check on a cookie write.
+- `access: { optionalAuth: "<reason>" }`: an anonymous caller or the nearest `identity`. A presented credential that the authenticate hook refuses is treated as anonymous, never answered 401 (brief section 7, A33), which is what a sign-out with an expired session needs.
+- `csrf: { exempt: "<reason>" }`: no CSRF check on this route's cookie writes.
 
-A route that resolves to neither an identity nor a public access is a compile error that names both fixes (FR-4, SCN-007). A public child under an identified parent still needs its reason (SCN-035).
+`identity` and `access` are inherited separately, the nearest winning for each (section 8). A node that sets `identity` without `access` makes the identity required again below it; `optionalAuth` uses the nearest `identity`, and both may be set on one node. A route that resolves to neither an identity nor a public access is a compile error that names both fixes (FR-4, SCN-007). A public child under an identified parent still needs its reason (SCN-035).
 
 #### Security schemes
 
@@ -389,17 +388,17 @@ schemes:
   csrfToken: { kind: header, name: X-Csrf-Token }
   bearer: { kind: bearer }
   deviceToken: { kind: header, name: X-Device-Token }
-  internalToken: { kind: bearer, format: jwt }
+  internalToken: { kind: bearer, bearerFormat: jwt }
 ```
 
-`kind` is `cookie`, `header` (an API key in a header), `bearer` (HTTP bearer) or `signature` (A5). `name` is the cookie or header name. `csrf` on a cookie scheme names the header scheme a cookie write must also present; CSRF is derived from it, never written on an identity (FR-27, SCN-008, SCN-077). A `signature` scheme declares (details and test vectors: ADR 0013):
+`kind` is `cookie`, `header` (an API key in a header), `bearer` (HTTP bearer) or `signature` (A5). `name` is the cookie or header name. `bearerFormat` documents a bearer token's format, emitted as OpenAPI's `bearerFormat`; nothing checks it. `csrf` on a cookie scheme names the header scheme a cookie write must also present; CSRF is derived from it, never written on an identity (FR-27, SCN-008, SCN-077). CSRF is opt-in (A34): a cookie scheme without `csrf` derives no CSRF check, and the lint rule `seampact/cookie-without-csrf` reports it, silenced with a reason through `lint.allow`. A `signature` scheme declares (details and test vectors: ADR 0013):
 
 ```yaml
 # shared/base.yaml (excerpt)
 schemes:
   stripeSignature:
     kind: signature
-    header: Stripe-Signature
+    name: Stripe-Signature
     format: 't={ts},v1={sig}'
     algorithm: hmac-sha256
     payload: '{ts}.{rawBody}'
@@ -408,7 +407,7 @@ schemes:
     key: { value: stripe }
 ```
 
-`format` holds `{sig}` and optionally `{ts}` and `{kid}`; `payload` holds `{rawBody}` and optionally `{ts}` and `{kid}`; `tolerance` is required when `{ts}` is used; `key` is `{ value: <literal> }` or `{ from: <path, query or header source> }`, the key identifier the application's secret lookup receives (FR-20).
+`name` is the header carrying the signature, as for a header scheme. `format` holds `{sig}` and optionally `{ts}`; `payload` holds `{rawBody}` and optionally `{ts}`. `tolerance` is required when `{ts}` is used and refused otherwise. `key` is the one way to name the key identifier the application's secret lookup receives (FR-20): `{ value: <literal> }`, or `{ from: <path, query or header source> }`.
 
 #### Identities
 
@@ -422,7 +421,7 @@ identities:
       optionalRead: [deviceToken]
     principal: ViewerPrincipal
   viewer_or_device:
-    schemes: { read: [sessionCookie, bearer, deviceToken] }
+    schemes: { read: [sessionCookie, bearer], write: [sessionCookie, bearer], optionalRead: [deviceToken] }
     principal:
       variants: { viewer: ViewerPrincipal, device: DevicePrincipal }
   stripe:
@@ -434,7 +433,7 @@ identities:
 | Key | Meaning |
 |---|---|
 | `kind` | `credential` (default) or `signed` |
-| `schemes.read`, `schemes.write` | the schemes accepted on reads and on writes; `write` defaults to `read` |
+| `schemes.read`, `schemes.write` | the schemes accepted on reads and on writes, both required, so adding a read scheme never widens writes; `write: []` refuses the identity on writes |
 | `schemes.optionalRead` | extra schemes accepted on optional-auth reads only (FR-27, SCN-076) |
 | `scheme` | `signed` only: the one `signature` scheme; the compiler forces a raw body and removes CSRF and idempotency keys (FR-20, SCN-026) |
 | `principal` | the principal schema, or `{ variants: { <name>: <schema> } }` for an identity accepting several credential kinds; hooks and handlers narrow on the variant name |
@@ -496,7 +495,7 @@ requires:
 | `subject` | rights only: a value source; see below |
 | `bucket` | rules declared with `bucket: true` only: a bucket name |
 
-The check order is fixed (FR-5): transport refusals, authentication, principal requirements, scopes in nesting order, requirements in the order of this list, input validation, bindings, the handler. A requirement may sit on a public or optional-auth route; its hook then receives a null principal (SCN-036).
+The check order is fixed (FR-5, ADR 0012): transport refusals, authentication, principal requirements, scopes in nesting order, requirements in the order of this list, input validation, restricted input fields and sort keys, bindings, the handler. A requirement may sit on a public or optional-auth route; its hook then receives a null principal for an anonymous caller (SCN-036). A rule may always; a right only when it is guest-enabled (below).
 
 #### Rights
 
@@ -518,7 +517,7 @@ rights:
 |---|---|
 | `params` | a fields map or a schema name; typed in the decide request |
 | `subject` | absent (none), `{ scope: <scope> }`, or `{ resource: <Name>, id: <id schema> }` |
-| `guest` | a reason; required for the right to appear on a public route (SCN-063) |
+| `guest` | a reason; required for the right to appear on a public or optional-auth route, where an anonymous caller reaches it (SCN-063) |
 | `errors` | the denial codes the decide hook may answer; default the code of the `forbidden` role |
 | `summary`, `description`, extension keys | docs and consumer metadata that reach the generated boundary (A20, SCN-064) |
 
@@ -538,7 +537,7 @@ rules:
     errors: [api.reauthentication_required]
 ```
 
-A rule is a pre-handler check that is not a right: no subject, no use on fields, sort keys or lists. `params` and `errors` are as for rights. `bucket: true` makes each use name a bucket, whose key sources and limits reach the decide hook; the 429 reply and its `Retry-After` come from the conventions (FR-41, SCN-096). `proof` declares a value the rule reads from the request (`in: body` or `in: header`): the compiler adds the field to the route's input once, marks it sensitive, and refuses a body proof on a route without a body (SCN-097).
+A rule is a pre-handler check that is not a right: no subject, no use on fields, sort keys or lists. `params` and `errors` are as for rights. `bucket: true` makes each use name a bucket, whose key sources and limits reach the decide hook; the 429 reply and its `Retry-After` come from the conventions (FR-41, SCN-096). `proof` declares a value the rule reads from the request (`in: body` or `in: header`): the compiler adds the field to the route's input once, after the authored fields, and marks it sensitive (SCN-097). A body proof is refused on a route without a body, which is a `get`, or a `delete` without `input`; on any other route without `input` (a POST action such as `revealStreamKey`), the proof becomes the whole input.
 
 #### Buckets
 
@@ -549,7 +548,7 @@ buckets:
   export: { key: [principal.accountId] }
 ```
 
-`key` lists the sources counted; `limit` and `window` may be left for the server to bind, and the compiler then warns (SCN-096).
+`key` lists the sources counted; `limit` and `window` may be left for the server to bind, and the compiler then warns (SCN-096). A bucket key is checked at each use: a `body.<field>` key must name a string or integer field of the route's input, checked against that field's schema when the rule reads it (step 5 of the check order, as for a body proof); a missing field, and a `principal.<field>` key on a public or optional-auth route, where the principal may be null, are compile errors naming the bucket and the route.
 
 #### Scopes
 
@@ -577,7 +576,7 @@ scopes: { org: subdomain, project: path.projectId }
 - `sortable`: a list of item fields, each a name or `{ key, right }`. A key inherits its field's `restrictedTo`; an explicit right that disagrees is a compile error; sorting by a restricted key without the right derives 403 from the `sortKeyForbidden` role (FR-23, SCN-067).
 - `filteredBy: <right>`: the right the application applies to its query; it reaches OpenAPI and the handler context, and nothing enforces it (SCN-068).
 - `degradable: [viewerProgress]`: paths of optional properties of the success data; a required one is a compile error (SCN-085).
-- `cache: { freshness: minute, anonymous: public, vary: [Cookie, Authorization], etag: true }`. `freshness` is a family from `conventions.cache.families` or `never` (no-store); `anonymous` (`public` or `private`) applies to anonymous callers only, since an identified caller always gets private; `etag: true` generates conditional GET (FR-33, SCN-013, SCN-086).
+- `cache: { freshness: minute, anonymous: public, vary: [Accept-Language], etag: true }`. `freshness` is a family from `conventions.cache.families` or `never` (no-store); `anonymous` (`public` or `private`) applies to anonymous callers only, since an identified caller always gets private; `etag: true` generates conditional GET (FR-33, SCN-013, SCN-086). The `Vary` entries for credentials (`Cookie`, `Authorization`, an API-key header) are derived from the schemes of the route's identity; `vary` lists only the other request headers the response depends on.
 - `budget: 300ms`: the client's default timeout and the deadline sent on an identity with a `deadline` header (SCN-043, SCN-078).
 - `bodyLimit: 2MiB`: overrides `conventions.bodyLimit` (SCN-041).
 - `idempotency: { exempt: "<reason>" }`: a write without the idempotency key (SCN-042).
@@ -1021,7 +1020,8 @@ Laravel's paginator also writes `meta.links`, a numbered list of page links. It 
 | `identities.*.schemes.write: [session+csrf]` | `csrf` on the cookie scheme | CSRF is derived from the scheme, stated once (FR-27) |
 | identity scheme names as strings | typed `schemes` catalogue | schemes are checked and emitted (FR-27) |
 | no rights, scopes, signed identities | `rights`, `scopes`, `kind: signed` | A5, A18 to A25 |
-| `access: { public }`, implicit optional auth | `public`, `optionalAuth`, `refusedAsAnonymous`, each with a reason | the sketch's `optionalAuth` bundled two behaviours that Arthome keeps apart |
+| `access: { public }`, implicit optional auth | `public` and `optionalAuth`, each with a reason; a refused credential on `optionalAuth` is anonymous | brief section 7 and A33 |
+| `csrfExempt` | `csrf: { exempt }` on a node; CSRF only for a cookie scheme that declares `csrf` | one exemption shape (`idempotency: { exempt }`); CSRF is opt-in (A34) |
 | `idempotent: true` on a GET, `idempotent: { exempt }` | `idempotency: { exempt }` only | a GET is safe by its method; one name for the convention and the exemption |
 | `errors` with fixed derived codes (`api.schema_invalid`) | derivation roles with default codes, renamed by the conventions, by `errorRoles` on any node or by a pack | a contract with no pack compiles (A34), and every code stays renamable (A20, A30, A35) |
 | `errors` on routes only | codes declared or attached on any node, inherited below | A35: a resource, scope or single states its codes once |
@@ -1054,10 +1054,10 @@ schemes:
   sessionCookie: { kind: cookie, name: __Host-session, csrf: csrfToken }
   csrfToken: { kind: header, name: X-Csrf-Token }
   bearer: { kind: bearer }
-  internalToken: { kind: bearer, format: jwt }
+  internalToken: { kind: bearer, bearerFormat: jwt }
   stripeSignature:
     kind: signature
-    header: Stripe-Signature
+    name: Stripe-Signature
     format: 't={ts},v1={sig}'
     algorithm: hmac-sha256
     payload: '{ts}.{rawBody}'
@@ -1075,7 +1075,7 @@ identities:
     schemes: { read: [sessionCookie, bearer], write: [sessionCookie, bearer] }
     principal: UserPrincipal
   service:
-    schemes: { read: [internalToken] }
+    schemes: { read: [internalToken], write: [internalToken] }
     principal: ServicePrincipal
     headers:
       deadline: { for: all, required: true }
@@ -1363,10 +1363,8 @@ signIn:
   output: Session
 signOut:
   method: post
-  access:
-    optionalAuth: "Anyone may end their session."
-    refusedAsAnonymous: "Signing out must succeed with an expired session."
-  csrfExempt: "A forged sign-out harms no one."
+  access: { optionalAuth: "Signing out must succeed, even with an expired session." }
+  csrf: { exempt: "A forged sign-out harms no one." }
   responses: { 204: {} }
 updateProfile:
   method: patch
@@ -1425,8 +1423,8 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-004 | `owner: caller`, `ops` (6) |
 | SCN-005 | `enums`, `enum` in a schema (12, ADR 0003) |
 | SCN-006 | `examples`, `$file` (12, 2); refused keyword `if` (ADR 0003). The scenario's "TaskPage" example is the list payload, the item array, which the emitter wraps through the format |
-| SCN-007 | `access.public`, `optionalAuth`, `csrfExempt`, `idempotency.exempt`, `lint.allow`, `maturity.reason`, enum `reason`, right `guest` (9 to 12) |
-| SCN-008 | `schemes` with `csrf`, `identities.schemes.write`, `csrfExempt` (9) |
+| SCN-007 | `access.public`, `optionalAuth`, `csrf.exempt`, `idempotency.exempt`, `lint.allow`, `maturity.reason`, enum `reason`, right `guest` (9 to 12). Every route lives under a surface, so the scenario's "route outside any surface" reads as a route under a surface with no identity |
+| SCN-008 | `schemes` with `csrf`, `identities.schemes.write`, `csrf.exempt` (9) |
 | SCN-009 | `identity`, `principal.requires`, `scopes`, `requires` (rule and right), `input`, `bindings` (9) |
 | SCN-010 | `bindings` with body and path sources (9) |
 | SCN-011 | `errors` declared in the catalogue or on a node, attached with `{}` or narrowed with `{ example }`, `conventions.errors.every`, `errorRoles` (11) |
@@ -1436,7 +1434,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-016 | `extensions` (`at`, `schema`), the extension key pattern, `x-<prefix>-<key>` (12, 4) |
 | SCN-018 | `lint.allow`, `maturity`; `sensitive` (12, 10, ADR 0003) |
 | SCN-019 | `api.compat.policy` (5) |
-| SCN-026 | `schemes` of `kind: signature` (`header`, `format`, `algorithm`, `payload`, `encoding`, `tolerance`, `key`), `identities` of `kind: signed` (9) |
+| SCN-026 | `schemes` of `kind: signature` (`name`, `format`, `algorithm`, `payload`, `encoding`, `tolerance`, `key`), `identities` of `kind: signed` (9) |
 | SCN-029 | `extends`, duplicate definitions (2) |
 | SCN-030 | `$ref` to a file, `include` of a schema (2) |
 | SCN-031 | `concurrency.version: query.<p>`, `concurrency: inherit`, `If-Match` refused (6, 4) |

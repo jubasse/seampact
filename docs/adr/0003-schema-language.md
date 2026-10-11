@@ -140,7 +140,7 @@ Every use of a schema is input or output, known from where it appears: `input`, 
 | unknown object keys | refused with 400, every issue reported at once | stripped by the server on emit; kept or ignored by a client on read, never an error |
 | unknown enum member | refused | kept by a client as an unknown member, or mapped to the enum's `fallback` |
 | unknown union tag | refused | the client's unknown-variant branch |
-| missing required field | refused | a server bug: the server boundary answers 500 from the `undeclaredStatus` slot rather than emit it |
+| missing required field | refused | a server bug: the server boundary answers 500 from the `undeclaredStatus` role rather than emit it |
 
 No target ever freezes an output enum or union: a server adding a member or a variant is an additive change (ADR 0005).
 
@@ -182,13 +182,14 @@ UpdateTask:
     title: { type: string, minLength: 1, maxLength: 200 }
     effort: { type: integer, minimum: 0, restrictedTo: tasks.seeEffort }
     note: { type: string, maxLength: 2000, restrictedTo: { right: tasks.annotate, input: strip } }
-    budget: { $ref: Money, restrictedTo: { right: roles, params: { allowed: [owner] }, subject: scope } }
+    budget: { $ref: Money, restrictedTo: { right: roles, params: { allowed: [owner] } } }
 ```
 
-- The short form names a right; its subject is the object holding the field (`holder`). The long form takes `right`, `params`, `subject` (`holder` or `scope`) and `input` (`reject` or `strip`, overriding `conventions.restrictedInput`).
+- The short form names a right. The long form takes `right`, `params` and `input` (`reject` or `strip`, overriding `conventions.restrictedInput`).
+- The subject is never written: it follows from the right's declaration (ADR 0002 section 9), so the same fact is not stated twice. A right without a subject has none. A scope right takes the route's resolved scope. A resource right takes, on output, the holder's property whose schema is the right's `id` schema; on input and for a sort key, the route's default subject, by the rule of `requires` (the nearest member id). When none is found, the compiler stops with an error naming the field, the right and the route.
 - A restricted property is optional by nature: listing it in `required` is an error with the fix "remove it from required".
 - On output, a field whose right the caller lacks is absent, never null; on a public route it is always absent unless the right is guest-enabled (SCN-065, CHK-025).
-- On input, a restricted field sent without the right answers 403 from the `forbidden` slot with the field pointer, or is stripped (SCN-066, CHK-092).
+- On input, a restricted field sent without the right answers 403 from the `forbidden` role with the field pointer, or is stripped (SCN-066, CHK-092).
 - A sort key inherits its field's restriction (ADR 0002 section 10).
 - The IR materialises, per operation, every field right with its schema, pointer, right, params, subject and direction, so targets never walk schemas to find them (ADR 0004).
 
