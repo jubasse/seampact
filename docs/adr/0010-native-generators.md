@@ -104,7 +104,7 @@ Before the PHP target lanes start, a spike builds one API Platform operation tha
 - Every IR change touches two generated models in the same PR; CI makes forgetting it impossible.
 - Each binary release implies a plugin release that embeds its hashes. Consumers can override them without waiting.
 - Linux musl (Alpine) is not a shipped binary platform; a consumer on Alpine uses the bundle path or a glibc build image.
-- Six Composer mirrors are needed at publication, not three.
+- Every Composer package needs a mirror at publication: the six above plus the signed-webhook helper of ADR 0013, not only the three targets A19 names.
 
 ## Traceability
 

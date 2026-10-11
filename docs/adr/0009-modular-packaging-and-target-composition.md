@@ -118,7 +118,7 @@ A target maps the contract onto its framework's idiomatic mechanisms (A30): Nest
 - No 1.0 target needs an adapter or an authorization library to compile, boot or pass the HTTP suite (SM-8 = 0).
 - A server consumer installs one more package than the brief's sketch: the `hooks` package. It is small, has no dependency and carries no behaviour.
 - A bug in generated boundary behaviour is fixed by upgrading the target and regenerating, not by a runtime package update. This is the price of generated code that runs without seampact behaviour code.
-- Composer needs read-only mirrors for `seampact/ir`, `seampact/hooks` and `seampact/laravel-spatie` as well as the three targets named in A19.
+- Every Composer package needs its own read-only mirror (A19 names the three targets): `seampact/ir`, `seampact/hooks`, `seampact/laravel-spatie` and the signed-webhook helper of ADR 0013 need one too.
 
 ## Traceability
 
