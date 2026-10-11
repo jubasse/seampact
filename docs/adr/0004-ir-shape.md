@@ -97,7 +97,9 @@ Every IR object of the kinds below has the members it needs from this list, with
 interface ErrorDecl {
   code: ErrorCode;  family: string;  nature: 'refused' | 'unavailable' | 'failed';
   http: { status: number };                 // the status is an HTTP attribute of the error (ADR 0014)
-  params?: SchemaRef;  example?: unknown;  title?: string;  docs; origin;
+  params?: SchemaRef;  example?: unknown;  title?: string;  docs;
+  origin;                                   // the catalogue entry or the tree node that declared it (A35)
+  default?: ErrorRole;                      // set when the code is a role's core default (ADR 0006 section 6)
 }
 interface HeaderDecl {
   id; semantic: 'deadline' | 'traceContext' | 'actorSurface' | 'versionToken';
@@ -201,7 +203,7 @@ interface Operation {
   bindings: { from: ValueSource; to: ValueSource; origin: Origin }[];
   input?: { media: string; schema: TypeUse; bodyLimitBytes: number; rawBody: boolean; origin };
   responses: Response[];                     // success and derived non-error responses (304), sorted by status
-  errors: { code: ErrorCode; example?: unknown; derivedFrom?: DerivedFrom; origin?: Origin }[];
+  errors: { code: ErrorCode; example?: unknown; derivedFrom?: DerivedFrom; origin?: Origin }[];   // origin: the node that attached it (A35)
   fieldRights: FieldRight[];
   idempotency?: { header: string; replayHeader: string; lifetimeMs: number; derivedFrom } | { exempt: Reason; origin };
   concurrency?: { version: ValueSource; field: string; derivedFrom };

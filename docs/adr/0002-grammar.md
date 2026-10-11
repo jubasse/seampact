@@ -101,7 +101,7 @@ conventions:
 
 Templates in `derive` use `{resource}`, the name of the collection or single the route belongs to (`tasks`), and `{op}`, the `ops` name, or the route's name for a route that did not come from `ops`. Every element an entry produces carries `derivedFrom` naming `pack.<pack>.<entry>` (ADR 0006).
 
-`conventions.rights.pattern` is the right-naming slot of ADR 0008: a regular expression that every right name, declared or derived, must match besides the core pattern of section 4.
+`conventions.rights.pattern` is the right-naming setting of ADR 0008: a regular expression that every right name, declared or derived, must match besides the core pattern of section 4.
 
 #### Layers and overrides
 
@@ -202,7 +202,7 @@ extends: ../shared/base.yaml
 | `name` | the api name, unique in the workspace |
 | `version` | an integer; the path version derives from it (section 6) |
 | `kind` | `surface` (default) or `service` |
-| `role` | `gateway`: every route derives 502, 503 and 504 from the conventions' error slots (FR-34) |
+| `role` | `gateway`: every route derives 502, 503 and 504 from the `upstreamUnavailable`, `serviceUnavailable` and `upstreamTimeout` roles (FR-34) |
 | `caller` | service apis only: `{ identity, right }`; see below |
 | `maturity` | `experimental`, `provisional` or `stable`; the default maturity of every operation |
 | `compat` | `{ policy: additive-only }` or `{ policy: none }`; gates releases and `maturity: stable` (FR-13, SCN-019, SCN-050) |
@@ -300,7 +300,7 @@ Operation ids of other routes: a route under `member` is its name plus the singu
 Kept from Arthome (brief 5.2, FR-2):
 
 - `owner: caller`: the caller owns the records. On a collection, another caller's id answers 404 (derived), with no version and no 409; on a single, nothing is derived (SCN-004).
-- Otherwise a write may be versioned: `concurrency: { version: body.expectedVersion, field: version }`. `update` and `delete` inherit it; a member route only with `concurrency: inherit` (SCN-003, SCN-031). The route's input must hold the `version` field (a body field or a query parameter) and the item schema must hold `field`; either missing is a compile error naming the field. A stale write derives `409` from the `stateConflict` slot. `If-Match` is not supported until a consumer needs it.
+- Otherwise a write may be versioned: `concurrency: { version: body.expectedVersion, field: version }`. `update` and `delete` inherit it; a member route only with `concurrency: inherit` (SCN-003, SCN-031). The route's input must hold the `version` field (a body field or a query parameter) and the item schema must hold `field`; either missing is a compile error naming the field. A stale write derives `409` from the `stateConflict` role. `If-Match` is not supported until a consumer needs it.
 - DELETE when the record disappears; an action (`POST .../archive`) when it stays with a new state.
 
 ### 7. Routes
@@ -360,7 +360,8 @@ Every node may set the settings below; its descendants inherit them, and the IR 
 | `scopes` | added; entering a scope twice is an error |
 | `principal.requires` | union |
 | `bindings` | added; one key bound to two different values is an error |
-| `errors` | union; an example override from the nearest node wins |
+| `errors` | union; a code declared on a node joins the api registry; an example narrowed by the nearest node wins |
+| `errorRoles` | per role, the nearest wins, over `conventions.errors.derived` |
 | `tags` | union |
 | `headers`, `query` | added; one name declared twice is an error |
 | `upstream`, `maturity`, `internal`, `deprecated`, `budget`, `bodyLimit`, `cache`, `csrfExempt`, `idempotency`, extension keys | the nearest wins |
@@ -437,7 +438,7 @@ identities:
 | `schemes.optionalRead` | extra schemes accepted on optional-auth reads only (FR-27, SCN-076) |
 | `scheme` | `signed` only: the one `signature` scheme; the compiler forces a raw body and removes CSRF and idempotency keys (FR-20, SCN-026) |
 | `principal` | the principal schema, or `{ variants: { <name>: <schema> } }` for an identity accepting several credential kinds; hooks and handlers narrow on the variant name |
-| `errors` | codes attached to every route of the identity |
+| `errors` | codes attached to every route of the identity, as a list of codes |
 | `headers` | the identity headers it uses, below |
 
 Identity headers (FR-28) are declared in the `headers` catalogue, so a pack can supply their names without the identity that uses them (SCN-079), and each identity names the ones it uses with the facts of that use:
@@ -473,7 +474,7 @@ principal: { requires: [profileId] }
 bindings: { body.profileId: principal.profileId, path.profileId: principal.profileId }
 ```
 
-`principal.requires` lists principal fields that must be present; a principal without one answers 403 after authentication, and the handler receives the field as non-optional (SCN-034). `bindings` maps a request value to a principal field; a mismatch answers 403 before the handler (SCN-010). Both answers use the `forbidden` slot unless the conventions name another code.
+`principal.requires` lists principal fields that must be present; a principal without one answers 403 after authentication, and the handler receives the field as non-optional (SCN-034). `bindings` maps a request value to a principal field; a mismatch answers 403 before the handler (SCN-010). Both answers use the `forbidden` role (section 11).
 
 #### Requirements
 
@@ -518,7 +519,7 @@ rights:
 | `params` | a fields map or a schema name; typed in the decide request |
 | `subject` | absent (none), `{ scope: <scope> }`, or `{ resource: <Name>, id: <id schema> }` |
 | `guest` | a reason; required for the right to appear on a public route (SCN-063) |
-| `errors` | the denial codes the decide hook may answer; default the `forbidden` slot |
+| `errors` | the denial codes the decide hook may answer; default the code of the `forbidden` role |
 | `summary`, `description`, extension keys | docs and consumer metadata that reach the generated boundary (A20, SCN-064) |
 
 At the use site, a resource subject defaults to the nearest member id whose schema is the right's `id` schema (`path.taskId` for `tasks.update` under `tasks`); otherwise `subject` is required. The source's schema must equal the subject's id schema (SCN-062). A scope subject takes the route's resolved scope; a route without that scope is a compile error. Roles, permissions and custom questions are all rights (FR-22); naming conventions and derived rights come only from opt-in packs (FR-26, SCN-073).
@@ -573,7 +574,7 @@ scopes: { org: subdomain, project: path.projectId }
 
 - A route is a list when it comes from the `list` op, or when it sets `item` instead of `output`. `output` always means the whole body; an array `output` on a GET is refused with the fix "use `item`", so an author always knows whether a route is paged.
 - `paging`: on a list. It names a paging style from the `pagings` catalogue (section 14): `paging: cursor`, or the mapping form `{ cursor: { maxLimit: 50 } }`, which also takes `defaultLimit` and, for a style with a `since` role, `token: opaque` or `token: instant`. A list without `paging` uses `conventions.paging.default`. A list with neither is a compile error naming both fixes: declare a style in `pagings` and name it, or apply a format pack that provides one (A31). `paging: { none: "<reason>" }` serves the whole list unpaged, through the format's `list` shape. A style with a `since` role derives 410 from the `gone` role (FR-31, SCN-012, SCN-082, SCN-083).
-- `sortable`: a list of item fields, each a name or `{ key, right }`. A key inherits its field's `restrictedTo`; an explicit right that disagrees is a compile error; sorting by a restricted key without the right derives 403 from the `sortKeyForbidden` slot (FR-23, SCN-067).
+- `sortable`: a list of item fields, each a name or `{ key, right }`. A key inherits its field's `restrictedTo`; an explicit right that disagrees is a compile error; sorting by a restricted key without the right derives 403 from the `sortKeyForbidden` role (FR-23, SCN-067).
 - `filteredBy: <right>`: the right the application applies to its query; it reaches OpenAPI and the handler context, and nothing enforces it (SCN-068).
 - `degradable: [viewerProgress]`: paths of optional properties of the success data; a required one is a compile error (SCN-085).
 - `cache: { freshness: minute, anonymous: public, vary: [Cookie, Authorization], etag: true }`. `freshness` is a family from `conventions.cache.families` or `never` (no-store); `anonymous` (`public` or `private`) applies to anonymous callers only, since an identified caller always gets private; `etag: true` generates conditional GET (FR-33, SCN-013, SCN-086).
@@ -598,7 +599,11 @@ services:
 ```yaml
 # shared/base.yaml (excerpt)
 errors:
-  api.forbidden: { status: 403, nature: refused, title: The caller may not do this. }
+  api.forbidden:
+    status: 403
+    nature: refused
+    title: The caller may not do this.
+    params: { pointer?: { type: string } }
   api.rate_limited:
     status: 429
     nature: unavailable
@@ -606,11 +611,47 @@ errors:
     example: { retryAfterMs: 1500 }
 ```
 
-The registry defines each code once: `status`, `nature`, `params` (a fields map or a schema name), `example` (the params), `title`, `description` (FR-6, SCN-037). Codes reach operations only by attachment, at three levels: `conventions.errors.every` (every operation), `errors` on a tree node (inherited), and `errors` on a route. An attachment is a code, or `{ code, example }` to override the example only; redefining `status`, `nature` or `params` anywhere but the registry is an error naming the registry location (SCN-011). Rights, rules, scopes and identities attach their own codes, with `derivedFrom` in the IR.
+A declaration defines a code once: `status` (400 to 599), `nature`, `params` (a fields map or a schema name), `example` (the params), `title`, `description` (FR-6, SCN-037). `nature` may be left out: it is then `unavailable` for 408, 425, 429, 502, 503 and 504, `refused` for every other 4xx and `failed` for every other 5xx.
+
+Codes are declared at every level of the tree (A35): in the `errors` catalogue (the api's global level, with its base and packs), or in `errors` on any node: a surface root, a collection, a single, a `collection` or `member` scope node, or a route. On a node, `errors` maps a code to one of:
+
+- `{}`: attaches a code declared elsewhere;
+- `{ example }`: attaches it and narrows its example to this subtree's case;
+- a declaration (it holds `status`): declares the code and attaches it.
+
+```yaml
+# tasks/api.yaml (excerpt: node settings of tasks)
+errors:
+  api.not_found: {}
+  tasks.not_found: { status: 404, title: No such task in this channel. }
+  tasks.locked: { status: 423, title: Another editor holds the task., params: { lockedBy: UserId } }
+  api.rate_limited: { example: { retryAfterMs: 30000 } }
+errorRoles:
+  notFound: tasks.not_found
+```
+
+A node's codes attach to every operation below it; children add codes or narrow an example, never remove one (section 8). `conventions.errors.every` attaches codes to every operation. Codes are api-wide, whatever level declares them: a code declared on a node joins the api's registry and any other node may attach it by name. Declaring a code a second time with a different definition is a compile error naming both locations; re-attaching it, here or below, is how it is reused. Rights, rules, scopes and identities list the codes they may answer, attached with `derivedFrom` in the IR. The IR records, for each operation's code, the node it was attached at, and for each declaration where it was declared (ADR 0004).
 
 `nature` is a closed set that tells a client whether retrying can help: `refused` (retrying the same request cannot succeed), `unavailable` (retrying later may succeed) and `failed` (the server failed). No layer adds a nature, so every client keeps one retry rule and the authoring schema refuses any other value with the allowed list (SCN-037).
 
-Derived errors use slots, never fixed codes. `conventions.errors.derived` maps each slot to a registry code; a derivation whose slot has no code is a compile error naming the slot. The slots: `unauthenticated` (401), `csrfInvalid`, `forbidden`, `sortKeyForbidden` (403), `notFound` (404), `schemaInvalid` (400), `payloadTooLarge` (413), `unsupportedMediaType` (415), `stateConflict`, `idempotencyKeyReused`, `idempotencyInProgress` (409), `gone` (410), `rateLimited` (429), `undeclaredStatus` (500), `upstreamUnavailable` (502), `serviceUnavailable` (503), `upstreamTimeout`, `deadlineExceeded` (504). The derivation table that uses them is ADR 0006.
+#### Error roles
+
+Derived errors answer roles, never fixed codes: `unauthenticated` (401), `csrfInvalid`, `forbidden`, `sortKeyForbidden` (403), `notFound` (404), `schemaInvalid` (400), `payloadTooLarge` (413), `unsupportedMediaType` (415), `stateConflict`, `idempotencyKeyReused`, `idempotencyInProgress` (409), `gone` (410), `rateLimited` (429), `undeclaredStatus` (500), `upstreamUnavailable` (502), `serviceUnavailable` (503), `upstreamTimeout`, `deadlineExceeded` (504). The derivation table that uses them is ADR 0006 section 5.
+
+Every role has a default code in the core (`api.schema_invalid`, `api.forbidden` and the others of ADR 0006 section 6), registered when used and rendered through the api's format, so a contract with no pack compiles (A34). A role is renamed for the whole api by `conventions.errors.derived`, or for a subtree by `errorRoles` on any node, the nearest binding winning (A35). A binding is a code, or `{ code, params }`:
+
+```yaml
+# shared/base.yaml (excerpt)
+conventions:
+  errors:
+    derived:
+      schemaInvalid:
+        code: api.schema_invalid
+        params: { issues: { $each: $issues, $as: { pointer: $item.pointer, rule: $item.rule } } }
+      forbidden: { code: api.forbidden, params: { pointer: $pointer } }
+```
+
+The boundary produces data for each role (the validation issues, the restricted field's pointer, the sort key, the body limit, the retry delay; ADR 0006 section 6 lists them). Without `params`, each param of the bound code takes the datum of the same name. `params` is a template (section 13) over the role's data. A bound code must be registered, and its params must receive every datum the role marks required, by name or through `params`; otherwise the binding is a compile error naming the role, the datum and the code.
 
 ### 12. Enums, examples, docs, extensions, lint
 
@@ -672,7 +713,7 @@ conventions:
   cache: { families: { minute: 60s, five_minutes: 300s } }
   restrictedInput: reject
   outputEnums: enum
-  rateLimit: { retryAfterHeader: Retry-After }
+  rateLimit: { header: Retry-After, param: retryAfterMs, unit: s }
   errors:
     every: [api.internal]
     derived: { unauthenticated: api.unauthenticated, forbidden: api.forbidden }
@@ -691,7 +732,7 @@ conventions:
 | `cache.families` | freshness families and their max-age | empty: each family a `cache.freshness` names is required |
 | `restrictedInput` | `reject` or `strip`: a restricted field sent without its right (A21); overridable per field (ADR 0003) | `reject` |
 | `outputEnums` | `enum` or `open`: how the emitter writes an output enum (FR-29) | `enum` |
-| `rateLimit` | the header carrying the retry delay on 429 | unset: a 429 carries no retry header |
+| `rateLimit` | `{ header, param, unit }`: the header written on a 429 from a bucket rule, carrying the denial's integer millisecond `param` in `unit` (`s`, rounded up, or `ms`) | unset: a 429 carries no retry header |
 | `degradedHeader` | the header listing degraded parts | unset: required for a `degradable` route whose format has no `degraded` meta field |
 | `rights.pattern` | a pattern every right name must also match (section 2) | unset: the core pattern only (A20) |
 | `errors.every` | codes attached to every operation (section 11) | empty |
@@ -982,7 +1023,8 @@ Laravel's paginator also writes `meta.links`, a numbered list of page links. It 
 | no rights, scopes, signed identities | `rights`, `scopes`, `kind: signed` | A5, A18 to A25 |
 | `access: { public }`, implicit optional auth | `public`, `optionalAuth`, `refusedAsAnonymous`, each with a reason | the sketch's `optionalAuth` bundled two behaviours that Arthome keeps apart |
 | `idempotent: true` on a GET, `idempotent: { exempt }` | `idempotency: { exempt }` only | a GET is safe by its method; one name for the convention and the exemption |
-| `errors` with fixed derived codes (`api.schema_invalid`) | derivation slots mapped by the conventions | the core imposes no error code (A20, A30) |
+| `errors` with fixed derived codes (`api.schema_invalid`) | derivation roles with default codes, renamed by the conventions, by `errorRoles` on any node or by a pack | a contract with no pack compiles (A34), and every code stays renamable (A20, A30, A35) |
+| `errors` on routes only | codes declared or attached on any node, inherited below | A35: a resource, scope or single states its codes once |
 | `nature` open | closed set of three; no layer adds one | clients keep one retry rule (FR-6), and no consumer needs another nature (lesson 5) |
 | `conventions` on any node (5.2) | `conventions` on the api, its base and packs only | a convention is one fact for the whole api; per-node values are ordinary inherited settings (section 8) |
 | identity headers written inside the identity | a `headers` catalogue, used by identities | a pack supplies header names without the identity (SCN-079) |
@@ -1070,28 +1112,15 @@ buckets:
   write: { key: [principal.userId], limit: 60, window: 1m }
 
 errors:
-  api.unauthenticated: { status: 401, nature: refused }
-  api.forbidden: { status: 403, nature: refused }
-  api.csrf_invalid: { status: 403, nature: refused }
-  api.sort_key_forbidden: { status: 403, nature: refused }
-  api.not_found: { status: 404, nature: refused }
   api.schema_invalid:
     status: 400
     nature: refused
     params: { issues: Issues }
     example: { issues: [{ pointer: /title, rule: minLength }] }
-  api.payload_too_large: { status: 413, nature: refused }
-  api.unsupported_media_type: { status: 415, nature: refused }
-  api.idempotency_key_reused: { status: 409, nature: refused }
-  api.idempotency_in_progress: { status: 409, nature: unavailable }
   api.rate_limited:
     status: 429
-    nature: unavailable
     params: { retryAfterMs: { type: integer, minimum: 0 } }
     example: { retryAfterMs: 1500 }
-  api.internal: { status: 500, nature: failed }
-  api.deadline_exceeded: { status: 504, nature: unavailable }
-  state.conflict: { status: 409, nature: refused }
 
 pagings:
   cursor:
@@ -1110,23 +1139,13 @@ conventions:
   batch: { maxIds: 200, bodyLimit: 2MiB }
   cache: { families: { minute: 60s, hour: 3600s } }
   restrictedInput: reject
+  rateLimit: { header: Retry-After, param: retryAfterMs, unit: s }
   errors:
     every: [api.internal]
     derived:
-      unauthenticated: api.unauthenticated
-      csrfInvalid: api.csrf_invalid
-      forbidden: api.forbidden
-      sortKeyForbidden: api.sort_key_forbidden
-      notFound: api.not_found
-      schemaInvalid: api.schema_invalid
-      payloadTooLarge: api.payload_too_large
-      unsupportedMediaType: api.unsupported_media_type
-      stateConflict: state.conflict
-      idempotencyKeyReused: api.idempotency_key_reused
-      idempotencyInProgress: api.idempotency_in_progress
-      rateLimited: api.rate_limited
-      undeclaredStatus: api.internal
-      deadlineExceeded: api.deadline_exceeded
+      schemaInvalid:
+        code: api.schema_invalid
+        params: { issues: { $each: $issues, $as: { pointer: $item.pointer, rule: $item.rule } } }
 
 enums:
   Role: { values: [owner, editor, viewer], reason: Roles are local to this product. }
@@ -1304,7 +1323,7 @@ surfaces:
   internal:
     prefix: /internal/v{version}
     requires: [{ right: callerService, params: { allowed: [catalog] } }]
-    errors: [api.not_found, api.forbidden]
+    errors: { api.not_found: {}, api.forbidden: {} }
     routes:
       channels:
         kind: collection
@@ -1320,6 +1339,8 @@ surfaces:
 ```
 
 What the example shows, by route:
+
+- Errors: the base declares only `api.schema_invalid` (its `Issues` carry no `in`, so the role is bound with a params template) and `api.rate_limited` (an example, and a nature left to its status). Every other derived error answers its role's default code (A34), and `api.internal`, `api.not_found` and `api.forbidden` are default codes attached by name.
 
 - `listTasks` (`GET /v1/channels/{channelId}/tasks`): identity `user` from the surface, scope `channel` from the member path of `channels`, the base's `cursor` style (the item array as the body, the next page in a `Link` header) capped at 50, the restricted sort key `effort` (it inherits `tasks.seeEffort` from `Task.effort`), `filteredBy`.
 - `createTask`: `throttle` then `roles` in that order, a body, an idempotency key from the conventions, CSRF from `sessionCookie` on a write.
@@ -1382,7 +1403,7 @@ listChanges:
 
 - Phase 1 writes the authoring JSON Schema from sections 1 to 13 of this ADR; a keyword not listed here is refused by it, and the grammar snapshot test (SM-6) fails when a core keyword is added without an ADR reference.
 - The loader implements sections 1 to 4 (composition, the byte-identity rule, pitfalls); the compiler passes implement sections 5 to 13 as ADR 0006 assigns them.
-- Contracts carry no house convention: error codes, header names, right names and wire formats all come from the base or from packs. A contract without them fails with a diagnostic naming the missing slot or key, which is the price of A20, A25 and A30.
+- Contracts carry no house convention: header names, right names, page shapes and wire formats all come from the base or from packs. Derived errors have default codes in the core (A34), each renamable, so a contract with no pack compiles; a paged list still needs a paging style (A31).
 - The grammar has three shorthands only: a string for a schema reference, `ops` as a list, and `paging` as a style name. Each yields the same IR as its long form.
 - An inherited requirement cannot be removed below; a contract that needs it must restructure its tree. Revisit only with a consumer that cannot.
 - Not modelled until a consumer needs it: `If-Match`, media types other than JSON (and the raw body of a signed identity), a base extending a base, shorthands beyond `ops`.
@@ -1408,7 +1429,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-008 | `schemes` with `csrf`, `identities.schemes.write`, `csrfExempt` (9) |
 | SCN-009 | `identity`, `principal.requires`, `scopes`, `requires` (rule and right), `input`, `bindings` (9) |
 | SCN-010 | `bindings` with body and path sources (9) |
-| SCN-011 | `errors` registry and attachment with `{ code, example }`, `conventions.errors.every` (11) |
+| SCN-011 | `errors` declared in the catalogue or on a node, attached with `{}` or narrowed with `{ example }`, `conventions.errors.every`, `errorRoles` (11) |
 | SCN-012 | `pagings` (`cursor`, `limit`, `sort` roles), `conventions.paging.default`, `paging.<style>.maxLimit`, `sortable`, `restrictedTo` (10, 14, ADR 0003) |
 | SCN-013 | `cache.freshness`, `cache.etag`, `conventions.cache.families` (10, 13) |
 | SCN-014 | `workspace.apis`, `api.kind: service`, `relays`, `workspace.imports` (1, 5, 7) |
@@ -1459,7 +1480,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-082 | a `pagings` style with the `since`, `nextSince` and `complete` roles, `paging.<style>.token`, `item` (10, 14) |
 | SCN-083 | a `pagings` style with the `page` and `limit` roles, from a format pack or the contract, `paging.<style>.maxLimit`, `item` (10, 14, 15) |
 | SCN-084 | `ops.batch.maxIds`, `conventions.batch` (6, 13) |
-| SCN-085 | `degradable`, `conventions.degradedHeader` or a format `meta` slot (10, 13) |
+| SCN-085 | `degradable`, `conventions.degradedHeader` or a format `degraded` meta field (10, 13) |
 | SCN-086 | `access.optionalAuth`, `cache.anonymous`, `cache.vary`, `sensitive` (9, 10) |
 | SCN-087 | `services`, `upstream`, `maturity.level`, `maturity.reason`, `api.role: gateway` (10, 5) |
 | SCN-088 | `summary`, `description` with `$file` (12, 2) |
