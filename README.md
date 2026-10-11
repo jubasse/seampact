@@ -10,16 +10,16 @@ seampact is a contract system for HTTP APIs. You describe an API in plain YAML f
 
 seampact generates boundaries, not implementations.
 
-- **Generated:** named types, validators, the route table, one handler interface per resource with exact input and output types, typed clients, derived errors and headers, and the access boundary a route needs.
-- **Yours:** what a handler does, where data lives, how a credential is checked, how a right is decided and which tenant a request belongs to.
+- **Generated:** named types, validators, the route table, one handler interface per resource (or tag, or operation) with exact input and output types, typed clients, derived errors and headers, and the utilities that place the access and validation checks around your controller: a decorator per operation in NestJS, a composed annotation in Spring, a FormRequest and middleware in Laravel, an attribute and its listener in Symfony and API Platform.
+- **Yours:** the controllers, which implement the generated interfaces, what a handler does, where data lives, how a credential is checked, how a right is decided and which tenant a request belongs to. seampact never generates a controller, and everything it generates goes to one directory, `__generated__` by default.
 
-seampact is not a framework. Generated code uses your framework's own mechanisms (guards and exception filters in NestJS, `ProblemDetail` in Spring, Form Requests and API Resources in Laravel, normalizers in Symfony) and never replaces them.
+seampact is not a framework. Generated code uses your framework's own mechanisms (guards, interceptors and exception filters in NestJS, interceptors, argument resolvers and `ProblemDetail` in Spring, Form Requests and API Resources in Laravel, listeners and normalizers in Symfony) and never replaces them. If you also want your framework's own OpenAPI output (`@nestjs/swagger`, springdoc, API Platform's), the opt-in `nativeDocs` artefact generates its annotations, agreeing with seampact's document.
 
 Access is checked through three generated, typed hooks: authenticate, decide and resolve scope. You answer them with the library you already use (Clerk, better-auth, Passport, CASL, spatie/laravel-permission, Laravel Gates, Symfony Voters, Spring Security) or with your own code. Your application refuses to start while a hook, a requirement or a route handler is missing.
 
 seampact imposes nothing: not a wire format, a page shape, error codes, header names, a versioning scheme, a permission model, a validator, a client library or a code style. Where it needs a value to work, it has a default you can rename; everything else comes from your contract or from opt-in packs. What it does demand is explicitness: every route states who may call it, and every exception states its reason.
 
-By default a response is the bare payload and an error is an RFC 9457 `application/problem+json` body, with default error codes you can rename. Paged lists declare their own parameter names and page shape, or take them from a pack. Envelopes, JSON:API, HAL, JSON-LD and Hydra, Laravel resources and paginators, Spring `Page`, or your own house format come from opt-in convention packs.
+By default a response is the bare payload and an error is an RFC 9457 `application/problem+json` body, with default error codes you can rename or replace with your own (`TASK_NOT_FOUND` works). Paged lists declare their own parameter names and page shape, or take them from a pack. Bodies are JSON, forms or multipart uploads, responses may be file downloads or redirects, and a value a third party shapes freely can be declared opaque. Envelopes, JSON:API, HAL, JSON-LD and Hydra, Laravel resources and paginators, Spring `Page`, or your own house format come from opt-in convention packs.
 
 ## Package map
 
@@ -53,7 +53,7 @@ Each app of a repository (frontend, backend, service) has its own `seampact.conf
 
 ### Java and PHP
 
-These run with no Node.js installed.
+These run with no Node.js installed. The standalone compiler binary runs `init`, `compile`, `check`, `lint` (core rules), `diff`, `explain` and `bundle`, so a Java or PHP team can own a contract repository without Node.js. The Gradle and Maven plugins read `seampact.config.yaml` or the same keys in their own DSL.
 
 | Framework | Install |
 |---|---|
@@ -64,7 +64,7 @@ These run with no Node.js installed.
 
 ### Which generators combine
 
-Every generator renders the default format and every format and paging style your contract or a pack declares, including your own page shapes: formats are data in the contract, not code in a generator. What differs is how each one plugs into its framework and what it links to. Supported framework versions are listed per release in `@seampact/spec`'s `compatibility/matrix.json`, and the CLI refuses a combination the matrix does not list.
+Every generator renders the default format and every format and paging style your contract or a pack declares, including your own page shapes: formats are data in the contract, not code in a generator. What differs is how each one plugs into its framework and what it links to. Supported framework versions are listed per release in `@seampact/spec`'s `compatibility/matrix.json`, and the CLI refuses a combination the matrix records as incompatible, and warns on a framework version it has not tested.
 
 | Generator | Produces | Links to | Formats mapped onto |
 |---|---|---|---|
@@ -72,16 +72,16 @@ Every generator renders the default format and every format and paging style you
 | `codegen-zod`, `codegen-yup` | validators (Standard Schema) | provides `validators` | not applicable: payloads only |
 | `codegen-class-validator` | DTO classes with decorators | provides `validators` | not applicable: payloads only |
 | `codegen-fetch` | typed client | provides `client` | the client's response readers |
-| `codegen-nestjs` | server boundary | `validators`: zod, yup or class-validator | exception filters and interceptors |
+| `codegen-nestjs` | per-operation decorators, guard, interceptor and input decorators around your controllers | `validators`: zod, yup or class-validator | exception filters and interceptors |
 | `codegen-fastify`, `codegen-express` | server boundary | `validators`: zod or yup | route hooks, middleware |
 | `codegen-adonis` | server boundary with VineJS validators | nothing | middleware and exception handler |
 | `codegen-react` | TanStack Query hooks | `client`: fetch | through the fetch client |
 | `codegen-vue` | composables | `client`: fetch | through the fetch client |
 | `codegen-angular` | injectable services over `HttpClient` | nothing | its own response readers |
-| Spring Boot plugin | server boundary with Bean Validation | nothing | `ProblemDetail`, Spring Data `Page` |
-| `seampact/laravel` | server boundary with Form Requests | nothing | API Resources and paginators |
-| `seampact/symfony` | server boundary with Validator constraints | nothing | normalizers |
-| `seampact/api-platform` | resources and DTOs | nothing | API Platform's serializer, JSON-LD and Hydra |
+| Spring Boot plugin | composed annotations, interceptor and argument resolver around your controllers, with Bean Validation | nothing | `ProblemDetail`, Spring Data `Page` |
+| `seampact/laravel` | routes, middleware and Form Requests around your controllers | nothing | API Resources and paginators |
+| `seampact/symfony` | route loader, attributes, listeners and Validator constraints around your controllers | nothing | normalizers |
+| `seampact/api-platform` | resource metadata and DTOs around your providers and processors | nothing | API Platform's serializer, JSON-LD and Hydra |
 
 In an app config, a link names the other entry's `id`: `link: { validators: validators }` for a server, `link: { client: client }` for React or Vue.
 
@@ -97,7 +97,7 @@ In an app config, a link names the other entry's `id`: `link: { validators: vali
 | `@seampact/pack-hal` | your api serves HAL |
 | `@seampact/nestjs-casl` | your NestJS app decides rights with CASL |
 | `seampact/laravel-spatie` | your Laravel app decides rights with spatie/laravel-permission |
-| `@seampact/signed-webhooks`, and its Java and PHP equivalents | you receive Stripe-style or GitHub-style signed webhooks and want the signature checked for you |
+| `@seampact/signed-webhooks`, and its Java and PHP equivalents | you receive Stripe-style or GitHub-style signed webhooks and want the signature checked for you; other senders (Standard Webhooks, Slack) are verified by your own hook with their own library |
 
 ## Sharing a contract between repositories
 
