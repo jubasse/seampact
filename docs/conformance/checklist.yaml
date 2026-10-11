@@ -74,7 +74,7 @@ items:
     targets: [core]
   - id: CHK-009
     source: "14 Access"
-    fact: Every exception (public, optionalAuth with a refused credential treated as anonymous, csrf exemption, idempotency exemption, allow-lists, stated maturity, local enum, guest right) carries a reason.
+    fact: Every exception (public, optionalAuth with a refused credential treated as anonymous, csrf exemption, idempotency exemption, ignored unknown input keys, a route format other than the api's, allow-lists, stated maturity, local enum, guest right) carries a reason.
     frs: [FR-4]
     scenario: SCN-007
     targets: [core]
@@ -166,7 +166,7 @@ items:
     targets: [server, fetch]
   - id: CHK-024
     source: "14 Responses"
-    fact: Tagged unions have a discriminator and mapping, are strict on the server, emitted as oneOf with mapping, and keep an unknown variant in clients.
+    fact: Tagged unions have a discriminator (a body property, or a request header for a route's whole input) and a mapping, are strict on the server, emitted as oneOf with mapping, and keep an unknown variant in clients.
     frs: [FR-3, FR-15]
     scenario: SCN-033
     targets: [core, server, zod, fetch]
@@ -281,7 +281,7 @@ items:
     targets: [core, server]
   - id: CHK-043
     source: "14 Reads and writes; A34"
-    fact: With conventions.idempotency set, writes carry idempotency keys checked against the store interface (replay, 409), with written exemptions; without it, no key is derived (A34).
+    fact: With conventions.idempotency set, the writes of its methods carry idempotency keys, required unless it says otherwise (400 when missing), generated per call by clients and checked against the store interface (replay, 409), with written exemptions; without it, no key is derived (A34).
     frs: [FR-7]
     scenario: SCN-042
     targets: [server, fetch]
@@ -338,7 +338,7 @@ items:
   # ---------- 14 Lifecycle ----------
   - id: CHK-052
     source: "14 Lifecycle"
-    fact: A service route relays a public operation and the compiler checks the superset across the workspace.
+    fact: A relay route takes its shape and domain codes from the public operation it serves, and the compiler checks across the workspace that it answers every public code outside the gateway's own.
     frs: [FR-8]
     scenario: SCN-014
     targets: [core]
@@ -668,7 +668,7 @@ items:
     source: "A31"
     fact: A paged list names a paging style whose roles map to query names, body members, headers and Link relations; a paged list with neither a style nor a pack is a compile error naming both fixes.
     frs: [FR-31, FR-42]
-    scenario: SCN-012
+    scenario: SCN-101
     targets: [core, server, fetch]
   - id: CHK-107
     source: "A32"
@@ -704,25 +704,25 @@ items:
     source: "A36"
     fact: The reference contract compiles with every core default overridden (format, paging style, error codes, header names, path version, query encoding, int64 wire form, deprecation header names, operation ids and paths), and with none of the opt-ins (no pack, no idempotency, no CSRF); no convention is applied that the contract or a pack cannot rename or turn off.
     frs: [FR-10, FR-42, FR-6]
-    scenario: SCN-048
+    scenario: SCN-102
     targets: [core]
   - id: CHK-113
     source: "A37"
     fact: Each app has its own seampact.config.yaml that works alone; a monorepo root config lists the apps and shares contract sources with them.
     frs: [FR-17, FR-39]
-    scenario: SCN-094
+    scenario: SCN-103
     targets: [core]
   - id: CHK-114
     source: "A37"
     fact: The app config switches each target's artefacts on or off, and a config with no codegen target generates only the OpenAPI documents.
     frs: [FR-11, FR-39]
-    scenario: SCN-049
+    scenario: SCN-104
     targets: [core]
   - id: CHK-115
     source: "A37"
     fact: The published compatibility matrix (targets, validators, clients, adapters, framework versions) validates the app config, and an incompatible combination is refused before generation with a diagnostic naming the working alternatives.
     frs: [FR-39, FR-14]
-    scenario: SCN-094
+    scenario: SCN-105
     targets: [core]
 not_in_checklist:
   - source: "A4, A16"
