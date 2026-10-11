@@ -39,7 +39,7 @@ interface Name { segments: string[]; role: Role }
 | `member` | a property or a parameter, as an identifier | none |
 | `enumMember` | an enum value, as an identifier | none |
 
-The wire name of a property, parameter, header or enum value stays a separate string in the IR (ADR 0004); a `Name` only drives identifiers.
+The wire name of a property, parameter, header or enum value stays a separate string in the IR (ADR 0004); a `Name` only drives identifiers. A property's `codeName` and an enum's `codeNames` (ADR 0003 section 6, ADR 0002 section 12) replace the segments split from the wire name, for an identifier the wire name makes poor; they never change the wire.
 
 ### 2. Splitting a written name into segments
 
@@ -90,7 +90,14 @@ A segment that starts with a digit is never first in a type name, because a decl
 
 ### 5. Reserved words and shadowed names
 
-After casing, an identifier that collides with a reserved word or a shadowed name of the target language gets a trailing `_` (`List_`, `match_`, `Error_`). One rule for every language keeps it predictable and visibly an escape. The casings of section 4 and this escape are defaults, not conventions imposed on the consumer (A36): a target may offer options for its own language (an escape prefix or suffix, the casing of enum members), applied after the shared algorithm and recorded in the target's options, so generation stays deterministic; the shared vectors test the defaults. The lists, part of the published algorithm:
+After casing, an identifier that collides with a reserved word or a shadowed name of the target language gets a trailing `_` (`List_`, `match_`, `Error_`). One rule for every language keeps it predictable and visibly an escape. The casings of section 4, the suffix words of section 1 and this escape are defaults, not conventions imposed on the consumer (A36): a target may offer options for its own language, applied after the shared algorithm and recorded in the target's options, so generation stays deterministic; the shared vectors test the defaults. Every target offers at least:
+
+- `suffixes`: the word of each derived role (`input: dto` gives `AssignTaskDto` in a NestJS habit, `input: request` gives `AssignTaskRequest` in a Java one);
+- `escape`: the reserved-word escape, a suffix or a prefix;
+- `enumCase`: the casing of enum members, where the language has them;
+- `handlers`: how operations are grouped into generated interfaces, `perResource` (the default, `TasksEndpoints`), `perTag`, or `perOperation` (one interface per operation, for single-action controllers such as Laravel's and Symfony's `__invoke`).
+
+The lists, part of the published algorithm:
 
 - TypeScript: the reserved and strict-mode words of ECMAScript; for types, the global names a generated module would shadow, such as `Array`, `Boolean`, `Date`, `Error`, `Function`, `Headers`, `JSON`, `Map`, `Math`, `Number`, `Object`, `Partial`, `Promise`, `Record`, `RegExp`, `Request`, `Response`, `Set`, `String`, `Symbol`, `URL`.
 - Java and Kotlin: the keywords and literals of both languages; for types, every simple name of `java.lang` (`Error`, `Exception`, `Integer`, `Object`, `Override`, `Record`, `String`, `Thread` and the rest), the names Kotlin imports by default that a generated type would shadow (`Any`, `Unit`, `Nothing`, `Pair`, `Result`), and the collection types generated code uses unqualified (`List`, `Map`, `Set`, `Collection`, `Iterable`, `Optional`).
@@ -114,7 +121,7 @@ Each vector gives a written name (or segments and an owner, for derived names), 
 
 - No target splits or re-cases a name on its own; two generators always agree on an identifier, and a rename shows in the IR diff.
 - Name collisions are found once, by the compiler, with a located diagnostic, instead of as a compile error in generated Java or PHP.
-- The trailing `_` escape makes generated names such as `List_` slightly unusual; it is predictable, and a contract author who dislikes it renames the schema.
+- The trailing `_` escape makes generated names such as `List_` slightly unusual; it is predictable, and a contract author who dislikes it renames the schema or sets the target's `escape` option.
 - Reserved-word lists are part of the IR contract: adding a word is an IR change, since it renames generated code.
 
 ## Traceability

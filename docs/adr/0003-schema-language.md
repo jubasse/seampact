@@ -251,7 +251,8 @@ These keywords are not JSON Schema. Each compiles to an explicit IR field. On a 
 | Keyword | Where | Meaning |
 |---|---|---|
 | `nullable: true` | any schema | section 5 |
-| `sensitive: true` | a property or a scalar schema | the value is secret: `format: password` in OpenAPI, redacted by generated serializers in logs, traces and idempotency storage, and `Cache-Control: no-store` on any response carrying it (CHK-026, SCN-054) |
+| `sensitive: true` | a property or a scalar schema | the value is secret: `format: password` in OpenAPI, redacted by generated serializers in logs, traces and idempotency storage, and `Cache-Control: no-store` on any response carrying it (CHK-026, SCN-054); a route declaring a `cache` family other than `never` and returning it is a compile error (ADR 0002 section 10) |
+| `codeName` | a property | the identifier generated code uses for the property, when its wire name makes a poor one (`class`, `2fa`); the wire name is unchanged (ADR 0007) |
 | `restrictedTo` | a property | the property is visible or writable only with a right (below) |
 | `discriminator` | a union | section 3: a property name, or `{ from: header.<Name> }` on a route's whole input |
 | `typeName` | a named object schema | the value the `$resource` slot writes (a JSON-LD `@type`), when it differs from the schema name (ADR 0002 section 13) |
@@ -259,7 +260,7 @@ These keywords are not JSON Schema. Each compiles to an explicit IR field. On a 
 | `lint: { allow: { <rule>: <reason> } }` | a schema or property | silences one lint rule there, with a reason (ADR 0002 section 12) |
 | `x-<prefix>-<key>` | where the extension's `at` allows | a consumer extension (ADR 0002 section 12) |
 
-A lint rule flags a property whose name looks like a credential (`password`, `secret`, `token`, `apiKey` and similar) and is not marked `sensitive`, unless allow-listed with a reason (FR-12, SCN-018). A rule proof (ADR 0002 section 9) is sensitive by construction.
+The lint rule `seampact/credential-name` flags a property whose name looks like a credential (`password`, `secret`, `token`, `apiKey` and similar) and is not marked `sensitive`, unless allow-listed with a reason or switched off for the api (ADR 0002 section 12, FR-12, SCN-018). A rule proof (ADR 0002 section 9) is sensitive by construction.
 
 `restrictedTo` (FR-23, A21):
 
@@ -298,7 +299,7 @@ DateCard:
       enum: { narrow: PublicationState, to: [published], reason: "Drafts never reach the listing." }
 ```
 
-`enum: <Name>` uses a catalogue enum (ADR 0002 section 12). `enum: { narrow, to, reason }` narrows it to a strict subset at this use; a `to` that is not a strict subset, or a missing reason, is an error (FR-29, SCN-080, CHK-048). A narrowing keeps the enum's identity: targets type it as the subset of the same enum, and the client keeps tolerating unknown members on output.
+`enum: <Name>` uses a catalogue enum (ADR 0002 section 12). `enum: { narrow, to, reason }` narrows it to a strict subset at this use, `reason` being optional docs; a `to` that is not a strict subset is an error (FR-29, SCN-080, CHK-048). A narrowing keeps the enum's identity: targets type it as the subset of the same enum, and the client keeps tolerating unknown members on output.
 
 ### 8. Formats
 

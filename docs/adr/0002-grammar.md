@@ -11,7 +11,7 @@ This ADR fixes every keyword a contract file may contain, outside the inside of 
 Forces:
 
 - One fact, one place (lesson 1). A grammar that lets the same fact be written twice needs a gate to hold the copies together.
-- Deny by default, and a reason on every exception (brief section 7, FR-4).
+- Deny by default, and a reason on every safety exception (brief section 7, FR-4, A40).
 - Nothing ahead of use (lesson 5): a keyword exists only if a checklist item or an amendment needs it.
 - The core imposes nothing (A36, after A20, A25, A30): no header name, error code, right name, envelope, page shape, wire format, versioning scheme, query encoding or implementation. Where the compiler needs a value to work, it has a default the contract can rename or replace, and everything else comes from the contract's base file or from opt-in convention packs. What the grammar does demand is explicitness: every route states its access, every exception its reason.
 - Inline and included content must compile to the same bytes (FR-1, FR-9).
@@ -44,6 +44,7 @@ workspace:
 
 - `workspace.apis` maps each api name to its api file. The names must equal each file's `api.name`. All apis of a workspace compile together, which is how `relays` reaches a sibling api (FR-8).
 - `workspace.shared` names a file with the keys of a base, which every api of the workspace builds on, before its own base (section 2). It holds what several apis share: schemes, identities, common schemas, and the rights and scopes their field marks name.
+- `workspace.editorSchemas` names the directory `compile --editor-schemas` writes to, relative to the root (`.seampact/schemas` by default, section 3).
 - `workspace.imports` names an api held in a pinned contract bundle, so a `relays` can target it without its sources. An entry takes one source form of the app config's `sources` (ADR 0011: `package` with `version`, `release`, or `git`), `api`, the api's name inside the bundle, and `integrity`, which is required. The bundle passes ADR 0011's pinned-bundle check before its IR is read; a missing `integrity` fails and prints the actual value, so pinning is a copy.
 
 There are five kinds of file. The loader knows each by its top-level keys.
@@ -52,8 +53,8 @@ There are five kinds of file. The loader knows each by its top-level keys.
 |---|---|---|
 | workspace | `workspace` | the CLI |
 | api | `api`, `extends`, `packs`, `surfaces`, any catalogue, `conventions`, `formats`, `extensions`, `lint` | `workspace.apis` |
-| base | any catalogue, `packs`, `conventions`, `formats`, `extensions` | `extends` from an api, or `workspace.shared` |
-| pack | `pack`, any catalogue, `conventions`, `formats`, `extensions`, `derive` | `packs` from an api or base, `extends` from a pack |
+| base | any catalogue, `packs`, `conventions`, `formats`, `extensions`, `lint` | `extends` from an api, or `workspace.shared` |
+| pack | `pack`, any catalogue, `conventions`, `formats`, `extensions`, `lint`, `derive` | `packs` from an api or base, `extends` from a pack |
 | fragment | whatever the include site expects | `$include` or a file `$ref` |
 
 The catalogues are `schemas`, `enums`, `scalars` (named formats, ADR 0003 section 8), `errors`, `natures` (error natures, section 11), `schemes`, `headers` (identity headers, section 9), `identities`, `rights`, `rules`, `requirements` (named requirement items, section 9), `scopes`, `buckets`, `services` and `pagings` (section 14). `formats` (section 13) is keyed by name like a catalogue. Each maps a name to one declaration. Everything a contract references by name lives in one of them.
@@ -134,7 +135,7 @@ An api's declarations and settings come from layers applied in this order: the s
 A layer resolves names only in itself and the layers it builds on, so it compiles the same for every api that uses it. A pack sees itself and the packs it extends; the shared file sees itself and its packs; a base sees itself, its packs, the shared file and the shared file's packs; an api sees everything. A base extended by two apis therefore never depends on what one of them declares: a name a base or the shared file uses but only an api declares is a compile error naming the name, the file and the fix (move the declaration into the shared file or the base).
 
 - Declarations (a catalogue entry, a format, a paging style, a `derive` entry) are never overridden: one name declared by two layers is an error naming both locations, even when the two are identical (SCN-029). An attachment may override an error's example only (section 11).
-- Settings (`conventions`) are overridden by leaf path. A leaf is a scalar, or a list taken as one value; `errors.every` is the exception, a union of every layer's list. Maps of named entries (`cache.families`, `errors.derived`) merge per entry, each entry being a leaf. An api writing `paging: { maxLimit: 50 }` therefore keeps a pack's `paging.default`.
+- Settings (`conventions`, and `lint.rules`) are overridden by leaf path. A leaf is a scalar, or a list taken as one value; `errors.every` is the exception, a union of every layer's list. Maps of named entries (`cache.families`, `errors.derived`) merge per entry, each entry being a leaf. An api writing `paging: { maxLimit: 50 }` therefore keeps a pack's `paging.default`.
 - A later layer wins, and the IR records the origin of every leaf (ADR 0004). A base shared by several apis can thus be overridden by one of them; an override states a different value, not a second copy of the same fact.
 
 #### The byte-identity rule
@@ -176,9 +177,9 @@ In data positions (examples), null is written `null`; `~`, `Null`, `NULL` and an
 
 No keyword of the grammar is a word that YAML 1.1 reads as a boolean (`on`, `off`, `yes`, `no`), so a keyword never needs quoting. Prose is another matter: in a flow mapping (`{ ... }`), a plain value ends at `, ` or `: `, so `{ title: No such workspace, or not a member. }` holds two keys. Quote prose (`title`, `summary`, `reason` and every docs string) in a flow mapping, or write it in block style; the examples of the ADRs do. A plain mapping key is a string, except in a mapping keyed by HTTP status (`responses`), where keys are plain integers from 200 to 299: only success responses are written. Error statuses come from codes (section 11), 304 is derived from `cache.etag`, and other 3xx responses are not modelled until a consumer needs them.
 
-One comment has a meaning, to editors only: the modeline, the first line of every contract file, fragments included (FR-9, SCN-046). `@seampact/spec` publishes an authoring schema per file kind (workspace, api, base, pack) and per fragment kind, that is, per mapping an include site may expect: a tree node, a name-keyed catalogue file (`schemas`, `errors`, `rights` and the other catalogues), a node's `errors` map, `conventions`, a schema. A fragment's kind is the one its include site expects. `seampact init` writes the modeline of each file it creates, and `seampact init --modelines` writes or corrects the modeline of every file of an existing workspace, taking each fragment's kind from its include site.
+One comment has a meaning, to editors only: the modeline, the first line of a contract file, fragments included (FR-9, SCN-046). It is optional, and `compile` never reads or checks it. `@seampact/spec` publishes an authoring schema per file kind (workspace, api, base, pack) and per fragment kind, that is, per mapping an include site may expect: a tree node, a name-keyed catalogue file (`schemas`, `errors`, `rights` and the other catalogues), a node's `errors` map, `conventions`, a schema. A fragment's kind is the one its include site expects. `seampact init` writes the modeline of each file it creates, and `seampact init --modelines` writes or corrects the modeline of every file of an existing workspace, taking each fragment's kind from its include site.
 
-Those schemas check keywords only. `seampact compile --editor-schemas` checks names too: it writes to `.seampact/schemas/` the same schemas specialised for the workspace, where every position that names a declaration (`identity`, `right`, a `requires` entry, `enum`, an error code, `paging`, a schema reference) lists the names the workspace declares, each described by the file and line that declares it. An editor then flags a misspelt name and offers the declared ones as you type; `compile --watch` keeps them current. `init` writes them once, adds `.seampact/` to `.gitignore`, and points the modelines there, relative to each file; a fresh checkout runs `compile --editor-schemas` once. A modeline may point at the installed `@seampact/spec` instead, which checks keywords only. No language server is needed for this; go-to-definition and rename wait for a consumer that asks (lesson 5). The included route of the worked example, `tasks/routes/tasks/search.yaml`, would start:
+Those schemas check keywords only. `seampact compile --editor-schemas` checks names too: it writes to `.seampact/schemas/` the same schemas specialised for the workspace, where every position that names a declaration (`identity`, `right`, a `requires` entry, `enum`, an error code, `paging`, a schema reference) lists the names the workspace declares, each described by the file and line that declares it. An editor then flags a misspelt name and offers the declared ones as you type; `compile --watch` keeps them current. `init` writes them once, adds `.seampact/` to `.gitignore`, and points the modelines there, relative to each file; a fresh checkout runs `compile --editor-schemas` once. Each of these is the user's choice (A36): `workspace.editorSchemas` names the directory (`.seampact/schemas` by default); `init --editor-schemas=ignore` (the default) git-ignores it, `commit` keeps it in the repository so a fresh checkout has it at the cost of a diff on each new declaration, and `none` writes none and points the modelines at the installed `@seampact/spec`, which checks keywords only; `--no-modelines` writes no modeline and `--no-ignore-files` touches no ignore file. `init` prints every file it creates or changes. No language server is needed for this; go-to-definition and rename wait for a consumer that asks (lesson 5). The included route of the worked example, `tasks/routes/tasks/search.yaml`, would start:
 
 ```yaml
 # yaml-language-server: $schema=../../../.seampact/schemas/node.schema.json
@@ -189,7 +190,7 @@ requires: [{ right: tasks.reed }]   # flagged: the right must be one of callerSe
 ### 4. Scalars, names and value sources
 
 - Durations: an integer followed by `ms`, `s`, `m`, `h` or `d` (`300ms`, `15m`, `24h`). Sizes: an integer followed by `B`, `KiB` or `MiB` (`1MiB`). Dates: a quoted ISO 8601 date (`'2027-06-30'`); unquoted it is a YAML 1.1 timestamp and refused.
-- Reasons: a non-empty string. Every exception takes one (section 9).
+- Reasons: a non-empty string. A reason is required on every safety exception, and only there (A40): `access.public`, `access.optionalAuth`, a right's `guest`, `csrf.exempt`, `idempotency.exempt`, an `unknownKeys` or `unknownQuery` that does not refuse, an opaque value, and, in the app config, a framework route outside the contract and native access (ADR 0011). A departure from a default that weakens no check (no path version, another format, an unpaged list, a stated maturity, a local enum or a narrowing) takes no reason, and may carry one as docs where the keyword offers it.
 - Name patterns, checked by the authoring schema:
 
 | Element | Pattern | Examples |
@@ -249,9 +250,8 @@ extends: ./base.yaml
 | Key | Meaning |
 |---|---|
 | `name` | the api name, unique in the workspace |
-| `version` | an integer; the path version derives from it (section 6) |
+| `version` | an integer, from which the path version derives (section 6); or a quoted string (`'2024-06-20'`, a date-versioned api) when every surface's path version is `none` |
 | `kind` | `product` (default: an api for end users and their clients) or `service` (an internal api with a caller identity, below) |
-| `pathVersion` | `{ omit: "<reason>" }` to keep `/v{version}` out of every surface's path (section 6); by default the path carries the version |
 | `role` | `gateway`: every route derives 502, 503 and 504 from the `upstreamUnavailable`, `serviceUnavailable` and `upstreamTimeout` roles (FR-34) |
 | `caller` | service apis only: `{ identity, right }`; see below |
 | `maturity` | `experimental`, `provisional` or `stable`; the default maturity of every operation |
@@ -261,7 +261,7 @@ extends: ./base.yaml
 
 A service api (FR-8, section 9 of the brief) states `caller: { identity: service, right: callerService }`. Every route of it runs under that identity, which its surfaces need not repeat and no node may change; a public or optional-auth route is a compile error; a route whose `requires` does not include `caller.right` is a compile error (SCN-014, SCN-045). The names are the contract's own (A20): the core knows only that this api has a caller identity and a caller right.
 
-`documents` declares named OpenAPI documents. Each entry takes `surfaces` (the surfaces it covers, default all) and `internal` (`include`, the default, or `exclude`). An api with no `documents` emits one document holding every route (SCN-044). Where each document is written is app configuration (ADR 0011); what each IR member becomes in it, natively or as an `x-seampact-*` extension, is ADR 0004 section 12.
+`documents` declares named OpenAPI documents. Each entry takes `surfaces` (the surfaces it covers, default all) and `internal` (`include`, the default, or `exclude`). An api with no `documents` emits one document holding every route (SCN-044). Where each document is written, and how it is rendered (which `x-seampact-*` extensions it carries, whether reasons appear, strict input schemas, `servers`), is app configuration (ADR 0011); what each IR member becomes in it, natively or as an `x-seampact-*` extension, is ADR 0004 section 12.
 
 ### 6. Surfaces and the tree
 
@@ -282,14 +282,14 @@ surfaces:
 
 `prefix` is the surface's leading path. `{version}` is replaced by `api.version`. A prefix with no `{version}` gets `/v{version}` in front of it. A literal version segment such as `/v1` is then refused, with the mismatch stated when it differs from `api.version` (FR-2, SCN-032); the version is held once, on the api.
 
-The path version is a default, not a rule (A33). `pathVersion: { omit: "<reason>" }` on the api, or on one surface, keeps it out: the prefix is used exactly as written, and may not hold `{version}`. That serves an api versioned by a header or a media type (declared with its own headers or formats) and a webhook path a third party fixes:
+The path version is a default, not a rule (A33). `conventions.pathVersion` is `prefix` (the default) or `none`, so a pack can make "no path version" a house default, and `pathVersion` on one surface overrides it. With `none` the prefix is used exactly as written and may not hold `{version}`. That serves an api versioned by a header, a media type or a date (declared with its own headers or formats) and a webhook path a third party fixes:
 
 ```yaml
 # tasks/api.yaml (excerpt)
 surfaces:
   stripeHooks:
     prefix: /stripe
-    pathVersion: { omit: "Stripe calls the URL configured in its dashboard." }
+    pathVersion: none                 # Stripe calls the URL configured in its dashboard
     identity: stripe
 ```
 
@@ -369,7 +369,7 @@ A group's path parameters are not member ids, so they derive no `notFound` (ADR 
 | `delete` | collection, single | `DELETE /tasks/{taskId}` | `delete` + singular | none (a versioned delete reads its version from the query or a header) | `204`, or `200` with `output` (SCN-040) |
 | `batch` | collection | `POST /tasks/batch` | `get` + plural + `Batch` (`getTasksBatch`) | `{ ids }`, at most `maxIds`, or a declared `input` | `200`, a table of `item` keyed by id |
 
-The plural is the collection's name; the singular is the collection's `singular` when set, otherwise the id parameter's name without its trailing `Id` (`taskId` gives `task`), or the whole parameter name when it has no such suffix. `singular` keeps the id named like the item's property when the noun differs: `members` with `id: { userId: UserId }` and `singular: member` gives `listMembers` and `getMember`, and `userId` still matches `Member.userId` for the `$id` slots and the batch table. For a single, the noun is the single's name. The methods, paths, operation ids and statuses above are defaults (A36). An op mapping takes every route key of section 7 except `relays`, every inherited setting of section 8, and `maxIds` for `batch`, so any op may override its method, path, operation id, input, output and responses. `create` and `update` have no default input, because the item schema holds fields a client never sends; the missing input is a compile error naming the op. No other shorthand exists until a consumer needs one (lesson 5).
+The plural is the collection's name; the singular is the collection's `singular` when set, otherwise the id parameter's name without its trailing `Id` (`taskId` gives `task`), or the whole parameter name when it has no such suffix. `singular` keeps the id named like the item's property when the noun differs: `members` with `id: { userId: UserId }` and `singular: member` gives `listMembers` and `getMember`, and `userId` still matches `Member.userId` for the `$id` slots and the batch table. For a single, the noun is the single's name. The methods, paths, operation ids and statuses above are defaults (A36). `conventions.ops` changes them for the whole api (`{ update: { method: put }, create: { status: 200 }, batch: { path: lookup } }`), and `conventions.operationIds: { order, case }` changes how every operation id is derived: `order` is `verbNoun` (the default, `listTasks`) or `nounVerb` (`tasksList`), `case` is `camel` (the default) or `snake` (`tasks_list`). An op mapping takes every route key of section 7 except `relays`, every inherited setting of section 8, and `maxIds` for `batch`, so any op may override its method, path, operation id, input, output and responses. `create` and `update` have no default input, because the item schema holds fields a client never sends; the missing input is a compile error naming the op. No other shorthand exists until a consumer needs one (lesson 5).
 
 A `batch` op is a safe read sent as POST: the IR marks it safe, so CSRF, idempotency and cache derivations treat it as a read. Its `maxIds`, body limit and budget default to `conventions.batch` (FR-32, SCN-084).
 
@@ -482,7 +482,25 @@ Every node may set the settings below; its descendants inherit them, and the IR 
 | `headers`, `query` | added; one name declared twice is an error. `query` reaches safe routes only: a write route below a node's `query` does not get it |
 | `upstream`, `maturity`, `internal`, `deprecated`, `budget`, `bodyLimit`, `cache`, `csrf`, `idempotency`, `format`, `unknownQuery`, extension keys | the nearest wins |
 
-`owner`, `concurrency`, `ops`, `id`, `singular`, `item`, `path`, `pathParams`, `paging`, `sortable`, `filteredBy`, `degradable`, `relays`, `examples`, `lint` and docs are not inherited: each applies to the node or element it is written on. Three inherited settings have limits: `deprecated.successor` is written on a route only, since one successor cannot serve several operations; `cache` applies to the GET routes below it and is refused on a non-GET route; a stated `maturity`, written on the route or inherited, wins over the one derived from `upstream`. An inherited requirement cannot be removed below; a route that needs fewer requirements belongs elsewhere in the tree. This keeps every requirement of a route visible in its ancestry. Requirements stack, they are not refined: `{ right: projectAccess, params: { level: read } }` on a `member` scope plus `{ right: projectAccess, params: { level: admin } }` on one of its routes asks the decide hook twice, in that order, and the route runs only when both allow. Where the second call matters, write the requirement on each route rather than on the scope; a `requirements` entry (section 9) keeps that to one name per route.
+`owner`, `concurrency`, `ops`, `id`, `idProperty`, `singular`, `resourceType`, `item`, `path`, `pathParams`, `paging`, `sortable`, `filteredBy`, `degradable`, `relays`, `examples` and docs are not inherited (`lint.allow` is, section 12): each applies to the node or element it is written on. Three inherited settings have limits: `deprecated.successor` is written on a route only, since one successor cannot serve several operations; `cache` applies to the GET routes below it and is refused on a non-GET route; a stated `maturity`, written on the route or inherited, wins over the one derived from `upstream`. An inherited requirement cannot be removed below; a route that needs fewer requirements belongs elsewhere in the tree. This keeps every requirement of a route visible in its ancestry. Since the tree is the URL, "elsewhere" is a sibling group (section 6) whose multi-segment `path` reaches the same URL without the requiring node:
+
+```yaml
+# tasks/api.yaml (excerpt: under a surface's routes)
+channels:
+  kind: collection
+  id: { channelId: ChannelId }
+  member:
+    requires: [channelEditor]          # every route below needs it
+    routes:
+      settings: { method: patch, input: ChannelSettings, output: Channel }
+channelPreview:
+  kind: single
+  path: 'channels/{channelId}/preview'
+  pathParams: { channelId: ChannelId }
+  scopes: { channel: path.channelId }
+  routes:
+    get: { method: get, path: '', output: ChannelPreview }   # GET /v1/channels/{channelId}/preview, without channelEditor
+``` Requirements stack, they are not refined: `{ right: projectAccess, params: { level: read } }` on a `member` scope plus `{ right: projectAccess, params: { level: admin } }` on one of its routes asks the decide hook twice, in that order, and the route runs only when both allow. Where the second call matters, write the requirement on each route rather than on the scope; a `requirements` entry (section 9) keeps that to one name per route.
 
 Inheritance by position has one trap. When the last key of a block is written one level too far left, the file is still valid YAML and the key becomes a setting of the enclosing node, reaching every route below it; a dedent in the middle of a block is a parse error, so only a last key is at risk. For an exception, that silently widens it from one route to a subtree while its reason stays present. The lint rule `seampact/subtree-exception`, a warning that `compile --strict` fails, therefore reports every `access.public`, `access.optionalAuth`, `csrf.exempt` and `idempotency.exempt` written on a node that is neither a route nor a surface root, naming the routes it reaches. An exception meant for a subtree keeps it with `lint.allow` and a reason (section 12). A code attached one level too high is not an exception: it shows in `seampact explain` (section 16) and in the diff of the committed OpenAPI document, where each response lists its codes with the node that attached them (ADR 0004 section 12).
 
@@ -509,7 +527,7 @@ schemes:
   internalToken: { kind: bearer, bearerFormat: jwt }
 ```
 
-`kind` is `cookie`, `header` (an API key in a header), `query` (an API key in a query parameter, as some map and webhook apis still take), `bearer` (HTTP bearer), `basic` (HTTP Basic) or `signature` (A5). `name` is the cookie, header or query parameter name; `bearer` and `basic` take none. A `query` scheme's parameter is never a declared query field and never an unknown key. `bearerFormat` documents a bearer token's format, emitted as OpenAPI's `bearerFormat`; nothing checks it. A bearer scheme may also state, for the document only, the OAuth 2 flows or the OpenID Connect discovery URL that issue its tokens, so documentation tools and client generators can obtain one: `oauth2: { flows: <OpenAPI OAuth Flows Object> }` or `openIdConnect: <url>`, never both. The run time is unchanged: the authenticate hook checks the token. `csrf` on a cookie scheme names the header scheme a cookie write must also present; CSRF is derived from it, never written on an identity (FR-27, SCN-008, SCN-077). CSRF is opt-in (A34): a cookie scheme without `csrf` derives no CSRF check, and the lint rule `seampact/cookie-without-csrf` reports it, silenced with a reason through `lint.allow`. A `signature` scheme declares (details and test vectors: ADR 0013):
+`kind` is `cookie`, `header` (an API key in a header), `query` (an API key in a query parameter, as some map and webhook apis still take), `bearer` (HTTP bearer), `basic` (HTTP Basic) or `signature` (A5). `name` is the cookie, header or query parameter name; `bearer` and `basic` take none. A `query` scheme's parameter is never a declared query field and never an unknown key. `bearerFormat` documents a bearer token's format, emitted as OpenAPI's `bearerFormat`; nothing checks it. A bearer scheme may also state, for the document only, the OAuth 2 flows or the OpenID Connect discovery URL that issue its tokens, so documentation tools and client generators can obtain one: `oauth2: { flows: <OpenAPI OAuth Flows Object> }` or `openIdConnect: <url>`, never both. The run time is unchanged: the authenticate hook checks the token. `csrf` on a cookie scheme names the header scheme a cookie write must also present; CSRF is derived from it, never written on an identity (FR-27, SCN-008, SCN-077). CSRF is opt-in (A34): a cookie scheme without `csrf` derives no CSRF check, and the lint rule `seampact/cookie-without-csrf` reports it, silenced with a reason through `lint.allow` on the scheme, or switched off with `lint.rules` (section 12). A `signature` scheme declares (details and test vectors: ADR 0013):
 
 ```yaml
 # shared/base.yaml (excerpt)
@@ -745,18 +763,18 @@ scopes: { org: subdomain, project: path.projectId }
 ### 10. Lists, cache and lifecycle settings
 
 - A route is a list when it comes from the `list` op, or when it sets `item` instead of `output`. `output` always means the whole body; an array `output` on a GET is refused with the fix "use `item`", so an author always knows whether a route is paged.
-- `paging`: on a list. It names a paging style from the `pagings` catalogue (section 14): `paging: cursor`, or the mapping form `{ cursor: { maxLimit: 50 } }`, which also takes `defaultLimit`, `overLimit` and, for a style with a `since` role, `token: opaque` or `token: instant`. A list without `paging` uses `conventions.paging.default`. A list with neither is a compile error naming both fixes: declare a style in `pagings` and name it, or apply a format pack that provides one (A31). `paging: { none: "<reason>" }` serves the whole list unpaged, through the format's `list` shape. A style with a `since` role derives 410 from the `gone` role (FR-31, SCN-012, SCN-082, SCN-083).
+- `paging`: on a list. It names a paging style from the `pagings` catalogue (section 14): `paging: cursor`, or the mapping form `{ cursor: { maxLimit: 50 } }`, which also takes `defaultLimit`, `overLimit` and, for a style with a `since` role, `token: opaque` or `token: instant`. A list without `paging` uses `conventions.paging.default`. A list with neither is a compile error naming both fixes: declare a style in `pagings` and name it, or apply a format pack that provides one (A31). `paging: none` serves the whole list unpaged, through the format's `list` shape. A style with a `since` role derives 410 from the `gone` role (FR-31, SCN-012, SCN-082, SCN-083).
 - `sortable`: a list of item fields, each a name or `{ key, right }`. A key inherits its field's `restrictedTo`; an explicit right that disagrees is a compile error; sorting by a restricted key without the right derives 403 from the `sortKeyForbidden` role (FR-23, SCN-067).
 - `filteredBy: <right>`: the right the application applies to its query; it reaches OpenAPI and the handler context, and nothing enforces it (SCN-068).
 - `degradable: [viewerProgress]`: paths of optional properties of the success data; a required one is a compile error (SCN-085).
-- `cache: { freshness: minute, anonymous: public, vary: [Accept-Language], etag: true }`. `freshness` is a family from `conventions.cache.families` or `never` (no-store); `anonymous` (`public` or `private`) applies to anonymous callers only, since an identified caller always gets private; `etag: true` generates conditional GET (FR-33, SCN-013, SCN-086). The `Vary` entries for credentials (`Cookie`, `Authorization`, an API-key header) are derived from the schemes of the route's identity; `vary` lists only the other request headers the response depends on.
+- `cache: { freshness: minute, anonymous: public, vary: [Accept-Language], etag: true }`. `freshness` is a family from `conventions.cache.families` or `never` (no-store); `anonymous` (`public` or `private`) applies to anonymous callers only, since an identified caller always gets private, and the shared-cache directives of a family (`s-maxage`) are written for public responses only; `etag: true` generates conditional GET (FR-33, SCN-013, SCN-086). The `Vary` entries for credentials (`Cookie`, `Authorization`, an API-key header) are derived from the schemes of the route's identity; `vary` lists only the other request headers the response depends on. A response that carries a `sensitive` field is `no-store` (ADR 0003 section 6), so a `cache` with a family other than `never` on such a route is a compile error naming the field and the route, with the fix "drop `cache` or `sensitive`": the contract never says one thing while the wire does another.
 - `budget: 300ms`: the client's default timeout and the deadline sent on an identity with a `deadline` header (SCN-043, SCN-078).
 - `bodyLimit: 2MiB`: overrides `conventions.bodyLimit` (SCN-041).
-- `format: { use: bare, reason: "<reason>" }`: the wire format of the routes below, instead of `conventions.format`, for an endpoint whose body a third party fixes (a load balancer's health probe, a vendor's callback). It names any declared format and takes a reason, because it departs from the api's format.
+- `format: bare`: the wire format of the routes below, instead of `conventions.format`, for an endpoint whose body a third party fixes (a load balancer's health probe, a vendor's callback). It names any declared format.
 - `idempotency: { exempt: "<reason>" }`: a write without the idempotency key (SCN-042). The generated clients send the key: a client target creates a fresh key per call (a UUID v4) unless the caller passes one, and returns it with the result. A client never replays a write by itself (FR-15); a caller that retries passes the key of the first attempt, so the write runs once.
 - `internal: true`: keeps the route out of documents with `internal: exclude` (product apis only, SCN-044).
 - `upstream: [streaming, catalog]`: services from the `services` catalogue, the owning service first. The operation's maturity derives from the owning service, otherwise from `api.maturity` (FR-34).
-- `maturity: { level: experimental, reason: "<reason>" }`: a stated maturity. On a node it departs from the derived level, so it takes a reason; on the api, `maturity` is a bare level, the default every operation derives from. A stated level equal to the derived one is reported by the lint rule `seampact/redundant-maturity`, silenced through `lint.allow` (SCN-087, SCN-018).
+- `maturity: experimental`, or `maturity: { level: experimental, reason: "<reason>" }` to say why: a stated maturity on a node, which wins over the derived level; on the api, `maturity` is the default every operation derives from. A stated level equal to the derived one is reported by the lint rule `seampact/redundant-maturity`, silenced through `lint.allow` (SCN-087, SCN-018).
 - `deprecated: { sunset: '2027-06-30', successor: getTask }`: derives the deprecation, sunset and successor headers (FR-13, SCN-051); `successor` only on a route. Their names default to RFC 9745's `Deprecation`, RFC 8594's `Sunset` and a `Link` with relation `successor-version`, and `conventions.deprecation` renames them (A36).
 - `tags: [tasks]`.
 
@@ -855,7 +873,7 @@ enums:
   Answer: { values: ['yes', 'no'], reason: "A survey answer." }
 ```
 
-An enum declares `values` (strings, unique) and either `source` or, for a local enum, `reason` (FR-29). `conventions.enums.reason` gives the reason of every local enum that states none, so an api whose enums are all its own product rules says so once. `source: { vocabulary: <name> }` names an external vocabulary: the name is a free label for the reader, with no declaration and no pattern. `source: { enum: <Enum> }` takes another enum's values as its own, so `values` is omitted; a subset at one use is a narrowing (ADR 0003 section 7), not a new enum. `fallback` names the member a client decoder maps an unknown value to (SCN-080). Narrowing happens at a use, inside a schema (ADR 0003). Members such as `yes` and `no` must be quoted (section 3).
+An enum declares `values` (strings, unique), and optionally `source` and `reason` (FR-29): an enum without `source` is local to the contract, and `reason` says why, as docs. `codeNames: { <value>: <name> }` gives a member the identifier generated code uses when its value makes a poor one (`'+'`, `class`), the wire value unchanged (ADR 0007). `source: { vocabulary: <name> }` names an external vocabulary: the name is a free label for the reader, with no declaration and no pattern. `source: { enum: <Enum> }` takes another enum's values as its own, so `values` is omitted; a subset at one use is a narrowing (ADR 0003 section 7), not a new enum. `fallback` names the member a client decoder maps an unknown value to (SCN-080). Narrowing happens at a use, inside a schema (ADR 0003). Members such as `yes` and `no` must be quoted (section 3).
 
 Examples are named, on a route, and parsed against their schema at compile time (FR-3, SCN-006):
 
@@ -887,7 +905,22 @@ extensions:
 
 An extension's `schema` is written in the subset of ADR 0003, like any schema. `at` lists where the key may appear: `api`, `operation` (any tree node, inherited), `schema`, `property`, `right`, `rule`, `scope`. The key is written `x-<prefix>-<key>` at its place of use (`x-acme-tax-basis: inclusive`). A core keyword never starts with `x-`, so an extension never collides with one, and no domain key becomes a core keyword (SM-6). The compiler validates every value with a located diagnostic.
 
-`lint: { allow: { <rule id>: "<reason>" } }` on any node, schema or property silences one lint rule there (FR-12, SCN-018).
+Lint is the contract's to tune (A36, FR-12, SCN-018). `lint.rules` on the api, its base, the shared file or a pack sets each rule's severity, `off`, `warning` or `error`, merged by leaf like `conventions`; a rule at `error` fails `compile`, one at `off` does not run. `lint.allow: { <rule id>: "<reason>" }` on a node, a schema, a property or a catalogue entry (a scheme, an identity, a right, a rule, a scope) silences one rule there, and on a node it reaches every node below it. Silencing one place keeps a reason, since the api kept the rule on; switching a rule off for the whole api needs none. Lint ids name rules only: no setting silences a compile error (ADR 0006 section 4). The core rules:
+
+| Rule | Default | Reports | Silenced on |
+|---|---|---|---|
+| `seampact/subtree-exception` | warning | a safety exception written above a route or surface root (section 8) | the node |
+| `seampact/cookie-without-csrf` | warning | a cookie scheme without `csrf` (section 9) | the scheme |
+| `seampact/redundant-maturity` | warning | a stated maturity equal to the derived one (section 10) | the node |
+| `seampact/field-right-unresolved` | warning | an output field always absent on a route, its subject not found (ADR 0003 section 6) | the property, or the node |
+| `seampact/credential-name` | warning | a property named like a credential and not `sensitive` (ADR 0003 section 6) | the property or schema |
+| `seampact/unused-declaration` | warning | a declaration no operation, identity or convention reaches (ADR 0004 section 2) | the catalogue entry |
+
+```yaml
+# shared/base.yaml (excerpt)
+lint:
+  rules: { seampact/credential-name: off, seampact/cookie-without-csrf: error }
+```
 
 ### 13. Conventions and wire formats
 
@@ -902,7 +935,11 @@ conventions:
   idempotency: { header: Idempotency-Key, replayHeader: Idempotency-Replayed, lifetime: 24h, methods: [post] }
   bodyLimit: 1MiB
   batch: { maxIds: 200, bodyLimit: 2MiB, budget: 150ms }
-  cache: { families: { minute: 60s, five_minutes: 300s } }
+  cache:
+    families:
+      minute: 60s
+      five_minutes: { maxAge: 300s, sharedMaxAge: 600s, staleWhileRevalidate: 60s }
+      revalidated: { maxAge: 0s, noCache: true }
   restrictedInput: reject
   outputEnums: enum
   rateLimit: { header: Retry-After, param: retryAfterMs, unit: s }
@@ -919,17 +956,19 @@ conventions:
 | `paging.maxLimit` | the largest `limit` a request may send | none: required when a list uses a style with a `limit` role and sets no `maxLimit` |
 | `paging.defaultLimit` | the limit of a request that sends none, and the page size of a style without `limit` | `maxLimit`; required for a style without `limit` |
 | `paging.overLimit` | `reject` (400) or `clamp` (served as `maxLimit`): a `limit` above `maxLimit` (section 14) | `reject` |
-| `idempotency` | `{ header, replayHeader, lifetime, methods, required }`: enables the idempotency key on every non-safe route whose method `methods` lists and that is not exempt (FR-7, A34). `methods` lists `post`, `put`, `patch` and `delete`, all four by default, so a POST-only policy is `methods: [post]`. `required` is `true` by default: a request without the key answers 400 from the `schemaInvalid` role; with `false` it runs without replay protection | unset: no key is derived, and an `idempotency.exempt` on a route the key does not reach is a compile error naming the unused reason |
+| `idempotency` | `{ header, replayHeader, lifetime, methods, required, enforce }`: enables the idempotency key on every non-safe route whose method `methods` lists and that is not exempt (FR-7, A34). `methods` lists `post`, `put`, `patch` and `delete`, all four by default, so a POST-only policy is `methods: [post]`. `required` is `true` by default: a request without the key answers 400 from the `schemaInvalid` role; with `false` it runs without replay protection. `enforce` is `boundary` (the default: the boundary fingerprints the request, stores the final response of every request that reached the handler, a success or an error the handler answered, and replays it; a refusal before the handler is not stored; a key reused with another request answers 422, one still running 409) or `none` (the key is declared, documented and passed to the handler, for an app whose gateway or library already handles replay) | unset: no key is derived, and an `idempotency.exempt` on a route the key does not reach is a compile error naming the unused reason |
 | `bodyLimit` | the default request body limit | `1MiB` |
 | `batch` | `{ maxIds, bodyLimit, budget }` for `batch` ops | `maxIds` required when a `batch` op sets none; `bodyLimit` from `bodyLimit`; no budget |
-| `cache.families` | freshness families and their max-age | empty: each family a `cache.freshness` names is required |
+| `cache.families` | freshness families: a max-age (`60s`), or `{ maxAge, sharedMaxAge, staleWhileRevalidate, staleIfError, immutable, noCache, mustRevalidate }`, each key a `Cache-Control` directive in camel case (`noCache: true` writes `no-cache`, for a response always revalidated with its ETag) | empty: each family a `cache.freshness` names is required |
 | `restrictedInput` | `reject` or `strip`: a restricted field sent without its right (A21); overridable per field (ADR 0003) | `reject` |
 | `outputEnums` | `enum` or `open`: how the emitter writes an output enum (FR-29) | `enum` |
-| `enums.reason` | the reason of every local enum without its own (section 12) | unset: each local enum states its reason |
+| `pathVersion` | `prefix` or `none`: whether every surface's path starts with `/v{version}` (section 6); a surface's `pathVersion` overrides it | `prefix` (A33) |
 | `query` | `{ lists, objects, unknownKeys }`: how a query list and an object field travel, and whether an undeclared key is refused (section 7) | `{ lists: repeat, objects: explode, unknownKeys: refuse }` |
 | `input.unknownKeys` | `refuse`, `{ ignore: "<reason>" }` or `{ keep: "<reason>" }`: the api's policy for unknown keys of body inputs; an `unknownKeys` on a schema use wins (ADR 0003 section 4) | `refuse` |
 | `int64` | `string` or `number`: the wire form of an `int64` value (ADR 0003 section 8) | `string` |
 | `deprecation` | `{ header, sunsetHeader, successorRel }`: the names of the deprecation headers (section 10) | `Deprecation`, `Sunset`, `successor-version` |
+| `ops` | per op name, `{ method, path, status }`: the defaults of the `ops` table (section 6) | the table's values |
+| `operationIds` | `{ order: verbNoun \| nounVerb, case: camel \| snake }`: how operation ids are derived (section 6) | `{ order: verbNoun, case: camel }` |
 | `rateLimit` | `{ header, param, unit }`: the header written on a 429 from a bucket rule, carrying the denial's integer millisecond `param` in `unit` (`s`, rounded up, or `ms`) | unset: a 429 carries no retry header |
 | `degradedHeader` | the header listing degraded parts | unset: required for a `degradable` route whose format has no `degraded` meta field |
 | `urls` | `relative` or `absolute`: how the URL slots and roles are written (section 13) | `relative` |
@@ -1296,7 +1335,7 @@ The output is a view, never an input: it is not a contract file, and nothing rea
 | `api: { name, version, maturity }` only | adds `kind`, `role`, `caller`, `compat`, `documents` | FR-8, FR-13, FR-34 need them, and they are api facts |
 | resources and routes in two maps at the top | one `routes` map per node; the node says its kind (`kind` or `method`) | two maps allowed the same name twice; the kind is already stated |
 | top-level `resources` under an implicit surface | each surface holds its tree | several surfaces per api, each with its prefix, identity and documents |
-| `prefix: /v1` | `prefix: /v{version}`, literal version refused, `pathVersion: { omit }` to opt out | the version is one fact, held on the api (FR-2); the path version is a default (A33) |
+| `prefix: /v1` | `prefix: /v{version}`, literal version refused, `conventions.pathVersion: none` or a surface's `pathVersion: none` to opt out | the version is one fact, held on the api (FR-2); the path version is a default (A33) |
 | `kind` absent | `kind: product` or `service` | "surface" already names a tree root |
 | version in the input schema | added by the compiler from `concurrency`; query or header on a DELETE | one fact, and no DELETE body (A33) |
 | `path: /health` | relative `path`, no leading slash, default from the node name | paths mirror the tree; a leading slash suggested an absolute path that the prefix then changed |
@@ -1665,7 +1704,7 @@ legacy:
   operationId: getTaskV1
   deprecated: { sunset: '2027-06-30', successor: getTask }
   upstream: [streaming, catalog]
-  maturity: { level: experimental, reason: "Kept only for old clients." }
+  maturity: { level: experimental, reason: "Kept only for old clients." }   # the reason is optional
   output: Task
 getDateDetail:
   method: get
@@ -1696,7 +1735,7 @@ move:
 health:
   method: get
   access: { public: "Probes call it before any user exists." }
-  format: { use: bare, reason: "The load balancer reads a bare body." }
+  format: bare                                # the load balancer reads a bare body
   output: Health
 ```
 
@@ -1729,22 +1768,22 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-004 | `owner: caller`, `ops` (6) |
 | SCN-005 | `enums`, `enum` in a schema (12, ADR 0003) |
 | SCN-006 | `examples` (`status`, `request`, `error`), `$file` (12, 2); refused keyword `if` (ADR 0003). The scenario's "TaskPage" example is the list payload, the item array, which the emitter wraps through the format |
-| SCN-007 | `access.public`, `optionalAuth`, `csrf.exempt`, `idempotency.exempt`, `lint.allow`, `maturity.reason`, enum `reason`, right `guest` (9 to 12). Every route lives under a surface, so the scenario's "route outside any surface" reads as a route under a surface with no identity |
+| SCN-007 | the reasons of the safety exceptions: `access.public`, `optionalAuth`, `csrf.exempt`, `idempotency.exempt`, `unknownKeys`, `unknownQuery`, `opaque`, right `guest`; `lint.allow`; the optional reasons of `maturity`, enums and narrowings (4, 9 to 12). Every route lives under a surface, so the scenario's "route outside any surface" reads as a route under a surface with no identity |
 | SCN-008 | `schemes` with `csrf`, `identities.schemes.write`, `csrf.exempt` (9) |
 | SCN-009 | `identity`, `principal.requires`, `scopes`, `requires` (rule and right, a `requirements` entry), `input`, `bindings` (9) |
 | SCN-010 | `bindings` with body and path sources (9) |
 | SCN-011 | `errors` declared in the catalogue or on a node, attached with `{}` or narrowed with `{ example }`, `reach`, `for`, `conventions.errors.every`, `errorRoles`; `seampact explain` shows each code's origin (11, 16) |
 | SCN-012 | `pagings` (`cursor`, `limit`, `sort` roles), `conventions.paging.default`, `paging.<style>.maxLimit`, `sortable`, `restrictedTo` (10, 14, ADR 0003) |
-| SCN-013 | `cache.freshness`, `cache.etag`, `conventions.cache.families` (10, 13) |
+| SCN-013 | `cache.freshness`, `cache.etag`, `conventions.cache.families` with directives (10, 13) |
 | SCN-014 | `workspace.apis`, `api.kind: service`, a relay route (`relays`, `operationId` to rename it), role bindings that differ between the two apis, `workspace.imports` (1, 5, 7) |
 | SCN-016 | `extensions` (`at`, `schema`), the extension key pattern, `x-<prefix>-<key>` (12, 4) |
-| SCN-018 | `lint.allow`, `maturity`, the `seampact/subtree-exception` rule; `sensitive` (12, 10, 8, ADR 0003) |
+| SCN-018 | `lint.rules`, `lint.allow` (inherited, on catalogue entries), the core rule table, `maturity`, the `seampact/subtree-exception` rule; `sensitive` (12, 10, 8, ADR 0003) |
 | SCN-019 | `api.compat.policy` (5) |
 | SCN-026 | `schemes` of `kind: signature` (`name`, `verify`, `format`, `algorithm`, `payload`, `encoding`, `tolerance`, `key`, `headers`), `identities` of `kind: signed` (9) |
 | SCN-029 | `extends`, duplicate definitions (2) |
 | SCN-030 | `$ref` to a file, `$include` of a schema with a fragment, name-keyed schema files (2) |
 | SCN-031 | `concurrency.version: query.<p>`, `concurrency: inherit` (6, 4). A33 accepts `header.If-Match`, which the scenario's acceptance criterion refused; the scenario follows A33 |
-| SCN-032 | `api.version`, `surfaces.<s>.prefix` with `{version}`, `pathVersion.omit` (5, 6) |
+| SCN-032 | `api.version`, `surfaces.<s>.prefix` with `{version}`, `conventions.pathVersion`, a surface's `pathVersion` (5, 6, 13) |
 | SCN-033 | `input` inline, derived names; `oneOf`, `discriminator` (7, ADR 0003, ADR 0007) |
 | SCN-034 | `principal.requires` (9) |
 | SCN-035 | `identity` inheritance, `routes` (8, 6) |
@@ -1754,11 +1793,11 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-039 | `responses` 202 with `Location`, `Retry-After` (7) |
 | SCN-040 | `ops.delete` with `output` (6) |
 | SCN-041 | `conventions.bodyLimit`, `bodyLimit`, `conventions.batch` (13, 10) |
-| SCN-042 | `conventions.idempotency`, `idempotency.exempt` (13, 10) |
+| SCN-042 | `conventions.idempotency` (`enforce` included), `idempotency.exempt` (13, 10) |
 | SCN-043 | `budget` (10) |
 | SCN-044 | `api.documents` with `internal: exclude`, `internal: true` (5, 10) |
 | SCN-045 | `api.caller.right`, `rights.callerService.params` (5, 9) |
-| SCN-046 | `# yaml-language-server` modeline on every file and fragment, `init --modelines`, `compile --editor-schemas` (3) |
+| SCN-046 | the optional `# yaml-language-server` modeline on every file and fragment, `init --modelines`, `init --editor-schemas`, `--no-modelines`, `--no-ignore-files`, `workspace.editorSchemas`, `compile --editor-schemas` (3) |
 | SCN-047 | `packs`, pack file keys, `pack` manifest (1, 2) |
 | SCN-048 | `formats` (`success.item`, `success.table`, `meta.fill`, `error`), a `pagings` style for the list, templates, `conventions.format`, `ops.batch` (13, 14, 6) |
 | SCN-050 | `api.maturity`, `api.compat` (5) |
