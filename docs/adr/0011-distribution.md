@@ -1,10 +1,10 @@
-# ADR 0011: Distribution, consumer config and unpublished installs
+# ADR 0011: Distribution, app config and unpublished installs
 
 Status: accepted
 
 ## Context
 
-A contract repository publishes a versioned bundle: the YAML sources and the compiled IR, plus an integrity hash (brief section 13). The bundle ships through three channels in 1.0: npm package, release asset and git tag (amendment A26). A consumer declares its sources and targets in its own config, pins a version, runs its generators and commits the outputs it reviews. A consumer check verifies that the pinned bundle is unaltered, and a local build can be refused on shared branches, as Arthome refuses a local `file:` build today.
+A contract repository publishes a versioned bundle: the YAML sources and the compiled IR, plus an integrity hash (brief section 13). The bundle ships through three channels in 1.0: npm package, release asset and git tag (amendment A26). A consumer app declares its sources and targets in its own config, pins a version, runs its generators and commits the outputs it reviews. A consumer check verifies that the pinned bundle is unaltered, and a local build can be refused on shared branches, as Arthome refuses a local `file:` build today.
 
 Nothing is published before the project is complete (A3), so every package and bundle must be installable without a registry for the test consumers (A12, FR-36). Native consumers have no Node.js (A9, ADR 0010).
 
@@ -39,44 +39,67 @@ All three channels carry the same bundle and the same integrity value.
 
 A runner caches fetched bundles by integrity value.
 
-### The consumer config
+### The app config
 
-One file, `contracts.config.yaml`, used by the Node CLI and by every native runner, so a polyglot repository has one place for its sources. Its JSON Schema is published in `@seampact/spec`, and it is read with the loader's YAML rules (FR-1). The key names below are the design of this ADR; the published schema is the reference.
+Each app (a frontend, a backend, a service) has its own `seampact.config.yaml` (A37), read by the Node CLI and by every native runner, so a polyglot repository has one kind of file for all of them. An app config works alone. A monorepo may add a root `seampact.config.yaml` that lists its apps and declares the contract sources they share. Both schemas are published in `@seampact/spec`, and both are read with the loader's YAML rules (FR-1). The key names below are the design of this ADR; the published schemas are the reference.
 
 ```yaml
-# contracts.config.yaml, in a consumer repository
+# seampact.config.yaml, at the root of a monorepo
+apps: [apps/api, apps/web, services/billing]
+allowLocal: true
 sources:
-  allowLocal: true                                   # reserved key, see below
   storefront: { package: '@acme/contracts', version: 2.3.0, integrity: sha256-Qm9vY... }
   billing:
     release: { url: https://github.com/acme/contracts/releases/download/billing-v1.4.0/billing.seampact.tgz }
     integrity: sha256-YmlsbG...
-  tasks: { path: ../contracts/tasks }                # a local source in a monorepo
+```
 
+```yaml
+# apps/api/seampact.config.yaml
+sources:
+  tasks: { path: ../../contracts/tasks }             # a local source, beside the root's
 targets:
-  - { id: validators, use: '@seampact/codegen-zod', api: storefront, out: apps/api/src/generated/validators }
+  - { id: validators, use: '@seampact/codegen-zod', api: storefront, out: src/generated/validators }
   - id: server
     use: '@seampact/codegen-nestjs'
     api: storefront
-    out: apps/api/src/generated/server
+    out: src/generated/server
     link: { validators: validators }                 # provider seam, ADR 0009
+    artefacts: { accessHooks: false }                # this app answers no access hook yet
     frameworkRoutes:
       - { method: GET, path: /metrics, reason: "Scraped by Prometheus; not part of the api." }
+openapi:
+  storefront: { public: openapi/storefront-public.yaml, full: openapi/storefront.yaml }
+checks: { openapi: true, generated: true }           # drift checks (FR-11, ADR 0015)
+```
+
+```yaml
+# services/billing/seampact.config.yaml: OpenAPI only, no code generated
+openapi:
+  billing: openapi/billing.yaml
+checks: { openapi: true }
+```
+
+```yaml
+# a Spring Boot app's seampact.config.yaml
+targets:
   - use: 'io.github.jubasse:seampact-spring-boot'    # handled by the Gradle or Maven plugin
     api: tasks
     out: src/main/generated
     options: { package: com.acme.tasks.api }
-
-checks:
-  openapi: { storefront: openapi/storefront.yaml }   # drift check of committed documents (FR-11)
-  generated: true                                    # drift check of committed generated files (ADR 0015)
 ```
 
 Rules:
+- The root config takes `apps` (the app directories), `sources` and `allowLocal`. An app config takes `sources`, `targets`, `openapi`, `checks` and `allowLocal`. An app inside a root's `apps` sees the root's sources beside its own; a name defined in both is an error naming both files. An app config outside any root, or run on its own, uses only its own sources.
 - `api` names a source when that source holds one api, and `<source>/<api>` otherwise.
 - `use` is an npm package name, a Maven `group:artifact` coordinate or a Composer `vendor/name`. Each runner handles the entries of its ecosystem and leaves the others; the forms cannot be confused.
+- `artefacts` switches each artefact a target declares on or off (types, validators, route table, handler interfaces, access hooks, client, query hooks; ADR 0009). Everything a target declares is on by default.
+- `openapi` maps an api to the path of its one document, or to a mapping from each of its documents (ADR 0002 section 5) to a path. An app config with `openapi` and no `targets` generates the documents and no code: an OpenAPI-only setup is a first-class one (A37). `checks.openapi: true` checks every document listed there for drift; `checks.generated: true` checks the committed generated files (ADR 0015).
 - `frameworkRoutes` is the allow-list of framework routes outside the contract that the boot check accepts, each with a reason (FR-25, ADR 0012).
+- The config is validated against the compatibility matrix before anything is generated (ADR 0009).
 - Native plugins read the same file. The Gradle and Maven build files only point to it and to the binary pin (ADR 0010).
+
+A contract workspace that relays to an api it does not compile names it in `workspace.imports` (ADR 0002 section 1). Such an entry takes the source forms of `sources` above, plus `api` (the api's name inside the bundle) and `integrity`, which is required there; it goes through the same pinned-bundle check.
 
 ### The pinned-bundle check
 
@@ -87,11 +110,11 @@ Before generating, and in `seampact check`, a runner verifies a bundle source:
 
 A missing pin fails and prints the actual integrity, so pinning is a copy. A mismatch fails and names the files that differ. Native plugins run the same three steps in Kotlin or PHP.
 
-Relays (FR-8) may point at an api in a pinned bundle: workspace compilation reads that bundle's IR, after the same check, for the superset check.
+Relays (FR-8) may point at an api in a pinned bundle, named in `workspace.imports` (ADR 0002 section 1): workspace compilation reads that bundle's IR, after the same check, for the superset check.
 
 ### Refusing local sources on shared branches
 
-`sources.allowLocal` defaults to `true`. When it is `false`:
+`allowLocal` (in the root or the app config, the app's winning) defaults to `true`. When it is `false`:
 - a `path` source fails `compile`, `generate` and `check` with a diagnostic naming the source and the fix (use a pinned bundle);
 - a `package` source that the package manager resolved from a local path (`file:`, `link:` or a workspace link) fails `check`.
 
@@ -117,12 +140,11 @@ Each channel has a CI smoke test (A26): a bundle of the reference contract is bu
 ## Consequences
 
 - A consumer in any ecosystem pins a contract the same way and gets the same verification.
-- `allowLocal` is a reserved name in `sources`, so no source can be called `allowLocal`.
 - Pinning a bundle requires copying its integrity once per version bump.
 - The git channel needs the `git` command on the machine that generates; every CI image has it.
 - The npm channel's native fetch assumes a registry that serves package tarballs over HTTPS; a private registry is configured by URL and a token from the environment.
 
 ## Traceability
 
-- FRs: FR-17, FR-36, FR-8 (relays to a pinned bundle), FR-11 (committed document checks), FR-25 (framework route allow-list); amendments A3, A9, A12, A26.
-- Checklist items enabled: CHK-052 (relays across a pinned bundle), CHK-059 (committed and drift-checked documents), CHK-063 (framework routes allow-listed with a reason), CHK-070 (test consumers), CHK-072 (unpublished installs), CHK-076 (native consumers read bundles), CHK-088 (PHP trees installable through path repositories).
+- FRs: FR-17, FR-36, FR-8 (relays to a pinned bundle), FR-11 (committed document checks), FR-25 (framework route allow-list); amendments A3, A9, A12, A26, A37.
+- Checklist items enabled: CHK-052 (relays across a pinned bundle), CHK-059 (committed and drift-checked documents), CHK-063 (framework routes allow-listed with a reason), CHK-070 (test consumers), CHK-072 (unpublished installs), CHK-076 (native consumers read bundles), CHK-088 (PHP trees installable through path repositories), CHK-113 and CHK-114 (per-app configs, artefact switches, OpenAPI-only setups).
