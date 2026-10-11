@@ -281,7 +281,7 @@ items:
     targets: [core, server]
   - id: CHK-043
     source: "14 Reads and writes; A34"
-    fact: With conventions.idempotency set, the writes of its methods carry idempotency keys, required unless it says otherwise (400 when missing), generated per call by clients and checked against the store interface (replay, 409), with written exemptions; without it, no key is derived (A34).
+    fact: With conventions.idempotency set, the writes of its methods carry idempotency keys, required unless it says otherwise (400 when missing), created per call by clients and reused by a caller that retries, and checked against the store interface (replay, 409), with written exemptions; without it, no key is derived (A34).
     frs: [FR-7]
     scenario: SCN-042
     targets: [server, fetch]
