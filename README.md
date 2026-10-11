@@ -17,7 +17,9 @@ seampact is not a framework. Generated code uses your framework's own mechanisms
 
 Access is checked through three generated, typed hooks: authenticate, decide and resolve scope. You answer them with the library you already use (Clerk, better-auth, Passport, CASL, spatie/laravel-permission, Laravel Gates, Symfony Voters, Spring Security) or with your own code. Your application refuses to start while a hook, a requirement or a route handler is missing.
 
-No wire format is imposed. By default a response is the bare payload and an error is an RFC 9457 `application/problem+json` body. Envelopes, JSON-LD and Hydra, or your own house format come from opt-in convention packs.
+seampact imposes nothing: not a wire format, a page shape, error codes, header names, a versioning scheme, a permission model, a validator, a client library or a code style. Where it needs a value to work, it has a default you can rename; everything else comes from your contract or from opt-in packs. What it does demand is explicitness: every route states who may call it, and every exception states its reason.
+
+By default a response is the bare payload and an error is an RFC 9457 `application/problem+json` body, with default error codes you can rename. Paged lists declare their own parameter names and page shape, or take them from a pack. Envelopes, JSON:API, HAL, JSON-LD and Hydra, Laravel resources and paginators, Spring `Page`, or your own house format come from opt-in convention packs.
 
 ## Package map
 
@@ -45,7 +47,9 @@ You install the core, then only the generators your project uses. Installing the
 | a server boundary | `@seampact/codegen-nestjs`, `@seampact/codegen-fastify`, `@seampact/codegen-express` or `@seampact/codegen-adonis`, plus `@seampact/hooks` |
 | a frontend client | `@seampact/codegen-react`, `@seampact/codegen-angular` or `@seampact/codegen-vue` |
 
-A server generator does not install a validator generator. You choose one and link the two in your project's `contracts.config.yaml`.
+A server generator does not install a validator generator. You choose one and link the two in your app's `seampact.config.yaml`, where you also turn each generated artefact on or off. The CLI checks the combination against a published compatibility matrix and, when it does not work, names the ones that do.
+
+Each app of a repository (frontend, backend, service) has its own `seampact.config.yaml`; a monorepo can add a root one that lists the apps and shares contract sources. An app that only needs the OpenAPI document installs no generator at all.
 
 ### Java and PHP
 
@@ -64,19 +68,23 @@ These run with no Node.js installed.
 |---|---|
 | `@seampact/pack-crud-rights` | you want a `<resource>.<op>` right on every CRUD route without declaring each one |
 | `@seampact/pack-api-platform` | your API Platform api serves JSON-LD items, Hydra pages and Hydra errors |
+| `@seampact/pack-laravel` | your api serves Laravel API Resources and paginators |
+| `@seampact/pack-spring` | your api serves Spring Data `Page` bodies |
+| `@seampact/pack-jsonapi` | your api speaks JSON:API |
+| `@seampact/pack-hal` | your api serves HAL |
 | `@seampact/nestjs-casl` | your NestJS app decides rights with CASL |
 | `seampact/laravel-spatie` | your Laravel app decides rights with spatie/laravel-permission |
 | `@seampact/signed-webhooks`, and its Java and PHP equivalents | you receive Stripe-style or GitHub-style signed webhooks and want the signature checked for you |
 
 ## Sharing a contract between repositories
 
-A contract repository publishes a bundle: the YAML sources, the compiled IR and an integrity hash, as an npm package, a release asset or a git tag. Each consumer pins a version and its hash in `contracts.config.yaml`, generates the code it needs and commits the result. `seampact check` fails when the pinned bundle was altered, and your CI can refuse local contract sources on shared branches.
+A contract repository publishes a bundle: the YAML sources, the compiled IR and an integrity hash, as an npm package, a release asset or a git tag. Each consumer pins a version and its hash in its `seampact.config.yaml`, generates the code it needs and commits the result. `seampact check` fails when the pinned bundle was altered, and your CI can refuse local contract sources on shared branches.
 
 ## What seampact does not do
 
 - Generate business logic, persistence, an authentication check or an authorization decision.
 - Provide a server framework, or a TypeScript API to write contracts: YAML is the only way to declare one.
-- Impose right names, roles, a permission model or a tenancy scheme.
+- Impose right names, roles, a permission model, a tenancy scheme, a wire format or a code style.
 - Model WebSocket, Server-Sent Events, gRPC or GraphQL. The IR leaves room for them; see [ADR 0014](docs/adr/0014-room-for-real-time-and-rpc.md).
 
 ## Design decisions
@@ -88,7 +96,7 @@ A contract repository publishes a bundle: the YAML sources, the compiled IR and 
 | [0008](docs/adr/0008-convention-packs-and-extensions.md) | convention packs and user extensions |
 | [0009](docs/adr/0009-modular-packaging-and-target-composition.md) | packages and how generators compose |
 | [0010](docs/adr/0010-native-generators.md) | Java and PHP generators and the standalone compiler |
-| [0011](docs/adr/0011-distribution.md) | bundles, consumer config and installs |
+| [0011](docs/adr/0011-distribution.md) | bundles, the app config and installs |
 | [0012](docs/adr/0012-access-hooks.md) | authenticate, decide and resolve-scope hooks |
 | [0013](docs/adr/0013-signed-webhooks.md) | inbound signed webhooks |
 | [0014](docs/adr/0014-room-for-real-time-and-rpc.md) | room for real-time and RPC |
