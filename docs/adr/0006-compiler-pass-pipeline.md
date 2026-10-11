@@ -62,14 +62,14 @@ export interface PassContext {
 | Pass | Writes |
 |---|---|
 | tree | `api`, `conventions`, `packs`, `formats`, `pagings`, `schemas`, `scalars`, `enums`, `services`, `extensionKeys`; per operation: `id`, `name`, `surface`, `op`, `method`, `path`, `safe`, declared `params`, `input` (schema and media), declared `responses` and their `shape`, `owner`, `concurrency` (declared), `paging` (kind, limits, sort keys without rights), `degradable`, `budgetMs`, `deprecated`, `relays`, `upstream`, `maturity` (stated), `internal`, `tags`, `examples`, `format`, `docs`, `extensions`, `origin` |
-| access | `schemes`, `identities`, `rights`, `rules`, `scopes`, `buckets`; per operation: `access`, `callerKinds`, `principalRequires`, `scopes`, `requires`, `bindings`, `fieldRights`, `paging.sortKeys[].right`, `filteredBy`, `csrf`, `input.rawBody`, rule proofs added to `input`; requirements and rights derived by pack entries |
-| derive | `errors`, `natures`; per operation: `errors`, derived `params`, derived `responses` and headers, `input.bodyLimitBytes`, `idempotency`, `concurrency.derivedFrom`, `cache`, `maturity` (derived), `deadlineHeader`, `features`; error codes attached by pack entries |
+| access | `schemes`, `headers`, `identities`, `rights`, `rules`, `scopes`, `buckets`; per operation: `access`, `callerKinds`, `principalRequires`, `scopes`, `requires`, `bindings`, `fieldRights`, `paging.sortKeys[].right`, `filteredBy`, `csrf`, `input.rawBody`, rule proofs added to `input`; requirements and rights derived by pack entries |
+| derive | `errors`; per operation: `errors`, derived `params`, derived `responses` and headers, `input.bodyLimitBytes`, `idempotency`, `concurrency.derivedFrom`, `cache`, `maturity` (derived), `deadlineHeader`, `features`; error codes attached by pack entries |
 | link | nothing |
 
 What each pass checks, besides its writes:
 
 - tree: path versions and prefixes, operation id uniqueness, `ops` inputs, version fields of `concurrency`, list routes and their paging style or its absence (A31), templates against the slot catalogue and each operation's payload (ADR 0002 sections 13 and 14), examples parsed against their schemas (FR-3), enum sources, reasons and narrowings (FR-29), degradable paths optional (FR-32), schema shapes (ADR 0003).
-- access: deny by default (FR-4), every exception's reason, service api rules (FR-8), guest rights on public routes, subject sources against id schemas, scope subjects and nesting (FR-22, FR-24), sortable rights against field rights (FR-23), body proofs on body-less routes (FR-41), scheme references (FR-27).
+- access: deny by default (FR-4), every exception's reason, pack `derive` selectors and templates, right names against `conventions.rights.pattern`, identity header uses against their declarations, service api rules (FR-8), guest rights on public routes, subject sources against id schemas, scope subjects and nesting (FR-22, FR-24), sortable rights against field rights (FR-23), body proofs on body-less routes (FR-41), scheme references (FR-27).
 - derive: error registry redefinitions (FR-6), unbound or unregistered roles, deprecation successors, bucket limits (a warning).
 - link: the `relays` superset (operation id, path shape after the prefix, body, paging, success responses, and the public codes minus the gateway's own), naming both operations and the missing element, or the missing api (FR-8, SCN-014).
 

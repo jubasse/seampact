@@ -51,21 +51,65 @@ There are five kinds of file. The loader knows each by its top-level keys.
 | workspace | `workspace` | the CLI |
 | api | `api`, `extends`, `packs`, `surfaces`, any catalogue, `conventions`, `formats`, `extensions`, `lint` | `workspace.apis` |
 | base | any catalogue, `packs`, `conventions`, `formats`, `extensions` | `extends` from an api |
-| pack | `pack`, any catalogue, `conventions`, `formats`, `extensions` | `packs` from an api or base |
+| pack | `pack`, any catalogue, `conventions`, `formats`, `extensions`, `derive` | `packs` from an api or base, `extends` from a pack |
 | fragment | whatever the include site expects | `include` or a file `$ref` |
 
-The catalogues are `schemas`, `enums`, `errors`, `natures`, `schemes`, `identities`, `rights`, `rules`, `scopes`, `buckets`, `services` and `pagings`. Each maps a name to one declaration. Everything a contract references by name lives in one of them.
+The catalogues are `schemas`, `enums`, `scalars` (named formats, ADR 0003 section 8), `errors`, `schemes`, `headers` (identity headers, section 9), `identities`, `rights`, `rules`, `scopes`, `buckets`, `services` and `pagings` (section 14). `formats` (section 13) is keyed by name like a catalogue. Each maps a name to one declaration. Everything a contract references by name lives in one of them.
 
 Paths in `extends`, `packs`, `include`, `$ref` and `$file` are relative to the file that contains them, use forward slashes, must stay inside the workspace directory, and must match the case of the file on disk. The last two rules keep compilation identical on case-insensitive file systems and stop a contract from reading files outside its repository.
 
 ### 2. Composition: `extends`, `packs`, `include`, `$ref`, `$file`
 
 - `extends: ./base.yaml`. An api extends at most one base. The base's catalogues, conventions, formats and extensions join the api's. A base does not extend another base; shared declarations beyond one level travel as packs. A name defined in both the api and its base is an error naming both locations, even when the two definitions are identical (fix: "remove the copy", SCN-029).
-- `packs: ['@seampact/pack-crud-rights', ./packs/house.yaml]`. A list of convention packs, applied in order. A string starting with `./` or `../` is a path; any other string is a package name, resolved as ADR 0008 says. A pack is data only: a pack file containing anything but the keys above is refused (SCN-047). Two packs defining the same catalogue name is an error. A `conventions` key set by a pack may be set again by the base or the api, which wins, and the IR records where the value came from; a key set by both the base and the api is an error.
+- `packs: ['@seampact/pack-crud-rights', ./packs/house.yaml]`. A list of convention packs, applied in order (below). A string starting with `./` or `../` is a path; any other string is a package name, resolved as ADR 0008 says. A pack is data only: a pack file containing anything but the keys of the table above is refused (SCN-047).
 - `include: <path>` or `include: [<path>, ...]` is organisational. It may appear as a key of any mapping except a mapping of named tree nodes (`routes`). Each included file holds a mapping, which is merged in place into the mapping that holds `include`. A key defined twice, by two files or by a file and a sibling key, is a duplicate-key error. An included schema is an inline copy at the include site, not a reference (SCN-030).
 - `$ref` names an addressable element and keeps its identity: the IR holds one copy and every use points to it (SCN-030). Its value is a name (`Task`), a pointer into the api's merged catalogues (`'#/schemas/Task'`), or a file (`./schemas/task.yaml`, or `./schemas/task.yaml#/schemas/Task`). A file `$ref` without a fragment is valid when that file declares exactly one element of the expected catalogue, under its name. A file reached only through `$ref` adds the referenced element, and what it references, to the api; its other declarations are not added. `#` always means the api's merged catalogues (api, base, packs, included pieces), not the physical file, because a base must reference schemas that the api declares and the reverse.
 - In a position that expects a schema, a plain string is a `$ref`: `output: Task` means `output: { $ref: Task }`. Other references are names in typed positions (`identity: user`, `right: tasks.update`, `errors: [api.forbidden]`, `enum: Role`), so they need no `$ref`.
 - `$file: <path>` replaces the value that holds it with a file's content: a `.md` or `.txt` file gives a string (docs), a `.json` or `.yaml` file gives data (examples). A `.yaml` file read this way goes through the same pitfall checks as any contract file. A missing file is a located error (SCN-088).
+
+#### Packs
+
+```yaml
+# @seampact/pack-crud-rights/pack.yaml
+pack: { name: '@seampact/pack-crud-rights', version: 1.0.0, extends: [] }
+derive:
+  - entry: crud
+    select: { op: [list, get, create, update, delete] }
+    declareRight:
+      name: '{resource}.{op}'
+      subject: { member: resource, collection: innermostScope }
+    require: { right: '{resource}.{op}' }
+```
+
+```yaml
+# packs/house.yaml (excerpt)
+pack: { name: house, version: 2.1.0, extends: ['@seampact/pack-crud-rights'] }
+conventions:
+  rights: { pattern: '^[a-z]+(\.[a-z]+)+$' }
+```
+
+`pack` is the manifest: `name` (the package name, or for a pack referenced by path a name of the contract's choosing), `version` (semver) and `extends` (packs applied just before this one, in the reference forms of `packs`). The version is written once, in the manifest: for a pack resolved from a package, the compiler refuses a `package.json` whose version differs.
+
+`derive` is the only way a pack adds to what a route ends up with (ADR 0008). It is a list of entries, applied in order; each has an `entry` name, unique in the pack, a selector and one or more effects, all from closed sets:
+
+| Key | Meaning |
+|---|---|
+| `select` | criteria a route must all match, each a list of accepted values: `op` (`list`, `get`, `create`, `update`, `delete`, `batch`: the `ops` name the route came from), `access` (`read` for a safe route, `write` otherwise), `apiKind` (`surface`, `service`), `identity`, `tag` |
+| `declareRight` | `{ name, subject, errors }`: declares the right the `name` template gives. `subject.member` (on member routes) is `resource`, the item schema with the member id, or `none`; `subject.collection` (on other routes) is `innermostScope` or `none`. When the catalogue already declares that name, the declared right is used and its subject must be the one the entry would give |
+| `require` | `{ right: <template> }` or `{ rule, params, bucket }`: a requirement attached to the route (section 8 gives its position) |
+| `attachErrors` | codes attached to the route |
+
+Templates in `derive` use `{resource}`, the name of the collection or single the route belongs to (`tasks`), and `{op}`, the `ops` name, or the route's name for a route that did not come from `ops`. Every element an entry produces carries `derivedFrom` naming `pack.<pack>.<entry>` (ADR 0006).
+
+`conventions.rights.pattern` is the right-naming slot of ADR 0008: a regular expression that every right name, declared or derived, must match besides the core pattern of section 4.
+
+#### Layers and overrides
+
+An api's declarations and settings come from layers applied in this order: the base's packs in their order, the api's packs in their order, the base, then the api. A pack's `extends` are applied just before it. A pack reached twice is applied once, at its first position; a cycle of `extends` is an error naming the cycle.
+
+- Declarations (a catalogue entry, a format, a paging style, a `derive` entry) are never overridden: one name declared by two layers is an error naming both locations, even when the two are identical (SCN-029). An attachment may override an error's example only (section 11).
+- Settings (`conventions`) are overridden by leaf path. A leaf is a scalar, or a list taken as one value; `errors.every` is the exception, a union of every layer's list. Maps of named entries (`cache.families`, `errors.derived`) merge per entry, each entry being a leaf. An api writing `paging: { maxLimit: 50 }` therefore keeps a pack's `paging.default`.
+- A later layer wins, and the IR records the origin of every leaf (ADR 0004). A base shared by several apis can thus be overridden by one of them; an override states a different value, not a second copy of the same fact.
 
 #### The byte-identity rule
 
@@ -103,10 +147,12 @@ No keyword of the grammar is a word that YAML 1.1 reads as a boolean (`on`, `off
 | Element | Pattern | Examples |
 |---|---|---|
 | schemas, enums | `^[A-Z][A-Za-z0-9]*$` | `Task`, `TaskId` |
-| apis, surfaces, tree nodes, operation ids, identities, schemes, scopes, rules, buckets, services, formats, natures, cache families, documents | `^[a-z][A-Za-z0-9_]*$` | `tasks`, `viewer_or_device`, `five_minutes` |
+| apis, surfaces, tree nodes, operation ids, identities, schemes, headers, scopes, rules, buckets, services, wire formats, paging styles, pack entries, cache families, documents | `^[a-z][A-Za-z0-9_]*$` | `tasks`, `viewer_or_device`, `five_minutes` |
+| scalars (named formats) | `^[a-z][A-Za-z0-9]*(-[a-z0-9]+)*$` | `money`, `iri-reference` |
 | rights | `^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*)*$` | `roles`, `tasks.update` |
 | error codes | `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$` | `api.forbidden`, `state.conflict` |
 | extension prefixes | `^[a-z][a-z0-9]*$`, `seampact` reserved | `acme` |
+| extension keys | `^[a-z][a-z0-9]*(-[a-z0-9]+)*$` | `tax-basis`, `invalidates` |
 
   The core constrains a right only by its pattern; it imposes no naming convention (A20, SCN-063). An error's family is its code up to the first dot (FR-6).
 - A fields map maps names to schemas. A field is required unless its name ends with `?`: `query: { limit?: { type: integer }, cursor?: Cursor }`. Fields maps are used for `id`, `pathParams`, `query`, `headers`, and the `params` of errors, rights and rules. In each of these places a string instead of a mapping names a schema whose properties are the fields (`query: TaskQuery`).
@@ -310,7 +356,7 @@ Every node may set the settings below; its descendants inherit them, and the IR 
 | Setting | Merge rule down the tree |
 |---|---|
 | `identity`, `access` | the nearest wins; `access` and `identity` replace each other |
-| `requires` | appended: ancestors first, then the node's own; the same right or rule twice with equal params is an error |
+| `requires` | appended: requirements derived by pack entries first (packs in application order, entries in written order), then the ancestors' from the root down, then the node's own; the same right or rule twice with equal params is an error, except that a derived requirement equal to a written one is dropped and the written one stays |
 | `scopes` | added; entering a scope twice is an error |
 | `principal.requires` | union |
 | `bindings` | added; one key bound to two different values is an error |
@@ -392,9 +438,18 @@ identities:
 | `scheme` | `signed` only: the one `signature` scheme; the compiler forces a raw body and removes CSRF and idempotency keys (FR-20, SCN-026) |
 | `principal` | the principal schema, or `{ variants: { <name>: <schema> } }` for an identity accepting several credential kinds; hooks and handlers narrow on the variant name |
 | `errors` | codes attached to every route of the identity |
-| `headers` | identity headers, below |
+| `headers` | the identity headers it uses, below |
 
-Identity headers (FR-28) map a local name to `{ name, in, for, required, schema, semantic }`. `in` is `request` or `response`; `for` is `all`, `reads` or `writes`; `required` defaults to `false`. `semantic` lets targets generate behaviour: `deadline` (an instant; the client computes it from the budget, the server exposes the remaining time and answers 504 from the `deadlineExceeded` slot once it has passed), `traceContext` (relayed, never refused when malformed), `actorSurface` (a strict enum; its `schema` names it). A `versionToken` entry has its own shape, because one fact drives two headers:
+Identity headers (FR-28) are declared in the `headers` catalogue, so a pack can supply their names without the identity that uses them (SCN-079), and each identity names the ones it uses with the facts of that use:
+
+```yaml
+# packs/house.yaml (excerpt)
+headers:
+  deadline: { name: X-Deadline, in: request, semantic: deadline }
+  trace: { name: traceparent, in: request, semantic: traceContext }
+  actorSurface: { name: X-Actor-Surface, in: request, semantic: actorSurface }
+  rightsVersion: { semantic: versionToken, response: X-Rights-Version, request: If-Rights-Version }
+```
 
 ```yaml
 # studio/base.yaml (excerpt)
@@ -403,15 +458,12 @@ identities:
     schemes: { read: [sessionCookie], write: [sessionCookie] }
     principal: OperatorPrincipal
     headers:
-      rightsVersion:
-        semantic: versionToken
-        from: principal.rightsVersion
-        response: { name: X-Rights-Version }
-        request: { name: If-Rights-Version, for: writes, required: false }
-        stale: api.rights_version_stale
+      rightsVersion: { from: principal.rightsVersion, for: writes, required: false, stale: api.rights_version_stale }
 ```
 
-The header names are the contract's or a pack's, never the core's (SCN-079).
+A header declaration takes `name`, `in` (`request` or `response`), `semantic` and optionally `schema`. `semantic` lets targets generate behaviour: `deadline` (an instant; the client computes it from the budget, the server exposes the remaining time and answers 504 from the `deadlineExceeded` role once it has passed), `traceContext` (relayed, never refused when malformed), `actorSurface` (a strict enum, named by `schema`), `versionToken`. A `versionToken` declares `response` and `request` names instead of `name` and `in`, because one fact drives two headers: the response header on every success and an optional request header compared on use.
+
+A use takes `for` (`all`, `reads` or `writes`; for a `versionToken`, the request header's), `required` (default `false`), `schema` when the declaration has none (setting it in both places is an error), and for a `versionToken` `from` (the principal field) and `stale` (the code answered to a stale request header). The header names are the contract's or a pack's, never the core's (SCN-079).
 
 #### Principal requirements and bindings
 
@@ -556,13 +608,7 @@ errors:
 
 The registry defines each code once: `status`, `nature`, `params` (a fields map or a schema name), `example` (the params), `title`, `description` (FR-6, SCN-037). Codes reach operations only by attachment, at three levels: `conventions.errors.every` (every operation), `errors` on a tree node (inherited), and `errors` on a route. An attachment is a code, or `{ code, example }` to override the example only; redefining `status`, `nature` or `params` anywhere but the registry is an error naming the registry location (SCN-011). Rights, rules, scopes and identities attach their own codes, with `derivedFrom` in the IR.
 
-`nature` is a closed set that tells a client whether retrying can help: `refused` (retrying the same request cannot succeed), `unavailable` (retrying later may succeed) and `failed` (the server failed). A pack or base may add a nature only by mapping it onto one of the three, so every client keeps its retry rule (SCN-037):
-
-```yaml
-# packs/house.yaml (excerpt)
-natures:
-  offline_forbidden: { like: refused, description: The action needs a connection. }
-```
+`nature` is a closed set that tells a client whether retrying can help: `refused` (retrying the same request cannot succeed), `unavailable` (retrying later may succeed) and `failed` (the server failed). No layer adds a nature, so every client keeps one retry rule and the authoring schema refuses any other value with the allowed list (SCN-037).
 
 Derived errors use slots, never fixed codes. `conventions.errors.derived` maps each slot to a registry code; a derivation whose slot has no code is a compile error naming the slot. The slots: `unauthenticated` (401), `csrfInvalid`, `forbidden`, `sortKeyForbidden` (403), `notFound` (404), `schemaInvalid` (400), `payloadTooLarge` (413), `unsupportedMediaType` (415), `stateConflict`, `idempotencyKeyReused`, `idempotencyInProgress` (409), `gone` (410), `rateLimited` (429), `undeclaredStatus` (500), `upstreamUnavailable` (502), `serviceUnavailable` (503), `upstreamTimeout`, `deadlineExceeded` (504). The derivation table that uses them is ADR 0006.
 
@@ -596,20 +642,23 @@ Consumer extension keys (FR-10, SCN-016) are declared with a JSON Schema under a
 
 ```yaml
 # shared/base.yaml (excerpt)
+enums:
+  TaxBasis: { values: [inclusive, exclusive], reason: Acme's tax rules. }
 extensions:
   acme:
     tax-basis:
       at: [operation, property]
-      schema: { enum: [inclusive, exclusive] }
+      schema: { enum: TaxBasis }
+    invalidates: { at: [operation], schema: { type: array, items: { type: string } } }
 ```
 
-`at` lists where the key may appear: `api`, `operation` (any tree node, inherited), `schema`, `property`, `right`, `rule`, `scope`. The key is written `x-<prefix>-<key>` at its place of use (`x-acme-tax-basis: inclusive`). A core keyword never starts with `x-`, so an extension never collides with one, and no domain key becomes a core keyword (SM-6). The compiler validates every value with a located diagnostic.
+An extension's `schema` is written in the subset of ADR 0003, like any schema. `at` lists where the key may appear: `api`, `operation` (any tree node, inherited), `schema`, `property`, `right`, `rule`, `scope`. The key is written `x-<prefix>-<key>` at its place of use (`x-acme-tax-basis: inclusive`). A core keyword never starts with `x-`, so an extension never collides with one, and no domain key becomes a core keyword (SM-6). The compiler validates every value with a located diagnostic.
 
 `lint: { allow: { <rule id>: "<reason>" } }` on any node, schema or property silences one lint rule there (FR-12, SCN-018).
 
 ### 13. Conventions and wire formats
 
-`conventions` holds the api-wide settings a pack usually supplies. What a pack may set, and the defaults, are ADR 0008.
+`conventions` holds the api-wide settings. Any layer may set them (section 2), usually a pack; a node never does, because a convention is one fact for the whole api. The table gives each key's default and, where there is none, when the key becomes required; a missing required key is a compile error naming the key, the route that needs it and the fix.
 
 ```yaml
 # shared/base.yaml (excerpt)
@@ -629,19 +678,24 @@ conventions:
     derived: { unauthenticated: api.unauthenticated, forbidden: api.forbidden }
 ```
 
-| Key | Meaning |
-|---|---|
-| `format` | the wire format, `bare` by default (A30) |
-| `pathCase` | how node names become path segments |
-| `paging` | `default` (a paging style), `maxLimit`, `defaultLimit` (section 14) |
-| `idempotency` | the key header, its replay header and its lifetime (FR-7) |
-| `bodyLimit`, `batch` | the default body limit (1 MiB) and the batch defaults |
-| `cache.families` | freshness families and their max-age |
-| `restrictedInput` | `reject` (default) or `strip`: a restricted field sent without its right (A21); overridable per field (ADR 0003) |
-| `outputEnums` | `enum` or `open`: how the emitter writes an output enum (FR-29) |
-| `rateLimit` | the header carrying the retry delay on 429 |
-| `degradedHeader` | the header listing degraded parts, for a format without a `degraded` meta field |
-| `errors.every`, `errors.derived` | section 11 |
+| Key | Meaning | Default, or when required |
+|---|---|---|
+| `format` | the wire format (section 13) | `bare` (A30) |
+| `pathCase` | how node names become path segments: `kebab`, `camel` or `snake` | `kebab` |
+| `paging.default` | the paging style of a list without `paging` (section 14) | none: a list with neither is a compile error naming both fixes (A31) |
+| `paging.maxLimit` | the largest `limit` a request may send | none: required when a list uses a style with a `limit` role and sets no `maxLimit` |
+| `paging.defaultLimit` | the limit of a request that sends none, and the page size of a style without `limit` | `maxLimit`; required for a style without `limit` |
+| `idempotency` | `{ header, replayHeader, lifetime }`: enables the idempotency key on every non-safe route that is not exempt (FR-7, A34) | unset: no key is derived, and an `idempotency.exempt` is a compile error naming the unused reason |
+| `bodyLimit` | the default request body limit | `1MiB` |
+| `batch` | `{ maxIds, bodyLimit, budget }` for `batch` ops | `maxIds` required when a `batch` op sets none; `bodyLimit` from `bodyLimit`; no budget |
+| `cache.families` | freshness families and their max-age | empty: each family a `cache.freshness` names is required |
+| `restrictedInput` | `reject` or `strip`: a restricted field sent without its right (A21); overridable per field (ADR 0003) | `reject` |
+| `outputEnums` | `enum` or `open`: how the emitter writes an output enum (FR-29) | `enum` |
+| `rateLimit` | the header carrying the retry delay on 429 | unset: a 429 carries no retry header |
+| `degradedHeader` | the header listing degraded parts | unset: required for a `degradable` route whose format has no `degraded` meta field |
+| `rights.pattern` | a pattern every right name must also match (section 2) | unset: the core pattern only (A20) |
+| `errors.every` | codes attached to every operation (section 11) | empty |
+| `errors.derived` | role bindings (section 11) | the default codes of ADR 0006 section 6 (A34) |
 
 The core imposes no wire format (A30). `format: bare`, the default, is itself written as format data below: every success body is the bare payload, and an error is an RFC 9457 `application/problem+json` body whose members are fixed in ADR 0006 section 7. `bare` has no paging style, because the core imposes no page shape either (A31, section 14). Every other format (an envelope like Arthome's, JSON:API, HAL, JSON-LD and Hydra, Laravel resources and paginators, Spring Page and ProblemDetail) is declared in `formats`, usually by a convention pack, and selected with `conventions.format`; each target maps it onto its framework's own mechanism (FR-42, SCN-048, SCN-100).
 
@@ -929,7 +983,10 @@ Laravel's paginator also writes `meta.links`, a numbered list of page links. It 
 | `access: { public }`, implicit optional auth | `public`, `optionalAuth`, `refusedAsAnonymous`, each with a reason | the sketch's `optionalAuth` bundled two behaviours that Arthome keeps apart |
 | `idempotent: true` on a GET, `idempotent: { exempt }` | `idempotency: { exempt }` only | a GET is safe by its method; one name for the convention and the exemption |
 | `errors` with fixed derived codes (`api.schema_invalid`) | derivation slots mapped by the conventions | the core imposes no error code (A20, A30) |
-| `nature` open | closed set of three, packs map extra natures onto them | clients keep one retry rule (FR-6) |
+| `nature` open | closed set of three; no layer adds one | clients keep one retry rule (FR-6), and no consumer needs another nature (lesson 5) |
+| `conventions` on any node (5.2) | `conventions` on the api, its base and packs only | a convention is one fact for the whole api; per-node values are ordinary inherited settings (section 8) |
+| identity headers written inside the identity | a `headers` catalogue, used by identities | a pack supplies header names without the identity (SCN-079) |
+| no pack manifest | `pack: { name, version, extends }` and `derive` | a pack is versioned, extends packs and derives rights (ADR 0008, SCN-073) |
 | `enums: { Role: [owner, editor] }` | `{ values, source or reason, fallback }` | FR-29: source, local reason, fallback |
 | `examples: { 200: ... }` | named examples with `status` or `request` | examples are named (checklist volume) and may target the request |
 | implicit envelopes | `conventions.format`, default bare plus problem+json | A30 |
@@ -966,6 +1023,11 @@ schemes:
     tolerance: 5m
     key: { value: stripe }
 
+headers:
+  deadline: { name: X-Deadline, in: request, semantic: deadline }
+  trace: { name: traceparent, in: request, semantic: traceContext }
+  actorSurface: { name: X-Actor-Surface, in: request, semantic: actorSurface }
+
 identities:
   user:
     schemes: { read: [sessionCookie, bearer], write: [sessionCookie, bearer] }
@@ -974,15 +1036,9 @@ identities:
     schemes: { read: [internalToken] }
     principal: ServicePrincipal
     headers:
-      deadline: { name: X-Deadline, in: request, for: all, required: true, semantic: deadline }
-      trace: { name: traceparent, in: request, for: all, semantic: traceContext }
-      actorSurface:
-        name: X-Actor-Surface
-        in: request
-        for: writes
-        required: true
-        semantic: actorSurface
-        schema: { enum: Surface }
+      deadline: { for: all, required: true }
+      trace: { for: all }
+      actorSurface: { for: writes, required: true, schema: { enum: Surface } }
   stripe:
     kind: signed
     scheme: stripeSignature
@@ -1356,7 +1412,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-012 | `pagings` (`cursor`, `limit`, `sort` roles), `conventions.paging.default`, `paging.<style>.maxLimit`, `sortable`, `restrictedTo` (10, 14, ADR 0003) |
 | SCN-013 | `cache.freshness`, `cache.etag`, `conventions.cache.families` (10, 13) |
 | SCN-014 | `workspace.apis`, `api.kind: service`, `relays`, `workspace.imports` (1, 5, 7) |
-| SCN-016 | `extensions`, `x-<prefix>-<key>` (12) |
+| SCN-016 | `extensions` (`at`, `schema`), the extension key pattern, `x-<prefix>-<key>` (12, 4) |
 | SCN-018 | `lint.allow`, `maturity`; `sensitive` (12, 10, ADR 0003) |
 | SCN-019 | `api.compat.policy` (5) |
 | SCN-026 | `schemes` of `kind: signature` (`header`, `format`, `algorithm`, `payload`, `encoding`, `tolerance`, `key`), `identities` of `kind: signed` (9) |
@@ -1368,7 +1424,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-034 | `principal.requires` (9) |
 | SCN-035 | `identity` inheritance, `routes` (8, 6) |
 | SCN-036 | `access.public`, `requires` with `bucket`, `buckets` (9) |
-| SCN-037 | `errors` (`status`, `nature`, `params`, `example`), `natures` (11) |
+| SCN-037 | `errors` (`status`, `nature`, `params`, `example`); the closed nature set (11) |
 | SCN-038 | `responses` with several 2xx and `headers` (7) |
 | SCN-039 | `responses` 202 with `Location`, `Retry-After` (7) |
 | SCN-040 | `ops.delete` with `output` (6) |
@@ -1378,7 +1434,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-044 | `api.documents` with `internal: exclude`, `internal: true` (5, 10) |
 | SCN-045 | `api.caller.right`, `rights.callerService.params` (5, 9) |
 | SCN-046 | `# yaml-language-server` modeline (3) |
-| SCN-047 | `packs`, pack file keys (1, 2) |
+| SCN-047 | `packs`, pack file keys, `pack` manifest (1, 2) |
 | SCN-048 | `formats` (`success.item`, `success.table`, `meta.fill`, `error`), a `pagings` style for the list, templates, `conventions.format`, `ops.batch` (13, 14, 6) |
 | SCN-050 | `api.maturity`, `api.compat` (5) |
 | SCN-051 | `deprecated.sunset`, `deprecated.successor` (10) |
@@ -1393,11 +1449,11 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-069 | `scopes` catalogue with `within`, `scopes` on a node with `subdomain` and `path` sources (9, 4) |
 | SCN-070 | `scopes` with `resolver` (9) |
 | SCN-071 | `rights` (no syntax beyond SCN-062) |
-| SCN-073 | `packs` with the CRUD rights pack, `ops` (2, 6) |
+| SCN-073 | `packs` with the CRUD rights pack, its `pack` manifest and `derive` entry (`select.op`, `declareRight`, `require`), `ops`, the `requires` merge order (2, 6, 8) |
 | SCN-076 | `identities.principal.variants`, `schemes.optionalRead` (9) |
 | SCN-077 | `schemes` (`kind`, `name`, `csrf`), `identities.schemes` (9) |
-| SCN-078 | identity `headers` with `deadline`, `traceContext`, `actorSurface`, `budget` (9, 10) |
-| SCN-079 | identity header `versionToken` (`from`, `response`, `request`, `stale`) (9) |
+| SCN-078 | the `headers` catalogue with `deadline`, `traceContext`, `actorSurface`, their use on an identity, `budget` (9, 10) |
+| SCN-079 | the `headers` catalogue in a pack (`semantic: versionToken`, `response`, `request`), the identity's use (`from`, `for`, `required`, `stale`) (9) |
 | SCN-080 | `enums` (`values`, `source`, `reason`, `fallback`), narrowing (12, ADR 0003), `conventions.outputEnums` (13) |
 | SCN-081 | `query` fields map with `?` and an object field (7, 4) |
 | SCN-082 | a `pagings` style with the `since`, `nextSince` and `complete` roles, `paging.<style>.token`, `item` (10, 14) |

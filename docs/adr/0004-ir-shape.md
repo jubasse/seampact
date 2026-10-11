@@ -38,7 +38,7 @@ interface ContractIR {
   kinds: DeclarationKind[];                 // the declaration kinds present: ['httpOperation'] in 1.0
   features: Feature[];                      // must-understand features used by any operation (ADR 0005); empty at 1.0
   api: Api;
-  packs: PackRef[];                         // packs applied, in application order: { name, version }
+  packs: PackRef[];                         // packs applied, in application order, extended packs included: { name, version }
   conventions: Conventions;                 // resolved values, each with its origin
   formats: Record<FormatId, WireFormat>;    // only the formats this api uses, the default included
   pagings: Record<PagingId, PagingStyle>;   // only the paging styles this api uses
@@ -46,8 +46,8 @@ interface ContractIR {
   scalars: Record<ScalarId, Scalar>;
   enums: Record<EnumId, Enum>;
   errors: Record<ErrorCode, ErrorDecl>;
-  natures: Record<NatureId, NatureDecl>;    // the three core natures and pack natures mapped onto them
   schemes: Record<SchemeId, Scheme>;
+  headers: Record<HeaderId, HeaderDecl>;    // identity headers (ADR 0002 section 9)
   identities: Record<IdentityId, Identity>;
   rights: Record<RightId, Right>;
   rules: Record<RuleId, Rule>;
@@ -95,11 +95,16 @@ Every IR object of the kinds below has the members it needs from this list, with
 
 ```ts
 interface ErrorDecl {
-  code: ErrorCode;  family: string;  nature: NatureId;
+  code: ErrorCode;  family: string;  nature: 'refused' | 'unavailable' | 'failed';
   http: { status: number };                 // the status is an HTTP attribute of the error (ADR 0014)
   params?: SchemaRef;  example?: unknown;  title?: string;  docs; origin;
 }
-interface NatureDecl { id; like: 'refused' | 'unavailable' | 'failed'; docs; origin }
+interface HeaderDecl {
+  id; semantic: 'deadline' | 'traceContext' | 'actorSurface' | 'versionToken';
+  name?: string; in?: 'request' | 'response';   // every semantic but versionToken
+  response?: string; request?: string;          // versionToken
+  schema?: TypeUse; origin;
+}
 
 interface Scheme {
   id; kind: 'cookie' | 'header' | 'bearer' | 'signature';
@@ -113,7 +118,8 @@ interface Identity {
   schemes: { read: SchemeId[]; write: SchemeId[]; optionalRead: SchemeId[] } | { signed: SchemeId };
   principal: SchemaRef | { variants: Record<VariantId, SchemaRef> };
   errors: ErrorCode[];
-  headers: IdentityHeader[];                // with 'semantic' and, for versionToken, both wire names
+  headers: { header: HeaderId; for: 'all' | 'reads' | 'writes'; required: boolean; schema?: TypeUse;
+             from?: ValueSource; stale?: ErrorCode; origin }[];   // uses of the headers catalogue
   docs; extensions; origin;
 }
 interface Right {
@@ -191,7 +197,7 @@ interface Operation {
   callerKinds: ('anonymous' | 'identified')[];
   principalRequires: { field: string; origin: Origin }[];
   scopes: { scope: ScopeId; source: ValueSource | { resolver: true }; origin: Origin }[];   // resolution order
-  requires: Requirement[];                   // declared order, then pack-derived ones where the pack places them
+  requires: Requirement[];                   // pack-derived (pack, then entry order), then ancestors', then the route's own (ADR 0002 section 8)
   bindings: { from: ValueSource; to: ValueSource; origin: Origin }[];
   input?: { media: string; schema: TypeUse; bodyLimitBytes: number; rawBody: boolean; origin };
   responses: Response[];                     // success and derived non-error responses (304), sorted by status
