@@ -180,12 +180,13 @@ type TypeUse =                               // what a property, item, body or p
 ### 6. Origins and `derivedFrom`
 
 ```ts
-interface Origin { layer: 'api' | 'base' | `pack:${string}`; pointer: string }
+interface Origin { api?: string; layer: 'api' | 'base' | `pack:${string}`; pointer: string }   // api: set on a copy from another api
 interface DerivedFrom { derivation: DerivationId; from: Origin[] }
 ```
 
 - `pointer` is a JSON Pointer into the merged authoring tree of its layer: `/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign`, `/rights/tasks.update`, `/conventions/idempotency/header`. It names a logical position, never a file, so moving content between files leaves it unchanged (ADR 0002 byte-identity rule).
 - Every declared element has an `origin`. Every inherited setting on an operation carries the origin of the node that set it (FR-2, SCN-003).
+- An element a relay route copies from another api (ADR 0002 section 7) keeps its origin in that api, with `api` naming it; the location is found through that api's side table, or the pinned bundle's sources.
 - Every derived element carries `derivedFrom`: the derivation id from the derivation table (ADR 0006) and the origins of the declarations that caused it, for example `{ derivation: 'csrf.cookieWrite', from: [/identities/user, /schemes/sessionCookie] }`. A test walks the IR and fails on a derived element without it (SCN-011, CHK-045).
 
 ### 7. The operation
@@ -220,7 +221,7 @@ interface Operation {
   degradable?: { paths: string[]; origin };
   budgetMs?: number;  deadlineHeader?: string;
   deprecated?: { sunset: string; successor?: OperationRef; origin };
-  relays?: OperationRef;
+  relays?: OperationRef;                     // a relay route: its shape fields carry derivedFrom 'relay.route'
   upstream: ServiceId[];                     // owner first
   maturity: { level: Maturity; source: 'api' | 'upstream' | 'stated'; reason?: Reason; origin };
   internal: boolean;

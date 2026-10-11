@@ -266,11 +266,12 @@ surfaces:
     identity: stripe
 ```
 
-Every node is a mapping of settings plus its children. There are three kinds of node:
+Every node is a mapping of settings plus its children. There are four kinds of node:
 
 | Node | Marked by | Children |
 |---|---|---|
 | route | `method` | none |
+| relay route | `relays`, in a surface root's `routes` only (section 7) | none |
 | collection | `kind: collection` | `ops`, `collection`, `member` |
 | single | `kind: single` | `ops`, `routes` |
 
@@ -366,7 +367,7 @@ assign:
 | `responses` | several responses keyed by status, instead of `output` |
 | `paging`, `sortable`, `filteredBy` | list behaviour (section 10) |
 | `degradable` | optional success-data paths that may be missing (FR-32) |
-| `relays` | `<api>.<operationId>`: the public operation this service route serves (FR-8) |
+| `relays` | `<api>.<operationId>`: marks a relay route, whose shape is derived from that public operation (below, FR-8) |
 | `examples` | named examples (section 12) |
 | `summary`, `description` | docs |
 
@@ -382,6 +383,35 @@ export:
     202:
       headers: { Location: Url, Retry-After: RetryAfterSeconds }
 ```
+
+#### Relays
+
+A service api (section 5) often serves operations of a public api: the public handler, or a gateway in front of it, forwards the call to a service route. `relays` pairs the two at compile time and derives the service route's shape from the public operation, so no fact is written twice (FR-8):
+
+```yaml
+# tasks-service/api.yaml (excerpt)
+surfaces:
+  internal:
+    prefix: /internal/v{version}
+    requires: [{ right: callerService, params: { allowed: [catalog] } }]
+    routes:
+      getTask: { relays: tasks.getTask }
+      getTasksBatch: { relays: tasks.getTasksBatch, budget: 100ms }
+```
+
+A relay route is marked by `relays: <api>.<operationId>`, naming an operation of a sibling api of the workspace or of an api in `workspace.imports` (section 1). It sits in a surface root's `routes`, and its name is the public operation id, which is also its own; a different name is a compile error naming both. The public operation's shape is copied, each copied element carrying `derivedFrom` with the derivation `relay.route` and the public operation's origin:
+
+- the method, and the path after the public surface's prefix, appended to this surface's prefix (`/internal/v1/channels/{channelId}/tasks/{taskId}`), with the schemas of its path parameters;
+- the query parameters, the declared request headers, the body input (with its `unknownKeys`), the success responses with their shapes and headers, the paging style and limits of a list, its sort keys without their rights, `concurrency`, and the wire format;
+- the codes the public operation answers from its domain rather than from its access: those attached through `errors` on its nodes or by a pack entry, and its `notFound` code (`member.notFound`, `owner.caller`), each with its declaration.
+
+The schemas, enums, scalars, formats, paging styles and error declarations the copies use join this api's IR. A name this api already declares must be the same declaration (a shared file, section 2); a different one is a compile error naming both.
+
+Nothing about access is copied. The public operation's identity, CSRF, idempotency key, scopes, requirements, principal requirements, bindings, field rights, sort-key rights, cache and deprecation belong to the gateway, which checks them before it forwards. The relay route runs under the service api's caller identity, inherits its surface's settings like any route, and writes only the service's own settings: `requires`, `errors`, `errorRoles`, `budget`, `bodyLimit`, `idempotency`, `upstream`, `maturity`, `deprecated`, `tags`, docs and extension keys. A shape key on it (`method`, `path`, `pathParams`, `operationId`, `query`, `headers`, `input`, `output`, `item`, `responses`, `paging`, `sortable`, `filteredBy`, `concurrency`) is a compile error naming the public operation it is derived from.
+
+The relay route derives its boundary errors from the copied shape under its own role bindings, like any route: `input.invalid`, `body.limit`, `body.media`, `concurrency.version`, `paging.params`, `paging.gone`. The link step then checks the superset (ADR 0006 section 3): every code of the public operation that is not the gateway's own is a code of the relay route. The gateway's own are the codes of the access and api-wide derivations of ADR 0006 section 5: `identity.authenticate`, `signed.identity`, `csrf.cookieWrite`, `idempotency.write`, `principal.requires`, `binding.mismatch`, `requirement.errors`, `scope.errors`, `fieldRight.restricted`, `sortKey.restricted`, `rule.bucket`, `identity.deadline`, `identity.versionToken`, `api.gateway`, `api.service`, `response.undeclared` and `conventions.every`. Since the domain codes are copied, the check fails only when the two apis bind a boundary role to different codes (the public api answers `request.invalid` for `schemaInvalid`, the service api the default `api.schema_invalid`); the diagnostic names both operations, the missing code and the fix: bind the role to the same code, for the api or with `errorRoles` on the relay route (SCN-014).
+
+`relays` has no run-time part. No target generates a forwarder: the service api's server targets generate the relay route like any route, and the public handler forwards with the service api's generated client when the app generates one (ADR 0011), or with its own code. `api.role: gateway` on the public api (section 5) is independent of it: it derives the 502, 503 and 504 a forwarding api may answer.
 
 ### 8. Inherited settings
 
@@ -1102,6 +1132,7 @@ Laravel's paginator also writes `meta.links`, a numbered list of page links. It 
 | `include` | `$include`, with an optional fragment | every loader directive is `$`-prefixed, so `include` stays usable as a field, parameter or property name (JSON:API's `include` query parameter) |
 | `cache: { freshness, etag }` | adds `anonymous` and `vary` | FR-33 caller kinds |
 | no workspace | `workspace.yaml` | several apis compile together for `relays` (FR-8) |
+| a relaying route restating the public path, body, success and codes | a relay route (`relays`) whose shape is copied from the public operation | one fact, one place: the superset check keeps only what can still differ, the role bindings |
 
 ## Worked example: the reference tasks api
 
@@ -1390,19 +1421,8 @@ surfaces:
   internal:
     prefix: /internal/v{version}
     requires: [{ right: callerService, params: { allowed: [catalog] } }]
-    errors: { api.not_found: {}, api.forbidden: {} }
     routes:
-      channels:
-        kind: collection
-        id: { channelId: ChannelId }
-        member:
-          routes:
-            tasks:
-              kind: collection
-              id: { taskId: TaskId }
-              item: Task
-              ops:
-                get: { relays: tasks.getTask }
+      getTask: { relays: tasks.getTask }
 ```
 
 What the example shows, by route:
@@ -1416,7 +1436,7 @@ What the example shows, by route:
 - `searchTasks`: an included route, idempotency exempt with its reason, a 300 ms budget, a named example.
 - `getPreferences` and `updatePreferences`: a single owned by the caller, conditional GET; `deleteDraft` answers 200 with the deleted record.
 - `payments` (`POST /v1/hooks/payments`): the signed `stripe` identity, raw body, no CSRF and no idempotency key, 204.
-- `getTask` in `tasksService` (`GET /internal/v1/channels/{channelId}/tasks/{taskId}`): the service identity with its deadline and trace headers (its actor-surface header applies to writes only), `callerService` allowing `catalog`, and a relay whose superset check runs against `tasks.getTask`.
+- `getTask` in `tasksService` (`GET /internal/v1/channels/{channelId}/tasks/{taskId}`): a relay route, its path, item and `notFound` code (`api.not_found`, from `member.notFound`) copied from `tasks.getTask`; the service identity with its deadline and trace headers (its actor-surface header applies to writes only), `callerService` allowing `catalog`. The `channel` scope and its denial stay with the public operation.
 
 Short forms not in the reference contract:
 
@@ -1497,7 +1517,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-011 | `errors` declared in the catalogue or on a node, attached with `{}` or narrowed with `{ example }`, `conventions.errors.every`, `errorRoles` (11) |
 | SCN-012 | `pagings` (`cursor`, `limit`, `sort` roles), `conventions.paging.default`, `paging.<style>.maxLimit`, `sortable`, `restrictedTo` (10, 14, ADR 0003) |
 | SCN-013 | `cache.freshness`, `cache.etag`, `conventions.cache.families` (10, 13) |
-| SCN-014 | `workspace.apis`, `api.kind: service`, `relays`, `workspace.imports` (1, 5, 7) |
+| SCN-014 | `workspace.apis`, `api.kind: service`, a relay route (`relays`), role bindings that differ between the two apis, `workspace.imports` (1, 5, 7) |
 | SCN-016 | `extensions` (`at`, `schema`), the extension key pattern, `x-<prefix>-<key>` (12, 4) |
 | SCN-018 | `lint.allow`, `maturity`; `sensitive` (12, 10, ADR 0003) |
 | SCN-019 | `api.compat.policy` (5) |

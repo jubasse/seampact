@@ -31,10 +31,10 @@ load -> validate -> tree -> access -> derive -> link -> finalize
 | tree | pass (p2-tree) | the raw tree | the draft IR fields listed below |
 | access | pass (p2-access) | the raw tree and tree's fields | its fields |
 | derive | pass (p2-derive) | the raw tree and the fields of tree and access | its fields |
-| link | workspace pass (p2-derive) | the draft IRs of every api, and the IRs of pinned bundles | diagnostics only: `relays` superset checks |
+| link | workspace pass (p2-derive) | the IRs of every api, and the IRs of pinned bundles | diagnostics only: `relays` superset checks |
 | finalize | stage (COMP-Pipeline) | a complete draft IR | canonical ids and ordering, the id collision check, validation against the IR JSON Schema, the serialised IR and its side table (ADR 0004) |
 
-The order is fixed. Each api of a workspace runs through derive on its own; link then sees all of them. A step that reports an error stops the pipeline after it completes, so later passes always receive consistent input, while every error of the failing step is still reported at once.
+The order is fixed. Each api of a workspace runs through derive on its own, in relay order: an api with relay routes runs after every workspace api they name, because its tree pass copies the public operations from that api's derived IR (an imported api's IR comes from its pinned bundle). Relays that form a cycle between apis are a compile error naming them. Link then sees all of them. A step that reports an error stops the pipeline after it completes, so later passes always receive consistent input, while every error of the failing step is still reported at once.
 
 ### 2. The pass interface
 
@@ -61,9 +61,9 @@ export interface PassContext {
 
 | Pass | Writes |
 |---|---|
-| tree | `api`, `conventions`, `packs`, `formats`, `pagings`, `schemas`, `scalars`, `enums`, `services`, `extensionKeys`; per operation: `id`, `name`, `surface`, `op`, `method`, `path`, `safe`, declared `params`, `input` (schema and media), declared `responses` and their `shape`, `owner`, `concurrency` (declared), `paging` (kind, limits, sort keys without rights), `degradable`, `budgetMs`, `deprecated`, `relays`, `upstream`, `maturity` (stated), `internal`, `tags`, `examples`, `format`, `docs`, `extensions`, `origin` |
+| tree | `api`, `conventions`, `packs`, `formats`, `pagings`, `schemas`, `scalars`, `enums`, `services`, `extensionKeys`; per operation: `id`, `name`, `surface`, `op`, `method`, `path`, `safe`, declared `params`, `input` (schema and media), declared `responses` and their `shape`, `owner`, `concurrency` (declared), `paging` (kind, limits, sort keys without rights), `degradable`, `budgetMs`, `deprecated`, `relays` and the shape a relay route copies (method, path, params, input, responses, paging, concurrency, format, and the declarations they use), `upstream`, `maturity` (stated), `internal`, `tags`, `examples`, `format`, `docs`, `extensions`, `origin` |
 | access | `schemes`, `headers`, `identities`, `rights`, `rules`, `scopes`, `buckets`; per operation: `access`, `callerKinds`, `principalRequires`, `scopes`, `requires`, `bindings`, `fieldRights`, `paging.sortKeys[].right`, `filteredBy`, `csrf`, `input.rawBody`, `unknownKeys` on the input of a signed identity's routes, rule proofs added to `input`; requirements and rights derived by pack entries |
-| derive | `errors`; per operation: `errors`, derived `params`, derived `responses` and headers, `input.bodyLimitBytes`, `idempotency`, `concurrency.derivedFrom`, `cache`, `maturity` (derived), `deadlineHeader`, `features`; error codes attached by pack entries |
+| derive | `errors`; per operation: `errors` (a relay route's copied domain codes included), derived `params`, derived `responses` and headers, `input.bodyLimitBytes`, `idempotency`, `concurrency.derivedFrom`, `cache`, `maturity` (derived), `deadlineHeader`, `features`; error codes attached by pack entries |
 | link | nothing |
 
 What each pass checks, besides its writes:
@@ -71,7 +71,8 @@ What each pass checks, besides its writes:
 - tree: path versions and prefixes (and `pathVersion.omit`), operation id uniqueness, `ops` inputs, version fields of `concurrency`, list routes and their paging style or its absence (A31), templates against the slot catalogue and each operation's payload (ADR 0002 sections 13 and 14), examples parsed against their schemas (FR-3), enum sources, reasons and narrowings (FR-29), degradable paths optional (FR-32), schema shapes (ADR 0003), `unknownKeys` on input uses only, header-tagged unions only as a route's whole input and their header not declared again.
 - access: deny by default (FR-4), every exception's reason, pack `derive` selectors and templates, right names against `conventions.rights.pattern`, identity header uses against their declarations, service api rules (FR-8), guest rights on public routes, subject sources against id schemas, scope subjects and nesting (FR-22, FR-24), sortable rights against field rights (FR-23), body proofs on body-less routes and bucket key sources against the route's input and access (FR-41), field-right subjects (FR-23), scheme references (FR-27).
 - derive: error registry redefinitions (FR-6) and conflicting node declarations (A35), role bindings to unregistered codes or codes that cannot receive the role's required data, deprecation successors, bucket limits (a warning).
-- link: the `relays` superset (operation id, path shape after the prefix, body, paging, success responses, and the public codes minus the gateway's own), naming both operations and the missing element, or the missing api (FR-8, SCN-014).
+- tree, for relay routes: the named api and operation exist, the route name is the operation id, no shape key is written, and a copied declaration equals any declaration of the same name in this api.
+- link: the `relays` superset. The shape (operation id, path after the prefix, body, paging, success responses) is copied, so only the codes can differ: every code of the public operation outside the gateway's own derivations (ADR 0002 section 7) must be a code of the relay route. A failure names both operations, the missing code and the fix, or the missing api or operation (FR-8, SCN-014).
 
 ### 4. Diagnostics
 
@@ -135,6 +136,7 @@ Every derived element carries `derivedFrom: { derivation, from }` with a derivat
 | `budget.timeout` | `budget` | `budgetMs` | none |
 | `deprecation.headers` | `deprecated` | the deprecation, sunset and successor `Link` response headers, named by `conventions.deprecation` (RFC 9745, RFC 8594 and `successor-version` by default) | none |
 | `upstream.maturity` | `upstream` | `maturity` from the owning service | none |
+| `relay.route` | a relay route (ADR 0002 section 7) | the public operation's method, path, parameters, input, success responses, paging, concurrency and format, and its domain codes (node and pack attachments, `notFound`) with their declarations | declared |
 | `api.gateway` | `api.role: gateway` | 502, 503, 504 on every operation | `upstreamUnavailable`, `serviceUnavailable`, `upstreamTimeout` |
 | `api.service` | `api.kind: service` | 504 on every operation | `deadlineExceeded` |
 | `response.undeclared` | every operation | 500 | `undeclaredStatus` |
