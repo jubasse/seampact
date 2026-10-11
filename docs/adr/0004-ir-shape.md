@@ -46,6 +46,7 @@ interface ContractIR {
   scalars: Record<ScalarId, Scalar>;
   enums: Record<EnumId, Enum>;
   errors: Record<ErrorCode, ErrorDecl>;
+  natures: Record<NatureId, NatureDecl>;    // the contract's own natures (ADR 0002 section 11)
   schemes: Record<SchemeId, Scheme>;
   headers: Record<HeaderId, HeaderDecl>;    // identity headers (ADR 0002 section 9)
   identities: Record<IdentityId, Identity>;
@@ -96,12 +97,15 @@ Every IR object of the kinds below has the members it needs from this list, with
 
 ```ts
 interface ErrorDecl {
-  code: ErrorCode;  family: string;  nature: 'refused' | 'unavailable' | 'failed';
+  code: ErrorCode;  family?: string;        // the declared family, or the code up to its first dot
+  nature: 'refused' | 'unavailable' | 'failed';   // the base nature: every client's retry rule reads this
+  natureName?: NatureId;                    // a nature of the 'natures' catalogue, written by '$nature'
   http: { status: number };                 // the status is an HTTP attribute of the error (ADR 0014)
   params?: SchemaRef;  example?: unknown;  title?: string;  docs;
   origin;                                   // the catalogue entry or the tree node that declared it (A35)
   default?: ErrorRole;                      // set when the code is a role's core default (ADR 0006 section 6)
 }
+interface NatureDecl { id: NatureId; base: 'refused' | 'unavailable' | 'failed'; docs; origin }
 interface HeaderDecl {
   id; semantic: 'deadline' | 'traceContext' | 'actorSurface' | 'versionToken';
   name?: string; in?: 'request' | 'response';   // every semantic but versionToken

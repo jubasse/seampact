@@ -56,7 +56,7 @@ There are five kinds of file. The loader knows each by its top-level keys.
 | pack | `pack`, any catalogue, `conventions`, `formats`, `extensions`, `derive` | `packs` from an api or base, `extends` from a pack |
 | fragment | whatever the include site expects | `$include` or a file `$ref` |
 
-The catalogues are `schemas`, `enums`, `scalars` (named formats, ADR 0003 section 8), `errors`, `schemes`, `headers` (identity headers, section 9), `identities`, `rights`, `rules`, `requirements` (named requirement items, section 9), `scopes`, `buckets`, `services` and `pagings` (section 14). `formats` (section 13) is keyed by name like a catalogue. Each maps a name to one declaration. Everything a contract references by name lives in one of them.
+The catalogues are `schemas`, `enums`, `scalars` (named formats, ADR 0003 section 8), `errors`, `natures` (error natures, section 11), `schemes`, `headers` (identity headers, section 9), `identities`, `rights`, `rules`, `requirements` (named requirement items, section 9), `scopes`, `buckets`, `services` and `pagings` (section 14). `formats` (section 13) is keyed by name like a catalogue. Each maps a name to one declaration. Everything a contract references by name lives in one of them.
 
 Paths in `extends`, `packs`, `$include`, `$ref` and `$file` are relative to the file that contains them, use forward slashes, must stay inside the workspace root, and must match the case of the file on disk. The last two rules keep compilation identical on case-insensitive file systems and stop a contract from reading files outside its repository.
 
@@ -195,14 +195,14 @@ requires: [{ right: tasks.reed }]   # flagged: the right must be one of callerSe
 | Element | Pattern | Examples |
 |---|---|---|
 | schemas, enums | `^[A-Z][A-Za-z0-9]*$` | `Task`, `TaskId` |
-| apis, surfaces, tree nodes, operation ids, identities, schemes, headers, scopes, rules, requirements, buckets, services, wire formats, paging styles, pack entries, cache families, documents | `^[a-z][A-Za-z0-9_]*$` | `tasks`, `viewer_or_device`, `five_minutes` |
+| apis, surfaces, tree nodes, operation ids, identities, schemes, headers, scopes, rules, requirements, buckets, services, natures, wire formats, paging styles, pack entries, cache families, documents | `^[a-z][A-Za-z0-9_]*$` | `tasks`, `viewer_or_device`, `five_minutes` |
 | scalars (named formats) | `^[a-z][A-Za-z0-9]*(-[a-z0-9]+)*$` | `money`, `iri-reference` |
-| rights | `^[a-z][a-zA-Z0-9]*(\.[a-z][a-zA-Z0-9]*)*$` | `roles`, `tasks.update` |
-| error codes | `^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$` | `api.forbidden`, `state.conflict` |
+| rights | any non-empty string without control characters and without leading or trailing space | `roles`, `tasks.update`, `read:tasks`, `update-post`, `ROLE_ADMIN`, `edit articles` |
+| error codes | `^[A-Za-z0-9][A-Za-z0-9._-]*$` | `api.forbidden`, `state.conflict`, `TASK_NOT_FOUND`, `E1042`, `not-found` |
 | extension prefixes | `^[a-z][a-z0-9]*$`, `seampact` reserved | `acme` |
 | extension keys | `^[a-z][a-z0-9]*(-[a-z0-9]+)*$` | `tax-basis`, `invalidates` |
 
-  The core constrains a right only by its pattern; it imposes no naming convention (A20, SCN-063). An error's family is its code up to the first dot (FR-6).
+  Right names and error codes are wire and library values, so the core asks no more of them than it must (A20, A36). A right takes the name the application's library already uses: an OAuth scope, a Laravel Gate, a Spring authority, a spatie permission; a name holding a space or a `:` followed by a space is quoted in YAML. An error code is the value every format sends and also the name of its OpenAPI component, whose keys OpenAPI 3.1 limits to letters, digits, `.`, `-` and `_`: hence its alphabet. A URI-shaped problem `type` is a format template over the code (section 15), not a code. The core imposes no naming convention on either (SCN-063); `conventions.rights.pattern` and `conventions.errors.pattern` add one when a contract or a pack wants it (section 13). Two rights or two codes whose identifier segments are equal (`not-found` and `not_found`) are a compile error, as for any name (ADR 0007). An error's family is its `family` key, or else its code up to the first dot; a code without a dot and without `family` has none (FR-6).
 - A fields map maps names to schemas. A field is required unless its name ends with `?`: `query: { limit?: { type: integer }, cursor?: Cursor }`. A fields map has no `required` keyword and a schema has no `?` suffix, so each place has one way to say it. Fields maps are used for `id`, `pathParams`, `query`, `headers`, and the `params` of errors, rights and rules. In each of these places a string instead of a mapping names a schema whose properties are the fields (`query: TaskQuery`).
 - Value sources name where a value is read. One grammar serves every use; each use accepts a subset:
 
@@ -378,7 +378,7 @@ Operation ids of other routes: a route under `member` is its name plus the singu
 Kept from Arthome (brief 5.2, FR-2):
 
 - `owner: caller`: the caller owns the records. On a collection, another caller's id answers 404 (derived), with no version and no 409; on a single, nothing is derived (SCN-004). The boundary cannot know who owns a record, so the handler (or the optional record loader of ADR 0012) answers it through its typed error result for the `notFound` role (ADR 0012), no hook is added, and the generated test helper checks the declared 404.
-- Otherwise a write may be versioned: `concurrency: { version: body.expectedVersion, field: version }`. `version` is where the client sends the version it read: a body field, a query parameter, or a request header (`header.If-Match` reads it as a strong entity tag, `"7"`); `field` is the item property it is compared with. `update` and `delete` inherit it; a member route only with `concurrency: inherit` (SCN-003, SCN-031). The compiler adds the version parameter itself, typed like `field`, after the authored fields: to the body input for a body source, to the query or headers otherwise. No input restates it, and an input that declares it is a compile error ("remove it; `concurrency` adds it"); an item schema without `field` is a compile error naming the field. A route without a body never carries the version in one (A33): on a `delete` without `input`, a body source becomes the query parameter of the same name (`body.expectedVersion` gives `query.expectedVersion` on `deleteTask`), and a query or header source stays as it is. A stale write derives `409` from the `stateConflict` role. With `header.If-Match`, every response carrying the item writes its `ETag` from `field`, and `cache.etag` on such a route uses that tag.
+- Otherwise a write may be versioned: `concurrency: { version: body.expectedVersion, field: version }`. `version` is where the client sends the version it read: a body field, a query parameter, or a request header (`header.If-Match` reads it as a strong entity tag, `"7"`); `field` is the item property it is compared with. `update` and `delete` inherit it; a member route only with `concurrency: inherit` (SCN-003, SCN-031). The compiler adds the version parameter itself, typed like `field`, after the authored fields: to the body input for a body source, to the query or headers otherwise. No input restates it, and an input that declares it is a compile error ("remove it; `concurrency` adds it"); an item schema without `field` is a compile error naming the field. A route without a body never carries the version in one (A33): on a `delete` without `input`, a body source becomes the query parameter of the same name (`body.expectedVersion` gives `query.expectedVersion` on `deleteTask`), and a query or header source stays as it is. A stale write derives `409` from the `stateConflict` role for a body or query version. With `header.If-Match`, HTTP's own answers apply (RFC 9110, RFC 6585): a stale tag derives `412` from the `preconditionFailed` role, and a write without the header `428` from the `preconditionRequired` role; every response carrying the item writes its `ETag` from `field`, and `cache.etag` on such a route uses that tag. Each role stays renamable (section 11).
 - DELETE when the record disappears; an action (`POST .../archive`) when it stays with a new state.
 
 ### 7. Routes
@@ -756,7 +756,7 @@ errors:
     example: { retryAfterMs: 1500 }
 ```
 
-A declaration defines a code once: `status` (400 to 599), `nature`, `params` (a fields map or a schema name), `example` (the params), `title`, `description` (FR-6, SCN-037). `nature` may be left out: it is then `unavailable` for 408, 425, 429, 502, 503 and 504, `refused` for every other 4xx and `failed` for every other 5xx.
+A declaration defines a code once: `status` (400 to 599), `nature`, `family`, `params` (a fields map or a schema name), `example` (the params), `title`, `description` (FR-6, SCN-037). `nature` may be left out: it is then `unavailable` for 408, 425, 429, 502, 503 and 504, `refused` for every other 4xx and `failed` for every other 5xx. `family` groups codes in docs and clients; it defaults to the code up to its first dot (section 4).
 
 Codes are declared at every level of the tree (A35): in the `errors` catalogue (the api's global level, with its base and packs), or in `errors` on any node: a surface root, a collection, a single, a `collection` or `member` scope node, or a route. On a node, `errors` maps a code to one of:
 
@@ -786,11 +786,20 @@ member:
 
 A node's codes attach to the operations below it; children add codes or narrow an example, never remove one (section 8). How far "below" goes is the attachment's reach. `subtree`, the default (A35), attaches the code to every operation below the node, child resources included. `resource` stops at the resource boundary: the code reaches the node's own `ops` and the routes of its `collection`, `member` and `routes` maps, but no child node with `kind` (a nested collection or single) and nothing below one. `conventions.errors.reach` sets the api's default; `reach` on one attachment overrides it. `for` narrows an attachment to `reads` (the safe routes, a `batch` read included) or `writes` (every other route); `all` is the default, as for an identity header's `for` (section 9). Above, `tasks.locked`, attached on `member` for writes with `reach: resource`, reaches `updateTask` and `assignTask` but not `getTask`, nor the routes of a `comments` collection nested under a task, so each error union lists only what its route can answer. `conventions.errors.every` attaches codes to every operation. Codes are api-wide, whatever level declares them: a code declared on a node joins the api's registry and any other node may attach it by name. Declaring a code a second time with a different definition is a compile error naming both locations; re-attaching it, here or below, is how it is reused. Rights, rules, scopes and identities list the codes they may answer, attached with `derivedFrom` in the IR. The IR records, for each operation's code, the node it was attached at, and for each declaration where it was declared (ADR 0004).
 
-`nature` is a closed set that tells a client whether retrying can help: `refused` (retrying the same request cannot succeed), `unavailable` (retrying later may succeed) and `failed` (the server failed). No layer adds a nature, so every client keeps one retry rule and the authoring schema refuses any other value with the allowed list (SCN-037).
+A nature tells a client whether retrying can help. Three base natures drive every client's retry rule: `refused` (retrying the same request cannot succeed), `unavailable` (retrying later may succeed) and `failed` (the server failed). A contract or a pack may name its own natures in the `natures` catalogue, each mapped onto one base (A40):
+
+```yaml
+# shared/base.yaml (excerpt)
+natures:
+  throttled: { base: unavailable, summary: 'Too many requests; retry after the stated delay.' }
+  conflict: { base: refused }
+```
+
+An error then states `nature: throttled`. The `$nature` slot writes the declared name, and a client takes its retry rule from the base of the code's declaration, which the generated client holds from the IR, never from the wire; every client therefore keeps one retry rule however many natures a contract names. A nature named like a base, or mapped onto anything but a base, is a compile error naming the allowed values (SCN-037).
 
 #### Error roles
 
-Derived errors answer roles, never fixed codes: `unauthenticated` (401), `csrfInvalid`, `forbidden`, `sortKeyForbidden` (403), `notFound` (404), `schemaInvalid` (400), `payloadTooLarge` (413), `unsupportedMediaType` (415), `stateConflict`, `idempotencyKeyReused`, `idempotencyInProgress` (409), `gone` (410), `rateLimited` (429), `undeclaredStatus` (500), `upstreamUnavailable` (502), `serviceUnavailable` (503), `upstreamTimeout`, `deadlineExceeded` (504). The derivation table that uses them is ADR 0006 section 5.
+Derived errors answer roles, never fixed codes: `unauthenticated` (401), `csrfInvalid`, `forbidden`, `sortKeyForbidden` (403), `notFound` (404), `schemaInvalid` (400), `payloadTooLarge` (413), `unsupportedMediaType` (415), `stateConflict`, `idempotencyInProgress` (409), `gone` (410), `preconditionFailed` (412), `idempotencyKeyReused` (422), `preconditionRequired` (428), `rateLimited` (429), `undeclaredStatus` (500), `upstreamUnavailable` (502), `serviceUnavailable` (503), `upstreamTimeout`, `deadlineExceeded` (504). The derivation table that uses them is ADR 0006 section 5.
 
 Every role has a default code in the core (`api.schema_invalid`, `api.forbidden` and the others of ADR 0006 section 6), registered when used and rendered through the api's format, so a contract with no pack compiles (A34). A role is renamed for the whole api by `conventions.errors.derived`, or for a subtree by `errorRoles` on any node, the nearest binding winning (A35). Above, every member route of `tasks` answers `tasks.not_found` for the `notFound` role: a route below a collection's `member` scope derives it for an id the client chose and no scope reads (ADR 0006 section 5), and the handler answers it, as any code its operation lists, through a typed error result (ADR 0012). The binding sits on `member`, not on the collection node: `listTasks` and `createTask` hold only parent ids in their path, and a binding there would rename the 404 of a missing parent too. A binding is a code, or `{ code, params }`:
 
@@ -894,6 +903,7 @@ conventions:
 | `rateLimit` | `{ header, param, unit }`: the header written on a 429 from a bucket rule, carrying the denial's integer millisecond `param` in `unit` (`s`, rounded up, or `ms`) | unset: a 429 carries no retry header |
 | `degradedHeader` | the header listing degraded parts | unset: required for a `degradable` route whose format has no `degraded` meta field |
 | `rights.pattern` | a pattern every right name must also match (section 2) | unset: the core pattern only (A20) |
+| `errors.pattern` | a pattern every error code must also match, the dotted `family.name` form for example (`'^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$'`) | unset: the core pattern only (A36) |
 | `errors.every` | codes attached to every operation (section 11) | empty |
 | `errors.reach` | `subtree` or `resource`: how far a code attached on a node reaches (section 11) | `subtree` (A35) |
 | `errors.derived` | role bindings (section 11) | the default codes of ADR 0006 section 6 (A34) |
@@ -925,7 +935,7 @@ formats:
 | `absent` | what a slot with no value writes: `omit` (default) or `null` |
 | `success.item`, `success.table`, `success.list`, `success.page` | one per response shape: `{ body, headers }`. `body` is a template, `$payload` by default (`$items` for `page`); `headers` maps a header name to a template. `item` is one record or any non-list body, `table` the id-keyed object of a `batch` read, `list` an unpaged list, `page` a paged list, whose paging style adds members to it or replaces its body (section 14) |
 | `meta` | the meta fields, each `{ fill, schema }`: `fill` is `now`, `traceId`, `degraded`, a `principal.<field>` source, or `handler` (which then needs `schema`) |
-| `error` | `{ media, body, headers }`; `media` defaults to the format's. A format without `error` uses the `bare` error |
+| `error` | `{ media, body, headers }`; `media` defaults to the format's. A format without `error` uses the `bare` error. The body must write `$code`, as a member or inside a text template (`'https://errors.acme.com/${code}'`), so a client can tell the code; a format whose error writes no `$code` is a compile error naming the format |
 
 A shape left out uses its default (`body: $payload`, or `$items` for a page, and no headers), so `bare` writes only its error.
 
@@ -1179,6 +1189,17 @@ formats:
       body: { type: $code, title: $title, status: $status, detail: $detail, instance: $instance, code: $code, nature: $nature, traceId: $traceId, $merge: $params }
 ```
 
+A client discriminates the error union on the member the format writes `$code` to, or, when the code sits inside a text template, matches the received text against the template to recover the code. Strict RFC 9457, with an absolute `type` and no seampact member, is one format away:
+
+```yaml
+# packs/house.yaml (excerpt): strict RFC 9457
+formats:
+  problem:
+    error:
+      media: application/problem+json
+      body: { type: 'https://errors.acme.com/${code}', title: $title, status: $status, detail: $detail, instance: $instance, $merge: $params }
+```
+
 The laravel pack covers success bodies and paginators only. Laravel's validation error (`{ message, errors: { <field>: [...] } }`) groups the issues by field, which the template language does not express, so a laravel api answers problem+json errors until a consumer needs that body (lesson 5). Laravel's paginator also writes `meta.links`, a numbered list of page links. It is not a role until a consumer needs it (lesson 5): the laravel target writes the declared shape through `ResourceCollection::paginationInformation`, Laravel's own customisation point (A30).
 
 ### 16. Seeing an operation whole: `seampact explain`
@@ -1206,7 +1227,7 @@ errors:
   - { status: 403, code: api.forbidden }         # requirement.errors, rights.tasks.update, shared/base.yaml:49
   - { status: 404, code: api.not_found }         # member.notFound for path.taskId; requirement.errors; scope.errors, scopes.channel, shared/base.yaml:39
   - { status: 409, code: state.conflict }        # concurrency.version
-  # and the two idempotency 409s, 413, 415, and 500 api.internal from conventions.errors.every
+  # and the idempotency 409 and 422, 413, 415, and 500 api.internal from conventions.errors.every
 ```
 
 The output is a view, never an input: it is not a contract file, and nothing reads it back. It is deterministic, so two runs diff cleanly in review, while `seampact diff` still classifies the change (ADR 0005). It needs no new IR member: every element already carries `origin` or `derivedFrom` (ADR 0004 section 6).
@@ -1238,7 +1259,7 @@ The output is a view, never an input: it is not a contract file, and nothing rea
 | `idempotent: true` on a GET, `idempotent: { exempt }` | `idempotency: { exempt }` only | a GET is safe by its method; one name for the convention and the exemption |
 | `errors` with fixed derived codes (`api.schema_invalid`) | derivation roles with default codes, renamed by the conventions, by `errorRoles` on any node or by a pack | a contract with no pack compiles (A34), and every code stays renamable (A20, A30, A35) |
 | `errors` on routes only | codes declared or attached on any node, inherited below | A35: a resource, scope or single states its codes once |
-| `nature` open | closed set of three; no layer adds one | clients keep one retry rule (FR-6), and no consumer needs another nature (lesson 5) |
+| `nature` open | three base natures; a `natures` catalogue names others, each mapped onto a base | clients keep one retry rule (FR-6) while a contract keeps its own vocabulary (A40) |
 | `conventions` on any node (5.2) | `conventions` on the api, its base and packs only | a convention is one fact for the whole api; per-node values are ordinary inherited settings (section 8) |
 | identity headers written inside the identity | a `headers` catalogue, used by identities | a pack supplies header names without the identity (SCN-079) |
 | no pack manifest | `pack: { name, version, extends }` and `derive` | a pack is versioned, extends packs and derives rights (ADR 0008, SCN-073) |
@@ -1671,7 +1692,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-034 | `principal.requires` (9) |
 | SCN-035 | `identity` inheritance, `routes` (8, 6) |
 | SCN-036 | `access.public`, `requires` with `bucket`, `buckets` (9) |
-| SCN-037 | `errors` (`status`, `nature`, `params`, `example`); the closed nature set (11) |
+| SCN-037 | `errors` (`status`, `nature`, `family`, `params`, `example`); the base natures and the `natures` catalogue; the error code pattern (11, 4) |
 | SCN-038 | `responses` with several 2xx and `headers` (7) |
 | SCN-039 | `responses` 202 with `Location`, `Retry-After` (7) |
 | SCN-040 | `ops.delete` with `output` (6) |

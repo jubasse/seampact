@@ -63,14 +63,14 @@ export interface PassContext {
 |---|---|
 | tree | `api`, `conventions`, `packs`, `formats`, `pagings`, `schemas`, `scalars`, `enums`, `services`, `extensionKeys`; per operation: `id`, `name`, `surface`, `op`, `method`, `path`, `safe`, declared `params`, `input` (schema and media), declared `responses` and their `shape`, `owner`, `concurrency` (declared), `paging` (kind, limits, sort keys without rights), `degradable`, `budgetMs`, `deprecated`, `relays` and the shape a relay route copies (method, path, params, input, responses, paging, concurrency, format, and the declarations they use), `upstream`, `maturity` (stated), `internal`, `tags`, `examples`, `format`, `docs`, `extensions`, `origin` |
 | access | `schemes`, `headers`, `identities`, `rights`, `rules`, `scopes`, `buckets`; per operation: `access`, `callerKinds`, `principalRequires`, `scopes`, `requires`, `bindings`, `fieldRights`, `paging.sortKeys[].right`, `filteredBy`, `csrf`, `input.rawBody`, `unknownKeys` on the input of a signed identity's routes, rule proofs added to `input`; requirements and rights derived by pack entries |
-| derive | `errors`; per operation: `errors` (a relay route's copied domain codes included), derived `params`, derived `responses` and headers, `input.bodyLimitBytes`, `idempotency`, `concurrency.derivedFrom`, `cache`, `maturity` (derived), `deadlineHeader`, `features`; error codes attached by pack entries |
+| derive | `errors`, `natures`; per operation: `errors` (a relay route's copied domain codes included), derived `params`, derived `responses` and headers, `input.bodyLimitBytes`, `idempotency`, `concurrency.derivedFrom`, `cache`, `maturity` (derived), `deadlineHeader`, `features`; error codes attached by pack entries |
 | link | nothing |
 
 What each pass checks, besides its writes:
 
 - tree: path versions and prefixes (and `pathVersion.omit`), operation id uniqueness, `ops` inputs, version fields of `concurrency`, list routes and their paging style or its absence (A31), templates against the slot catalogue and each operation's payload (ADR 0002 sections 13 and 14), examples parsed against their schemas (FR-3), enum sources, reasons and narrowings (FR-29), degradable paths optional (FR-32), schema shapes (ADR 0003), `pick` and `omit` sources, fields and overlays, merged into plain objects, scalar names that are not portable format names, `unknownKeys` on input uses only, header-tagged unions only as a route's whole input and their header not declared again.
 - access: deny by default (FR-4), every exception's reason, `requirements` entries named in `requires`, pack `derive` selectors and templates, right names against `conventions.rights.pattern`, identity header uses against their declarations, service api rules (FR-8), guest rights on public routes, subject sources against id schemas, scope subjects and nesting (FR-22, FR-24), sortable rights against field rights (FR-23), body proofs on body-less routes and bucket key sources against the route's input and access (FR-41), field-right subjects (FR-23), scheme references (FR-27).
-- derive: error registry redefinitions (FR-6) and conflicting node declarations (A35), error examples against the operation's codes and their params, role bindings to unregistered codes or codes that cannot receive the role's required data, deprecation successors, bucket limits (a warning).
+- derive: error registry redefinitions (FR-6) and conflicting node declarations (A35), codes against `conventions.errors.pattern`, natures mapped onto a base, error formats that write `$code`, error examples against the operation's codes and their params, role bindings to unregistered codes or codes that cannot receive the role's required data, deprecation successors, bucket limits (a warning).
 - tree, for relay routes: the named api and operation exist, the route name is the public operation id unless `operationId` is set, no other shape key is written, and a copied declaration equals any declaration of the same name in this api.
 - link: the `relays` superset. The shape (operation id unless `operationId` renames it, path after the prefix, body, paging, success responses) is copied, so only the codes can differ: every code of the public operation outside the gateway's own derivations (ADR 0002 section 7) must be a code of the relay route. A failure names both operations, the missing code and the fix, or the missing api or operation (FR-8, SCN-014).
 
@@ -110,8 +110,8 @@ Every derived element carries `derivedFrom: { derivation, from }` with a derivat
 | `body.media` | a request body | 415 | `unsupportedMediaType` |
 | `identity.authenticate` | identity or optional access | credential parameters of the accepted schemes, 401 | `unauthenticated` |
 | `csrf.cookieWrite` | a non-safe operation whose write schemes include a cookie scheme that declares `csrf` (opt-in, A34), not `csrf.exempt` | the CSRF header parameter, 403 | `csrfInvalid` |
-| `idempotency.write` | a non-safe operation when `conventions.idempotency` is set (opt-in, A34) and its `methods` lists the method, not exempt, not under a signed identity | the key header parameter (required unless `required: false`, a missing key answering 400), the replay response header, two 409s | `idempotencyKeyReused`, `idempotencyInProgress`, `schemaInvalid` |
-| `concurrency.version` | `update`, `delete`, or `concurrency: inherit`, on a versioned resource | the version parameter, typed like `field` and added after the authored fields (a body source on a DELETE becomes the query parameter of the same name, A33), `ETag` from `field` with `header.If-Match`, 409 | `stateConflict` |
+| `idempotency.write` | a non-safe operation when `conventions.idempotency` is set (opt-in, A34) and its `methods` lists the method, not exempt, not under a signed identity | the key header parameter (required unless `required: false`, a missing key answering 400), the replay response header, 422 for a key reused with another request, 409 while the first run is in progress | `idempotencyKeyReused`, `idempotencyInProgress`, `schemaInvalid` |
+| `concurrency.version` | `update`, `delete`, or `concurrency: inherit`, on a versioned resource | the version parameter, typed like `field` and added after the authored fields (a body source on a DELETE becomes the query parameter of the same name, A33), `ETag` from `field` with `header.If-Match`; 409 for a body or query version, 412 for a stale `If-Match` and 428 for a missing one | `stateConflict`, `preconditionFailed`, `preconditionRequired` |
 | `member.notFound` | a route below a collection's `member` scope, nested resources included, whose path holds a member id that no scope of the operation reads: the client chose that id, and no resolver answers for it (a scope's membership codes answer an id it reads, `scope.errors`) | 404, answered by the handler through its typed error result (ADR 0012) | `notFound` |
 | `owner.caller` | a member route of a collection with `owner: caller` | 404 for another caller's id, answered by the handler through its typed error result | `notFound` |
 | `principal.requires` | `principal.requires` | 403 | `forbidden` |
@@ -163,8 +163,10 @@ The Data column lists what the boundary produces for each role. A datum marked r
 | `sortKeyForbidden` | `api.sort_key_forbidden` | 403 | refused | `key` (required) |
 | `notFound` | `api.not_found` | 404 | refused | none |
 | `stateConflict` | `state.conflict` | 409 | refused | none |
-| `idempotencyKeyReused` | `api.idempotency_key_reused` | 409 | refused | none |
 | `idempotencyInProgress` | `api.idempotency_in_progress` | 409 | unavailable | none |
+| `preconditionFailed` | `api.precondition_failed` | 412 | refused | none |
+| `idempotencyKeyReused` | `api.idempotency_key_reused` | 422 | refused | none |
+| `preconditionRequired` | `api.precondition_required` | 428 | refused | none |
 | `gone` | `api.cursor_too_old` | 410 | refused | none |
 | `payloadTooLarge` | `api.payload_too_large` | 413 | refused | `limitBytes` |
 | `unsupportedMediaType` | `api.unsupported_media_type` | 415 | refused | none |
@@ -196,7 +198,7 @@ The default wire format (A30), as fixed members so every target writes the same 
 | `detail` | optional text from the handler or hook; never parsed by a client |
 | `instance` | optional, a reference to this occurrence |
 | `code` | the error code; the member every client discriminates the error union on |
-| `nature` | the error's nature |
+| `nature` | the error's nature, as declared (a base, or a name of the `natures` catalogue) |
 | `traceId` | optional, the request's trace id |
 | one member per param | each declared param of the code, at the top level as RFC 9457 extension members |
 
