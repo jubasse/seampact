@@ -304,7 +304,7 @@ Every node is a mapping of settings plus its children. There are four kinds of n
 
 A surface root, a single, and the `collection` and `member` scopes of a collection hold their children under `routes`, a mapping from child name to node. The child name is written in the parent file even when its content is included (`search: { $include: ./routes/tasks/search.yaml }`), so every route stays discoverable from its parent (brief 5.1).
 
-A node's path segment is its name, converted by `conventions.pathCase` (`kebab`, the default, `camel` or `snake`). `path` replaces the segment: it is relative to the parent, has no leading slash, may be empty, and may hold `{param}` placeholders declared in `pathParams`.
+A node's path segment is its name, converted by `conventions.pathCase` (`kebab`, the default, `camel` or `snake`). `path` replaces the segment: it is relative to the parent, has no leading slash, may be empty or hold several segments, and may hold `{param}` placeholders declared in `pathParams`.
 
 #### Collections and singles
 
@@ -338,6 +338,21 @@ tasks:
 | `routes` | single, surface, `collection`, `member` | the named children |
 
 Settings written on the collection node apply to all its routes; settings written in `collection` or `member` apply to that scope only. The routes `list`, `create` and `batch` belong to the `collection` scope, and `get`, `update` and `delete` to the `member` scope: each inherits that scope's settings, and their origin is under `.../collection` or `.../member`. That is how a scope id read from the member path (`path.channelId`) applies to `getChannel` and every member route, and not to the list. A route's `path` is relative to its scope's path (`/tasks` for `collection`, `/tasks/{taskId}` for `member`).
+
+A single with neither `item` nor `ops` is a group: settings and `routes`, nothing of its own. With a `path` of several segments, a group reaches a nested resource without the empty collections in between, each of which costs a `kind`, an `id`, a `member` and a `routes` level:
+
+```yaml
+# tasks/api.yaml (excerpt: under a surface's routes)
+projectTasks:
+  kind: single
+  path: 'orgs/{orgId}/projects/{projectId}'
+  pathParams: { orgId: OrgId, projectId: ProjectId }
+  scopes: { org: path.orgId, project: path.projectId }
+  routes:
+    tasks: { $include: ./routes/tasks.yaml }
+```
+
+A group's path parameters are not member ids, so they derive no `notFound` (ADR 0006 section 5): a scope that reads them answers a missing one, as here, or a code attached on the group does. A route written directly in the group's `routes` takes the group's name in its operation id, while a collection below it names its own (`listTasks`). The two-collection form stays the one to use when the parents have operations of their own.
 
 #### The `ops` shorthand
 
@@ -812,9 +827,10 @@ Examples are named, on a route, and parsed against their schema at compile time 
 examples:
   firstPage: { status: 200, value: { $file: ./examples/search-200.json } }
   minimal: { request: true, value: { title: 'Write the brief' } }
+  emptyTitle: { error: api.schema_invalid, value: { issues: [{ pointer: /title, rule: minLength }] } }
 ```
 
-An example targets a success status or the request (`request: true`); error examples live in the registry. Schema examples are ADR 0003. A success example's `value` is what the handler returns: the payload for an item, the item array for a list (paged or not), the id-keyed object for a table. It is parsed against that schema, and the OpenAPI emitter wraps it through the operation's format and paging style before writing it, so an example never restates an envelope (A30).
+An example targets a success status, the request (`request: true`), or one of the operation's error codes (`error: <code>`). An error example's `value` is the code's params, parsed against its params schema; a code the operation does not list is a compile error naming it, and the emitter writes the params inside the format's error body, under the code's status. It shows the case of this route (here, an empty title), while the registry's `example` stays the code's default (section 11). Schema examples are ADR 0003. A success example's `value` is what the handler returns: the payload for an item, the item array for a list (paged or not), the id-keyed object for a table. It is parsed against that schema, and the OpenAPI emitter wraps it through the operation's format and paging style before writing it, so an example never restates an envelope (A30).
 
 Docs are `summary` (inline) and `description` (inline or `$file`) on apis, nodes, routes, errors, rights, rules, scopes, identities and enums; schemas use JSON Schema's `title` and `description` (FR-34, SCN-088).
 
@@ -1616,6 +1632,7 @@ A right never reads the body (section 4): it is decided before the body is valid
 - The grammar has four shorthands only: a string for a schema reference, `ops` as a list, `paging` as a style name, and a string in `requires` for a `requirements` entry. Each yields the same IR as its long form, the last one with the entry's name.
 - An inherited requirement cannot be removed below; a contract that needs it must restructure its tree. Revisit only with a consumer that cannot.
 - Not modelled until a consumer needs it: media types other than JSON (and the raw body of a signed identity), a base extending a base, shorthands beyond `ops`.
+- YAML stays the only authoring medium (A38). A one-shot importer from an OpenAPI document into this grammar is planned for v3.
 
 ## Traceability
 
@@ -1633,7 +1650,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-003 | `kind: collection`, `id`, `item`, `concurrency.version`, `concurrency.field`, `ops`, `member`, `method` (6); the compiler adds `expectedVersion`, to the body of `updateTask` and to the query of `deleteTask` |
 | SCN-004 | `owner: caller`, `ops` (6) |
 | SCN-005 | `enums`, `enum` in a schema (12, ADR 0003) |
-| SCN-006 | `examples`, `$file` (12, 2); refused keyword `if` (ADR 0003). The scenario's "TaskPage" example is the list payload, the item array, which the emitter wraps through the format |
+| SCN-006 | `examples` (`status`, `request`, `error`), `$file` (12, 2); refused keyword `if` (ADR 0003). The scenario's "TaskPage" example is the list payload, the item array, which the emitter wraps through the format |
 | SCN-007 | `access.public`, `optionalAuth`, `csrf.exempt`, `idempotency.exempt`, `lint.allow`, `maturity.reason`, enum `reason`, right `guest` (9 to 12). Every route lives under a surface, so the scenario's "route outside any surface" reads as a route under a surface with no identity |
 | SCN-008 | `schemes` with `csrf`, `identities.schemes.write`, `csrf.exempt` (9) |
 | SCN-009 | `identity`, `principal.requires`, `scopes`, `requires` (rule and right, a `requirements` entry), `input`, `bindings` (9) |

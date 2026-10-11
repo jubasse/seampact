@@ -344,7 +344,7 @@ items:
     targets: [core]
   - id: CHK-053
     source: "14 Lifecycle"
-    fact: Examples are named and parsed against their schemas.
+    fact: Examples are named and parsed against their schemas; an error example names a code its operation lists and is parsed against that code's params.
     frs: [FR-3, FR-34]
     scenario: SCN-006
     targets: [core]

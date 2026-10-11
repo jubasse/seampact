@@ -228,7 +228,7 @@ interface Operation {
   csrf?: { header: string; derivedFrom } | { exempt: Reason; origin };
   format: FormatId;
   tags: string[];
-  examples: Record<string, { status?: number; request?: true; value: unknown }>;
+  examples: Record<string, { status?: number; request?: true; error?: ErrorCode; value: unknown }>;   // error: value holds the code's params
   docs; extensions; origin;
 }
 
