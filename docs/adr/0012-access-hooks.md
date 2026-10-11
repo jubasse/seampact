@@ -18,11 +18,11 @@ Every server target generates exactly three hook interfaces (FR-25). Each is typ
 
 **Authenticate**, one per identity. It receives:
 - the identity name and the credentials found in the locations the identity's schemes declare for this request (read or write schemes), including the CSRF companion value on a write through a cookie scheme that declares `csrf` (opt-in, A34);
-- for a signed identity, the raw body and the parsed signature fields (ADR 0013);
+- for a signed identity, the raw body and the parsed signature fields (ADR 0013), or, for a scheme with `verify: application`, the raw body, the signature header and the scheme's declared headers, unparsed (ADR 0002 section 9, A40);
 - a read-only view of the request (method, path, headers, client address) and the operation reference;
 - the operation's extension metadata (A20).
 
-It answers a typed principal (tagged with its variant when the identity declares several, FR-27) or a denial limited to the identity's declared codes. The hook is not called when no declared credential is present: the boundary answers 401, or continues with a null principal on a public or optional-auth route. A refused credential on an optional-auth route is treated as anonymous (FR-4). The boundary validates the returned principal against the principal schema; an invalid principal is a server error (500), never accepted.
+It answers a typed principal (tagged with its variant when the identity declares several, FR-27) or a denial limited to the identity's declared codes. The hook is not called when no declared credential is present: the boundary answers 401, or continues with a null principal on a public or optional-auth route. A refused credential on an optional-auth route is treated as anonymous (FR-4), or answers 401 when the route says `onRefused: reject` (A40). The boundary validates the returned principal against the principal schema; an invalid principal is a server error (500), never accepted.
 
 **Decide**, for every requirement, right or rule. It receives:
 - the kind (right or rule), the name and the typed params declared at the use site;
@@ -47,6 +47,37 @@ export interface DecideHook<R extends RequirementRequest> {
 export type Decision<C extends ErrorCodeWithParams> = { allow: true } | { deny: C };
 ```
 
+### Your controller, the generated utilities around it
+
+No target generates the framework controller (A41). The developer writes the controller, or its framework's equivalent, and implements on it the generated interface of its resource, tag or operation (ADR 0007 `handlers`), whose methods carry the exact input and output types. Codegen emits only what sits around that controller: types, validators, interfaces, and utility annotations, attributes, decorators, middleware or hooks that place every step of the check order (below) in the framework's own pipeline. Where the language composes annotations, each operation gets one composite the developer puts on its method; where it does not (PHP attributes), a generated attribute names the operation and a generated listener reads it. Every artefact is switchable in the app config, and all generated code goes to the app's one generated directory, `__generated__` by default (ADR 0011).
+
+| Target | The developer writes | Generated around it |
+|---|---|---|
+| nestjs | a `@Controller()` class implementing `TasksEndpoints`, each method decorated with its operation's composite and taking the operation's input decorator: `@UpdateTask() update(@UpdateTaskInput() input: UpdateTaskRequest)` | per operation, a composite method decorator built with `applyDecorators`: the verb and the full contract path (`Version(VERSION_NEUTRAL)`, so a global prefix is the `mount`), `HttpCode`, the seampact guard (steps 2 to 5; guards run before interceptors and pipes), the seampact interceptor (steps 6 to 8 and 10), `SetMetadata` with the operation id and access kind, and, with `nativeDocs`, the `@nestjs/swagger` decorators; per operation, a param decorator made with `createParamDecorator` that hands over the validated input, since `applyDecorators` cannot compose parameter decorators; the module registering the hooks, the exception filter of the format, and the boot check |
+| fastify | handler objects implementing the generated interface | a plugin registering each route with `onRequest`, `preValidation` and `preHandler` hooks for steps 1 to 8 and `onSend` for step 10 |
+| express | handler objects implementing the generated interface | a router factory mounting each route behind generated middleware for steps 1 to 8, and a response writer for step 10 |
+| adonis | a controller implementing the generated interface | a routes file binding each operation to it, named middleware for steps 1 to 5, VineJS validators and a validated-input accessor for steps 6 to 8, the exception handler of the format |
+| spring-boot | a `@RestController` implementing the generated interface, each method annotated with its operation's composed annotation (`@UpdateTask`) | per operation, a composed meta-annotation carrying `@PatchMapping` with the contract path and `@ResponseStatus` (`@AliasFor` exposing what may vary); a servlet filter that captures the raw body within the route's limit (step 1); a `HandlerInterceptor` that runs steps 2 to 8 on the decoded body before Spring binds any argument; a `HandlerMethodArgumentResolver` handing the validated input record to the method; a `@ControllerAdvice` writing `ProblemDetail` or the declared format, and a `ResponseBodyAdvice` for step 10. Nothing relies on `@PreAuthorize`, which runs after argument binding |
+| laravel | a controller implementing the generated interface, bound in the container | a routes file (or a `Route::seampact()` macro) registering each operation with its middleware (steps 1 to 5 and 10) and the operation's generated FormRequest, type-hinted on the method: `validationData()` returns the boundary's decoded input, its rules run step 6, `passedValidation()` runs steps 7 and 8, `failedValidation()` renders the `schemaInvalid` 400 |
+| symfony | a controller service implementing the generated interface, its methods marked with the generated `#[SeampactOperation('updateTask')]` attribute | a route loader registering each operation natively, a `kernel.controller_arguments` listener that reads the attribute and runs steps 2 to 8, a value resolver for the validated input, an exception listener for the format |
+| api-platform | State Providers and Processors implementing the generated interfaces | resource metadata for each operation (`uriTemplate`, `uriVariables`), the generated attribute and listener as for symfony, decorated providers and processors placing the steps; restricted input fields are rejected by the target's own check before denormalisation, since API Platform's property security only strips (A21, A42) |
+
+What the boot check calls a bound handler is, per target, this developer code: a controller method carrying the operation's composite (nestjs, spring-boot), a container binding of the interface (laravel, adonis), a service carrying the operation's attribute (symfony), a provider or processor for the operation (api-platform), an entry of the handler map (fastify, express).
+
+Bodies beyond JSON (A39) use each framework's own mechanism, with the contract's limits:
+
+| Target | Form and multipart input | Download | Redirect |
+|---|---|---|---|
+| nestjs | the platform's parsers (`urlencoded` and multer on Express, `@fastify/formbody` and `@fastify/multipart` on Fastify) configured by the composite | `StreamableFile` | `@Redirect()` in the composite, the location from the typed result |
+| fastify, express | `@fastify/formbody` and `@fastify/multipart`; `express.urlencoded` and multer | a stream with `Content-Type` and `Content-Disposition` | `reply.redirect()`, `res.redirect()` |
+| adonis | `request.file()` checked with `vine.file()` | `response.stream()` or `response.download()` | `response.redirect()` |
+| spring-boot | the decoded form, and `MultipartFile` through Spring's multipart resolver | `ResponseEntity` of a `Resource` or `StreamingResponseBody` | `ResponseEntity` with the status and `location(uri)` |
+| laravel | request input and `UploadedFile` with `file`, `mimetypes` and `max` rules | `response()->streamDownload()` | `redirect()->to()` |
+| symfony | `Request::$request` and `UploadedFile` with the `File` constraint | `BinaryFileResponse` or `StreamedResponse` | `RedirectResponse` |
+| api-platform | the `multipart` input format through a generated decoder and denormalizer, API Platform's documented way to take files | a `Response` from the processor | a `RedirectResponse` from the processor |
+
+Client targets send forms with `URLSearchParams` and `FormData`, return a download as a `Blob` or a stream with its media type, and read a redirect with `redirect: 'manual'` where the platform exposes it.
+
 ### Registration and per-right overrides
 
 Each target registers hooks through its framework's own mechanism (A30): providers and a dynamic module in NestJS, options of the generated plugin in Fastify, the router factory in Express, the IoC container in AdonisJS, beans in Spring, service-provider bindings in Laravel, tagged services in Symfony.
@@ -68,29 +99,32 @@ Before the application accepts a request, the generated boot check refuses to st
 - an identity used by a bound operation has no authenticate hook;
 - a right or rule used by a bound operation has no decider;
 - a scope used by a bound operation has no resolver;
-- a contract operation has no bound handler;
-- a framework route is absent from the generated route table and not allow-listed with a reason in the app config (ADR 0011);
+- a contract operation has no bound handler, among the operations the target entry's `operations` filter keeps (ADR 0011);
+- a framework route is absent from the generated route table and not allow-listed with a reason in the app config, by its path or a path pattern (`/actuator/**`, ADR 0011);
+- the framework's own path prefix (a NestJS global prefix, a Laravel route group, a servlet context path, API Platform's route prefix) differs from the target entry's `mount`;
 - a decider's params check refuses the params of a requirement;
 - the installed hooks package is outside the range the generated code needs.
 
 In PHP, where an application boots per request, the check runs when the container or route cache is built and at boot when no cache exists; the generated dispatcher also answers 500 rather than call a missing hook.
 
+The app config may switch off the handler check and the framework-route check apart (`artefacts.bootCheck: { handlers: false, frameworkRoutes: false }`), for an app that serves part of an api or registers many routes of its own; while the target generates hooks, a missing hook is always refused, since nothing may fall back to allow.
+
 ### The check order
 
 The order is fixed in every target and stops at the first failure (FR-5):
 
-1. Transport refusals raised while the framework parses: unknown route (404), body too large (413), unsupported media type (415), malformed body (400), rendered in the api's declared error format (ADR 0008).
+1. Transport refusals raised while the framework parses: unknown route (404), body too large (413), unsupported media type (415), malformed body (400), and the refusals of the framework's own security layers (below), rendered in the api's declared error format (ADR 0008). A malformed body is one that does not parse as its declared media type; a value of the wrong type is a step 6 issue.
 2. Authenticate (401), over the raw body for a signed identity.
 3. Principal requirements (403).
 4. Scope resolution, outermost scope first (each scope's declared denial).
-5. Requirements in declared order. A body proof is read from the parsed body and checked against its own field schema in this step.
+5. Requirements in declared order. A body proof is read from the parsed body and checked against its own field schema in this step. A registered record loader runs here, before the decide call that receives the record; a record it does not find answers the `notFound` role at this step, before any 403 (as Laravel's route-model binding and API Platform's providers do).
 6. Input validation (400), reporting every issue of path, query, headers and body at once.
 7. Restricted input fields (403 with the field pointer, or stripped, per A21) and restricted sort keys (403).
 8. Principal bindings (403).
 9. The handler.
-10. The response: an undeclared status answers 500; restricted output fields are projected out; undeclared fields are stripped; sensitive values are redacted from logs; the success or error format, cache, identity and deprecation headers are written.
+10. The response: an undeclared status answers 500; restricted output fields are projected out; undeclared fields are stripped; sensitive values are redacted from logs; the success or error format, cache, identity and deprecation headers are written. No framework-generated validator or 304 reaches a contract route: a target turns off its framework's automatic ETags there (Express sends weak ETags and 304s by default), and only `cache.etag` produces them.
 
-Each target places the steps in its framework's mechanisms, in this order. In spring-boot, the steps that need no body run in a `HandlerInterceptor`; the generated delegating controller binds the body without validating it, runs the remaining requirement steps, then validates, then checks bindings (FR-19), so the observable order is the same as everywhere else.
+Each target places the steps in its framework's mechanisms, in this order, through the generated utilities above. Steps 1 to 8 are one generated pipeline with one rule everywhere: the body is first decoded to the language's JSON tree (a JavaScript value, a Jackson `JsonNode`, decoded PHP objects), never bound to a typed object; step 6 validates path, query, headers and body in one pass, the linked validator library (class-validator, zod, yup, VineJS, Bean Validation, Laravel rules, Symfony constraints) running inside that pass, and only then converts to the typed input. The boundary uses its own decoder settings, never the app's global pipe, Jackson mapper or serializer, so an app's `ValidationPipe` with `forbidNonWhitelisted` or a flipped `FAIL_ON_UNKNOWN_PROPERTIES` changes nothing the contract says. In spring-boot this is why the steps run in the `HandlerInterceptor`, on the decoded body, before argument binding (FR-19). A framework that sets a fixed route status and re-applies it on reply (NestJS) gets the status from the generated reply path, never from an interceptor's `res.status()`.
 
 ### Restricted fields
 
@@ -108,7 +142,7 @@ A handler answers any code its operation lists through a typed error result that
 return { error: 'tasks.locked', params: { lockedBy: lock.userId } };   // typed from updateTask's error union
 ```
 
-A code the operation does not list is a type error, and at run time a 500, as for a hook's undeclared denial.
+A handler may instead throw the generated exception of a code, one class per code with its typed params in the constructor, which is the idiom of NestJS (`HttpException` with an `errorCode`), Spring, Laravel, Symfony and API Platform (`ProblemExceptionInterface`). A target offers the form its language favours, or both. Java targets declare the operation's error exceptions on the interface method, which keeps the compile-time check; PHP targets declare them with `@throws`, for static analysis. A code the operation does not list is a type error where the language can tell, and at run time a 500, as for a hook's undeclared denial.
 
 `owner: caller` (ADR 0002 section 6) derives a 404 for another caller's id, but the boundary cannot know who owns a record. No hook is added for it: the handler, or the optional record loader above, answers the `notFound` role with that typed result. The generated test helper checks the declared 404 (SCN-004).
 
@@ -134,27 +168,53 @@ Other libraries plug in through the same hooks, as application code or community
 |---|---|---|
 | Clerk | authenticate | verify the session token with Clerk's backend SDK and build the principal from the claims |
 | better-auth | authenticate | read the session from the request headers through better-auth's server API |
-| Passport | authenticate | run the strategy inside the hook, or keep Passport's guard or middleware and read the user it set |
+| Passport | authenticate | run the strategy inside the hook, or keep Passport's guard or middleware and read the user it set; a global Passport guard reads the operation's access kind from the route metadata (below) and lets public and optional-auth routes through |
 | Laravel guards and Sanctum | authenticate | read the user from the configured guard |
 | Laravel Gates and Policies | decide | ask the Gate for the principal, passing the subject and params |
 | Symfony Security and Voters | authenticate, decide | read the user from the token storage after the firewall; call `isGranted` with the right name and a subject object carrying params and scopes |
-| Spring Security | authenticate, decide | read the `Authentication` set by the filter chain; delegate to a `PermissionEvaluator` or an `AuthorizationManager` bean |
+| Spring Security | authenticate, decide | read the `Authentication` set by the filter chain; delegate to a `PermissionEvaluator` or an `AuthorizationManager` bean. On an optional-auth route with `onRefused: anonymous`, the resource server's bearer filter must not answer 401 itself: exclude those routes with the generated request matchers (below), or verify the token inside the authenticate hook |
+
+### Native security layers
+
+A framework's own security layer often runs before the boundary: a global NestJS `APP_GUARD` (Passport, `ThrottlerGuard`), Spring Security's filter chain, Laravel's `VerifyCsrfToken`, `ThrottleRequests` and guards, Symfony's firewall. seampact neither removes them nor lets them contradict the contract (A30, A42):
+
+- Every target exports each operation's access in the framework's native form: route metadata a guard reads through `Reflector` in NestJS (set by the operation's composite), request-matcher sets per access kind (public, optional, identity, signed) in spring-boot, route names and middleware groups in laravel, request matchers for `access_control` in symfony and api-platform. An app's own layer can therefore skip public and optional-auth routes without a hand-kept list. spring-boot can also generate, opt-in, a Spring Security customizer that permits the public and optional-auth routes and keeps them out of the bearer filter (target option `springSecurity: { matchers: true }`, A42).
+- The target maps the framework's own refusals to roles and renders them in the api's error format, at step 1: Spring Security's entry point, access-denied handler and CSRF refusal; Laravel's `AuthenticationException`, `AuthorizationException`, `TokenMismatchException` (419 there, the `csrfInvalid` role here) and `ThrottleRequestsException`; Symfony's entry point and `AccessDeniedException`; NestJS's `UnauthorizedException`, `ForbiddenException` and `ThrottlerException`. A refusal the operation does not list is a 500, as for a hook.
+- On an optional-auth route with `onRefused: anonymous`, no native layer may refuse a presented credential: the app excludes those routes from its token filter (the exported matchers name them), or lets the authenticate hook verify the credential. With `onRefused: reject`, a native 401 is the contract's.
+
+### Native access instead of hooks
+
+An app that keeps its framework's native access (Spring Security rules, Laravel Policies on routes, Symfony `access_control`) and wants seampact's types, validation and routes only turns the access hooks off (A42): `artefacts: { accessHooks: false }` with `access: { native: "<reason>" }` on the target entry (ADR 0011). The reason is required, since access leaves the boundary; turning the artefact off without it is refused, naming both keys. The target then generates no hook interfaces and no steps 2 to 5, and exports every operation's identity, requirements and scopes as route metadata for the native layer to enforce. The boundary has no principal in that setup, so an operation whose contract needs one at the boundary (principal requirements, bindings, field rights, restricted sort keys) is refused by `generate`, naming the operation and the construct, with the fix "keep the access hooks for this api". The generated test helper still checks every declared 401 and 403, so the native layer is held to the contract.
+
+### Target obligations
+
+Each target's own ADR states, besides its placement above:
+
+- nestjs and express: no framework ETag or 304 on contract routes (step 10); nestjs: the reply path for a dynamic status (several 2xx, a 304, an idempotent replay), since an interceptor's `res.status()` is overwritten by the route status; the stored error of an idempotent replay is captured in the exception filter, which an interceptor cannot see.
+- Every target: the per-route body limit as a generated check (`Content-Length`, then a bounded read), the framework's app-wide parser limit set at least to the largest route limit; query decoding from the raw query string (ADR 0002 section 7).
+- spring-boot and api-platform: the paging request roles are validated, `overLimit` included, before a native `Pageable` or paginator is built, since both clamp silently (ADR 0002 section 14).
+- laravel: the rule mapping of ADR 0003's Consequences (`present` for a required string, whole-number integers, objects preserved, `TrimStrings` and `ConvertEmptyStringsToNull` excluded) and the `failedValidation()` re-render from 422 to the `schemaInvalid` 400.
+- spring-boot, laravel, symfony and api-platform: `toString()` of a generated record and PHP's `var_dump` and `print_r` (`__debugInfo()`, `#[\SensitiveParameter]` on constructors) never show a `sensitive` value.
+- angular: `HttpClient`'s XSRF support (`withXsrfConfiguration`) set from the contract's CSRF header name.
+- fastify: route schemas compiled with Ajv from the IR's JSON Schema when no validator is linked (ADR 0009); adonis: strict input as a generated rule, since VineJS drops unknown keys.
 
 ### Failures inside hooks
 
-- A hook that throws or rejects produces 500 with the error logged; it never counts as allow.
+- A hook may throw the generated exception of one of its declared codes, as a handler may. A framework's own denial exception thrown inside a decide hook (Laravel's `AuthorizationException` from `Gate::authorize()`, Symfony's `AccessDeniedException` from `denyAccessUnlessGranted()`, Spring Security's `AccessDeniedException`) answers the requirement's first declared denial code, so an idiomatic decider body works as written.
+- Any other exception thrown or rejected by a hook produces 500 with the error logged; it never counts as allow.
 - A denial naming a code the requirement did not declare produces 500: the contract would otherwise be broken silently.
 - Timeouts and retries inside a hook are the application's concern.
 
 ## Consequences
 
-- Each target generates less than a native mapping would (no `#[IsGranted]`, `@PreAuthorize` or policy registration), and the application or an adapter writes a few lines of glue. In return no target imposes a library, a right naming scheme or a tenancy scheme.
+- Each target generates less than a native mapping would (no `#[IsGranted]`, `@PreAuthorize` or policy registration), and the application or an adapter writes a few lines of glue. In return no target imposes a library, a right naming scheme or a tenancy scheme. An app that prefers its framework's native access keeps it, with seampact's metadata, at the cost of the principal-dependent checks.
+- No target owns a controller: the developer's controller stays the developer's, and regenerating never touches it (A41).
 - The same HTTP suite proves every target, because every target exposes the same three hooks.
 - The check order is a contract fact. A framework whose natural order differs (Spring's argument validation, NestJS guards before pipes) is adapted by the generated code, not by the application.
 - The CASL and spatie adapters show how to write an adapter; community adapters follow the same hooks package.
 
 ## Traceability
 
-- FRs: FR-4, FR-5, FR-19 (spring-boot check placement), FR-22, FR-23, FR-24, FR-25, FR-26, FR-27, FR-41, FR-10 (metadata reaches the boundary); amendments A18, A20, A21, A23, A24, A25, A30.
-- Checklist items enabled: CHK-004, CHK-006, CHK-007 (identities, variants, CSRF), CHK-014 (order and boot refusal), CHK-015, CHK-016 (throttle bucket and proof reach the hook), CHK-017, CHK-018, CHK-019, CHK-020, CHK-025, CHK-033, CHK-062, CHK-063, CHK-086, CHK-087, CHK-090, CHK-091, CHK-092, CHK-093, CHK-094, CHK-096, CHK-097, CHK-098, CHK-099, CHK-116 (no second 404 for a scoped id), CHK-117 (no field rights on a relay route).
+- FRs: FR-4, FR-5, FR-16 (controllers stay the developer's, A41), FR-19 (spring-boot check placement), FR-22, FR-23, FR-24, FR-25, FR-26, FR-27, FR-41, FR-10 (metadata reaches the boundary); amendments A18, A20, A21, A23, A24, A25, A30, A39, A40, A41, A42.
+- Checklist items enabled: CHK-004, CHK-006, CHK-007 (identities, variants, CSRF), CHK-014 (order and boot refusal), CHK-015, CHK-016 (throttle bucket and proof reach the hook), CHK-017, CHK-018, CHK-019, CHK-020, CHK-025, CHK-033, CHK-062, CHK-063, CHK-086, CHK-087, CHK-090, CHK-091, CHK-092, CHK-093, CHK-094, CHK-096, CHK-097, CHK-098, CHK-099, CHK-116 (no second 404 for a scoped id), CHK-117 (no field rights on a relay route); from round 4, CHK-131, CHK-133, CHK-147, CHK-150 to CHK-158, CHK-161 to CHK-164, CHK-168, CHK-169.
 - Success metric: SM-8.
