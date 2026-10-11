@@ -26,7 +26,7 @@ load -> validate -> tree -> access -> derive -> link -> finalize
 
 | Step | Kind | Input | Output |
 |---|---|---|---|
-| load | stage (p1-loader) | the workspace files | per api, a merged raw tree (api, base, packs, includes, `$file` content) and the source map; pitfalls refused (ADR 0002 section 3) |
+| load | stage (p1-loader) | the workspace files | per api, a merged raw tree (api, base, shared file, packs, includes, `$file` content), each name resolved in the layers that may see it (ADR 0002 section 2) and the source map; pitfalls refused (ADR 0002 section 3) |
 | validate | stage (p1-spec) | the raw tree | the raw tree checked against the authoring JSON Schema; refused schema keywords reported with ADR 0003's reasons |
 | tree | pass (p2-tree) | the raw tree | the draft IR fields listed below |
 | access | pass (p2-access) | the raw tree and tree's fields | its fields |

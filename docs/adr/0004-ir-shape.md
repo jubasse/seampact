@@ -180,7 +180,7 @@ type TypeUse =                               // what a property, item, body or p
 ### 6. Origins and `derivedFrom`
 
 ```ts
-interface Origin { api?: string; layer: 'api' | 'base' | `pack:${string}`; pointer: string }   // api: set on a copy from another api
+interface Origin { api?: string; layer: 'api' | 'shared' | 'base' | `pack:${string}`; pointer: string }   // api: set on a copy from another api
 interface DerivedFrom { derivation: DerivationId; from: Origin[] }
 ```
 

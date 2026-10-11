@@ -37,11 +37,13 @@ workspace:
   apis:
     tasks: ./tasks/api.yaml
     tasksService: ./tasks-service/api.yaml
+  shared: ./shared/base.yaml
   imports:
     storefront: { package: '@acme/contracts', version: 2.3.0, api: storefront, integrity: sha256-Qm9vY... }
 ```
 
 - `workspace.apis` maps each api name to its api file. The names must equal each file's `api.name`. All apis of a workspace compile together, which is how `relays` reaches a sibling api (FR-8).
+- `workspace.shared` names a file with the keys of a base, which every api of the workspace builds on, before its own base (section 2). It holds what several apis share: schemes, identities, common schemas, and the rights and scopes their field marks name.
 - `workspace.imports` names an api held in a pinned contract bundle, so a `relays` can target it without its sources. An entry takes one source form of the app config's `sources` (ADR 0011: `package` with `version`, `release`, or `git`), `api`, the api's name inside the bundle, and `integrity`, which is required. The bundle passes ADR 0011's pinned-bundle check before its IR is read; a missing `integrity` fails and prints the actual value, so pinning is a copy.
 
 There are five kinds of file. The loader knows each by its top-level keys.
@@ -50,7 +52,7 @@ There are five kinds of file. The loader knows each by its top-level keys.
 |---|---|---|
 | workspace | `workspace` | the CLI |
 | api | `api`, `extends`, `packs`, `surfaces`, any catalogue, `conventions`, `formats`, `extensions`, `lint` | `workspace.apis` |
-| base | any catalogue, `packs`, `conventions`, `formats`, `extensions` | `extends` from an api |
+| base | any catalogue, `packs`, `conventions`, `formats`, `extensions` | `extends` from an api, or `workspace.shared` |
 | pack | `pack`, any catalogue, `conventions`, `formats`, `extensions`, `derive` | `packs` from an api or base, `extends` from a pack |
 | fragment | whatever the include site expects | `$include` or a file `$ref` |
 
@@ -60,10 +62,10 @@ Paths in `extends`, `packs`, `$include`, `$ref` and `$file` are relative to the 
 
 ### 2. Composition: `extends`, `packs`, `$include`, `$ref`, `$file`
 
-- `extends: ./base.yaml`. An api extends at most one base. The base's catalogues, conventions, formats and extensions join the api's. A base does not extend another base; shared declarations beyond one level travel as packs. A name defined in both the api and its base is an error naming both locations, even when the two definitions are identical (fix: "remove the copy", SCN-029).
-- `packs: ['@seampact/pack-crud-rights', ./packs/house.yaml]`. A list of convention packs, applied in order (below). A string starting with `./` or `../` is a path; any other string is a package name, resolved as ADR 0008 says. A pack is data only: a pack file containing anything but the keys of the table above is refused (SCN-047).
+- `extends: ./base.yaml`. An api extends at most one base. The base's catalogues, conventions, formats and extensions join the api's. A base does not extend another base: what every api shares goes in the workspace's shared file (section 1), and anything beyond travels as packs. A name defined in both the api and its base is an error naming both locations, even when the two definitions are identical (fix: "remove the copy", SCN-029).
+- `packs: ['@seampact/pack-crud-rights', ./packs/house.yaml]`. A list of convention packs, applied in order (below). A string starting with `./` or `../` is a path; any other string is a package name, resolved from the nearest `package.json` at or above the workspace root (ADR 0008). The first-party packs are also embedded in the standalone binary, which uses its copy when no package resolves. A pack is data only: a pack file containing anything but the keys of the table above is refused (SCN-047).
 - `$include: <path>` or `$include: [<path>, ...]` is organisational. It may appear as a key of any mapping except a mapping of named tree nodes (`routes`). Each included file holds a mapping, which is merged in place into the mapping that holds `$include`: its keys take the position of the `$include` key, in the file's order, several files in list order. A path may end with a fragment, `#` and a JSON Pointer into that file, to include one mapping inside it (`./schemas/task.yaml#/Task`). A key defined twice, by two files or by a file and a sibling key, is a duplicate-key error. An included schema is an inline copy at the include site, not a reference (SCN-030).
-- `$ref` names an addressable element and keeps its identity: the IR holds one copy and every use points to it (SCN-030). Its value is a name (`Task`) or a file (`./schemas/task.yaml`, or `./schemas/task.yaml#/Task`). A fragment after a file path is a JSON Pointer into that file. A file `$ref` without a fragment is valid when that file declares exactly one element of the expected catalogue, under its name. A file reached only through `$ref` adds the referenced element, and what it references, to the api; its other declarations are not added. A name resolves in the api's merged catalogues (api, base, packs, included pieces), so a base can reference schemas that the api declares and the reverse. A pointer into the merged catalogues (`'#/schemas/Task'`) is refused: the name says the same thing.
+- `$ref` names an addressable element and keeps its identity: the IR holds one copy and every use points to it (SCN-030). Its value is a name (`Task`) or a file (`./schemas/task.yaml`, or `./schemas/task.yaml#/Task`). A fragment after a file path is a JSON Pointer into that file. A file `$ref` without a fragment is valid when that file declares exactly one element of the expected catalogue, under its name. A file reached only through `$ref` adds the referenced element, and the elements it references in turn, to the api; its other declarations are not added. A name used inside that file resolves among the names its layer sees (below) and the file's own declarations, and an element found in the file is added with the one that uses it; a name found in both is a compile error naming both. A file both `$include`d into a catalogue and reached by `$ref` is declared once, by the include, and the `$ref` points at the included element. A pointer into the merged catalogues (`'#/schemas/Task'`) is refused: the name says the same thing.
 - Schema files are always name-keyed: they map names to schemas (`Task: {...}`), whether reached through `$ref`, through `$include` under `schemas`, or through a fragment. One file therefore serves both uses of SCN-030:
 
 ```yaml
@@ -114,7 +116,9 @@ Templates in `derive` use `{resource}`, the name of the collection or single the
 
 #### Layers and overrides
 
-An api's declarations and settings come from layers applied in this order: the base's packs in their order, the api's packs in their order, the base, then the api. A pack's `extends` are applied just before it. A pack reached twice is applied once, at its first position; a cycle of `extends` is an error naming the cycle.
+An api's declarations and settings come from layers applied in this order: the shared file's packs, the base's packs and the api's packs, each in their order, then the shared file, the base and the api. A pack's `extends` are applied just before it. A pack reached twice is applied once, at its first position; a cycle of `extends` is an error naming the cycle.
+
+A layer resolves names only in itself and the layers it builds on, so it compiles the same for every api that uses it. A pack sees itself and the packs it extends; the shared file sees itself and its packs; a base sees itself, its packs, the shared file and the shared file's packs; an api sees everything. A base extended by two apis therefore never depends on what one of them declares: a name a base or the shared file uses but only an api declares is a compile error naming the name, the file and the fix (move the declaration into the shared file or the base).
 
 - Declarations (a catalogue entry, a format, a paging style, a `derive` entry) are never overridden: one name declared by two layers is an error naming both locations, even when the two are identical (SCN-029). An attachment may override an error's example only (section 11).
 - Settings (`conventions`) are overridden by leaf path. A leaf is a scalar, or a list taken as one value; `errors.every` is the exception, a union of every layer's list. Maps of named entries (`cache.families`, `errors.derived`) merge per entry, each entry being a leaf. An api writing `paging: { maxLimit: 50 }` therefore keeps a pack's `paging.default`.
@@ -216,7 +220,7 @@ api:
   documents:
     public: { internal: exclude }
     full: {}
-extends: ../shared/base.yaml
+extends: ./base.yaml
 ```
 
 | Key | Meaning |
@@ -1132,6 +1136,7 @@ Laravel's paginator also writes `meta.links`, a numbered list of page links. It 
 | `include` | `$include`, with an optional fragment | every loader directive is `$`-prefixed, so `include` stays usable as a field, parameter or property name (JSON:API's `include` query parameter) |
 | `cache: { freshness, etag }` | adds `anonymous` and `vary` | FR-33 caller kinds |
 | no workspace | `workspace.yaml` | several apis compile together for `relays` (FR-8) |
+| a base per api | an api's base plus the workspace's `shared` file, each layer resolving names only in itself and the layers it builds on | a file several apis use compiles the same for each of them |
 | a relaying route restating the public path, body, success and codes | a relay route (`relays`) whose shape is copied from the public operation | one fact, one place: the superset check keeps only what can still differ, the role bindings |
 
 ## Worked example: the reference tasks api
@@ -1144,10 +1149,11 @@ workspace:
   apis:
     tasks: ./tasks/api.yaml
     tasksService: ./tasks-service/api.yaml
+  shared: ./shared/base.yaml
 ```
 
 ```yaml
-# shared/base.yaml
+# shared/base.yaml: the workspace's shared file, seen by both apis
 schemes:
   sessionCookie: { kind: cookie, name: __Host-session, csrf: csrfToken }
   csrfToken: { kind: header, name: X-Csrf-Token }
@@ -1304,7 +1310,6 @@ api:
   documents:
     public: { surfaces: [app], internal: exclude }
     full: {}
-extends: ../shared/base.yaml
 
 schemas:
   $include: ./schemas.yaml
@@ -1415,7 +1420,6 @@ api:
   kind: service
   caller: { identity: service, right: callerService }
   maturity: provisional
-extends: ../shared/base.yaml
 
 surfaces:
   internal:
