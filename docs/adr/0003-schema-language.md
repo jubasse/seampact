@@ -32,7 +32,7 @@ Every keyword of the 2020-12 vocabularies, kept or refused. A refused keyword is
 |---|---|---|
 | `$schema` | refused | the dialect is fixed by seampact and the authoring schema |
 | `$id` | refused | a schema's identity is its catalogue name; a second identifier would be a second fact |
-| `$ref` | kept, with ADR 0002's meaning | identity-preserving references by name, pointer or file; siblings allowed only from the annotation and mark list of section 6 |
+| `$ref` | kept, with ADR 0002's meaning | identity-preserving references by name or file; siblings allowed only from the annotation and mark list of section 6 |
 | `$anchor` | refused | names live in the catalogue |
 | `$dynamicRef`, `$dynamicAnchor` | refused | generic, late-bound schemas have no counterpart in any target's type system |
 | `$vocabulary` | refused | the vocabulary is fixed |
@@ -98,7 +98,7 @@ Every keyword of the 2020-12 vocabularies, kept or refused. A refused keyword is
 A schema is one of:
 
 - a scalar: `type` `string`, `integer`, `number` or `boolean`, with refinements and an optional `format`;
-- an enum use: `enum: Role` (its `type` is `string` and may be omitted);
+- an enum use: `enum: Role` (its type is `string`; writing `type` beside it is refused, since the enum already states it);
 - an object: `type: object` with `properties` and `required`;
 - a map: `type: object` with `additionalProperties: <schema>` and optionally `propertyNames`;
 - an array: `type: array` with `items`;
@@ -106,7 +106,9 @@ A schema is one of:
 - a merged object: `allOf` of object schemas;
 - a reference: a string, or `$ref`, to a named schema.
 
-An object needs at least one property. A schema with no recognisable shape, such as `{}`, is refused: a free-form value has no type in any target.
+An object needs at least one property, except a union variant, which may hold only its tag (section 3). A schema with no recognisable shape, such as `{}`, is refused: a free-form value has no type in any target.
+
+A schema may reference itself, directly or through other schemas, by named reference: a `Comment` whose `replies` are an array of `Comment` is legal, whatever the file layout, because a reference resolves by name (ADR 0002 section 3). An inline cycle cannot be written. A cycle in which every step is a required, non-nullable object property is refused, since no finite value satisfies it. Targets that need it (zod's `z.lazy`) generate the deferral; the shared payload table includes a recursive case.
 
 ### 3. Tagged unions
 
@@ -237,7 +239,7 @@ scalars:
     pattern: '^[A-Z]{2}$'
 ```
 
-A field then writes `{ type: string, format: money }`; the field's `type` must equal the scalar's.
+A field then writes `{ format: money }`: its type is the scalar's, and writing `type` beside a named format is refused, since the scalar already states it. The portable formats above keep JSON Schema's spelling, `type` with `format`.
 
 ### 9. Portable regular expressions
 

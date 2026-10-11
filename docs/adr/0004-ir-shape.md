@@ -326,9 +326,9 @@ An `object` template either wraps (the payload under a member, `{ data: $payload
 
 | Kept in written or semantic order | Sorted |
 |---|---|
-| `requires`; `scopes` (resolution order); `upstream` (owner first); enum `values`; `bucket.key`; a union's variants (by tag); template members; `examples` values of a schema; `packs` (application order) | `operations` (by id); `properties` (by name); `errors` (by status, then code); `responses` (by status); `params` (by name); `tags`, `vary`, `callerKinds`, `directions`, `kinds`, `features`; `fieldRights` (by schema, then pointer, then direction); `sortKeys` (by key); `bindings` (by source) |
+| `requires`; `scopes` (resolution order); `upstream` (owner first); enum `values`; `bucket.key`; `properties` and declared `params` (written order, A33; derived params after them); template members; a paging style's `request`; `examples` values of a schema; `packs` (application order) | `operations` (by id); a union's variants (by tag); `errors` (by status, then code); `responses` (by status); `tags`, `vary`, `callerKinds`, `directions`, `kinds`, `features`; `schemes.read`, `schemes.write` and `schemes.optionalRead` of an identity; `fieldRights` (by schema, then pointer, then direction); `sortKeys` (by key); `bindings` (by source) |
 
-Object properties are sorted by name because ADR 0002 makes mapping key order meaningless: generated types list fields alphabetically.
+Object properties keep the order the author wrote them in (A33), so generated types and Java record constructors list fields as written. ADR 0002 makes that order independent of files: an `$include` merges its keys at its own position, and `allOf` members merge in their written order. Properties the compiler adds (a concurrency version field, a rule proof) follow the authored ones, in that order.
 
 ### 10. Byte-stable serialisation
 
@@ -362,7 +362,7 @@ Keys are `"<layer>#<pointer>"`, the serialised form of an `Origin`. `file` is re
 - Targets never walk schemas for rights, never re-derive errors or headers, and find every wire-format detail in `formats`: the IR is larger, target code is smaller and the same in every language.
 - Origins as logical pointers keep the IR byte-stable when files move; the cost is one extra lookup through the side table to print a location.
 - The `kinds` list, code-identified errors with `http.status`, explicit media types and kind-tagged references are paid now so a later transport is additive (ADR 0014).
-- Alphabetical properties may surprise an author who ordered fields deliberately; it is the price of byte identity across files.
+- Authored property order makes reordering the properties of a schema an IR change, visible in the diff and in generated constructors; the diff classifies it as non-breaking on the wire.
 
 ## Traceability
 

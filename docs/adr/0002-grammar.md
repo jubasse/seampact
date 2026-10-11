@@ -29,7 +29,7 @@ Option 1 does not cover A18 to A25 (rights, scopes, neutral hooks) or A5 (signed
 
 ### 1. Files and the workspace
 
-A contract workspace is a directory of YAML files with one entry file, `workspace.yaml`. A workspace with a single api may omit it; the CLI then takes the api file directly.
+A contract workspace is a directory of YAML files with one entry file, `workspace.yaml`; the workspace root is that file's directory. A workspace with a single api may omit it; the CLI then takes the api file directly, and the root is the api file's directory. A contract whose files reach above that directory (`extends: ../shared/base.yaml`) needs a `workspace.yaml` at or above every file it reads.
 
 ```yaml
 # workspace.yaml
@@ -38,11 +38,11 @@ workspace:
     tasks: ./tasks/api.yaml
     tasksService: ./tasks-service/api.yaml
   imports:
-    storefront: { package: '@acme/contracts', version: 2.3.0, api: storefront }
+    storefront: { package: '@acme/contracts', version: 2.3.0, api: storefront, integrity: sha256-Qm9vY... }
 ```
 
 - `workspace.apis` maps each api name to its api file. The names must equal each file's `api.name`. All apis of a workspace compile together, which is how `relays` reaches a sibling api (FR-8).
-- `workspace.imports` names an api held in a pinned contract bundle, so a `relays` can target it without its sources. The bundle reference (`package`, `version`, or the other source forms) and its integrity check are ADR 0011.
+- `workspace.imports` names an api held in a pinned contract bundle, so a `relays` can target it without its sources. An entry takes one source form of the consumer config's `sources` (ADR 0011: `package` with `version`, `release`, or `git`), `api`, the api's name inside the bundle, and `integrity`, which is required. The bundle passes ADR 0011's pinned-bundle check before its IR is read; a missing `integrity` fails and prints the actual value, so pinning is a copy.
 
 There are five kinds of file. The loader knows each by its top-level keys.
 
@@ -52,19 +52,28 @@ There are five kinds of file. The loader knows each by its top-level keys.
 | api | `api`, `extends`, `packs`, `surfaces`, any catalogue, `conventions`, `formats`, `extensions`, `lint` | `workspace.apis` |
 | base | any catalogue, `packs`, `conventions`, `formats`, `extensions` | `extends` from an api |
 | pack | `pack`, any catalogue, `conventions`, `formats`, `extensions`, `derive` | `packs` from an api or base, `extends` from a pack |
-| fragment | whatever the include site expects | `include` or a file `$ref` |
+| fragment | whatever the include site expects | `$include` or a file `$ref` |
 
 The catalogues are `schemas`, `enums`, `scalars` (named formats, ADR 0003 section 8), `errors`, `schemes`, `headers` (identity headers, section 9), `identities`, `rights`, `rules`, `scopes`, `buckets`, `services` and `pagings` (section 14). `formats` (section 13) is keyed by name like a catalogue. Each maps a name to one declaration. Everything a contract references by name lives in one of them.
 
-Paths in `extends`, `packs`, `include`, `$ref` and `$file` are relative to the file that contains them, use forward slashes, must stay inside the workspace directory, and must match the case of the file on disk. The last two rules keep compilation identical on case-insensitive file systems and stop a contract from reading files outside its repository.
+Paths in `extends`, `packs`, `$include`, `$ref` and `$file` are relative to the file that contains them, use forward slashes, must stay inside the workspace root, and must match the case of the file on disk. The last two rules keep compilation identical on case-insensitive file systems and stop a contract from reading files outside its repository.
 
-### 2. Composition: `extends`, `packs`, `include`, `$ref`, `$file`
+### 2. Composition: `extends`, `packs`, `$include`, `$ref`, `$file`
 
 - `extends: ./base.yaml`. An api extends at most one base. The base's catalogues, conventions, formats and extensions join the api's. A base does not extend another base; shared declarations beyond one level travel as packs. A name defined in both the api and its base is an error naming both locations, even when the two definitions are identical (fix: "remove the copy", SCN-029).
 - `packs: ['@seampact/pack-crud-rights', ./packs/house.yaml]`. A list of convention packs, applied in order (below). A string starting with `./` or `../` is a path; any other string is a package name, resolved as ADR 0008 says. A pack is data only: a pack file containing anything but the keys of the table above is refused (SCN-047).
-- `include: <path>` or `include: [<path>, ...]` is organisational. It may appear as a key of any mapping except a mapping of named tree nodes (`routes`). Each included file holds a mapping, which is merged in place into the mapping that holds `include`. A key defined twice, by two files or by a file and a sibling key, is a duplicate-key error. An included schema is an inline copy at the include site, not a reference (SCN-030).
-- `$ref` names an addressable element and keeps its identity: the IR holds one copy and every use points to it (SCN-030). Its value is a name (`Task`), a pointer into the api's merged catalogues (`'#/schemas/Task'`), or a file (`./schemas/task.yaml`, or `./schemas/task.yaml#/schemas/Task`). A file `$ref` without a fragment is valid when that file declares exactly one element of the expected catalogue, under its name. A file reached only through `$ref` adds the referenced element, and what it references, to the api; its other declarations are not added. `#` always means the api's merged catalogues (api, base, packs, included pieces), not the physical file, because a base must reference schemas that the api declares and the reverse.
-- In a position that expects a schema, a plain string is a `$ref`: `output: Task` means `output: { $ref: Task }`. Other references are names in typed positions (`identity: user`, `right: tasks.update`, `errors: [api.forbidden]`, `enum: Role`), so they need no `$ref`.
+- `$include: <path>` or `$include: [<path>, ...]` is organisational. It may appear as a key of any mapping except a mapping of named tree nodes (`routes`). Each included file holds a mapping, which is merged in place into the mapping that holds `$include`: its keys take the position of the `$include` key, in the file's order, several files in list order. A path may end with a fragment, `#` and a JSON Pointer into that file, to include one mapping inside it (`./schemas/task.yaml#/Task`). A key defined twice, by two files or by a file and a sibling key, is a duplicate-key error. An included schema is an inline copy at the include site, not a reference (SCN-030).
+- `$ref` names an addressable element and keeps its identity: the IR holds one copy and every use points to it (SCN-030). Its value is a name (`Task`) or a file (`./schemas/task.yaml`, or `./schemas/task.yaml#/Task`). A fragment after a file path is a JSON Pointer into that file. A file `$ref` without a fragment is valid when that file declares exactly one element of the expected catalogue, under its name. A file reached only through `$ref` adds the referenced element, and what it references, to the api; its other declarations are not added. A name resolves in the api's merged catalogues (api, base, packs, included pieces), so a base can reference schemas that the api declares and the reverse. A pointer into the merged catalogues (`'#/schemas/Task'`) is refused: the name says the same thing.
+- Schema files are always name-keyed: they map names to schemas (`Task: {...}`), whether reached through `$ref`, through `$include` under `schemas`, or through a fragment. One file therefore serves both uses of SCN-030:
+
+```yaml
+# tasks/api.yaml (excerpt: two route settings)
+output: { $ref: ./schemas/task.yaml }            # the element Task, shared
+input: { $include: ./schemas/task.yaml#/Task }   # an inline copy of Task's body
+```
+
+- Every loader directive (`$include`, `$ref`, `$file`) starts with `$`, which no name pattern admits, so a directive never collides with a field, property, parameter, header or catalogue name: `query: { include: { type: string } }` declares a query field named `include`. In data positions (`value`, `example`, `examples`, `default`), only a mapping whose sole key is `$file` is processed; any other mapping, one holding `$ref` or `$include` included, is data.
+- In a position that expects a schema, a plain string is a `$ref`: `output: Task` means `output: { $ref: Task }`. The `$ref` form is written only when siblings sit beside it (ADR 0003 section 6) or to name a file. Other references are names in typed positions (`identity: user`, `right: tasks.update`, `errors: [api.forbidden]`, `enum: Role`), so they need no `$ref`.
 - `$file: <path>` replaces the value that holds it with a file's content: a `.md` or `.txt` file gives a string (docs), a `.json` or `.yaml` file gives data (examples). A `.yaml` file read this way goes through the same pitfall checks as any contract file. A missing file is a located error (SCN-088).
 
 #### Packs
@@ -113,10 +122,10 @@ An api's declarations and settings come from layers applied in this order: the b
 
 #### The byte-identity rule
 
-A route declared inline and the same route moved to a file reached through `include` compile to byte-identical IR (FR-1, FR-9, SCN-001). The grammar guarantees it with five rules:
+A route declared inline and the same route moved to a file reached through `$include` compile to byte-identical IR (FR-1, FR-9, SCN-001). The grammar guarantees it with five rules:
 
-1. The IR never depends on the order of keys in a mapping, nor on which file a node came from. Order is meaningful only in sequences, and `include` never reorders one. ADR 0004 lists the sequences whose order the IR keeps (`requires`, `upstream`, enum `values`, among others) and sorts every other sequence as a set.
-2. `include` replaces itself with the file's mapping before any other step; after it, the tree is the same as if the content had been written inline.
+1. The IR never depends on which file a node came from, nor on the order of keys in a mapping, with one exception: the members of a generated type (`properties` of an object schema, and fields maps) keep their written order, so generated code lists fields as the author wrote them (A33). `$include` never reorders anything: its keys take its position. Order is otherwise meaningful only in sequences; ADR 0004 lists the sequences whose order the IR keeps (`requires`, `upstream`, enum `values`, among others) and sorts every other sequence as a set.
+2. `$include` replaces itself with the file's mapping before any other step; after it, the tree is the same as if the content had been written inline.
 3. Relative paths inside an included file resolve against that file, so moving content and fixing its relative paths reaches the same files; the IR stores the content of `$file` and `$ref` targets, never a path.
 4. Names that the compiler derives (operation ids, inline schema names, ADR 0007) come from the position in the tree and the role, never from a file name.
 5. Source locations (file, line, column) live only in the side table (ADR 0004). An element's `origin` in the IR is a logical path in the tree, such as `surfaces.app.routes.channels.member.routes.tasks`, which does not change when content moves between files.
@@ -127,16 +136,28 @@ The loader's property test externalises random nodes of generated trees and asse
 
 Files are parsed as YAML 1.2 with the core schema, then checked against the authoring JSON Schema (FR-9). The loader refuses, each with file, line, column, rule and fix (FR-1, SCN-002):
 
-| Refused | Example | Fix |
-|---|---|---|
-| A plain scalar whose type differs between YAML 1.1 and 1.2 | `y`, `n`, `yes`, `no`, `on`, `off` (any case), `1:30` (sexagesimal), `2027-06-30` (timestamp), `1e3` | quote it |
-| An anchor, an alias or a merge key, anywhere | `&base`, `*base`, `<<:` | use `$ref` or `extends` |
-| A scalar whose type differs from the one the authoring schema expects | `version: '1'`, `name: 12` | write the expected type |
-| A duplicate key | two `tasks:` in one mapping, or once inline and once through `include` | remove the duplicate |
-| A cycle of `include`, `$ref` files or `extends` | `a.yaml` includes `b.yaml`, which includes `a.yaml` | break the cycle |
-| More than one document in a file, or a tag | `---` twice, `!!str` | one document per file; no tags |
+| Rule | Refused | Examples | Fix |
+|---|---|---|---|
+| P1 | a plain scalar that YAML 1.1 reads as a boolean, or a boolean not in lowercase | `y`, `n`, `yes`, `no`, `on`, `off` (any case), `True`, `FALSE` | quote it, or write `true` or `false` |
+| P2 | a plain number not written in plain decimal | `012` (octal in 1.1, 12 in 1.2), `0o12`, `0x1F`, `+1`, `1e3`, `.5`, `1.`, `.inf`, `.nan` | quote it, or write the number in plain decimal |
+| P3 | a plain scalar that YAML 1.1 reads as a number or a timestamp and 1.2 as a string | `1_000`, `0b101`, `1:30` (sexagesimal), `2027-06-30`, `2027-06-30T10:00:00Z` | quote it |
+| P4 | a plain `=` or `<<` | `=` (a 1.1 value key), `<<:` | quote it |
+| P5 | an anchor, an alias or a merge key, anywhere | `&base`, `*base`, `<<:` | use `$ref` or `extends` |
+| P6 | a scalar whose type differs from the one the authoring schema expects, null included | `version: '1'`, `name: 12`, `summary: ~`, `summary:` with no value | write the expected type |
+| P7 | a duplicate key | two `tasks:` in one mapping, or once inline and once through `$include` | remove the duplicate |
+| P8 | a cycle of `$include`, `extends` or pack `extends` | `a.yaml` includes `b.yaml`, which includes `a.yaml` | break the cycle |
+| P9 | more than one document in a file, or a tag | `---` twice, `!!str` | one document per file; no tags |
 
-No keyword of the grammar is a word that YAML 1.1 reads as a boolean (`on`, `off`, `yes`, `no`), so a keyword never needs quoting. A plain mapping key is a string, except in a mapping keyed by HTTP status (`responses`), where keys are plain integers from 100 to 599. A `# yaml-language-server: $schema=...` comment is the only comment with a meaning, and only to editors: `seampact init` writes it (FR-9, SCN-046).
+The loader applies P1 to P4 to every plain scalar (keys and values) with these expressions, so the loader lane implements an exhaustive list, not examples:
+
+- P1: `^(y|Y|yes|Yes|YES|n|N|no|No|NO|on|On|ON|off|Off|OFF|True|TRUE|False|FALSE)$`.
+- P2: a scalar that the YAML 1.2 core schema resolves to an integer or a float and that does not match `^-?(0|[1-9][0-9]*)(\.[0-9]+)?$`.
+- P3: the YAML 1.1 int, float and timestamp expressions that the 1.2 core schema does not match: `^[-+]?(0b[01_]+|0[0-7_]+|0x[0-9a-fA-F_]+|[0-9][0-9_]*(:[0-5]?[0-9])+(\.[0-9_]*)?|[0-9][0-9_]*_[0-9_]*|([0-9][0-9_]*)?\.[0-9_]*_[0-9_]*)$` and `^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}([Tt ]|$)`.
+- P4: `^(=|<<)$`.
+
+In data positions (examples), null is written `null`; `~`, `Null`, `NULL` and an empty value are refused there too. A `$ref` resolves by name, so a cycle through it is a recursive schema, which is legal and independent of the file layout (ADR 0003 section 2).
+
+No keyword of the grammar is a word that YAML 1.1 reads as a boolean (`on`, `off`, `yes`, `no`), so a keyword never needs quoting. A plain mapping key is a string, except in a mapping keyed by HTTP status (`responses`), where keys are plain integers from 200 to 299: only success responses are written. Error statuses come from codes (section 11), 304 is derived from `cache.etag`, and other 3xx responses are not modelled until a consumer needs them. A `# yaml-language-server: $schema=...` comment is the only comment with a meaning, and only to editors: `seampact init` writes it (FR-9, SCN-046).
 
 ### 4. Scalars, names and value sources
 
@@ -155,7 +176,7 @@ No keyword of the grammar is a word that YAML 1.1 reads as a boolean (`on`, `off
 | extension keys | `^[a-z][a-z0-9]*(-[a-z0-9]+)*$` | `tax-basis`, `invalidates` |
 
   The core constrains a right only by its pattern; it imposes no naming convention (A20, SCN-063). An error's family is its code up to the first dot (FR-6).
-- A fields map maps names to schemas. A field is required unless its name ends with `?`: `query: { limit?: { type: integer }, cursor?: Cursor }`. Fields maps are used for `id`, `pathParams`, `query`, `headers`, and the `params` of errors, rights and rules. In each of these places a string instead of a mapping names a schema whose properties are the fields (`query: TaskQuery`).
+- A fields map maps names to schemas. A field is required unless its name ends with `?`: `query: { limit?: { type: integer }, cursor?: Cursor }`. A fields map has no `required` keyword and a schema has no `?` suffix, so each place has one way to say it. Fields maps are used for `id`, `pathParams`, `query`, `headers`, and the `params` of errors, rights and rules. In each of these places a string instead of a mapping names a schema whose properties are the fields (`query: TaskQuery`).
 - Value sources name where a value is read. One grammar serves every use; each use accepts a subset:
 
 | Source | Meaning |
@@ -240,7 +261,7 @@ Every node is a mapping of settings plus its children. There are three kinds of 
 | collection | `kind: collection` | `ops`, `collection`, `member` |
 | single | `kind: single` | `ops`, `routes` |
 
-A surface root, a single, and the `collection` and `member` scopes of a collection hold their children under `routes`, a mapping from child name to node. The child name is written in the parent file even when its content is included (`search: { include: ./routes/tasks/search.yaml }`), so every route stays discoverable from its parent (brief 5.1).
+A surface root, a single, and the `collection` and `member` scopes of a collection hold their children under `routes`, a mapping from child name to node. The child name is written in the parent file even when its content is included (`search: { $include: ./routes/tasks/search.yaml }`), so every route stays discoverable from its parent (brief 5.1).
 
 A node's path segment is its name, converted by `conventions.pathCase` (`kebab`, the default, `camel` or `snake`). `path` replaces the segment: it is relative to the parent, has no leading slash, may be empty, and may hold `{param}` placeholders declared in `pathParams`.
 
@@ -256,7 +277,7 @@ tasks:
   ops: [list, get]
   collection:
     routes:
-      search: { include: ./routes/tasks/search.yaml }
+      search: { $include: ./routes/tasks/search.yaml }
   member:
     scopes: { task: path.taskId }
     routes:
@@ -1032,7 +1053,8 @@ Laravel's paginator also writes `meta.links`, a numbered list of page links. It 
 | `enums: { Role: [owner, editor] }` | `{ values, source or reason, fallback }` | FR-29: source, local reason, fallback |
 | `examples: { 200: ... }` | named examples with `status` or `request` | examples are named (checklist volume) and may target the request |
 | implicit envelopes | `conventions.format`, default bare plus problem+json | A30 |
-| `$ref: ./schemas/task.yaml` only | also names (`Task`) and plain strings in schema positions | readability; the IR is the same |
+| `$ref: ./schemas/task.yaml` only | also names (`Task`) and plain strings in schema positions; no `#/schemas/...` pointer | readability and one way to name an element; the IR is the same |
+| `include` | `$include`, with an optional fragment | every loader directive is `$`-prefixed, so `include` stays usable as a field, parameter or property name (JSON:API's `include` query parameter) |
 | `cache: { freshness, etag }` | adds `anonymous` and `vary` | FR-33 caller kinds |
 | no workspace | `workspace.yaml` | several apis compile together for `relays` (FR-8) |
 
@@ -1154,7 +1176,7 @@ enums:
   Service: { values: [catalog, ticketing], reason: The product's internal services. }
 
 schemas:
-  include: ./schemas.yaml
+  $include: ./schemas.yaml
 ```
 
 ```yaml
@@ -1209,7 +1231,7 @@ api:
 extends: ../shared/base.yaml
 
 schemas:
-  include: ./schemas.yaml
+  $include: ./schemas.yaml
 
 surfaces:
   app:
@@ -1250,7 +1272,7 @@ surfaces:
                 batch: { maxIds: 200 }
               collection:
                 routes:
-                  search: { include: ./routes/tasks/search.yaml }
+                  search: { $include: ./routes/tasks/search.yaml }
               member:
                 routes:
                   assign:
@@ -1417,8 +1439,8 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 
 | Scenario | Keywords (section) |
 |---|---|
-| SCN-001 | `include`, `routes`, `collection`, the byte-identity rule (2, 6) |
-| SCN-002 | refused pitfalls, `include` cycles (3) |
+| SCN-001 | `$include`, `routes`, `collection`, the byte-identity rule (2, 6) |
+| SCN-002 | refused pitfalls P1 to P9, `$include` cycles (3) |
 | SCN-003 | `kind: collection`, `id`, `item`, `concurrency.version`, `concurrency.field`, `ops`, `member`, `method` (6) |
 | SCN-004 | `owner: caller`, `ops` (6) |
 | SCN-005 | `enums`, `enum` in a schema (12, ADR 0003) |
@@ -1436,7 +1458,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-019 | `api.compat.policy` (5) |
 | SCN-026 | `schemes` of `kind: signature` (`name`, `format`, `algorithm`, `payload`, `encoding`, `tolerance`, `key`), `identities` of `kind: signed` (9) |
 | SCN-029 | `extends`, duplicate definitions (2) |
-| SCN-030 | `$ref` to a file, `include` of a schema (2) |
+| SCN-030 | `$ref` to a file, `$include` of a schema with a fragment, name-keyed schema files (2) |
 | SCN-031 | `concurrency.version: query.<p>`, `concurrency: inherit`, `If-Match` refused (6, 4) |
 | SCN-032 | `api.version`, `surfaces.<s>.prefix` with `{version}` (5, 6) |
 | SCN-033 | `input` inline, derived names; `oneOf`, `discriminator` (7, ADR 0003, ADR 0007) |
