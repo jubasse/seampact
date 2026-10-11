@@ -16,7 +16,9 @@ Choice: pnpm 12, pinned through `packageManager`. Its strict, non-flat `node_mod
 
 ### Language and runtime: TypeScript 6 on Node 24
 
-ESM only (`NodeNext`), strict plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` and `verbatimModuleSyntax`. Node 24 is pinned by `.nvmrc` and `engines`. TypeScript 6 is used rather than 7 (native compiler) because the surrounding tools are validated against the JavaScript implementation; moving to 7 is a separate, reversible change. Packages run `tsc --noEmit`; project references are not needed until packages emit build output.
+Options: TypeScript 6, TypeScript 7 (native compiler), plain JavaScript with JSDoc types.
+
+Choice: TypeScript 6 on Node 24. ESM only (`NodeNext`), strict plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` and `verbatimModuleSyntax`. Node 24 is pinned to an exact version in `.nvmrc`, which CI reads through `node-version-file`; `engines` sets the floor. TypeScript 6 is used rather than 7 (native compiler) because the surrounding tools are validated against the JavaScript implementation; moving to 7 is a separate, reversible change. Packages run `tsc --noEmit`, and a root `tsconfig.json` typechecks `vitest.config.ts`; project references are not needed until packages emit build output.
 
 ### Lint and format: Biome
 
@@ -26,7 +28,9 @@ Choice: Biome. One tool and one config file for both lint and format, no plugin 
 
 ### Test runner: Vitest
 
-TypeScript and ESM work without extra transforms, the API is Jest-compatible, and watch mode is fast. Tests live next to sources as `*.test.ts` in each package.
+Options: Jest, `node:test`, Vitest.
+
+Choice: Vitest. TypeScript and ESM work without extra transforms, the API is Jest-compatible, and watch mode is fast. Tests live next to sources as `*.test.ts` in each package.
 
 ### Versions: Changesets
 
@@ -37,3 +41,10 @@ Choice: Changesets, with `access: restricted` and no publish workflow or npm tok
 ### CI
 
 One job named `ci` runs `pnpm install --frozen-lockfile` then `pnpm gate` on push and pull request to `main`. Actions are pinned by full commit SHA with the version in a comment. The `ci` job is the check that branch protection will require.
+
+## Consequences
+
+- Adding a package needs only a directory under `packages/` with a `typecheck` script; the gate picks it up.
+- Biome's smaller rule set may leave gaps. Revisit with a targeted ESLint pass if a needed rule is missing.
+- Revisit TypeScript 7 once the surrounding tools support it.
+- Exact pins, including the Node version, mean updates are deliberate and reviewed.
