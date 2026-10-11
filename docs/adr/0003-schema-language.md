@@ -232,7 +232,7 @@ DateCard:
   properties:
     state: { enum: PublicationState }
     listedState:
-      enum: { narrow: PublicationState, to: [published], reason: Drafts never reach the listing. }
+      enum: { narrow: PublicationState, to: [published], reason: "Drafts never reach the listing." }
 ```
 
 `enum: <Name>` uses a catalogue enum (ADR 0002 section 12). `enum: { narrow, to, reason }` narrows it to a strict subset at this use; a `to` that is not a strict subset, or a missing reason, is an error (FR-29, SCN-080, CHK-048). A narrowing keeps the enum's identity: targets type it as the subset of the same enum, and the client keeps tolerating unknown members on output.

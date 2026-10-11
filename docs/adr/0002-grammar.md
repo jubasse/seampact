@@ -786,10 +786,10 @@ The boundary produces data for each role (the validation issues, the restricted 
 ```yaml
 # shared/base.yaml (excerpt)
 enums:
-  Role: { values: [owner, editor, viewer], reason: Roles are local to this product. }
+  Role: { values: [owner, editor, viewer], reason: "Roles are local to this product." }
   PublicationState: { values: [draft, published, withdrawn], source: { vocabulary: domain.publication } }
-  ErrorNature: { values: [refused, unavailable, failed], fallback: unavailable, reason: Mirrors the core natures. }
-  Answer: { values: ['yes', 'no'], reason: A survey answer. }
+  ErrorNature: { values: [refused, unavailable, failed], fallback: unavailable, reason: "Mirrors the core natures." }
+  Answer: { values: ['yes', 'no'], reason: "A survey answer." }
 ```
 
 An enum declares `values` (strings, unique) and either `source` or, for a local enum, `reason` (FR-29). `conventions.enums.reason` gives the reason of every local enum that states none, so an api whose enums are all its own product rules says so once. `source: { vocabulary: <name> }` names an external vocabulary: the name is a free label for the reader, with no declaration and no pattern. `source: { enum: <Enum> }` takes another enum's values as its own, so `values` is omitted; a subset at one use is a narrowing (ADR 0003 section 7), not a new enum. `fallback` names the member a client decoder maps an unknown value to (SCN-080). Narrowing happens at a use, inside a schema (ADR 0003). Members such as `yes` and `no` must be quoted (section 3).
@@ -800,7 +800,7 @@ Examples are named, on a route, and parsed against their schema at compile time 
 # tasks/api.yaml (excerpt: route settings)
 examples:
   firstPage: { status: 200, value: { $file: ./examples/search-200.json } }
-  minimal: { request: true, value: { title: Write the brief } }
+  minimal: { request: true, value: { title: 'Write the brief' } }
 ```
 
 An example targets a success status or the request (`request: true`); error examples live in the registry. Schema examples are ADR 0003. A success example's `value` is what the handler returns: the payload for an item, the item array for a list (paged or not), the id-keyed object for a table. It is parsed against that schema, and the OpenAPI emitter wraps it through the operation's format and paging style before writing it, so an example never restates an envelope (A30).
@@ -812,7 +812,7 @@ Consumer extension keys (FR-10, SCN-016) are declared with a JSON Schema under a
 ```yaml
 # shared/base.yaml (excerpt)
 enums:
-  TaxBasis: { values: [inclusive, exclusive], reason: Acme's tax rules. }
+  TaxBasis: { values: [inclusive, exclusive], reason: "Acme's tax rules." }
 extensions:
   acme:
     tax-basis:
@@ -1308,10 +1308,10 @@ conventions:
         params: { issues: { $each: $issues, $as: { pointer: $item.pointer, rule: $item.rule } } }
 
 enums:
-  Role: { values: [owner, editor, viewer], reason: Roles are local to this product. }
-  TaskState: { values: [open, done, archived], reason: Task states belong to this api. }
-  Surface: { values: [app, studio], reason: The product's entry points. }
-  Service: { values: [catalog, ticketing], reason: The product's internal services. }
+  Role: { values: [owner, editor, viewer], reason: "Roles are local to this product." }
+  TaskState: { values: [open, done, archived], reason: "Task states belong to this api." }
+  Surface: { values: [app, studio], reason: "The product's entry points." }
+  Service: { values: [catalog, ticketing], reason: "The product's internal services." }
 
 schemas:
   $include: ./schemas.yaml
