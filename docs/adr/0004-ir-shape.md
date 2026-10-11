@@ -365,15 +365,92 @@ interface SourceMap {
 
 Keys are `"<layer>#<pointer>"`, the serialised form of an `Origin`. `file` is relative to the workspace root, with forward slashes. Every pass, lint and the CLI turn an origin into `file:line:col` through this table, so diagnostics stay located after the IR is built (FR-1). A pack origin maps to the pack's own file inside its package or bundle.
 
+### 12. The OpenAPI mapping
+
+The OpenAPI 3.1 document is emitted from the IR only (FR-11), and it is the interop surface every other tool reads, so what each IR member becomes in it is fixed here rather than left to the emitter. What OpenAPI states natively is written natively. What it cannot state is written as an `x-seampact-<name>` extension, kebab case, whose JSON Schema `@seampact/openapi` publishes (ADR 0009); the numeric refinements of ADR 0003 section 8 keep the JSON Schema keyword's spelling (`x-seampact-exclusiveMinimum`). A value source is written as in the grammar (`path.taskId`), an origin as its side-table key (`api#/surfaces/app/routes/...`, section 11), a derivation by its id (ADR 0006 section 5). Consumer extension keys are written as `x-<prefix>-<key>` where they are declared (ADR 0002 section 12). The table is closed: an IR member without a row reaches no document, and a new row is a change to this ADR.
+
+| IR | OpenAPI |
+|---|---|
+| `schemes` | `components.securitySchemes`: a cookie scheme is `apiKey` with `in: cookie`, a header scheme `apiKey` with `in: header`, a bearer scheme `http` with `scheme: bearer` and its `bearerFormat`; a signature scheme is `apiKey` with `in: header` and its `name`, plus `x-seampact-signature: { format, algorithm, payload, encoding, toleranceMs, key }` |
+| `access`, identity | `security`: one Security Requirement Object per scheme the operation accepts (`schemes.read` on a safe operation, `schemes.write` otherwise). A cookie scheme with `csrf`, on a write, is one object holding the cookie scheme and its CSRF header scheme, since an object's schemes are all required. Plus `x-seampact-access: { identity }`. Credential and CSRF headers are written through the schemes, never as parameters |
+| `access`, optional | the same list with `schemes.optionalRead` added on a read, plus `{}` (anonymous allowed), and `x-seampact-access: { identity, optionalAuth: <reason> }` |
+| `access`, public | `security: []` and `x-seampact-access: { public: <reason> }` |
+| `access` of a signed identity | `security` with the signature scheme alone, `x-seampact-access: { identity }`, and `x-seampact-raw-body: true` on the request body |
+| `csrf` exemption | `x-seampact-csrf: { exempt: <reason> }` |
+| `principalRequires`, `bindings` | `x-seampact-principal-requires: [<field>]`, `x-seampact-bindings: [{ from, to }]` |
+| `scopes` | `x-seampact-scopes: [{ scope, from }]` in resolution order; `from` is the source, or `resolver` |
+| `requires` | `x-seampact-requires`: the items in order, `{ right, params, subject }` or `{ rule, params, bucket }`, with `entry` when written through a `requirements` entry |
+| `fieldRights` | `x-seampact-restricted-to: [{ schema, pointer, right, params, direction, input }]` on the operation, empty and left out on a relay route |
+| `filteredBy` | `x-seampact-filtered-by: <right>` |
+| `paging` | the request roles as ordinary parameters (`maximum` from `maxLimit`, `default` from `defaultLimit`), the page as the response body schema the format and style give, the style's headers and `Link` as response headers, plus `x-seampact-paging: { style, position, roles: { <role>: <source> }, maxLimit, defaultLimit, token, sortKeys: [{ key, right }] }`, or `{ none: <reason> }` for an unpaged list |
+| `concurrency` | the version as an ordinary parameter or body property, `ETag` on the responses carrying the item, plus `x-seampact-concurrency: { version, field }` |
+| `idempotency` | the key header parameter and the replay response header, plus `x-seampact-idempotency: { header, replayHeader, lifetimeMs, required }`, or `{ exempt: <reason> }` |
+| `owner` | `x-seampact-owner: caller` |
+| `input` | the request body with the format's media type. Component schemas carry no `additionalProperties: false`, since one schema serves both directions: strict input is the default every reader of a seampact document assumes, and an ignoring use writes `x-seampact-unknown-keys: { ignore: <reason> }` on the request body |
+| `responses` | the success responses, each body the format's shape written out around a reference to the payload schema, with the format's media type |
+| `errors` | one response per error status, its `description` the list of its codes, its body the format's error body; each code is a component schema of that body for the code's params, named by the code (`api.forbidden`), with `x-seampact-nature`. Several codes on one status are a `oneOf`, with a `discriminator` on the member the format writes `$code` to when it is a top-level member (`code` under `bare`). The response carries `x-seampact-errors: [{ code, derivedFrom, origin }]`: each code's derivation, or the node that attached it |
+| `examples` | the route examples, wrapped through the format and the paging style (ADR 0002 section 12), in the `examples` of the request body or of the response for their status or code |
+| `cache` | the `Cache-Control` response header with `x-seampact-cache-control: { anonymous, identified }`, one value per caller kind, plus `ETag`, `If-None-Match` and the 304 when `etag` is set |
+| identity headers | ordinary header parameters and response headers, each with `x-seampact-semantic` (`deadline`, `traceContext`, `actorSurface`, `versionToken`) |
+| `budgetMs`, `upstream`, `maturity`, `degradable` | `x-seampact-budget-ms`, `x-seampact-upstream`, `x-seampact-maturity: { level, source, reason }`, `x-seampact-degradable` |
+| `deprecated` | `deprecated: true`, the deprecation headers on the responses, and `x-seampact-deprecation: { sunset, successor }` |
+| `internal` | left out of a document with `internal: exclude`; `x-seampact-internal: true` in the others |
+| `relays` | `x-seampact-relays: { api, operationId }` |
+| `format` | the media types above, `x-seampact-format: <format>` at the document root, and on an operation whose format differs |
+| `api.kind`, `api.role`, `api.caller` | `x-seampact-api: { kind, role, caller }` at the document root |
+| schema marks | ADR 0003: `format: password` for `sensitive`, `x-seampact-discriminator` for a header-tagged union, `x-seampact-enum` and `x-seampact-enum-fallback` for an open output enum, the `x-seampact-*` refinements of `int64` and `decimal` |
+
+```yaml
+# emitted from the reference contract of ADR 0002 (excerpt)
+paths:
+  /v1/health:
+    get:
+      operationId: health
+      security: []
+      x-seampact-access: { public: "Probes call it before any user exists." }
+  /v1/channels/{channelId}/tasks/{taskId}:
+    patch:
+      operationId: updateTask
+      security:
+        - { sessionCookie: [], csrfToken: [] }
+        - { bearer: [] }
+      x-seampact-access: { identity: user }
+      x-seampact-scopes: [{ scope: channel, from: path.channelId }]
+      x-seampact-requires: [{ right: tasks.update, subject: path.taskId }]
+      x-seampact-concurrency: { version: body.expectedVersion, field: version }
+      x-seampact-idempotency: { header: Idempotency-Key, replayHeader: Idempotency-Replayed, lifetimeMs: 86400000, required: true }
+      responses:
+        '403':
+          description: 'api.csrf_invalid, api.forbidden'
+          content:
+            application/problem+json:
+              schema:
+                oneOf: [{ $ref: '#/components/schemas/api.csrf_invalid' }, { $ref: '#/components/schemas/api.forbidden' }]
+                discriminator: { propertyName: code }
+          x-seampact-errors:
+            - { code: api.csrf_invalid, derivedFrom: csrf.cookieWrite }
+            - { code: api.forbidden, derivedFrom: requirement.errors }
+components:
+  securitySchemes:
+    stripeSignature:
+      type: apiKey
+      in: header
+      name: Stripe-Signature
+      x-seampact-signature: { format: 't={ts},v1={sig}', algorithm: hmac-sha256, payload: '{ts}.{rawBody}', encoding: hex, toleranceMs: 300000, key: { value: stripe } }
+```
+
+A moved or added code therefore shows in the committed document's diff (ADR 0011 `checks.openapi`) on every operation it reaches, which is how a reviewer sees an attachment that an indentation slip moved up the tree (ADR 0002 section 8).
+
 ## Consequences
 
 - Phase 1 writes this shape as the IR JSON Schema and its TypeScript types, then generates the Kotlin and PHP models from the schema (FR-40). Field names here are the ones phase 1 uses; additions follow ADR 0005.
 - Targets never walk schemas for rights, never re-derive errors or headers, and find every wire-format detail in `formats`: the IR is larger, target code is smaller and the same in every language.
 - Origins as logical pointers keep the IR byte-stable when files move; the cost is one extra lookup through the side table to print a location.
+- The OpenAPI mapping is fixed per IR member (section 12), so the docs app, the drift check and every tool reading the document see the same `x-seampact-*` extensions; a construct that OpenAPI lacks costs an extension and its published schema, not an emitter's choice.
 - The `kinds` list, code-identified errors with `http.status`, explicit media types and kind-tagged references are paid now so a later transport is additive (ADR 0014).
 - Authored property order makes reordering the properties of a schema an IR change, visible in the diff and in generated constructors; the diff classifies it as non-breaking on the wire.
 
 ## Traceability
 
-- FRs: FR-9, FR-37 (extension slots, open `kind` members), FR-38 (names as segments and role), FR-40 (subset-shaped JSON Schema for model generation), FR-2 (origins of inherited settings), FR-5 (requirements union and order), FR-6 (`derivedFrom`, errors by code), FR-8 (`relays`, documents), FR-23 (field rights), FR-30 (query wire form), FR-31 and A31 (paging styles), FR-33, FR-42 and A30 (formats), FR-27, FR-28.
+- FRs: FR-9, FR-11 (the OpenAPI mapping and its `x-seampact-*` extensions), FR-37 (extension slots, open `kind` members), FR-38 (names as segments and role), FR-40 (subset-shaped JSON Schema for model generation), FR-2 (origins of inherited settings), FR-5 (requirements union and order), FR-6 (`derivedFrom`, errors by code), FR-8 (`relays`, documents), FR-23 (field rights), FR-30 (query wire form), FR-31 and A31 (paging styles), FR-33, FR-42 and A30 (formats), FR-27, FR-28.
 - CHK items enabled: CHK-024, CHK-025, CHK-033, CHK-045, CHK-052, CHK-059, CHK-077, CHK-078, CHK-092, and the IR side of every server item (CHK-011 to CHK-043).

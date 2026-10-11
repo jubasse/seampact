@@ -748,6 +748,12 @@ items:
     frs: [FR-3]
     scenario: SCN-006
     targets: [core]
+  - id: CHK-120
+    source: "14 Lifecycle"
+    fact: The OpenAPI document states every IR member of the mapping in ADR 0004 section 12, natively or through an x-seampact-* extension (access with its reason, a cookie write with its CSRF scheme as one requirement, signature schemes, requirements, scopes, field and sort-key rights, paging, concurrency, idempotency, relays, and each response's codes with their derivation or attaching node), and every extension value validates against its published JSON Schema.
+    frs: [FR-11]
+    scenario: SCN-049
+    targets: [core]
 not_in_checklist:
   - source: "A4, A16"
     reason: Process decisions (FAVIR framing, read-only Arthome research); nothing to test in the product.
