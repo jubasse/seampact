@@ -40,13 +40,13 @@ The line holds the target package and version and the api name. It never holds a
 
 ### Formatter pinning
 
-- TypeScript targets format with Prettier, pinned to an exact version as each target's own dependency, called in-process. Its configuration is a target option with a default (line width, quotes, semicolons, indentation, trailing commas), set in the app config (ADR 0011): code style is the consumer's choice, never imposed (A36). The consumer's Prettier configuration files, `.editorconfig` and plugins are never read, so the output depends only on declared options.
-- The spring-boot generator builds Java with JavaPoet (Palantir's maintained fork), pinned; its printer is deterministic.
-- The PHP targets print with `nette/php-generator`, pinned.
+- TypeScript targets format with Prettier, pinned to an exact version as each target's own dependency, called in-process. Its configuration is a target option, set in the app config (ADR 0011), that accepts every Prettier option except plugins, each with Prettier's default: code style is the consumer's choice, never imposed (A36). The consumer's Prettier configuration files, `.editorconfig` and plugins are never read, so the output depends only on declared options; plugins stay out because their versions would escape the pin.
+- The spring-boot generator builds Java with JavaPoet (Palantir's maintained fork), pinned; its printer is deterministic, and its indent is a target option.
+- The PHP targets print with `nette/php-generator`, pinned, through its `PsrPrinter` by default (four spaces, as PSR-12, PER and Laravel Pint expect), with the indent as a target option.
 
 - File layout is a target option too: one file per resource or per schema, index files, directory and file naming, each with a default. The naming options of ADR 0007 work the same way.
 
-Changing a formatter version is a target release, and its golden diffs are reviewed like any change. Consumers exclude generated directories from their own formatters and linters; `seampact init` writes the ignore entries for the tools it detects.
+Changing a formatter version is a target release, and its golden diffs are reviewed like any change. Generated code lives in the app's one generated directory (`__generated__` by default, ADR 0011), which consumers exclude from their own formatters and linters; `seampact init` writes the ignore entries for the tools it detects, unless `--no-ignore-files`, and prints each file it changes.
 
 ### Golden tests
 
@@ -92,7 +92,9 @@ A server target is done when the `default`, `hand-written` and `boot` profiles p
 
 ### The validator agreement table
 
-The three TypeScript validator targets share a language-neutral JSON table of payloads, each with the expected accept or reject per schema and direction (FR-15). Their generated validators must agree with it exactly, as a CI gate (CHK-080, SM-9). The native targets meet the same expectations through the HTTP suite's 400 cases.
+The three TypeScript validator targets share a language-neutral JSON table of payloads, each with the expected accept or reject per schema and direction (FR-15). Their generated validators must agree with it exactly, as a CI gate (CHK-080, SM-9). The native targets meet the same expectations through the HTTP suite's 400 cases. The table holds, besides the cases of ADR 0003: a root-level union input, a per-subtree `unknownKeys`, an optional property that is not nullable sent as `null`, a string whose length counts variation selectors (the class-validator gaps), `{}` against a list and `[]` against an object, `1.0` for an integer (the PHP decoding cases), `{}` against `{ "publishOn": null }` for an optional and nullable property, a nine-digit `date-time` fraction, unknown keys under `ignore` and `keep`, and an opaque value.
+
+When a target's `nativeDocs` artefact is on, its golden tests also emit the framework's own OpenAPI document for the reference contract and compare it with seampact's: operation ids, response codes and schemas must agree for every contract route (CHK-165).
 
 ## Consequences
 
@@ -105,5 +107,5 @@ The three TypeScript validator targets share a language-neutral JSON table of pa
 ## Traceability
 
 - FRs: FR-14 (pure, deterministic generate), FR-9 and FR-38 (byte-stable IR and naming vectors), FR-15 (agreement table), FR-16 (the undeclared-status test helper is generated and golden-tested), FR-18 (report keyed by checklist id), FR-35 (the suite); amendments A13, A17, A30.
-- Checklist items enabled: CHK-060 (test helper on undeclared responses), CHK-062 and CHK-063 (boot tests and allow-list), CHK-074 (every server target and adapter passes the suite), CHK-080 (validator agreement), CHK-098 (hand-written hooks, no adapter), CHK-099 (exactly one neutral hook per concern, observed through the recorded calls); every server-category item is proven through the suite's tags.
+- Checklist items enabled: CHK-144 (code style options), CHK-165 (native docs agree), CHK-156, CHK-158 and CHK-159 (validator and payload cases), CHK-060 (test helper on undeclared responses), CHK-062 and CHK-063 (boot tests and allow-list), CHK-074 (every server target and adapter passes the suite), CHK-080 (validator agreement), CHK-098 (hand-written hooks, no adapter), CHK-099 (exactly one neutral hook per concern, observed through the recorded calls); every server-category item is proven through the suite's tags.
 - Success metrics: SM-3, SM-7, SM-9.
