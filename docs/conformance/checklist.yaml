@@ -736,6 +736,18 @@ items:
     frs: [FR-8, FR-23]
     scenario: SCN-014
     targets: [core, server]
+  - id: CHK-118
+    source: "A38"
+    fact: A pick or omit schema compiles to the same IR object as its properties written out, each keeping its refinements and marks; a field the source lacks, or an overlay key outside the allowed list, is a compile error.
+    frs: [FR-3]
+    scenario: SCN-030
+    targets: [core, zod]
+  - id: CHK-119
+    source: "14 Responses"
+    fact: A scalar named like a portable format, and a portable format written without its type, are compile errors whose fix names the portable spelling.
+    frs: [FR-3]
+    scenario: SCN-006
+    targets: [core]
 not_in_checklist:
   - source: "A4, A16"
     reason: Process decisions (FAVIR framing, read-only Arthome research); nothing to test in the product.

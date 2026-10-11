@@ -941,7 +941,7 @@ The slots are a closed set:
 | `$code`, `$nature`, `$title`, `$detail`, `$instance`, `$traceId`, `$params` | the error's code, nature, title (or code), optional text, optional occurrence reference, optional trace id, and its params object | `error` |
 | `$<role>` | a paging response role (section 14) or an error-role datum (section 11) | paging styles, role params |
 
-`$id`, `$fields`, `$itemId`, `$itemFields` and `$itemSelf` need the item schema to hold a property named like the collection's `id` parameter (`taskId`); a format that uses one on an operation without it fails to compile, naming the operation and the property. The names `bare` (format), `never` (cache family) and `none` (paging style) are reserved.
+`$id`, `$fields`, `$itemId`, `$itemFields` and `$itemSelf` need the item schema to hold a property named like the collection's `id` parameter (`taskId`); a format that uses one on an operation without it fails to compile, naming the operation and the property. The names `bare` (format), `never` (cache family) and `none` (paging style) are reserved, and so are the portable format names in `scalars` (ADR 0003 section 8).
 
 ### 14. Paging styles
 
@@ -1355,7 +1355,7 @@ Task:
     createdAt: { type: string, format: date-time }
 ```
 
-`tasks/schemas.yaml` (not shown) declares the api's own schemas in the same way: `Health`, `Channel`, `CreateTask`, `UpdateTask`, `ArchiveTask` (its reason; `concurrency` adds `expectedVersion`), `Preferences`, `UpdatePreferences`, `DraftId`, `Draft`, `PaymentEvent`, `TaskQuery` and `TaskSearchResult`.
+`tasks/schemas.yaml` (not shown) declares the api's own schemas in the same way: `Health`, `Channel`, `CreateTask` and `UpdateTask` (picked from `Task`, ADR 0003 section 2), `ArchiveTask` (its reason; `concurrency` adds `expectedVersion`), `Preferences`, `UpdatePreferences`, `DraftId`, `Draft`, `PaymentEvent`, `TaskQuery` and `TaskSearchResult`.
 
 ```yaml
 # tasks/api.yaml

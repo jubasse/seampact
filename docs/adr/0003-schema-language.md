@@ -90,7 +90,7 @@ Every keyword of the 2020-12 vocabularies, kept or refused. A refused keyword is
 | `title`, `description` | kept | docs; `description` may be a `$file` |
 | `default` | kept, with a semantics | section 10 |
 | `deprecated` | kept | emitted to OpenAPI and read by the diff |
-| `readOnly`, `writeOnly` | refused | they make one schema stand for two types; a payload that differs between input and output is two schemas (`CreateTask`, `Task`) |
+| `readOnly`, `writeOnly` | refused | they make one schema stand for two types; a payload that differs between input and output is two schemas (`CreateTask`, `Task`), the input one usually derived from the other with `pick` or `omit` (section 2) |
 | `examples` | kept | each value is parsed against the schema at compile time (section 11) |
 
 ### 2. Shapes
@@ -104,11 +104,48 @@ A schema is one of:
 - an array: `type: array` with `items`;
 - a tagged union: `oneOf` and `discriminator` (section 3);
 - a merged object: `allOf` of object schemas;
+- a derived object: `pick` or `omit` of another object schema (below);
 - a reference: a string, or `$ref`, to a named schema.
 
 An object needs at least one property, except a union variant, which may hold only its tag (section 3). A schema with no recognisable shape, such as `{}`, is refused: a free-form value has no type in any target.
 
 A schema may reference itself, directly or through other schemas, by named reference: a `Comment` whose `replies` are an array of `Comment` is legal, whatever the file layout, because a reference resolves by name (ADR 0002 section 3). An inline cycle cannot be written. A cycle in which every step is a required, non-nullable object property is refused, since no finite value satisfies it. Targets that need it (zod's `z.lazy`) generate the deferral; the shared payload table includes a recursive case.
+
+#### Derived objects: `pick` and `omit`
+
+A create or update input usually holds some of the item's fields with the same constraints. Restating them is a second copy of each constraint, which drifts when one changes (lesson 1). A derived object keeps them from the source:
+
+```yaml
+# studio/schemas.yaml (excerpt)
+Article:
+  type: object
+  required: [articleId, title, state, version]
+  properties:
+    articleId: ArticleId
+    title: { type: string, minLength: 1, maxLength: 200 }
+    body: { type: string, maxLength: 20000 }
+    state: { enum: PublicationState }
+    publishOn: { type: string, format: date }
+    version: { type: integer, minimum: 1 }
+CreateArticle:
+  pick: { from: Article, fields: [title, body, state, publishOn] }
+  required: [title]
+  properties:
+    state: { default: draft }
+UpdateArticle:
+  omit: { from: Article, fields: [articleId, version] }
+  required: []
+  properties:
+    body: { nullable: true }
+    publishOn: { nullable: true }
+```
+
+- `pick: { from, fields }` keeps the listed properties of `from`, in the order of `fields`; `omit: { from, fields }` keeps the others, in the source's order. `from` names an object schema: a plain one, an `allOf` or another derived object. A union, a map or a scalar source is refused, and so is a cycle of sources. A field the source does not hold is a compile error naming the field and the source.
+- A kept property keeps its schema, refinements, marks (`sensitive`, `restrictedTo`), docs, `lint` and extension keys.
+- `required` replaces the source's list for the kept properties. Without it, a kept property stays required when the source requires it. A name in `required` that is not kept is an error.
+- `properties` overlays a kept property, and only one: a field to add, or a field whose refinements differ, is a different fact, written in full in an `allOf` beside the derived object. An overlay may set `nullable`, `default`, `restrictedTo`, `title`, `description`, `deprecated` and `examples`, each replacing the source's. `restrictedTo` is there for the create rule of section 6, a field the source restricts by a resource right; `sensitive` is not, since a secret stays one.
+
+The compiler merges a derived object into a plain object, as it does `allOf` (section 1), so targets, lint and the diff see an ordinary named object and never `pick` or `omit`. A change to a source property is therefore a change to every schema that keeps it, and the diff classifies each by that schema's own directions (ADR 0005). A derived object stays a schema of its own, with its own name and directions, so no schema stands for two types and `readOnly` stays refused.
 
 ### 3. Tagged unions
 
@@ -276,7 +313,7 @@ scalars:
     pattern: '^[A-Z]{2}$'
 ```
 
-A field then writes `{ format: money }`: its type is the scalar's, and writing `type` beside a named format is refused, since the scalar already states it. The portable formats above keep JSON Schema's spelling, `type` with `format`.
+A field then writes `{ format: money }`: its type is the scalar's, and writing `type` beside a named format is refused, since the scalar already states it. The portable formats above keep JSON Schema's spelling, `type` with `format`, so `{ format: email }` without `type` is refused. A scalar may not take the name of a portable format (`uuid`, `date-time`, `date`, `int64`, `decimal`, `email`, `uri`, `uri-reference`) or `password`: one name would then mean two checks. Both errors name the portable spelling as the fix (`type: string, format: email`).
 
 ### 9. Portable regular expressions
 
@@ -319,6 +356,7 @@ Every named schema becomes a named type in every target. An inline schema gets a
 - Phase 1's authoring JSON Schema refuses every keyword marked refused here, with this ADR's reason in the diagnostic.
 - The validator targets (zod, yup, class-validator, VineJS, Bean Validation, Laravel, Symfony) each need code for: code-point string lengths, int64 and decimal strings, the regex anchoring rules, unknown-key refusal on input (and dropping under `unknownKeys: ignore`), header-tagged unions, and stripping on emit. The shared payload table tests each case in CI (SCN-028).
 - Contracts lose some expressiveness: conditional schemas, `anyOf`, tuples and inline enums must be rewritten as tagged unions, separate schemas or catalogue enums. A refused keyword comes back only with a consumer and an ADR.
+- A create or update input derived with `pick` or `omit` holds each constraint once, in the item schema; the price is that a reader follows `from` to see a field's refinements, which `seampact explain` and the editor schemas show (ADR 0002 section 16).
 - `int64` on the wire is a string by default even for targets that could hold a 64-bit number, which costs one conversion in Java and PHP and buys one wire form for every client; an api that sends numbers says so in its conventions.
 - A30 keeps schemas free of wire-format fields, so the same contract can switch formats through its conventions without touching a schema.
 

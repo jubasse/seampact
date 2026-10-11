@@ -171,7 +171,7 @@ type TypeUse =                               // what a property, item, body or p
 ```
 
 - Objects, maps and unions are always named schemas, hoisted to `schemas` with the deterministic name of ADR 0007; scalars, enum uses and arrays stay inline in their use. Generated code therefore never holds an anonymous structural type (FR-3).
-- `allOf` is already merged. A union holds where its tag is read (a body property, or a request header for a union that is a route's whole input) and each variant's tag; the variant schema does not hold the tag property, which targets add inside a body-tagged union only (ADR 0003 section 3).
+- `allOf`, `pick` and `omit` are already merged (ADR 0003 section 2). A union holds where its tag is read (a body property, or a request header for a union that is a route's whole input) and each variant's tag; the variant schema does not hold the tag property, which targets add inside a body-tagged union only (ADR 0003 section 3).
 - `unknownKeys` sits on the use of a schema, never on the schema: an `unknownKeys` written on an inline object moves to the use of its hoisted schema, and one inherited from a signed identity sits on the operation's input with `derivedFrom`. It covers every object reached from that use.
 - A pattern refinement holds the normalised form of ADR 0003 section 9, never the written text alone.
 - `directions` lists `input` and `output` as the schema is used; targets generate per-direction validators from it (ADR 0003 section 4).
@@ -337,7 +337,7 @@ An `object` template either wraps (the payload under a member, `{ data: $payload
 |---|---|
 | `requires`; `scopes` (resolution order); `upstream` (owner first); enum `values`; `bucket.key`; `properties` and declared `params` (written order, A33; derived params after them); template members; a paging style's `request`; `examples` values of a schema; `packs` (application order) | `operations` (by id); a union's variants (by tag); `errors` (by status, then code); `responses` (by status); `tags`, `vary`, `callerKinds`, `directions`, `kinds`, `features`; `schemes.read`, `schemes.write` and `schemes.optionalRead` of an identity; `fieldRights` (by schema, then pointer, then direction); `sortKeys` (by key); `bindings` (by source) |
 
-Object properties keep the order the author wrote them in (A33), so generated types and Java record constructors list fields as written. ADR 0002 makes that order independent of files: an `$include` merges its keys at its own position, and `allOf` members merge in their written order. Properties the compiler adds (a concurrency version field, a rule proof) follow the authored ones, in that order.
+Object properties keep the order the author wrote them in (A33), so generated types and Java record constructors list fields as written. ADR 0002 makes that order independent of files: an `$include` merges its keys at its own position, `allOf` members merge in their written order, a `pick` keeps the order of its `fields` and an `omit` the source's order. Properties the compiler adds (a concurrency version field, a rule proof) follow the authored ones, in that order.
 
 ### 10. Byte-stable serialisation
 
