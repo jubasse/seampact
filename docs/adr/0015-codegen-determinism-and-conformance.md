@@ -12,7 +12,7 @@ Eight server targets in three languages must also prove the same server boundary
 
 ### Generate is pure
 
-A target's generate step is a function of four inputs only: the IR without its location side table, the validated target options, the link descriptors (ADR 0009), and the target's own version. It returns a list of files, each a relative POSIX path and its bytes.
+A target's generate step is a function of four inputs only: the IR without its location side table, the validated target options (formatting and file layout included, below), the link descriptors (ADR 0009), and the target's own version. It returns a list of files, each a relative POSIX path and its bytes.
 
 Inside generate, a target never reads the file system, the network, environment variables, the clock or a random source, and never calls locale-sensitive APIs (`localeCompare`, `Intl`, `toLocaleString`, locale-default string casing). Sorting uses code-unit order. Paths use `/` and never contain an absolute prefix.
 
@@ -40,9 +40,11 @@ The line holds the target package and version and the api name. It never holds a
 
 ### Formatter pinning
 
-- TypeScript targets format with Prettier, pinned to an exact version as each target's own dependency, called in-process with a fixed configuration. The consumer's Prettier configuration, `.editorconfig` and plugins are never read.
+- TypeScript targets format with Prettier, pinned to an exact version as each target's own dependency, called in-process. Its configuration is a target option with a default (line width, quotes, semicolons, indentation, trailing commas), set in the app config (ADR 0011): code style is the consumer's choice, never imposed (A36). The consumer's Prettier configuration files, `.editorconfig` and plugins are never read, so the output depends only on declared options.
 - The spring-boot generator builds Java with JavaPoet (Palantir's maintained fork), pinned; its printer is deterministic.
 - The PHP targets print with `nette/php-generator`, pinned.
+
+- File layout is a target option too: one file per resource or per schema, index files, directory and file naming, each with a default. The naming options of ADR 0007 work the same way.
 
 Changing a formatter version is a target release, and its golden diffs are reviewed like any change. Consumers exclude generated directories from their own formatters and linters; `seampact init` writes the ignore entries for the tools it detects.
 

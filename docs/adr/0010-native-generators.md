@@ -34,7 +34,7 @@ JVM, groupId `io.github.jubasse`:
 
 | Artifact | Language | Role (ADR 0009) | Content |
 |---|---|---|---|
-| `seampact-ir` | Kotlin | core | IR model, naming, consumer-config reader, bundle reader and verifier, binary runner |
+| `seampact-ir` | Kotlin | core | IR model, naming, app-config reader, bundle reader and verifier, binary runner |
 | `seampact-hooks` | Java | hooks | access hook interfaces and runtime types imported by generated Java; no dependency |
 | `seampact-spring-boot` | Kotlin | target | the spring-boot generator, shared by both plugins |
 | `seampact-gradle-plugin` | Kotlin | target | plugin id `io.github.jubasse.seampact`; task `seampactGenerate`, wired before Java compilation |
@@ -46,7 +46,7 @@ Composer, vendor `seampact`:
 
 | Package | Role | Content |
 |---|---|---|
-| `seampact/ir` | core | IR model, naming, consumer-config reader, bundle reader and verifier, binary runner, and the `vendor/bin/seampact` runner |
+| `seampact/ir` | core | IR model, naming, app-config reader, bundle reader and verifier, binary runner, and the `vendor/bin/seampact` runner |
 | `seampact/hooks` | hooks | access hook interfaces and runtime types imported by generated PHP; no dependency |
 | `seampact/laravel` | target | routes, controller interfaces, Form Requests, the full server boundary |
 | `seampact/symfony` | target | routes, controller interfaces, Validator constraints, the full server boundary |
