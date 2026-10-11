@@ -71,7 +71,7 @@ Paths in `extends`, `packs`, `include`, `$ref` and `$file` are relative to the f
 
 A route declared inline and the same route moved to a file reached through `include` compile to byte-identical IR (FR-1, FR-9, SCN-001). The grammar guarantees it with five rules:
 
-1. The IR never depends on the order of keys in a mapping, nor on which file a node came from. Order is meaningful only in a sequence whose order the grammar says matters (`requires`); every other sequence is a set.
+1. The IR never depends on the order of keys in a mapping, nor on which file a node came from. Order is meaningful only in sequences, and `include` never reorders one. ADR 0004 lists the sequences whose order the IR keeps (`requires`, `upstream`, enum `values`, among others) and sorts every other sequence as a set.
 2. `include` replaces itself with the file's mapping before any other step; after it, the tree is the same as if the content had been written inline.
 3. Relative paths inside an included file resolve against that file, so moving content and fixing its relative paths reaches the same files; the IR stores the content of `$file` and `$ref` targets, never a path.
 4. Names that the compiler derives (operation ids, inline schema names, ADR 0007) come from the position in the tree and the role, never from a file name.
