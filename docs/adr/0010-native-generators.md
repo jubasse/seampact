@@ -34,23 +34,25 @@ JVM, groupId `io.github.jubasse`:
 
 | Artifact | Language | Role (ADR 0009) | Content |
 |---|---|---|---|
-| `seampact-ir` | Kotlin | core | IR model, naming, app-config reader, bundle reader and verifier, binary runner |
-| `seampact-hooks` | Java | hooks | access hook interfaces and runtime types imported by generated Java; no dependency |
+| `seampact-ir` | Kotlin | core | IR model, naming, app-config reader (the file or the plugin DSL, A42), bundle reader and verifier, binary runner |
+| `seampact-hooks` | Java | hooks | access hook interfaces and runtime types imported by generated Java, the three-state `Field<T>` (ADR 0003 section 5); no dependency; vendorable (ADR 0009) |
 | `seampact-spring-boot` | Kotlin | target | the spring-boot generator, shared by both plugins |
-| `seampact-gradle-plugin` | Kotlin | target | plugin id `io.github.jubasse.seampact`; task `seampactGenerate`, wired before Java compilation |
-| `seampact-maven-plugin` | Kotlin | target | goal `generate`, bound to `generate-sources`, adds the output as a source root |
+| `seampact-gradle-plugin` | Kotlin | target | plugin id `io.github.jubasse.seampact`; task `seampactGenerate`, wired before Java compilation, with the config, the bundle or source, the binary hash and the options declared as task inputs and the output directory as its output, so up-to-date checks and the build cache work; the `seampact { }` DSL takes the app-config keys |
+| `seampact-maven-plugin` | Kotlin | target | goal `generate`, bound to `generate-sources`, adds the output as a source root; `<configuration>` takes the app-config keys |
 
 Plugin and generator bytecode targets Java 21, the lowest version A13 supports. Both plugins call the same generator library, and a golden test checks they produce identical files. `seampact-hooks` is plain Java so a Spring application does not pull the Kotlin standard library at run time.
+
+Configuration follows each build tool's habit (A42): the app-config keys are written in `seampact.config.yaml` or in the plugin's DSL, with the same schema, never both for one app. Output goes to the app's `outDir`; a JVM app usually sets it to the build directory (`build/generated/sources/seampact/main`, `target/generated-sources/seampact`), leaves it uncommitted and turns `checks.generated` off, while a team that reviews generated diffs keeps the default `__generated__` and commits it (ADR 0011).
 
 Composer, vendor `seampact`:
 
 | Package | Role | Content |
 |---|---|---|
 | `seampact/ir` | core | IR model, naming, app-config reader, bundle reader and verifier, binary runner, and the `vendor/bin/seampact` runner |
-| `seampact/hooks` | hooks | access hook interfaces and runtime types imported by generated PHP; no dependency |
-| `seampact/laravel` | target | routes, controller interfaces, Form Requests, the full server boundary |
-| `seampact/symfony` | target | routes, controller interfaces, Validator constraints, the full server boundary |
-| `seampact/api-platform` | target | resources, DTOs, State Provider and Processor interfaces; API Platform's own OpenAPI generation off |
+| `seampact/hooks` | hooks | access hook interfaces and runtime types imported by generated PHP, the three-state `Field`; no dependency; vendorable (ADR 0009) |
+| `seampact/laravel` | target | a routes file or macro, controller interfaces, a FormRequest and middleware per operation (ADR 0012), the full server boundary around the developer's controller; an `artisan seampact:generate` command beside `vendor/bin/seampact` |
+| `seampact/symfony` | target | a route loader, controller interfaces, the operation attribute and its listener, value resolvers, Validator constraints, the full server boundary around the developer's controller |
+| `seampact/api-platform` | target | resource metadata, DTOs, State Provider and Processor interfaces, the operation attribute and its listener; API Platform's own OpenAPI generation off unless the `nativeDocs` artefact is on |
 | `seampact/laravel-spatie` | adapter | spatie/laravel-permission behind the decide hook (A24) |
 
 Targets are development requirements (`require-dev`); `seampact/hooks` is a runtime requirement of the application. The `vendor/bin/seampact` runner discovers installed targets through a key in each target's `composer.json` `extra` section, the PHP counterpart of the Node CLI resolving targets from the project (ADR 0009). The PHP version floor is the lowest version required by the framework majors the PHP lanes support.
@@ -68,7 +70,7 @@ In both cases no Node.js installation is involved (CHK-076).
 
 ### The standalone compiler binary
 
-Content: the compiler and the CLI commands `compile`, `check` and `bundle`, with the first-party packs embedded (ADR 0008). It carries no codegen target, no `generate` and no `lint`: native consumers generate with their own plugin and do not run lint plugins (FR-12).
+Content: the compiler and every CLI command that needs no target or plugin, `init`, `compile` (with `--editor-schemas`), `check`, `lint` with the core rules, `diff`, `explain` and `bundle`, with the first-party packs embedded (ADR 0008). A Java or PHP team that owns a contract repository therefore runs its release gate (`diff` under `compat.policy: additive-only`), its lint and its editor schemas without Node.js. It carries no codegen target and no `generate`: native consumers generate with their own plugin; and lint plugins, being npm packages, stay with the Node CLI (FR-12).
 
 Build: esbuild bundles the compiler and CLI into one file (architecture external dependency), which is wrapped as a Node single executable application on the Node version pinned by ADR 0001. One Linux job builds all five binaries by injecting the same blob into the official Node binaries of each platform, verified against the Node project's signed checksums. Code cache and startup snapshot stay off, since cross-platform builds do not support them.
 
@@ -96,7 +98,14 @@ PHP packages are developed under `php/<name>` in the monorepo (ADR 0009). A CI s
 
 ### API Platform spike
 
-Before the PHP target lanes start, a spike builds one API Platform operation that serves the default format (bare payload, problem+json errors) and, with the api-platform pack, JSON-LD items, a Hydra page and Hydra errors, with API Platform's OpenAPI generation off. It records which API Platform mechanisms the target configures and which it keeps (A28).
+Before the PHP target lanes start, a spike builds one API Platform operation that serves the default format (bare payload, problem+json errors) and, with the api-platform pack, JSON-LD items, a Hydra page and Hydra errors, with API Platform's OpenAPI generation off. It records which API Platform mechanisms the target configures and which it keeps (A28), and in particular:
+
+- how `security` without `object` is evaluated before the provider reads (API Platform 4.3), against the check order of ADR 0012;
+- `@id` generation for a nested item whose parent id is not an item property, since the IRI converter needs every `uriVariable` from the object (`idProperty`, ADR 0002 section 6);
+- the target's own reject of a restricted input field before denormalisation, since property `securityPostDenormalize` only strips (A21, A42);
+- validation answered as the `schemaInvalid` 400 rather than 422, with `collectDenormalizationErrors` and `allow_extra_attributes: false`;
+- the JSON-LD context routes as allow-listed framework routes (ADR 0008);
+- which API Platform flavours the target supports (Symfony, and whether Laravel too).
 
 ## Consequences
 
@@ -108,5 +117,5 @@ Before the PHP target lanes start, a spike builds one API Platform operation tha
 
 ## Traceability
 
-- FRs: FR-40, FR-38, FR-37 (version checks), FR-14 (native targets), FR-17 (standalone binary and mirrors), FR-19 (Gradle and Maven plugins), FR-21 (PHP targets); amendments A7, A9, A13, A15, A19, A26, A27, A28.
-- Checklist items enabled: CHK-072 (unpublished installs from Maven local and Composer path repositories), CHK-076 (no Node.js on native consumers), CHK-077 and CHK-078 (version checks and open enums in the native models), CHK-079 (Java 21 and 25 through Gradle and Maven), CHK-083, CHK-084 and CHK-085 (PHP targets), CHK-088 (mirror trees installable).
+- FRs: FR-40, FR-38, FR-37 (version checks), FR-14 (native targets), FR-17 (standalone binary and mirrors), FR-19 (Gradle and Maven plugins), FR-21 (PHP targets), FR-13 (`diff` in the binary); amendments A7, A9, A13, A15, A19, A26, A27, A28, A41, A42.
+- Checklist items enabled: CHK-072 (unpublished installs from Maven local and Composer path repositories), CHK-076 (no Node.js on native consumers), CHK-077 and CHK-078 (version checks and open enums in the native models), CHK-079 (Java 21 and 25 through Gradle and Maven), CHK-083, CHK-084 and CHK-085 (PHP targets), CHK-088 (mirror trees installable), and from round 4 CHK-140 (binary commands), CHK-158 (`Field`), CHK-159 (PHP decoding), CHK-166 (JVM DSL, build-directory output, artisan), CHK-167 (JSON-LD contexts).
