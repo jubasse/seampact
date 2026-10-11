@@ -356,7 +356,7 @@ Every named schema becomes a named type in every target. An inline schema gets a
 - Phase 1's authoring JSON Schema refuses every keyword marked refused here, with this ADR's reason in the diagnostic.
 - The validator targets (zod, yup, class-validator, VineJS, Bean Validation, Laravel, Symfony) each need code for: code-point string lengths, int64 and decimal strings, the regex anchoring rules, unknown-key refusal on input (and dropping under `unknownKeys: ignore`), header-tagged unions, and stripping on emit. The shared payload table tests each case in CI (SCN-028).
 - Contracts lose some expressiveness: conditional schemas, `anyOf`, tuples and inline enums must be rewritten as tagged unions, separate schemas or catalogue enums. A refused keyword comes back only with a consumer and an ADR.
-- A create or update input derived with `pick` or `omit` holds each constraint once, in the item schema; the price is that a reader follows `from` to see a field's refinements, which `seampact explain` and the editor schemas show (ADR 0002 sections 16 and 3).
+- A create or update input derived with `pick` or `omit` holds each constraint once, in the item schema; the price is that a reader follows `from` to see a field's refinements.
 - `int64` on the wire is a string by default even for targets that could hold a 64-bit number, which costs one conversion in Java and PHP and buys one wire form for every client; an api that sends numbers says so in its conventions.
 - A30 keeps schemas free of wire-format fields, so the same contract can switch formats through its conventions without touching a schema.
 
