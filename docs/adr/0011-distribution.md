@@ -74,6 +74,31 @@ checks: { openapi: true, generated: true }           # drift checks (FR-11, ADR 
 ```
 
 ```yaml
+# apps/web/seampact.config.yaml: React with a typed fetch client and TanStack Query hooks
+targets:
+  - { id: client, use: '@seampact/codegen-fetch', api: storefront, document: public, out: src/generated/client }
+  - id: hooks
+    use: '@seampact/codegen-react'
+    api: storefront
+    document: public                                 # internal routes stay out of the browser
+    out: src/generated/hooks
+    link: { client: client }                         # the client link kind, ADR 0009
+```
+
+```yaml
+# a standalone NestJS app serving a public and a service api of one workspace
+sources:
+  contracts: { path: ../contracts }                  # its workspace.yaml lists tasks and tasksService
+targets:
+  - { id: validators, use: '@seampact/codegen-zod', apis: [tasks, tasksService], out: src/generated/validators }
+  - id: server
+    use: '@seampact/codegen-nestjs'
+    apis: [tasks, tasksService]
+    out: src/generated/server
+    link: { validators: validators }
+```
+
+```yaml
 # services/billing/seampact.config.yaml: OpenAPI only, no code generated
 openapi:
   billing: openapi/billing.yaml
@@ -91,7 +116,11 @@ targets:
 
 Rules:
 - The root config takes `apps` (the app directories), `sources` and `allowLocal`. An app config takes `sources`, `targets`, `openapi`, `checks` and `allowLocal`. An app inside a root's `apps` sees the root's sources beside its own; a name defined in both is an error naming both files. An app config outside any root, or run on its own, uses only its own sources.
-- `api` names a source when that source holds one api, and `<source>/<api>` otherwise.
+- A target entry takes `id`, `use`, `api` or `apis`, `document`, `out`, `link`, `artefacts`, `options` and, for a server target, `frameworkRoutes`.
+- `api` names an api by its name alone when no other source the app sees holds an api of that name, and as `<source>/<api>` otherwise. `apis` lists several, generated each under `<out>/<api>`, so one app serving a public and a service api writes one entry per target kind; a link between two entries with `apis` pairs each api with the same api.
+- `document` names one of the api's documents (ADR 0002 section 5): the target generates only the operations that document holds, so a client generated from the `public` document leaves the `internal` routes out.
+- Paths (`path` sources, `out`, the `openapi` paths) are relative to the config file that writes them.
+- Only the sources an app uses (by a target, an `openapi` entry or a check) are resolved and checked: a root's `path` source that an app with `allowLocal: false` never names does not fail it.
 - `use` is an npm package name, a Maven `group:artifact` coordinate or a Composer `vendor/name`. Each runner handles the entries of its ecosystem and leaves the others; the forms cannot be confused.
 - `artefacts` switches each artefact a target declares on or off (types, validators, route table, handler interfaces, access hooks, client, query hooks; ADR 0009). Everything a target declares is on by default.
 - `openapi` maps an api to the path of its one document, or to a mapping from each of its documents (ADR 0002 section 5) to a path. An app config with `openapi` and no `targets` generates the documents and no code: an OpenAPI-only setup is a first-class one (A37). `checks.openapi: true` checks every document listed there for drift; `checks.generated: true` checks the committed generated files (ADR 0015).
@@ -108,7 +137,7 @@ Before generating, and in `seampact check`, a runner verifies a bundle source:
 2. the manifest's integrity matches the `integrity` pinned in the config;
 3. each IR file validates against the IR JSON Schema of its declared version.
 
-A missing pin fails and prints the actual integrity, so pinning is a copy. A mismatch fails and names the files that differ. Native plugins run the same three steps in Kotlin or PHP.
+The config schema accepts a bundle source without `integrity`, so pinning is a copy: leave the key out, run `seampact check`, copy the value it prints. A missing pin, or one that differs from the manifest's integrity, fails and prints the actual value; a file whose hash differs from the manifest fails, naming the file. Native plugins run the same three steps in Kotlin or PHP.
 
 Relays (FR-8) may point at an api in a pinned bundle, named in `workspace.imports` (ADR 0002 section 1): workspace compilation reads that bundle's IR, after the same check, for the superset check.
 
