@@ -21,7 +21,7 @@ Choice: data only. A pack is a set of YAML files with the same structure as the 
 Reasons:
 - The standalone compiler binary (ADR 0010) applies packs without Node.js, so a Java or PHP consumer compiling a local source gets the same IR as a Node consumer.
 - A data pack cannot do what the core forbids. It can only fill the slots this ADR lists, and the compiler validates every value with located diagnostics.
-- Code-level house rules still exist, as lint plugins (FR-12). A house kit is a pack plus, when needed, a lint plugin package. The pack never depends on the plugin.
+- Code-level house rules still exist, as lint plugins (FR-12). A house kit is a pack plus, when needed, a lint plugin package. The pack never depends on the plugin. Rules written as data in a pack (a closed catalogue of selectors, reusing those of `derive`, and assertions such as "every route of the `hooks` surface uses a signed identity") would let a native consumer apply house rules without Node.js; they wait for a consumer that asks (lesson 5).
 
 A pack is distributed as an npm package whose `package.json` names its YAML entry file, so the Node CLI resolves it like any dependency, from the nearest `package.json` at or above the contract's workspace root (ADR 0002 section 2). A contract's own pack lives beside it and is referenced by path (`packs: [./packs/house.yaml]`): that is where a contract writes its own `derive` entries, such as attaching a plan-limit code to every `create` route, since a base holds none. The same files are vendored into every contract bundle that uses them (ADR 0011), and the first-party packs are embedded in the standalone binary, so a native consumer never needs npm to resolve one.
 
@@ -34,7 +34,7 @@ A pack may set exactly these, each validated against the pack schema published i
 | Header names | the idempotency key and replay headers (`conventions.idempotency`), identity headers in the `headers` catalogue (deadline, trace context, actor surface, rights version), the rate-limit and deprecation header names | FR-7, FR-28 |
 | Wire formats | `formats`: item, table, list and page shapes with body and header templates, meta fields and who fills each, the error body; media types | FR-42, A30 |
 | Paging styles | `pagings`: request roles mapped to parameter names, response roles mapped to members added to the format's page or to a whole page body, headers and `Link` relations (ADR 0002 section 14) | FR-31, A31 |
-| Named formats | `scalars`: `money` or `iri-reference`, a base JSON type, portable refinements, a description | FR-3 |
+| Named formats | `scalars`: `money` or `iri-reference`, a base JSON type, portable refinements, a description; never the name of a portable format (ADR 0003 section 8) | FR-3 |
 | Cache families | a name mapped to a max-age; `never` (no-store) is reserved | FR-33 |
 | Error families | error codes with status, nature, typed params and an example, added to the registry | FR-6 |
 | Error role bindings | the code each derivation role answers, renaming the core default (A34), with an optional params template; how far a code attached on a node reaches (`conventions.errors.reach`) | FR-6 |
