@@ -103,7 +103,7 @@ conventions:
 
 | Key | Meaning |
 |---|---|
-| `select` | criteria a route must all match, each a list of accepted values: `op` (`list`, `get`, `create`, `update`, `delete`, `batch`: the `ops` name the route came from), `access` (`read` for a safe route, `write` otherwise), `apiKind` (`surface`, `service`), `identity`, `tag` |
+| `select` | criteria a route must all match, each a list of accepted values: `op` (`list`, `get`, `create`, `update`, `delete`, `batch`: the `ops` name the route came from), `access` (`read` for a safe route, `write` otherwise), `apiKind` (`product`, `service`), `identity`, `tag` |
 | `declareRight` | `{ name, subject, errors }`: declares the right the `name` template gives. `subject.member` (on member routes) is `resource`, the item schema with the member id, or `none`; `subject.collection` (on other routes) is `innermostScope` or `none`. When the catalogue already declares that name, the declared right is used and its subject must be the one the entry would give |
 | `require` | `{ right: <template> }` or `{ rule, params, bucket }`: a requirement attached to the route (section 8 gives its position) |
 | `attachErrors` | codes attached to the route |
@@ -196,7 +196,7 @@ No keyword of the grammar is a word that YAML 1.1 reads as a boolean (`on`, `off
 | requirement `subject` | path, query, header, principal, scope (never body: rights are decided before body validation, FR-5) |
 | scope id (`scopes` on a node) | path, query, header, host, subdomain, principal, resolver (A23) |
 | `bindings` key / value | path, query, body / principal |
-| `concurrency.version` | body, query (a header such as `If-Match` is refused, SCN-031) |
+| `concurrency.version` | body, query, header (`header.If-Match` reads a strong entity tag) |
 | bucket `key` | address, address prefix, principal, body |
 | signature `key` | path, query, header |
 
@@ -207,7 +207,7 @@ No keyword of the grammar is a word that YAML 1.1 reads as a boolean (`on`, `off
 api:
   name: tasks
   version: 1
-  kind: surface
+  kind: product
   maturity: provisional
   summary: Tasks shared inside channels.
   description: { $file: ./docs/api.md }
@@ -222,7 +222,8 @@ extends: ../shared/base.yaml
 |---|---|
 | `name` | the api name, unique in the workspace |
 | `version` | an integer; the path version derives from it (section 6) |
-| `kind` | `surface` (default) or `service` |
+| `kind` | `product` (default: an api for end users and their clients) or `service` (an internal api with a caller identity, below) |
+| `pathVersion` | `{ omit: "<reason>" }` to keep `/v{version}` out of every surface's path (section 6); by default the path carries the version |
 | `role` | `gateway`: every route derives 502, 503 and 504 from the `upstreamUnavailable`, `serviceUnavailable` and `upstreamTimeout` roles (FR-34) |
 | `caller` | service apis only: `{ identity, right }`; see below |
 | `maturity` | `experimental`, `provisional` or `stable`; the default maturity of every operation |
@@ -251,7 +252,18 @@ surfaces:
         output: Health
 ```
 
-`prefix` is the surface's leading path. `{version}` is replaced by `api.version`. A prefix with no `{version}` gets `/v{version}` in front of it. A literal version segment such as `/v1` is refused, with the mismatch stated when it differs from `api.version` (FR-2, SCN-032); the version is held once, on the api.
+`prefix` is the surface's leading path. `{version}` is replaced by `api.version`. A prefix with no `{version}` gets `/v{version}` in front of it. A literal version segment such as `/v1` is then refused, with the mismatch stated when it differs from `api.version` (FR-2, SCN-032); the version is held once, on the api.
+
+The path version is a default, not a rule (A33). `pathVersion: { omit: "<reason>" }` on the api, or on one surface, keeps it out: the prefix is used exactly as written, and may not hold `{version}`. That serves an api versioned by a header or a media type (declared with its own headers or formats) and a webhook path a third party fixes:
+
+```yaml
+# tasks/api.yaml (excerpt)
+surfaces:
+  stripeHooks:
+    prefix: /stripe
+    pathVersion: { omit: "Stripe calls the URL configured in its dashboard." }
+    identity: stripe
+```
 
 Every node is a mapping of settings plus its children. There are three kinds of node:
 
@@ -295,7 +307,7 @@ tasks:
 | `member` | collection | a node for the member scope (`/tasks/{taskId}`): settings plus `routes` |
 | `routes` | single, surface, `collection`, `member` | the named children |
 
-Settings written on the collection node apply to all its routes; settings written in `collection` or `member` apply to that scope only. That is how a scope id read from the member path (`path.channelId`) applies to member routes and not to the list.
+Settings written on the collection node apply to all its routes; settings written in `collection` or `member` apply to that scope only. The routes `list`, `create` and `batch` belong to the `collection` scope, and `get`, `update` and `delete` to the `member` scope: each inherits that scope's settings, and their origin is under `.../collection` or `.../member`. That is how a scope id read from the member path (`path.channelId`) applies to `getChannel` and every member route, and not to the list. A route's `path` is relative to its scope's path (`/tasks` for `collection`, `/tasks/{taskId}` for `member`).
 
 #### The `ops` shorthand
 
@@ -307,7 +319,7 @@ Settings written on the collection node apply to all its routes; settings writte
 | `get` | collection, single | `GET /tasks/{taskId}`, `GET /me/preferences` | `get` + singular (`getTask`, `getPreferences`) | none | `200`, `item` |
 | `create` | collection | `POST /tasks` | `create` + singular | required `input` | `201`, `item` |
 | `update` | collection, single | `PATCH /tasks/{taskId}` | `update` + singular | required `input` | `200`, `item` |
-| `delete` | collection, single | `DELETE /tasks/{taskId}` | `delete` + singular | none | `204`, or `200` with `output` (SCN-040) |
+| `delete` | collection, single | `DELETE /tasks/{taskId}` | `delete` + singular | none (a versioned delete reads its version from the query or a header) | `204`, or `200` with `output` (SCN-040) |
 | `batch` | collection | `POST /tasks/batch` | `get` + plural + `Batch` (`getTasksBatch`) | `{ ids }`, at most `maxIds`, or a declared `input` | `200`, a table of `item` keyed by id |
 
 The plural is the collection's name; the singular is the id parameter's name without its trailing `Id` (`taskId` gives `task`), or the whole parameter name when it has no such suffix. For a single, the noun is the single's name. Any op's settings may override `method`, `path`, `operationId`, `input`, `output`, `responses` and every node setting. `create` and `update` have no default input, because the item schema holds fields a client never sends; the missing input is a compile error naming the op. No other shorthand exists until a consumer needs one (lesson 5).
@@ -321,7 +333,7 @@ Operation ids of other routes: a route under `member` is its name plus the singu
 Kept from Arthome (brief 5.2, FR-2):
 
 - `owner: caller`: the caller owns the records. On a collection, another caller's id answers 404 (derived), with no version and no 409; on a single, nothing is derived (SCN-004). The boundary cannot know who owns a record, so the handler (or the optional record loader of ADR 0012) answers it: the target gives the handler a typed `notFound` result for the `notFound` role, no hook is added, and the generated test helper checks the declared 404.
-- Otherwise a write may be versioned: `concurrency: { version: body.expectedVersion, field: version }`. `update` and `delete` inherit it; a member route only with `concurrency: inherit` (SCN-003, SCN-031). The route's input must hold the `version` field (a body field or a query parameter) and the item schema must hold `field`; either missing is a compile error naming the field. A stale write derives `409` from the `stateConflict` role. `If-Match` is not supported until a consumer needs it.
+- Otherwise a write may be versioned: `concurrency: { version: body.expectedVersion, field: version }`. `version` is where the client sends the version it read: a body field, a query parameter, or a request header (`header.If-Match` reads it as a strong entity tag, `"7"`); `field` is the item property it is compared with. `update` and `delete` inherit it; a member route only with `concurrency: inherit` (SCN-003, SCN-031). The compiler adds the version parameter itself, typed like `field`, after the authored fields: to the body input for a body source, to the query or headers otherwise. No input restates it, and an input that declares it is a compile error ("remove it; `concurrency` adds it"); an item schema without `field` is a compile error naming the field. A route without a body never carries the version in one (A33): on a `delete` without `input`, a body source becomes the query parameter of the same name (`body.expectedVersion` gives `query.expectedVersion` on `deleteTask`), and a query or header source stays as it is. A stale write derives `409` from the `stateConflict` role. With `header.If-Match`, every response carrying the item writes its `ETag` from `field`, and `cache.etag` on such a route uses that tag.
 - DELETE when the record disappears; an action (`POST .../archive`) when it stays with a new state.
 
 ### 7. Routes
@@ -387,7 +399,7 @@ Every node may set the settings below; its descendants inherit them, and the IR 
 | `headers`, `query` | added; one name declared twice is an error |
 | `upstream`, `maturity`, `internal`, `deprecated`, `budget`, `bodyLimit`, `cache`, `csrf`, `idempotency`, extension keys | the nearest wins |
 
-`owner`, `concurrency`, `ops`, `paging`, `sortable`, `filteredBy`, `degradable`, `relays`, `examples` and docs are not inherited. An inherited requirement cannot be removed below; a route that needs fewer requirements belongs elsewhere in the tree. This keeps every requirement of a route visible in its ancestry.
+`owner`, `concurrency`, `ops`, `id`, `item`, `path`, `pathParams`, `paging`, `sortable`, `filteredBy`, `degradable`, `relays`, `examples`, `lint` and docs are not inherited: each applies to the node or element it is written on. Three inherited settings have limits: `deprecated.successor` is written on a route only, since one successor cannot serve several operations; `cache` applies to the GET routes below it and is refused on a non-GET route; a stated `maturity`, written on the route or inherited, wins over the one derived from `upstream`. An inherited requirement cannot be removed below; a route that needs fewer requirements belongs elsewhere in the tree. This keeps every requirement of a route visible in its ancestry.
 
 ### 9. Access, identities, rights, rules, scopes
 
@@ -601,10 +613,10 @@ scopes: { org: subdomain, project: path.projectId }
 - `budget: 300ms`: the client's default timeout and the deadline sent on an identity with a `deadline` header (SCN-043, SCN-078).
 - `bodyLimit: 2MiB`: overrides `conventions.bodyLimit` (SCN-041).
 - `idempotency: { exempt: "<reason>" }`: a write without the idempotency key (SCN-042).
-- `internal: true`: keeps the route out of documents with `internal: exclude` (surface apis only, SCN-044).
+- `internal: true`: keeps the route out of documents with `internal: exclude` (product apis only, SCN-044).
 - `upstream: [streaming, catalog]`: services from the `services` catalogue, the owning service first. The operation's maturity derives from the owning service, otherwise from `api.maturity` (FR-34).
-- `maturity: { level: experimental, reason: "<reason>" }`: a stated maturity; it must differ from the derived one (SCN-087).
-- `deprecated: { sunset: '2027-06-30', successor: getTask }`: derives the Deprecation, Sunset and successor Link headers (FR-13, SCN-051).
+- `maturity: { level: experimental, reason: "<reason>" }`: a stated maturity. On a node it departs from the derived level, so it takes a reason; on the api, `maturity` is a bare level, the default every operation derives from. A stated level equal to the derived one is reported by the lint rule `seampact/redundant-maturity`, silenced through `lint.allow` (SCN-087, SCN-018).
+- `deprecated: { sunset: '2027-06-30', successor: getTask }`: derives the Deprecation, Sunset and successor Link headers (FR-13, SCN-051); `successor` only on a route.
 - `tags: [tasks]`.
 
 ```yaml
@@ -684,7 +696,7 @@ enums:
   Answer: { values: ['yes', 'no'], reason: A survey answer. }
 ```
 
-An enum declares `values` (strings, unique) and either `source` (`{ vocabulary: <name> }` for an external vocabulary, or `{ enum: <Enum> }` to take another enum's values) or, for a local enum, `reason` (FR-29). `fallback` names the member a client decoder maps an unknown value to (SCN-080). Narrowing happens at a use, inside a schema (ADR 0003). Members such as `yes` and `no` must be quoted (section 3).
+An enum declares `values` (strings, unique) and either `source` or, for a local enum, `reason` (FR-29). `source: { vocabulary: <name> }` names an external vocabulary: the name is a free label for the reader, with no declaration and no pattern. `source: { enum: <Enum> }` takes another enum's values as its own, so `values` is omitted; a subset at one use is a narrowing (ADR 0003 section 7), not a new enum. `fallback` names the member a client decoder maps an unknown value to (SCN-080). Narrowing happens at a use, inside a schema (ADR 0003). Members such as `yes` and `no` must be quoted (section 3).
 
 Examples are named, on a route, and parsed against their schema at compile time (FR-3, SCN-006):
 
@@ -692,7 +704,7 @@ Examples are named, on a route, and parsed against their schema at compile time 
 # tasks/api.yaml (excerpt: route settings)
 examples:
   firstPage: { status: 200, value: { $file: ./examples/search-200.json } }
-  missingTitle: { request: true, value: { title: '' } }
+  minimal: { request: true, value: { title: Write the brief } }
 ```
 
 An example targets a success status or the request (`request: true`); error examples live in the registry. Schema examples are ADR 0003. A success example's `value` is what the handler returns: the payload for an item, the item array for a list (paged or not), the id-keyed object for a table. It is parsed against that schema, and the OpenAPI emitter wraps it through the operation's format and paging style before writing it, so an example never restates an envelope (A30).
@@ -1029,7 +1041,9 @@ Laravel's paginator also writes `meta.links`, a numbered list of page links. It 
 | `api: { name, version, maturity }` only | adds `kind`, `role`, `caller`, `compat`, `documents` | FR-8, FR-13, FR-34 need them, and they are api facts |
 | resources and routes in two maps at the top | one `routes` map per node; the node says its kind (`kind` or `method`) | two maps allowed the same name twice; the kind is already stated |
 | top-level `resources` under an implicit surface | each surface holds its tree | several surfaces per api, each with its prefix, identity and documents |
-| `prefix: /v1` | `prefix: /v{version}`, literal version refused | the version is one fact, held on the api (FR-2) |
+| `prefix: /v1` | `prefix: /v{version}`, literal version refused, `pathVersion: { omit }` to opt out | the version is one fact, held on the api (FR-2); the path version is a default (A33) |
+| `kind` absent | `kind: product` or `service` | "surface" already names a tree root |
+| version in the input schema | added by the compiler from `concurrency`; query or header on a DELETE | one fact, and no DELETE body (A33) |
 | `path: /health` | relative `path`, no leading slash, default from the node name | paths mirror the tree; a leading slash suggested an absolute path that the prefix then changed |
 | children of a `single` mixed with its settings | children under `routes` | a child named like a setting (`cache`) was ambiguous |
 | `collection:` and `member:` holding children | they are nodes: settings plus `routes` | settings per scope (a scope id read from the member path) |
@@ -1060,7 +1074,7 @@ Laravel's paginator also writes `meta.links`, a numbered list of page links. It 
 
 ## Worked example: the reference tasks api
 
-A workspace of two apis: a surface api with a tenant-scoped collection under rights, a single owned by the caller, a signed webhook surface, and a service api whose route relays a public operation. Schemas are kept short; their language is ADR 0003.
+A workspace of two apis: a product api with a tenant-scoped collection under rights, a single owned by the caller, a signed webhook surface, and a service api whose route relays a public operation. Schemas are kept short; their language is ADR 0003.
 
 ```yaml
 # workspace.yaml
@@ -1214,14 +1228,14 @@ Task:
     createdAt: { type: string, format: date-time }
 ```
 
-`tasks/schemas.yaml` (not shown) declares the api's own schemas in the same way: `Health`, `Channel`, `CreateTask`, `UpdateTask`, `ArchiveTask` (holding `expectedVersion`), `Preferences`, `UpdatePreferences`, `DraftId`, `Draft`, `PaymentEvent`, `TaskQuery` and `TaskSearchResult`.
+`tasks/schemas.yaml` (not shown) declares the api's own schemas in the same way: `Health`, `Channel`, `CreateTask`, `UpdateTask`, `ArchiveTask` (its reason; `concurrency` adds `expectedVersion`), `Preferences`, `UpdatePreferences`, `DraftId`, `Draft`, `PaymentEvent`, `TaskQuery` and `TaskSearchResult`.
 
 ```yaml
 # tasks/api.yaml
 api:
   name: tasks
   version: 1
-  kind: surface
+  kind: product
   maturity: provisional
   summary: Tasks shared inside channels.
   compat: { policy: additive-only }
@@ -1371,7 +1385,7 @@ What the example shows, by route:
 - `searchTasks`: an included route, idempotency exempt with its reason, a 300 ms budget, a named example.
 - `getPreferences` and `updatePreferences`: a single owned by the caller, conditional GET; `deleteDraft` answers 200 with the deleted record.
 - `payments` (`POST /v1/hooks/payments`): the signed `stripe` identity, raw body, no CSRF and no idempotency key, 204.
-- `getTask` in `tasksService` (`GET /internal/v1/channels/{channelId}/tasks/{taskId}`): the service identity with its deadline, trace and actor-surface headers, `callerService` allowing `catalog`, and a relay whose superset check runs against `tasks.getTask`.
+- `getTask` in `tasksService` (`GET /internal/v1/channels/{channelId}/tasks/{taskId}`): the service identity with its deadline and trace headers (its actor-surface header applies to writes only), `callerService` allowing `catalog`, and a relay whose superset check runs against `tasks.getTask`.
 
 Short forms not in the reference contract:
 
@@ -1426,7 +1440,7 @@ listChanges:
 - Contracts carry no house convention: header names, right names, page shapes and wire formats all come from the base or from packs. Derived errors have default codes in the core (A34), each renamable, so a contract with no pack compiles; a paged list still needs a paging style (A31).
 - The grammar has three shorthands only: a string for a schema reference, `ops` as a list, and `paging` as a style name. Each yields the same IR as its long form.
 - An inherited requirement cannot be removed below; a contract that needs it must restructure its tree. Revisit only with a consumer that cannot.
-- Not modelled until a consumer needs it: `If-Match`, media types other than JSON (and the raw body of a signed identity), a base extending a base, shorthands beyond `ops`.
+- Not modelled until a consumer needs it: media types other than JSON (and the raw body of a signed identity), a base extending a base, shorthands beyond `ops`.
 
 ## Traceability
 
@@ -1441,7 +1455,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 |---|---|
 | SCN-001 | `$include`, `routes`, `collection`, the byte-identity rule (2, 6) |
 | SCN-002 | refused pitfalls P1 to P9, `$include` cycles (3) |
-| SCN-003 | `kind: collection`, `id`, `item`, `concurrency.version`, `concurrency.field`, `ops`, `member`, `method` (6) |
+| SCN-003 | `kind: collection`, `id`, `item`, `concurrency.version`, `concurrency.field`, `ops`, `member`, `method` (6); the compiler adds `expectedVersion`, to the body of `updateTask` and to the query of `deleteTask` |
 | SCN-004 | `owner: caller`, `ops` (6) |
 | SCN-005 | `enums`, `enum` in a schema (12, ADR 0003) |
 | SCN-006 | `examples`, `$file` (12, 2); refused keyword `if` (ADR 0003). The scenario's "TaskPage" example is the list payload, the item array, which the emitter wraps through the format |
@@ -1459,8 +1473,8 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-026 | `schemes` of `kind: signature` (`name`, `format`, `algorithm`, `payload`, `encoding`, `tolerance`, `key`), `identities` of `kind: signed` (9) |
 | SCN-029 | `extends`, duplicate definitions (2) |
 | SCN-030 | `$ref` to a file, `$include` of a schema with a fragment, name-keyed schema files (2) |
-| SCN-031 | `concurrency.version: query.<p>`, `concurrency: inherit`, `If-Match` refused (6, 4) |
-| SCN-032 | `api.version`, `surfaces.<s>.prefix` with `{version}` (5, 6) |
+| SCN-031 | `concurrency.version: query.<p>`, `concurrency: inherit` (6, 4). A33 accepts `header.If-Match`, which the scenario's acceptance criterion refused; the scenario follows A33 |
+| SCN-032 | `api.version`, `surfaces.<s>.prefix` with `{version}`, `pathVersion.omit` (5, 6) |
 | SCN-033 | `input` inline, derived names; `oneOf`, `discriminator` (7, ADR 0003, ADR 0007) |
 | SCN-034 | `principal.requires` (9) |
 | SCN-035 | `identity` inheritance, `routes` (8, 6) |

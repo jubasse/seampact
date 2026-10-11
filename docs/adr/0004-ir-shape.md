@@ -67,12 +67,13 @@ interface ContractIR {
 interface Api {
   id: string;  name: Name;                  // 'tasks'
   version: number;                          // the path version
-  kind: 'surface' | 'service';
+  kind: 'product' | 'service';
+  pathVersion: { omit?: Reason; origin };   // omitted surfaces also carry it in 'surfaces'
   role?: 'gateway';
   maturity: Maturity;                       // 'experimental' | 'provisional' | 'stable'
   caller?: { identity: IdentityId; right: RightId };
   compat: { policy: 'additive-only' | 'none' };
-  surfaces: Record<SurfaceId, { name: Name; prefix: string; origin: Origin }>;
+  surfaces: Record<SurfaceId, { name: Name; prefix: string; pathVersionOmitted?: Reason; origin: Origin }>;
   documents: Record<DocumentId, { surfaces: SurfaceId[]; internal: 'include' | 'exclude' }>;
   docs: Docs;  extensions: Extensions;  origin: Origin;
 }
@@ -206,7 +207,7 @@ interface Operation {
   errors: { code: ErrorCode; example?: unknown; derivedFrom?: DerivedFrom; origin?: Origin }[];   // origin: the node that attached it (A35)
   fieldRights: FieldRight[];
   idempotency?: { header: string; replayHeader: string; lifetimeMs: number; derivedFrom } | { exempt: Reason; origin };
-  concurrency?: { version: ValueSource; field: string; derivedFrom };
+  concurrency?: { version: ValueSource; field: string; derivedFrom };   // per operation: a DELETE reads a body source from the query
   owner?: { kind: 'caller'; origin };
   cache?: Cache;
   paging?: Paging;
