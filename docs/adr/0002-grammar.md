@@ -404,7 +404,7 @@ assign:
 | `method` | `get`, `post`, `put`, `patch` or `delete` |
 | `path`, `pathParams` | the segment and the schemas of its extra placeholders (all required) |
 | `operationId` | replaces the derived id |
-| `query` | a fields map, or a schema name; an object-typed field and a list are encoded as `conventions.query` says, and any undeclared key is refused (FR-30). Written on a node, it reaches the safe routes below it only (section 8) |
+| `query` | a fields map, or a schema name; an object-typed field and a list are encoded as `conventions.query` says, and an undeclared key is refused (FR-30) unless `unknownQuery` says otherwise (below). Written on a node, it reaches the safe routes below it only (section 8) |
 | `headers` | request headers: a fields map keyed by header name |
 | `input` | the body schema (`application/json`) |
 | `output` | the body of the single success response, always the whole payload: its status is the op's default, or `200` |
@@ -416,7 +416,14 @@ assign:
 | `examples` | named examples (section 12) |
 | `summary`, `description` | docs |
 
-Query wire kinds (number, boolean, list, text, object) derive from each field's schema type and need no keyword (FR-30, SCN-081). How a list and an object travel is a convention with a default (A36): `conventions.query.lists` is `repeat` (`tag=a&tag=b`, the default) or `comma` (`tag=a,b`), and `conventions.query.objects` is `explode` (an object's members as top-level keys, the default) or `deepObject` (`filter[state]=open`).
+Query wire kinds (number, boolean, list, text, object) derive from each field's schema type and need no keyword (FR-30, SCN-081). How a list and an object travel is a convention with a default (A36): `conventions.query.lists` is `repeat` (`tag=a&tag=b`, the default), `comma` (`tag=a,b`) or `brackets` (`tag[]=a&tag[]=b`, PHP's native form, which API Platform's filters use), and `conventions.query.objects` is `explode` (an object's members as top-level keys, the default) or `deepObject` (`filter[state]=open`). A server target decodes from the raw query string with these rules, never from the platform's parsed query (PHP's `$_GET`, which keeps only the last of `tag=a&tag=b`; Express's `query parser` setting), so no framework setting changes what the contract accepts.
+
+An undeclared query key is refused by default. Tracking parameters (`utm_*`), cache busters and parameters a gateway adds make that too strict for some apis, so the policy is a default with a reasoned exception (A36, A40): `conventions.query.unknownKeys: { ignore: "<reason>" }` sets it for the api, and the inherited setting `unknownQuery` (`refuse`, or `{ ignore: "<reason>" }`) sets it for a subtree or a route, the nearest winning. Ignored keys never reach the handler.
+
+```yaml
+# tasks/api.yaml (excerpt: settings of a surface root)
+unknownQuery: { ignore: "Marketing links add utm_* parameters to every page." }
+```
 
 `responses` maps a status to `{ body, headers, description }`; `headers` is a fields map of response headers keyed by name. It serves several 2xx on one route (SCN-038), a `202` with `Location` and `Retry-After` (SCN-039) and a `DELETE` answering 200 with a body (SCN-040). Only success responses are written here; error responses come from error codes (section 11).
 
@@ -473,7 +480,7 @@ Every node may set the settings below; its descendants inherit them, and the IR 
 | `errorRoles` | per role, the nearest wins, over `conventions.errors.derived` |
 | `tags` | union |
 | `headers`, `query` | added; one name declared twice is an error. `query` reaches safe routes only: a write route below a node's `query` does not get it |
-| `upstream`, `maturity`, `internal`, `deprecated`, `budget`, `bodyLimit`, `cache`, `csrf`, `idempotency`, `format`, extension keys | the nearest wins |
+| `upstream`, `maturity`, `internal`, `deprecated`, `budget`, `bodyLimit`, `cache`, `csrf`, `idempotency`, `format`, `unknownQuery`, extension keys | the nearest wins |
 
 `owner`, `concurrency`, `ops`, `id`, `singular`, `item`, `path`, `pathParams`, `paging`, `sortable`, `filteredBy`, `degradable`, `relays`, `examples`, `lint` and docs are not inherited: each applies to the node or element it is written on. Three inherited settings have limits: `deprecated.successor` is written on a route only, since one successor cannot serve several operations; `cache` applies to the GET routes below it and is refused on a non-GET route; a stated `maturity`, written on the route or inherited, wins over the one derived from `upstream`. An inherited requirement cannot be removed below; a route that needs fewer requirements belongs elsewhere in the tree. This keeps every requirement of a route visible in its ancestry. Requirements stack, they are not refined: `{ right: projectAccess, params: { level: read } }` on a `member` scope plus `{ right: projectAccess, params: { level: admin } }` on one of its routes asks the decide hook twice, in that order, and the route runs only when both allow. Where the second call matters, write the requirement on each route rather than on the scope; a `requirements` entry (section 9) keeps that to one name per route.
 
@@ -485,7 +492,7 @@ Inheritance by position has one trap. When the last key of a block is written on
 
 - `identity: <name>`: the route requires that identity. A surface usually sets it once.
 - `access: { public: "<reason>" }`: no authentication; the principal is null.
-- `access: { optionalAuth: "<reason>" }`: an anonymous caller or the nearest `identity`. A presented credential that the authenticate hook refuses is treated as anonymous, never answered 401 (brief section 7, A33), which is what a sign-out with an expired session needs.
+- `access: { optionalAuth: "<reason>" }`: an anonymous caller or the nearest `identity`. A presented credential that the authenticate hook refuses is treated as anonymous by default, never answered 401 (brief section 7, A33), which is what a sign-out with an expired session needs. `onRefused: reject` beside it answers 401 instead, as GitHub does for a bad token on a public endpoint: `access: { optionalAuth: "<reason>", onRefused: reject }`. `onRefused` is `anonymous` (the default) or `reject`, and is refused without `optionalAuth` (A40).
 - `csrf: { exempt: "<reason>" }`: no CSRF check on this route's cookie writes.
 
 `identity` and `access` are inherited separately, the nearest winning for each (section 8). A node that sets `identity` without `access` makes the identity required again below it; `optionalAuth` uses the nearest `identity`, and both may be set on one node. A route that resolves to neither an identity nor a public access is a compile error that names both fixes (FR-4, SCN-007). A public child under an identified parent still needs its reason (SCN-035).
@@ -502,7 +509,7 @@ schemes:
   internalToken: { kind: bearer, bearerFormat: jwt }
 ```
 
-`kind` is `cookie`, `header` (an API key in a header), `bearer` (HTTP bearer) or `signature` (A5). `name` is the cookie or header name. `bearerFormat` documents a bearer token's format, emitted as OpenAPI's `bearerFormat`; nothing checks it. `csrf` on a cookie scheme names the header scheme a cookie write must also present; CSRF is derived from it, never written on an identity (FR-27, SCN-008, SCN-077). CSRF is opt-in (A34): a cookie scheme without `csrf` derives no CSRF check, and the lint rule `seampact/cookie-without-csrf` reports it, silenced with a reason through `lint.allow`. A `signature` scheme declares (details and test vectors: ADR 0013):
+`kind` is `cookie`, `header` (an API key in a header), `query` (an API key in a query parameter, as some map and webhook apis still take), `bearer` (HTTP bearer), `basic` (HTTP Basic) or `signature` (A5). `name` is the cookie, header or query parameter name; `bearer` and `basic` take none. A `query` scheme's parameter is never a declared query field and never an unknown key. `bearerFormat` documents a bearer token's format, emitted as OpenAPI's `bearerFormat`; nothing checks it. A bearer scheme may also state, for the document only, the OAuth 2 flows or the OpenID Connect discovery URL that issue its tokens, so documentation tools and client generators can obtain one: `oauth2: { flows: <OpenAPI OAuth Flows Object> }` or `openIdConnect: <url>`, never both. The run time is unchanged: the authenticate hook checks the token. `csrf` on a cookie scheme names the header scheme a cookie write must also present; CSRF is derived from it, never written on an identity (FR-27, SCN-008, SCN-077). CSRF is opt-in (A34): a cookie scheme without `csrf` derives no CSRF check, and the lint rule `seampact/cookie-without-csrf` reports it, silenced with a reason through `lint.allow`. A `signature` scheme declares (details and test vectors: ADR 0013):
 
 ```yaml
 # shared/base.yaml (excerpt)
@@ -518,7 +525,26 @@ schemes:
     key: { value: stripe }
 ```
 
-`name` is the header carrying the signature, as for a header scheme. `format` holds `{sig}` and optionally `{ts}`; `payload` holds `{rawBody}` and optionally `{ts}`. `tolerance` is required when `{ts}` is used and refused otherwise. `key` is the one way to name the key identifier the application's secret lookup receives (FR-20): `{ value: <literal> }`, or `{ from: <path, query or header source> }`. A `from` source is read per route: every route under an identity whose scheme reads `key.from` must have that parameter (a path placeholder, a declared query field or request header), and a route without it is a compile error naming the route, the identity and the source.
+`name` is the header carrying the signature, as for a header scheme. `verify` says who reads it: `template` (the default) or `application`. With `template`, the scheme states the layout the boundary parses and the optional helper checks (ADR 0013): `format` holds `{sig}` and optionally `{ts}`; `payload` holds `{rawBody}` and optionally `{ts}`; `tolerance` is required when `{ts}` is used and refused otherwise. `key` is the one way to name the key identifier the application's secret lookup receives (FR-20): `{ value: <literal> }`, or `{ from: <path, query or header source> }`. A `from` source is read per route: every route under an identity whose scheme reads `key.from` must have that parameter (a path placeholder, a declared query field or request header), and a route without it is a compile error naming the route, the identity and the source.
+
+With `verify: application`, the boundary parses nothing: the authenticate hook receives the raw body, the signature header and the other headers listed in `headers`, as received, and verifies with whatever library the sender documents (A25, A40). That serves the senders a template cannot describe: Standard Webhooks (Svix, and so Clerk) signing an id, a timestamp and the body from three headers, Slack's `v0:{ts}:{body}`, Ed25519 signatures (Discord). `format`, `algorithm`, `payload`, `encoding` and `tolerance` are refused there, `key` is optional, and a missing signature header still answers 401 before the hook:
+
+```yaml
+# shared/base.yaml (excerpt)
+schemes:
+  clerkWebhook:
+    kind: signature
+    verify: application
+    name: svix-signature
+    headers: [svix-id, svix-timestamp]
+  slackSignature:
+    kind: signature
+    verify: application
+    name: X-Slack-Signature
+    headers: [X-Slack-Request-Timestamp]
+```
+
+Either way the identity is signed, so the compiler forces the raw body and removes CSRF and idempotency keys.
 
 ```yaml
 # shared/base.yaml (excerpt): one secret per workspace, GitHub style
@@ -567,7 +593,7 @@ identities:
 | `schemes.optionalRead` | extra schemes accepted on optional-auth reads only (FR-27, SCN-076) |
 | `scheme` | `signed` only: the one `signature` scheme; the compiler forces a raw body and removes CSRF and idempotency keys (FR-20, SCN-026) |
 | `principal` | the principal schema, or `{ variants: { <name>: <schema> } }` for an identity accepting several credential kinds; hooks and handlers narrow on the variant name |
-| `unknownKeys` | `signed` only: `{ ignore: "<reason>" }`; the body input of every route of the identity drops unknown keys instead of refusing them (ADR 0003 section 4), for a sender whose payloads grow without notice |
+| `unknownKeys` | `signed` only: `{ ignore: "<reason>" }` or `{ keep: "<reason>" }`; the body input of every route of the identity drops or keeps unknown keys instead of refusing them (ADR 0003 section 4), for a sender whose payloads grow without notice |
 | `errors` | codes attached to every route of the identity, as a list of codes |
 | `headers` | the identity headers it uses, below |
 
@@ -900,7 +926,8 @@ conventions:
 | `restrictedInput` | `reject` or `strip`: a restricted field sent without its right (A21); overridable per field (ADR 0003) | `reject` |
 | `outputEnums` | `enum` or `open`: how the emitter writes an output enum (FR-29) | `enum` |
 | `enums.reason` | the reason of every local enum without its own (section 12) | unset: each local enum states its reason |
-| `query` | `{ lists, objects }`: how a query list and an object field travel (section 7) | `{ lists: repeat, objects: explode }` |
+| `query` | `{ lists, objects, unknownKeys }`: how a query list and an object field travel, and whether an undeclared key is refused (section 7) | `{ lists: repeat, objects: explode, unknownKeys: refuse }` |
+| `input.unknownKeys` | `refuse`, `{ ignore: "<reason>" }` or `{ keep: "<reason>" }`: the api's policy for unknown keys of body inputs; an `unknownKeys` on a schema use wins (ADR 0003 section 4) | `refuse` |
 | `int64` | `string` or `number`: the wire form of an `int64` value (ADR 0003 section 8) | `string` |
 | `deprecation` | `{ header, sunsetHeader, successorRel }`: the names of the deprecation headers (section 10) | `Deprecation`, `Sunset`, `successor-version` |
 | `rateLimit` | `{ header, param, unit }`: the header written on a 429 from a bucket rule, carrying the denial's integer millisecond `param` in `unit` (`s`, rounded up, or `ms`) | unset: a 429 carries no retry header |
@@ -1284,7 +1311,7 @@ The output is a view, never an input: it is not a contract file, and nothing rea
 | `identities.*.schemes.write: [session+csrf]` | `csrf` on the cookie scheme | CSRF is derived from the scheme, stated once (FR-27) |
 | identity scheme names as strings | typed `schemes` catalogue | schemes are checked and emitted (FR-27) |
 | no rights, scopes, signed identities | `rights`, `scopes`, `kind: signed` | A5, A18 to A25 |
-| `access: { public }`, implicit optional auth | `public` and `optionalAuth`, each with a reason; a refused credential on `optionalAuth` is anonymous | brief section 7 and A33 |
+| `access: { public }`, implicit optional auth | `public` and `optionalAuth`, each with a reason; a refused credential on `optionalAuth` is anonymous, or 401 with `onRefused: reject` | brief section 7, A33, A40 |
 | `csrfExempt` | `csrf: { exempt }` on a node; CSRF only for a cookie scheme that declares `csrf` | one exemption shape (`idempotency: { exempt }`); CSRF is opt-in (A34) |
 | `idempotent: true` on a GET, `idempotent: { exempt }` | `idempotency: { exempt }` only | a GET is safe by its method; one name for the convention and the exemption |
 | `errors` with fixed derived codes (`api.schema_invalid`) | derivation roles with default codes, renamed by the conventions, by `errorRoles` on any node or by a pack | a contract with no pack compiles (A34), and every code stays renamable (A20, A30, A35) |
@@ -1713,7 +1740,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-016 | `extensions` (`at`, `schema`), the extension key pattern, `x-<prefix>-<key>` (12, 4) |
 | SCN-018 | `lint.allow`, `maturity`, the `seampact/subtree-exception` rule; `sensitive` (12, 10, 8, ADR 0003) |
 | SCN-019 | `api.compat.policy` (5) |
-| SCN-026 | `schemes` of `kind: signature` (`name`, `format`, `algorithm`, `payload`, `encoding`, `tolerance`, `key`), `identities` of `kind: signed` (9) |
+| SCN-026 | `schemes` of `kind: signature` (`name`, `verify`, `format`, `algorithm`, `payload`, `encoding`, `tolerance`, `key`, `headers`), `identities` of `kind: signed` (9) |
 | SCN-029 | `extends`, duplicate definitions (2) |
 | SCN-030 | `$ref` to a file, `$include` of a schema with a fragment, name-keyed schema files (2) |
 | SCN-031 | `concurrency.version: query.<p>`, `concurrency: inherit` (6, 4). A33 accepts `header.If-Match`, which the scenario's acceptance criterion refused; the scenario follows A33 |
@@ -1749,16 +1776,16 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-071 | `rights` (no syntax beyond SCN-062) |
 | SCN-073 | `packs` with the CRUD rights pack, its `pack` manifest and `derive` entry (`select.op`, `declareRight`, `require`), `ops`, the `requires` merge order (2, 6, 8) |
 | SCN-076 | `identities.principal.variants`, `schemes.optionalRead` (9) |
-| SCN-077 | `schemes` (`kind`, `name`, `csrf`), `identities.schemes` (9) |
+| SCN-077 | `schemes` (`kind`: cookie, header, query, bearer, basic, signature; `name`, `csrf`, `bearerFormat`, `oauth2`, `openIdConnect`), `identities.schemes` (9) |
 | SCN-078 | the `headers` catalogue with `deadline`, `traceContext`, `actorSurface`, their use on an identity, `budget` (9, 10) |
 | SCN-079 | the `headers` catalogue in a pack (`semantic: versionToken`, `response`, `request`), the identity's use (`from`, `for`, `required`, `stale`) (9) |
 | SCN-080 | `enums` (`values`, `source`, `reason`, `fallback`), narrowing (12, ADR 0003), `conventions.outputEnums` (13) |
-| SCN-081 | `query` fields map with `?` and an object field (7, 4) |
+| SCN-081 | `query` fields map with `?` and an object field, `conventions.query` (`lists`, `objects`, `unknownKeys`), `unknownQuery` (7, 4, 13) |
 | SCN-082 | a `pagings` style with the `since`, `nextSince` and `complete` roles, `paging.<style>.token`, `item` (10, 14) |
 | SCN-083 | a `pagings` style with the `page` and `limit` roles, from a format pack or the contract, `paging.<style>.maxLimit`, `item` (10, 14, 15) |
 | SCN-084 | `ops.batch.maxIds`, `conventions.batch` (6, 13) |
 | SCN-085 | `degradable`, `conventions.degradedHeader` or a format `degraded` meta field (10, 13) |
-| SCN-086 | `access.optionalAuth`, `cache.anonymous`, `cache.vary`, `sensitive` (9, 10) |
+| SCN-086 | `access.optionalAuth` with `onRefused`, `cache.anonymous`, `cache.vary`, `cache.families` directives, `sensitive` (9, 10, 13) |
 | SCN-087 | `services`, `upstream`, `maturity.level`, `maturity.reason`, `api.role: gateway` (10, 5) |
 | SCN-088 | `summary`, `description` with `$file` (12, 2) |
 | SCN-096 | `buckets` (`key`, `limit`, `window`), `rules.throttle.bucket`, `conventions.rateLimit` (9, 13) |

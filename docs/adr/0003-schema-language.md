@@ -44,12 +44,12 @@ Every keyword of the 2020-12 vocabularies, kept or refused. A refused keyword is
 | Keyword | Decision | Reason |
 |---|---|---|
 | `allOf` | kept, restricted | every member is an object schema; the compiler merges them into one object in the IR (a property declared twice with different schemas is an error), so targets never see composition and Java or PHP need no intersection types |
-| `anyOf` | refused | an untagged union cannot be decoded by a client without trying each branch, and validators disagree on overlaps; use `oneOf` with a discriminator, or `nullable` |
+| `anyOf` | refused | an untagged union cannot be decoded by a client without trying each branch, and validators disagree on overlaps; use `oneOf` with a discriminator, `nullable`, or an opaque value (section 2) for a third party's untagged shape |
 | `oneOf` | kept, tagged only | section 3; always with a discriminator and a mapping |
 | `not` | refused | negative constraints have no native form in Bean Validation, Laravel or Symfony constraints |
 | `if`, `then`, `else` | refused | conditional validation is not portable and hides two types in one; use a tagged union |
 | `dependentSchemas` | refused | conditional, same reason |
-| `prefixItems` | refused | tuples map to no record or class type; no consumer needs them |
+| `prefixItems` | refused | tuples map to no record or class type; a third party's tuple is an opaque value (section 2) |
 | `items` | kept | an array has exactly one item schema |
 | `contains` | refused | no native counterpart in most targets; no consumer |
 | `properties` | kept | |
@@ -105,9 +105,27 @@ A schema is one of:
 - a tagged union: `oneOf` and `discriminator` (section 3);
 - a merged object: `allOf` of object schemas;
 - a derived object: `pick` or `omit` of another object schema (below);
+- an opaque value: `{ opaque: "<reason>" }` (below);
 - a reference: a string, or `$ref`, to a named schema.
 
-An object needs at least one property, except a union variant, which may hold only its tag (section 3). A schema with no recognisable shape, such as `{}`, is refused: a free-form value has no type in any target.
+An object needs at least one property, except a union variant, which may hold only its tag (section 3). A schema with no recognisable shape, such as `{}`, is refused: a free-form value is written as an opaque value, with its reason.
+
+#### Opaque values
+
+Some wire shapes have no type in the subset: a free-form `metadata` blob, a JSON Patch `value`, a webhook's `data.object`, Stripe's expandable field (an id string or an object), a tuple. Refusing them would push the whole route out of the contract, so a schema may say "not checked here", with a reason, since it is an exception to validation (A36, A40):
+
+```yaml
+# hooks/schemas.yaml (excerpt)
+StripeEvent:
+  type: object
+  required: [id, type, data]
+  properties:
+    id: { type: string }
+    type: { type: string }
+    data: { opaque: "Stripe's object depends on the event type and its API version." }
+```
+
+An opaque value accepts any JSON value, `null` only with `nullable: true`. Targets type it as their untyped JSON value (`unknown` in TypeScript, `JsonNode` in Java, `mixed` in PHP); the handler narrows it. The OpenAPI emitter writes `{}` with `x-seampact-opaque: <reason>`. It holds no refinement, mark or default, and it never sits in a query, a path parameter or a header.
 
 A schema may reference itself, directly or through other schemas, by named reference: a `Comment` whose `replies` are an array of `Comment` is legal, whatever the file layout, because a reference resolves by name (ADR 0002 section 3). An inline cycle cannot be written. A cycle in which every step is a required, non-nullable object property is refused, since no finite value satisfies it. Targets that need it (zod's `z.lazy`) generate the deferral; the shared payload table includes a recursive case.
 
@@ -191,7 +209,7 @@ Every use of a schema is input or output, known from where it appears: `input`, 
 
 | | Input (strict) | Output |
 |---|---|---|
-| unknown object keys | refused with 400, every issue reported at once, unless the use ignores them (below) | stripped by the server on emit; kept or ignored by a client on read, never an error |
+| unknown object keys | refused with 400, every issue reported at once, unless the use ignores or keeps them (below) | stripped by the server on emit; kept or ignored by a client on read, never an error |
 | unknown enum member | refused | kept by a client as an unknown member, or mapped to the enum's `fallback` |
 | unknown union tag | refused | the client's unknown-variant branch |
 | missing required field | refused | a server bug: the server boundary answers 500 from the `undeclaredStatus` role rather than emit it |
@@ -207,7 +225,13 @@ input:
   unknownKeys: { ignore: "GitHub adds payload fields without notice; the handler reads six." }
 ```
 
-`unknownKeys: { ignore: "<reason>" }` sits on an object schema, a union, or beside a `$ref` (section 6), and acts on input uses only: on a named schema used both ways, an output use is unaffected. Unknown keys of that object, and of every object reached from it in that use (properties, items, map values, variants), are dropped before the handler, never answered with an error and never passed on. Everything else stays strict: a declared field of the wrong type, an unknown enum member or union tag, a missing required field. A signed identity may set it once for the body input of every route under it, with its own reason (ADR 0002 section 9). Query parameters stay strict (FR-30). The shared payload table of the validator targets holds the case: an input with unknown keys at the root and in a nested object is accepted, and the value the handler receives has neither.
+`unknownKeys` sits on an object schema, a union, or beside a `$ref` (section 6), and acts on input uses only: on a named schema used both ways, an output use is unaffected. It takes one of three values:
+
+- `refuse`, the default: unknown keys answer 400;
+- `{ ignore: "<reason>" }`: unknown keys of that object, and of every object reached from it in that use (properties, items, map values, variants), are dropped before the handler, never answered with an error and never passed on;
+- `{ keep: "<reason>" }`: the same objects accept unknown keys and pass them to the handler beside the declared fields, as a map of opaque values (a TypeScript index signature of `unknown`, a `Map<String, JsonNode>` the Java record carries as `additional`, a PHP array property), for a handler that forwards or stores what it does not read.
+
+Everything else stays strict: a declared field of the wrong type, an unknown enum member or union tag, a missing required field. `conventions.input.unknownKeys` sets the api's default for every body input, so an api that wants the drop-unknown behaviour of Spring's Jackson defaults or Laravel's `validated()` says so once; a use's own value wins, `refuse` included. A signed identity may set it once for the body input of every route under it, with its own reason (ADR 0002 section 9). Query parameters follow `conventions.query.unknownKeys` and `unknownQuery` instead (ADR 0002 section 7, FR-30). The shared payload table of the validator targets holds the cases: an input with unknown keys at the root and in a nested object is accepted, the value the handler receives has neither under `ignore`, and both under `keep`.
 
 Enums are emitted per direction (FR-29): on input always as `enum`; on output as `enum` or, with `conventions.outputEnums: open`, as a string with the members in `x-seampact-enum` (and the fallback in `x-seampact-enum-fallback`). Arthome's documents use the open form, which is why it is a convention and not fixed.
 
@@ -231,7 +255,7 @@ These keywords are not JSON Schema. Each compiles to an explicit IR field. On a 
 | `restrictedTo` | a property | the property is visible or writable only with a right (below) |
 | `discriminator` | a union | section 3: a property name, or `{ from: header.<Name> }` on a route's whole input |
 | `typeName` | a named object schema | the value the `$resource` slot writes (a JSON-LD `@type`), when it differs from the schema name (ADR 0002 section 13) |
-| `unknownKeys: { ignore: <reason> }` | an object schema, a union or a reference, on input | unknown keys are dropped instead of refused, in this object and every object below it (section 4) |
+| `unknownKeys` | an object schema, a union or a reference, on input | `refuse`, `{ ignore: <reason> }` or `{ keep: <reason> }`: unknown keys are refused, dropped or kept, in this object and every object below it (section 4) |
 | `lint: { allow: { <rule>: <reason> } }` | a schema or property | silences one lint rule there, with a reason (ADR 0002 section 12) |
 | `x-<prefix>-<key>` | where the extension's `at` allows | a consumer extension (ADR 0002 section 12) |
 
@@ -355,8 +379,8 @@ Every named schema becomes a named type in every target. An inline schema gets a
 ## Consequences
 
 - Phase 1's authoring JSON Schema refuses every keyword marked refused here, with this ADR's reason in the diagnostic.
-- The validator targets (zod, yup, class-validator, VineJS, Bean Validation, Laravel, Symfony) each need code for: code-point string lengths, int64 and decimal strings, the regex anchoring rules, unknown-key refusal on input (and dropping under `unknownKeys: ignore`), header-tagged unions, and stripping on emit. The shared payload table tests each case in CI (SCN-028).
-- Contracts lose some expressiveness: conditional schemas, `anyOf`, tuples and inline enums must be rewritten as tagged unions, separate schemas or catalogue enums. A refused keyword comes back only with a consumer and an ADR.
+- The validator targets (zod, yup, class-validator, VineJS, Bean Validation, Laravel, Symfony) each need code for: code-point string lengths, int64 and decimal strings, the regex anchoring rules, unknown-key refusal on input (dropping under `unknownKeys: ignore`, passing on under `keep`), opaque values, header-tagged unions, and stripping on emit. The shared payload table tests each case in CI (SCN-028).
+- Contracts lose some expressiveness: conditional schemas, `anyOf`, tuples and inline enums must be rewritten as tagged unions, separate schemas or catalogue enums, or, for a shape a third party fixes, declared opaque with a reason. A refused keyword comes back only with a consumer and an ADR.
 - A create or update input derived with `pick` or `omit` holds each constraint once, in the item schema; the price is that a reader follows `from` to see a field's refinements.
 - `int64` on the wire is a string by default even for targets that could hold a 64-bit number, which costs one conversion in Java and PHP and buys one wire form for every client; an api that sends numbers says so in its conventions.
 - A30 keeps schemas free of wire-format fields, so the same contract can switch formats through its conventions without touching a schema.

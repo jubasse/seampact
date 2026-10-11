@@ -114,17 +114,19 @@ interface HeaderDecl {
 }
 
 interface Scheme {
-  id; kind: 'cookie' | 'header' | 'bearer' | 'signature';
-  name?: string; bearerFormat?: string; csrf?: SchemeId;   // name: the cookie or header, or the signature header
-  signature?: { format; algorithm; payload; encoding: 'hex' | 'base64'; toleranceMs?: number;
-                key: { value: string } | { from: ValueSource } };
+  id; kind: 'cookie' | 'header' | 'query' | 'bearer' | 'basic' | 'signature';
+  name?: string; csrf?: SchemeId;           // name: the cookie, header or query parameter, or the signature header
+  bearer?: { format?: string; oauth2?: { flows: unknown } ; openIdConnectUrl?: string };   // document-only facts
+  signature?: { verify: 'template'; format; algorithm; payload; encoding: 'hex' | 'base64'; toleranceMs?: number;
+                key: { value: string } | { from: ValueSource } }
+            | { verify: 'application'; headers: string[]; key?: { value: string } | { from: ValueSource } };
   origin;
 }
 interface Identity {
   id; kind: 'credential' | 'signed';
   schemes: { read: SchemeId[]; write: SchemeId[]; optionalRead: SchemeId[] } | { signed: SchemeId };
   principal: SchemaRef | { variants: Record<VariantId, SchemaRef> };
-  unknownKeys?: { ignore: Reason };         // signed identities only
+  unknownKeys?: { ignore: Reason } | { keep: Reason };   // signed identities only
   errors: ErrorCode[];
   headers: { header: HeaderId; for: 'all' | 'reads' | 'writes'; required: boolean; schema?: TypeUse;
              from?: ValueSource; stale?: ErrorCode; origin }[];   // uses of the headers catalogue
@@ -168,7 +170,9 @@ interface Property {
 }
 type TypeUse =                               // what a property, item, body or parameter is
   | { kind: 'ref'; schema: SchemaId;         // objects, maps and unions are always named
-      unknownKeys?: { ignore: Reason; origin?: Origin; derivedFrom?: DerivedFrom } }   // input uses only (ADR 0003 section 4)
+      unknownKeys?: { policy: 'refuse' | 'ignore' | 'keep'; reason?: Reason;   // input uses only (ADR 0003 section 4)
+                      origin?: Origin; derivedFrom?: DerivedFrom } }          // origin: the use or 'conventions.input'
+  | { kind: 'opaque'; reason: Reason; origin: Origin }   // any JSON value, unchecked (ADR 0003 section 2)
   | { kind: 'enum'; enum: EnumId; narrowedTo?: { values: string[]; reason: Reason } }
   | { kind: 'scalar'; type: 'string' | 'integer' | 'number' | 'boolean'; format?: string; refinements: Refinements }
   | { kind: 'array'; items: TypeUse; minItems?: number; maxItems?: number };
@@ -176,7 +180,7 @@ type TypeUse =                               // what a property, item, body or p
 
 - Objects, maps and unions are always named schemas, hoisted to `schemas` with the deterministic name of ADR 0007; scalars, enum uses and arrays stay inline in their use. Generated code therefore never holds an anonymous structural type (FR-3).
 - `allOf`, `pick` and `omit` are already merged (ADR 0003 section 2). A union holds where its tag is read (a body property, or a request header for a union that is a route's whole input) and each variant's tag; the variant schema does not hold the tag property, which targets add inside a body-tagged union only (ADR 0003 section 3).
-- `unknownKeys` sits on the use of a schema, never on the schema: an `unknownKeys` written on an inline object moves to the use of its hoisted schema, and one inherited from a signed identity sits on the operation's input with `derivedFrom`. It covers every object reached from that use.
+- `unknownKeys` sits on the use of a schema, never on the schema: an `unknownKeys` written on an inline object moves to the use of its hoisted schema, one inherited from a signed identity sits on the operation's input with `derivedFrom`, and one from `conventions.input.unknownKeys` carries that convention's origin. It covers every object reached from that use. An input use with no `unknownKeys` refuses unknown keys.
 - A pattern refinement holds the normalised form of ADR 0003 section 9, never the written text alone.
 - `directions` lists `input` and `output` as the schema is used; targets generate per-direction validators from it (ADR 0003 section 4).
 - `nullable` and `optional` are two members (FR-3, SCN-005).
@@ -207,6 +211,7 @@ interface Operation {
   path: string;                              // '/v1/channels/{channelId}/tasks/{taskId}/assign'
   safe: boolean;                             // a GET, or a batch read sent as POST
   params: { path: Param[]; query: Param[]; header: Param[] };       // declared and derived, each with origin or derivedFrom
+  unknownQuery: { policy: 'refuse' } | { policy: 'ignore'; reason: Reason; origin: Origin };   // undeclared query keys
   access: Access;
   callerKinds: ('anonymous' | 'identified')[];
   principalRequires: { field: string; origin: Origin }[];
@@ -239,7 +244,8 @@ interface Operation {
 
 type Access =
   | { kind: 'identity'; identity: IdentityId; schemes: SchemeId[]; origin }
-  | { kind: 'optional'; identity: IdentityId; schemes: SchemeId[]; reason: Reason; origin }   // a refused credential is anonymous
+  | { kind: 'optional'; identity: IdentityId; schemes: SchemeId[]; reason: Reason;
+      onRefused: 'anonymous' | 'reject'; origin }   // a refused credential: anonymous, or 401
   | { kind: 'public'; reason: Reason; origin };
 
 type Requirement =
@@ -377,9 +383,9 @@ The OpenAPI 3.1 document is emitted from the IR only (FR-11), and it is the inte
 
 | IR | OpenAPI |
 |---|---|
-| `schemes` | `components.securitySchemes`: a cookie scheme is `apiKey` with `in: cookie`, a header scheme `apiKey` with `in: header`, a bearer scheme `http` with `scheme: bearer` and its `bearerFormat`; a signature scheme is `apiKey` with `in: header` and its `name`, plus `x-seampact-signature: { format, algorithm, payload, encoding, toleranceMs, key }` |
+| `schemes` | `components.securitySchemes`: a cookie scheme is `apiKey` with `in: cookie`, a header scheme `apiKey` with `in: header`, a query scheme `apiKey` with `in: query`, a basic scheme `http` with `scheme: basic`, a bearer scheme `http` with `scheme: bearer` and its `bearerFormat`, or `oauth2` with its `flows`, or `openIdConnect` with its `openIdConnectUrl`; a signature scheme is `apiKey` with `in: header` and its `name`, plus `x-seampact-signature: { verify, format, algorithm, payload, encoding, toleranceMs, key }` for a template, or `{ verify: application, headers, key }` |
 | `access`, identity | `security`: one Security Requirement Object per scheme the operation accepts (`schemes.read` on a safe operation, `schemes.write` otherwise). A cookie scheme with `csrf`, on a write, is one object holding the cookie scheme and its CSRF header scheme, since an object's schemes are all required. Plus `x-seampact-access: { identity }`. Credential and CSRF headers are written through the schemes, never as parameters |
-| `access`, optional | the same list with `schemes.optionalRead` added on a read, plus `{}` (anonymous allowed), and `x-seampact-access: { identity, optionalAuth: <reason> }` |
+| `access`, optional | the same list with `schemes.optionalRead` added on a read, plus `{}` (anonymous allowed), and `x-seampact-access: { identity, optionalAuth: <reason>, onRefused }` |
 | `access`, public | `security: []` and `x-seampact-access: { public: <reason> }` |
 | `access` of a signed identity | `security` with the signature scheme alone, `x-seampact-access: { identity }`, and `x-seampact-raw-body: true` on the request body |
 | `csrf` exemption | `x-seampact-csrf: { exempt: <reason> }` |
@@ -392,7 +398,8 @@ The OpenAPI 3.1 document is emitted from the IR only (FR-11), and it is the inte
 | `concurrency` | the version as an ordinary parameter or body property, `ETag` on the responses carrying the item, plus `x-seampact-concurrency: { version, field }` |
 | `idempotency` | the key header parameter and the replay response header, plus `x-seampact-idempotency: { header, replayHeader, lifetimeMs, required }`, or `{ exempt: <reason> }` |
 | `owner` | `x-seampact-owner: caller` |
-| `input` | the request body with the format's media type. Component schemas carry no `additionalProperties: false`, since one schema serves both directions: strict input is the default every reader of a seampact document assumes, and an ignoring use writes `x-seampact-unknown-keys: { ignore: <reason> }` on the request body |
+| `input` | the request body with the format's media type. Component schemas carry no `additionalProperties: false`, since one schema serves both directions: strict input is the default every reader of a seampact document assumes, and an ignoring or keeping use writes `x-seampact-unknown-keys: { ignore: <reason> }` or `{ keep: <reason> }` on the request body |
+| `unknownQuery` | `x-seampact-unknown-query: { ignore: <reason> }` on an operation that ignores undeclared query keys |
 | `responses` | the success responses, each body the format's shape written out around a reference to the payload schema, with the format's media type |
 | `errors` | one response per error status, its `description` the list of its codes, its body the format's error body; each code is a component schema of that body for the code's params, named by the code (`api.forbidden`), with `x-seampact-nature`. Several codes on one status are a `oneOf`, with a `discriminator` on the member the format writes `$code` to when it is a top-level member (`code` under `bare`). The response carries `x-seampact-errors: [{ code, derivedFrom, origin }]`: each code's derivation, or the node that attached it |
 | `examples` | the route examples, wrapped through the format and the paging style (ADR 0002 section 12), in the `examples` of the request body or of the response for their status or code |
@@ -404,7 +411,7 @@ The OpenAPI 3.1 document is emitted from the IR only (FR-11), and it is the inte
 | `relays` | `x-seampact-relays: { api, operationId }` |
 | `format` | the media types above, `x-seampact-format: <format>` at the document root, and on an operation whose format differs |
 | `api.kind`, `api.role`, `api.caller` | `x-seampact-api: { kind, role, caller }` at the document root |
-| schema marks | ADR 0003: `format: password` for `sensitive`, `x-seampact-discriminator` for a header-tagged union, `x-seampact-enum` and `x-seampact-enum-fallback` for an open output enum, the `x-seampact-*` refinements of `int64` and `decimal` |
+| schema marks | ADR 0003: `format: password` for `sensitive`, `{}` with `x-seampact-opaque: <reason>` for an opaque value, `x-seampact-discriminator` for a header-tagged union, `x-seampact-enum` and `x-seampact-enum-fallback` for an open output enum, the `x-seampact-*` refinements of `int64` and `decimal` |
 
 ```yaml
 # emitted from the reference contract of ADR 0002 (excerpt)
