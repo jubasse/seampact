@@ -35,10 +35,13 @@ A pack may set exactly these, each validated against the pack schema published i
 | Wire formats | `formats`: item, table, list and page shapes with body and header templates, meta fields and who fills each, the error body; media types | FR-42, A30 |
 | Paging styles | `pagings`: request roles mapped to parameter names, response roles mapped to members added to the format's page or to a whole page body, headers and `Link` relations (ADR 0002 section 14) | FR-31, A31 |
 | Named formats | `scalars`: `money` or `iri-reference`, a base JSON type, portable refinements, a description; never the name of a portable format (ADR 0003 section 8) | FR-3 |
-| Cache families | a name mapped to a max-age; `never` (no-store) is reserved | FR-33 |
-| Error families | error codes with status, nature, typed params and an example, added to the registry | FR-6 |
+| Cache families | a name mapped to a max-age or to `Cache-Control` directives; `never` (no-store) is reserved | FR-33 |
+| Error families | error codes with status, nature, family, typed params and an example, added to the registry; an extra code pattern (`conventions.errors.pattern`) | FR-6 |
+| Natures | the `natures` catalogue, each mapped onto a base nature (A40) | FR-6 |
 | Error role bindings | the code each derivation role answers, renaming the core default (A34), with an optional params template; how far a code attached on a node reaches (`conventions.errors.reach`) | FR-6 |
-| Request defaults | idempotency lifetime, methods and whether the key is required, body-limit default, batch `maxIds` and body limit, query encoding, int64 wire form | FR-7, FR-30, FR-32, FR-41 |
+| Request defaults | idempotency lifetime, methods, whether the key is required and who enforces it, body-limit default, batch `maxIds` and body limit, query encoding and unknown-key policy, body unknown-key policy, int64 wire form, the paging over-limit policy | FR-7, FR-30, FR-32, FR-41 |
+| Route defaults | the path version (`conventions.pathVersion`), the `ops` defaults and operation-id derivation, the URL form | FR-2 |
+| Lint severities | `lint.rules` (ADR 0002 section 12) | FR-12 |
 | Named requirements | `requirements`: requirement items a route uses by name in `requires` (ADR 0002 section 9) | FR-5 |
 | Right naming | `conventions.rights.pattern`, a pattern every right name must also match, enforced as an error | FR-22 |
 | Derivation entries | `derive`: a selector and effects from closed sets (below) | FR-26 |
@@ -50,7 +53,7 @@ Derivation entries are the only way a pack adds to what a route ends up with. A 
 
 A pack never:
 - adds a keyword to the grammar, or a field to the IR outside the extension slots;
-- removes or weakens a derivation of the derivation table, the deny-by-default rule (FR-4), the fixed check order (ADR 0012), the no-store rule on sensitive fields or the closed set of error natures;
+- removes or weakens a derivation of the derivation table, the deny-by-default rule (FR-4), the fixed check order (ADR 0012), the no-store rule on sensitive fields, the reason a safety exception requires, or the three base natures (a pack may name natures, each mapped onto a base);
 - redefines a declaration made elsewhere: two layers declaring the same error code, format, paging style, family or right is a compile error naming both locations, as with `extends` (FR-1); a `declareRight` whose name the catalogue already declares reuses that right;
 - contains code, or references anything outside its own files and the packs it extends.
 
@@ -103,7 +106,7 @@ extensions:
 seampact ships six opt-in packs, all data only, each with its own conformance fixtures (A24, A28, A32). ADR 0002 section 15 writes the presets of the format packs. Each format pack sets `conventions.format` and `conventions.paging.default` to its own presets when applied, named in its entry below; a later layer may choose others.
 
 - `@seampact/pack-crud-rights` (A24, FR-26). For every route produced by the `ops` shorthand, it declares a right `{resource}.{op}` and attaches it as a requirement, first in the route's `requires` (ADR 0002 section 8). On a member route (get, update, delete) the right's subject is the resource, taken from the member id. On a collection route (list, create) the subject is the route's innermost scope when it has one, and none otherwise. A route that already lists the same right does not get it twice. Without the pack nothing is derived and the core imposes no right name (A20).
-- `@seampact/pack-api-platform` (A28, FR-21). JSON-LD items (`jsonld`, the format it sets), Hydra collections and paging (`hydra`, the default style it sets: `page`, `itemsPerPage`, `order[key]`), Hydra or problem+json errors, their media types, and the `iri-reference` named format. The api-platform target renders them through API Platform's own serializer; since the pack is ordinary data, any target able to render it may do so.
+- `@seampact/pack-api-platform` (A28, FR-21). JSON-LD items (`jsonld`, the format it sets), Hydra collections and paging (`hydra`, the default style it sets: `page`, `itemsPerPage`, `order[key]`), Hydra or problem+json errors, their media types, and the `iri-reference` named format. The api-platform target renders them through API Platform's own serializer, and serves the JSON-LD contexts the format points at (`/contexts/{resource}`, `/contexts/Error`) and Hydra's API documentation link as API Platform's own routes, allow-listed for the boot check. Since the pack is ordinary data, another target may render it too, provided it serves those contexts; the compatibility matrix refuses a target that claims the pack without them (ADR 0009).
 - `@seampact/pack-laravel`. API Resources (`data` wrapping, the `laravel` format it sets, whose page shape is `{ data, meta }`) and the length-aware and cursor paginators (`laravelPages`, the default style it sets, and `laravelCursor`), rendered by the laravel target through Laravel's own resource collections. It covers success bodies and paginators only: errors stay the bare problem+json, because Laravel's validation error body groups issues by field, which the template language does not express (ADR 0002 section 15).
 - `@seampact/pack-spring`. Spring Data's `Page` (`springPage`, the default style it sets: zero-based `page`, `size`, `sort=key,desc`); it sets no format, so errors stay problem+json, which the spring-boot target writes with `ProblemDetail`.
 - `@seampact/pack-jsonapi`. JSON:API resource objects (`jsonapi`, the format it sets), `page[number]` and `page[size]` paging (`jsonapiPages`, the default style it sets), `sort`, and the `errors` array, over `application/vnd.api+json`.
@@ -121,6 +124,6 @@ Anyone can write other packs, house envelopes included, without a core change.
 
 ## Traceability
 
-- FRs: FR-10, FR-26 (pack part), FR-42, FR-6 (families and role bindings), FR-22 (naming), FR-21 (api-platform pack), FR-3 (named formats), FR-7, FR-28, FR-31, FR-32, FR-33, FR-41 (values the derivations read); amendments A20, A24, A28, A30, A31, A32, A34, A35, A36.
-- Checklist items enabled: CHK-003 (error families), CHK-028 (envelopes from a pack), CHK-029 (framework refusals in the declared error format), CHK-036 (cache families), CHK-039 (body-limit defaults), CHK-050 and CHK-051 (consumer extensions), CHK-085 (api-platform formats), CHK-089 (no imposed right naming), CHK-090 (right metadata reaches the boundary), CHK-095 (derived CRUD rights), CHK-106 (no default page shape), CHK-107 (first-party format packs), CHK-110 (default error codes).
+- FRs: FR-10, FR-26 (pack part), FR-42, FR-6 (families and role bindings), FR-22 (naming), FR-21 (api-platform pack), FR-3 (named formats), FR-7, FR-28, FR-31, FR-32, FR-33, FR-41 (values the derivations read); amendments A20, A24, A28, A30, A31, A32, A34, A35, A36, A40.
+- Checklist items enabled: CHK-125 (natures), CHK-137 (lint severities from packs), CHK-167 (JSON-LD contexts), CHK-003 (error families), CHK-028 (envelopes from a pack), CHK-029 (framework refusals in the declared error format), CHK-036 (cache families), CHK-039 (body-limit defaults), CHK-050 and CHK-051 (consumer extensions), CHK-085 (api-platform formats), CHK-089 (no imposed right naming), CHK-090 (right metadata reaches the boundary), CHK-095 (derived CRUD rights), CHK-106 (no default page shape), CHK-107 (first-party format packs), CHK-110 (default error codes).
 - Success metric: SM-6.
