@@ -95,7 +95,7 @@ tasks/api.yaml:42:9: error seampact/access/deny-by-default: route 'exportTasks' 
 
 - Rule ids are `seampact/<step>/<rule>` in kebab case; they are stable, documented, and used by `lint.allow` only for lint rules, never to silence a compile error.
 - Diagnostics are sorted by file, line, column, then rule, so the output is deterministic.
-- Warnings do not fail `compile`; `compile --strict`, which CI uses, fails on them. A lint rule's severity comes from `lint.rules` (ADR 0002 section 12): `error` fails `compile`, `off` never runs, and a `lint.allow` on an element or an ancestor silences the rule there.
+- Warnings do not fail `compile`; `compile --strict`, which CI uses, fails on them. A lint rule's severity comes from `lint.rules` (ADR 0002 section 12): `error` fails `compile`, `disabled` never runs, and a `lint.allow` on an element or an ancestor silences the rule there.
 - Lint rules (FR-12) report through the same structure, with ids `<plugin>/<rule>`.
 - `seampact explain` (ADR 0002 section 16) turns the same origins and `derivedFrom` into file and line comments on an operation's every element, so the answer to "where does this code come from" is the one the diagnostics use.
 
@@ -222,4 +222,4 @@ Any other format and every paging style declare their own members, parameters an
 ## Traceability
 
 - FRs: FR-1 (located diagnostics with rule and fix), FR-6 (derivation table, roles, registry), FR-7, FR-8 (relays in link), FR-9, FR-20, FR-22 to FR-24, FR-28, FR-31 to FR-34, FR-41, FR-42 and A30 (the `bare` format), A31 (no default page), A34 (default codes), A35 (errors on tree nodes), FR-37 (field ownership protects the seam).
-- CHK items enabled: CHK-007, CHK-011, CHK-015, CHK-016, CHK-029, CHK-030 to CHK-043, CHK-044 to CHK-046, CHK-052, CHK-055, CHK-058, CHK-073.
+- CHK items enabled: CHK-007, CHK-011, CHK-015, CHK-016, CHK-029, CHK-030 to CHK-043, CHK-044 to CHK-046, CHK-052, CHK-055, CHK-058, CHK-073, and from round 4 CHK-124, CHK-125, CHK-127, CHK-128, CHK-131, CHK-133, CHK-134, CHK-137 to CHK-139, CHK-149 to CHK-153.

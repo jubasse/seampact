@@ -128,4 +128,4 @@ Each vector gives a written name (or segments and an owner, for derived names), 
 
 - FRs: FR-38 (segments and role, per-language escaping, shared vectors), FR-3 (deterministic names for inline schemas), FR-40 (native implementations pass the vectors), FR-14 (byte-identical generation).
 - Scenarios: SCN-033, SCN-093, SCN-095.
-- CHK items enabled: CHK-024 (named union variants), CHK-002 (named types at scale compile), CHK-078 (naming is part of the stable IR contract).
+- CHK items enabled: CHK-024 (named union variants), CHK-002 (named types at scale compile), CHK-078 (naming is part of the stable IR contract), CHK-146 (code names, suffixes, handler grouping).

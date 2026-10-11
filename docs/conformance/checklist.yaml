@@ -74,7 +74,7 @@ items:
     targets: [core]
   - id: CHK-009
     source: "14 Access"
-    fact: Every exception (public, optionalAuth with a refused credential treated as anonymous, csrf exemption, idempotency exemption, ignored unknown input keys, a route format other than the api's, allow-lists, stated maturity, local enum, guest right) carries a reason.
+    fact: Every safety exception carries a reason (public, optionalAuth, guest right, csrf exemption, idempotency exemption, unknown body or query keys ignored or kept, opaque value, framework route allow-list, native access), and no other departure from a default needs one (A40).
     frs: [FR-4]
     scenario: SCN-007
     targets: [core]
@@ -275,13 +275,13 @@ items:
     targets: [core, server]
   - id: CHK-042
     source: "14 Reads and writes; A33"
-    fact: A version read from the query or from If-Match, and a member action opting into the version (A33).
+    fact: A version read from the query, and a member action opting into the version (A33); a version read from If-Match answers 412 when stale and 428 when missing, both renamable.
     frs: [FR-2]
     scenario: SCN-031
     targets: [core, server]
   - id: CHK-043
     source: "14 Reads and writes; A34"
-    fact: With conventions.idempotency set, the writes of its methods carry idempotency keys, required unless it says otherwise (400 when missing), created per call by clients and reused by a caller that retries, and checked against the store interface (replay, 409), with written exemptions; without it, no key is derived (A34).
+    fact: With conventions.idempotency set, the writes of its methods carry idempotency keys, required unless it says otherwise (400 when missing), created per call by clients and reused by a caller that retries, and checked against the store interface (replay, 422 for a key reused with another request, 409 while in progress), with written exemptions; without it, no key is derived (A34).
     frs: [FR-7]
     scenario: SCN-042
     targets: [server, fetch]
@@ -300,7 +300,7 @@ items:
     targets: [core]
   - id: CHK-046
     source: "14 Errors and enums"
-    fact: Errors are attached at three levels (base or group, conventions, route); a redefinition is refused and only the example may be overridden.
+    fact: Errors are declared or attached at every level of the tree (catalogue, surface, collection, single, scope node, route) and by the conventions; a redefinition is refused and only the example may be overridden (A35).
     frs: [FR-6]
     scenario: SCN-011
     targets: [core]
@@ -312,7 +312,7 @@ items:
     targets: [zod, fetch, server]
   - id: CHK-048
     source: "14 Errors and enums"
-    fact: An enum carries its source, a local enum its reason, a narrowing is a strict subset with a reason, and an unknown fallback is used by clients.
+    fact: An enum carries its source or is local, a local enum and a narrowing may state a reason, a narrowing is a strict subset, and an unknown fallback is used by clients.
     frs: [FR-29]
     scenario: SCN-080
     targets: [core, fetch]
@@ -350,7 +350,7 @@ items:
     targets: [core]
   - id: CHK-054
     source: "14 Lifecycle"
-    fact: Maturity derives from upstream services; a stated maturity needs a reason.
+    fact: Maturity derives from upstream services; a stated maturity wins and may state a reason.
     frs: [FR-34]
     scenario: SCN-087
     targets: [core]
@@ -563,7 +563,7 @@ items:
     targets: [laravel, symfony, api-platform]
   - id: CHK-089
     source: "A20"
-    fact: The core accepts any right name matching the identifier pattern and imposes no naming convention.
+    fact: The core accepts any right name without control characters or surrounding spaces (an OAuth scope, a Gate name, a Spring authority, a spatie permission) and imposes no naming convention; conventions.rights.pattern narrows it on request.
     frs: [FR-22]
     scenario: SCN-063
     targets: [core]
@@ -678,7 +678,7 @@ items:
     targets: [core, server, fetch]
   - id: CHK-108
     source: "A33"
-    fact: The /v{version} path prefix is a default; pathVersion omit on an api or a surface keeps it out, and with the default a literal version segment is refused.
+    fact: The /v{version} path prefix is a default; conventions.pathVersion none, set by the api or a pack, or a surface's pathVersion none keeps it out, a string api.version is then allowed, and with the default a literal version segment is refused.
     frs: [FR-2]
     scenario: SCN-032
     targets: [core]
@@ -702,7 +702,7 @@ items:
     targets: [core, fetch]
   - id: CHK-112
     source: "A36"
-    fact: The reference contract compiles with every core default overridden (format, paging style, error codes, header names, path version, query encoding, int64 wire form, deprecation header names, operation ids and paths), and with none of the opt-ins (no pack, no idempotency, no CSRF); no convention is applied that the contract or a pack cannot rename or turn off.
+    fact: The reference contract compiles with every core default overridden (format, paging style and its over-limit policy, error codes and their pattern, header names, path version, query encoding and unknown-key policy, body unknown-key policy, int64 wire form, deprecation header names, ops defaults, operation ids and paths, URL form, cache directives), and with none of the opt-ins (no pack, no idempotency, no CSRF); no convention is applied that the contract or a pack cannot rename or turn off.
     frs: [FR-10, FR-42, FR-6]
     scenario: SCN-102
     targets: [core]
@@ -750,7 +750,7 @@ items:
     targets: [core]
   - id: CHK-120
     source: "14 Lifecycle"
-    fact: The OpenAPI document states every IR member of the mapping in ADR 0004 section 12, natively or through an x-seampact-* extension (access with its reason, a cookie write with its CSRF scheme as one requirement, signature schemes, requirements, scopes, field and sort-key rights, paging, concurrency, idempotency, relays, and each response's codes with their derivation or attaching node), and every extension value validates against its published JSON Schema.
+    fact: The OpenAPI document states every IR member of the mapping in ADR 0004 section 12, natively or through an x-seampact-* extension (access with its reason, a cookie write with its CSRF scheme as one requirement, signature schemes, requirements, scopes, field and sort-key rights, paging, concurrency, idempotency, relays, and each response's codes with their derivation or attaching node), and every extension value validates against its published JSON Schema; this holds with the emitter option extensions all, the default.
     frs: [FR-11]
     scenario: SCN-049
     targets: [core]
@@ -772,6 +772,283 @@ items:
     frs: [FR-2, FR-6]
     scenario: SCN-011
     targets: [core]
+  # ---------- Added with grammar review round 4 (A36 audit, target mapping, A39 to A42) ----------
+  - id: CHK-124
+    source: "A36"
+    fact: Error codes outside the dotted form (TASK_NOT_FOUND, E1042, not-found) compile and reach the wire unchanged; a code's family is its family key or the part before its first dot, and conventions.errors.pattern narrows the codes on request.
+    frs: [FR-6]
+    scenario: SCN-037
+    targets: [core, fetch]
+  - id: CHK-125
+    source: "A40"
+    fact: A contract nature mapped onto a base nature is written on the wire by its name, and a generated client takes its retry rule from the base of the code's declaration.
+    frs: [FR-6, FR-15]
+    scenario: SCN-037
+    targets: [core, fetch]
+  - id: CHK-126
+    source: "A36"
+    fact: Every error format writes the code, as a member or inside a text template, and a format that writes none fails to compile; under a strict RFC 9457 format with absolute type URIs the client recovers the code from the template.
+    frs: [FR-42, FR-6]
+    scenario: SCN-048
+    targets: [core, fetch]
+  - id: CHK-127
+    source: "A36"
+    fact: With a header.If-Match version, a stale tag answers 412 and a missing header 428, both renamable roles; a body or query version keeps 409.
+    frs: [FR-2, FR-6]
+    scenario: SCN-031
+    targets: [core, server]
+  - id: CHK-128
+    source: "A36"
+    fact: Paging styles express a more flag, after and before cursors (both sent answers 400), overLimit clamp (served as maxLimit and reported by the limit role, native paging resolvers included) and a split sort; the Stripe and GitHub styles of ADR 0002 compile and are served.
+    frs: [FR-31]
+    scenario: SCN-083
+    targets: [core, server, fetch]
+  - id: CHK-129
+    source: "A36"
+    fact: resourceType, typeName and idProperty set the values of the collection, resource and id slots, so a nested collection whose item holds its id as id renders JSON:API, HAL and JSON-LD bodies with the wire names it chooses.
+    frs: [FR-42, FR-10]
+    scenario: SCN-100
+    targets: [core, server]
+  - id: CHK-130
+    source: "A36"
+    fact: conventions.urls absolute writes absolute URL slots and Link relations from the framework's trusted-proxy view of the request; the default writes relative references.
+    frs: [FR-42]
+    scenario: SCN-100
+    targets: [core, server]
+  - id: CHK-131
+    source: "A40"
+    fact: A signature scheme with verify application hands the raw body, the signature header and the declared headers to the authenticate hook unparsed; a missing signature header answers 401 before the hook, and a Standard Webhooks fixture is verified by a hand-written hook.
+    frs: [FR-20, FR-25]
+    scenario: SCN-026
+    targets: [core, server]
+  - id: CHK-132
+    source: "A36"
+    fact: Query API key and HTTP Basic schemes are checked and emitted, and a bearer scheme's OAuth 2 flows or OpenID Connect URL are emitted as native OpenAPI security schemes.
+    frs: [FR-27, FR-11]
+    scenario: SCN-077
+    targets: [core, server]
+  - id: CHK-133
+    source: "A40"
+    fact: An optionalAuth route treats a refused credential as anonymous by default and answers 401 with onRefused reject.
+    frs: [FR-4, FR-27]
+    scenario: SCN-086
+    targets: [core, server]
+  - id: CHK-134
+    source: "A36"
+    fact: An undeclared query key answers 400 by default and is dropped under conventions.query.unknownKeys or unknownQuery ignore; conventions.input.unknownKeys sets the default for body inputs and a use's own value, refuse included, wins.
+    frs: [FR-30, FR-3]
+    scenario: SCN-081
+    targets: [core, server, zod, yup, class-validator]
+  - id: CHK-135
+    source: "A36"
+    fact: unknownKeys keep passes unknown keys to the handler as a map of opaque values, and an opaque schema accepts any JSON value, typed unknown, JsonNode or mixed, and emitted as an empty schema with x-seampact-opaque.
+    frs: [FR-3, FR-15]
+    scenario: SCN-028
+    targets: [core, server, zod, yup, class-validator]
+  - id: CHK-136
+    source: "A40"
+    fact: The OpenAPI emitter options of the app config (extensions all, none or a list; reasons omit; inputSchemas strict with additionalProperties false on input components; servers) change only what they name, and the defaults give the ADR 0004 section 12 document.
+    frs: [FR-11]
+    scenario: SCN-049
+    targets: [core]
+  - id: CHK-137
+    source: "A36"
+    fact: lint.rules sets each rule disabled, warning or error from the api, its base, the shared file or a pack; lint.allow is inherited down the tree and accepted on catalogue entries; every core rule is documented with its id, default severity and where it is silenced.
+    frs: [FR-12]
+    scenario: SCN-018
+    targets: [core]
+  - id: CHK-138
+    source: "A36"
+    fact: A cache family takes every Cache-Control directive (max-age, s-maxage on public responses only, stale-while-revalidate, stale-if-error, immutable, no-cache, must-revalidate), and each caller kind gets its value.
+    frs: [FR-33]
+    scenario: SCN-086
+    targets: [core, server]
+  - id: CHK-139
+    source: "A36"
+    fact: A route declaring a cache family other than never and returning a sensitive field is a compile error naming the field and the route.
+    frs: [FR-33, FR-3]
+    scenario: SCN-054
+    targets: [core]
+  - id: CHK-140
+    source: "A36"
+    fact: The standalone binary runs init, compile with editor schemas, check, lint with the core rules, diff, explain and bundle with the same results as the Node CLI, so a Java or PHP contract repository needs no Node.js.
+    frs: [FR-17, FR-13]
+    scenario: SCN-056
+    targets: [core]
+  - id: CHK-141
+    source: "A36"
+    fact: An untested framework version is a warning, refused only with checks.matrix strict and silenced by allowUntested, while a version the matrix records as incompatible is refused.
+    frs: [FR-39, FR-14]
+    scenario: SCN-105
+    targets: [core]
+  - id: CHK-142
+    source: "A40"
+    fact: No path version (convention or surface), an unpaged list, a node format, a stated maturity, a local enum and a narrowing compile without a reason, and a pack can make no path version the house default.
+    frs: [FR-4, FR-2]
+    scenario: SCN-007
+    targets: [core]
+  - id: CHK-143
+    source: "A36"
+    fact: init writes optional modelines, honours --editor-schemas ignore, commit or none, --no-modelines and --no-ignore-files and workspace.editorSchemas, and prints every file it changes; compile never reads a modeline.
+    frs: [FR-9]
+    scenario: SCN-046
+    targets: [core]
+  - id: CHK-144
+    source: "A36"
+    fact: Code style is the consumer's choice, with every Prettier option but plugins, nette's PsrPrinter with an indent option by default, and JavaPoet's indent, each giving byte-stable output.
+    frs: [FR-14]
+    scenario: SCN-015
+    targets: [nestjs, spring-boot, laravel]
+  - id: CHK-145
+    source: "A36"
+    fact: conventions.ops and conventions.operationIds change the method, path and status of every ops route and the order and case of every derived operation id.
+    frs: [FR-2, FR-38]
+    scenario: SCN-102
+    targets: [core]
+  - id: CHK-146
+    source: "A36"
+    fact: codeName and codeNames change generated identifiers and never the wire, the suffixes option renames derived types, and handlers perOperation gives one interface per operation.
+    frs: [FR-38]
+    scenario: SCN-093
+    targets: [core, nestjs, spring-boot, laravel]
+  - id: CHK-147
+    source: "A36"
+    fact: frameworkRoutes accepts path patterns with one reason, the boot check's handler and framework-route checks switch off apart, and a target entry's operations filter limits the operations an app serves and the boot check expects.
+    frs: [FR-25]
+    scenario: SCN-072
+    targets: [server]
+  - id: CHK-148
+    source: "A40"
+    fact: The hooks option vendored generates the hook interfaces and runtime types into the consumer's namespace with no seampact runtime package, and is refused with an adapter.
+    frs: [FR-25, FR-14]
+    scenario: SCN-020
+    targets: [server]
+  - id: CHK-149
+    source: "A36"
+    fact: With idempotency enforce none the key is declared, documented and passed to the handler with no replay; with boundary the stored final response of a request that reached the handler, success or handler-answered error, is replayed, and a refusal before the handler is not stored.
+    frs: [FR-7]
+    scenario: SCN-042
+    targets: [core, server]
+  - id: CHK-150
+    source: "A39"
+    fact: A form body (Slack style, signed, with a JSON text field) is decoded with the query rules, its JSON field parsed and validated, and the handler typed.
+    frs: [FR-7, FR-20]
+    scenario: SCN-026
+    targets: [core, server, fetch]
+  - id: CHK-151
+    source: "A39"
+    fact: A multipart upload with typed fields and files answers 400 for a file outside its media list or above maxSize and 413 above the body limit, and the handler receives the framework's own upload object.
+    frs: [FR-7]
+    scenario: SCN-041
+    targets: [core, server, fetch]
+  - id: CHK-152
+    source: "A39"
+    fact: A file download sets Content-Type from the declared media and Content-Disposition from the handler's file name, bypasses the wire format, and clients return the content with its media type.
+    frs: [FR-7]
+    scenario: SCN-038
+    targets: [core, server, fetch]
+  - id: CHK-153
+    source: "A39"
+    fact: A 302 and a 303 carry the derived Location header from a typed handler result, and clients that can read a redirect return its status and location.
+    frs: [FR-7]
+    scenario: SCN-038
+    targets: [core, server, fetch]
+  - id: CHK-154
+    source: "A41"
+    fact: No target generates the framework controller; the developer's controller implements the generated interface, generated utilities place every step of the check order around it, and all generated code goes to the app's outDir, __generated__ by default.
+    frs: [FR-16, FR-39]
+    scenario: SCN-098
+    targets: [server]
+  - id: CHK-155
+    source: "A41"
+    fact: nestjs generates one composite method decorator and one input param decorator per operation, spring-boot one composed meta-annotation per operation, laravel a routes file with middleware and a FormRequest per operation, and symfony and api-platform a generated attribute read by a generated listener with native route registration.
+    frs: [FR-16]
+    scenario: SCN-098
+    targets: [nestjs, spring-boot, laravel, symfony, api-platform]
+  - id: CHK-156
+    source: "A41"
+    fact: Input validation reports path, query, header and body issues together in one 400, through the boundary's own decoder, whatever the app's global pipe, Jackson mapper or serializer settings.
+    frs: [FR-5, FR-16]
+    scenario: SCN-009
+    targets: [server]
+  - id: CHK-157
+    source: "A41"
+    fact: A handler or hook answers a listed code by returning the typed error result or throwing the generated exception for it; a framework denial exception thrown in a decide hook answers the requirement's first denial code; any other exception is 500.
+    frs: [FR-25, FR-16]
+    scenario: SCN-071
+    targets: [server]
+  - id: CHK-158
+    source: "A41"
+    fact: On the JVM and in PHP, an optional and nullable property reaches the handler as absent for {} and as null for an explicit null.
+    frs: [FR-3, FR-21]
+    scenario: SCN-005
+    targets: [spring-boot, laravel, symfony, api-platform]
+  - id: CHK-159
+    source: "A15"
+    fact: PHP targets refuse {} where a list is declared and [] where an object is, accept 1.0 as an integer, emit an empty object as {}, and Laravel's input middlewares do not alter contract routes.
+    frs: [FR-21, FR-15]
+    scenario: SCN-027
+    targets: [laravel, symfony, api-platform]
+  - id: CHK-160
+    source: "A36"
+    fact: A query list in brackets form (tag[]=a&tag[]=b) is accepted and sent, and every server decodes the raw query string, so PHP's last-value parsing and Express's parser setting change nothing.
+    frs: [FR-30]
+    scenario: SCN-081
+    targets: [core, server, fetch]
+  - id: CHK-161
+    source: "A41"
+    fact: A server target entry's mount states the framework's own path prefix, the boot check refuses a mismatch, and nestjs routes are version-neutral with the full contract path.
+    frs: [FR-25, FR-16]
+    scenario: SCN-072
+    targets: [server]
+  - id: CHK-162
+    source: "A42"
+    fact: Every target exports each operation's access in the framework's native form, renders the framework's own security refusals (entry points, CSRF, throttling) in the api's error format through their roles, and spring-boot can generate Spring Security request matchers for public and optionalAuth routes.
+    frs: [FR-25, FR-42]
+    scenario: SCN-048
+    targets: [server]
+  - id: CHK-163
+    source: "A42"
+    fact: With accessHooks false and native access stated with a reason, a target generates no hooks and no access steps, exports the access metadata, refuses an operation that needs the boundary's principal, and its test helper still checks the declared 401 and 403.
+    frs: [FR-25, FR-4]
+    scenario: SCN-104
+    targets: [server]
+  - id: CHK-164
+    source: "A41"
+    fact: nestjs and express send no framework-generated ETag and no 304 on contract routes without cache etag.
+    frs: [FR-33]
+    scenario: SCN-013
+    targets: [nestjs, express]
+  - id: CHK-165
+    source: "A41"
+    fact: The nativeDocs artefact is off by default; when on, the framework's own OpenAPI output agrees with the seampact document on operation ids, response codes and schemas for every contract route.
+    frs: [FR-11, FR-39]
+    scenario: SCN-104
+    targets: [nestjs, spring-boot, api-platform]
+  - id: CHK-166
+    source: "A42"
+    fact: On the JVM the app config is seampact.config.yaml or the Gradle or Maven DSL with the same keys and schema, both together being an error; output in the build directory with declared task inputs and outputs works, and laravel offers an artisan command.
+    frs: [FR-17, FR-19]
+    scenario: SCN-103
+    targets: [spring-boot, laravel]
+  - id: CHK-167
+    source: "A28"
+    fact: The api-platform target serves the JSON-LD contexts as allow-listed framework routes, and another target claiming the api-platform pack serves them too or is refused by the matrix.
+    frs: [FR-21, FR-42]
+    scenario: SCN-100
+    targets: [core, api-platform]
+  - id: CHK-168
+    source: "A41"
+    fact: A Java record's toString and PHP's var_dump and print_r never show a sensitive value.
+    frs: [FR-16]
+    scenario: SCN-054
+    targets: [spring-boot, laravel, symfony, api-platform]
+  - id: CHK-169
+    source: "A41"
+    fact: angular configures HttpClient's XSRF header from the contract's CSRF scheme.
+    frs: [FR-19, FR-27]
+    scenario: SCN-025
+    targets: [angular]
 not_in_checklist:
   - source: "A4, A16"
     reason: Process decisions (FAVIR framing, read-only Arthome research); nothing to test in the product.

@@ -56,7 +56,7 @@ interface ContractIR {
   buckets: Record<BucketId, Bucket>;
   services: Record<ServiceId, Service>;
   extensionKeys: Record<ExtensionKeyId, ExtensionKeyDecl>;   // '<prefix>-<key>' to its schema and allowed places
-  lint: { rules: Record<string, 'off' | 'warning' | 'error'>;   // resolved severities, each with its origin
+  lint: { rules: Record<string, 'disabled' | 'warning' | 'error'>;   // resolved severities, each with its origin
           allows: { rule: string; at: Origin; reason: Reason; subtree: boolean }[] };   // ADR 0002 section 12
   operations: Operation[];                  // the 'httpOperation' kind, sorted by id
 }
@@ -480,4 +480,4 @@ A moved or added code therefore shows in the committed document's diff (ADR 0011
 ## Traceability
 
 - FRs: FR-9, FR-11 (the OpenAPI mapping and its `x-seampact-*` extensions), FR-37 (extension slots, open `kind` members), FR-38 (names as segments and role), FR-40 (subset-shaped JSON Schema for model generation), FR-2 (origins of inherited settings), FR-5 (requirements union and order), FR-6 (`derivedFrom`, errors by code), FR-8 (`relays`, documents), FR-23 (field rights), FR-30 (query wire form), FR-31 and A31 (paging styles), FR-33, FR-42 and A30 (formats), FR-27, FR-28.
-- CHK items enabled: CHK-024, CHK-025, CHK-033, CHK-045, CHK-052, CHK-059, CHK-077, CHK-078, CHK-092, and the IR side of every server item (CHK-011 to CHK-043).
+- CHK items enabled: CHK-024, CHK-025, CHK-033, CHK-045, CHK-052, CHK-059, CHK-077, CHK-078, CHK-092, and the IR side of every server item (CHK-011 to CHK-043), and from round 4 CHK-124 to CHK-136, CHK-138, CHK-149 to CHK-153, CHK-160.

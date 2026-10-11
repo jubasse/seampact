@@ -962,7 +962,7 @@ extensions:
 
 An extension's `schema` is written in the subset of ADR 0003, like any schema. `at` lists where the key may appear: `api`, `operation` (any tree node, inherited), `schema`, `property`, `right`, `rule`, `scope`. The key is written `x-<prefix>-<key>` at its place of use (`x-acme-tax-basis: inclusive`). A core keyword never starts with `x-`, so an extension never collides with one, and no domain key becomes a core keyword (SM-6). The compiler validates every value with a located diagnostic.
 
-Lint is the contract's to tune (A36, FR-12, SCN-018). `lint.rules` on the api, its base, the shared file or a pack sets each rule's severity, `off`, `warning` or `error`, merged by leaf like `conventions`; a rule at `error` fails `compile`, one at `off` does not run. `lint.allow: { <rule id>: "<reason>" }` on a node, a schema, a property or a catalogue entry (a scheme, an identity, a right, a rule, a scope) silences one rule there, and on a node it reaches every node below it. Silencing one place keeps a reason, since the api kept the rule on; switching a rule off for the whole api needs none. Lint ids name rules only: no setting silences a compile error (ADR 0006 section 4). The core rules:
+Lint is the contract's to tune (A36, FR-12, SCN-018). `lint.rules` on the api, its base, the shared file or a pack sets each rule's severity, `disabled`, `warning` or `error` (not `off`, which YAML 1.1 reads as a boolean, section 3), merged by leaf like `conventions`; a rule at `error` fails `compile`, one `disabled` does not run. `lint.allow: { <rule id>: "<reason>" }` on a node, a schema, a property or a catalogue entry (a scheme, an identity, a right, a rule, a scope) silences one rule there, and on a node it reaches every node below it. Silencing one place keeps a reason, since the api kept the rule on; switching a rule off for the whole api needs none. Lint ids name rules only: no setting silences a compile error (ADR 0006 section 4). The core rules:
 
 | Rule | Default | Reports | Silenced on |
 |---|---|---|---|
@@ -976,7 +976,7 @@ Lint is the contract's to tune (A36, FR-12, SCN-018). `lint.rules` on the api, i
 ```yaml
 # shared/base.yaml (excerpt)
 lint:
-  rules: { seampact/credential-name: off, seampact/cookie-without-csrf: error }
+  rules: { seampact/credential-name: disabled, seampact/cookie-without-csrf: error }
 ```
 
 ### 13. Conventions and wire formats
@@ -1810,8 +1810,8 @@ A right never reads the body (section 4): it is decided before the body is valid
 
 ## Traceability
 
-- FRs: FR-1, FR-2, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9 (byte identity, modeline), FR-10 (extension keys, pack keywords), FR-13, FR-20 (keywords), FR-22, FR-23 (sort keys, filteredBy), FR-24, FR-27, FR-28, FR-29 (catalogue), FR-30, FR-31, FR-32, FR-33, FR-34, FR-41, FR-42. Amendments A20, A21, A23, A25, A30 to A36.
-- CHK items enabled: CHK-004 to CHK-020, CHK-021 to CHK-023, CHK-027 to CHK-046, CHK-048, CHK-050 to CHK-058, CHK-073, CHK-086, CHK-087, CHK-089, CHK-090, CHK-092 to CHK-095, CHK-100.
+- FRs: FR-1, FR-2, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9 (byte identity, modeline), FR-10 (extension keys, pack keywords), FR-13, FR-20 (keywords), FR-22, FR-23 (sort keys, filteredBy), FR-24, FR-27, FR-28, FR-29 (catalogue), FR-30, FR-31, FR-32, FR-33, FR-34, FR-41, FR-42. Amendments A20, A21, A23, A25, A30 to A36; amendments A39 (bodies beyond JSON, redirects) and A40 (onRefused, reasons on safety exceptions only, verify application, natures).
+- CHK items enabled: CHK-004 to CHK-020, CHK-021 to CHK-023, CHK-027 to CHK-046, CHK-048, CHK-050 to CHK-058, CHK-073, CHK-086, CHK-087, CHK-089, CHK-090, CHK-092 to CHK-095, CHK-100, and from round 4 CHK-124 to CHK-139, CHK-142, CHK-143, CHK-145, CHK-146, CHK-149 to CHK-153, CHK-160.
 
 ## Self-check: scenarios and keywords
 
