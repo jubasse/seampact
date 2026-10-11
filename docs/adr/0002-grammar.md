@@ -328,7 +328,9 @@ tasks:
 | Key | On | Meaning |
 |---|---|---|
 | `id` | collection | a fields map with one entry: the member id path parameter and its schema |
+| `idProperty` | collection | the item property that holds the member id, when its name differs from the path parameter (`id` for `taskId`); default the parameter's name |
 | `singular` | collection | the noun of member operation ids, instead of the one derived from `id` (below) |
+| `resourceType` | collection, single | the value of the `$collection` slot (a JSON:API `type`, a HAL `_embedded` key), when it differs from the node name: `blog-posts` |
 | `item` | collection, single | the schema of one record; a collection without `ops` that need it may omit it, and a single with neither `item` nor `ops` only groups its `routes` (`me` in the worked example) |
 | `owner` | collection, single | `caller`: see write semantics |
 | `concurrency` | collection, single | `{ version: <body or query source>, field: <item field> }`; on a member route, `concurrency: inherit` |
@@ -717,7 +719,7 @@ scopes: { org: subdomain, project: path.projectId }
 ### 10. Lists, cache and lifecycle settings
 
 - A route is a list when it comes from the `list` op, or when it sets `item` instead of `output`. `output` always means the whole body; an array `output` on a GET is refused with the fix "use `item`", so an author always knows whether a route is paged.
-- `paging`: on a list. It names a paging style from the `pagings` catalogue (section 14): `paging: cursor`, or the mapping form `{ cursor: { maxLimit: 50 } }`, which also takes `defaultLimit` and, for a style with a `since` role, `token: opaque` or `token: instant`. A list without `paging` uses `conventions.paging.default`. A list with neither is a compile error naming both fixes: declare a style in `pagings` and name it, or apply a format pack that provides one (A31). `paging: { none: "<reason>" }` serves the whole list unpaged, through the format's `list` shape. A style with a `since` role derives 410 from the `gone` role (FR-31, SCN-012, SCN-082, SCN-083).
+- `paging`: on a list. It names a paging style from the `pagings` catalogue (section 14): `paging: cursor`, or the mapping form `{ cursor: { maxLimit: 50 } }`, which also takes `defaultLimit`, `overLimit` and, for a style with a `since` role, `token: opaque` or `token: instant`. A list without `paging` uses `conventions.paging.default`. A list with neither is a compile error naming both fixes: declare a style in `pagings` and name it, or apply a format pack that provides one (A31). `paging: { none: "<reason>" }` serves the whole list unpaged, through the format's `list` shape. A style with a `since` role derives 410 from the `gone` role (FR-31, SCN-012, SCN-082, SCN-083).
 - `sortable`: a list of item fields, each a name or `{ key, right }`. A key inherits its field's `restrictedTo`; an explicit right that disagrees is a compile error; sorting by a restricted key without the right derives 403 from the `sortKeyForbidden` role (FR-23, SCN-067).
 - `filteredBy: <right>`: the right the application applies to its query; it reaches OpenAPI and the handler context, and nothing enforces it (SCN-068).
 - `degradable: [viewerProgress]`: paths of optional properties of the success data; a required one is a compile error (SCN-085).
@@ -890,6 +892,7 @@ conventions:
 | `paging.default` | the paging style of a list without `paging` (section 14) | none: a list with neither is a compile error naming both fixes (A31) |
 | `paging.maxLimit` | the largest `limit` a request may send | none: required when a list uses a style with a `limit` role and sets no `maxLimit` |
 | `paging.defaultLimit` | the limit of a request that sends none, and the page size of a style without `limit` | `maxLimit`; required for a style without `limit` |
+| `paging.overLimit` | `reject` (400) or `clamp` (served as `maxLimit`): a `limit` above `maxLimit` (section 14) | `reject` |
 | `idempotency` | `{ header, replayHeader, lifetime, methods, required }`: enables the idempotency key on every non-safe route whose method `methods` lists and that is not exempt (FR-7, A34). `methods` lists `post`, `put`, `patch` and `delete`, all four by default, so a POST-only policy is `methods: [post]`. `required` is `true` by default: a request without the key answers 400 from the `schemaInvalid` role; with `false` it runs without replay protection | unset: no key is derived, and an `idempotency.exempt` on a route the key does not reach is a compile error naming the unused reason |
 | `bodyLimit` | the default request body limit | `1MiB` |
 | `batch` | `{ maxIds, bodyLimit, budget }` for `batch` ops | `maxIds` required when a `batch` op sets none; `bodyLimit` from `bodyLimit`; no budget |
@@ -902,6 +905,7 @@ conventions:
 | `deprecation` | `{ header, sunsetHeader, successorRel }`: the names of the deprecation headers (section 10) | `Deprecation`, `Sunset`, `successor-version` |
 | `rateLimit` | `{ header, param, unit }`: the header written on a 429 from a bucket rule, carrying the denial's integer millisecond `param` in `unit` (`s`, rounded up, or `ms`) | unset: a 429 carries no retry header |
 | `degradedHeader` | the header listing degraded parts | unset: required for a `degradable` route whose format has no `degraded` meta field |
+| `urls` | `relative` or `absolute`: how the URL slots and roles are written (section 13) | `relative` |
 | `rights.pattern` | a pattern every right name must also match (section 2) | unset: the core pattern only (A20) |
 | `errors.pattern` | a pattern every error code must also match, the dotted `family.name` form for example (`'^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$'`) | unset: the core pattern only (A36) |
 | `errors.every` | codes attached to every operation (section 11) | empty |
@@ -968,14 +972,14 @@ The slots are a closed set:
 | `$status` | the HTTP status | everywhere |
 | `$self` | the URL of what the body describes: the member URL of a collection item (built from `$id`), the current page of a paged list, the request URL otherwise | everywhere |
 | `$path` | the request path, without the query | everywhere |
-| `$resource` | the item schema's name (`Task`) | success shapes, paging styles |
-| `$collection` | the collection node's name (`tasks`); also a member name | `table`, `list`, paging styles |
+| `$resource` | the item schema's `typeName` (ADR 0003 section 6), or its name (`Task`) | success shapes, paging styles |
+| `$collection` | the collection's or single's `resourceType`, or its node name (`tasks`); also a member name | `table`, `list`, paging styles |
 | `$id`, `$fields` | the record's id, and the record without its id member | `item` |
 | `$item`, `$itemId`, `$itemFields`, `$itemSelf` | inside `$as`: the element, its id, the element without its id member, its member URL | `$as` |
 | `$code`, `$nature`, `$title`, `$detail`, `$instance`, `$traceId`, `$params` | the error's code, nature, title (or code), optional text, optional occurrence reference, optional trace id, and its params object | `error` |
 | `$<role>` | a paging response role (section 14) or an error-role datum (section 11) | paging styles, role params |
 
-`$id`, `$fields`, `$itemId`, `$itemFields` and `$itemSelf` need the item schema to hold a property named like the collection's `id` parameter (`taskId`); a format that uses one on an operation without it fails to compile, naming the operation and the property. The names `bare` (format), `never` (cache family) and `none` (paging style) are reserved, and so are the portable format names in `scalars` (ADR 0003 section 8).
+`$id`, `$fields`, `$itemId`, `$itemFields` and `$itemSelf` read the item property named by the collection's `idProperty`, or else named like its `id` parameter (`taskId`); a format that uses one on an operation whose item lacks that property fails to compile, naming the operation and the property. The batch table is keyed by the same property. The URL slots (`$self`, `$itemSelf` and the URL roles of section 14) are relative references by default; `conventions.urls: absolute` writes absolute URLs, built from the request's scheme and host as the framework's trusted-proxy settings report them, since the boundary cannot guess a public host behind a proxy. The names `bare` (format), `never` (cache family) and `none` (paging style) are reserved, and so are the portable format names in `scalars` (ADR 0003 section 8).
 
 ### 14. Paging styles
 
@@ -1002,7 +1006,7 @@ pagings:
 
 | Key | Meaning |
 |---|---|
-| `request` | request roles, each `{ query: <name> }` or `{ header: <name> }`; `page` also takes `base` (`1` by default, or `0`), `sort` takes `style` |
+| `request` | request roles, each `{ query: <name> }` or `{ header: <name> }`; `page` also takes `base` (`1` by default, or `0`), `sort` takes `style` and, for `style: split`, `direction` |
 | `response.meta` | members added to the format's page: each maps a member name to a template over the response roles, and joins the `$meta` slot of the format's `success.page` |
 | `response.body` | instead of `meta`: the whole page body, replacing the format's `success.page` body; a template whose slots are the response roles and `$meta`, with `$items` exactly once |
 | `response.headers` | response headers, each a template (`X-Total-Count: $total`) |
@@ -1024,23 +1028,25 @@ pagings:
 
 A page of `pages` is `{ data: [...], meta: { page, lastPage, perPage, total } }`, plus the format's own `meta` fields when it declares some (a `servedAt` filled with `now`); a member named by both the format and the style is a compile error naming both. A style with `meta` under a format whose page shape writes no `$meta`, such as `bare` (`$items`), is a compile error naming the style and the format, with the fix "write `response.body`". A style with `body` replaces the page body, as Hydra, HAL and JSON:API need; inside it, `$meta` holds the format's `meta` fields only, and those fields appear in a page only where a template writes `$meta`. `headers` and `links` add to the page in both cases.
 
-Request roles. A style has exactly one position role (`cursor`, `page`, `offset` or `since`), which sets its kind:
+Request roles. A style has exactly one position role (`cursor`, `page`, `offset` or `since`), or the pair `after` and `before`, which sets its kind:
 
 | Role | Meaning |
 |---|---|
 | `cursor` | an opaque position the handler issued |
+| `after`, `before` | a cursor kind whose two directions travel in two parameters (Stripe's `starting_after` and `ending_before`): records after the position, or before it. A request sends at most one of the two; both answer 400 |
 | `page` | a page number, counted from `base` |
 | `offset` | the number of records to skip |
 | `since` | a changes-since token: opaque, or a `date-time` with `token: instant` (SCN-082) |
-| `limit` | the page size, from 1 to the route's `maxLimit`; a larger value answers 400 (SCN-012). A style without it serves `defaultLimit` records per page |
-| `sort` | the sort keys of `sortable`; `style` is `signed` (`sort=-createdAt,title`), `pair` (`sort=createdAt,desc`, repeated) or `keyed` (the name holds `{key}`: `order[createdAt]=desc`) |
+| `limit` | the page size, from 1 to the route's `maxLimit`. A larger value answers 400 (SCN-012), or, with `overLimit: clamp`, is served as `maxLimit`, which the `limit` response role then reports, as Spring Data, GitHub and API Platform do. A style without it serves `defaultLimit` records per page |
+| `sort` | the sort keys of `sortable`; `style` is `signed` (`sort=-createdAt,title`), `pair` (`sort=createdAt,desc`, repeated), `keyed` (the name holds `{key}`: `order[createdAt]=desc`) or `split` (one key, its direction `asc` or `desc` in the parameter `direction` names: `sort=created&direction=desc`) |
 
 Response roles, each a slot of the body, a header or a link:
 
 | Role | Value | Filled by | Kinds |
 |---|---|---|---|
 | `items` | the page's records | handler | all |
-| `nextCursor`, `previousCursor` | the cursors of the next and previous pages, absent at either end | handler | cursor |
+| `nextCursor`, `previousCursor` | the cursors of the next and previous pages, absent at either end; with `after` and `before`, the values those parameters take | handler | cursor |
+| `more` | whether records follow this page (Stripe's `has_more`, a `hasNext` flag) | handler | all |
 | `page`, `offset`, `limit` | the request's position and the limit applied | boundary | page, offset; `limit` all |
 | `from`, `to` | the one-based positions of the first and last record of the page | boundary | page, offset |
 | `total` | the number of records of the whole list | handler | cursor, page, offset |
@@ -1048,7 +1054,31 @@ Response roles, each a slot of the body, a header or a link:
 | `self`, `first`, `previous`, `next`, `last` | page URLs: the request URL with its position replaced | boundary | `last` page and offset only |
 | `nextSince`, `complete` | the token for the next call, and whether every change up to it is included | handler | since |
 
-The handler result is typed from the roles the style uses: the items, plus `nextCursor`, `previousCursor`, `nextSince` and `complete` when used, and `total` when the style uses `total`, `totalPages` or `last`, whether or not a template writes `$total` (a `lastPage` member without the total is that case). A page or offset style that needs no total asks the handler for a `more` flag, which drives `next`. A role used outside its kinds, a sort key on a style without a `sort` role, and a request name already used by the route's `query` are compile errors naming the style. The route sets the limits (`maxLimit`, `defaultLimit`), or they come from `conventions.paging`.
+The handler result is typed from the roles the style uses: the items, plus `nextCursor`, `previousCursor`, `more`, `nextSince` and `complete` when used, and `total` when the style uses `total`, `totalPages` or `last`, whether or not a template writes `$total` (a `lastPage` member without the total is that case). A page or offset style that needs no total also asks the handler for `more`, which drives `next`. A role used outside its kinds, a sort key on a style without a `sort` role, and a request name already used by the route's `query` are compile errors naming the style. The route sets the limits (`maxLimit`, `defaultLimit`, `overLimit`), or they come from `conventions.paging`.
+
+Two third-party styles show the roles at work, Stripe's list object and GitHub's pages:
+
+```yaml
+# shared/base.yaml (excerpt)
+pagings:
+  stripeList:
+    request:
+      after: { query: starting_after }
+      before: { query: ending_before }
+      limit: { query: limit }
+    response:
+      body: { object: list, data: $items, has_more: $more, url: $path }
+  githubPages:
+    request:
+      page: { query: page }
+      limit: { query: per_page }
+      sort: { query: sort, style: split, direction: direction }
+    response:
+      body: $items
+      links: { next: $next, prev: $previous, first: $first, last: $last }
+conventions:
+  paging: { maxLimit: 100, overLimit: clamp }
+```
 
 ### 15. The presets of the first-party packs
 

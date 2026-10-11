@@ -230,6 +230,7 @@ These keywords are not JSON Schema. Each compiles to an explicit IR field. On a 
 | `sensitive: true` | a property or a scalar schema | the value is secret: `format: password` in OpenAPI, redacted by generated serializers in logs, traces and idempotency storage, and `Cache-Control: no-store` on any response carrying it (CHK-026, SCN-054) |
 | `restrictedTo` | a property | the property is visible or writable only with a right (below) |
 | `discriminator` | a union | section 3: a property name, or `{ from: header.<Name> }` on a route's whole input |
+| `typeName` | a named object schema | the value the `$resource` slot writes (a JSON-LD `@type`), when it differs from the schema name (ADR 0002 section 13) |
 | `unknownKeys: { ignore: <reason> }` | an object schema, a union or a reference, on input | unknown keys are dropped instead of refused, in this object and every object below it (section 4) |
 | `lint: { allow: { <rule>: <reason> } }` | a schema or property | silences one lint rule there, with a reason (ADR 0002 section 12) |
 | `x-<prefix>-<key>` | where the extension's `at` allows | a consumer extension (ADR 0002 section 12) |

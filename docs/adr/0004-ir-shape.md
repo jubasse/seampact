@@ -160,7 +160,7 @@ type Schema =                                // a tagged union on 'kind'
   | { kind: 'map'; keys?: TypeUse; values: TypeUse }
   | { kind: 'union'; tag: { in: 'body'; property: string } | { in: 'header'; name: string };   // header: a route's whole input only
       variants: { tag: string; schema: SchemaId }[] }
-  ;                                          // each with id, name, directions, examples, docs, extensions, origin
+  ;                                          // each with id, name, typeName?, directions, examples, docs, extensions, origin
 interface Property {
   name: string; type: TypeUse; optional: boolean; nullable: boolean;
   sensitive: boolean; restrictedTo?: FieldRestriction; default?: unknown; deprecated: boolean;
@@ -201,6 +201,7 @@ interface Operation {
   id: string;  name: Name;                   // 'assignTask'
   surface: SurfaceId;
   op?: 'list' | 'get' | 'create' | 'update' | 'delete' | 'batch';   // the ops shorthand it came from
+  resource?: { type: string; idParam?: string; idProperty?: string };   // the collection or single it belongs to: '$collection' value, member id parameter, item id property
   features: Feature[];                       // must-understand features this operation uses (ADR 0005)
   method: 'get' | 'post' | 'put' | 'patch' | 'delete';
   path: string;                              // '/v1/channels/{channelId}/tasks/{taskId}/assign'
@@ -284,8 +285,8 @@ interface Cache {
   origin; derivedFrom?;
 }
 interface Paging {
-  style?: PagingId;                          // absent with 'noneReason': an unpaged list
-  maxLimit?: number; defaultLimit?: number; token?: 'opaque' | 'instant'; noneReason?: Reason;
+  style?: PagingId;                          // absent for an unpaged list ('paging: none')
+  maxLimit?: number; defaultLimit?: number; overLimit: 'reject' | 'clamp'; token?: 'opaque' | 'instant';
   sortKeys: { key: string; right?: RightId; derivedFrom?: DerivedFrom; origin?: Origin }[];
   origin;
 }
@@ -311,8 +312,9 @@ interface PagingStyle {
   id: PagingId; origin;
   position: 'cursor' | 'page' | 'offset' | 'since';
   absent: 'omit' | 'null';
-  request: { role: 'cursor' | 'page' | 'offset' | 'since' | 'limit' | 'sort';
-             in: 'query' | 'header'; name: string; base?: 0 | 1; style?: 'signed' | 'pair' | 'keyed' }[];
+  request: { role: 'cursor' | 'after' | 'before' | 'page' | 'offset' | 'since' | 'limit' | 'sort';
+             in: 'query' | 'header'; name: string; base?: 0 | 1; style?: 'signed' | 'pair' | 'keyed' | 'split';
+             direction?: string }[];                // split: the direction parameter's name
   response: { body?: Template;               // the whole page body; absent when the style adds 'meta' to the format's page
               meta: { name: string; value: Template }[];   // members joining the format's page $meta
               headers: HeaderTemplate[]; links: { rel: string; role: UrlRole }[] };
@@ -386,7 +388,7 @@ The OpenAPI 3.1 document is emitted from the IR only (FR-11), and it is the inte
 | `requires` | `x-seampact-requires`: the items in order, `{ right, params, subject }` or `{ rule, params, bucket }`, with `entry` when written through a `requirements` entry |
 | `fieldRights` | `x-seampact-restricted-to: [{ schema, pointer, right, params, direction, input }]` on the operation, empty and left out on a relay route |
 | `filteredBy` | `x-seampact-filtered-by: <right>` |
-| `paging` | the request roles as ordinary parameters (`maximum` from `maxLimit`, `default` from `defaultLimit`), the page as the response body schema the format and style give, the style's headers and `Link` as response headers, plus `x-seampact-paging: { style, position, roles: { <role>: <source> }, maxLimit, defaultLimit, token, sortKeys: [{ key, right }] }`, or `{ none: <reason> }` for an unpaged list |
+| `paging` | the request roles as ordinary parameters (`maximum` from `maxLimit` unless `overLimit` is `clamp`, `default` from `defaultLimit`), the page as the response body schema the format and style give, the style's headers and `Link` as response headers, plus `x-seampact-paging: { style, position, roles: { <role>: <source> }, maxLimit, defaultLimit, overLimit, token, sortKeys: [{ key, right }] }`, or `{ none: true }` for an unpaged list |
 | `concurrency` | the version as an ordinary parameter or body property, `ETag` on the responses carrying the item, plus `x-seampact-concurrency: { version, field }` |
 | `idempotency` | the key header parameter and the replay response header, plus `x-seampact-idempotency: { header, replayHeader, lifetimeMs, required }`, or `{ exempt: <reason> }` |
 | `owner` | `x-seampact-owner: caller` |
