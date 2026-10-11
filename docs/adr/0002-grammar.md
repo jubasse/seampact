@@ -54,7 +54,7 @@ There are five kinds of file. The loader knows each by its top-level keys.
 | pack | `pack`, any catalogue, `conventions`, `formats`, `extensions` | `packs` from an api or base |
 | fragment | whatever the include site expects | `include` or a file `$ref` |
 
-The catalogues are `schemas`, `enums`, `errors`, `natures`, `schemes`, `identities`, `rights`, `rules`, `scopes`, `buckets` and `services`. Each maps a name to one declaration. Everything a contract references by name lives in one of them.
+The catalogues are `schemas`, `enums`, `errors`, `natures`, `schemes`, `identities`, `rights`, `rules`, `scopes`, `buckets`, `services` and `pagings`. Each maps a name to one declaration. Everything a contract references by name lives in one of them.
 
 Paths in `extends`, `packs`, `include`, `$ref` and `$file` are relative to the file that contains them, use forward slashes, must stay inside the workspace directory, and must match the case of the file on disk. The last two rules keep compilation identical on case-insensitive file systems and stop a contract from reading files outside its repository.
 
@@ -220,7 +220,7 @@ tasks:
 | Key | On | Meaning |
 |---|---|---|
 | `id` | collection | a fields map with one entry: the member id path parameter and its schema |
-| `item` | collection, single | the schema of one record |
+| `item` | collection, single | the schema of one record; a collection without `ops` that need it may omit it, and a single with neither `item` nor `ops` only groups its `routes` (`me` in the worked example) |
 | `owner` | collection, single | `caller`: see write semantics |
 | `concurrency` | collection, single | `{ version: <body or query source>, field: <item field> }`; on a member route, `concurrency: inherit` |
 | `ops` | collection, single | the shorthand routes; see below |
@@ -236,7 +236,7 @@ Settings written on the collection node apply to all its routes; settings writte
 
 | Op | On | Method and path | Operation id | Input | Success |
 |---|---|---|---|---|---|
-| `list` | collection | `GET /tasks` | `list` + plural (`listTasks`) | the paging query | `200`, a page of `item` |
+| `list` | collection | `GET /tasks` | `list` + plural (`listTasks`) | the paging style's request roles | `200`, a page of `item` (section 14) |
 | `get` | collection, single | `GET /tasks/{taskId}`, `GET /me/preferences` | `get` + singular (`getTask`, `getPreferences`) | none | `200`, `item` |
 | `create` | collection | `POST /tasks` | `create` + singular | required `input` | `201`, `item` |
 | `update` | collection, single | `PATCH /tasks/{taskId}` | `update` + singular | required `input` | `200`, `item` |
@@ -281,7 +281,8 @@ assign:
 | `query` | a fields map, or a schema name; an object-typed field is exploded into top-level keys, and any undeclared key is refused (FR-30) |
 | `headers` | request headers: a fields map keyed by header name |
 | `input` | the body schema (`application/json`) |
-| `output` | the single success response: its status is the op's default, or `200` |
+| `output` | the body of the single success response, always the whole payload: its status is the op's default, or `200` |
+| `item` | instead of `output`, on a route that is a list: the schema of one record (section 10) |
 | `responses` | several responses keyed by status, instead of `output` |
 | `paging`, `sortable`, `filteredBy` | list behaviour (section 10) |
 | `degradable` | optional success-data paths that may be missing (FR-32) |
@@ -518,7 +519,8 @@ scopes: { org: subdomain, project: path.projectId }
 
 ### 10. Lists, cache and lifecycle settings
 
-- `paging`: on a list op or any GET route returning several records (its `output` is then the item schema): `cursor`, `pages`, `changesSince`, or the mapping form `{ cursor: { maxLimit: 50 } }`, `{ pages: { maxLimit: 100 } }`, `{ changesSince: { token: opaque } }` (`token: opaque` or `token: instant`). A list without `paging` uses `conventions.paging.default`; `paging: { none: "<reason>" }` opts out. Where the paging state travels (query parameters, page fields, headers) is the wire format's (section 13). `changesSince` derives 410 from the `gone` slot (FR-31, SCN-012, SCN-082, SCN-083).
+- A route is a list when it comes from the `list` op, or when it sets `item` instead of `output`. `output` always means the whole body; an array `output` on a GET is refused with the fix "use `item`", so an author always knows whether a route is paged.
+- `paging`: on a list. It names a paging style from the `pagings` catalogue (section 14): `paging: cursor`, or the mapping form `{ cursor: { maxLimit: 50 } }`, which also takes `defaultLimit` and, for a style with a `since` role, `token: opaque` or `token: instant`. A list without `paging` uses `conventions.paging.default`. A list with neither is a compile error naming both fixes: declare a style in `pagings` and name it, or apply a format pack that provides one (A31). `paging: { none: "<reason>" }` serves the whole list unpaged, through the format's `list` shape. A style with a `since` role derives 410 from the `gone` role (FR-31, SCN-012, SCN-082, SCN-083).
 - `sortable`: a list of item fields, each a name or `{ key, right }`. A key inherits its field's `restrictedTo`; an explicit right that disagrees is a compile error; sorting by a restricted key without the right derives 403 from the `sortKeyForbidden` slot (FR-23, SCN-067).
 - `filteredBy: <right>`: the right the application applies to its query; it reaches OpenAPI and the handler context, and nothing enforces it (SCN-068).
 - `degradable: [viewerProgress]`: paths of optional properties of the success data; a required one is a compile error (SCN-085).
@@ -586,7 +588,7 @@ examples:
   missingTitle: { request: true, value: { title: '' } }
 ```
 
-An example targets a success status or the request (`request: true`); error examples live in the registry. Schema examples are ADR 0003.
+An example targets a success status or the request (`request: true`); error examples live in the registry. Schema examples are ADR 0003. A success example's `value` is what the handler returns: the payload for an item, the item array for a list (paged or not), the id-keyed object for a table. It is parsed against that schema, and the OpenAPI emitter wraps it through the operation's format and paging style before writing it, so an example never restates an envelope (A30).
 
 Docs are `summary` (inline) and `description` (inline or `$file`) on apis, nodes, routes, errors, rights, rules, scopes, identities and enums; schemas use JSON Schema's `title` and `description` (FR-34, SCN-088).
 
@@ -631,38 +633,279 @@ conventions:
 |---|---|
 | `format` | the wire format, `bare` by default (A30) |
 | `pathCase` | how node names become path segments |
-| `paging` | the default paging kind, `maxLimit`, `defaultLimit` |
+| `paging` | `default` (a paging style), `maxLimit`, `defaultLimit` (section 14) |
 | `idempotency` | the key header, its replay header and its lifetime (FR-7) |
 | `bodyLimit`, `batch` | the default body limit (1 MiB) and the batch defaults |
 | `cache.families` | freshness families and their max-age |
 | `restrictedInput` | `reject` (default) or `strip`: a restricted field sent without its right (A21); overridable per field (ADR 0003) |
 | `outputEnums` | `enum` or `open`: how the emitter writes an output enum (FR-29) |
 | `rateLimit` | the header carrying the retry delay on 429 |
-| `degradedHeader` | the header listing degraded parts, for a format without a meta slot |
+| `degradedHeader` | the header listing degraded parts, for a format without a `degraded` meta field |
 | `errors.every`, `errors.derived` | section 11 |
 
-The core imposes no wire format (A30). With `format: bare`, the default, a success body is the bare payload, a list is the bare array with its paging state in RFC 8288 `Link` headers, and an error is an RFC 9457 `application/problem+json` body whose `code` member is the discriminator, with `nature` and the error's params as further members. Every other format (an envelope like Arthome's, JSON:API, HAL, JSON-LD and Hydra, Laravel resources and paginators, Spring Page and ProblemDetail) is declared by a convention pack in `formats` and selected with `conventions.format`; each target maps it onto its framework's own mechanism (FR-42, SCN-048, SCN-100).
+The core imposes no wire format (A30). `format: bare`, the default, is itself written as format data below: every success body is the bare payload, and an error is an RFC 9457 `application/problem+json` body whose members are fixed in ADR 0006 section 7. `bare` has no paging style, because the core imposes no page shape either (A31, section 14). Every other format (an envelope like Arthome's, JSON:API, HAL, JSON-LD and Hydra, Laravel resources and paginators, Spring Page and ProblemDetail) is declared in `formats`, usually by a convention pack, and selected with `conventions.format`; each target maps it onto its framework's own mechanism (FR-42, SCN-048, SCN-100).
+
+#### Wire formats
 
 ```yaml
-# packs/acme-envelope.yaml (excerpt)
+# packs/house.yaml (excerpt)
 formats:
   acmeEnvelope:
     media: application/json
     success:
-      item: { data: $payload, meta: $meta }
-      page: { items: $payload, page: $page, meta: $meta }
-      table: { data: $payload, meta: $meta }
+      item: { body: { data: $payload, meta: $meta } }
+      table: { body: { data: $payload, meta: $meta } }
+      list: { body: { data: $payload, meta: $meta } }
     meta:
       servedAt: { fill: now }
       degraded: { fill: degraded }
-    page:
-      cursor: { next: $nextCursor, limit: $limit }
     error:
-      media: application/json
       body: { error: { code: $code, nature: $nature, params: $params, traceId: $traceId } }
 ```
 
-A format is a set of templates. A string starting with `$` in a template is a slot the boundary fills: `$payload`, `$meta`, `$page`, `$code`, `$nature`, `$params`, `$status`, `$title`, `$traceId`, and the paging slots of each kind. `meta` fields say who fills each one (`fill`: `now`, `traceId`, `degraded`, a `principal.<field>` source, or `handler`). The IR keeps the unwrapped data and a reference to the format, so nothing restates the shape (FR-42).
+| Key | Meaning |
+|---|---|
+| `media` | the media type of success bodies; `application/json` by default |
+| `absent` | what a slot with no value writes: `omit` (default) or `null` |
+| `success.item`, `success.table`, `success.list` | one per response shape: `{ body, headers }`. `body` is a template, `$payload` by default; `headers` maps a header name to a template. `item` is one record or any non-list body, `table` the id-keyed object of a `batch` read, `list` an unpaged list. A paged list takes its shape from its paging style (section 14) |
+| `meta` | the meta fields, each `{ fill, schema }`: `fill` is `now`, `traceId`, `degraded`, a `principal.<field>` source, or `handler` (which then needs `schema`) |
+| `error` | `{ media, body, headers }`; `media` defaults to the format's. A format without `error` uses the `bare` error |
+
+A shape left out uses its default (`body: $payload`, no headers), so `bare` writes only its error.
+
+#### Templates
+
+A template describes a JSON value the boundary writes. The same language serves format shapes, paging styles (section 14) and error-role params (section 11).
+
+| Written | Meaning |
+|---|---|
+| `$name` (the whole string) | a slot: the value the boundary fills, with its own JSON type |
+| `$name.member` | a member of an object slot (`$item.taskId`, `$issue.pointer`) |
+| `${name}` inside a longer string | the slot's value as text (`'/contexts/${resource}'`, `'${status}'`) |
+| `$$` | a literal `$` (`$$ref` writes `$ref`) |
+| a mapping | an object; each key is a member name, written literally |
+| the key `$merge: <slot>` | spreads an object slot's members beside the others; a member defined twice is a compile error naming both |
+| a key that is a name slot (`$collection`) | the member name is the slot's value |
+| `{ $each: <slot>, $as: <template> }` | an array: `$as` applied to each element of an array slot; inside it, `$item` is the element |
+| a sequence | an array of templates |
+| any other scalar | a literal |
+
+A member whose value is a slot with no value is omitted, or written `null` when `absent: null`; an object whose members are all omitted is omitted in turn, so `next: { href: $next }` disappears on the last page. `$merge` takes an object-typed slot only, and a payload that is not an object fails to compile under a format that merges it.
+
+The slots are a closed set:
+
+| Slot | Value | Where |
+|---|---|---|
+| `$payload` | what the handler returns: the item, the id-keyed table, or the array of an unpaged list | success shapes |
+| `$meta` | the object of the format's `meta` fields | success shapes, paging styles |
+| `$status` | the HTTP status | everywhere |
+| `$self` | the URL of what the body describes: the member URL of a collection item (built from `$id`), the current page of a paged list, the request URL otherwise | everywhere |
+| `$path` | the request path, without the query | everywhere |
+| `$resource` | the item schema's name (`Task`) | success shapes, paging styles |
+| `$collection` | the collection node's name (`tasks`); also a member name | `table`, `list`, paging styles |
+| `$id`, `$fields` | the record's id, and the record without its id member | `item` |
+| `$item`, `$itemId`, `$itemFields`, `$itemSelf` | inside `$as`: the element, its id, the element without its id member, its member URL | `$as` |
+| `$code`, `$nature`, `$title`, `$detail`, `$instance`, `$traceId`, `$params` | the error's code, nature, title (or code), optional text, optional occurrence reference, optional trace id, and its params object | `error` |
+| `$<role>` | a paging response role (section 14) or an error-role datum (section 11) | paging styles, role params |
+
+`$id`, `$fields`, `$itemId`, `$itemFields` and `$itemSelf` need the item schema to hold a property named like the collection's `id` parameter (`taskId`); a format that uses one on an operation without it fails to compile, naming the operation and the property. The names `bare` (format), `never` (cache family) and `none` (paging style) are reserved.
+
+### 14. Paging styles
+
+Paging imposes no convention (A31). A paging style lists the semantic roles a list uses and maps each one to a location and a name of the contract's choosing: a query parameter or a request header for the request roles, a body member, a response header or an RFC 8288 `Link` relation for the response roles. Styles live in the `pagings` catalogue; a format pack provides presets of them (section 15). Roles are core semantics: the core knows what each one means and who fills it, never what it is called.
+
+```yaml
+# shared/base.yaml (excerpt)
+pagings:
+  cursor:
+    request:
+      cursor: { query: cursor }
+      limit: { query: limit }
+      sort: { query: sort, style: signed }
+    response:
+      body: $items
+      links: { next: $next }
+  changes:
+    request:
+      since: { query: since }
+      limit: { query: limit }
+    response:
+      body: { items: $items, next: $nextSince, complete: $complete }
+```
+
+| Key | Meaning |
+|---|---|
+| `request` | request roles, each `{ query: <name> }` or `{ header: <name> }`; `page` also takes `base` (`1` by default, or `0`), `sort` takes `style` |
+| `response.body` | the page body, a template whose slots are the response roles; `$items` appears exactly once |
+| `response.headers` | response headers, each a template (`X-Total-Count: $total`) |
+| `response.links` | RFC 8288 relations written in one `Link` header, each mapped to a URL role (`next: $next`) |
+| `absent` | as on a format; `omit` by default |
+
+Request roles. A style has exactly one position role (`cursor`, `page`, `offset` or `since`), which sets its kind:
+
+| Role | Meaning |
+|---|---|
+| `cursor` | an opaque position the handler issued |
+| `page` | a page number, counted from `base` |
+| `offset` | the number of records to skip |
+| `since` | a changes-since token: opaque, or a `date-time` with `token: instant` (SCN-082) |
+| `limit` | the page size, from 1 to the route's `maxLimit`; a larger value answers 400 (SCN-012). A style without it serves `defaultLimit` records per page |
+| `sort` | the sort keys of `sortable`; `style` is `signed` (`sort=-createdAt,title`), `pair` (`sort=createdAt,desc`, repeated) or `keyed` (the name holds `{key}`: `order[createdAt]=desc`) |
+
+Response roles, each a slot of the body, a header or a link:
+
+| Role | Value | Filled by | Kinds |
+|---|---|---|---|
+| `items` | the page's records | handler | all |
+| `nextCursor`, `previousCursor` | the cursors of the next and previous pages, absent at either end | handler | cursor |
+| `page`, `offset`, `limit` | the request's position and the limit applied | boundary | page, offset; `limit` all |
+| `from`, `to` | the one-based positions of the first and last record of the page | boundary | page, offset |
+| `total` | the number of records of the whole list | handler | cursor, page, offset |
+| `totalPages` | `total` divided by `limit`, rounded up | boundary | page, offset |
+| `self`, `first`, `previous`, `next`, `last` | page URLs: the request URL with its position replaced | boundary | `last` page and offset only |
+| `nextSince`, `complete` | the token for the next call, and whether every change up to it is included | handler | since |
+
+The handler result is typed from the roles the style uses: the items, plus `nextCursor`, `previousCursor`, `total`, `nextSince` and `complete` when used. A page or offset style without `total` asks the handler for a `more` flag, which drives `next`. A role used outside its kinds, `last` or `totalPages` without `total`, a sort key on a style without a `sort` role, and a request name already used by the route's `query` are compile errors naming the style. The route sets the limits (`maxLimit`, `defaultLimit`), or they come from `conventions.paging`.
+
+### 15. The presets of the first-party packs
+
+The template language must express every format A28 and A32 name. These are the presets of the first-party packs (ADR 0008), written in the grammar above; the packs hold the full versions.
+
+```yaml
+# @seampact/pack-api-platform: JSON-LD items and Hydra collections (excerpt)
+formats:
+  jsonld:
+    media: application/ld+json
+    success:
+      item:
+        body: { '@context': '/contexts/${resource}', '@id': $self, '@type': $resource, $merge: $payload }
+    error:
+      body:
+        '@context': /contexts/Error
+        '@id': '/errors/${status}'
+        '@type': Error
+        type: '/errors/${status}'
+        title: $title
+        detail: $detail
+        status: $status
+        code: $code
+        $merge: $params
+pagings:
+  hydra:
+    request:
+      page: { query: page }
+      limit: { query: itemsPerPage }
+      sort: { query: 'order[{key}]', style: keyed }
+    response:
+      body:
+        '@context': '/contexts/${resource}'
+        '@id': $path
+        '@type': Collection
+        totalItems: $total
+        member: { $each: $items, $as: { '@id': $itemSelf, '@type': $resource, $merge: $item } }
+        view: { '@id': $self, '@type': PartialCollectionView, first: $first, last: $last, previous: $previous, next: $next }
+```
+
+```yaml
+# @seampact/pack-jsonapi (excerpt)
+formats:
+  jsonapi:
+    media: application/vnd.api+json
+    success:
+      item: { body: { data: { type: $collection, id: '${id}', attributes: $fields, links: { self: $self } } } }
+    error:
+      body:
+        errors:
+          - { status: '${status}', code: $code, title: $title, detail: $detail, meta: $params }
+pagings:
+  jsonapiPages:
+    request:
+      page: { query: 'page[number]' }
+      limit: { query: 'page[size]' }
+      sort: { query: sort, style: signed }
+    response:
+      body:
+        data: { $each: $items, $as: { type: $collection, id: '${itemId}', attributes: $itemFields, links: { self: $itemSelf } } }
+        links: { self: $self, first: $first, prev: $previous, next: $next, last: $last }
+        meta: { total: $total }
+```
+
+```yaml
+# @seampact/pack-hal (excerpt)
+formats:
+  hal:
+    media: application/hal+json
+    success:
+      item: { body: { $merge: $payload, _links: { self: { href: $self } } } }
+pagings:
+  halPages:
+    request:
+      page: { query: page, base: 0 }
+      limit: { query: size }
+      sort: { query: sort, style: pair }
+    response:
+      body:
+        _embedded: { $collection: { $each: $items, $as: { $merge: $item, _links: { self: { href: $itemSelf } } } } }
+        _links: { self: { href: $self }, first: { href: $first }, prev: { href: $previous }, next: { href: $next }, last: { href: $last } }
+        page: { size: $limit, totalElements: $total, totalPages: $totalPages, number: $page }
+```
+
+```yaml
+# @seampact/pack-laravel: API Resources and paginators (excerpt)
+formats:
+  laravel:
+    success:
+      item: { body: { data: $payload } }
+      table: { body: { data: $payload } }
+      list: { body: { data: $payload } }
+pagings:
+  laravelPages:
+    absent: null
+    request:
+      page: { query: page }
+      limit: { query: per_page }
+    response:
+      body:
+        data: $items
+        links: { first: $first, last: $last, prev: $previous, next: $next }
+        meta: { current_page: $page, from: $from, last_page: $totalPages, path: $path, per_page: $limit, to: $to, total: $total }
+  laravelCursor:
+    absent: null
+    request:
+      cursor: { query: cursor }
+      limit: { query: per_page }
+    response:
+      body:
+        data: $items
+        links: { first: null, last: null, prev: $previous, next: $next }
+        meta: { path: $path, per_page: $limit, next_cursor: $nextCursor, prev_cursor: $previousCursor }
+```
+
+```yaml
+# @seampact/pack-spring: Page; errors stay the bare problem+json, which the spring-boot target writes with ProblemDetail (excerpt)
+pagings:
+  springPage:
+    request:
+      page: { query: page, base: 0 }
+      limit: { query: size }
+      sort: { query: sort, style: pair }
+    response:
+      body:
+        content: $items
+        page: { size: $limit, number: $page, totalElements: $total, totalPages: $totalPages }
+```
+
+```yaml
+# the core default (ADR 0006 section 7)
+formats:
+  bare:
+    media: application/json
+    error:
+      media: application/problem+json
+      body: { type: $code, title: $title, status: $status, detail: $detail, instance: $instance, code: $code, nature: $nature, traceId: $traceId, $merge: $params }
+```
+
+Laravel's paginator also writes `meta.links`, a numbered list of page links. It is not a role until a consumer needs it (lesson 5): the laravel target writes the declared shape through `ResourceCollection::paginationInformation`, Laravel's own customisation point (A30).
 
 ## Departures from brief 5.3
 
@@ -793,6 +1036,16 @@ errors:
   api.internal: { status: 500, nature: failed }
   api.deadline_exceeded: { status: 504, nature: unavailable }
   state.conflict: { status: 409, nature: refused }
+
+pagings:
+  cursor:
+    request:
+      cursor: { query: cursor }
+      limit: { query: limit }
+      sort: { query: sort, style: signed }
+    response:
+      body: $items
+      links: { next: $next }
 
 conventions:
   paging: { default: cursor, maxLimit: 100 }
@@ -1012,7 +1265,7 @@ surfaces:
 
 What the example shows, by route:
 
-- `listTasks` (`GET /v1/channels/{channelId}/tasks`): identity `user` from the surface, scope `channel` from the member path of `channels`, cursor paging capped at 50, the restricted sort key `effort` (it inherits `tasks.seeEffort` from `Task.effort`), `filteredBy`.
+- `listTasks` (`GET /v1/channels/{channelId}/tasks`): identity `user` from the surface, scope `channel` from the member path of `channels`, the base's `cursor` style (the item array as the body, the next page in a `Link` header) capped at 50, the restricted sort key `effort` (it inherits `tasks.seeEffort` from `Task.effort`), `filteredBy`.
 - `createTask`: `throttle` then `roles` in that order, a body, an idempotency key from the conventions, CSRF from `sessionCookie` on a write.
 - `updateTask`: `tasks.update` with the subject defaulting to `path.taskId`, the version read from `body.expectedVersion` and compared to `Task.version`, 409 `state.conflict`.
 - `archiveTask`: a member action that opts into the version, kept out of the `public` document.
@@ -1061,12 +1314,12 @@ getDateDetail:
   output: DateDetail
 listInvoices:
   method: get
-  paging: { pages: { maxLimit: 100 } }
-  output: Invoice
+  paging: { springPage: { maxLimit: 100 } }   # a preset of @seampact/pack-spring
+  item: Invoice
 listChanges:
   method: get
-  paging: { changesSince: { token: opaque } }
-  output: Change
+  paging: { changes: { token: opaque } }      # the style of section 14
+  item: Change
 ```
 
 ## Consequences
@@ -1074,7 +1327,7 @@ listChanges:
 - Phase 1 writes the authoring JSON Schema from sections 1 to 13 of this ADR; a keyword not listed here is refused by it, and the grammar snapshot test (SM-6) fails when a core keyword is added without an ADR reference.
 - The loader implements sections 1 to 4 (composition, the byte-identity rule, pitfalls); the compiler passes implement sections 5 to 13 as ADR 0006 assigns them.
 - Contracts carry no house convention: error codes, header names, right names and wire formats all come from the base or from packs. A contract without them fails with a diagnostic naming the missing slot or key, which is the price of A20, A25 and A30.
-- The grammar has three shorthands only: a string for a schema reference, `ops` as a list, and `paging` as a kind name. Each yields the same IR as its long form.
+- The grammar has three shorthands only: a string for a schema reference, `ops` as a list, and `paging` as a style name. Each yields the same IR as its long form.
 - An inherited requirement cannot be removed below; a contract that needs it must restructure its tree. Revisit only with a consumer that cannot.
 - Not modelled until a consumer needs it: `If-Match`, media types other than JSON (and the raw body of a signed identity), a base extending a base, shorthands beyond `ops`.
 
@@ -1094,13 +1347,13 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-003 | `kind: collection`, `id`, `item`, `concurrency.version`, `concurrency.field`, `ops`, `member`, `method` (6) |
 | SCN-004 | `owner: caller`, `ops` (6) |
 | SCN-005 | `enums`, `enum` in a schema (12, ADR 0003) |
-| SCN-006 | `examples`, `$file` (12, 2); refused keyword `if` (ADR 0003) |
+| SCN-006 | `examples`, `$file` (12, 2); refused keyword `if` (ADR 0003). The scenario's "TaskPage" example is the list payload, the item array, which the emitter wraps through the format |
 | SCN-007 | `access.public`, `optionalAuth`, `csrfExempt`, `idempotency.exempt`, `lint.allow`, `maturity.reason`, enum `reason`, right `guest` (9 to 12) |
 | SCN-008 | `schemes` with `csrf`, `identities.schemes.write`, `csrfExempt` (9) |
 | SCN-009 | `identity`, `principal.requires`, `scopes`, `requires` (rule and right), `input`, `bindings` (9) |
 | SCN-010 | `bindings` with body and path sources (9) |
 | SCN-011 | `errors` registry and attachment with `{ code, example }`, `conventions.errors.every` (11) |
-| SCN-012 | `conventions.paging.default`, `paging.cursor.maxLimit`, `sortable`, `restrictedTo` (10, ADR 0003) |
+| SCN-012 | `pagings` (`cursor`, `limit`, `sort` roles), `conventions.paging.default`, `paging.<style>.maxLimit`, `sortable`, `restrictedTo` (10, 14, ADR 0003) |
 | SCN-013 | `cache.freshness`, `cache.etag`, `conventions.cache.families` (10, 13) |
 | SCN-014 | `workspace.apis`, `api.kind: service`, `relays`, `workspace.imports` (1, 5, 7) |
 | SCN-016 | `extensions`, `x-<prefix>-<key>` (12) |
@@ -1126,7 +1379,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-045 | `api.caller.right`, `rights.callerService.params` (5, 9) |
 | SCN-046 | `# yaml-language-server` modeline (3) |
 | SCN-047 | `packs`, pack file keys (1, 2) |
-| SCN-048 | `formats` (`success`, `meta.fill`, `error`), `conventions.format`, `ops.batch` (13, 6) |
+| SCN-048 | `formats` (`success.item`, `success.table`, `meta.fill`, `error`), a `pagings` style for the list, templates, `conventions.format`, `ops.batch` (13, 14, 6) |
 | SCN-050 | `api.maturity`, `api.compat` (5) |
 | SCN-051 | `deprecated.sunset`, `deprecated.successor` (10) |
 | SCN-054 | `sensitive` (ADR 0003) |
@@ -1147,8 +1400,8 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-079 | identity header `versionToken` (`from`, `response`, `request`, `stale`) (9) |
 | SCN-080 | `enums` (`values`, `source`, `reason`, `fallback`), narrowing (12, ADR 0003), `conventions.outputEnums` (13) |
 | SCN-081 | `query` fields map with `?` and an object field (7, 4) |
-| SCN-082 | `paging.changesSince.token` (10) |
-| SCN-083 | `paging.pages.maxLimit` (10) |
+| SCN-082 | a `pagings` style with the `since`, `nextSince` and `complete` roles, `paging.<style>.token`, `item` (10, 14) |
+| SCN-083 | a `pagings` style with the `page` and `limit` roles, from a format pack or the contract, `paging.<style>.maxLimit`, `item` (10, 14, 15) |
 | SCN-084 | `ops.batch.maxIds`, `conventions.batch` (6, 13) |
 | SCN-085 | `degradable`, `conventions.degradedHeader` or a format `meta` slot (10, 13) |
 | SCN-086 | `access.optionalAuth`, `cache.anonymous`, `cache.vary`, `sensitive` (9, 10) |
@@ -1156,4 +1409,4 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-088 | `summary`, `description` with `$file` (12, 2) |
 | SCN-096 | `buckets` (`key`, `limit`, `window`), `rules.throttle.bucket`, `conventions.rateLimit` (9, 13) |
 | SCN-097 | `rules.recentAuth.proof`, `params` (9) |
-| SCN-100 | `packs`, `formats`, `conventions.format` (2, 13) |
+| SCN-100 | `packs`, the api-platform pack's `jsonld` format and `hydra` paging style (`$merge`, `$each`, the URL roles), `conventions.format`, `conventions.paging.default` (2, 13, 14, 15) |

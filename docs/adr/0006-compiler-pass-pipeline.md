@@ -6,7 +6,7 @@ Status: accepted
 
 Phase 2 builds the semantic compiler in three parallel lanes, one pass each (brief section 15): tree, access and derivation. Parallel lanes on one compiler need a seam that is merged first: a pass interface, a fixed order, and a rule for what each pass may read and write, so that two lanes never edit the same field (the devil's advocate review, risk 4; COMP-Pipeline). Derivation is data, not code scattered in targets (brief section 8): the table that says which declaration derives which element must be written down once. And diagnostics are a feature (brief section 17.1): every one names the file, the line, the column, the rule and the fix (FR-1).
 
-ADR 0008 leaves two values to this ADR: the default code of each derivation role, and the member names of the RFC 9457 error body of the default `bare` format (A30).
+ADR 0008 leaves two values to this ADR: the default code of each derivation role, and the member names of the RFC 9457 error body of the default `bare` format (A30). The core sets no page shape (A31): paging styles are contract or pack data (ADR 0002 section 14).
 
 ## Options
 
@@ -61,14 +61,14 @@ export interface PassContext {
 
 | Pass | Writes |
 |---|---|
-| tree | `api`, `conventions`, `packs`, `formats`, `schemas`, `scalars`, `enums`, `services`, `extensionKeys`; per operation: `id`, `name`, `surface`, `op`, `method`, `path`, `safe`, declared `params`, `input` (schema and media), declared `responses` and their `shape`, `owner`, `concurrency` (declared), `paging` (kind, limits, sort keys without rights), `degradable`, `budgetMs`, `deprecated`, `relays`, `upstream`, `maturity` (stated), `internal`, `tags`, `examples`, `format`, `docs`, `extensions`, `origin` |
+| tree | `api`, `conventions`, `packs`, `formats`, `pagings`, `schemas`, `scalars`, `enums`, `services`, `extensionKeys`; per operation: `id`, `name`, `surface`, `op`, `method`, `path`, `safe`, declared `params`, `input` (schema and media), declared `responses` and their `shape`, `owner`, `concurrency` (declared), `paging` (kind, limits, sort keys without rights), `degradable`, `budgetMs`, `deprecated`, `relays`, `upstream`, `maturity` (stated), `internal`, `tags`, `examples`, `format`, `docs`, `extensions`, `origin` |
 | access | `schemes`, `identities`, `rights`, `rules`, `scopes`, `buckets`; per operation: `access`, `callerKinds`, `principalRequires`, `scopes`, `requires`, `bindings`, `fieldRights`, `paging.sortKeys[].right`, `filteredBy`, `csrf`, `input.rawBody`, rule proofs added to `input`; requirements and rights derived by pack entries |
 | derive | `errors`, `natures`; per operation: `errors`, derived `params`, derived `responses` and headers, `input.bodyLimitBytes`, `idempotency`, `concurrency.derivedFrom`, `cache`, `maturity` (derived), `deadlineHeader`, `features`; error codes attached by pack entries |
 | link | nothing |
 
 What each pass checks, besides its writes:
 
-- tree: path versions and prefixes, operation id uniqueness, `ops` inputs, version fields of `concurrency`, examples parsed against their schemas (FR-3), enum sources, reasons and narrowings (FR-29), degradable paths optional (FR-32), schema shapes (ADR 0003).
+- tree: path versions and prefixes, operation id uniqueness, `ops` inputs, version fields of `concurrency`, list routes and their paging style or its absence (A31), templates against the slot catalogue and each operation's payload (ADR 0002 sections 13 and 14), examples parsed against their schemas (FR-3), enum sources, reasons and narrowings (FR-29), degradable paths optional (FR-32), schema shapes (ADR 0003).
 - access: deny by default (FR-4), every exception's reason, service api rules (FR-8), guest rights on public routes, subject sources against id schemas, scope subjects and nesting (FR-22, FR-24), sortable rights against field rights (FR-23), body proofs on body-less routes (FR-41), scheme references (FR-27).
 - derive: error registry redefinitions (FR-6), unbound or unregistered roles, deprecation successors, bucket limits (a warning).
 - link: the `relays` superset (operation id, path shape after the prefix, body, paging, success responses, and the public codes minus the gateway's own), naming both operations and the missing element, or the missing api (FR-8, SCN-014).
@@ -126,8 +126,8 @@ Every derived element carries `derivedFrom: { derivation, from }` with a derivat
 | `cache.headers` | `cache` on a GET | `Cache-Control` per caller kind, `Vary` | none |
 | `cache.etag` | `cache.etag` | `ETag` response header, `If-None-Match` parameter, a 304 response | none |
 | `cache.sensitive` | a response whose payload holds a sensitive field | `cache.noStore` | none |
-| `paging.params` | `paging` | the paging query parameters of the format, the page shape, the sort parameter when `sortable` | none |
-| `paging.gone` | `changesSince` paging | 410 | `gone` |
+| `paging.params` | a list with a paging style | the style's request parameters (with `maxLimit` bounds and, for `since`, the token type), the sort parameter when `sortable`, the `page` response shape with the style's headers and `Link` relations, 400 above `maxLimit` | `schemaInvalid` |
+| `paging.gone` | a paging style with a `since` role | 410 | `gone` |
 | `batch.read` | the `batch` op | `safe`, the ids input with `maxIds`, the table shape, batch defaults | none |
 | `budget.timeout` | `budget` | `budgetMs` | none |
 | `deprecation.headers` | `deprecated` | `Deprecation`, `Sunset` and `Link` (successor) response headers | none |
@@ -168,17 +168,9 @@ A rule with `bucket: true` declares its own codes; when it declares none, it ans
 
 ### 7. The `bare` format
 
-The default wire format (A30), as fixed members so every target writes the same bytes:
+The default wire format (A30), as fixed members so every target writes the same bytes. ADR 0002 section 15 writes it as format data.
 
-- Success: the bare payload for an item; for a table, the object keyed by id; for a page, the page object of its paging kind:
-
-| Paging kind | Query parameters | Page object |
-|---|---|---|
-| `cursor` | `cursor`, `limit` | `{ items, nextCursor }` (`nextCursor` null on the last page) |
-| `pages` | `page` (from 1), `limit` | `{ items, page, limit, totalItems }` |
-| `changesSince` | `since` (an opaque token or a `date-time`) | `{ items, next, complete }` |
-
-  The sort parameter is `sort`, a key or a key prefixed with `-` for descending.
+- Success: the bare payload for every shape: the item, the id-keyed object of a table, the array of an unpaged list. `bare` declares no paging style: a paged list takes its whole shape, body and headers, from the paging style it names, and a paged list with neither a style nor a pack fails to compile (A31, ADR 0002 section 10).
 - Error: `Content-Type: application/problem+json` (RFC 9457), with members:
 
 | Member | Value |
@@ -193,10 +185,10 @@ The default wire format (A30), as fixed members so every target writes the same 
 | `traceId` | optional, the request's trace id |
 | one member per param | each declared param of the code, at the top level as RFC 9457 extension members |
 
-  A param named like one of the members above is a compile error under the `bare` format.
+  An optional member with no value is omitted. A param named like one of the members above is a compile error under the `bare` format, as any `$merge` collision is (ADR 0002 section 13).
 - `degradable` under `bare` needs `conventions.degradedHeader`; without it the operation fails to compile, naming the fix.
 
-Any other format declares its own members and parameters through its templates (ADR 0004 section 8).
+Any other format and every paging style declare their own members, parameters and headers through their templates (ADR 0002 sections 13 and 14, ADR 0004 section 8).
 
 ## Consequences
 
@@ -204,9 +196,10 @@ Any other format declares its own members and parameters through its templates (
 - A pass needing a field another pass owns asks the lead; ownership moves only by a change to this ADR's table.
 - Adding a derivation is a row in the table and an IR change under ADR 0005 when it needs a new member; targets learn of it through the IR, never through compiler code.
 - The `bare` format's member names are now part of every server and client target's behaviour; changing one is a breaking change of the wire, recorded in an ADR.
+- The core fixes no page shape and no paging parameter name: every paged list names a style, so a contract without a pack writes one before its first list compiles (A31).
 - Default codes let a contract compile without a pack; a contract with its own codes binds roles explicitly.
 
 ## Traceability
 
-- FRs: FR-1 (located diagnostics with rule and fix), FR-6 (derivation table, roles, registry), FR-7, FR-8 (relays in link), FR-9, FR-20, FR-22 to FR-24, FR-28, FR-31 to FR-34, FR-41, FR-42 and A30 (the `bare` format), FR-37 (field ownership protects the seam).
+- FRs: FR-1 (located diagnostics with rule and fix), FR-6 (derivation table, roles, registry), FR-7, FR-8 (relays in link), FR-9, FR-20, FR-22 to FR-24, FR-28, FR-31 to FR-34, FR-41, FR-42 and A30 (the `bare` format), A31 (no default page), FR-37 (field ownership protects the seam).
 - CHK items enabled: CHK-007, CHK-011, CHK-015, CHK-016, CHK-029, CHK-030 to CHK-043, CHK-044 to CHK-046, CHK-052, CHK-055, CHK-058, CHK-073.

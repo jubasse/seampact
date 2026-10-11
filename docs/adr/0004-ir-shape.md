@@ -41,6 +41,7 @@ interface ContractIR {
   packs: PackRef[];                         // packs applied, in application order: { name, version }
   conventions: Conventions;                 // resolved values, each with its origin
   formats: Record<FormatId, WireFormat>;    // only the formats this api uses, the default included
+  pagings: Record<PagingId, PagingStyle>;   // only the paging styles this api uses
   schemas: Record<SchemaId, Schema>;        // named and hoisted inline schemas
   scalars: Record<ScalarId, Scalar>;
   enums: Record<EnumId, Enum>;
@@ -232,7 +233,7 @@ interface Response {
   status: number;
   media?: string;                            // absent for an empty body (204, 304)
   body?: TypeUse;                            // the unwrapped payload
-  shape: 'item' | 'page' | 'table' | 'empty';   // which template of the operation's format wraps it
+  shape: 'item' | 'table' | 'list' | 'page' | 'empty';   // 'page': the paging style's response; the others: the format's shape
   headers: { name: string; type: TypeUse; required: boolean; semantic?: string; origin?: Origin; derivedFrom?: DerivedFrom }[];
   origin?: Origin; derivedFrom?: DerivedFrom;
 }
@@ -263,33 +264,50 @@ interface Cache {
   origin; derivedFrom?;
 }
 interface Paging {
-  kind: 'cursor' | 'pages' | 'changesSince' | 'none';
+  style?: PagingId;                          // absent with 'noneReason': an unpaged list
   maxLimit?: number; defaultLimit?: number; token?: 'opaque' | 'instant'; noneReason?: Reason;
   sortKeys: { key: string; right?: RightId; derivedFrom?: DerivedFrom; origin?: Origin }[];
   origin;
 }
 ```
 
-### 8. Wire formats
+### 8. Wire formats and paging styles
 
-A wire format (A30, ADR 0008) is data in `formats`. The core default `bare` appears there too, like a pack format, so targets handle one model:
+A wire format (A30, ADR 0008) is data in `formats`, and a paging style (A31) is data in `pagings`, both with the template language of ADR 0002 sections 13 and 14. The core default `bare` appears in `formats` too, like a pack format, so targets handle one model:
 
 ```ts
 interface WireFormat {
   id: FormatId; origin;
   media: string;                             // 'application/json', 'application/ld+json'
-  success: { item: Template; page: Record<PagingKind, Template>; table: Template; empty?: Template };
+  absent: 'omit' | 'null';
+  success: { item: Shape; table: Shape; list: Shape };   // defaults filled: body '$payload', no headers
   meta: Record<string, { type: TypeUse; fill: 'now' | 'traceId' | 'degraded' | 'handler' | ValueSource }>;
-  error: { media: string; body: Template };  // 'application/problem+json' for 'bare'
+  error: { media: string; body: Template; headers: HeaderTemplate[] };   // 'application/problem+json' for 'bare'
 }
+interface Shape { body: Template; headers: HeaderTemplate[] }
+interface HeaderTemplate { name: string; value: Template }
+
+interface PagingStyle {
+  id: PagingId; origin;
+  position: 'cursor' | 'page' | 'offset' | 'since';
+  absent: 'omit' | 'null';
+  request: { role: 'cursor' | 'page' | 'offset' | 'since' | 'limit' | 'sort';
+             in: 'query' | 'header'; name: string; base?: 0 | 1; style?: 'signed' | 'pair' | 'keyed' }[];
+  response: { body: Template; headers: HeaderTemplate[]; links: { rel: string; role: UrlRole }[] };
+  handlerResult: ('nextCursor' | 'previousCursor' | 'total' | 'more' | 'nextSince' | 'complete')[];
+}
+type UrlRole = 'self' | 'first' | 'previous' | 'next' | 'last';
+
 type Template =
-  | { kind: 'slot'; slot: Slot }             // '$payload', '$code', '$nextCursor', ...
+  | { kind: 'slot'; slot: Slot; path: string[] }   // '$payload', '$item.taskId' (path ['taskId'])
+  | { kind: 'text'; parts: ({ text: string } | { slot: Slot; path: string[] })[] }   // '/contexts/${resource}'
   | { kind: 'literal'; value: unknown }
-  | { kind: 'object'; members: { name: string; value: Template }[]; spread?: Slot }
-  | { kind: 'array'; items: Template };
+  | { kind: 'object'; members: { name: string | { slot: Slot }; value: Template }[]; merge?: Slot }
+  | { kind: 'array'; items: Template[] }
+  | { kind: 'each'; of: Slot; as: Template };
 ```
 
-An `object` template either wraps (the payload under a member, `{ data: $payload, meta: $meta }`) or merges (`spread: '$payload'`, the payload's own members beside the format's members, as JSON-LD puts `@context`, `@id` and `@type` beside an item's fields). Each response records its media type and its `shape`, so a target finds the template without guessing. The IR stores the unwrapped payload and the format reference only; nothing restates the envelope (FR-42). The member names of the `bare` error body (RFC 9457) and the slots each paging kind fills are fixed in the derivation table (ADR 0006).
+An `object` template either wraps (the payload under a member, `{ data: $payload, meta: $meta }`) or merges (`merge: 'payload'`, the payload's own members beside the format's members, as JSON-LD puts `@context`, `@id` and `@type` beside an item's fields). An `each` template maps every element of an array slot, as Hydra's `member`, JSON:API's resource objects and HAL's `_embedded` need. Each response records its media type and its `shape`, so a target finds the template without guessing: `item`, `table` and `list` read the format, `page` reads the operation's paging style. The IR stores the unwrapped payload and the format and style references only; nothing restates the envelope (FR-42). `handlerResult` lists what the handler returns beside the items, so a target types the handler's page result without reading templates. The slot catalogue, the roles and who fills each one are ADR 0002 sections 13 and 14; the members of the `bare` error body (RFC 9457) are ADR 0006 section 7.
 
 ### 9. Canonical ids and ordering
 
@@ -339,5 +357,5 @@ Keys are `"<layer>#<pointer>"`, the serialised form of an `Origin`. `file` is re
 
 ## Traceability
 
-- FRs: FR-9, FR-37 (extension slots, open `kind` members), FR-38 (names as segments and role), FR-40 (subset-shaped JSON Schema for model generation), FR-2 (origins of inherited settings), FR-5 (requirements union and order), FR-6 (`derivedFrom`, errors by code), FR-8 (`relays`, documents), FR-23 (field rights), FR-30 (query wire form), FR-31, FR-33, FR-42 and A30 (formats), FR-27, FR-28.
+- FRs: FR-9, FR-37 (extension slots, open `kind` members), FR-38 (names as segments and role), FR-40 (subset-shaped JSON Schema for model generation), FR-2 (origins of inherited settings), FR-5 (requirements union and order), FR-6 (`derivedFrom`, errors by code), FR-8 (`relays`, documents), FR-23 (field rights), FR-30 (query wire form), FR-31 and A31 (paging styles), FR-33, FR-42 and A30 (formats), FR-27, FR-28.
 - CHK items enabled: CHK-024, CHK-025, CHK-033, CHK-045, CHK-052, CHK-059, CHK-077, CHK-078, CHK-092, and the IR side of every server item (CHK-011 to CHK-043).
