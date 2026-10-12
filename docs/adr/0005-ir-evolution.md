@@ -65,6 +65,11 @@ A target declares the kinds and features it supports. An IR naming one it does n
 | making an optional member required, or a nullable one non-nullable | breaking |
 | changing canonical ordering, ids or serialisation (ADR 0004) | breaking: the bytes and the bundle hashes change |
 | a new member whose absence makes older readers generate a weaker check, without a feature name | not allowed |
+| a new invariant (a rule `checkIrInvariants` enforces on an existing definition) | tightening |
+| must-act added to an existing definition (it names a feature, carried in `features`) | tightening |
+| relaxing or removing an invariant | breaking |
+
+A tightening makes a reader of the new revision refuse IR that an older compiler could write. It is versioned like a breaking change for readers from 1.0 (`irVersion` and the major version), unless a feature guards it: a tightening that names a feature is additive for readers that do not know the feature, since they refuse the IR by name.
 
 Before 1.0 a breaking change is allowed with its release note (A8); from 1.0 it bumps `irVersion` and the major version, and every target states whether it reads the new version.
 

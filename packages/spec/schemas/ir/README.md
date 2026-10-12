@@ -58,7 +58,9 @@ Every choice between shapes is a tagged union (`Scheme` and `Identity` on `kind`
 - `FieldWire`, by `kind`: the five query wire kinds carry `style`, `explode` and `brackets`; `file` and `json` carry none.
 - `MetaMember`, by `fill`: `source` only for `fill: source`.
 - `HeaderDecl`, by `semantic`: `name` and `in` for every semantic but `versionToken`, which carries `response` and `request`.
-- `Cache`, by `family`: `directives` for every family but `never`, which sets `noStore`.
+- `Cache`, by `family`: `directives` for every family but `never`, which sets `noStore`. `family` is an open string, not an enum: the invariant reads the one reserved name `never`, and any other family is a plain one.
+
+A hand-written partition of a deciding member's values (`ValueSource.in`, `FieldWire.kind`) must stay a disjoint union of the schema's known list: `invariants.test.ts` asserts it, so a new known value fails there until its invariant decides it.
 
 ## Other shapes
 
@@ -84,6 +86,7 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 | `ir.field-wire.members` | `FieldWire` of kind `file` or `json` has no `style`, `explode` or `brackets`; a query wire kind has all three. |
 | `ir.property.nullable` | A property's type use has no `nullable`: `Property.nullable` holds it. |
 | `ir.scalar.type` | A named format's own type names no `scalar`. |
+| `ir.id.scalar` | `Scope.idSchema` and `ResourceSubject.idSchema` are a `scalar` or `enum` type use without `nullable`; `RuleProof.schema` is anything but `opaque` and `file`. |
 | `ir.ref.resolves` | Every member whose schema is a `$ref` to a catalogue id definition (the key of a top-level or api map, such as `SchemeId` or `SurfaceId`) names an existing key, read with `Object.hasOwn`. |
 | `ir.cache.sensitive-no-store` | Planned (p2-finalize): a response that carries a sensitive field sets `Cache.noStore`. Not checked yet: it needs a walk of the response schemas. |
 
