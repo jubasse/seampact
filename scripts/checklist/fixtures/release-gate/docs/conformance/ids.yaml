@@ -1,0 +1,6 @@
+frs:
+  FR-1: "First requirement"
+  FR-2: "Second requirement"
+scenarios:
+  SCN-001: "First scenario"
+  SCN-002: "Second scenario"

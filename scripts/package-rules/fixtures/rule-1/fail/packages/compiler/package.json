@@ -1,0 +1,11 @@
+{
+  "name": "@seampact/compiler",
+  "version": "0.0.0",
+  "private": true,
+  "seampact": {
+    "role": "core"
+  },
+  "dependencies": {
+    "@seampact/codegen-nestjs": "workspace:*"
+  }
+}

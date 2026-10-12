@@ -1,0 +1,15 @@
+{
+  "name": "@seampact/codegen-fetch",
+  "version": "0.0.0",
+  "private": true,
+  "seampact": {
+    "role": "target"
+  },
+  "peerDependencies": {
+    "@seampact/codegen-core": "*",
+    "@seampact/spec": "*"
+  },
+  "devDependencies": {
+    "@seampact/signed-webhooks": "workspace:*"
+  }
+}

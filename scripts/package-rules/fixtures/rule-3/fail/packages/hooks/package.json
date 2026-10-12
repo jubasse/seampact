@@ -1,0 +1,11 @@
+{
+  "name": "@seampact/hooks",
+  "version": "0.0.0",
+  "private": true,
+  "seampact": {
+    "role": "hooks"
+  },
+  "dependencies": {
+    "@seampact/spec": "workspace:*"
+  }
+}

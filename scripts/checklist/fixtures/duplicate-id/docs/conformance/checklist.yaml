@@ -1,0 +1,12 @@
+schema: 1
+items:
+  - id: CHK-001
+    fact: A fact.
+    frs: [FR-1]
+    scenario: SCN-001
+    targets: [core, nestjs]
+  - id: CHK-001
+    fact: A fact.
+    frs: [FR-1]
+    scenario: SCN-001
+    targets: [core, nestjs]

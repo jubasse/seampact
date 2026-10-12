@@ -1,0 +1,8 @@
+{
+  "name": "seampact-spec",
+  "version": "0.0.0",
+  "private": false,
+  "seampact": {
+    "role": "core"
+  }
+}
