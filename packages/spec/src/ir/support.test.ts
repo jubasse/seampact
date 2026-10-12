@@ -22,16 +22,9 @@ describe("checkIrSupport", () => {
   });
 
   test("checkIrSupport names the mismatch", () => {
-    const ir = { ...sample("unknown-kind-and-feature.ir.json"), irVersion: 2, irRevision: 8 };
+    const ir = { ...sample("unknown-kind-and-feature.ir.json"), irRevision: 8 };
     expect(validateIr(ir, "open").valid).toBe(true);
     expect(checkIrSupport(ir, { ...READER, irRevision: 7 })).toEqual([
-      {
-        code: "ir.version.unsupported",
-        member: "/irVersion",
-        value: 2,
-        expected: [1],
-        message: "irVersion 2 is not one this reader reads (1).",
-      },
       {
         code: "ir.revision.mismatch",
         member: "/irRevision",
@@ -61,6 +54,49 @@ describe("checkIrSupport", () => {
         operation: "health",
         message: "The feature 'streaming' in operation 'health' is not supported by this reader.",
       },
+    ]);
+  });
+
+  test("an unsupported irVersion is named alone, whatever shape the rest has", () => {
+    const version = {
+      code: "ir.version.unsupported",
+      member: "/irVersion",
+      value: 2,
+      expected: [1],
+      message: "irVersion 2 is not one this reader reads (1).",
+    };
+    expect(checkIrSupport({ irVersion: 2, operations: {}, kinds: "all" }, READER)).toEqual([
+      version,
+    ]);
+    expect(checkIrSupport(null, READER)).toEqual([
+      {
+        ...version,
+        value: "missing",
+        message: "irVersion missing is not one this reader reads (1).",
+      },
+    ]);
+  });
+
+  test("a missing or non-array list is malformed, never read as empty", () => {
+    const ir = sample("every-member.ir.json") as unknown as Record<string, unknown>;
+    const { kinds: _kinds, ...withoutKinds } = ir;
+    const operations = [{ id: "health", kind: "httpOperation", features: "none" }];
+    expect(checkIrSupport({ ...withoutKinds, features: {}, operations }, READER)).toEqual([
+      expect.objectContaining({ code: "ir.support.malformed", member: "/kinds", value: "missing" }),
+      expect.objectContaining({
+        code: "ir.support.malformed",
+        member: "/features",
+        value: "object",
+      }),
+      expect.objectContaining({
+        code: "ir.support.malformed",
+        member: "/operations/0/features",
+        value: "string",
+        operation: "health",
+      }),
+    ]);
+    expect(checkIrSupport({ ...ir, operations: { health: {} } }, READER)).toEqual([
+      expect.objectContaining({ code: "ir.support.malformed", member: "/operations" }),
     ]);
   });
 
