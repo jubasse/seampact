@@ -35,7 +35,9 @@ if (process.env.EXPECT_CRLF === "1") {
 
 const exec = (dir) => spawnSync(binary, [dir], { env, encoding: "buffer" });
 
+const firstStart = process.hrtime.bigint();
 const ok = exec(okDir);
+const firstMs = Number(process.hrtime.bigint() - firstStart) / 1e6;
 const wantOut = readFileSync(join(referenceDir, "ok.stdout"));
 check(ok.status === 0, `ok fixture exit code ${ok.status}, stderr: ${ok.stderr?.toString()}`);
 check(
@@ -54,7 +56,8 @@ check(
 );
 check(/^a\.yaml:\d+:\d+: /.test(bad.stderr.toString()), "anchor message is not located");
 
-// Measures (recorded, not gated): size and cold start (median of 7 runs).
+// Measures (recorded, not gated): size, first launch (the first run of the
+// file on this runner, includes any OS scan) and warm start (median of 7 later runs).
 const runs = [];
 for (let i = 0; i < 7; i++) {
   const t0 = process.hrtime.bigint();
@@ -65,7 +68,8 @@ runs.sort((a, b) => a - b);
 const row = {
   label,
   sizeMB: +(statSync(binary).size / 1048576).toFixed(1),
-  coldStartMs: +runs[3].toFixed(0),
+  firstMs: +firstMs.toFixed(0),
+  warmMs: +runs[3].toFixed(0),
   exitCode: ok.status,
   pass: failures.length === 0,
 };
@@ -73,7 +77,7 @@ console.log(JSON.stringify(row));
 if (process.env.GITHUB_STEP_SUMMARY) {
   appendFileSync(
     process.env.GITHUB_STEP_SUMMARY,
-    `| ${label} | ${row.pass ? "pass" : "FAIL"} | ${row.sizeMB} | ${row.coldStartMs} |\n`,
+    `| ${label} | ${row.pass ? "pass" : "FAIL"} | ${row.sizeMB} | ${row.firstMs} | ${row.warmMs} |\n`,
   );
 }
 if (process.env.SMOKE_RESULT) writeFileSync(process.env.SMOKE_RESULT, `${JSON.stringify(row)}\n`);

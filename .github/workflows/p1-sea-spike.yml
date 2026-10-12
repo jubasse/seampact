@@ -43,6 +43,10 @@ jobs:
             echo '```'
             ls -l dist/bin
             echo '```'
+            echo "Size in bytes and gzip level 9 size per binary:"
+            echo '```'
+            cat dist/sizes.txt
+            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -106,19 +110,42 @@ jobs:
       - name: Make the binary executable
         if: runner.os != 'Windows'
         run: chmod +x "bin/${{ matrix.binary }}"
-      - name: macOS, run before re-signing and show attributes (information only)
+      - name: Check the runner architecture against the matrix id
+        run: |
+          want="${MATRIX_ID#*-}"
+          got="$(node -p process.arch)"
+          echo "runner: ${{ matrix.runner }}, uname -m: $(uname -m), node arch: $got, binary: $want"
+          [ "$got" = "$want" ] || { echo "runner architecture $got is not $want"; exit 1; }
+        env:
+          MATRIX_ID: ${{ matrix.id }}
+      - name: Windows, check the PE security directory is empty
+        if: runner.os == 'Windows'
+        run: node spikes/sea/scripts/pe.mjs check "bin/${{ matrix.binary }}"
+      - name: macOS, fetch with curl, run before re-signing and show attributes (information only)
         if: runner.os == 'macOS'
         run: |
-          xattr -l "bin/${{ matrix.binary }}" || true
-          echo "quarantine attribute present: $(xattr -l "bin/${{ matrix.binary }}" | grep -c quarantine || true)"
-          codesign -dv "bin/${{ matrix.binary }}" 2>&1 || true
+          mkdir fetched
+          (cd bin && python3 -m http.server 8765 --bind 127.0.0.1 > ../server.log 2>&1 & echo $! > ../server.pid)
+          sleep 2
+          curl --fail --silent --show-error --output "fetched/${{ matrix.binary }}" \
+            "http://127.0.0.1:8765/${{ matrix.binary }}"
+          kill "$(cat server.pid)" || true
+          cmp "bin/${{ matrix.binary }}" "fetched/${{ matrix.binary }}"
+          chmod +x "fetched/${{ matrix.binary }}"
+          xattr -l "fetched/${{ matrix.binary }}" || true
+          echo "quarantine attribute present: $(xattr -l "fetched/${{ matrix.binary }}" | grep -c quarantine || true)"
+          codesign -dv "fetched/${{ matrix.binary }}" 2>&1 || true
           set +e
-          "bin/${{ matrix.binary }}" spikes/sea/fixtures/ok > /dev/null 2> unsigned.err
+          "fetched/${{ matrix.binary }}" spikes/sea/fixtures/ok > unsigned.out 2> unsigned.err
           code=$?
           echo "unsigned run exit code: $code"
+          if cmp -s unsigned.out reference/ok.stdout; then same=identical; else same=DIFFERENT; fi
+          echo "unsigned run stdout versus the Node reference: $same"
+          echo "unsigned run stderr ($(wc -c < unsigned.err | tr -d ' ') bytes):"
+          cat unsigned.err
           {
             echo "### macOS ${{ matrix.id }}"
-            echo "Run before the ad hoc re-sign, exit code: $code"
+            echo "Binary fetched with curl from a local HTTP server, run before the ad hoc re-sign: exit code $code, stdout $same, stderr $(wc -c < unsigned.err | tr -d ' ') bytes"
           } >> "$GITHUB_STEP_SUMMARY"
           exit 0
       - name: macOS, ad hoc re-sign
@@ -133,8 +160,8 @@ jobs:
         run: |
           {
             echo "### Smoke ${{ matrix.id }} (${{ matrix.runner }})"
-            echo "| platform | result | size MB | cold start ms |"
-            echo "|---|---|---|---|"
+            echo "| platform | result | size MiB | first launch ms | warm start median of 7 ms |"
+            echo "|---|---|---|---|---|"
           } >> "$GITHUB_STEP_SUMMARY"
           node spikes/sea/scripts/smoke.mjs "bin/${{ matrix.binary }}" reference --label "${{ matrix.id }}"
       - name: Smoke with a non-UTC TZ and a non-English LANG
