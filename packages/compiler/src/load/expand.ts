@@ -2,6 +2,7 @@ import type { Origin } from "@seampact/spec/ir";
 import { isAlias, isMap, isScalar, isSeq, type Node, Scalar, type YAMLMap } from "yaml";
 import type { JsonObject, JsonValue } from "../raw-tree.js";
 import { asObject, isReservedKey, jsonObject, setKey } from "./json.js";
+import { LOAD_MAX_DEPTH, LOAD_MAX_NODES } from "./limits.js";
 import { pointerEscape, pointerSegments } from "./paths.js";
 import type { Reporter, SiteLocation } from "./report.js";
 import { type FileStore, nodeSite, pairSite, type ParsedFile } from "./source.js";
@@ -34,8 +35,10 @@ export interface LayerBuild {
   included: Set<string>;
 }
 
+/** One file of the `$include`/`$file` chain: `key` is the real path, `shown` the written one. */
 interface StackEntry {
   key: string;
+  shown: string;
   at: SiteLocation;
 }
 
@@ -44,6 +47,8 @@ interface Scope {
   data: boolean;
   parentKey: string | undefined;
   stack: StackEntry[];
+  /** Nesting level in the merged tree, through includes and `$file`. */
+  depth: number;
 }
 
 // Data positions (ADR 0002 section 2): only a mapping whose sole key is `$file` is processed.
@@ -68,8 +73,8 @@ export function keyString(node: Node | null | undefined): string | undefined {
   return String(node.value);
 }
 
-function displayStackKey(key: string): string {
-  return key.endsWith("#") ? key.slice(0, -1) : key;
+function shownTarget(path: string, fragment: string | undefined): string {
+  return fragment === undefined || fragment === "" ? path : `${path}#${fragment}`;
 }
 
 export function navigate(file: ParsedFile, fragment: string | undefined): Node | undefined {
@@ -94,6 +99,10 @@ export function navigate(file: ParsedFile, fragment: string | undefined): Node |
 }
 
 export class Expander {
+  /** Nodes built so far in this load, every layer and api together (`LOAD_MAX_NODES`). */
+  private nodes = 0;
+  private exhausted = false;
+
   constructor(
     private readonly store: FileStore,
     private readonly rep: Reporter,
@@ -125,7 +134,14 @@ export class Expander {
       file,
       data: false,
       parentKey: undefined,
-      stack: [{ key: `${file.path}#`, at: nodeSite(file, file.root) }],
+      stack: [
+        {
+          key: `${this.store.realOf(file.path)}#`,
+          shown: file.path,
+          at: nodeSite(file, file.root),
+        },
+      ],
+      depth: 0,
     };
     const value = this.node(build, file.root, "", scope);
     if (value !== null && typeof value === "object" && !Array.isArray(value)) build.tree = value;
@@ -186,7 +202,14 @@ export class Expander {
         file: ref.file,
         data: false,
         parentKey: ref.name,
-        stack: [{ key: `${ref.file.path}#/${pointerEscape(ref.name)}`, at: elementSite }],
+        stack: [
+          {
+            key: `${this.store.realOf(ref.file.path)}#/${pointerEscape(ref.name)}`,
+            shown: `${ref.file.path}#/${pointerEscape(ref.name)}`,
+            at: elementSite,
+          },
+        ],
+        depth: 2,
       };
       const value = this.node(build, ref.pair.value, pointer, scope);
       setKey(declared(), ref.name, value);
@@ -213,15 +236,42 @@ export class Expander {
     }
   }
 
+  /** Counts a node against the load's budget and its depth against the limit; false stops it. */
+  private admit(file: ParsedFile, node: Node | null, depth: number): boolean {
+    if (this.exhausted) return false;
+    if (++this.nodes > LOAD_MAX_NODES) {
+      this.exhausted = true;
+      this.rep.report({
+        rule: "expansion-limit",
+        message: `the contract expands to more than ${LOAD_MAX_NODES} nodes; the expansion stops here`,
+        fix: "look for a file included many times over, through includes of includes",
+        at: nodeSite(file, node),
+      });
+      return false;
+    }
+    if (depth > LOAD_MAX_DEPTH) {
+      this.store.reportTooDeep(nodeSite(file, node));
+      return false;
+    }
+    return true;
+  }
+
   private node(build: LayerBuild, node: Node | null, pointer: string, scope: Scope): JsonValue {
     if (node === null || node === undefined || isAlias(node)) return null;
+    if (!this.admit(scope.file, node, scope.depth)) return null;
     if (isScalar(node)) return this.scalar(node, scope);
     if (isSeq(node)) {
       const out: JsonValue[] = [];
       node.items.forEach((item, i) => {
         const child = `${pointer}/${i}`;
         const itemNode = item as Node | null;
-        out.push(this.node(build, itemNode, child, { ...scope, parentKey: undefined }));
+        out.push(
+          this.node(build, itemNode, child, {
+            ...scope,
+            parentKey: undefined,
+            depth: scope.depth + 1,
+          }),
+        );
         build.locs.set(child, nodeSite(scope.file, itemNode));
       });
       return out;
@@ -272,6 +322,8 @@ export class Expander {
   ): void {
     const { file } = scope;
     for (const pair of map.items) {
+      // Every pair counts, `$include` ones too: a chain of includes builds nothing else.
+      if (!this.admit(file, pair.key as Node, scope.depth)) return;
       const keyNode = pair.key as Node;
       const valueNode = pair.value as Node | null;
       const key = keyString(keyNode);
@@ -307,7 +359,12 @@ export class Expander {
       seen.set(key, keySite);
       const child = `${pointer}/${pointerEscape(key)}`;
       const data = scope.data || (DATA_KEYS.has(key) && !NAME_KEYED.has(scope.parentKey ?? ""));
-      let value = this.node(build, valueNode, child, { ...scope, data, parentKey: key });
+      let value = this.node(build, valueNode, child, {
+        ...scope,
+        data,
+        parentKey: key,
+        depth: scope.depth + 1,
+      });
       if (key === "$ref" && !scope.data && typeof value === "string") {
         value = this.ref(build, value, valueNode, child, scope);
       }
@@ -375,11 +432,13 @@ export class Expander {
         });
         continue;
       }
-      const key = `${resolved.path}#${resolved.fragment ?? ""}`;
+      // Keyed on the real path: a directory link back into the tree is the same file.
+      const key = `${resolved.real}#${resolved.fragment ?? ""}`;
+      const shown = shownTarget(resolved.path, resolved.fragment);
       const at0 = scope.stack.findIndex((s) => s.key === key);
       if (at0 >= 0) {
         const cycle = scope.stack.slice(at0);
-        const names = [...cycle.map((s) => displayStackKey(s.key)), displayStackKey(key)];
+        const names = [...cycle.map((s) => s.shown), shown];
         this.rep.report({
           rule: "include-cycle",
           message: `$include cycle (P8): ${names.join(" -> ")}`,
@@ -387,7 +446,7 @@ export class Expander {
           at,
           related: cycle.slice(1).map((s) => ({
             at: s.at,
-            message: `'${displayStackKey(s.key)}' is included here`,
+            message: `'${s.shown}' is included here`,
           })),
         });
         continue;
@@ -397,7 +456,8 @@ export class Expander {
         file: pf,
         data: false,
         parentKey: scope.parentKey,
-        stack: [...scope.stack, { key, at }],
+        stack: [...scope.stack, { key, shown, at }],
+        depth: scope.depth,
       };
       this.items(build, mapNode, pointer, inner, out, seen);
       if (pointer === "/schemas") {
@@ -457,6 +517,7 @@ export class Expander {
           JSON.parse(text) as JsonValue,
           resolved.path,
           nodeSite(file, valueNode),
+          scope.depth,
         );
       } catch (e) {
         this.rep.report({
@@ -471,10 +532,10 @@ export class Expander {
     if (ext === "yaml" || ext === "yml") {
       const pf = this.store.parse(resolved.path, file.boundary);
       if (!pf?.root) return null;
-      const key = `${resolved.path}#`;
+      const key = `${resolved.real}#`;
       const at0 = scope.stack.findIndex((s) => s.key === key);
       if (at0 >= 0) {
-        const names = [...scope.stack.slice(at0).map((s) => displayStackKey(s.key)), resolved.path];
+        const names = [...scope.stack.slice(at0).map((s) => s.shown), resolved.path];
         this.rep.report({
           rule: "include-cycle",
           message: `$file cycle (P8): ${names.join(" -> ")}`,
@@ -487,7 +548,8 @@ export class Expander {
         file: pf,
         data: true,
         parentKey: undefined,
-        stack: [...scope.stack, { key, at: nodeSite(file, valueNode) }],
+        stack: [...scope.stack, { key, shown: resolved.path, at: nodeSite(file, valueNode) }],
+        depth: scope.depth,
       });
     }
     this.rep.report({
@@ -500,8 +562,23 @@ export class Expander {
   }
 
   /** JSON data as the loader's own tree: no prototype, no reserved key. */
-  private jsonData(value: JsonValue, path: string, at: SiteLocation): JsonValue {
-    if (Array.isArray(value)) return value.map((v) => this.jsonData(v, path, at));
+  private jsonData(value: JsonValue, path: string, at: SiteLocation, depth: number): JsonValue {
+    if (this.exhausted) return null;
+    if (++this.nodes > LOAD_MAX_NODES) {
+      this.exhausted = true;
+      this.rep.report({
+        rule: "expansion-limit",
+        message: `the contract expands to more than ${LOAD_MAX_NODES} nodes; the expansion stops at '${path}'`,
+        fix: "shrink the data file",
+        at,
+      });
+      return null;
+    }
+    if (depth > LOAD_MAX_DEPTH) {
+      this.store.reportTooDeep(at);
+      return null;
+    }
+    if (Array.isArray(value)) return value.map((v) => this.jsonData(v, path, at, depth + 1));
     const obj = asObject(value);
     if (!obj) return value;
     const out = jsonObject();
@@ -515,7 +592,7 @@ export class Expander {
         });
         continue;
       }
-      setKey(out, k, this.jsonData(v, path, at));
+      setKey(out, k, this.jsonData(v, path, at, depth + 1));
     }
     return out;
   }

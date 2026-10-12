@@ -5,9 +5,12 @@ import * as path from "node:path";
 // runtime without Node's `fs` (the Bun fallback) swaps one implementation, nothing else.
 // Every path is root-relative with forward slashes; `..` segments appear only when a pack is
 // resolved from a package above the workspace root.
+/** A file's text, or `tooLarge` when it holds more than the bytes asked for (it is not read). */
+export type LoadText = { text: string } | { tooLarge: true };
+
 export interface LoadReader {
   /** The file's text, or undefined when it does not exist or is not a file. */
-  readText(file: string): string | undefined;
+  readText(file: string, maxBytes: number): LoadText | undefined;
   /** The names in a directory, or undefined when it does not exist. */
   listDir(dir: string): string[] | undefined;
   /**
@@ -52,13 +55,38 @@ export function loadFsReader(root: string): LoadReader {
   const abs = (file: string) => path.resolve(realRoot, file);
   return {
     ascent: loadAscentOf(realRoot),
-    readText(file) {
+    readText(file, maxBytes) {
+      const target = abs(file);
+      let fd: number | undefined;
       try {
-        const target = abs(file);
+        // stat first: opening a FIFO would block.
         if (!fs.statSync(target).isFile()) return undefined;
-        return fs.readFileSync(target, "utf8");
+        fd = fs.openSync(target, "r");
+        const stat = fs.fstatSync(fd);
+        if (!stat.isFile()) return undefined;
+        if (stat.size > maxBytes) return { tooLarge: true };
+        // Read to the end, never more than the cap: the file may have grown since fstat.
+        const chunks: Uint8Array[] = [];
+        let total = 0;
+        for (;;) {
+          const chunk = new Uint8Array(Math.min(65536, maxBytes + 1 - total));
+          const n = fs.readSync(fd, chunk, 0, chunk.length, null);
+          if (n === 0) break;
+          chunks.push(chunk.subarray(0, n));
+          total += n;
+          if (total > maxBytes) return { tooLarge: true };
+        }
+        const bytes = new Uint8Array(total);
+        let at = 0;
+        for (const c of chunks) {
+          bytes.set(c, at);
+          at += c.length;
+        }
+        return { text: new TextDecoder("utf-8").decode(bytes) };
       } catch {
         return undefined;
+      } finally {
+        if (fd !== undefined) fs.closeSync(fd);
       }
     },
     listDir(dir) {
@@ -114,7 +142,11 @@ export function loadMemoryReader(
   };
   return {
     ascent: options.ascent ?? 3,
-    readText: (file) => table.get(resolve(file)),
+    readText(file, maxBytes) {
+      const text = table.get(resolve(file));
+      if (text === undefined) return undefined;
+      return new TextEncoder().encode(text).length > maxBytes ? { tooLarge: true } : { text };
+    },
     listDir(dir) {
       const base = resolve(dir);
       const prefix = base === "" ? "" : `${base}/`;
@@ -131,7 +163,8 @@ export function loadMemoryReader(
     },
     realPath(file) {
       const real = resolve(file);
-      const exists = table.has(real) || [...table.keys()].some((k) => k.startsWith(`${real}/`));
+      const exists =
+        real === "" || table.has(real) || [...table.keys()].some((k) => k.startsWith(`${real}/`));
       return exists ? real || "." : undefined;
     },
   };

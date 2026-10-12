@@ -10,6 +10,7 @@ import {
   parseDocument,
   Scalar,
 } from "yaml";
+import { LOAD_MAX_DEPTH, LOAD_MAX_FILE_BYTES } from "./limits.js";
 import { checkCase, isInside, resolveAuthoredPath } from "./paths.js";
 import type { LoadReader } from "./reader.js";
 import { loadScalarPitfall } from "./scalars.js";
@@ -78,6 +79,11 @@ export class FileStore {
   private readonly texts = new Map<string, string | null>();
   /** Lexical path to the real path `checkFile` accepted for it. */
   private readonly reals = new Map<string, string>();
+
+  /** The checked real path of a file, its identity for cycle detection. */
+  realOf(file: string): string {
+    return this.reals.get(file) ?? file;
+  }
   /** Every file the load read or tried to read, for the watch primitive. */
   readonly touched = new Set<string>();
 
@@ -90,8 +96,16 @@ export class FileStore {
   rawText(file: string): string | undefined {
     this.touched.add(file);
     if (!this.texts.has(file)) {
-      const text = this.reader.readText(this.reals.get(file) ?? file);
-      this.texts.set(file, text === undefined ? null : normalizeText(text));
+      const got = this.reader.readText(this.reals.get(file) ?? file, LOAD_MAX_FILE_BYTES);
+      if (got && "tooLarge" in got) {
+        this.reporter.report({
+          rule: "file-too-large",
+          message: `file '${file}' is larger than ${LOAD_MAX_FILE_BYTES} bytes, the most one contract file may hold`,
+          fix: "split the file, with $include, or shrink it",
+          at: { file, line: 1, column: 1, endLine: 1, endColumn: 1 },
+        });
+      }
+      this.texts.set(file, got && "text" in got ? normalizeText(got.text) : null);
     }
     return this.texts.get(file) ?? undefined;
   }
@@ -108,6 +122,11 @@ export class FileStore {
     at: SiteLocation,
     kind: FileKind,
   ): ResolvedFile | undefined {
+    // A path that resolved once resolves the same way: the checks list directories, and a file
+    // included from many sites would repeat them.
+    const cacheKey = `${from.boundary}\0${from.path}\0${raw}`;
+    const hit = this.resolved.get(cacheKey);
+    if (hit) return hit;
     const what = WHAT[kind];
     const r = resolveAuthoredPath(from.path, raw, from.boundary);
     if (typeof r === "string") {
@@ -131,8 +150,13 @@ export class FileStore {
       return undefined;
     }
     const real = this.checkFile(r.path, from.boundary, at, what, raw);
-    return real === undefined ? undefined : { ...r, real };
+    if (real === undefined) return undefined;
+    const ok = { ...r, real };
+    this.resolved.set(cacheKey, ok);
+    return ok;
   }
+
+  private readonly resolved = new Map<string, ResolvedFile>();
 
   /**
    * Existence, case and symlink checks for a path already inside its boundary (lexically).
@@ -204,12 +228,26 @@ export class FileStore {
       return undefined;
     }
     const lc = new LineCounter();
-    const doc = parseDocument(text, {
-      schema: "core",
-      lineCounter: lc,
-      merge: false,
-      uniqueKeys: false,
-    });
+    let doc: Document.Parsed;
+    try {
+      doc = parseDocument(text, {
+        schema: "core",
+        lineCounter: lc,
+        merge: false,
+        uniqueKeys: false,
+      });
+    } catch (e) {
+      // `yaml` reports its own stack exhaustion as an error; this is the backstop for any other.
+      if (!(e instanceof RangeError)) throw e;
+      this.reporter.report({
+        rule: "yaml-syntax",
+        message: "YAML syntax error: the file nests too deeply to be parsed",
+        fix: "flatten the nesting, or split the file with $include",
+        at: { file, line: 1, column: 1, endLine: 1, endColumn: 1 },
+      });
+      this.parsed.set(key, null);
+      return undefined;
+    }
     const pf: ParsedFile = { path: file, boundary, lc, doc, root: doc.contents };
     this.parsed.set(key, pf);
     this.checkDocument(pf);
@@ -238,11 +276,15 @@ export class FileStore {
       }
     }
     if (doc.errors.some((e) => e.code !== "MULTIPLE_DOCS")) pf.root = null;
-    if (pf.root) this.walk(pf, pf.root, false);
+    if (pf.root) this.walk(pf, pf.root, false, 0);
   }
 
-  private walk(pf: ParsedFile, node: Node, isKey: boolean): void {
+  private walk(pf: ParsedFile, node: Node, isKey: boolean, depth: number): void {
     const at = nodeSite(pf, node);
+    if (depth > LOAD_MAX_DEPTH) {
+      this.reportTooDeep(at);
+      return;
+    }
     if (isAlias(node)) {
       this.reporter.report({
         rule: "yaml-anchor",
@@ -272,13 +314,27 @@ export class FileStore {
     }
     if (isMap(node)) {
       for (const pair of node.items) {
-        if (isNode(pair.key)) this.walk(pf, pair.key, true);
-        if (isNode(pair.value)) this.walk(pf, pair.value, false);
+        if (isNode(pair.key)) this.walk(pf, pair.key, true, depth + 1);
+        if (isNode(pair.value)) this.walk(pf, pair.value, false, depth + 1);
       }
     } else if (isSeq(node)) {
-      for (const item of node.items) if (isNode(item)) this.walk(pf, item, false);
+      for (const item of node.items) if (isNode(item)) this.walk(pf, item, false, depth + 1);
     }
   }
+
+  /** One report per file: every node below the limit would otherwise repeat it. */
+  reportTooDeep(at: SiteLocation): void {
+    if (this.tooDeep.has(at.file)) return;
+    this.tooDeep.add(at.file);
+    this.reporter.report({
+      rule: "too-deep",
+      message: `the contract nests deeper than ${LOAD_MAX_DEPTH} levels here, counted through $include and $file`,
+      fix: "flatten the nesting; a contract never needs this depth",
+      at,
+    });
+  }
+
+  private readonly tooDeep = new Set<string>();
 
   private checkPlain(node: Scalar, isKey: boolean, at: SiteLocation): void {
     const source = node.source ?? "";

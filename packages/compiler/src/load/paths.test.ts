@@ -13,9 +13,9 @@ function spy(reader: LoadReader) {
     ascent: reader.ascent,
     listDir: (d) => reader.listDir(d),
     realPath: (f) => reader.realPath(f),
-    readText: (f) => {
+    readText: (f, max) => {
       reads.push(f);
-      return reader.readText(f);
+      return reader.readText(f, max);
     },
   };
   return { reader: wrapped, reads };

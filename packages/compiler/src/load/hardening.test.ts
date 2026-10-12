@@ -231,3 +231,74 @@ test("nit: the checked real path is the one read", () => {
   expect(r.diagnostics).toEqual([]);
   expect(reads).toEqual(["api.yaml", "real.yaml"]);
 });
+
+function fanOut(n: number): Record<string, string> {
+  const files: Record<string, string> = {
+    "api.yaml": "api: { name: t }\nx:\n  $include: ./f0.yaml\n",
+  };
+  for (let i = 0; i < n; i++) {
+    files[`f${i}.yaml`] =
+      i + 1 < n ? `a:\n  $include: ./f${i + 1}.yaml\nb:\n  $include: ./f${i + 1}.yaml\n` : "z: 1\n";
+  }
+  return files;
+}
+
+test("C-6 an include fan-out stops at the expansion limit", () => {
+  const r = run(fanOut(18));
+  expect(rules(r)).toEqual(["expansion-limit"]);
+  expect(r.diagnostics[0]?.message).toContain("200000");
+}, 30_000);
+
+test("C-6 an exponential include fan-out ends quickly", () => {
+  const started = Date.now();
+  const r = run(fanOut(30));
+  expect(rules(r)).toEqual(["expansion-limit"]);
+  expect(Date.now() - started).toBeLessThan(10_000);
+}, 30_000);
+
+test("C-6 a cycle through a directory link is found on the real path", () => {
+  const r = run(
+    {
+      "api.yaml": "api: { name: t }\nx:\n  $include: ./a.yaml\n",
+      "a.yaml": "k:\n  $include: ./loop/a.yaml\n",
+    },
+    "api.yaml",
+    { links: { loop: "." } },
+  );
+  expect(rules(r)).toEqual(["include-cycle"]);
+  expect(r.diagnostics[0]?.message).toContain("a.yaml -> loop/a.yaml");
+});
+
+function deepChain(files: number, depth: number): Record<string, string> {
+  const block = (leaf: string) =>
+    `${Array.from({ length: depth }, (_, i) => `${" ".repeat(i * 2)}a:`).join("\n")}\n${" ".repeat(depth * 2)}${leaf}\n`;
+  const out: Record<string, string> = {
+    "api.yaml": "api: { name: t }\nx:\n  $include: ./f0.yaml\n",
+  };
+  for (let i = 0; i < files; i++) {
+    out[`f${i}.yaml`] = block(i + 1 < files ? `$include: ./f${i + 1}.yaml` : "z: 1");
+  }
+  return out;
+}
+
+test("C-8 nesting deeper than the limit, through includes, is a located error, not a crash", () => {
+  const r = run(deepChain(50, 60));
+  expect(rules(r)).toEqual(["too-deep"]);
+  expect(printed(r)).toMatch(/^f4\.yaml:\d+:\d+: error seampact\/load\/too-deep: /);
+});
+
+test("C-8 a file larger than the byte cap is refused unread", () => {
+  const big = `k: '${"x".repeat(4 * 1024 * 1024)}'\n`;
+  const r = run({ "api.yaml": "api: { name: t }\nx:\n  $include: ./big.yaml\n", "big.yaml": big });
+  expect(rules(r)).toEqual(["file-too-large"]);
+  expect(printed(r)).toContain("big.yaml:1:1: error seampact/load/file-too-large");
+});
+
+test("C-8 deep JSON data is bounded too", () => {
+  const n = 300;
+  const r = run({
+    "api.yaml": "api: { name: t }\nexamples:\n  one: { value: { $file: ./deep.json } }\n",
+    "deep.json": `${"[".repeat(n)}${"]".repeat(n)}`,
+  });
+  expect(rules(r)).toEqual(["too-deep"]);
+});
