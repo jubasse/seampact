@@ -102,6 +102,46 @@ test("the location key is the origin's layer and pointer, never its api", () => 
   );
 });
 
+test("the location key ignores the origin's api, where the old key put it first", () => {
+  // The first key format was `<api>:<layer>#<pointer>` when the origin named an api; the table
+  // of the api the origin belongs to is keyed `<layer>#<pointer>` only.
+  const table = { "tasks:api#/e": site("old.yaml", 1, 1), "api#/e": site("new.yaml", 2, 2) };
+  expect(diagnosticLocation({ api: "tasks", layer: "api", pointer: "/e" }, table).file).toBe(
+    "new.yaml",
+  );
+  const oldOnly = { "tasks:api#/e": site("old.yaml", 1, 1) };
+  expect(diagnosticLocation({ api: "tasks", layer: "api", pointer: "/e" }, oldOnly).file).toBe(
+    "(unknown location)",
+  );
+});
+
+test("printer escapes every control and format character, zero-width and tag ones included", () => {
+  const cases: [string, string][] = [
+    ["\u061C", "\\u061C"], // Arabic letter mark
+    ["\u200B", "\\u200B"], // zero-width space
+    ["\u200C", "\\u200C"],
+    ["\u200D", "\\u200D"], // zero-width joiner
+    ["\u2060", "\\u2060"], // word joiner
+    ["\u2061", "\\u2061"],
+    ["\u2062", "\\u2062"],
+    ["\u2063", "\\u2063"],
+    ["\u2064", "\\u2064"],
+    ["\u00AD", "\\u00AD"], // soft hyphen, another Cf
+    ["\u{E0041}", "\\u{E0041}"], // a tag character, beyond the basic plane
+    ["\uD800", "\\uD800"], // a lone surrogate
+  ];
+  for (const [ch, shown] of cases) {
+    const out = printDiagnostics(
+      [d("seampact/load/x", "/t", "api", { message: `a${ch}b`, fix: "f" })],
+      { "api#/t": site(`f${ch}.yaml`, 1, 1) },
+    );
+    expect(out, shown).toBe(`f${shown}.yaml:1:1: error seampact/load/x: a${shown}b. Fix: f.`);
+  }
+  // The byte order mark: a file name keeps it escaped (a message folds it as white space).
+  const bom = printDiagnostics([d("seampact/load/x", "/t")], { "api#/t": site("\uFEFFf.yaml", 1, 1) });
+  expect(bom).toBe("\\uFEFFf.yaml:1:1: error seampact/load/x: m. Fix: f.");
+});
+
 test("printer escapes control and bidirectional characters from authored text", () => {
   const esc = String.fromCharCode(27);
   const tricky = {

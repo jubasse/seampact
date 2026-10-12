@@ -47,30 +47,22 @@ export function diagnosticSort(
   return keyed.map((k) => k.d);
 }
 
-/** C0, DEL, C1, the bidirectional marks, embeddings, overrides and isolates, line separators. */
-function isInert(code: number): boolean {
-  return !(
-    code <= 0x1f ||
-    (code >= 0x7f && code <= 0x9f) ||
-    code === 0x200e ||
-    code === 0x200f ||
-    (code >= 0x2028 && code <= 0x202e) ||
-    (code >= 0x2066 && code <= 0x2069)
-  );
-}
+// Every control (Cc: C0, DEL, C1) and format character (Cf: the bidirectional marks,
+// embeddings, overrides and isolates, U+061C, the zero-width U+200B to U+200D, U+2060 to U+2064,
+// U+FEFF, the tag characters), the line and paragraph separators, and a lone surrogate.
+const ACTIVE = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Cs}]/gu;
 
 /**
  * Authored strings and file names reach the terminal through messages: a character a terminal
- * acts on (an escape sequence, a bidirectional override that reorders the line) is written as
- * `\uXXXX` instead.
+ * acts on, or one that hides or reorders text (an escape sequence, a bidirectional override, a
+ * zero-width joiner), is written as `\uXXXX` instead, `\u{XXXXX}` beyond the basic plane.
  */
 function inert(text: string): string {
-  let out = "";
-  for (const ch of text) {
-    const code = ch.charCodeAt(0);
-    out += isInert(code) ? ch : `\\u${code.toString(16).toUpperCase().padStart(4, "0")}`;
-  }
-  return out;
+  return text.replace(ACTIVE, (ch) => {
+    const code = ch.codePointAt(0) as number;
+    const hex = code.toString(16).toUpperCase();
+    return code > 0xffff ? `\\u{${hex}}` : `\\u${hex.padStart(4, "0")}`;
+  });
 }
 
 function sentence(text: string): string {
