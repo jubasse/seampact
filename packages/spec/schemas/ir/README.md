@@ -68,6 +68,24 @@ Every choice between shapes is a tagged union (`Scheme` and `Identity` on `kind`
 - A numeric refinement (`minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`) is a decimal literal string (`"9223372036854775807"`, `"0.01"`), compared numerically, so no digit is lost in any language. Every other IR number is an integer.
 - `nullable` is a member of `Property` and, for every other position (array items, map values, parameters, headers, bodies), an optional member of every type use but the opaque one (an opaque value already admits `null`).
 
+## Invariants the schema cannot state
+
+The ADR 0003 subset has no conditional keyword, so these cross-member rules live beside the schema, each with a stable id. `checkIrInvariants(ir)` in `@seampact/spec/ir` checks them: pure, without Ajv, run by the compiler's finalize pass (p2-finalize, the owner) after the strict form, and reused by the tests of the native readers. A rule reads known values only; an unknown tag or value is the reader's to name.
+
+| Id | Rule |
+|---|---|
+| `ir.name.status` | `Name.status` is present if and only if `role` is `response` (200 to 399, ADR 0007 amendment). |
+| `ir.meta.source` | `MetaMember.source` is present if and only if `fill` is `source`. |
+| `ir.value-source.members` | `ValueSource.name` with `path`, `query`, `header`, `body`, `principal`, `scope` and `holderField`; no `name` with `host`, `subdomain`, `resolver` and `address`; `prefixBits` only with `address`. |
+| `ir.value-source.place` | `in: resolver` only as an operation scope's source; `in: holderField` only as a field right subject's source. |
+| `ir.header.members` | `HeaderDecl.name` and `in` for every semantic but `versionToken`; `response` and `request` for `versionToken` only. |
+| `ir.cache.directives` | `Cache.directives` is absent if and only if the family is `never`, and a `never` family sets `noStore`. |
+| `ir.csrf.cookie` | An unsafe operation whose access accepts a cookie scheme has `csrf` (derived or exempt). |
+| `ir.field-wire.members` | `FieldWire` of kind `file` or `json` has no `style`, `explode` or `brackets`; a query wire kind has all three. |
+| `ir.identity.kind` | `Identity.schemes.kind` equals `Identity.kind`. |
+| `ir.property.nullable` | A property's type use has no `nullable`: `Property.nullable` holds it. |
+| `ir.scalar.type` | A named format's own type names no `scalar`. |
+
 ## Readers
 
 - Ignore unknown members: an additive IR change adds them (ADR 0005 section 4).

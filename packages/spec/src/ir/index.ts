@@ -8,6 +8,8 @@ export {
 export type { SchemaNode } from "./schemas.js";
 export { listIrUnknowns, walkIrInstance } from "./instance-walk.js";
 export type { IrInstanceNode, IrUnknowns } from "./instance-walk.js";
+export { checkIrInvariants } from "./invariants.js";
+export type { IrInvariantId, IrInvariantViolation } from "./invariants.js";
 export { isKnownVariant } from "./unions.js";
 export {
   classifyIrErrors,
