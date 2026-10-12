@@ -29,7 +29,8 @@ export function strictIrSchemas(
   return documents.map((document) => {
     const copy = structuredClone(document) as Record<string, unknown>;
     walkSchema(copy, (node) => {
-      if (isSchemaNode(node.properties)) (node as Record<string, unknown>).additionalProperties = false;
+      if (isSchemaNode(node.properties))
+        (node as Record<string, unknown>).additionalProperties = false;
     });
     return copy;
   });

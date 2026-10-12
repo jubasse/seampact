@@ -72,7 +72,7 @@ function typeOf(node: SchemaNode, at: string): string {
   }
   switch (node.type) {
     case "string":
-      return stringType(node, at);
+      return stringType(node);
     case "integer":
     case "number":
       return "number";
@@ -85,7 +85,8 @@ function typeOf(node: SchemaNode, at: string): string {
     }
     case "object": {
       if (isSchemaNode(node.properties)) return objectType(node, at);
-      if (!isSchemaNode(node.additionalProperties)) throw new Error(`${at}: object without a shape`);
+      if (!isSchemaNode(node.additionalProperties))
+        throw new Error(`${at}: object without a shape`);
       const keys = isSchemaNode(node.propertyNames) && typeof node.propertyNames.$ref === "string";
       const key = keys ? refName((node.propertyNames as SchemaNode).$ref as string) : "string";
       return `Record<${key}, ${typeOf(node.additionalProperties, `${at}{}`)}>`;
@@ -97,10 +98,11 @@ function typeOf(node: SchemaNode, at: string): string {
   }
 }
 
-function stringType(node: SchemaNode, at: string): string {
+function stringType(node: SchemaNode): string {
   if (typeof node.const === "string") return JSON.stringify(node.const);
   const known = node[KNOWN_VALUES_KEYWORD];
-  if (Array.isArray(known)) return [...known.map((v) => JSON.stringify(v)), "(string & {})"].join(" | ");
+  if (Array.isArray(known))
+    return [...known.map((v) => JSON.stringify(v)), "(string & {})"].join(" | ");
   if (typeof node.pattern === "string") {
     const match = LITERAL_ALTERNATION.exec(node.pattern);
     if (match?.[1] !== undefined) {

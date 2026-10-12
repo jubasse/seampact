@@ -1,5 +1,10 @@
 export type * from "./types.generated.js";
-export { IR_SCHEMA_BASE, IR_SCHEMA_DOCUMENTS, IR_SCHEMA_ID, SOURCE_MAP_SCHEMA_ID } from "./schemas.js";
+export {
+  IR_SCHEMA_BASE,
+  IR_SCHEMA_DOCUMENTS,
+  IR_SCHEMA_ID,
+  SOURCE_MAP_SCHEMA_ID,
+} from "./schemas.js";
 export type { SchemaNode } from "./schemas.js";
 export {
   classifyIrErrors,

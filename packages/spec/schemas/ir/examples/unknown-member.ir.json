@@ -1,0 +1,59 @@
+{
+  "irVersion": 1,
+  "irRevision": 1,
+  "kinds": [],
+  "features": [],
+  "api": {
+    "id": "tasks",
+    "name": {
+      "segments": ["tasks"],
+      "role": "schema"
+    },
+    "version": 1,
+    "kind": "product",
+    "pathVersion": {
+      "value": "prefix",
+      "origin": {
+        "layer": "base",
+        "pointer": "/conventions/pathVersion"
+      }
+    },
+    "maturity": "stable",
+    "compat": {
+      "policy": "additive-only"
+    },
+    "surfaces": {},
+    "documents": {},
+    "docs": {},
+    "extensions": {},
+    "origin": {
+      "layer": "api",
+      "pointer": "",
+      "column": 4
+    },
+    "owner": "team-tasks"
+  },
+  "packs": [],
+  "conventions": {},
+  "schemas": {},
+  "scalars": {},
+  "enums": {},
+  "errors": {},
+  "natures": {},
+  "schemes": {},
+  "headers": {},
+  "identities": {},
+  "rights": {},
+  "rules": {},
+  "scopes": {},
+  "buckets": {},
+  "services": {},
+  "extensionKeys": {},
+  "lint": {
+    "rules": {},
+    "allows": []
+  },
+  "generatedBy": {
+    "tool": "a later compiler"
+  }
+}
