@@ -9,17 +9,21 @@ import {
   mkdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 import { build } from "esbuild";
+import { securityDirectory, stripSignature } from "./pe.mjs";
 
 const NODE_VERSION = "24.21.0";
 const SENTINEL = "NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2";
 const ALLOWED_BUILTINS = new Set(["fs", "path", "crypto", "process"]);
-// `yaml` imports `buffer` for its YAML 1.1 binary tag, which the core schema never reaches;
-// Buffer is a global in Node, so this is tolerated and recorded in the README.
+// `yaml` imports `buffer` for its YAML 1.1 binary tag: the module is loaded at start-up but the
+// call is never reached by the core schema; Buffer is a global in Node, so this is tolerated
+// (yaml only, in both checks) and recorded in the README. Only module imports are checked.
 const TOLERATED = new Map([["buffer", "/yaml/dist/"]]);
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -75,6 +79,7 @@ mkdirSync(cache, { recursive: true });
 
 // 1. Bundle (CommonJS: the Node 24 SEA entry is a script) and check the Node API surface.
 const result = await build({
+  absWorkingDir: root,
   entryPoints: [join(root, "src/main.ts")],
   outfile: join(dist, "bundle.cjs"),
   bundle: true,
@@ -98,21 +103,33 @@ for (const [file, input] of Object.entries(result.metafile.inputs)) {
 const extra = [...used].filter((name) => !ALLOWED_BUILTINS.has(name));
 if (extra.length > 0) fail(`Node APIs beyond fs, path, crypto and process: ${extra.join(", ")}`);
 const bundleText = readFileSync(join(dist, "bundle.cjs"), "utf8");
+// esbuild marks each module with a `// <path>` comment line: the tolerated import must sit in
+// the section of its allowed package.
+const sectionOf = (index) => {
+  const marks = [...bundleText.slice(0, index).matchAll(/^\/\/ (\S.*)$/gm)];
+  return marks.length > 0 ? marks[marks.length - 1][1] : "";
+};
 const dynamic = [...bundleText.matchAll(/require\(\s*["'`]([^"'`]+)["'`]\s*\)/g)]
-  .map((m) => m[1].replace(/^node:/, ""))
-  .filter((name) => !ALLOWED_BUILTINS.has(name) && !TOLERATED.has(name));
+  .map((m) => [m[1].replace(/^node:/, ""), m.index])
+  .filter(([name, index]) => {
+    if (ALLOWED_BUILTINS.has(name)) return false;
+    const via = TOLERATED.get(name);
+    return !(via && `/${sectionOf(index)}`.includes(via));
+  })
+  .map(([name]) => name);
 if (dynamic.length > 0)
   fail(`bundle requires beyond fs, path, crypto and process: ${dynamic.join(", ")}`);
 console.log(`build: bundle ok, builtins used: ${[...used].sort().join(", ")}`);
 
-// 2. SEA blob: code cache and snapshot off (cross-platform), warning disabled.
+// 2. SEA blob: code cache and snapshot off (cross-platform), warning disabled. The paths are
+// relative to dist/ (cwd of the blob step) so the blob does not depend on the checkout directory.
 const seaConfig = join(dist, "sea-config.json");
 writeFileSync(
   seaConfig,
   `${JSON.stringify(
     {
-      main: join(dist, "bundle.cjs"),
-      output: join(dist, "sea.blob"),
+      main: "bundle.cjs",
+      output: "sea.blob",
       disableExperimentalSEAWarning: true,
       useSnapshot: false,
       useCodeCache: false,
@@ -121,7 +138,7 @@ writeFileSync(
     2,
   )}\n`,
 );
-run(process.execPath, ["--experimental-sea-config", seaConfig]);
+run(process.execPath, ["--experimental-sea-config", "sea-config.json"], { cwd: dist });
 
 // 3. Official Node binaries, verified against the signed SHASUMS256.txt.
 const base = `https://nodejs.org/dist/v${NODE_VERSION}`;
@@ -182,6 +199,7 @@ const expected = new Map(
 // 4. Inject into each platform's binary.
 const postject = join(root, "node_modules/.bin/postject");
 const manifest = [];
+const sizes = [];
 for (const t of targets) {
   const name = `node-v${NODE_VERSION}-${t.archive}`;
   const archive = download(name);
@@ -201,12 +219,27 @@ for (const t of targets) {
   const out = join(dist, "bin", t.out);
   copyFileSync(inner, out);
   chmodSync(out, 0o755);
+  if (t.id === "win32-x64") {
+    // The injection invalidates Node's Authenticode signature: remove it first (Node docs do
+    // the same with `signtool remove /s`), then check the PE security directory is empty.
+    const removed = stripSignature(out);
+    if (removed === 0) fail("node.exe carried no signature to strip (expected one in 24.21.0)");
+    console.log(`build: win32-x64 Authenticode signature removed (${removed} bytes)`);
+  }
   const args = [out, "NODE_SEA_BLOB", join(dist, "sea.blob"), "--sentinel-fuse", SENTINEL];
   if (t.macho) args.push("--macho-segment-name", "NODE_SEA");
   run(postject, args);
+  if (t.id === "win32-x64") {
+    const { offset, size } = securityDirectory(out);
+    if (offset !== 0 || size !== 0) fail("win32-x64 binary has a PE security directory");
+  }
+  sizes.push(
+    `${t.out} ${statSync(out).size} gzip-9 ${gzipSync(readFileSync(out), { level: 9 }).length}`,
+  );
   manifest.push(`${sha256(out)}  ${t.out}`);
   console.log(`build: ${t.id} done`);
 }
+writeFileSync(join(dist, "sizes.txt"), `${sizes.join("\n")}\n`);
 writeFileSync(join(dist, "bin", "SHA256SUMS"), `${manifest.join("\n")}\n`);
 const seconds = ((Date.now() - started) / 1000).toFixed(1);
 writeFileSync(join(dist, "build-seconds.txt"), `${seconds}\n`);
