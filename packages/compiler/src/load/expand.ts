@@ -326,10 +326,13 @@ export class Expander {
       node.items.forEach((item, i) => {
         const child = `${pointer}/${i}`;
         const itemNode = item as Node | null;
+        // An item is a position like a key's value: an item of a data list (`examples`) is data.
+        const pos = scope.data ? undefined : stepPosition(scope.pos, String(i), true);
         out.push(
           this.node(build, itemNode, child, {
             ...scope,
-            pos: scope.data ? undefined : stepPosition(scope.pos, String(i), true),
+            data: scope.data || (pos?.data ?? false),
+            pos,
             parentKey: undefined,
             depth: scope.depth + 1,
           }),

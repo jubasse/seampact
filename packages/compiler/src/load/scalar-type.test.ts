@@ -154,3 +154,22 @@ describe("pack names", () => {
     expect(r.result.diagnostics[0]?.message).toContain("holds a '#'");
   });
 });
+
+describe("data positions in lists", () => {
+  test("a list item of a data list is data: null spelled null, directives kept literal", () => {
+    const r = load({
+      "api.yaml":
+        "api: { name: t }\nschemas:\n  T:\n    type: string\n    examples: [~, { $include: ./x.yaml }, { $ref: X }]\n",
+      "x.yaml": "a: 1\n",
+    });
+    expect(r.rules).toEqual(["data-null"]);
+    expect(r.printed).toContain("api.yaml:5:16:");
+    const schemas = r.result.workspace.apis[0]?.merged.schemas as Record<string, unknown>;
+    expect((schemas.T as { examples: unknown }).examples).toEqual([
+      null,
+      { $include: "./x.yaml" },
+      { $ref: "X" },
+    ]);
+    expect(r.result.files).not.toContain("x.yaml");
+  });
+});
