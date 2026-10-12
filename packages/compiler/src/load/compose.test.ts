@@ -538,7 +538,7 @@ test("two $include keys in one mapping are a duplicate key", () => {
 test("a paging default and a scheme key value are settings, not data", () => {
   const r = run({
     "api.yaml":
-      "api: { name: t }\nconventions:\n  paging: { default: ~ }\nschemes:\n  s: { key: { value: ~ } }\nsurfaces:\n  app:\n    routes:\n      r:\n        method: get\n        examples:\n          e: { status: 200, value: ~ }\n",
+      "api: { name: t }\nconventions:\n  paging: { default: ~ }\nschemes:\n  s: { kind: signature, key: { value: ~ } }\nsurfaces:\n  app:\n    routes:\n      r:\n        method: get\n        examples:\n          e: { status: 200, value: ~ }\n",
   });
   // The settings are strings, so a null there is a type error (P6); only the example is data.
   expect(rules(r)).toEqual(["scalar-type", "scalar-type", "data-null"]);

@@ -9,7 +9,10 @@ import {
   expectedTypes,
   type Position,
   type PositionKind,
+  type MapView,
+  NOT_SCALAR,
   positionAt,
+  refinePosition,
   refusesScalar,
   rootPosition,
   scalarType,
@@ -198,7 +201,7 @@ export class Expander {
    * Expands the schema files reached only through `$ref`, once the layer's names are known.
    * A file `$ref` is read as naming a schema: ADR 0002 section 2 shows it only for schema files
    * ("schema files are always name-keyed"), so the element joins `schemas`. Another catalogue
-   * reached by file would need the expected catalogue from the authoring schema (P6 follow-up).
+   * reached by file would need the expected catalogue from the authoring schema.
    */
   finishRefs(
     build: LayerBuild,
@@ -416,6 +419,18 @@ export class Expander {
   ): void {
     const { file } = scope;
     let includeSite: SiteLocation | undefined;
+    // Which conditional branches of the schema this mapping's keys decide (a node with `method` is
+    // a route). Keys an include may bring are not seen here, so the view is open then.
+    const index = mapIndex(map);
+    const view: MapView = {
+      has: (key) => index.has(key),
+      scalar: (key) => {
+        const value = index.get(key)?.value;
+        return isScalar(value) ? value.value : NOT_SCALAR;
+      },
+      open: scope.stack.length > 1 || index.has("$include"),
+    };
+    const here = scope.data ? undefined : refinePosition(scope.pos, view);
     for (const pair of map.items) {
       // Every pair counts, `$include` ones too: a chain of includes builds nothing else.
       if (!this.admit(file, pair.key as Node, scope.depth, pointer)) return;
@@ -470,7 +485,7 @@ export class Expander {
       seen.sites.set(key, keySite);
       seen.order.push(key);
       const child = `${pointer}/${pointerEscape(key)}`;
-      const pos = scope.data ? undefined : stepPosition(scope.pos, key, false);
+      const pos = scope.data ? undefined : stepPosition(here, key, false);
       let value = this.node(build, valueNode, child, {
         ...scope,
         data: scope.data || (pos?.data ?? false),

@@ -99,8 +99,9 @@ export interface ApiDiagnostics {
 
 // The validate stage's output for a workspace.
 export interface WorkspaceDiagnostics {
-  // The workspace file's own diagnostics; empty until the workspace file is validated here
-  // (p1-loader-2 hands the stage that document).
+  // The workspace entry file's own diagnostics (kind `workspace`), located through
+  // `RawWorkspace.locations` under `workspace#<pointer>`; empty when the entry is a single api
+  // file, which is listed as the api's own layer.
   workspace: Diagnostic[];
   // One entry per api, in workspace order.
   apis: ApiDiagnostics[];
@@ -123,5 +124,9 @@ export function validateWorkspace(workspace: RawWorkspace): WorkspaceDiagnostics
     }
     return { api: api.name, diagnostics: sortDiagnostics(diagnostics) };
   });
-  return { workspace: [], apis };
+  const entry = workspace.entry;
+  return {
+    workspace: entry ? validateDocument("workspace", entry.tree, entry.layer) : [],
+    apis,
+  };
 }

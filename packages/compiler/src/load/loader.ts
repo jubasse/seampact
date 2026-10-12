@@ -548,6 +548,18 @@ class Loader {
     const nameNode = navigate(pf, "/pack/name");
     const written = isScalar(nameNode) ? nameNode.value : undefined;
     const name = typeof written === "string" ? written : ref;
+    if (name.includes("#")) {
+      // The name is the layer id, which a side table key joins to a pointer with `#`
+      // (`<layer>#<pointer>`): a `#` in it could make a pack's key meet a load site's.
+      this.rep.report({
+        rule: "pack-name",
+        message: `the pack name '${name}' holds a '#'`,
+        fix: "name the pack without '#'",
+        at: nodeSite(pf, isScalar(nameNode) ? nameNode : null),
+      });
+      this.packs.set(key, null);
+      return undefined;
+    }
     const layerId: Origin["layer"] = `pack:${name}`;
     const build = this.layer(pf, layerId);
     const saved = this.rep.layer;
