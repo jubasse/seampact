@@ -4,7 +4,7 @@ Status: accepted
 
 ## Context
 
-The IR is a public API. Up to sixteen targets in three languages, two generated native models (FR-40), the OpenAPI emitter, lint and diff read it, and generators written outside the repository will too. The first plan froze `irVersion: 1` at the end of phase 1; the framing replaced that with a two-step freeze (FR-37) because the compiler passes of phase 2 will find gaps in an IR schema written before them. [A8](../decisions.md#a8) sets the policy from 1.0: semver, an additive change keeps `irVersion`, a removal or change of meaning bumps `irVersion` and the major version, and each target declares the `irVersion` range it reads.
+The IR is a public API. Up to sixteen targets in three languages, two generated native models (FR-40), the OpenAPI emitter, lint and diff read it, and generators written outside the repository will too. The first plan froze `irVersion: 1` at the end of phase 1 (the loader and the authoring and IR schemas); the framing replaced that with a two-step freeze (FR-37) because the compiler passes of phase 2 (the semantic compiler) will find gaps in an IR schema written before them. [A8](../decisions.md#a8) sets the policy from 1.0: semver, an additive change keeps `irVersion`, a removal or change of meaning bumps `irVersion` and the major version, and each target declares the `irVersion` range it reads.
 
 This ADR decides how the IR changes before and after 1.0, what counts as additive, and how readers protect themselves.
 
@@ -14,19 +14,19 @@ This ADR decides how the IR changes before and after 1.0, what counts as additiv
 2. No freeze before 1.0; change the IR freely and fix targets as they break.
 3. A two-step freeze with an exact revision counter before 1.0, semver after, and an IR that is additive by design.
 
-Option 1 forces either an `irVersion` bump during phase 2 (when every pass lane is still learning the shape) or workarounds that keep a wrong shape forever. Option 2 makes every target lane chase a moving seam, the main risk the devil's advocate review named. Option 3 is chosen (FR-37).
+Option 1 forces either an `irVersion` bump during phase 2 (while every pass is still learning the shape) or workarounds that keep a wrong shape forever. Option 2 makes every target chase a moving seam, the main risk of building targets in parallel. Option 3 is chosen (FR-37).
 
 ## Decision
 
 ### 1. Two steps
 
-**Change-controlled, from the end of phase 1.** The IR JSON Schema and its TypeScript types merge as the seam of phase 2 (p1-spec). From then on:
+**Change-controlled, from the end of phase 1.** The IR JSON Schema and its TypeScript types merge as the seam of phase 2. From then on:
 
-- each IR change is its own small PR, merged before any lane that needs it;
+- each IR change is its own small PR, merged before any work that needs it;
 - the PR raises `irRevision` by one, regenerates the golden IR files, regenerates the Kotlin and PHP models (FR-40, SCN-095), and carries a release note: a changeset on `@seampact/spec` with an "IR change" section naming each field or kind, whether it is additive, and what a target must do;
-- a lane that needs an IR change asks the lead; it never edits the IR schema in its own PR.
+- work that needs an IR change asks for that change PR; it never edits the IR schema in its own PR.
 
-**Frozen for targets, at the end of phase 2.** The gate is met when the golden IR of the reference contract (ADR 0002), a signed webhook, a tenant-scoped route with rights and a service api with relays all compile, and a TypeScript reader, a Kotlin reader and a PHP reader have each been written against it and reviewed. No target lane starts before this gate. After it, the IR still changes only through the change-controlled PRs above, and each change is additive unless the lead accepts a breaking one with its release note (A8 allows it before 1.0).
+**Frozen for targets, at the end of phase 2.** The gate is met when the golden IR of the reference contract (ADR 0002), a signed webhook, a tenant-scoped route with rights and a service api with relays all compile, and a TypeScript reader, a Kotlin reader and a PHP reader have each been written against it and reviewed. No target work starts before this gate. After it, the IR still changes only through the change-controlled PRs above, and each change is additive unless the maintainers accept a breaking one with its release note (A8 allows it before 1.0).
 
 ### 2. Versions
 
@@ -44,7 +44,7 @@ Three properties let most changes be additive (FR-37, SCN-092, CHK-078):
 2. **Every IR enum is open.** A string member with a set of known values (`kind`, `method`, `nature`, `semantic`, `shape`, a paging style's `position` and roles, and every other) is typed in the IR JSON Schema as a string with its known values listed, never as a closed `enum`. A reader that must act on the value and meets an unknown one fails with a diagnostic naming the value, the member and the operation; it never guesses and never silently skips.
 3. **Every extendable object has an extension slot.** Api, operation, schema, property, right, rule and scope carry `extensions` (ADR 0004), so consumer data and later experiments never need a new core member.
 
-One more rule closes the gap the first property opens: a reader that ignores a new member must still generate code that is correct, even if less complete. A new member whose absence would make an older reader generate a weaker check (lesson 2, FR-14) is not added silently; it comes with a must-understand name:
+One more rule closes the gap the first property opens: a reader that ignores a new member must still generate code that is correct, even if less complete. A new member whose absence would make an older reader generate a weaker check ([lesson 2](../decisions.md#lesson-2), FR-14) is not added silently; it comes with a must-understand name:
 
 - the top-level `kinds` list names the declaration kinds present (ADR 0004, ADR 0014);
 - each operation's `features` list names the must-understand features it uses, and the top-level `features` lists their union.
@@ -76,7 +76,7 @@ Before 1.0 a breaking change is allowed with its release note (A8); from 1.0 it 
 
 ## Consequences
 
-- Phase 2 lanes can ask for IR fields as they find gaps, each as a small reviewed PR, without breaking each other; target lanes wait for the frozen-for-targets gate and then build on a stable seam.
+- Work on the phase 2 passes can ask for IR fields as it finds gaps, each as a small reviewed PR, without breaking other work; targets wait for the frozen-for-targets gate and then build on a stable seam.
 - Exact revision matching before 1.0 means every IR change requires rebuilding every target's tests in the same CI run; this is acceptable while all targets are in the monorepo and nothing is published.
 - The `features` list costs a few strings in the IR and a declaration per target, and buys the guarantee that an older target never emits a weaker check without saying so.
 - After 1.0, most improvements ship as additive changes; a breaking one is rare and visible through `irVersion`.

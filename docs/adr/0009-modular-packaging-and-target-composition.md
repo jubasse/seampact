@@ -52,7 +52,7 @@ npm, scope `@seampact` ([A1](../decisions.md#a1), [A27](../decisions.md#a27)):
 | `pack-crud-rights`, `pack-api-platform`, `pack-laravel`, `pack-spring`, `pack-jsonapi`, `pack-hal` | pack | ADR 0008 (A24, [A28](../decisions.md#a28), [A32](../decisions.md#a32)) |
 | `http-suite` | tool | the shared black-box HTTP suite (ADR 0015) |
 
-Optional runtime helpers are named `@seampact/<concern>` when they work with every server target of the ecosystem (for example `@seampact/signed-webhooks`, `@seampact/idempotency-memory`) and `@seampact/<framework>-<concern>` only when framework glue is unavoidable. Each target lane adds the helpers it needs, under these names and rules.
+Optional runtime helpers are named `@seampact/<concern>` when they work with every server target of the ecosystem (for example `@seampact/signed-webhooks`, `@seampact/idempotency-memory`) and `@seampact/<framework>-<concern>` only when framework glue is unavoidable. Each target adds the helpers it needs, under these names and rules.
 
 JVM, groupId `io.github.jubasse` (A27), and Composer, vendor `seampact`: the IR model, the hooks interfaces, the plugins and the PHP targets are listed in ADR 0010. Their roles follow the same table.
 
@@ -140,5 +140,5 @@ A target maps the contract onto its framework's idiomatic mechanisms (A30): Nest
 ## Traceability
 
 - FRs: FR-14, FR-39, FR-25 and FR-26 (adapters optional and separate), FR-16 (runtime helpers, utilities around the developer's controller), FR-36 (checks on packed installs), FR-9 and FR-11 (published authoring and extension schemas, native docs); amendments A2, A24, A25, A27, A30, A32, A37, [A38](../decisions.md#a38), A40, A41, A43.
-- Checklist items enabled: CHK-071 (the CLI pulls no target and names a missing one), CHK-077 (version ranges checked), CHK-081 (nestjs with zod and with class-validator), CHK-096 and CHK-097 (adapters as separate packages), CHK-098 (a target passes with no adapter installed), CHK-107 (format packs), CHK-114 and CHK-115 (artefact switches, OpenAPI-only setups, the compatibility matrix), CHK-120 (the published `x-seampact-*` schemas), CHK-122 (editor schemas), CHK-123 (`explain`), and from round 4 CHK-141 (untested versions), CHK-148 (vendored hooks), CHK-154 and CHK-155 (utilities around the developer's controller), CHK-165 (`nativeDocs`), and from round 5 CHK-170 (document choices per app).
+- Checklist items enabled: CHK-071 (the CLI pulls no target and names a missing one), CHK-077 (version ranges checked), CHK-081 (nestjs with zod and with class-validator), CHK-096 and CHK-097 (adapters as separate packages), CHK-098 (a target passes with no adapter installed), CHK-107 (format packs), CHK-114 and CHK-115 (artefact switches, OpenAPI-only setups, the compatibility matrix), CHK-120 (the published `x-seampact-*` schemas), CHK-122 (editor schemas), CHK-123 (`explain`), CHK-141 (untested versions), CHK-148 (vendored hooks), CHK-154 and CHK-155 (utilities around the developer's controller), CHK-165 (`nativeDocs`), CHK-170 (document choices per app).
 - Success metrics: SM-5, SM-8.

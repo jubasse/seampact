@@ -6,7 +6,7 @@ Status: accepted
 
 Generators outside the TypeScript ecosystem are native to their ecosystem and read the IR (amendment [A7](../decisions.md#a7)). Java users install a Gradle or Maven plugin; PHP users install Composer packages ([A15](../decisions.md#a15)). The consumer never needs Node.js: a native plugin gets the IR from a contract bundle, or, for a local YAML source, from a standalone compiler binary pinned by hash ([A9](../decisions.md#a9)). Generated Java compiles and is tested on Java 21 and 25 ([A13](../decisions.md#a13)). PHP packages live in the monorepo and reach Composer through read-only mirrors ([A19](../decisions.md#a19)). The binary ships for five platforms ([A26](../decisions.md#a26)), and the namespaces are fixed ([A27](../decisions.md#a27)).
 
-Two risks from the framing review shape this ADR: Node single executable applications (SEA) are still experimental and need per-platform signing (devil's advocate section 8), and Composer cannot install from a monorepo subdirectory (section 5).
+Two risks shape this ADR: Node single executable applications (SEA) are still experimental and need per-platform signing, and Composer cannot install from a monorepo subdirectory.
 
 ## Decisions
 
@@ -55,7 +55,7 @@ Composer, vendor `seampact`:
 | `seampact/api-platform` | target | resource metadata, DTOs, State Provider and Processor interfaces, the `kernel.controller` listener and the decorated deserialize provider; API Platform's own OpenAPI generation left as the app has it, completed with `nativeDocs` or turned off with `frameworkDocs: off` ([A43](../decisions.md#a43)) |
 | `seampact/laravel-spatie` | adapter | spatie/laravel-permission behind the decide hook ([A24](../decisions.md#a24)) |
 
-Targets are development requirements (`require-dev`); `seampact/hooks` is a runtime requirement of the application. The `vendor/bin/seampact` runner discovers installed targets through a key in each target's `composer.json` `extra` section, the PHP counterpart of the Node CLI resolving targets from the project (ADR 0009). The PHP version floor is the lowest version required by the framework majors the PHP lanes support.
+Targets are development requirements (`require-dev`); `seampact/hooks` is a runtime requirement of the application. The `vendor/bin/seampact` runner discovers installed targets through a key in each target's `composer.json` `extra` section, the PHP counterpart of the Node CLI resolving targets from the project (ADR 0009). The PHP version floor is the lowest version required by the framework majors the PHP targets support.
 
 ### Namespaces
 
@@ -82,7 +82,7 @@ Signing:
 
 Smoke tests: on each platform's own CI runner, the binary compiles the reference contract and its IR must be byte-identical to the IR produced by the Node CLI on Linux (A26). The CLI version and the binary version are the same.
 
-A spike runs first (devil's advocate section 8): a hello-world compiler built for the five platforms from one Linux job and smoke-run on each OS.
+A spike runs first: a hello-world compiler built for the five platforms from one Linux job and smoke-run on each OS.
 
 Fallback, if SEA proves unfit (a platform fails, startup or size is unacceptable, or a needed Node API is missing): Bun's `--compile`, which cross-compiles every platform from one host; Deno's `compile` second. To keep the fallback open, the compiler reads files only through an injected reader and uses no Node API beyond `fs`, `path` and `crypto`. The decision (one standalone binary per platform, pinned by hash) does not change with the runtime; the artifact names and the hash manifest stay the same.
 
@@ -98,7 +98,7 @@ PHP packages are developed under `php/<name>` in the monorepo (ADR 0009). A CI s
 
 ### API Platform spike
 
-Before the PHP target lanes start, a spike builds one API Platform operation that serves the default format (bare payload, problem+json errors) and, with the api-platform pack, JSON-LD items, a Hydra page and Hydra errors, with API Platform's own OpenAPI generation on (its default, which A43 leaves to the app), completed by `nativeDocs`, and off through `frameworkDocs: off`. It records which API Platform mechanisms the target configures and which it keeps ([A28](../decisions.md#a28)), and in particular:
+Before work on the PHP targets starts, a spike builds one API Platform operation that serves the default format (bare payload, problem+json errors) and, with the api-platform pack, JSON-LD items, a Hydra page and Hydra errors, with API Platform's own OpenAPI generation on (its default, which A43 leaves to the app), completed by `nativeDocs`, and off through `frameworkDocs: off`. It records which API Platform mechanisms the target configures and which it keeps ([A28](../decisions.md#a28)), and in particular:
 
 - how `security` without `object` is evaluated before the provider reads (API Platform 4.3), against the check order of ADR 0012;
 - `@id` generation for a nested item whose parent id is not an item property, since the IRI converter needs every `uriVariable` from the object (`idProperty`, ADR 0002 section 6);
@@ -119,4 +119,4 @@ Before the PHP target lanes start, a spike builds one API Platform operation tha
 ## Traceability
 
 - FRs: FR-40, FR-38, FR-37 (version checks), FR-14 (native targets), FR-17 (standalone binary and mirrors), FR-19 (Gradle and Maven plugins), FR-21 (PHP targets), FR-13 (`diff` in the binary); amendments A7, A9, A13, A15, A19, A26, A27, A28, [A41](../decisions.md#a41), A42, A43.
-- Checklist items enabled: CHK-072 (unpublished installs from Maven local and Composer path repositories), CHK-076 (no Node.js on native consumers), CHK-077 and CHK-078 (version checks and open enums in the native models), CHK-079 (Java 21 and 25 through Gradle and Maven), CHK-083, CHK-084 and CHK-085 (PHP targets), CHK-088 (mirror trees installable), and from round 4 CHK-140 (binary commands), CHK-158 (`Field`), CHK-159 (PHP decoding), CHK-166 (JVM DSL, build-directory output, artisan), CHK-167 (JSON-LD contexts).
+- Checklist items enabled: CHK-072 (unpublished installs from Maven local and Composer path repositories), CHK-076 (no Node.js on native consumers), CHK-077 and CHK-078 (version checks and open enums in the native models), CHK-079 (Java 21 and 25 through Gradle and Maven), CHK-083, CHK-084 and CHK-085 (PHP targets), CHK-088 (mirror trees installable), CHK-140 (binary commands), CHK-158 (`Field`), CHK-159 (PHP decoding), CHK-166 (JVM DSL, build-directory output, artisan), CHK-167 (JSON-LD contexts).

@@ -10,9 +10,9 @@ This ADR fixes every keyword a contract file may contain, outside the inside of 
 
 Forces:
 
-- One fact, one place (lesson 1). A grammar that lets the same fact be written twice needs a gate to hold the copies together.
+- One fact, one place ([lesson 1](../decisions.md#lesson-1)). A grammar that lets the same fact be written twice needs a gate to hold the copies together.
 - Deny by default, and a reason on every safety exception (FR-4, [A40](../decisions.md#a40)).
-- Nothing ahead of use (lesson 5): a keyword exists only if a checklist item or an amendment needs it.
+- Nothing ahead of use ([lesson 5](../decisions.md#lesson-5)): a keyword exists only if a checklist item or an amendment needs it.
 - The core imposes nothing ([A36](../decisions.md#a36), after [A20](../decisions.md#a20), [A25](../decisions.md#a25), [A30](../decisions.md#a30)): no header name, error code, right name, envelope, page shape, wire format, versioning scheme, query encoding or implementation. Where the compiler needs a value to work, it has a default the contract can rename or replace, and everything else comes from the contract's base file or from opt-in convention packs. What the grammar does demand is explicitness: every route states its access, every exception its reason.
 - Inline and included content must compile to the same bytes (FR-1, FR-9).
 - The YAML must mean the same thing to every parser, in every language (FR-1).
@@ -166,7 +166,7 @@ Files are parsed as YAML 1.2 with the core schema, then checked against the auth
 | P8 | a cycle of `$include`, `extends` or pack `extends` | `a.yaml` includes `b.yaml`, which includes `a.yaml` | break the cycle |
 | P9 | more than one document in a file, or a tag | `---` twice, `!!str` | one document per file; no tags |
 
-The loader applies P1 to P4 to every plain scalar (keys and values) with these expressions, so the loader lane implements an exhaustive list, not examples:
+The loader applies P1 to P4 to every plain scalar (keys and values) with these expressions, so the loader implements an exhaustive list, not examples:
 
 - P1: `^(y|Y|yes|Yes|YES|n|N|no|No|NO|on|On|ON|off|Off|OFF|True|TRUE|False|FALSE)$`.
 - P2: a scalar that the YAML 1.2 core schema resolves to an integer or a float and that does not match `^-?(0|[1-9][0-9]*)(\.[0-9]+)?$`.
@@ -1814,7 +1814,7 @@ A right never reads the body (section 4): it is decided before the body is valid
 ## Traceability
 
 - FRs: FR-1, FR-2, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9 (byte identity, modeline), FR-10 (extension keys, pack keywords), FR-13, FR-20 (keywords), FR-22, FR-23 (sort keys, filteredBy), FR-24, FR-27, FR-28, FR-29 (catalogue), FR-30, FR-31, FR-32, FR-33, FR-34, FR-41, FR-42. Amendments A20, A21, A23, A25, A30 to A36; amendments A39 (bodies beyond JSON, redirects) and A40 (onRefused, reasons on safety exceptions only, verify application, natures); amendment A43 (which documents exist).
-- CHK items enabled: CHK-004 to CHK-020, CHK-021 to CHK-023, CHK-027 to CHK-046, CHK-048, CHK-050 to CHK-058, CHK-073, CHK-086, CHK-087, CHK-089, CHK-090, CHK-092 to CHK-095, CHK-100, and from round 4 CHK-124 to CHK-139, CHK-142, CHK-143, CHK-145, CHK-146, CHK-149 to CHK-153, CHK-160, and from round 5 CHK-121 (unknownQuery, allow on its own node), CHK-170 and CHK-171 (which documents exist, A43), CHK-173 (a right's `codeName`).
+- CHK items enabled: CHK-004 to CHK-020, CHK-021 to CHK-023, CHK-027 to CHK-046, CHK-048, CHK-050 to CHK-058, CHK-073, CHK-086, CHK-087, CHK-089, CHK-090, CHK-092 to CHK-095, CHK-100, CHK-124 to CHK-139, CHK-142, CHK-143, CHK-145, CHK-146, CHK-149 to CHK-153, CHK-160, CHK-121 (unknownQuery, allow on its own node), CHK-170 and CHK-171 (which documents exist, A43), CHK-173 (a right's `codeName`).
 
 ## Self-check: scenarios and keywords
 

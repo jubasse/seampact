@@ -4,7 +4,7 @@ Status: accepted
 
 ## Context
 
-Phase 2 builds the semantic compiler in three parallel lanes, one pass each: tree, access and derivation. Parallel lanes on one compiler need a seam that is merged first: a pass interface, a fixed order, and a rule for what each pass may read and write, so that two lanes never edit the same field (the devil's advocate review, risk 4; COMP-Pipeline). Derivation is data, not code scattered in targets: the table that says which declaration derives which element must be written down once. And diagnostics are a feature: every one names the file, the line, the column, the rule and the fix (FR-1).
+Phase 2 builds the semantic compiler as three passes developed in parallel: tree, access and derivation. Passes developed in parallel on one compiler need a seam that is merged first: a pass interface, a fixed order, and a rule for what each pass may read and write, so that two passes never edit the same field. Derivation is data, not code scattered in targets: the table that says which declaration derives which element must be written down once. And diagnostics are a feature: every one names the file, the line, the column, the rule and the fix (FR-1).
 
 ADR 0008 leaves two values to this ADR: the default code of each derivation role, and the member names of the RFC 9457 error body of the default `bare` format ([A30](../decisions.md#a30)). The core sets no page shape ([A31](../decisions.md#a31)): paging styles are contract or pack data (ADR 0002 section 14).
 
@@ -14,7 +14,7 @@ ADR 0008 leaves two values to this ADR: the default code of each derivation role
 2. A plugin pipeline where each pass may read and write the whole draft IR.
 3. A fixed sequence of passes, each declaring the draft-IR fields it reads and writes, with the declaration enforced in tests, plus a derivation table held as data.
 
-Option 1 cannot be built by three lanes at once. Option 2 lets passes overwrite each other's fields, so a lane's tests pass alone and fail once merged. Option 3 is chosen.
+Option 1 cannot be built as three passes at once. Option 2 lets passes overwrite each other's fields, so a pass's tests pass alone and fail once merged. Option 3 is chosen.
 
 ## Decision
 
@@ -26,13 +26,13 @@ load -> validate -> tree -> access -> derive -> link -> finalize
 
 | Step | Kind | Input | Output |
 |---|---|---|---|
-| load | stage (p1-loader) | the workspace files | per api, a merged raw tree (api, base, shared file, packs, includes, `$file` content), each name resolved in the layers that may see it (ADR 0002 section 2) and the source map; pitfalls refused (ADR 0002 section 3) |
-| validate | stage (p1-spec) | the raw tree | the raw tree checked against the authoring JSON Schema; refused schema keywords reported with ADR 0003's reasons |
-| tree | pass (p2-tree) | the raw tree | the draft IR fields listed below |
-| access | pass (p2-access) | the raw tree and tree's fields | its fields |
-| derive | pass (p2-derive) | the raw tree and the fields of tree and access | its fields |
-| link | workspace pass (p2-derive) | the IRs of every api, and the IRs of pinned bundles | diagnostics only: `relays` superset checks |
-| finalize | stage (COMP-Pipeline) | a complete draft IR | canonical ids and ordering, the id collision check, validation against the IR JSON Schema, the serialised IR and its side table (ADR 0004) |
+| load | stage | the workspace files | per api, a merged raw tree (api, base, shared file, packs, includes, `$file` content), each name resolved in the layers that may see it (ADR 0002 section 2) and the source map; pitfalls refused (ADR 0002 section 3) |
+| validate | stage | the raw tree | the raw tree checked against the authoring JSON Schema; refused schema keywords reported with ADR 0003's reasons |
+| tree | pass | the raw tree | the draft IR fields listed below |
+| access | pass | the raw tree and tree's fields | its fields |
+| derive | pass | the raw tree and the fields of tree and access | its fields |
+| link | workspace pass, built with derive | the IRs of every api, and the IRs of pinned bundles | diagnostics only: `relays` superset checks |
+| finalize | stage, built with the seam | a complete draft IR | canonical ids and ordering, the id collision check, validation against the IR JSON Schema, the serialised IR and its side table (ADR 0004) |
 
 The order is fixed. Each api of a workspace runs through derive on its own, in relay order: an api with relay routes runs after every workspace api they name, because its tree pass copies the public operations from that api's derived IR (an imported api's IR comes from its pinned bundle). Relays that form a cycle between apis are a compile error naming them. Link then sees all of them. A step that reports an error stops the pipeline after it completes, so later passes always receive consistent input, while every error of the failing step is still reported at once.
 
@@ -53,9 +53,9 @@ export interface PassContext {
 }
 ```
 
-- A pass writes only the fields it declares. In tests, the draft IR is wrapped so that a read or a write outside the declaration throws; a lane's tests therefore fail on the first undeclared access, not at merge time (COMP-Pipeline).
+- A pass writes only the fields it declares. In tests, the draft IR is wrapped so that a read or a write outside the declaration throws; a pass's tests therefore fail on the first undeclared access, not at merge time.
 - `inherited` is the single inherited-setting mechanism, shared by tree, access and derive (which reads node `errors` and `errorRoles` through it). It applies the merge rules of ADR 0002 section 8 and returns the origin of the node that set the value.
-- The seam PR (COMP-Pipeline, merged first in phase 2) holds the interface, `inherited`, the field ownership table below, and two hand-written draft-IR fixtures of the reference contract: after tree, and after tree and access. They are the contract between the three lanes; each lane's golden tests start from the fixture before it.
+- The seam PR (merged first in phase 2) holds the interface, `inherited`, the field ownership table below, and two hand-written draft-IR fixtures of the reference contract: after tree, and after tree and access. They are the contract between the three passes; each pass's golden tests start from the fixture before it.
 
 ### 3. Field ownership
 
@@ -213,8 +213,8 @@ Any other format and every paging style declare their own members, parameters an
 
 ## Consequences
 
-- The seam PR of phase 2 (interface, `inherited`, field table, two draft-IR fixtures) must merge before the three pass lanes start coding against it.
-- A pass needing a field another pass owns asks the lead; ownership moves only by a change to this ADR's table.
+- The seam PR of phase 2 (interface, `inherited`, field table, two draft-IR fixtures) must merge before work on the three passes starts against it.
+- A pass needing a field another pass owns cannot take it; ownership moves only by a change to this ADR's table.
 - Adding a derivation is a row in the table and an IR change under ADR 0005 when it needs a new member; targets learn of it through the IR, never through compiler code.
 - The `bare` format's member names are now part of every server and client target's behaviour; changing one is a breaking change of the wire, recorded in an ADR.
 - The core fixes no page shape and no paging parameter name: every paged list names a style, so a contract without a pack writes one before its first list compiles (A31).
@@ -223,4 +223,4 @@ Any other format and every paging style declare their own members, parameters an
 ## Traceability
 
 - FRs: FR-1 (located diagnostics with rule and fix), FR-6 (derivation table, roles, registry), FR-7, FR-8 (relays in link), FR-9, FR-20, FR-22 to FR-24, FR-28, FR-31 to FR-34, FR-41, FR-42 and A30 (the `bare` format), A31 (no default page), A34 (default codes), A35 (errors on tree nodes), FR-37 (field ownership protects the seam).
-- CHK items enabled: CHK-007, CHK-011, CHK-015, CHK-016, CHK-029, CHK-030 to CHK-043, CHK-044 to CHK-046, CHK-052, CHK-055, CHK-058, CHK-073, and from round 4 CHK-124, CHK-125, CHK-127, CHK-128, CHK-131, CHK-133, CHK-134, CHK-137 to CHK-139, CHK-149 to CHK-153, and from round 5 CHK-172 (codes against schema component keys), CHK-173 (rights without segments).
+- CHK items enabled: CHK-007, CHK-011, CHK-015, CHK-016, CHK-029, CHK-030 to CHK-043, CHK-044 to CHK-046, CHK-052, CHK-055, CHK-058, CHK-073, CHK-124, CHK-125, CHK-127, CHK-128, CHK-131, CHK-133, CHK-134, CHK-137 to CHK-139, CHK-149 to CHK-153, CHK-172 (codes against schema component keys), CHK-173 (rights without segments).

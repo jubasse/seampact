@@ -120,7 +120,7 @@ The exact lists ship with the vectors and change only through an IR change PR (A
   "expected": { "typescript": "List", "kotlin": "List_", "java": "List_", "php": "List_" } }
 ```
 
-Each vector gives a written name (or segments and an owner, for derived names), the role, the expected segments, and the expected identifier per language. The set covers the splitting cases of section 2, every derived role of section 3 (the `error` and `errors` roles included), leading digits in members and in types derived from a digit-led error code, empty enum values, a right without segments and its `codeName`, and the reserved and shadowed names, including schemas named `list`, `match`, `record`, `error` and `promise` (SCN-093). The TypeScript implementation in codegen-core, the Kotlin implementation in `seampact-ir`, which both the Gradle and the Maven plugin use, and the PHP implementation in `seampact/ir` (ADR 0010) each run the whole file in their test suites, and each is about thirty lines (COMP-Naming, FR-40). A target for another ecosystem passes the same file.
+Each vector gives a written name (or segments and an owner, for derived names), the role, the expected segments, and the expected identifier per language. The set covers the splitting cases of section 2, every derived role of section 3 (the `error` and `errors` roles included), leading digits in members and in types derived from a digit-led error code, empty enum values, a right without segments and its `codeName`, and the reserved and shadowed names, including schemas named `list`, `match`, `record`, `error` and `promise` (SCN-093). The TypeScript implementation in codegen-core, the Kotlin implementation in `seampact-ir`, which both the Gradle and the Maven plugin use, and the PHP implementation in `seampact/ir` (ADR 0010) each run the whole file in their test suites, and each is about thirty lines (FR-40). A target for another ecosystem passes the same file.
 
 ## Consequences
 
@@ -133,4 +133,4 @@ Each vector gives a written name (or segments and an owner, for derived names), 
 
 - FRs: FR-38 (segments and role, per-language escaping, shared vectors), FR-3 (deterministic names for inline schemas), FR-40 (native implementations pass the vectors), FR-14 (byte-identical generation).
 - Scenarios: SCN-033, SCN-093, SCN-095.
-- CHK items enabled: CHK-024 (named union variants), CHK-002 (named types at scale compile), CHK-078 (naming is part of the stable IR contract), CHK-146 (code names, suffixes, handler grouping), and from round 5 CHK-173 (error roles, digit-led codes, rights without segments).
+- CHK items enabled: CHK-024 (named union variants), CHK-002 (named types at scale compile), CHK-078 (naming is part of the stable IR contract), CHK-146 (code names, suffixes, handler grouping), CHK-173 (error roles, digit-led codes, rights without segments).

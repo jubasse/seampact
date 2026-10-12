@@ -4,7 +4,7 @@ Status: accepted
 
 ## Context
 
-Every body, parameter, header, principal, error param and rule param of a contract is described by a schema. The schema language belongs to seampact, not to a validator (lesson 6): no zod, class-validator, Bean Validation, Laravel or Symfony idiom may reach the contract or the IR, and every target maps the IR's schemas onto its own validator and type system (FR-3). The base is a stated subset of JSON Schema 2020-12, with these additions: direction, tagged unions, optional versus nullable, portable formats, marks, portable refinements, deterministic names and parsed examples.
+Every body, parameter, header, principal, error param and rule param of a contract is described by a schema. The schema language belongs to seampact, not to a validator ([lesson 6](../decisions.md#lesson-6)): no zod, class-validator, Bean Validation, Laravel or Symfony idiom may reach the contract or the IR, and every target maps the IR's schemas onto its own validator and type system (FR-3). The base is a stated subset of JSON Schema 2020-12, with these additions: direction, tagged unions, optional versus nullable, portable formats, marks, portable refinements, deterministic names and parsed examples.
 
 The subset has one test: every server target (TypeScript with zod, yup or class-validator, Java with Bean Validation, PHP with Laravel and Symfony validation) and every client target must accept and reject exactly the same payloads for a schema (SCN-028, SM-9). A keyword that one of them cannot check natively and exactly is either refused or given a precise, portable meaning here.
 
@@ -133,7 +133,7 @@ A schema may reference itself, directly or through other schemas, by named refer
 
 #### Derived objects: `pick` and `omit`
 
-A create or update input usually holds some of the item's fields with the same constraints. Restating them is a second copy of each constraint, which drifts when one changes (lesson 1). A derived object keeps them from the source:
+A create or update input usually holds some of the item's fields with the same constraints. Restating them is a second copy of each constraint, which drifts when one changes ([lesson 1](../decisions.md#lesson-1)). A derived object keeps them from the source:
 
 ```yaml
 # studio/schemas.yaml (excerpt)
@@ -395,4 +395,4 @@ Every named schema becomes a named type in every target. An inline schema gets a
 ## Traceability
 
 - FRs: FR-3 (subset, direction, unions, optional and nullable, formats, marks, refinements, names, examples), FR-12 (credential lint, allow-list), FR-15 (one payload behaviour for zod, yup and class-validator), FR-23 (`restrictedTo`, input policy), FR-29 (enum uses and emission), FR-30 (defaults), FR-42 and A30 (no envelope in schemas); A36 and A40 (opaque values, unknown-key policies), A39 (files, JSON text fields).
-- CHK items enabled: CHK-002, CHK-024, CHK-025, CHK-026, CHK-033, CHK-047, CHK-048, CHK-049, CHK-053, CHK-080, CHK-092, CHK-134, CHK-139, CHK-146, CHK-151, CHK-158, CHK-159, and from round 5 CHK-135 (`additionalMember`).
+- CHK items enabled: CHK-002, CHK-024, CHK-025, CHK-026, CHK-033, CHK-047, CHK-048, CHK-049, CHK-053, CHK-080, CHK-092, CHK-134, CHK-139, CHK-146, CHK-151, CHK-158, CHK-159, CHK-135 (`additionalMember`).

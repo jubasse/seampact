@@ -4,7 +4,7 @@ The ADRs and the conformance checklist cite product decisions by id, from A1 to 
 
 A36 is the governing principle: where an older decision reads as imposing a convention, A36 prevails.
 
-The ADRs also cite FR-n and SCN-n ids. They refer to the requirement and scenario catalogue of FEAT-001, the project's first feature, which is maintained outside the repository for now.
+The ADRs also cite six design lessons, listed under [Lessons](#lessons) below, and FR-n and SCN-n ids. They refer to the requirement and scenario catalogue of FEAT-001, the project's first feature, which is maintained outside the repository for now.
 
 ## Decisions
 
@@ -139,3 +139,25 @@ The ADRs also cite FR-n and SCN-n ids. They refer to the requirement and scenari
 
 <a id="a44"></a>
 **A44.** Development process: git flow, with `feat/` branches squash-merged into develop, `release/` branches merged into main and back into develop, and `hotfix/` branches from main merged into main and develop. develop is the default branch until 1.0 and main from then on; both are protected (required `ci` check, no force push, no deletion) and receive no direct commits.
+
+## Lessons
+
+Six design lessons, drawn from experience with an earlier contract system written in TypeScript, guide the design. The ADRs cite them as "lesson n".
+
+<a id="lesson-1"></a>
+**Lesson 1. One fact, one place.** Each fact is stated once and the IR holds the only copy, because a fact written twice needs a gate to keep its copies together.
+
+<a id="lesson-2"></a>
+**Lesson 2. Declared means derived.** When the contract declares a behaviour, at least one server target and one client target generate it; otherwise the declaration does not ship.
+
+<a id="lesson-3"></a>
+**Lesson 3. One emitter.** seampact writes its OpenAPI documents one way, from the IR, and nothing in seampact rebuilds them a second way (whether a framework also writes its own document is the app's choice, A43).
+
+<a id="lesson-4"></a>
+**Lesson 4. Deny by default has no transition hole.** A route with no access declaration is a compile error, and a bound route with no access fails the server's boot instead of falling back to some other guard.
+
+<a id="lesson-5"></a>
+**Lesson 5. Nothing ahead of use.** A feature is built when a named consumer needs it, never before.
+
+<a id="lesson-6"></a>
+**Lesson 6. No validator in the semantics.** The schema language belongs to seampact, and each target maps it onto its own validator.
