@@ -21,6 +21,7 @@ export type IrInvariantId =
   | "ir.field-wire.members"
   | "ir.property.nullable"
   | "ir.scalar.type"
+  | "ir.id.scalar"
   | "ir.ref.resolves";
 
 export interface IrInvariantViolation {
@@ -37,10 +38,22 @@ const isRecord = (value: unknown): value is Json =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const parentOf = (pointer: string): string => pointer.slice(0, pointer.lastIndexOf("/"));
 
+// The hand-written partitions of the values that decide a struct's members. Each must be a disjoint union of
+// the schema's known list (`ValueSource.in`, `FieldWire.kind`, `TypeUse.kind`): invariants.test.ts asserts it, so
+// a new known value fails there until its invariant decides it (CHANGE-TEMPLATE.md).
 const NAMED_SOURCES = ["path", "query", "header", "body", "principal", "scope", "holderField"];
 const BARE_SOURCES = ["host", "subdomain", "resolver", "address"];
 const QUERY_WIRE_KINDS = ["number", "boolean", "list", "text", "object"];
+const PLAIN_WIRE_KINDS = ["file", "json"];
 const QUERY_WIRE_MEMBERS = ["style", "explode", "brackets"];
+const ID_TYPE_KINDS = ["scalar", "enum"]; // an id is a scalar or an enum use
+const PROOF_REFUSED_KINDS = ["opaque", "file"]; // a proof is anything else
+const OTHER_TYPE_KINDS = ["ref", "array"]; // neither an id nor a refused proof
+export const IR_PARTITIONS = {
+  "ValueSource.in": [NAMED_SOURCES, BARE_SOURCES],
+  "FieldWire.kind": [QUERY_WIRE_KINDS, PLAIN_WIRE_KINDS],
+  "TypeUse.kind": [ID_TYPE_KINDS, PROOF_REFUSED_KINDS, OTHER_TYPE_KINDS],
+} as const satisfies Record<string, readonly (readonly string[])[]>;
 
 // The known values of the open enum that `definition.member` references, read from the schema files.
 function knownValues(definition: string, member: string): readonly string[] {
@@ -193,7 +206,7 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
       }
       case "FieldWire": {
         const kind = value.kind;
-        if (kind === "file" || kind === "json") {
+        if (PLAIN_WIRE_KINDS.includes(String(kind))) {
           if (QUERY_WIRE_MEMBERS.some((member) => has(value, member)))
             fail(
               "ir.field-wire.members",
@@ -216,6 +229,32 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
             "ir.property.nullable",
             pointer,
             "A property's type use has no 'nullable': the property holds it.",
+          );
+        break;
+      }
+      case "Scope":
+      case "ResourceSubject": {
+        const use = value.idSchema;
+        if (
+          !isRecord(use) ||
+          !ID_TYPE_KINDS.concat(PROOF_REFUSED_KINDS, OTHER_TYPE_KINDS).includes(String(use.kind))
+        )
+          break;
+        if (!ID_TYPE_KINDS.includes(String(use.kind)) || has(use, "nullable"))
+          fail(
+            "ir.id.scalar",
+            `${pointer}/idSchema`,
+            "An id's type use is a 'scalar' or 'enum' use without 'nullable'.",
+          );
+        break;
+      }
+      case "RuleProof": {
+        const use = value.schema;
+        if (isRecord(use) && PROOF_REFUSED_KINDS.includes(String(use.kind)))
+          fail(
+            "ir.id.scalar",
+            `${pointer}/schema`,
+            "A rule proof's type use is neither 'opaque' nor 'file'.",
           );
         break;
       }

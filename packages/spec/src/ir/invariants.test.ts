@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
-import { walkIrInstance } from "./instance-walk.js";
-import { checkIrInvariants, type IrInvariantId } from "./invariants.js";
+import { irDefinition, KNOWN_VALUES_KEYWORD, walkIrInstance } from "./instance-walk.js";
+import { checkIrInvariants, IR_PARTITIONS, type IrInvariantId } from "./invariants.js";
+import type { SchemaNode } from "./schemas.js";
 
 const sample = (name: string): Record<string, unknown> =>
   JSON.parse(readFileSync(new URL(`../../schemas/ir/examples/${name}`, import.meta.url), "utf8"));
@@ -156,6 +157,68 @@ describe("checkIrInvariants", () => {
         (scalar.type as Record<string, unknown>).scalar = "money";
       }),
     ).toEqual(one("ir.scalar.type"));
+    const use = (value: Record<string, unknown>, member: string) =>
+      value[member] as Record<string, unknown>;
+    expect(
+      broken("Scope", (scope) => {
+        use(scope, "idSchema").nullable = true;
+      }),
+    ).toEqual(one("ir.id.scalar"));
+    expect(
+      broken("ResourceSubject", (subject) => {
+        subject.idSchema = { kind: "ref", schema: "Task" };
+      }),
+    ).toEqual(one("ir.id.scalar"));
+    expect(
+      broken("RuleProof", (proof) => {
+        proof.schema = { kind: "opaque" };
+      }),
+    ).toEqual(one("ir.id.scalar"));
+    expect(
+      broken("RuleProof", (proof) => {
+        proof.schema = { kind: "file" };
+      }),
+    ).toEqual(one("ir.id.scalar"));
+    // An unknown use kind is the reader's to name; a proof may be an enum or an array.
+    expect(
+      broken("Scope", (scope) => {
+        scope.idSchema = { kind: "zzLater" };
+      }),
+    ).toEqual([]);
+    expect(
+      broken("RuleProof", (proof) => {
+        proof.schema = {
+          kind: "array",
+          items: { kind: "scalar", type: "string", refinements: {} },
+        };
+      }),
+    ).toEqual([]);
+  });
+
+  // Each hand-written partition is a disjoint union equal to the schema's known list, so a new known value of
+  // a deciding member cannot slip past its invariant unnoticed.
+  test("each partition is a disjoint union of the schema's known list", () => {
+    const knownOf = (key: string): string[] => {
+      const [definition, member] = key.split(".") as [string, string];
+      if (definition === "TypeUse")
+        return ((irDefinition("TypeUse")?.oneOf ?? []) as SchemaNode[]).map((variant) => {
+          const name = String(variant.$ref).slice(String(variant.$ref).lastIndexOf("/") + 1);
+          const tag = ((irDefinition(name)?.properties ?? {}) as Record<string, SchemaNode>)[
+            member
+          ];
+          return String(tag?.const);
+        });
+      const properties = irDefinition(definition)?.properties as Record<string, SchemaNode>;
+      let node: SchemaNode | undefined = properties[member];
+      while (typeof node?.$ref === "string")
+        node = irDefinition(node.$ref.slice(node.$ref.lastIndexOf("/") + 1));
+      return node?.[KNOWN_VALUES_KEYWORD] as string[];
+    };
+    for (const [key, parts] of Object.entries(IR_PARTITIONS)) {
+      const flat = parts.flat();
+      expect(new Set(flat).size, `${key} parts overlap`).toBe(flat.length);
+      expect([...flat].sort(), key).toEqual([...knownOf(key)].sort());
+    }
   });
 
   test("leaves unknown values to the reader", () => {
@@ -214,13 +277,13 @@ describe("checkIrInvariants", () => {
     // A key read with Object.hasOwn: an id spelled like a prototype member resolves to nothing.
     const rights = ir.rights as Record<string, Record<string, unknown>>;
     (rights["tasks.read"] as Record<string, unknown>).id = "constructor";
-    // Ids are type uses: a scope id names a missing named format, a resource id a missing schema.
+    // Ids are type uses: a scope id names a missing named format, a resource id a missing enum.
     const scopes = ir.scopes as Record<string, Record<string, unknown>>;
     ((scopes.workspace as Record<string, unknown>).idSchema as Record<string, unknown>).scalar =
       "missingId";
     (
       (rights["tasks.update"] as Record<string, unknown>).subject as Record<string, unknown>
-    ).idSchema = { kind: "ref", schema: "MissingId" };
+    ).idSchema = { kind: "enum", enum: "MissingId" };
     expect(checkIrInvariants(ir)).toEqual([
       expect.objectContaining({
         id: "ir.ref.resolves",
@@ -234,7 +297,7 @@ describe("checkIrInvariants", () => {
       expect.objectContaining({ id: "ir.ref.resolves", pointer: "/rights/tasks.read/id" }),
       expect.objectContaining({
         id: "ir.ref.resolves",
-        pointer: "/rights/tasks.update/subject/idSchema/schema",
+        pointer: "/rights/tasks.update/subject/idSchema/enum",
       }),
       expect.objectContaining({
         id: "ir.ref.resolves",
