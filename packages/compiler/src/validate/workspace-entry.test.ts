@@ -104,3 +104,18 @@ test("a scalar of the wrong type in workspace.yaml is a P6 load error, located",
     /^workspace\.yaml:4:18: /,
   );
 });
+
+test("an access written through $include is checked after resolution, through the real loader", () => {
+  const loaded = loadWorkspace({
+    reader: loadMemoryReader({
+      "api.yaml":
+        "api: { name: a, version: 1 }\nsurfaces:\n  app:\n    identity: user\n    routes:\n      health:\n        method: get\n        access: { $include: ./access.yaml }\n",
+      "access.yaml": "public: ''\n",
+    }),
+    entry: "api.yaml",
+  });
+  expect(loaded.diagnostics).toEqual([]);
+  const found = validateWorkspace(loaded.workspace).apis.flatMap((a) => a.diagnostics);
+  expect(found.length).toBeGreaterThan(0);
+  expect(found.map((d) => d.origin.pointer)).toContain("/surfaces/app/routes/health/access/public");
+});
