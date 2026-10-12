@@ -138,7 +138,9 @@ test("printer escapes every control and format character, zero-width and tag one
     expect(out, shown).toBe(`f${shown}.yaml:1:1: error seampact/load/x: a${shown}b. Fix: f.`);
   }
   // The byte order mark: a file name keeps it escaped (a message folds it as white space).
-  const bom = printDiagnostics([d("seampact/load/x", "/t")], { "api#/t": site("\uFEFFf.yaml", 1, 1) });
+  const bom = printDiagnostics([d("seampact/load/x", "/t")], {
+    "api#/t": site("\uFEFFf.yaml", 1, 1),
+  });
   expect(bom).toBe("\\uFEFFf.yaml:1:1: error seampact/load/x: m. Fix: f.");
 });
 

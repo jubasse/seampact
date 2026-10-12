@@ -140,7 +140,9 @@ test("budget: many distinct file $ref targets are expanded in linear time", () =
 
 test("budget: an $include chain longer than the depth limit is a located error", () => {
   const n = 300;
-  const files: Record<string, string> = { "api.yaml": "api: { name: t }\nx:\n  $include: ./f0.yaml\n" };
+  const files: Record<string, string> = {
+    "api.yaml": "api: { name: t }\nx:\n  $include: ./f0.yaml\n",
+  };
   for (let i = 0; i < n; i++) {
     files[`f${i}.yaml`] = i + 1 < n ? `$include: ./f${i + 1}.yaml\n` : "z: 1\n";
   }
