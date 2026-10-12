@@ -1,7 +1,7 @@
 import type { Origin } from "@seampact/spec/ir";
 import { isMap, isScalar } from "yaml";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
-import { diagnosticLocationKey, diagnosticSort } from "../diagnostics/print.js";
+import { diagnosticInert, diagnosticLocationKey, diagnosticSort } from "../diagnostics/print.js";
 import type {
   ApiLayerId,
   JsonObject,
@@ -553,7 +553,7 @@ class Loader {
       // (`<layer>#<pointer>`): a `#` in it could make a pack's key meet a load site's.
       this.rep.report({
         rule: "pack-name",
-        message: `the pack name '${name}' holds a '#'`,
+        message: `the pack name '${diagnosticInert(name)}' holds a '#'`,
         fix: "name the pack without '#'",
         at: nodeSite(pf, isScalar(nameNode) ? nameNode : null),
       });
@@ -664,7 +664,7 @@ class Loader {
     const refuse = () => {
       this.rep.report({
         rule: "pack-name",
-        message: `'${name}' is neither a path (starting with ./ or ../) nor a package name`,
+        message: `'${diagnosticInert(name)}' is neither a path (starting with ./ or ../) nor a package name`,
         fix: "write a package name such as @seampact/pack-crud-rights, or a path such as ./packs/house.yaml",
         at,
       });

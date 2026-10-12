@@ -1,5 +1,6 @@
 import type { Origin } from "@seampact/spec/ir";
 import { isAlias, isMap, isScalar, isSeq, type Node, type Pair, Scalar, type YAMLMap } from "yaml";
+import { diagnosticInert } from "../diagnostics/print.js";
 import type { ApiLayerId, JsonObject, JsonValue } from "../raw-tree.js";
 import { type LoadBudget, loadWorkOf } from "./budget.js";
 import { asObject, cloneJson, isReservedKey, jsonObject, setKey } from "./json.js";
@@ -19,6 +20,7 @@ import {
   stepPosition,
 } from "./positions.js";
 import type { Reporter, SiteLocation } from "./report.js";
+import { loadScalarPitfall } from "./scalars.js";
 import { type FileStore, nodeSite, pairSite, type ParsedFile } from "./source.js";
 
 // ADR 0002 section 2: `$include`, `$file` and the file form of `$ref`, expanded over the YAML
@@ -370,10 +372,12 @@ export class Expander {
   private checkType(node: Scalar, scope: Scope): void {
     const type = scalarType(node.value);
     if (type === undefined || !scope.pos || !refusesScalar(scope.pos, type)) return;
+    // A plain scalar P1 to P4 refuse is reported once, by them: their fix (quote it) is the one.
+    if (node.type === Scalar.PLAIN && loadScalarPitfall(node.source ?? "", node.value)) return;
     const expected = expectedTypes(scope.pos) ?? [];
     const written =
       node.type === Scalar.PLAIN ? (node.source ?? "") : JSON.stringify(String(node.value));
-    const shown = written.length > 40 ? `${written.slice(0, 37)}...` : written;
+    const shown = diagnosticInert(written.length > 40 ? `${written.slice(0, 37)}...` : written);
     const wants = expected.join(" or ");
     const got =
       type === "null"

@@ -143,6 +143,41 @@ describe("p6 typed scalar", () => {
   });
 });
 
+describe("p6 beside p1 to p4", () => {
+  test("a scalar P1 to P4 already refuse gets no P6 report", () => {
+    for (const v of ["1_000", "0x1F", "yes", "2027-06-30"]) {
+      const r = load({
+        "api.yaml": `api: { name: t }\nscalars:\n  Id: { type: integer, maximum: ${v} }\n`,
+      });
+      expect(r.rules).toHaveLength(1);
+      expect(r.rules).not.toContain("scalar-type");
+    }
+  });
+});
+
+describe("authored text in messages", () => {
+  test("a scalar-type message writes an active character escaped", () => {
+    const r = load({
+      "api.yaml": 'api: { name: t }\nscalars:\n  Id: { type: string, minLength: "a\\u202Eb" }\n',
+    });
+    expect(r.rules).toEqual(["scalar-type"]);
+    const d = r.result.diagnostics[0];
+    expect(d?.message).not.toMatch(/\u202E/u);
+    expect(d?.message).toContain("\\u202E");
+    expect(d?.fix).not.toMatch(/\u202E/u);
+  });
+
+  test("a pack-name message writes an active character escaped", () => {
+    const r = load({
+      "api.yaml": "api: { name: t }\npacks: [./p.yaml]\n",
+      "p.yaml": 'pack: { name: "a#\\u202Eb", version: 1.0.0 }\n',
+    });
+    expect(r.rules).toEqual(["pack-name"]);
+    expect(r.result.diagnostics[0]?.message).not.toMatch(/\u202E/u);
+    expect(r.result.diagnostics[0]?.message).toContain("\\u202E");
+  });
+});
+
 describe("pack names", () => {
   test("a '#' in a pack name is refused", () => {
     const r = load({
