@@ -5,41 +5,24 @@
   "features": [],
   "api": {
     "id": "tasks",
-    "name": {
-      "segments": ["tasks"],
-      "role": "schema"
-    },
-    "version": 1,
+    "name": { "segments": ["tasks"], "role": "schema" },
+    "version": { "kind": "path", "number": 1 },
     "kind": "product",
     "pathVersion": {
       "value": "prefix",
-      "origin": {
-        "layer": "base",
-        "pointer": "/conventions/pathVersion"
-      }
+      "origin": { "layer": "base", "pointer": "/conventions/pathVersion" }
     },
     "maturity": "stable",
-    "compat": {
-      "policy": "additive-only"
-    },
+    "compat": { "policy": "additive-only" },
     "surfaces": {},
     "documents": {},
     "docs": {},
     "extensions": {},
-    "origin": {
-      "layer": "api",
-      "pointer": ""
-    }
+    "origin": { "layer": "api", "pointer": "" }
   },
   "packs": [],
   "conventions": {},
-  "schemas": {
-    "Point": {
-      "kind": "tuple",
-      "id": "Point",
-      "items": ["number", "number"]
-    }
-  },
+  "schemas": { "Point": { "kind": "tuple", "id": "Point", "items": ["number", "number"] } },
   "scalars": {},
   "enums": {},
   "errors": {},
@@ -53,8 +36,5 @@
   "buckets": {},
   "services": {},
   "extensionKeys": {},
-  "lint": {
-    "rules": {},
-    "allows": []
-  }
+  "lint": { "rules": {}, "allows": [] }
 }

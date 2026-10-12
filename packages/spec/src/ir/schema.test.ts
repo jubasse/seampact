@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { isSchemaNode, walkSchema } from "./schema-walk.js";
 import { IR_SCHEMA_DOCUMENTS, IR_SCHEMA_ID, type SchemaNode } from "./schemas.js";
 import { createAjv } from "./test-support.js";
-import { KNOWN_VALUES_KEYWORD, strictIrSchemas } from "./validation.js";
+import { KNOWN_VALUES_KEYWORD, MUST_ACT_KEYWORD, strictIrSchemas } from "./validation.js";
 
 const defs = new Map<string, SchemaNode>();
 for (const document of IR_SCHEMA_DOCUMENTS) {
@@ -14,6 +14,23 @@ const def = (name: string): SchemaNode => {
   if (found === undefined) throw new Error(`no definition ${name}`);
   return found;
 };
+// ADR 0004 section 13: the unions and enums a reader must understand to enforce a security boundary.
+const MUST_ACT = [
+  "Access",
+  "Requirement",
+  "RightSubject",
+  "SignatureScheme",
+  "UnknownQuery",
+  "SchemeKind",
+  "IdentityKind",
+  "RefusedCredential",
+  "UnknownKeysPolicy",
+  "InputPolicy",
+  "Idempotency",
+  "Csrf",
+];
+// Map keys with no grammar in ADR 0002 section 4 (principal variant names); readers use Object.hasOwn.
+const KEYS_WITHOUT_GRAMMAR = ["VariantId"];
 const refName = (ref: unknown): string => String(ref).slice(String(ref).lastIndexOf("/") + 1);
 
 // Every node of every file, with `file#pointer` for messages.
@@ -120,6 +137,7 @@ describe("IR schema files", () => {
       "deprecated",
       "examples",
       KNOWN_VALUES_KEYWORD,
+      MUST_ACT_KEYWORD,
     ]);
     const rootOnly = new Set(["$schema", "$id", "$defs"]);
     const offenders: string[] = [];
@@ -136,6 +154,9 @@ describe("IR schema files", () => {
         const keys = Object.keys(node.discriminator as SchemaNode);
         if (keys.join() !== "propertyName") offenders.push(`${at}: discriminator ${keys.join()}`);
         if ("properties" in node) offenders.push(`${at}: a union wrapper declares properties`);
+      }
+      if (MUST_ACT_KEYWORD in node && !("discriminator" in node || KNOWN_VALUES_KEYWORD in node)) {
+        offenders.push(`${at}: must-act outside a union or an open enum`);
       }
       if ("type" in node && (typeof node.type !== "string" || node.type === "null")) {
         offenders.push(`${at}: type must be one non-null type`);

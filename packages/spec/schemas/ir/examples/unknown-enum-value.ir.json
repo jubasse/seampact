@@ -5,31 +5,20 @@
   "features": [],
   "api": {
     "id": "tasks",
-    "name": {
-      "segments": ["tasks"],
-      "role": "schema"
-    },
-    "version": 1,
+    "name": { "segments": ["tasks"], "role": "schema" },
+    "version": { "kind": "path", "number": 1 },
     "kind": "library",
     "pathVersion": {
       "value": "prefix",
-      "origin": {
-        "layer": "base",
-        "pointer": "/conventions/pathVersion"
-      }
+      "origin": { "layer": "base", "pointer": "/conventions/pathVersion" }
     },
     "maturity": "deprecated",
-    "compat": {
-      "policy": "semver"
-    },
+    "compat": { "policy": "semver" },
     "surfaces": {},
     "documents": {},
     "docs": {},
     "extensions": {},
-    "origin": {
-      "layer": "api",
-      "pointer": ""
-    }
+    "origin": { "layer": "api", "pointer": "" }
   },
   "packs": [],
   "conventions": {},
@@ -47,8 +36,5 @@
   "buckets": {},
   "services": {},
   "extensionKeys": {},
-  "lint": {
-    "rules": {},
-    "allows": []
-  }
+  "lint": { "rules": {}, "allows": [] }
 }

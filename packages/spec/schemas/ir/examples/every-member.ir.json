@@ -6,7 +6,7 @@
   "api": {
     "id": "tasks",
     "name": { "segments": ["tasks"], "role": "schema" },
-    "version": 1,
+    "version": { "kind": "path", "number": 1 },
     "kind": "service",
     "pathVersion": {
       "value": "prefix",
@@ -64,16 +64,12 @@
           "type": {
             "kind": "scalar",
             "type": "integer",
-            "format": "int32",
+            "format": "int64",
             "refinements": {
-              "minLength": 1,
-              "maxLength": 3,
-              "pattern": { "source": "^[0-9]+$", "normalized": "^[0-9]+$" },
-              "minimum": 0,
-              "maximum": 100,
-              "exclusiveMinimum": -1,
-              "exclusiveMaximum": 101,
-              "multipleOf": 1
+              "minimum": "0",
+              "maximum": "9223372036854775807",
+              "exclusiveMinimum": "-1",
+              "multipleOf": "1"
             }
           },
           "optional": true,
@@ -97,6 +93,62 @@
               { "api": "billing", "layer": "pack:@acme/pack-tenancy", "pointer": "/derive/version" }
             ]
           }
+        },
+        {
+          "name": "title",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "minLength": 1,
+              "maxLength": 200,
+              "pattern": { "source": "^\\S", "normalized": "^[^\\t\\n\\v\\f\\r ]" }
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": { "layer": "api", "pointer": "/schemas/Task/properties/title" }
+        },
+        {
+          "name": "budget",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "scalar": "money",
+            "refinements": {
+              "pattern": {
+                "source": "^-?(0|[1-9][0-9]*)\\.[0-9]{2}$",
+                "normalized": "^-?(0|[1-9][0-9]*)\\.[0-9]{2}$"
+              }
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": { "layer": "api", "pointer": "/schemas/Task/properties/budget" }
+        },
+        {
+          "name": "ratio",
+          "type": {
+            "kind": "scalar",
+            "type": "number",
+            "refinements": { "exclusiveMaximum": "1", "multipleOf": "0.01" },
+            "nullable": true
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": { "layer": "api", "pointer": "/schemas/Task/properties/ratio" }
         },
         {
           "name": "data",
@@ -150,7 +202,8 @@
               "content": {
                 "media": "application/json",
                 "schema": { "kind": "ref", "schema": "Notice" }
-              }
+              },
+              "nullable": true
             },
             "minItems": 0,
             "maxItems": 10
@@ -198,7 +251,7 @@
       "extensions": {},
       "origin": { "layer": "shared", "pointer": "/schemas/Labels" },
       "keys": { "kind": "scalar", "type": "string", "refinements": {} },
-      "values": { "kind": "scalar", "type": "string", "refinements": {} }
+      "values": { "kind": "scalar", "type": "string", "refinements": {}, "nullable": true }
     },
     "Notice": {
       "kind": "union",
@@ -240,13 +293,22 @@
     }
   },
   "scalars": {
-    "TaskId": {
-      "id": "TaskId",
-      "name": { "segments": ["task", "id"], "role": "schema" },
-      "type": { "kind": "scalar", "type": "string", "format": "uuid", "refinements": {} },
+    "money": {
+      "id": "money",
+      "name": { "segments": ["money"], "role": "schema" },
+      "type": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {
+          "pattern": {
+            "source": "^-?(0|[1-9][0-9]*)\\.[0-9]{2}$",
+            "normalized": "^-?(0|[1-9][0-9]*)\\.[0-9]{2}$"
+          }
+        }
+      },
       "directions": ["input", "output"],
-      "docs": {},
-      "origin": { "layer": "api", "pointer": "/schemas/TaskId" }
+      "docs": { "summary": "An amount with two decimals." },
+      "origin": { "layer": "pack:@acme/pack-tenancy", "pointer": "/scalars/money" }
     }
   },
   "enums": {
@@ -255,7 +317,7 @@
       "name": { "segments": ["state"], "role": "schema" },
       "values": ["open", "done"],
       "codeNames": { "done": { "segments": ["finished"], "role": "enumMember" } },
-      "source": { "vocabulary": "task-states" },
+      "source": { "kind": "vocabulary", "vocabulary": "task-states" },
       "localReason": "Kept local for the demo.",
       "fallback": "open",
       "directions": ["output"],
@@ -266,7 +328,7 @@
       "id": "Mirror",
       "name": { "segments": ["mirror"], "role": "schema" },
       "values": ["open"],
-      "source": { "enum": "State" },
+      "source": { "kind": "enum", "enum": "State" },
       "directions": ["input"],
       "docs": {},
       "origin": { "layer": "api", "pointer": "/enums/Mirror" }
@@ -324,7 +386,7 @@
         "payload": "{ts}.{rawBody}",
         "encoding": "hex",
         "toleranceMs": 300000,
-        "key": { "value": "stripe" }
+        "key": { "kind": "value", "value": "stripe" }
       },
       "origin": { "layer": "api", "pointer": "/schemes/stripeSignature" }
     },
@@ -334,7 +396,7 @@
       "signature": {
         "verify": "application",
         "headers": ["X-Signature"],
-        "key": { "from": { "in": "header", "name": "X-Key-Id" } }
+        "key": { "kind": "from", "from": { "in": "header", "name": "X-Key-Id" } }
       },
       "origin": { "layer": "api", "pointer": "/schemes/appSignature" }
     }
@@ -360,8 +422,13 @@
     "user": {
       "id": "user",
       "kind": "credential",
-      "schemes": { "read": ["bearer", "sessionCookie"], "write": ["bearer"], "optionalRead": [] },
-      "principal": { "schema": "Task" },
+      "schemes": {
+        "kind": "credential",
+        "read": ["bearer", "sessionCookie"],
+        "write": ["bearer"],
+        "optionalRead": []
+      },
+      "principal": { "kind": "schema", "schema": "Task" },
       "errors": ["tasks.locked"],
       "headers": [
         {
@@ -381,9 +448,9 @@
     "stripe": {
       "id": "stripe",
       "kind": "signed",
-      "schemes": { "signed": "stripeSignature" },
-      "principal": { "variants": { "live": "Task" } },
-      "unknownKeys": { "ignore": "Stripe adds fields." },
+      "schemes": { "kind": "signed", "signed": "stripeSignature" },
+      "principal": { "kind": "variants", "variants": { "live": "Task" } },
+      "unknownKeys": { "policy": "ignore", "reason": "Stripe adds fields." },
       "errors": [],
       "headers": [],
       "docs": {},
@@ -393,9 +460,9 @@
     "partner": {
       "id": "partner",
       "kind": "signed",
-      "schemes": { "signed": "appSignature" },
-      "principal": { "schema": "Task" },
-      "unknownKeys": { "keep": "Forwarded as is." },
+      "schemes": { "kind": "signed", "signed": "appSignature" },
+      "principal": { "kind": "schema", "schema": "Task" },
+      "unknownKeys": { "policy": "keep", "reason": "Forwarded as is." },
       "errors": [],
       "headers": [],
       "docs": {},

@@ -6,75 +6,103 @@
   "$defs": {
     "SchemaId": {
       "type": "string",
-      "description": "The id of a named schema: its catalogue key (ADR 0004 section 9)."
+      "description": "The id of a named schema: its catalogue key, the name as written or the canonical identifier of a derived name (ADR 0004 section 9, ADR 0002 section 4, ADR 0007).",
+      "pattern": "^([A-Z]|_[0-9])[A-Za-z0-9_]*$"
     },
     "ScalarId": {
       "type": "string",
-      "description": "The id of a named scalar: its catalogue key (ADR 0004 section 9)."
+      "description": "The id of a named format: its catalogue key (ADR 0003 section 8, ADR 0002 section 4).",
+      "pattern": "^[a-z][A-Za-z0-9]*(-[a-z0-9]+)*$"
     },
     "EnumId": {
       "type": "string",
-      "description": "The id of an enum: its catalogue key (ADR 0004 section 9)."
+      "description": "The id of an enum: its catalogue key, the name as written or the canonical identifier of a derived name (ADR 0004 section 9, ADR 0002 section 4).",
+      "pattern": "^([A-Z]|_[0-9])[A-Za-z0-9_]*$"
     },
     "ErrorCode": {
       "type": "string",
-      "description": "An error code, the key of the errors catalogue (ADR 0004 section 4)."
+      "description": "An error code, the key of the errors catalogue (ADR 0004 section 4, ADR 0002 section 4).",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
     },
     "NatureId": {
       "type": "string",
-      "description": "The id of a contract nature: its catalogue key (ADR 0004 section 9)."
+      "pattern": "^[a-z][A-Za-z0-9_]*$",
+      "description": "The id of a contract nature: its catalogue key (ADR 0004 section 9, ADR 0002 section 4)."
     },
     "SchemeId": {
       "type": "string",
-      "description": "The id of a security scheme: its catalogue key (ADR 0004 section 9)."
+      "pattern": "^[a-z][A-Za-z0-9_]*$",
+      "description": "The id of a security scheme: its catalogue key (ADR 0004 section 9, ADR 0002 section 4)."
     },
     "HeaderId": {
       "type": "string",
-      "description": "The id of an identity header: its catalogue key (ADR 0004 section 9)."
+      "pattern": "^[a-z][A-Za-z0-9_]*$",
+      "description": "The id of an identity header: its catalogue key (ADR 0004 section 9, ADR 0002 section 4)."
     },
     "IdentityId": {
       "type": "string",
-      "description": "The id of an identity: its catalogue key (ADR 0004 section 9)."
+      "pattern": "^[a-z][A-Za-z0-9_]*$",
+      "description": "The id of an identity: its catalogue key (ADR 0004 section 9, ADR 0002 section 4)."
     },
     "RightId": {
       "type": "string",
-      "description": "The id of a right: its catalogue key (ADR 0004 section 9)."
+      "description": "The id of a right: its catalogue key, the name its library uses, without line breaks or leading or trailing space (ADR 0002 section 4).",
+      "pattern": "^\\S(.*\\S)?$"
     },
     "RuleId": {
       "type": "string",
-      "description": "The id of a rule: its catalogue key (ADR 0004 section 9)."
+      "pattern": "^[a-z][A-Za-z0-9_]*$",
+      "description": "The id of a rule: its catalogue key (ADR 0004 section 9, ADR 0002 section 4)."
     },
     "ScopeId": {
       "type": "string",
-      "description": "The id of a scope: its catalogue key (ADR 0004 section 9)."
+      "pattern": "^[a-z][A-Za-z0-9_]*$",
+      "description": "The id of a scope: its catalogue key (ADR 0004 section 9, ADR 0002 section 4)."
     },
     "BucketId": {
       "type": "string",
-      "description": "The id of a rate-limit bucket: its catalogue key (ADR 0004 section 9)."
+      "pattern": "^[a-z][A-Za-z0-9_]*$",
+      "description": "The id of a rate-limit bucket: its catalogue key (ADR 0004 section 9, ADR 0002 section 4)."
     },
     "ServiceId": {
       "type": "string",
-      "description": "The id of a service: its catalogue key (ADR 0004 section 9)."
+      "pattern": "^[a-z][A-Za-z0-9_]*$",
+      "description": "The id of a service: its catalogue key (ADR 0004 section 9, ADR 0002 section 4)."
     },
     "ExtensionKeyId": {
       "type": "string",
-      "description": "An extension key, written '<prefix>-<key>' (ADR 0002 section 12)."
+      "description": "A declared extension key, written '<prefix>-<key>' (ADR 0002 sections 4 and 12).",
+      "pattern": "^[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "ExtensionPrefix": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*$",
+      "description": "An extension prefix (ADR 0002 section 4); the compiler refuses 'seampact', which is reserved."
+    },
+    "ExtensionKey": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$",
+      "description": "An extension key under its prefix (ADR 0002 section 4)."
     },
     "FormatId": {
       "type": "string",
-      "description": "The id of a wire format: its catalogue key (ADR 0004 section 9)."
+      "pattern": "^[a-z][A-Za-z0-9_]*$",
+      "description": "The id of a wire format: its catalogue key (ADR 0004 section 9, ADR 0002 section 4)."
     },
     "PagingId": {
       "type": "string",
-      "description": "The id of a paging style: its catalogue key (ADR 0004 section 9)."
+      "pattern": "^[a-z][A-Za-z0-9_]*$",
+      "description": "The id of a paging style: its catalogue key (ADR 0004 section 9, ADR 0002 section 4)."
     },
     "SurfaceId": {
       "type": "string",
-      "description": "The id of an api surface: its catalogue key (ADR 0004 section 9)."
+      "pattern": "^[a-z][A-Za-z0-9_]*$",
+      "description": "The id of an api surface: its catalogue key (ADR 0004 section 9, ADR 0002 section 4)."
     },
     "DocumentId": {
       "type": "string",
-      "description": "The id of an api document: its catalogue key (ADR 0004 section 9)."
+      "pattern": "^[a-z][A-Za-z0-9_]*$",
+      "description": "The id of an api document: its catalogue key (ADR 0004 section 9, ADR 0002 section 4)."
     },
     "VariantId": {
       "type": "string",
@@ -89,7 +117,12 @@
       "type": "string",
       "description": "A must-understand feature name (ADR 0005 section 3); none is defined at irRevision 1."
     },
-    "Reason": { "type": "string", "description": "The written reason of an exception (A36)." },
+    "Reason": {
+      "type": "string",
+      "description": "The written reason of an exception: non-empty, without leading or trailing white space (A36, ADR 0002 section 4).",
+      "minLength": 1,
+      "pattern": "^\\S([\\s\\S]*\\S)?$"
+    },
     "SchemaRef": {
       "$ref": "#/$defs/SchemaId",
       "description": "A reference by id to a named object schema of the schemas catalogue (ADR 0004 section 4)."
@@ -99,10 +132,7 @@
       "description": "A declaration kind (ADR 0004 section 2, ADR 0014).",
       "x-seampact-known": ["httpOperation"]
     },
-    "Maturity": {
-      "type": "string",
-      "x-seampact-known": ["experimental", "provisional", "stable"]
-    },
+    "Maturity": { "type": "string", "x-seampact-known": ["experimental", "provisional", "stable"] },
     "Direction": { "type": "string", "x-seampact-known": ["input", "output"] },
     "NameRole": {
       "type": "string",
@@ -130,7 +160,7 @@
     },
     "Name": {
       "type": "object",
-      "description": "A canonical name: word segments plus a role, never a final identifier (ADR 0007 section 1).",
+      "description": "A canonical name: word segments plus a role, never a final identifier (ADR 0007 section 1 and its amendment).",
       "required": ["segments", "role"],
       "properties": {
         "segments": {
@@ -142,8 +172,8 @@
         "status": {
           "type": "integer",
           "minimum": 200,
-          "maximum": 299,
-          "description": "The HTTP success status of a 'response' name; present if and only if role is 'response' (lead decision, checked by the compiler: the schema subset has no conditional)."
+          "maximum": 399,
+          "description": "The HTTP success or redirect status of a 'response' name; present if and only if role is 'response' (invariant ir.name.status, ADR 0004 section 13)."
         }
       }
     },
@@ -155,8 +185,10 @@
     "Extensions": {
       "type": "object",
       "description": "The extension slot: { '<prefix>': { '<key>': value } } (ADR 0004 section 3).",
+      "propertyNames": { "$ref": "#/$defs/ExtensionPrefix" },
       "additionalProperties": {
         "type": "object",
+        "propertyNames": { "$ref": "#/$defs/ExtensionKey" },
         "additionalProperties": { "description": "A consumer value, kept as raw JSON." }
       }
     },
@@ -171,8 +203,8 @@
         },
         "layer": {
           "type": "string",
-          "pattern": "^(api|shared|base|pack:.+)$",
-          "description": "'api', 'shared', 'base' or 'pack:<name>'."
+          "pattern": "^(api|shared|base|workspace|pack:[^#]+)$",
+          "description": "'api', 'shared', 'base', 'pack:<name>', or 'workspace' for a diagnostic on workspace.yaml (no IR element carries it). Closed: the one exception to open enums (ADR 0004 section 13)."
         },
         "pointer": { "type": "string", "pattern": "^(/.*)?$" }
       }
@@ -197,12 +229,15 @@
         "scope",
         "host",
         "subdomain",
-        "address"
-      ]
+        "address",
+        "resolver",
+        "holderField"
+      ],
+      "description": "Where a value is read (ADR 0002 section 4); 'resolver' only as a scope source, 'holderField' only as a field right's subject source."
     },
     "ValueSource": {
       "type": "object",
-      "description": "Where a value is read (ADR 0004 section 7). 'name' with path, query, header, body, principal and scope; 'prefixBits' only with address.",
+      "description": "Where a value is read (ADR 0004 section 7). 'name' with path, query, header, body, principal, scope and holderField (the holder's property); no other member with host, subdomain and resolver; 'prefixBits' only with address (invariants ir.value-source.members and ir.value-source.place).",
       "required": ["in"],
       "properties": {
         "in": { "$ref": "#/$defs/ValueSourceIn" },

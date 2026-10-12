@@ -5,32 +5,20 @@
   "features": [],
   "api": {
     "id": "tasks",
-    "name": {
-      "segments": ["tasks"],
-      "role": "schema"
-    },
-    "version": 1,
+    "name": { "segments": ["tasks"], "role": "schema" },
+    "version": { "kind": "path", "number": 1 },
     "kind": "product",
     "pathVersion": {
       "value": "prefix",
-      "origin": {
-        "layer": "base",
-        "pointer": "/conventions/pathVersion"
-      }
+      "origin": { "layer": "base", "pointer": "/conventions/pathVersion" }
     },
     "maturity": "stable",
-    "compat": {
-      "policy": "additive-only"
-    },
+    "compat": { "policy": "additive-only" },
     "surfaces": {},
     "documents": {},
     "docs": {},
     "extensions": {},
-    "origin": {
-      "layer": "api",
-      "pointer": "",
-      "column": 4
-    },
+    "origin": { "layer": "api", "pointer": "", "column": 4 },
     "owner": "team-tasks"
   },
   "packs": [],
@@ -49,11 +37,6 @@
   "buckets": {},
   "services": {},
   "extensionKeys": {},
-  "lint": {
-    "rules": {},
-    "allows": []
-  },
-  "generatedBy": {
-    "tool": "a later compiler"
-  }
+  "lint": { "rules": {}, "allows": [] },
+  "generatedBy": { "tool": "a later compiler" }
 }

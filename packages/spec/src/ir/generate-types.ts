@@ -1,6 +1,6 @@
 import { isSchemaNode } from "./schema-walk.js";
 import { IR_SCHEMA_DOCUMENTS, type SchemaNode } from "./schemas.js";
-import { KNOWN_VALUES_KEYWORD } from "./validation.js";
+import { KNOWN_VALUES_KEYWORD, MUST_ACT_KEYWORD } from "./validation.js";
 
 // The in-repo generator of the IR TypeScript types (ADR 0005 section 5: readers' models are generated from the
 // one IR JSON Schema). It reads only the subset the schema files use (README.md) and fails on anything else, so
@@ -10,11 +10,15 @@ import { KNOWN_VALUES_KEYWORD } from "./validation.js";
 // Mapping:
 // - a definition with `properties`: an interface; a member outside `required` is optional (`name?: T`);
 // - `$ref`: the referenced definition's name (definition names are unique across the files);
-// - `oneOf` with `discriminator`: the union of its variants;
+// - a definition with `oneOf` and `discriminator` (a tagged union): `Known<Name>`, the closed union of its
+//   variants, and `<Name>`, that union plus `UnknownVariant<tag>`, the explicit unknown arm whose tag is typed
+//   `string & {}` (ADR 0005 section 3: the tag stays open). TypeScript narrows no union holding that arm, so a
+//   reader first narrows to `Known<Name>` with `isKnownVariant` and handles the unknown arm by name;
+//   `IrUnionMap` lists every union for that guard;
 // - a string with `const` (a union tag): that literal;
 // - a string with the known-values annotation (an open enum): `"a" | "b" | (string & {})`;
-// - a string whose `pattern` is an anchored alternation of words and `word:.+` prefixes: the closed union of
-//   those literals and template literals (Origin's layer);
+// - a string whose `pattern` is an anchored alternation of words and `word:[^#]+` prefixes: the closed union
+//   of those literals and template literals (Origin's layer);
 // - `integer` and `number`: `number`; `boolean`; an array: `T[]`;
 // - an object with `additionalProperties` (a map): `Record<K, V>`, K from `propertyNames` when it is a `$ref`;
 // - a schema with no shape keyword (an opaque value): `unknown`.
@@ -24,7 +28,11 @@ export function generateIrTypes(documents: readonly SchemaNode[] = IR_SCHEMA_DOC
     "// Generated from packages/spec/schemas/ir/*.schema.json by src/ir/generate-types.ts. Do not edit.",
     "// Regenerate: UPDATE_IR_TYPES=1 pnpm vitest run packages/spec/src/ir/types.test.ts",
     "",
+    "/** The unknown arm of a tagged union: a variant this revision does not know, named by its tag. */",
+    "export type UnknownVariant<Tag extends string> = { [K in Tag]: string & {} };",
+    "",
   ];
+  const unions: string[] = [];
   for (const document of documents) {
     const defs = document.$defs;
     if (!isSchemaNode(defs)) continue;
@@ -32,15 +40,38 @@ export function generateIrTypes(documents: readonly SchemaNode[] = IR_SCHEMA_DOC
       if (!isSchemaNode(def)) throw new Error(`${name}: not a schema`);
       if (names.has(name)) throw new Error(`${name}: defined twice across the IR schema files`);
       names.add(name);
-      out.push(...docComment(def.description, ""));
-      if (isSchemaNode(def.properties)) {
+      out.push(...docComment(description(def), ""));
+      if (isSchemaNode(def.discriminator)) {
+        if (!Array.isArray(def.oneOf)) throw new Error(`${name}: discriminator without oneOf`);
+        const tag = String(def.discriminator.propertyName);
+        const variants = def.oneOf.map((variant) => typeOf(variant as SchemaNode, name));
+        out.push(`export type Known${name} = ${variants.join(" | ")};`, "");
+        out.push(...docComment(description(def), ""));
+        out.push(`export type ${name} = Known${name} | UnknownVariant<"${tag}">;`, "");
+        unions.push(`  ${name}: { union: ${name}; known: Known${name} };`);
+      } else if (isSchemaNode(def.properties)) {
         out.push(`export interface ${name} ${objectType(def, name)}`, "");
       } else {
         out.push(`export type ${name} = ${typeOf(def, name)};`, "");
       }
     }
   }
+  out.push(
+    "/** Every tagged union of the IR, for `isKnownVariant`. */",
+    "export interface IrUnionMap {",
+    ...unions,
+    "}",
+    "",
+  );
   return out.join("\n");
+}
+
+// A definition's description, with the must-act rule when the definition carries it.
+function description(def: SchemaNode): string | undefined {
+  if (def[MUST_ACT_KEYWORD] !== true)
+    return typeof def.description === "string" ? def.description : undefined;
+  const rule = "Must act: an unknown value makes the IR invalid for every reader.";
+  return typeof def.description === "string" ? `${def.description} ${rule}` : rule;
 }
 
 function docComment(description: unknown, indent: string): string[] {
@@ -52,7 +83,7 @@ function objectType(node: SchemaNode, at: string): string {
   const required = new Set(Array.isArray(node.required) ? node.required : []);
   const lines = ["{"];
   for (const [member, schema] of Object.entries(properties)) {
-    lines.push(...docComment(schema.description, "  "));
+    lines.push(...docComment(description(schema), "  "));
     const optional = required.has(member) ? "" : "?";
     lines.push(`  ${member}${optional}: ${typeOf(schema, `${at}.${member}`)};`);
   }
@@ -62,14 +93,13 @@ function objectType(node: SchemaNode, at: string): string {
 
 const refName = (ref: string): string => ref.slice(ref.lastIndexOf("/") + 1);
 
-const LITERAL_ALTERNATION = /^\^\(([a-z]+(?::\.\+)?(?:\|[a-z]+(?::\.\+)?)*)\)\$$/;
+const PREFIX_SUFFIX = ":[^#]+";
+const LITERAL_ALTERNATION = /^\^\(([a-z]+(?::\[\^#\]\+)?(?:\|[a-z]+(?::\[\^#\]\+)?)*)\)\$$/;
 
 function typeOf(node: SchemaNode, at: string): string {
   if (typeof node.$ref === "string") return refName(node.$ref);
-  if (Array.isArray(node.oneOf)) {
-    if (!isSchemaNode(node.discriminator)) throw new Error(`${at}: oneOf without discriminator`);
-    return node.oneOf.map((variant) => typeOf(variant as SchemaNode, at)).join(" | ");
-  }
+  if (Array.isArray(node.oneOf))
+    throw new Error(`${at}: a tagged union is a definition of its own`);
   switch (node.type) {
     case "string":
       return stringType(node);
@@ -108,7 +138,11 @@ function stringType(node: SchemaNode): string {
     if (match?.[1] !== undefined) {
       return match[1]
         .split("|")
-        .map((word) => (word.endsWith(":.+") ? `\`${word.slice(0, -2)}\${string}\`` : `"${word}"`))
+        .map((word) =>
+          word.endsWith(PREFIX_SUFFIX)
+            ? `\`${word.slice(0, -PREFIX_SUFFIX.length + 1)}\${string}\``
+            : `"${word}"`,
+        )
         .join(" | ");
     }
   }

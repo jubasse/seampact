@@ -15,7 +15,7 @@
           "description": "Keyed by '<layer>#<pointer>', the serialised form of an Origin.",
           "propertyNames": {
             "type": "string",
-            "pattern": "^(api|shared|base|pack:[^#]+)#(/.*)?$"
+            "pattern": "^(api|shared|base|workspace|pack:[^#]+)#(/.*)?$"
           },
           "additionalProperties": { "$ref": "#/$defs/SourceLocation" }
         }
@@ -23,10 +23,14 @@
     },
     "SourceLocation": {
       "type": "object",
-      "description": "A location; 'file' is relative to the workspace root, with forward slashes.",
+      "description": "A location in a source file.",
       "required": ["file", "line", "column", "endLine", "endColumn"],
       "properties": {
-        "file": { "type": "string" },
+        "file": {
+          "type": "string",
+          "pattern": "^([^/\\\\:.][^/\\\\:]*|\\.[^/\\\\:.][^/\\\\:]*|\\.\\.[^/\\\\:]+)(/([^/\\\\:.][^/\\\\:]*|\\.[^/\\\\:.][^/\\\\:]*|\\.\\.[^/\\\\:]+))*$",
+          "description": "Relative to the workspace root, with forward slashes: never absolute, no '.' or '..' segment, no backslash or ':'."
+        },
         "line": { "type": "integer", "minimum": 1 },
         "column": { "type": "integer", "minimum": 1 },
         "endLine": { "type": "integer", "minimum": 1 },

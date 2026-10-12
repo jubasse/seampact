@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync } from "node:fs";
+import { Ajv2020, type Options } from "ajv/dist/2020.js";
 import { describe, expect, test } from "vitest";
 import minimal from "../../schemas/ir/examples/minimal.ir.json" with { type: "json" };
 import { isSchemaNode } from "./schema-walk.js";
@@ -12,6 +13,7 @@ import {
   walkInstance,
 } from "./test-support.js";
 import type { ContractIR } from "./types.generated.js";
+import { createIrValidator } from "./validation.js";
 
 const EXAMPLES = new URL("../../schemas/ir/examples/", import.meta.url);
 const sample = (name: string): unknown => JSON.parse(readFileSync(new URL(name, EXAMPLES), "utf8"));
@@ -26,6 +28,13 @@ const nodesOf = (value: unknown): InstanceNode[] => {
   return nodes;
 };
 
+const VALID_REPORT = {
+  valid: true,
+  unknownKinds: [],
+  unknownValues: [],
+  unknownMembers: [],
+  problems: [],
+};
 const UNKNOWN_MEMBER = "zzUnknownMember";
 const UNKNOWN_VALUE = "zzUnknownValue";
 
@@ -33,18 +42,8 @@ describe.each(VALID)("%s", (name) => {
   const value = sample(name);
 
   test("is valid in both forms", () => {
-    expect(validateIr(value, "open")).toEqual({
-      valid: true,
-      unknownKinds: [],
-      unknownMembers: [],
-      problems: [],
-    });
-    expect(validateIr(value, "strict")).toEqual({
-      valid: true,
-      unknownKinds: [],
-      unknownMembers: [],
-      problems: [],
-    });
+    expect(validateIr(value, "open")).toEqual(VALID_REPORT);
+    expect(validateIr(value, "strict")).toEqual(VALID_REPORT);
   });
 
   test("unknown members accepted", () => {
@@ -64,31 +63,43 @@ describe.each(VALID)("%s", (name) => {
         node[UNKNOWN_MEMBER] = true;
       });
       expect(validateIr(mutated, "strict"), pointer).toEqual({
+        ...VALID_REPORT,
         valid: false,
-        unknownKinds: [],
         unknownMembers: [`${pointer}/${UNKNOWN_MEMBER}`],
-        problems: [],
       });
     }
   });
 
-  test("unknown open-enum values accepted", () => {
-    for (const { pointer } of nodesOf(value).filter((node) => node.kind === "openEnum")) {
-      const mutated = replaceAt(value, pointer, UNKNOWN_VALUE);
-      expect(validateIr(mutated, "open"), pointer).toMatchObject({ valid: true, unknownKinds: [] });
+  test("unknown open-enum values accepted, unless must-act", () => {
+    for (const node of nodesOf(value)) {
+      if (node.kind !== "openEnum") continue;
+      const mutated = replaceAt(value, node.pointer, UNKNOWN_VALUE);
+      const named = [
+        { pointer: node.pointer, value: UNKNOWN_VALUE, known: node.known, mustAct: node.mustAct },
+      ];
+      expect(validateIr(mutated, "open"), node.pointer).toEqual({
+        ...VALID_REPORT,
+        valid: !node.mustAct,
+        unknownValues: named,
+      });
+      expect(validateIr(mutated, "strict"), node.pointer).toMatchObject({
+        valid: false,
+        unknownValues: named,
+      });
     }
   });
 
-  test("unknown kinds named, accepted open and refused strict", () => {
+  test("unknown kinds named, accepted open unless must-act, refused strict", () => {
     for (const node of nodesOf(value)) {
       if (node.kind !== "union") continue;
       const mutated = replaceAt(value, `${node.pointer}/${node.tag}`, UNKNOWN_VALUE);
-      const named = [{ pointer: node.pointer, tag: node.tag, value: UNKNOWN_VALUE }];
+      const named = [
+        { pointer: node.pointer, tag: node.tag, value: UNKNOWN_VALUE, mustAct: node.mustAct },
+      ];
       expect(validateIr(mutated, "open"), node.pointer).toEqual({
-        valid: true,
+        ...VALID_REPORT,
+        valid: !node.mustAct,
         unknownKinds: named,
-        unknownMembers: [],
-        problems: [],
       });
       expect(validateIr(mutated, "strict"), node.pointer).toMatchObject({
         valid: false,
@@ -127,14 +138,49 @@ test("fixed unknown cases", () => {
     "/api/owner",
     "/api/origin/column",
   ]);
-  expect(validateIr(sample("unknown-enum-value.ir.json"), "open").valid).toBe(true);
-  expect(validateIr(sample("unknown-kind.ir.json"), "open")).toEqual({
+  expect(validateIr(sample("unknown-enum-value.ir.json"), "open")).toMatchObject({
     valid: true,
-    unknownKinds: [{ pointer: "/schemas/Point", tag: "kind", value: "tuple" }],
-    unknownMembers: [],
-    problems: [],
+    unknownValues: [
+      { pointer: "/api/kind", value: "library", mustAct: false },
+      { pointer: "/api/maturity", value: "deprecated", mustAct: false },
+      { pointer: "/api/compat/policy", value: "semver", mustAct: false },
+    ],
+  });
+  expect(validateIr(sample("unknown-kind.ir.json"), "open")).toEqual({
+    ...VALID_REPORT,
+    unknownKinds: [{ pointer: "/schemas/Point", tag: "kind", value: "tuple", mustAct: false }],
   });
   expect(validateIr(sample("unknown-kind.ir.json"), "strict").valid).toBe(false);
+  // A must-act value (a security scheme kind) makes the IR invalid for every reader.
+  expect(validateIr(sample("unknown-must-act.ir.json"), "open")).toEqual({
+    ...VALID_REPORT,
+    valid: false,
+    unknownValues: [
+      {
+        pointer: "/schemes/client/kind",
+        value: "mtls",
+        known: ["cookie", "header", "query", "bearer", "basic", "signature"],
+        mustAct: true,
+      },
+    ],
+  });
+});
+
+test("the validator's options are load-bearing: allErrors false hides a problem after an unknown kind", () => {
+  // The unknown tag (/schemas/Point) is an expected discriminator error in the open form; the wrong member
+  // type after it (/lint/allows) is a real problem, which only a validator collecting every error still sees.
+  const ir = mutateAt(sample("unknown-kind.ir.json"), "/lint", (lint) => {
+    lint.allows = "none";
+  });
+  const problem = [{ pointer: "/lint/allows", keyword: "type", message: "must be array" }];
+  expect(validateIr(ir, "open")).toMatchObject({ valid: false, problems: problem });
+  class FirstErrorOnly extends Ajv2020 {
+    constructor(options: Options) {
+      super({ ...options, allErrors: false });
+    }
+  }
+  const firstErrorOnly = createIrValidator(FirstErrorOnly, "open").validate(ir);
+  expect(firstErrorOnly).toMatchObject({ valid: true, problems: [] });
 });
 
 // JSON module imports widen every literal string to `string` (TypeScript has no const JSON import), so the sample

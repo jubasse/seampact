@@ -6,10 +6,10 @@
   "api": {
     "id": "tasks",
     "name": { "segments": ["tasks"], "role": "schema" },
-    "version": 1,
+    "version": { "kind": "label", "label": "2026-10" },
     "kind": "product",
     "pathVersion": {
-      "value": "prefix",
+      "value": "none",
       "origin": { "layer": "base", "pointer": "/conventions/pathVersion" }
     },
     "maturity": "stable",

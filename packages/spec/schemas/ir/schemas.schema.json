@@ -121,10 +121,7 @@
     "HeaderUnionTag": {
       "type": "object",
       "required": ["in", "name"],
-      "properties": {
-        "in": { "type": "string", "const": "header" },
-        "name": { "type": "string" }
-      }
+      "properties": { "in": { "type": "string", "const": "header" }, "name": { "type": "string" } }
     },
     "UnionVariant": {
       "type": "object",
@@ -164,6 +161,12 @@
         "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
       }
     },
+    "InputPolicy": {
+      "type": "string",
+      "description": "What the boundary does with a restricted input field sent without the right (A21).",
+      "x-seampact-known": ["reject", "strip"],
+      "x-seampact-must-act": true
+    },
     "FieldRestriction": {
       "type": "object",
       "description": "A restrictedTo mark (ADR 0003 section 6).",
@@ -171,7 +174,7 @@
       "properties": {
         "right": { "$ref": "common.schema.json#/$defs/RightId" },
         "params": {},
-        "inputPolicy": { "type": "string", "x-seampact-known": ["reject", "strip"] },
+        "inputPolicy": { "$ref": "#/$defs/InputPolicy" },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
     },
@@ -188,12 +191,18 @@
         { "$ref": "#/$defs/ArrayTypeUse" }
       ]
     },
+    "UnknownKeysPolicy": {
+      "type": "string",
+      "description": "What an input use does with unknown keys (ADR 0003 section 4).",
+      "x-seampact-known": ["refuse", "ignore", "keep"],
+      "x-seampact-must-act": true
+    },
     "UnknownKeys": {
       "type": "object",
       "description": "Unknown keys of an input use (ADR 0003 section 4).",
       "required": ["policy"],
       "properties": {
-        "policy": { "type": "string", "x-seampact-known": ["refuse", "ignore", "keep"] },
+        "policy": { "$ref": "#/$defs/UnknownKeysPolicy" },
         "reason": { "$ref": "common.schema.json#/$defs/Reason" },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" },
         "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
@@ -205,7 +214,11 @@
       "properties": {
         "kind": { "type": "string", "const": "ref" },
         "schema": { "$ref": "common.schema.json#/$defs/SchemaId" },
-        "unknownKeys": { "$ref": "#/$defs/UnknownKeys" }
+        "unknownKeys": { "$ref": "#/$defs/UnknownKeys" },
+        "nullable": {
+          "type": "boolean",
+          "description": "The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable)."
+        }
       }
     },
     "OpaqueTypeUse": {
@@ -225,7 +238,11 @@
       "properties": {
         "kind": { "type": "string", "const": "file" },
         "media": { "type": "array", "items": { "type": "string" } },
-        "maxSizeBytes": { "type": "integer", "minimum": 0 }
+        "maxSizeBytes": { "type": "integer", "minimum": 0 },
+        "nullable": {
+          "type": "boolean",
+          "description": "The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable)."
+        }
       }
     },
     "EnumNarrowing": {
@@ -242,31 +259,54 @@
       "properties": {
         "kind": { "type": "string", "const": "enum" },
         "enum": { "$ref": "common.schema.json#/$defs/EnumId" },
-        "narrowedTo": { "$ref": "#/$defs/EnumNarrowing" }
+        "narrowedTo": { "$ref": "#/$defs/EnumNarrowing" },
+        "nullable": {
+          "type": "boolean",
+          "description": "The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable)."
+        }
       }
+    },
+    "JsonMediaType": {
+      "type": "string",
+      "description": "The media type of a JSON text field.",
+      "x-seampact-known": ["application/json"]
     },
     "JsonContent": {
       "type": "object",
       "description": "A form or multipart text field holding JSON.",
       "required": ["media", "schema"],
       "properties": {
-        "media": { "type": "string", "x-seampact-known": ["application/json"] },
+        "media": { "$ref": "#/$defs/JsonMediaType" },
         "schema": { "$ref": "#/$defs/TypeUse" }
       }
+    },
+    "ScalarType": {
+      "type": "string",
+      "description": "The JSON type of a scalar.",
+      "x-seampact-known": ["string", "integer", "number", "boolean"]
     },
     "ScalarTypeUse": {
       "type": "object",
       "required": ["kind", "type", "refinements"],
       "properties": {
         "kind": { "type": "string", "const": "scalar" },
-        "type": {
+        "type": { "$ref": "#/$defs/ScalarType" },
+        "format": {
           "type": "string",
-          "x-seampact-known": ["string", "integer", "number", "boolean"]
+          "description": "A portable format of ADR 0003 section 8 ('uuid', 'int64', 'decimal'...); a named format is 'scalar'."
         },
-        "format": { "type": "string" },
+        "scalar": {
+          "$ref": "common.schema.json#/$defs/ScalarId",
+          "description": "The named format this use reads, from the scalars catalogue."
+        },
         "refinements": { "$ref": "#/$defs/Refinements" },
-        "content": { "$ref": "#/$defs/JsonContent" }
-      }
+        "content": { "$ref": "#/$defs/JsonContent" },
+        "nullable": {
+          "type": "boolean",
+          "description": "The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable)."
+        }
+      },
+      "description": "A scalar use. A use of a named format names it in 'scalar' and holds its type and refinements inline, so a target that does not map the named format still checks it (ADR 0003 section 8)."
     },
     "ArrayTypeUse": {
       "type": "object",
@@ -275,7 +315,11 @@
         "kind": { "type": "string", "const": "array" },
         "items": { "$ref": "#/$defs/TypeUse" },
         "minItems": { "type": "integer", "minimum": 0 },
-        "maxItems": { "type": "integer", "minimum": 0 }
+        "maxItems": { "type": "integer", "minimum": 0 },
+        "nullable": {
+          "type": "boolean",
+          "description": "The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable)."
+        }
       }
     },
     "Pattern": {
@@ -284,23 +328,28 @@
       "required": ["source", "normalized"],
       "properties": { "source": { "type": "string" }, "normalized": { "type": "string" } }
     },
+    "DecimalLiteral": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$",
+      "description": "A number written as a decimal literal string, so an int64 or decimal bound and a long multipleOf keep every digit in every language (ADR 0003 section 8)."
+    },
     "Refinements": {
       "type": "object",
-      "description": "The refinements of a scalar (ADR 0003 sections 1 and 8).",
+      "description": "The refinements of a scalar (ADR 0003 sections 1 and 8); numeric ones are decimal literal strings, compared numerically.",
       "properties": {
         "minLength": { "type": "integer", "minimum": 0 },
         "maxLength": { "type": "integer", "minimum": 0 },
         "pattern": { "$ref": "#/$defs/Pattern" },
-        "minimum": { "type": "number" },
-        "maximum": { "type": "number" },
-        "exclusiveMinimum": { "type": "number" },
-        "exclusiveMaximum": { "type": "number" },
-        "multipleOf": { "type": "number" }
+        "minimum": { "$ref": "#/$defs/DecimalLiteral" },
+        "maximum": { "$ref": "#/$defs/DecimalLiteral" },
+        "exclusiveMinimum": { "$ref": "#/$defs/DecimalLiteral" },
+        "exclusiveMaximum": { "$ref": "#/$defs/DecimalLiteral" },
+        "multipleOf": { "$ref": "#/$defs/DecimalLiteral" }
       }
     },
     "Scalar": {
       "type": "object",
-      "description": "A named scalar of the scalars catalogue.",
+      "description": "A named format of the scalars catalogue: a base type plus refinements (ADR 0003 section 8). Its own type holds no 'scalar'.",
       "required": ["id", "name", "type", "directions", "docs", "origin"],
       "properties": {
         "id": { "$ref": "common.schema.json#/$defs/ScalarId" },

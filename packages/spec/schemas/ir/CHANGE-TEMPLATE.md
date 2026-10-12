@@ -28,5 +28,7 @@ Copy into `.changeset/<branch>.md` for every IR change PR (ADR 0005 section 1). 
 Rules the reviewer checks:
 
 - A new member whose absence makes an older reader generate a weaker check comes with a feature or kind name in the same PR; without one it is not allowed.
+- A new tag or value on a must-act union or enum (`"x-seampact-must-act": true`, README.md) always names its feature in the "Guarded by" column; must-act is never removed from a definition.
+- A convention a target acts on is a typed member, never a value read from `conventions` (ADR 0004 section 13).
 - A new value of an open enum is additive; removing or renaming a member, kind or value, changing a type, unit or meaning, making an optional member required, or changing canonical ordering, ids or serialisation is breaking.
 - A new key in an extension slot is not an IR change.
