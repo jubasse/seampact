@@ -263,23 +263,43 @@ describe("validate stage", () => {
     tree,
   });
 
-  test("validates the shared file and a pack once, whatever the number of apis", () => {
-    const shared = layer("shared", "shared/base.yaml", { conventions: { pathcase: "kebab" } });
-    const workspace: RawWorkspace = {
+  const workspaceOf = (apis: { name: string; layers: ReturnType<typeof layer>[] }[]) =>
+    ({
       root: ".",
       locations: {},
-      apis: ["a", "b"].map((name) => ({
+      apis: apis.map((a) => ({ ...a, merged: {}, leafOrigins: {} })),
+    }) satisfies RawWorkspace;
+
+  test("validates the shared file once, under the first api that reaches it", () => {
+    const shared = layer("shared", "shared/base.yaml", { conventions: { pathcase: "kebab" } });
+    const workspace = workspaceOf(
+      ["a", "b"].map((name) => ({
         name,
         layers: [shared, layer("api", `${name}/api.yaml`, { api: { name, version: 1 } })],
-        merged: {},
-        leafOrigins: {},
       })),
-    };
-    const diagnostics = validateWorkspace(workspace);
-    expect(diagnostics.map((d) => [d.origin.layer, d.origin.pointer])).toEqual([
-      ["shared", "/conventions/pathcase"],
+    );
+    const result = validateWorkspace(workspace);
+    expect(result.map((r) => r.api)).toEqual(["a", "b"]);
+    expect(result[0]?.diagnostics.map((d) => d.origin)).toEqual([
+      { layer: "shared", pointer: "/conventions/pathcase" },
     ]);
-    expect(diagnostics[0]?.origin).toEqual({ layer: "shared", pointer: "/conventions/pathcase" });
+    expect(result[1]?.diagnostics).toEqual([]);
+  });
+
+  test("two failing api files stay apart, each under its api", () => {
+    const workspace = workspaceOf(
+      ["tasks", "tasksService"].map((name) => ({
+        name,
+        layers: [layer("api", `${name}/api.yaml`, { api: { name, version: 1 }, surface: {} })],
+      })),
+    );
+    const result = validateWorkspace(workspace);
+    expect(
+      result.map((r) => [r.api, r.diagnostics.map((d) => [d.origin.layer, d.origin.pointer])]),
+    ).toEqual([
+      ["tasks", [["api", "/surface"]]],
+      ["tasksService", [["api", "/surface"]]],
+    ]);
   });
 
   test("a layer is validated against its kind", () => {

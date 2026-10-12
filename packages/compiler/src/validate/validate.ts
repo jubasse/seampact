@@ -1,5 +1,10 @@
 // The validate stage (ADR 0006 section 1): the raw tree checked against the authoring JSON Schemas,
 // refused schema keywords reported with ADR 0003's reasons.
+//
+// Contract with the loader: the stage runs on trees whose `$include`s are resolved (ADR 0002
+// section 2, rule 2). The schemas relieve a mapping holding `$include` of its required keys, which
+// is right for an editor reading one file, but would let `access: { $include: ./x.yaml }` hide an
+// included `{ public: '' }` here; the access and reason checks below hold only after resolution.
 
 import {
   AUTHORING_FILES,
@@ -54,7 +59,7 @@ function validatorFor(kind: ValidateDocumentKind): ValidateFunction {
 
 // ADR 0006 section 4 sorts by file, line, column, rule; without the side table, the stage sorts by
 // layer, then pointer, then rule, so its output is stable on its own.
-export function validateSortDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
+function sortDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
   const key = (d: Diagnostic): string[] => [d.origin.layer, d.origin.pointer, d.rule, d.message];
   return [...diagnostics].sort((a, b) => {
     const ka = key(a);
@@ -76,7 +81,7 @@ export function validateDocument(
 ): Diagnostic[] {
   const validate = validatorFor(kind);
   if (validate(tree)) return [];
-  return validateSortDiagnostics(
+  return sortDiagnostics(
     convertErrors(validate.errors ?? [], { layer, isPackRoot: kind === "pack" }),
   );
 }
@@ -85,18 +90,25 @@ export function validateLayer(layer: RawLayer): Diagnostic[] {
   return validateDocument(LAYER_SCHEMA[layerKindOf(layer.layer)], layer.tree, layer.layer);
 }
 
-// Every layer of every api, each file once: the shared file and a pack reached by several apis
-// are one layer, validated once.
-export function validateWorkspace(workspace: RawWorkspace): Diagnostic[] {
+// The diagnostics of one api: its origins name layers of that api only (ADR 0006 section 4).
+export interface ApiDiagnostics {
+  api: string;
+  diagnostics: Diagnostic[];
+}
+
+// Every layer of every api, each file once: the shared file and a pack reached by several apis are
+// one layer, validated once and listed under the first api that reaches it, in workspace order.
+// Every api has an entry, empty when its layers are valid.
+export function validateWorkspace(workspace: RawWorkspace): ApiDiagnostics[] {
   const seen = new Set<string>();
-  const out: Diagnostic[] = [];
-  for (const api of workspace.apis) {
+  return workspace.apis.map((api) => {
+    const diagnostics: Diagnostic[] = [];
     for (const layer of api.layers) {
       const id = `${layer.layer}\u0000${layer.file}`;
       if (seen.has(id)) continue;
       seen.add(id);
-      out.push(...validateLayer(layer));
+      diagnostics.push(...validateLayer(layer));
     }
-  }
-  return validateSortDiagnostics(out);
+    return { api: api.name, diagnostics: sortDiagnostics(diagnostics) };
+  });
 }
