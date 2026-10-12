@@ -7,6 +7,8 @@ import {
   deriveName,
   identifier,
   isReserved,
+  isTypeRole,
+  LANGUAGES,
   type Language,
   type Name,
   operationId,
@@ -18,9 +20,8 @@ import {
 } from "./index.js";
 import reservedWords from "../../vectors/naming/reserved-words.json" with { type: "json" };
 import vectors from "../../vectors/naming/vectors.json" with { type: "json" };
+import reservedSchema from "../../vectors/naming/reserved-words.schema.json" with { type: "json" };
 import schema from "../../vectors/naming/vectors.schema.json" with { type: "json" };
-
-const LANGUAGES: Language[] = ["typescript", "kotlin", "java", "php"];
 
 interface Vector {
   id: string;
@@ -31,7 +32,7 @@ interface Vector {
   codeName?: string;
   position?: number;
   owner?: string[];
-  status?: string;
+  status?: number;
   segments?: string[];
   error?: string;
   expected?: Record<Language, string | null>;
@@ -85,7 +86,7 @@ function check(v: Vector): string[] {
   return problems;
 }
 
-const name = (segments: string[], role: Role, status?: string) =>
+const name = (segments: string[], role: Role, status?: number) =>
   deriveName(segments, role, status);
 
 describe("naming", () => {
@@ -97,9 +98,9 @@ describe("naming", () => {
     expect(splitName("oauth2Token")).toEqual(["oauth2", "token"]);
     expect(splitName("v2")).toEqual(["v2"]);
     // Section 3 table, through the canonical id and every language.
-    const table: [string[], Role, string, string?][] = [
+    const table: [string[], Role, string, number?][] = [
       [["assign", "task"], "input", "AssignTaskInput"],
-      [["create", "task"], "response", "CreateTaskResponse201", "201"],
+      [["create", "task"], "response", "CreateTaskResponse201", 201],
       [["list", "tasks"], "query", "ListTasksQuery"],
       [["tasks", "update"], "params", "TasksUpdateParams"],
       [["api", "rate", "limited"], "params", "ApiRateLimitedParams"],
@@ -150,13 +151,40 @@ describe("naming", () => {
     const validate = new Ajv2020({ allErrors: true, strict: true, strictRequired: false }).compile(
       schema,
     );
-    for (const v of ALL) {
-      expect(validate(v) ? [] : validate.errors, v.id).toEqual([]);
-    }
+    expect(validate(vectors) ? [] : validate.errors).toEqual([]);
     const idList = ALL.map((v) => v.id);
     expect(new Set(idList).size).toBe(idList.length);
     const sorted = [...idList].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
     expect(idList).toEqual(sorted);
+    // The schema rejects what the decisions forbid.
+    const ok = find("derived/response-201");
+    const bad: unknown[] = [
+      { ...ok, status: "201" },
+      { ...ok, status: undefined },
+      { ...find("derived/input"), status: 200 },
+      {
+        ...find("digits/enum-member-2fa"),
+        expected: { typescript: "x", kotlin: "A", java: "A", php: "A" },
+      },
+      {
+        ...find("derived/input"),
+        expected: { ...find("derived/input").expected, typescript: null },
+      },
+    ];
+    for (const v of bad) expect(validate([v]), JSON.stringify(v)).toBe(false);
+  });
+
+  test("reserved-words.json matches its schema and is sorted", () => {
+    const validate = new Ajv2020({ allErrors: true, strict: true }).compile(reservedSchema);
+    expect(validate(reservedWords) ? [] : validate.errors).toEqual([]);
+    const served = Object.values(reservedWords.lists).flatMap((l) => l.usedBy);
+    expect([...served].sort()).toEqual([...LANGUAGES].sort());
+    for (const list of Object.values(reservedWords.lists)) {
+      for (const words of [list.keywords, list.types, list.members, list.enumMembers]) {
+        const sorted = [...new Set(words)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+        expect(words).toEqual(sorted);
+      }
+    }
   });
 
   test("vectors cover the required cases", () => {
@@ -204,49 +232,60 @@ describe("naming", () => {
       ["class", "member", "typescript", "class_"],
       ["delete", "member", "typescript", "delete_"],
       ["delete", "member", "java", "delete"],
-      ["val", "member", "java", "val_"],
+      ["val", "member", "kotlin", "val_"],
+      ["val", "member", "java", "val"],
       ["let", "member", "typescript", "let_"],
     ];
     for (const [word, role, language, expected] of cases) {
       expect(identifier(name([word], role), language), `${word} ${language}`).toBe(expected);
     }
     // A shadowed type name does not escape a member; a keyword escapes both.
-    expect(isReserved("Error", "typescript", true)).toBe(true);
-    expect(isReserved("Error", "typescript", false)).toBe(false);
-    expect(isReserved("class", "typescript", false)).toBe(true);
-    // Every listed word is escaped, with the casing of its list.
-    for (const language of ["typescript", "kotlin", "java"] as const) {
-      const lists = reservedWords[language === "typescript" ? "typescript" : "jvm"];
-      for (const word of lists.keywords) expect(isReserved(word, language, false), word).toBe(true);
-      for (const word of lists.types) expect(isReserved(word, language, true), word).toBe(true);
+    expect(isReserved("Error", "typescript", "schema")).toBe(true);
+    expect(isReserved("Error", "typescript", "member")).toBe(false);
+    expect(isReserved("class", "typescript", "member")).toBe(true);
+    // Every listed word is escaped for the roles it applies to, with the casing of its list.
+    for (const language of LANGUAGES) {
+      const list = Object.values(reservedWords.lists).find((l) =>
+        (l.usedBy as string[]).includes(language),
+      ) as (typeof reservedWords.lists)[Language];
+      for (const word of list.keywords) {
+        for (const role of ROLES)
+          expect(isReserved(word, language, role), `${word} ${role}`).toBe(true);
+      }
+      for (const word of list.types) expect(isReserved(word, language, "schema"), word).toBe(true);
+      for (const word of list.members)
+        expect(isReserved(word, language, "member"), word).toBe(true);
+      for (const word of list.enumMembers) {
+        expect(isReserved(word, language, "enumMember"), word).toBe(true);
+      }
     }
-    // The lists are sorted and free of duplicates.
-    for (const list of [
-      reservedWords.typescript.keywords,
-      reservedWords.typescript.types,
-      reservedWords.jvm.keywords,
-      reservedWords.jvm.types,
-      reservedWords.php.keywords,
-      reservedWords.php.types,
-    ]) {
-      const sorted = [...new Set(list)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
-      expect(list).toEqual(sorted);
-    }
+    // Minimal escaping: PHP keywords block type names (and the enum case `class`), not members.
+    expect(identifier(name(["list"], "member"), "php")).toBe("list");
+    expect(identifier(name(["list"], "enumMember"), "php")).toBe("List");
+    expect(identifier(name(["class"], "enumMember"), "php")).toBe("Class_");
+    expect(identifier(name(["this"], "member"), "php")).toBe("this_");
+    expect(identifier(name(["hash", "code"], "member"), "java")).toBe("hashCode_");
+    expect(identifier(name(["hash", "code"], "member"), "kotlin")).toBe("hashCode");
+    expect(identifier(name(["val"], "member"), "java")).toBe("val");
+    expect(identifier(name(["val"], "member"), "kotlin")).toBe("val_");
+    expect(identifier(name(["optional"], "schema"), "kotlin")).toBe("Optional");
+    expect(identifier(name(["optional"], "schema"), "java")).toBe("Optional_");
+    expect(identifier(name(["constructor"], "member"), "typescript")).toBe("constructor_");
   });
 
   test("php case-insensitive reserved names", () => {
     for (const word of ["list", "LIST", "List", "lIsT", "Fn", "FN", "Match", "ARRAY"]) {
-      expect(isReserved(word, "php", true), word).toBe(true);
+      expect(isReserved(word, "php", "schema"), word).toBe(true);
     }
     // Other languages compare exactly.
-    expect(isReserved("LIST", "kotlin", true)).toBe(false);
-    expect(isReserved("Class", "typescript", false)).toBe(false);
+    expect(isReserved("LIST", "kotlin", "schema")).toBe(false);
+    expect(isReserved("Class", "typescript", "member")).toBe(false);
     for (const written of ["list", "LIST", "List"]) {
       const segments = splitName(written);
       expect(identifier(name(segments, "schema"), "php")).toBe("List_");
     }
     expect(identifier(name(["class"], "enumMember"), "php")).toBe("Class_");
-    expect(reservedWords.php.caseInsensitive).toBe(true);
+    expect(reservedWords.lists.php.caseInsensitive).toBe(true);
   });
 
   test("digit-led identifiers", () => {
@@ -260,7 +299,7 @@ describe("naming", () => {
     for (const role of ROLES) {
       for (const language of LANGUAGES) {
         const got = identifier(
-          name(["7up"], role, role === "response" ? "200" : undefined),
+          name(["7up"], role, role === "response" ? 200 : undefined),
           language,
         );
         if (got !== undefined) expect(got.startsWith("_7"), `${role} ${language}`).toBe(true);
@@ -280,6 +319,11 @@ describe("naming", () => {
       ok: false,
       reason: "no-segment",
     });
+    // A codeName without segment is an error for an enum value too, never the fallback.
+    expect(segmentsOf("ok", "enumValue", { codeName: "+", position: 2 })).toEqual({
+      ok: false,
+      reason: "no-segment",
+    });
     expect(segmentsOf("tasks.update", "right")).toEqual({
       ok: true,
       segments: ["tasks", "update"],
@@ -290,6 +334,13 @@ describe("naming", () => {
       segments: ["value3"],
     });
     expect(segmentsOf("+", "name")).toEqual({ ok: false, reason: "no-segment" });
+    // An enum value needs a positive integer position.
+    for (const position of [undefined, 0, -1, 1.5, Number.NaN]) {
+      expect(() =>
+        segmentsOf("+", "enumValue", position === undefined ? {} : { position }),
+      ).toThrow(/position/);
+    }
+    expect(() => segmentsOf("active", "enumValue")).toThrow(/position/);
   });
 
   test("splitName is total and yields only valid segments", () => {
@@ -324,9 +375,123 @@ describe("naming", () => {
   });
 
   test("response suffix carries the status", () => {
-    expect(suffixWords(name(["create", "task"], "response", "201"))).toEqual(["response", "201"]);
+    expect(suffixWords(name(["create", "task"], "response", 201))).toEqual(["response", "201"]);
     expect(suffixWords(name(["create", "task"], "input"))).toEqual(["input"]);
     expect(suffixWords(name(["order", "address"], "property"))).toEqual([]);
+  });
+
+  test("status is an integer, present exactly for a response", () => {
+    expect(name(["create", "task"], "response", 201)).toEqual({
+      segments: ["create", "task"],
+      role: "response",
+      status: 201,
+    });
+    expect("status" in name(["create", "task"], "input")).toBe(true); // key present, value undefined
+    expect(name(["create", "task"], "input").status).toBeUndefined();
+    const bad = (segments: string[], role: Role, status?: unknown) => () =>
+      deriveName(segments, role, status as number);
+    expect(bad(["a"], "response")).toThrow(/status/);
+    expect(bad(["a"], "response", "201")).toThrow(/status/);
+    expect(bad(["a"], "response", 20.5)).toThrow(/status/);
+    expect(bad(["a"], "response", 99)).toThrow(/status/);
+    expect(bad(["a"], "response", 600)).toThrow(/status/);
+    expect(bad(["a"], "input", 200)).toThrow(/no status/);
+    // A hand-built name is checked by identifier, canonicalId and suffixWords too.
+    const forged = (n: unknown) => n as Name;
+    for (const fn of [
+      (n: Name) => identifier(n, "typescript"),
+      (n: Name) => canonicalId(n),
+      (n: Name) => suffixWords(n),
+    ]) {
+      expect(() => fn(forged({ segments: ["a"], role: "response" }))).toThrow(/status/);
+      expect(() => fn(forged({ segments: ["a"], role: "response", status: "201" }))).toThrow(
+        /status/,
+      );
+      expect(() => fn(forged({ segments: ["a"], role: "input", status: 200 }))).toThrow(
+        /no status/,
+      );
+    }
+  });
+
+  test("fails closed on a malformed name", () => {
+    const forged = (segments: string[], role: string) => ({ segments, role }) as unknown as Name;
+    for (const segments of [["Task"], ["a b"], ["a_b"], [""], ["é"]]) {
+      expect(() => deriveName(segments, "schema"), segments.join()).toThrow(/segment/);
+      expect(() => identifier(forged(segments, "schema"), "typescript")).toThrow(/segment/);
+    }
+    expect(() => operationId(["List"])).toThrow(/segment/);
+    expect(() => operationId([])).toThrow(/segment/);
+    // An empty result has no identifier; a role with a suffix word still has one.
+    expect(() => identifier(name([], "schema"), "typescript")).toThrow(/without segment/);
+    expect(() => identifier(name([], "member"), "php")).toThrow(/without segment/);
+    expect(identifier(name([], "endpoints"), "typescript")).toBe("Endpoints");
+    // An unknown role (ADR 0005 open enums) is named in the error, never guessed.
+    expect(() => deriveName(["a"], "widget" as Role)).toThrow(/"widget"/);
+    expect(() => identifier(forged(["a"], "widget"), "java")).toThrow(/"widget"/);
+    expect(() => isReserved("a", "java", "widget" as Role)).toThrow(/"widget"/);
+    expect(() => isTypeRole("widget" as Role)).toThrow(/"widget"/);
+    // An unknown language, including an inherited property name, is refused.
+    for (const language of ["go", "constructor", "__proto__"]) {
+      expect(() => identifier(name(["a"], "schema"), language as Language)).toThrow(/language/);
+    }
+    expect(() => suffixWords(name(["a"], "input"), { constructor: "x" } as never)).not.toThrow();
+  });
+
+  test("isTypeRole classifies every role", () => {
+    const nonTypes = new Set<Role>(["operation", "member", "enumMember"]);
+    for (const role of ROLES) expect(isTypeRole(role), role).toBe(!nonTypes.has(role));
+  });
+
+  test("options seam: suffixes, escape and enumCase", () => {
+    const input = name(["assign", "task"], "input");
+    expect(identifier(input, "java", { suffixes: { input: "dto" } })).toBe("AssignTaskDto");
+    expect(identifier(input, "typescript", { suffixes: { input: "request" } })).toBe(
+      "AssignTaskRequest",
+    );
+    // The status still follows the word of a response.
+    expect(
+      identifier(name(["create", "task"], "response", 201), "php", {
+        suffixes: { response: "reply" },
+      }),
+    ).toBe("CreateTaskReply201");
+    // Defaults reproduce the vectors.
+    expect(identifier(input, "kotlin", {})).toBe(identifier(input, "kotlin"));
+    expect(
+      identifier(name(["list"], "schema"), "java", { escape: { position: "prefix", text: "_" } }),
+    ).toBe("_List");
+    expect(
+      identifier(name(["list"], "schema"), "java", {
+        escape: { position: "suffix", text: "Type" },
+      }),
+    ).toBe("ListType");
+    expect(
+      identifier(name(["class"], "member"), "typescript", {
+        escape: { position: "prefix", text: "my" },
+      }),
+    ).toBe("myclass");
+    // An enum member takes the casing asked for; TypeScript still has none.
+    const ok = name(["in", "progress"], "enumMember");
+    expect(identifier(ok, "kotlin", { enumCase: "pascal" })).toBe("InProgress");
+    expect(identifier(ok, "php", { enumCase: "upperSnake" })).toBe("IN_PROGRESS");
+    expect(identifier(ok, "java", { enumCase: "camel" })).toBe("inProgress");
+    expect(identifier(ok, "typescript", { enumCase: "pascal" })).toBeUndefined();
+    // The escape applies to the final identifier: camel `class` is a keyword.
+    expect(identifier(name(["class"], "enumMember"), "kotlin", { enumCase: "camel" })).toBe(
+      "class_",
+    );
+    // Malformed options throw.
+    expect(() => identifier(input, "java", { suffixes: { input: "Dto" } })).toThrow(/suffix/);
+    expect(() => identifier(input, "java", { suffixes: { input: "" } })).toThrow(/suffix/);
+    expect(() => identifier(input, "java", { escape: { position: "suffix", text: "" } })).toThrow(
+      /escape/,
+    );
+    expect(() => identifier(input, "java", { escape: { position: "prefix", text: "1x" } })).toThrow(
+      /digit/,
+    );
+    expect(() =>
+      identifier(input, "java", { escape: { position: "middle" as never, text: "_" } }),
+    ).toThrow(/position/);
+    expect(() => identifier(ok, "java", { enumCase: "kebab" as never })).toThrow(/enumCase/);
   });
 
   test("operation id casing", () => {

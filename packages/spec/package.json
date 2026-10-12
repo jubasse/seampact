@@ -16,7 +16,10 @@
     "./bundle": "./src/bundle/index.ts",
     "./compatibility": "./src/compatibility/index.ts",
     "./schemas/*.json": "./schemas/*.json",
-    "./naming/vectors.json": "./vectors/naming/vectors.json"
+    "./naming/vectors.json": "./vectors/naming/vectors.json",
+    "./naming/vectors.schema.json": "./vectors/naming/vectors.schema.json",
+    "./naming/reserved-words.json": "./vectors/naming/reserved-words.json",
+    "./naming/reserved-words.schema.json": "./vectors/naming/reserved-words.schema.json"
   },
   "seampact": {
     "role": "core"

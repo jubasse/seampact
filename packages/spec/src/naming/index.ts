@@ -3,12 +3,23 @@
 
 export {
   canonicalId,
+  type IdentifierOptions,
   identifier,
   type OperationIdCase,
   operationId,
   type Style,
   styleOf,
 } from "./identifier.js";
-export { isReserved, type Language } from "./reserved.js";
-export { deriveName, type Name, ROLES, type Role, suffixWords } from "./roles.js";
+export { isReserved, LANGUAGES, type Language } from "./reserved.js";
+export {
+  deriveName,
+  isRole,
+  isTypeRole,
+  type Name,
+  ROLES,
+  type Role,
+  type SuffixRole,
+  type Suffixes,
+  suffixWords,
+} from "./roles.js";
 export { type NameSource, type SegmentsResult, segmentsOf, splitName } from "./split.js";

@@ -215,7 +215,7 @@
       "typescript": "list",
       "kotlin": "list",
       "java": "list",
-      "php": "list_"
+      "php": "list"
     },
     "operationId": {
       "camel": "list",
@@ -325,7 +325,7 @@
     "category": "derived",
     "owner": ["list", "tasks"],
     "role": "response",
-    "status": "200",
+    "status": 200,
     "segments": ["list", "tasks"],
     "expected": {
       "typescript": "ListTasksResponse200",
@@ -340,7 +340,7 @@
     "category": "derived",
     "owner": ["create", "task"],
     "role": "response",
-    "status": "201",
+    "status": 201,
     "segments": ["create", "task"],
     "expected": {
       "typescript": "CreateTaskResponse201",
@@ -650,7 +650,7 @@
     "expected": {
       "typescript": "Array_",
       "kotlin": "Array_",
-      "java": "Array_",
+      "java": "Array",
       "php": "Array_"
     }
   },
@@ -765,7 +765,7 @@
       "typescript": "list",
       "kotlin": "list",
       "java": "list",
-      "php": "list_"
+      "php": "list"
     }
   },
   {
@@ -810,7 +810,7 @@
       "typescript": null,
       "kotlin": "LIST",
       "java": "LIST",
-      "php": "List_"
+      "php": "List"
     }
   },
   {
@@ -825,7 +825,7 @@
       "typescript": null,
       "kotlin": "MATCH",
       "java": "MATCH",
-      "php": "Match_"
+      "php": "Match"
     }
   },
   {
@@ -840,7 +840,7 @@
       "typescript": null,
       "kotlin": "NEW",
       "java": "NEW",
-      "php": "New_"
+      "php": "New"
     }
   },
   {
@@ -855,7 +855,7 @@
       "typescript": null,
       "kotlin": "NULL",
       "java": "NULL",
-      "php": "Null_"
+      "php": "Null"
     }
   },
   {
@@ -883,7 +883,21 @@
       "typescript": "class_",
       "kotlin": "class_",
       "java": "class_",
-      "php": "class_"
+      "php": "class"
+    }
+  },
+  {
+    "id": "reserved/member-constructor",
+    "category": "reserved",
+    "source": "name",
+    "written": "constructor",
+    "role": "member",
+    "segments": ["constructor"],
+    "expected": {
+      "typescript": "constructor_",
+      "kotlin": "constructor",
+      "java": "constructor",
+      "php": "constructor"
     }
   },
   {
@@ -895,9 +909,9 @@
     "segments": ["default"],
     "expected": {
       "typescript": "default_",
-      "kotlin": "default_",
+      "kotlin": "default",
       "java": "default_",
-      "php": "default_"
+      "php": "default"
     }
   },
   {
@@ -924,7 +938,7 @@
     "expected": {
       "typescript": "fun",
       "kotlin": "fun_",
-      "java": "fun_",
+      "java": "fun",
       "php": "fun"
     }
   },
@@ -939,7 +953,21 @@
       "typescript": "function_",
       "kotlin": "function",
       "java": "function",
-      "php": "function_"
+      "php": "function"
+    }
+  },
+  {
+    "id": "reserved/member-hash-code",
+    "category": "reserved",
+    "source": "name",
+    "written": "hashCode",
+    "role": "member",
+    "segments": ["hash", "code"],
+    "expected": {
+      "typescript": "hashCode",
+      "kotlin": "hashCode",
+      "java": "hashCode_",
+      "php": "hashCode"
     }
   },
   {
@@ -952,7 +980,7 @@
     "expected": {
       "typescript": "is",
       "kotlin": "is_",
-      "java": "is_",
+      "java": "is",
       "php": "is"
     }
   },
@@ -981,7 +1009,7 @@
       "typescript": "list",
       "kotlin": "list",
       "java": "list",
-      "php": "list_"
+      "php": "list"
     }
   },
   {
@@ -995,7 +1023,7 @@
       "typescript": "print",
       "kotlin": "print",
       "java": "print",
-      "php": "print_"
+      "php": "print"
     }
   },
   {
@@ -1027,6 +1055,20 @@
     }
   },
   {
+    "id": "reserved/member-this",
+    "category": "reserved",
+    "source": "name",
+    "written": "this",
+    "role": "member",
+    "segments": ["this"],
+    "expected": {
+      "typescript": "this_",
+      "kotlin": "this_",
+      "java": "this_",
+      "php": "this_"
+    }
+  },
+  {
     "id": "reserved/member-type",
     "category": "reserved",
     "source": "name",
@@ -1050,7 +1092,7 @@
     "expected": {
       "typescript": "val",
       "kotlin": "val_",
-      "java": "val_",
+      "java": "val",
       "php": "val"
     }
   },
@@ -1079,7 +1121,7 @@
       "typescript": "list",
       "kotlin": "list",
       "java": "list",
-      "php": "list_"
+      "php": "list"
     }
   },
   {
@@ -1092,7 +1134,7 @@
     "expected": {
       "typescript": "Any",
       "kotlin": "Any_",
-      "java": "Any_",
+      "java": "Any",
       "php": "Any"
     }
   },
@@ -1106,7 +1148,7 @@
     "expected": {
       "typescript": "Array_",
       "kotlin": "Array_",
-      "java": "Array_",
+      "java": "Array",
       "php": "Array_"
     }
   },
@@ -1181,6 +1223,20 @@
     }
   },
   {
+    "id": "reserved/schema-file",
+    "category": "reserved",
+    "source": "name",
+    "written": "File",
+    "role": "schema",
+    "segments": ["file"],
+    "expected": {
+      "typescript": "File_",
+      "kotlin": "File",
+      "java": "File",
+      "php": "File"
+    }
+  },
+  {
     "id": "reserved/schema-float",
     "category": "reserved",
     "source": "name",
@@ -1246,7 +1302,7 @@
     "expected": {
       "typescript": "Int",
       "kotlin": "Int_",
-      "java": "Int_",
+      "java": "Int",
       "php": "Int_"
     }
   },
@@ -1272,7 +1328,7 @@
     "role": "schema",
     "segments": ["iterable"],
     "expected": {
-      "typescript": "Iterable",
+      "typescript": "Iterable_",
       "kotlin": "Iterable_",
       "java": "Iterable_",
       "php": "Iterable_"
@@ -1385,7 +1441,7 @@
     "segments": ["optional"],
     "expected": {
       "typescript": "Optional",
-      "kotlin": "Optional_",
+      "kotlin": "Optional",
       "java": "Optional_",
       "php": "Optional"
     }
@@ -1414,7 +1470,7 @@
     "expected": {
       "typescript": "Pair",
       "kotlin": "Pair_",
-      "java": "Pair_",
+      "java": "Pair",
       "php": "Pair"
     }
   },
@@ -1454,7 +1510,7 @@
     "role": "schema",
     "segments": ["readonly"],
     "expected": {
-      "typescript": "Readonly",
+      "typescript": "Readonly_",
       "kotlin": "Readonly",
       "java": "Readonly",
       "php": "Readonly_"
@@ -1472,6 +1528,20 @@
       "kotlin": "Record_",
       "java": "Record_",
       "php": "Record"
+    }
+  },
+  {
+    "id": "reserved/schema-regexp",
+    "category": "reserved",
+    "source": "name",
+    "written": "RegExp",
+    "role": "schema",
+    "segments": ["reg", "exp"],
+    "expected": {
+      "typescript": "RegExp_",
+      "kotlin": "RegExp",
+      "java": "RegExp",
+      "php": "RegExp"
     }
   },
   {
@@ -1512,7 +1582,7 @@
     "expected": {
       "typescript": "Result",
       "kotlin": "Result_",
-      "java": "Result_",
+      "java": "Result",
       "php": "Result"
     }
   },
@@ -1638,7 +1708,7 @@
     "expected": {
       "typescript": "Unit",
       "kotlin": "Unit_",
-      "java": "Unit_",
+      "java": "Unit",
       "php": "Unit"
     }
   },
@@ -1682,7 +1752,7 @@
     "expected": {
       "typescript": "Any",
       "kotlin": "Any_",
-      "java": "Any_",
+      "java": "Any",
       "php": "Any"
     }
   },

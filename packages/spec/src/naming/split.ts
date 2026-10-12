@@ -56,10 +56,13 @@ export type SegmentsResult = { ok: true; segments: string[] } | { ok: false; rea
 /**
  * The segments of a written name in its context (ADR 0007 section 2, last paragraph).
  *
- * - An enum value without a segment becomes `value<position>`, `position` being one-based.
+ * - `codeName` replaces the segments split from the written name, for every source; one that
+ *   yields no segment is `{ ok: false }`, never the enum fallback.
+ * - An enum value without a segment becomes `value<position>`, `position` being one-based. It is
+ *   required for an enum value (a positive integer) and throws when missing, so that a fallback
+ *   name never depends on a guess.
  * - A right without a segment is `{ ok: false }` unless `codeName` is set: the caller turns the
  *   failure into the diagnostic naming the right, with the fix "set its `codeName`".
- * - `codeName` replaces the segments split from the written name, for every source.
  * - Any other name without a segment is `{ ok: false }` too; the grammar's name patterns make it
  *   unreachable, and the caller reports it.
  */
@@ -68,8 +71,14 @@ export function segmentsOf(
   source: NameSource,
   options: { codeName?: string; position?: number } = {},
 ): SegmentsResult {
-  const split = splitName(options.codeName ?? written);
+  const { codeName, position } = options;
+  if (source === "enumValue" && (!Number.isInteger(position) || (position as number) < 1)) {
+    throw new Error(`an enum value needs its one-based position, got ${String(position)}`);
+  }
+  const split = splitName(codeName ?? written);
   if (split.length > 0) return { ok: true, segments: split };
-  if (source === "enumValue") return { ok: true, segments: [`value${options.position ?? 1}`] };
+  if (source === "enumValue" && codeName === undefined) {
+    return { ok: true, segments: [`value${position}`] };
+  }
   return { ok: false, reason: "no-segment" };
 }
