@@ -161,7 +161,12 @@ export class Expander {
     return build;
   }
 
-  /** Expands the schema files reached only through `$ref`, once the layer's names are known. */
+  /**
+   * Expands the schema files reached only through `$ref`, once the layer's names are known.
+   * A file `$ref` is read as naming a schema: ADR 0002 section 2 shows it only for schema files
+   * ("schema files are always name-keyed"), so the element joins `schemas`. Another catalogue
+   * reached by file would need the expected catalogue from the authoring schema (P6 follow-up).
+   */
   finishRefs(
     build: LayerBuild,
     visible: (

@@ -53,3 +53,44 @@ test("watch notifies once per change burst, only for the files it was given", as
   await sleep(200);
   expect(calls).toBe(2);
 });
+
+test("watch ignores files outside the root, but for a node_modules above it", async () => {
+  const base = mkdtempSync(join(tmpdir(), "seampact-watch-out-"));
+  dirs.push(base);
+  const root = join(base, "ws");
+  mkdirSync(root);
+  mkdirSync(join(base, "node_modules/p"), { recursive: true });
+  writeFileSync(join(base, "outside.yaml"), "x: 1\n");
+  writeFileSync(join(base, "node_modules/p/package.json"), "{}\n");
+  let calls = 0;
+  const watcher = loadWatchFiles(
+    ["../outside.yaml", "/etc/hostname", "../node_modules/p/package.json"],
+    {
+      root,
+      debounceMs: 50,
+      onChange: () => calls++,
+    },
+  );
+  try {
+    await sleep(50);
+    writeFileSync(join(base, "outside.yaml"), "x: 2\n");
+    await sleep(250);
+    expect(calls).toBe(0);
+    writeFileSync(join(base, "node_modules/p/package.json"), '{"v":1}\n');
+    await sleep(250);
+    expect(calls).toBe(1);
+  } finally {
+    watcher.close();
+  }
+});
+
+test("watch update after close watches nothing", async () => {
+  const root = workspace();
+  let calls = 0;
+  const watcher = loadWatchFiles([], { root, debounceMs: 30, onChange: () => calls++ });
+  watcher.close();
+  watcher.update(["api.yaml"]);
+  writeFileSync(join(root, "api.yaml"), "api: { name: t }\n# 9\n");
+  await sleep(150);
+  expect(calls).toBe(0);
+});
