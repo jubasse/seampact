@@ -46,8 +46,9 @@ export function assertLanguage(language: unknown): asserts language is Language 
 
 /**
  * Whether `identifier`, the final identifier of a name with `role`, collides in `language` with:
- * a keyword (every role); for a type role, a shadowed type name; for a member, a name that breaks
- * its class or record; for an enum member, a name its enum cannot take. PHP compares
+ * a keyword (every role); for a type role, a shadowed type name; for a member or an operation,
+ * a name that breaks its class or record (generator shapes are not known yet, so escaping is the
+ * safe default); for an enum member, a name its enum cannot take. PHP compares
  * case-insensitively (ASCII; its class names are).
  */
 export function isReserved(identifier: string, language: Language, role: Role): boolean {
@@ -57,7 +58,7 @@ export function isReserved(identifier: string, language: Language, role: Role): 
   const key = list.caseInsensitive ? identifier.toLowerCase() : identifier;
   if (list.keywords.has(key)) return true;
   if (isTypeRole(role)) return list.types.has(key);
-  if (role === "member") return list.members.has(key);
+  if (role === "member" || role === "operation") return list.members.has(key);
   if (role === "enumMember") return list.enumMembers.has(key);
   return false;
 }

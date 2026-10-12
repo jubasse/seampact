@@ -1111,6 +1111,20 @@
     }
   },
   {
+    "id": "reserved/operation-hash-code",
+    "category": "reserved",
+    "source": "name",
+    "written": "hashCode",
+    "role": "operation",
+    "segments": ["hash", "code"],
+    "expected": {
+      "typescript": "hashCode",
+      "kotlin": "hashCode",
+      "java": "hashCode_",
+      "php": "hashCode"
+    }
+  },
+  {
     "id": "reserved/operation-list",
     "category": "reserved",
     "source": "name",

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "The reserved and shadowed names (ADR 0007 section 5)",
-  "description": "One list per target language, read through `usedBy`. `keywords` are blocked for every role. `types` are blocked for the type roles only (schema, derived types, endpoints), `members` for the member role only (a name that breaks a class or a record), `enumMembers` for the enumMember role only. Words are listed in the case of the identifier they block, sorted and without duplicates; `caseInsensitive` lists compare in ASCII lowercase. A list is checked against the final identifier, after casing and the leading digit underscore.",
+  "description": "One list per target language, read through `usedBy`. `keywords` are blocked for every role. `types` are blocked for the type roles only (schema, derived types, endpoints), `members` for the member and operation roles (a name that breaks a class or a record), `enumMembers` for the enumMember role only. Words are listed in the case of the identifier they block, sorted and without duplicates; `caseInsensitive` lists compare in ASCII lowercase. A list is checked against the final identifier, after casing and the leading digit underscore.",
   "type": "object",
   "additionalProperties": false,
   "required": ["lists"],
