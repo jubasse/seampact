@@ -25,3 +25,8 @@ export function expectGolden(dir: string, result: LoadResult): string {
   expect(readFileSync(file, "utf8")).toBe(`${printed}\n`);
   return printed;
 }
+
+export function must<T>(value: T | undefined): T {
+  if (value === undefined) throw new Error("expected a value");
+  return value;
+}

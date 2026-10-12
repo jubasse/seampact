@@ -5,7 +5,7 @@ import { diagnosticLocationKey, sortDiagnostics } from "../diagnostics/print.js"
 import type { JsonObject, JsonValue, RawApi, RawWorkspace } from "../raw-tree.js";
 import { mergeLayers } from "./compose.js";
 import { asObject, Expander, type LayerBuild, navigate } from "./expand.js";
-import { joinPath, loadNormalizePath } from "./paths.js";
+import { isInside, joinPath, loadNormalizePath } from "./paths.js";
 import type { LoadReader } from "./reader.js";
 import { Reporter, type SiteLocation } from "./report.js";
 import { FileStore, nodeSite, type ParsedFile } from "./source.js";
@@ -92,7 +92,14 @@ class Loader {
     this.rep.api = undefined;
     this.rep.layer = "api";
     let entryBuild: LayerBuild | undefined;
-    if (this.store.checkFile(entry, ".", entrySite, "the entry file")) {
+    if (!isInside(".", entry)) {
+      this.rep.report({
+        rule: "path-escape",
+        message: `the entry file '${entry}' is outside the workspace root`,
+        fix: "name an entry file inside the workspace root",
+        at: entrySite,
+      });
+    } else if (this.store.checkFile(entry, ".", entrySite, "the entry file")) {
       const pf = this.store.parse(entry, ".");
       if (pf) entryBuild = this.layer(pf, "api");
     }

@@ -71,7 +71,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter): Merged {
         const first = owner.at;
         rep.report({
           rule: "declaration-twice",
-          message: `${what} '${name}' is declared by both '${owner.layer}' and '${b.layer}', and a declaration is never overridden, even when the two are identical`,
+          message: `'${name}' (${what}) is declared by both '${owner.layer}' (${owner.file}) and '${b.layer}' (${b.parsed.path}), and a declaration is never overridden, even when the two are identical`,
           fix: "remove the copy",
           at,
           related: first ? [{ at: first, message: "first declared here" }] : [],
@@ -174,7 +174,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter): Merged {
           if (id && owner && at) {
             rep.report({
               rule: "declaration-twice",
-              message: `derive entry '${String(name)}' is declared by both '${owner.layer}' and '${b.layer}', and a declaration is never overridden`,
+              message: `derive entry '${String(name)}' is declared by both '${owner.layer}' (${owner.file}) and '${b.layer}' (${b.parsed.path}), and a declaration is never overridden`,
               fix: "remove the copy",
               at,
               related: owner.at ? [{ at: owner.at, message: "first declared here" }] : [],
