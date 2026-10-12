@@ -163,6 +163,22 @@ describe("guard refuses undeclared access", () => {
     }).toThrow(DraftAccessError);
   });
 
+  test("a half adds its derived elements only to the lists its row lets it derive into", () => {
+    const value = draft();
+    const rights = pipelineGuard(
+      value,
+      part("access.rights", [], ["operations[].params.header", "operations[].params.query"]),
+    );
+    const params = operationOf(rights).params;
+    const proof = { name: "X-Proof", type: text, required: true, derivedFrom: derivedFrom("rule.proof") };
+    params?.header.push(proof);
+    expect(operationOf(value).params?.header).toHaveLength(1);
+    const misplaced = refused(() => params?.query.push({ ...proof, name: "proof" }));
+    expect(misplaced.message).toContain(
+      "derivation rule.proof adds no element here (derived by tree.nodes, derive.wire)",
+    );
+  });
+
   test("a default is written only where absent, by the halves of its order", () => {
     const value = draft();
     const wire = pipelineGuard(

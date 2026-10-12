@@ -329,6 +329,12 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
   ): void => {
     if (element === undefined) return;
     const { owner, derivation } = draftElementOwner(row, element);
+    if (derivation !== undefined && owner !== undefined && !row.derived.includes(owner))
+      fail(
+        "write",
+        position,
+        `derivation ${derivation} adds no element here (derived by ${row.derived.join(", ")})`,
+      );
     if (owner === part.half) return;
     const by = derivation === undefined ? "declared" : `derivation ${derivation}`;
     fail(

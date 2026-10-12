@@ -12,7 +12,10 @@ import type { HalfName } from "./halves.js";
 //   owned by `declared` when it has no `derivedFrom`, else by the `wire` owner of its derivation in the
 //   derivation table (`derivations/table.ts`): declared parameters and responses and the `relay.route`,
 //   `batch.read`, `response.format` and `budget.timeout` elements to tree.nodes, `rule.proof` elements to
-//   access.rights, other derived wire elements to derive.wire.
+//   access.rights, other derived wire elements to derive.wire. `derived` lists the halves whose derivations add
+//   elements to the list; a derived element of another half's derivation is refused there. A rule proof is a
+//   derived header parameter; a body proof field goes to `operations[].input.proofs` (access.rights) once the IR
+//   change `feat/ir-1-core-origins-proofs` adds it (CR-1).
 // A field above rows (`operations[]`, `operations[].input`) is a container: halves navigate through it, and
 // writing it writes each row below it. The finalize members (top level, and each operation's `features`) belong
 // to `finalize`, which no half is.
@@ -27,10 +30,17 @@ export type DraftOwner = HalfName | "finalize";
 export type OwnershipRow =
   | { field: string; mode: "owned"; owner: DraftOwner }
   | { field: string; mode: "default"; order: readonly HalfName[] }
-  | { field: string; mode: "elements"; declared: HalfName };
+  | { field: string; mode: "elements"; declared: HalfName; derived: readonly HalfName[] };
 
 const owned = <F extends string>(owner: DraftOwner, ...fields: F[]) =>
   fields.map((field) => ({ field, mode: "owned" as const, owner }));
+// A list declared by tree.nodes, with the halves whose derivations add to it.
+const elements = <F extends string>(field: F, ...derived: HalfName[]) => ({
+  field,
+  mode: "elements" as const,
+  declared: "tree.nodes" as const,
+  derived,
+});
 const op = <M extends string>(member: M): `operations[].${M}` => `operations[].${member}`;
 const ops = <M extends string>(...members: M[]): `operations[].${M}`[] => members.map(op);
 
@@ -88,11 +98,13 @@ export const pipelineOwnership = [
       "origin",
     ),
   ),
-  { field: op("params.path"), mode: "elements", declared: "tree.nodes" },
-  { field: op("params.query"), mode: "elements", declared: "tree.nodes" },
-  { field: op("params.header"), mode: "elements", declared: "tree.nodes" },
-  { field: op("responses"), mode: "elements", declared: "tree.nodes" },
-  { field: op("responses[].headers"), mode: "elements", declared: "tree.nodes" },
+  // Derived elements: tree.nodes' are those a relay route copies (`relay.route`); access.rights adds rule proof
+  // headers (`rule.proof`); derive.wire the other derived parameters, responses and response headers.
+  elements(op("params.path"), "tree.nodes", "derive.wire"),
+  elements(op("params.query"), "tree.nodes", "derive.wire"),
+  elements(op("params.header"), "tree.nodes", "access.rights", "derive.wire"),
+  elements(op("responses"), "tree.nodes", "derive.wire"),
+  elements(op("responses[].headers"), "tree.nodes", "derive.wire"),
   { field: op("maturity"), mode: "default", order: ["tree.nodes", "derive.wire"] },
   {
     field: op("input.schema.unknownKeys"),
@@ -192,6 +204,6 @@ export function draftOwnerText(row: OwnershipRow | undefined): string {
     case "default":
       return `the first of ${row.order.join(", ")} to write it (a default, written only where absent)`;
     case "elements":
-      return `${row.declared} for a declared element, the wire owner of its derivation for a derived one`;
+      return `${row.declared} for a declared element, the wire owner of its derivation for a derived one (${row.derived.join(", ")})`;
   }
 }

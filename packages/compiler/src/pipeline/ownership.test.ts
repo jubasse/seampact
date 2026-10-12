@@ -109,6 +109,13 @@ describe("field ownership", () => {
     expect(unowned, "IR members with no owner").toEqual([]);
   });
 
+  test("a list's derived halves are wire owners of derivations", () => {
+    const wireOwners = new Set(derivationTable.flatMap((row) => (row.wire ? [row.wire] : [])));
+    for (const row of pipelineOwnership)
+      if (row.mode === "elements")
+        for (const half of row.derived) expect(wireOwners, `${row.field}: ${half}`).toContain(half);
+  });
+
   test("ownership matches ADR 0006", () => {
     const adr = readFileSync(
       fileURLToPath(
@@ -133,10 +140,7 @@ describe("field ownership", () => {
     // Backticked mentions that are not a member the pass writes, each with its reason.
     const notMembers: Record<PassName, Record<string, string>> = {
       tree: {},
-      access: {
-        // "rule proofs added to `input`": no IR member holds a body proof (IR change request in the report).
-        input: "rule proofs",
-      },
+      access: {},
       derive: {
         "conventions.input.unknownKeys": "the convention derive reads",
         "input.unknownKeys": "the derivation id",
@@ -158,9 +162,8 @@ describe("field ownership", () => {
       derive: {},
     };
 
-    const derivedWireOwners = new Set(
-      derivationTable.flatMap((row) => (row.wire ? [row.wire] : [])),
-    );
+    // A derived element is written by the halves the row lists in `derived`, so a pass's row in the ADR is
+    // checked for the derived elements of its own halves only.
     const writers = (field: string, qualifier: string | undefined): Set<HalfName> => {
       const row = draftOwnershipRow(field);
       const halves = new Set<HalfName>();
@@ -174,7 +177,7 @@ describe("field ownership", () => {
       if (row.mode === "default") for (const half of row.order) halves.add(half);
       if (row.mode === "elements") {
         if (qualifier !== "derived") halves.add(row.declared);
-        if (qualifier !== "declared") for (const half of derivedWireOwners) halves.add(half);
+        if (qualifier !== "declared") for (const half of row.derived) halves.add(half);
       }
       return halves;
     };
@@ -209,7 +212,7 @@ describe("field ownership", () => {
             : [row.owner]
           : row.mode === "default"
             ? row.order
-            : [row.declared, "derive.wire" as const];
+            : [row.declared, ...row.derived];
       for (const half of halves) {
         const pass = pipelinePassOf(half);
         if (Object.hasOwn(unmentioned[pass], row.field)) continue;
