@@ -1,0 +1,13 @@
+{
+  "irRevision": 1,
+  "locations": {
+    "api#": { "file": "contract/api.yaml", "line": 1, "column": 1, "endLine": 40, "endColumn": 1 },
+    "pack:@acme/pack-tenancy#/rights/tasks.effort": {
+      "file": "node_modules/@acme/pack-tenancy/pack.yaml",
+      "line": 12,
+      "column": 3,
+      "endLine": 14,
+      "endColumn": 20
+    }
+  }
+}

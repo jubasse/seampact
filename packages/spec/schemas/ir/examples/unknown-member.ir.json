@@ -23,6 +23,8 @@
   },
   "packs": [],
   "conventions": {},
+  "formats": {},
+  "pagings": {},
   "schemas": {},
   "scalars": {},
   "enums": {},
@@ -38,5 +40,6 @@
   "services": {},
   "extensionKeys": {},
   "lint": { "rules": {}, "allows": [] },
-  "generatedBy": { "tool": "a later compiler" }
+  "generatedBy": { "tool": "a later compiler" },
+  "operations": []
 }

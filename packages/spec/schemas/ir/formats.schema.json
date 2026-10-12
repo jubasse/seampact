@@ -1,0 +1,239 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/ir/formats.schema.json",
+  "title": "seampact IR: wire formats and paging styles",
+  "description": "Wire formats, paging styles and their templates (ADR 0004 section 8).",
+  "$defs": {
+    "Slot": {
+      "type": "string",
+      "description": "A slot of the template language (ADR 0002 sections 13 and 14), without its '$'."
+    },
+    "UrlRole": {
+      "type": "string",
+      "x-seampact-known": ["self", "first", "previous", "next", "last"]
+    },
+    "Absent": { "type": "string", "x-seampact-known": ["omit", "null"] },
+    "HeaderTemplate": {
+      "type": "object",
+      "required": ["name", "value"],
+      "properties": { "name": { "type": "string" }, "value": { "$ref": "#/$defs/Template" } }
+    },
+    "Shape": {
+      "type": "object",
+      "required": ["body", "headers"],
+      "properties": {
+        "body": { "$ref": "#/$defs/Template" },
+        "headers": { "type": "array", "items": { "$ref": "#/$defs/HeaderTemplate" } }
+      }
+    },
+    "SuccessShapes": {
+      "type": "object",
+      "required": ["item", "table", "list", "page"],
+      "properties": {
+        "item": { "$ref": "#/$defs/Shape" },
+        "table": { "$ref": "#/$defs/Shape" },
+        "list": { "$ref": "#/$defs/Shape" },
+        "page": { "$ref": "#/$defs/Shape" }
+      }
+    },
+    "MetaMember": {
+      "type": "object",
+      "description": "A member of the format's $meta: 'source' set only when 'fill' is 'source'.",
+      "required": ["type", "fill"],
+      "properties": {
+        "type": { "$ref": "schemas.schema.json#/$defs/TypeUse" },
+        "fill": {
+          "type": "string",
+          "x-seampact-known": ["now", "traceId", "degraded", "handler", "source"]
+        },
+        "source": { "$ref": "common.schema.json#/$defs/ValueSource" }
+      }
+    },
+    "ErrorShape": {
+      "type": "object",
+      "required": ["media", "body", "headers"],
+      "properties": {
+        "media": { "type": "string" },
+        "body": { "$ref": "#/$defs/Template" },
+        "headers": { "type": "array", "items": { "$ref": "#/$defs/HeaderTemplate" } }
+      }
+    },
+    "WireFormat": {
+      "type": "object",
+      "description": "A wire format (A30, ADR 0008).",
+      "required": ["id", "origin", "media", "absent", "success", "meta", "error"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/FormatId" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" },
+        "media": { "type": "string" },
+        "absent": { "$ref": "#/$defs/Absent" },
+        "success": { "$ref": "#/$defs/SuccessShapes" },
+        "meta": { "type": "object", "additionalProperties": { "$ref": "#/$defs/MetaMember" } },
+        "error": { "$ref": "#/$defs/ErrorShape" }
+      }
+    },
+    "PagingRequestRole": {
+      "type": "object",
+      "required": ["role", "in", "name"],
+      "properties": {
+        "role": {
+          "type": "string",
+          "x-seampact-known": [
+            "cursor",
+            "after",
+            "before",
+            "page",
+            "offset",
+            "since",
+            "limit",
+            "sort"
+          ]
+        },
+        "in": { "type": "string", "x-seampact-known": ["query", "header"] },
+        "name": { "type": "string" },
+        "base": { "type": "integer", "minimum": 0, "maximum": 1 },
+        "style": { "type": "string", "x-seampact-known": ["signed", "pair", "keyed", "split"] },
+        "direction": {
+          "type": "string",
+          "description": "With style 'split': the direction parameter's name."
+        }
+      }
+    },
+    "NamedTemplate": {
+      "type": "object",
+      "required": ["name", "value"],
+      "properties": { "name": { "type": "string" }, "value": { "$ref": "#/$defs/Template" } }
+    },
+    "PagingLink": {
+      "type": "object",
+      "required": ["rel", "role"],
+      "properties": { "rel": { "type": "string" }, "role": { "$ref": "#/$defs/UrlRole" } }
+    },
+    "PagingResponse": {
+      "type": "object",
+      "required": ["meta", "headers", "links"],
+      "properties": {
+        "body": {
+          "$ref": "#/$defs/Template",
+          "description": "The whole page body; absent when the style adds 'meta' to the format's page."
+        },
+        "meta": { "type": "array", "items": { "$ref": "#/$defs/NamedTemplate" } },
+        "headers": { "type": "array", "items": { "$ref": "#/$defs/HeaderTemplate" } },
+        "links": { "type": "array", "items": { "$ref": "#/$defs/PagingLink" } }
+      }
+    },
+    "PagingStyle": {
+      "type": "object",
+      "description": "A paging style (A31).",
+      "required": ["id", "origin", "position", "absent", "request", "response", "handlerResult"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/PagingId" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" },
+        "position": {
+          "type": "string",
+          "x-seampact-known": ["cursor", "page", "offset", "since"]
+        },
+        "absent": { "$ref": "#/$defs/Absent" },
+        "request": { "type": "array", "items": { "$ref": "#/$defs/PagingRequestRole" } },
+        "response": { "$ref": "#/$defs/PagingResponse" },
+        "handlerResult": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "x-seampact-known": [
+              "nextCursor",
+              "previousCursor",
+              "total",
+              "more",
+              "nextSince",
+              "complete"
+            ]
+          }
+        }
+      }
+    },
+    "Template": {
+      "type": "object",
+      "description": "A template of the template language (ADR 0002 sections 13 and 14).",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [
+        { "$ref": "#/$defs/SlotTemplate" },
+        { "$ref": "#/$defs/TextTemplate" },
+        { "$ref": "#/$defs/LiteralTemplate" },
+        { "$ref": "#/$defs/ObjectTemplate" },
+        { "$ref": "#/$defs/ArrayTemplate" },
+        { "$ref": "#/$defs/EachTemplate" }
+      ]
+    },
+    "SlotTemplate": {
+      "type": "object",
+      "required": ["kind", "slot", "path"],
+      "properties": {
+        "kind": { "type": "string", "const": "slot" },
+        "slot": { "$ref": "#/$defs/Slot" },
+        "path": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "TextPart": {
+      "type": "object",
+      "description": "Exactly one of 'text', or 'slot' with 'path'.",
+      "properties": {
+        "text": { "type": "string" },
+        "slot": { "$ref": "#/$defs/Slot" },
+        "path": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "TextTemplate": {
+      "type": "object",
+      "required": ["kind", "parts"],
+      "properties": {
+        "kind": { "type": "string", "const": "text" },
+        "parts": { "type": "array", "items": { "$ref": "#/$defs/TextPart" } }
+      }
+    },
+    "LiteralTemplate": {
+      "type": "object",
+      "required": ["kind", "value"],
+      "properties": { "kind": { "type": "string", "const": "literal" }, "value": {} }
+    },
+    "MemberName": {
+      "type": "object",
+      "description": "Exactly one of 'text' or 'slot'.",
+      "properties": { "text": { "type": "string" }, "slot": { "$ref": "#/$defs/Slot" } }
+    },
+    "ObjectTemplateMember": {
+      "type": "object",
+      "required": ["name", "value"],
+      "properties": {
+        "name": { "$ref": "#/$defs/MemberName" },
+        "value": { "$ref": "#/$defs/Template" }
+      }
+    },
+    "ObjectTemplate": {
+      "type": "object",
+      "required": ["kind", "members"],
+      "properties": {
+        "kind": { "type": "string", "const": "object" },
+        "members": { "type": "array", "items": { "$ref": "#/$defs/ObjectTemplateMember" } },
+        "merge": { "$ref": "#/$defs/Slot" }
+      }
+    },
+    "ArrayTemplate": {
+      "type": "object",
+      "required": ["kind", "items"],
+      "properties": {
+        "kind": { "type": "string", "const": "array" },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/Template" } }
+      }
+    },
+    "EachTemplate": {
+      "type": "object",
+      "required": ["kind", "of", "as"],
+      "properties": {
+        "kind": { "type": "string", "const": "each" },
+        "of": { "$ref": "#/$defs/Slot" },
+        "as": { "$ref": "#/$defs/Template" }
+      }
+    }
+  }
+}

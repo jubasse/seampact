@@ -22,6 +22,8 @@
   },
   "packs": [],
   "conventions": {},
+  "formats": {},
+  "pagings": {},
   "schemas": {},
   "scalars": {},
   "enums": {},
@@ -36,5 +38,6 @@
   "buckets": {},
   "services": {},
   "extensionKeys": {},
-  "lint": { "rules": {}, "allows": [] }
+  "lint": { "rules": {}, "allows": [] },
+  "operations": []
 }

@@ -788,6 +788,552 @@ export interface Scalar {
   origin: Origin;
 }
 
+export type HttpMethod = "get" | "post" | "put" | "patch" | "delete" | (string & {});
+
+export type CallerKind = "anonymous" | "identified" | (string & {});
+
+/** A kind-tagged operation reference (ADR 0014). */
+export interface OperationRef {
+  kind: DeclarationKind;
+  api: string;
+  id: OperationId;
+}
+
+/** The wire form of a query parameter (FR-30). */
+export interface QueryWire {
+  kind: "number" | "boolean" | "list" | "text" | "object" | (string & {});
+  style: "form" | "deepObject" | (string & {});
+  explode: boolean;
+  /** A list sent as 'name[]'. */
+  brackets: boolean;
+}
+
+/** The wire form of a form or multipart field: a query wire form (style, explode and brackets set), or kind 'file' or 'json' alone. */
+export interface FieldWire {
+  kind: "number" | "boolean" | "list" | "text" | "object" | "file" | "json" | (string & {});
+  style?: "form" | "deepObject" | (string & {});
+  explode?: boolean;
+  brackets?: boolean;
+}
+
+/** A path, query or header parameter, declared (origin) or derived (derivedFrom). */
+export interface Param {
+  name: string;
+  type: TypeUse;
+  required: boolean;
+  wire?: QueryWire;
+  default?: unknown;
+  origin?: Origin;
+  derivedFrom?: DerivedFrom;
+}
+
+export interface Params {
+  path: Param[];
+  query: Param[];
+  header: Param[];
+}
+
+/** Undeclared query keys. */
+export type KnownUnknownQuery = RefuseUnknownQuery | IgnoreUnknownQuery;
+
+/** Undeclared query keys. */
+export type UnknownQuery = KnownUnknownQuery | UnknownVariant<"policy">;
+
+export interface RefuseUnknownQuery {
+  policy: "refuse";
+}
+
+export interface IgnoreUnknownQuery {
+  policy: "ignore";
+  reason: Reason;
+  origin: Origin;
+}
+
+/** Who may call the operation. */
+export type KnownAccess = IdentityAccess | OptionalAccess | PublicAccess;
+
+/** Who may call the operation. */
+export type Access = KnownAccess | UnknownVariant<"kind">;
+
+export interface IdentityAccess {
+  kind: "identity";
+  identity: IdentityId;
+  schemes: SchemeId[];
+  origin: Origin;
+}
+
+export interface OptionalAccess {
+  kind: "optional";
+  identity: IdentityId;
+  schemes: SchemeId[];
+  reason: Reason;
+  onRefused: "anonymous" | "reject" | (string & {});
+  origin: Origin;
+}
+
+export interface PublicAccess {
+  kind: "public";
+  reason: Reason;
+  origin: Origin;
+}
+
+export interface PrincipalRequirement {
+  field: string;
+  origin: Origin;
+}
+
+/** A value source, or 'resolver: true' alone. */
+export interface ScopeSource {
+  in?: ValueSourceIn;
+  name?: string;
+  prefixBits?: number;
+  resolver?: boolean;
+}
+
+export interface OperationScope {
+  scope: ScopeId;
+  source: ScopeSource;
+  origin: Origin;
+}
+
+/** A requirement, in declared order (FR-5). */
+export type KnownRequirement = RightRequirement | RuleRequirement;
+
+/** A requirement, in declared order (FR-5). */
+export type Requirement = KnownRequirement | UnknownVariant<"kind">;
+
+export interface RequirementSubject {
+  source: ValueSource;
+  defaulted: boolean;
+}
+
+export interface RightRequirement {
+  kind: "right";
+  right: RightId;
+  /** Values already validated against the right's params schema. */
+  params?: unknown;
+  subject?: RequirementSubject;
+  /** The 'requirements' entry it was written through. */
+  entry?: string;
+  origin?: Origin;
+  derivedFrom?: DerivedFrom;
+}
+
+export interface RuleRequirement {
+  kind: "rule";
+  rule: RuleId;
+  /** Values already validated against the rule's params schema. */
+  params?: unknown;
+  bucket?: BucketId;
+  /** The 'requirements' entry it was written through. */
+  entry?: string;
+  origin?: Origin;
+  derivedFrom?: DerivedFrom;
+}
+
+export interface Binding {
+  from: ValueSource;
+  to: ValueSource;
+  origin: Origin;
+}
+
+export interface InputField {
+  name: string;
+  wire: FieldWire;
+}
+
+/** The request body. */
+export interface OperationInput {
+  media:
+    | "application/json"
+    | "application/x-www-form-urlencoded"
+    | "multipart/form-data"
+    | (string & {});
+  schema: TypeUse;
+  bodyLimitBytes: number;
+  rawBody: boolean;
+  fields?: InputField[];
+  origin: Origin;
+}
+
+export interface ResponseHeader {
+  name: string;
+  type: TypeUse;
+  required: boolean;
+  semantic?: string;
+  origin?: Origin;
+  derivedFrom?: DerivedFrom;
+}
+
+/** A success or derived non-error response. */
+export interface Response {
+  status: number;
+  /** Absent for an empty body. */
+  media?: string;
+  body?: TypeUse;
+  shape: "item" | "table" | "list" | "page" | "empty" | "binary" | "redirect" | (string & {});
+  headers: ResponseHeader[];
+  origin?: Origin;
+  derivedFrom?: DerivedFrom;
+}
+
+/** A code the operation can answer, declared or derived. */
+export interface OperationError {
+  code: ErrorCode;
+  example?: unknown;
+  derivedFrom?: DerivedFrom;
+  origin?: Origin;
+}
+
+/** A value source, or 'holderField' alone. */
+export interface FieldSubjectSource {
+  in?: ValueSourceIn;
+  name?: string;
+  prefixBits?: number;
+  holderField?: string;
+}
+
+export interface FieldRightSubject {
+  source: FieldSubjectSource;
+}
+
+/** A field right, materialised so targets never walk schemas (FR-23). */
+export interface FieldRight {
+  schema: SchemaId;
+  pointer: string;
+  right: RightId;
+  params?: unknown;
+  subject?: FieldRightSubject;
+  direction: Direction;
+  inputPolicy?: "reject" | "strip" | (string & {});
+  derivedFrom: DerivedFrom;
+}
+
+/** Either the derived key settings (header, replayHeader, lifetimeMs, required, enforce, derivedFrom) or an exemption (exempt, origin). */
+export interface Idempotency {
+  header?: string;
+  replayHeader?: string;
+  lifetimeMs?: number;
+  required?: boolean;
+  enforce?: "boundary" | "none" | (string & {});
+  derivedFrom?: DerivedFrom;
+  exempt?: Reason;
+  origin?: Origin;
+}
+
+export interface Concurrency {
+  version: ValueSource;
+  field: string;
+  derivedFrom: DerivedFrom;
+}
+
+export interface Owner {
+  kind: "caller" | (string & {});
+  origin: Origin;
+}
+
+export interface CacheDirectives {
+  maxAgeMs: number;
+  sharedMaxAgeMs?: number;
+  staleWhileRevalidateMs?: number;
+  staleIfErrorMs?: number;
+  immutable: boolean;
+  noCache: boolean;
+  mustRevalidate: boolean;
+}
+
+export interface CallerCacheControl {
+  caller: CallerKind;
+  cacheControl: string;
+}
+
+/** Cache settings (ADR 0004 section 7). */
+export interface Cache {
+  family: string;
+  /** Absent for 'never' (no-store). */
+  directives?: CacheDirectives;
+  anonymous: "public" | "private" | (string & {});
+  vary: string[];
+  etag: boolean;
+  perCallerKind: CallerCacheControl[];
+  noStore: boolean;
+  origin: Origin;
+  derivedFrom?: DerivedFrom;
+}
+
+export interface SortKey {
+  key: string;
+  right?: RightId;
+  derivedFrom?: DerivedFrom;
+  origin?: Origin;
+}
+
+/** The paging of a list; 'style' is absent for an unpaged list. */
+export interface Paging {
+  style?: PagingId;
+  maxLimit?: number;
+  defaultLimit?: number;
+  overLimit: "reject" | "clamp" | (string & {});
+  token?: "opaque" | "instant" | (string & {});
+  sortKeys: SortKey[];
+  origin: Origin;
+}
+
+/** Either the derived CSRF header (header, derivedFrom) or an exemption (exempt, origin). */
+export interface Csrf {
+  header?: string;
+  derivedFrom?: DerivedFrom;
+  exempt?: Reason;
+  origin?: Origin;
+}
+
+export interface Degradable {
+  paths: string[];
+  origin: Origin;
+}
+
+export interface Deprecation {
+  sunset: string;
+  successor?: OperationRef;
+  origin: Origin;
+}
+
+export interface OperationMaturity {
+  level: Maturity;
+  source: "api" | "upstream" | "stated" | (string & {});
+  reason?: Reason;
+  origin: Origin;
+}
+
+/** The collection or single it belongs to. */
+export interface OperationResource {
+  type: string;
+  idParam?: string;
+  idProperty?: string;
+}
+
+/** A route example; with 'error', 'value' holds the code's params. */
+export interface OperationExample {
+  status?: number;
+  request?: boolean;
+  error?: ErrorCode;
+  value: unknown;
+}
+
+/** An HTTP operation (ADR 0004 section 7). */
+export interface Operation {
+  kind: DeclarationKind;
+  id: OperationId;
+  name: Name;
+  surface: SurfaceId;
+  op?: "list" | "get" | "create" | "update" | "delete" | "batch" | (string & {});
+  resource?: OperationResource;
+  features: Feature[];
+  method: HttpMethod;
+  path: string;
+  safe: boolean;
+  params: Params;
+  unknownQuery: UnknownQuery;
+  access: Access;
+  callerKinds: CallerKind[];
+  principalRequires: PrincipalRequirement[];
+  scopes: OperationScope[];
+  requires: Requirement[];
+  bindings: Binding[];
+  input?: OperationInput;
+  responses: Response[];
+  errors: OperationError[];
+  fieldRights: FieldRight[];
+  idempotency?: Idempotency;
+  concurrency?: Concurrency;
+  owner?: Owner;
+  cache?: Cache;
+  paging?: Paging;
+  filteredBy?: RightId;
+  degradable?: Degradable;
+  budgetMs?: number;
+  deadlineHeader?: string;
+  deprecated?: Deprecation;
+  relays?: OperationRef;
+  upstream: ServiceId[];
+  maturity: OperationMaturity;
+  internal: boolean;
+  csrf?: Csrf;
+  format: FormatId;
+  tags: string[];
+  examples: Record<string, OperationExample>;
+  docs: Docs;
+  extensions: Extensions;
+  origin: Origin;
+}
+
+/** A slot of the template language (ADR 0002 sections 13 and 14), without its '$'. */
+export type Slot = string;
+
+export type UrlRole = "self" | "first" | "previous" | "next" | "last" | (string & {});
+
+export type Absent = "omit" | "null" | (string & {});
+
+export interface HeaderTemplate {
+  name: string;
+  value: Template;
+}
+
+export interface Shape {
+  body: Template;
+  headers: HeaderTemplate[];
+}
+
+export interface SuccessShapes {
+  item: Shape;
+  table: Shape;
+  list: Shape;
+  page: Shape;
+}
+
+/** A member of the format's $meta: 'source' set only when 'fill' is 'source'. */
+export interface MetaMember {
+  type: TypeUse;
+  fill: "now" | "traceId" | "degraded" | "handler" | "source" | (string & {});
+  source?: ValueSource;
+}
+
+export interface ErrorShape {
+  media: string;
+  body: Template;
+  headers: HeaderTemplate[];
+}
+
+/** A wire format (A30, ADR 0008). */
+export interface WireFormat {
+  id: FormatId;
+  origin: Origin;
+  media: string;
+  absent: Absent;
+  success: SuccessShapes;
+  meta: Record<string, MetaMember>;
+  error: ErrorShape;
+}
+
+export interface PagingRequestRole {
+  role:
+    | "cursor"
+    | "after"
+    | "before"
+    | "page"
+    | "offset"
+    | "since"
+    | "limit"
+    | "sort"
+    | (string & {});
+  in: "query" | "header" | (string & {});
+  name: string;
+  base?: number;
+  style?: "signed" | "pair" | "keyed" | "split" | (string & {});
+  /** With style 'split': the direction parameter's name. */
+  direction?: string;
+}
+
+export interface NamedTemplate {
+  name: string;
+  value: Template;
+}
+
+export interface PagingLink {
+  rel: string;
+  role: UrlRole;
+}
+
+export interface PagingResponse {
+  /** The whole page body; absent when the style adds 'meta' to the format's page. */
+  body?: Template;
+  meta: NamedTemplate[];
+  headers: HeaderTemplate[];
+  links: PagingLink[];
+}
+
+/** A paging style (A31). */
+export interface PagingStyle {
+  id: PagingId;
+  origin: Origin;
+  position: "cursor" | "page" | "offset" | "since" | (string & {});
+  absent: Absent;
+  request: PagingRequestRole[];
+  response: PagingResponse;
+  handlerResult: (
+    | "nextCursor"
+    | "previousCursor"
+    | "total"
+    | "more"
+    | "nextSince"
+    | "complete"
+    | (string & {})
+  )[];
+}
+
+/** A template of the template language (ADR 0002 sections 13 and 14). */
+export type KnownTemplate =
+  | SlotTemplate
+  | TextTemplate
+  | LiteralTemplate
+  | ObjectTemplate
+  | ArrayTemplate
+  | EachTemplate;
+
+/** A template of the template language (ADR 0002 sections 13 and 14). */
+export type Template = KnownTemplate | UnknownVariant<"kind">;
+
+export interface SlotTemplate {
+  kind: "slot";
+  slot: Slot;
+  path: string[];
+}
+
+/** Exactly one of 'text', or 'slot' with 'path'. */
+export interface TextPart {
+  text?: string;
+  slot?: Slot;
+  path?: string[];
+}
+
+export interface TextTemplate {
+  kind: "text";
+  parts: TextPart[];
+}
+
+export interface LiteralTemplate {
+  kind: "literal";
+  value: unknown;
+}
+
+/** Exactly one of 'text' or 'slot'. */
+export interface MemberName {
+  text?: string;
+  slot?: Slot;
+}
+
+export interface ObjectTemplateMember {
+  name: MemberName;
+  value: Template;
+}
+
+export interface ObjectTemplate {
+  kind: "object";
+  members: ObjectTemplateMember[];
+  merge?: Slot;
+}
+
+export interface ArrayTemplate {
+  kind: "array";
+  items: Template[];
+}
+
+export interface EachTemplate {
+  kind: "each";
+  of: Slot;
+  as: Template;
+}
+
 /** One IR document per api (ADR 0004 sections 1 and 2). */
 export interface ContractIR {
   /** 1 until 1.0 and through 1.x (ADR 0005 section 2). */
@@ -799,6 +1345,8 @@ export interface ContractIR {
   api: Api;
   packs: PackRef[];
   conventions: Conventions;
+  formats: Record<FormatId, WireFormat>;
+  pagings: Record<PagingId, PagingStyle>;
   schemas: Record<SchemaId, Schema>;
   scalars: Record<ScalarId, Scalar>;
   enums: Record<EnumId, Enum>;
@@ -814,6 +1362,7 @@ export interface ContractIR {
   services: Record<ServiceId, Service>;
   extensionKeys: Record<ExtensionKeyId, ExtensionKeyDecl>;
   lint: Lint;
+  operations: Operation[];
 }
 
 /** A pack applied, in application order. */
@@ -979,5 +1528,9 @@ export interface IrUnionMap {
   Schema: { union: Schema; known: KnownSchema };
   UnionTag: { union: UnionTag; known: KnownUnionTag };
   TypeUse: { union: TypeUse; known: KnownTypeUse };
+  UnknownQuery: { union: UnknownQuery; known: KnownUnknownQuery };
+  Access: { union: Access; known: KnownAccess };
+  Requirement: { union: Requirement; known: KnownRequirement };
+  Template: { union: Template; known: KnownTemplate };
   ApiVersion: { union: ApiVersion; known: KnownApiVersion };
 }

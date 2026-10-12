@@ -16,6 +16,8 @@
         "api",
         "packs",
         "conventions",
+        "formats",
+        "pagings",
         "schemas",
         "scalars",
         "enums",
@@ -30,7 +32,8 @@
         "buckets",
         "services",
         "extensionKeys",
-        "lint"
+        "lint",
+        "operations"
       ],
       "properties": {
         "irVersion": {
@@ -51,6 +54,16 @@
         "api": { "$ref": "#/$defs/Api" },
         "packs": { "type": "array", "items": { "$ref": "#/$defs/PackRef" } },
         "conventions": { "$ref": "#/$defs/Conventions" },
+        "formats": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/FormatId" },
+          "additionalProperties": { "$ref": "formats.schema.json#/$defs/WireFormat" }
+        },
+        "pagings": {
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/PagingId" },
+          "additionalProperties": { "$ref": "formats.schema.json#/$defs/PagingStyle" }
+        },
         "schemas": {
           "type": "object",
           "propertyNames": { "$ref": "common.schema.json#/$defs/SchemaId" },
@@ -121,7 +134,11 @@
           "propertyNames": { "$ref": "common.schema.json#/$defs/ExtensionKeyId" },
           "additionalProperties": { "$ref": "#/$defs/ExtensionKeyDecl" }
         },
-        "lint": { "$ref": "#/$defs/Lint" }
+        "lint": { "$ref": "#/$defs/Lint" },
+        "operations": {
+          "type": "array",
+          "items": { "$ref": "operation.schema.json#/$defs/Operation" }
+        }
       }
     },
     "PackRef": {
