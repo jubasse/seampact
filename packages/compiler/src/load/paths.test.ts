@@ -4,7 +4,8 @@ import { join } from "node:path";
 import { expect, test } from "vitest";
 import { must } from "./golden.js";
 import { printDiagnostics } from "../diagnostics/print.js";
-import { type LoadReader, loadFsReader, loadMemoryReader, loadWorkspace } from "./index.js";
+import { type LoadReader, loadFsReader, loadWorkspace } from "./index.js";
+import { loadMemoryReader } from "./reader.js";
 
 function spy(reader: LoadReader) {
   const reads: string[] = [];
@@ -108,7 +109,7 @@ test("pack resolution", () => {
     ["api", "api.yaml"],
   ]);
   expect(api.leafOrigins["/conventions/paging/default"]?.layer).toBe("pack:@acme/pack-a");
-  expect(ok.workspace.locations["t:pack:@acme/pack-a#/rights/r.one"]?.file).toBe(
+  expect(api.locations["pack:@acme/pack-a#/rights/r.one"]?.file).toBe(
     "node_modules/@acme/pack-a/lib/pack.yaml",
   );
 

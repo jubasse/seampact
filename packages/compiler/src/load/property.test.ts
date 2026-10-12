@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { must } from "./golden.js";
-import { loadMemoryReader, loadWorkspace } from "./index.js";
+import { loadWorkspace } from "./index.js";
+import { loadMemoryReader } from "./reader.js";
 
 // CHK-109 at raw-tree level (ADR 0002, the byte-identity rule): random nodes of generated trees
 // moved into `$include` files give the same merged tree, key order and origins as the inline
@@ -126,7 +127,7 @@ test("inline equals included", () => {
     );
     if (split.includes > 0) {
       // Only the source map differs.
-      expect(JSON.stringify(b.workspace.locations)).not.toBe(JSON.stringify(a.workspace.locations));
+      expect(JSON.stringify(apiB?.locations)).not.toBe(JSON.stringify(apiA?.locations));
     }
   }
   expect(moved).toBeGreaterThan(100);

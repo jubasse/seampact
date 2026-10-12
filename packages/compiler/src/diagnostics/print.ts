@@ -4,13 +4,12 @@ import type { Diagnostic } from "./diagnostic.js";
 type Locations = SourceMap["locations"];
 
 /**
- * ADR 0004 section 11: the side table key is `"<layer>#<pointer>"`. An origin that names an api
- * (the loader sets it on everything it locates, so one table serves every api of a workspace)
- * prefixes `"<api>:"`.
+ * ADR 0004 section 11: the side table key is `"<layer>#<pointer>"`, the serialised form of an
+ * origin. The table names the api (each api has its own), so `api` is never part of the key: an
+ * origin copied from another api is looked up in that api's table. Internal to the compiler.
  */
 export function diagnosticLocationKey(origin: Origin): string {
-  const base = `${origin.layer}#${origin.pointer}`;
-  return origin.api === undefined ? base : `${origin.api}:${base}`;
+  return `${origin.layer}#${origin.pointer}`;
 }
 
 export interface PrintedLocation {
@@ -21,11 +20,10 @@ export interface PrintedLocation {
 
 const UNKNOWN: PrintedLocation = { file: "(unknown location)", line: 0, column: 0 };
 
+/** `locations` is the table the origin belongs to: an api's, or the workspace's for load diagnostics. */
 export function diagnosticLocation(origin: Origin, locations: Locations): PrintedLocation {
-  const hit = locations[diagnosticLocationKey(origin)];
-  if (hit) return hit;
-  const { api: _api, ...rest } = origin;
-  return locations[diagnosticLocationKey(rest)] ?? UNKNOWN;
+  const key = diagnosticLocationKey(origin);
+  return Object.hasOwn(locations, key) ? (locations[key] as PrintedLocation) : UNKNOWN;
 }
 
 function compare(a: string | number, b: string | number): number {
@@ -33,7 +31,7 @@ function compare(a: string | number, b: string | number): number {
 }
 
 /** ADR 0006 section 4: sorted by file, line, column, then rule; the message breaks any remaining tie. */
-export function sortDiagnostics(
+export function diagnosticSort(
   diagnostics: readonly Diagnostic[],
   locations: Locations,
 ): Diagnostic[] {
@@ -61,7 +59,7 @@ function sentence(text: string): string {
  */
 export function printDiagnostics(diagnostics: readonly Diagnostic[], locations: Locations): string {
   const lines: string[] = [];
-  for (const d of sortDiagnostics(diagnostics, locations)) {
+  for (const d of diagnosticSort(diagnostics, locations)) {
     const at = diagnosticLocation(d.origin, locations);
     lines.push(
       `${at.file}:${at.line}:${at.column}: ${d.severity} ${d.rule}: ${sentence(d.message)} Fix: ${sentence(d.fix)}`,

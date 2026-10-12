@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { diagnosticLocation } from "../diagnostics/print.js";
 import { expectGolden, loadFixture } from "./golden.js";
-import { loadScalarPitfall } from "./index.js";
+import { loadScalarPitfall } from "./scalars.js";
 
 // One fixture per case under fixtures/loader/pitfalls: [pitfall, case, directory, rules expected].
 const CASES: [string, string, string, string[]][] = [

@@ -1,7 +1,7 @@
 import type { SourceMap } from "@seampact/spec/ir";
 import { expect, test } from "vitest";
 import type { Diagnostic } from "./diagnostic.js";
-import { printDiagnostics, sortDiagnostics } from "./print.js";
+import { diagnosticLocation, diagnosticSort, printDiagnostics } from "./print.js";
 
 const site = (file: string, line: number, column: number) => ({
   file,
@@ -16,7 +16,7 @@ const locations: SourceMap["locations"] = {
   "api#/b": site("tasks/api.yaml", 42, 9),
   "api#/c": site("tasks/api.yaml", 7, 3),
   "base#/d": site("base.yaml", 99, 1),
-  "tasks:api#/e": site("tasks/api.yaml", 42, 10),
+  "api#/e": site("tasks/api.yaml", 42, 10),
 };
 
 const d = (
@@ -84,7 +84,20 @@ test("printer sorting is stable whatever the input order", () => {
     d("seampact/load/a", "/b"),
     d("seampact/load/c", "/d", "base"),
   ];
-  const forward = sortDiagnostics(list, locations).map((x) => x.rule);
-  const reverse = sortDiagnostics([...list].reverse(), locations).map((x) => x.rule);
+  const forward = diagnosticSort(list, locations).map((x) => x.rule);
+  const reverse = diagnosticSort([...list].reverse(), locations).map((x) => x.rule);
   expect(reverse).toEqual(forward);
+});
+
+test("the location key is the origin's layer and pointer, never its api", () => {
+  // The caller passes the table of the api the origin belongs to (ADR 0004 section 11).
+  expect(diagnosticLocation({ api: "tasks", layer: "api", pointer: "/e" }, locations)).toEqual(
+    site("tasks/api.yaml", 42, 10),
+  );
+  expect(diagnosticLocation({ layer: "api", pointer: "/missing" }, locations).file).toBe(
+    "(unknown location)",
+  );
+  expect(diagnosticLocation({ layer: "api", pointer: "/toString" }, {}).file).toBe(
+    "(unknown location)",
+  );
 });

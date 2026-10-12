@@ -1,8 +1,8 @@
 import type { Origin } from "@seampact/spec/ir";
 import { isScalar } from "yaml";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
-import { diagnosticLocationKey, sortDiagnostics } from "../diagnostics/print.js";
-import type { JsonObject, JsonValue, RawApi, RawWorkspace } from "../raw-tree.js";
+import { diagnosticLocationKey, diagnosticSort } from "../diagnostics/print.js";
+import type { JsonObject, RawApi, RawWorkspace, RawWorkspaceConfig } from "../raw-tree.js";
 import { mergeLayers } from "./compose.js";
 import { asObject, Expander, type LayerBuild, navigate } from "./expand.js";
 import { isInside, joinPath, loadNormalizePath } from "./paths.js";
@@ -22,10 +22,6 @@ export interface LoadResult {
   diagnostics: Diagnostic[];
   /** Every file the load read or tried to read, sorted, for the watch primitive. */
   files: string[];
-  /** Per api, per layer, the layers whose names that layer may resolve (ADR 0002 section 2). */
-  visibility: Record<string, Record<string, string[]>>;
-  /** What `workspace.yaml` says besides the apis, passed through. */
-  config: { editorSchemas: string | undefined; imports: JsonValue | undefined };
 }
 
 // The keys a pack may hold (ADR 0002 section 1, table of file kinds).
@@ -85,11 +81,9 @@ class Loader {
 
   run(): LoadResult {
     const apis: RawApi[] = [];
-    const visibility: LoadResult["visibility"] = {};
-    const config: LoadResult["config"] = { editorSchemas: undefined, imports: undefined };
+    const config: RawWorkspaceConfig = {};
     const entry = loadNormalizePath(this.options.entry);
     const entrySite: SiteLocation = { file: entry, line: 1, column: 1, endLine: 1, endColumn: 1 };
-    this.rep.api = undefined;
     this.rep.layer = "api";
     let entryBuild: LayerBuild | undefined;
     if (!isInside(".", entry)) {
@@ -107,10 +101,10 @@ class Loader {
       const tree = entryBuild.tree;
       const ws = asObject(tree.workspace);
       if (ws) {
-        this.workspaceMode(entryBuild, ws, apis, visibility, config);
+        this.workspaceMode(entryBuild, ws, apis, config);
       } else if (asObject(tree.api)) {
         const name = asObject(tree.api)?.name;
-        if (typeof name === "string") this.loadApi(name, entryBuild, undefined, apis, visibility);
+        if (typeof name === "string") this.loadApi(name, entryBuild, undefined, apis);
         else
           this.badShape(
             entryBuild,
@@ -128,24 +122,14 @@ class Loader {
       }
     }
     const locations = this.rep.locations;
-    for (const api of apis) {
-      for (const b of this.apiBuilds.get(api.name) ?? []) {
-        for (const [ptr, site] of b.locs) {
-          const origin: Origin = { api: api.name, layer: b.layer, pointer: ptr };
-          locations[diagnosticLocationKey(origin)] = site;
-        }
-      }
-    }
+    const workspace: RawWorkspace = { root: ".", apis, locations };
+    if (Object.keys(config).length > 0) workspace.config = config;
     return {
-      workspace: { root: ".", apis, locations },
-      diagnostics: sortDiagnostics(this.rep.diagnostics, locations),
+      workspace,
+      diagnostics: diagnosticSort(this.rep.diagnostics, locations),
       files: [...this.store.touched].sort(),
-      visibility,
-      config,
     };
   }
-
-  private readonly apiBuilds = new Map<string, LayerBuild[]>();
 
   private badShape(b: LayerBuild, ptr: string, message: string, fix: string): void {
     this.rep.report({
@@ -172,8 +156,7 @@ class Loader {
     entry: LayerBuild,
     ws: JsonObject,
     apis: RawApi[],
-    visibility: LoadResult["visibility"],
-    config: LoadResult["config"],
+    config: RawWorkspaceConfig,
   ): void {
     const site = (ptr: string) => entry.locs.get(ptr) ?? nodeSite(entry.parsed, entry.parsed.root);
     if (typeof ws.editorSchemas === "string") config.editorSchemas = ws.editorSchemas;
@@ -222,7 +205,6 @@ class Loader {
       const r = this.store.resolve(entry.parsed, raw, at, "workspace");
       const pf = r && this.store.parse(r.path, ".");
       if (!pf) continue;
-      this.rep.api = name;
       this.rep.layer = "api";
       const build = this.layer(pf, "api");
       const declared = asObject(build.tree.api)?.name;
@@ -235,7 +217,7 @@ class Loader {
           related: [{ at, message: "named here" }],
         });
       }
-      this.loadApi(name, build, shared, apis, visibility);
+      this.loadApi(name, build, shared, apis);
     }
   }
 
@@ -244,9 +226,7 @@ class Loader {
     api: LayerBuild,
     shared: LayerBuild | undefined,
     apis: RawApi[],
-    visibility: LoadResult["visibility"],
   ): void {
-    this.rep.api = name;
     this.rep.layer = "api";
     const state: ApiState = { order: [], done: new Set() };
     // base
@@ -293,7 +273,6 @@ class Loader {
     const sharedPacks = shared ? this.applyList(shared, state) : [];
     const basePacks = base ? this.applyList(base, state) : [];
     this.applyList(api, state);
-    this.rep.api = name;
 
     const order: LayerBuild[] = [
       ...state.order.map((p) => p.build),
@@ -311,20 +290,22 @@ class Loader {
       }
       return seen;
     };
-    const layerName = (key: string) => this.packs.get(key)?.build.layer as string;
+    const layerName = (key: string) => this.packs.get(key)?.build.layer as Origin["layer"];
     const closureNames = (list: PackBuild[]) => {
       const keys = new Set<string>();
       for (const p of list) for (const k of closure(p)) keys.add(k);
       return [...keys].map(layerName);
     };
-    const sharedSees = shared ? ["shared", ...closureNames(sharedPacks)] : [];
-    const baseSees = base ? ["base", ...closureNames(basePacks), ...sharedSees] : [];
-    const vis: Record<string, string[]> = {};
-    for (const p of state.order) vis[p.build.layer] = [...closureNames([p])].sort();
+    const sharedSees: Origin["layer"][] = shared ? ["shared", ...closureNames(sharedPacks)] : [];
+    const baseSees: Origin["layer"][] = base
+      ? ["base", ...closureNames(basePacks), ...sharedSees]
+      : [];
+    // Null prototype: the keys are layer ids, which embed pack names an author chose.
+    const vis: RawApi["visibility"] = Object.create(null);
+    for (const p of state.order) vis[p.build.layer] = closureNames([p]).sort();
     if (shared) vis.shared = [...sharedSees].sort();
     if (base) vis.base = [...new Set(baseSees)].sort();
     vis.api = order.map((b) => b.layer).sort();
-    visibility[name] = vis;
 
     // Finish each layer once its visible layers are finished: schema files reached by `$ref`.
     const byLayer = new Map(order.map((b) => [b.layer as string, b]));
@@ -379,12 +360,20 @@ class Loader {
 
     this.rep.layer = "api";
     const { merged, leafOrigins } = mergeLayers(order, this.rep);
-    this.apiBuilds.set(name, order);
+    // ADR 0004 section 11: this api's own table, keyed exactly as its origins serialise.
+    const locations: RawApi["locations"] = {};
+    for (const b of order) {
+      for (const [pointer, site] of b.locs) {
+        locations[diagnosticLocationKey({ layer: b.layer, pointer })] = site;
+      }
+    }
     apis.push({
       name,
       layers: order.map((b) => ({ layer: b.layer, file: b.parsed.path, tree: b.tree })),
       merged,
       leafOrigins,
+      locations,
+      visibility: vis,
     });
   }
 

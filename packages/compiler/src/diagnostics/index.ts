@@ -1,6 +1,1 @@
-export {
-  diagnosticLocation,
-  diagnosticLocationKey,
-  printDiagnostics,
-  sortDiagnostics,
-} from "./print.js";
+export { diagnosticLocation, diagnosticSort, printDiagnostics } from "./print.js";

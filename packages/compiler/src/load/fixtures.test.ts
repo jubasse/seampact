@@ -51,7 +51,7 @@ test("fixture: inline and included routes give the same raw tree", () => {
   const b = included.workspace.apis[0];
   expect(JSON.stringify(b?.merged)).toBe(JSON.stringify(a?.merged));
   expect(JSON.stringify(b?.leafOrigins)).toBe(JSON.stringify(a?.leafOrigins));
-  expect(
-    included.workspace.locations["tasks:api#/surfaces/app/routes/tasks/routes/search/method"]?.file,
-  ).toBe("routes/search.yaml");
+  expect(b?.locations["api#/surfaces/app/routes/tasks/routes/search/method"]?.file).toBe(
+    "routes/search.yaml",
+  );
 });

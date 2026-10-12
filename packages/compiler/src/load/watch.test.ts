@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
-import { loadWatchFiles } from "./index.js";
+import { loadWatchFiles } from "./watch.js";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const dirs: string[] = [];

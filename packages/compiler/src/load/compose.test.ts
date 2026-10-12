@@ -1,7 +1,8 @@
 import { expect, test } from "vitest";
 import { must } from "./golden.js";
 import { diagnosticLocation, printDiagnostics } from "../diagnostics/print.js";
-import { type LoadMemoryOptions, loadMemoryReader, loadWorkspace } from "./index.js";
+import { loadWorkspace } from "./index.js";
+import { type LoadMemoryOptions, loadMemoryReader } from "./reader.js";
 
 function run(files: Record<string, string>, entry = "api.yaml", options?: LoadMemoryOptions) {
   const result = loadWorkspace({ reader: loadMemoryReader(files, options), entry });
@@ -76,7 +77,7 @@ test("layer visibility", () => {
   expect(d.fix).toBe("move the declaration into the shared file or the base");
   expect(r.where(d)).toMatchObject({ file: "base.yaml", line: 6 });
   expect(d.related[0]?.message).toBe("declared here");
-  expect(r.result.visibility.tasks).toEqual({
+  expect(r.result.workspace.apis[0]?.visibility).toEqual({
     "pack:s": ["pack:s"],
     shared: ["pack:s", "shared"],
     base: ["base", "pack:s", "shared"],
@@ -173,11 +174,8 @@ test("include keeps position", () => {
     "third",
   ]);
   expect(b.leafOrigins).toEqual(a.leafOrigins);
-  const loc = included.result.workspace.locations;
-  expect(loc["t:api#/schemas/Task/second"]).toMatchObject({ file: "mid.yaml", line: 1 });
-  expect(inline.result.workspace.locations["t:api#/schemas/Task/second"]).toMatchObject({
-    file: "api.yaml",
-  });
+  expect(b.locations["api#/schemas/Task/second"]).toMatchObject({ file: "mid.yaml", line: 1 });
+  expect(a.locations["api#/schemas/Task/second"]).toMatchObject({ file: "api.yaml" });
 });
 
 test("include merges several files in list order and takes a pointer", () => {
@@ -252,8 +250,8 @@ test("a file $ref used twice yields one element, and it keeps its identity", () 
   expect(Object.keys(m.schemas)).toEqual(["Task", "Owner"]);
   expect(m.surfaces.app.one?.output).toEqual({ $ref: "Task" });
   expect(m.surfaces.app.two?.output).toEqual({ $ref: "Task" });
-  const loc = r.result.workspace.locations;
-  expect(loc["t:api#/schemas/Task"]).toMatchObject({ file: "schemas/task.yaml", line: 1 });
+  const loc = must(r.result.workspace.apis[0]).locations;
+  expect(loc["api#/schemas/Task"]).toMatchObject({ file: "schemas/task.yaml", line: 1 });
 });
 
 test("a file both included into a catalogue and reached by $ref is declared once", () => {
@@ -368,9 +366,37 @@ test("apis of one workspace keep their own locations", () => {
     },
     "workspace.yaml",
   );
-  const loc = r.result.workspace.locations;
-  expect(loc["one:base#/rights/r"]?.file).toBe("b1.yaml");
-  expect(loc["two:base#/rights/r"]?.file).toBe("b2.yaml");
+  const [one, two] = r.result.workspace.apis;
+  expect(one?.locations["base#/rights/r"]?.file).toBe("b1.yaml");
+  expect(two?.locations["base#/rights/r"]?.file).toBe("b2.yaml");
+});
+
+test("a leaf origin resolves to file:line:col through its api's table", () => {
+  const r = run(
+    {
+      "workspace.yaml": "workspace:\n  apis: { one: ./one.yaml, two: ./two.yaml }\n",
+      "one.yaml": "api: { name: one }\nextends: ./b1.yaml\n",
+      "two.yaml": "api: { name: two }\nextends: ./b2.yaml\n",
+      "b1.yaml": "conventions:\n  paging: { maxLimit: 10 }\n",
+      "b2.yaml": "\nconventions:\n  paging:\n    maxLimit: 20\n",
+    },
+    "workspace.yaml",
+  );
+  expect(r.result.diagnostics).toEqual([]);
+  for (const [api, file, line, column] of [
+    [r.result.workspace.apis[0], "b1.yaml", 2, 13],
+    [r.result.workspace.apis[1], "b2.yaml", 4, 5],
+  ] as const) {
+    const origin = must(api?.leafOrigins["/conventions/paging/maxLimit"]);
+    expect(origin).toEqual({ layer: "base", pointer: "/conventions/paging/maxLimit" });
+    expect(diagnosticLocation(origin, must(api).locations)).toEqual({
+      file,
+      line,
+      column,
+      endLine: line,
+      endColumn: expect.any(Number),
+    });
+  }
 });
 
 test("a file $ref without a pointer needs a file with exactly one element", () => {

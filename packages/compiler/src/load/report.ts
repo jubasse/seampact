@@ -28,18 +28,13 @@ export function loadSitePointer(site: SiteLocation): string {
 export class Reporter {
   readonly diagnostics: Diagnostic[] = [];
   readonly locations: SourceMap["locations"] = {};
-  // Set by the loader before it works on a layer; parse-level diagnostics of a file shared by
-  // several apis are reported once, under the first api that reached it.
-  api: string | undefined;
+  // Set by the loader before it works on a layer. A file shared by several apis is reported
+  // once: its site pointer locates it the same way for every api (`RawWorkspace.locations`).
   layer: Origin["layer"] = "api";
   private readonly seen = new Set<string>();
 
   originAt(site: SiteLocation): Origin {
-    const origin: Origin = {
-      ...(this.api === undefined ? {} : { api: this.api }),
-      layer: this.layer,
-      pointer: loadSitePointer(site),
-    };
+    const origin: Origin = { layer: this.layer, pointer: loadSitePointer(site) };
     this.locations[diagnosticLocationKey(origin)] = site;
     return origin;
   }
