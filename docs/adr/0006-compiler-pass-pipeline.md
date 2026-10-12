@@ -36,6 +36,14 @@ load -> validate -> tree -> access -> derive -> link -> finalize
 
 The order is fixed. Each api of a workspace runs through derive on its own, in relay order: an api with relay routes runs after every workspace api they name, because its tree pass copies the public operations from that api's derived IR (an imported api's IR comes from its pinned bundle). Relays that form a cycle between apis are a compile error naming them. Link then sees all of them. A step that reports an error stops the pipeline after it completes, so later passes always receive consistent input, while every error of the failing step is still reported at once.
 
+The load stage's trust model: contract files and the packs installed beside them are trusted like any dependency the user chooses to install, as an npm package, an ESLint or a Babel plugin is (a pack, unlike those, is data only). The loader keeps what is a correctness or safety guarantee whoever wrote the files:
+
+- root containment: nothing outside the workspace root, or outside a pack's package directory, is read, through links and `../` included;
+- prototype keys refused: `__proto__`, `constructor` and `prototype` are refused as keys and api names, so a raw tree is plain data;
+- a depth limit, a per-file size limit and a per-load budget of work and text, which turn a runaway include or expansion into a located error instead of a hang.
+
+Its non-goals: defending against an adversarial contract or pack author, and denial of service beyond those limits, which are not tuned against a hostile author. A pitfall of ADR 0002 section 3 is a diagnostic that keeps the YAML an author means the YAML the compiler reads, not a defence.
+
 ### 2. The pass interface (amendment 2026-10-12, p2-pipeline)
 
 Each of the three api passes runs as two halves, each a `PassPart`:
@@ -118,6 +126,7 @@ tasks/api.yaml:42:9: error seampact/access/deny-by-default: route 'exportTasks' 
 
 - Rule ids are `seampact/<step>/<rule>` in kebab case; they are stable, documented, and used by `lint.allow` only for lint rules, never to silence a compile error.
 - Diagnostics are sorted by file, line, column, then rule, so the output is deterministic.
+- Each origin resolves through one side table (ADR 0004 section 11). The load stage's diagnostics and every diagnostic on the workspace entry file resolve through `RawWorkspace.locations`: the entry document's pointers under `workspace#<pointer>`, a key the compiler spells in one place (`entryLocationKey`), and the load sites under `<layer>#/~load/<file>/<line>/<column>`, a set no entry pointer meets, as none starts `/~load/`. Every other diagnostic belongs to one api and resolves through that api's `RawApi.locations`. The pipeline returns the workspace table beside the per-api tables, so a consumer looks a workspace diagnostic up in the first and an api's in its own. A workspace whose entry is a single api file has no entry document: the workspace part of the validate stage's result is empty, and that file's diagnostics are its api's.
 - Warnings do not fail `compile`; `compile --strict`, which CI uses, fails on them. A lint rule's severity comes from `lint.rules` (ADR 0002 section 12): `error` fails `compile`, `disabled` never runs, and a `lint.allow` on an element or an ancestor silences the rule there.
 - Lint rules (FR-12) report through the same structure, with ids `<plugin>/<rule>`.
 - `seampact explain` (ADR 0002 section 16) turns the same origins and `derivedFrom` into file and line comments on an operation's every element, so the answer to "where does this code come from" is the one the diagnostics use.
