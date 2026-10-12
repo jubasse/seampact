@@ -17,6 +17,7 @@ import {
   AUTHORING_FILES,
   type AuthoringFile,
   authoringSchemas,
+  DATA,
   type JsonSchema,
 } from "@seampact/spec/authoring";
 
@@ -30,7 +31,7 @@ export type PositionKind = "workspace" | "api" | "base" | "pack";
 type Types = ReadonlySet<TypeName> | undefined;
 
 export interface Position {
-  /** A node with no constraint at all: anything below is data. */
+  /** A data position, marked `DATA` by the grammar: anything below is data. */
   readonly data: boolean;
   /** What the position accepts, `undefined` when it cannot say. */
   readonly types: Types;
@@ -56,7 +57,6 @@ export interface MapView {
 
 export const NOT_SCALAR: unique symbol = Symbol("not a scalar");
 
-const ANNOTATIONS = new Set(["$comment", "description", "title", "examples", "default"]);
 const TYPE_NAMES = new Set<string>([
   "string",
   "number",
@@ -322,14 +322,23 @@ export function refinePosition(pos: Position | undefined, view: MapView): Positi
   return refined;
 }
 
-function isEmpty(node: JsonSchema): boolean {
-  return Object.keys(node).every((k) => ANNOTATIONS.has(k));
+function isData(node: JsonSchema): boolean {
+  return node.title === DATA;
+}
+
+// A node fragment whose kind an include brings (`node.schema.json#/$defs/includedNode`) lists the
+// keys of every node kind with no constraint, for an editor; the kinds themselves type those keys,
+// so its placeholders never count here.
+let includedNode: JsonSchema | undefined;
+function isIncludedNode(node: JsonSchema): boolean {
+  includedNode ??= resolveRef("node.schema.json#/$defs/includedNode", "node")?.node;
+  return node === includedNode;
 }
 
 function position(nodes: JsonSchema[]): Position | undefined {
   const live = nodes.filter((n) => !isConflict(n));
   if (live.length === 0) return undefined;
-  const data = live.every(isEmpty);
+  const data = live.every(isData);
   return {
     data,
     types: data ? undefined : union(live.map(typesOf)),
@@ -358,6 +367,7 @@ function patternOf(pattern: string): RegExp {
 function stepNodes(from: Position, segment: string, isIndex: boolean): JsonSchema[] {
   const found: JsonSchema[] = [];
   for (const leaf of leafSetOf(from)) {
+    if (isIncludedNode(leaf)) continue;
     if (isIndex) {
       // `items` is the one form the grammar writes for lists.
       if (isSchema(leaf.items)) found.push(tagged(leaf.items, fileOf(leaf)));

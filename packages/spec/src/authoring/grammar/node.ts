@@ -4,6 +4,7 @@
 import {
   A2,
   conflict,
+  data,
   forbid,
   type JsonSchema,
   keyNames,
@@ -542,7 +543,7 @@ export function nodeDefs(): Record<string, JsonSchema> {
           status: kw(A2(12), { type: "integer", minimum: 200, maximum: 399 }),
           request: kw(A2(12), { const: true }),
           error: kw(A2(12), ref("common", "errorCode")),
-          value: kw(A2(12), {}, "The payload, the request body or the code's params."),
+          value: kw(A2(12), data(), "The payload, the request body or the code's params."),
         },
         required: ["value"],
       }),
@@ -557,7 +558,7 @@ export function errorDeclarationProps(): Record<string, JsonSchema> {
     nature: kw(A2(11), ref("common", "name"), "A base nature or one of the 'natures' catalogue."),
     family: kw(A2(11), ref("common", "errorCode"), "Groups codes in docs and clients."),
     params: kw(A2(11), fields(), "A fields map or a schema name."),
-    example: kw(A2(11), {}, "The params."),
+    example: kw(A2(11), data(), "The params."),
     title: kw(A2(11), str()),
     ...docs(12),
   };
@@ -580,7 +581,7 @@ export function nodeErrorsDefs(): Record<string, JsonSchema> {
       ...when(
         req("status"),
         object({ props: { ...errorDeclarationProps(), ...reach } }),
-        object({ props: { example: kw(A2(11), {}), ...reach } }),
+        object({ props: { example: kw(A2(11), data()), ...reach } }),
       ),
     },
   };

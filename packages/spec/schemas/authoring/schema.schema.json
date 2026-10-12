@@ -373,12 +373,15 @@
           "$comment": "ADR 0003 section 1"
         },
         "default": {
+          "title": "data",
           "$comment": "ADR 0003 section 10",
           "description": "On an optional input property or query field only (ADR 0003 section 10)."
         },
         "examples": {
           "type": "array",
-          "items": {},
+          "items": {
+            "title": "data"
+          },
           "$comment": "ADR 0003 section 11",
           "description": "Values parsed against the schema at compile time."
         },
@@ -631,12 +634,15 @@
           "$comment": "ADR 0003 section 1"
         },
         "default": {
+          "title": "data",
           "$comment": "ADR 0003 section 10",
           "description": "On an optional input property or query field only (ADR 0003 section 10)."
         },
         "examples": {
           "type": "array",
-          "items": {},
+          "items": {
+            "title": "data"
+          },
           "$comment": "ADR 0003 section 11",
           "description": "Values parsed against the schema at compile time."
         },
@@ -999,7 +1005,9 @@
         },
         "examples": {
           "type": "array",
-          "items": {},
+          "items": {
+            "title": "data"
+          },
           "$comment": "ADR 0003 section 11",
           "description": "Values parsed against the schema at compile time."
         },
@@ -1236,6 +1244,7 @@
           "$comment": "ADR 0003 section 2"
         },
         "default": {
+          "title": "data",
           "$comment": "ADR 0003 section 2"
         },
         "restrictedTo": {
@@ -1256,7 +1265,9 @@
         },
         "examples": {
           "type": "array",
-          "items": {},
+          "items": {
+            "title": "data"
+          },
           "$comment": "ADR 0003 section 2"
         },
         "$schema": {

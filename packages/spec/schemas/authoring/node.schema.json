@@ -2812,6 +2812,7 @@
             "$comment": "ADR 0002 section 12"
           },
           "value": {
+            "title": "data",
             "$comment": "ADR 0002 section 12",
             "description": "The payload, the request body or the code's params."
           },

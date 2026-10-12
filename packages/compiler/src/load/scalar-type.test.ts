@@ -157,6 +157,26 @@ describe("p6 typed scalar", () => {
   });
 });
 
+describe("data positions are the ones the grammar marks", () => {
+  test("an extension value is not data: no data-null, and $file keeps its rule", () => {
+    const r = load({
+      "api.yaml": "api:\n  name: t\n  x-acme-note: ~\n  x-acme-doc: { $file: ./a.md, b: 1 }\n",
+      "a.md": "text\n",
+    });
+    expect(r.rules).toEqual(["directive-siblings"]);
+  });
+
+  test("a node fragment's placeholders never count: an included route's keys are typed", () => {
+    const r = load({
+      "api.yaml":
+        "api: { name: t }\nsurfaces:\n  app:\n    routes:\n      r:\n        $include: ./r.yaml\n        internal: ~\n        examples:\n          e: { status: 200, value: ~ }\n",
+      "r.yaml": "method: get\n",
+    });
+    expect(r.rules).toEqual(["scalar-type", "data-null"]);
+    expect(r.printed).toContain("api.yaml:7:19: error seampact/load/scalar-type");
+  });
+});
+
 describe("p6 beside p1 to p4", () => {
   test("a scalar P1 to P4 already refuse gets no P6 report", () => {
     for (const v of ["1_000", "0x1F", "yes", "2027-06-30"]) {

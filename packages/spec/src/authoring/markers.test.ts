@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { EDITOR_TITLES, isMarker, MARKERS } from "./markers.js";
+import { DATA, EDITOR_TITLES, isMarker, MARKERS } from "./markers.js";
 import { AUTHORING_FILES, authoringSchemas } from "./schemas.js";
 
 function titles(node: unknown, out: Set<string>): Set<string> {
@@ -29,10 +29,11 @@ test("every title in the generated schemas is a marker or an editor title", () =
     const { title: _fileTitle, ...below } = authoringSchemas()[file] as Record<string, unknown>;
     titles(below, found);
   }
-  const known = new Set<string>([...Object.values(MARKERS), ...EDITOR_TITLES]);
+  const known = new Set<string>([...Object.values(MARKERS), ...EDITOR_TITLES, DATA]);
   expect([...found].filter((t) => !known.has(t)).sort()).toEqual([]);
   expect(EDITOR_TITLES.filter((t) => !found.has(t))).toEqual([]);
   expect(EDITOR_TITLES.filter(isMarker)).toEqual([]);
+  expect(isMarker(DATA) || EDITOR_TITLES.includes(DATA)).toBe(false);
 });
 
 test("markers are distinct and recognised", () => {
@@ -40,4 +41,35 @@ test("markers are distinct and recognised", () => {
   expect(new Set(values).size).toBe(values.length);
   expect(values.every(isMarker)).toBe(true);
   expect(isMarker("path")).toBe(false);
+});
+
+function dataPointers(node: unknown, where: string, out: string[]): string[] {
+  if (Array.isArray(node)) node.forEach((child, i) => dataPointers(child, `${where}/${i}`, out));
+  else if (node !== null && typeof node === "object") {
+    if ((node as Record<string, unknown>).title === DATA) out.push(where);
+    for (const [key, child] of Object.entries(node)) {
+      if (key !== "title") dataPointers(child, `${where}/${key}`, out);
+    }
+  }
+  return out;
+}
+
+// The data positions are marked, never inferred (ADR 0002 section 2): a payload, an example, a
+// default. Adding one is a grammar decision, seen here.
+test("the data positions are the ones marked DATA", () => {
+  const found: string[] = [];
+  for (const file of AUTHORING_FILES) dataPointers(authoringSchemas()[file], file, found);
+  expect(found.sort()).toEqual([
+    "errors/$defs/entry/properties/example",
+    "node-errors/$defs/attachment/else/properties/example",
+    "node-errors/$defs/attachment/then/properties/example",
+    "node/$defs/examples/additionalProperties/properties/value",
+    "schema/$defs/derived/properties/examples/items",
+    "schema/$defs/overlay/properties/default",
+    "schema/$defs/overlay/properties/examples/items",
+    "schema/$defs/plain/properties/default",
+    "schema/$defs/plain/properties/examples/items",
+    "schema/$defs/referenceMapping/properties/default",
+    "schema/$defs/referenceMapping/properties/examples/items",
+  ]);
 });

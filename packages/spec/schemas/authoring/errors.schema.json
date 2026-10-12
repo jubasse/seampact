@@ -48,6 +48,7 @@
           "description": "A fields map or a schema name."
         },
         "example": {
+          "title": "data",
           "$comment": "ADR 0002 section 11",
           "description": "The params."
         },

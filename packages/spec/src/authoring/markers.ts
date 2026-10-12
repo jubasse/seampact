@@ -68,6 +68,13 @@ export const EDITOR_TITLES: readonly string[] = [
 // implementation reads alike (a pattern lookahead is not portable to RE2-based validators).
 export const RESERVED_NAMES = ["__proto__", "constructor", "prototype"] as const;
 
+// The title of a data position (ADR 0002 section 2): a payload, an example, a default, where the
+// grammar expects any value. The loader reads it: there, null is written `null`, a mapping holding
+// only `$file` is replaced, and no scalar type is checked (P6). The positions are marked, never
+// inferred: an extension value or a node fragment's placeholder is not data. No rule of the
+// validate stage reads it.
+export const DATA = "data";
+
 const MARKER_SET: ReadonlySet<string> = new Set(Object.values(MARKERS));
 
 export function isMarker(title: unknown): title is Marker {
