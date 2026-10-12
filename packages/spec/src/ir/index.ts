@@ -1,4 +1,5 @@
 export type * from "./types.generated.js";
+export type * as IrWriter from "./types.writer.generated.js";
 export {
   IR_SCHEMA_BASE,
   IR_SCHEMA_DOCUMENTS,
