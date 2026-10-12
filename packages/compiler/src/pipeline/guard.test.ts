@@ -275,3 +275,55 @@ describe("guard refuses undeclared access", () => {
     expect(() => guard.dispose()).not.toThrow();
   });
 });
+
+// The guard catches mistakes of our own pass lanes, not an adversary; these are the ways a write could still
+// slip past its checks by accident.
+describe("guard refuses writes around its checks", () => {
+  test("a symbol key is no draft member: set, defineProperty and delete are refused", () => {
+    const value = draft();
+    const guarded = pipelineGuard(value, part("tree.nodes", [], ["operations[].docs"]));
+    const operation = operationOf(guarded);
+    const key = Symbol("note");
+    expect(refused(() => Reflect.set(operation, key, 1)).message).toContain("symbol");
+    expect(refused(() => Object.defineProperty(operation, key, { value: 1 })).access).toBe(
+      "write",
+    );
+    expect(refused(() => Reflect.deleteProperty(operation, key)).access).toBe("write");
+    expect(Object.getOwnPropertySymbols(operationOf(value))).toEqual([]);
+  });
+
+  test("an accessor descriptor is refused, even on a field the half owns", () => {
+    const value = draft();
+    const guarded = pipelineGuard(value, part("derive.wire", [], ["operations[].cache"]));
+    const accessor = refused(() =>
+      Object.defineProperty(operationOf(guarded), "cache", { get: () => undefined }),
+    );
+    expect(accessor.message).toContain("accessor");
+    expect(Object.hasOwn(operationOf(value), "cache")).toBe(false);
+  });
+
+  test("changing a prototype or preventing extensions through a guard is refused", () => {
+    const value = draft();
+    const guarded = pipelineGuard(value, part("tree.nodes", [], ["operations[]"]));
+    expect(refused(() => Object.setPrototypeOf(operationOf(guarded), null)).access).toBe("write");
+    expect(refused(() => Object.preventExtensions(guarded.operations)).access).toBe("write");
+    expect(refused(() => Object.freeze(operationOf(guarded))).access).toBe("write");
+    expect(Object.getPrototypeOf(operationOf(value))).toBe(Object.prototype);
+    expect(Object.isExtensible(value.operations)).toBe(true);
+  });
+
+  test("an array length is coerced before the check, as the array coerces it", () => {
+    const value = draft();
+    const wire = pipelineGuard(value, part("derive.wire", [], ["operations[].params.query"]));
+    const list = operationOf(wire).params?.query;
+    if (list === undefined) throw new Error("no query list");
+    expect(refused(() => Reflect.set(list, "length", "0")).message).toContain(
+      "owned by tree.nodes (declared)",
+    );
+    expect(
+      refused(() => Object.defineProperty(list, "length", { value: 0 })).message,
+    ).toContain("owned by tree.nodes (declared)");
+    expect(operationOf(value).params?.query).toHaveLength(1);
+    expect(() => Reflect.set(list, "length", -1)).toThrow(RangeError);
+  });
+});

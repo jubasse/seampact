@@ -353,6 +353,28 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
     checkWrite(next, value, Reflect.get(target, key));
   };
 
+  // Checks writing `value` (undefined for a delete) at `target[key]`, and returns the value to store.
+  const assign = (
+    position: Position,
+    target: object,
+    key: string | symbol,
+    value: unknown,
+  ): unknown => {
+    if (typeof key === "symbol")
+      fail("write", position, `a symbol key (${String(key)}) is no draft member`);
+    const plain = unwrap(value);
+    if (Array.isArray(target) && key === "length") {
+      // Coerced first, as the array coerces it, so `length = "0"` is checked as the truncation it is. An invalid
+      // length changes nothing: storing it throws a RangeError.
+      const length = Number(plain);
+      if (Number.isInteger(length) && length >= 0)
+        checkWrite(position, target.slice(0, length), target.slice());
+      return length;
+    }
+    write(position, target, key, plain);
+    return plain;
+  };
+
   const handlerAt = (position: Position): ProxyHandler<object> => ({
     get(target, key, receiver) {
       const next = read(position, target, key);
@@ -377,24 +399,24 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
       return Reflect.ownKeys(target);
     },
     set(target, key, value) {
-      const plain = unwrap(value);
-      if (typeof key === "symbol") return Reflect.set(target, key, plain);
-      if (Array.isArray(target) && key === "length") {
-        const length = typeof plain === "number" ? plain : target.length;
-        checkWrite(position, target.slice(0, length), target.slice());
-      } else write(position, target, key, plain);
-      return Reflect.set(target, key, plain);
+      return Reflect.set(target, key, assign(position, target, key, value));
     },
     deleteProperty(target, key) {
-      if (typeof key !== "symbol") write(position, target, key, undefined);
+      assign(position, target, key, undefined);
       return Reflect.deleteProperty(target, key);
     },
     defineProperty(target, key, descriptor) {
-      if (typeof key === "symbol" || !("value" in descriptor))
-        return Reflect.defineProperty(target, key, descriptor);
-      const plain = unwrap(descriptor.value);
-      write(position, target, key, plain);
+      // The draft is data: a getter or a setter would run code on every later read or write, unchecked.
+      if ("get" in descriptor || "set" in descriptor)
+        fail("write", position, `an accessor for ${String(key)} is no draft member`);
+      const plain = assign(position, target, key, descriptor.value);
       return Reflect.defineProperty(target, key, { ...descriptor, value: plain });
+    },
+    setPrototypeOf() {
+      return fail("write", position, "a draft value keeps its prototype");
+    },
+    preventExtensions() {
+      return fail("write", position, "a draft value stays extensible for the halves after this one");
     },
   });
 
