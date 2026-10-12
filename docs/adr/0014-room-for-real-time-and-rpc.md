@@ -4,7 +4,7 @@ Status: accepted
 
 ## Context
 
-Real-time (WebSocket, Server-Sent Events, AsyncAPI), gRPC and GraphQL are out of the first versions (brief section 3, PRD non-goals). The brief asks for an ADR that keeps room for them in the IR, so they can arrive later without a breaking change. After 1.0, a removal or change of meaning in the IR bumps `irVersion` and the major version (amendment A8), so whatever room is needed must exist when the IR is frozen for targets (FR-37).
+Real-time (WebSocket, Server-Sent Events, AsyncAPI), gRPC and GraphQL are out of the first versions (FEAT-001 non-goals). This ADR keeps room for them in the IR, so they can arrive later without a breaking change. After 1.0, a removal or change of meaning in the IR bumps `irVersion` and the major version (amendment [A8](../decisions.md#a8)), so whatever room is needed must exist when the IR is frozen for targets (FR-37).
 
 Lesson 5 forbids building ahead of use: no keyword, IR field or target code for these transports now. The question is only which IR properties would otherwise force a breaking change later.
 
@@ -53,5 +53,5 @@ None of these is planned for 1.0, and none has a named consumer (lesson 5).
 
 ## Traceability
 
-- FRs: FR-37 (additive by design), FR-14 (a target refuses a feature it cannot express), FR-9 (versioned IR); amendment A8; brief section 3 and open question 6.
+- FRs: FR-37 (additive by design), FR-14 (a target refuses a feature it cannot express), FR-9 (versioned IR); amendment A8; FEAT-001 non-goals.
 - Checklist items enabled: CHK-077 and CHK-078 (version ranges, unknown kinds refused with a named diagnostic).

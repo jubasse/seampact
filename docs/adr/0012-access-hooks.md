@@ -4,15 +4,15 @@ Status: accepted
 
 ## Context
 
-Authentication, rights, roles and tenancy are unopinionated, even at the cost of less generated code (amendment A25). The contract declares what a route requires: an identity and its principal schema, requirements (rights and rules) with typed params and a subject, tenancy scopes, and the errors each can raise. It never says how a credential is checked, how a right is decided or how a tenant is found. Applications keep the libraries they already use: Clerk, better-auth, Passport, CASL, spatie/laravel-permission, Laravel Gates and Policies, Symfony Voters, Spring Security, or hand-written code (A25). seampact adapts to the framework's own mechanisms and never replaces them (A30).
+Authentication, rights, roles and tenancy are unopinionated, even at the cost of less generated code (amendment [A25](../decisions.md#a25)). The contract declares what a route requires: an identity and its principal schema, requirements (rights and rules) with typed params and a subject, tenancy scopes, and the errors each can raise. It never says how a credential is checked, how a right is decided or how a tenant is found. Applications keep the libraries they already use: Clerk, better-auth, Passport, CASL, spatie/laravel-permission, Laravel Gates and Policies, Symfony Voters, Spring Security, or hand-written code (A25). seampact adapts to the framework's own mechanisms and never replaces them ([A30](../decisions.md#a30)).
 
-Early research proposed mapping each right onto each framework's native authorization mechanism inside the target. A25 overrides that: targets generate neutral hooks only, and native mappings are optional adapter packages. Rights stay flexible (A20), a restricted input field is rejected or stripped by configuration (A21), and tenancy is open (A23). 1.0 ships the CASL and spatie adapters (A24).
+Early research proposed mapping each right onto each framework's native authorization mechanism inside the target. A25 overrides that: targets generate neutral hooks only, and native mappings are optional adapter packages. Rights stay flexible ([A20](../decisions.md#a20)), a restricted input field is rejected or stripped by configuration ([A21](../decisions.md#a21)), and tenancy is open ([A23](../decisions.md#a23)). 1.0 ships the CASL and spatie adapters ([A24](../decisions.md#a24)).
 
 Rights, rules, scopes and identities are declared with the grammar of ADR 0002 and recorded in the IR of ADR 0004. This ADR decides the runtime boundary every server target generates from them.
 
 ## Options
 
-- Map each right onto the framework's native authorization inside the target (`#[IsGranted]`, `@PreAuthorize`, policies), as the rights research proposed; generate neutral typed hooks, with native mappings as optional adapters; or generate nothing for access. Choice: neutral hooks (A25), with native access as an opt-in setup (A42, "Native access instead of hooks" below). A native mapping imposes one library per framework, and generating nothing leaves deny by default and the check order unenforced at the boundary.
+- Map each right onto the framework's native authorization inside the target (`#[IsGranted]`, `@PreAuthorize`, policies), as the rights research proposed; generate neutral typed hooks, with native mappings as optional adapters; or generate nothing for access. Choice: neutral hooks (A25), with native access as an opt-in setup ([A42](../decisions.md#a42), "Native access instead of hooks" below). A native mapping imposes one library per framework, and generating nothing leaves deny by default and the check order unenforced at the boundary.
 
 ## Decisions
 
@@ -21,8 +21,8 @@ Rights, rules, scopes and identities are declared with the grammar of ADR 0002 a
 Every server target generates exactly three hook interfaces (FR-25), unless the app turns `accessHooks` off for native access (below). Each is typed from the contract: the generated request types name the identity, right, rule or scope and carry its declared params, principal and error codes.
 
 **Authenticate**, one per identity. It receives:
-- the identity name and the credentials found in the locations the identity's schemes declare for this request (read or write schemes), including the CSRF companion value on a write through a cookie scheme that declares `csrf` (opt-in, A34);
-- for a signed identity, the raw body and the parsed signature fields (ADR 0013), or, for a scheme with `verify: application`, the raw body, the signature header and the scheme's declared headers, unparsed (ADR 0002 section 9, A40);
+- the identity name and the credentials found in the locations the identity's schemes declare for this request (read or write schemes), including the CSRF companion value on a write through a cookie scheme that declares `csrf` (opt-in, [A34](../decisions.md#a34));
+- for a signed identity, the raw body and the parsed signature fields (ADR 0013), or, for a scheme with `verify: application`, the raw body, the signature header and the scheme's declared headers, unparsed (ADR 0002 section 9, [A40](../decisions.md#a40));
 - a read-only view of the request (method, path, headers, client address) and the operation reference;
 - the operation's extension metadata (A20).
 
@@ -53,7 +53,7 @@ export type Decision<C extends ErrorCodeWithParams> = { allow: true } | { deny: 
 
 ### Your controller, the generated utilities around it
 
-No target generates the framework controller (A41). The developer writes the controller, or its framework's equivalent, and implements on it the generated interface of its resource, tag or operation (ADR 0007 `handlers`), whose methods carry the exact input and output types. Codegen emits only what sits around that controller: types, validators, interfaces, and utility annotations, attributes, decorators, middleware or hooks that place every step of the check order (below) in the framework's own pipeline. Where the language composes annotations, each operation gets one composite the developer puts on its method; where it does not (PHP attributes), a generated attribute names the operation and a generated listener reads it. Every artefact is switchable in the app config, and all generated code goes to the app's one generated directory, `__generated__` by default (ADR 0011).
+No target generates the framework controller ([A41](../decisions.md#a41)). The developer writes the controller, or its framework's equivalent, and implements on it the generated interface of its resource, tag or operation (ADR 0007 `handlers`), whose methods carry the exact input and output types. Codegen emits only what sits around that controller: types, validators, interfaces, and utility annotations, attributes, decorators, middleware or hooks that place every step of the check order (below) in the framework's own pipeline. Where the language composes annotations, each operation gets one composite the developer puts on its method; where it does not (PHP attributes), a generated attribute names the operation and a generated listener reads it. Every artefact is switchable in the app config, and all generated code goes to the app's one generated directory, `__generated__` by default (ADR 0011).
 
 | Target | The developer writes | Generated around it |
 |---|---|---|
@@ -68,7 +68,7 @@ No target generates the framework controller (A41). The developer writes the con
 
 What the boot check calls a bound handler is, per target, this developer code: a controller method carrying the operation's composite (nestjs, spring-boot), a container binding of the interface (laravel, adonis), a service carrying the operation's attribute (symfony), a provider or processor for the operation (api-platform), an entry of the handler map (fastify, express).
 
-Bodies beyond JSON (A39) use each framework's own mechanism, with the contract's limits:
+Bodies beyond JSON ([A39](../decisions.md#a39)) use each framework's own mechanism, with the contract's limits:
 
 | Target | Form and multipart input | Download | Redirect |
 |---|---|---|---|
@@ -219,6 +219,6 @@ Each target's own ADR states, besides its placement above:
 
 ## Traceability
 
-- FRs: FR-4, FR-5, FR-16 (controllers stay the developer's, A41), FR-19 (spring-boot check placement), FR-22, FR-23, FR-24, FR-25, FR-26, FR-27, FR-41, FR-10 (metadata reaches the boundary); amendments A18, A20, A21, A23, A24, A25, A30, A39, A40, A41, A42, A43.
+- FRs: FR-4, FR-5, FR-16 (controllers stay the developer's, A41), FR-19 (spring-boot check placement), FR-22, FR-23, FR-24, FR-25, FR-26, FR-27, FR-41, FR-10 (metadata reaches the boundary); amendments [A18](../decisions.md#a18), A20, A21, A23, A24, A25, A30, A39, A40, A41, A42, [A43](../decisions.md#a43).
 - Checklist items enabled: CHK-004, CHK-006, CHK-007 (identities, variants, CSRF), CHK-014 (order and boot refusal), CHK-015, CHK-016 (throttle bucket and proof reach the hook), CHK-017, CHK-018, CHK-019, CHK-020, CHK-025, CHK-033, CHK-062, CHK-063, CHK-086, CHK-087, CHK-090, CHK-091, CHK-092, CHK-093, CHK-094, CHK-096, CHK-097, CHK-098, CHK-099, CHK-116 (no second 404 for a scoped id), CHK-117 (no field rights on a relay route); from round 4, CHK-131, CHK-133, CHK-147, CHK-150 to CHK-158, CHK-161 to CHK-164, CHK-168, CHK-169; from round 5, CHK-170 (framework document routes in the boot check), CHK-174 (symfony, api-platform, adonis and fastify step placement).
 - Success metric: SM-8.

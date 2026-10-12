@@ -4,9 +4,9 @@ Status: accepted
 
 ## Context
 
-Inbound signed webhooks are in v1, minimal (amendment A5). A third-party caller, such as a payment provider or a media server, has no user token; it proves itself by signing the request with a shared secret. The first consumer is a Stripe-style scheme: a header carrying a timestamp and an HMAC-SHA256 of `"{timestamp}.{raw body}"`, a five-minute tolerance, and a raw body requirement.
+Inbound signed webhooks are in v1, minimal (amendment [A5](../decisions.md#a5)). A third-party caller, such as a payment provider or a media server, has no user token; it proves itself by signing the request with a shared secret. The first consumer is a Stripe-style scheme: a header carrying a timestamp and an HMAC-SHA256 of `"{timestamp}.{raw body}"`, a five-minute tolerance, and a raw body requirement.
 
-Authentication stays neutral (A25, ADR 0012): the generated boundary must not force a verification implementation on the application. A40 settles the tension between A5's "minimal" and A36: a sender whose signature no template describes must still fit, so the scheme has a neutral form that leaves verification to the application. FR-20 asks for a signed identity kind, a declared scheme, and an optional runtime helper that implements the scheme behind the authenticate hook, with test vectors computed by an independent tool.
+Authentication stays neutral ([A25](../decisions.md#a25), ADR 0012): the generated boundary must not force a verification implementation on the application. [A40](../decisions.md#a40) settles the tension between A5's "minimal" and [A36](../decisions.md#a36): a sender whose signature no template describes must still fit, so the scheme has a neutral form that leaves verification to the application. FR-20 asks for a signed identity kind, a declared scheme, and an optional runtime helper that implements the scheme behind the authenticate hook, with test vectors computed by an independent tool.
 
 The keywords are defined by the grammar (ADR 0002). YAML below is illustration only, syntax per ADR 0002.
 
@@ -135,7 +135,7 @@ Each ecosystem has an optional helper that implements a template scheme behind t
 4. compares in constant time (`crypto.timingSafeEqual`, `MessageDigest.isEqual`, `hash_equals`); one match passes;
 5. refuses when the distance between the timestamp and now exceeds the tolerance, in either direction; the clock is injectable for tests.
 
-Raw body capture uses each framework's own facility (A30): the `rawBody` option in NestJS, a buffer content-type parser on the route in Fastify, `express.raw` on the route in Express, `request.raw()` in AdonisJS, the generated servlet filter in Spring (no controller is generated, ADR 0012), `getContent()` in Laravel and Symfony. No middleware may re-serialize the body before capture.
+Raw body capture uses each framework's own facility ([A30](../decisions.md#a30)): the `rawBody` option in NestJS, a buffer content-type parser on the route in Fastify, `express.raw` on the route in Express, `request.raw()` in AdonisJS, the generated servlet filter in Spring (no controller is generated, ADR 0012), `getContent()` in Laravel and Symfony. No middleware may re-serialize the body before capture.
 
 ### Test vectors
 
@@ -178,5 +178,5 @@ Signatures shortened with `...` in the table are the full values listed above.
 
 ## Traceability
 
-- FRs: FR-20, FR-25 (verification behind the authenticate hook), FR-16 (signed webhooks in every server target), FR-35 (suite cases); amendments A5, A25, A30, A39 (form bodies), A40 (the neutral form).
+- FRs: FR-20, FR-25 (verification behind the authenticate hook), FR-16 (signed webhooks in every server target), FR-35 (suite cases); amendments A5, A25, A30, [A39](../decisions.md#a39) (form bodies), A40 (the neutral form).
 - Checklist items enabled: CHK-073 (a bad or stale signature answers 401 before the handler, with a raw body and no CSRF or idempotency key), CHK-131 (`verify: application`), CHK-150 (a signed form body).

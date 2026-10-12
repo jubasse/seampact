@@ -4,9 +4,9 @@ Status: accepted
 
 ## Context
 
-The same IR and options must give the same files, byte for byte, on every machine (brief section 12.1, FR-14, SM-3). Consumers commit generated code and review its diffs, so any nondeterminism shows up as noise in their pull requests, and drift checks become impossible.
+The same IR and options must give the same files, byte for byte, on every machine (FR-14, SM-3). Consumers commit generated code and review its diffs, so any nondeterminism shows up as noise in their pull requests, and drift checks become impossible.
 
-Eight server targets in three languages must also prove the same server boundary (amendment A17). Each target maps the contract onto its framework's own mechanisms and the declared wire format (A30), so the proof must check observable HTTP behaviour, not generated source. FR-35 asks for one black-box HTTP suite, written once, run against every server target and every adapter.
+Eight server targets in three languages must also prove the same server boundary (amendment [A17](../decisions.md#a17)). Each target maps the contract onto its framework's own mechanisms and the declared wire format ([A30](../decisions.md#a30)), so the proof must check observable HTTP behaviour, not generated source. FR-35 asks for one black-box HTTP suite, written once, run against every server target and every adapter.
 
 ## Options
 
@@ -45,7 +45,7 @@ The line holds the target package and version and the api name. It never holds a
 
 ### Formatter pinning
 
-- TypeScript targets format with Prettier, pinned to an exact version as each target's own dependency, called in-process. Its configuration is a target option, set in the app config (ADR 0011), that accepts every Prettier option except plugins, each with Prettier's default: code style is the consumer's choice, never imposed (A36). The consumer's Prettier configuration files, `.editorconfig` and plugins are never read, so the output depends only on declared options; plugins stay out because their versions would escape the pin.
+- TypeScript targets format with Prettier, pinned to an exact version as each target's own dependency, called in-process. Its configuration is a target option, set in the app config (ADR 0011), that accepts every Prettier option except plugins, each with Prettier's default: code style is the consumer's choice, never imposed ([A36](../decisions.md#a36)). The consumer's Prettier configuration files, `.editorconfig` and plugins are never read, so the output depends only on declared options; plugins stay out because their versions would escape the pin.
 - The spring-boot generator builds Java with JavaPoet (Palantir's maintained fork), pinned; its printer is deterministic, and its indent is a target option.
 - The PHP targets print with `nette/php-generator`, pinned, through its `PsrPrinter` by default (four spaces, as PSR-12, PER and Laravel Pint expect), with the indent as a target option.
 
@@ -55,11 +55,11 @@ Changing a formatter version is a target release, and its golden diffs are revie
 
 ### Golden tests
 
-Every target has golden tests (brief section 17.1):
+Every target has golden tests:
 - inputs: the reference contract (the tasks api with a tenant-scoped route with rights, a signed webhook and a service api with relays) and one fixture per feature the target supports;
 - one golden set per wire format the target claims: the core default (bare payloads with problem+json errors) for every target, plus each format pack it supports, such as the api-platform pack for the api-platform target (A30);
 - the expected file trees are committed beside the target and compared byte for byte; an explicit update mode rewrites them, and the diff is reviewed in the pull request;
-- every golden tree is also compiled with the target's real toolchain: `tsc` in strict mode, `javac` on Java 21 and 25 through Gradle and Maven (A13), PHP lint and PHPStan;
+- every golden tree is also compiled with the target's real toolchain: `tsc` in strict mode, `javac` on Java 21 and 25 through Gradle and Maven ([A13](../decisions.md#a13)), PHP lint and PHPStan;
 - the naming vectors of ADR 0007 run in each target's test suite (FR-38).
 
 ### The determinism matrix
@@ -99,7 +99,7 @@ A server target is done when the `default`, `hand-written` and `boot` profiles p
 
 The three TypeScript validator targets share a language-neutral JSON table of payloads, each with the expected accept or reject per schema and direction (FR-15). Their generated validators must agree with it exactly, as a CI gate (CHK-080, SM-9). The native targets meet the same expectations through the HTTP suite's 400 cases. The table holds, besides the cases of ADR 0003: a root-level union input, a per-subtree `unknownKeys`, an optional property that is not nullable sent as `null`, a string whose length counts variation selectors (the class-validator gaps), `{}` against a list and `[]` against an object, `1.0` for an integer (the PHP decoding cases), `{}` against `{ "publishOn": null }` for an optional and nullable property, a nine-digit `date-time` fraction, unknown keys under `ignore` and `keep`, and an opaque value.
 
-When a target's `nativeDocs` artefact is on, its golden tests also emit the framework's own OpenAPI document for the reference contract and compare it with seampact's: operation ids, response codes and schemas must agree for every contract route (CHK-165). The comparison runs whether or not the app also writes seampact's document (A43), since seampact's is always computable from the IR. Merged documents of a root config have golden tests of their own: a fixture monorepo of two apps, with an identical shared element written once, a clash refused, and the same clash accepted under a `prefix` (CHK-171).
+When a target's `nativeDocs` artefact is on, its golden tests also emit the framework's own OpenAPI document for the reference contract and compare it with seampact's: operation ids, response codes and schemas must agree for every contract route (CHK-165). The comparison runs whether or not the app also writes seampact's document ([A43](../decisions.md#a43)), since seampact's is always computable from the IR. Merged documents of a root config have golden tests of their own: a fixture monorepo of two apps, with an identical shared element written once, a clash refused, and the same clash accepted under a `prefix` (CHK-171).
 
 ## Consequences
 

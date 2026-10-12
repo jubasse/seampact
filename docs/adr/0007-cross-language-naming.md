@@ -4,7 +4,7 @@ Status: accepted
 
 ## Context
 
-Every named schema becomes a named type in every target, and every inline schema gets a deterministic name from its operation and role (brief section 6). Generated names are explicit and stable (`AssignTaskInput`, `TasksEndpoints`, brief section 17.2). Targets are written in TypeScript, Kotlin and PHP and generate TypeScript, Java and PHP. If the IR held final identifiers, it would hold TypeScript's casing and reserved words, and each other language would re-split them by its own rules; two generators would then disagree on a name such as `userID` or a schema called `List`. FR-38 decides that the IR holds word segments plus a role, and that each target applies a small published algorithm checked by shared, language-neutral vectors (SCN-093).
+Every named schema becomes a named type in every target, and every inline schema gets a deterministic name from its operation and role (ADR 0003). Generated names are explicit and stable (`AssignTaskInput`, `TasksEndpoints`). Targets are written in TypeScript, Kotlin and PHP and generate TypeScript, Java and PHP. If the IR held final identifiers, it would hold TypeScript's casing and reserved words, and each other language would re-split them by its own rules; two generators would then disagree on a name such as `userID` or a schema called `List`. FR-38 decides that the IR holds word segments plus a role, and that each target applies a small published algorithm checked by shared, language-neutral vectors (SCN-093).
 
 ## Options
 
@@ -95,7 +95,7 @@ An identifier whose first segment starts with a digit gets a leading `_`, in eve
 
 ### 5. Reserved words and shadowed names
 
-After casing, an identifier that collides with a reserved word or a shadowed name of the target language gets a trailing `_` (`List_`, `match_`, `Error_`). One rule for every language keeps it predictable and visibly an escape. The casings of section 4, the suffix words of section 1 and this escape are defaults, not conventions imposed on the consumer (A36): a target may offer options for its own language, applied after the shared algorithm and recorded in the target's options, so generation stays deterministic; the shared vectors test the defaults. Every target offers at least:
+After casing, an identifier that collides with a reserved word or a shadowed name of the target language gets a trailing `_` (`List_`, `match_`, `Error_`). One rule for every language keeps it predictable and visibly an escape. The casings of section 4, the suffix words of section 1 and this escape are defaults, not conventions imposed on the consumer ([A36](../decisions.md#a36)): a target may offer options for its own language, applied after the shared algorithm and recorded in the target's options, so generation stays deterministic; the shared vectors test the defaults. Every target offers at least:
 
 - `suffixes`: the word of each derived role (`input: dto` gives `AssignTaskDto` in a NestJS habit, `input: request` gives `AssignTaskRequest` in a Java one);
 - `escape`: the reserved-word escape, a suffix or a prefix;

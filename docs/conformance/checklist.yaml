@@ -2,12 +2,13 @@
 #
 # One testable fact per id. Ids (CHK-NNN) are stable: an item is never renumbered or reused;
 # a retired item stays with `retired: <reason>`.
-#   source:    brief section 14 subsection, an amendment (Ann) or a success metric (SM-n).
+#   source:    an acceptance area ("14 <area>", from the project's acceptance list), a product
+#              decision (An, see docs/decisions.md) or a success metric (SM-n).
 #   frs:       the FEAT-001 requirements the item realises.
 #   scenario:  the FEAT-001 scenario that proves it.
 #   targets:   who must pass it. "server" = nestjs, fastify, express, adonis, spring-boot,
 #              laravel, symfony, api-platform (A17, through the shared HTTP suite);
-#              "core" = compiler, emitter or CLI only. Section 14 items need at least
+#              "core" = compiler, emitter or CLI only. "14 <area>" items need at least
 #              zod, fetch, nestjs and fastify fixtures.
 #   fixture:   added when it exists: the monorepo fixture path that shows the item (SM-2).
 #   tests:     added when they exist: per target, the test-consumer test that proves the
@@ -1081,14 +1082,14 @@ items:
     targets: [symfony, api-platform, adonis, fastify]
 not_in_checklist:
   - source: "A4, A16"
-    reason: Process decisions (FAVIR framing, read-only Arthome research); nothing to test in the product.
+    reason: Development process decisions (how features are framed, what research may inform); nothing to test in the product.
   - source: "A10"
     reason: .NET and Python targets are a v2 objective; nothing in 1.0.
   - source: "A11"
     reason: No performance threshold gates CI in v1.
-  - source: "A12 (Arthome adoption)"
-    reason: Arthome adopts after 1.0; section 14 migration proof steps 2 to 4 (OpenAPI comparison with Arthome's documents, binding swap, deletion) happen then, outside this checklist. CHK-070 replaces step 1 before 1.0.
+  - source: "A12 (production adoption)"
+    reason: A first production adopter migrates after 1.0; the later migration proof steps 2 to 4 (OpenAPI comparison with the adopter's documents, binding swap, deletion) happen then, outside this checklist. CHK-070 replaces step 1 before 1.0.
   - source: "A1 (repository, license)"
     reason: Repository facts, not product behaviour; the package scope is covered by CHK-071.
   - source: "A29"
-    reason: A working rule for agents (opt-in RTK); nothing to test in the product.
+    reason: A development tooling choice; nothing to test in the product.

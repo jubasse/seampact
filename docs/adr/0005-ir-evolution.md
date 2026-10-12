@@ -4,7 +4,7 @@ Status: accepted
 
 ## Context
 
-The IR is a public API (brief section 10). Up to sixteen targets in three languages, two generated native models (FR-40), the OpenAPI emitter, lint and diff read it, and generators written outside the repository will too. The brief froze `irVersion: 1` at the end of phase 1; the framing replaced that with a two-step freeze (FR-37) because the compiler passes of phase 2 will find gaps in an IR schema written before them. A8 sets the policy from 1.0: semver, an additive change keeps `irVersion`, a removal or change of meaning bumps `irVersion` and the major version, and each target declares the `irVersion` range it reads.
+The IR is a public API. Up to sixteen targets in three languages, two generated native models (FR-40), the OpenAPI emitter, lint and diff read it, and generators written outside the repository will too. The first plan froze `irVersion: 1` at the end of phase 1; the framing replaced that with a two-step freeze (FR-37) because the compiler passes of phase 2 will find gaps in an IR schema written before them. [A8](../decisions.md#a8) sets the policy from 1.0: semver, an additive change keeps `irVersion`, a removal or change of meaning bumps `irVersion` and the major version, and each target declares the `irVersion` range it reads.
 
 This ADR decides how the IR changes before and after 1.0, what counts as additive, and how readers protect themselves.
 
@@ -22,7 +22,7 @@ Option 1 forces either an `irVersion` bump during phase 2 (when every pass lane 
 
 **Change-controlled, from the end of phase 1.** The IR JSON Schema and its TypeScript types merge as the seam of phase 2 (p1-spec). From then on:
 
-- each IR change is its own small PR, merged before any lane that needs it (brief section 15);
+- each IR change is its own small PR, merged before any lane that needs it;
 - the PR raises `irRevision` by one, regenerates the golden IR files, regenerates the Kotlin and PHP models (FR-40, SCN-095), and carries a release note: a changeset on `@seampact/spec` with an "IR change" section naming each field or kind, whether it is additive, and what a target must do;
 - a lane that needs an IR change asks the lead; it never edits the IR schema in its own PR.
 
@@ -32,7 +32,7 @@ Option 1 forces either an `irVersion` bump during phase 2 (when every pass lane 
 
 - `irVersion` is an integer. It is `1` until 1.0 and through 1.x.
 - `irRevision` is an integer that rises by one with every IR change, additive or not, from the merge of the seam on.
-- Before 1.0, a target reads exactly one `irRevision`, the one it was built for. A different revision fails `generate`, naming both revisions and the package to update (SCN-091, CHK-077). Exact matching is cheap while nothing is published (A3) and every target lives in the monorepo.
+- Before 1.0, a target reads exactly one `irRevision`, the one it was built for. A different revision fails `generate`, naming both revisions and the package to update (SCN-091, CHK-077). Exact matching is cheap while nothing is published ([A3](../decisions.md#a3)) and every target lives in the monorepo.
 - From 1.0 (A8), the IR is under semver with `@seampact/spec`: an additive change keeps `irVersion` and is a minor version of the spec; a removal or a change of meaning bumps `irVersion` and the major version. `irRevision` keeps rising as a record of changes but no reader checks it exactly any more.
 - Every target declares the `irVersion` values it reads (`irVersions: [1]`), and before 1.0 its `irRevision`. The CLI checks both before calling a TypeScript target (ADR 0009); the Kotlin and PHP models check them on read (ADR 0010). An IR outside the declared range fails with both values named, and no file is written (SCN-052).
 

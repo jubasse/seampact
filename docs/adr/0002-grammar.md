@@ -4,26 +4,26 @@ Status: accepted
 
 ## Context
 
-A contract is written in YAML only (brief section 1). The grammar is the decision hardest to change later: every contract, the authoring JSON Schema, the loader, the compiler passes and the editor experience depend on it. Brief section 5.3 gives a first sketch and asks for the final grammar with a reason for each departure (open question 1 of section 18).
+A contract is written in YAML only ([A38](../decisions.md#a38)). The grammar is the decision hardest to change later: every contract, the authoring JSON Schema, the loader, the compiler passes and the editor experience depend on it. Framing started from a first sketch of the grammar; this ADR fixes the final grammar and gives a reason for each departure from that sketch.
 
 This ADR fixes every keyword a contract file may contain, outside the inside of a schema. The schema language itself (JSON Schema keywords kept and refused, direction, unions, marks such as `sensitive` and `restrictedTo`) is ADR 0003; this ADR only says where a schema may appear. What the compiler makes of the tree is the IR (ADR 0004) and the pass pipeline (ADR 0006). What a convention pack may set, and how packs and packages are resolved, is ADR 0008; this ADR defines the keywords they use.
 
 Forces:
 
 - One fact, one place (lesson 1). A grammar that lets the same fact be written twice needs a gate to hold the copies together.
-- Deny by default, and a reason on every safety exception (brief section 7, FR-4, A40).
+- Deny by default, and a reason on every safety exception (FR-4, [A40](../decisions.md#a40)).
 - Nothing ahead of use (lesson 5): a keyword exists only if a checklist item or an amendment needs it.
-- The core imposes nothing (A36, after A20, A25, A30): no header name, error code, right name, envelope, page shape, wire format, versioning scheme, query encoding or implementation. Where the compiler needs a value to work, it has a default the contract can rename or replace, and everything else comes from the contract's base file or from opt-in convention packs. What the grammar does demand is explicitness: every route states its access, every exception its reason.
+- The core imposes nothing ([A36](../decisions.md#a36), after [A20](../decisions.md#a20), [A25](../decisions.md#a25), [A30](../decisions.md#a30)): no header name, error code, right name, envelope, page shape, wire format, versioning scheme, query encoding or implementation. Where the compiler needs a value to work, it has a default the contract can rename or replace, and everything else comes from the contract's base file or from opt-in convention packs. What the grammar does demand is explicitness: every route states its access, every exception its reason.
 - Inline and included content must compile to the same bytes (FR-1, FR-9).
 - The YAML must mean the same thing to every parser, in every language (FR-1).
 
 ## Options
 
-1. Keep the sketch of section 5.3 as written.
+1. Keep the first sketch as written.
 2. Replace it with an OpenAPI-like flat list of paths and operations.
 3. Keep the sketch's model (a tree mirroring the URL, catalogues of named declarations, `ops` shorthand, `requires`) and change what does not hold up once rights, scopes, signed webhooks, several apis and A30 are added.
 
-Option 1 does not cover A18 to A25 (rights, scopes, neutral hooks) or A5 (signed webhooks), and some of its forms are ambiguous (children of a `single` mixed with settings keywords; `requires` items that cannot tell a right from a rule). Option 2 loses inheritance, which is what lets a contract state an identity, a scope or an error once for a whole subtree (brief section 5.2). Option 3 is chosen. Each departure from the sketch is listed with its reason in "Departures from brief 5.3".
+Option 1 does not cover [A18](../decisions.md#a18) to A25 (rights, scopes, neutral hooks) or [A5](../decisions.md#a5) (signed webhooks), and some of its forms are ambiguous (children of a `single` mixed with settings keywords; `requires` items that cannot tell a right from a rule). Option 2 loses inheritance, which is what lets a contract state an identity, a scope or an error once for a whole subtree. Option 3 is chosen. Each departure from the sketch is listed with its reason in "Departures from the first sketch".
 
 ## Decision
 
@@ -142,7 +142,7 @@ A layer resolves names only in itself and the layers it builds on, so it compile
 
 A route declared inline and the same route moved to a file reached through `$include` compile to byte-identical IR (FR-1, FR-9, SCN-001). The grammar guarantees it with five rules:
 
-1. The IR never depends on which file a node came from, nor on the order of keys in a mapping, with one exception: the members of a generated type (`properties` of an object schema, and fields maps) keep their written order, so generated code lists fields as the author wrote them (A33). `$include` never reorders anything: its keys take its position. Order is otherwise meaningful only in sequences; ADR 0004 lists the sequences whose order the IR keeps (`requires`, `upstream`, enum `values`, among others) and sorts every other sequence as a set.
+1. The IR never depends on which file a node came from, nor on the order of keys in a mapping, with one exception: the members of a generated type (`properties` of an object schema, and fields maps) keep their written order, so generated code lists fields as the author wrote them ([A33](../decisions.md#a33)). `$include` never reorders anything: its keys take its position. Order is otherwise meaningful only in sequences; ADR 0004 lists the sequences whose order the IR keeps (`requires`, `upstream`, enum `values`, among others) and sorts every other sequence as a set.
 2. `$include` replaces itself with the file's mapping before any other step; after it, the tree is the same as if the content had been written inline.
 3. Relative paths inside an included file resolve against that file, so moving content and fixing its relative paths reaches the same files; the IR stores the content of `$file` and `$ref` targets, never a path.
 4. Names that the compiler derives (operation ids, inline schema names, ADR 0007) come from the position in the tree and the role, never from a file name.
@@ -222,7 +222,7 @@ requires: [{ right: tasks.reed }]   # flagged: the right must be one of callerSe
 | Use | Accepted sources |
 |---|---|
 | requirement `subject` | path, query, header, principal, scope (never body: rights are decided before body validation, FR-5) |
-| scope id (`scopes` on a node) | path, query, header, host, subdomain, principal, resolver (A23) |
+| scope id (`scopes` on a node) | path, query, header, host, subdomain, principal, resolver ([A23](../decisions.md#a23)) |
 | `bindings` key / value | path, query, body / principal |
 | `concurrency.version` | body, query, header (`header.If-Match` reads a strong entity tag) |
 | bucket `key` | address, address prefix, principal, body |
@@ -259,9 +259,9 @@ extends: ./base.yaml
 | `documents` | the OpenAPI documents to emit; see below |
 | `summary`, `description` | docs; `description` may be a `$file` |
 
-A service api (FR-8, section 9 of the brief) states `caller: { identity: service, right: callerService }`. Every route of it runs under that identity, which its surfaces need not repeat and no node may change; a public or optional-auth route is a compile error; a route whose `requires` does not include `caller.right` is a compile error (SCN-014, SCN-045). The names are the contract's own (A20): the core knows only that this api has a caller identity and a caller right.
+A service api (FR-8) states `caller: { identity: service, right: callerService }`. Every route of it runs under that identity, which its surfaces need not repeat and no node may change; a public or optional-auth route is a compile error; a route whose `requires` does not include `caller.right` is a compile error (SCN-014, SCN-045). The names are the contract's own (A20): the core knows only that this api has a caller identity and a caller right.
 
-`documents` declares named OpenAPI documents. Each entry takes `surfaces` (the surfaces it covers, default all) and `internal` (`include`, the default, or `exclude`). An api with no `documents` emits one document holding every route (SCN-044). `documents` says what a document of this api may hold; whether any is written is the app's choice, for every target alike (A43): seampact's documents (the default for an app with a server target; an app with client targets only writes none unless it asks), the framework's own document completed by the `nativeDocs` artefact, both, or none, and a monorepo's root config may also write one document merged across its apps (ADR 0011). Where each document is written, and how it is rendered (which `x-seampact-*` extensions it carries, whether reasons appear, strict input schemas, `servers`), is app configuration (ADR 0011); what each IR member becomes in it, natively or as an `x-seampact-*` extension, is ADR 0004 section 12.
+`documents` declares named OpenAPI documents. Each entry takes `surfaces` (the surfaces it covers, default all) and `internal` (`include`, the default, or `exclude`). An api with no `documents` emits one document holding every route (SCN-044). `documents` says what a document of this api may hold; whether any is written is the app's choice, for every target alike ([A43](../decisions.md#a43)): seampact's documents (the default for an app with a server target; an app with client targets only writes none unless it asks), the framework's own document completed by the `nativeDocs` artefact, both, or none, and a monorepo's root config may also write one document merged across its apps (ADR 0011). Where each document is written, and how it is rendered (which `x-seampact-*` extensions it carries, whether reasons appear, strict input schemas, `servers`), is app configuration (ADR 0011); what each IR member becomes in it, natively or as an `x-seampact-*` extension, is ADR 0004 section 12.
 
 ### 6. Surfaces and the tree
 
@@ -304,7 +304,7 @@ Every node is a mapping of settings plus its children. There are four kinds of n
 | collection | `kind: collection` | `ops`, `collection`, `member` |
 | single | `kind: single` | `ops`, `routes` |
 
-A surface root, a single, and the `collection` and `member` scopes of a collection hold their children under `routes`, a mapping from child name to node. The child name is written in the parent file even when its content is included (`search: { $include: ./routes/tasks/search.yaml }`), so every route stays discoverable from its parent (brief 5.1).
+A surface root, a single, and the `collection` and `member` scopes of a collection hold their children under `routes`, a mapping from child name to node. The child name is written in the parent file even when its content is included (`search: { $include: ./routes/tasks/search.yaml }`), so every route stays discoverable from its parent.
 
 A node's path segment is its name, converted by `conventions.pathCase` (`kebab`, the default, `camel` or `snake`). `path` replaces the segment: it is relative to the parent, has no leading slash, may be empty or hold several segments, and may hold `{param}` placeholders declared in `pathParams`.
 
@@ -360,7 +360,7 @@ A group's path parameters are not member ids, so they derive no `notFound` (ADR 
 
 #### The `ops` shorthand
 
-`ops` expands to ordinary routes; the IR holds only routes (brief 5.2). It is either a list of op names or a mapping from op name to settings for that op; the list `[get, update]` is the mapping `{ get: {}, update: {} }`.
+`ops` expands to ordinary routes; the IR holds only routes. It is either a list of op names or a mapping from op name to settings for that op; the list `[get, update]` is the mapping `{ get: {}, update: {} }`.
 
 | Op | On | Method and path | Operation id | Input | Success |
 |---|---|---|---|---|---|
@@ -379,7 +379,7 @@ Operation ids of other routes: a route under `member` is its name plus the singu
 
 #### Write semantics
 
-Kept from Arthome (brief 5.2, FR-2):
+Kept from the first sketch (FR-2):
 
 - `owner: caller`: the caller owns the records. On a collection, another caller's id answers 404 (derived), with no version and no 409; on a single, nothing is derived (SCN-004). The boundary cannot know who owns a record, so the handler (or the optional record loader of ADR 0012) answers it through its typed error result for the `notFound` role (ADR 0012), no hook is added, and the generated test helper checks the declared 404.
 - Otherwise a write may be versioned: `concurrency: { version: body.expectedVersion, field: version }`. `version` is where the client sends the version it read: a body field, a query parameter, or a request header (`header.If-Match` reads it as a strong entity tag, `"7"`); `field` is the item property it is compared with. `update` and `delete` inherit it; a member route only with `concurrency: inherit` (SCN-003, SCN-031). The compiler adds the version parameter itself, typed like `field`, after the authored fields: to the body input for a body source, to the query or headers otherwise. No input restates it, and an input that declares it is a compile error ("remove it; `concurrency` adds it"); an item schema without `field` is a compile error naming the field. A route without a body never carries the version in one (A33): on a `delete` without `input`, a body source becomes the query parameter of the same name (`body.expectedVersion` gives `query.expectedVersion` on `deleteTask`), and a query or header source stays as it is. A stale write derives `409` from the `stateConflict` role for a body or query version. With `header.If-Match`, HTTP's own answers apply (RFC 9110, RFC 6585): a stale tag derives `412` from the `preconditionFailed` role, and a write without the header `428` from the `preconditionRequired` role; every response carrying the item writes its `ETag` from `field`, and `cache.etag` on such a route uses that tag. Each role stays renamable (section 11).
@@ -441,7 +441,7 @@ export:
 
 #### Bodies beyond JSON
 
-Uploads, downloads, form posts and redirects are part of the contract, typed like any body (A39), and every target renders them with its framework's own mechanism (ADR 0012).
+Uploads, downloads, form posts and redirects are part of the contract, typed like any body ([A39](../decisions.md#a39)), and every target renders them with its framework's own mechanism (ADR 0012).
 
 ```yaml
 # tasks/api.yaml (excerpt: member routes of tasks, and a hook)
@@ -569,7 +569,7 @@ Inheritance by position has one trap. When the last key of a block is written on
 
 - `identity: <name>`: the route requires that identity. A surface usually sets it once.
 - `access: { public: "<reason>" }`: no authentication; the principal is null.
-- `access: { optionalAuth: "<reason>" }`: an anonymous caller or the nearest `identity`. A presented credential that the authenticate hook refuses is treated as anonymous by default, never answered 401 (brief section 7, A33), which is what a sign-out with an expired session needs. `onRefused: reject` beside it answers 401 instead, as GitHub does for a bad token on a public endpoint: `access: { optionalAuth: "<reason>", onRefused: reject }`. `onRefused` is `anonymous` (the default) or `reject`, and is refused without `optionalAuth` (A40).
+- `access: { optionalAuth: "<reason>" }`: an anonymous caller or the nearest `identity`. A presented credential that the authenticate hook refuses is treated as anonymous by default, never answered 401 (A33), which is what a sign-out with an expired session needs. `onRefused: reject` beside it answers 401 instead, as GitHub does for a bad token on a public endpoint: `access: { optionalAuth: "<reason>", onRefused: reject }`. `onRefused` is `anonymous` (the default) or `reject`, and is refused without `optionalAuth` (A40).
 - `csrf: { exempt: "<reason>" }`: no CSRF check on this route's cookie writes.
 
 `identity` and `access` are inherited separately, the nearest winning for each (section 8). A node that sets `identity` without `access` makes the identity required again below it; `optionalAuth` uses the nearest `identity`, and both may be set on one node. A route that resolves to neither an identity nor a public access is a compile error that names both fixes (FR-4, SCN-007). A public child under an identified parent still needs its reason (SCN-035).
@@ -586,7 +586,7 @@ schemes:
   internalToken: { kind: bearer, bearerFormat: jwt }
 ```
 
-`kind` is `cookie`, `header` (an API key in a header), `query` (an API key in a query parameter, as some map and webhook apis still take), `bearer` (HTTP bearer), `basic` (HTTP Basic) or `signature` (A5). `name` is the cookie, header or query parameter name; `bearer` and `basic` take none. A `query` scheme's parameter is never a declared query field and never an unknown key. `bearerFormat` documents a bearer token's format, emitted as OpenAPI's `bearerFormat`; nothing checks it. A bearer scheme may also state, for the document only, the OAuth 2 flows or the OpenID Connect discovery URL that issue its tokens, so documentation tools and client generators can obtain one: `oauth2: { flows: <OpenAPI OAuth Flows Object> }` or `openIdConnect: <url>`, never both. The run time is unchanged: the authenticate hook checks the token. `csrf` on a cookie scheme names the header scheme a cookie write must also present; CSRF is derived from it, never written on an identity (FR-27, SCN-008, SCN-077). CSRF is opt-in (A34): a cookie scheme without `csrf` derives no CSRF check, and the lint rule `seampact/cookie-without-csrf` reports it, silenced with a reason through `lint.allow` on the scheme, or switched off with `lint.rules` (section 12). A `signature` scheme declares (details and test vectors: ADR 0013):
+`kind` is `cookie`, `header` (an API key in a header), `query` (an API key in a query parameter, as some map and webhook apis still take), `bearer` (HTTP bearer), `basic` (HTTP Basic) or `signature` (A5). `name` is the cookie, header or query parameter name; `bearer` and `basic` take none. A `query` scheme's parameter is never a declared query field and never an unknown key. `bearerFormat` documents a bearer token's format, emitted as OpenAPI's `bearerFormat`; nothing checks it. A bearer scheme may also state, for the document only, the OAuth 2 flows or the OpenID Connect discovery URL that issue its tokens, so documentation tools and client generators can obtain one: `oauth2: { flows: <OpenAPI OAuth Flows Object> }` or `openIdConnect: <url>`, never both. The run time is unchanged: the authenticate hook checks the token. `csrf` on a cookie scheme names the header scheme a cookie write must also present; CSRF is derived from it, never written on an identity (FR-27, SCN-008, SCN-077). CSRF is opt-in ([A34](../decisions.md#a34)): a cookie scheme without `csrf` derives no CSRF check, and the lint rule `seampact/cookie-without-csrf` reports it, silenced with a reason through `lint.allow` on the scheme, or switched off with `lint.rules` (section 12). A `signature` scheme declares (details and test vectors: ADR 0013):
 
 ```yaml
 # shared/base.yaml (excerpt)
@@ -823,7 +823,7 @@ scopes: { org: subdomain, project: path.projectId }
 ### 10. Lists, cache and lifecycle settings
 
 - A route is a list when it comes from the `list` op, or when it sets `item` instead of `output`. `output` always means the whole body; an array `output` on a GET is refused with the fix "use `item`", so an author always knows whether a route is paged.
-- `paging`: on a list. It names a paging style from the `pagings` catalogue (section 14): `paging: cursor`, or the mapping form `{ cursor: { maxLimit: 50 } }`, which also takes `defaultLimit`, `overLimit` and, for a style with a `since` role, `token: opaque` or `token: instant`. A list without `paging` uses `conventions.paging.default`. A list with neither is a compile error naming both fixes: declare a style in `pagings` and name it, or apply a format pack that provides one (A31). `paging: none` serves the whole list unpaged, through the format's `list` shape. A style with a `since` role derives 410 from the `gone` role (FR-31, SCN-012, SCN-082, SCN-083).
+- `paging`: on a list. It names a paging style from the `pagings` catalogue (section 14): `paging: cursor`, or the mapping form `{ cursor: { maxLimit: 50 } }`, which also takes `defaultLimit`, `overLimit` and, for a style with a `since` role, `token: opaque` or `token: instant`. A list without `paging` uses `conventions.paging.default`. A list with neither is a compile error naming both fixes: declare a style in `pagings` and name it, or apply a format pack that provides one ([A31](../decisions.md#a31)). `paging: none` serves the whole list unpaged, through the format's `list` shape. A style with a `since` role derives 410 from the `gone` role (FR-31, SCN-012, SCN-082, SCN-083).
 - `sortable`: a list of item fields, each a name or `{ key, right }`. A key inherits its field's `restrictedTo`; an explicit right that disagrees is a compile error; sorting by a restricted key without the right derives 403 from the `sortKeyForbidden` role (FR-23, SCN-067).
 - `filteredBy: <right>`: the right the application applies to its query; it reaches OpenAPI and the handler context, and nothing enforces it (SCN-068).
 - `degradable: [viewerProgress]`: paths of optional properties of the success data; a required one is a compile error (SCN-085).
@@ -864,7 +864,7 @@ errors:
 
 A declaration defines a code once: `status` (400 to 599), `nature`, `family`, `params` (a fields map or a schema name), `example` (the params), `title`, `description` (FR-6, SCN-037). `nature` may be left out: it is then `unavailable` for 408, 425, 429, 502, 503 and 504, `refused` for every other 4xx and `failed` for every other 5xx. `family` groups codes in docs and clients; it defaults to the code up to its first dot (section 4).
 
-Codes are declared at every level of the tree (A35): in the `errors` catalogue (the api's global level, with its base and packs), or in `errors` on any node: a surface root, a collection, a single, a `collection` or `member` scope node, or a route. On a node, `errors` maps a code to one of:
+Codes are declared at every level of the tree ([A35](../decisions.md#a35)): in the `errors` catalogue (the api's global level, with its base and packs), or in `errors` on any node: a surface root, a collection, a single, a `collection` or `member` scope node, or a route. On a node, `errors` maps a code to one of:
 
 - `{}`: attaches a code declared elsewhere;
 - `{ example }`: attaches it and narrows its example to this subtree's case;
@@ -1020,7 +1020,7 @@ conventions:
 | `bodyLimit` | the default request body limit | `1MiB` |
 | `batch` | `{ maxIds, bodyLimit, budget }` for `batch` ops | `maxIds` required when a `batch` op sets none; `bodyLimit` from `bodyLimit`; no budget |
 | `cache.families` | freshness families: a max-age (`60s`), or `{ maxAge, sharedMaxAge, staleWhileRevalidate, staleIfError, immutable, noCache, mustRevalidate }`, each key a `Cache-Control` directive in camel case (`noCache: true` writes `no-cache`, for a response always revalidated with its ETag) | empty: each family a `cache.freshness` names is required |
-| `restrictedInput` | `reject` or `strip`: a restricted field sent without its right (A21); overridable per field (ADR 0003) | `reject` |
+| `restrictedInput` | `reject` or `strip`: a restricted field sent without its right ([A21](../decisions.md#a21)); overridable per field (ADR 0003) | `reject` |
 | `outputEnums` | `enum` or `open`: how the emitter writes an output enum (FR-29) | `enum` |
 | `pathVersion` | `prefix` or `none`: whether every surface's path starts with `/v{version}` (section 6); a surface's `pathVersion` overrides it | `prefix` (A33) |
 | `query` | `{ lists, objects, unknownKeys }`: how a query list and an object field travel, and whether an undeclared key is refused (section 7) | `{ lists: repeat, objects: explode, unknownKeys: refuse }` |
@@ -1038,7 +1038,7 @@ conventions:
 | `errors.reach` | `subtree` or `resource`: how far a code attached on a node reaches (section 11) | `subtree` (A35) |
 | `errors.derived` | role bindings (section 11) | the default codes of ADR 0006 section 6 (A34) |
 
-The core imposes no wire format (A30). `format: bare`, the default, is itself written as format data below: every success body is the bare payload, and an error is an RFC 9457 `application/problem+json` body whose members are fixed in ADR 0006 section 7. `bare` has no paging style, because the core imposes no page shape either (A31, section 14). Every other format (an envelope like Arthome's, JSON:API, HAL, JSON-LD and Hydra, Laravel resources and paginators, Spring Page and ProblemDetail) is declared in `formats`, usually by a convention pack, and selected with `conventions.format`; each target maps it onto its framework's own mechanism (FR-42, SCN-048, SCN-100).
+The core imposes no wire format (A30). `format: bare`, the default, is itself written as format data below: every success body is the bare payload, and an error is an RFC 9457 `application/problem+json` body whose members are fixed in ADR 0006 section 7. `bare` has no paging style, because the core imposes no page shape either (A31, section 14). Every other format (a house envelope, JSON:API, HAL, JSON-LD and Hydra, Laravel resources and paginators, Spring Page and ProblemDetail) is declared in `formats`, usually by a convention pack, and selected with `conventions.format`; each target maps it onto its framework's own mechanism (FR-42, SCN-048, SCN-100).
 
 #### Wire formats
 
@@ -1208,7 +1208,7 @@ conventions:
 
 ### 15. The presets of the first-party packs
 
-The template language must express every format A28 and A32 name. These are the presets of the first-party packs (ADR 0008), written in the grammar above; the packs hold the full versions.
+The template language must express every format [A28](../decisions.md#a28) and [A32](../decisions.md#a32) name. These are the presets of the first-party packs (ADR 0008), written in the grammar above; the packs hold the full versions.
 
 ```yaml
 # @seampact/pack-api-platform: JSON-LD items and Hydra collections (excerpt)
@@ -1388,7 +1388,7 @@ errors:
 
 The output is a view, never an input: it is not a contract file, and nothing reads it back. It is deterministic, so two runs diff cleanly in review, while `seampact diff` still classifies the change (ADR 0005). It needs no new IR member: every element already carries `origin` or `derivedFrom` (ADR 0004 section 6).
 
-## Departures from brief 5.3
+## Departures from the first sketch
 
 | Sketch | Final | Reason |
 |---|---|---|
@@ -1410,7 +1410,7 @@ The output is a view, never an input: it is not a contract file, and nothing rea
 | `identities.*.schemes.write: [session+csrf]` | `csrf` on the cookie scheme | CSRF is derived from the scheme, stated once (FR-27) |
 | identity scheme names as strings | typed `schemes` catalogue | schemes are checked and emitted (FR-27) |
 | no rights, scopes, signed identities | `rights`, `scopes`, `kind: signed` | A5, A18 to A25 |
-| `access: { public }`, implicit optional auth | `public` and `optionalAuth`, each with a reason; a refused credential on `optionalAuth` is anonymous, or 401 with `onRefused: reject` | brief section 7, A33, A40 |
+| `access: { public }`, implicit optional auth | `public` and `optionalAuth`, each with a reason; a refused credential on `optionalAuth` is anonymous, or 401 with `onRefused: reject` | A33, A40 |
 | `csrfExempt` | `csrf: { exempt }` on a node; CSRF only for a cookie scheme that declares `csrf` | one exemption shape (`idempotency: { exempt }`); CSRF is opt-in (A34) |
 | `idempotent: true` on a GET, `idempotent: { exempt }` | `idempotency: { exempt }` only | a GET is safe by its method; one name for the convention and the exemption |
 | `errors` with fixed derived codes (`api.schema_invalid`) | derivation roles with default codes, renamed by the conventions, by `errorRoles` on any node or by a pack | a contract with no pack compiles (A34), and every code stays renamable (A20, A30, A35) |
