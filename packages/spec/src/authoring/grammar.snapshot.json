@@ -1,0 +1,1037 @@
+{
+  "workspace.schema.json#": {
+    "workspace": "ADR 0002 section 1"
+  },
+  "workspace.schema.json#/properties/workspace": {
+    "apis": "ADR 0002 section 1",
+    "shared": "ADR 0002 section 1",
+    "editorSchemas": "ADR 0002 section 1",
+    "imports": "ADR 0002 section 1"
+  },
+  "workspace.schema.json#/$defs/import": {
+    "package": "ADR 0002 section 1",
+    "version": "ADR 0002 section 1",
+    "release": "ADR 0002 section 1",
+    "git": "ADR 0002 section 1",
+    "api": "ADR 0002 section 1",
+    "integrity": "ADR 0002 section 1"
+  },
+  "workspace.schema.json#/$defs/import/properties/release": {
+    "url": "ADR 0002 section 1"
+  },
+  "workspace.schema.json#/$defs/import/properties/git": {
+    "url": "ADR 0002 section 1",
+    "tag": "ADR 0002 section 1",
+    "directory": "ADR 0002 section 1"
+  },
+  "api.schema.json#": {
+    "api": "ADR 0002 section 5",
+    "extends": "ADR 0002 section 2",
+    "packs": "ADR 0002 section 2",
+    "surfaces": "ADR 0002 section 6",
+    "schemas": "ADR 0002 section 1",
+    "enums": "ADR 0002 section 12",
+    "scalars": "ADR 0003 section 8",
+    "errors": "ADR 0002 section 11",
+    "natures": "ADR 0002 section 11",
+    "schemes": "ADR 0002 section 9",
+    "headers": "ADR 0002 section 9",
+    "identities": "ADR 0002 section 9",
+    "rights": "ADR 0002 section 9",
+    "rules": "ADR 0002 section 9",
+    "requirements": "ADR 0002 section 9",
+    "scopes": "ADR 0002 section 9",
+    "buckets": "ADR 0002 section 9",
+    "services": "ADR 0002 section 10",
+    "pagings": "ADR 0002 section 14",
+    "formats": "ADR 0002 section 13",
+    "conventions": "ADR 0002 section 13",
+    "extensions": "ADR 0002 section 12",
+    "lint": "ADR 0002 section 12"
+  },
+  "api.schema.json#/$defs/api": {
+    "name": "ADR 0002 section 5",
+    "version": "ADR 0002 section 5",
+    "kind": "ADR 0002 section 5",
+    "role": "ADR 0002 section 5",
+    "caller": "ADR 0002 section 5",
+    "maturity": "ADR 0002 section 5",
+    "compat": "ADR 0002 section 5",
+    "documents": "ADR 0002 section 5",
+    "summary": "ADR 0002 section 5",
+    "description": "ADR 0002 section 5",
+    "x-<prefix>-<key>": "ADR 0002 section 12"
+  },
+  "api.schema.json#/$defs/api/properties/caller": {
+    "identity": "ADR 0002 section 5",
+    "right": "ADR 0002 section 5"
+  },
+  "api.schema.json#/$defs/api/properties/compat": {
+    "policy": "ADR 0002 section 5"
+  },
+  "api.schema.json#/$defs/api/properties/documents/additionalProperties": {
+    "surfaces": "ADR 0002 section 5",
+    "internal": "ADR 0002 section 5"
+  },
+  "base.schema.json#": {
+    "packs": "ADR 0002 section 2",
+    "schemas": "ADR 0002 section 1",
+    "enums": "ADR 0002 section 12",
+    "scalars": "ADR 0003 section 8",
+    "errors": "ADR 0002 section 11",
+    "natures": "ADR 0002 section 11",
+    "schemes": "ADR 0002 section 9",
+    "headers": "ADR 0002 section 9",
+    "identities": "ADR 0002 section 9",
+    "rights": "ADR 0002 section 9",
+    "rules": "ADR 0002 section 9",
+    "requirements": "ADR 0002 section 9",
+    "scopes": "ADR 0002 section 9",
+    "buckets": "ADR 0002 section 9",
+    "services": "ADR 0002 section 10",
+    "pagings": "ADR 0002 section 14",
+    "formats": "ADR 0002 section 13",
+    "conventions": "ADR 0002 section 13",
+    "extensions": "ADR 0002 section 12",
+    "lint": "ADR 0002 section 12"
+  },
+  "base.schema.json#/$defs/extensions/additionalProperties/additionalProperties": {
+    "at": "ADR 0002 section 12",
+    "schema": "ADR 0002 section 12"
+  },
+  "pack.schema.json#": {
+    "pack": "ADR 0002 section 2",
+    "schemas": "ADR 0002 section 1",
+    "enums": "ADR 0002 section 12",
+    "scalars": "ADR 0003 section 8",
+    "errors": "ADR 0002 section 11",
+    "natures": "ADR 0002 section 11",
+    "schemes": "ADR 0002 section 9",
+    "headers": "ADR 0002 section 9",
+    "identities": "ADR 0002 section 9",
+    "rights": "ADR 0002 section 9",
+    "rules": "ADR 0002 section 9",
+    "requirements": "ADR 0002 section 9",
+    "scopes": "ADR 0002 section 9",
+    "buckets": "ADR 0002 section 9",
+    "services": "ADR 0002 section 10",
+    "pagings": "ADR 0002 section 14",
+    "formats": "ADR 0002 section 13",
+    "conventions": "ADR 0002 section 13",
+    "extensions": "ADR 0002 section 12",
+    "lint": "ADR 0002 section 12",
+    "derive": "ADR 0002 section 2"
+  },
+  "pack.schema.json#/$defs/manifest": {
+    "name": "ADR 0002 section 2",
+    "version": "ADR 0002 section 2",
+    "extends": "ADR 0002 section 2"
+  },
+  "pack.schema.json#/$defs/entry": {
+    "entry": "ADR 0002 section 2",
+    "select": "ADR 0002 section 2",
+    "declareRight": "ADR 0002 section 2",
+    "require": "ADR 0002 section 2",
+    "attachErrors": "ADR 0002 section 2"
+  },
+  "pack.schema.json#/$defs/entry/properties/select": {
+    "op": "ADR 0008",
+    "access": "ADR 0008",
+    "apiKind": "ADR 0008",
+    "identity": "ADR 0008",
+    "tag": "ADR 0008"
+  },
+  "pack.schema.json#/$defs/entry/properties/declareRight": {
+    "name": "ADR 0002 section 2",
+    "subject": "ADR 0002 section 2",
+    "errors": "ADR 0002 section 2"
+  },
+  "pack.schema.json#/$defs/entry/properties/declareRight/properties/subject": {
+    "member": "ADR 0002 section 2",
+    "collection": "ADR 0002 section 2"
+  },
+  "pack.schema.json#/$defs/entry/properties/require": {
+    "right": "ADR 0002 section 2",
+    "rule": "ADR 0002 section 2",
+    "params": "ADR 0002 section 2",
+    "bucket": "ADR 0002 section 2"
+  },
+  "node.schema.json#/$defs/unmarked": {
+    "method": "ADR 0002 section 7",
+    "kind": "ADR 0002 section 6"
+  },
+  "node.schema.json#/$defs/route": {
+    "method": "ADR 0002 section 7",
+    "path": "ADR 0002 section 6",
+    "pathParams": "ADR 0002 section 7",
+    "operationId": "ADR 0002 section 7",
+    "input": "ADR 0002 section 7",
+    "inputMedia": "ADR 0002 section 7",
+    "output": "ADR 0002 section 7",
+    "item": "ADR 0002 section 10",
+    "responses": "ADR 0002 section 7",
+    "paging": "ADR 0002 section 10",
+    "sortable": "ADR 0002 section 10",
+    "filteredBy": "ADR 0002 section 10",
+    "degradable": "ADR 0002 section 10",
+    "examples": "ADR 0002 section 12",
+    "summary": "ADR 0002 section 7",
+    "description": "ADR 0002 section 7",
+    "concurrency": "ADR 0002 section 6",
+    "identity": "ADR 0002 section 9",
+    "access": "ADR 0002 section 9",
+    "requires": "ADR 0002 section 9",
+    "scopes": "ADR 0002 section 9",
+    "principal": "ADR 0002 section 9",
+    "bindings": "ADR 0002 section 9",
+    "errors": "ADR 0002 section 11",
+    "errorRoles": "ADR 0002 section 11",
+    "tags": "ADR 0002 section 10",
+    "headers": "ADR 0002 section 7",
+    "query": "ADR 0002 section 7",
+    "upstream": "ADR 0002 section 10",
+    "maturity": "ADR 0002 section 10",
+    "internal": "ADR 0002 section 10",
+    "deprecated": "ADR 0002 section 10",
+    "budget": "ADR 0002 section 10",
+    "bodyLimit": "ADR 0002 section 10",
+    "cache": "ADR 0002 section 10",
+    "csrf": "ADR 0002 section 9",
+    "idempotency": "ADR 0002 section 10",
+    "format": "ADR 0002 section 10",
+    "unknownQuery": "ADR 0002 section 7",
+    "lint": "ADR 0002 section 12",
+    "x-<prefix>-<key>": "ADR 0002 section 12"
+  },
+  "node.schema.json#/$defs/relayRoute": {
+    "relays": "ADR 0002 section 7",
+    "operationId": "ADR 0002 section 7",
+    "requires": "ADR 0002 section 9",
+    "errors": "ADR 0002 section 11",
+    "errorRoles": "ADR 0002 section 11",
+    "budget": "ADR 0002 section 10",
+    "bodyLimit": "ADR 0002 section 10",
+    "idempotency": "ADR 0002 section 10",
+    "upstream": "ADR 0002 section 10",
+    "maturity": "ADR 0002 section 10",
+    "deprecated": "ADR 0002 section 10",
+    "tags": "ADR 0002 section 10",
+    "summary": "ADR 0002 section 7",
+    "description": "ADR 0002 section 7",
+    "x-<prefix>-<key>": "ADR 0002 section 12"
+  },
+  "node.schema.json#/$defs/collection": {
+    "kind": "ADR 0002 section 6",
+    "id": "ADR 0002 section 6",
+    "idProperty": "ADR 0002 section 6",
+    "singular": "ADR 0002 section 6",
+    "item": "ADR 0002 section 6",
+    "owner": "ADR 0002 section 6",
+    "concurrency": "ADR 0002 section 6",
+    "resourceType": "ADR 0002 section 6",
+    "ops": "ADR 0002 section 6",
+    "collection": "ADR 0002 section 6",
+    "member": "ADR 0002 section 6",
+    "path": "ADR 0002 section 6",
+    "pathParams": "ADR 0002 section 7",
+    "identity": "ADR 0002 section 9",
+    "access": "ADR 0002 section 9",
+    "requires": "ADR 0002 section 9",
+    "scopes": "ADR 0002 section 9",
+    "principal": "ADR 0002 section 9",
+    "bindings": "ADR 0002 section 9",
+    "errors": "ADR 0002 section 11",
+    "errorRoles": "ADR 0002 section 11",
+    "tags": "ADR 0002 section 10",
+    "headers": "ADR 0002 section 7",
+    "query": "ADR 0002 section 7",
+    "upstream": "ADR 0002 section 10",
+    "maturity": "ADR 0002 section 10",
+    "internal": "ADR 0002 section 10",
+    "deprecated": "ADR 0002 section 10",
+    "budget": "ADR 0002 section 10",
+    "bodyLimit": "ADR 0002 section 10",
+    "cache": "ADR 0002 section 10",
+    "csrf": "ADR 0002 section 9",
+    "idempotency": "ADR 0002 section 10",
+    "format": "ADR 0002 section 10",
+    "unknownQuery": "ADR 0002 section 7",
+    "lint": "ADR 0002 section 12",
+    "summary": "ADR 0002 section 12",
+    "description": "ADR 0002 section 12",
+    "x-<prefix>-<key>": "ADR 0002 section 12"
+  },
+  "node.schema.json#/$defs/collection/properties/ops/else": {
+    "list": "ADR 0002 section 6",
+    "get": "ADR 0002 section 6",
+    "create": "ADR 0002 section 6",
+    "update": "ADR 0002 section 6",
+    "delete": "ADR 0002 section 6",
+    "batch": "ADR 0002 section 6"
+  },
+  "node.schema.json#/$defs/single": {
+    "kind": "ADR 0002 section 6",
+    "item": "ADR 0002 section 6",
+    "owner": "ADR 0002 section 6",
+    "concurrency": "ADR 0002 section 6",
+    "resourceType": "ADR 0002 section 6",
+    "ops": "ADR 0002 section 6",
+    "routes": "ADR 0002 section 6",
+    "path": "ADR 0002 section 6",
+    "pathParams": "ADR 0002 section 7",
+    "identity": "ADR 0002 section 9",
+    "access": "ADR 0002 section 9",
+    "requires": "ADR 0002 section 9",
+    "scopes": "ADR 0002 section 9",
+    "principal": "ADR 0002 section 9",
+    "bindings": "ADR 0002 section 9",
+    "errors": "ADR 0002 section 11",
+    "errorRoles": "ADR 0002 section 11",
+    "tags": "ADR 0002 section 10",
+    "headers": "ADR 0002 section 7",
+    "query": "ADR 0002 section 7",
+    "upstream": "ADR 0002 section 10",
+    "maturity": "ADR 0002 section 10",
+    "internal": "ADR 0002 section 10",
+    "deprecated": "ADR 0002 section 10",
+    "budget": "ADR 0002 section 10",
+    "bodyLimit": "ADR 0002 section 10",
+    "cache": "ADR 0002 section 10",
+    "csrf": "ADR 0002 section 9",
+    "idempotency": "ADR 0002 section 10",
+    "format": "ADR 0002 section 10",
+    "unknownQuery": "ADR 0002 section 7",
+    "lint": "ADR 0002 section 12",
+    "summary": "ADR 0002 section 12",
+    "description": "ADR 0002 section 12",
+    "x-<prefix>-<key>": "ADR 0002 section 12"
+  },
+  "node.schema.json#/$defs/single/properties/ops/else": {
+    "get": "ADR 0002 section 6",
+    "update": "ADR 0002 section 6",
+    "delete": "ADR 0002 section 6"
+  },
+  "node.schema.json#/$defs/scope": {
+    "routes": "ADR 0002 section 6",
+    "identity": "ADR 0002 section 9",
+    "access": "ADR 0002 section 9",
+    "requires": "ADR 0002 section 9",
+    "scopes": "ADR 0002 section 9",
+    "principal": "ADR 0002 section 9",
+    "bindings": "ADR 0002 section 9",
+    "errors": "ADR 0002 section 11",
+    "errorRoles": "ADR 0002 section 11",
+    "tags": "ADR 0002 section 10",
+    "headers": "ADR 0002 section 7",
+    "query": "ADR 0002 section 7",
+    "upstream": "ADR 0002 section 10",
+    "maturity": "ADR 0002 section 10",
+    "internal": "ADR 0002 section 10",
+    "deprecated": "ADR 0002 section 10",
+    "budget": "ADR 0002 section 10",
+    "bodyLimit": "ADR 0002 section 10",
+    "cache": "ADR 0002 section 10",
+    "csrf": "ADR 0002 section 9",
+    "idempotency": "ADR 0002 section 10",
+    "format": "ADR 0002 section 10",
+    "unknownQuery": "ADR 0002 section 7",
+    "lint": "ADR 0002 section 12",
+    "summary": "ADR 0002 section 12",
+    "description": "ADR 0002 section 12",
+    "x-<prefix>-<key>": "ADR 0002 section 12"
+  },
+  "node.schema.json#/$defs/surface": {
+    "prefix": "ADR 0002 section 6",
+    "pathVersion": "ADR 0002 section 6",
+    "routes": "ADR 0002 section 6",
+    "identity": "ADR 0002 section 9",
+    "access": "ADR 0002 section 9",
+    "requires": "ADR 0002 section 9",
+    "scopes": "ADR 0002 section 9",
+    "principal": "ADR 0002 section 9",
+    "bindings": "ADR 0002 section 9",
+    "errors": "ADR 0002 section 11",
+    "errorRoles": "ADR 0002 section 11",
+    "tags": "ADR 0002 section 10",
+    "headers": "ADR 0002 section 7",
+    "query": "ADR 0002 section 7",
+    "upstream": "ADR 0002 section 10",
+    "maturity": "ADR 0002 section 10",
+    "internal": "ADR 0002 section 10",
+    "deprecated": "ADR 0002 section 10",
+    "budget": "ADR 0002 section 10",
+    "bodyLimit": "ADR 0002 section 10",
+    "cache": "ADR 0002 section 10",
+    "csrf": "ADR 0002 section 9",
+    "idempotency": "ADR 0002 section 10",
+    "format": "ADR 0002 section 10",
+    "unknownQuery": "ADR 0002 section 7",
+    "lint": "ADR 0002 section 12",
+    "summary": "ADR 0002 section 12",
+    "description": "ADR 0002 section 12",
+    "x-<prefix>-<key>": "ADR 0002 section 12"
+  },
+  "node.schema.json#/$defs/op": {
+    "method": "ADR 0002 section 7",
+    "path": "ADR 0002 section 6",
+    "pathParams": "ADR 0002 section 7",
+    "operationId": "ADR 0002 section 7",
+    "input": "ADR 0002 section 7",
+    "inputMedia": "ADR 0002 section 7",
+    "output": "ADR 0002 section 7",
+    "item": "ADR 0002 section 10",
+    "responses": "ADR 0002 section 7",
+    "paging": "ADR 0002 section 10",
+    "sortable": "ADR 0002 section 10",
+    "filteredBy": "ADR 0002 section 10",
+    "degradable": "ADR 0002 section 10",
+    "examples": "ADR 0002 section 12",
+    "summary": "ADR 0002 section 7",
+    "description": "ADR 0002 section 7",
+    "identity": "ADR 0002 section 9",
+    "access": "ADR 0002 section 9",
+    "requires": "ADR 0002 section 9",
+    "scopes": "ADR 0002 section 9",
+    "principal": "ADR 0002 section 9",
+    "bindings": "ADR 0002 section 9",
+    "errors": "ADR 0002 section 11",
+    "errorRoles": "ADR 0002 section 11",
+    "tags": "ADR 0002 section 10",
+    "headers": "ADR 0002 section 7",
+    "query": "ADR 0002 section 7",
+    "upstream": "ADR 0002 section 10",
+    "maturity": "ADR 0002 section 10",
+    "internal": "ADR 0002 section 10",
+    "deprecated": "ADR 0002 section 10",
+    "budget": "ADR 0002 section 10",
+    "bodyLimit": "ADR 0002 section 10",
+    "cache": "ADR 0002 section 10",
+    "csrf": "ADR 0002 section 9",
+    "idempotency": "ADR 0002 section 10",
+    "format": "ADR 0002 section 10",
+    "unknownQuery": "ADR 0002 section 7",
+    "lint": "ADR 0002 section 12",
+    "x-<prefix>-<key>": "ADR 0002 section 12"
+  },
+  "node.schema.json#/$defs/batchOp": {
+    "method": "ADR 0002 section 7",
+    "path": "ADR 0002 section 6",
+    "pathParams": "ADR 0002 section 7",
+    "operationId": "ADR 0002 section 7",
+    "input": "ADR 0002 section 7",
+    "inputMedia": "ADR 0002 section 7",
+    "output": "ADR 0002 section 7",
+    "item": "ADR 0002 section 10",
+    "responses": "ADR 0002 section 7",
+    "paging": "ADR 0002 section 10",
+    "sortable": "ADR 0002 section 10",
+    "filteredBy": "ADR 0002 section 10",
+    "degradable": "ADR 0002 section 10",
+    "examples": "ADR 0002 section 12",
+    "summary": "ADR 0002 section 7",
+    "description": "ADR 0002 section 7",
+    "identity": "ADR 0002 section 9",
+    "access": "ADR 0002 section 9",
+    "requires": "ADR 0002 section 9",
+    "scopes": "ADR 0002 section 9",
+    "principal": "ADR 0002 section 9",
+    "bindings": "ADR 0002 section 9",
+    "errors": "ADR 0002 section 11",
+    "errorRoles": "ADR 0002 section 11",
+    "tags": "ADR 0002 section 10",
+    "headers": "ADR 0002 section 7",
+    "query": "ADR 0002 section 7",
+    "upstream": "ADR 0002 section 10",
+    "maturity": "ADR 0002 section 10",
+    "internal": "ADR 0002 section 10",
+    "deprecated": "ADR 0002 section 10",
+    "budget": "ADR 0002 section 10",
+    "bodyLimit": "ADR 0002 section 10",
+    "cache": "ADR 0002 section 10",
+    "csrf": "ADR 0002 section 9",
+    "idempotency": "ADR 0002 section 10",
+    "format": "ADR 0002 section 10",
+    "unknownQuery": "ADR 0002 section 7",
+    "lint": "ADR 0002 section 12",
+    "maxIds": "ADR 0002 section 6",
+    "x-<prefix>-<key>": "ADR 0002 section 12"
+  },
+  "node.schema.json#/$defs/concurrency": {
+    "version": "ADR 0002 section 6",
+    "field": "ADR 0002 section 6"
+  },
+  "node.schema.json#/$defs/access": {
+    "public": "ADR 0002 section 9",
+    "optionalAuth": "ADR 0002 section 9",
+    "onRefused": "ADR 0002 section 9"
+  },
+  "node.schema.json#/$defs/csrf": {
+    "exempt": "ADR 0002 section 9"
+  },
+  "node.schema.json#/$defs/idempotency": {
+    "exempt": "ADR 0002 section 10"
+  },
+  "node.schema.json#/$defs/requirement": {
+    "right": "ADR 0002 section 9",
+    "rule": "ADR 0002 section 9",
+    "params": "ADR 0002 section 9",
+    "subject": "ADR 0002 section 9",
+    "bucket": "ADR 0002 section 9"
+  },
+  "node.schema.json#/$defs/principal": {
+    "requires": "ADR 0002 section 9"
+  },
+  "node.schema.json#/$defs/maturity/else": {
+    "level": "ADR 0002 section 10",
+    "reason": "ADR 0002 section 10"
+  },
+  "node.schema.json#/$defs/deprecation": {
+    "sunset": "ADR 0002 section 10"
+  },
+  "node.schema.json#/$defs/routeDeprecation": {
+    "sunset": "ADR 0002 section 10",
+    "successor": "ADR 0002 section 10"
+  },
+  "node.schema.json#/$defs/cache": {
+    "freshness": "ADR 0002 section 10",
+    "anonymous": "ADR 0002 section 10",
+    "vary": "ADR 0002 section 10",
+    "etag": "ADR 0002 section 10"
+  },
+  "node.schema.json#/$defs/paging/else/additionalProperties": {
+    "maxLimit": "ADR 0002 section 10",
+    "defaultLimit": "ADR 0002 section 10",
+    "overLimit": "ADR 0002 section 10",
+    "token": "ADR 0002 section 10"
+  },
+  "node.schema.json#/$defs/sortable/items/else": {
+    "key": "ADR 0002 section 10",
+    "right": "ADR 0002 section 10"
+  },
+  "node.schema.json#/$defs/responses/additionalProperties": {
+    "body": "ADR 0002 section 7",
+    "headers": "ADR 0002 section 7",
+    "description": "ADR 0002 section 7"
+  },
+  "node.schema.json#/$defs/examples/additionalProperties": {
+    "status": "ADR 0002 section 12",
+    "request": "ADR 0002 section 12",
+    "error": "ADR 0002 section 12",
+    "value": "ADR 0002 section 12"
+  },
+  "node-errors.schema.json#/$defs/attachment/then": {
+    "status": "ADR 0002 section 11",
+    "nature": "ADR 0002 section 11",
+    "family": "ADR 0002 section 11",
+    "params": "ADR 0002 section 11",
+    "example": "ADR 0002 section 11",
+    "title": "ADR 0002 section 11",
+    "summary": "ADR 0002 section 12",
+    "description": "ADR 0002 section 12",
+    "reach": "ADR 0002 section 11",
+    "for": "ADR 0002 section 11"
+  },
+  "node-errors.schema.json#/$defs/attachment/else": {
+    "example": "ADR 0002 section 11",
+    "reach": "ADR 0002 section 11",
+    "for": "ADR 0002 section 11"
+  },
+  "conventions.schema.json#/$defs/conventions": {
+    "format": "ADR 0002 section 13",
+    "pathCase": "ADR 0002 section 13",
+    "paging": "ADR 0002 section 13",
+    "idempotency": "ADR 0002 section 13",
+    "bodyLimit": "ADR 0002 section 13",
+    "batch": "ADR 0002 section 13",
+    "cache": "ADR 0002 section 13",
+    "restrictedInput": "ADR 0002 section 13",
+    "outputEnums": "ADR 0002 section 13",
+    "pathVersion": "ADR 0002 section 13",
+    "query": "ADR 0002 section 13",
+    "input": "ADR 0002 section 13",
+    "int64": "ADR 0002 section 13",
+    "deprecation": "ADR 0002 section 13",
+    "ops": "ADR 0002 section 6",
+    "operationIds": "ADR 0002 section 6",
+    "rateLimit": "ADR 0002 section 13",
+    "degradedHeader": "ADR 0002 section 13",
+    "urls": "ADR 0002 section 13",
+    "rights": "ADR 0002 section 2",
+    "errors": "ADR 0002 section 11"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/paging": {
+    "default": "ADR 0002 section 13",
+    "maxLimit": "ADR 0002 section 13",
+    "defaultLimit": "ADR 0002 section 13",
+    "overLimit": "ADR 0002 section 13"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/idempotency": {
+    "header": "ADR 0002 section 13",
+    "replayHeader": "ADR 0002 section 13",
+    "lifetime": "ADR 0002 section 13",
+    "methods": "ADR 0002 section 13",
+    "required": "ADR 0002 section 13",
+    "enforce": "ADR 0002 section 13"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/batch": {
+    "maxIds": "ADR 0002 section 13",
+    "bodyLimit": "ADR 0002 section 13",
+    "budget": "ADR 0002 section 13"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/cache": {
+    "families": "ADR 0002 section 13"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/query": {
+    "lists": "ADR 0002 section 7",
+    "objects": "ADR 0002 section 7",
+    "unknownKeys": "ADR 0002 section 7"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/input": {
+    "unknownKeys": "ADR 0003 section 4"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/deprecation": {
+    "header": "ADR 0002 section 13",
+    "sunsetHeader": "ADR 0002 section 13",
+    "successorRel": "ADR 0002 section 13"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/ops": {
+    "list": "ADR 0002 section 6",
+    "get": "ADR 0002 section 6",
+    "create": "ADR 0002 section 6",
+    "update": "ADR 0002 section 6",
+    "delete": "ADR 0002 section 6",
+    "batch": "ADR 0002 section 6"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/ops/properties/list": {
+    "method": "ADR 0002 section 6",
+    "path": "ADR 0002 section 6",
+    "status": "ADR 0002 section 6"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/ops/properties/get": {
+    "method": "ADR 0002 section 6",
+    "path": "ADR 0002 section 6",
+    "status": "ADR 0002 section 6"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/ops/properties/create": {
+    "method": "ADR 0002 section 6",
+    "path": "ADR 0002 section 6",
+    "status": "ADR 0002 section 6"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/ops/properties/update": {
+    "method": "ADR 0002 section 6",
+    "path": "ADR 0002 section 6",
+    "status": "ADR 0002 section 6"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/ops/properties/delete": {
+    "method": "ADR 0002 section 6",
+    "path": "ADR 0002 section 6",
+    "status": "ADR 0002 section 6"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/ops/properties/batch": {
+    "method": "ADR 0002 section 6",
+    "path": "ADR 0002 section 6",
+    "status": "ADR 0002 section 6"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/operationIds": {
+    "order": "ADR 0002 section 6",
+    "case": "ADR 0002 section 6"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/rateLimit": {
+    "header": "ADR 0002 section 13",
+    "param": "ADR 0002 section 13",
+    "unit": "ADR 0002 section 13"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/rights": {
+    "pattern": "ADR 0002 section 2"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/errors": {
+    "pattern": "ADR 0002 section 13",
+    "every": "ADR 0002 section 11",
+    "reach": "ADR 0002 section 11",
+    "derived": "ADR 0002 section 11"
+  },
+  "conventions.schema.json#/$defs/cacheDirectives": {
+    "maxAge": "ADR 0002 section 13",
+    "sharedMaxAge": "ADR 0002 section 13",
+    "staleWhileRevalidate": "ADR 0002 section 13",
+    "staleIfError": "ADR 0002 section 13",
+    "immutable": "ADR 0002 section 13",
+    "noCache": "ADR 0002 section 13",
+    "mustRevalidate": "ADR 0002 section 13"
+  },
+  "conventions.schema.json#/$defs/roleBinding/else": {
+    "code": "ADR 0002 section 11",
+    "params": "ADR 0002 section 11"
+  },
+  "schema.schema.json#/$defs/plain": {
+    "type": "ADR 0003 section 1",
+    "enum": "ADR 0003 section 7",
+    "allOf": "ADR 0003 section 1",
+    "oneOf": "ADR 0003 section 3",
+    "items": "ADR 0003 section 1",
+    "properties": "ADR 0003 section 1",
+    "additionalProperties": "ADR 0003 section 1",
+    "propertyNames": "ADR 0003 section 1",
+    "multipleOf": "ADR 0003 section 1",
+    "maximum": "ADR 0003 section 1",
+    "exclusiveMaximum": "ADR 0003 section 1",
+    "minimum": "ADR 0003 section 1",
+    "exclusiveMinimum": "ADR 0003 section 1",
+    "maxLength": "ADR 0003 section 1",
+    "minLength": "ADR 0003 section 1",
+    "pattern": "ADR 0003 section 9",
+    "maxItems": "ADR 0003 section 1",
+    "minItems": "ADR 0003 section 1",
+    "required": "ADR 0003 section 5",
+    "format": "ADR 0003 section 8",
+    "contentMediaType": "ADR 0003 section 1",
+    "contentSchema": "ADR 0003 section 1",
+    "opaque": "ADR 0003 section 2",
+    "file": "ADR 0003 section 2",
+    "title": "ADR 0003 section 1",
+    "description": "ADR 0003 section 1",
+    "deprecated": "ADR 0003 section 1",
+    "default": "ADR 0003 section 10",
+    "examples": "ADR 0003 section 11",
+    "nullable": "ADR 0003 section 5",
+    "sensitive": "ADR 0003 section 6",
+    "codeName": "ADR 0003 section 6",
+    "restrictedTo": "ADR 0003 section 6",
+    "discriminator": "ADR 0003 section 3",
+    "typeName": "ADR 0003 section 6",
+    "unknownKeys": "ADR 0003 section 4",
+    "lint": "ADR 0003 section 6",
+    "x-<prefix>-<key>": "ADR 0002 section 12"
+  },
+  "schema.schema.json#/$defs/plain/properties/enum/else/else": {
+    "narrow": "ADR 0003 section 7",
+    "to": "ADR 0003 section 7",
+    "reason": "ADR 0003 section 7"
+  },
+  "schema.schema.json#/$defs/plain/properties/file": {
+    "media": "ADR 0003 section 2",
+    "maxSize": "ADR 0003 section 2"
+  },
+  "schema.schema.json#/$defs/referenceMapping": {
+    "$ref": "ADR 0003 section 1",
+    "title": "ADR 0003 section 1",
+    "description": "ADR 0003 section 1",
+    "deprecated": "ADR 0003 section 1",
+    "default": "ADR 0003 section 10",
+    "examples": "ADR 0003 section 11",
+    "nullable": "ADR 0003 section 5",
+    "sensitive": "ADR 0003 section 6",
+    "codeName": "ADR 0003 section 6",
+    "restrictedTo": "ADR 0003 section 6",
+    "discriminator": "ADR 0003 section 3",
+    "typeName": "ADR 0003 section 6",
+    "unknownKeys": "ADR 0003 section 4",
+    "lint": "ADR 0003 section 6",
+    "x-<prefix>-<key>": "ADR 0002 section 12"
+  },
+  "schema.schema.json#/$defs/derived": {
+    "pick": "ADR 0003 section 2",
+    "omit": "ADR 0003 section 2",
+    "required": "ADR 0003 section 2",
+    "properties": "ADR 0003 section 2",
+    "title": "ADR 0003 section 1",
+    "description": "ADR 0003 section 1",
+    "typeName": "ADR 0003 section 6",
+    "unknownKeys": "ADR 0003 section 4",
+    "lint": "ADR 0003 section 6",
+    "x-<prefix>-<key>": "ADR 0002 section 12"
+  },
+  "schema.schema.json#/$defs/derived/properties/pick": {
+    "from": "ADR 0003 section 2",
+    "fields": "ADR 0003 section 2"
+  },
+  "schema.schema.json#/$defs/derived/properties/omit": {
+    "from": "ADR 0003 section 2",
+    "fields": "ADR 0003 section 2"
+  },
+  "schema.schema.json#/$defs/overlay": {
+    "nullable": "ADR 0003 section 2",
+    "default": "ADR 0003 section 2",
+    "restrictedTo": "ADR 0003 section 2",
+    "title": "ADR 0003 section 2",
+    "description": "ADR 0003 section 2",
+    "deprecated": "ADR 0003 section 2",
+    "examples": "ADR 0003 section 2"
+  },
+  "schema.schema.json#/$defs/restrictedTo/else": {
+    "right": "ADR 0003 section 6",
+    "params": "ADR 0003 section 6",
+    "input": "ADR 0003 section 6"
+  },
+  "schema.schema.json#/$defs/discriminator/else": {
+    "from": "ADR 0003 section 3"
+  },
+  "enums.schema.json#/$defs/entry": {
+    "values": "ADR 0002 section 12",
+    "source": "ADR 0002 section 12",
+    "reason": "ADR 0002 section 12",
+    "fallback": "ADR 0002 section 12",
+    "codeNames": "ADR 0002 section 12",
+    "summary": "ADR 0002 section 12",
+    "description": "ADR 0002 section 12"
+  },
+  "enums.schema.json#/$defs/source": {
+    "vocabulary": "ADR 0002 section 12",
+    "enum": "ADR 0002 section 12"
+  },
+  "scalars.schema.json#/$defs/entry": {
+    "type": "ADR 0003 section 8",
+    "pattern": "ADR 0003 section 9",
+    "minLength": "ADR 0003 section 8",
+    "maxLength": "ADR 0003 section 8",
+    "minimum": "ADR 0003 section 8",
+    "maximum": "ADR 0003 section 8",
+    "exclusiveMinimum": "ADR 0003 section 8",
+    "exclusiveMaximum": "ADR 0003 section 8",
+    "multipleOf": "ADR 0003 section 8",
+    "title": "ADR 0003 section 8",
+    "description": "ADR 0003 section 8"
+  },
+  "errors.schema.json#/$defs/entry": {
+    "status": "ADR 0002 section 11",
+    "nature": "ADR 0002 section 11",
+    "family": "ADR 0002 section 11",
+    "params": "ADR 0002 section 11",
+    "example": "ADR 0002 section 11",
+    "title": "ADR 0002 section 11",
+    "summary": "ADR 0002 section 12",
+    "description": "ADR 0002 section 12"
+  },
+  "natures.schema.json#/$defs/entry": {
+    "base": "ADR 0002 section 11",
+    "summary": "ADR 0002 section 11",
+    "description": "ADR 0002 section 11"
+  },
+  "schemes.schema.json#/$defs/cookie": {
+    "kind": "ADR 0002 section 9",
+    "name": "ADR 0002 section 9",
+    "csrf": "ADR 0002 section 9",
+    "lint": "ADR 0002 section 12"
+  },
+  "schemes.schema.json#/$defs/apiKey": {
+    "kind": "ADR 0002 section 9",
+    "name": "ADR 0002 section 9",
+    "lint": "ADR 0002 section 12"
+  },
+  "schemes.schema.json#/$defs/bearer": {
+    "kind": "ADR 0002 section 9",
+    "bearerFormat": "ADR 0002 section 9",
+    "oauth2": "ADR 0002 section 9",
+    "openIdConnect": "ADR 0002 section 9",
+    "lint": "ADR 0002 section 12"
+  },
+  "schemes.schema.json#/$defs/bearer/properties/oauth2": {
+    "flows": "ADR 0002 section 9"
+  },
+  "schemes.schema.json#/$defs/basic": {
+    "kind": "ADR 0002 section 9",
+    "lint": "ADR 0002 section 12"
+  },
+  "schemes.schema.json#/$defs/signature": {
+    "kind": "ADR 0002 section 9",
+    "name": "ADR 0002 section 9",
+    "verify": "ADR 0002 section 9",
+    "format": "ADR 0002 section 9",
+    "algorithm": "ADR 0002 section 9",
+    "payload": "ADR 0002 section 9",
+    "encoding": "ADR 0002 section 9",
+    "tolerance": "ADR 0002 section 9",
+    "key": "ADR 0002 section 9",
+    "headers": "ADR 0002 section 9",
+    "lint": "ADR 0002 section 12"
+  },
+  "schemes.schema.json#/$defs/key": {
+    "value": "ADR 0002 section 9",
+    "from": "ADR 0002 section 9"
+  },
+  "headers.schema.json#/$defs/entry": {
+    "name": "ADR 0002 section 9",
+    "in": "ADR 0002 section 9",
+    "semantic": "ADR 0002 section 9",
+    "schema": "ADR 0002 section 9",
+    "response": "ADR 0002 section 9",
+    "request": "ADR 0002 section 9"
+  },
+  "identities.schema.json#/$defs/entry": {
+    "kind": "ADR 0002 section 9",
+    "schemes": "ADR 0002 section 9",
+    "scheme": "ADR 0002 section 9",
+    "principal": "ADR 0002 section 9",
+    "unknownKeys": "ADR 0002 section 9",
+    "errors": "ADR 0002 section 9",
+    "headers": "ADR 0002 section 9",
+    "lint": "ADR 0002 section 12",
+    "summary": "ADR 0002 section 12",
+    "description": "ADR 0002 section 12"
+  },
+  "identities.schema.json#/$defs/entry/properties/schemes": {
+    "read": "ADR 0002 section 9",
+    "write": "ADR 0002 section 9",
+    "optionalRead": "ADR 0002 section 9"
+  },
+  "identities.schema.json#/$defs/principal/then": {
+    "variants": "ADR 0002 section 9"
+  },
+  "identities.schema.json#/$defs/headerUse": {
+    "for": "ADR 0002 section 9",
+    "required": "ADR 0002 section 9",
+    "schema": "ADR 0002 section 9",
+    "from": "ADR 0002 section 9",
+    "stale": "ADR 0002 section 9"
+  },
+  "rights.schema.json#/$defs/entry": {
+    "params": "ADR 0002 section 9",
+    "subject": "ADR 0002 section 9",
+    "guest": "ADR 0002 section 9",
+    "errors": "ADR 0002 section 9",
+    "codeName": "ADR 0002 section 9",
+    "lint": "ADR 0002 section 12",
+    "summary": "ADR 0002 section 9",
+    "description": "ADR 0002 section 9",
+    "x-<prefix>-<key>": "ADR 0002 section 12"
+  },
+  "rights.schema.json#/$defs/subject": {
+    "scope": "ADR 0002 section 9",
+    "resource": "ADR 0002 section 9",
+    "id": "ADR 0002 section 9"
+  },
+  "rules.schema.json#/$defs/entry": {
+    "bucket": "ADR 0002 section 9",
+    "params": "ADR 0002 section 9",
+    "errors": "ADR 0002 section 9",
+    "proof": "ADR 0002 section 9",
+    "lint": "ADR 0002 section 12",
+    "summary": "ADR 0002 section 9",
+    "description": "ADR 0002 section 9",
+    "x-<prefix>-<key>": "ADR 0002 section 12"
+  },
+  "rules.schema.json#/$defs/entry/properties/proof": {
+    "in": "ADR 0002 section 9",
+    "name": "ADR 0002 section 9",
+    "schema": "ADR 0002 section 9"
+  },
+  "scopes.schema.json#/$defs/entry": {
+    "id": "ADR 0002 section 9",
+    "within": "ADR 0002 section 9",
+    "errors": "ADR 0002 section 9",
+    "lint": "ADR 0002 section 12",
+    "summary": "ADR 0002 section 9",
+    "description": "ADR 0002 section 9",
+    "x-<prefix>-<key>": "ADR 0002 section 12"
+  },
+  "buckets.schema.json#/$defs/entry": {
+    "key": "ADR 0002 section 9",
+    "limit": "ADR 0002 section 9",
+    "window": "ADR 0002 section 9"
+  },
+  "services.schema.json#/$defs/entry": {
+    "maturity": "ADR 0002 section 10"
+  },
+  "pagings.schema.json#/$defs/entry": {
+    "request": "ADR 0002 section 14",
+    "response": "ADR 0002 section 14",
+    "absent": "ADR 0002 section 14"
+  },
+  "pagings.schema.json#/$defs/entry/properties/request": {
+    "cursor": "ADR 0002 section 14",
+    "after": "ADR 0002 section 14",
+    "before": "ADR 0002 section 14",
+    "page": "ADR 0002 section 14",
+    "offset": "ADR 0002 section 14",
+    "since": "ADR 0002 section 14",
+    "limit": "ADR 0002 section 14",
+    "sort": "ADR 0002 section 14"
+  },
+  "pagings.schema.json#/$defs/entry/properties/request/properties/cursor": {
+    "query": "ADR 0002 section 14",
+    "header": "ADR 0002 section 14"
+  },
+  "pagings.schema.json#/$defs/entry/properties/request/properties/after": {
+    "query": "ADR 0002 section 14",
+    "header": "ADR 0002 section 14"
+  },
+  "pagings.schema.json#/$defs/entry/properties/request/properties/before": {
+    "query": "ADR 0002 section 14",
+    "header": "ADR 0002 section 14"
+  },
+  "pagings.schema.json#/$defs/entry/properties/request/properties/page": {
+    "query": "ADR 0002 section 14",
+    "header": "ADR 0002 section 14",
+    "base": "ADR 0002 section 14"
+  },
+  "pagings.schema.json#/$defs/entry/properties/request/properties/offset": {
+    "query": "ADR 0002 section 14",
+    "header": "ADR 0002 section 14"
+  },
+  "pagings.schema.json#/$defs/entry/properties/request/properties/since": {
+    "query": "ADR 0002 section 14",
+    "header": "ADR 0002 section 14"
+  },
+  "pagings.schema.json#/$defs/entry/properties/request/properties/limit": {
+    "query": "ADR 0002 section 14",
+    "header": "ADR 0002 section 14"
+  },
+  "pagings.schema.json#/$defs/entry/properties/request/properties/sort": {
+    "query": "ADR 0002 section 14",
+    "header": "ADR 0002 section 14",
+    "style": "ADR 0002 section 14",
+    "direction": "ADR 0002 section 14"
+  },
+  "pagings.schema.json#/$defs/entry/properties/response": {
+    "meta": "ADR 0002 section 14",
+    "body": "ADR 0002 section 14",
+    "headers": "ADR 0002 section 14",
+    "links": "ADR 0002 section 14"
+  },
+  "formats.schema.json#/$defs/entry": {
+    "media": "ADR 0002 section 13",
+    "absent": "ADR 0002 section 13",
+    "success": "ADR 0002 section 13",
+    "meta": "ADR 0002 section 13",
+    "error": "ADR 0002 section 13"
+  },
+  "formats.schema.json#/$defs/entry/properties/success": {
+    "item": "ADR 0002 section 13",
+    "table": "ADR 0002 section 13",
+    "list": "ADR 0002 section 13",
+    "page": "ADR 0002 section 13"
+  },
+  "formats.schema.json#/$defs/entry/properties/meta/additionalProperties": {
+    "fill": "ADR 0002 section 13",
+    "schema": "ADR 0002 section 13"
+  },
+  "formats.schema.json#/$defs/entry/properties/error": {
+    "media": "ADR 0002 section 13",
+    "body": "ADR 0002 section 13",
+    "headers": "ADR 0002 section 13"
+  },
+  "formats.schema.json#/$defs/shape": {
+    "body": "ADR 0002 section 13",
+    "headers": "ADR 0002 section 13"
+  },
+  "common.schema.json#/$defs/file": {
+    "$file": "ADR 0002 section 2"
+  },
+  "common.schema.json#/$defs/unknownKeysPolicy/else": {
+    "ignore": "ADR 0003 section 4",
+    "keep": "ADR 0003 section 4"
+  },
+  "common.schema.json#/$defs/unknownKeysException/else": {
+    "ignore": "ADR 0002 section 9",
+    "keep": "ADR 0002 section 9"
+  },
+  "common.schema.json#/$defs/unknownQueryPolicy/else": {
+    "ignore": "ADR 0002 section 7"
+  },
+  "common.schema.json#/$defs/lintAllow": {
+    "allow": "ADR 0002 section 12"
+  },
+  "common.schema.json#/$defs/lintRules": {
+    "rules": "ADR 0002 section 12"
+  }
+}

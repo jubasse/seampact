@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact buckets catalogue",
+  "description": "Rate-limit buckets (ADR 0002 section 9). A name-keyed catalogue file.",
+  "type": "object",
+  "properties": {
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "propertyNames": {
+    "description": "a bucket name",
+    "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/entry"
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/bucketKeySource"
+          },
+          "minItems": 1,
+          "$comment": "ADR 0002 section 9"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "$comment": "ADR 0002 section 9"
+        },
+        "window": {
+          "$ref": "common.schema.json#/$defs/duration",
+          "$comment": "ADR 0002 section 9"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "$include": true
+        },
+        "required": ["$include"]
+      },
+      "else": {
+        "properties": {
+          "key": true
+        },
+        "required": ["key"]
+      }
+    }
+  }
+}

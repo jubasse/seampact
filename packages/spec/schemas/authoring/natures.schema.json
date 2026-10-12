@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact natures catalogue",
+  "description": "Error natures, each mapped onto a base nature (ADR 0002 section 11). A name-keyed catalogue file.",
+  "type": "object",
+  "properties": {
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "propertyNames": {
+    "description": "a nature name",
+    "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/entry"
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "properties": {
+        "base": {
+          "enum": ["refused", "unavailable", "failed"],
+          "$comment": "ADR 0002 section 11"
+        },
+        "summary": {
+          "$ref": "common.schema.json#/$defs/summary",
+          "$comment": "ADR 0002 section 11"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0002 section 11"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "$include": true
+        },
+        "required": ["$include"]
+      },
+      "else": {
+        "properties": {
+          "base": true
+        },
+        "required": ["base"]
+      }
+    }
+  }
+}

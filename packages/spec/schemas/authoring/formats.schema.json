@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact formats catalogue",
+  "description": "Wire formats (ADR 0002 section 13). A name-keyed catalogue file.",
+  "type": "object",
+  "properties": {
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "propertyNames": {
+    "description": "a wire format name",
+    "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/entry"
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "properties": {
+        "media": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 13"
+        },
+        "absent": {
+          "enum": ["omit", null],
+          "$comment": "ADR 0002 section 13"
+        },
+        "success": {
+          "type": "object",
+          "properties": {
+            "item": {
+              "$ref": "#/$defs/shape",
+              "$comment": "ADR 0002 section 13"
+            },
+            "table": {
+              "$ref": "#/$defs/shape",
+              "$comment": "ADR 0002 section 13"
+            },
+            "list": {
+              "$ref": "#/$defs/shape",
+              "$comment": "ADR 0002 section 13"
+            },
+            "page": {
+              "$ref": "#/$defs/shape",
+              "$comment": "ADR 0002 section 13"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 13"
+        },
+        "meta": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "a meta field name",
+            "pattern": "^(?:[^$].*|\\$include)$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "fill": {
+                "title": "meta fill",
+                "description": "now, traceId, degraded, handler or principal.<field>.",
+                "type": "string",
+                "pattern": "^(?:now|traceId|degraded|handler|principal\\.[^.\\s]+(?:\\.[^.\\s]+)*)$",
+                "$comment": "ADR 0002 section 13"
+              },
+              "schema": {
+                "$ref": "schema.schema.json#/$defs/schema",
+                "$comment": "ADR 0002 section 13"
+              },
+              "$include": {
+                "$ref": "common.schema.json#/$defs/include"
+              }
+            },
+            "additionalProperties": false,
+            "if": {
+              "properties": {
+                "$include": true
+              },
+              "required": ["$include"]
+            },
+            "else": {
+              "properties": {
+                "fill": true
+              },
+              "required": ["fill"]
+            }
+          },
+          "$comment": "ADR 0002 section 13"
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "media": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "ADR 0002 section 13"
+            },
+            "body": {
+              "$ref": "common.schema.json#/$defs/template",
+              "$comment": "ADR 0002 section 13"
+            },
+            "headers": {
+              "type": "object",
+              "description": "Response headers.",
+              "properties": {
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "propertyNames": {
+                "description": "a member or header name",
+                "pattern": "^(?:[^$].*|\\$include)$"
+              },
+              "additionalProperties": {
+                "$ref": "common.schema.json#/$defs/template"
+              },
+              "$comment": "ADR 0002 section 13"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 13"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false
+    },
+    "shape": {
+      "type": "object",
+      "properties": {
+        "body": {
+          "$ref": "common.schema.json#/$defs/template",
+          "$comment": "ADR 0002 section 13"
+        },
+        "headers": {
+          "type": "object",
+          "description": "Response headers, each a template.",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "a member or header name",
+            "pattern": "^(?:[^$].*|\\$include)$"
+          },
+          "additionalProperties": {
+            "$ref": "common.schema.json#/$defs/template"
+          },
+          "$comment": "ADR 0002 section 13"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

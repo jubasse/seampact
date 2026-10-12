@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact services catalogue",
+  "description": "Upstream services (ADR 0002 section 10). A name-keyed catalogue file.",
+  "type": "object",
+  "properties": {
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "propertyNames": {
+    "description": "a service name",
+    "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/entry"
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "properties": {
+        "maturity": {
+          "$ref": "common.schema.json#/$defs/maturityLevel",
+          "$comment": "ADR 0002 section 10"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

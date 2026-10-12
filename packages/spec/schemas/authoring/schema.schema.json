@@ -1,0 +1,1350 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact schema",
+  "$ref": "#/$defs/schema",
+  "$defs": {
+    "schema": {
+      "title": "schema",
+      "description": "A schema (ADR 0003): a schema name, a file path, or a mapping in the schema language.",
+      "if": {
+        "type": "string"
+      },
+      "then": {
+        "$ref": "#/$defs/reference"
+      },
+      "else": {
+        "$ref": "#/$defs/mapping"
+      }
+    },
+    "reference": {
+      "title": "schema reference",
+      "description": "A schema name (Task) or a file (./schemas/task.yaml#/Task) (ADR 0002 section 2).",
+      "type": "string",
+      "pattern": "^(?:[A-Z][A-Za-z0-9]*|\\.\\.?/[^\\\\#]+(?:#/.*)?)$"
+    },
+    "mapping": {
+      "type": "object",
+      "if": {
+        "properties": {
+          "$ref": true
+        },
+        "required": ["$ref"]
+      },
+      "then": {
+        "$ref": "#/$defs/referenceMapping"
+      },
+      "else": {
+        "if": {
+          "properties": {
+            "pick": true
+          },
+          "required": ["pick"]
+        },
+        "then": {
+          "$ref": "#/$defs/derived"
+        },
+        "else": {
+          "if": {
+            "properties": {
+              "omit": true
+            },
+            "required": ["omit"]
+          },
+          "then": {
+            "$ref": "#/$defs/derived"
+          },
+          "else": {
+            "$ref": "#/$defs/plain"
+          }
+        }
+      }
+    },
+    "plain": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "if": {
+            "anyOf": [
+              {
+                "type": "array"
+              },
+              {
+                "type": "null"
+              },
+              {
+                "const": "null"
+              }
+            ]
+          },
+          "then": {
+            "title": "refused form",
+            "description": "Refused (ADR 0003 section 1): 'null' and type arrays are refused; nullability is 'nullable' (ADR 0003 section 5). Fix: write one type and 'nullable: true'.",
+            "not": {}
+          },
+          "else": {
+            "enum": ["string", "integer", "number", "boolean", "object", "array"]
+          },
+          "$comment": "ADR 0003 section 1"
+        },
+        "enum": {
+          "if": {
+            "type": "array"
+          },
+          "then": {
+            "title": "refused form",
+            "description": "Refused (ADR 0003 section 1): inline value lists are refused because enums live in one catalogue, where each is declared once with its values, source and fallback. Fix: declare the values in the 'enums' catalogue and write 'enum: <EnumName>'.",
+            "not": {}
+          },
+          "else": {
+            "if": {
+              "type": "string"
+            },
+            "then": {
+              "$ref": "common.schema.json#/$defs/schemaName"
+            },
+            "else": {
+              "type": "object",
+              "description": "A narrowing of a catalogue enum to a strict subset (ADR 0003 section 7).",
+              "properties": {
+                "narrow": {
+                  "$ref": "common.schema.json#/$defs/schemaName",
+                  "$comment": "ADR 0003 section 7"
+                },
+                "to": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 1,
+                  "$comment": "ADR 0003 section 7"
+                },
+                "reason": {
+                  "type": "string",
+                  "$comment": "ADR 0003 section 7",
+                  "description": "Optional docs: why the use narrows the enum."
+                }
+              },
+              "additionalProperties": false,
+              "required": ["narrow", "to"]
+            }
+          },
+          "$comment": "ADR 0003 section 7"
+        },
+        "allOf": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/schema"
+          },
+          "minItems": 1,
+          "$comment": "ADR 0003 section 1",
+          "description": "Object schemas, merged into one."
+        },
+        "oneOf": {
+          "type": "object",
+          "propertyNames": {
+            "description": "a union tag",
+            "pattern": "^(?:[^$].*)$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/schema"
+          },
+          "$comment": "ADR 0003 section 3",
+          "description": "A mapping from tag value to variant (ADR 0003 section 3)."
+        },
+        "items": {
+          "$ref": "#/$defs/schema",
+          "$comment": "ADR 0003 section 1"
+        },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "a property name",
+            "pattern": "^(?:[^$].*|\\$include)$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/schema"
+          },
+          "$comment": "ADR 0003 section 1"
+        },
+        "additionalProperties": {
+          "if": {
+            "type": "boolean"
+          },
+          "then": {
+            "title": "refused form",
+            "description": "Refused (ADR 0003 section 1): 'true' and 'false' are refused because direction decides strictness. Fix: remove it, or set 'unknownKeys' on the input use (ADR 0003 section 4).",
+            "not": {}
+          },
+          "else": {
+            "$ref": "#/$defs/schema"
+          },
+          "$comment": "ADR 0003 section 1"
+        },
+        "propertyNames": {
+          "$ref": "#/$defs/schema",
+          "$comment": "ADR 0003 section 1"
+        },
+        "multipleOf": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "$comment": "ADR 0003 section 1"
+        },
+        "maximum": {
+          "type": "number",
+          "$comment": "ADR 0003 section 1"
+        },
+        "exclusiveMaximum": {
+          "type": "number",
+          "$comment": "ADR 0003 section 1"
+        },
+        "minimum": {
+          "type": "number",
+          "$comment": "ADR 0003 section 1"
+        },
+        "exclusiveMinimum": {
+          "type": "number",
+          "$comment": "ADR 0003 section 1"
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 0,
+          "$comment": "ADR 0003 section 1"
+        },
+        "minLength": {
+          "type": "integer",
+          "minimum": 0,
+          "$comment": "ADR 0003 section 1"
+        },
+        "pattern": {
+          "type": "string",
+          "$comment": "ADR 0003 section 9",
+          "description": "A portable regular expression (ADR 0003 section 9)."
+        },
+        "maxItems": {
+          "type": "integer",
+          "minimum": 0,
+          "$comment": "ADR 0003 section 1"
+        },
+        "minItems": {
+          "type": "integer",
+          "minimum": 0,
+          "$comment": "ADR 0003 section 1"
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "$comment": "ADR 0003 section 5"
+        },
+        "format": {
+          "type": "string",
+          "pattern": "^[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*$",
+          "$comment": "ADR 0003 section 8",
+          "description": "A portable format (uuid, date-time, date, int64, decimal, email, uri, uri-reference) or a named format of the 'scalars' catalogue."
+        },
+        "contentMediaType": {
+          "enum": ["application/json"],
+          "$comment": "ADR 0003 section 1"
+        },
+        "contentSchema": {
+          "$ref": "#/$defs/schema",
+          "$comment": "ADR 0003 section 1"
+        },
+        "opaque": {
+          "$ref": "common.schema.json#/$defs/reason",
+          "$comment": "ADR 0003 section 2",
+          "description": "Any JSON value, not checked here, with the reason (ADR 0003 section 2)."
+        },
+        "file": {
+          "type": "object",
+          "properties": {
+            "media": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1,
+              "$comment": "ADR 0003 section 2"
+            },
+            "maxSize": {
+              "$ref": "common.schema.json#/$defs/size",
+              "$comment": "ADR 0003 section 2"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0003 section 2",
+          "description": "A file: a multipart field or a download (ADR 0003 section 2)."
+        },
+        "title": {
+          "type": "string",
+          "$comment": "ADR 0003 section 1",
+          "description": "Docs: the schema's title."
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0003 section 1"
+        },
+        "deprecated": {
+          "type": "boolean",
+          "$comment": "ADR 0003 section 1"
+        },
+        "default": {
+          "$comment": "ADR 0003 section 10",
+          "description": "On an optional input property or query field only (ADR 0003 section 10)."
+        },
+        "examples": {
+          "type": "array",
+          "items": {},
+          "$comment": "ADR 0003 section 11",
+          "description": "Values parsed against the schema at compile time."
+        },
+        "nullable": {
+          "type": "boolean",
+          "$comment": "ADR 0003 section 5",
+          "description": "The value may be JSON null (ADR 0003 section 5)."
+        },
+        "sensitive": {
+          "type": "boolean",
+          "$comment": "ADR 0003 section 6",
+          "description": "The value is secret (ADR 0003 section 6)."
+        },
+        "codeName": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0003 section 6",
+          "description": "The identifier generated code uses for the property."
+        },
+        "restrictedTo": {
+          "$ref": "#/$defs/restrictedTo",
+          "$comment": "ADR 0003 section 6"
+        },
+        "discriminator": {
+          "$ref": "#/$defs/discriminator",
+          "$comment": "ADR 0003 section 3"
+        },
+        "typeName": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0003 section 6",
+          "description": "The value the $resource slot writes."
+        },
+        "unknownKeys": {
+          "$ref": "common.schema.json#/$defs/unknownKeysPolicy",
+          "$comment": "ADR 0003 section 4"
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0003 section 6"
+        },
+        "$schema": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): the dialect is fixed by seampact and the authoring schema. Fix: remove '$schema'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$id": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): a schema's identity is its catalogue name; a second identifier would be a second fact. Fix: remove '$id' and use the schema's catalogue name.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$anchor": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): names live in the catalogue. Fix: declare the schema in the 'schemas' catalogue and reference it by name.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$dynamicRef": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): generic, late-bound schemas have no counterpart in any target's type system. Fix: reference a named schema with '$ref'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$dynamicAnchor": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): generic, late-bound schemas have no counterpart in any target's type system. Fix: declare the schema in the 'schemas' catalogue and reference it by name.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$vocabulary": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): the vocabulary is fixed. Fix: remove '$vocabulary'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$comment": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): YAML comments serve; a '$comment' would reach no output. Fix: write a YAML comment ('# ...') or a 'description'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$defs": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): named schemas live in the 'schemas' catalogue, one place. Fix: move each definition into the 'schemas' catalogue and reference it by name.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "anyOf": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): an untagged union cannot be decoded by a client without trying each branch, and validators disagree on overlaps. Fix: use 'oneOf' with a 'discriminator', 'nullable: true', or an opaque value with its reason.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "not": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): negative constraints have no native form in Bean Validation, Laravel or Symfony constraints. Fix: state the accepted values positively (an enum, a pattern, a range).",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "if": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional validation is not portable and hides two types in one. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "then": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional validation is not portable and hides two types in one. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "else": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional validation is not portable and hides two types in one. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "dependentSchemas": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional validation is not portable and hides two types in one. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "prefixItems": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): tuples map to no record or class type. Fix: use an object, or an opaque value with its reason for a third party's tuple.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "contains": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): no native counterpart in most targets; no consumer. Fix: remove 'contains'; check the item schema with 'items'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "patternProperties": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): key-dependent schemas map to no type. Fix: use a map: 'additionalProperties: <schema>' with 'propertyNames'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "unevaluatedItems": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): direction decides how unknown fields are treated. Fix: remove it; input refuses unknown items and output tolerates them.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "unevaluatedProperties": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): direction decides how unknown fields are treated. Fix: remove it, or set 'unknownKeys' on the input use (ADR 0003 section 4).",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "const": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): a one-value field is an enum or a union tag; keeping both would give two ways to state it. Fix: use a catalogue enum, or a union tag.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "uniqueItems": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): no native, exact check in Bean Validation or class-validator, and \"equal\" differs for objects; no consumer. Fix: remove 'uniqueItems'; the handler deduplicates.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "maxContains": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): 'contains' is refused. Fix: remove 'maxContains'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "minContains": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): 'contains' is refused. Fix: remove 'minContains'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "maxProperties": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): no consumer; map size limits wait for one. Fix: remove 'maxProperties'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "minProperties": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): no consumer; map size limits wait for one. Fix: remove 'minProperties'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "dependentRequired": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional presence. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "contentEncoding": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): base64 inside JSON has no consumer; files travel as multipart parts or downloads. Fix: use a file field of a multipart input, or a file download.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "readOnly": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): they make one schema stand for two types; a payload that differs between input and output is two schemas. Fix: declare two schemas, the input one derived with 'pick' or 'omit'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "writeOnly": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): they make one schema stand for two types; a payload that differs between input and output is two schemas. Fix: declare two schemas, the input one derived with 'pick' or 'omit'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "patternProperties": {
+        "^x-seampact-": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        },
+        "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$comment": "ADR 0002 section 12"
+        }
+      },
+      "additionalProperties": false
+    },
+    "referenceMapping": {
+      "type": "object",
+      "properties": {
+        "$ref": {
+          "$ref": "#/$defs/reference",
+          "$comment": "ADR 0003 section 1"
+        },
+        "title": {
+          "type": "string",
+          "$comment": "ADR 0003 section 1",
+          "description": "Docs: the schema's title."
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0003 section 1"
+        },
+        "deprecated": {
+          "type": "boolean",
+          "$comment": "ADR 0003 section 1"
+        },
+        "default": {
+          "$comment": "ADR 0003 section 10",
+          "description": "On an optional input property or query field only (ADR 0003 section 10)."
+        },
+        "examples": {
+          "type": "array",
+          "items": {},
+          "$comment": "ADR 0003 section 11",
+          "description": "Values parsed against the schema at compile time."
+        },
+        "nullable": {
+          "type": "boolean",
+          "$comment": "ADR 0003 section 5",
+          "description": "The value may be JSON null (ADR 0003 section 5)."
+        },
+        "sensitive": {
+          "type": "boolean",
+          "$comment": "ADR 0003 section 6",
+          "description": "The value is secret (ADR 0003 section 6)."
+        },
+        "codeName": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0003 section 6",
+          "description": "The identifier generated code uses for the property."
+        },
+        "restrictedTo": {
+          "$ref": "#/$defs/restrictedTo",
+          "$comment": "ADR 0003 section 6"
+        },
+        "discriminator": {
+          "$ref": "#/$defs/discriminator",
+          "$comment": "ADR 0003 section 3"
+        },
+        "typeName": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0003 section 6",
+          "description": "The value the $resource slot writes."
+        },
+        "unknownKeys": {
+          "$ref": "common.schema.json#/$defs/unknownKeysPolicy",
+          "$comment": "ADR 0003 section 4"
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0003 section 6"
+        },
+        "$schema": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): the dialect is fixed by seampact and the authoring schema. Fix: remove '$schema'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$id": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): a schema's identity is its catalogue name; a second identifier would be a second fact. Fix: remove '$id' and use the schema's catalogue name.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$anchor": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): names live in the catalogue. Fix: declare the schema in the 'schemas' catalogue and reference it by name.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$dynamicRef": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): generic, late-bound schemas have no counterpart in any target's type system. Fix: reference a named schema with '$ref'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$dynamicAnchor": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): generic, late-bound schemas have no counterpart in any target's type system. Fix: declare the schema in the 'schemas' catalogue and reference it by name.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$vocabulary": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): the vocabulary is fixed. Fix: remove '$vocabulary'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$comment": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): YAML comments serve; a '$comment' would reach no output. Fix: write a YAML comment ('# ...') or a 'description'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$defs": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): named schemas live in the 'schemas' catalogue, one place. Fix: move each definition into the 'schemas' catalogue and reference it by name.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "anyOf": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): an untagged union cannot be decoded by a client without trying each branch, and validators disagree on overlaps. Fix: use 'oneOf' with a 'discriminator', 'nullable: true', or an opaque value with its reason.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "not": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): negative constraints have no native form in Bean Validation, Laravel or Symfony constraints. Fix: state the accepted values positively (an enum, a pattern, a range).",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "if": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional validation is not portable and hides two types in one. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "then": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional validation is not portable and hides two types in one. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "else": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional validation is not portable and hides two types in one. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "dependentSchemas": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional validation is not portable and hides two types in one. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "prefixItems": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): tuples map to no record or class type. Fix: use an object, or an opaque value with its reason for a third party's tuple.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "contains": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): no native counterpart in most targets; no consumer. Fix: remove 'contains'; check the item schema with 'items'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "patternProperties": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): key-dependent schemas map to no type. Fix: use a map: 'additionalProperties: <schema>' with 'propertyNames'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "unevaluatedItems": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): direction decides how unknown fields are treated. Fix: remove it; input refuses unknown items and output tolerates them.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "unevaluatedProperties": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): direction decides how unknown fields are treated. Fix: remove it, or set 'unknownKeys' on the input use (ADR 0003 section 4).",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "const": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): a one-value field is an enum or a union tag; keeping both would give two ways to state it. Fix: use a catalogue enum, or a union tag.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "uniqueItems": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): no native, exact check in Bean Validation or class-validator, and \"equal\" differs for objects; no consumer. Fix: remove 'uniqueItems'; the handler deduplicates.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "maxContains": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): 'contains' is refused. Fix: remove 'maxContains'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "minContains": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): 'contains' is refused. Fix: remove 'minContains'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "maxProperties": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): no consumer; map size limits wait for one. Fix: remove 'maxProperties'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "minProperties": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): no consumer; map size limits wait for one. Fix: remove 'minProperties'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "dependentRequired": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional presence. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "contentEncoding": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): base64 inside JSON has no consumer; files travel as multipart parts or downloads. Fix: use a file field of a multipart input, or a file download.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "readOnly": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): they make one schema stand for two types; a payload that differs between input and output is two schemas. Fix: declare two schemas, the input one derived with 'pick' or 'omit'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "writeOnly": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): they make one schema stand for two types; a payload that differs between input and output is two schemas. Fix: declare two schemas, the input one derived with 'pick' or 'omit'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "patternProperties": {
+        "^x-seampact-": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        },
+        "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$comment": "ADR 0002 section 12"
+        }
+      },
+      "additionalProperties": false
+    },
+    "derived": {
+      "type": "object",
+      "properties": {
+        "pick": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "$ref": "#/$defs/reference",
+              "$comment": "ADR 0003 section 2"
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "$comment": "ADR 0003 section 2"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["from", "fields"],
+          "$comment": "ADR 0003 section 2",
+          "description": "Keeps the listed properties of 'from', in that order."
+        },
+        "omit": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "$ref": "#/$defs/reference",
+              "$comment": "ADR 0003 section 2"
+            },
+            "fields": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "$comment": "ADR 0003 section 2"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["from", "fields"],
+          "$comment": "ADR 0003 section 2",
+          "description": "Keeps the other properties of 'from', in its order."
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "$comment": "ADR 0003 section 2"
+        },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "a property name",
+            "pattern": "^(?:[^$].*|\\$include)$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/overlay"
+          },
+          "$comment": "ADR 0003 section 2",
+          "description": "Overlays of kept properties."
+        },
+        "title": {
+          "type": "string",
+          "$comment": "ADR 0003 section 1"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0003 section 1"
+        },
+        "typeName": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0003 section 6"
+        },
+        "unknownKeys": {
+          "$ref": "common.schema.json#/$defs/unknownKeysPolicy",
+          "$comment": "ADR 0003 section 4"
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0003 section 6"
+        },
+        "$schema": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): the dialect is fixed by seampact and the authoring schema. Fix: remove '$schema'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$id": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): a schema's identity is its catalogue name; a second identifier would be a second fact. Fix: remove '$id' and use the schema's catalogue name.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$anchor": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): names live in the catalogue. Fix: declare the schema in the 'schemas' catalogue and reference it by name.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$dynamicRef": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): generic, late-bound schemas have no counterpart in any target's type system. Fix: reference a named schema with '$ref'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$dynamicAnchor": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): generic, late-bound schemas have no counterpart in any target's type system. Fix: declare the schema in the 'schemas' catalogue and reference it by name.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$vocabulary": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): the vocabulary is fixed. Fix: remove '$vocabulary'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$comment": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): YAML comments serve; a '$comment' would reach no output. Fix: write a YAML comment ('# ...') or a 'description'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$defs": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): named schemas live in the 'schemas' catalogue, one place. Fix: move each definition into the 'schemas' catalogue and reference it by name.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "anyOf": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): an untagged union cannot be decoded by a client without trying each branch, and validators disagree on overlaps. Fix: use 'oneOf' with a 'discriminator', 'nullable: true', or an opaque value with its reason.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "not": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): negative constraints have no native form in Bean Validation, Laravel or Symfony constraints. Fix: state the accepted values positively (an enum, a pattern, a range).",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "if": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional validation is not portable and hides two types in one. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "then": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional validation is not portable and hides two types in one. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "else": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional validation is not portable and hides two types in one. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "dependentSchemas": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional validation is not portable and hides two types in one. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "prefixItems": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): tuples map to no record or class type. Fix: use an object, or an opaque value with its reason for a third party's tuple.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "contains": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): no native counterpart in most targets; no consumer. Fix: remove 'contains'; check the item schema with 'items'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "patternProperties": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): key-dependent schemas map to no type. Fix: use a map: 'additionalProperties: <schema>' with 'propertyNames'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "unevaluatedItems": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): direction decides how unknown fields are treated. Fix: remove it; input refuses unknown items and output tolerates them.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "unevaluatedProperties": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): direction decides how unknown fields are treated. Fix: remove it, or set 'unknownKeys' on the input use (ADR 0003 section 4).",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "const": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): a one-value field is an enum or a union tag; keeping both would give two ways to state it. Fix: use a catalogue enum, or a union tag.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "uniqueItems": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): no native, exact check in Bean Validation or class-validator, and \"equal\" differs for objects; no consumer. Fix: remove 'uniqueItems'; the handler deduplicates.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "maxContains": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): 'contains' is refused. Fix: remove 'maxContains'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "minContains": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): 'contains' is refused. Fix: remove 'minContains'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "maxProperties": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): no consumer; map size limits wait for one. Fix: remove 'maxProperties'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "minProperties": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): no consumer; map size limits wait for one. Fix: remove 'minProperties'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "dependentRequired": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional presence. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "contentEncoding": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): base64 inside JSON has no consumer; files travel as multipart parts or downloads. Fix: use a file field of a multipart input, or a file download.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "readOnly": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): they make one schema stand for two types; a payload that differs between input and output is two schemas. Fix: declare two schemas, the input one derived with 'pick' or 'omit'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "writeOnly": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): they make one schema stand for two types; a payload that differs between input and output is two schemas. Fix: declare two schemas, the input one derived with 'pick' or 'omit'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "patternProperties": {
+        "^x-seampact-": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        },
+        "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$comment": "ADR 0002 section 12"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "pick": true
+        },
+        "required": ["pick"]
+      },
+      "then": {
+        "properties": {
+          "omit": {
+            "title": "conflict",
+            "description": "Write 'pick' or 'omit', not both.",
+            "not": {}
+          }
+        }
+      }
+    },
+    "overlay": {
+      "type": "object",
+      "properties": {
+        "nullable": {
+          "type": "boolean",
+          "$comment": "ADR 0003 section 2"
+        },
+        "default": {
+          "$comment": "ADR 0003 section 2"
+        },
+        "restrictedTo": {
+          "$ref": "#/$defs/restrictedTo",
+          "$comment": "ADR 0003 section 2"
+        },
+        "title": {
+          "type": "string",
+          "$comment": "ADR 0003 section 2"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0003 section 2"
+        },
+        "deprecated": {
+          "type": "boolean",
+          "$comment": "ADR 0003 section 2"
+        },
+        "examples": {
+          "type": "array",
+          "items": {},
+          "$comment": "ADR 0003 section 2"
+        },
+        "$schema": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): the dialect is fixed by seampact and the authoring schema. Fix: remove '$schema'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$id": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): a schema's identity is its catalogue name; a second identifier would be a second fact. Fix: remove '$id' and use the schema's catalogue name.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$anchor": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): names live in the catalogue. Fix: declare the schema in the 'schemas' catalogue and reference it by name.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$dynamicRef": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): generic, late-bound schemas have no counterpart in any target's type system. Fix: reference a named schema with '$ref'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$dynamicAnchor": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): generic, late-bound schemas have no counterpart in any target's type system. Fix: declare the schema in the 'schemas' catalogue and reference it by name.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$vocabulary": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): the vocabulary is fixed. Fix: remove '$vocabulary'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$comment": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): YAML comments serve; a '$comment' would reach no output. Fix: write a YAML comment ('# ...') or a 'description'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$defs": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): named schemas live in the 'schemas' catalogue, one place. Fix: move each definition into the 'schemas' catalogue and reference it by name.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "anyOf": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): an untagged union cannot be decoded by a client without trying each branch, and validators disagree on overlaps. Fix: use 'oneOf' with a 'discriminator', 'nullable: true', or an opaque value with its reason.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "not": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): negative constraints have no native form in Bean Validation, Laravel or Symfony constraints. Fix: state the accepted values positively (an enum, a pattern, a range).",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "if": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional validation is not portable and hides two types in one. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "then": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional validation is not portable and hides two types in one. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "else": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional validation is not portable and hides two types in one. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "dependentSchemas": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional validation is not portable and hides two types in one. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "prefixItems": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): tuples map to no record or class type. Fix: use an object, or an opaque value with its reason for a third party's tuple.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "contains": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): no native counterpart in most targets; no consumer. Fix: remove 'contains'; check the item schema with 'items'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "patternProperties": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): key-dependent schemas map to no type. Fix: use a map: 'additionalProperties: <schema>' with 'propertyNames'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "unevaluatedItems": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): direction decides how unknown fields are treated. Fix: remove it; input refuses unknown items and output tolerates them.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "unevaluatedProperties": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): direction decides how unknown fields are treated. Fix: remove it, or set 'unknownKeys' on the input use (ADR 0003 section 4).",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "const": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): a one-value field is an enum or a union tag; keeping both would give two ways to state it. Fix: use a catalogue enum, or a union tag.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "uniqueItems": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): no native, exact check in Bean Validation or class-validator, and \"equal\" differs for objects; no consumer. Fix: remove 'uniqueItems'; the handler deduplicates.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "maxContains": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): 'contains' is refused. Fix: remove 'maxContains'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "minContains": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): 'contains' is refused. Fix: remove 'minContains'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "maxProperties": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): no consumer; map size limits wait for one. Fix: remove 'maxProperties'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "minProperties": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): no consumer; map size limits wait for one. Fix: remove 'minProperties'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "dependentRequired": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): conditional presence. Fix: use a tagged union ('oneOf' with a 'discriminator').",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "contentEncoding": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): base64 inside JSON has no consumer; files travel as multipart parts or downloads. Fix: use a file field of a multipart input, or a file download.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "readOnly": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): they make one schema stand for two types; a payload that differs between input and output is two schemas. Fix: declare two schemas, the input one derived with 'pick' or 'omit'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "writeOnly": {
+          "title": "refused",
+          "description": "Refused (ADR 0003 section 1): they make one schema stand for two types; a payload that differs between input and output is two schemas. Fix: declare two schemas, the input one derived with 'pick' or 'omit'.",
+          "$comment": "ADR 0003 section 1",
+          "not": {}
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false
+    },
+    "restrictedTo": {
+      "description": "A right name, or { right, params, input } (ADR 0003 section 6).",
+      "if": {
+        "type": "string"
+      },
+      "then": {
+        "$ref": "common.schema.json#/$defs/rightName"
+      },
+      "else": {
+        "type": "object",
+        "properties": {
+          "right": {
+            "$ref": "common.schema.json#/$defs/rightName",
+            "$comment": "ADR 0003 section 6"
+          },
+          "params": {
+            "type": "object",
+            "$comment": "ADR 0003 section 6"
+          },
+          "input": {
+            "enum": ["reject", "strip"],
+            "$comment": "ADR 0003 section 6"
+          }
+        },
+        "additionalProperties": false,
+        "required": ["right"]
+      }
+    },
+    "discriminator": {
+      "description": "The tag property, or { from: header.<Name> } (ADR 0003 section 3).",
+      "if": {
+        "type": "string"
+      },
+      "then": {
+        "type": "string",
+        "minLength": 1
+      },
+      "else": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "$ref": "common.schema.json#/$defs/discriminatorSource",
+            "$comment": "ADR 0003 section 3"
+          }
+        },
+        "additionalProperties": false,
+        "required": ["from"]
+      }
+    }
+  }
+}

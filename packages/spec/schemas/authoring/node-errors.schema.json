@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact node errors map",
+  "description": "A node's errors map: each code attached, narrowed or declared (ADR 0002 section 11).",
+  "type": "object",
+  "properties": {
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "propertyNames": {
+    "description": "an error code",
+    "pattern": "^(?:[A-Za-z0-9][A-Za-z0-9._-]*|\\$include)$"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/attachment"
+  },
+  "$defs": {
+    "attachment": {
+      "description": "{} attaches a code, { example } narrows its example, a declaration (with status) declares it (ADR 0002 section 11).",
+      "type": "object",
+      "if": {
+        "properties": {
+          "status": true
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599,
+            "$comment": "ADR 0002 section 11"
+          },
+          "nature": {
+            "$ref": "common.schema.json#/$defs/name",
+            "$comment": "ADR 0002 section 11",
+            "description": "A base nature or one of the 'natures' catalogue."
+          },
+          "family": {
+            "$ref": "common.schema.json#/$defs/errorCode",
+            "$comment": "ADR 0002 section 11",
+            "description": "Groups codes in docs and clients."
+          },
+          "params": {
+            "$ref": "node.schema.json#/$defs/fields",
+            "$comment": "ADR 0002 section 11",
+            "description": "A fields map or a schema name."
+          },
+          "example": {
+            "$comment": "ADR 0002 section 11",
+            "description": "The params."
+          },
+          "title": {
+            "type": "string",
+            "$comment": "ADR 0002 section 11"
+          },
+          "summary": {
+            "$ref": "common.schema.json#/$defs/summary",
+            "$comment": "ADR 0002 section 12"
+          },
+          "description": {
+            "$ref": "common.schema.json#/$defs/description",
+            "$comment": "ADR 0002 section 12"
+          },
+          "reach": {
+            "enum": ["subtree", "resource"],
+            "$comment": "ADR 0002 section 11",
+            "description": "How far below the node the code reaches."
+          },
+          "for": {
+            "enum": ["all", "reads", "writes"],
+            "$comment": "ADR 0002 section 11"
+          },
+          "$include": {
+            "$ref": "common.schema.json#/$defs/include"
+          }
+        },
+        "additionalProperties": false
+      },
+      "else": {
+        "type": "object",
+        "properties": {
+          "example": {
+            "$comment": "ADR 0002 section 11"
+          },
+          "reach": {
+            "enum": ["subtree", "resource"],
+            "$comment": "ADR 0002 section 11",
+            "description": "How far below the node the code reaches."
+          },
+          "for": {
+            "enum": ["all", "reads", "writes"],
+            "$comment": "ADR 0002 section 11"
+          },
+          "$include": {
+            "$ref": "common.schema.json#/$defs/include"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  }
+}

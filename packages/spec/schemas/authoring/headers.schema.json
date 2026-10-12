@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact headers catalogue",
+  "description": "Identity headers (ADR 0002 section 9). A name-keyed catalogue file.",
+  "type": "object",
+  "properties": {
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "propertyNames": {
+    "description": "an identity header name",
+    "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/entry"
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "common.schema.json#/$defs/headerName",
+          "$comment": "ADR 0002 section 9"
+        },
+        "in": {
+          "enum": ["request", "response"],
+          "$comment": "ADR 0002 section 9"
+        },
+        "semantic": {
+          "enum": ["deadline", "traceContext", "actorSurface", "versionToken"],
+          "$comment": "ADR 0002 section 9"
+        },
+        "schema": {
+          "$ref": "schema.schema.json#/$defs/schema",
+          "$comment": "ADR 0002 section 9"
+        },
+        "response": {
+          "$ref": "common.schema.json#/$defs/headerName",
+          "$comment": "ADR 0002 section 9",
+          "description": "versionToken: the response header."
+        },
+        "request": {
+          "$ref": "common.schema.json#/$defs/headerName",
+          "$comment": "ADR 0002 section 9",
+          "description": "versionToken: the request header."
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": ["$include"]
+          },
+          "else": {
+            "properties": {
+              "semantic": true
+            },
+            "required": ["semantic"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "semantic": {
+                "const": "versionToken"
+              }
+            },
+            "required": ["semantic"]
+          },
+          "then": {
+            "properties": {
+              "name": {
+                "title": "conflict",
+                "description": "A versionToken declares 'response' and 'request' instead.",
+                "not": {}
+              },
+              "in": {
+                "title": "conflict",
+                "description": "A versionToken declares 'response' and 'request' instead.",
+                "not": {}
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "response": {
+                "title": "conflict",
+                "description": "Only a versionToken declares 'response' and 'request'.",
+                "not": {}
+              },
+              "request": {
+                "title": "conflict",
+                "description": "Only a versionToken declares 'response' and 'request'.",
+                "not": {}
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

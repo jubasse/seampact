@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact workspace file",
+  "type": "object",
+  "description": "The workspace entry file (ADR 0002 section 1).",
+  "properties": {
+    "workspace": {
+      "type": "object",
+      "properties": {
+        "apis": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "an api name",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+          },
+          "additionalProperties": {
+            "$ref": "common.schema.json#/$defs/path"
+          },
+          "$comment": "ADR 0002 section 1",
+          "description": "Each api name and its api file."
+        },
+        "shared": {
+          "$ref": "common.schema.json#/$defs/path",
+          "$comment": "ADR 0002 section 1",
+          "description": "The file every api builds on, with a base's keys."
+        },
+        "editorSchemas": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 1",
+          "description": "Where compile --editor-schemas writes."
+        },
+        "imports": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "an api name",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/import"
+          },
+          "$comment": "ADR 0002 section 1",
+          "description": "Apis held in pinned contract bundles."
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "$comment": "ADR 0002 section 1"
+    },
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "$include": true
+    },
+    "required": ["$include"]
+  },
+  "else": {
+    "properties": {
+      "workspace": true
+    },
+    "required": ["workspace"]
+  },
+  "$defs": {
+    "import": {
+      "type": "object",
+      "properties": {
+        "package": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 1"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 1"
+        },
+        "release": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "ADR 0002 section 1"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["url"],
+          "$comment": "ADR 0002 section 1"
+        },
+        "git": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "ADR 0002 section 1"
+            },
+            "tag": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "ADR 0002 section 1"
+            },
+            "directory": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "ADR 0002 section 1"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["url", "tag"],
+          "$comment": "ADR 0002 section 1"
+        },
+        "api": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 1"
+        },
+        "integrity": {
+          "type": "string",
+          "pattern": "^sha256-",
+          "$comment": "ADR 0002 section 1"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "$include": true
+        },
+        "required": ["$include"]
+      },
+      "else": {
+        "properties": {
+          "api": true,
+          "integrity": true
+        },
+        "required": ["api", "integrity"]
+      }
+    }
+  }
+}

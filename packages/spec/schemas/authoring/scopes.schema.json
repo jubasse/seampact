@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact scopes catalogue",
+  "description": "Tenancy scopes (ADR 0002 section 9). A name-keyed catalogue file.",
+  "type": "object",
+  "properties": {
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "propertyNames": {
+    "description": "a scope name",
+    "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/entry"
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "schema.schema.json#/$defs/schema",
+          "$comment": "ADR 0002 section 9"
+        },
+        "within": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 9",
+          "description": "The parent scope."
+        },
+        "errors": {
+          "$ref": "common.schema.json#/$defs/errorCodes",
+          "$comment": "ADR 0002 section 9"
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0002 section 12"
+        },
+        "summary": {
+          "$ref": "common.schema.json#/$defs/summary",
+          "$comment": "ADR 0002 section 9"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0002 section 9"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "patternProperties": {
+        "^x-seampact-": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        },
+        "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$comment": "ADR 0002 section 12"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

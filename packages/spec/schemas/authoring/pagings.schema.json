@@ -1,0 +1,426 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact pagings catalogue",
+  "description": "Paging styles (ADR 0002 section 14). A name-keyed catalogue file.",
+  "type": "object",
+  "properties": {
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "propertyNames": {
+    "description": "a paging style name",
+    "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/entry"
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "properties": {
+        "request": {
+          "type": "object",
+          "properties": {
+            "cursor": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "minLength": 1,
+                  "$comment": "ADR 0002 section 14",
+                  "description": "The query parameter that carries the role."
+                },
+                "header": {
+                  "$ref": "common.schema.json#/$defs/headerName",
+                  "$comment": "ADR 0002 section 14",
+                  "description": "The request header that carries the role."
+                },
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "additionalProperties": false,
+              "if": {
+                "properties": {
+                  "query": true
+                },
+                "required": ["query"]
+              },
+              "then": {
+                "properties": {
+                  "header": {
+                    "title": "conflict",
+                    "description": "A role travels in a query parameter or a header, not both.",
+                    "not": {}
+                  }
+                }
+              },
+              "$comment": "ADR 0002 section 14"
+            },
+            "after": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "minLength": 1,
+                  "$comment": "ADR 0002 section 14",
+                  "description": "The query parameter that carries the role."
+                },
+                "header": {
+                  "$ref": "common.schema.json#/$defs/headerName",
+                  "$comment": "ADR 0002 section 14",
+                  "description": "The request header that carries the role."
+                },
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "additionalProperties": false,
+              "if": {
+                "properties": {
+                  "query": true
+                },
+                "required": ["query"]
+              },
+              "then": {
+                "properties": {
+                  "header": {
+                    "title": "conflict",
+                    "description": "A role travels in a query parameter or a header, not both.",
+                    "not": {}
+                  }
+                }
+              },
+              "$comment": "ADR 0002 section 14"
+            },
+            "before": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "minLength": 1,
+                  "$comment": "ADR 0002 section 14",
+                  "description": "The query parameter that carries the role."
+                },
+                "header": {
+                  "$ref": "common.schema.json#/$defs/headerName",
+                  "$comment": "ADR 0002 section 14",
+                  "description": "The request header that carries the role."
+                },
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "additionalProperties": false,
+              "if": {
+                "properties": {
+                  "query": true
+                },
+                "required": ["query"]
+              },
+              "then": {
+                "properties": {
+                  "header": {
+                    "title": "conflict",
+                    "description": "A role travels in a query parameter or a header, not both.",
+                    "not": {}
+                  }
+                }
+              },
+              "$comment": "ADR 0002 section 14"
+            },
+            "page": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "minLength": 1,
+                  "$comment": "ADR 0002 section 14",
+                  "description": "The query parameter that carries the role."
+                },
+                "header": {
+                  "$ref": "common.schema.json#/$defs/headerName",
+                  "$comment": "ADR 0002 section 14",
+                  "description": "The request header that carries the role."
+                },
+                "base": {
+                  "enum": [0, 1],
+                  "$comment": "ADR 0002 section 14"
+                },
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "additionalProperties": false,
+              "if": {
+                "properties": {
+                  "query": true
+                },
+                "required": ["query"]
+              },
+              "then": {
+                "properties": {
+                  "header": {
+                    "title": "conflict",
+                    "description": "A role travels in a query parameter or a header, not both.",
+                    "not": {}
+                  }
+                }
+              },
+              "$comment": "ADR 0002 section 14"
+            },
+            "offset": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "minLength": 1,
+                  "$comment": "ADR 0002 section 14",
+                  "description": "The query parameter that carries the role."
+                },
+                "header": {
+                  "$ref": "common.schema.json#/$defs/headerName",
+                  "$comment": "ADR 0002 section 14",
+                  "description": "The request header that carries the role."
+                },
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "additionalProperties": false,
+              "if": {
+                "properties": {
+                  "query": true
+                },
+                "required": ["query"]
+              },
+              "then": {
+                "properties": {
+                  "header": {
+                    "title": "conflict",
+                    "description": "A role travels in a query parameter or a header, not both.",
+                    "not": {}
+                  }
+                }
+              },
+              "$comment": "ADR 0002 section 14"
+            },
+            "since": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "minLength": 1,
+                  "$comment": "ADR 0002 section 14",
+                  "description": "The query parameter that carries the role."
+                },
+                "header": {
+                  "$ref": "common.schema.json#/$defs/headerName",
+                  "$comment": "ADR 0002 section 14",
+                  "description": "The request header that carries the role."
+                },
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "additionalProperties": false,
+              "if": {
+                "properties": {
+                  "query": true
+                },
+                "required": ["query"]
+              },
+              "then": {
+                "properties": {
+                  "header": {
+                    "title": "conflict",
+                    "description": "A role travels in a query parameter or a header, not both.",
+                    "not": {}
+                  }
+                }
+              },
+              "$comment": "ADR 0002 section 14"
+            },
+            "limit": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "minLength": 1,
+                  "$comment": "ADR 0002 section 14",
+                  "description": "The query parameter that carries the role."
+                },
+                "header": {
+                  "$ref": "common.schema.json#/$defs/headerName",
+                  "$comment": "ADR 0002 section 14",
+                  "description": "The request header that carries the role."
+                },
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "additionalProperties": false,
+              "if": {
+                "properties": {
+                  "query": true
+                },
+                "required": ["query"]
+              },
+              "then": {
+                "properties": {
+                  "header": {
+                    "title": "conflict",
+                    "description": "A role travels in a query parameter or a header, not both.",
+                    "not": {}
+                  }
+                }
+              },
+              "$comment": "ADR 0002 section 14"
+            },
+            "sort": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string",
+                  "minLength": 1,
+                  "$comment": "ADR 0002 section 14",
+                  "description": "The query parameter that carries the role."
+                },
+                "header": {
+                  "$ref": "common.schema.json#/$defs/headerName",
+                  "$comment": "ADR 0002 section 14",
+                  "description": "The request header that carries the role."
+                },
+                "style": {
+                  "enum": ["signed", "pair", "keyed", "split"],
+                  "$comment": "ADR 0002 section 14"
+                },
+                "direction": {
+                  "type": "string",
+                  "minLength": 1,
+                  "$comment": "ADR 0002 section 14",
+                  "description": "style: split: the direction parameter."
+                },
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "additionalProperties": false,
+              "if": {
+                "properties": {
+                  "query": true
+                },
+                "required": ["query"]
+              },
+              "then": {
+                "properties": {
+                  "header": {
+                    "title": "conflict",
+                    "description": "A role travels in a query parameter or a header, not both.",
+                    "not": {}
+                  }
+                }
+              },
+              "$comment": "ADR 0002 section 14"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 14"
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "meta": {
+              "type": "object",
+              "description": "Members added to the format's page.",
+              "properties": {
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "propertyNames": {
+                "description": "a member or header name",
+                "pattern": "^(?:[^$].*|\\$include)$"
+              },
+              "additionalProperties": {
+                "$ref": "common.schema.json#/$defs/template"
+              },
+              "$comment": "ADR 0002 section 14"
+            },
+            "body": {
+              "$ref": "common.schema.json#/$defs/template",
+              "$comment": "ADR 0002 section 14",
+              "description": "The whole page body."
+            },
+            "headers": {
+              "type": "object",
+              "description": "Response headers.",
+              "properties": {
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "propertyNames": {
+                "description": "a member or header name",
+                "pattern": "^(?:[^$].*|\\$include)$"
+              },
+              "additionalProperties": {
+                "$ref": "common.schema.json#/$defs/template"
+              },
+              "$comment": "ADR 0002 section 14"
+            },
+            "links": {
+              "type": "object",
+              "description": "RFC 8288 relations, each a URL role.",
+              "properties": {
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "propertyNames": {
+                "description": "a member or header name",
+                "pattern": "^(?:[^$].*|\\$include)$"
+              },
+              "additionalProperties": {
+                "$ref": "common.schema.json#/$defs/template"
+              },
+              "$comment": "ADR 0002 section 14"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "body": true
+            },
+            "required": ["body"]
+          },
+          "then": {
+            "properties": {
+              "meta": {
+                "title": "conflict",
+                "description": "Write 'body' or 'meta', not both.",
+                "not": {}
+              }
+            }
+          },
+          "$comment": "ADR 0002 section 14"
+        },
+        "absent": {
+          "enum": ["omit", null],
+          "$comment": "ADR 0002 section 14"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact schemas catalogue",
+  "description": "Named schemas, in the schema language of ADR 0003. A name-keyed catalogue file.",
+  "type": "object",
+  "properties": {
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "propertyNames": {
+    "description": "a schema name",
+    "pattern": "^(?:[A-Z][A-Za-z0-9]*|\\$include)$"
+  },
+  "additionalProperties": {
+    "$ref": "schema.schema.json#/$defs/schema"
+  },
+  "$defs": {}
+}

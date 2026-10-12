@@ -1,0 +1,313 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact api file",
+  "type": "object",
+  "description": "An api file (ADR 0002 section 1).",
+  "properties": {
+    "api": {
+      "$ref": "#/$defs/api",
+      "$comment": "ADR 0002 section 5"
+    },
+    "extends": {
+      "$ref": "common.schema.json#/$defs/path",
+      "$comment": "ADR 0002 section 2",
+      "description": "The one base this api extends."
+    },
+    "packs": {
+      "type": "array",
+      "items": {
+        "title": "pack reference",
+        "description": "A path starting with ./ or ../, or a package name (ADR 0002 section 2).",
+        "type": "string",
+        "minLength": 1
+      },
+      "$comment": "ADR 0002 section 2",
+      "description": "Convention packs, applied in order (ADR 0002 section 2)."
+    },
+    "surfaces": {
+      "type": "object",
+      "properties": {
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "propertyNames": {
+        "description": "a surface name",
+        "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+      },
+      "additionalProperties": {
+        "$ref": "node.schema.json#/$defs/surface"
+      },
+      "$comment": "ADR 0002 section 6",
+      "description": "Each surface and the root node of its tree."
+    },
+    "schemas": {
+      "$ref": "schemas.schema.json",
+      "$comment": "ADR 0002 section 1",
+      "description": "Named schemas, in the schema language of ADR 0003."
+    },
+    "enums": {
+      "$ref": "enums.schema.json",
+      "$comment": "ADR 0002 section 12",
+      "description": "Enums: values, source, reason, fallback (ADR 0002 section 12)."
+    },
+    "scalars": {
+      "$ref": "scalars.schema.json",
+      "$comment": "ADR 0003 section 8",
+      "description": "Named formats: a base type plus portable refinements (ADR 0003 section 8)."
+    },
+    "errors": {
+      "$ref": "errors.schema.json",
+      "$comment": "ADR 0002 section 11",
+      "description": "Error codes, declared once (ADR 0002 section 11)."
+    },
+    "natures": {
+      "$ref": "natures.schema.json",
+      "$comment": "ADR 0002 section 11",
+      "description": "Error natures, each mapped onto a base nature (ADR 0002 section 11)."
+    },
+    "schemes": {
+      "$ref": "schemes.schema.json",
+      "$comment": "ADR 0002 section 9",
+      "description": "Security schemes (ADR 0002 section 9)."
+    },
+    "headers": {
+      "$ref": "headers.schema.json",
+      "$comment": "ADR 0002 section 9",
+      "description": "Identity headers (ADR 0002 section 9)."
+    },
+    "identities": {
+      "$ref": "identities.schema.json",
+      "$comment": "ADR 0002 section 9",
+      "description": "Identities (ADR 0002 section 9)."
+    },
+    "rights": {
+      "$ref": "rights.schema.json",
+      "$comment": "ADR 0002 section 9",
+      "description": "Rights (ADR 0002 section 9)."
+    },
+    "rules": {
+      "$ref": "rules.schema.json",
+      "$comment": "ADR 0002 section 9",
+      "description": "Rules: pre-handler checks that are not rights (ADR 0002 section 9)."
+    },
+    "requirements": {
+      "$ref": "requirements.schema.json",
+      "$comment": "ADR 0002 section 9",
+      "description": "Named requirement items (ADR 0002 section 9)."
+    },
+    "scopes": {
+      "$ref": "scopes.schema.json",
+      "$comment": "ADR 0002 section 9",
+      "description": "Tenancy scopes (ADR 0002 section 9)."
+    },
+    "buckets": {
+      "$ref": "buckets.schema.json",
+      "$comment": "ADR 0002 section 9",
+      "description": "Rate-limit buckets (ADR 0002 section 9)."
+    },
+    "services": {
+      "$ref": "services.schema.json",
+      "$comment": "ADR 0002 section 10",
+      "description": "Upstream services (ADR 0002 section 10)."
+    },
+    "pagings": {
+      "$ref": "pagings.schema.json",
+      "$comment": "ADR 0002 section 14",
+      "description": "Paging styles (ADR 0002 section 14)."
+    },
+    "formats": {
+      "$ref": "formats.schema.json",
+      "$comment": "ADR 0002 section 13",
+      "description": "Wire formats (ADR 0002 section 13)."
+    },
+    "conventions": {
+      "$ref": "conventions.schema.json",
+      "$comment": "ADR 0002 section 13"
+    },
+    "extensions": {
+      "$ref": "base.schema.json#/$defs/extensions",
+      "$comment": "ADR 0002 section 12"
+    },
+    "lint": {
+      "$ref": "common.schema.json#/$defs/lintRules",
+      "$comment": "ADR 0002 section 12"
+    },
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "$include": true
+    },
+    "required": ["$include"]
+  },
+  "else": {
+    "properties": {
+      "api": true
+    },
+    "required": ["api"]
+  },
+  "$defs": {
+    "api": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 5"
+        },
+        "version": {
+          "if": {
+            "type": "string"
+          },
+          "then": {
+            "type": "string",
+            "minLength": 1
+          },
+          "else": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "$comment": "ADR 0002 section 5",
+          "description": "An integer, or a quoted string for a date-versioned api."
+        },
+        "kind": {
+          "enum": ["product", "service"],
+          "$comment": "ADR 0002 section 5"
+        },
+        "role": {
+          "enum": ["gateway"],
+          "$comment": "ADR 0002 section 5"
+        },
+        "caller": {
+          "type": "object",
+          "properties": {
+            "identity": {
+              "$ref": "common.schema.json#/$defs/name",
+              "$comment": "ADR 0002 section 5"
+            },
+            "right": {
+              "$ref": "common.schema.json#/$defs/rightName",
+              "$comment": "ADR 0002 section 5"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": ["$include"]
+          },
+          "else": {
+            "properties": {
+              "identity": true,
+              "right": true
+            },
+            "required": ["identity", "right"]
+          },
+          "$comment": "ADR 0002 section 5"
+        },
+        "maturity": {
+          "$ref": "common.schema.json#/$defs/maturityLevel",
+          "$comment": "ADR 0002 section 5"
+        },
+        "compat": {
+          "type": "object",
+          "properties": {
+            "policy": {
+              "enum": ["additive-only", "none"],
+              "$comment": "ADR 0002 section 5"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": ["$include"]
+          },
+          "else": {
+            "properties": {
+              "policy": true
+            },
+            "required": ["policy"]
+          },
+          "$comment": "ADR 0002 section 5"
+        },
+        "documents": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "a document name",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "surfaces": {
+                "$ref": "common.schema.json#/$defs/names",
+                "$comment": "ADR 0002 section 5"
+              },
+              "internal": {
+                "enum": ["include", "exclude"],
+                "$comment": "ADR 0002 section 5"
+              },
+              "$include": {
+                "$ref": "common.schema.json#/$defs/include"
+              }
+            },
+            "additionalProperties": false
+          },
+          "$comment": "ADR 0002 section 5"
+        },
+        "summary": {
+          "$ref": "common.schema.json#/$defs/summary",
+          "$comment": "ADR 0002 section 5"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0002 section 5"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "patternProperties": {
+        "^x-seampact-": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        },
+        "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$comment": "ADR 0002 section 12"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "$include": true
+        },
+        "required": ["$include"]
+      },
+      "else": {
+        "properties": {
+          "name": true,
+          "version": true
+        },
+        "required": ["name", "version"]
+      }
+    }
+  }
+}
