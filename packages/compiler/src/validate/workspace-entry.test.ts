@@ -119,3 +119,39 @@ test("an access written through $include is checked after resolution, through th
   expect(found.length).toBeGreaterThan(0);
   expect(found.map((d) => d.origin.pointer)).toContain("/surfaces/app/routes/health/access/public");
 });
+
+// The layer of a load diagnostic is the layer being loaded: a diagnostic on workspace.yaml raised
+// after its expansion is the workspace's, and its key, `workspace#/~load/...`, meets no pointer of
+// the entry document (none starts `/~load/`).
+test("a load diagnostic on workspace.yaml has the workspace layer, its key disjoint from the entry's", () => {
+  const { loaded } = entryOf({
+    "workspace.yaml": "workspace:\n  apis:\n    a: ./a.yaml\n    b: [x]\n",
+    "a.yaml": "api: { name: a, version: 1 }\n",
+  });
+  const [d, ...rest] = loaded.diagnostics;
+  expect(rest).toEqual([]);
+  expect(d?.rule).toBe("seampact/load/workspace-shape");
+  expect(d?.origin.layer).toBe("workspace");
+  expect(d?.origin.pointer.startsWith("/~load/")).toBe(true);
+  expect(d && diagnosticLocation(d.origin, loaded.workspace.locations)).toMatchObject({
+    file: "workspace.yaml",
+    line: 4,
+  });
+  const entryKeys = Object.keys(loaded.workspace.locations).filter(
+    (k) => k.startsWith("workspace#") && !k.startsWith("workspace#/~load/"),
+  );
+  expect(entryKeys).toContain("workspace#/workspace/apis/b");
+  expect(entryKeys).not.toContain(`workspace#${d?.origin.pointer}`);
+});
+
+test("a workspace that maps no api is reported with the workspace layer", () => {
+  const { loaded } = entryOf({ "workspace.yaml": "workspace:\n  apis: {}\n" });
+  expect(loaded.diagnostics.map((d) => [d.rule, d.origin.layer])).toEqual([
+    ["seampact/load/workspace-shape", "workspace"],
+  ]);
+});
+
+test("a scalar workspace key gets its P6 report only, not a 'neither' report", () => {
+  const { loaded } = entryOf({ "workspace.yaml": "workspace: 12\n" });
+  expect(loaded.diagnostics.map((d) => d.rule)).toEqual(["seampact/load/scalar-type"]);
+});

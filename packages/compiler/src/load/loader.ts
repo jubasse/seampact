@@ -121,9 +121,13 @@ class Loader {
       }
     }
     if (entryBuild) {
+      // What is reported on the entry from here on is the entry's layer's.
+      this.rep.layer = entryBuild.layer;
       const tree = entryBuild.tree;
       const ws = asObject(tree.workspace);
-      if (ws && entryBuild.layer !== "workspace") {
+      if (entryBuild.layer === "workspace" && !ws) {
+        // `workspace:` holds no mapping: P6 or the validate stage reports it, nothing more here.
+      } else if (ws && entryBuild.layer !== "workspace") {
         this.badShape(
           entryBuild,
           "/workspace",
@@ -237,6 +241,8 @@ class Loader {
     for (const [name, raw] of Object.entries(list)) {
       // Once the budget is spent, the apis left would only report what an empty tree lacks.
       if (this.budget.exhausted) break;
+      // Each api entry is read from workspace.yaml; loading the api before it moved the layer.
+      this.rep.layer = entry.layer;
       const at = site(`/workspace/apis/${pointerEscape(name)}`);
       if (typeof raw !== "string") {
         this.rep.report({
@@ -250,9 +256,9 @@ class Loader {
       const r = this.store.resolve(entry.parsed, raw, at, "workspace");
       const pf = r && this.store.parse(r.path, ".");
       if (!pf) continue;
-      this.rep.layer = "api";
       const build = this.layer(pf, "api");
       const declared = asObject(build.tree.api)?.name;
+      this.rep.layer = "api";
       if (declared !== name) {
         this.rep.report({
           rule: "api-name-mismatch",
