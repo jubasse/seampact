@@ -178,6 +178,13 @@ describe("authored text in messages", () => {
   });
 });
 
+test("a package-name message writes an active character escaped", () => {
+  const r = load({ "api.yaml": 'api: { name: t }\npacks: ["a\\u202Eb"]\n' });
+  expect(r.rules).toEqual(["pack-name"]);
+  expect(r.result.diagnostics[0]?.message).not.toMatch(/\u202E/u);
+  expect(r.result.diagnostics[0]?.message).toContain("\\u202E");
+});
+
 describe("pack names", () => {
   test("a '#' in a pack name is refused", () => {
     const r = load({
