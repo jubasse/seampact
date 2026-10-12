@@ -3,9 +3,11 @@ import { isScalar } from "yaml";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
 import { diagnosticLocationKey, diagnosticSort } from "../diagnostics/print.js";
 import type { JsonObject, RawApi, RawWorkspace, RawWorkspaceConfig } from "../raw-tree.js";
+import { LoadBudget, loadWorkOf } from "./budget.js";
 import { mergeLayers } from "./compose.js";
 import { Expander, type LayerBuild, navigate } from "./expand.js";
 import { asObject, isReservedKey, showValue } from "./json.js";
+import { LOAD_MAX_DEPTH } from "./limits.js";
 import { isInside, joinPath, loadNormalizePath, pointerEscape } from "./paths.js";
 import type { LoadReader } from "./reader.js";
 import { Reporter, type SiteLocation } from "./report.js";
@@ -74,6 +76,7 @@ export function loadWorkspace(options: LoadOptions): LoadResult {
 
 class Loader {
   private readonly rep = new Reporter();
+  private readonly budget = new LoadBudget(this.rep);
   private readonly store: FileStore;
   private readonly ex: Expander;
   private readonly builds = new Map<string, LayerBuild>();
@@ -83,7 +86,7 @@ class Loader {
 
   constructor(private readonly options: LoadOptions) {
     this.store = new FileStore(options.reader, this.rep);
-    this.ex = new Expander(this.store, this.rep);
+    this.ex = new Expander(this.store, this.rep, this.budget);
   }
 
   run(): LoadResult {
@@ -100,7 +103,7 @@ class Loader {
         fix: "name an entry file inside the workspace root",
         at: entrySite,
       });
-    } else if (this.store.checkFile(entry, ".", entrySite, "the entry file") !== undefined) {
+    } else if (typeof this.store.checkFile(entry, ".", entrySite, "the entry file") === "string") {
       const pf = this.store.parse(entry, ".");
       if (pf) entryBuild = this.layer(pf, "api");
     }
@@ -199,6 +202,8 @@ class Loader {
       }
     }
     for (const [name, raw] of Object.entries(list)) {
+      // Once the budget is spent, the apis left would only report what an empty tree lacks.
+      if (this.budget.exhausted) break;
       const at = site(`/workspace/apis/${pointerEscape(name)}`);
       if (typeof raw !== "string") {
         this.rep.report({
@@ -297,8 +302,10 @@ class Loader {
       api,
     ];
     // Layer names clash: the layer id is the pack name, so two packs of one name are one layer.
+    // Each pack visited is charged: an api recomputes the closure of every pack it applies.
+    const apiSite = () => nodeSite(api.parsed, api.parsed.root);
     const closure = (p: PackBuild, seen = new Set<string>()): Set<string> => {
-      if (seen.has(p.key)) return seen;
+      if (seen.has(p.key) || !this.budget.charge(1, apiSite)) return seen;
       seen.add(p.key);
       for (const e of p.extendsRefs) {
         const sub = this.findPack(e.ref, p.build);
@@ -330,7 +337,9 @@ class Loader {
       this.finished.add(b);
       this.rep.layer = b.layer;
       this.ex.finishRefs(b, (n) => {
-        for (const l of vis[b.layer] ?? []) {
+        const sees = vis[b.layer] ?? [];
+        if (!this.budget.charge(sees.length, apiSite)) return undefined;
+        for (const l of sees) {
           if (l === b.layer) continue;
           const other = byLayer.get(l);
           if (other && Object.hasOwn(asObject(other.tree.schemas) ?? {}, n)) {
@@ -342,19 +351,26 @@ class Loader {
       });
     }
 
-    // Names a layer uses but only a layer it does not build on declares.
-    const declares = (b: LayerBuild, n: string) =>
-      Object.hasOwn(asObject(b.tree.schemas) ?? {}, n) ||
-      Object.hasOwn(asObject(b.tree.enums) ?? {}, n);
+    // Names a layer uses but only a layer it does not build on declares. The declaring layers of
+    // each name are indexed once per api, in application order, and every lookup is charged.
+    const declaredBy = new Map<string, LayerBuild[]>();
+    for (const b of order) {
+      for (const section of [asObject(b.tree.schemas), asObject(b.tree.enums)]) {
+        for (const n of Object.keys(section ?? {})) {
+          if (!this.budget.charge(1, apiSite)) break;
+          const list = declaredBy.get(n);
+          if (!list) declaredBy.set(n, [b]);
+          else if (list[list.length - 1] !== b) list.push(b);
+        }
+      }
+    }
     for (const b of order) {
       const sees = new Set(vis[b.layer] ?? []);
       for (const use of b.uses) {
-        if (
-          declares(b, use.name) ||
-          [...sees].some((l) => byLayer.get(l) && declares(byLayer.get(l) as LayerBuild, use.name))
-        )
-          continue;
-        const other = order.find((o) => !sees.has(o.layer) && declares(o, use.name));
+        const by = declaredBy.get(use.name) ?? [];
+        if (!this.budget.charge(1 + by.length, apiSite)) break;
+        if (by.some((o) => o === b || sees.has(o.layer))) continue;
+        const other = by[0];
         if (!other) continue;
         this.rep.layer = b.layer;
         this.rep.report({
@@ -376,12 +392,15 @@ class Loader {
     }
 
     this.rep.layer = "api";
-    const { merged, leafOrigins } = mergeLayers(order, this.rep);
-    // ADR 0004 section 11: this api's own table, keyed exactly as its origins serialise.
+    const { merged, leafOrigins } = mergeLayers(order, this.rep, this.budget);
+    // ADR 0004 section 11: this api's own table, keyed exactly as its origins serialise. Each
+    // entry is charged: a layer shared by many apis is written into each one's table.
     const locations: RawApi["locations"] = {};
     for (const b of order) {
       for (const [pointer, site] of b.locs) {
-        locations[diagnosticLocationKey({ layer: b.layer, pointer })] = site;
+        const key = diagnosticLocationKey({ layer: b.layer, pointer });
+        if (!this.budget.charge(loadWorkOf(key), site)) break;
+        locations[key] = site;
       }
     }
     apis.push({
@@ -448,6 +467,10 @@ class Loader {
           message: `'${p.name}' extends from here`,
         })),
       });
+      return;
+    }
+    if (stack.length >= LOAD_MAX_DEPTH) {
+      this.store.reportTooDeep(nodeSite(pack.build.parsed, pack.build.parsed.root));
       return;
     }
     const next = [...stack, pack];

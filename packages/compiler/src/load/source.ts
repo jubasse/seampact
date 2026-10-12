@@ -74,6 +74,27 @@ export interface ResolvedFile {
   fragment: string | undefined;
 }
 
+/**
+ * Listings and real paths are asked once per load: a directory named by many targets is listed
+ * once, however many distinct paths resolve through it. One load sees one state of the disk.
+ */
+function memoReader(reader: LoadReader): LoadReader {
+  const lists = new Map<string, string[] | undefined>();
+  const reals = new Map<string, string | undefined>();
+  return {
+    ascent: reader.ascent,
+    readText: (file, maxBytes) => reader.readText(file, maxBytes),
+    listDir(dir) {
+      if (!lists.has(dir)) lists.set(dir, reader.listDir(dir));
+      return lists.get(dir);
+    },
+    realPath(file) {
+      if (!reals.has(file)) reals.set(file, reader.realPath(file));
+      return reals.get(file);
+    },
+  };
+}
+
 export class FileStore {
   private readonly parsed = new Map<string, ParsedFile | null>();
   private readonly texts = new Map<string, string | null>();
@@ -87,10 +108,14 @@ export class FileStore {
   /** Every file the load read or tried to read, for the watch primitive. */
   readonly touched = new Set<string>();
 
+  readonly reader: LoadReader;
+
   constructor(
-    readonly reader: LoadReader,
+    reader: LoadReader,
     private readonly reporter: Reporter,
-  ) {}
+  ) {
+    this.reader = memoReader(reader);
+  }
 
   /** Reads the real path `checkFile` accepted, not the lexical one (narrows a swap in between). */
   rawText(file: string): string | undefined {
@@ -150,7 +175,7 @@ export class FileStore {
       return undefined;
     }
     const real = this.checkFile(r.path, from.boundary, at, what, raw);
-    if (real === undefined) return undefined;
+    if (typeof real !== "string") return undefined;
     const ok = { ...r, real };
     this.resolved.set(cacheKey, ok);
     return ok;
@@ -162,7 +187,8 @@ export class FileStore {
    * Existence, case and symlink checks for a path already inside its boundary (lexically).
    * Containment comes first: every directory is checked inside the boundary, after links, before
    * it is listed, and the file's real path after. Returns the real path, or undefined after
-   * reporting. An escape never names the outside target.
+   * reporting. An escape never names the outside target. With `probe`, a missing file is not an
+   * error: it returns null without a report (the `node_modules` walk goes on upward).
    */
   checkFile(
     file: string,
@@ -170,11 +196,13 @@ export class FileStore {
     at: SiteLocation,
     what: string,
     raw = file,
-  ): string | undefined {
+    probe = false,
+  ): string | undefined | null {
     const where = boundary === "." ? "the workspace root" : `the package (${boundary})`;
     const realBoundary = boundary === "." ? "." : this.reader.realPath(boundary);
     const missing = () => {
       this.touched.add(file);
+      if (probe) return null;
       this.reporter.report({
         rule: "file-missing",
         message: `file '${file}' named by ${what} does not exist`,

@@ -1,8 +1,9 @@
 import type { Origin } from "@seampact/spec/ir";
-import { isAlias, isMap, isScalar, isSeq, type Node, Scalar, type YAMLMap } from "yaml";
+import { isAlias, isMap, isScalar, isSeq, type Node, type Pair, Scalar, type YAMLMap } from "yaml";
 import type { JsonObject, JsonValue } from "../raw-tree.js";
-import { asObject, isReservedKey, jsonObject, setKey } from "./json.js";
-import { LOAD_MAX_DEPTH, LOAD_MAX_NODES } from "./limits.js";
+import { type LoadBudget, loadWorkOf } from "./budget.js";
+import { asObject, cloneJson, isReservedKey, jsonObject, setKey } from "./json.js";
+import { LOAD_MAX_DEPTH } from "./limits.js";
 import { pointerEscape, pointerSegments } from "./paths.js";
 import type { Reporter, SiteLocation } from "./report.js";
 import { type FileStore, nodeSite, pairSite, type ParsedFile } from "./source.js";
@@ -33,6 +34,8 @@ export interface LayerBuild {
   locs: Map<string, SiteLocation>;
   uses: RefUse[];
   refs: Map<string, FileRef>;
+  /** Refs added since `finishRefs` last looked, in order. */
+  pendingRefs: FileRef[];
   /**
    * The file element each schema came from (`/schemas/<name>` to `<real path>#<pointer>`), for
    * those declared by an `$include` under `schemas` or by a file `$ref`. One element reached from
@@ -47,6 +50,17 @@ interface StackEntry {
   shown: string;
   at: SiteLocation;
 }
+
+/** The keys one mapping received, its own and those its `$include`s merged, in order. */
+interface MapKeys {
+  sites: Map<string, SiteLocation>;
+  order: string[];
+}
+
+/** A `$file` JSON file, parsed and made safe once per real path, then charged per use. */
+type JsonFile =
+  | { ok: true; value: JsonValue; nodes: number; text: number; depth: number }
+  | { ok: false; error: string };
 
 interface Scope {
   file: ParsedFile;
@@ -64,11 +78,10 @@ const DATA_KEYS = new Set(["value", "example", "examples", "default"]);
 // Exceptions, where such a key is not data:
 // - mappings whose keys are names an author chooses, so `default:` or `value:` there is a name
 //   (`query: { default: { type: string } }` declares a query field named `default`);
-// - settings mappings whose `default` or `value` is itself a setting: `paging.default` names a
-//   paging style (section 13), a scheme's `key.value` is a literal identifier (section 9).
+// - two settings mappings whose `default` or `value` is itself a setting, matched by pointer so
+//   a property or field of that name keeps its data positions: `conventions.paging.default`
+//   names a paging style (section 13), a scheme's `key.value` is a literal identifier (section 9).
 const NOT_DATA_UNDER = new Set([
-  "paging",
-  "key",
   "properties",
   "query",
   "pathParams",
@@ -77,6 +90,8 @@ const NOT_DATA_UNDER = new Set([
   "id",
   "fields",
 ]);
+
+const SETTINGS_NOT_DATA = /^(?:\/conventions\/paging|\/schemes\/[^/]+\/key)$/;
 
 const NULL_SPELLINGS = new Set(["", "~", "Null", "NULL"]);
 
@@ -90,6 +105,23 @@ function shownTarget(path: string, fragment: string | undefined): string {
   return fragment === undefined || fragment === "" ? path : `${path}#${fragment}`;
 }
 
+// A mapping's pairs by key (the first of a duplicated key, as a scan finds it), built once per
+// mapping: a lookup by name never rescans a large file for each site that names an element.
+const mapIndexes = new WeakMap<YAMLMap, Map<string, Pair>>();
+
+export function mapIndex(map: YAMLMap): Map<string, Pair> {
+  let index = mapIndexes.get(map);
+  if (!index) {
+    index = new Map();
+    for (const pair of map.items as Pair[]) {
+      const k = keyString(pair.key as Node);
+      if (k !== undefined && !index.has(k)) index.set(k, pair);
+    }
+    mapIndexes.set(map, index);
+  }
+  return index;
+}
+
 export function navigate(file: ParsedFile, fragment: string | undefined): Node | undefined {
   if (!file.root) return undefined;
   if (fragment === undefined || fragment === "") return file.root;
@@ -98,8 +130,7 @@ export function navigate(file: ParsedFile, fragment: string | undefined): Node |
   let node: Node | undefined = file.root;
   for (const seg of segs) {
     if (isMap(node)) {
-      const hit: Node | null | undefined = node.items.find((p) => keyString(p.key as Node) === seg)
-        ?.value as Node | null | undefined;
+      const hit = mapIndex(node).get(seg)?.value as Node | null | undefined;
       node = hit ?? undefined;
     } else if (isSeq(node)) {
       const item: unknown = node.items[Number(seg)];
@@ -112,13 +143,12 @@ export function navigate(file: ParsedFile, fragment: string | undefined): Node |
 }
 
 export class Expander {
-  /** Nodes built so far in this load, every layer and api together (`LOAD_MAX_NODES`). */
-  private nodes = 0;
-  private exhausted = false;
+  private readonly jsonFiles = new Map<string, JsonFile>();
 
   constructor(
     private readonly store: FileStore,
     private readonly rep: Reporter,
+    private readonly budget: LoadBudget,
   ) {}
 
   /** Expands a whole file as one layer. */
@@ -130,6 +160,7 @@ export class Expander {
       locs: new Map(),
       uses: [],
       refs: new Map(),
+      pendingRefs: [],
       sources: new Map(),
     };
     if (!file.root) return build;
@@ -173,10 +204,12 @@ export class Expander {
       name: string,
     ) => { site: SiteLocation | undefined; layer: string; source: string | undefined } | undefined,
   ): void {
+    // A queue read by a cursor, fed by the refs each expansion adds: no rescan, no shift.
     const queue: FileRef[] = [];
+    let next = 0;
     const queued = new Set<string>();
     const enqueueAll = () => {
-      for (const r of build.refs.values()) {
+      for (const r of build.pendingRefs.splice(0)) {
         if (!queued.has(r.id)) {
           queued.add(r.id);
           queue.push(r);
@@ -193,8 +226,9 @@ export class Expander {
       setKey(build.tree, "schemas", fresh);
       return fresh;
     };
-    while (queue.length > 0) {
-      const ref = queue.shift() as FileRef;
+    while (next < queue.length) {
+      if (this.budget.exhausted) return;
+      const ref = queue[next++] as FileRef;
       const pointer = `/schemas/${pointerEscape(ref.name)}`;
       const elementSite = pairSite(ref.file, ref.pair.key, ref.pair.value);
       const own = Object.hasOwn(asObject(build.tree.schemas) ?? {}, ref.name);
@@ -240,7 +274,7 @@ export class Expander {
       const fileRoot = ref.file.root;
       for (const use of build.uses.slice(before)) {
         if (!isMap(fileRoot) || use.at.file !== ref.file.path) continue;
-        const pair = fileRoot.items.find((p) => keyString(p.key as Node) === use.name);
+        const pair = mapIndex(fileRoot).get(use.name);
         if (pair) {
           const nid = `${this.store.realOf(ref.file.path)}#/${pointerEscape(use.name)}`;
           if (!queued.has(nid)) {
@@ -259,19 +293,12 @@ export class Expander {
     }
   }
 
-  /** Counts a node against the load's budget and its depth against the limit; false stops it. */
-  private admit(file: ParsedFile, node: Node | null, depth: number): boolean {
-    if (this.exhausted) return false;
-    if (++this.nodes > LOAD_MAX_NODES) {
-      this.exhausted = true;
-      this.rep.report({
-        rule: "expansion-limit",
-        message: `the contract expands to more than ${LOAD_MAX_NODES} nodes; the expansion stops here`,
-        fix: "look for a file included many times over, through includes of includes",
-        at: nodeSite(file, node),
-      });
-      return false;
-    }
+  /**
+   * Charges a node (or a pair) written at `pointer` to the load's budget, and its depth against
+   * the limit; false stops it.
+   */
+  private admit(file: ParsedFile, node: Node | null, depth: number, pointer: string): boolean {
+    if (!this.budget.charge(loadWorkOf(pointer), () => nodeSite(file, node))) return false;
     if (depth > LOAD_MAX_DEPTH) {
       this.store.reportTooDeep(nodeSite(file, node));
       return false;
@@ -281,7 +308,7 @@ export class Expander {
 
   private node(build: LayerBuild, node: Node | null, pointer: string, scope: Scope): JsonValue {
     if (node === null || node === undefined || isAlias(node)) return null;
-    if (!this.admit(scope.file, node, scope.depth)) return null;
+    if (!this.admit(scope.file, node, scope.depth, pointer)) return null;
     if (isScalar(node)) return this.scalar(node, scope);
     if (isSeq(node)) {
       const out: JsonValue[] = [];
@@ -313,11 +340,15 @@ export class Expander {
         at: nodeSite(scope.file, node),
       });
     }
-    return node.value as JsonValue;
+    const value = node.value as JsonValue;
+    if (typeof value === "string") {
+      if (!this.budget.chargeText(value.length, () => nodeSite(scope.file, node))) return null;
+    }
+    return value;
   }
 
   private map(build: LayerBuild, node: YAMLMap, pointer: string, scope: Scope): JsonValue {
-    const fileKey = node.items.find((p) => keyString(p.key as Node) === "$file");
+    const fileKey = mapIndex(node).get("$file");
     if (fileKey) {
       if (node.items.length === 1) return this.fileDirective(build, fileKey, pointer, scope);
       if (!scope.data) {
@@ -331,7 +362,7 @@ export class Expander {
       }
     }
     const out = jsonObject();
-    this.items(build, node, pointer, scope, out, new Map());
+    this.items(build, node, pointer, scope, out, { sites: new Map(), order: [] });
     return out;
   }
 
@@ -341,16 +372,19 @@ export class Expander {
     pointer: string,
     scope: Scope,
     out: JsonObject,
-    seen: Map<string, SiteLocation>,
+    seen: MapKeys,
   ): void {
     const { file } = scope;
     let includeSite: SiteLocation | undefined;
     for (const pair of map.items) {
       // Every pair counts, `$include` ones too: a chain of includes builds nothing else.
-      if (!this.admit(file, pair.key as Node, scope.depth)) return;
+      if (!this.admit(file, pair.key as Node, scope.depth, pointer)) return;
       const keyNode = pair.key as Node;
       const valueNode = pair.value as Node | null;
       const key = keyString(keyNode);
+      if (key !== undefined && !this.budget.chargeText(key.length, () => nodeSite(file, keyNode))) {
+        return;
+      }
       if (key === undefined) {
         this.rep.report({
           rule: "key-not-scalar",
@@ -382,7 +416,7 @@ export class Expander {
         continue;
       }
       const keySite = nodeSite(file, keyNode);
-      const first = seen.get(key);
+      const first = seen.sites.get(key);
       if (first) {
         this.rep.report({
           rule: "duplicate-key",
@@ -393,9 +427,14 @@ export class Expander {
         });
         continue;
       }
-      seen.set(key, keySite);
+      seen.sites.set(key, keySite);
+      seen.order.push(key);
       const child = `${pointer}/${pointerEscape(key)}`;
-      const data = scope.data || (DATA_KEYS.has(key) && !NOT_DATA_UNDER.has(scope.parentKey ?? ""));
+      const data =
+        scope.data ||
+        (DATA_KEYS.has(key) &&
+          !NOT_DATA_UNDER.has(scope.parentKey ?? "") &&
+          !SETTINGS_NOT_DATA.test(pointer));
       let value = this.node(build, valueNode, child, {
         ...scope,
         data,
@@ -416,7 +455,7 @@ export class Expander {
     pointer: string,
     scope: Scope,
     out: JsonObject,
-    seen: Map<string, SiteLocation>,
+    seen: MapKeys,
   ): void {
     const { file } = scope;
     const valueNode = pair.value as Node | null;
@@ -430,22 +469,21 @@ export class Expander {
       });
       return;
     }
-    const targets: { raw: string; node: Node }[] = [];
-    if (isScalar(valueNode) && typeof valueNode.value === "string") {
-      targets.push({ raw: valueNode.value, node: valueNode });
-    } else if (isSeq(valueNode)) {
-      for (const item of valueNode.items) {
-        if (isScalar(item) && typeof item.value === "string") {
-          targets.push({ raw: item.value, node: item });
-        } else {
-          this.shape(file, item as Node | null, "$include");
-        }
+    const items = (isSeq(valueNode) ? valueNode.items : [valueNode]) as (Node | null)[];
+    for (const item of items) {
+      // Each target is charged before anything is resolved, an empty file or a bad item too.
+      const raw = isScalar(item) && typeof item.value === "string" ? item.value : undefined;
+      if (!this.budget.charge(loadWorkOf(raw ?? ""), () => nodeSite(file, item))) return;
+      if (raw === undefined) {
+        this.shape(file, item, "$include");
+        continue;
       }
-    } else {
-      this.shape(file, valueNode, "$include");
-    }
-    for (const target of targets) {
+      const target = { raw, node: item as Node };
       const at = nodeSite(file, target.node);
+      if (scope.stack.length >= LOAD_MAX_DEPTH) {
+        this.store.reportTooDeep(at);
+        return;
+      }
       const resolved = this.store.resolve(file, target.raw, at, "include");
       if (!resolved) continue;
       const pf = this.store.parse(resolved.path, file.boundary);
@@ -488,7 +526,7 @@ export class Expander {
         });
         continue;
       }
-      const before = new Set(Object.keys(out));
+      const start = seen.order.length;
       const inner: Scope = {
         file: pf,
         data: false,
@@ -500,9 +538,9 @@ export class Expander {
       if (pointer === "/schemas") {
         // A nested include recorded its own keys first; those of this file are the rest.
         const prefix = `${resolved.real}#${resolved.fragment ?? ""}`;
-        for (const k of Object.keys(out)) {
+        for (const k of seen.order.slice(start)) {
           const declaredAt = `/schemas/${pointerEscape(k)}`;
-          if (!before.has(k) && !build.sources.has(declaredAt)) {
+          if (!build.sources.has(declaredAt)) {
             build.sources.set(declaredAt, `${prefix}/${pointerEscape(k)}`);
           }
         }
@@ -546,30 +584,40 @@ export class Expander {
       });
       return null;
     }
-    const resolved = this.store.resolve(file, valueNode.value, nodeSite(file, valueNode), "file");
+    const valueSite = nodeSite(file, valueNode);
+    // Each site is charged before anything is resolved, and what it reads is charged per use.
+    if (!this.budget.charge(loadWorkOf(valueNode.value), valueSite)) return null;
+    if (scope.stack.length >= LOAD_MAX_DEPTH) {
+      this.store.reportTooDeep(valueSite);
+      return null;
+    }
+    const resolved = this.store.resolve(file, valueNode.value, valueSite, "file");
     if (!resolved) return null;
     const ext = resolved.path.slice(resolved.path.lastIndexOf(".") + 1).toLowerCase();
     if (ext === "md" || ext === "txt") {
-      return this.store.rawText(resolved.path) ?? null;
+      const text = this.store.rawText(resolved.path);
+      if (text === undefined || !this.budget.chargeText(text.length, valueSite)) return null;
+      return text;
     }
     if (ext === "json") {
-      const text = this.store.rawText(resolved.path) ?? "";
-      try {
-        return this.jsonData(
-          JSON.parse(text) as JsonValue,
-          resolved.path,
-          nodeSite(file, valueNode),
-          scope.depth,
-        );
-      } catch (e) {
+      const json = this.jsonFile(resolved.path, resolved.real, valueSite);
+      if (!json.ok) {
         this.rep.report({
           rule: "file-invalid",
-          message: `'${resolved.path}' is not valid JSON: ${(e as Error).message}`,
+          message: `'${resolved.path}' is not valid JSON: ${json.error}`,
           fix: "fix the JSON, or use a .yaml file",
-          at: nodeSite(file, valueNode),
+          at: valueSite,
         });
         return null;
       }
+      if (scope.depth + json.depth > LOAD_MAX_DEPTH) {
+        this.store.reportTooDeep(valueSite);
+        return null;
+      }
+      if (!this.budget.charge(json.nodes, valueSite)) return null;
+      if (!this.budget.chargeText(json.text, valueSite)) return null;
+      // Each use is its own copy: a layer tree never shares a node between two positions.
+      return cloneJson(json.value);
     }
     if (ext === "yaml" || ext === "yml") {
       const pf = this.store.parse(resolved.path, file.boundary);
@@ -603,24 +651,40 @@ export class Expander {
     return null;
   }
 
-  /** JSON data as the loader's own tree: no prototype, no reserved key. */
-  private jsonData(value: JsonValue, path: string, at: SiteLocation, depth: number): JsonValue {
-    if (this.exhausted) return null;
-    if (++this.nodes > LOAD_MAX_NODES) {
-      this.exhausted = true;
-      this.rep.report({
-        rule: "expansion-limit",
-        message: `the contract expands to more than ${LOAD_MAX_NODES} nodes; the expansion stops at '${path}'`,
-        fix: "shrink the data file",
-        at,
-      });
-      return null;
+  /**
+   * A JSON file parsed once per real path and turned into the loader's own tree (no prototype,
+   * no reserved key, reported at the first site that reads it), with what one use costs: its
+   * nodes, its characters and its depth. Nothing deeper than the depth limit is walked.
+   */
+  private jsonFile(path: string, real: string, at: SiteLocation): JsonFile {
+    const hit = this.jsonFiles.get(real);
+    if (hit) return hit;
+    let parsed: JsonValue;
+    let result: JsonFile;
+    try {
+      parsed = JSON.parse(this.store.rawText(path) ?? "") as JsonValue;
+      const cost = { nodes: 0, text: 0, depth: 0 };
+      const value = this.jsonSafe(parsed, path, at, 0, cost);
+      result = { ok: true, value, ...cost };
+    } catch (e) {
+      result = { ok: false, error: (e as Error).message };
     }
-    if (depth > LOAD_MAX_DEPTH) {
-      this.store.reportTooDeep(at);
-      return null;
-    }
-    if (Array.isArray(value)) return value.map((v) => this.jsonData(v, path, at, depth + 1));
+    this.jsonFiles.set(real, result);
+    return result;
+  }
+
+  private jsonSafe(
+    value: JsonValue,
+    path: string,
+    at: SiteLocation,
+    depth: number,
+    cost: { nodes: number; text: number; depth: number },
+  ): JsonValue {
+    cost.nodes++;
+    if (depth > cost.depth) cost.depth = depth;
+    if (depth > LOAD_MAX_DEPTH) return null; // refused per use, by depth
+    if (typeof value === "string") cost.text += value.length;
+    if (Array.isArray(value)) return value.map((v) => this.jsonSafe(v, path, at, depth + 1, cost));
     const obj = asObject(value);
     if (!obj) return value;
     const out = jsonObject();
@@ -634,7 +698,8 @@ export class Expander {
         });
         continue;
       }
-      setKey(out, k, this.jsonData(v, path, at, depth + 1));
+      cost.text += k.length;
+      setKey(out, k, this.jsonSafe(v, path, at, depth + 1, cost));
     }
     return out;
   }
@@ -703,7 +768,7 @@ export class Expander {
       this.reserved(file, valueNode, name);
       return value;
     }
-    const element = pf.root.items.find((p) => keyString(p.key as Node) === name);
+    const element = name === undefined ? undefined : mapIndex(pf.root).get(name);
     if (name === undefined || !element) {
       this.rep.report({
         rule: "ref-fragment",
@@ -715,13 +780,15 @@ export class Expander {
     }
     const id = `${resolved.real}#/${pointerEscape(name)}`;
     if (!build.refs.has(id)) {
-      build.refs.set(id, {
+      const ref: FileRef = {
         id,
         name,
         file: pf,
         pair: { key: element.key as Node, value: element.value as Node | null },
         at,
-      });
+      };
+      build.refs.set(id, ref);
+      build.pendingRefs.push(ref);
     }
     return name;
   }

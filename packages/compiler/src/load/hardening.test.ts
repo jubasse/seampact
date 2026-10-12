@@ -5,6 +5,7 @@ import { afterEach, expect, test } from "vitest";
 import { printDiagnostics } from "../diagnostics/print.js";
 import { must } from "./golden.js";
 import { loadWorkspace } from "./index.js";
+import { LOAD_MAX_WORK } from "./limits.js";
 import { isInside } from "./paths.js";
 import {
   type LoadMemoryOptions,
@@ -246,7 +247,7 @@ function fanOut(n: number): Record<string, string> {
 test("C-6 an include fan-out stops at the expansion limit", () => {
   const r = run(fanOut(18));
   expect(rules(r)).toEqual(["expansion-limit"]);
-  expect(r.diagnostics[0]?.message).toContain("200000");
+  expect(r.diagnostics[0]?.message).toContain(`more than ${LOAD_MAX_WORK} units of work`);
 }, 30_000);
 
 test("C-6 an exponential include fan-out ends quickly", () => {

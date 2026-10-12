@@ -75,6 +75,27 @@ export type CaseCheck =
  * directory reached through a link that leaves the boundary is never listed. `file` is inside
  * `boundary` (lexically), and the boundary itself was built by the loader.
  */
+// A listing's names, and per lowercase name the first in sorted order, built once per listing: a
+// directory named by many paths is searched in constant time (the store hands out one array).
+const listingIndexes = new WeakMap<
+  readonly string[],
+  { names: Set<string>; folded: Map<string, string> }
+>();
+
+function listingIndex(entries: readonly string[]) {
+  let index = listingIndexes.get(entries);
+  if (!index) {
+    const folded = new Map<string, string>();
+    for (const e of [...entries].sort()) {
+      const k = e.toLowerCase();
+      if (!folded.has(k)) folded.set(k, e);
+    }
+    index = { names: new Set(entries), folded };
+    listingIndexes.set(entries, index);
+  }
+  return index;
+}
+
 export function checkCase(
   reader: LoadReader,
   file: string,
@@ -90,11 +111,11 @@ export function checkCase(
     if (!inside(dir)) return { kind: "escape" };
     const entries = reader.listDir(dir);
     if (!entries) return { kind: "missing" };
-    if (entries.includes(seg)) {
+    const index = listingIndex(entries);
+    if (index.names.has(seg)) {
       actual.push(seg);
     } else {
-      const folded = entries.filter((e) => e.toLowerCase() === seg.toLowerCase()).sort();
-      const hit = folded[0];
+      const hit = index.folded.get(seg.toLowerCase());
       if (hit === undefined) return { kind: "missing" };
       actual.push(hit);
       mismatch = true;
