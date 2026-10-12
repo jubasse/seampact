@@ -1,0 +1,1 @@
+packs/house.yaml:2:1: error seampact/load/pack-not-data: the pack file 'packs/house.yaml' holds 'surfaces', which is not a pack key; a pack is data only. Fix: keep to the keys of a pack (pack, the catalogues, conventions, formats, extensions, lint, derive).
