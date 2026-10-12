@@ -1,10 +1,14 @@
 # SEA spike (p1-sea-spike)
 
-Status: complete. Run URL: https://github.com/jubasse/seampact/actions/runs/38235349165
-(workflow `p1-sea-spike`, commit 50de05d, 2026-10-12, all 6 jobs green: build plus 5 smoke).
-The measures, the run URL and the runner images below are those of that run, which predates the
-review fixes (Windows signature strip, reproducible blob, curl fetch, runner check, first-launch
-timing, compressed sizes): to refresh after the next CI run.
+Status: complete. Run URL: https://github.com/jubasse/seampact/actions/runs/38237233164
+(workflow `p1-sea-spike`, commit 73fed77, 2026-10-12, all 6 jobs green: build plus 5 smoke).
+The measures, the run URL and the runner images below are those of that run, which includes the
+review fixes (Windows signature strip, path-independent blob, curl fetch, runner architecture
+check, first-launch timing, compressed sizes). The earlier run 38235349165 (commit 50de05d) is
+superseded. Only the build-job step summary of this run (`dist/sizes.txt`) cannot be read through
+the API: the gzip-9 sizes below were computed with the same method (`zlib` level 9) on the run's
+`sea-binaries` artifact, and are identical to the `dist/sizes.txt` of a local build whose
+`SHA256SUMS` equals the artifact's.
 
 ## Verdict
 
@@ -16,12 +20,13 @@ criterion of the brief failed, so the fallback was not needed.
 Deciding criterion: every platform ran the binary on its own OS runner with stdout byte-identical
 to `node dist/bundle.cjs` on Linux, exit code 0, and the anchor fixture gave a non-zero exit with
 the located message `a.yaml:2:3: anchors are not allowed`. The needed Node APIs (`fs`, `path`,
-`crypto`, `process`) all work in the SEA. Size (90 to 121 MiB uncompressed) and warm start (36 to 175 ms)
-are recorded, not gated (A11); the compressed download size is measured by the next run
-(`dist/sizes.txt`, gzip level 9), and p3-binary re-measures it when it picks the release asset
-format. The size is judged acceptable for a build-plugin download, with no threshold set. The five hosted
-runners needed no paid signing: macOS binaries run after a free ad hoc re-sign, Windows with Node's
-Authenticode signature removed before injection (ADR 0010: no Authenticode signing of our own).
+`crypto`, `process`) all work in the SEA. Size (89.6 to 121.1 MiB uncompressed, 34.2 to 42.3 MiB at gzip level 9), first launch (41 to 193 ms)
+and warm start (38 to 101 ms) are recorded, not gated (A11); p3-binary re-measures the compressed
+size when it picks the release asset format. The size is judged acceptable for a build-plugin
+download, with no threshold set. The five hosted runners needed no paid signing: the Windows binary
+ran with Node's Authenticode signature removed before injection (`pe.mjs check` passed on the
+runner: security directory offset 0, size 0; ADR 0010: no Authenticode signing of our own), and the
+macOS binaries ran even unsigned, then again after a free ad hoc re-sign, which stays in the plan.
 
 ## What it proves
 
@@ -67,41 +72,49 @@ All from `spikes/sea/`, on Linux, with Node 24.21.0 (the `.nvmrc` pin), `gpg`, `
 5. macOS only, on the macOS runner: `codesign --remove-signature` then `codesign --force --sign -`
    (the injection on Linux leaves no valid signature).
 
-## Measures (run 38235349165, not estimated)
+## Measures (run 38237233164, not estimated)
 
-Size is the file size in MiB (bytes / 1048576). The start column of these numbers is a warm start:
-the median of 7 runs of the binary on the fixture, after two earlier runs of the same file (page
-cache warm), measured by `scripts/smoke.mjs` on the platform's own runner (includes process spawn;
-the macOS re-sign had been done). First-launch costs (macOS assessment of a freshly signed binary,
-Defender scan on Windows) were not captured in this run; `smoke.mjs` now also reports the first
-launch separately, and `dist/sizes.txt` the gzip size: both to refresh after the next CI run.
+Size is the file size in MiB (bytes / 1048576) as built on Linux, with the gzip level 9 size of
+the same file (`dist/sizes.txt`). First launch is the first run of the binary on the fixture, and
+warm start the median of 7 further runs after two warm-up runs (page cache warm), both measured
+by `scripts/smoke.mjs` on the platform's own runner (includes process spawn). On macOS the smoke
+runs after the ad hoc re-sign, so its file is 0.9 MiB larger than the Linux-built one (116.5 and
+119.5 MiB in the smoke output); the first launch there includes the first assessment of a freshly
+signed binary. Windows Defender scanning is not separated out.
 
-| Platform | Smoke runner | Size (MiB) | Start, warm median of 7 (ms) | Smoke |
-|---|---|---|---|---|
-| linux x64 (glibc) | ubuntu-24.04 | 121.1 | 49 | pass |
-| linux arm64 (glibc) | ubuntu-24.04-arm | 117.6 | 36 | pass |
-| macOS arm64 | macos-15 | 116.5 | 45 | pass |
-| macOS x64 | macos-15-intel | 119.5 | 175 | pass |
-| Windows x64 | windows-2025 | 89.6 | 88 | pass |
+| Platform | Smoke runner | Size (MiB) | gzip-9 (MiB) | First launch (ms) | Warm median of 7 (ms) | Smoke |
+|---|---|---|---|---|---|---|
+| linux x64 (glibc) | ubuntu-24.04 | 121.1 | 42.3 | 50 | 48 | pass |
+| linux arm64 (glibc) | ubuntu-24.04-arm | 117.6 | 42.2 | 41 | 38 | pass |
+| macOS arm64 | macos-15 | 115.6 | 37.6 | 102 | 61 | pass |
+| macOS x64 | macos-15-intel | 118.6 | 38.6 | 193 | 101 | pass |
+| Windows x64 | windows-2025 | 89.6 | 34.2 | 100 | 85 | pass |
+
+Exact sizes in bytes (gzip-9 in bytes): linux x64 126946496 (44322500), linux arm64 123276416
+(44298461), macOS x64 124322108 (40519811), macOS arm64 121205092 (39455372), Windows x64
+93976576 (35887337).
 
 Linux job (`ubuntu-24.04`):
-- `pnpm build` script: 33.3 s for the five binaries (downloads of the five Node archives, gpg and
-  SHA-256 verification, five injections; esbuild and blob under 1 s).
-- Whole build job: about 61 s (10:17:09 to 10:18:10 UTC), including checkout, pnpm and Node setup,
+- `pnpm build` script: 60.7 s for the five binaries (downloads of the five Node archives, gpg and
+  SHA-256 verification, five injections, and now a gzip level 9 pass over each binary; esbuild and
+  blob under 1 s). The previous run measured 33.3 s without the gzip pass.
+- Whole build job: 88 s (10:35:03 to 10:36:31 UTC), including checkout, pnpm and Node setup,
   install, reference output and artefact upload.
-- Smoke jobs: 10 to 82 s each, dominated by checkout and artefact download.
+- Smoke jobs: 12 to 15 s (Linux), 32 s (Windows), 88 s (macOS arm64) and 103 s (macOS x64); the
+  macOS jobs include the curl step (about 37 s each), the re-sign and the extra artefact upload.
 - The linux x64 binary also passed with `TZ=Asia/Kolkata LANG=fr_FR.UTF-8 LC_ALL=fr_FR.UTF-8`
-  (49 ms), and Windows ran from a `core.autocrlf=true` checkout (CRLF fixtures) with output equal to
-  the reference.
+  (first launch 49 ms, warm 47 ms), and Windows ran from a `core.autocrlf=true` checkout (CRLF
+  fixtures) with output equal to the reference.
 
 ## Runners
 
-Labels used (GitHub-hosted), with the image versions in the log of run 38235349165:
+Labels used (GitHub-hosted), with the image versions in the log of run 38237233164:
 `ubuntu-24.04` (build and linux x64, image 20261004.327.1), `ubuntu-24.04-arm` (20261004.142.1),
 `macos-15` (arm64, image macos-15-arm64 20260907.0337.1), `macos-15-intel` (x64, image macos-15
-20260824.0482.1), `windows-2025` (image windows-2025-vs2026 20260925.250.1). A step now asserts
-`node -p process.arch` equals the matrix architecture, so the darwin-x64 job proves x64 only on an
-Intel runner.
+20260824.0482.1), `windows-2025` (image windows-2025-vs2026 20260925.250.1). The step asserting
+`node -p process.arch` equals the matrix architecture passed on all 5 smoke jobs (linux-x64:
+x86_64/x64, linux-arm64: aarch64/arm64, darwin-x64 on macos-15-intel: x86_64/x64, darwin-arm64 on
+macos-15: arm64/arm64, win32-x64: x64), so the darwin-x64 result comes from an Intel runner.
 
 ## Caveats for p3-binary
 
@@ -113,45 +126,58 @@ Intel runner.
   ADR 0001 pin moves to a Node line that has it. ELF output prints LIEF warnings (`Can't find
   string offset for section name '.note.100'`), harmless here, the binaries run. On Windows the
   warning `The signature seems corrupted!` came from the unstripped Node signature (run
-  38235349165); with the strip it should be gone, to confirm in the next run.
-- Reproducibility: with the relative `main` and esbuild `absWorkingDir`, two builds in two
-  different directories gave identical SHA256SUMS locally (linux-x64 `49698f53…`, linux-arm64 `80a4d987…`, darwin-x64 `4ff04f84…`, darwin-arm64
-  `5c6b96c6…`, win32-x64 `6f2aba29…`, built in two directories of different depth, blob
-  byte-identical). Hashes also
-  depend on the pinned Node archives, esbuild 0.28.2, yaml 2.9.1 and postject 1.0.0-alpha.6, which
-  p3-binary must keep pinned; the local hashes differ from CI's (Linux and local may differ in
-  anything else the build reads), so only builds on the same pinned inputs are comparable.
+  38235349165); with the strip it is gone in run 38237233164 (no such line in any log).
+- Reproducibility: the CI `SHA256SUMS` (run 38237233164, Linux job, before any macOS re-sign) is
+  linux-x64 `3575609b…`, linux-arm64 `07e581ff…`, darwin-x64 `ccf94f60…`, darwin-arm64 `76c304b2…`,
+  win32-x64 `3874408e…`. A local build on Linux (Node 24.21.0, in `spikes/sea/dist` of the lane
+  worktree, built just before the tip was committed) gave the identical five hashes, `sha256sum -c` against
+  the CI manifest passing on all five files. So CI equals local for the same pinned inputs. The
+  earlier hashes recorded here (`49698f53…`, `80a4d987…`, `4ff04f84…`, `5c6b96c6…`, `6f2aba29…`)
+  do not match either: they are superseded, and the cause of that older difference was not
+  isolated, so do not rely on them. The macOS binaries that p3-binary ships differ from this manifest after the ad hoc
+  re-sign (the `signed-darwin-*` artefacts). Hashes depend on the pinned Node archives, esbuild
+  0.28.2, yaml 2.9.1 and postject 1.0.0-alpha.6, which p3-binary must keep pinned. A second
+  build in a different directory was not repeated against this tip.
 - pnpm 12: `pnpm install --ignore-workspace --frozen-lockfile` fails (exit 1, esbuild build script
   unapproved, because the flag ignores settings files). The spike has its own
   `pnpm-workspace.yaml` (`allowBuilds` esbuild: false) and uses plain `pnpm install
   --frozen-lockfile`; CI ran this fine under pnpm 12.11.2. p3-binary, inside the workspace, needs
   its own approval of esbuild's build script instead.
-- For the lead: ADR 0010 says Apple silicon refuses to run an unsigned binary. The spike did not
-  reproduce that on hosted runners (the unsigned arm64 binary exited 0, and the next run now also
-  compares its stdout and prints its stderr). The ad hoc re-sign stays regardless.
+- For the lead (contradiction with ADR 0010): ADR 0010 says Apple silicon refuses to run an
+  unsigned binary. The spike did not reproduce that on the hosted macos-15 arm64 runner: the
+  unsigned binary, fetched with curl, exited 0 with stdout identical to the Node reference and an
+  empty stderr (0 bytes). This does not change the Go verdict, the ad hoc re-sign stays regardless,
+  but the ADR sentence should be reworded (observed on a CI runner only, not on users' Macs).
 - macOS, unsigned: the Mach-O binaries come out of the Linux injection with no usable signature
   (`codesign -dv` on both macOS runners: "code object is not signed at all"). Run before any
-  re-sign, on both the arm64 and the x64 runner, they still exited 0 (information step). That is one
-  observation on CI runners, with no quarantine attribute; do not read it as proof that an unsigned
-  arm64 binary runs on users' Macs. The ad hoc re-sign stays in the plan.
+  re-sign, fetched with curl, on both the arm64 and the x64 runner, they exited 0, stdout identical
+  to the Node reference, stderr empty (0 bytes). That is one observation on CI runners, with no
+  quarantine attribute; do not read it as proof that an unsigned arm64 binary runs on users' Macs.
+  The ad hoc re-sign stays in the plan.
 - macOS ad hoc re-sign: `codesign --remove-signature` (tolerated failure) then
   `codesign --force --sign -`, then `codesign --verify --verbose=2` ("valid on disk", "satisfies its
   Designated Requirement") on a macOS runner, as a separate job step after the artefact download.
   The re-signed binary is not the one the Linux build hashed: p3-binary must hash and sign checksums
   after the re-sign, or sign on the macOS job and republish.
-- Quarantine: in run 38235349165 the binaries came from `download-artifact`, not curl or a browser,
-  and carried no quarantine attribute (`xattr`: 0 matches on both runners). The workflow now serves
-  `bin/` on localhost, fetches the binary with `curl` on both macOS jobs, then runs `xattr` and the
-  binary (result to refresh after the next CI run). The behaviour of a quarantined browser download
-  (Gatekeeper without notarisation) cannot be tested from CI.
+- Quarantine: in run 38237233164 both macOS jobs served `bin/` on localhost, fetched the binary
+  with `curl`, `cmp` found it identical to the artefact, and `xattr` showed no quarantine attribute
+  ("quarantine attribute present: 0" on both runners): curl does not set it, as expected, so this
+  does not model a browser download. The behaviour of a quarantined browser download (Gatekeeper
+  without notarisation) cannot be tested from CI. Workflow glitch for the lead: the step's
+  `cat server.pid` failed ("No such file or directory", `kill` got an empty argument) because the
+  `cd bin && python3 ... &` list runs in a background subshell, so `../server.pid` lands outside
+  the working directory; the local server was never killed (harmless in a throwaway job, the fetch
+  and checks were unaffected), and the step took about 37 s.
 - Linux ad hoc signing: signing the Mach-O from Linux with a pinned tool (for example rcodesign) was
   not tried, so the macOS re-sign still needs macOS runners. It could save the extra job.
 - Windows: in run 38235349165 the binary still carried Node's Authenticode signature (PE security
-  directory of 15688 bytes at the end of the file), invalid after injection, not unsigned as first
-  written; it ran on windows-2025, but no SmartScreen, Defender, AppLocker or WDAC test is possible
-  in CI. The signature is now stripped before injection (`scripts/pe.mjs`), verified empty in the
-  build and on the Windows runner (next run). p3-binary must keep that step. Authenticode signing
-  of our own stays out of 1.0 unless the lead decides otherwise.
+  directory of 15688 bytes at the end of the file), invalid after injection. In run 38237233164
+  the build removed it (15688 bytes), checked the directory empty after injection, and the
+  Windows runner re-checked the real binary: `pe.mjs check` printed `pe: security directory
+  offset 0, size 0`. The unsigned binary passed the smoke on windows-2025 (first launch 100 ms,
+  warm 85 ms), but no SmartScreen, Defender, AppLocker or WDAC test is possible in CI. p3-binary
+  must keep the strip step. Authenticode signing of our own stays out of 1.0 unless the lead
+  decides otherwise.
 - Anchor position: the message points at the anchored node (`a.yaml:2:3`), not at the anchor
   token (`&base` is at `a.yaml:1:7`), because `node.range` excludes the node's properties. p3-binary
   must locate the anchor token itself (from the CST `srcToken` props). The aliases check is never
@@ -160,8 +186,10 @@ Intel runner.
   `LOG_TOKENS` is set in the environment, which would mix debug lines into the compiler's stdout.
   p3-binary must delete both variables from `process.env` before parsing (or patch them out at
   bundle time) and run one smoke with `LOG_TOKENS=1 LOG_STREAM=1`.
-- macOS x64 is the slowest platform to start (175 ms, Intel hosted runner, versus 36 to 88 ms
-  elsewhere) and its job was the longest; it is a recorded measure, not a gate (A11).
+- macOS x64 is the slowest platform to start (first launch 193 ms, warm 101 ms, Intel hosted
+  runner, versus 41 to 102 ms first launch and 38 to 85 ms warm elsewhere) and its job was the
+  longest; it is a recorded measure, not a gate (A11). Run to run noise was not measured: the
+  previous run gave 175 ms warm on the same runner label.
 - Entry format: CommonJS. The Node 24.21.0 SEA entry is a script; `require` inside it only loads
   built-ins. An ESM entry was not tried.
 - `yaml` imports `buffer` for its YAML 1.1 binary tag: `require("buffer")` runs when the bundle
