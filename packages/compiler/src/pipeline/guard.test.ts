@@ -10,6 +10,19 @@ const pipelineGuard = <D extends DraftIR>(value: D, guarded: GuardedPart): D =>
 const origin: IrWriter.Origin = { layer: "api", pointer: "/surfaces/app/routes/tasks" };
 const text: IrWriter.TypeUse = { kind: "scalar", type: "string", refinements: {} };
 const derivedFrom = (derivation: string): IrWriter.DerivedFrom => ({ derivation, from: [origin] });
+// A catalogue key, held in a variable: written literally, `x["__proto__"]` reads like the accessor.
+const PROTO = "__proto__";
+const task = (): IrWriter.Schema => ({
+  kind: "object",
+  id: "Task",
+  name: { segments: ["task"], role: "schema" },
+  properties: [],
+  directions: ["output"],
+  examples: [],
+  docs: {},
+  extensions: {},
+  origin,
+});
 
 // A draft after the tree pass, with one operation: a declared query parameter and one declared response.
 function draft(): DraftIR {
@@ -81,17 +94,7 @@ describe("guard refuses undeclared access", () => {
 
   test("a read of a catalogue entry and Object.hasOwn go through the catalogue's field", () => {
     const value = draft();
-    value.schemas.Task = {
-      kind: "object",
-      id: "Task",
-      name: { segments: ["task"], role: "schema" },
-      properties: [],
-      directions: ["output"],
-      examples: [],
-      docs: {},
-      extensions: {},
-      origin,
-    };
+    value.schemas.Task = task();
     const guarded = pipelineGuard(value, part("tree.nodes", ["schemas"], []));
     expect(Object.hasOwn(guarded.schemas, "Task")).toBe(true);
     expect(guarded.schemas.Task?.kind).toBe("object");
@@ -325,5 +328,78 @@ describe("guard refuses writes around its checks", () => {
     ).toContain("owned by tree.nodes (declared)");
     expect(operationOf(value).params?.query).toHaveLength(1);
     expect(() => Reflect.set(list, "length", -1)).toThrow(RangeError);
+  });
+
+  test("a prototype key reads only as an own member", () => {
+    const value = draft();
+    operationOf(value).docs = {};
+    const guarded = pipelineGuard(value, part("tree.nodes", [], ["operations[]"]));
+    const operation = operationOf(guarded);
+    const docs = operation.docs ?? {};
+    expect(refused(() => Reflect.get(docs, "__proto__")).message).toContain("prototype");
+    expect(refused(() => Reflect.get(operation, "constructor")).path).toBe(
+      "operations[0].constructor",
+    );
+    expect(refused(() => Reflect.get(operation, "prototype")).access).toBe("read");
+    // Array methods read `constructor` (species): it passes on a list.
+    expect(guarded.operations.map((entry) => entry.id)).toEqual(["createTask"]);
+
+    const rights = draft();
+    rights.rights[PROTO] = {
+      id: "__proto__",
+      subject: { kind: "none" },
+      errors: [],
+      docs: {},
+      extensions: {},
+      origin,
+    };
+    const reader = pipelineGuard(rights, part("access.rights", [], ["rights"]));
+    expect(reader.rights[PROTO]?.id).toBe("__proto__");
+    expect(Object.hasOwn(reader.rights, "__proto__")).toBe(true);
+  });
+
+  test("writing a prototype key adds an own member and never changes the prototype", () => {
+    const value = draft();
+    operationOf(value).docs = {};
+    const guarded = pipelineGuard(value, part("tree.nodes", [], ["operations[]"]));
+    Reflect.set(operationOf(guarded).docs ?? {}, "__proto__", { polluted: true });
+    const docs = operationOf(value).docs ?? {};
+    expect(Object.getPrototypeOf(docs)).toBe(Object.prototype);
+    expect(Object.hasOwn(docs, "__proto__")).toBe(true);
+  });
+
+  test("an unwrapped copy keeps its prototype and its `__proto__` member", () => {
+    const value = draft();
+    value.schemas.Task = task();
+    const guarded = pipelineGuard(value, part("tree.schemas", [], ["schemas"]));
+    const entry = guarded.schemas.Task;
+    if (entry === undefined) throw new Error("no schema");
+    const replacement: Record<string, IrWriter.Schema> = Object.create(null);
+    replacement[PROTO] = entry;
+    replacement.Task = entry;
+    guarded.schemas = replacement;
+    expect(Object.getPrototypeOf(value.schemas)).toBeNull();
+    expect(Object.hasOwn(value.schemas, "__proto__")).toBe(true);
+    expect(value.schemas[PROTO]).toBe(value.schemas.Task);
+    expect(value.schemas === replacement, "the copy, not the object holding guards").toBe(false);
+  });
+
+  test("a catalogue assigned whole has no prototype, and is never removed", () => {
+    const value = draft();
+    const guarded = pipelineGuard(value, part("tree.schemas", [], ["schemas"]));
+    expect(refused(() => Object.assign(guarded, { schemas: { Task: task() } })).message).toContain(
+      "Object.create(null)",
+    );
+    expect(refused(() => Reflect.deleteProperty(guarded, "schemas")).path).toBe("schemas");
+    expect(Object.getPrototypeOf(value.schemas)).toBeNull();
+  });
+
+  test("a frozen property reads as its own value, as a proxy must", () => {
+    const value = draft();
+    const input = operationOf(value).input;
+    if (input === undefined) throw new Error("no input");
+    Object.freeze(input);
+    const guarded = pipelineGuard(value, part("access.identity", ["operations[].input"], []));
+    expect(operationOf(guarded).input?.schema).toBe(input.schema);
   });
 });

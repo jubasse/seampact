@@ -1,4 +1,4 @@
-import type { DraftIR } from "./draft.js";
+import { createDraftIR, type DraftIR } from "./draft.js";
 import type { HalfName } from "./halves.js";
 import {
   type DraftField,
@@ -24,10 +24,20 @@ import {
 //   that change are checked, so `{ ...op.input, rawBody: true }` checks `rawBody` alone.
 // - A default is written in one assignment: changing a member inside a present default is a write over it.
 // - A half appends to an `elements` list; moving another half's element (`splice`, `unshift`, `sort`) writes it.
-// - Values are unwrapped before they reach the draft, so the draft never holds a guard.
+// - Values are unwrapped before they reach the draft, so the draft never holds a guard. A copy made to unwrap
+//   keeps its source's prototype and defines its members.
+// - The draft is data. A symbol key, an accessor, a prototype change or making a value non-extensible is
+//   refused. `__proto__`, `constructor` and `prototype` read only as own members (a list's `constructor`
+//   passes, for array methods), and writing a new member defines it, so no setter runs. A catalogue assigned
+//   whole must have no prototype, as `createDraftIR` makes it, so an entry named `__proto__` stays an entry.
+// - A frozen property reads as its own value, as a proxy must, so what it holds is not guarded.
 // - The guards of a run are revocable: the orchestrator calls `dispose` when the half ends, so a guard kept past
 //   the run throws instead of writing unchecked.
 // The link pass is guarded with `writes: []`: read-only by guard as well as by type.
+//
+// Scope: the guard catches mistakes of our own pass lanes, not an adversary. One limit is accepted and not
+// cloned away: a value read from one field and written to another is stored as the same object (aliasing), and
+// a later write through either path is checked against that path only.
 
 /** What a guarded part declares: its name, its reads and its writes. */
 export interface GuardedPart {
@@ -156,9 +166,29 @@ function normalText(path: readonly string[]): string {
 }
 
 // Keys a runtime reads on any object (JSON.stringify, await, string conversion) that are no draft member.
-const PASS_THROUGH = new Set(["toJSON", "then", "constructor", "valueOf", "toString"]);
+const PASS_THROUGH = new Set(["toJSON", "then", "valueOf", "toString"]);
+
+// Keys that reach a prototype when they are not an own member: read through a guard, they would hand out
+// `Object.prototype` (or a constructor) wrapped as if it were draft data, and a write through it would reach
+// every object. A list's `constructor` passes: array methods read it to build their result.
+const PROTOTYPE_KEYS = new Set(["__proto__", "constructor", "prototype"]);
 
 const isObject = (value: unknown): value is object => typeof value === "object" && value !== null;
+
+// The catalogues of the draft (`schemas`, `rights`, ...): the members `createDraftIR` creates without a prototype.
+const CATALOGUES: ReadonlySet<string> = new Set(
+  Object.entries(createDraftIR()).flatMap(([key, value]) =>
+    isObject(value) && Object.getPrototypeOf(value) === null ? [key] : [],
+  ),
+);
+
+// A data member as a plain assignment creates it.
+const dataMember = (value: unknown): PropertyDescriptor => ({
+  value,
+  writable: true,
+  enumerable: true,
+  configurable: true,
+});
 
 /** Wraps `draft` so `part` may read and write only what it declares and owns, until `dispose`. */
 export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): DraftGuard<D> {
@@ -213,7 +243,9 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
     return proxy;
   };
 
-  // The value without any guard inside it, copying only the objects and lists that held one.
+  // The value without any guard inside it, copying only the objects and lists that held one. A copy keeps the
+  // prototype of its source (none for a catalogue) and defines its members, so a member named `__proto__` stays
+  // a member instead of setting the copy's prototype.
   const unwrap = (value: unknown): unknown => {
     if (!isObject(value)) return value;
     const target = targets.get(value);
@@ -224,15 +256,13 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
     }
     const prototype: unknown = Object.getPrototypeOf(value);
     if (prototype !== Object.prototype && prototype !== null) return value;
-    let copy: Record<string, unknown> | undefined;
-    for (const [member, item] of Object.entries(value)) {
-      const plain = unwrap(item);
-      if (plain !== item) {
-        copy ??= { ...value };
-        copy[member] = plain;
-      }
-    }
-    return copy ?? value;
+    const members = Object.entries(value);
+    const plain = members.map(([, item]) => unwrap(item));
+    if (plain.every((item, i) => item === members[i]?.[1])) return value;
+    const copy: object = Object.create(prototype);
+    for (const [i, [member]] of members.entries())
+      Object.defineProperty(copy, member, dataMember(plain[i]));
+    return copy;
   };
 
   const declaredWrite = (position: Position): void => {
@@ -350,7 +380,7 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
     const next = child(position, target, key);
     if (next.node === undefined && position.row === undefined)
       fail("write", next, "no row owns this member");
-    checkWrite(next, value, Reflect.get(target, key));
+    checkWrite(next, value, member(target, key));
   };
 
   // Checks writing `value` (undefined for a delete) at `target[key]`, and returns the value to store.
@@ -371,15 +401,38 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
         checkWrite(position, target.slice(0, length), target.slice());
       return length;
     }
+    if (
+      position.normal.length === 0 &&
+      CATALOGUES.has(key) &&
+      !(isObject(plain) && !Array.isArray(plain) && Object.getPrototypeOf(plain) === null)
+    )
+      // Refused rather than re-copied: the guard is off outside tests, so a copy here would hide the bug.
+      fail(
+        "write",
+        child(position, target, key),
+        "a catalogue is always present, as an object without a prototype (Object.create(null)), " +
+          "so an entry named __proto__ stays an entry",
+      );
     write(position, target, key, plain);
     return plain;
   };
 
   const handlerAt = (position: Position): ProxyHandler<object> => ({
     get(target, key, receiver) {
+      if (
+        typeof key === "string" &&
+        PROTOTYPE_KEYS.has(key) &&
+        !Object.hasOwn(target, key) &&
+        !(Array.isArray(target) && key === "constructor")
+      )
+        fail("read", child(position, target, key), "a prototype key, not an own member");
       const next = read(position, target, key);
       const value: unknown = Reflect.get(target, key, receiver);
-      return next === undefined ? value : wrap(value, next);
+      if (next === undefined) return value;
+      // A frozen property must read as its own value (a proxy invariant), so its value leaves unguarded.
+      const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+      if (descriptor?.configurable === false && descriptor.writable === false) return value;
+      return wrap(value, next);
     },
     has(target, key) {
       read(position, target, key);
@@ -399,7 +452,11 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
       return Reflect.ownKeys(target);
     },
     set(target, key, value) {
-      return Reflect.set(target, key, assign(position, target, key, value));
+      const plain = assign(position, target, key, value);
+      // A new member is defined, so no setter up the prototype chain runs (`__proto__` included).
+      return Object.hasOwn(target, key)
+        ? Reflect.set(target, key, plain)
+        : Reflect.defineProperty(target, key, dataMember(plain));
     },
     deleteProperty(target, key) {
       assign(position, target, key, undefined);
