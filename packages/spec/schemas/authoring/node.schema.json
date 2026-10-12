@@ -228,7 +228,14 @@
           },
           "propertyNames": {
             "description": "a scope name (ADR 0002 section 4)",
-            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "common.schema.json#/$defs/scopeSource"
@@ -257,7 +264,14 @@
           },
           "propertyNames": {
             "description": "an error role (ADR 0002 section 11)",
-            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$"
+            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "conventions.schema.json#/$defs/roleBinding"
@@ -385,7 +399,14 @@
           },
           "propertyNames": {
             "description": "an error role (ADR 0002 section 11)",
-            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$"
+            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "conventions.schema.json#/$defs/roleBinding"
@@ -611,7 +632,14 @@
           },
           "propertyNames": {
             "description": "a scope name (ADR 0002 section 4)",
-            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "common.schema.json#/$defs/scopeSource"
@@ -640,7 +668,14 @@
           },
           "propertyNames": {
             "description": "an error role (ADR 0002 section 11)",
-            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$"
+            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "conventions.schema.json#/$defs/roleBinding"
@@ -820,7 +855,14 @@
           "title": "routes",
           "propertyNames": {
             "description": "a node name (ADR 0002 section 4)",
-            "pattern": "^(?:[a-z][A-Za-z0-9_]*)$"
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "#/$defs/node"
@@ -860,7 +902,14 @@
           },
           "propertyNames": {
             "description": "a scope name (ADR 0002 section 4)",
-            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "common.schema.json#/$defs/scopeSource"
@@ -889,7 +938,14 @@
           },
           "propertyNames": {
             "description": "an error role (ADR 0002 section 11)",
-            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$"
+            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "conventions.schema.json#/$defs/roleBinding"
@@ -1172,7 +1228,14 @@
           "title": "routes",
           "propertyNames": {
             "description": "a node name (ADR 0002 section 4)",
-            "pattern": "^(?:[a-z][A-Za-z0-9_]*)$"
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "#/$defs/node"
@@ -1202,7 +1265,14 @@
           },
           "propertyNames": {
             "description": "a scope name (ADR 0002 section 4)",
-            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "common.schema.json#/$defs/scopeSource"
@@ -1231,7 +1301,14 @@
           },
           "propertyNames": {
             "description": "an error role (ADR 0002 section 11)",
-            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$"
+            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "conventions.schema.json#/$defs/roleBinding"
@@ -1358,7 +1435,14 @@
           "title": "routes",
           "propertyNames": {
             "description": "a node name (ADR 0002 section 4)",
-            "pattern": "^(?:[a-z][A-Za-z0-9_]*)$"
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "#/$defs/surfaceChild"
@@ -1388,7 +1472,14 @@
           },
           "propertyNames": {
             "description": "a scope name (ADR 0002 section 4)",
-            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "common.schema.json#/$defs/scopeSource"
@@ -1417,7 +1508,14 @@
           },
           "propertyNames": {
             "description": "an error role (ADR 0002 section 11)",
-            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$"
+            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "conventions.schema.json#/$defs/roleBinding"
@@ -1628,7 +1726,14 @@
           },
           "propertyNames": {
             "description": "a scope name (ADR 0002 section 4)",
-            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "common.schema.json#/$defs/scopeSource"
@@ -1657,7 +1762,14 @@
           },
           "propertyNames": {
             "description": "an error role (ADR 0002 section 11)",
-            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$"
+            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "conventions.schema.json#/$defs/roleBinding"
@@ -1860,7 +1972,14 @@
           },
           "propertyNames": {
             "description": "a scope name (ADR 0002 section 4)",
-            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "common.schema.json#/$defs/scopeSource"
@@ -1889,7 +2008,14 @@
           },
           "propertyNames": {
             "description": "an error role (ADR 0002 section 11)",
-            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$"
+            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "conventions.schema.json#/$defs/roleBinding"
@@ -2013,7 +2139,14 @@
           },
           "propertyNames": {
             "description": "a field name (ADR 0002 section 2)",
-            "pattern": "^(?:(?!(?:__proto__|constructor|prototype)$)[^$].*|\\$include)$"
+            "pattern": "^(?:[^$].*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "schema.schema.json#/$defs/schema"
@@ -2268,6 +2401,11 @@
             "title": "conflict",
             "description": "A requirement names a right or a rule, not both.",
             "not": {}
+          },
+          "bucket": {
+            "title": "conflict",
+            "description": "'bucket' is for rules declared with bucket: true only.",
+            "not": {}
           }
         }
       },
@@ -2323,7 +2461,14 @@
       },
       "propertyNames": {
         "description": "a binding key (path.<param>, query.<param> or body.<field>) (ADR 0002 section 9)",
-        "pattern": "^(?:path\\.[^.\\s]+|query\\.[^.\\s]+|body\\.[^.\\s]+(?:\\.[^.\\s]+)*|\\$include)$"
+        "pattern": "^(?:path\\.[^.\\s]+|query\\.[^.\\s]+|body\\.[^.\\s]+(?:\\.[^.\\s]+)*|\\$include)$",
+        "not": {
+          "enum": [
+            "__proto__",
+            "constructor",
+            "prototype"
+          ]
+        }
       },
       "additionalProperties": {
         "$ref": "common.schema.json#/$defs/bindingValue"
@@ -2466,10 +2611,30 @@
           },
           "propertyNames": {
             "description": "a paging style name (ADR 0002 section 10)",
-            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
-          "minProperties": 1,
-          "maxProperties": 1,
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "then": {
+            "maxProperties": 2
+          },
+          "else": {
+            "minProperties": 1,
+            "maxProperties": 1
+          },
           "additionalProperties": {
             "type": "object",
             "properties": {
@@ -2578,7 +2743,14 @@
       },
       "propertyNames": {
         "description": "a success or redirect status (ADR 0002 section 7)",
-        "pattern": "^(?:2[0-9][0-9]|30[1237]|308|\\$include)$"
+        "pattern": "^(?:2[0-9][0-9]|30[1237]|308|\\$include)$",
+        "not": {
+          "enum": [
+            "__proto__",
+            "constructor",
+            "prototype"
+          ]
+        }
       },
       "additionalProperties": {
         "type": "object",
@@ -2613,7 +2785,14 @@
       },
       "propertyNames": {
         "description": "an example name (ADR 0002 section 4)",
-        "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+        "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+        "not": {
+          "enum": [
+            "__proto__",
+            "constructor",
+            "prototype"
+          ]
+        }
       },
       "additionalProperties": {
         "type": "object",

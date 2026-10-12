@@ -10,7 +10,14 @@
   },
   "propertyNames": {
     "description": "a wire format name (ADR 0002 section 4)",
-    "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+    "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+    "not": {
+      "enum": [
+        "__proto__",
+        "constructor",
+        "prototype"
+      ]
+    }
   },
   "additionalProperties": {
     "$ref": "#/$defs/entry"
@@ -66,7 +73,14 @@
           },
           "propertyNames": {
             "description": "a meta field name (ADR 0002 section 2)",
-            "pattern": "^(?:(?!(?:__proto__|constructor|prototype)$)[^$].*|\\$include)$"
+            "pattern": "^(?:[^$].*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "type": "object",
@@ -128,7 +142,14 @@
               },
               "propertyNames": {
                 "description": "a member or header name (ADR 0002 section 2)",
-                "pattern": "^(?:(?!(?:__proto__|constructor|prototype)$)[^$].*|\\$include)$"
+                "pattern": "^(?:[^$].*|\\$include)$",
+                "not": {
+                  "enum": [
+                    "__proto__",
+                    "constructor",
+                    "prototype"
+                  ]
+                }
               },
               "additionalProperties": {
                 "$ref": "common.schema.json#/$defs/template"
@@ -165,7 +186,14 @@
           },
           "propertyNames": {
             "description": "a member or header name (ADR 0002 section 2)",
-            "pattern": "^(?:(?!(?:__proto__|constructor|prototype)$)[^$].*|\\$include)$"
+            "pattern": "^(?:[^$].*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "common.schema.json#/$defs/template"

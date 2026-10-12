@@ -30,7 +30,7 @@
       "title": "schema reference",
       "description": "A schema name (Task) or a file (./schemas/task.yaml#/Task) (ADR 0002 section 2).",
       "type": "string",
-      "pattern": "^(?:[A-Z][A-Za-z0-9]*|\\.\\.?/[^\\\\#\\u0000-\\u001F\\u007F]+(?:#/[^\\u0000-\\u001F\\u007F]*)?)$"
+      "pattern": "^(?:[A-Z][A-Za-z0-9]*|\\.\\.?/[^\\\\#\\u0000-\\u001F\\u007F-\\u009F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u2028\\u2029]+(?:#/[^\\u0000-\\u001F\\u007F-\\u009F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u2028\\u2029]*)?)$"
     },
     "mapping": {
       "type": "object",
@@ -201,7 +201,14 @@
           },
           "propertyNames": {
             "description": "a union tag (ADR 0002 section 2)",
-            "pattern": "^(?:(?!(?:__proto__|constructor|prototype)$)[^$].*|\\$include)$"
+            "pattern": "^(?:[^$].*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "#/$defs/schema"
@@ -222,7 +229,14 @@
           },
           "propertyNames": {
             "description": "a property name (ADR 0002 section 2)",
-            "pattern": "^(?:(?!(?:__proto__|constructor|prototype)$)[^$].*|\\$include)$"
+            "pattern": "^(?:[^$].*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "#/$defs/schema"
@@ -955,7 +969,14 @@
           },
           "propertyNames": {
             "description": "a property name (ADR 0002 section 2)",
-            "pattern": "^(?:(?!(?:__proto__|constructor|prototype)$)[^$].*|\\$include)$"
+            "pattern": "^(?:[^$].*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "#/$defs/overlay"

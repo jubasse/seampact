@@ -19,7 +19,7 @@
         "title": "pack reference",
         "description": "A path starting with ./ or ../, or a package name (ADR 0002 section 2).",
         "type": "string",
-        "pattern": "^[^\\u0000-\\u001F\\u007F]+$"
+        "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u2028\\u2029]+$"
       },
       "$comment": "ADR 0002 section 2",
       "description": "Convention packs, applied in order (ADR 0002 section 2)."
@@ -33,7 +33,14 @@
       },
       "propertyNames": {
         "description": "a surface name (ADR 0002 section 4)",
-        "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+        "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+        "not": {
+          "enum": [
+            "__proto__",
+            "constructor",
+            "prototype"
+          ]
+        }
       },
       "additionalProperties": {
         "$ref": "node.schema.json#/$defs/surface"
@@ -272,7 +279,14 @@
           },
           "propertyNames": {
             "description": "a document name (ADR 0002 section 4)",
-            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "type": "object",

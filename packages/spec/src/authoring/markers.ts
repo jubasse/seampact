@@ -1,7 +1,8 @@
 // The titles that mark a definition whose failures the validate stage reports by their own rule
 // (packages/compiler/src/validate/diagnostics.ts). The grammar writes them through this table, and
 // the validate stage maps every one of them, so a renamed or added marker is a type error there.
-// Titles not listed here (`path`, `duration`, `scheme`) are for editors only.
+// Titles in `EDITOR_TITLES` are for editors only; markers.test.ts checks that the generated schemas
+// carry no other title.
 
 export const MARKERS = {
   // A refused JSON Schema keyword, or a refused form of a kept one (ADR 0003 section 1).
@@ -41,6 +42,31 @@ export const MARKERS = {
 } as const;
 
 export type Marker = (typeof MARKERS)[keyof typeof MARKERS];
+
+// Titles shown by editors (hover, completion) that no rule of the validate stage reads; a file's
+// root title ("seampact api file") is not listed.
+export const EDITOR_TITLES: readonly string[] = [
+  "date",
+  "duration",
+  "meta fill",
+  "node",
+  "pack reference",
+  "path",
+  "schema",
+  "scheme",
+  "scheme kind",
+  "size",
+  "template",
+  "unknown keys policy",
+  "unknown query policy",
+  "value source",
+];
+
+// Names no map of the grammar admits as a key, and no right name takes: a key that reaches the
+// prototype chain of a JavaScript reader (the loader refuses them as keys too,
+// `seampact/load/reserved-key`). Refused through `not: { enum }`, which every JSON Schema
+// implementation reads alike (a pattern lookahead is not portable to RE2-based validators).
+export const RESERVED_NAMES = ["__proto__", "constructor", "prototype"] as const;
 
 const MARKER_SET: ReadonlySet<string> = new Set(Object.values(MARKERS));
 

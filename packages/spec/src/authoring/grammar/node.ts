@@ -3,6 +3,7 @@
 
 import {
   A2,
+  conflict,
   forbid,
   type JsonSchema,
   keyNames,
@@ -418,7 +419,12 @@ export function nodeDefs(): Record<string, JsonSchema> {
         {
           ...when(
             req("right"),
-            forbid(["rule"], "A requirement names a right or a rule, not both."),
+            {
+              properties: {
+                rule: conflict("A requirement names a right or a rule, not both."),
+                bucket: conflict("'bucket' is for rules declared with bucket: true only."),
+              },
+            },
             {
               if: req("$include"),
               else: { ...req("rule"), ...forbid(["subject"], "'subject' is for rights only.") },
@@ -485,8 +491,8 @@ export function nodeDefs(): Record<string, JsonSchema> {
         type: "object",
         properties: { $include: ref("common", "include") },
         propertyNames: keyNames(KEYS.name, "a paging style name", A2(10)),
-        minProperties: 1,
-        maxProperties: 1,
+        // One style; `$include` beside it is not one.
+        ...when(req("$include"), { maxProperties: 2 }, { minProperties: 1, maxProperties: 1 }),
         additionalProperties: object({
           props: {
             maxLimit: kw(A2(10), { type: "integer", minimum: 1 }),

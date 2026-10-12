@@ -10,7 +10,14 @@
   },
   "propertyNames": {
     "description": "a schema name (ADR 0002 section 4)",
-    "pattern": "^(?:[A-Z][A-Za-z0-9]*|\\$include)$"
+    "pattern": "^(?:[A-Z][A-Za-z0-9]*|\\$include)$",
+    "not": {
+      "enum": [
+        "__proto__",
+        "constructor",
+        "prototype"
+      ]
+    }
   },
   "additionalProperties": {
     "$ref": "schema.schema.json#/$defs/schema"

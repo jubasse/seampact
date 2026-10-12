@@ -9,8 +9,8 @@ import {
   list,
   map,
   object,
+  NOT_RESERVED,
   oneOfValues,
-  RESERVED_KEYS,
   ref,
   req,
   str,
@@ -22,7 +22,14 @@ import { MARKERS, type Marker } from "../markers.js";
 const NAME = "[a-z][A-Za-z0-9_]*";
 const SCHEMA_NAME = "[A-Z][A-Za-z0-9]*";
 const SCALAR_NAME = "[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*";
-const RIGHT_NAME = `${RESERVED_KEYS}[^\\s\\u0000-\\u001F\\u007F-\\u009F](?:[^\\u0000-\\u001F\\u007F-\\u009F]*[^\\s\\u0000-\\u001F\\u007F-\\u009F])?`;
+
+// The characters no authored path, pointer, pack reference or right name holds, inside a regex
+// class: C0, DEL and C1 controls, the bidi controls (ALM, LRM, RLM, LRE to RLO, LRI to PDI) and the
+// line and paragraph separators. The validate stage escapes the same set when it prints a value.
+export const CONTROL =
+  "\\u0000-\\u001F\\u007F-\\u009F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u2028\\u2029";
+
+const RIGHT_NAME = `[^\\s${CONTROL}](?:[^${CONTROL}]*[^\\s${CONTROL}])?`;
 const ERROR_CODE = "[A-Za-z0-9][A-Za-z0-9._-]*";
 const HEADER_NAME = "[!#$%&'*+.^_`|~0-9A-Za-z-]+";
 const RULE_ID = "[^\\s/]+(?:/[^\\s/]+)+";
@@ -40,11 +47,11 @@ export const KEYS = {
   extensionKey: "[a-z][a-z0-9]*(?:-[a-z0-9]+)*",
 } as const;
 
-// A relative path: './' or '../', then no backslash, '#' or control character. Containment in the
+// A relative path: './' or '../', then no backslash, '#' or `CONTROL` character. Containment in the
 // workspace root is the loader's check; this is defence in depth for editors and the stage.
-export const PATH = "\\.\\.?/[^\\\\#\\u0000-\\u001F\\u007F]+";
-// A JSON Pointer after a path's '#', without control characters.
-export const POINTER = "#/[^\\u0000-\\u001F\\u007F]*";
+export const PATH = `\\.\\.?/[^\\\\#${CONTROL}]+`;
+// A JSON Pointer after a path's '#', without `CONTROL` characters.
+export const POINTER = `#/[^${CONTROL}]*`;
 
 // Value sources (ADR 0002 section 4), one pattern per form.
 const SOURCE = {
@@ -186,11 +193,14 @@ export function commonDefs(): Record<string, JsonSchema> {
       SCALAR_NAME,
       "A named format: money, iri-reference (ADR 0002 section 4).",
     ),
-    rightName: name(
-      MARKERS.rightName,
-      RIGHT_NAME,
-      "Any non-empty string without control characters and without leading or trailing space, other than __proto__, constructor and prototype (ADR 0002 section 4).",
-    ),
+    rightName: {
+      ...name(
+        MARKERS.rightName,
+        RIGHT_NAME,
+        "Any non-empty string without control characters and without leading or trailing space (ADR 0002 section 4); not __proto__, constructor or prototype.",
+      ),
+      ...NOT_RESERVED,
+    },
     errorCode: name(
       MARKERS.errorCode,
       ERROR_CODE,

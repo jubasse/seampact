@@ -7,7 +7,7 @@
 //   (markers.ts), never by a literal;
 // - every `required` sits beside a `properties` that lists its keys (Ajv strictRequired).
 
-import { MARKERS } from "./markers.js";
+import { MARKERS, RESERVED_NAMES } from "./markers.js";
 
 export type JsonSchema = { [key: string]: unknown };
 
@@ -161,12 +161,12 @@ export function object(spec: ObjectSpec): JsonSchema {
   return out;
 }
 
-// Keys no mapping of the grammar admits, whatever its key pattern: an object key that would reach
-// the prototype chain of a JavaScript reader (the loader refuses them too).
-export const RESERVED_KEYS = "(?!(?:__proto__|constructor|prototype)$)";
+// `RESERVED_NAMES` refused, for a map's keys or a right name.
+export const NOT_RESERVED: JsonSchema = { not: { enum: [...RESERVED_NAMES] } };
 
-// Any key not starting with `$` (a loader directive, ADR 0002 section 2) and not reserved.
-export const FREE_KEY = `${RESERVED_KEYS}[^$].*`;
+// Any key not starting with `$` (a loader directive, ADR 0002 section 2); `keyNames` refuses the
+// reserved names.
+export const FREE_KEY = "[^$].*";
 
 export interface MapSpec {
   // The key pattern, without anchors; `null` accepts `FREE_KEY`.
@@ -183,7 +183,8 @@ export interface MapSpec {
   include?: boolean;
 }
 
-// The `propertyNames` of a map: its pattern, and what a key names with the ADR section saying so.
+// The `propertyNames` of a map: its pattern, what a key names with the ADR section saying so, and
+// the reserved names refused whatever the pattern.
 export function keyNames(
   keys: string,
   keyDescription: string,
@@ -193,6 +194,7 @@ export function keyNames(
   return {
     description: `${keyDescription} (${section})`,
     pattern: include ? `^(?:${keys}|\\$include)$` : `^(?:${keys})$`,
+    ...NOT_RESERVED,
   };
 }
 

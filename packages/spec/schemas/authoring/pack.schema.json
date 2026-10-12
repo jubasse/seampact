@@ -151,7 +151,7 @@
             "title": "pack reference",
             "description": "A path starting with ./ or ../, or a package name (ADR 0002 section 2).",
             "type": "string",
-            "pattern": "^[^\\u0000-\\u001F\\u007F]+$"
+            "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u2028\\u2029]+$"
           },
           "$comment": "ADR 0002 section 2",
           "description": "Packs applied just before this one."
@@ -421,16 +421,49 @@
         },
         {
           "if": {
-            "properties": {
-              "$include": true
-            },
-            "required": [
-              "$include"
+            "anyOf": [
+              {
+                "properties": {
+                  "$include": true
+                },
+                "required": [
+                  "$include"
+                ]
+              },
+              {
+                "properties": {
+                  "declareRight": true
+                },
+                "required": [
+                  "declareRight"
+                ]
+              },
+              {
+                "properties": {
+                  "require": true
+                },
+                "required": [
+                  "require"
+                ]
+              },
+              {
+                "properties": {
+                  "attachErrors": true
+                },
+                "required": [
+                  "attachErrors"
+                ]
+              }
             ]
           },
           "else": {
             "title": "derive entry",
-            "minProperties": 3
+            "properties": {
+              "declareRight": true
+            },
+            "required": [
+              "declareRight"
+            ]
           }
         }
       ]

@@ -170,6 +170,37 @@ test.each([
     { method: "get", $include: "./a\n.yaml" },
     "pattern /$include",
   ],
+  [
+    "a path with a bidi control",
+    "api",
+    { api: { name: "a", version: 1 }, extends: "./a\u202E.yaml" },
+    "pattern /extends",
+  ],
+  [
+    "a pointer with a line separator",
+    "node",
+    { method: "get", $include: "./a.yaml#/b\u2028" },
+    "pattern /$include",
+  ],
+  [
+    "a pack reference with a C1 control",
+    "base",
+    { packs: ["@acme/pack\u0085"] },
+    "pattern /packs/0",
+  ],
+  ["a right name with a bidi isolate", "rights", { "tasks\u2066.read": {} }, "propertyNames "],
+  [
+    "a requirement with a right and a bucket",
+    "node",
+    { method: "get", requires: [{ right: "tasks.read", bucket: "b" }] },
+    "not /requires/0/bucket",
+  ],
+  [
+    "a paging mapping with two styles beside $include",
+    "node",
+    { method: "get", paging: { $include: "./p.yaml", cursor: {}, offset: {} } },
+    "maxProperties /paging",
+  ],
 ] as const)("rejects %s", (_, file, doc, expected) => {
   expect(errors(file, doc)).toContain(expected);
 });
@@ -208,6 +239,16 @@ test.each([
   ],
   ["an import source", "workspace", workspace({ ...pinned, release: { $include: "./r.yaml" } })],
   ["a node fragment of an unknown kind", "node", { $include: "./n.yaml", output: "Task" }],
+  [
+    "an import package (the version may be included)",
+    "workspace",
+    workspace({ ...pinned, package: "@acme/c", $include: "./v.yaml" }),
+  ],
+  [
+    "a paging mapping beside its one style",
+    "node",
+    { method: "get", paging: { $include: "./p.yaml", cursor: { maxLimit: 50 } } },
+  ],
 ] as const)("accepts $include in %s", (_, file, doc) => {
   expect(errors(file, doc)).toEqual([]);
 });
@@ -227,6 +268,29 @@ test.each([
   ],
 ] as const)("rejects %s", (_, file, doc, expected) => {
   expect(errors(file, doc)).toContain(expected);
+});
+
+// The derive entry's effect is stated on the effect keys (ADR 0002 section 2).
+test.each([
+  [
+    "a missing select is not also a missing effect",
+    { entry: "e", attachErrors: [] },
+    ["required "],
+  ],
+  [
+    "an unknown key is not an effect",
+    { entry: "e", select: {}, bogus: 1 },
+    ["required ", "additionalProperties "],
+  ],
+] as const)("derive entry: %s", (_, entry, expected) => {
+  const validate = ajv.getSchema(schemaId("pack"));
+  if (validate === undefined) throw new Error("pack");
+  validate(pack(entry));
+  expect(
+    (validate.errors ?? [])
+      .filter((e) => e.keyword !== "if")
+      .map((e) => `${e.keyword} ${e.instancePath.replace("/derive/0", "")}`),
+  ).toEqual(expected);
 });
 
 test("a derived object accepts nullable, deprecated and examples", () => {
@@ -257,7 +321,38 @@ test.each([
     "a right name in use",
     "node",
     '{ "method": "get", "filteredBy": "__proto__" }',
-    "pattern /filteredBy",
+    "not /filteredBy",
+  ],
+  [
+    "a right name in use",
+    "node",
+    '{ "method": "get", "filteredBy": "constructor" }',
+    "not /filteredBy",
+  ],
+  [
+    "a route name",
+    "node",
+    '{ "kind": "single", "routes": { "constructor": { "method": "get" } } }',
+    "propertyNames /routes",
+  ],
+  ["a catalogue name", "buckets", '{ "prototype": { "limit": 1, "per": "1m" } }', "propertyNames "],
+  [
+    "a paging style name",
+    "node",
+    '{ "method": "get", "paging": { "constructor": {} } }',
+    "propertyNames /paging",
+  ],
+  [
+    "an extension prefix",
+    "base",
+    '{ "extensions": { "prototype": {} } }',
+    "propertyNames /extensions",
+  ],
+  [
+    "an extension key",
+    "base",
+    '{ "extensions": { "acme": { "constructor": { "at": ["route"] } } } }',
+    "propertyNames /extensions/acme",
   ],
 ] as const)("refuses a reserved name as %s", (_, file, json, expected) => {
   expect(errors(file, JSON.parse(json))).toContain(expected);

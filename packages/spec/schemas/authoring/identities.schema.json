@@ -10,7 +10,14 @@
   },
   "propertyNames": {
     "description": "an identity name (ADR 0002 section 4)",
-    "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+    "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+    "not": {
+      "enum": [
+        "__proto__",
+        "constructor",
+        "prototype"
+      ]
+    }
   },
   "additionalProperties": {
     "$ref": "#/$defs/entry"
@@ -92,7 +99,14 @@
           },
           "propertyNames": {
             "description": "an identity header name (ADR 0002 section 4)",
-            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "#/$defs/headerUse"
@@ -173,7 +187,14 @@
             },
             "propertyNames": {
               "description": "a variant name (ADR 0002 section 4)",
-              "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+              "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+              "not": {
+                "enum": [
+                  "__proto__",
+                  "constructor",
+                  "prototype"
+                ]
+              }
             },
             "additionalProperties": {
               "$ref": "schema.schema.json#/$defs/schema"

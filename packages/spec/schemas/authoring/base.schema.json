@@ -10,7 +10,7 @@
         "title": "pack reference",
         "description": "A path starting with ./ or ../, or a package name (ADR 0002 section 2).",
         "type": "string",
-        "pattern": "^[^\\u0000-\\u001F\\u007F]+$"
+        "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u2028\\u2029]+$"
       },
       "$comment": "ADR 0002 section 2",
       "description": "Convention packs, applied in order (ADR 0002 section 2)."
@@ -128,7 +128,14 @@
       },
       "propertyNames": {
         "description": "an extension prefix (ADR 0002 section 12)",
-        "pattern": "^(?:[a-z][a-z0-9]*|\\$include)$"
+        "pattern": "^(?:[a-z][a-z0-9]*|\\$include)$",
+        "not": {
+          "enum": [
+            "__proto__",
+            "constructor",
+            "prototype"
+          ]
+        }
       },
       "additionalProperties": {
         "type": "object",
@@ -139,7 +146,14 @@
         },
         "propertyNames": {
           "description": "an extension key (ADR 0002 section 12)",
-          "pattern": "^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*|\\$include)$"
+          "pattern": "^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*|\\$include)$",
+          "not": {
+            "enum": [
+              "__proto__",
+              "constructor",
+              "prototype"
+            ]
+          }
         },
         "additionalProperties": {
           "type": "object",

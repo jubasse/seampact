@@ -16,7 +16,14 @@
           },
           "propertyNames": {
             "description": "an api name (ADR 0002 section 4)",
-            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "common.schema.json#/$defs/path"
@@ -44,7 +51,14 @@
           },
           "propertyNames": {
             "description": "an api name (ADR 0002 section 4)",
-            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "#/$defs/import"
@@ -214,7 +228,6 @@
           },
           "then": {
             "properties": {
-              "version": true,
               "release": {
                 "title": "conflict",
                 "description": "An import takes one source form: 'package' with 'version', 'release', or 'git'.",
@@ -226,9 +239,22 @@
                 "not": {}
               }
             },
-            "required": [
-              "version"
-            ]
+            "if": {
+              "properties": {
+                "$include": true
+              },
+              "required": [
+                "$include"
+              ]
+            },
+            "else": {
+              "properties": {
+                "version": true
+              },
+              "required": [
+                "version"
+              ]
+            }
           },
           "else": {
             "properties": {

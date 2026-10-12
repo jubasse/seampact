@@ -10,7 +10,14 @@
   },
   "propertyNames": {
     "description": "an enum name (ADR 0002 section 4)",
-    "pattern": "^(?:[A-Z][A-Za-z0-9]*|\\$include)$"
+    "pattern": "^(?:[A-Z][A-Za-z0-9]*|\\$include)$",
+    "not": {
+      "enum": [
+        "__proto__",
+        "constructor",
+        "prototype"
+      ]
+    }
   },
   "additionalProperties": {
     "$ref": "#/$defs/entry"
@@ -50,7 +57,14 @@
           },
           "propertyNames": {
             "description": "an enum value (ADR 0002 section 2)",
-            "pattern": "^(?:(?!(?:__proto__|constructor|prototype)$)[^$].*|\\$include)$"
+            "pattern": "^(?:[^$].*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "type": "string",

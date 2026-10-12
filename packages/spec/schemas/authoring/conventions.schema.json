@@ -137,7 +137,14 @@
               },
               "propertyNames": {
                 "description": "a cache family name (ADR 0002 section 4)",
-                "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
+                "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+                "not": {
+                  "enum": [
+                    "__proto__",
+                    "constructor",
+                    "prototype"
+                  ]
+                }
               },
               "additionalProperties": {
                 "if": {
@@ -525,7 +532,14 @@
               },
               "propertyNames": {
                 "description": "an error role (ADR 0002 section 11)",
-                "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$"
+                "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+                "not": {
+                  "enum": [
+                    "__proto__",
+                    "constructor",
+                    "prototype"
+                  ]
+                }
               },
               "additionalProperties": {
                 "$ref": "#/$defs/roleBinding"

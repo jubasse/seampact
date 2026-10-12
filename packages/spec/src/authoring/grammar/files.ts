@@ -20,7 +20,7 @@ import {
 } from "../dsl.js";
 import { type Catalogue, catalogues } from "./catalogues.js";
 import { MARKERS } from "../markers.js";
-import { KEYS } from "./common.js";
+import { CONTROL, KEYS } from "./common.js";
 
 const SEMVER =
   "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$";
@@ -30,8 +30,11 @@ const packReference = (): JsonSchema => ({
   title: "pack reference",
   description: "A path starting with ./ or ../, or a package name (ADR 0002 section 2).",
   type: "string",
-  pattern: "^[^\\u0000-\\u001F\\u007F]+$",
+  pattern: `^[^${CONTROL}]+$`,
 });
+
+// The effects of a derive entry (ADR 0002 section 2); the first is the key a missing effect names.
+const DERIVE_EFFECTS = ["declareRight", "require", "attachErrors"] as const;
 
 const ONE_SOURCE =
   "An import takes one source form: 'package' with 'version', 'release', or 'git'.";
@@ -41,8 +44,9 @@ const importSource = (): JsonSchema => ({
   ...when(
     req("package"),
     {
-      properties: { version: true, release: conflict(ONE_SOURCE), git: conflict(ONE_SOURCE) },
-      required: ["version"],
+      properties: { release: conflict(ONE_SOURCE), git: conflict(ONE_SOURCE) },
+      // An included file may bring 'version'.
+      ...when(req("$include"), undefined, req("version")),
     },
     {
       properties: { version: conflict("'version' goes with 'package'.") },
@@ -376,9 +380,15 @@ export function packDefs(): Record<string, JsonSchema> {
         attachErrors: kw(A2(2), ref("common", "errorCodes")),
       },
       required: ["entry", "select"],
-      // At least one effect beside `entry` and `select`; an included entry may bring it.
+      // At least one effect; an included entry may bring it. Stated on the effect keys, so an
+      // unknown key does not count as one and a missing 'select' is not also a missing effect.
       rules: [
-        { ...when(req("$include"), undefined, { title: MARKERS.deriveEntry, minProperties: 3 }) },
+        {
+          ...when({ anyOf: [req("$include"), ...DERIVE_EFFECTS.map((k) => req(k))] }, undefined, {
+            title: MARKERS.deriveEntry,
+            ...req(DERIVE_EFFECTS[0]),
+          }),
+        },
       ],
     }),
   };

@@ -10,7 +10,14 @@
   },
   "propertyNames": {
     "description": "an error code (ADR 0002 section 4)",
-    "pattern": "^(?:[A-Za-z0-9][A-Za-z0-9._-]*|\\$include)$"
+    "pattern": "^(?:[A-Za-z0-9][A-Za-z0-9._-]*|\\$include)$",
+    "not": {
+      "enum": [
+        "__proto__",
+        "constructor",
+        "prototype"
+      ]
+    }
   },
   "additionalProperties": {
     "$ref": "#/$defs/entry"

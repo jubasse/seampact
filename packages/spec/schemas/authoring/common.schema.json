@@ -7,13 +7,13 @@
       "title": "path",
       "description": "A path relative to the file that holds it, starting with './' or '../', with forward slashes (ADR 0002 section 1).",
       "type": "string",
-      "pattern": "^\\.\\.?/[^\\\\#\\u0000-\\u001F\\u007F]+$"
+      "pattern": "^\\.\\.?/[^\\\\#\\u0000-\\u001F\\u007F-\\u009F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u2028\\u2029]+$"
     },
     "pointerPath": {
       "title": "path",
       "description": "A relative path, optionally followed by '#' and a JSON Pointer into that file (ADR 0002 section 2).",
       "type": "string",
-      "pattern": "^\\.\\.?/[^\\\\#\\u0000-\\u001F\\u007F]+(?:#/[^\\u0000-\\u001F\\u007F]*)?$"
+      "pattern": "^\\.\\.?/[^\\\\#\\u0000-\\u001F\\u007F-\\u009F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u2028\\u2029]+(?:#/[^\\u0000-\\u001F\\u007F-\\u009F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u2028\\u2029]*)?$"
     },
     "include": {
       "if": {
@@ -145,9 +145,16 @@
     },
     "rightName": {
       "title": "right name",
-      "description": "Any non-empty string without control characters and without leading or trailing space, other than __proto__, constructor and prototype (ADR 0002 section 4).",
+      "description": "Any non-empty string without control characters and without leading or trailing space (ADR 0002 section 4); not __proto__, constructor or prototype.",
       "type": "string",
-      "pattern": "^(?!(?:__proto__|constructor|prototype)$)[^\\s\\u0000-\\u001F\\u007F-\\u009F](?:[^\\u0000-\\u001F\\u007F-\\u009F]*[^\\s\\u0000-\\u001F\\u007F-\\u009F])?$"
+      "pattern": "^[^\\s\\u0000-\\u001F\\u007F-\\u009F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u2028\\u2029](?:[^\\u0000-\\u001F\\u007F-\\u009F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u2028\\u2029]*[^\\s\\u0000-\\u001F\\u007F-\\u009F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u2028\\u2029])?$",
+      "not": {
+        "enum": [
+          "__proto__",
+          "constructor",
+          "prototype"
+        ]
+      }
     },
     "errorCode": {
       "title": "error code",
@@ -417,7 +424,14 @@
           },
           "propertyNames": {
             "description": "a lint rule id (ADR 0002 section 12)",
-            "pattern": "^(?:[^\\s/]+(?:/[^\\s/]+)+|\\$include)$"
+            "pattern": "^(?:[^\\s/]+(?:/[^\\s/]+)+|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "$ref": "#/$defs/reason"
@@ -443,7 +457,14 @@
           },
           "propertyNames": {
             "description": "a lint rule id (ADR 0002 section 12)",
-            "pattern": "^(?:[^\\s/]+(?:/[^\\s/]+)+|\\$include)$"
+            "pattern": "^(?:[^\\s/]+(?:/[^\\s/]+)+|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
           },
           "additionalProperties": {
             "enum": [
