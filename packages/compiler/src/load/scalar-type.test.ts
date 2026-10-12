@@ -57,8 +57,9 @@ const CASES: Case[] = [
     name: "a string or an integer (api.version)",
     expects: "an integer or a string",
     doc: "api: { name: t, version: $V }\n",
-    refused: ["1.5", "true", ...NULLS],
-    accepted: ["1", "'2027-06-30'"],
+    // A quoted whole number the integer branch takes is written as the integer (ADR row `'1'`).
+    refused: ["1.5", "true", ...NULLS, "'1'", '"0"', "'12'"],
+    accepted: ["1", "'2027-06-30'", "'-1'", "'1.0'", "'01'"],
   },
   {
     name: "a mapping (a scalar written for routes)",
@@ -93,6 +94,19 @@ describe("p6 typed scalar", () => {
       });
     });
   }
+
+  test.each([
+    ["version: '1'", "api: { name: t, version: '1' }\n", "write 1"],
+    ["name: 12", "api: { name: 12, version: 1 }\n", "quote it"],
+    ["summary: ~", "api: { name: t, summary: ~ }\n", "write a string"],
+    ["summary: with no value", "api:\n  name: t\n  summary:\n", "write a string"],
+  ])("the ADR's own P6 example %s is refused", (_, doc, fix) => {
+    // `name: 12` also leaves the api without a name (workspace-shape).
+    const r = load({ "api.yaml": doc });
+    const p6 = r.result.diagnostics.filter((d) => d.rule === "seampact/load/scalar-type");
+    expect(p6).toHaveLength(1);
+    expect(p6[0]?.fix).toContain(fix);
+  });
 
   test("the diagnostic is located at the scalar", () => {
     const r = load({ "api.yaml": "api:\n  name: t\n  summary: 12\n" });

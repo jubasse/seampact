@@ -7,6 +7,7 @@ import { asObject, cloneJson, isReservedKey, jsonObject, setKey } from "./json.j
 import { LOAD_MAX_DEPTH } from "./limits.js";
 import { pointerEscape, pointerSegments } from "./paths.js";
 import {
+  admitsInteger,
   expectedTypes,
   type Position,
   type PositionKind,
@@ -371,7 +372,11 @@ export class Expander {
    */
   private checkType(node: Scalar, scope: Scope): void {
     const type = scalarType(node.value);
-    if (type === undefined || !scope.pos || !refusesScalar(scope.pos, type)) return;
+    if (type === undefined || !scope.pos) return;
+    if (!refusesScalar(scope.pos, type)) {
+      this.checkQuotedInteger(node, scope.file, scope.pos);
+      return;
+    }
     // A plain scalar P1 to P4 refuse is reported once, by them: their fix (quote it) is the one.
     if (node.type === Scalar.PLAIN && loadScalarPitfall(node.source ?? "", node.value)) return;
     const expected = expectedTypes(scope.pos) ?? [];
@@ -389,6 +394,25 @@ export class Expander {
       message: `${got} where the schema expects ${wants} (P6)`,
       fix: quotable ? `quote it ('${shown}') to write a string` : `write ${wants}`,
       at: nodeSite(scope.file, node),
+    });
+  }
+
+  /**
+   * P6, the ADR's own `version: '1'`: where a string or an integer goes, a quoted whole number in
+   * plain decimal that the integer form takes is the integer, written as a string by mistake.
+   */
+  private checkQuotedInteger(node: Scalar, file: ParsedFile, pos: Position): void {
+    if (node.type === Scalar.PLAIN || typeof node.value !== "string") return;
+    if (!pos.types?.has("string") || !pos.types.has("integer")) return;
+    if (!/^-?(0|[1-9][0-9]*)$/.test(node.value)) return;
+    const n = Number(node.value);
+    if (!Number.isSafeInteger(n) || !admitsInteger(pos, n)) return;
+    const wants = (expectedTypes(pos) ?? []).join(" or ");
+    this.rep.report({
+      rule: "scalar-type",
+      message: `'${JSON.stringify(node.value)}' is a quoted whole number where the schema expects ${wants}, and reads as the integer (P6)`,
+      fix: `write ${node.value}, unquoted`,
+      at: nodeSite(file, node),
     });
   }
 

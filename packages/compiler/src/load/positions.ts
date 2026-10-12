@@ -443,6 +443,32 @@ export function expectedTypes(pos: Position): string[] | undefined {
   return [...types].sort().map((t) => words[t]);
 }
 
+/**
+ * True when the position's integer form takes `n`: some node of the position that types an
+ * integer bounds it with `minimum`, `maximum` or their exclusive forms, and `n` is within one of
+ * them (no such node: any integer).
+ */
+export function admitsInteger(pos: Position, n: number): boolean {
+  const forms = leafSetOf(pos).filter((node) => {
+    const t = node.type;
+    return t === "integer" || (Array.isArray(t) && t.includes("integer"));
+  });
+  if (forms.length === 0) return true;
+  const num = (v: unknown) => (typeof v === "number" ? v : undefined);
+  return forms.some((node) => {
+    const min = num(node.minimum);
+    const max = num(node.maximum);
+    const xmin = num(node.exclusiveMinimum);
+    const xmax = num(node.exclusiveMaximum);
+    return (
+      (min === undefined || n >= min) &&
+      (max === undefined || n <= max) &&
+      (xmin === undefined || n > xmin) &&
+      (xmax === undefined || n < xmax)
+    );
+  });
+}
+
 /** True when a scalar of this type is a type the position does not accept. */
 export function refusesScalar(pos: Position | undefined, type: ScalarType): boolean {
   const types = pos?.types;
