@@ -95,7 +95,9 @@
         "properties": {
           "scope": true
         },
-        "required": ["scope"]
+        "required": [
+          "scope"
+        ]
       },
       "then": {
         "properties": {

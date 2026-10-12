@@ -25,7 +25,10 @@
           "$comment": "ADR 0002 section 13"
         },
         "absent": {
-          "enum": ["omit", null],
+          "enum": [
+            "omit",
+            null
+          ],
           "$comment": "ADR 0002 section 13"
         },
         "success": {
@@ -88,13 +91,17 @@
               "properties": {
                 "$include": true
               },
-              "required": ["$include"]
+              "required": [
+                "$include"
+              ]
             },
             "else": {
               "properties": {
                 "fill": true
               },
-              "required": ["fill"]
+              "required": [
+                "fill"
+              ]
             }
           },
           "$comment": "ADR 0002 section 13"

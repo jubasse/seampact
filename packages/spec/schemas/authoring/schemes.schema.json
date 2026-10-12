@@ -26,7 +26,9 @@
             "const": "signature"
           }
         },
-        "required": ["kind"]
+        "required": [
+          "kind"
+        ]
       },
       "then": {
         "$ref": "#/$defs/signature"
@@ -38,7 +40,9 @@
               "const": "bearer"
             }
           },
-          "required": ["kind"]
+          "required": [
+            "kind"
+          ]
         },
         "then": {
           "$ref": "#/$defs/bearer"
@@ -50,7 +54,9 @@
                 "const": "cookie"
               }
             },
-            "required": ["kind"]
+            "required": [
+              "kind"
+            ]
           },
           "then": {
             "$ref": "#/$defs/cookie"
@@ -59,10 +65,15 @@
             "if": {
               "properties": {
                 "kind": {
-                  "enum": ["header", "query"]
+                  "enum": [
+                    "header",
+                    "query"
+                  ]
                 }
               },
-              "required": ["kind"]
+              "required": [
+                "kind"
+              ]
             },
             "then": {
               "$ref": "#/$defs/apiKey"
@@ -78,7 +89,9 @@
       "type": "object",
       "properties": {
         "kind": {
-          "enum": ["cookie"],
+          "enum": [
+            "cookie"
+          ],
           "$comment": "ADR 0002 section 9"
         },
         "name": {
@@ -106,7 +119,10 @@
       "type": "object",
       "properties": {
         "kind": {
-          "enum": ["header", "query"],
+          "enum": [
+            "header",
+            "query"
+          ],
           "$comment": "ADR 0002 section 9"
         },
         "name": {
@@ -129,7 +145,9 @@
       "type": "object",
       "properties": {
         "kind": {
-          "enum": ["bearer"],
+          "enum": [
+            "bearer"
+          ],
           "$comment": "ADR 0002 section 9"
         },
         "bearerFormat": {
@@ -148,7 +166,9 @@
             }
           },
           "additionalProperties": false,
-          "required": ["flows"],
+          "required": [
+            "flows"
+          ],
           "$comment": "ADR 0002 section 9"
         },
         "openIdConnect": {
@@ -170,7 +190,9 @@
         "properties": {
           "oauth2": true
         },
-        "required": ["oauth2"]
+        "required": [
+          "oauth2"
+        ]
       },
       "then": {
         "properties": {
@@ -187,7 +209,14 @@
       "title": "scheme kind",
       "properties": {
         "kind": {
-          "enum": ["cookie", "header", "query", "bearer", "basic", "signature"],
+          "enum": [
+            "cookie",
+            "header",
+            "query",
+            "bearer",
+            "basic",
+            "signature"
+          ],
           "$comment": "ADR 0002 section 9"
         },
         "lint": {
@@ -203,20 +232,26 @@
         "properties": {
           "$include": true
         },
-        "required": ["$include"]
+        "required": [
+          "$include"
+        ]
       },
       "else": {
         "properties": {
           "kind": true
         },
-        "required": ["kind"]
+        "required": [
+          "kind"
+        ]
       }
     },
     "signature": {
       "type": "object",
       "properties": {
         "kind": {
-          "enum": ["signature"],
+          "enum": [
+            "signature"
+          ],
           "$comment": "ADR 0002 section 9"
         },
         "name": {
@@ -225,7 +260,10 @@
           "description": "The header carrying the signature."
         },
         "verify": {
-          "enum": ["template", "application"],
+          "enum": [
+            "template",
+            "application"
+          ],
           "$comment": "ADR 0002 section 9",
           "description": "Who reads the signature."
         },
@@ -282,7 +320,9 @@
             "const": "application"
           }
         },
-        "required": ["verify"]
+        "required": [
+          "verify"
+        ]
       },
       "then": {
         "properties": {
@@ -336,7 +376,9 @@
         "properties": {
           "value": true
         },
-        "required": ["value"]
+        "required": [
+          "value"
+        ]
       },
       "then": {
         "properties": {

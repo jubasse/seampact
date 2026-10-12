@@ -45,7 +45,9 @@
                 "properties": {
                   "query": true
                 },
-                "required": ["query"]
+                "required": [
+                  "query"
+                ]
               },
               "then": {
                 "properties": {
@@ -81,7 +83,9 @@
                 "properties": {
                   "query": true
                 },
-                "required": ["query"]
+                "required": [
+                  "query"
+                ]
               },
               "then": {
                 "properties": {
@@ -117,7 +121,9 @@
                 "properties": {
                   "query": true
                 },
-                "required": ["query"]
+                "required": [
+                  "query"
+                ]
               },
               "then": {
                 "properties": {
@@ -145,7 +151,10 @@
                   "description": "The request header that carries the role."
                 },
                 "base": {
-                  "enum": [0, 1],
+                  "enum": [
+                    0,
+                    1
+                  ],
                   "$comment": "ADR 0002 section 14"
                 },
                 "$include": {
@@ -157,7 +166,9 @@
                 "properties": {
                   "query": true
                 },
-                "required": ["query"]
+                "required": [
+                  "query"
+                ]
               },
               "then": {
                 "properties": {
@@ -193,7 +204,9 @@
                 "properties": {
                   "query": true
                 },
-                "required": ["query"]
+                "required": [
+                  "query"
+                ]
               },
               "then": {
                 "properties": {
@@ -229,7 +242,9 @@
                 "properties": {
                   "query": true
                 },
-                "required": ["query"]
+                "required": [
+                  "query"
+                ]
               },
               "then": {
                 "properties": {
@@ -265,7 +280,9 @@
                 "properties": {
                   "query": true
                 },
-                "required": ["query"]
+                "required": [
+                  "query"
+                ]
               },
               "then": {
                 "properties": {
@@ -293,7 +310,12 @@
                   "description": "The request header that carries the role."
                 },
                 "style": {
-                  "enum": ["signed", "pair", "keyed", "split"],
+                  "enum": [
+                    "signed",
+                    "pair",
+                    "keyed",
+                    "split"
+                  ],
                   "$comment": "ADR 0002 section 14"
                 },
                 "direction": {
@@ -311,7 +333,9 @@
                 "properties": {
                   "query": true
                 },
-                "required": ["query"]
+                "required": [
+                  "query"
+                ]
               },
               "then": {
                 "properties": {
@@ -399,7 +423,9 @@
             "properties": {
               "body": true
             },
-            "required": ["body"]
+            "required": [
+              "body"
+            ]
           },
           "then": {
             "properties": {
@@ -413,7 +439,10 @@
           "$comment": "ADR 0002 section 14"
         },
         "absent": {
-          "enum": ["omit", null],
+          "enum": [
+            "omit",
+            null
+          ],
           "$comment": "ADR 0002 section 14"
         },
         "$include": {

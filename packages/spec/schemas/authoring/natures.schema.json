@@ -20,7 +20,11 @@
       "type": "object",
       "properties": {
         "base": {
-          "enum": ["refused", "unavailable", "failed"],
+          "enum": [
+            "refused",
+            "unavailable",
+            "failed"
+          ],
           "$comment": "ADR 0002 section 11"
         },
         "summary": {
@@ -40,13 +44,17 @@
         "properties": {
           "$include": true
         },
-        "required": ["$include"]
+        "required": [
+          "$include"
+        ]
       },
       "else": {
         "properties": {
           "base": true
         },
-        "required": ["base"]
+        "required": [
+          "base"
+        ]
       }
     }
   }

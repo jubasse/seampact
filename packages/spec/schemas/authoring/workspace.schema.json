@@ -68,13 +68,17 @@
     "properties": {
       "$include": true
     },
-    "required": ["$include"]
+    "required": [
+      "$include"
+    ]
   },
   "else": {
     "properties": {
       "workspace": true
     },
-    "required": ["workspace"]
+    "required": [
+      "workspace"
+    ]
   },
   "$defs": {
     "import": {
@@ -100,7 +104,9 @@
             }
           },
           "additionalProperties": false,
-          "required": ["url"],
+          "required": [
+            "url"
+          ],
           "$comment": "ADR 0002 section 1"
         },
         "git": {
@@ -123,7 +129,10 @@
             }
           },
           "additionalProperties": false,
-          "required": ["url", "tag"],
+          "required": [
+            "url",
+            "tag"
+          ],
           "$comment": "ADR 0002 section 1"
         },
         "api": {
@@ -144,14 +153,19 @@
         "properties": {
           "$include": true
         },
-        "required": ["$include"]
+        "required": [
+          "$include"
+        ]
       },
       "else": {
         "properties": {
           "api": true,
           "integrity": true
         },
-        "required": ["api", "integrity"]
+        "required": [
+          "api",
+          "integrity"
+        ]
       }
     }
   }

@@ -142,13 +142,17 @@
     "properties": {
       "$include": true
     },
-    "required": ["$include"]
+    "required": [
+      "$include"
+    ]
   },
   "else": {
     "properties": {
       "api": true
     },
-    "required": ["api"]
+    "required": [
+      "api"
+    ]
   },
   "$defs": {
     "api": {
@@ -174,11 +178,16 @@
           "description": "An integer, or a quoted string for a date-versioned api."
         },
         "kind": {
-          "enum": ["product", "service"],
+          "enum": [
+            "product",
+            "service"
+          ],
           "$comment": "ADR 0002 section 5"
         },
         "role": {
-          "enum": ["gateway"],
+          "enum": [
+            "gateway"
+          ],
           "$comment": "ADR 0002 section 5"
         },
         "caller": {
@@ -201,14 +210,19 @@
             "properties": {
               "$include": true
             },
-            "required": ["$include"]
+            "required": [
+              "$include"
+            ]
           },
           "else": {
             "properties": {
               "identity": true,
               "right": true
             },
-            "required": ["identity", "right"]
+            "required": [
+              "identity",
+              "right"
+            ]
           },
           "$comment": "ADR 0002 section 5"
         },
@@ -220,7 +234,10 @@
           "type": "object",
           "properties": {
             "policy": {
-              "enum": ["additive-only", "none"],
+              "enum": [
+                "additive-only",
+                "none"
+              ],
               "$comment": "ADR 0002 section 5"
             },
             "$include": {
@@ -232,13 +249,17 @@
             "properties": {
               "$include": true
             },
-            "required": ["$include"]
+            "required": [
+              "$include"
+            ]
           },
           "else": {
             "properties": {
               "policy": true
             },
-            "required": ["policy"]
+            "required": [
+              "policy"
+            ]
           },
           "$comment": "ADR 0002 section 5"
         },
@@ -261,7 +282,10 @@
                 "$comment": "ADR 0002 section 5"
               },
               "internal": {
-                "enum": ["include", "exclude"],
+                "enum": [
+                  "include",
+                  "exclude"
+                ],
                 "$comment": "ADR 0002 section 5"
               },
               "$include": {
@@ -299,14 +323,19 @@
         "properties": {
           "$include": true
         },
-        "required": ["$include"]
+        "required": [
+          "$include"
+        ]
       },
       "else": {
         "properties": {
           "name": true,
           "version": true
         },
-        "required": ["name", "version"]
+        "required": [
+          "name",
+          "version"
+        ]
       }
     }
   }

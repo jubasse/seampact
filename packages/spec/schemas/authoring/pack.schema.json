@@ -117,13 +117,17 @@
     "properties": {
       "$include": true
     },
-    "required": ["$include"]
+    "required": [
+      "$include"
+    ]
   },
   "else": {
     "properties": {
       "pack": true
     },
-    "required": ["pack"]
+    "required": [
+      "pack"
+    ]
   },
   "$defs": {
     "manifest": {
@@ -161,14 +165,19 @@
         "properties": {
           "$include": true
         },
-        "required": ["$include"]
+        "required": [
+          "$include"
+        ]
       },
       "else": {
         "properties": {
           "name": true,
           "version": true
         },
-        "required": ["name", "version"]
+        "required": [
+          "name",
+          "version"
+        ]
       }
     },
     "entry": {
@@ -186,7 +195,14 @@
             "op": {
               "type": "array",
               "items": {
-                "enum": ["list", "get", "create", "update", "delete", "batch"]
+                "enum": [
+                  "list",
+                  "get",
+                  "create",
+                  "update",
+                  "delete",
+                  "batch"
+                ]
               },
               "minItems": 1,
               "$comment": "ADR 0008"
@@ -194,7 +210,10 @@
             "access": {
               "type": "array",
               "items": {
-                "enum": ["read", "write"]
+                "enum": [
+                  "read",
+                  "write"
+                ]
               },
               "minItems": 1,
               "$comment": "ADR 0008"
@@ -202,7 +221,10 @@
             "apiKind": {
               "type": "array",
               "items": {
-                "enum": ["product", "service"]
+                "enum": [
+                  "product",
+                  "service"
+                ]
               },
               "minItems": 1,
               "$comment": "ADR 0008"
@@ -244,11 +266,17 @@
               "type": "object",
               "properties": {
                 "member": {
-                  "enum": ["resource", "none"],
+                  "enum": [
+                    "resource",
+                    "none"
+                  ],
                   "$comment": "ADR 0002 section 2"
                 },
                 "collection": {
-                  "enum": ["innermostScope", "none"],
+                  "enum": [
+                    "innermostScope",
+                    "none"
+                  ],
                   "$comment": "ADR 0002 section 2"
                 },
                 "$include": {
@@ -271,13 +299,17 @@
             "properties": {
               "$include": true
             },
-            "required": ["$include"]
+            "required": [
+              "$include"
+            ]
           },
           "else": {
             "properties": {
               "name": true
             },
-            "required": ["name"]
+            "required": [
+              "name"
+            ]
           },
           "$comment": "ADR 0002 section 2"
         },
@@ -311,7 +343,9 @@
             "properties": {
               "right": true
             },
-            "required": ["right"]
+            "required": [
+              "right"
+            ]
           },
           "then": {
             "properties": {
@@ -338,14 +372,19 @@
         "properties": {
           "$include": true
         },
-        "required": ["$include"]
+        "required": [
+          "$include"
+        ]
       },
       "else": {
         "properties": {
           "entry": true,
           "select": true
         },
-        "required": ["entry", "select"]
+        "required": [
+          "entry",
+          "select"
+        ]
       }
     }
   }

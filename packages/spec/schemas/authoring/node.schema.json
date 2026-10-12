@@ -10,7 +10,9 @@
         "properties": {
           "relays": true
         },
-        "required": ["relays"]
+        "required": [
+          "relays"
+        ]
       },
       "then": {
         "$ref": "#/$defs/relayRoute"
@@ -27,7 +29,9 @@
         "properties": {
           "method": true
         },
-        "required": ["method"]
+        "required": [
+          "method"
+        ]
       },
       "then": {
         "$ref": "#/$defs/route"
@@ -39,7 +43,9 @@
               "const": "collection"
             }
           },
-          "required": ["kind"]
+          "required": [
+            "kind"
+          ]
         },
         "then": {
           "$ref": "#/$defs/collection"
@@ -51,7 +57,9 @@
                 "const": "single"
               }
             },
-            "required": ["kind"]
+            "required": [
+              "kind"
+            ]
           },
           "then": {
             "$ref": "#/$defs/single"
@@ -71,7 +79,10 @@
           "$comment": "ADR 0002 section 7"
         },
         "kind": {
-          "enum": ["collection", "single"],
+          "enum": [
+            "collection",
+            "single"
+          ],
           "$comment": "ADR 0002 section 6"
         },
         "$include": {
@@ -83,13 +94,17 @@
         "properties": {
           "$include": true
         },
-        "required": ["$include"]
+        "required": [
+          "$include"
+        ]
       },
       "else": {
         "properties": {
           "method": true
         },
-        "required": ["method"]
+        "required": [
+          "method"
+        ]
       }
     },
     "route": {
@@ -121,7 +136,11 @@
           "description": "The body schema."
         },
         "inputMedia": {
-          "enum": ["json", "form", "multipart"],
+          "enum": [
+            "json",
+            "form",
+            "multipart"
+          ],
           "$comment": "ADR 0002 section 7"
         },
         "output": {
@@ -426,13 +445,17 @@
         "properties": {
           "$include": true
         },
-        "required": ["$include"]
+        "required": [
+          "$include"
+        ]
       },
       "else": {
         "properties": {
           "relays": true
         },
-        "required": ["relays"]
+        "required": [
+          "relays"
+        ]
       }
     },
     "collection": {
@@ -440,7 +463,9 @@
       "description": "A collection: settings, inherited below (ADR 0002 section 8), ops, and the collection and member scopes.",
       "properties": {
         "kind": {
-          "enum": ["collection"],
+          "enum": [
+            "collection"
+          ],
           "$comment": "ADR 0002 section 6"
         },
         "id": {
@@ -465,7 +490,9 @@
           "description": "The schema of one record."
         },
         "owner": {
-          "enum": ["caller"],
+          "enum": [
+            "caller"
+          ],
           "$comment": "ADR 0002 section 6",
           "description": "caller: the caller owns the records."
         },
@@ -487,7 +514,14 @@
           "then": {
             "type": "array",
             "items": {
-              "enum": ["list", "get", "create", "update", "delete", "batch"]
+              "enum": [
+                "list",
+                "get",
+                "create",
+                "update",
+                "delete",
+                "batch"
+              ]
             }
           },
           "else": {
@@ -703,7 +737,9 @@
       "description": "A single: settings, inherited below (ADR 0002 section 8), ops and routes; with neither item nor ops, a group.",
       "properties": {
         "kind": {
-          "enum": ["single"],
+          "enum": [
+            "single"
+          ],
           "$comment": "ADR 0002 section 6"
         },
         "item": {
@@ -712,7 +748,9 @@
           "description": "The schema of one record."
         },
         "owner": {
-          "enum": ["caller"],
+          "enum": [
+            "caller"
+          ],
           "$comment": "ADR 0002 section 6",
           "description": "caller: the caller owns the records."
         },
@@ -734,7 +772,11 @@
           "then": {
             "type": "array",
             "items": {
-              "enum": ["get", "update", "delete"]
+              "enum": [
+                "get",
+                "update",
+                "delete"
+              ]
             }
           },
           "else": {
@@ -1116,7 +1158,10 @@
           "description": "The surface's leading path; {version} is replaced by api.version."
         },
         "pathVersion": {
-          "enum": ["prefix", "none"],
+          "enum": [
+            "prefix",
+            "none"
+          ],
           "$comment": "ADR 0002 section 6",
           "description": "none: the prefix is used as written."
         },
@@ -1317,7 +1362,11 @@
           "description": "The body schema."
         },
         "inputMedia": {
-          "enum": ["json", "form", "multipart"],
+          "enum": [
+            "json",
+            "form",
+            "multipart"
+          ],
           "$comment": "ADR 0002 section 7"
         },
         "output": {
@@ -1545,7 +1594,11 @@
           "description": "The body schema."
         },
         "inputMedia": {
-          "enum": ["json", "form", "multipart"],
+          "enum": [
+            "json",
+            "form",
+            "multipart"
+          ],
           "$comment": "ADR 0002 section 7"
         },
         "output": {
@@ -1797,14 +1850,19 @@
         "properties": {
           "$include": true
         },
-        "required": ["$include"]
+        "required": [
+          "$include"
+        ]
       },
       "else": {
         "properties": {
           "version": true,
           "field": true
         },
-        "required": ["version", "field"]
+        "required": [
+          "version",
+          "field"
+        ]
       }
     },
     "access": {
@@ -1823,7 +1881,10 @@
           "description": "An anonymous caller or the identity, with the reason."
         },
         "onRefused": {
-          "enum": ["anonymous", "reject"],
+          "enum": [
+            "anonymous",
+            "reject"
+          ],
           "$comment": "ADR 0002 section 9",
           "description": "A refused credential: anonymous or 401."
         },
@@ -1836,7 +1897,9 @@
         "properties": {
           "public": true
         },
-        "required": ["public"]
+        "required": [
+          "public"
+        ]
       },
       "then": {
         "properties": {
@@ -1857,13 +1920,17 @@
           "properties": {
             "$include": true
           },
-          "required": ["$include"]
+          "required": [
+            "$include"
+          ]
         },
         "else": {
           "properties": {
             "optionalAuth": true
           },
-          "required": ["optionalAuth"]
+          "required": [
+            "optionalAuth"
+          ]
         }
       }
     },
@@ -1885,13 +1952,17 @@
         "properties": {
           "$include": true
         },
-        "required": ["$include"]
+        "required": [
+          "$include"
+        ]
       },
       "else": {
         "properties": {
           "exempt": true
         },
-        "required": ["exempt"]
+        "required": [
+          "exempt"
+        ]
       }
     },
     "idempotency": {
@@ -1912,13 +1983,17 @@
         "properties": {
           "$include": true
         },
-        "required": ["$include"]
+        "required": [
+          "$include"
+        ]
       },
       "else": {
         "properties": {
           "exempt": true
         },
-        "required": ["exempt"]
+        "required": [
+          "exempt"
+        ]
       }
     },
     "requires": {
@@ -1971,7 +2046,9 @@
         "properties": {
           "right": true
         },
-        "required": ["right"]
+        "required": [
+          "right"
+        ]
       },
       "then": {
         "properties": {
@@ -1987,7 +2064,9 @@
           "properties": {
             "$include": true
           },
-          "required": ["$include"]
+          "required": [
+            "$include"
+          ]
         },
         "else": {
           "properties": {
@@ -1997,7 +2076,9 @@
               "not": {}
             }
           },
-          "required": ["rule"]
+          "required": [
+            "rule"
+          ]
         }
       }
     },
@@ -2053,7 +2134,9 @@
           }
         },
         "additionalProperties": false,
-        "required": ["level"]
+        "required": [
+          "level"
+        ]
       }
     },
     "deprecation": {
@@ -2096,7 +2179,10 @@
           "description": "A family of conventions.cache.families, or never."
         },
         "anonymous": {
-          "enum": ["public", "private"],
+          "enum": [
+            "public",
+            "private"
+          ],
           "$comment": "ADR 0002 section 10"
         },
         "vary": {
@@ -2146,11 +2232,17 @@
               "$comment": "ADR 0002 section 10"
             },
             "overLimit": {
-              "enum": ["reject", "clamp"],
+              "enum": [
+                "reject",
+                "clamp"
+              ],
               "$comment": "ADR 0002 section 10"
             },
             "token": {
-              "enum": ["opaque", "instant"],
+              "enum": [
+                "opaque",
+                "instant"
+              ],
               "$comment": "ADR 0002 section 10"
             }
           },
@@ -2182,7 +2274,9 @@
             }
           },
           "additionalProperties": false,
-          "required": ["key"]
+          "required": [
+            "key"
+          ]
         }
       },
       "description": "Sort keys: an item field, or { key, right } (ADR 0002 section 10)."
@@ -2256,13 +2350,17 @@
           "properties": {
             "$include": true
           },
-          "required": ["$include"]
+          "required": [
+            "$include"
+          ]
         },
         "else": {
           "properties": {
             "value": true
           },
-          "required": ["value"]
+          "required": [
+            "value"
+          ]
         }
       }
     }

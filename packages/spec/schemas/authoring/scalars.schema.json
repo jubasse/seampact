@@ -20,7 +20,10 @@
       "type": "object",
       "properties": {
         "type": {
-          "enum": ["string", "integer"],
+          "enum": [
+            "string",
+            "integer"
+          ],
           "$comment": "ADR 0003 section 8"
         },
         "pattern": {
@@ -75,13 +78,17 @@
         "properties": {
           "$include": true
         },
-        "required": ["$include"]
+        "required": [
+          "$include"
+        ]
       },
       "else": {
         "properties": {
           "type": true
         },
-        "required": ["type"]
+        "required": [
+          "type"
+        ]
       }
     }
   }

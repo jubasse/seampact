@@ -147,7 +147,15 @@
             "at": {
               "type": "array",
               "items": {
-                "enum": ["api", "operation", "schema", "property", "right", "rule", "scope"]
+                "enum": [
+                  "api",
+                  "operation",
+                  "schema",
+                  "property",
+                  "right",
+                  "rule",
+                  "scope"
+                ]
               },
               "minItems": 1,
               "$comment": "ADR 0002 section 12"
@@ -165,14 +173,19 @@
             "properties": {
               "$include": true
             },
-            "required": ["$include"]
+            "required": [
+              "$include"
+            ]
           },
           "else": {
             "properties": {
               "at": true,
               "schema": true
             },
-            "required": ["at", "schema"]
+            "required": [
+              "at",
+              "schema"
+            ]
           }
         }
       }

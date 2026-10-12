@@ -13,7 +13,11 @@
           "description": "The wire format; bare by default."
         },
         "pathCase": {
-          "enum": ["kebab", "camel", "snake"],
+          "enum": [
+            "kebab",
+            "camel",
+            "snake"
+          ],
           "$comment": "ADR 0002 section 13"
         },
         "paging": {
@@ -35,7 +39,10 @@
               "$comment": "ADR 0002 section 13"
             },
             "overLimit": {
-              "enum": ["reject", "clamp"],
+              "enum": [
+                "reject",
+                "clamp"
+              ],
               "$comment": "ADR 0002 section 13"
             },
             "$include": {
@@ -63,7 +70,12 @@
             "methods": {
               "type": "array",
               "items": {
-                "enum": ["post", "put", "patch", "delete"]
+                "enum": [
+                  "post",
+                  "put",
+                  "patch",
+                  "delete"
+                ]
               },
               "minItems": 1,
               "$comment": "ADR 0002 section 13"
@@ -73,7 +85,10 @@
               "$comment": "ADR 0002 section 13"
             },
             "enforce": {
-              "enum": ["boundary", "none"],
+              "enum": [
+                "boundary",
+                "none"
+              ],
               "$comment": "ADR 0002 section 13"
             },
             "$include": {
@@ -145,15 +160,24 @@
           "$comment": "ADR 0002 section 13"
         },
         "restrictedInput": {
-          "enum": ["reject", "strip"],
+          "enum": [
+            "reject",
+            "strip"
+          ],
           "$comment": "ADR 0002 section 13"
         },
         "outputEnums": {
-          "enum": ["enum", "open"],
+          "enum": [
+            "enum",
+            "open"
+          ],
           "$comment": "ADR 0002 section 13"
         },
         "pathVersion": {
-          "enum": ["prefix", "none"],
+          "enum": [
+            "prefix",
+            "none"
+          ],
           "$comment": "ADR 0002 section 13",
           "description": "none: no surface path starts with /v{version}."
         },
@@ -161,11 +185,18 @@
           "type": "object",
           "properties": {
             "lists": {
-              "enum": ["repeat", "comma", "brackets"],
+              "enum": [
+                "repeat",
+                "comma",
+                "brackets"
+              ],
               "$comment": "ADR 0002 section 7"
             },
             "objects": {
-              "enum": ["explode", "deepObject"],
+              "enum": [
+                "explode",
+                "deepObject"
+              ],
               "$comment": "ADR 0002 section 7"
             },
             "unknownKeys": {
@@ -194,7 +225,10 @@
           "$comment": "ADR 0002 section 13"
         },
         "int64": {
-          "enum": ["string", "number"],
+          "enum": [
+            "string",
+            "number"
+          ],
           "$comment": "ADR 0002 section 13"
         },
         "deprecation": {
@@ -378,11 +412,17 @@
           "type": "object",
           "properties": {
             "order": {
-              "enum": ["verbNoun", "nounVerb"],
+              "enum": [
+                "verbNoun",
+                "nounVerb"
+              ],
               "$comment": "ADR 0002 section 6"
             },
             "case": {
-              "enum": ["camel", "snake"],
+              "enum": [
+                "camel",
+                "snake"
+              ],
               "$comment": "ADR 0002 section 6"
             },
             "$include": {
@@ -405,7 +445,10 @@
               "$comment": "ADR 0002 section 13"
             },
             "unit": {
-              "enum": ["s", "ms"],
+              "enum": [
+                "s",
+                "ms"
+              ],
               "$comment": "ADR 0002 section 13"
             },
             "$include": {
@@ -420,7 +463,10 @@
           "$comment": "ADR 0002 section 13"
         },
         "urls": {
-          "enum": ["relative", "absolute"],
+          "enum": [
+            "relative",
+            "absolute"
+          ],
           "$comment": "ADR 0002 section 13"
         },
         "rights": {
@@ -454,7 +500,10 @@
               "description": "Codes attached to every operation."
             },
             "reach": {
-              "enum": ["subtree", "resource"],
+              "enum": [
+                "subtree",
+                "resource"
+              ],
               "$comment": "ADR 0002 section 11"
             },
             "derived": {
@@ -546,7 +595,9 @@
           }
         },
         "additionalProperties": false,
-        "required": ["code"]
+        "required": [
+          "code"
+        ]
       }
     }
   }

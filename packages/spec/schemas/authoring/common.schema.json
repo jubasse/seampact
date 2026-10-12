@@ -42,7 +42,9 @@
         }
       },
       "additionalProperties": false,
-      "required": ["$file"]
+      "required": [
+        "$file"
+      ]
     },
     "summary": {
       "type": "string",
@@ -142,10 +144,20 @@
       }
     },
     "method": {
-      "enum": ["get", "post", "put", "patch", "delete"]
+      "enum": [
+        "get",
+        "post",
+        "put",
+        "patch",
+        "delete"
+      ]
     },
     "maturityLevel": {
-      "enum": ["experimental", "provisional", "stable"]
+      "enum": [
+        "experimental",
+        "provisional",
+        "stable"
+      ]
     },
     "template": {
       "title": "template",
@@ -159,7 +171,9 @@
       },
       "then": {
         "title": "reasoned policy",
-        "enum": ["refuse"]
+        "enum": [
+          "refuse"
+        ]
       },
       "else": {
         "type": "object",
@@ -213,7 +227,9 @@
       },
       "then": {
         "title": "reasoned policy",
-        "enum": ["refuse"]
+        "enum": [
+          "refuse"
+        ]
       },
       "else": {
         "type": "object",
@@ -225,7 +241,9 @@
           }
         },
         "additionalProperties": false,
-        "required": ["ignore"]
+        "required": [
+          "ignore"
+        ]
       }
     },
     "lintAllow": {
@@ -269,7 +287,11 @@
             "pattern": "^(?:[^\\s/]+(?:/[^\\s/]+)+|\\$include)$"
           },
           "additionalProperties": {
-            "enum": ["disabled", "warning", "error"]
+            "enum": [
+              "disabled",
+              "warning",
+              "error"
+            ]
           },
           "$comment": "ADR 0002 section 12",
           "description": "Each rule's severity: disabled, warning or error."

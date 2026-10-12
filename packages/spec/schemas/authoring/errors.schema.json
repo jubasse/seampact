@@ -65,13 +65,17 @@
         "properties": {
           "$include": true
         },
-        "required": ["$include"]
+        "required": [
+          "$include"
+        ]
       },
       "else": {
         "properties": {
           "status": true
         },
-        "required": ["status"]
+        "required": [
+          "status"
+        ]
       }
     }
   }

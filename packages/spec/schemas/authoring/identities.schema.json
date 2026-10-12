@@ -20,7 +20,10 @@
       "type": "object",
       "properties": {
         "kind": {
-          "enum": ["credential", "signed"],
+          "enum": [
+            "credential",
+            "signed"
+          ],
           "$comment": "ADR 0002 section 9"
         },
         "schemes": {
@@ -47,14 +50,19 @@
             "properties": {
               "$include": true
             },
-            "required": ["$include"]
+            "required": [
+              "$include"
+            ]
           },
           "else": {
             "properties": {
               "read": true,
               "write": true
             },
-            "required": ["read", "write"]
+            "required": [
+              "read",
+              "write"
+            ]
           },
           "$comment": "ADR 0002 section 9"
         },
@@ -114,7 +122,9 @@
             "const": "signed"
           }
         },
-        "required": ["kind"]
+        "required": [
+          "kind"
+        ]
       },
       "then": {
         "properties": {
@@ -147,7 +157,9 @@
         "properties": {
           "variants": true
         },
-        "required": ["variants"]
+        "required": [
+          "variants"
+        ]
       },
       "then": {
         "type": "object",
@@ -174,7 +186,11 @@
       "type": "object",
       "properties": {
         "for": {
-          "enum": ["all", "reads", "writes"],
+          "enum": [
+            "all",
+            "reads",
+            "writes"
+          ],
           "$comment": "ADR 0002 section 9"
         },
         "required": {

@@ -28,7 +28,9 @@
         "properties": {
           "$ref": true
         },
-        "required": ["$ref"]
+        "required": [
+          "$ref"
+        ]
       },
       "then": {
         "$ref": "#/$defs/referenceMapping"
@@ -38,7 +40,9 @@
           "properties": {
             "pick": true
           },
-          "required": ["pick"]
+          "required": [
+            "pick"
+          ]
         },
         "then": {
           "$ref": "#/$defs/derived"
@@ -48,7 +52,9 @@
             "properties": {
               "omit": true
             },
-            "required": ["omit"]
+            "required": [
+              "omit"
+            ]
           },
           "then": {
             "$ref": "#/$defs/derived"
@@ -82,7 +88,14 @@
             "not": {}
           },
           "else": {
-            "enum": ["string", "integer", "number", "boolean", "object", "array"]
+            "enum": [
+              "string",
+              "integer",
+              "number",
+              "boolean",
+              "object",
+              "array"
+            ]
           },
           "$comment": "ADR 0003 section 1"
         },
@@ -125,7 +138,10 @@
                 }
               },
               "additionalProperties": false,
-              "required": ["narrow", "to"]
+              "required": [
+                "narrow",
+                "to"
+              ]
             }
           },
           "$comment": "ADR 0003 section 7"
@@ -249,7 +265,9 @@
           "description": "A portable format (uuid, date-time, date, int64, decimal, email, uri, uri-reference) or a named format of the 'scalars' catalogue."
         },
         "contentMediaType": {
-          "enum": ["application/json"],
+          "enum": [
+            "application/json"
+          ],
           "$comment": "ADR 0003 section 1"
         },
         "contentSchema": {
@@ -811,7 +829,10 @@
             }
           },
           "additionalProperties": false,
-          "required": ["from", "fields"],
+          "required": [
+            "from",
+            "fields"
+          ],
           "$comment": "ADR 0003 section 2",
           "description": "Keeps the listed properties of 'from', in that order."
         },
@@ -832,7 +853,10 @@
             }
           },
           "additionalProperties": false,
-          "required": ["from", "fields"],
+          "required": [
+            "from",
+            "fields"
+          ],
           "$comment": "ADR 0003 section 2",
           "description": "Keeps the other properties of 'from', in its order."
         },
@@ -1074,7 +1098,9 @@
         "properties": {
           "pick": true
         },
-        "required": ["pick"]
+        "required": [
+          "pick"
+        ]
       },
       "then": {
         "properties": {
@@ -1317,12 +1343,17 @@
             "$comment": "ADR 0003 section 6"
           },
           "input": {
-            "enum": ["reject", "strip"],
+            "enum": [
+              "reject",
+              "strip"
+            ],
             "$comment": "ADR 0003 section 6"
           }
         },
         "additionalProperties": false,
-        "required": ["right"]
+        "required": [
+          "right"
+        ]
       }
     },
     "discriminator": {
@@ -1343,7 +1374,9 @@
           }
         },
         "additionalProperties": false,
-        "required": ["from"]
+        "required": [
+          "from"
+        ]
       }
     }
   }

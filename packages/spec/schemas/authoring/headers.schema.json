@@ -24,11 +24,19 @@
           "$comment": "ADR 0002 section 9"
         },
         "in": {
-          "enum": ["request", "response"],
+          "enum": [
+            "request",
+            "response"
+          ],
           "$comment": "ADR 0002 section 9"
         },
         "semantic": {
-          "enum": ["deadline", "traceContext", "actorSurface", "versionToken"],
+          "enum": [
+            "deadline",
+            "traceContext",
+            "actorSurface",
+            "versionToken"
+          ],
           "$comment": "ADR 0002 section 9"
         },
         "schema": {
@@ -56,13 +64,17 @@
             "properties": {
               "$include": true
             },
-            "required": ["$include"]
+            "required": [
+              "$include"
+            ]
           },
           "else": {
             "properties": {
               "semantic": true
             },
-            "required": ["semantic"]
+            "required": [
+              "semantic"
+            ]
           }
         },
         {
@@ -72,7 +84,9 @@
                 "const": "versionToken"
               }
             },
-            "required": ["semantic"]
+            "required": [
+              "semantic"
+            ]
           },
           "then": {
             "properties": {

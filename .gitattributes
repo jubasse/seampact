@@ -1,0 +1,3 @@
+# Generated from the grammar modules (packages/spec/src/authoring); review the sources instead.
+packages/spec/schemas/authoring/** linguist-generated
+packages/spec/src/authoring/grammar.snapshot.json linguist-generated

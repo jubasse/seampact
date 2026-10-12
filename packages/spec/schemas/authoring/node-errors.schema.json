@@ -23,7 +23,9 @@
         "properties": {
           "status": true
         },
-        "required": ["status"]
+        "required": [
+          "status"
+        ]
       },
       "then": {
         "type": "object",
@@ -66,12 +68,19 @@
             "$comment": "ADR 0002 section 12"
           },
           "reach": {
-            "enum": ["subtree", "resource"],
+            "enum": [
+              "subtree",
+              "resource"
+            ],
             "$comment": "ADR 0002 section 11",
             "description": "How far below the node the code reaches."
           },
           "for": {
-            "enum": ["all", "reads", "writes"],
+            "enum": [
+              "all",
+              "reads",
+              "writes"
+            ],
             "$comment": "ADR 0002 section 11"
           },
           "$include": {
@@ -87,12 +96,19 @@
             "$comment": "ADR 0002 section 11"
           },
           "reach": {
-            "enum": ["subtree", "resource"],
+            "enum": [
+              "subtree",
+              "resource"
+            ],
             "$comment": "ADR 0002 section 11",
             "description": "How far below the node the code reaches."
           },
           "for": {
-            "enum": ["all", "reads", "writes"],
+            "enum": [
+              "all",
+              "reads",
+              "writes"
+            ],
             "$comment": "ADR 0002 section 11"
           },
           "$include": {

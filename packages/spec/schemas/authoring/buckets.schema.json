@@ -45,13 +45,17 @@
         "properties": {
           "$include": true
         },
-        "required": ["$include"]
+        "required": [
+          "$include"
+        ]
       },
       "else": {
         "properties": {
           "key": true
         },
-        "required": ["key"]
+        "required": [
+          "key"
+        ]
       }
     }
   }

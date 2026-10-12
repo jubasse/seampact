@@ -36,7 +36,10 @@
           "type": "object",
           "properties": {
             "in": {
-              "enum": ["body", "header"],
+              "enum": [
+                "body",
+                "header"
+              ],
               "$comment": "ADR 0002 section 9"
             },
             "name": {
@@ -57,14 +60,19 @@
             "properties": {
               "$include": true
             },
-            "required": ["$include"]
+            "required": [
+              "$include"
+            ]
           },
           "else": {
             "properties": {
               "in": true,
               "name": true
             },
-            "required": ["in", "name"]
+            "required": [
+              "in",
+              "name"
+            ]
           },
           "$comment": "ADR 0002 section 9"
         },
