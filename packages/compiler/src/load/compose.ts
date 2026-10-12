@@ -1,6 +1,7 @@
 import type { Origin } from "@seampact/spec/ir";
 import type { JsonObject, JsonValue } from "../raw-tree.js";
-import { asObject, type LayerBuild, setKey } from "./expand.js";
+import type { LayerBuild } from "./expand.js";
+import { asObject, cloneJson, jsonObject, ownValue, setKey } from "./json.js";
 import { pointerEscape } from "./paths.js";
 import type { Reporter } from "./report.js";
 
@@ -38,7 +39,9 @@ export interface Merged {
 }
 
 export function mergeLayers(layers: LayerBuild[], rep: Reporter): Merged {
-  const merged: JsonObject = {};
+  // Every value taken from a layer is copied: layers are cached and shared by the apis that build
+  // on them, so a merge must never write into one.
+  const merged = jsonObject();
   const winner = new Map<string, Origin>();
   const owners = new Map<string, { layer: string; file: string; at: ReturnType<typeof siteAt> }>();
   const siteAt = (b: LayerBuild, ptr: string) => b.locs.get(ptr);
@@ -80,14 +83,14 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter): Merged {
       return;
     }
     owners.set(ptr, { layer: b.layer, file: b.parsed.path, at: siteAt(b, ptr) });
-    setKey(section, name, value);
+    setKey(section, name, cloneJson(value));
     winner.set(ptr, { layer: b.layer, pointer: ptr });
     record(value, ptr, b.layer, ptr);
   };
   const ensure = (parent: JsonObject, key: string): JsonObject => {
-    const cur = asObject(parent[key]);
+    const cur = asObject(ownValue(parent, key));
     if (cur) return cur;
-    const fresh: JsonObject = {};
+    const fresh = jsonObject();
     setKey(parent, key, fresh);
     return fresh;
   };
@@ -100,18 +103,18 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter): Merged {
     ptr: string,
     lptr: string,
   ) => {
-    const cur = Object.hasOwn(parent, key) ? parent[key] : undefined;
+    const cur = ownValue(parent, key);
     const curObj = asObject(cur);
     const valObj = asObject(value);
     if (cur === undefined) {
-      setKey(parent, key, value);
+      setKey(parent, key, cloneJson(value));
       record(value, ptr, b.layer, lptr);
     } else if (curObj && valObj) {
       for (const [k, v] of Object.entries(valObj)) {
         const cptr = `${ptr}/${pointerEscape(k)}`;
         const lcptr = `${lptr}/${pointerEscape(k)}`;
         if (LEAF_MAPS.has(ptr)) {
-          setKey(curObj, k, v);
+          setKey(curObj, k, cloneJson(v));
           clear(cptr);
           winner.set(cptr, { layer: b.layer, pointer: lcptr });
         } else {
@@ -121,12 +124,12 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter): Merged {
     } else if (UNIONS.has(ptr) && Array.isArray(cur) && Array.isArray(value)) {
       const seen = new Set(cur.map((x) => JSON.stringify(x)));
       const union = [...cur];
-      for (const x of value) if (!seen.has(JSON.stringify(x))) union.push(x);
+      for (const x of value) if (!seen.has(JSON.stringify(x))) union.push(cloneJson(x));
       setKey(parent, key, union);
       clear(ptr);
       winner.set(ptr, { layer: b.layer, pointer: lptr });
     } else {
-      setKey(parent, key, value);
+      setKey(parent, key, cloneJson(value));
       clear(ptr);
       record(value, ptr, b.layer, lptr);
     }
@@ -164,8 +167,9 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter): Merged {
           }
         }
       } else if (key === "derive" && Array.isArray(value)) {
-        const target = Array.isArray(merged.derive) ? merged.derive : [];
-        if (!Array.isArray(merged.derive)) setKey(merged, "derive", target);
+        const existing = ownValue(merged, "derive");
+        const target = Array.isArray(existing) ? existing : [];
+        if (!Array.isArray(existing)) setKey(merged, "derive", target);
         value.forEach((entry, i) => {
           const name = asObject(entry)?.entry;
           const id = typeof name === "string" ? `/derive#${name}` : undefined;
@@ -183,7 +187,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter): Merged {
           }
           if (id) owners.set(id, { layer: b.layer, file: b.parsed.path, at });
           const mptr = `/derive/${target.length}`;
-          target.push(entry);
+          target.push(cloneJson(entry));
           record(entry, mptr, b.layer, `/derive/${i}`);
         });
       } else {

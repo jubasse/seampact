@@ -4,7 +4,8 @@ import type { Diagnostic } from "../diagnostics/diagnostic.js";
 import { diagnosticLocationKey, diagnosticSort } from "../diagnostics/print.js";
 import type { JsonObject, RawApi, RawWorkspace, RawWorkspaceConfig } from "../raw-tree.js";
 import { mergeLayers } from "./compose.js";
-import { asObject, Expander, type LayerBuild, navigate } from "./expand.js";
+import { Expander, type LayerBuild, navigate } from "./expand.js";
+import { asObject, isReservedKey, showValue } from "./json.js";
 import { isInside, joinPath, loadNormalizePath } from "./paths.js";
 import type { LoadReader } from "./reader.js";
 import { Reporter, type SiteLocation } from "./report.js";
@@ -211,7 +212,7 @@ class Loader {
       if (declared !== name) {
         this.rep.report({
           rule: "api-name-mismatch",
-          message: `workspace.apis names this api '${name}', and api.name is '${String(declared)}'`,
+          message: `workspace.apis names this api '${name}', and api.name is '${showValue(declared)}'`,
           fix: "make the two names equal",
           at: build.locs.get("/api/name") ?? nodeSite(pf, pf.root),
           related: [{ at, message: "named here" }],
@@ -228,6 +229,15 @@ class Loader {
     apis: RawApi[],
   ): void {
     this.rep.layer = "api";
+    if (isReservedKey(name)) {
+      this.rep.report({
+        rule: "reserved-key",
+        message: `'${name}' cannot name an api: it names a property every JavaScript object inherits`,
+        fix: "rename the api",
+        at: api.locs.get("/api/name") ?? nodeSite(api.parsed, api.parsed.root),
+      });
+      return;
+    }
     const state: ApiState = { order: [], done: new Set() };
     // base
     let base: LayerBuild | undefined;

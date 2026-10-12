@@ -1,6 +1,7 @@
 import type { Origin } from "@seampact/spec/ir";
 import { isAlias, isMap, isScalar, isSeq, type Node, Scalar, type YAMLMap } from "yaml";
 import type { JsonObject, JsonValue } from "../raw-tree.js";
+import { asObject, isReservedKey, jsonObject, setKey } from "./json.js";
 import { pointerEscape, pointerSegments } from "./paths.js";
 import type { Reporter, SiteLocation } from "./report.js";
 import { type FileStore, nodeSite, pairSite, type ParsedFile } from "./source.js";
@@ -61,14 +62,6 @@ const NAME_KEYED = new Set([
 
 const NULL_SPELLINGS = new Set(["", "~", "Null", "NULL"]);
 
-export function setKey(obj: JsonObject, key: string, value: JsonValue): void {
-  Object.defineProperty(obj, key, { value, enumerable: true, writable: true, configurable: true });
-}
-
-export function asObject(v: JsonValue | undefined): JsonObject | undefined {
-  return v !== null && typeof v === "object" && !Array.isArray(v) ? v : undefined;
-}
-
 export function keyString(node: Node | null | undefined): string | undefined {
   if (!isScalar(node)) return undefined;
   if (node.type === Scalar.PLAIN) return node.source ?? String(node.value);
@@ -111,7 +104,7 @@ export class Expander {
     const build: LayerBuild = {
       layer,
       parsed: file,
-      tree: {},
+      tree: jsonObject(),
       locs: new Map(),
       uses: [],
       refs: new Map(),
@@ -161,7 +154,7 @@ export class Expander {
       if (existing !== undefined && typeof existing === "object" && !Array.isArray(existing)) {
         return existing as JsonObject;
       }
-      const fresh: JsonObject = {};
+      const fresh = jsonObject();
       setKey(build.tree, "schemas", fresh);
       return fresh;
     };
@@ -264,7 +257,7 @@ export class Expander {
         return null;
       }
     }
-    const out: JsonObject = {};
+    const out = jsonObject();
     this.items(build, node, pointer, scope, out, new Map());
     return out;
   }
@@ -289,6 +282,10 @@ export class Expander {
           fix: "write the key as a string",
           at: nodeSite(file, keyNode),
         });
+        continue;
+      }
+      if (isReservedKey(key)) {
+        this.reserved(file, keyNode, key);
         continue;
       }
       if (key === "$include" && !scope.data) {
@@ -411,6 +408,15 @@ export class Expander {
     }
   }
 
+  private reserved(file: ParsedFile, node: Node | null, key: string): void {
+    this.rep.report({
+      rule: "reserved-key",
+      message: `'${key}' cannot be a key: it names a property every JavaScript object inherits`,
+      fix: "rename the key",
+      at: nodeSite(file, node),
+    });
+  }
+
   private shape(file: ParsedFile, node: Node | null, what: string): void {
     this.rep.report({
       rule: "include-shape",
@@ -447,7 +453,11 @@ export class Expander {
     if (ext === "json") {
       const text = this.store.rawText(resolved.path) ?? "";
       try {
-        return JSON.parse(text) as JsonValue;
+        return this.jsonData(
+          JSON.parse(text) as JsonValue,
+          resolved.path,
+          nodeSite(file, valueNode),
+        );
       } catch (e) {
         this.rep.report({
           rule: "file-invalid",
@@ -487,6 +497,27 @@ export class Expander {
       at: nodeSite(file, valueNode),
     });
     return null;
+  }
+
+  /** JSON data as the loader's own tree: no prototype, no reserved key. */
+  private jsonData(value: JsonValue, path: string, at: SiteLocation): JsonValue {
+    if (Array.isArray(value)) return value.map((v) => this.jsonData(v, path, at));
+    const obj = asObject(value);
+    if (!obj) return value;
+    const out = jsonObject();
+    for (const [k, v] of Object.entries(obj)) {
+      if (isReservedKey(k)) {
+        this.rep.report({
+          rule: "reserved-key",
+          message: `'${path}' holds the key '${k}', which names a property every JavaScript object inherits`,
+          fix: "rename the key in the JSON file",
+          at,
+        });
+        continue;
+      }
+      setKey(out, k, this.jsonData(v, path, at));
+    }
+    return out;
   }
 
   private ref(
@@ -547,6 +578,10 @@ export class Expander {
         fix: "add the element's name: $ref: ./schemas/task.yaml#/Task",
         at,
       });
+      return value;
+    }
+    if (name !== undefined && isReservedKey(name)) {
+      this.reserved(file, valueNode, name);
       return value;
     }
     const element = pf.root.items.find((p) => keyString(p.key as Node) === name);

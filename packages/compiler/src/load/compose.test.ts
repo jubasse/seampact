@@ -416,3 +416,41 @@ test("a file $ref without a pointer needs a file with exactly one element", () =
   });
   expect(rules(many)).toEqual(["ref-file-shape"]);
 });
+
+test("an override in one api never leaks into another api sharing the layer", () => {
+  const r = run(
+    {
+      "workspace.yaml":
+        "workspace:\n  apis: { one: ./one.yaml, two: ./two.yaml }\n  shared: ./shared.yaml\n",
+      "shared.yaml":
+        "packs: [./p.yaml]\nconventions:\n  paging: { default: offset, maxLimit: 20 }\n",
+      "p.yaml":
+        "pack: { name: p, version: 1.0.0 }\nconventions:\n  cache: { families: { minute: 60s } }\n",
+      "one.yaml": [
+        "api: { name: one }",
+        "conventions:",
+        "  paging: { maxLimit: 50 }",
+        "  cache: { families: { minute: 1s } }",
+        "",
+      ].join("\n"),
+      "two.yaml": "api: { name: two }\n",
+    },
+    "workspace.yaml",
+  );
+  expect(r.result.diagnostics).toEqual([]);
+  const [one, two] = r.result.workspace.apis;
+  expect(one?.merged.conventions).toEqual({
+    cache: { families: { minute: "1s" } },
+    paging: { default: "offset", maxLimit: 50 },
+  });
+  expect(two?.merged.conventions).toEqual({
+    cache: { families: { minute: "60s" } },
+    paging: { default: "offset", maxLimit: 20 },
+  });
+  expect(two?.leafOrigins["/conventions/paging/maxLimit"]?.layer).toBe("shared");
+  expect(two?.leafOrigins["/conventions/cache/families/minute"]?.layer).toBe("pack:p");
+  // The layers themselves are untouched by the merge.
+  expect(two?.layers.find((l) => l.layer === "shared")?.tree.conventions).toEqual({
+    paging: { default: "offset", maxLimit: 20 },
+  });
+});
