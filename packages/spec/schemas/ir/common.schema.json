@@ -1,0 +1,214 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/ir/common.schema.json",
+  "title": "seampact IR: common members",
+  "description": "Ids, names, origins, docs and extension slots shared by every IR file (ADR 0004 sections 3 and 6).",
+  "$defs": {
+    "SchemaId": {
+      "type": "string",
+      "description": "The id of a named schema: its catalogue key (ADR 0004 section 9)."
+    },
+    "ScalarId": {
+      "type": "string",
+      "description": "The id of a named scalar: its catalogue key (ADR 0004 section 9)."
+    },
+    "EnumId": {
+      "type": "string",
+      "description": "The id of an enum: its catalogue key (ADR 0004 section 9)."
+    },
+    "ErrorCode": {
+      "type": "string",
+      "description": "An error code, the key of the errors catalogue (ADR 0004 section 4)."
+    },
+    "NatureId": {
+      "type": "string",
+      "description": "The id of a contract nature: its catalogue key (ADR 0004 section 9)."
+    },
+    "SchemeId": {
+      "type": "string",
+      "description": "The id of a security scheme: its catalogue key (ADR 0004 section 9)."
+    },
+    "HeaderId": {
+      "type": "string",
+      "description": "The id of an identity header: its catalogue key (ADR 0004 section 9)."
+    },
+    "IdentityId": {
+      "type": "string",
+      "description": "The id of an identity: its catalogue key (ADR 0004 section 9)."
+    },
+    "RightId": {
+      "type": "string",
+      "description": "The id of a right: its catalogue key (ADR 0004 section 9)."
+    },
+    "RuleId": {
+      "type": "string",
+      "description": "The id of a rule: its catalogue key (ADR 0004 section 9)."
+    },
+    "ScopeId": {
+      "type": "string",
+      "description": "The id of a scope: its catalogue key (ADR 0004 section 9)."
+    },
+    "BucketId": {
+      "type": "string",
+      "description": "The id of a rate-limit bucket: its catalogue key (ADR 0004 section 9)."
+    },
+    "ServiceId": {
+      "type": "string",
+      "description": "The id of a service: its catalogue key (ADR 0004 section 9)."
+    },
+    "ExtensionKeyId": {
+      "type": "string",
+      "description": "An extension key, written '<prefix>-<key>' (ADR 0002 section 12)."
+    },
+    "FormatId": {
+      "type": "string",
+      "description": "The id of a wire format: its catalogue key (ADR 0004 section 9)."
+    },
+    "PagingId": {
+      "type": "string",
+      "description": "The id of a paging style: its catalogue key (ADR 0004 section 9)."
+    },
+    "SurfaceId": {
+      "type": "string",
+      "description": "The id of an api surface: its catalogue key (ADR 0004 section 9)."
+    },
+    "DocumentId": {
+      "type": "string",
+      "description": "The id of an api document: its catalogue key (ADR 0004 section 9)."
+    },
+    "VariantId": {
+      "type": "string",
+      "description": "The id of a principal variant: its catalogue key (ADR 0004 section 9)."
+    },
+    "OperationId": { "type": "string", "description": "An operation id (ADR 0004 section 7)." },
+    "DerivationId": {
+      "type": "string",
+      "description": "A derivation id of the derivation table (ADR 0006 section 5), 'pack.<pack>.<entry>' for a pack entry."
+    },
+    "Feature": {
+      "type": "string",
+      "description": "A must-understand feature name (ADR 0005 section 3); none is defined at irRevision 1."
+    },
+    "Reason": { "type": "string", "description": "The written reason of an exception (A36)." },
+    "SchemaRef": {
+      "$ref": "#/$defs/SchemaId",
+      "description": "A reference by id to a named object schema of the schemas catalogue (ADR 0004 section 4)."
+    },
+    "DeclarationKind": {
+      "type": "string",
+      "description": "A declaration kind (ADR 0004 section 2, ADR 0014).",
+      "x-seampact-known": ["httpOperation"]
+    },
+    "Maturity": {
+      "type": "string",
+      "x-seampact-known": ["experimental", "provisional", "stable"]
+    },
+    "Direction": { "type": "string", "x-seampact-known": ["input", "output"] },
+    "NameRole": {
+      "type": "string",
+      "description": "The role of a name (ADR 0007 section 1).",
+      "x-seampact-known": [
+        "schema",
+        "input",
+        "output",
+        "query",
+        "headers",
+        "path",
+        "response",
+        "params",
+        "error",
+        "errors",
+        "property",
+        "item",
+        "value",
+        "variant",
+        "endpoints",
+        "operation",
+        "member",
+        "enumMember"
+      ]
+    },
+    "Name": {
+      "type": "object",
+      "description": "A canonical name: word segments plus a role, never a final identifier (ADR 0007 section 1).",
+      "required": ["segments", "role"],
+      "properties": {
+        "segments": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z0-9]+$" },
+          "minItems": 1
+        },
+        "role": { "$ref": "#/$defs/NameRole" },
+        "status": {
+          "type": "integer",
+          "minimum": 200,
+          "maximum": 299,
+          "description": "The HTTP success status of a 'response' name; present if and only if role is 'response' (lead decision, checked by the compiler: the schema subset has no conditional)."
+        }
+      }
+    },
+    "Docs": {
+      "type": "object",
+      "description": "Resolved documentation text.",
+      "properties": { "summary": { "type": "string" }, "description": { "type": "string" } }
+    },
+    "Extensions": {
+      "type": "object",
+      "description": "The extension slot: { '<prefix>': { '<key>': value } } (ADR 0004 section 3).",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": { "description": "A consumer value, kept as raw JSON." }
+      }
+    },
+    "Origin": {
+      "type": "object",
+      "description": "Where an element was declared: a JSON Pointer into the merged authoring tree of its layer (ADR 0004 section 6).",
+      "required": ["layer", "pointer"],
+      "properties": {
+        "api": {
+          "type": "string",
+          "description": "Set on an element copied from another api by a relay route."
+        },
+        "layer": {
+          "type": "string",
+          "pattern": "^(api|shared|base|pack:.+)$",
+          "description": "'api', 'shared', 'base' or 'pack:<name>'."
+        },
+        "pointer": { "type": "string", "pattern": "^(/.*)?$" }
+      }
+    },
+    "DerivedFrom": {
+      "type": "object",
+      "description": "Present on, and only on, an element the compiler derived (ADR 0004 section 6).",
+      "required": ["derivation", "from"],
+      "properties": {
+        "derivation": { "$ref": "#/$defs/DerivationId" },
+        "from": { "type": "array", "items": { "$ref": "#/$defs/Origin" } }
+      }
+    },
+    "ValueSourceIn": {
+      "type": "string",
+      "x-seampact-known": [
+        "path",
+        "query",
+        "header",
+        "body",
+        "principal",
+        "scope",
+        "host",
+        "subdomain",
+        "address"
+      ]
+    },
+    "ValueSource": {
+      "type": "object",
+      "description": "Where a value is read (ADR 0004 section 7). 'name' with path, query, header, body, principal and scope; 'prefixBits' only with address.",
+      "required": ["in"],
+      "properties": {
+        "in": { "$ref": "#/$defs/ValueSourceIn" },
+        "name": { "type": "string" },
+        "prefixBits": { "type": "integer", "minimum": 0, "maximum": 128 }
+      }
+    }
+  }
+}

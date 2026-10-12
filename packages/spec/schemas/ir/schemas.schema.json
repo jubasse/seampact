@@ -1,0 +1,318 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/ir/schemas.schema.json",
+  "title": "seampact IR: schemas",
+  "description": "Named schemas, properties and type uses (ADR 0004 section 5).",
+  "$defs": {
+    "Schema": {
+      "type": "object",
+      "description": "A named schema: objects, maps and unions are always named (ADR 0004 section 5).",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [
+        { "$ref": "#/$defs/ObjectSchema" },
+        { "$ref": "#/$defs/MapSchema" },
+        { "$ref": "#/$defs/UnionSchema" }
+      ]
+    },
+    "ObjectSchema": {
+      "type": "object",
+      "required": [
+        "kind",
+        "properties",
+        "id",
+        "name",
+        "directions",
+        "examples",
+        "docs",
+        "extensions",
+        "origin"
+      ],
+      "properties": {
+        "kind": { "type": "string", "const": "object" },
+        "properties": { "type": "array", "items": { "$ref": "#/$defs/Property" } },
+        "id": { "$ref": "common.schema.json#/$defs/SchemaId" },
+        "name": { "$ref": "common.schema.json#/$defs/Name" },
+        "typeName": { "type": "string" },
+        "directions": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/Direction" }
+        },
+        "examples": { "type": "array", "items": {} },
+        "docs": { "$ref": "common.schema.json#/$defs/Docs" },
+        "extensions": { "$ref": "common.schema.json#/$defs/Extensions" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "MapSchema": {
+      "type": "object",
+      "required": [
+        "kind",
+        "values",
+        "id",
+        "name",
+        "directions",
+        "examples",
+        "docs",
+        "extensions",
+        "origin"
+      ],
+      "properties": {
+        "kind": { "type": "string", "const": "map" },
+        "keys": { "$ref": "#/$defs/TypeUse" },
+        "values": { "$ref": "#/$defs/TypeUse" },
+        "id": { "$ref": "common.schema.json#/$defs/SchemaId" },
+        "name": { "$ref": "common.schema.json#/$defs/Name" },
+        "typeName": { "type": "string" },
+        "directions": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/Direction" }
+        },
+        "examples": { "type": "array", "items": {} },
+        "docs": { "$ref": "common.schema.json#/$defs/Docs" },
+        "extensions": { "$ref": "common.schema.json#/$defs/Extensions" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "UnionSchema": {
+      "type": "object",
+      "required": [
+        "kind",
+        "tag",
+        "variants",
+        "id",
+        "name",
+        "directions",
+        "examples",
+        "docs",
+        "extensions",
+        "origin"
+      ],
+      "properties": {
+        "kind": { "type": "string", "const": "union" },
+        "tag": { "$ref": "#/$defs/UnionTag" },
+        "variants": { "type": "array", "items": { "$ref": "#/$defs/UnionVariant" } },
+        "id": { "$ref": "common.schema.json#/$defs/SchemaId" },
+        "name": { "$ref": "common.schema.json#/$defs/Name" },
+        "typeName": { "type": "string" },
+        "directions": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/Direction" }
+        },
+        "examples": { "type": "array", "items": {} },
+        "docs": { "$ref": "common.schema.json#/$defs/Docs" },
+        "extensions": { "$ref": "common.schema.json#/$defs/Extensions" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "UnionTag": {
+      "type": "object",
+      "description": "Where a union's tag is read; 'header' only for a route's whole input.",
+      "discriminator": { "propertyName": "in" },
+      "oneOf": [{ "$ref": "#/$defs/BodyUnionTag" }, { "$ref": "#/$defs/HeaderUnionTag" }]
+    },
+    "BodyUnionTag": {
+      "type": "object",
+      "required": ["in", "property"],
+      "properties": {
+        "in": { "type": "string", "const": "body" },
+        "property": { "type": "string" }
+      }
+    },
+    "HeaderUnionTag": {
+      "type": "object",
+      "required": ["in", "name"],
+      "properties": {
+        "in": { "type": "string", "const": "header" },
+        "name": { "type": "string" }
+      }
+    },
+    "UnionVariant": {
+      "type": "object",
+      "required": ["tag", "schema"],
+      "properties": {
+        "tag": { "type": "string" },
+        "schema": { "$ref": "common.schema.json#/$defs/SchemaId" }
+      }
+    },
+    "Property": {
+      "type": "object",
+      "description": "An object property; the wire name stays 'name' (ADR 0004 section 5).",
+      "required": [
+        "name",
+        "type",
+        "optional",
+        "nullable",
+        "sensitive",
+        "deprecated",
+        "docs",
+        "extensions",
+        "origin"
+      ],
+      "properties": {
+        "name": { "type": "string" },
+        "type": { "$ref": "#/$defs/TypeUse" },
+        "optional": { "type": "boolean" },
+        "nullable": { "type": "boolean" },
+        "sensitive": { "type": "boolean" },
+        "restrictedTo": { "$ref": "#/$defs/FieldRestriction" },
+        "default": {},
+        "deprecated": { "type": "boolean" },
+        "codeName": { "$ref": "common.schema.json#/$defs/Name" },
+        "docs": { "$ref": "common.schema.json#/$defs/Docs" },
+        "extensions": { "$ref": "common.schema.json#/$defs/Extensions" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" },
+        "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
+      }
+    },
+    "FieldRestriction": {
+      "type": "object",
+      "description": "A restrictedTo mark (ADR 0003 section 6).",
+      "required": ["right"],
+      "properties": {
+        "right": { "$ref": "common.schema.json#/$defs/RightId" },
+        "params": {},
+        "inputPolicy": { "type": "string", "x-seampact-known": ["reject", "strip"] },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "TypeUse": {
+      "type": "object",
+      "description": "What a property, item, body or parameter is (ADR 0004 section 5).",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [
+        { "$ref": "#/$defs/RefTypeUse" },
+        { "$ref": "#/$defs/OpaqueTypeUse" },
+        { "$ref": "#/$defs/FileTypeUse" },
+        { "$ref": "#/$defs/EnumTypeUse" },
+        { "$ref": "#/$defs/ScalarTypeUse" },
+        { "$ref": "#/$defs/ArrayTypeUse" }
+      ]
+    },
+    "UnknownKeys": {
+      "type": "object",
+      "description": "Unknown keys of an input use (ADR 0003 section 4).",
+      "required": ["policy"],
+      "properties": {
+        "policy": { "type": "string", "x-seampact-known": ["refuse", "ignore", "keep"] },
+        "reason": { "$ref": "common.schema.json#/$defs/Reason" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" },
+        "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
+      }
+    },
+    "RefTypeUse": {
+      "type": "object",
+      "required": ["kind", "schema"],
+      "properties": {
+        "kind": { "type": "string", "const": "ref" },
+        "schema": { "$ref": "common.schema.json#/$defs/SchemaId" },
+        "unknownKeys": { "$ref": "#/$defs/UnknownKeys" }
+      }
+    },
+    "OpaqueTypeUse": {
+      "type": "object",
+      "description": "Any JSON value, unchecked (ADR 0003 section 2).",
+      "required": ["kind", "reason", "origin"],
+      "properties": {
+        "kind": { "type": "string", "const": "opaque" },
+        "reason": { "$ref": "common.schema.json#/$defs/Reason" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "FileTypeUse": {
+      "type": "object",
+      "description": "A multipart field or a download (A39).",
+      "required": ["kind", "media"],
+      "properties": {
+        "kind": { "type": "string", "const": "file" },
+        "media": { "type": "array", "items": { "type": "string" } },
+        "maxSizeBytes": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "EnumNarrowing": {
+      "type": "object",
+      "required": ["values"],
+      "properties": {
+        "values": { "type": "array", "items": { "type": "string" } },
+        "reason": { "$ref": "common.schema.json#/$defs/Reason" }
+      }
+    },
+    "EnumTypeUse": {
+      "type": "object",
+      "required": ["kind", "enum"],
+      "properties": {
+        "kind": { "type": "string", "const": "enum" },
+        "enum": { "$ref": "common.schema.json#/$defs/EnumId" },
+        "narrowedTo": { "$ref": "#/$defs/EnumNarrowing" }
+      }
+    },
+    "JsonContent": {
+      "type": "object",
+      "description": "A form or multipart text field holding JSON.",
+      "required": ["media", "schema"],
+      "properties": {
+        "media": { "type": "string", "x-seampact-known": ["application/json"] },
+        "schema": { "$ref": "#/$defs/TypeUse" }
+      }
+    },
+    "ScalarTypeUse": {
+      "type": "object",
+      "required": ["kind", "type", "refinements"],
+      "properties": {
+        "kind": { "type": "string", "const": "scalar" },
+        "type": {
+          "type": "string",
+          "x-seampact-known": ["string", "integer", "number", "boolean"]
+        },
+        "format": { "type": "string" },
+        "refinements": { "$ref": "#/$defs/Refinements" },
+        "content": { "$ref": "#/$defs/JsonContent" }
+      }
+    },
+    "ArrayTypeUse": {
+      "type": "object",
+      "required": ["kind", "items"],
+      "properties": {
+        "kind": { "type": "string", "const": "array" },
+        "items": { "$ref": "#/$defs/TypeUse" },
+        "minItems": { "type": "integer", "minimum": 0 },
+        "maxItems": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "Pattern": {
+      "type": "object",
+      "description": "A pattern refinement: the written text and its normalised form (ADR 0003 section 9).",
+      "required": ["source", "normalized"],
+      "properties": { "source": { "type": "string" }, "normalized": { "type": "string" } }
+    },
+    "Refinements": {
+      "type": "object",
+      "description": "The refinements of a scalar (ADR 0003 sections 1 and 8).",
+      "properties": {
+        "minLength": { "type": "integer", "minimum": 0 },
+        "maxLength": { "type": "integer", "minimum": 0 },
+        "pattern": { "$ref": "#/$defs/Pattern" },
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" },
+        "exclusiveMinimum": { "type": "number" },
+        "exclusiveMaximum": { "type": "number" },
+        "multipleOf": { "type": "number" }
+      }
+    },
+    "Scalar": {
+      "type": "object",
+      "description": "A named scalar of the scalars catalogue.",
+      "required": ["id", "name", "type", "directions", "docs", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/ScalarId" },
+        "name": { "$ref": "common.schema.json#/$defs/Name" },
+        "type": { "$ref": "#/$defs/ScalarTypeUse" },
+        "directions": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/Direction" }
+        },
+        "docs": { "$ref": "common.schema.json#/$defs/Docs" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    }
+  }
+}
