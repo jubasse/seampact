@@ -2,6 +2,7 @@ export type { ConventionReading, ResolvedConventions } from "./conventions.js";
 export type {
   DraftConcurrency,
   DraftFinalizeMember,
+  DraftFinalizeOperationMember,
   DraftIR,
   DraftOperation,
   DraftOperationInput,

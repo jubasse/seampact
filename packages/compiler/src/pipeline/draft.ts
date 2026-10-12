@@ -5,8 +5,8 @@ import type { IrWriter } from "@seampact/spec/ir";
 //
 // Form (the lane's choice): the draft is the IR minus what finalize writes, with every catalogue and every list
 // present from the start and every other member optional until its owner writes it.
-// - The finalize members (`irVersion`, `irRevision`, `kinds`, top-level `features`) are not in the draft:
-//   finalize computes them from the complete draft.
+// - The finalize members (`irVersion`, `irRevision`, `kinds`, `features`, and each operation's `features`) are
+//   not in the draft: finalize computes them from the members present in the complete draft (ADR 0005).
 // - Catalogues (every map member, `conventions` included) and `packs` and `operations` exist empty from the
 //   start, so a half adds to a container that is always there and never races another half to create it.
 // - `api` and `lint`, objects with no empty form, are optional until `tree.nodes` writes them.
@@ -28,9 +28,15 @@ export type DraftConcurrency = Omit<IrWriter.Concurrency, "derivedFrom"> & {
   derivedFrom?: IrWriter.DerivedFrom;
 };
 
-type OperationMember = Exclude<keyof IrWriter.Operation, "input" | "concurrency">;
+/** The operation member finalize writes; absent from a draft operation. */
+export type DraftFinalizeOperationMember = "features";
 
-/** An operation in the draft: every member optional until its owner writes it. */
+type OperationMember = Exclude<
+  keyof IrWriter.Operation,
+  "input" | "concurrency" | DraftFinalizeOperationMember
+>;
+
+/** An operation in the draft: every member optional until its owner writes it, `features` absent. */
 export type DraftOperation = { [K in OperationMember]?: IrWriter.Operation[K] } & {
   input?: DraftOperationInput;
   concurrency?: DraftConcurrency;

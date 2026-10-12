@@ -259,6 +259,12 @@ describe("guard refuses undeclared access", () => {
     expect(operationOf(value).responses?.[0]?.status).toBe(200);
   });
 
+  test("an operation's features are finalize's, computed from the members present", () => {
+    const guarded = pipelineGuard(draft(), part("derive.wire", [], ["operations[].features"]));
+    const error = refused(() => Object.assign(operationOf(guarded), { features: [] }));
+    expect(error).toMatchObject({ field: "operations[].features", owner: "finalize" });
+  });
+
   test("the link pass is read-only by guard", () => {
     const guarded = pipelineGuard(draft(), part("link", ["operations[]"], []));
     expect(JSON.parse(JSON.stringify(guarded.operations))[0].id).toBe("createTask");

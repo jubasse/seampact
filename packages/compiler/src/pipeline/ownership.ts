@@ -14,7 +14,8 @@ import type { HalfName } from "./halves.js";
 //   `batch.read`, `response.format` and `budget.timeout` elements to tree.nodes, `rule.proof` elements to
 //   access.rights, other derived wire elements to derive.wire.
 // A field above rows (`operations[]`, `operations[].input`) is a container: halves navigate through it, and
-// writing it writes each row below it. The finalize members belong to `finalize`, which no half is.
+// writing it writes each row below it. The finalize members (top level, and each operation's `features`) belong
+// to `finalize`, which no half is.
 //
 // Paths are normalised: `[]` for the items of a list, and a catalogue named by its member (`schemas` covers
 // every schema, `operations[].params.query` every query parameter). The test `every member has one owner` walks
@@ -35,8 +36,9 @@ const ops = <M extends string>(...members: M[]): `operations[].${M}`[] => member
 
 /** The ownership table, one row per field. */
 export const pipelineOwnership = [
-  // Finalize computes these from the complete draft (ADR 0004 section 2).
-  ...owned("finalize", "irVersion", "irRevision", "kinds", "features"),
+  // Finalize computes these from the complete draft (ADR 0004 section 2): `kinds` and `features` from the
+  // members present, each operation's `features` as well (ADR 0005), so no half can forget one.
+  ...owned("finalize", "irVersion", "irRevision", "kinds", "features", op("features")),
   // Top level.
   ...owned("tree.schemas", "schemas", "scalars", "enums", "extensionKeys"),
   ...owned("tree.nodes", "api", "conventions", "lint", "packs", "formats", "pagings", "services"),
@@ -117,7 +119,7 @@ export const pipelineOwnership = [
   // Per operation, derive.wire.
   ...owned(
     "derive.wire",
-    ...ops("features", "input.bodyLimitBytes", "idempotency", "concurrency.derivedFrom", "cache"),
+    ...ops("input.bodyLimitBytes", "idempotency", "concurrency.derivedFrom", "cache"),
     op("deadlineHeader"),
   ),
   // Per operation, derive.errors: every element of `errors`, a relay route's copied codes included.

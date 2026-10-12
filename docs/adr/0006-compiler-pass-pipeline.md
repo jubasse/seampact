@@ -63,8 +63,10 @@ export interface PassContext {
 |---|---|
 | tree | `api`, `conventions`, `lint`, `packs`, `formats`, `pagings`, `schemas`, `scalars`, `enums`, `services`, `extensionKeys`; per operation: `id`, `name`, `surface`, `op`, `resource`, `method`, `path`, `safe`, declared `params`, `unknownQuery`, `input` (schema, media, and `fields`, the per-field wire forms of a form or multipart input), declared `responses` and their `shape`, `owner`, `concurrency` (declared), `paging` (kind, limits, sort keys without rights), `degradable`, `budgetMs`, `deprecated`, `relays` and the shape a relay route copies (method, path, params, input, responses, paging, concurrency, format, and the declarations they use), `upstream`, `maturity` (stated), `internal`, `tags`, `examples`, `format`, `docs`, `extensions`, `origin` |
 | access | `schemes`, `headers`, `identities`, `rights`, `rules`, `scopes`, `buckets`; per operation: `access`, `callerKinds`, `principalRequires`, `scopes`, `requires`, `bindings`, `fieldRights`, `paging.sortKeys[].right`, `filteredBy`, `csrf`, `input.rawBody`, `unknownKeys` on the input of a signed identity's routes, rule proofs added to `input`; requirements and rights derived by pack entries |
-| derive | `errors`, `natures`; per operation: `errors` (a relay route's copied domain codes included), `unknownKeys` on each body input use that sets none, from `conventions.input.unknownKeys` (derivation `input.unknownKeys`), derived `params`, derived `responses` and headers, `input.bodyLimitBytes`, `idempotency`, `concurrency.derivedFrom`, `cache`, `maturity` (derived), `deadlineHeader`, `features`; error codes attached by pack entries |
+| derive | `errors`, `natures`; per operation: `errors` (a relay route's copied domain codes included), `unknownKeys` on each body input use that sets none, from `conventions.input.unknownKeys` (derivation `input.unknownKeys`), derived `params`, derived `responses` and headers, `input.bodyLimitBytes`, `idempotency`, `concurrency.derivedFrom`, `cache`, `maturity` (derived), `deadlineHeader`; error codes attached by pack entries |
 | link | nothing |
+
+Finalize writes `irVersion`, `irRevision`, `kinds` and `features`, and each operation's `features`, computed from the members present (ADR 0005), so no pass writes them.
 
 What each pass checks, besides its writes:
 

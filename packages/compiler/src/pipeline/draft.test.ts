@@ -19,7 +19,9 @@ test("writer view refuses unknown variants", () => {
   const scheme: IrWriter.Scheme = unknownArm;
   // @ts-expect-error an open enum inside a catalogue entry
   const maturity: IrWriter.Service = { id: "mail", maturity: "beta", origin };
-  expect([operation, body, scheme, maturity]).toHaveLength(4);
+  // @ts-expect-error an operation's features are finalize's: no half writes them
+  const features: DraftOperation = { kind: "httpOperation", features: [] };
+  expect([operation, body, scheme, maturity, features]).toHaveLength(5);
 });
 
 test("a complete draft, with finalize's members, is a ContractIR", () => {
