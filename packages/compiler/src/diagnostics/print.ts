@@ -47,14 +47,41 @@ export function diagnosticSort(
   return keyed.map((k) => k.d);
 }
 
+/** C0, DEL, C1, the bidirectional marks, embeddings, overrides and isolates, line separators. */
+function isInert(code: number): boolean {
+  return !(
+    code <= 0x1f ||
+    (code >= 0x7f && code <= 0x9f) ||
+    code === 0x200e ||
+    code === 0x200f ||
+    (code >= 0x2028 && code <= 0x202e) ||
+    (code >= 0x2066 && code <= 0x2069)
+  );
+}
+
+/**
+ * Authored strings and file names reach the terminal through messages: a character a terminal
+ * acts on (an escape sequence, a bidirectional override that reorders the line) is written as
+ * `\uXXXX` instead.
+ */
+function inert(text: string): string {
+  let out = "";
+  for (const ch of text) {
+    const code = ch.charCodeAt(0);
+    out += isInert(code) ? ch : `\\u${code.toString(16).toUpperCase().padStart(4, "0")}`;
+  }
+  return out;
+}
+
 function sentence(text: string): string {
-  const t = text.replace(/\s+/g, " ").trim();
+  const t = inert(text.replace(/\s+/g, " ").trim());
   return /[.!?]$/.test(t) ? t : `${t}.`;
 }
 
 /**
  * One line per diagnostic in the form editors read, related locations indented below it. No
- * colour, no absolute path (the table holds workspace-relative files). Lines are joined with
+ * colour, no absolute path (the table holds workspace-relative files), no character a terminal
+ * acts on. Lines are joined with
  * "\n"; the caller ends the output.
  */
 export function printDiagnostics(diagnostics: readonly Diagnostic[], locations: Locations): string {
@@ -62,7 +89,7 @@ export function printDiagnostics(diagnostics: readonly Diagnostic[], locations: 
   for (const d of diagnosticSort(diagnostics, locations)) {
     const at = diagnosticLocation(d.origin, locations);
     lines.push(
-      `${at.file}:${at.line}:${at.column}: ${d.severity} ${d.rule}: ${sentence(d.message)} Fix: ${sentence(d.fix)}`,
+      `${inert(at.file)}:${at.line}:${at.column}: ${d.severity} ${d.rule}: ${sentence(d.message)} Fix: ${sentence(d.fix)}`,
     );
     const related = d.related
       .map((r) => ({ r, at: diagnosticLocation(r.origin, locations) }))
@@ -74,7 +101,7 @@ export function printDiagnostics(diagnostics: readonly Diagnostic[], locations: 
           compare(x.r.message, y.r.message),
       );
     for (const { r, at: rat } of related) {
-      lines.push(`  ${rat.file}:${rat.line}:${rat.column}: ${sentence(r.message)}`);
+      lines.push(`  ${inert(rat.file)}:${rat.line}:${rat.column}: ${sentence(r.message)}`);
     }
   }
   return lines.join("\n");

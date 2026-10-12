@@ -302,3 +302,10 @@ test("C-8 deep JSON data is bounded too", () => {
   });
   expect(rules(r)).toEqual(["too-deep"]);
 });
+
+test("C-9 an authored key with escape sequences prints inert", () => {
+  const r = run({ "api.yaml": 'api: { name: t }\nx:\n  "\\e[2J": 1\n  "\\e[2J": 2\n' });
+  expect(rules(r)).toEqual(["duplicate-key"]);
+  expect(printed(r)).toContain("key '\\u001B[2J' is defined twice");
+  expect(printed(r)).not.toContain(String.fromCharCode(27));
+});

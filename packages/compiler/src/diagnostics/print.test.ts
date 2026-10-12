@@ -101,3 +101,33 @@ test("the location key is the origin's layer and pointer, never its api", () => 
     "(unknown location)",
   );
 });
+
+test("printer escapes control and bidirectional characters from authored text", () => {
+  const esc = String.fromCharCode(27);
+  const tricky = {
+    "api#/t": site(`a${esc}[2Jb‮.yaml`, 1, 1),
+    "api#/r": site("r.yaml", 2, 1),
+  };
+  const out = printDiagnostics(
+    [
+      d("seampact/load/x", "/t", "api", {
+        message: `key '${esc}[31mred\u0007' ‎hidden⁦⁩ \u009B1m del\u007F`,
+        fix: `drop‭it‏`,
+        related: [{ origin: { layer: "api", pointer: "/r" }, message: `here${esc}]0;title` }],
+      }),
+    ],
+    tricky,
+  );
+  expect(out).toBe(
+    [
+      "a\\u001B[2Jb\\u202E.yaml:1:1: error seampact/load/x: key '\\u001B[31mred\\u0007' \\u200Ehidden\\u2066\\u2069 \\u009B1m del\\u007F. Fix: drop\\u202Dit\\u200F.",
+      "  r.yaml:2:1: here\\u001B]0;title.",
+    ].join("\n"),
+  );
+  // Nothing a terminal would act on is left.
+  const active = [...out].filter((ch) => {
+    const c = ch.charCodeAt(0);
+    return (c <= 0x1f && c !== 0x0a) || (c >= 0x7f && c <= 0x9f) || (c >= 0x200e && c <= 0x206f);
+  });
+  expect(active).toEqual([]);
+});
