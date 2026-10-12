@@ -7,15 +7,18 @@ export interface JsonObject {
 
 export type LayerKind = "api" | "base" | "shared" | "pack";
 
-// One layer after `$include` and `$file` are resolved, `$ref` kept; `file` is relative to the workspace root, forward slashes.
+// `layer` is the single source of truth; the kind is derived by `layerKindOf`.
 export interface RawLayer {
   layer: Origin["layer"];
-  kind: LayerKind;
   file: string;
   tree: JsonObject;
 }
 
-// `layers` in application order (ADR 0002 section 2); `leafOrigins` maps a pointer in `merged` to the origin of the layer that won.
+export function layerKindOf(layer: Origin["layer"]): LayerKind {
+  return layer.startsWith("pack:") ? "pack" : (layer as Exclude<LayerKind, "pack">);
+}
+
+// ADR 0002 section 2: `layers` in application order.
 export interface RawApi {
   name: string;
   layers: RawLayer[];
@@ -23,8 +26,9 @@ export interface RawApi {
   leafOrigins: Record<string, Origin>;
 }
 
+// `locations` only: the `SourceMap` revision belongs to the IR written by finalize (ADR 0004 section 11).
 export interface RawWorkspace {
   root: string;
   apis: RawApi[];
-  sourceMap: SourceMap;
+  locations: SourceMap["locations"];
 }

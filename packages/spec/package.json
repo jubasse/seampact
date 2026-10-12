@@ -15,7 +15,7 @@
     "./config": "./src/config/index.ts",
     "./bundle": "./src/bundle/index.ts",
     "./compatibility": "./src/compatibility/index.ts",
-    "./schemas/*": "./schemas/*",
+    "./schemas/*.json": "./schemas/*.json",
     "./naming/vectors.json": "./vectors/naming/vectors.json"
   },
   "seampact": {

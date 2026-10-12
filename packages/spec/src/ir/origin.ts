@@ -5,7 +5,7 @@ export interface Origin {
   pointer: string;
 }
 
-// ADR 0004 section 11
+// ADR 0004 section 11; `locations` keys are `"<layer>#<pointer>"`.
 export interface SourceMap {
   irRevision: number;
   locations: Record<

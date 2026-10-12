@@ -1,10 +1,14 @@
 import type { Origin } from "@seampact/spec/ir";
 import { expect, test } from "vitest";
-import type { Diagnostic } from "./diagnostics/diagnostic.js";
-import { PACKAGE_NAME } from "./index.js";
+import type { Diagnostic, JsonObject, RawWorkspace } from "./index.js";
+import { layerKindOf } from "./index.js";
 
-test("exposes the package name", () => {
-  expect(PACKAGE_NAME).toBe("@seampact/compiler");
+test("exposes the shared compiler types and helpers through the barrel", () => {
+  const tree: JsonObject = {};
+  const workspace: RawWorkspace = { root: ".", apis: [], locations: {} };
+  expect(layerKindOf("pack:x")).toBe("pack");
+  expect(workspace.apis).toEqual([]);
+  expect(tree).toEqual({});
 });
 
 test("builds a Diagnostic from an Origin of the spec subpath", () => {

@@ -1,5 +1,10 @@
 import type { Origin } from "@seampact/spec/ir";
 
+export interface RelatedLocation {
+  origin: Origin;
+  message: string;
+}
+
 // ADR 0006 section 4
 export interface Diagnostic {
   severity: "error" | "warning";
@@ -7,5 +12,5 @@ export interface Diagnostic {
   message: string;
   fix: string;
   origin: Origin;
-  related: { origin: Origin; message: string }[];
+  related: RelatedLocation[];
 }
