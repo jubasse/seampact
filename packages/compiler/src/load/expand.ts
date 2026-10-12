@@ -1,7 +1,7 @@
 import type { Origin } from "@seampact/spec/ir";
 import { isAlias, isMap, isScalar, isSeq, type Node, type Pair, Scalar, type YAMLMap } from "yaml";
 import { diagnosticInert } from "../diagnostics/print.js";
-import type { ApiLayerId, JsonObject, JsonValue } from "../raw-tree.js";
+import { type ApiLayerId, type JsonObject, type JsonValue, schemaKindOf } from "../raw-tree.js";
 import { type LoadBudget, loadWorkOf } from "./budget.js";
 import { asObject, cloneJson, isReservedKey, jsonObject, setKey } from "./json.js";
 import { LOAD_MAX_DEPTH } from "./limits.js";
@@ -10,7 +10,6 @@ import {
   admitsInteger,
   expectedTypes,
   type Position,
-  type PositionKind,
   type MapView,
   NOT_SCALAR,
   positionAt,
@@ -80,7 +79,7 @@ type JsonFile =
 
 interface Scope {
   file: ParsedFile;
-  /** True in a data position (and below it): the authoring schema expects nothing there. */
+  /** True in a data position (and below it), one the authoring schema marks `DATA`. */
   data: boolean;
   /** Where the authoring schema places this node (P6); undefined when it says nothing. */
   pos: Position | undefined;
@@ -88,16 +87,6 @@ interface Scope {
   stack: StackEntry[];
   /** Nesting level in the merged tree, through includes and `$file`. */
   depth: number;
-}
-
-// Data positions (ADR 0002 section 2): a position where the authoring schema expects nothing (a
-// payload, an example, a default) is data. Only there is a mapping whose sole key is `$file`
-// processed, and null must be written `null`.
-/** The file kind a layer is read as; the validate stage maps the layers the same way. */
-function positionKindOf(layer: Origin["layer"]): PositionKind {
-  if (layer === "workspace" || layer === "api") return layer;
-  if (layer.startsWith("pack:")) return "pack";
-  return "base";
 }
 
 const NULL_SPELLINGS = new Set(["", "~", "Null", "NULL"]);
@@ -184,7 +173,7 @@ export class Expander {
     const scope: Scope = {
       file,
       data: false,
-      pos: rootPosition(positionKindOf(layer)),
+      pos: rootPosition(schemaKindOf(layer)),
       parentKey: undefined,
       stack: [
         {
@@ -264,7 +253,7 @@ export class Expander {
       const scope: Scope = {
         file: ref.file,
         data: false,
-        pos: positionAt(positionKindOf(build.layer), ["schemas", ref.name]),
+        pos: positionAt(schemaKindOf(build.layer), ["schemas", ref.name]),
         parentKey: ref.name,
         stack: [
           {

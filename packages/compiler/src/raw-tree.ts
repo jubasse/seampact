@@ -30,6 +30,21 @@ export function layerKindOf(layer: ApiLayerId): LayerKind {
   return layer.startsWith("pack:") ? "pack" : (layer as Exclude<LayerKind, "pack">);
 }
 
+// The authoring schema a layer's document is read as (P6, by the load stage) and validated as (by
+// the validate stage): one mapping for both. The shared file is a base (ADR 0002 section 1).
+export type LayerSchemaKind = "workspace" | "api" | "base" | "pack";
+
+const LAYER_SCHEMA: Record<LayerKind, LayerSchemaKind> = {
+  api: "api",
+  base: "base",
+  shared: "base",
+  pack: "pack",
+};
+
+export function schemaKindOf(layer: Origin["layer"]): LayerSchemaKind {
+  return layer === "workspace" ? "workspace" : LAYER_SCHEMA[layerKindOf(layer)];
+}
+
 // ADR 0002 section 2: `layers` in application order.
 export interface RawApi {
   name: string;

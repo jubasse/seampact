@@ -33,12 +33,13 @@ import {
   DATA,
   type JsonSchema,
 } from "@seampact/spec/authoring";
+import type { LayerSchemaKind } from "../raw-tree.js";
 
 export type ScalarType = "string" | "number" | "integer" | "boolean" | "null";
 type TypeName = ScalarType | "object" | "array";
 
 /** The file kinds a layer is read as (`schemaKindOf`). */
-export type PositionKind = "workspace" | "api" | "base" | "pack";
+export type PositionKind = LayerSchemaKind;
 
 // The types a node accepts, or `undefined` when it states none.
 type Types = ReadonlySet<TypeName> | undefined;
