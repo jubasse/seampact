@@ -479,7 +479,11 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
       return fail("write", position, "a draft value keeps its prototype");
     },
     preventExtensions() {
-      return fail("write", position, "a draft value stays extensible for the halves after this one");
+      return fail(
+        "write",
+        position,
+        "a draft value stays extensible for the halves after this one",
+      );
     },
   });
 

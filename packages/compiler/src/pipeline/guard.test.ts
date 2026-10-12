@@ -170,7 +170,12 @@ describe("guard refuses undeclared access", () => {
       part("access.rights", [], ["operations[].params.header", "operations[].params.query"]),
     );
     const params = operationOf(rights).params;
-    const proof = { name: "X-Proof", type: text, required: true, derivedFrom: derivedFrom("rule.proof") };
+    const proof = {
+      name: "X-Proof",
+      type: text,
+      required: true,
+      derivedFrom: derivedFrom("rule.proof"),
+    };
     params?.header.push(proof);
     expect(operationOf(value).params?.header).toHaveLength(1);
     const misplaced = refused(() => params?.query.push({ ...proof, name: "proof" }));
@@ -310,9 +315,7 @@ describe("guard refuses writes around its checks", () => {
     const operation = operationOf(guarded);
     const key = Symbol("note");
     expect(refused(() => Reflect.set(operation, key, 1)).message).toContain("symbol");
-    expect(refused(() => Object.defineProperty(operation, key, { value: 1 })).access).toBe(
-      "write",
-    );
+    expect(refused(() => Object.defineProperty(operation, key, { value: 1 })).access).toBe("write");
     expect(refused(() => Reflect.deleteProperty(operation, key)).access).toBe("write");
     expect(Object.getOwnPropertySymbols(operationOf(value))).toEqual([]);
   });
@@ -345,9 +348,9 @@ describe("guard refuses writes around its checks", () => {
     expect(refused(() => Reflect.set(list, "length", "0")).message).toContain(
       "owned by tree.nodes (declared)",
     );
-    expect(
-      refused(() => Object.defineProperty(list, "length", { value: 0 })).message,
-    ).toContain("owned by tree.nodes (declared)");
+    expect(refused(() => Object.defineProperty(list, "length", { value: 0 })).message).toContain(
+      "owned by tree.nodes (declared)",
+    );
     expect(operationOf(value).params?.query).toHaveLength(1);
     expect(() => Reflect.set(list, "length", -1)).toThrow(RangeError);
   });

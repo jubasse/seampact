@@ -12,7 +12,6 @@ import type { DraftField } from "./ownership.js";
 // `PassPart` that declares the draft fields it reads and writes. The guard (`guard.ts`) holds a half to its
 // declaration in tests; the field-ownership table (`ownership.ts`) says which half may write each field.
 
-
 /** A problem an example has against a type use, located inside the example value. */
 export interface TreeSchemaExampleIssue {
   /** The JSON Pointer of the offending value inside the example (`""` for the example itself). */

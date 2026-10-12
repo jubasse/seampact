@@ -139,7 +139,8 @@ function objectsOf(value: unknown, found: object[] = []): object[] {
 describe("derivation data", () => {
   test("the data is deep-frozen and shares no object", () => {
     const objects = objectsOf([derivationTable, derivationRoles, derivationIssueMembers]).slice(1);
-    for (const object of objects) expect(Object.isFrozen(object), JSON.stringify(object)).toBe(true);
+    for (const object of objects)
+      expect(Object.isFrozen(object), JSON.stringify(object)).toBe(true);
     expect(new Set(objects).size, "an object reached twice").toBe(objects.length);
   });
 
@@ -160,4 +161,3 @@ describe("derivation data", () => {
     expect(pattern?.normalized).toBe(pattern?.source);
   });
 });
-
