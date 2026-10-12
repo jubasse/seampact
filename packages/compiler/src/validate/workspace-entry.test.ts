@@ -79,16 +79,63 @@ test("a single api file has no entry document", () => {
   expect(validateWorkspace(loaded.workspace).workspace).toEqual([]);
 });
 
-test("a workspace key brought by $include is refused", () => {
+// ADR 0002 section 2: `$include` may bring any key, `workspace:` included; the entry's kind is
+// read from its keys once its includes are resolved.
+test("a workspace key brought by $include makes the entry a workspace", () => {
+  const { loaded, validated } = entryOf({
+    "workspace.yaml": "$include: ./ws.yaml\n",
+    "ws.yaml": "workspace:\n  apis:\n    a: ./a.yaml\n",
+    "a.yaml": "api: { name: a, version: 1 }\n",
+  });
+  expect(loaded.diagnostics).toEqual([]);
+  expect(loaded.workspace.entry?.layer).toBe("workspace");
+  expect(loaded.workspace.apis.map((a) => a.name)).toEqual(["a"]);
+  expect(validated.workspace).toEqual([]);
+  expect(loaded.workspace.locations["workspace#/workspace/apis/a"]).toMatchObject({
+    file: "ws.yaml",
+    line: 3,
+  });
+});
+
+test("an included workspace's scalars are typed as the workspace's, with its layer", () => {
+  const { loaded } = entryOf({
+    "workspace.yaml": "$include: ./ws.yaml\n",
+    "ws.yaml": "workspace:\n  apis:\n    a: ./a.yaml\n  editorSchemas: 12\n",
+    "a.yaml": "api: { name: a, version: 1 }\n",
+  });
+  expect(loaded.diagnostics.map((d) => [d.rule, d.origin.layer])).toEqual([
+    ["seampact/load/scalar-type", "workspace"],
+  ]);
+  expect(printDiagnostics(loaded.diagnostics, loaded.workspace.locations)).toMatch(
+    /^ws\.yaml:4:18: /,
+  );
+});
+
+test("an entry whose include brings api: is an api file, its diagnostics the api's", () => {
   const loaded = loadWorkspace({
     reader: loadMemoryReader({
-      "workspace.yaml": "$include: ./ws.yaml\n",
-      "ws.yaml": "workspace:\n  apis:\n    a: ./a.yaml\n",
-      "a.yaml": "api: { name: a, version: 1 }\n",
+      "api.yaml": "$include: ./head.yaml\n",
+      "head.yaml": "api: { name: a, version: 1, summary: 12 }\n",
     }),
-    entry: "workspace.yaml",
+    entry: "api.yaml",
+  });
+  expect(loaded.workspace.entry).toBeUndefined();
+  expect(loaded.workspace.apis.map((a) => a.name)).toEqual(["a"]);
+  expect(loaded.diagnostics.map((d) => [d.rule, d.origin.layer])).toEqual([
+    ["seampact/load/scalar-type", "api"],
+  ]);
+  const keys = Object.keys(loaded.workspace.locations);
+  expect(keys.every((k) => !k.startsWith("workspace#"))).toBe(true);
+});
+
+test("an entry that is both a workspace and an api is refused", () => {
+  const { loaded } = entryOf({
+    "workspace.yaml": "api: { name: a, version: 1 }\n$include: ./ws.yaml\n",
+    "ws.yaml": "workspace:\n  apis:\n    a: ./a.yaml\n",
+    "a.yaml": "api: { name: a, version: 1 }\n",
   });
   expect(loaded.diagnostics.map((d) => d.rule)).toEqual(["seampact/load/workspace-shape"]);
+  expect(loaded.diagnostics[0]?.message).toContain("both");
 });
 
 test("a scalar of the wrong type in workspace.yaml is a P6 load error, located", () => {

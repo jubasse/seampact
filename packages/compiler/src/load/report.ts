@@ -39,6 +39,27 @@ export class Reporter {
     return origin;
   }
 
+  /**
+   * Gives the diagnostics reported since `since` under layer `from` the layer `to`, their table
+   * keys with them: for a file whose layer is known only once it is read (an entry file whose
+   * `$include` brings `workspace:` or `api:`). Those keys are used by nothing reported before.
+   */
+  relabel(since: number, from: Origin["layer"], to: Origin["layer"]): void {
+    const move = (origin: Origin): Origin => {
+      if (origin.layer !== from) return origin;
+      const key = diagnosticLocationKey(origin);
+      const site = this.locations[key];
+      delete this.locations[key];
+      const moved: Origin = { layer: to, pointer: origin.pointer };
+      if (site) this.locations[diagnosticLocationKey(moved)] = site;
+      return moved;
+    };
+    for (const d of this.diagnostics.slice(since)) {
+      d.origin = move(d.origin);
+      d.related = d.related.map((r) => ({ ...r, origin: move(r.origin) }));
+    }
+  }
+
   report(p: PendingDiagnostic): void {
     const identity = `${p.rule}|${p.at.file}|${p.at.line}|${p.at.column}|${p.message}`;
     if (this.seen.has(identity)) return;

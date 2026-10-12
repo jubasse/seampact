@@ -12,6 +12,7 @@ import type {
 import { LoadBudget, loadWorkOf } from "./budget.js";
 import { mergeLayers } from "./compose.js";
 import { Expander, type LayerBuild, mapIndex, navigate } from "./expand.js";
+import { entryRootPosition } from "./positions.js";
 import { asObject, isReservedKey, showValue } from "./json.js";
 import { LOAD_MAX_DEPTH } from "./limits.js";
 import { isInside, joinPath, loadNormalizePath, pointerEscape } from "./paths.js";
@@ -113,27 +114,22 @@ class Loader {
       });
     } else if (typeof this.store.checkFile(entry, ".", entrySite, "the entry file") === "string") {
       const pf = this.store.parse(entry, ".");
-      if (pf) {
-        // The entry is read as the workspace kind when it writes `workspace:` itself, so the
-        // authoring schema of that kind types its scalars; any other entry is an api file.
-        const isWorkspace = isMap(pf.root) && mapIndex(pf.root).has("workspace");
-        entryBuild = isWorkspace ? this.layer(pf, "workspace") : this.layer(pf, "api");
-      }
+      if (pf) entryBuild = this.entryLayer(pf);
     }
     if (entryBuild) {
       // What is reported on the entry from here on is the entry's layer's.
       this.rep.layer = entryBuild.layer;
       const tree = entryBuild.tree;
       const ws = asObject(tree.workspace);
-      if (entryBuild.layer === "workspace" && !ws) {
-        // `workspace:` holds no mapping: P6 or the validate stage reports it, nothing more here.
-      } else if (ws && entryBuild.layer !== "workspace") {
+      if (tree.workspace !== undefined && tree.api !== undefined) {
         this.badShape(
           entryBuild,
-          "/workspace",
-          "the workspace key comes from an $include, so the file is not read as a workspace file",
-          "write workspace: in the entry file itself",
+          "/api",
+          "the entry file is both a workspace (workspace:) and an api (api:)",
+          "keep one of them: a workspace names its api files, an api file is the entry of one api",
         );
+      } else if (entryBuild.layer === "workspace" && !ws) {
+        // `workspace:` holds no mapping: P6 or the validate stage reports it, nothing more here.
       } else if (ws && entryBuild.layer === "workspace") {
         this.workspaceMode(entryBuild, ws, apis, config);
       } else if (entryBuild.layer === "api" && asObject(tree.api)) {
@@ -171,6 +167,26 @@ class Loader {
       diagnostics: diagnosticSort(this.rep.diagnostics, locations),
       files: [...this.store.touched].sort(),
     };
+  }
+
+  /**
+   * The entry file, read as a workspace file when it holds `workspace:` and as an api file
+   * otherwise. When its own keys do not tell (an `$include` brings them, ADR 0002 section 2), it
+   * is read against both root schemas and takes the kind its keys say once its includes are
+   * resolved; what was reported meanwhile moves to that layer.
+   */
+  private entryLayer(pf: ParsedFile): LayerBuild<"workspace"> | LayerBuild<"api"> {
+    const own = isMap(pf.root) ? mapIndex(pf.root) : undefined;
+    if (own?.has("workspace")) return this.layer(pf, "workspace");
+    if (!own?.has("$include") || own.has("api")) return this.layer(pf, "api");
+    const since = this.rep.diagnostics.length;
+    const saved = this.rep.layer;
+    this.rep.layer = "workspace";
+    const build = this.ex.expandLayer(pf, "workspace", entryRootPosition());
+    this.rep.layer = saved;
+    if (build.tree.workspace !== undefined) return build;
+    this.rep.relabel(since, "workspace", "api");
+    return { ...build, layer: "api" };
   }
 
   private badShape(

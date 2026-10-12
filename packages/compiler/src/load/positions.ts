@@ -527,6 +527,21 @@ export function rootPosition(kind: PositionKind): Position | undefined {
   return roots.get(kind);
 }
 
+let entryRoot: Position | undefined;
+
+/**
+ * The root of an entry file whose kind its own keys do not tell (its `$include` brings them): the
+ * workspace and the api root schemas as alternatives, so each key is typed by the kind it belongs
+ * to.
+ */
+export function entryRootPosition(): Position | undefined {
+  const ws = rootPosition("workspace");
+  const api = rootPosition("api");
+  if (!ws || !api) return ws ?? api;
+  entryRoot ??= position({ anyOf: [ws.node, api.node] });
+  return entryRoot;
+}
+
 const patterns = new Map<string, RegExp>();
 function patternOf(pattern: string): RegExp {
   let re = patterns.get(pattern);

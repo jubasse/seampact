@@ -147,8 +147,15 @@ export class Expander {
     private readonly budget: LoadBudget,
   ) {}
 
-  /** Expands a whole file as one layer. */
-  expandLayer<L extends Origin["layer"]>(file: ParsedFile, layer: L): LayerBuild<L> {
+  /**
+   * Expands a whole file as one layer, its scalars typed from `root` (by default, the root schema
+   * of the layer's kind).
+   */
+  expandLayer<L extends Origin["layer"]>(
+    file: ParsedFile,
+    layer: L,
+    root: Position | undefined = rootPosition(schemaKindOf(layer)),
+  ): LayerBuild<L> {
     const build: LayerBuild<L> = {
       layer,
       parsed: file,
@@ -173,7 +180,7 @@ export class Expander {
     const scope: Scope = {
       file,
       data: false,
-      pos: rootPosition(schemaKindOf(layer)),
+      pos: root,
       parentKey: undefined,
       stack: [
         {
