@@ -1,1 +1,2302 @@
-[]
+[
+  {
+    "id": "derived/endpoints",
+    "category": "derived",
+    "owner": ["tasks"],
+    "role": "endpoints",
+    "segments": ["tasks"],
+    "expected": {
+      "typescript": "TasksEndpoints",
+      "kotlin": "TasksEndpoints",
+      "java": "TasksEndpoints",
+      "php": "TasksEndpoints"
+    },
+    "canonicalId": "TasksEndpoints"
+  },
+  {
+    "id": "derived/error-class",
+    "category": "derived",
+    "owner": ["tasks", "locked"],
+    "role": "error",
+    "segments": ["tasks", "locked"],
+    "expected": {
+      "typescript": "TasksLockedError",
+      "kotlin": "TasksLockedError",
+      "java": "TasksLockedError",
+      "php": "TasksLockedError"
+    },
+    "canonicalId": "TasksLockedError"
+  },
+  {
+    "id": "derived/error-class-404-gone",
+    "category": "derived",
+    "owner": ["404", "gone"],
+    "role": "error",
+    "segments": ["404", "gone"],
+    "expected": {
+      "typescript": "_404GoneError",
+      "kotlin": "_404GoneError",
+      "java": "_404GoneError",
+      "php": "_404GoneError"
+    },
+    "canonicalId": "_404GoneError"
+  },
+  {
+    "id": "derived/errors-result",
+    "category": "derived",
+    "owner": ["update", "task"],
+    "role": "errors",
+    "segments": ["update", "task"],
+    "expected": {
+      "typescript": "UpdateTaskErrors",
+      "kotlin": "UpdateTaskErrors",
+      "java": "UpdateTaskErrors",
+      "php": "UpdateTaskErrors"
+    },
+    "canonicalId": "UpdateTaskErrors"
+  },
+  {
+    "id": "derived/headers",
+    "category": "derived",
+    "owner": ["create", "task"],
+    "role": "headers",
+    "segments": ["create", "task"],
+    "expected": {
+      "typescript": "CreateTaskHeaders",
+      "kotlin": "CreateTaskHeaders",
+      "java": "CreateTaskHeaders",
+      "php": "CreateTaskHeaders"
+    },
+    "canonicalId": "CreateTaskHeaders"
+  },
+  {
+    "id": "derived/input",
+    "category": "derived",
+    "owner": ["assign", "task"],
+    "role": "input",
+    "segments": ["assign", "task"],
+    "expected": {
+      "typescript": "AssignTaskInput",
+      "kotlin": "AssignTaskInput",
+      "java": "AssignTaskInput",
+      "php": "AssignTaskInput"
+    },
+    "canonicalId": "AssignTaskInput"
+  },
+  {
+    "id": "derived/input-digit-led",
+    "category": "derived",
+    "owner": ["2fa"],
+    "role": "input",
+    "segments": ["2fa"],
+    "expected": {
+      "typescript": "_2faInput",
+      "kotlin": "_2faInput",
+      "java": "_2faInput",
+      "php": "_2faInput"
+    },
+    "canonicalId": "_2faInput"
+  },
+  {
+    "id": "derived/item",
+    "category": "derived",
+    "owner": ["order", "lines"],
+    "role": "item",
+    "segments": ["order", "lines"],
+    "expected": {
+      "typescript": "OrderLinesItem",
+      "kotlin": "OrderLinesItem",
+      "java": "OrderLinesItem",
+      "php": "OrderLinesItem"
+    },
+    "canonicalId": "OrderLinesItem"
+  },
+  {
+    "id": "derived/member-created-at",
+    "category": "derived",
+    "owner": ["created", "at"],
+    "role": "member",
+    "segments": ["created", "at"],
+    "expected": {
+      "typescript": "createdAt",
+      "kotlin": "createdAt",
+      "java": "createdAt",
+      "php": "createdAt"
+    }
+  },
+  {
+    "id": "derived/member-user-id",
+    "category": "derived",
+    "owner": ["user", "id"],
+    "role": "member",
+    "segments": ["user", "id"],
+    "expected": {
+      "typescript": "userId",
+      "kotlin": "userId",
+      "java": "userId",
+      "php": "userId"
+    }
+  },
+  {
+    "id": "derived/operation-assign-task",
+    "category": "derived",
+    "owner": ["assign", "task"],
+    "role": "operation",
+    "segments": ["assign", "task"],
+    "expected": {
+      "typescript": "assignTask",
+      "kotlin": "assignTask",
+      "java": "assignTask",
+      "php": "assignTask"
+    },
+    "operationId": {
+      "camel": "assignTask",
+      "snake": "assign_task"
+    }
+  },
+  {
+    "id": "derived/operation-get-tasks-batch",
+    "category": "derived",
+    "owner": ["get", "tasks", "batch"],
+    "role": "operation",
+    "segments": ["get", "tasks", "batch"],
+    "expected": {
+      "typescript": "getTasksBatch",
+      "kotlin": "getTasksBatch",
+      "java": "getTasksBatch",
+      "php": "getTasksBatch"
+    },
+    "operationId": {
+      "camel": "getTasksBatch",
+      "snake": "get_tasks_batch"
+    }
+  },
+  {
+    "id": "derived/operation-list-tasks",
+    "category": "derived",
+    "owner": ["list", "tasks"],
+    "role": "operation",
+    "segments": ["list", "tasks"],
+    "expected": {
+      "typescript": "listTasks",
+      "kotlin": "listTasks",
+      "java": "listTasks",
+      "php": "listTasks"
+    },
+    "operationId": {
+      "camel": "listTasks",
+      "snake": "list_tasks"
+    }
+  },
+  {
+    "id": "derived/operation-noun-verb",
+    "category": "derived",
+    "owner": ["tasks", "list"],
+    "role": "operation",
+    "segments": ["tasks", "list"],
+    "expected": {
+      "typescript": "tasksList",
+      "kotlin": "tasksList",
+      "java": "tasksList",
+      "php": "tasksList"
+    },
+    "operationId": {
+      "camel": "tasksList",
+      "snake": "tasks_list"
+    }
+  },
+  {
+    "id": "derived/operation-single-word",
+    "category": "derived",
+    "owner": ["list"],
+    "role": "operation",
+    "segments": ["list"],
+    "expected": {
+      "typescript": "list",
+      "kotlin": "list",
+      "java": "list",
+      "php": "list"
+    },
+    "operationId": {
+      "camel": "list",
+      "snake": "list"
+    }
+  },
+  {
+    "id": "derived/output",
+    "category": "derived",
+    "owner": ["get", "task"],
+    "role": "output",
+    "segments": ["get", "task"],
+    "expected": {
+      "typescript": "GetTaskOutput",
+      "kotlin": "GetTaskOutput",
+      "java": "GetTaskOutput",
+      "php": "GetTaskOutput"
+    },
+    "canonicalId": "GetTaskOutput"
+  },
+  {
+    "id": "derived/params-error-1042",
+    "category": "derived",
+    "owner": ["1042"],
+    "role": "params",
+    "segments": ["1042"],
+    "expected": {
+      "typescript": "_1042Params",
+      "kotlin": "_1042Params",
+      "java": "_1042Params",
+      "php": "_1042Params"
+    },
+    "canonicalId": "_1042Params"
+  },
+  {
+    "id": "derived/params-error-dotted",
+    "category": "derived",
+    "owner": ["api", "rate", "limited"],
+    "role": "params",
+    "segments": ["api", "rate", "limited"],
+    "expected": {
+      "typescript": "ApiRateLimitedParams",
+      "kotlin": "ApiRateLimitedParams",
+      "java": "ApiRateLimitedParams",
+      "php": "ApiRateLimitedParams"
+    },
+    "canonicalId": "ApiRateLimitedParams"
+  },
+  {
+    "id": "derived/params-right",
+    "category": "derived",
+    "owner": ["tasks", "update"],
+    "role": "params",
+    "segments": ["tasks", "update"],
+    "expected": {
+      "typescript": "TasksUpdateParams",
+      "kotlin": "TasksUpdateParams",
+      "java": "TasksUpdateParams",
+      "php": "TasksUpdateParams"
+    },
+    "canonicalId": "TasksUpdateParams"
+  },
+  {
+    "id": "derived/path",
+    "category": "derived",
+    "owner": ["get", "task"],
+    "role": "path",
+    "segments": ["get", "task"],
+    "expected": {
+      "typescript": "GetTaskPath",
+      "kotlin": "GetTaskPath",
+      "java": "GetTaskPath",
+      "php": "GetTaskPath"
+    },
+    "canonicalId": "GetTaskPath"
+  },
+  {
+    "id": "derived/property",
+    "category": "derived",
+    "owner": ["order", "address"],
+    "role": "property",
+    "segments": ["order", "address"],
+    "expected": {
+      "typescript": "OrderAddress",
+      "kotlin": "OrderAddress",
+      "java": "OrderAddress",
+      "php": "OrderAddress"
+    },
+    "canonicalId": "OrderAddress"
+  },
+  {
+    "id": "derived/query",
+    "category": "derived",
+    "owner": ["list", "tasks"],
+    "role": "query",
+    "segments": ["list", "tasks"],
+    "expected": {
+      "typescript": "ListTasksQuery",
+      "kotlin": "ListTasksQuery",
+      "java": "ListTasksQuery",
+      "php": "ListTasksQuery"
+    },
+    "canonicalId": "ListTasksQuery"
+  },
+  {
+    "id": "derived/response-200",
+    "category": "derived",
+    "owner": ["list", "tasks"],
+    "role": "response",
+    "status": 200,
+    "segments": ["list", "tasks"],
+    "expected": {
+      "typescript": "ListTasksResponse200",
+      "kotlin": "ListTasksResponse200",
+      "java": "ListTasksResponse200",
+      "php": "ListTasksResponse200"
+    },
+    "canonicalId": "ListTasksResponse200"
+  },
+  {
+    "id": "derived/response-201",
+    "category": "derived",
+    "owner": ["create", "task"],
+    "role": "response",
+    "status": 201,
+    "segments": ["create", "task"],
+    "expected": {
+      "typescript": "CreateTaskResponse201",
+      "kotlin": "CreateTaskResponse201",
+      "java": "CreateTaskResponse201",
+      "php": "CreateTaskResponse201"
+    },
+    "canonicalId": "CreateTaskResponse201"
+  },
+  {
+    "id": "derived/value",
+    "category": "derived",
+    "owner": ["order", "labels"],
+    "role": "value",
+    "segments": ["order", "labels"],
+    "expected": {
+      "typescript": "OrderLabelsValue",
+      "kotlin": "OrderLabelsValue",
+      "java": "OrderLabelsValue",
+      "php": "OrderLabelsValue"
+    },
+    "canonicalId": "OrderLabelsValue"
+  },
+  {
+    "id": "derived/variant",
+    "category": "derived",
+    "owner": ["notice", "assigned"],
+    "role": "variant",
+    "segments": ["notice", "assigned"],
+    "expected": {
+      "typescript": "NoticeAssigned",
+      "kotlin": "NoticeAssigned",
+      "java": "NoticeAssigned",
+      "php": "NoticeAssigned"
+    },
+    "canonicalId": "NoticeAssigned"
+  },
+  {
+    "id": "digits/enum-member-2FA-splits",
+    "category": "digits",
+    "source": "enumValue",
+    "written": "2FA",
+    "role": "enumMember",
+    "position": 1,
+    "segments": ["2", "fa"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "_2_FA",
+      "java": "_2_FA",
+      "php": "_2Fa"
+    }
+  },
+  {
+    "id": "digits/enum-member-2fa",
+    "category": "digits",
+    "source": "enumValue",
+    "written": "2fa",
+    "role": "enumMember",
+    "position": 1,
+    "segments": ["2fa"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "_2FA",
+      "java": "_2FA",
+      "php": "_2fa"
+    }
+  },
+  {
+    "id": "digits/enum-member-plus-one",
+    "category": "digits",
+    "source": "enumValue",
+    "written": "+1",
+    "role": "enumMember",
+    "position": 4,
+    "segments": ["1"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "_1",
+      "java": "_1",
+      "php": "_1"
+    }
+  },
+  {
+    "id": "digits/error-code-error-1042",
+    "category": "digits",
+    "source": "name",
+    "written": "1042",
+    "role": "error",
+    "segments": ["1042"],
+    "expected": {
+      "typescript": "_1042Error",
+      "kotlin": "_1042Error",
+      "java": "_1042Error",
+      "php": "_1042Error"
+    }
+  },
+  {
+    "id": "digits/error-code-error-404-gone",
+    "category": "digits",
+    "source": "name",
+    "written": "404-gone",
+    "role": "error",
+    "segments": ["404", "gone"],
+    "expected": {
+      "typescript": "_404GoneError",
+      "kotlin": "_404GoneError",
+      "java": "_404GoneError",
+      "php": "_404GoneError"
+    }
+  },
+  {
+    "id": "digits/error-code-params-1042",
+    "category": "digits",
+    "source": "name",
+    "written": "1042",
+    "role": "params",
+    "segments": ["1042"],
+    "expected": {
+      "typescript": "_1042Params",
+      "kotlin": "_1042Params",
+      "java": "_1042Params",
+      "php": "_1042Params"
+    }
+  },
+  {
+    "id": "digits/error-code-params-404-gone",
+    "category": "digits",
+    "source": "name",
+    "written": "404-gone",
+    "role": "params",
+    "segments": ["404", "gone"],
+    "expected": {
+      "typescript": "_404GoneParams",
+      "kotlin": "_404GoneParams",
+      "java": "_404GoneParams",
+      "php": "_404GoneParams"
+    }
+  },
+  {
+    "id": "digits/member-2FA-splits",
+    "category": "digits",
+    "source": "name",
+    "written": "2FA",
+    "role": "member",
+    "segments": ["2", "fa"],
+    "expected": {
+      "typescript": "_2Fa",
+      "kotlin": "_2Fa",
+      "java": "_2Fa",
+      "php": "_2Fa"
+    }
+  },
+  {
+    "id": "digits/member-2fa",
+    "category": "digits",
+    "source": "name",
+    "written": "2fa",
+    "role": "member",
+    "segments": ["2fa"],
+    "expected": {
+      "typescript": "_2fa",
+      "kotlin": "_2fa",
+      "java": "_2fa",
+      "php": "_2fa"
+    }
+  },
+  {
+    "id": "digits/operation-digit-led",
+    "category": "digits",
+    "source": "name",
+    "written": "2fa_verify",
+    "role": "operation",
+    "segments": ["2fa", "verify"],
+    "expected": {
+      "typescript": "_2faVerify",
+      "kotlin": "_2faVerify",
+      "java": "_2faVerify",
+      "php": "_2faVerify"
+    }
+  },
+  {
+    "id": "digits/schema-digit-led",
+    "category": "digits",
+    "source": "name",
+    "written": "3d_secure",
+    "role": "schema",
+    "segments": ["3d", "secure"],
+    "expected": {
+      "typescript": "_3dSecure",
+      "kotlin": "_3dSecure",
+      "java": "_3dSecure",
+      "php": "_3dSecure"
+    }
+  },
+  {
+    "id": "enum-fallback/codeName-without-segment",
+    "category": "enum-fallback",
+    "source": "enumValue",
+    "written": "ok",
+    "codeName": "+",
+    "role": "enumMember",
+    "position": 2,
+    "error": "no-segment"
+  },
+  {
+    "id": "enum-fallback/empty-at-2",
+    "category": "enum-fallback",
+    "source": "enumValue",
+    "written": "",
+    "role": "enumMember",
+    "position": 2,
+    "segments": ["value2"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "VALUE2",
+      "java": "VALUE2",
+      "php": "Value2"
+    }
+  },
+  {
+    "id": "enum-fallback/minus-at-1",
+    "category": "enum-fallback",
+    "source": "enumValue",
+    "written": "-",
+    "role": "enumMember",
+    "position": 1,
+    "segments": ["value1"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "VALUE1",
+      "java": "VALUE1",
+      "php": "Value1"
+    }
+  },
+  {
+    "id": "enum-fallback/operator-at-7",
+    "category": "enum-fallback",
+    "source": "enumValue",
+    "written": ">=",
+    "role": "enumMember",
+    "position": 7,
+    "segments": ["value7"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "VALUE7",
+      "java": "VALUE7",
+      "php": "Value7"
+    }
+  },
+  {
+    "id": "enum-fallback/plain-value",
+    "category": "enum-fallback",
+    "source": "enumValue",
+    "written": "in_progress",
+    "role": "enumMember",
+    "position": 1,
+    "segments": ["in", "progress"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "IN_PROGRESS",
+      "java": "IN_PROGRESS",
+      "php": "InProgress"
+    }
+  },
+  {
+    "id": "enum-fallback/plus-at-3",
+    "category": "enum-fallback",
+    "source": "enumValue",
+    "written": "+",
+    "role": "enumMember",
+    "position": 3,
+    "segments": ["value3"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "VALUE3",
+      "java": "VALUE3",
+      "php": "Value3"
+    }
+  },
+  {
+    "id": "enum-fallback/single-word",
+    "category": "enum-fallback",
+    "source": "enumValue",
+    "written": "done",
+    "role": "enumMember",
+    "position": 2,
+    "segments": ["done"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "DONE",
+      "java": "DONE",
+      "php": "Done"
+    }
+  },
+  {
+    "id": "enum-fallback/star-at-12",
+    "category": "enum-fallback",
+    "source": "enumValue",
+    "written": "*",
+    "role": "enumMember",
+    "position": 12,
+    "segments": ["value12"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "VALUE12",
+      "java": "VALUE12",
+      "php": "Value12"
+    }
+  },
+  {
+    "id": "php-case/array-upper",
+    "category": "php-case",
+    "source": "name",
+    "written": "ARRAY",
+    "role": "schema",
+    "segments": ["array"],
+    "expected": {
+      "typescript": "Array_",
+      "kotlin": "Array_",
+      "java": "Array",
+      "php": "Array_"
+    }
+  },
+  {
+    "id": "php-case/enum-case-mixed",
+    "category": "php-case",
+    "source": "enumValue",
+    "written": "Class",
+    "role": "enumMember",
+    "position": 1,
+    "segments": ["class"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "CLASS",
+      "java": "CLASS",
+      "php": "Class_"
+    }
+  },
+  {
+    "id": "php-case/enum-case-upper",
+    "category": "php-case",
+    "source": "enumValue",
+    "written": "CLASS",
+    "role": "enumMember",
+    "position": 1,
+    "segments": ["class"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "CLASS",
+      "java": "CLASS",
+      "php": "Class_"
+    }
+  },
+  {
+    "id": "php-case/fn-upper",
+    "category": "php-case",
+    "source": "name",
+    "written": "FN",
+    "role": "schema",
+    "segments": ["fn"],
+    "expected": {
+      "typescript": "Fn",
+      "kotlin": "Fn",
+      "java": "Fn",
+      "php": "Fn_"
+    }
+  },
+  {
+    "id": "php-case/list-lower",
+    "category": "php-case",
+    "source": "name",
+    "written": "list",
+    "role": "schema",
+    "segments": ["list"],
+    "expected": {
+      "typescript": "List",
+      "kotlin": "List_",
+      "java": "List_",
+      "php": "List_"
+    }
+  },
+  {
+    "id": "php-case/list-pascal",
+    "category": "php-case",
+    "source": "name",
+    "written": "List",
+    "role": "schema",
+    "segments": ["list"],
+    "expected": {
+      "typescript": "List",
+      "kotlin": "List_",
+      "java": "List_",
+      "php": "List_"
+    }
+  },
+  {
+    "id": "php-case/list-upper",
+    "category": "php-case",
+    "source": "name",
+    "written": "LIST",
+    "role": "schema",
+    "segments": ["list"],
+    "expected": {
+      "typescript": "List",
+      "kotlin": "List_",
+      "java": "List_",
+      "php": "List_"
+    }
+  },
+  {
+    "id": "php-case/match-upper",
+    "category": "php-case",
+    "source": "name",
+    "written": "MATCH",
+    "role": "schema",
+    "segments": ["match"],
+    "expected": {
+      "typescript": "Match",
+      "kotlin": "Match",
+      "java": "Match",
+      "php": "Match_"
+    }
+  },
+  {
+    "id": "php-case/member-list-upper",
+    "category": "php-case",
+    "source": "name",
+    "written": "LIST",
+    "role": "member",
+    "segments": ["list"],
+    "expected": {
+      "typescript": "list",
+      "kotlin": "list",
+      "java": "list",
+      "php": "list"
+    }
+  },
+  {
+    "id": "reserved/enum-member-class",
+    "category": "reserved",
+    "source": "enumValue",
+    "written": "class",
+    "role": "enumMember",
+    "position": 1,
+    "segments": ["class"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "CLASS",
+      "java": "CLASS",
+      "php": "Class_"
+    }
+  },
+  {
+    "id": "reserved/enum-member-enum",
+    "category": "reserved",
+    "source": "enumValue",
+    "written": "enum",
+    "role": "enumMember",
+    "position": 1,
+    "segments": ["enum"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "ENUM",
+      "java": "ENUM",
+      "php": "Enum"
+    }
+  },
+  {
+    "id": "reserved/enum-member-list",
+    "category": "reserved",
+    "source": "enumValue",
+    "written": "list",
+    "role": "enumMember",
+    "position": 1,
+    "segments": ["list"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "LIST",
+      "java": "LIST",
+      "php": "List"
+    }
+  },
+  {
+    "id": "reserved/enum-member-match",
+    "category": "reserved",
+    "source": "enumValue",
+    "written": "match",
+    "role": "enumMember",
+    "position": 1,
+    "segments": ["match"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "MATCH",
+      "java": "MATCH",
+      "php": "Match"
+    }
+  },
+  {
+    "id": "reserved/enum-member-new",
+    "category": "reserved",
+    "source": "enumValue",
+    "written": "new",
+    "role": "enumMember",
+    "position": 1,
+    "segments": ["new"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "NEW",
+      "java": "NEW",
+      "php": "New"
+    }
+  },
+  {
+    "id": "reserved/enum-member-null",
+    "category": "reserved",
+    "source": "enumValue",
+    "written": "null",
+    "role": "enumMember",
+    "position": 1,
+    "segments": ["null"],
+    "expected": {
+      "typescript": null,
+      "kotlin": "NULL",
+      "java": "NULL",
+      "php": "Null"
+    }
+  },
+  {
+    "id": "reserved/member-arguments",
+    "category": "reserved",
+    "source": "name",
+    "written": "arguments",
+    "role": "member",
+    "segments": ["arguments"],
+    "expected": {
+      "typescript": "arguments_",
+      "kotlin": "arguments",
+      "java": "arguments",
+      "php": "arguments"
+    }
+  },
+  {
+    "id": "reserved/member-class",
+    "category": "reserved",
+    "source": "name",
+    "written": "class",
+    "role": "member",
+    "segments": ["class"],
+    "expected": {
+      "typescript": "class_",
+      "kotlin": "class_",
+      "java": "class_",
+      "php": "class"
+    }
+  },
+  {
+    "id": "reserved/member-constructor",
+    "category": "reserved",
+    "source": "name",
+    "written": "constructor",
+    "role": "member",
+    "segments": ["constructor"],
+    "expected": {
+      "typescript": "constructor_",
+      "kotlin": "constructor",
+      "java": "constructor",
+      "php": "constructor"
+    }
+  },
+  {
+    "id": "reserved/member-default",
+    "category": "reserved",
+    "source": "name",
+    "written": "default",
+    "role": "member",
+    "segments": ["default"],
+    "expected": {
+      "typescript": "default_",
+      "kotlin": "default",
+      "java": "default_",
+      "php": "default"
+    }
+  },
+  {
+    "id": "reserved/member-delete",
+    "category": "reserved",
+    "source": "name",
+    "written": "delete",
+    "role": "member",
+    "segments": ["delete"],
+    "expected": {
+      "typescript": "delete_",
+      "kotlin": "delete",
+      "java": "delete",
+      "php": "delete"
+    }
+  },
+  {
+    "id": "reserved/member-fun",
+    "category": "reserved",
+    "source": "name",
+    "written": "fun",
+    "role": "member",
+    "segments": ["fun"],
+    "expected": {
+      "typescript": "fun",
+      "kotlin": "fun_",
+      "java": "fun",
+      "php": "fun"
+    }
+  },
+  {
+    "id": "reserved/member-function",
+    "category": "reserved",
+    "source": "name",
+    "written": "function",
+    "role": "member",
+    "segments": ["function"],
+    "expected": {
+      "typescript": "function_",
+      "kotlin": "function",
+      "java": "function",
+      "php": "function"
+    }
+  },
+  {
+    "id": "reserved/member-hash-code",
+    "category": "reserved",
+    "source": "name",
+    "written": "hashCode",
+    "role": "member",
+    "segments": ["hash", "code"],
+    "expected": {
+      "typescript": "hashCode",
+      "kotlin": "hashCode",
+      "java": "hashCode_",
+      "php": "hashCode"
+    }
+  },
+  {
+    "id": "reserved/member-is",
+    "category": "reserved",
+    "source": "name",
+    "written": "is",
+    "role": "member",
+    "segments": ["is"],
+    "expected": {
+      "typescript": "is",
+      "kotlin": "is_",
+      "java": "is",
+      "php": "is"
+    }
+  },
+  {
+    "id": "reserved/member-let",
+    "category": "reserved",
+    "source": "name",
+    "written": "let",
+    "role": "member",
+    "segments": ["let"],
+    "expected": {
+      "typescript": "let_",
+      "kotlin": "let",
+      "java": "let",
+      "php": "let"
+    }
+  },
+  {
+    "id": "reserved/member-list",
+    "category": "reserved",
+    "source": "name",
+    "written": "list",
+    "role": "member",
+    "segments": ["list"],
+    "expected": {
+      "typescript": "list",
+      "kotlin": "list",
+      "java": "list",
+      "php": "list"
+    }
+  },
+  {
+    "id": "reserved/member-print",
+    "category": "reserved",
+    "source": "name",
+    "written": "print",
+    "role": "member",
+    "segments": ["print"],
+    "expected": {
+      "typescript": "print",
+      "kotlin": "print",
+      "java": "print",
+      "php": "print"
+    }
+  },
+  {
+    "id": "reserved/member-record-not-reserved",
+    "category": "reserved",
+    "source": "name",
+    "written": "record",
+    "role": "member",
+    "segments": ["record"],
+    "expected": {
+      "typescript": "record",
+      "kotlin": "record",
+      "java": "record",
+      "php": "record"
+    }
+  },
+  {
+    "id": "reserved/member-string-not-reserved",
+    "category": "reserved",
+    "source": "name",
+    "written": "string",
+    "role": "member",
+    "segments": ["string"],
+    "expected": {
+      "typescript": "string",
+      "kotlin": "string",
+      "java": "string",
+      "php": "string"
+    }
+  },
+  {
+    "id": "reserved/member-this",
+    "category": "reserved",
+    "source": "name",
+    "written": "this",
+    "role": "member",
+    "segments": ["this"],
+    "expected": {
+      "typescript": "this_",
+      "kotlin": "this_",
+      "java": "this_",
+      "php": "this_"
+    }
+  },
+  {
+    "id": "reserved/member-type",
+    "category": "reserved",
+    "source": "name",
+    "written": "type",
+    "role": "member",
+    "segments": ["type"],
+    "expected": {
+      "typescript": "type",
+      "kotlin": "type",
+      "java": "type",
+      "php": "type"
+    }
+  },
+  {
+    "id": "reserved/member-val",
+    "category": "reserved",
+    "source": "name",
+    "written": "val",
+    "role": "member",
+    "segments": ["val"],
+    "expected": {
+      "typescript": "val",
+      "kotlin": "val_",
+      "java": "val",
+      "php": "val"
+    }
+  },
+  {
+    "id": "reserved/operation-delete",
+    "category": "reserved",
+    "source": "name",
+    "written": "delete",
+    "role": "operation",
+    "segments": ["delete"],
+    "expected": {
+      "typescript": "delete_",
+      "kotlin": "delete",
+      "java": "delete",
+      "php": "delete"
+    }
+  },
+  {
+    "id": "reserved/operation-hash-code",
+    "category": "reserved",
+    "source": "name",
+    "written": "hashCode",
+    "role": "operation",
+    "segments": ["hash", "code"],
+    "expected": {
+      "typescript": "hashCode",
+      "kotlin": "hashCode",
+      "java": "hashCode_",
+      "php": "hashCode"
+    }
+  },
+  {
+    "id": "reserved/operation-list",
+    "category": "reserved",
+    "source": "name",
+    "written": "list",
+    "role": "operation",
+    "segments": ["list"],
+    "expected": {
+      "typescript": "list",
+      "kotlin": "list",
+      "java": "list",
+      "php": "list"
+    }
+  },
+  {
+    "id": "reserved/schema-any",
+    "category": "reserved",
+    "source": "name",
+    "written": "any",
+    "role": "schema",
+    "segments": ["any"],
+    "expected": {
+      "typescript": "Any",
+      "kotlin": "Any_",
+      "java": "Any",
+      "php": "Any"
+    }
+  },
+  {
+    "id": "reserved/schema-array",
+    "category": "reserved",
+    "source": "name",
+    "written": "array",
+    "role": "schema",
+    "segments": ["array"],
+    "expected": {
+      "typescript": "Array_",
+      "kotlin": "Array_",
+      "java": "Array",
+      "php": "Array_"
+    }
+  },
+  {
+    "id": "reserved/schema-bool",
+    "category": "reserved",
+    "source": "name",
+    "written": "bool",
+    "role": "schema",
+    "segments": ["bool"],
+    "expected": {
+      "typescript": "Bool",
+      "kotlin": "Bool",
+      "java": "Bool",
+      "php": "Bool_"
+    }
+  },
+  {
+    "id": "reserved/schema-class",
+    "category": "reserved",
+    "source": "name",
+    "written": "class",
+    "role": "schema",
+    "segments": ["class"],
+    "expected": {
+      "typescript": "Class",
+      "kotlin": "Class_",
+      "java": "Class_",
+      "php": "Class_"
+    }
+  },
+  {
+    "id": "reserved/schema-date",
+    "category": "reserved",
+    "source": "name",
+    "written": "date",
+    "role": "schema",
+    "segments": ["date"],
+    "expected": {
+      "typescript": "Date_",
+      "kotlin": "Date",
+      "java": "Date",
+      "php": "Date"
+    }
+  },
+  {
+    "id": "reserved/schema-enum",
+    "category": "reserved",
+    "source": "name",
+    "written": "enum",
+    "role": "schema",
+    "segments": ["enum"],
+    "expected": {
+      "typescript": "Enum",
+      "kotlin": "Enum_",
+      "java": "Enum_",
+      "php": "Enum_"
+    }
+  },
+  {
+    "id": "reserved/schema-error",
+    "category": "reserved",
+    "source": "name",
+    "written": "error",
+    "role": "schema",
+    "segments": ["error"],
+    "expected": {
+      "typescript": "Error_",
+      "kotlin": "Error_",
+      "java": "Error_",
+      "php": "Error"
+    }
+  },
+  {
+    "id": "reserved/schema-file",
+    "category": "reserved",
+    "source": "name",
+    "written": "File",
+    "role": "schema",
+    "segments": ["file"],
+    "expected": {
+      "typescript": "File_",
+      "kotlin": "File",
+      "java": "File",
+      "php": "File"
+    }
+  },
+  {
+    "id": "reserved/schema-float",
+    "category": "reserved",
+    "source": "name",
+    "written": "float",
+    "role": "schema",
+    "segments": ["float"],
+    "expected": {
+      "typescript": "Float",
+      "kotlin": "Float_",
+      "java": "Float_",
+      "php": "Float_"
+    }
+  },
+  {
+    "id": "reserved/schema-fn",
+    "category": "reserved",
+    "source": "name",
+    "written": "fn",
+    "role": "schema",
+    "segments": ["fn"],
+    "expected": {
+      "typescript": "Fn",
+      "kotlin": "Fn",
+      "java": "Fn",
+      "php": "Fn_"
+    }
+  },
+  {
+    "id": "reserved/schema-function",
+    "category": "reserved",
+    "source": "name",
+    "written": "function",
+    "role": "schema",
+    "segments": ["function"],
+    "expected": {
+      "typescript": "Function_",
+      "kotlin": "Function",
+      "java": "Function",
+      "php": "Function_"
+    }
+  },
+  {
+    "id": "reserved/schema-headers",
+    "category": "reserved",
+    "source": "name",
+    "written": "headers",
+    "role": "schema",
+    "segments": ["headers"],
+    "expected": {
+      "typescript": "Headers_",
+      "kotlin": "Headers",
+      "java": "Headers",
+      "php": "Headers"
+    }
+  },
+  {
+    "id": "reserved/schema-int",
+    "category": "reserved",
+    "source": "name",
+    "written": "int",
+    "role": "schema",
+    "segments": ["int"],
+    "expected": {
+      "typescript": "Int",
+      "kotlin": "Int_",
+      "java": "Int",
+      "php": "Int_"
+    }
+  },
+  {
+    "id": "reserved/schema-integer",
+    "category": "reserved",
+    "source": "name",
+    "written": "integer",
+    "role": "schema",
+    "segments": ["integer"],
+    "expected": {
+      "typescript": "Integer",
+      "kotlin": "Integer_",
+      "java": "Integer_",
+      "php": "Integer"
+    }
+  },
+  {
+    "id": "reserved/schema-iterable",
+    "category": "reserved",
+    "source": "name",
+    "written": "iterable",
+    "role": "schema",
+    "segments": ["iterable"],
+    "expected": {
+      "typescript": "Iterable_",
+      "kotlin": "Iterable_",
+      "java": "Iterable_",
+      "php": "Iterable_"
+    }
+  },
+  {
+    "id": "reserved/schema-list",
+    "category": "reserved",
+    "source": "name",
+    "written": "list",
+    "role": "schema",
+    "segments": ["list"],
+    "expected": {
+      "typescript": "List",
+      "kotlin": "List_",
+      "java": "List_",
+      "php": "List_"
+    }
+  },
+  {
+    "id": "reserved/schema-map",
+    "category": "reserved",
+    "source": "name",
+    "written": "map",
+    "role": "schema",
+    "segments": ["map"],
+    "expected": {
+      "typescript": "Map_",
+      "kotlin": "Map_",
+      "java": "Map_",
+      "php": "Map"
+    }
+  },
+  {
+    "id": "reserved/schema-match",
+    "category": "reserved",
+    "source": "name",
+    "written": "match",
+    "role": "schema",
+    "segments": ["match"],
+    "expected": {
+      "typescript": "Match",
+      "kotlin": "Match",
+      "java": "Match",
+      "php": "Match_"
+    }
+  },
+  {
+    "id": "reserved/schema-mixed",
+    "category": "reserved",
+    "source": "name",
+    "written": "mixed",
+    "role": "schema",
+    "segments": ["mixed"],
+    "expected": {
+      "typescript": "Mixed",
+      "kotlin": "Mixed",
+      "java": "Mixed",
+      "php": "Mixed_"
+    }
+  },
+  {
+    "id": "reserved/schema-never",
+    "category": "reserved",
+    "source": "name",
+    "written": "never",
+    "role": "schema",
+    "segments": ["never"],
+    "expected": {
+      "typescript": "Never",
+      "kotlin": "Never",
+      "java": "Never",
+      "php": "Never_"
+    }
+  },
+  {
+    "id": "reserved/schema-null",
+    "category": "reserved",
+    "source": "name",
+    "written": "null",
+    "role": "schema",
+    "segments": ["null"],
+    "expected": {
+      "typescript": "Null",
+      "kotlin": "Null",
+      "java": "Null",
+      "php": "Null_"
+    }
+  },
+  {
+    "id": "reserved/schema-object",
+    "category": "reserved",
+    "source": "name",
+    "written": "object",
+    "role": "schema",
+    "segments": ["object"],
+    "expected": {
+      "typescript": "Object_",
+      "kotlin": "Object_",
+      "java": "Object_",
+      "php": "Object_"
+    }
+  },
+  {
+    "id": "reserved/schema-optional",
+    "category": "reserved",
+    "source": "name",
+    "written": "optional",
+    "role": "schema",
+    "segments": ["optional"],
+    "expected": {
+      "typescript": "Optional",
+      "kotlin": "Optional",
+      "java": "Optional_",
+      "php": "Optional"
+    }
+  },
+  {
+    "id": "reserved/schema-override",
+    "category": "reserved",
+    "source": "name",
+    "written": "override",
+    "role": "schema",
+    "segments": ["override"],
+    "expected": {
+      "typescript": "Override",
+      "kotlin": "Override_",
+      "java": "Override_",
+      "php": "Override"
+    }
+  },
+  {
+    "id": "reserved/schema-pair",
+    "category": "reserved",
+    "source": "name",
+    "written": "pair",
+    "role": "schema",
+    "segments": ["pair"],
+    "expected": {
+      "typescript": "Pair",
+      "kotlin": "Pair_",
+      "java": "Pair",
+      "php": "Pair"
+    }
+  },
+  {
+    "id": "reserved/schema-partial",
+    "category": "reserved",
+    "source": "name",
+    "written": "partial",
+    "role": "schema",
+    "segments": ["partial"],
+    "expected": {
+      "typescript": "Partial_",
+      "kotlin": "Partial",
+      "java": "Partial",
+      "php": "Partial"
+    }
+  },
+  {
+    "id": "reserved/schema-promise",
+    "category": "reserved",
+    "source": "name",
+    "written": "promise",
+    "role": "schema",
+    "segments": ["promise"],
+    "expected": {
+      "typescript": "Promise_",
+      "kotlin": "Promise",
+      "java": "Promise",
+      "php": "Promise"
+    }
+  },
+  {
+    "id": "reserved/schema-readonly",
+    "category": "reserved",
+    "source": "name",
+    "written": "readonly",
+    "role": "schema",
+    "segments": ["readonly"],
+    "expected": {
+      "typescript": "Readonly_",
+      "kotlin": "Readonly",
+      "java": "Readonly",
+      "php": "Readonly_"
+    }
+  },
+  {
+    "id": "reserved/schema-record",
+    "category": "reserved",
+    "source": "name",
+    "written": "record",
+    "role": "schema",
+    "segments": ["record"],
+    "expected": {
+      "typescript": "Record_",
+      "kotlin": "Record_",
+      "java": "Record_",
+      "php": "Record"
+    }
+  },
+  {
+    "id": "reserved/schema-regexp",
+    "category": "reserved",
+    "source": "name",
+    "written": "RegExp",
+    "role": "schema",
+    "segments": ["reg", "exp"],
+    "expected": {
+      "typescript": "RegExp_",
+      "kotlin": "RegExp",
+      "java": "RegExp",
+      "php": "RegExp"
+    }
+  },
+  {
+    "id": "reserved/schema-request",
+    "category": "reserved",
+    "source": "name",
+    "written": "request",
+    "role": "schema",
+    "segments": ["request"],
+    "expected": {
+      "typescript": "Request_",
+      "kotlin": "Request",
+      "java": "Request",
+      "php": "Request"
+    }
+  },
+  {
+    "id": "reserved/schema-response",
+    "category": "reserved",
+    "source": "name",
+    "written": "response",
+    "role": "schema",
+    "segments": ["response"],
+    "expected": {
+      "typescript": "Response_",
+      "kotlin": "Response",
+      "java": "Response",
+      "php": "Response"
+    }
+  },
+  {
+    "id": "reserved/schema-result",
+    "category": "reserved",
+    "source": "name",
+    "written": "result",
+    "role": "schema",
+    "segments": ["result"],
+    "expected": {
+      "typescript": "Result",
+      "kotlin": "Result_",
+      "java": "Result",
+      "php": "Result"
+    }
+  },
+  {
+    "id": "reserved/schema-self",
+    "category": "reserved",
+    "source": "name",
+    "written": "self",
+    "role": "schema",
+    "segments": ["self"],
+    "expected": {
+      "typescript": "Self",
+      "kotlin": "Self",
+      "java": "Self",
+      "php": "Self_"
+    }
+  },
+  {
+    "id": "reserved/schema-set",
+    "category": "reserved",
+    "source": "name",
+    "written": "set",
+    "role": "schema",
+    "segments": ["set"],
+    "expected": {
+      "typescript": "Set_",
+      "kotlin": "Set_",
+      "java": "Set_",
+      "php": "Set"
+    }
+  },
+  {
+    "id": "reserved/schema-static",
+    "category": "reserved",
+    "source": "name",
+    "written": "static",
+    "role": "schema",
+    "segments": ["static"],
+    "expected": {
+      "typescript": "Static",
+      "kotlin": "Static",
+      "java": "Static",
+      "php": "Static_"
+    }
+  },
+  {
+    "id": "reserved/schema-string",
+    "category": "reserved",
+    "source": "name",
+    "written": "string",
+    "role": "schema",
+    "segments": ["string"],
+    "expected": {
+      "typescript": "String_",
+      "kotlin": "String_",
+      "java": "String_",
+      "php": "String_"
+    }
+  },
+  {
+    "id": "reserved/schema-symbol",
+    "category": "reserved",
+    "source": "name",
+    "written": "symbol",
+    "role": "schema",
+    "segments": ["symbol"],
+    "expected": {
+      "typescript": "Symbol_",
+      "kotlin": "Symbol",
+      "java": "Symbol",
+      "php": "Symbol"
+    }
+  },
+  {
+    "id": "reserved/schema-task",
+    "category": "reserved",
+    "source": "name",
+    "written": "task",
+    "role": "schema",
+    "segments": ["task"],
+    "expected": {
+      "typescript": "Task",
+      "kotlin": "Task",
+      "java": "Task",
+      "php": "Task"
+    }
+  },
+  {
+    "id": "reserved/schema-thread",
+    "category": "reserved",
+    "source": "name",
+    "written": "thread",
+    "role": "schema",
+    "segments": ["thread"],
+    "expected": {
+      "typescript": "Thread",
+      "kotlin": "Thread_",
+      "java": "Thread_",
+      "php": "Thread"
+    }
+  },
+  {
+    "id": "reserved/schema-true",
+    "category": "reserved",
+    "source": "name",
+    "written": "true",
+    "role": "schema",
+    "segments": ["true"],
+    "expected": {
+      "typescript": "True",
+      "kotlin": "True",
+      "java": "True",
+      "php": "True_"
+    }
+  },
+  {
+    "id": "reserved/schema-unit",
+    "category": "reserved",
+    "source": "name",
+    "written": "unit",
+    "role": "schema",
+    "segments": ["unit"],
+    "expected": {
+      "typescript": "Unit",
+      "kotlin": "Unit_",
+      "java": "Unit",
+      "php": "Unit"
+    }
+  },
+  {
+    "id": "reserved/schema-void",
+    "category": "reserved",
+    "source": "name",
+    "written": "void",
+    "role": "schema",
+    "segments": ["void"],
+    "expected": {
+      "typescript": "Void",
+      "kotlin": "Void_",
+      "java": "Void_",
+      "php": "Void_"
+    }
+  },
+  {
+    "id": "right/codeName-overrides-name",
+    "category": "right",
+    "source": "right",
+    "written": "tasks.update",
+    "role": "schema",
+    "codeName": "edit_task",
+    "segments": ["edit", "task"],
+    "expected": {
+      "typescript": "EditTask",
+      "kotlin": "EditTask",
+      "java": "EditTask",
+      "php": "EditTask"
+    }
+  },
+  {
+    "id": "right/codeName-reserved",
+    "category": "right",
+    "source": "right",
+    "written": "*",
+    "role": "schema",
+    "codeName": "any",
+    "segments": ["any"],
+    "expected": {
+      "typescript": "Any",
+      "kotlin": "Any_",
+      "java": "Any",
+      "php": "Any"
+    }
+  },
+  {
+    "id": "right/colon",
+    "category": "right",
+    "source": "right",
+    "written": "tasks:write",
+    "role": "schema",
+    "segments": ["tasks", "write"],
+    "expected": {
+      "typescript": "TasksWrite",
+      "kotlin": "TasksWrite",
+      "java": "TasksWrite",
+      "php": "TasksWrite"
+    }
+  },
+  {
+    "id": "right/dotted",
+    "category": "right",
+    "source": "right",
+    "written": "tasks.update",
+    "role": "schema",
+    "segments": ["tasks", "update"],
+    "expected": {
+      "typescript": "TasksUpdate",
+      "kotlin": "TasksUpdate",
+      "java": "TasksUpdate",
+      "php": "TasksUpdate"
+    }
+  },
+  {
+    "id": "right/star-with-codeName",
+    "category": "right",
+    "source": "right",
+    "written": "*",
+    "role": "schema",
+    "codeName": "wildcard",
+    "segments": ["wildcard"],
+    "expected": {
+      "typescript": "Wildcard",
+      "kotlin": "Wildcard",
+      "java": "Wildcard",
+      "php": "Wildcard"
+    }
+  },
+  {
+    "id": "right/star-with-empty-codeName",
+    "category": "right",
+    "source": "right",
+    "written": "*",
+    "role": "schema",
+    "codeName": "*",
+    "error": "no-segment"
+  },
+  {
+    "id": "right/star-with-multiword-codeName",
+    "category": "right",
+    "source": "right",
+    "written": "*",
+    "role": "schema",
+    "codeName": "anyRight",
+    "segments": ["any", "right"],
+    "expected": {
+      "typescript": "AnyRight",
+      "kotlin": "AnyRight",
+      "java": "AnyRight",
+      "php": "AnyRight"
+    }
+  },
+  {
+    "id": "right/star-without-codeName",
+    "category": "right",
+    "source": "right",
+    "written": "*",
+    "role": "schema",
+    "error": "no-segment"
+  },
+  {
+    "id": "right/stars-without-codeName",
+    "category": "right",
+    "source": "right",
+    "written": "**",
+    "role": "schema",
+    "error": "no-segment"
+  },
+  {
+    "id": "right/trailing-star",
+    "category": "right",
+    "source": "right",
+    "written": "tasks.*",
+    "role": "schema",
+    "segments": ["tasks"],
+    "expected": {
+      "typescript": "Tasks",
+      "kotlin": "Tasks",
+      "java": "Tasks",
+      "php": "Tasks"
+    }
+  },
+  {
+    "id": "splitting/acronym-at-end",
+    "category": "splitting",
+    "source": "name",
+    "written": "userID",
+    "role": "schema",
+    "segments": ["user", "id"],
+    "expected": {
+      "typescript": "UserId",
+      "kotlin": "UserId",
+      "java": "UserId",
+      "php": "UserId"
+    }
+  },
+  {
+    "id": "splitting/acronym-digit-at-end",
+    "category": "splitting",
+    "source": "name",
+    "written": "HTTPServer2",
+    "role": "schema",
+    "segments": ["http", "server2"],
+    "expected": {
+      "typescript": "HttpServer2",
+      "kotlin": "HttpServer2",
+      "java": "HttpServer2",
+      "php": "HttpServer2"
+    }
+  },
+  {
+    "id": "splitting/acronym-run-then-digit-word",
+    "category": "splitting",
+    "source": "name",
+    "written": "HTTP2Server",
+    "role": "schema",
+    "segments": ["http2", "server"],
+    "expected": {
+      "typescript": "Http2Server",
+      "kotlin": "Http2Server",
+      "java": "Http2Server",
+      "php": "Http2Server"
+    }
+  },
+  {
+    "id": "splitting/acronym-then-word",
+    "category": "splitting",
+    "source": "name",
+    "written": "HTTPServer",
+    "role": "schema",
+    "segments": ["http", "server"],
+    "expected": {
+      "typescript": "HttpServer",
+      "kotlin": "HttpServer",
+      "java": "HttpServer",
+      "php": "HttpServer"
+    }
+  },
+  {
+    "id": "splitting/acronym-with-digit-tail",
+    "category": "splitting",
+    "source": "name",
+    "written": "userID2",
+    "role": "schema",
+    "segments": ["user", "id2"],
+    "expected": {
+      "typescript": "UserId2",
+      "kotlin": "UserId2",
+      "java": "UserId2",
+      "php": "UserId2"
+    }
+  },
+  {
+    "id": "splitting/all-caps",
+    "category": "splitting",
+    "source": "name",
+    "written": "URL",
+    "role": "schema",
+    "segments": ["url"],
+    "expected": {
+      "typescript": "Url",
+      "kotlin": "Url",
+      "java": "Url",
+      "php": "Url"
+    }
+  },
+  {
+    "id": "splitting/all-caps-id",
+    "category": "splitting",
+    "source": "name",
+    "written": "ID",
+    "role": "schema",
+    "segments": ["id"],
+    "expected": {
+      "typescript": "Id",
+      "kotlin": "Id",
+      "java": "Id",
+      "php": "Id"
+    }
+  },
+  {
+    "id": "splitting/camel-userId",
+    "category": "splitting",
+    "source": "name",
+    "written": "userId",
+    "role": "schema",
+    "segments": ["user", "id"],
+    "expected": {
+      "typescript": "UserId",
+      "kotlin": "UserId",
+      "java": "UserId",
+      "php": "UserId"
+    }
+  },
+  {
+    "id": "splitting/digit-in-segment",
+    "category": "splitting",
+    "source": "name",
+    "written": "oauth2Token",
+    "role": "schema",
+    "segments": ["oauth2", "token"],
+    "expected": {
+      "typescript": "Oauth2Token",
+      "kotlin": "Oauth2Token",
+      "java": "Oauth2Token",
+      "php": "Oauth2Token"
+    }
+  },
+  {
+    "id": "splitting/digit-then-upper",
+    "category": "splitting",
+    "source": "name",
+    "written": "a1B2",
+    "role": "schema",
+    "segments": ["a1", "b2"],
+    "expected": {
+      "typescript": "A1B2",
+      "kotlin": "A1B2",
+      "java": "A1B2",
+      "php": "A1B2"
+    }
+  },
+  {
+    "id": "splitting/digits-inside-lower",
+    "category": "splitting",
+    "source": "name",
+    "written": "a1b2",
+    "role": "schema",
+    "segments": ["a1b2"],
+    "expected": {
+      "typescript": "A1b2",
+      "kotlin": "A1b2",
+      "java": "A1b2",
+      "php": "A1b2"
+    }
+  },
+  {
+    "id": "splitting/dot",
+    "category": "splitting",
+    "source": "name",
+    "written": "api.rate_limited",
+    "role": "schema",
+    "segments": ["api", "rate", "limited"],
+    "expected": {
+      "typescript": "ApiRateLimited",
+      "kotlin": "ApiRateLimited",
+      "java": "ApiRateLimited",
+      "php": "ApiRateLimited"
+    }
+  },
+  {
+    "id": "splitting/dunder",
+    "category": "splitting",
+    "source": "name",
+    "written": "__init__",
+    "role": "schema",
+    "segments": ["init"],
+    "expected": {
+      "typescript": "Init",
+      "kotlin": "Init",
+      "java": "Init",
+      "php": "Init"
+    }
+  },
+  {
+    "id": "splitting/edge-separators",
+    "category": "splitting",
+    "source": "name",
+    "written": "_user_",
+    "role": "schema",
+    "segments": ["user"],
+    "expected": {
+      "typescript": "User",
+      "kotlin": "User",
+      "java": "User",
+      "php": "User"
+    }
+  },
+  {
+    "id": "splitting/empty",
+    "category": "splitting",
+    "source": "name",
+    "written": "",
+    "role": "schema",
+    "error": "no-segment"
+  },
+  {
+    "id": "splitting/letter-and-digit",
+    "category": "splitting",
+    "source": "name",
+    "written": "v2",
+    "role": "schema",
+    "segments": ["v2"],
+    "expected": {
+      "typescript": "V2",
+      "kotlin": "V2",
+      "java": "V2",
+      "php": "V2"
+    }
+  },
+  {
+    "id": "splitting/lower-upper",
+    "category": "splitting",
+    "source": "name",
+    "written": "aB",
+    "role": "schema",
+    "segments": ["a", "b"],
+    "expected": {
+      "typescript": "AB",
+      "kotlin": "AB",
+      "java": "AB",
+      "php": "AB"
+    }
+  },
+  {
+    "id": "splitting/mixed-separators",
+    "category": "splitting",
+    "source": "name",
+    "written": "a.b-c d_e",
+    "role": "schema",
+    "segments": ["a", "b", "c", "d", "e"],
+    "expected": {
+      "typescript": "ABCDE",
+      "kotlin": "ABCDE",
+      "java": "ABCDE",
+      "php": "ABCDE"
+    }
+  },
+  {
+    "id": "splitting/non-ascii-is-separator",
+    "category": "splitting",
+    "source": "name",
+    "written": "café_au_lait",
+    "role": "schema",
+    "segments": ["caf", "au", "lait"],
+    "expected": {
+      "typescript": "CafAuLait",
+      "kotlin": "CafAuLait",
+      "java": "CafAuLait",
+      "php": "CafAuLait"
+    }
+  },
+  {
+    "id": "splitting/pascal-input",
+    "category": "splitting",
+    "source": "name",
+    "written": "TaskList",
+    "role": "schema",
+    "segments": ["task", "list"],
+    "expected": {
+      "typescript": "TaskList",
+      "kotlin": "TaskList",
+      "java": "TaskList",
+      "php": "TaskList"
+    }
+  },
+  {
+    "id": "splitting/repeated-separators",
+    "category": "splitting",
+    "source": "name",
+    "written": "a__b--c",
+    "role": "schema",
+    "segments": ["a", "b", "c"],
+    "expected": {
+      "typescript": "ABC",
+      "kotlin": "ABC",
+      "java": "ABC",
+      "php": "ABC"
+    }
+  },
+  {
+    "id": "splitting/separators-only",
+    "category": "splitting",
+    "source": "name",
+    "written": "---",
+    "role": "schema",
+    "error": "no-segment"
+  },
+  {
+    "id": "splitting/single-letter",
+    "category": "splitting",
+    "source": "name",
+    "written": "x",
+    "role": "schema",
+    "segments": ["x"],
+    "expected": {
+      "typescript": "X",
+      "kotlin": "X",
+      "java": "X",
+      "php": "X"
+    }
+  },
+  {
+    "id": "splitting/space",
+    "category": "splitting",
+    "source": "name",
+    "written": "hello world",
+    "role": "schema",
+    "segments": ["hello", "world"],
+    "expected": {
+      "typescript": "HelloWorld",
+      "kotlin": "HelloWorld",
+      "java": "HelloWorld",
+      "php": "HelloWorld"
+    }
+  },
+  {
+    "id": "splitting/tab-and-newline",
+    "category": "splitting",
+    "source": "name",
+    "written": "a\tb\nc",
+    "role": "schema",
+    "segments": ["a", "b", "c"],
+    "expected": {
+      "typescript": "ABC",
+      "kotlin": "ABC",
+      "java": "ABC",
+      "php": "ABC"
+    }
+  },
+  {
+    "id": "splitting/three-words-with-acronym",
+    "category": "splitting",
+    "source": "name",
+    "written": "getHTTPResponseCode",
+    "role": "schema",
+    "segments": ["get", "http", "response", "code"],
+    "expected": {
+      "typescript": "GetHttpResponseCode",
+      "kotlin": "GetHttpResponseCode",
+      "java": "GetHttpResponseCode",
+      "php": "GetHttpResponseCode"
+    }
+  },
+  {
+    "id": "splitting/two-letter-acronym-word",
+    "category": "splitting",
+    "source": "name",
+    "written": "IOError",
+    "role": "schema",
+    "segments": ["io", "error"],
+    "expected": {
+      "typescript": "IoError",
+      "kotlin": "IoError",
+      "java": "IoError",
+      "php": "IoError"
+    }
+  },
+  {
+    "id": "splitting/underscore",
+    "category": "splitting",
+    "source": "name",
+    "written": "rate_limited",
+    "role": "schema",
+    "segments": ["rate", "limited"],
+    "expected": {
+      "typescript": "RateLimited",
+      "kotlin": "RateLimited",
+      "java": "RateLimited",
+      "php": "RateLimited"
+    }
+  },
+  {
+    "id": "splitting/upper-pair-then-lower",
+    "category": "splitting",
+    "source": "name",
+    "written": "ABc",
+    "role": "schema",
+    "segments": ["a", "bc"],
+    "expected": {
+      "typescript": "ABc",
+      "kotlin": "ABc",
+      "java": "ABc",
+      "php": "ABc"
+    }
+  },
+  {
+    "id": "splitting/upper-snake",
+    "category": "splitting",
+    "source": "name",
+    "written": "UPPER_SNAKE_CASE",
+    "role": "schema",
+    "segments": ["upper", "snake", "case"],
+    "expected": {
+      "typescript": "UpperSnakeCase",
+      "kotlin": "UpperSnakeCase",
+      "java": "UpperSnakeCase",
+      "php": "UpperSnakeCase"
+    }
+  },
+  {
+    "id": "splitting/xml-http-request",
+    "category": "splitting",
+    "source": "name",
+    "written": "XMLHttpRequest",
+    "role": "schema",
+    "segments": ["xml", "http", "request"],
+    "expected": {
+      "typescript": "XmlHttpRequest",
+      "kotlin": "XmlHttpRequest",
+      "java": "XmlHttpRequest",
+      "php": "XmlHttpRequest"
+    }
+  }
+]

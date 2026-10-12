@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "The reserved and shadowed names (ADR 0007 section 5)",
+  "description": "One list per target language, under its own key; `usedBy` repeats that language. `keywords` are blocked for every role. `types` are blocked for the type roles only (schema, derived types, endpoints), `members` for the member and operation roles (a name that breaks a class or a record), `enumMembers` for the enumMember role only. Words are listed in the case of the identifier they block, sorted and without duplicates; `caseInsensitive` lists compare in ASCII lowercase. A list is checked against the final identifier, after casing and the leading digit underscore.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["lists"],
+  "properties": {
+    "lists": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["typescript", "kotlin", "java", "php"],
+      "properties": {
+        "typescript": {
+          "allOf": [
+            { "$ref": "#/$defs/list" },
+            { "type": "object", "properties": { "usedBy": { "const": ["typescript"] } } }
+          ]
+        },
+        "kotlin": {
+          "allOf": [
+            { "$ref": "#/$defs/list" },
+            { "type": "object", "properties": { "usedBy": { "const": ["kotlin"] } } }
+          ]
+        },
+        "java": {
+          "allOf": [
+            { "$ref": "#/$defs/list" },
+            { "type": "object", "properties": { "usedBy": { "const": ["java"] } } }
+          ]
+        },
+        "php": {
+          "allOf": [
+            { "$ref": "#/$defs/list" },
+            { "type": "object", "properties": { "usedBy": { "const": ["php"] } } }
+          ]
+        }
+      }
+    }
+  },
+  "$defs": {
+    "words": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" }
+    },
+    "list": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "usedBy",
+        "caseInsensitive",
+        "keywords",
+        "types",
+        "members",
+        "enumMembers",
+        "source"
+      ],
+      "properties": {
+        "usedBy": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["typescript", "kotlin", "java", "php"] }
+        },
+        "caseInsensitive": { "type": "boolean" },
+        "keywords": { "$ref": "#/$defs/words" },
+        "types": { "$ref": "#/$defs/words" },
+        "members": { "$ref": "#/$defs/words" },
+        "enumMembers": { "$ref": "#/$defs/words" },
+        "source": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
