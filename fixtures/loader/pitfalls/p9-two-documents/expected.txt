@@ -1,0 +1,1 @@
+api.yaml:3:1: error seampact/load/yaml-document: the file holds more than one YAML document. Fix: one document per file; remove the extra '---'.

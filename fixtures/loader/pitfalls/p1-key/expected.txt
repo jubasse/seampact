@@ -1,0 +1,1 @@
+api.yaml:4:3: error seampact/load/yaml-boolean: plain 'no' is read as a boolean by YAML 1.1 parsers, or is a boolean not in lowercase (P1). Fix: quote it ('no'), or write true or false.

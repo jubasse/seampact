@@ -1,0 +1,2 @@
+more.yaml:1:1: error seampact/load/duplicate-key: key 'a' is defined twice in the same mapping (P7). Fix: remove the duplicate.
+  api.yaml:4:3: first defined here.

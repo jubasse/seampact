@@ -1,0 +1,11 @@
+api:
+  name: tasks
+surfaces:
+  app:
+    routes:
+      tasks:
+        routes:
+          search:
+            $include: ./routes/search.yaml
+          get:
+            method: get

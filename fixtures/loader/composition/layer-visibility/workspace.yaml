@@ -1,0 +1,4 @@
+workspace:
+  apis:
+    tasks: ./api.yaml
+  shared: ./shared.yaml

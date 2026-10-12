@@ -1,0 +1,2 @@
+schemas:
+  Id: { type: string }

@@ -1,0 +1,2 @@
+b.yaml:2:13: error seampact/load/include-cycle: $include cycle (P8): a.yaml -> b.yaml -> a.yaml. Fix: break the cycle by removing one $include of it.
+  a.yaml:2:13: 'b.yaml' is included here.

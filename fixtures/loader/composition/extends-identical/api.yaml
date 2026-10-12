@@ -1,0 +1,5 @@
+api:
+  name: tasks
+extends: ./base.yaml
+errors:
+  api.forbidden: { status: 403 }

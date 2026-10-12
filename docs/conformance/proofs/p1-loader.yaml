@@ -1,0 +1,10 @@
+# docs/conformance/proofs/p1-loader.yaml
+lane: p1-loader
+proofs:
+  - id: CHK-109
+    fixtures: [fixtures/loader/byte-identity]
+    tests:
+      - 'core: packages/compiler/src/load/property.test.ts#inline equals included'
+      - 'core: packages/compiler/src/load/property.test.ts#a moved property keeps its position'
+      - 'core: packages/compiler/src/load/fixtures.test.ts#fixture: inline and included routes give the same raw tree'
+      - 'core: packages/compiler/src/load/compose.test.ts#include keeps position'

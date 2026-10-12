@@ -1,0 +1,12 @@
+api:
+  name: tasks
+surfaces:
+  app:
+    routes:
+      tasks:
+        routes:
+          search:
+            method: post
+            summary: Search tasks
+          get:
+            method: get

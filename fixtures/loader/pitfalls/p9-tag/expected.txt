@@ -1,0 +1,2 @@
+api.yaml:3:10: error seampact/load/yaml-tag: tag '!!str' is not allowed (P9). Fix: remove the tag; no tags are read, quote the value if it is a string.
+api.yaml:4:12: error seampact/load/yaml-tag: tag '!custom' is not allowed (P9). Fix: remove the tag; no tags are read, quote the value if it is a string.

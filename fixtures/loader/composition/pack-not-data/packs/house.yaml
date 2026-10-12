@@ -1,0 +1,4 @@
+pack: { name: house, version: 1.0.0 }
+surfaces: {}
+rights:
+  tasks.read: {}

@@ -1,0 +1,7 @@
+api:
+  name: tasks
+schemas:
+  A: { $include: ../outside.yaml }
+  B: { $include: /etc/hosts }
+  C: { $include: '.\\x.yaml' }
+  D: { $include: ./Parts/task.yaml }

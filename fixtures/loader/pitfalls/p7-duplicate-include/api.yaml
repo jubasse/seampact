@@ -1,0 +1,5 @@
+api:
+  name: demo
+tasks:
+  a: 1
+  $include: ./more.yaml

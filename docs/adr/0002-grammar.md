@@ -138,6 +138,8 @@ A layer resolves names only in itself and the layers it builds on, so it compile
 - Settings (`conventions`, and `lint.rules`) are overridden by leaf path. A leaf is a scalar, or a list taken as one value; `errors.every` is the exception, a union of every layer's list. Maps of named entries (`cache.families`, `errors.derived`) merge per entry, each entry being a leaf. An api writing `paging: { maxLimit: 50 }` therefore keeps a pack's `paging.default`.
 - A later layer wins, and the IR records the origin of every leaf (ADR 0004). A base shared by several apis can thus be overridden by one of them; an override states a different value, not a second copy of the same fact.
 
+Clarification (p1-loader review): a `derive` entry name is unique across every layer of an api, not only within its pack. "Unique in the pack" (Packs, above) is the case of two entries in one pack; two packs whose entries share a name are a declaration made by two layers, refused with both locations, although `derivedFrom` (`pack.<pack>.<entry>`) could tell them apart. A pack therefore names its entries so that they do not collide with the packs it may be applied beside.
+
 #### The byte-identity rule
 
 A route declared inline and the same route moved to a file reached through `$include` compile to byte-identical IR (FR-1, FR-9, SCN-001). The grammar guarantees it with five rules:
