@@ -181,6 +181,42 @@ describe("IR schema files", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("objects, unions and open enums are named definitions", () => {
+    // A generated model names every type: no anonymous object, union or open enum inside a member.
+    const offenders: string[] = [];
+    for (const { node, at } of allNodes()) {
+      const shaped =
+        "properties" in node || "discriminator" in node || KNOWN_VALUES_KEYWORD in node;
+      if (shaped && !/#\/\$defs\/\w+$/.test(at)) offenders.push(at);
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test("must-act marks the security-boundary unions and enums", () => {
+    // README.md: an unknown tag or value there makes the IR invalid for every reader.
+    const marked = [...defs].filter(([, node]) => node[MUST_ACT_KEYWORD] === true).map(([n]) => n);
+    expect(marked.sort()).toEqual(MUST_ACT.filter((name) => defs.has(name)).sort());
+  });
+
+  test("catalogue keys follow the grammars of ADR 0002 section 4", () => {
+    const offenders: string[] = [];
+    for (const { node, at } of allNodes()) {
+      if (!isSchemaNode(node.propertyNames)) continue;
+      const names = node.propertyNames;
+      const key = typeof names.$ref === "string" ? def(refName(names.$ref)) : names;
+      const pattern = typeof key.pattern === "string" ? new RegExp(key.pattern, "u") : undefined;
+      if (pattern === undefined) {
+        if (!KEYS_WITHOUT_GRAMMAR.includes(refName(names.$ref))) offenders.push(at);
+        continue;
+      }
+      // A right takes any name its library uses (A20), `__proto__` included: readers use Object.hasOwn.
+      const refused =
+        refName(names.$ref) === "RightId" ? ["", " a", "a "] : ["__proto__", "", " a"];
+      for (const bad of refused) if (pattern.test(bad)) offenders.push(`${at}: ${bad}`);
+    }
+    expect(offenders).toEqual([]);
+  });
+
   test("catalogues are maps keyed by id and declarations are referenced by id", () => {
     const contract = def("ContractIR").properties as Record<string, SchemaNode>;
     // ADR 0004 section 2: every `Record<Id, Decl>` of the top level.
