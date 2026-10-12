@@ -219,6 +219,17 @@ describe("IR schema files", () => {
     expect(offenders).toEqual([]);
   });
 
+  test("deterministic files", () => {
+    // Requirement 9: no timestamp, absolute path or machine-dependent value; stable ids under one base.
+    for (const document of IR_SCHEMA_DOCUMENTS) {
+      const text = JSON.stringify(document);
+      expect(String(document.$id)).toMatch(
+        /^https:\/\/seampact\.dev\/schemas\/ir\/[a-z-]+\.schema\.json$/,
+      );
+      expect(text).not.toMatch(/\d{4}-\d{2}-\d{2}T|file:|\/home\/|\/Users\/|[A-Z]:\\\\/);
+    }
+  });
+
   test("catalogues are maps keyed by id and declarations are referenced by id", () => {
     const contract = def("ContractIR").properties as Record<string, SchemaNode>;
     // ADR 0004 section 2: every `Record<Id, Decl>` of the top level.
