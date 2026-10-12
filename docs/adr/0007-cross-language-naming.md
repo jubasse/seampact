@@ -31,6 +31,8 @@ interface Name { segments: string[]; role: Role }
 | `input`, `output`, `query`, `headers`, `path` | an operation's inline body, single success body, query, request headers, path parameters | `input`, `output`, `query`, `headers`, `path` |
 | `response` | an inline success body of one status among several | `response` plus the status (`response`, `201`) |
 | `params` | the params of a right, rule or error | `params` |
+| `error` | the generated exception or error class of one error code (ADR 0012) | `error` |
+| `errors` | an operation's typed error result, the union of its codes | `errors` |
 | `property` | an inline object or union held by a property | none (the property's segments follow the parent's) |
 | `item`, `value` | an inline object as an array item or a map value | `item`, `value` |
 | `variant` | an inline union variant | none (the tag's segments follow the union's) |
@@ -39,7 +41,7 @@ interface Name { segments: string[]; role: Role }
 | `member` | a property or a parameter, as an identifier | none |
 | `enumMember` | an enum value, as an identifier | none |
 
-The wire name of a property, parameter, header or enum value stays a separate string in the IR (ADR 0004); a `Name` only drives identifiers. A property's `codeName` and an enum's `codeNames` (ADR 0003 section 6, ADR 0002 section 12) replace the segments split from the wire name, for an identifier the wire name makes poor; they never change the wire.
+The wire name of a property, parameter, header or enum value stays a separate string in the IR (ADR 0004); a `Name` only drives identifiers. A property's `codeName`, a right's `codeName` and an enum's `codeNames` (ADR 0003 section 6, ADR 0002 sections 9 and 12) replace the segments split from the wire name, for an identifier the wire name makes poor; they never change the wire.
 
 ### 2. Splitting a written name into segments
 
@@ -50,7 +52,7 @@ The compiler splits every name written in a contract (a schema name, a node name
 3. Never split around digits (`oauth2Token` gives `oauth2`, `token`; `v2` stays `v2`).
 4. Lowercase every segment and drop empty ones.
 
-A name that yields no segment (an enum value such as `+`) gets the single segment `value` followed by its one-based position in the enum (`value3`). Two names of one scope that yield equal segments (two properties of one object, two values of one enum, two schemas, two operations) are a compile error naming both, because they would collide in every language; this check runs once, in the tree pass, instead of in every target.
+A name that yields no segment (an enum value such as `+`) gets the single segment `value` followed by its one-based position in the enum (`value3`). That fallback is for enum values only. A right takes the name its library uses (ADR 0002 section 4), so it may yield none (`*`); such a right is a compile error naming it, with the fix: set its `codeName`. An error code always yields at least one segment, since its alphabet starts with a letter or a digit. Two names of one scope that yield equal segments (two properties of one object, two values of one enum, two schemas, two operations) are a compile error naming both, because they would collide in every language; this check runs once, in the tree pass, instead of in every target.
 
 ### 3. Derived names
 
@@ -63,12 +65,15 @@ An inline schema is named from its position (FR-3, SCN-033): the segments of its
 | the query of `listTasks` | `[list, tasks]`, `query` | `ListTasksQuery` |
 | the params of right `tasks.update` | `[tasks, update]`, `params` | `TasksUpdateParams` |
 | the params of error `api.rate_limited` | `[api, rate, limited]`, `params` | `ApiRateLimitedParams` |
+| the exception of error `tasks.locked` | `[tasks, locked]`, `error` | `TasksLockedError` |
+| the error result of `updateTask` | `[update, task]`, `errors` | `UpdateTaskErrors` |
+| the params of error `1042` | `[1042]`, `params` | `_1042Params` (section 4) |
 | the inline object of property `address` of `Order` | `[order, address]`, `property` | `OrderAddress` |
 | the inline variant `assigned` of union `Notice` | `[notice, assigned]`, `variant` | `NoticeAssigned` |
 | the interface of resource `tasks` | `[tasks]`, `endpoints` | `TasksEndpoints` |
 | operation `assign` under the member of `tasks` | `[assign, task]`, `operation` | `assignTask` |
 
-The canonical identifier that ADR 0004 uses as an id is the TypeScript form of the name (PascalCase for types, camelCase for operations). A derived name equal to a declared one is a compile error naming both, with the fix "rename the schema or set `operationId`".
+The canonical identifier that ADR 0004 uses as an id is the TypeScript form of the name: PascalCase for derived schema ids. An operation id is the exception: its string follows `conventions.operationIds` (ADR 0002 section 6) everywhere it appears, the IR's `Operation.id`, the OpenAPI `operationId`, and the operation names `relays`, `deprecated.successor` and `seampact explain` take, so `case: snake` makes `list_tasks` the id in all of them; camelCase is only its default. Generated method names still come from the segments through section 4 (`listTasks` in TypeScript). A derived name equal to a declared one is a compile error naming both, with the fix "rename the schema or set `operationId`".
 
 ### 4. Identifiers per language
 
@@ -86,7 +91,7 @@ Casing joins the segments, then appends the suffix words:
 | `operation`, `member` | camel | camel | camel |
 | `enumMember` | none (enums are string literal unions) | upper snake | Pascal (enum cases) |
 
-A segment that starts with a digit is never first in a type name, because a declared type name starts with a letter and a derived one starts with its owner's segments. For a member or enum member whose first segment starts with a digit, the identifier gets a leading `_` (`_2fa`, `_2FA`).
+An identifier whose first segment starts with a digit gets a leading `_`, in every role. A declared schema name starts with a letter, but an error code may start with a digit (`1042`, `404-gone`, ADR 0002 section 4), and so do the types derived from it: its params type and its exception give `_1042Params` and `_404GoneError`. A member or enum member gives `_2fa`, `_2FA`. The suffix words stay last, so `suffixes` renames them as for any other name.
 
 ### 5. Reserved words and shadowed names
 
@@ -115,7 +120,7 @@ The exact lists ship with the vectors and change only through an IR change PR (A
   "expected": { "typescript": "List", "kotlin": "List_", "java": "List_", "php": "List_" } }
 ```
 
-Each vector gives a written name (or segments and an owner, for derived names), the role, the expected segments, and the expected identifier per language. The set covers the splitting cases of section 2, every derived role of section 3, leading digits, empty names, and the reserved and shadowed names, including schemas named `list`, `match`, `record`, `error` and `promise` (SCN-093). The TypeScript implementation in codegen-core, the Kotlin implementation in the Gradle and Maven plugins and the PHP implementation in the Composer packages each run the whole file in their test suites, and each is about thirty lines (COMP-Naming, FR-40). A target for another ecosystem passes the same file.
+Each vector gives a written name (or segments and an owner, for derived names), the role, the expected segments, and the expected identifier per language. The set covers the splitting cases of section 2, every derived role of section 3 (the `error` and `errors` roles included), leading digits in members and in types derived from a digit-led error code, empty enum values, a right without segments and its `codeName`, and the reserved and shadowed names, including schemas named `list`, `match`, `record`, `error` and `promise` (SCN-093). The TypeScript implementation in codegen-core, the Kotlin implementation in the Gradle and Maven plugins and the PHP implementation in the Composer packages each run the whole file in their test suites, and each is about thirty lines (COMP-Naming, FR-40). A target for another ecosystem passes the same file.
 
 ## Consequences
 
@@ -128,4 +133,4 @@ Each vector gives a written name (or segments and an owner, for derived names), 
 
 - FRs: FR-38 (segments and role, per-language escaping, shared vectors), FR-3 (deterministic names for inline schemas), FR-40 (native implementations pass the vectors), FR-14 (byte-identical generation).
 - Scenarios: SCN-033, SCN-093, SCN-095.
-- CHK items enabled: CHK-024 (named union variants), CHK-002 (named types at scale compile), CHK-078 (naming is part of the stable IR contract), CHK-146 (code names, suffixes, handler grouping).
+- CHK items enabled: CHK-024 (named union variants), CHK-002 (named types at scale compile), CHK-078 (naming is part of the stable IR contract), CHK-146 (code names, suffixes, handler grouping), and from round 5 CHK-173 (error roles, digit-led codes, rights without segments).

@@ -69,7 +69,7 @@ Every keyword of the 2020-12 vocabularies, kept or refused. A refused keyword is
 |---|---|---|
 | `type` | kept, one value | `string`, `integer`, `number`, `boolean`, `object` or `array`; `null` and type arrays are refused, nullability is `nullable` (section 5) |
 | `const` | refused | a one-value field is an enum or a union tag; keeping both would give two ways to state it |
-| `enum` | kept, by reference | `enum: <EnumName>` or a narrowing (section 7); inline value lists are refused because enums live in one section and a local enum needs a reason (FR-29) |
+| `enum` | kept, by reference | `enum: <EnumName>` or a narrowing (section 7); inline value lists are refused because enums live in one catalogue, where each is declared once with its values, source and fallback (FR-29) |
 | `multipleOf` | kept on `integer` and decimal | refused on `number`, where binary floating point makes the check differ between targets |
 | `maximum`, `exclusiveMaximum`, `minimum`, `exclusiveMinimum` | kept | portable range checks (number values only, as in 2020-12) |
 | `maxLength`, `minLength` | kept | counted in Unicode code points in every target, as JSON Schema says (a JavaScript target must not count UTF-16 units) |
@@ -231,7 +231,7 @@ input:
 
 - `refuse`, the default: unknown keys answer 400;
 - `{ ignore: "<reason>" }`: unknown keys of that object, and of every object reached from it in that use (properties, items, map values, variants), are dropped before the handler, never answered with an error and never passed on;
-- `{ keep: "<reason>" }`: the same objects accept unknown keys and pass them to the handler beside the declared fields, as a map of opaque values (a TypeScript index signature of `unknown`, a `Map<String, JsonNode>` the Java record carries as `additional`, a PHP array property), for a handler that forwards or stores what it does not read.
+- `{ keep: "<reason>" }`: the same objects accept unknown keys and pass them to the handler beside the declared fields, as a map of opaque values (a TypeScript index signature of `unknown`, a `Map<String, JsonNode>` on the Java record, a PHP array property), for a handler that forwards or stores what it does not read. In Java and PHP the member that holds the map is named by a target option, `additionalMember` (`additional` by default), and a declared property of a keeping object whose identifier equals it is refused by `generate`, naming the property and the option; a TypeScript index signature has no member name.
 
 Everything else stays strict: a declared field of the wrong type, an unknown enum member or union tag, a missing required field. `conventions.input.unknownKeys` sets the api's default for every body input, so an api that wants the drop-unknown behaviour of Spring's Jackson defaults or Laravel's `validated()` says so once; a use's own value wins, `refuse` included. A signed identity may set it once for the body input of every route under it, with its own reason (ADR 0002 section 9). Query parameters follow `conventions.query.unknownKeys` and `unknownQuery` instead (ADR 0002 section 7, FR-30). The shared payload table of the validator targets holds the cases: an input with unknown keys at the root and in a nested object is accepted, the value the handler receives has neither under `ignore`, and both under `keep`.
 
@@ -395,4 +395,4 @@ Every named schema becomes a named type in every target. An inline schema gets a
 ## Traceability
 
 - FRs: FR-3 (subset, direction, unions, optional and nullable, formats, marks, refinements, names, examples), FR-12 (credential lint, allow-list), FR-15 (one payload behaviour for zod, yup and class-validator), FR-23 (`restrictedTo`, input policy), FR-29 (enum uses and emission), FR-30 (defaults), FR-42 and A30 (no envelope in schemas); A36 and A40 (opaque values, unknown-key policies), A39 (files, JSON text fields).
-- CHK items enabled: CHK-002, CHK-024, CHK-025, CHK-026, CHK-033, CHK-047, CHK-048, CHK-049, CHK-053, CHK-080, CHK-092, CHK-134, CHK-135, CHK-139, CHK-146, CHK-151, CHK-158, CHK-159.
+- CHK items enabled: CHK-002, CHK-024, CHK-025, CHK-026, CHK-033, CHK-047, CHK-048, CHK-049, CHK-053, CHK-080, CHK-092, CHK-134, CHK-135, CHK-139, CHK-146, CHK-151, CHK-158, CHK-159, and from round 5 CHK-135 (`additionalMember`).

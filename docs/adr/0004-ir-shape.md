@@ -138,6 +138,7 @@ interface Right {
   id; params?: SchemaRef;
   subject: { kind: 'none' } | { kind: 'scope'; scope: ScopeId } | { kind: 'resource'; type: Name; idSchema: SchemaRef };
   guest?: Reason;  errors: ErrorCode[];  docs; extensions; origin; derivedFrom?;   // derivedFrom when a pack declared it
+  codeName?: Name;                          // identifier override; the right's name stays its id (ADR 0007)
 }
 interface Rule {
   id; params?: SchemaRef; takesBucket: boolean;
@@ -395,6 +396,8 @@ The OpenAPI 3.1 document is emitted from the IR only (FR-11), and it is the inte
 
 The table is what the emitter can write; the app config chooses, per document, what it does write (ADR 0011, A40): `extensions` (`all`, the default, `none`, or a list of extension names) keeps every `x-seampact-*` extension, none, or those listed, the native rows staying; `reasons: omit` drops every reason from the extensions it keeps, so a public document does not publish internal rationale; `inputSchemas: strict` writes, for each schema used as input, a second component named `<name>.input` with `additionalProperties: false` on every object that refuses unknown keys, and points request bodies at it, so a plain OpenAPI reader (a mock server, a request validator, a client generator) sees the input as strict as the boundary serves it; `servers` writes OpenAPI's `servers`. These options select and shape rows; they never add an IR member, and with the defaults the document is the one this section describes.
 
+Which documents exist is the user's choice, for every target alike (A43): per app, seampact's documents, the framework's own document completed by the `nativeDocs` artefact, both, or none (ADR 0011). seampact's documents are always written from this table. A monorepo's root config may also ask for a merged document across the apps it lists: the documents of several apis, each mapped by this table, written as one. An element that two apis emit identically (a schema of the workspace's shared file, a shared security scheme, an error code with the same declaration) is written once. Two different elements under one name (an operation id, a component key of `components.schemas` or `components.securitySchemes`, a tag) are refused by `generate` and `check`, naming both apis, both elements and the fix: set a `prefix` for one of the apis in the merged document's entry, which writes `<prefix>.` before every operation id and component key of that api (`billing.listInvoices`, `billing.Invoice`, `billing.api.forbidden`). Two operations with the same method and path are always refused, since one document cannot say which service answers; the fix is a distinct contract path or separate documents. The options above apply to a merged document as to any other.
+
 | IR | OpenAPI |
 |---|---|
 | `schemes` | `components.securitySchemes`: a cookie scheme is `apiKey` with `in: cookie`, a header scheme `apiKey` with `in: header`, a query scheme `apiKey` with `in: query`, a basic scheme `http` with `scheme: basic`, a bearer scheme `http` with `scheme: bearer` and its `bearerFormat`, or `oauth2` with its `flows`, or `openIdConnect` with its `openIdConnectUrl`; a signature scheme is `apiKey` with `in: header` and its `name`, plus `x-seampact-signature: { verify, format, algorithm, payload, encoding, toleranceMs, key }` for a template, or `{ verify: application, headers, key }` |
@@ -415,7 +418,7 @@ The table is what the emitter can write; the app config chooses, per document, w
 | `input` | the request body with its media type: the format's for JSON; `application/x-www-form-urlencoded` with an `encoding` entry per list or object field (`style: form`, `explode` as the conventions say); `multipart/form-data` with each file field as `type: string` with `contentMediaType` (the media list in the part's `encoding.contentType`) and `x-seampact-max-size`, and each JSON text field with `contentMediaType: application/json` and `contentSchema`. Component schemas carry no `additionalProperties: false`, since one schema serves both directions: strict input is the default every reader of a seampact document assumes, and an ignoring or keeping use writes `x-seampact-unknown-keys: { ignore: <reason> }` or `{ keep: <reason> }` on the request body |
 | `unknownQuery` | `x-seampact-unknown-query: { ignore: <reason> }` on an operation that ignores undeclared query keys |
 | `responses` | the success responses, each body the format's shape written out around a reference to the payload schema, with the format's media type; a download as one content entry per media type, each `{ schema: { type: string, contentMediaType } }`, with `Content-Disposition`; a redirect as its status with the `Location` header and no content |
-| `errors` | one response per error status, its `description` the list of its codes, its body the format's error body; each code is a component schema of that body for the code's params, named by the code (`api.forbidden`), with `x-seampact-nature`. Several codes on one status are a `oneOf`, with a `discriminator` on the member the format writes `$code` to when it is a top-level member (`code` under `bare`). The response carries `x-seampact-errors: [{ code, derivedFrom, origin }]`: each code's derivation, or the node that attached it |
+| `errors` | one response per error status, its `description` the list of its codes, its body the format's error body; each code is a component schema of that body for the code's params, named by the code (`api.forbidden`), with `x-seampact-nature`. Since a code now takes the component key alphabet (ADR 0002 section 4), a code equal to a schema id, a hoisted inline schema name or `<schema>.input` would share a key with that schema in `components.schemas`; the compiler refuses it (ADR 0006 section 3), so every document option emits distinct keys. Several codes on one status are a `oneOf`, with a `discriminator` on the member the format writes `$code` to when it is a top-level member (`code` under `bare`). The response carries `x-seampact-errors: [{ code, derivedFrom, origin }]`: each code's derivation, or the node that attached it |
 | `examples` | the route examples, wrapped through the format and the paging style (ADR 0002 section 12), in the `examples` of the request body or of the response for their status or code |
 | `cache` | the `Cache-Control` response header (its directives from the family) with `x-seampact-cache-control: { anonymous, identified }`, one value per caller kind, plus `ETag`, `If-None-Match` and the 304 when `etag` is set |
 | identity headers | ordinary header parameters and response headers, each with `x-seampact-semantic` (`deadline`, `traceContext`, `actorSurface`, `versionToken`) |
@@ -424,7 +427,7 @@ The table is what the emitter can write; the app config chooses, per document, w
 | `internal` | left out of a document with `internal: exclude`; `x-seampact-internal: true` in the others |
 | `relays` | `x-seampact-relays: { api, operationId }` |
 | `format` | the media types above, `x-seampact-format: <format>` at the document root, and on an operation whose format differs |
-| `api.kind`, `api.role`, `api.caller` | `x-seampact-api: { kind, role, caller }` at the document root |
+| `api.kind`, `api.role`, `api.caller` | `x-seampact-api: { kind, role, caller }` at the document root; in a merged document (below), `x-seampact-apis: [{ name, kind, role, caller }]` at the root instead, and `x-seampact-source-api: <name>` on each operation |
 | schema marks | ADR 0003: `format: password` for `sensitive`, `{}` with `x-seampact-opaque: <reason>` for an opaque value, `x-seampact-discriminator` for a header-tagged union, `x-seampact-enum` and `x-seampact-enum-fallback` for an open output enum, the `x-seampact-*` refinements of `int64` and `decimal` |
 
 ```yaml
@@ -445,7 +448,7 @@ paths:
       x-seampact-scopes: [{ scope: channel, from: path.channelId }]
       x-seampact-requires: [{ right: tasks.update, subject: path.taskId }]
       x-seampact-concurrency: { version: body.expectedVersion, field: version }
-      x-seampact-idempotency: { header: Idempotency-Key, replayHeader: Idempotency-Replayed, lifetimeMs: 86400000, required: true }
+      x-seampact-idempotency: { header: Idempotency-Key, replayHeader: Idempotency-Replayed, lifetimeMs: 86400000, required: true, enforce: boundary }
       responses:
         '403':
           description: 'api.csrf_invalid, api.forbidden'
@@ -463,7 +466,7 @@ components:
       type: apiKey
       in: header
       name: Stripe-Signature
-      x-seampact-signature: { format: 't={ts},v1={sig}', algorithm: hmac-sha256, payload: '{ts}.{rawBody}', encoding: hex, toleranceMs: 300000, key: { value: stripe } }
+      x-seampact-signature: { verify: template, format: 't={ts},v1={sig}', algorithm: hmac-sha256, payload: '{ts}.{rawBody}', encoding: hex, toleranceMs: 300000, key: { value: stripe } }
 ```
 
 A moved or added code therefore shows in the committed document's diff (ADR 0011 `checks.openapi`) on every operation it reaches, which is how a reviewer sees an attachment that an indentation slip moved up the tree (ADR 0002 section 8).
@@ -479,5 +482,5 @@ A moved or added code therefore shows in the committed document's diff (ADR 0011
 
 ## Traceability
 
-- FRs: FR-9, FR-11 (the OpenAPI mapping and its `x-seampact-*` extensions), FR-37 (extension slots, open `kind` members), FR-38 (names as segments and role), FR-40 (subset-shaped JSON Schema for model generation), FR-2 (origins of inherited settings), FR-5 (requirements union and order), FR-6 (`derivedFrom`, errors by code), FR-8 (`relays`, documents), FR-23 (field rights), FR-30 (query wire form), FR-31 and A31 (paging styles), FR-33, FR-42 and A30 (formats), FR-27, FR-28.
-- CHK items enabled: CHK-024, CHK-025, CHK-033, CHK-045, CHK-052, CHK-059, CHK-077, CHK-078, CHK-092, and the IR side of every server item (CHK-011 to CHK-043), and from round 4 CHK-124 to CHK-136, CHK-138, CHK-149 to CHK-153, CHK-160.
+- FRs: FR-9, FR-11 (the OpenAPI mapping and its `x-seampact-*` extensions), FR-37 (extension slots, open `kind` members), FR-38 (names as segments and role), FR-40 (subset-shaped JSON Schema for model generation), FR-2 (origins of inherited settings), FR-5 (requirements union and order), FR-6 (`derivedFrom`, errors by code), FR-8 (`relays`, documents), FR-23 (field rights), FR-30 (query wire form), FR-31 and A31 (paging styles), FR-33, FR-42 and A30 (formats), FR-27, FR-28; amendment A43 (which documents exist, merged documents).
+- CHK items enabled: CHK-024, CHK-025, CHK-033, CHK-045, CHK-052, CHK-059, CHK-077, CHK-078, CHK-092, and the IR side of every server item (CHK-011 to CHK-043), and from round 4 CHK-124 to CHK-136, CHK-138, CHK-149 to CHK-153, CHK-160, and from round 5 CHK-171 (merged documents), CHK-172 (distinct component keys).
