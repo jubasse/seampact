@@ -158,7 +158,11 @@ describe("naming", () => {
     expect(idList).toEqual(sorted);
     // The schema rejects what the decisions forbid.
     const ok = find("derived/response-201");
+    const { position: _position, ...noPosition } = find("enum-fallback/plain-value");
     const bad: unknown[] = [
+      noPosition,
+      { ...ok, status: 404 },
+      { ...ok, status: 199 },
       { ...ok, status: "201" },
       { ...ok, status: undefined },
       { ...find("derived/input"), status: 200 },
@@ -386,15 +390,20 @@ describe("naming", () => {
       role: "response",
       status: 201,
     });
-    expect("status" in name(["create", "task"], "input")).toBe(true); // key present, value undefined
+    expect("status" in name(["create", "task"], "input")).toBe(false);
     expect(name(["create", "task"], "input").status).toBeUndefined();
     const bad = (segments: string[], role: Role, status?: unknown) => () =>
       deriveName(segments, role, status as number);
     expect(bad(["a"], "response")).toThrow(/status/);
     expect(bad(["a"], "response", "201")).toThrow(/status/);
     expect(bad(["a"], "response", 20.5)).toThrow(/status/);
-    expect(bad(["a"], "response", 99)).toThrow(/status/);
-    expect(bad(["a"], "response", 600)).toThrow(/status/);
+    // 200 to 399: success and redirect, what `responses` admits.
+    for (const status of [100, 199, 400, 404, 599, 600]) {
+      expect(bad(["a"], "response", status), String(status)).toThrow(/status/);
+    }
+    for (const status of [200, 204, 399]) {
+      expect(bad(["a"], "response", status), String(status)).not.toThrow();
+    }
     expect(bad(["a"], "input", 200)).toThrow(/no status/);
     // A hand-built name is checked by identifier, canonicalId and suffixWords too.
     const forged = (n: unknown) => n as Name;
@@ -421,6 +430,15 @@ describe("naming", () => {
     }
     expect(() => operationId(["List"])).toThrow(/segment/);
     expect(() => operationId([])).toThrow(/segment/);
+    // `segments` must be an array: a string would pass character by character.
+    const text = "list" as unknown as string[];
+    expect(() => operationId(text)).toThrow(/array/);
+    expect(() => deriveName(text, "schema")).toThrow(/array/);
+    expect(() => identifier({ segments: text, role: "schema" }, "typescript")).toThrow(/array/);
+    expect(() =>
+      identifier({ segments: "list", role: "schema" } as unknown as Name, "java"),
+    ).toThrow(/array/);
+    expect(() => deriveName("owner" as unknown as string[], "input")).toThrow(/array/);
     // An empty result has no identifier; a role with a suffix word still has one.
     expect(() => identifier(name([], "schema"), "typescript")).toThrow(/without segment/);
     expect(() => identifier(name([], "member"), "php")).toThrow(/without segment/);

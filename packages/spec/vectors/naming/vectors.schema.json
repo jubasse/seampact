@@ -65,7 +65,7 @@
         "position": {
           "type": "integer",
           "minimum": 1,
-          "description": "One-based position of an enum value in its enum."
+          "description": "One-based position of an enum value in its enum; required when `source` is `enumValue`."
         },
         "owner": {
           "type": "array",
@@ -77,9 +77,9 @@
         },
         "status": {
           "type": "integer",
-          "minimum": 100,
-          "maximum": 599,
-          "description": "The integer status of a `response` role (ADR 0004: the IR's status is a number); present exactly for that role."
+          "minimum": 200,
+          "maximum": 399,
+          "description": "The integer status of a `response` role, 200 to 399 (success and redirect, what `responses` admits; ADR 0004: the IR's status is a number); present exactly for that role."
         },
         "segments": {
           "type": "array",
@@ -214,6 +214,19 @@
             "not": {
               "required": ["status"]
             }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "source": {
+                "const": "enumValue"
+              }
+            },
+            "required": ["source"]
+          },
+          "then": {
+            "required": ["position"]
           }
         },
         {

@@ -536,6 +536,16 @@
     }
   },
   {
+    "id": "enum-fallback/codeName-without-segment",
+    "category": "enum-fallback",
+    "source": "enumValue",
+    "written": "ok",
+    "codeName": "+",
+    "role": "enumMember",
+    "position": 2,
+    "error": "no-segment"
+  },
+  {
     "id": "enum-fallback/empty-at-2",
     "category": "enum-fallback",
     "source": "enumValue",

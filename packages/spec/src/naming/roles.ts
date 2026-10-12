@@ -25,9 +25,12 @@ export type Role = (typeof ROLES)[number];
 
 const SEGMENT = /^[a-z0-9]+$/;
 
-/** The statuses a `response` name can carry: an HTTP status code, as the IR stores it (a number). */
-const MIN_STATUS = 100;
-const MAX_STATUS = 599;
+/**
+ * The statuses a `response` name can carry: 200 to 399, success and redirect, which is what a
+ * `responses` entry admits (ADR 0002, ADR 0004); the IR stores it as a number.
+ */
+const MIN_STATUS = 200;
+const MAX_STATUS = 399;
 
 /**
  * A name as the IR stores it. A `response` name carries the integer `status` (ADR 0004: the IR
@@ -131,6 +134,9 @@ function assertStatus(status: unknown): asserts status is number {
 
 /** Throws unless `segments` are `[a-z0-9]+` strings: every identifier is built from them. */
 export function assertSegments(segments: readonly string[]): void {
+  if (!Array.isArray(segments)) {
+    throw new Error(`naming segments are an array, got ${JSON.stringify(segments)}`);
+  }
   for (const segment of segments) {
     if (typeof segment !== "string" || !SEGMENT.test(segment)) {
       throw new Error(`a naming segment is [a-z0-9]+, got ${JSON.stringify(segment)}`);
@@ -188,10 +194,12 @@ export function deriveName(
 export function deriveName(owner: readonly string[], role: Role, status?: number): Name;
 export function deriveName(owner: readonly string[], role: Role, status?: number): Name {
   assertRole(role);
+  assertSegments(owner);
+  // The `status` key exists on a response name only.
   const name = (
     role === "response"
       ? { segments: [...owner], role, status: status as number }
-      : { segments: [...owner], role, status }
+      : { segments: [...owner], role, ...(status === undefined ? {} : { status }) }
   ) as Name;
   assertName(name);
   return name;
