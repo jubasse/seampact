@@ -6,7 +6,7 @@ import type { Origin } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { parse } from "yaml";
 import { loadFsReader, loadWorkspace } from "../load/index.js";
-import type { JsonObject, JsonValue, RawApi, RawWorkspace } from "../raw-tree.js";
+import type { ApiLayerId, JsonObject, RawApi, RawWorkspace } from "../raw-tree.js";
 import { MAX_DIAGNOSTICS } from "./diagnostics.js";
 import { validateRules } from "./rules.js";
 import {
@@ -259,7 +259,7 @@ describe("reference contract validates", () => {
 });
 
 describe("validate stage", () => {
-  const layer = (name: Origin["layer"], file: string, tree: JsonObject) => ({
+  const layer = (name: ApiLayerId, file: string, tree: JsonObject) => ({
     layer: name,
     file,
     tree,

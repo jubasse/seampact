@@ -7,8 +7,8 @@ surfaces:
   app:
     routes:
       tasks:
-        list:
-          query:
-            default: { $include: ./fields/default.yaml }
-          examples:
-            raw: { value: { $include: ./never-read.yaml } }
+        method: get
+        query:
+          default: { $include: ./fields/default.yaml }
+        examples:
+          raw: { status: 200, value: { $include: ./never-read.yaml } }

@@ -1,10 +1,20 @@
 import type { Origin } from "@seampact/spec/ir";
 import { isAlias, isMap, isScalar, isSeq, type Node, type Pair, Scalar, type YAMLMap } from "yaml";
-import type { JsonObject, JsonValue } from "../raw-tree.js";
+import type { ApiLayerId, JsonObject, JsonValue } from "../raw-tree.js";
 import { type LoadBudget, loadWorkOf } from "./budget.js";
 import { asObject, cloneJson, isReservedKey, jsonObject, setKey } from "./json.js";
 import { LOAD_MAX_DEPTH } from "./limits.js";
 import { pointerEscape, pointerSegments } from "./paths.js";
+import {
+  expectedTypes,
+  type Position,
+  type PositionKind,
+  positionAt,
+  refusesScalar,
+  rootPosition,
+  scalarType,
+  stepPosition,
+} from "./positions.js";
 import type { Reporter, SiteLocation } from "./report.js";
 import { type FileStore, nodeSite, pairSite, type ParsedFile } from "./source.js";
 
@@ -27,8 +37,8 @@ interface FileRef {
 }
 
 /** One layer file, expanded. `locs` maps a layer pointer to where it is written. */
-export interface LayerBuild {
-  layer: Origin["layer"];
+export interface LayerBuild<L extends Origin["layer"] = ApiLayerId> {
+  layer: L;
   parsed: ParsedFile;
   tree: JsonObject;
   locs: Map<string, SiteLocation>;
@@ -64,34 +74,25 @@ type JsonFile =
 
 interface Scope {
   file: ParsedFile;
+  /** True in a data position (and below it): the authoring schema expects nothing there. */
   data: boolean;
+  /** Where the authoring schema places this node (P6); undefined when it says nothing. */
+  pos: Position | undefined;
   parentKey: string | undefined;
   stack: StackEntry[];
   /** Nesting level in the merged tree, through includes and `$file`. */
   depth: number;
 }
 
-// Data positions (ADR 0002 section 2): only a mapping whose sole key is `$file` is processed.
-// Recognised by key name, a stopgap accepted at review: the follow-up PR (with P6) derives the
-// data positions from the authoring schema and removes both exception lists below.
-const DATA_KEYS = new Set(["value", "example", "examples", "default"]);
-// Exceptions, where such a key is not data:
-// - mappings whose keys are names an author chooses, so `default:` or `value:` there is a name
-//   (`query: { default: { type: string } }` declares a query field named `default`);
-// - two settings mappings whose `default` or `value` is itself a setting, matched by pointer so
-//   a property or field of that name keeps its data positions: `conventions.paging.default`
-//   names a paging style (section 13), a scheme's `key.value` is a literal identifier (section 9).
-const NOT_DATA_UNDER = new Set([
-  "properties",
-  "query",
-  "pathParams",
-  "headers",
-  "params",
-  "id",
-  "fields",
-]);
-
-const SETTINGS_NOT_DATA = /^(?:\/conventions\/paging|\/schemes\/[^/]+\/key)$/;
+// Data positions (ADR 0002 section 2): a position where the authoring schema expects nothing (a
+// payload, an example, a default) is data. Only there is a mapping whose sole key is `$file`
+// processed, and null must be written `null`.
+/** The file kind a layer is read as; the validate stage maps the layers the same way. */
+function positionKindOf(layer: Origin["layer"]): PositionKind {
+  if (layer === "workspace" || layer === "api") return layer;
+  if (layer.startsWith("pack:")) return "pack";
+  return "base";
+}
 
 const NULL_SPELLINGS = new Set(["", "~", "Null", "NULL"]);
 
@@ -152,8 +153,8 @@ export class Expander {
   ) {}
 
   /** Expands a whole file as one layer. */
-  expandLayer(file: ParsedFile, layer: Origin["layer"]): LayerBuild {
-    const build: LayerBuild = {
+  expandLayer<L extends Origin["layer"]>(file: ParsedFile, layer: L): LayerBuild<L> {
+    const build: LayerBuild<L> = {
       layer,
       parsed: file,
       tree: jsonObject(),
@@ -177,6 +178,7 @@ export class Expander {
     const scope: Scope = {
       file,
       data: false,
+      pos: rootPosition(positionKindOf(layer)),
       parentKey: undefined,
       stack: [
         {
@@ -256,6 +258,7 @@ export class Expander {
       const scope: Scope = {
         file: ref.file,
         data: false,
+        pos: positionAt(positionKindOf(build.layer), ["schemas", ref.name]),
         parentKey: ref.name,
         stack: [
           {
@@ -306,7 +309,12 @@ export class Expander {
     return true;
   }
 
-  private node(build: LayerBuild, node: Node | null, pointer: string, scope: Scope): JsonValue {
+  private node<L extends Origin["layer"]>(
+    build: LayerBuild<L>,
+    node: Node | null,
+    pointer: string,
+    scope: Scope,
+  ): JsonValue {
     if (node === null || node === undefined || isAlias(node)) return null;
     if (!this.admit(scope.file, node, scope.depth, pointer)) return null;
     if (isScalar(node)) return this.scalar(node, scope);
@@ -318,6 +326,7 @@ export class Expander {
         out.push(
           this.node(build, itemNode, child, {
             ...scope,
+            pos: scope.data ? undefined : stepPosition(scope.pos, String(i), true),
             parentKey: undefined,
             depth: scope.depth + 1,
           }),
@@ -332,6 +341,7 @@ export class Expander {
 
   private scalar(node: Scalar, scope: Scope): JsonValue {
     const source = node.source ?? "";
+    if (!scope.data && !node.tag) this.checkType(node, scope);
     if (scope.data && node.type === Scalar.PLAIN && !node.tag && NULL_SPELLINGS.has(source)) {
       this.rep.report({
         rule: "data-null",
@@ -347,7 +357,37 @@ export class Expander {
     return value;
   }
 
-  private map(build: LayerBuild, node: YAMLMap, pointer: string, scope: Scope): JsonValue {
+  /**
+   * P6 (ADR 0002 section 3): a scalar whose YAML type is not one the authoring schema accepts
+   * at this position, null included. The tag case is P9's, reported by the file walk.
+   */
+  private checkType(node: Scalar, scope: Scope): void {
+    const type = scalarType(node.value);
+    if (type === undefined || !scope.pos || !refusesScalar(scope.pos, type)) return;
+    const expected = expectedTypes(scope.pos) ?? [];
+    const written =
+      node.type === Scalar.PLAIN ? (node.source ?? "") : JSON.stringify(String(node.value));
+    const shown = written.length > 40 ? `${written.slice(0, 37)}...` : written;
+    const wants = expected.join(" or ");
+    const got =
+      type === "null"
+        ? "a null (no value, '~' or null)"
+        : `'${shown}' is ${type === "integer" ? "an integer" : `a ${type}`}`;
+    const quotable = expected.includes("a string") && type !== "null";
+    this.rep.report({
+      rule: "scalar-type",
+      message: `${got} where the schema expects ${wants} (P6)`,
+      fix: quotable ? `quote it ('${shown}') to write a string` : `write ${wants}`,
+      at: nodeSite(scope.file, node),
+    });
+  }
+
+  private map<L extends Origin["layer"]>(
+    build: LayerBuild<L>,
+    node: YAMLMap,
+    pointer: string,
+    scope: Scope,
+  ): JsonValue {
     const fileKey = mapIndex(node).get("$file");
     if (fileKey) {
       if (node.items.length === 1) return this.fileDirective(build, fileKey, pointer, scope);
@@ -366,8 +406,8 @@ export class Expander {
     return out;
   }
 
-  private items(
-    build: LayerBuild,
+  private items<L extends Origin["layer"]>(
+    build: LayerBuild<L>,
     map: YAMLMap,
     pointer: string,
     scope: Scope,
@@ -430,14 +470,11 @@ export class Expander {
       seen.sites.set(key, keySite);
       seen.order.push(key);
       const child = `${pointer}/${pointerEscape(key)}`;
-      const data =
-        scope.data ||
-        (DATA_KEYS.has(key) &&
-          !NOT_DATA_UNDER.has(scope.parentKey ?? "") &&
-          !SETTINGS_NOT_DATA.test(pointer));
+      const pos = scope.data ? undefined : stepPosition(scope.pos, key, false);
       let value = this.node(build, valueNode, child, {
         ...scope,
-        data,
+        data: scope.data || (pos?.data ?? false),
+        pos,
         parentKey: key,
         depth: scope.depth + 1,
       });
@@ -449,8 +486,8 @@ export class Expander {
     }
   }
 
-  private include(
-    build: LayerBuild,
+  private include<L extends Origin["layer"]>(
+    build: LayerBuild<L>,
     pair: YAMLMap["items"][number],
     pointer: string,
     scope: Scope,
@@ -530,6 +567,7 @@ export class Expander {
       const inner: Scope = {
         file: pf,
         data: false,
+        pos: scope.pos,
         parentKey: scope.parentKey,
         stack: [...scope.stack, { key, shown, at }],
         depth: scope.depth,
@@ -566,8 +604,8 @@ export class Expander {
     });
   }
 
-  private fileDirective(
-    build: LayerBuild,
+  private fileDirective<L extends Origin["layer"]>(
+    build: LayerBuild<L>,
     pair: YAMLMap["items"][number],
     pointer: string,
     scope: Scope,
@@ -637,6 +675,7 @@ export class Expander {
       return this.node(build, pf.root, pointer, {
         file: pf,
         data: true,
+        pos: undefined,
         parentKey: undefined,
         stack: [...scope.stack, { key, shown: resolved.path, at: nodeSite(file, valueNode) }],
         depth: scope.depth,
@@ -704,8 +743,8 @@ export class Expander {
     return out;
   }
 
-  private ref(
-    build: LayerBuild,
+  private ref<L extends Origin["layer"]>(
+    build: LayerBuild<L>,
     value: string,
     valueNode: Node | null,
     pointer: string,

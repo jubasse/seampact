@@ -1,11 +1,17 @@
 import type { Origin } from "@seampact/spec/ir";
-import { isScalar } from "yaml";
+import { isMap, isScalar } from "yaml";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
 import { diagnosticLocationKey, diagnosticSort } from "../diagnostics/print.js";
-import type { JsonObject, RawApi, RawWorkspace, RawWorkspaceConfig } from "../raw-tree.js";
+import type {
+  ApiLayerId,
+  JsonObject,
+  RawApi,
+  RawWorkspace,
+  RawWorkspaceConfig,
+} from "../raw-tree.js";
 import { LoadBudget, loadWorkOf } from "./budget.js";
 import { mergeLayers } from "./compose.js";
-import { Expander, type LayerBuild, navigate } from "./expand.js";
+import { Expander, type LayerBuild, mapIndex, navigate } from "./expand.js";
 import { asObject, isReservedKey, showValue } from "./json.js";
 import { LOAD_MAX_DEPTH } from "./limits.js";
 import { isInside, joinPath, loadNormalizePath, pointerEscape } from "./paths.js";
@@ -81,8 +87,8 @@ class Loader {
   private readonly budget = new LoadBudget(this.rep);
   private readonly store: FileStore;
   private readonly ex: Expander;
-  private readonly builds = new Map<string, LayerBuild>();
-  private readonly finished = new Set<LayerBuild>();
+  private readonly builds = new Map<string, LayerBuild<Origin["layer"]>>();
+  private readonly finished = new Set<LayerBuild<Origin["layer"]>>();
   private readonly packs = new Map<string, PackBuild | null>();
   private readonly packNames = new Map<string, PackBuild>();
 
@@ -97,7 +103,7 @@ class Loader {
     const entry = loadNormalizePath(this.options.entry);
     const entrySite: SiteLocation = { file: entry, line: 1, column: 1, endLine: 1, endColumn: 1 };
     this.rep.layer = "api";
-    let entryBuild: LayerBuild | undefined;
+    let entryBuild: LayerBuild<"workspace"> | LayerBuild<"api"> | undefined;
     if (!isInside(".", entry)) {
       this.rep.report({
         rule: "path-escape",
@@ -107,14 +113,26 @@ class Loader {
       });
     } else if (typeof this.store.checkFile(entry, ".", entrySite, "the entry file") === "string") {
       const pf = this.store.parse(entry, ".");
-      if (pf) entryBuild = this.layer(pf, "api");
+      if (pf) {
+        // The entry is read as the workspace kind when it writes `workspace:` itself, so the
+        // authoring schema of that kind types its scalars; any other entry is an api file.
+        const isWorkspace = isMap(pf.root) && mapIndex(pf.root).has("workspace");
+        entryBuild = isWorkspace ? this.layer(pf, "workspace") : this.layer(pf, "api");
+      }
     }
     if (entryBuild) {
       const tree = entryBuild.tree;
       const ws = asObject(tree.workspace);
-      if (ws) {
+      if (ws && entryBuild.layer !== "workspace") {
+        this.badShape(
+          entryBuild,
+          "/workspace",
+          "the workspace key comes from an $include, so the file is not read as a workspace file",
+          "write workspace: in the entry file itself",
+        );
+      } else if (ws && entryBuild.layer === "workspace") {
         this.workspaceMode(entryBuild, ws, apis, config);
-      } else if (asObject(tree.api)) {
+      } else if (entryBuild.layer === "api" && asObject(tree.api)) {
         const name = asObject(tree.api)?.name;
         if (typeof name === "string") this.loadApi(name, entryBuild, undefined, apis);
         else
@@ -135,6 +153,14 @@ class Loader {
     }
     const locations = this.rep.locations;
     const workspace: RawWorkspace = { root: ".", apis, locations };
+    if (entryBuild?.layer === "workspace") {
+      // The whole entry document, located by `workspace#<pointer>`: the `workspace` layer id is
+      // never an api layer's, and the load sites' pointers start `/~load/`.
+      workspace.entry = { layer: "workspace", file: entryBuild.parsed.path, tree: entryBuild.tree };
+      for (const [pointer, site] of entryBuild.locs) {
+        locations[diagnosticLocationKey({ layer: "workspace", pointer })] = site;
+      }
+    }
     if (Object.keys(config).length > 0) workspace.config = config;
     return {
       workspace,
@@ -143,7 +169,12 @@ class Loader {
     };
   }
 
-  private badShape(b: LayerBuild, ptr: string, message: string, fix: string): void {
+  private badShape(
+    b: LayerBuild<Origin["layer"]>,
+    ptr: string,
+    message: string,
+    fix: string,
+  ): void {
     this.rep.report({
       rule: "workspace-shape",
       message,
@@ -152,10 +183,10 @@ class Loader {
     });
   }
 
-  private layer(pf: ParsedFile, layer: Origin["layer"]): LayerBuild {
+  private layer<L extends Origin["layer"]>(pf: ParsedFile, layer: L): LayerBuild<L> {
     const key = `${layer}|${pf.boundary}|${pf.path}`;
     const hit = this.builds.get(key);
-    if (hit) return hit;
+    if (hit) return hit as LayerBuild<L>;
     const saved = this.rep.layer;
     this.rep.layer = layer;
     const build = this.ex.expandLayer(pf, layer);
@@ -165,7 +196,7 @@ class Loader {
   }
 
   private workspaceMode(
-    entry: LayerBuild,
+    entry: LayerBuild<"workspace">,
     ws: JsonObject,
     apis: RawApi[],
     config: RawWorkspaceConfig,
@@ -315,16 +346,14 @@ class Loader {
       }
       return seen;
     };
-    const layerName = (key: string) => this.packs.get(key)?.build.layer as Origin["layer"];
+    const layerName = (key: string) => this.packs.get(key)?.build.layer as ApiLayerId;
     const closureNames = (list: PackBuild[]) => {
       const keys = new Set<string>();
       for (const p of list) for (const k of closure(p)) keys.add(k);
       return [...keys].map(layerName);
     };
-    const sharedSees: Origin["layer"][] = shared ? ["shared", ...closureNames(sharedPacks)] : [];
-    const baseSees: Origin["layer"][] = base
-      ? ["base", ...closureNames(basePacks), ...sharedSees]
-      : [];
+    const sharedSees: ApiLayerId[] = shared ? ["shared", ...closureNames(sharedPacks)] : [];
+    const baseSees: ApiLayerId[] = base ? ["base", ...closureNames(basePacks), ...sharedSees] : [];
     // Null prototype: the keys are layer ids, which embed pack names an author chose.
     const vis: RawApi["visibility"] = Object.create(null);
     for (const p of state.order) vis[p.build.layer] = closureNames([p]).sort();
