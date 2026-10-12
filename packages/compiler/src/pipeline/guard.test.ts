@@ -1,7 +1,11 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { createDraftIR, type DraftIR, type DraftOperation } from "./draft.js";
-import { DraftAccessError, type GuardedPart, pipelineGuard } from "./guard.js";
+import { DraftAccessError, type GuardedPart, pipelineGuard as revocableGuard } from "./guard.js";
+
+// The guarded draft of a guard whose disposal the test does not exercise.
+const pipelineGuard = <D extends DraftIR>(value: D, guarded: GuardedPart): D =>
+  revocableGuard(value, guarded).draft;
 
 const origin: IrWriter.Origin = { layer: "api", pointer: "/surfaces/app/routes/tasks" };
 const text: IrWriter.TypeUse = { kind: "scalar", type: "string", refinements: {} };
@@ -258,5 +262,16 @@ describe("guard refuses undeclared access", () => {
     expect(refused(() => Object.assign(operationOf(guarded), { id: "x" })).message).toContain(
       "outside its writes",
     );
+  });
+
+  test("dispose revokes every guard of the half, so a retained one throws", () => {
+    const guard = revocableGuard(draft(), part("tree.nodes", ["operations[]"], []));
+    const operation = operationOf(guard.draft);
+    const operations = guard.draft.operations;
+    expect(operation.id).toBe("createTask");
+    guard.dispose();
+    expect(() => operation.id).toThrow(TypeError);
+    expect(() => operations.length).toThrow(TypeError);
+    expect(() => guard.dispose()).not.toThrow();
   });
 });

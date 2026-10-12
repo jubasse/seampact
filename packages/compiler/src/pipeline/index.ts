@@ -7,7 +7,7 @@ export type {
   DraftOperationInput,
 } from "./draft.js";
 export { createDraftIR } from "./draft.js";
-export type { GuardedPart } from "./guard.js";
+export type { DraftGuard, GuardedPart } from "./guard.js";
 export { DraftAccessError, pipelineGuard } from "./guard.js";
 export type { HalfName, PassName, PassOf } from "./halves.js";
 export { pipelineHalves, pipelinePassOf } from "./halves.js";

@@ -25,6 +25,8 @@ import {
 // - A default is written in one assignment: changing a member inside a present default is a write over it.
 // - A half appends to an `elements` list; moving another half's element (`splice`, `unshift`, `sort`) writes it.
 // - Values are unwrapped before they reach the draft, so the draft never holds a guard.
+// - The guards of a run are revocable: the orchestrator calls `dispose` when the half ends, so a guard kept past
+//   the run throws instead of writing unchecked.
 // The link pass is guarded with `writes: []`: read-only by guard as well as by type.
 
 /** What a guarded part declares: its name, its reads and its writes. */
@@ -32,6 +34,17 @@ export interface GuardedPart {
   half: HalfName | "link";
   reads: readonly DraftField[];
   writes: readonly DraftField[];
+}
+
+/** A guarded draft for one half's run, and the call that ends it. */
+export interface DraftGuard<D extends DraftIR> {
+  /** The draft as the half sees it. */
+  readonly draft: D;
+  /**
+   * Revokes every guard handed out for this run, so a guard the half kept past its run throws a `TypeError` on
+   * any later access. The orchestrator calls it when the half ends; calling it again does nothing.
+   */
+  dispose(): void;
 }
 
 /** An access outside a half's declaration or its ownership. */
@@ -147,12 +160,13 @@ const PASS_THROUGH = new Set(["toJSON", "then", "constructor", "valueOf", "toStr
 
 const isObject = (value: unknown): value is object => typeof value === "object" && value !== null;
 
-/** Wraps `draft` so `part` may read and write only what it declares and owns. */
-export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D {
+/** Wraps `draft` so `part` may read and write only what it declares and owns, until `dispose`. */
+export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): DraftGuard<D> {
   const reads = [...part.reads, ...part.writes].map(draftFieldSegments);
   const writes = part.writes.map(draftFieldSegments);
   const proxies = new WeakMap<object, Map<string, object>>();
   const targets = new WeakMap<object, object>();
+  const revokes: (() => void)[] = [];
 
   function fail(access: "read" | "write", position: Position, reason: string): never {
     throw new DraftAccessError(
@@ -190,7 +204,9 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
     }
     let proxy = byPath.get(key);
     if (proxy === undefined) {
-      proxy = new Proxy(value, handlerAt(position));
+      const revocable = Proxy.revocable(value, handlerAt(position));
+      proxy = revocable.proxy;
+      revokes.push(revocable.revoke);
       byPath.set(key, proxy);
       targets.set(proxy, value);
     }
@@ -382,7 +398,12 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
     },
   });
 
-  return wrap(draft, START) as D;
+  return {
+    draft: wrap(draft, START) as D,
+    dispose() {
+      for (const revoke of revokes.splice(0)) revoke();
+    },
+  };
 }
 
 const member = (value: unknown, key: string): unknown =>
