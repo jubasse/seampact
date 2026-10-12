@@ -5,7 +5,7 @@ import { REFUSED_SCHEMA_KEYWORDS } from "@seampact/spec/authoring";
 import type { Origin } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { parse } from "yaml";
-import type { JsonObject, JsonValue, RawWorkspace } from "../raw-tree.js";
+import type { JsonObject, JsonValue, RawApi, RawWorkspace } from "../raw-tree.js";
 import { MAX_DIAGNOSTICS } from "./diagnostics.js";
 import { validateRules } from "./rules.js";
 import {
@@ -268,7 +268,14 @@ describe("validate stage", () => {
     ({
       root: ".",
       locations: {},
-      apis: apis.map((a) => ({ ...a, merged: {}, leafOrigins: {} })),
+      apis: apis.map((a) => ({
+        ...a,
+        merged: {},
+        leafOrigins: {},
+        locations: {},
+        // The validate stage never reads visibility; the Record type requires the fixed layer keys.
+        visibility: {} as RawApi["visibility"],
+      })),
     }) satisfies RawWorkspace;
 
   test("validates the shared file once, under the first api that reaches it", () => {
