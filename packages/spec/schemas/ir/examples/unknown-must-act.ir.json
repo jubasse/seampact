@@ -1,0 +1,46 @@
+{
+  "irVersion": 1,
+  "irRevision": 1,
+  "kinds": [],
+  "features": [],
+  "api": {
+    "id": "tasks",
+    "name": { "segments": ["tasks"], "role": "schema" },
+    "version": { "kind": "label", "label": "2026-10" },
+    "kind": "product",
+    "pathVersion": {
+      "value": "none",
+      "origin": { "layer": "base", "pointer": "/conventions/pathVersion" }
+    },
+    "maturity": "stable",
+    "compat": { "policy": "additive-only" },
+    "surfaces": {},
+    "documents": {},
+    "docs": {},
+    "extensions": {},
+    "origin": { "layer": "api", "pointer": "" }
+  },
+  "packs": [],
+  "conventions": {},
+  "schemas": {},
+  "scalars": {},
+  "enums": {},
+  "errors": {},
+  "natures": {},
+  "schemes": {
+    "client": {
+      "id": "client",
+      "kind": "mtls",
+      "origin": { "layer": "api", "pointer": "/schemes/client" }
+    }
+  },
+  "headers": {},
+  "identities": {},
+  "rights": {},
+  "rules": {},
+  "scopes": {},
+  "buckets": {},
+  "services": {},
+  "extensionKeys": {},
+  "lint": { "rules": {}, "allows": [] }
+}

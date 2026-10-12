@@ -1,0 +1,646 @@
+{
+  "irVersion": 1,
+  "irRevision": 1,
+  "kinds": ["httpOperation"],
+  "features": [],
+  "api": {
+    "id": "tasks",
+    "name": { "segments": ["tasks"], "role": "schema" },
+    "version": { "kind": "path", "number": 1 },
+    "kind": "service",
+    "pathVersion": {
+      "value": "prefix",
+      "origin": { "layer": "base", "pointer": "/conventions/pathVersion" }
+    },
+    "role": "gateway",
+    "maturity": "provisional",
+    "caller": { "identity": "user", "right": "tasks.read" },
+    "compat": { "policy": "additive-only" },
+    "surfaces": {
+      "app": {
+        "name": { "segments": ["app"], "role": "schema" },
+        "prefix": "/app",
+        "pathVersion": "prefix",
+        "origin": { "layer": "api", "pointer": "/surfaces/app" }
+      }
+    },
+    "documents": { "public": { "surfaces": ["app"], "internal": "exclude" } },
+    "docs": { "summary": "Tasks.", "description": "Tasks and their assignees." },
+    "extensions": { "acme": { "owner": "team-tasks" } },
+    "origin": { "layer": "api", "pointer": "" }
+  },
+  "packs": [{ "name": "@acme/pack-tenancy", "version": "1.2.0" }],
+  "conventions": {
+    "pathVersion": {
+      "value": "prefix",
+      "origin": { "layer": "base", "pointer": "/conventions/pathVersion" }
+    }
+  },
+  "schemas": {
+    "Task": {
+      "kind": "object",
+      "id": "Task",
+      "name": { "segments": ["task"], "role": "schema" },
+      "typeName": "Task",
+      "directions": ["input", "output"],
+      "examples": [{ "taskId": "t1" }],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/schemas/Task" },
+      "properties": [
+        {
+          "name": "taskId",
+          "type": { "kind": "ref", "schema": "Labels" },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": { "layer": "api", "pointer": "/schemas/Task/properties/taskId" }
+        },
+        {
+          "name": "effort",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "format": "int64",
+            "refinements": {
+              "minimum": "0",
+              "maximum": "9223372036854775807",
+              "exclusiveMinimum": "-1",
+              "multipleOf": "1"
+            }
+          },
+          "optional": true,
+          "nullable": true,
+          "sensitive": true,
+          "restrictedTo": {
+            "right": "tasks.effort",
+            "params": { "level": 2 },
+            "inputPolicy": "strip",
+            "origin": { "layer": "api", "pointer": "/schemas/Task/properties/effort/restrictedTo" }
+          },
+          "default": 1,
+          "deprecated": true,
+          "codeName": { "segments": ["effort", "points"], "role": "member" },
+          "docs": { "summary": "Effort." },
+          "extensions": {},
+          "origin": { "layer": "api", "pointer": "/schemas/Task/properties/effort" },
+          "derivedFrom": {
+            "derivation": "concurrency.version",
+            "from": [
+              { "api": "billing", "layer": "pack:@acme/pack-tenancy", "pointer": "/derive/version" }
+            ]
+          }
+        },
+        {
+          "name": "title",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "minLength": 1,
+              "maxLength": 200,
+              "pattern": { "source": "^\\S", "normalized": "^[^\\t\\n\\v\\f\\r ]" }
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": { "layer": "api", "pointer": "/schemas/Task/properties/title" }
+        },
+        {
+          "name": "budget",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "scalar": "money",
+            "refinements": {
+              "pattern": {
+                "source": "^-?(0|[1-9][0-9]*)\\.[0-9]{2}$",
+                "normalized": "^-?(0|[1-9][0-9]*)\\.[0-9]{2}$"
+              }
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": { "layer": "api", "pointer": "/schemas/Task/properties/budget" }
+        },
+        {
+          "name": "ratio",
+          "type": {
+            "kind": "scalar",
+            "type": "number",
+            "refinements": { "exclusiveMaximum": "1", "multipleOf": "0.01" },
+            "nullable": true
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": { "layer": "api", "pointer": "/schemas/Task/properties/ratio" }
+        },
+        {
+          "name": "data",
+          "type": {
+            "kind": "opaque",
+            "reason": "Third-party payload.",
+            "origin": { "layer": "api", "pointer": "/schemas/Task/properties/data" }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": { "layer": "api", "pointer": "/schemas/Task/properties/data" }
+        },
+        {
+          "name": "attachment",
+          "type": { "kind": "file", "media": ["image/png"], "maxSizeBytes": 1048576 },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": { "layer": "api", "pointer": "/schemas/Task/properties/attachment" }
+        },
+        {
+          "name": "state",
+          "type": {
+            "kind": "enum",
+            "enum": "State",
+            "narrowedTo": { "values": ["open"], "reason": "Only open tasks." }
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": { "layer": "api", "pointer": "/schemas/Task/properties/state" }
+        },
+        {
+          "name": "tags",
+          "type": {
+            "kind": "array",
+            "items": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {},
+              "content": {
+                "media": "application/json",
+                "schema": { "kind": "ref", "schema": "Notice" }
+              },
+              "nullable": true
+            },
+            "minItems": 0,
+            "maxItems": 10
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": { "layer": "api", "pointer": "/schemas/Task/properties/tags" }
+        },
+        {
+          "name": "notice",
+          "type": {
+            "kind": "ref",
+            "schema": "Notice",
+            "unknownKeys": {
+              "policy": "ignore",
+              "reason": "The sender adds fields.",
+              "origin": { "layer": "api", "pointer": "/schemas/Task/properties/notice" },
+              "derivedFrom": {
+                "derivation": "input.unknownKeys",
+                "from": [{ "layer": "api", "pointer": "/conventions/input/unknownKeys" }]
+              }
+            }
+          },
+          "optional": true,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": { "layer": "api", "pointer": "/schemas/Task/properties/notice" }
+        }
+      ]
+    },
+    "Labels": {
+      "kind": "map",
+      "id": "Labels",
+      "name": { "segments": ["labels"], "role": "schema" },
+      "directions": ["output"],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "shared", "pointer": "/schemas/Labels" },
+      "keys": { "kind": "scalar", "type": "string", "refinements": {} },
+      "values": { "kind": "scalar", "type": "string", "refinements": {}, "nullable": true }
+    },
+    "Notice": {
+      "kind": "union",
+      "id": "Notice",
+      "name": { "segments": ["notice"], "role": "schema" },
+      "directions": ["output"],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "shared", "pointer": "/schemas/Notice" },
+      "tag": { "in": "body", "property": "kind" },
+      "variants": [{ "tag": "done", "schema": "Task" }]
+    },
+    "GithubEvent": {
+      "kind": "union",
+      "id": "GithubEvent",
+      "name": { "segments": ["github", "event"], "role": "schema" },
+      "directions": ["input"],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/schemas/GithubEvent" },
+      "tag": { "in": "header", "name": "X-GitHub-Event" },
+      "variants": [{ "tag": "push", "schema": "Task" }]
+    },
+    "CreateTaskResponse201": {
+      "kind": "object",
+      "id": "CreateTaskResponse201",
+      "name": { "segments": ["create", "task"], "role": "response", "status": 201 },
+      "directions": ["output"],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/tasks/routes/create/responses/201/body"
+      },
+      "properties": []
+    },
+    "LockedParams": {
+      "kind": "object",
+      "id": "LockedParams",
+      "name": { "segments": ["locked", "params"], "role": "schema" },
+      "directions": ["output"],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/errors/tasks.locked/params" },
+      "properties": []
+    }
+  },
+  "scalars": {
+    "money": {
+      "id": "money",
+      "name": { "segments": ["money"], "role": "schema" },
+      "type": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {
+          "pattern": {
+            "source": "^-?(0|[1-9][0-9]*)\\.[0-9]{2}$",
+            "normalized": "^-?(0|[1-9][0-9]*)\\.[0-9]{2}$"
+          }
+        }
+      },
+      "directions": ["input", "output"],
+      "docs": { "summary": "An amount with two decimals." },
+      "origin": { "layer": "pack:@acme/pack-tenancy", "pointer": "/scalars/money" }
+    },
+    "resourceId": {
+      "id": "resourceId",
+      "name": { "segments": ["resource", "id"], "role": "schema" },
+      "type": { "kind": "scalar", "type": "string", "format": "uuid", "refinements": {} },
+      "directions": ["input", "output"],
+      "docs": { "summary": "The id of a scope or a resource: a UUID." },
+      "origin": { "layer": "api", "pointer": "/scalars/resourceId" }
+    }
+  },
+  "enums": {
+    "State": {
+      "id": "State",
+      "name": { "segments": ["state"], "role": "schema" },
+      "values": ["open", "done"],
+      "codeNames": { "done": { "segments": ["finished"], "role": "enumMember" } },
+      "source": { "kind": "vocabulary", "vocabulary": "task-states" },
+      "localReason": "Kept local for the demo.",
+      "fallback": "open",
+      "directions": ["output"],
+      "docs": {},
+      "origin": { "layer": "api", "pointer": "/enums/State" }
+    },
+    "Mirror": {
+      "id": "Mirror",
+      "name": { "segments": ["mirror"], "role": "schema" },
+      "values": ["open"],
+      "source": { "kind": "enum", "enum": "State" },
+      "directions": ["input"],
+      "docs": {},
+      "origin": { "layer": "api", "pointer": "/enums/Mirror" }
+    }
+  },
+  "errors": {
+    "tasks.locked": {
+      "code": "tasks.locked",
+      "family": "tasks",
+      "nature": "refused",
+      "natureName": "locked",
+      "http": { "status": 423 },
+      "params": "LockedParams",
+      "example": { "until": "2026-01-01" },
+      "title": "Locked",
+      "docs": {},
+      "origin": { "layer": "api", "pointer": "/errors/tasks.locked" },
+      "default": "stateConflict"
+    }
+  },
+  "natures": {
+    "locked": {
+      "id": "locked",
+      "base": "refused",
+      "docs": {},
+      "origin": { "layer": "api", "pointer": "/natures/locked" }
+    }
+  },
+  "schemes": {
+    "sessionCookie": {
+      "id": "sessionCookie",
+      "kind": "cookie",
+      "name": "session",
+      "csrf": "csrfToken",
+      "origin": { "layer": "api", "pointer": "/schemes/sessionCookie" }
+    },
+    "csrfToken": {
+      "id": "csrfToken",
+      "kind": "header",
+      "name": "X-CSRF-Token",
+      "origin": { "layer": "api", "pointer": "/schemes/csrfToken" }
+    },
+    "apiKey": {
+      "id": "apiKey",
+      "kind": "query",
+      "name": "api_key",
+      "origin": { "layer": "api", "pointer": "/schemes/apiKey" }
+    },
+    "basicAuth": {
+      "id": "basicAuth",
+      "kind": "basic",
+      "origin": { "layer": "api", "pointer": "/schemes/basicAuth" }
+    },
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "bearer": {
+        "format": "JWT",
+        "oauth2": { "flows": {} },
+        "openIdConnectUrl": "https://id.example.com"
+      },
+      "origin": { "layer": "api", "pointer": "/schemes/bearer" }
+    },
+    "stripeSignature": {
+      "id": "stripeSignature",
+      "kind": "signature",
+      "name": "Stripe-Signature",
+      "signature": {
+        "verify": "template",
+        "format": "t={ts},v1={sig}",
+        "algorithm": "hmac-sha256",
+        "payload": "{ts}.{rawBody}",
+        "encoding": "hex",
+        "toleranceMs": 300000,
+        "key": { "kind": "value", "value": "stripe" }
+      },
+      "origin": { "layer": "api", "pointer": "/schemes/stripeSignature" }
+    },
+    "appSignature": {
+      "id": "appSignature",
+      "kind": "signature",
+      "signature": {
+        "verify": "application",
+        "headers": ["X-Signature"],
+        "key": { "kind": "from", "from": { "in": "header", "name": "X-Key-Id" } }
+      },
+      "origin": { "layer": "api", "pointer": "/schemes/appSignature" }
+    }
+  },
+  "headers": {
+    "deadline": {
+      "id": "deadline",
+      "semantic": "deadline",
+      "name": "X-Deadline",
+      "in": "request",
+      "schema": { "kind": "scalar", "type": "integer", "refinements": {} },
+      "origin": { "layer": "api", "pointer": "/headers/deadline" }
+    },
+    "version": {
+      "id": "version",
+      "semantic": "versionToken",
+      "response": "X-Version",
+      "request": "X-If-Version",
+      "origin": { "layer": "api", "pointer": "/headers/version" }
+    }
+  },
+  "identities": {
+    "user": {
+      "id": "user",
+      "kind": "credential",
+      "schemes": {
+        "read": ["bearer", "sessionCookie", "basicAuth"],
+        "write": ["bearer"],
+        "optionalRead": ["apiKey"]
+      },
+      "principal": { "kind": "schema", "schema": "Task" },
+      "errors": ["tasks.locked"],
+      "headers": [
+        {
+          "header": "deadline",
+          "for": "all",
+          "required": false,
+          "schema": { "kind": "scalar", "type": "integer", "refinements": {} },
+          "from": { "in": "address", "prefixBits": 24 },
+          "stale": "tasks.locked",
+          "origin": { "layer": "api", "pointer": "/identities/user/headers/0" }
+        }
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/identities/user" }
+    },
+    "stripe": {
+      "id": "stripe",
+      "kind": "signed",
+      "signed": "stripeSignature",
+      "principal": { "kind": "variants", "variants": { "live": "Task" } },
+      "unknownKeys": { "policy": "ignore", "reason": "Stripe adds fields." },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/identities/stripe" }
+    },
+    "partner": {
+      "id": "partner",
+      "kind": "signed",
+      "signed": "appSignature",
+      "principal": { "kind": "schema", "schema": "Task" },
+      "unknownKeys": { "policy": "keep", "reason": "Forwarded as is." },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/identities/partner" }
+    }
+  },
+  "rights": {
+    "tasks.read": {
+      "id": "tasks.read",
+      "subject": { "kind": "none" },
+      "guest": "Anyone may read.",
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/rights/tasks.read" }
+    },
+    "tasks.effort": {
+      "id": "tasks.effort",
+      "params": "LockedParams",
+      "subject": { "kind": "scope", "scope": "channel" },
+      "errors": ["tasks.locked"],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "pack:@acme/pack-tenancy", "pointer": "/rights/tasks.effort" },
+      "derivedFrom": {
+        "derivation": "pack.@acme/pack-tenancy.rights",
+        "from": [{ "layer": "pack:@acme/pack-tenancy", "pointer": "/rights" }]
+      },
+      "codeName": { "segments": ["task", "effort"], "role": "schema" }
+    },
+    "tasks.update": {
+      "id": "tasks.update",
+      "subject": {
+        "kind": "resource",
+        "type": { "segments": ["task"], "role": "schema" },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "scalar": "resourceId",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/rights/tasks.update" }
+    }
+  },
+  "rules": {
+    "quota": {
+      "id": "quota",
+      "params": "LockedParams",
+      "takesBucket": true,
+      "proof": {
+        "in": "header",
+        "name": "X-Proof",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "scalar": "resourceId",
+          "refinements": {}
+        }
+      },
+      "errors": ["tasks.locked"],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/rules/quota" }
+    }
+  },
+  "scopes": {
+    "workspace": {
+      "id": "workspace",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "scalar": "resourceId",
+        "refinements": {}
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/scopes/workspace" }
+    },
+    "channel": {
+      "id": "channel",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "scalar": "resourceId",
+        "refinements": {}
+      },
+      "within": "workspace",
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/scopes/channel" }
+    }
+  },
+  "buckets": {
+    "perUser": {
+      "id": "perUser",
+      "key": [{ "in": "principal", "name": "userId" }, { "in": "host" }],
+      "limit": 100,
+      "windowMs": 60000,
+      "origin": { "layer": "api", "pointer": "/buckets/perUser" }
+    }
+  },
+  "services": {
+    "billing": {
+      "id": "billing",
+      "maturity": "experimental",
+      "origin": { "layer": "api", "pointer": "/services/billing" }
+    }
+  },
+  "extensionKeys": {
+    "acme-owner": {
+      "id": "acme-owner",
+      "prefix": "acme",
+      "key": "owner",
+      "schema": { "kind": "scalar", "type": "string", "refinements": {} },
+      "places": ["api", "operation"],
+      "origin": { "layer": "api", "pointer": "/extensionKeys/acme-owner" }
+    }
+  },
+  "lint": {
+    "rules": {
+      "naming": {
+        "severity": "warning",
+        "origin": { "layer": "api", "pointer": "/lint/rules/naming" }
+      }
+    },
+    "allows": [
+      {
+        "rule": "naming",
+        "at": { "layer": "api", "pointer": "/schemas/Task" },
+        "reason": "Legacy name.",
+        "subtree": true
+      }
+    ]
+  }
+}
