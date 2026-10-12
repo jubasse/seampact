@@ -1,0 +1,11 @@
+lane: p1-repo-checks
+proofs:
+  - id: CHK-104
+    fixtures:
+      - scripts/package-rules/fixtures/npm-namespace
+      - scripts/package-rules/fixtures/changeset
+      - scripts/package-rules/fixtures/workflow-publish
+      - scripts/package-rules/fixtures/gradle
+      - scripts/package-rules/fixtures/composer
+    tests:
+      - 'core: scripts/package-rules/package-rules.test.ts#namespaces and no publish'

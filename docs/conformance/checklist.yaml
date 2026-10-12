@@ -11,17 +11,31 @@
 #              laravel, symfony, api-platform (A17, through the shared HTTP suite);
 #              "core" = compiler, emitter or CLI only. Acceptance-area items need at least
 #              zod, fetch, nestjs and fastify fixtures.
-#   fixture:   added when it exists: the monorepo fixture path that shows the item (SM-2).
-#   tests:     added when they exist: per target, the test-consumer test that proves the
-#              item end to end (SM-1), as "<target>: <project>/<test file>#<test name>".
+#   retired:   the reason an item is no longer live; the id stays and never carries a proof.
 #
-# How CI consumes this file: a checklist script in the monorepo reads it on every push and
-#   - fails on a malformed entry, a duplicate or renumbered id, an unknown FR or scenario id
-#     (checked against FEAT-001), or a fixture or test path that does not exist;
-#   - reports, per target, the share of ids with a passing fixture (SM-2) and with a passing
-#     test-consumer test (SM-1), using the CI results of the named fixtures and tests;
-#   - from the 1.0 release gate on, also fails on any id without a fixture and, for every
-#     listed target, a test-consumer test (SCN-057), naming the id and the target.
+# Fixtures and tests are recorded in docs/conformance/proofs/<lane-id>.yaml, never in this
+# file, and lanes never edit this file (only the lead adds or retires items):
+#   lane: <lane-id>
+#   proofs:
+#     - id: CHK-NNN
+#       fixtures: [<repo-relative path>, ...]          # files or directories that show the item (SM-2)
+#       tests: ['<target>: <path>#<test name>', ...]   # a monorepo test, or test-seampact-<name>/<file> (SM-1)
+#
+# How CI consumes this file (scripts/checklist, run as `node scripts/checklist/cli.ts <command>`
+# and by `pnpm gate`):
+#   check      the default. Fails on a malformed item or proof file, a duplicate or out-of-order
+#              id, an FR or scenario id missing from docs/conformance/ids.yaml (the committed
+#              export of FEAT-001's ids and titles), an unknown target, a proof for an unknown
+#              or retired id, a fixture or monorepo test path that does not exist, and a test for
+#              a target the item does not list ("server" and "all targets" expand to their
+#              targets). `--base <git ref>` also fails on an id removed instead of retired and on
+#              a new id not above the base's highest; `--consumers <dir>` also checks the
+#              test-seampact-<name> paths.
+#   report     per target, the share of live ids with a fixture (SM-2) and with a test (SM-1);
+#              `--results <vitest json>` counts only passing tests.
+#   --release-gate (of check)  from the 1.0 release gate on, also fails on any live id without a
+#              fixture and, for every listed target, a test, naming the id and the target
+#              (SCN-057). Off until the conformance lane turns it on.
 schema: 1
 items:
   # ---------- Acceptance: Volume ----------
@@ -1014,6 +1028,52 @@ items:
     frs: [FR-5, FR-16, FR-21]
     scenario: SCN-130
     targets: [symfony, api-platform, adonis, fastify]
+  # ---------- Compatibility diff and lifecycle gates (FR-13) ----------
+  - id: CHK-175
+    fact: The diff classifies every kind of IR change of ADR 0005 section 4 per direction (additive, breaking for clients, breaking for servers) and reports each change with its direction and its operation.
+    frs: [FR-13]
+    scenario: SCN-019
+    targets: [core]
+  - id: CHK-176
+    fact: The diff fixtures hold one case per change kind and direction.
+    frs: [FR-13]
+    scenario: SCN-019
+    targets: [core]
+  - id: CHK-177
+    fact: A breaking change under compat.policy additive-only fails the gate, naming the change, its direction and the operation.
+    frs: [FR-13]
+    scenario: SCN-019
+    targets: [core]
+  - id: CHK-178
+    fact: Under compat.policy none the diff reports a breaking change and the gate does not fail.
+    frs: [FR-13]
+    scenario: SCN-019
+    targets: [core]
+  - id: CHK-179
+    fact: maturity stable is refused on an api whose diff breaks its compat policy, naming the maturity and the change.
+    frs: [FR-13]
+    scenario: SCN-050
+    targets: [core]
+  - id: CHK-180
+    fact: A provisional api with compat.policy additive-only passes the gate only when the change is additive.
+    frs: [FR-13]
+    scenario: SCN-050
+    targets: [core]
+  - id: CHK-181
+    fact: Comparing IRs of two irVersion values is refused, naming both versions.
+    frs: [FR-13]
+    scenario: SCN-019
+    targets: [core]
+  - id: CHK-182
+    fact: Reordering an object's properties is reported by the diff and classified non-breaking on the wire.
+    frs: [FR-13]
+    scenario: SCN-019
+    targets: [core]
+  - id: CHK-183
+    fact: A pack upgrade is classified by the IR changes it causes, per direction.
+    frs: [FR-13]
+    scenario: SCN-019
+    targets: [core]
 not_in_checklist:
   - source: "A4, A16"
     reason: Development process decisions (how features are framed, what research may inform); nothing to test in the product.
