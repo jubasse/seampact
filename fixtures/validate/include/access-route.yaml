@@ -1,0 +1,11 @@
+# expect: seampact/validate/reason-required /surfaces/app/routes/health/access/public
+# access brought by $include: the reason check holds once the include is resolved (ADR 0002 section 2).
+api: { name: tasks, version: 1 }
+surfaces:
+  app:
+    identity: user
+    routes:
+      health:
+        method: get
+        access: { $include: ./access-public.yaml }
+        output: Health

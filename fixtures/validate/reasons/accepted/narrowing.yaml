@@ -1,0 +1,7 @@
+# CHK-142: A narrowing without a reason.
+schemas:
+  Card:
+    type: object
+    required: [state]
+    properties:
+      state: { enum: { narrow: PublicationState, to: [published] } }

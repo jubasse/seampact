@@ -1,0 +1,13 @@
+# CHK-142: No path version on one surface, without a reason.
+api: { name: tasks, version: 1 }
+surfaces:
+  app:
+    identity: user
+    routes:
+      health: { method: get, output: Health }
+  hooks:
+    prefix: /stripe
+    pathVersion: none
+    identity: stripe
+    routes:
+      events: { method: post, input: Event, responses: { 204: {} } }

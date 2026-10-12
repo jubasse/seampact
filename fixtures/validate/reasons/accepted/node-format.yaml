@@ -1,0 +1,11 @@
+# CHK-142: Another wire format on a node, without a reason.
+api: { name: tasks, version: 1 }
+surfaces:
+  app:
+    identity: user
+    routes:
+      probes:
+        kind: single
+        format: bare
+        routes:
+          health: { method: get, output: Health }

@@ -1,0 +1,8 @@
+# expect: seampact/validate/invalid-name /surfaces/app/routes/tasks/filteredBy
+# a reserved name as a right name in use.
+api: { name: tasks, version: 1 }
+surfaces:
+  app:
+    identity: user
+    routes:
+      tasks: { method: get, item: Task, filteredBy: prototype }

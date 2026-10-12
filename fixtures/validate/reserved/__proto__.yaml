@@ -1,0 +1,7 @@
+# expect: seampact/validate/invalid-name /schemas/Task/properties/__proto__
+# a reserved name as a free key (a schema property).
+schemas:
+  Task:
+    type: object
+    properties:
+      __proto__: { type: string }

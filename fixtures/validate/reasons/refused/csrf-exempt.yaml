@@ -1,0 +1,8 @@
+# expect: seampact/validate/reason-required /surfaces/app/routes/signOut/csrf/exempt
+# csrf.exempt without a reason
+api: { name: tasks, version: 1 }
+surfaces:
+  app:
+    identity: user
+    routes:
+      signOut: { method: post, csrf: { exempt: '' }, responses: { 204: {} } }

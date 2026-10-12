@@ -1,0 +1,8 @@
+# expect: seampact/validate/reason-required /identities/github/unknownKeys
+# a signed identity's unknownKeys without a reason
+identities:
+  github:
+    kind: signed
+    scheme: githubSignature
+    principal: WebhookCaller
+    unknownKeys: keep

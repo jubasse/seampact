@@ -1,0 +1,32 @@
+# shared/schemas.yaml
+ChannelId: { type: string, format: uuid }
+TaskId: { type: string, format: uuid }
+UserId: { type: string, format: uuid }
+UserPrincipal:
+  type: object
+  required: [userId]
+  properties: { userId: UserId }
+ServicePrincipal:
+  type: object
+  required: [service, userId]
+  properties: { service: { enum: Service }, userId: UserId }
+WebhookCaller:
+  type: object
+  required: [account]
+  properties: { account: { type: string } }
+Issues:
+  type: array
+  items:
+    type: object
+    required: [pointer, rule]
+    properties: { pointer: { type: string }, rule: { type: string } }
+Task:
+  type: object
+  required: [taskId, title, state, version, createdAt]
+  properties:
+    taskId: TaskId
+    title: { type: string, minLength: 1, maxLength: 200 }
+    state: { enum: TaskState }
+    effort: { type: integer, minimum: 0, restrictedTo: tasks.seeEffort }
+    version: { type: integer, minimum: 1 }
+    createdAt: { type: string, format: date-time }

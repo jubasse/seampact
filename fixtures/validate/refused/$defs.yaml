@@ -1,0 +1,8 @@
+# ADR 0003 section 1 refuses '$defs'; the validate stage names its reason and fix.
+schemas:
+  Task:
+    type: object
+    required: [title]
+    properties:
+      title: { type: string }
+    $defs: { Title: { type: string } }
