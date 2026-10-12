@@ -1,0 +1,7 @@
+# expect: seampact/validate/invalid-name /schemas/Task/properties/__proto__
+# a key that reaches a JavaScript reader's prototype chain is refused in every mapping.
+schemas:
+  Task:
+    type: object
+    properties:
+      __proto__: { type: string }

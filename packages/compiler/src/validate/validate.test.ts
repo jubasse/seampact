@@ -5,7 +5,8 @@ import { REFUSED_SCHEMA_KEYWORDS } from "@seampact/spec/authoring";
 import type { Origin } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { parse } from "yaml";
-import type { JsonObject, RawWorkspace } from "../raw-tree.js";
+import type { JsonObject, JsonValue, RawWorkspace } from "../raw-tree.js";
+import { MAX_DIAGNOSTICS } from "./diagnostics.js";
 import { validateRules } from "./rules.js";
 import {
   type ValidateDocumentKind,
@@ -398,5 +399,244 @@ describe("validate stage", () => {
     expect(diagnostics.map((d) => [d.rule, d.origin.pointer])).toEqual([[rule, pointer]]);
     expect(diagnostics[0]?.message).not.toBe("");
     expect(diagnostics[0]?.fix).not.toBe("");
+  });
+});
+
+// C-4: the reference contract is ADR 0002's Worked example, file for file.
+describe("reference contract is the ADR's worked example", () => {
+  const dir = join(FIXTURES, "reference");
+  // Files the ADR names without showing them, written for this fixture (see the lane report).
+  const BEYOND_THE_ADR = ["tasks/examples/search-200.json", "tasks/schemas.yaml"];
+  const adr = readFileSync(join(ROOT, "docs/adr/0002-grammar.md"), "utf8");
+  const start = adr.indexOf("\n## Worked example");
+  const section = adr.slice(start, adr.indexOf("\n## ", start + 1));
+  const blocks = new Map<string, string>();
+  for (const m of section.matchAll(/```yaml\n([\s\S]*?)```/g)) {
+    const body = m[1] ?? "";
+    const path = /^# ([\w./-]+\.(?:yaml|json))(?::|$)/m.exec(body.split("\n")[0] ?? "")?.[1];
+    if (path !== undefined) blocks.set(path, body);
+  }
+
+  test("every file is shown by the ADR or listed as written beyond it", () => {
+    const fixtures = files(dir).map((f) => relative(dir, f));
+    expect(fixtures.filter((f) => !blocks.has(f) && !BEYOND_THE_ADR.includes(f))).toEqual([]);
+    expect([...blocks.keys()].filter((p) => !fixtures.includes(p))).toEqual([]);
+    expect(BEYOND_THE_ADR.filter((p) => blocks.has(p))).toEqual([]);
+  });
+
+  test.each([...blocks.keys()])("%s is the ADR's block, byte for byte", (path) => {
+    expect(readFileSync(join(dir, path), "utf8")).toBe(blocks.get(path));
+  });
+});
+
+describe("one diagnostic per problem", () => {
+  test.each([
+    [
+      "a misspelt node kind",
+      api({ kind: "colection", item: "Task" }),
+      validateRules.invalidValue,
+      "/surfaces/app/routes/health/kind",
+    ],
+    [
+      "a misspelt scheme kind",
+      { schemes: { session: { kind: "coookie", name: "sid" } } },
+      validateRules.invalidValue,
+      "/schemes/session/kind",
+    ],
+    [
+      "a scheme without a kind",
+      { schemes: { session: { name: "sid" } } },
+      validateRules.missingKeyword,
+      "/schemes/session",
+    ],
+    [
+      "an included node with a key no node has",
+      api({ $include: "./health.yaml", ouput: "Health" }),
+      validateRules.unknownKeyword,
+      "/surfaces/app/routes/health/ouput",
+    ],
+    [
+      "a derive require without right or rule",
+      { pack: { name: "p", version: "1.0.0" }, derive: [{ entry: "e", select: {}, require: {} }] },
+      validateRules.missingKeyword,
+      "/derive/0/require",
+    ],
+    [
+      "an import without a source",
+      { workspace: { imports: { billing: { api: "billing", integrity: "sha256-x" } } } },
+      validateRules.missingKeyword,
+      "/workspace/imports/billing",
+    ],
+    [
+      "an import with two sources",
+      {
+        workspace: {
+          imports: {
+            billing: {
+              api: "billing",
+              integrity: "sha256-x",
+              package: "@acme/c",
+              version: "1.0.0",
+              git: { url: "https://x", tag: "v1" },
+            },
+          },
+        },
+      },
+      validateRules.conflictingKeywords,
+      "/workspace/imports/billing/git",
+    ],
+    [
+      "an unknown keys exception holding both",
+      { schemas: { T: { type: "object", unknownKeys: { ignore: "a", keep: "b" } } } },
+      validateRules.conflictingKeywords,
+      "/schemas/T/unknownKeys/keep",
+    ],
+    [
+      "an empty unknown keys exception",
+      { schemas: { T: { type: "object", unknownKeys: {} } } },
+      validateRules.reasonRequired,
+      "/schemas/T/unknownKeys",
+    ],
+  ] as const)("%s", (_, tree, rule, pointer) => {
+    const t = tree as unknown as JsonObject;
+    const kind: ValidateDocumentKind = "workspace" in t ? "workspace" : layerOf(t).kind;
+    const diagnostics = validateDocument(kind, t, layerOf(t).layer);
+    expect(diagnostics.map((d) => [d.rule, d.origin.pointer])).toEqual([[rule, pointer]]);
+  });
+});
+
+describe("messages name the problem", () => {
+  const one = (kind: ValidateDocumentKind, tree: unknown) => {
+    const diagnostics = validateDocument(kind, tree as JsonObject, "shared");
+    expect(diagnostics).toHaveLength(1);
+    return diagnostics[0] as NonNullable<(typeof diagnostics)[0]>;
+  };
+
+  test("a value of neither accepted type", () => {
+    const d = one("node", { method: "get", paging: 3 });
+    expect(d.rule).toBe(validateRules.wrongType);
+    expect(d.message).toBe("'paging' must be a string or a mapping.");
+  });
+
+  test("a constant", () => {
+    const d = one("node", { method: "get", concurrency: "own" });
+    expect(d.message).toBe(`'concurrency' is 'own'; its one value is "inherit".`);
+  });
+
+  test("two keys where one is taken", () => {
+    const d = one("node", { method: "get", paging: { cursor: {}, offset: {} } });
+    expect(d.rule).toBe(validateRules.conflictingKeywords);
+    expect(d.message).toBe("'paging' takes one key, not 'cursor', 'offset'.");
+  });
+
+  test("a string where only a reasoned exception is accepted", () => {
+    const d = one("identities", { hook: { kind: "signed", unknownKeys: "refuse" } });
+    expect(d.rule).toBe(validateRules.invalidValue);
+    expect(d.message).toBe("'unknownKeys' takes no string here, only a reasoned exception.");
+  });
+
+  test("no Ajv wording reaches a message", () => {
+    const trees: [ValidateDocumentKind, unknown][] = [
+      ["node", { method: "get", paging: 3 }],
+      ["node", { method: "get", concurrency: "own" }],
+      ["node", { method: "get", paging: { cursor: {}, offset: {} } }],
+      ["identities", { hook: { kind: "signed", unknownKeys: "refuse" } }],
+    ];
+    for (const [kind, tree] of trees) {
+      for (const d of validateDocument(kind, tree as JsonObject, "shared")) {
+        expect(d.message).not.toMatch(/must NOT|equal to constant|must match/);
+      }
+    }
+  });
+
+  test("$include in routes is the one refusal of $include", () => {
+    const d = one("node", { kind: "single", routes: { $include: "./r.yaml" } });
+    expect(d.message).toContain("every child of a routes map is named in its parent");
+    expect(
+      validateDocument("node", { method: "get", responses: { $include: "./r.yaml" } }, "api"),
+    ).toEqual([]);
+  });
+
+  test("a misnamed key cites the ADR section of its pattern", () => {
+    expect(one("node", { method: "get", responses: { 404: {} } }).message).toBe(
+      "'404' is not a success or redirect status (ADR 0002 section 7).",
+    );
+    expect(one("schemas", { task: { type: "string" } }).message).toBe(
+      "'task' is not a schema name (ADR 0002 section 4).",
+    );
+  });
+});
+
+describe("authored values in diagnostics", () => {
+  test("control, bidi and separator characters are escaped", () => {
+    const [esc, rlo, ls] = [0x1b, 0x202e, 0x2028].map((c) => String.fromCharCode(c));
+    const key = `a${esc}[31mred${rlo}b${ls}c\nd`;
+    const [d] = validateDocument("node", { method: "get", [key]: 1 }, "api");
+    expect(d?.message).toBe(
+      "'a\\u001B[31mred\\u202Eb\\u2028c\\u000Ad' is not a keyword of the file's root.",
+    );
+    expect(
+      [...(d?.fix ?? "")].some((c) => [0x1b, 0x0a, 0x202e, 0x2028].includes(c.charCodeAt(0))),
+    ).toBe(false);
+  });
+
+  test("a long value is cut, and gets no closest keyword", () => {
+    const key = `ouput${"x".repeat(200)}`;
+    const [d] = validateDocument("node", { method: "get", [key]: 1 }, "api");
+    expect(d?.message.length).toBeLessThan(140);
+    expect(d?.message).toContain(String.fromCharCode(0x2026));
+    expect(d?.fix).toMatch(/^Remove '/);
+  });
+
+  test("a value in an enum message is quoted and escaped", () => {
+    const [d] = validateDocument("node", { method: "ge\u0007t" }, "api");
+    expect(d?.message).toBe("'method' is 'ge\\u0007t', not one of its values.");
+  });
+
+  test(`a file far from the grammar gives at most ${MAX_DIAGNOSTICS} diagnostics`, () => {
+    const tree = Object.fromEntries(Array.from({ length: 500 }, (_, i) => [`k${i}`, i]));
+    expect(validateDocument("node", { method: "get", ...tree }, "api")).toHaveLength(
+      MAX_DIAGNOSTICS,
+    );
+  });
+});
+
+describe("reserved names refused", () => {
+  const dir = join(FIXTURES, "validate/reserved");
+  test.each(["__proto__", "constructor", "prototype"])("%s", (name) => {
+    const { text, diagnostics } = check(join(dir, `${name}.yaml`));
+    const { rule, pointer } = expectation(text);
+    expect(diagnostics.map((d) => [d.rule, d.origin.pointer])).toEqual([[rule, pointer]]);
+  });
+});
+
+// C-13: the stage runs on include-resolved trees; an access brought by `$include` is checked then.
+describe("access through $include", () => {
+  const dir = join(FIXTURES, "validate/include");
+
+  // ADR 0002 section 2, rule 2: the included mapping's keys take the place of `$include`.
+  function resolve(value: JsonValue, base: string): JsonValue {
+    if (Array.isArray(value)) return value.map((v) => resolve(v, base));
+    if (value === null || typeof value !== "object") return value;
+    const out: JsonObject = {};
+    for (const [key, v] of Object.entries(value)) {
+      if (key === "$include" && typeof v === "string") {
+        Object.assign(out, resolve(read(join(base, v)).tree, base) as JsonObject);
+      } else {
+        out[key] = resolve(v, base);
+      }
+    }
+    return out;
+  }
+
+  test("the unresolved file passes: $include relieves the mapping of its keys", () => {
+    expect(validateDocument("api", read(join(dir, "access-route.yaml")).tree, "api")).toEqual([]);
+  });
+
+  test("the resolved tree refuses the empty reason", () => {
+    const { text, tree } = read(join(dir, "access-route.yaml"));
+    const { rule, pointer } = expectation(text);
+    const diagnostics = validateDocument("api", resolve(tree, dir), "api");
+    expect(diagnostics.map((d) => [d.rule, d.origin.pointer])).toEqual([[rule, pointer]]);
   });
 });
