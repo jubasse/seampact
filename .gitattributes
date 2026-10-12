@@ -1,0 +1,5 @@
+# Generated from the grammar modules (packages/spec/src/authoring); review the sources instead.
+# The same paths are excluded from Biome's formatter (biome.json formatter.includes); schemas.test.ts
+# checks the two lists match.
+packages/spec/schemas/authoring/** linguist-generated
+packages/spec/src/authoring/grammar.snapshot.json linguist-generated

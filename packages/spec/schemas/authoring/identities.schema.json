@@ -1,0 +1,250 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact identities catalogue",
+  "description": "Identities (ADR 0002 section 9). A name-keyed catalogue file.",
+  "type": "object",
+  "properties": {
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "propertyNames": {
+    "description": "an identity name (ADR 0002 section 4)",
+    "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+    "not": {
+      "enum": [
+        "__proto__",
+        "constructor",
+        "prototype"
+      ]
+    }
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/entry"
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "credential",
+            "signed"
+          ],
+          "$comment": "ADR 0002 section 9"
+        },
+        "schemes": {
+          "type": "object",
+          "properties": {
+            "read": {
+              "$ref": "common.schema.json#/$defs/names",
+              "$comment": "ADR 0002 section 9"
+            },
+            "write": {
+              "$ref": "common.schema.json#/$defs/names",
+              "$comment": "ADR 0002 section 9"
+            },
+            "optionalRead": {
+              "$ref": "common.schema.json#/$defs/names",
+              "$comment": "ADR 0002 section 9"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "read": true,
+              "write": true
+            },
+            "required": [
+              "read",
+              "write"
+            ]
+          },
+          "$comment": "ADR 0002 section 9"
+        },
+        "scheme": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 9",
+          "description": "signed only: the one signature scheme."
+        },
+        "principal": {
+          "$ref": "#/$defs/principal",
+          "$comment": "ADR 0002 section 9"
+        },
+        "unknownKeys": {
+          "$ref": "common.schema.json#/$defs/unknownKeysException",
+          "$comment": "ADR 0002 section 9"
+        },
+        "errors": {
+          "$ref": "common.schema.json#/$defs/errorCodes",
+          "$comment": "ADR 0002 section 9"
+        },
+        "headers": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "an identity header name (ADR 0002 section 4)",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/headerUse"
+          },
+          "$comment": "ADR 0002 section 9"
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0002 section 12"
+        },
+        "summary": {
+          "$ref": "common.schema.json#/$defs/summary",
+          "$comment": "ADR 0002 section 12"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0002 section 12"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "signed"
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "schemes": {
+            "title": "conflict",
+            "description": "A signed identity names one 'scheme'.",
+            "not": {}
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "scheme": {
+            "title": "conflict",
+            "description": "'scheme' and 'unknownKeys' belong to a signed identity.",
+            "not": {}
+          },
+          "unknownKeys": {
+            "title": "conflict",
+            "description": "'scheme' and 'unknownKeys' belong to a signed identity.",
+            "not": {}
+          }
+        }
+      }
+    },
+    "principal": {
+      "description": "The principal schema, or { variants: { <name>: <schema> } } (ADR 0002 section 9).",
+      "if": {
+        "type": "object",
+        "properties": {
+          "variants": true
+        },
+        "required": [
+          "variants"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "variants": {
+            "type": "object",
+            "properties": {
+              "$include": {
+                "$ref": "common.schema.json#/$defs/include"
+              }
+            },
+            "propertyNames": {
+              "description": "a variant name (ADR 0002 section 4)",
+              "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+              "not": {
+                "enum": [
+                  "__proto__",
+                  "constructor",
+                  "prototype"
+                ]
+              }
+            },
+            "additionalProperties": {
+              "$ref": "schema.schema.json#/$defs/schema"
+            },
+            "$comment": "ADR 0002 section 9"
+          },
+          "$include": {
+            "$ref": "common.schema.json#/$defs/include"
+          }
+        },
+        "additionalProperties": false
+      },
+      "else": {
+        "$ref": "schema.schema.json#/$defs/schema"
+      }
+    },
+    "headerUse": {
+      "type": "object",
+      "properties": {
+        "for": {
+          "enum": [
+            "all",
+            "reads",
+            "writes"
+          ],
+          "$comment": "ADR 0002 section 9"
+        },
+        "required": {
+          "type": "boolean",
+          "$comment": "ADR 0002 section 9"
+        },
+        "schema": {
+          "$ref": "schema.schema.json#/$defs/schema",
+          "$comment": "ADR 0002 section 9"
+        },
+        "from": {
+          "$ref": "common.schema.json#/$defs/principalSource",
+          "$comment": "ADR 0002 section 9",
+          "description": "versionToken: the principal field."
+        },
+        "stale": {
+          "$ref": "common.schema.json#/$defs/errorCode",
+          "$comment": "ADR 0002 section 9",
+          "description": "versionToken: the code of a stale request header."
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

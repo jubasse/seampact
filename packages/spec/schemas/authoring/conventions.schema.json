@@ -1,0 +1,654 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact conventions",
+  "$ref": "#/$defs/conventions",
+  "$defs": {
+    "conventions": {
+      "type": "object",
+      "description": "The api-wide settings, set by any layer, usually a pack (ADR 0002 section 13).",
+      "properties": {
+        "format": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 13",
+          "description": "The wire format; bare by default."
+        },
+        "pathCase": {
+          "enum": [
+            "kebab",
+            "camel",
+            "snake"
+          ],
+          "$comment": "ADR 0002 section 13"
+        },
+        "paging": {
+          "type": "object",
+          "properties": {
+            "default": {
+              "$ref": "common.schema.json#/$defs/name",
+              "$comment": "ADR 0002 section 13",
+              "description": "The paging style of a list without paging."
+            },
+            "maxLimit": {
+              "type": "integer",
+              "minimum": 1,
+              "$comment": "ADR 0002 section 13"
+            },
+            "defaultLimit": {
+              "type": "integer",
+              "minimum": 1,
+              "$comment": "ADR 0002 section 13"
+            },
+            "overLimit": {
+              "enum": [
+                "reject",
+                "clamp"
+              ],
+              "$comment": "ADR 0002 section 13"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 13"
+        },
+        "idempotency": {
+          "type": "object",
+          "properties": {
+            "header": {
+              "$ref": "common.schema.json#/$defs/headerName",
+              "$comment": "ADR 0002 section 13"
+            },
+            "replayHeader": {
+              "$ref": "common.schema.json#/$defs/headerName",
+              "$comment": "ADR 0002 section 13"
+            },
+            "lifetime": {
+              "$ref": "common.schema.json#/$defs/duration",
+              "$comment": "ADR 0002 section 13"
+            },
+            "methods": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "post",
+                  "put",
+                  "patch",
+                  "delete"
+                ]
+              },
+              "minItems": 1,
+              "$comment": "ADR 0002 section 13"
+            },
+            "required": {
+              "type": "boolean",
+              "$comment": "ADR 0002 section 13"
+            },
+            "enforce": {
+              "enum": [
+                "boundary",
+                "none"
+              ],
+              "$comment": "ADR 0002 section 13"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 13"
+        },
+        "bodyLimit": {
+          "$ref": "common.schema.json#/$defs/size",
+          "$comment": "ADR 0002 section 13"
+        },
+        "batch": {
+          "type": "object",
+          "properties": {
+            "maxIds": {
+              "type": "integer",
+              "minimum": 1,
+              "$comment": "ADR 0002 section 13"
+            },
+            "bodyLimit": {
+              "$ref": "common.schema.json#/$defs/size",
+              "$comment": "ADR 0002 section 13"
+            },
+            "budget": {
+              "$ref": "common.schema.json#/$defs/duration",
+              "$comment": "ADR 0002 section 13"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 13"
+        },
+        "cache": {
+          "type": "object",
+          "properties": {
+            "families": {
+              "type": "object",
+              "properties": {
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "propertyNames": {
+                "description": "a cache family name (ADR 0002 section 4)",
+                "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+                "not": {
+                  "enum": [
+                    "__proto__",
+                    "constructor",
+                    "prototype"
+                  ]
+                }
+              },
+              "additionalProperties": {
+                "if": {
+                  "type": "string"
+                },
+                "then": {
+                  "$ref": "common.schema.json#/$defs/duration"
+                },
+                "else": {
+                  "if": {
+                    "type": "object"
+                  },
+                  "then": {
+                    "$ref": "#/$defs/cacheDirectives"
+                  },
+                  "else": {
+                    "title": "alternatives",
+                    "description": "a string or a mapping",
+                    "type": "object"
+                  }
+                }
+              },
+              "$comment": "ADR 0002 section 13"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 13"
+        },
+        "restrictedInput": {
+          "enum": [
+            "reject",
+            "strip"
+          ],
+          "$comment": "ADR 0002 section 13"
+        },
+        "outputEnums": {
+          "enum": [
+            "enum",
+            "open"
+          ],
+          "$comment": "ADR 0002 section 13"
+        },
+        "pathVersion": {
+          "enum": [
+            "prefix",
+            "none"
+          ],
+          "$comment": "ADR 0002 section 13",
+          "description": "none: no surface path starts with /v{version}."
+        },
+        "query": {
+          "type": "object",
+          "properties": {
+            "lists": {
+              "enum": [
+                "repeat",
+                "comma",
+                "brackets"
+              ],
+              "$comment": "ADR 0002 section 7"
+            },
+            "objects": {
+              "enum": [
+                "explode",
+                "deepObject"
+              ],
+              "$comment": "ADR 0002 section 7"
+            },
+            "unknownKeys": {
+              "$ref": "common.schema.json#/$defs/unknownQueryPolicy",
+              "$comment": "ADR 0002 section 7"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 13"
+        },
+        "input": {
+          "type": "object",
+          "properties": {
+            "unknownKeys": {
+              "$ref": "common.schema.json#/$defs/unknownKeysPolicy",
+              "$comment": "ADR 0003 section 4"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 13"
+        },
+        "int64": {
+          "enum": [
+            "string",
+            "number"
+          ],
+          "$comment": "ADR 0002 section 13"
+        },
+        "deprecation": {
+          "type": "object",
+          "properties": {
+            "header": {
+              "$ref": "common.schema.json#/$defs/headerName",
+              "$comment": "ADR 0002 section 13"
+            },
+            "sunsetHeader": {
+              "$ref": "common.schema.json#/$defs/headerName",
+              "$comment": "ADR 0002 section 13"
+            },
+            "successorRel": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "ADR 0002 section 13"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 13"
+        },
+        "ops": {
+          "type": "object",
+          "properties": {
+            "list": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "$ref": "common.schema.json#/$defs/method",
+                  "$comment": "ADR 0002 section 6"
+                },
+                "path": {
+                  "type": "string",
+                  "$comment": "ADR 0002 section 6"
+                },
+                "status": {
+                  "type": "integer",
+                  "minimum": 200,
+                  "maximum": 299,
+                  "$comment": "ADR 0002 section 6"
+                },
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "additionalProperties": false,
+              "$comment": "ADR 0002 section 6"
+            },
+            "get": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "$ref": "common.schema.json#/$defs/method",
+                  "$comment": "ADR 0002 section 6"
+                },
+                "path": {
+                  "type": "string",
+                  "$comment": "ADR 0002 section 6"
+                },
+                "status": {
+                  "type": "integer",
+                  "minimum": 200,
+                  "maximum": 299,
+                  "$comment": "ADR 0002 section 6"
+                },
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "additionalProperties": false,
+              "$comment": "ADR 0002 section 6"
+            },
+            "create": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "$ref": "common.schema.json#/$defs/method",
+                  "$comment": "ADR 0002 section 6"
+                },
+                "path": {
+                  "type": "string",
+                  "$comment": "ADR 0002 section 6"
+                },
+                "status": {
+                  "type": "integer",
+                  "minimum": 200,
+                  "maximum": 299,
+                  "$comment": "ADR 0002 section 6"
+                },
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "additionalProperties": false,
+              "$comment": "ADR 0002 section 6"
+            },
+            "update": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "$ref": "common.schema.json#/$defs/method",
+                  "$comment": "ADR 0002 section 6"
+                },
+                "path": {
+                  "type": "string",
+                  "$comment": "ADR 0002 section 6"
+                },
+                "status": {
+                  "type": "integer",
+                  "minimum": 200,
+                  "maximum": 299,
+                  "$comment": "ADR 0002 section 6"
+                },
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "additionalProperties": false,
+              "$comment": "ADR 0002 section 6"
+            },
+            "delete": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "$ref": "common.schema.json#/$defs/method",
+                  "$comment": "ADR 0002 section 6"
+                },
+                "path": {
+                  "type": "string",
+                  "$comment": "ADR 0002 section 6"
+                },
+                "status": {
+                  "type": "integer",
+                  "minimum": 200,
+                  "maximum": 299,
+                  "$comment": "ADR 0002 section 6"
+                },
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "additionalProperties": false,
+              "$comment": "ADR 0002 section 6"
+            },
+            "batch": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "$ref": "common.schema.json#/$defs/method",
+                  "$comment": "ADR 0002 section 6"
+                },
+                "path": {
+                  "type": "string",
+                  "$comment": "ADR 0002 section 6"
+                },
+                "status": {
+                  "type": "integer",
+                  "minimum": 200,
+                  "maximum": 299,
+                  "$comment": "ADR 0002 section 6"
+                },
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "additionalProperties": false,
+              "$comment": "ADR 0002 section 6"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 6"
+        },
+        "operationIds": {
+          "type": "object",
+          "properties": {
+            "order": {
+              "enum": [
+                "verbNoun",
+                "nounVerb"
+              ],
+              "$comment": "ADR 0002 section 6"
+            },
+            "case": {
+              "enum": [
+                "camel",
+                "snake"
+              ],
+              "$comment": "ADR 0002 section 6"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 6"
+        },
+        "rateLimit": {
+          "type": "object",
+          "properties": {
+            "header": {
+              "$ref": "common.schema.json#/$defs/headerName",
+              "$comment": "ADR 0002 section 13"
+            },
+            "param": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "ADR 0002 section 13"
+            },
+            "unit": {
+              "enum": [
+                "s",
+                "ms"
+              ],
+              "$comment": "ADR 0002 section 13"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 13"
+        },
+        "degradedHeader": {
+          "$ref": "common.schema.json#/$defs/headerName",
+          "$comment": "ADR 0002 section 13"
+        },
+        "urls": {
+          "enum": [
+            "relative",
+            "absolute"
+          ],
+          "$comment": "ADR 0002 section 13"
+        },
+        "rights": {
+          "type": "object",
+          "properties": {
+            "pattern": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "ADR 0002 section 2",
+              "description": "A pattern every right name must also match."
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 2"
+        },
+        "errors": {
+          "type": "object",
+          "properties": {
+            "pattern": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "ADR 0002 section 13",
+              "description": "A pattern every error code must also match."
+            },
+            "every": {
+              "$ref": "common.schema.json#/$defs/errorCodes",
+              "$comment": "ADR 0002 section 11",
+              "description": "Codes attached to every operation."
+            },
+            "reach": {
+              "enum": [
+                "subtree",
+                "resource"
+              ],
+              "$comment": "ADR 0002 section 11"
+            },
+            "derived": {
+              "type": "object",
+              "properties": {
+                "$include": {
+                  "$ref": "common.schema.json#/$defs/include"
+                }
+              },
+              "propertyNames": {
+                "description": "an error role (ADR 0002 section 11)",
+                "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+                "not": {
+                  "enum": [
+                    "__proto__",
+                    "constructor",
+                    "prototype"
+                  ]
+                }
+              },
+              "additionalProperties": {
+                "$ref": "#/$defs/roleBinding"
+              },
+              "$comment": "ADR 0002 section 11",
+              "description": "Role bindings."
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 11"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false
+    },
+    "cacheDirectives": {
+      "type": "object",
+      "description": "Cache-Control directives in camel case (ADR 0002 section 13).",
+      "properties": {
+        "maxAge": {
+          "$ref": "common.schema.json#/$defs/duration",
+          "$comment": "ADR 0002 section 13"
+        },
+        "sharedMaxAge": {
+          "$ref": "common.schema.json#/$defs/duration",
+          "$comment": "ADR 0002 section 13"
+        },
+        "staleWhileRevalidate": {
+          "$ref": "common.schema.json#/$defs/duration",
+          "$comment": "ADR 0002 section 13"
+        },
+        "staleIfError": {
+          "$ref": "common.schema.json#/$defs/duration",
+          "$comment": "ADR 0002 section 13"
+        },
+        "immutable": {
+          "type": "boolean",
+          "$comment": "ADR 0002 section 13"
+        },
+        "noCache": {
+          "type": "boolean",
+          "$comment": "ADR 0002 section 13"
+        },
+        "mustRevalidate": {
+          "type": "boolean",
+          "$comment": "ADR 0002 section 13"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false
+    },
+    "roleBinding": {
+      "if": {
+        "type": "string"
+      },
+      "then": {
+        "$ref": "common.schema.json#/$defs/errorCode"
+      },
+      "else": {
+        "if": {
+          "type": "object"
+        },
+        "then": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "$ref": "common.schema.json#/$defs/errorCode",
+              "$comment": "ADR 0002 section 11"
+            },
+            "params": {
+              "$ref": "common.schema.json#/$defs/template",
+              "$comment": "ADR 0002 section 11",
+              "description": "A template over the role's data."
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "code": true
+            },
+            "required": [
+              "code"
+            ]
+          }
+        },
+        "else": {
+          "title": "alternatives",
+          "description": "a string or a mapping",
+          "type": "object"
+        }
+      }
+    }
+  }
+}

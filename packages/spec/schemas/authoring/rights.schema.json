@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact rights catalogue",
+  "description": "Rights (ADR 0002 section 9). A name-keyed catalogue file.",
+  "type": "object",
+  "properties": {
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "propertyNames": {
+    "description": "a right name (ADR 0002 section 4)",
+    "pattern": "^(?:[^\\s\\u0000-\\u001F\\u007F-\\u009F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u2028\\u2029](?:[^\\u0000-\\u001F\\u007F-\\u009F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u2028\\u2029]*[^\\s\\u0000-\\u001F\\u007F-\\u009F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u2028\\u2029])?|\\$include)$",
+    "not": {
+      "enum": [
+        "__proto__",
+        "constructor",
+        "prototype"
+      ]
+    }
+  },
+  "additionalProperties": {
+    "$ref": "#/$defs/entry"
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "properties": {
+        "params": {
+          "$ref": "node.schema.json#/$defs/fields",
+          "$comment": "ADR 0002 section 9"
+        },
+        "subject": {
+          "$ref": "#/$defs/subject",
+          "$comment": "ADR 0002 section 9"
+        },
+        "guest": {
+          "$ref": "common.schema.json#/$defs/reason",
+          "$comment": "ADR 0002 section 9",
+          "description": "Lets an anonymous caller reach the right, with the reason."
+        },
+        "errors": {
+          "$ref": "common.schema.json#/$defs/errorCodes",
+          "$comment": "ADR 0002 section 9"
+        },
+        "codeName": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 9",
+          "description": "The identifier generated code uses for the right."
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0002 section 12"
+        },
+        "summary": {
+          "$ref": "common.schema.json#/$defs/summary",
+          "$comment": "ADR 0002 section 9"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0002 section 9"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "patternProperties": {
+        "^x-seampact-": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        },
+        "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$comment": "ADR 0002 section 12"
+        }
+      },
+      "additionalProperties": false
+    },
+    "subject": {
+      "type": "object",
+      "description": "{ scope: <scope> } or { resource: <Name>, id: <id schema> } (ADR 0002 section 9).",
+      "properties": {
+        "scope": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 9"
+        },
+        "resource": {
+          "$ref": "common.schema.json#/$defs/schemaName",
+          "$comment": "ADR 0002 section 9"
+        },
+        "id": {
+          "$ref": "schema.schema.json#/$defs/schema",
+          "$comment": "ADR 0002 section 9"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "scope": true
+        },
+        "required": [
+          "scope"
+        ]
+      },
+      "then": {
+        "properties": {
+          "resource": {
+            "title": "conflict",
+            "description": "A subject is a scope or a resource, not both.",
+            "not": {}
+          },
+          "id": {
+            "title": "conflict",
+            "description": "A subject is a scope or a resource, not both.",
+            "not": {}
+          }
+        }
+      }
+    }
+  }
+}

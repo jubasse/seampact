@@ -1,0 +1,2842 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact tree node",
+  "description": "A tree node fragment: a route, a relay route, a collection or a single.",
+  "$ref": "#/$defs/surfaceChild",
+  "$defs": {
+    "surfaceChild": {
+      "type": "object",
+      "if": {
+        "properties": {
+          "relays": true
+        },
+        "required": [
+          "relays"
+        ]
+      },
+      "then": {
+        "$ref": "#/$defs/relayRoute"
+      },
+      "else": {
+        "$ref": "#/$defs/node"
+      }
+    },
+    "node": {
+      "title": "node",
+      "description": "A tree node: a route (method), a collection (kind: collection) or a single (kind: single) (ADR 0002 section 6).",
+      "type": "object",
+      "if": {
+        "properties": {
+          "method": true
+        },
+        "required": [
+          "method"
+        ]
+      },
+      "then": {
+        "$ref": "#/$defs/route"
+      },
+      "else": {
+        "if": {
+          "properties": {
+            "kind": {
+              "const": "collection"
+            }
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        "then": {
+          "$ref": "#/$defs/collection"
+        },
+        "else": {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "single"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "$ref": "#/$defs/single"
+          },
+          "else": {
+            "$ref": "#/$defs/unmarked"
+          }
+        }
+      }
+    },
+    "unmarked": {
+      "title": "node marker",
+      "type": "object",
+      "properties": {
+        "method": {
+          "$ref": "common.schema.json#/$defs/method",
+          "$comment": "ADR 0002 section 7"
+        },
+        "kind": {
+          "enum": [
+            "collection",
+            "single"
+          ],
+          "$comment": "ADR 0002 section 6"
+        }
+      },
+      "if": {
+        "properties": {
+          "$include": true
+        },
+        "required": [
+          "$include"
+        ]
+      },
+      "then": {
+        "$ref": "#/$defs/includedNode"
+      },
+      "else": {
+        "if": {
+          "properties": {
+            "kind": true
+          },
+          "required": [
+            "kind"
+          ]
+        },
+        "else": {
+          "properties": {
+            "method": true
+          },
+          "required": [
+            "method"
+          ],
+          "title": "node marker"
+        }
+      }
+    },
+    "route": {
+      "type": "object",
+      "description": "A route: settings, inherited below (ADR 0002 section 8).",
+      "properties": {
+        "method": {
+          "$ref": "common.schema.json#/$defs/method",
+          "$comment": "ADR 0002 section 7"
+        },
+        "path": {
+          "type": "string",
+          "$comment": "ADR 0002 section 6",
+          "description": "Replaces the node's path segment: relative, no leading slash, may hold {param}."
+        },
+        "pathParams": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "The schemas of the extra path placeholders."
+        },
+        "operationId": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 7",
+          "description": "Replaces the derived operation id."
+        },
+        "input": {
+          "$ref": "schema.schema.json#/$defs/schema",
+          "$comment": "ADR 0002 section 7",
+          "description": "The body schema."
+        },
+        "inputMedia": {
+          "enum": [
+            "json",
+            "form",
+            "multipart"
+          ],
+          "$comment": "ADR 0002 section 7"
+        },
+        "output": {
+          "$ref": "schema.schema.json#/$defs/schema",
+          "$comment": "ADR 0002 section 7",
+          "description": "The body of the single success response."
+        },
+        "item": {
+          "$ref": "schema.schema.json#/$defs/schema",
+          "$comment": "ADR 0002 section 10",
+          "description": "Instead of 'output', on a list: the schema of one record."
+        },
+        "responses": {
+          "$ref": "#/$defs/responses",
+          "$comment": "ADR 0002 section 7"
+        },
+        "paging": {
+          "$ref": "#/$defs/paging",
+          "$comment": "ADR 0002 section 10"
+        },
+        "sortable": {
+          "$ref": "#/$defs/sortable",
+          "$comment": "ADR 0002 section 10"
+        },
+        "filteredBy": {
+          "$ref": "common.schema.json#/$defs/rightName",
+          "$comment": "ADR 0002 section 10",
+          "description": "The right the application applies to its query."
+        },
+        "degradable": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "$comment": "ADR 0002 section 10"
+        },
+        "examples": {
+          "$ref": "#/$defs/examples",
+          "$comment": "ADR 0002 section 12"
+        },
+        "summary": {
+          "$ref": "common.schema.json#/$defs/summary",
+          "$comment": "ADR 0002 section 7"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0002 section 7"
+        },
+        "concurrency": {
+          "const": "inherit",
+          "$comment": "ADR 0002 section 6",
+          "description": "On a member route: opts into the version."
+        },
+        "identity": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 9",
+          "description": "The identity the routes below require."
+        },
+        "access": {
+          "$ref": "#/$defs/access",
+          "$comment": "ADR 0002 section 9"
+        },
+        "requires": {
+          "$ref": "#/$defs/requires",
+          "$comment": "ADR 0002 section 9"
+        },
+        "scopes": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "a scope name (ADR 0002 section 4)",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "common.schema.json#/$defs/scopeSource"
+          },
+          "$comment": "ADR 0002 section 9",
+          "description": "Scopes entered here, each read from a value source."
+        },
+        "principal": {
+          "$ref": "#/$defs/principal",
+          "$comment": "ADR 0002 section 9"
+        },
+        "bindings": {
+          "$ref": "#/$defs/bindings",
+          "$comment": "ADR 0002 section 9"
+        },
+        "errors": {
+          "$ref": "node-errors.schema.json",
+          "$comment": "ADR 0002 section 11"
+        },
+        "errorRoles": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "an error role (ADR 0002 section 11)",
+            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "conventions.schema.json#/$defs/roleBinding"
+          },
+          "$comment": "ADR 0002 section 11",
+          "description": "Role bindings for this subtree, the nearest winning."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "$comment": "ADR 0002 section 10"
+        },
+        "headers": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "Request headers: a fields map keyed by header name."
+        },
+        "query": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "Query fields; on a node, they reach the safe routes below it only."
+        },
+        "upstream": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/name"
+          },
+          "minItems": 1,
+          "$comment": "ADR 0002 section 10",
+          "description": "Services, the owner first."
+        },
+        "maturity": {
+          "$ref": "#/$defs/maturity",
+          "$comment": "ADR 0002 section 10"
+        },
+        "internal": {
+          "type": "boolean",
+          "$comment": "ADR 0002 section 10",
+          "description": "Keeps the routes out of documents with internal: exclude."
+        },
+        "deprecated": {
+          "$ref": "#/$defs/routeDeprecation",
+          "$comment": "ADR 0002 section 10"
+        },
+        "budget": {
+          "$ref": "common.schema.json#/$defs/duration",
+          "$comment": "ADR 0002 section 10"
+        },
+        "bodyLimit": {
+          "$ref": "common.schema.json#/$defs/size",
+          "$comment": "ADR 0002 section 10"
+        },
+        "cache": {
+          "$ref": "#/$defs/cache",
+          "$comment": "ADR 0002 section 10"
+        },
+        "csrf": {
+          "$ref": "#/$defs/csrf",
+          "$comment": "ADR 0002 section 9"
+        },
+        "idempotency": {
+          "$ref": "#/$defs/idempotency",
+          "$comment": "ADR 0002 section 10"
+        },
+        "format": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 10",
+          "description": "The wire format of the routes below."
+        },
+        "unknownQuery": {
+          "$ref": "common.schema.json#/$defs/unknownQueryPolicy",
+          "$comment": "ADR 0002 section 7"
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0002 section 12"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "patternProperties": {
+        "^x-seampact-": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        },
+        "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$comment": "ADR 0002 section 12"
+        }
+      },
+      "additionalProperties": false
+    },
+    "relayRoute": {
+      "type": "object",
+      "description": "A relay route: its shape is derived from the public operation (ADR 0002 section 7).",
+      "properties": {
+        "relays": {
+          "type": "string",
+          "pattern": "^[a-z][A-Za-z0-9_]*\\.[a-z][A-Za-z0-9_]*$",
+          "$comment": "ADR 0002 section 7",
+          "description": "<api>.<operationId>: the public operation this route relays."
+        },
+        "operationId": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 7"
+        },
+        "requires": {
+          "$ref": "#/$defs/requires",
+          "$comment": "ADR 0002 section 9"
+        },
+        "errors": {
+          "$ref": "node-errors.schema.json",
+          "$comment": "ADR 0002 section 11"
+        },
+        "errorRoles": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "an error role (ADR 0002 section 11)",
+            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "conventions.schema.json#/$defs/roleBinding"
+          },
+          "$comment": "ADR 0002 section 11"
+        },
+        "budget": {
+          "$ref": "common.schema.json#/$defs/duration",
+          "$comment": "ADR 0002 section 10"
+        },
+        "bodyLimit": {
+          "$ref": "common.schema.json#/$defs/size",
+          "$comment": "ADR 0002 section 10"
+        },
+        "idempotency": {
+          "$ref": "#/$defs/idempotency",
+          "$comment": "ADR 0002 section 10"
+        },
+        "upstream": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/name"
+          },
+          "minItems": 1,
+          "$comment": "ADR 0002 section 10"
+        },
+        "maturity": {
+          "$ref": "#/$defs/maturity",
+          "$comment": "ADR 0002 section 10"
+        },
+        "deprecated": {
+          "$ref": "#/$defs/routeDeprecation",
+          "$comment": "ADR 0002 section 10"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "$comment": "ADR 0002 section 10"
+        },
+        "summary": {
+          "$ref": "common.schema.json#/$defs/summary",
+          "$comment": "ADR 0002 section 7"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0002 section 7"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "patternProperties": {
+        "^x-seampact-": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        },
+        "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$comment": "ADR 0002 section 12"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "$include": true
+        },
+        "required": [
+          "$include"
+        ]
+      },
+      "else": {
+        "properties": {
+          "relays": true
+        },
+        "required": [
+          "relays"
+        ]
+      }
+    },
+    "collection": {
+      "type": "object",
+      "description": "A collection: settings, inherited below (ADR 0002 section 8), ops, and the collection and member scopes.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "collection"
+          ],
+          "$comment": "ADR 0002 section 6"
+        },
+        "id": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 6",
+          "description": "A fields map with one entry: the member id parameter and its schema."
+        },
+        "idProperty": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 6",
+          "description": "The item property holding the member id."
+        },
+        "singular": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 6",
+          "description": "The noun of member operation ids."
+        },
+        "item": {
+          "$ref": "schema.schema.json#/$defs/schema",
+          "$comment": "ADR 0002 section 6",
+          "description": "The schema of one record."
+        },
+        "owner": {
+          "enum": [
+            "caller"
+          ],
+          "$comment": "ADR 0002 section 6",
+          "description": "caller: the caller owns the records."
+        },
+        "concurrency": {
+          "$ref": "#/$defs/concurrency",
+          "$comment": "ADR 0002 section 6"
+        },
+        "resourceType": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 6",
+          "description": "The value of the $collection slot."
+        },
+        "ops": {
+          "description": "The ops shorthand: a list of list, get, create, update, delete, batch, or a mapping from op to its settings (ADR 0002 section 6).",
+          "if": {
+            "type": "array"
+          },
+          "then": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "list",
+                "get",
+                "create",
+                "update",
+                "delete",
+                "batch"
+              ]
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "list": {
+                "$ref": "#/$defs/op",
+                "$comment": "ADR 0002 section 6"
+              },
+              "get": {
+                "$ref": "#/$defs/op",
+                "$comment": "ADR 0002 section 6"
+              },
+              "create": {
+                "$ref": "#/$defs/op",
+                "$comment": "ADR 0002 section 6"
+              },
+              "update": {
+                "$ref": "#/$defs/op",
+                "$comment": "ADR 0002 section 6"
+              },
+              "delete": {
+                "$ref": "#/$defs/op",
+                "$comment": "ADR 0002 section 6"
+              },
+              "batch": {
+                "$ref": "#/$defs/batchOp",
+                "$comment": "ADR 0002 section 6"
+              },
+              "$include": {
+                "$ref": "common.schema.json#/$defs/include"
+              }
+            },
+            "additionalProperties": false
+          },
+          "$comment": "ADR 0002 section 6"
+        },
+        "collection": {
+          "$ref": "#/$defs/scope",
+          "$comment": "ADR 0002 section 6",
+          "description": "The collection scope: settings plus routes."
+        },
+        "member": {
+          "$ref": "#/$defs/scope",
+          "$comment": "ADR 0002 section 6",
+          "description": "The member scope: settings plus routes."
+        },
+        "path": {
+          "type": "string",
+          "$comment": "ADR 0002 section 6",
+          "description": "Replaces the node's path segment: relative, no leading slash, may hold {param}."
+        },
+        "pathParams": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "The schemas of the extra path placeholders."
+        },
+        "identity": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 9",
+          "description": "The identity the routes below require."
+        },
+        "access": {
+          "$ref": "#/$defs/access",
+          "$comment": "ADR 0002 section 9"
+        },
+        "requires": {
+          "$ref": "#/$defs/requires",
+          "$comment": "ADR 0002 section 9"
+        },
+        "scopes": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "a scope name (ADR 0002 section 4)",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "common.schema.json#/$defs/scopeSource"
+          },
+          "$comment": "ADR 0002 section 9",
+          "description": "Scopes entered here, each read from a value source."
+        },
+        "principal": {
+          "$ref": "#/$defs/principal",
+          "$comment": "ADR 0002 section 9"
+        },
+        "bindings": {
+          "$ref": "#/$defs/bindings",
+          "$comment": "ADR 0002 section 9"
+        },
+        "errors": {
+          "$ref": "node-errors.schema.json",
+          "$comment": "ADR 0002 section 11"
+        },
+        "errorRoles": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "an error role (ADR 0002 section 11)",
+            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "conventions.schema.json#/$defs/roleBinding"
+          },
+          "$comment": "ADR 0002 section 11",
+          "description": "Role bindings for this subtree, the nearest winning."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "$comment": "ADR 0002 section 10"
+        },
+        "headers": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "Request headers: a fields map keyed by header name."
+        },
+        "query": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "Query fields; on a node, they reach the safe routes below it only."
+        },
+        "upstream": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/name"
+          },
+          "minItems": 1,
+          "$comment": "ADR 0002 section 10",
+          "description": "Services, the owner first."
+        },
+        "maturity": {
+          "$ref": "#/$defs/maturity",
+          "$comment": "ADR 0002 section 10"
+        },
+        "internal": {
+          "type": "boolean",
+          "$comment": "ADR 0002 section 10",
+          "description": "Keeps the routes out of documents with internal: exclude."
+        },
+        "deprecated": {
+          "$ref": "#/$defs/deprecation",
+          "$comment": "ADR 0002 section 10"
+        },
+        "budget": {
+          "$ref": "common.schema.json#/$defs/duration",
+          "$comment": "ADR 0002 section 10"
+        },
+        "bodyLimit": {
+          "$ref": "common.schema.json#/$defs/size",
+          "$comment": "ADR 0002 section 10"
+        },
+        "cache": {
+          "$ref": "#/$defs/cache",
+          "$comment": "ADR 0002 section 10"
+        },
+        "csrf": {
+          "$ref": "#/$defs/csrf",
+          "$comment": "ADR 0002 section 9"
+        },
+        "idempotency": {
+          "$ref": "#/$defs/idempotency",
+          "$comment": "ADR 0002 section 10"
+        },
+        "format": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 10",
+          "description": "The wire format of the routes below."
+        },
+        "unknownQuery": {
+          "$ref": "common.schema.json#/$defs/unknownQueryPolicy",
+          "$comment": "ADR 0002 section 7"
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0002 section 12"
+        },
+        "summary": {
+          "$ref": "common.schema.json#/$defs/summary",
+          "$comment": "ADR 0002 section 12"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0002 section 12"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "patternProperties": {
+        "^x-seampact-": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        },
+        "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$comment": "ADR 0002 section 12"
+        }
+      },
+      "additionalProperties": false
+    },
+    "single": {
+      "type": "object",
+      "description": "A single: settings, inherited below (ADR 0002 section 8), ops and routes; with neither item nor ops, a group.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "single"
+          ],
+          "$comment": "ADR 0002 section 6"
+        },
+        "item": {
+          "$ref": "schema.schema.json#/$defs/schema",
+          "$comment": "ADR 0002 section 6",
+          "description": "The schema of one record."
+        },
+        "owner": {
+          "enum": [
+            "caller"
+          ],
+          "$comment": "ADR 0002 section 6",
+          "description": "caller: the caller owns the records."
+        },
+        "concurrency": {
+          "$ref": "#/$defs/concurrency",
+          "$comment": "ADR 0002 section 6"
+        },
+        "resourceType": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 6",
+          "description": "The value of the $collection slot."
+        },
+        "ops": {
+          "description": "The ops shorthand: a list of get, update, delete, or a mapping from op to its settings (ADR 0002 section 6).",
+          "if": {
+            "type": "array"
+          },
+          "then": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "get",
+                "update",
+                "delete"
+              ]
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "get": {
+                "$ref": "#/$defs/op",
+                "$comment": "ADR 0002 section 6"
+              },
+              "update": {
+                "$ref": "#/$defs/op",
+                "$comment": "ADR 0002 section 6"
+              },
+              "delete": {
+                "$ref": "#/$defs/op",
+                "$comment": "ADR 0002 section 6"
+              },
+              "$include": {
+                "$ref": "common.schema.json#/$defs/include"
+              }
+            },
+            "additionalProperties": false
+          },
+          "$comment": "ADR 0002 section 6"
+        },
+        "routes": {
+          "type": "object",
+          "title": "routes",
+          "propertyNames": {
+            "description": "a node name (ADR 0002 section 4)",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/node"
+          },
+          "$comment": "ADR 0002 section 6",
+          "description": "The named children: a mapping from child name to node."
+        },
+        "path": {
+          "type": "string",
+          "$comment": "ADR 0002 section 6",
+          "description": "Replaces the node's path segment: relative, no leading slash, may hold {param}."
+        },
+        "pathParams": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "The schemas of the extra path placeholders."
+        },
+        "identity": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 9",
+          "description": "The identity the routes below require."
+        },
+        "access": {
+          "$ref": "#/$defs/access",
+          "$comment": "ADR 0002 section 9"
+        },
+        "requires": {
+          "$ref": "#/$defs/requires",
+          "$comment": "ADR 0002 section 9"
+        },
+        "scopes": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "a scope name (ADR 0002 section 4)",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "common.schema.json#/$defs/scopeSource"
+          },
+          "$comment": "ADR 0002 section 9",
+          "description": "Scopes entered here, each read from a value source."
+        },
+        "principal": {
+          "$ref": "#/$defs/principal",
+          "$comment": "ADR 0002 section 9"
+        },
+        "bindings": {
+          "$ref": "#/$defs/bindings",
+          "$comment": "ADR 0002 section 9"
+        },
+        "errors": {
+          "$ref": "node-errors.schema.json",
+          "$comment": "ADR 0002 section 11"
+        },
+        "errorRoles": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "an error role (ADR 0002 section 11)",
+            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "conventions.schema.json#/$defs/roleBinding"
+          },
+          "$comment": "ADR 0002 section 11",
+          "description": "Role bindings for this subtree, the nearest winning."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "$comment": "ADR 0002 section 10"
+        },
+        "headers": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "Request headers: a fields map keyed by header name."
+        },
+        "query": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "Query fields; on a node, they reach the safe routes below it only."
+        },
+        "upstream": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/name"
+          },
+          "minItems": 1,
+          "$comment": "ADR 0002 section 10",
+          "description": "Services, the owner first."
+        },
+        "maturity": {
+          "$ref": "#/$defs/maturity",
+          "$comment": "ADR 0002 section 10"
+        },
+        "internal": {
+          "type": "boolean",
+          "$comment": "ADR 0002 section 10",
+          "description": "Keeps the routes out of documents with internal: exclude."
+        },
+        "deprecated": {
+          "$ref": "#/$defs/deprecation",
+          "$comment": "ADR 0002 section 10"
+        },
+        "budget": {
+          "$ref": "common.schema.json#/$defs/duration",
+          "$comment": "ADR 0002 section 10"
+        },
+        "bodyLimit": {
+          "$ref": "common.schema.json#/$defs/size",
+          "$comment": "ADR 0002 section 10"
+        },
+        "cache": {
+          "$ref": "#/$defs/cache",
+          "$comment": "ADR 0002 section 10"
+        },
+        "csrf": {
+          "$ref": "#/$defs/csrf",
+          "$comment": "ADR 0002 section 9"
+        },
+        "idempotency": {
+          "$ref": "#/$defs/idempotency",
+          "$comment": "ADR 0002 section 10"
+        },
+        "format": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 10",
+          "description": "The wire format of the routes below."
+        },
+        "unknownQuery": {
+          "$ref": "common.schema.json#/$defs/unknownQueryPolicy",
+          "$comment": "ADR 0002 section 7"
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0002 section 12"
+        },
+        "summary": {
+          "$ref": "common.schema.json#/$defs/summary",
+          "$comment": "ADR 0002 section 12"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0002 section 12"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "patternProperties": {
+        "^x-seampact-": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        },
+        "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$comment": "ADR 0002 section 12"
+        }
+      },
+      "additionalProperties": false
+    },
+    "includedNode": {
+      "type": "object",
+      "description": "A node whose kind comes from an included file (ADR 0002 section 2).",
+      "properties": {
+        "method": {
+          "$comment": "ADR 0002 section 7"
+        },
+        "path": {
+          "$comment": "ADR 0002 section 6"
+        },
+        "pathParams": {
+          "$comment": "ADR 0002 section 7"
+        },
+        "operationId": {
+          "$comment": "ADR 0002 section 7"
+        },
+        "input": {
+          "$comment": "ADR 0002 section 7"
+        },
+        "inputMedia": {
+          "$comment": "ADR 0002 section 7"
+        },
+        "output": {
+          "$comment": "ADR 0002 section 7"
+        },
+        "item": {
+          "$comment": "ADR 0002 section 6"
+        },
+        "responses": {
+          "$comment": "ADR 0002 section 7"
+        },
+        "paging": {
+          "$comment": "ADR 0002 section 10"
+        },
+        "sortable": {
+          "$comment": "ADR 0002 section 10"
+        },
+        "filteredBy": {
+          "$comment": "ADR 0002 section 10"
+        },
+        "degradable": {
+          "$comment": "ADR 0002 section 10"
+        },
+        "examples": {
+          "$comment": "ADR 0002 section 12"
+        },
+        "summary": {
+          "$comment": "ADR 0002 section 12"
+        },
+        "description": {
+          "$comment": "ADR 0002 section 12"
+        },
+        "concurrency": {
+          "$comment": "ADR 0002 section 6"
+        },
+        "identity": {
+          "$comment": "ADR 0002 section 9"
+        },
+        "access": {
+          "$comment": "ADR 0002 section 9"
+        },
+        "requires": {
+          "$comment": "ADR 0002 section 9"
+        },
+        "scopes": {
+          "$comment": "ADR 0002 section 9"
+        },
+        "principal": {
+          "$comment": "ADR 0002 section 9"
+        },
+        "bindings": {
+          "$comment": "ADR 0002 section 9"
+        },
+        "errors": {
+          "$comment": "ADR 0002 section 11"
+        },
+        "errorRoles": {
+          "$comment": "ADR 0002 section 11"
+        },
+        "tags": {
+          "$comment": "ADR 0002 section 10"
+        },
+        "headers": {
+          "$comment": "ADR 0002 section 7"
+        },
+        "query": {
+          "$comment": "ADR 0002 section 7"
+        },
+        "upstream": {
+          "$comment": "ADR 0002 section 10"
+        },
+        "maturity": {
+          "$comment": "ADR 0002 section 10"
+        },
+        "internal": {
+          "$comment": "ADR 0002 section 10"
+        },
+        "deprecated": {
+          "$comment": "ADR 0002 section 10"
+        },
+        "budget": {
+          "$comment": "ADR 0002 section 10"
+        },
+        "bodyLimit": {
+          "$comment": "ADR 0002 section 10"
+        },
+        "cache": {
+          "$comment": "ADR 0002 section 10"
+        },
+        "csrf": {
+          "$comment": "ADR 0002 section 9"
+        },
+        "idempotency": {
+          "$comment": "ADR 0002 section 10"
+        },
+        "format": {
+          "$comment": "ADR 0002 section 10"
+        },
+        "unknownQuery": {
+          "$comment": "ADR 0002 section 7"
+        },
+        "lint": {
+          "$comment": "ADR 0002 section 12"
+        },
+        "kind": {
+          "$comment": "ADR 0002 section 6"
+        },
+        "id": {
+          "$comment": "ADR 0002 section 6"
+        },
+        "idProperty": {
+          "$comment": "ADR 0002 section 6"
+        },
+        "singular": {
+          "$comment": "ADR 0002 section 6"
+        },
+        "owner": {
+          "$comment": "ADR 0002 section 6"
+        },
+        "resourceType": {
+          "$comment": "ADR 0002 section 6"
+        },
+        "ops": {
+          "$comment": "ADR 0002 section 6"
+        },
+        "collection": {
+          "$comment": "ADR 0002 section 6"
+        },
+        "member": {
+          "$comment": "ADR 0002 section 6"
+        },
+        "routes": {
+          "$comment": "ADR 0002 section 6"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "patternProperties": {
+        "^x-seampact-": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        },
+        "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$comment": "ADR 0002 section 12"
+        }
+      },
+      "additionalProperties": false
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "routes": {
+          "type": "object",
+          "title": "routes",
+          "propertyNames": {
+            "description": "a node name (ADR 0002 section 4)",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/node"
+          },
+          "$comment": "ADR 0002 section 6",
+          "description": "The named children: a mapping from child name to node."
+        },
+        "identity": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 9",
+          "description": "The identity the routes below require."
+        },
+        "access": {
+          "$ref": "#/$defs/access",
+          "$comment": "ADR 0002 section 9"
+        },
+        "requires": {
+          "$ref": "#/$defs/requires",
+          "$comment": "ADR 0002 section 9"
+        },
+        "scopes": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "a scope name (ADR 0002 section 4)",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "common.schema.json#/$defs/scopeSource"
+          },
+          "$comment": "ADR 0002 section 9",
+          "description": "Scopes entered here, each read from a value source."
+        },
+        "principal": {
+          "$ref": "#/$defs/principal",
+          "$comment": "ADR 0002 section 9"
+        },
+        "bindings": {
+          "$ref": "#/$defs/bindings",
+          "$comment": "ADR 0002 section 9"
+        },
+        "errors": {
+          "$ref": "node-errors.schema.json",
+          "$comment": "ADR 0002 section 11"
+        },
+        "errorRoles": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "an error role (ADR 0002 section 11)",
+            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "conventions.schema.json#/$defs/roleBinding"
+          },
+          "$comment": "ADR 0002 section 11",
+          "description": "Role bindings for this subtree, the nearest winning."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "$comment": "ADR 0002 section 10"
+        },
+        "headers": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "Request headers: a fields map keyed by header name."
+        },
+        "query": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "Query fields; on a node, they reach the safe routes below it only."
+        },
+        "upstream": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/name"
+          },
+          "minItems": 1,
+          "$comment": "ADR 0002 section 10",
+          "description": "Services, the owner first."
+        },
+        "maturity": {
+          "$ref": "#/$defs/maturity",
+          "$comment": "ADR 0002 section 10"
+        },
+        "internal": {
+          "type": "boolean",
+          "$comment": "ADR 0002 section 10",
+          "description": "Keeps the routes out of documents with internal: exclude."
+        },
+        "deprecated": {
+          "$ref": "#/$defs/deprecation",
+          "$comment": "ADR 0002 section 10"
+        },
+        "budget": {
+          "$ref": "common.schema.json#/$defs/duration",
+          "$comment": "ADR 0002 section 10"
+        },
+        "bodyLimit": {
+          "$ref": "common.schema.json#/$defs/size",
+          "$comment": "ADR 0002 section 10"
+        },
+        "cache": {
+          "$ref": "#/$defs/cache",
+          "$comment": "ADR 0002 section 10"
+        },
+        "csrf": {
+          "$ref": "#/$defs/csrf",
+          "$comment": "ADR 0002 section 9"
+        },
+        "idempotency": {
+          "$ref": "#/$defs/idempotency",
+          "$comment": "ADR 0002 section 10"
+        },
+        "format": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 10",
+          "description": "The wire format of the routes below."
+        },
+        "unknownQuery": {
+          "$ref": "common.schema.json#/$defs/unknownQueryPolicy",
+          "$comment": "ADR 0002 section 7"
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0002 section 12"
+        },
+        "summary": {
+          "$ref": "common.schema.json#/$defs/summary",
+          "$comment": "ADR 0002 section 12"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0002 section 12"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "patternProperties": {
+        "^x-seampact-": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        },
+        "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$comment": "ADR 0002 section 12"
+        }
+      },
+      "additionalProperties": false
+    },
+    "surface": {
+      "type": "object",
+      "description": "A surface: a named entry point with a path prefix (ADR 0002 section 6).",
+      "properties": {
+        "prefix": {
+          "type": "string",
+          "$comment": "ADR 0002 section 6",
+          "description": "The surface's leading path; {version} is replaced by api.version."
+        },
+        "pathVersion": {
+          "enum": [
+            "prefix",
+            "none"
+          ],
+          "$comment": "ADR 0002 section 6",
+          "description": "none: the prefix is used as written."
+        },
+        "routes": {
+          "type": "object",
+          "title": "routes",
+          "propertyNames": {
+            "description": "a node name (ADR 0002 section 4)",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/surfaceChild"
+          },
+          "$comment": "ADR 0002 section 6",
+          "description": "The named children: a mapping from child name to node."
+        },
+        "identity": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 9",
+          "description": "The identity the routes below require."
+        },
+        "access": {
+          "$ref": "#/$defs/access",
+          "$comment": "ADR 0002 section 9"
+        },
+        "requires": {
+          "$ref": "#/$defs/requires",
+          "$comment": "ADR 0002 section 9"
+        },
+        "scopes": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "a scope name (ADR 0002 section 4)",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "common.schema.json#/$defs/scopeSource"
+          },
+          "$comment": "ADR 0002 section 9",
+          "description": "Scopes entered here, each read from a value source."
+        },
+        "principal": {
+          "$ref": "#/$defs/principal",
+          "$comment": "ADR 0002 section 9"
+        },
+        "bindings": {
+          "$ref": "#/$defs/bindings",
+          "$comment": "ADR 0002 section 9"
+        },
+        "errors": {
+          "$ref": "node-errors.schema.json",
+          "$comment": "ADR 0002 section 11"
+        },
+        "errorRoles": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "an error role (ADR 0002 section 11)",
+            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "conventions.schema.json#/$defs/roleBinding"
+          },
+          "$comment": "ADR 0002 section 11",
+          "description": "Role bindings for this subtree, the nearest winning."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "$comment": "ADR 0002 section 10"
+        },
+        "headers": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "Request headers: a fields map keyed by header name."
+        },
+        "query": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "Query fields; on a node, they reach the safe routes below it only."
+        },
+        "upstream": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/name"
+          },
+          "minItems": 1,
+          "$comment": "ADR 0002 section 10",
+          "description": "Services, the owner first."
+        },
+        "maturity": {
+          "$ref": "#/$defs/maturity",
+          "$comment": "ADR 0002 section 10"
+        },
+        "internal": {
+          "type": "boolean",
+          "$comment": "ADR 0002 section 10",
+          "description": "Keeps the routes out of documents with internal: exclude."
+        },
+        "deprecated": {
+          "$ref": "#/$defs/deprecation",
+          "$comment": "ADR 0002 section 10"
+        },
+        "budget": {
+          "$ref": "common.schema.json#/$defs/duration",
+          "$comment": "ADR 0002 section 10"
+        },
+        "bodyLimit": {
+          "$ref": "common.schema.json#/$defs/size",
+          "$comment": "ADR 0002 section 10"
+        },
+        "cache": {
+          "$ref": "#/$defs/cache",
+          "$comment": "ADR 0002 section 10"
+        },
+        "csrf": {
+          "$ref": "#/$defs/csrf",
+          "$comment": "ADR 0002 section 9"
+        },
+        "idempotency": {
+          "$ref": "#/$defs/idempotency",
+          "$comment": "ADR 0002 section 10"
+        },
+        "format": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 10",
+          "description": "The wire format of the routes below."
+        },
+        "unknownQuery": {
+          "$ref": "common.schema.json#/$defs/unknownQueryPolicy",
+          "$comment": "ADR 0002 section 7"
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0002 section 12"
+        },
+        "summary": {
+          "$ref": "common.schema.json#/$defs/summary",
+          "$comment": "ADR 0002 section 12"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0002 section 12"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "patternProperties": {
+        "^x-seampact-": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        },
+        "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$comment": "ADR 0002 section 12"
+        }
+      },
+      "additionalProperties": false
+    },
+    "op": {
+      "type": "object",
+      "description": "The settings of one op: route keys and inherited settings (ADR 0002 section 6).",
+      "properties": {
+        "method": {
+          "$ref": "common.schema.json#/$defs/method",
+          "$comment": "ADR 0002 section 7"
+        },
+        "path": {
+          "type": "string",
+          "$comment": "ADR 0002 section 6",
+          "description": "Replaces the node's path segment: relative, no leading slash, may hold {param}."
+        },
+        "pathParams": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "The schemas of the extra path placeholders."
+        },
+        "operationId": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 7",
+          "description": "Replaces the derived operation id."
+        },
+        "input": {
+          "$ref": "schema.schema.json#/$defs/schema",
+          "$comment": "ADR 0002 section 7",
+          "description": "The body schema."
+        },
+        "inputMedia": {
+          "enum": [
+            "json",
+            "form",
+            "multipart"
+          ],
+          "$comment": "ADR 0002 section 7"
+        },
+        "output": {
+          "$ref": "schema.schema.json#/$defs/schema",
+          "$comment": "ADR 0002 section 7",
+          "description": "The body of the single success response."
+        },
+        "item": {
+          "$ref": "schema.schema.json#/$defs/schema",
+          "$comment": "ADR 0002 section 10",
+          "description": "Instead of 'output', on a list: the schema of one record."
+        },
+        "responses": {
+          "$ref": "#/$defs/responses",
+          "$comment": "ADR 0002 section 7"
+        },
+        "paging": {
+          "$ref": "#/$defs/paging",
+          "$comment": "ADR 0002 section 10"
+        },
+        "sortable": {
+          "$ref": "#/$defs/sortable",
+          "$comment": "ADR 0002 section 10"
+        },
+        "filteredBy": {
+          "$ref": "common.schema.json#/$defs/rightName",
+          "$comment": "ADR 0002 section 10",
+          "description": "The right the application applies to its query."
+        },
+        "degradable": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "$comment": "ADR 0002 section 10"
+        },
+        "examples": {
+          "$ref": "#/$defs/examples",
+          "$comment": "ADR 0002 section 12"
+        },
+        "summary": {
+          "$ref": "common.schema.json#/$defs/summary",
+          "$comment": "ADR 0002 section 7"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0002 section 7"
+        },
+        "identity": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 9",
+          "description": "The identity the routes below require."
+        },
+        "access": {
+          "$ref": "#/$defs/access",
+          "$comment": "ADR 0002 section 9"
+        },
+        "requires": {
+          "$ref": "#/$defs/requires",
+          "$comment": "ADR 0002 section 9"
+        },
+        "scopes": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "a scope name (ADR 0002 section 4)",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "common.schema.json#/$defs/scopeSource"
+          },
+          "$comment": "ADR 0002 section 9",
+          "description": "Scopes entered here, each read from a value source."
+        },
+        "principal": {
+          "$ref": "#/$defs/principal",
+          "$comment": "ADR 0002 section 9"
+        },
+        "bindings": {
+          "$ref": "#/$defs/bindings",
+          "$comment": "ADR 0002 section 9"
+        },
+        "errors": {
+          "$ref": "node-errors.schema.json",
+          "$comment": "ADR 0002 section 11"
+        },
+        "errorRoles": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "an error role (ADR 0002 section 11)",
+            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "conventions.schema.json#/$defs/roleBinding"
+          },
+          "$comment": "ADR 0002 section 11",
+          "description": "Role bindings for this subtree, the nearest winning."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "$comment": "ADR 0002 section 10"
+        },
+        "headers": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "Request headers: a fields map keyed by header name."
+        },
+        "query": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "Query fields; on a node, they reach the safe routes below it only."
+        },
+        "upstream": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/name"
+          },
+          "minItems": 1,
+          "$comment": "ADR 0002 section 10",
+          "description": "Services, the owner first."
+        },
+        "maturity": {
+          "$ref": "#/$defs/maturity",
+          "$comment": "ADR 0002 section 10"
+        },
+        "internal": {
+          "type": "boolean",
+          "$comment": "ADR 0002 section 10",
+          "description": "Keeps the routes out of documents with internal: exclude."
+        },
+        "deprecated": {
+          "$ref": "#/$defs/routeDeprecation",
+          "$comment": "ADR 0002 section 10"
+        },
+        "budget": {
+          "$ref": "common.schema.json#/$defs/duration",
+          "$comment": "ADR 0002 section 10"
+        },
+        "bodyLimit": {
+          "$ref": "common.schema.json#/$defs/size",
+          "$comment": "ADR 0002 section 10"
+        },
+        "cache": {
+          "$ref": "#/$defs/cache",
+          "$comment": "ADR 0002 section 10"
+        },
+        "csrf": {
+          "$ref": "#/$defs/csrf",
+          "$comment": "ADR 0002 section 9"
+        },
+        "idempotency": {
+          "$ref": "#/$defs/idempotency",
+          "$comment": "ADR 0002 section 10"
+        },
+        "format": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 10",
+          "description": "The wire format of the routes below."
+        },
+        "unknownQuery": {
+          "$ref": "common.schema.json#/$defs/unknownQueryPolicy",
+          "$comment": "ADR 0002 section 7"
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0002 section 12"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "patternProperties": {
+        "^x-seampact-": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        },
+        "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$comment": "ADR 0002 section 12"
+        }
+      },
+      "additionalProperties": false
+    },
+    "batchOp": {
+      "type": "object",
+      "description": "The settings of one op: route keys and inherited settings (ADR 0002 section 6).",
+      "properties": {
+        "method": {
+          "$ref": "common.schema.json#/$defs/method",
+          "$comment": "ADR 0002 section 7"
+        },
+        "path": {
+          "type": "string",
+          "$comment": "ADR 0002 section 6",
+          "description": "Replaces the node's path segment: relative, no leading slash, may hold {param}."
+        },
+        "pathParams": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "The schemas of the extra path placeholders."
+        },
+        "operationId": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 7",
+          "description": "Replaces the derived operation id."
+        },
+        "input": {
+          "$ref": "schema.schema.json#/$defs/schema",
+          "$comment": "ADR 0002 section 7",
+          "description": "The body schema."
+        },
+        "inputMedia": {
+          "enum": [
+            "json",
+            "form",
+            "multipart"
+          ],
+          "$comment": "ADR 0002 section 7"
+        },
+        "output": {
+          "$ref": "schema.schema.json#/$defs/schema",
+          "$comment": "ADR 0002 section 7",
+          "description": "The body of the single success response."
+        },
+        "item": {
+          "$ref": "schema.schema.json#/$defs/schema",
+          "$comment": "ADR 0002 section 10",
+          "description": "Instead of 'output', on a list: the schema of one record."
+        },
+        "responses": {
+          "$ref": "#/$defs/responses",
+          "$comment": "ADR 0002 section 7"
+        },
+        "paging": {
+          "$ref": "#/$defs/paging",
+          "$comment": "ADR 0002 section 10"
+        },
+        "sortable": {
+          "$ref": "#/$defs/sortable",
+          "$comment": "ADR 0002 section 10"
+        },
+        "filteredBy": {
+          "$ref": "common.schema.json#/$defs/rightName",
+          "$comment": "ADR 0002 section 10",
+          "description": "The right the application applies to its query."
+        },
+        "degradable": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "$comment": "ADR 0002 section 10"
+        },
+        "examples": {
+          "$ref": "#/$defs/examples",
+          "$comment": "ADR 0002 section 12"
+        },
+        "summary": {
+          "$ref": "common.schema.json#/$defs/summary",
+          "$comment": "ADR 0002 section 7"
+        },
+        "description": {
+          "$ref": "common.schema.json#/$defs/description",
+          "$comment": "ADR 0002 section 7"
+        },
+        "identity": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 9",
+          "description": "The identity the routes below require."
+        },
+        "access": {
+          "$ref": "#/$defs/access",
+          "$comment": "ADR 0002 section 9"
+        },
+        "requires": {
+          "$ref": "#/$defs/requires",
+          "$comment": "ADR 0002 section 9"
+        },
+        "scopes": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "a scope name (ADR 0002 section 4)",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "common.schema.json#/$defs/scopeSource"
+          },
+          "$comment": "ADR 0002 section 9",
+          "description": "Scopes entered here, each read from a value source."
+        },
+        "principal": {
+          "$ref": "#/$defs/principal",
+          "$comment": "ADR 0002 section 9"
+        },
+        "bindings": {
+          "$ref": "#/$defs/bindings",
+          "$comment": "ADR 0002 section 9"
+        },
+        "errors": {
+          "$ref": "node-errors.schema.json",
+          "$comment": "ADR 0002 section 11"
+        },
+        "errorRoles": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "an error role (ADR 0002 section 11)",
+            "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "conventions.schema.json#/$defs/roleBinding"
+          },
+          "$comment": "ADR 0002 section 11",
+          "description": "Role bindings for this subtree, the nearest winning."
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "$comment": "ADR 0002 section 10"
+        },
+        "headers": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "Request headers: a fields map keyed by header name."
+        },
+        "query": {
+          "$ref": "#/$defs/fields",
+          "$comment": "ADR 0002 section 7",
+          "description": "Query fields; on a node, they reach the safe routes below it only."
+        },
+        "upstream": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/name"
+          },
+          "minItems": 1,
+          "$comment": "ADR 0002 section 10",
+          "description": "Services, the owner first."
+        },
+        "maturity": {
+          "$ref": "#/$defs/maturity",
+          "$comment": "ADR 0002 section 10"
+        },
+        "internal": {
+          "type": "boolean",
+          "$comment": "ADR 0002 section 10",
+          "description": "Keeps the routes out of documents with internal: exclude."
+        },
+        "deprecated": {
+          "$ref": "#/$defs/routeDeprecation",
+          "$comment": "ADR 0002 section 10"
+        },
+        "budget": {
+          "$ref": "common.schema.json#/$defs/duration",
+          "$comment": "ADR 0002 section 10"
+        },
+        "bodyLimit": {
+          "$ref": "common.schema.json#/$defs/size",
+          "$comment": "ADR 0002 section 10"
+        },
+        "cache": {
+          "$ref": "#/$defs/cache",
+          "$comment": "ADR 0002 section 10"
+        },
+        "csrf": {
+          "$ref": "#/$defs/csrf",
+          "$comment": "ADR 0002 section 9"
+        },
+        "idempotency": {
+          "$ref": "#/$defs/idempotency",
+          "$comment": "ADR 0002 section 10"
+        },
+        "format": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 10",
+          "description": "The wire format of the routes below."
+        },
+        "unknownQuery": {
+          "$ref": "common.schema.json#/$defs/unknownQueryPolicy",
+          "$comment": "ADR 0002 section 7"
+        },
+        "lint": {
+          "$ref": "common.schema.json#/$defs/lintAllow",
+          "$comment": "ADR 0002 section 12"
+        },
+        "maxIds": {
+          "type": "integer",
+          "minimum": 1,
+          "$comment": "ADR 0002 section 6",
+          "description": "The most ids one batch read takes."
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "patternProperties": {
+        "^x-seampact-": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        },
+        "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$": {
+          "$comment": "ADR 0002 section 12"
+        }
+      },
+      "additionalProperties": false
+    },
+    "fields": {
+      "description": "A fields map (a name ending with '?' is optional), or a schema name (ADR 0002 section 4).",
+      "if": {
+        "type": "string"
+      },
+      "then": {
+        "$ref": "schema.schema.json#/$defs/reference"
+      },
+      "else": {
+        "if": {
+          "type": "object"
+        },
+        "then": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "a field name (ADR 0002 section 2)",
+            "pattern": "^(?:[^$].*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "schema.schema.json#/$defs/schema"
+          }
+        },
+        "else": {
+          "title": "alternatives",
+          "description": "a string or a mapping",
+          "type": "object"
+        }
+      }
+    },
+    "concurrency": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "$ref": "common.schema.json#/$defs/concurrencySource",
+          "$comment": "ADR 0002 section 6",
+          "description": "Where the client sends the version."
+        },
+        "field": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 6",
+          "description": "The item property it is compared with."
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "$include": true
+        },
+        "required": [
+          "$include"
+        ]
+      },
+      "else": {
+        "properties": {
+          "version": true,
+          "field": true
+        },
+        "required": [
+          "version",
+          "field"
+        ]
+      }
+    },
+    "access": {
+      "type": "object",
+      "title": "access",
+      "description": "{ public: \"<reason>\" } or { optionalAuth: \"<reason>\", onRefused } (ADR 0002 section 9).",
+      "properties": {
+        "public": {
+          "$ref": "common.schema.json#/$defs/reason",
+          "$comment": "ADR 0002 section 9",
+          "description": "No authentication, with the reason."
+        },
+        "optionalAuth": {
+          "$ref": "common.schema.json#/$defs/reason",
+          "$comment": "ADR 0002 section 9",
+          "description": "An anonymous caller or the identity, with the reason."
+        },
+        "onRefused": {
+          "enum": [
+            "anonymous",
+            "reject"
+          ],
+          "$comment": "ADR 0002 section 9",
+          "description": "A refused credential: anonymous or 401."
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "public": true
+        },
+        "required": [
+          "public"
+        ]
+      },
+      "then": {
+        "properties": {
+          "optionalAuth": {
+            "title": "conflict",
+            "description": "'public' excludes 'optionalAuth' and 'onRefused'.",
+            "not": {}
+          },
+          "onRefused": {
+            "title": "conflict",
+            "description": "'public' excludes 'optionalAuth' and 'onRefused'.",
+            "not": {}
+          }
+        }
+      },
+      "else": {
+        "if": {
+          "properties": {
+            "$include": true
+          },
+          "required": [
+            "$include"
+          ]
+        },
+        "else": {
+          "properties": {
+            "optionalAuth": true
+          },
+          "required": [
+            "optionalAuth"
+          ],
+          "title": "access"
+        }
+      }
+    },
+    "csrf": {
+      "type": "object",
+      "title": "csrf exemption",
+      "properties": {
+        "exempt": {
+          "$ref": "common.schema.json#/$defs/reason",
+          "$comment": "ADR 0002 section 9",
+          "description": "No CSRF check here, with the reason."
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "$include": true
+        },
+        "required": [
+          "$include"
+        ]
+      },
+      "else": {
+        "properties": {
+          "exempt": true
+        },
+        "required": [
+          "exempt"
+        ],
+        "title": "csrf exemption"
+      }
+    },
+    "idempotency": {
+      "type": "object",
+      "title": "idempotency exemption",
+      "properties": {
+        "exempt": {
+          "$ref": "common.schema.json#/$defs/reason",
+          "$comment": "ADR 0002 section 10",
+          "description": "A write without the idempotency key, with the reason."
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "$include": true
+        },
+        "required": [
+          "$include"
+        ]
+      },
+      "else": {
+        "properties": {
+          "exempt": true
+        },
+        "required": [
+          "exempt"
+        ],
+        "title": "idempotency exemption"
+      }
+    },
+    "requires": {
+      "type": "array",
+      "items": {
+        "if": {
+          "type": "string"
+        },
+        "then": {
+          "$ref": "common.schema.json#/$defs/name"
+        },
+        "else": {
+          "if": {
+            "type": "object"
+          },
+          "then": {
+            "$ref": "#/$defs/requirement"
+          },
+          "else": {
+            "title": "alternatives",
+            "description": "a string or a mapping",
+            "type": "object"
+          }
+        }
+      },
+      "description": "Requirements: a 'requirements' entry by name, or an item (ADR 0002 section 9)."
+    },
+    "requirement": {
+      "type": "object",
+      "properties": {
+        "right": {
+          "$ref": "common.schema.json#/$defs/rightName",
+          "$comment": "ADR 0002 section 9"
+        },
+        "rule": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 9"
+        },
+        "params": {
+          "type": "object",
+          "$comment": "ADR 0002 section 9",
+          "description": "The values of the right's or rule's typed params."
+        },
+        "subject": {
+          "$ref": "common.schema.json#/$defs/subjectSource",
+          "$comment": "ADR 0002 section 9",
+          "description": "Rights only: where the subject is read."
+        },
+        "bucket": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 9",
+          "description": "Rules declared with bucket: true only."
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "right": true
+        },
+        "required": [
+          "right"
+        ]
+      },
+      "then": {
+        "properties": {
+          "rule": {
+            "title": "conflict",
+            "description": "A requirement names a right or a rule, not both.",
+            "not": {}
+          },
+          "bucket": {
+            "title": "conflict",
+            "description": "'bucket' is for rules declared with bucket: true only.",
+            "not": {}
+          }
+        }
+      },
+      "else": {
+        "if": {
+          "properties": {
+            "$include": true
+          },
+          "required": [
+            "$include"
+          ]
+        },
+        "else": {
+          "properties": {
+            "subject": {
+              "title": "conflict",
+              "description": "'subject' is for rights only.",
+              "not": {}
+            }
+          },
+          "required": [
+            "rule"
+          ]
+        }
+      }
+    },
+    "principal": {
+      "type": "object",
+      "properties": {
+        "requires": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "$comment": "ADR 0002 section 9",
+          "description": "Principal fields that must be present."
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false
+    },
+    "bindings": {
+      "type": "object",
+      "description": "Maps a request value to a principal field (ADR 0002 section 9).",
+      "properties": {
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "propertyNames": {
+        "description": "a binding key (path.<param>, query.<param> or body.<field>) (ADR 0002 section 9)",
+        "pattern": "^(?:path\\.[^.\\s]+|query\\.[^.\\s]+|body\\.[^.\\s]+(?:\\.[^.\\s]+)*|\\$include)$",
+        "not": {
+          "enum": [
+            "__proto__",
+            "constructor",
+            "prototype"
+          ]
+        }
+      },
+      "additionalProperties": {
+        "$ref": "common.schema.json#/$defs/bindingValue"
+      }
+    },
+    "maturity": {
+      "description": "A level, or { level, reason } (ADR 0002 section 10).",
+      "if": {
+        "type": "string"
+      },
+      "then": {
+        "$ref": "common.schema.json#/$defs/maturityLevel"
+      },
+      "else": {
+        "if": {
+          "type": "object"
+        },
+        "then": {
+          "type": "object",
+          "properties": {
+            "level": {
+              "$ref": "common.schema.json#/$defs/maturityLevel",
+              "$comment": "ADR 0002 section 10"
+            },
+            "reason": {
+              "type": "string",
+              "$comment": "ADR 0002 section 10",
+              "description": "Optional docs: why the level is stated."
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "level": true
+            },
+            "required": [
+              "level"
+            ]
+          }
+        },
+        "else": {
+          "title": "alternatives",
+          "description": "a string or a mapping",
+          "type": "object"
+        }
+      }
+    },
+    "deprecation": {
+      "type": "object",
+      "properties": {
+        "sunset": {
+          "$ref": "common.schema.json#/$defs/date",
+          "$comment": "ADR 0002 section 10"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false
+    },
+    "routeDeprecation": {
+      "type": "object",
+      "properties": {
+        "sunset": {
+          "$ref": "common.schema.json#/$defs/date",
+          "$comment": "ADR 0002 section 10"
+        },
+        "successor": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 10",
+          "description": "The operation id that replaces this route."
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false
+    },
+    "cache": {
+      "type": "object",
+      "properties": {
+        "freshness": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 10",
+          "description": "A family of conventions.cache.families, or never."
+        },
+        "anonymous": {
+          "enum": [
+            "public",
+            "private"
+          ],
+          "$comment": "ADR 0002 section 10"
+        },
+        "vary": {
+          "type": "array",
+          "items": {
+            "$ref": "common.schema.json#/$defs/headerName"
+          },
+          "$comment": "ADR 0002 section 10"
+        },
+        "etag": {
+          "type": "boolean",
+          "$comment": "ADR 0002 section 10"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false
+    },
+    "paging": {
+      "description": "A paging style name, none, or { <style>: { maxLimit, defaultLimit, overLimit, token } }.",
+      "if": {
+        "type": "string"
+      },
+      "then": {
+        "$ref": "common.schema.json#/$defs/name"
+      },
+      "else": {
+        "if": {
+          "type": "object"
+        },
+        "then": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "a paging style name (ADR 0002 section 10)",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "then": {
+            "maxProperties": 2
+          },
+          "else": {
+            "minProperties": 1,
+            "maxProperties": 1
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "maxLimit": {
+                "type": "integer",
+                "minimum": 1,
+                "$comment": "ADR 0002 section 10"
+              },
+              "defaultLimit": {
+                "type": "integer",
+                "minimum": 1,
+                "$comment": "ADR 0002 section 10"
+              },
+              "overLimit": {
+                "enum": [
+                  "reject",
+                  "clamp"
+                ],
+                "$comment": "ADR 0002 section 10"
+              },
+              "token": {
+                "enum": [
+                  "opaque",
+                  "instant"
+                ],
+                "$comment": "ADR 0002 section 10"
+              },
+              "$include": {
+                "$ref": "common.schema.json#/$defs/include"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "else": {
+          "title": "alternatives",
+          "description": "a string or a mapping",
+          "type": "object"
+        }
+      }
+    },
+    "sortable": {
+      "type": "array",
+      "items": {
+        "if": {
+          "type": "string"
+        },
+        "then": {
+          "type": "string",
+          "minLength": 1
+        },
+        "else": {
+          "if": {
+            "type": "object"
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "$comment": "ADR 0002 section 10"
+              },
+              "right": {
+                "$ref": "common.schema.json#/$defs/rightName",
+                "$comment": "ADR 0002 section 10"
+              },
+              "$include": {
+                "$ref": "common.schema.json#/$defs/include"
+              }
+            },
+            "additionalProperties": false,
+            "if": {
+              "properties": {
+                "$include": true
+              },
+              "required": [
+                "$include"
+              ]
+            },
+            "else": {
+              "properties": {
+                "key": true
+              },
+              "required": [
+                "key"
+              ]
+            }
+          },
+          "else": {
+            "title": "alternatives",
+            "description": "a string or a mapping",
+            "type": "object"
+          }
+        }
+      },
+      "description": "Sort keys: an item field, or { key, right } (ADR 0002 section 10)."
+    },
+    "responses": {
+      "type": "object",
+      "description": "Success (200 to 299) and redirect (301, 302, 303, 307, 308) responses.",
+      "properties": {
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "propertyNames": {
+        "description": "a success or redirect status (ADR 0002 section 7)",
+        "pattern": "^(?:2[0-9][0-9]|30[1237]|308|\\$include)$",
+        "not": {
+          "enum": [
+            "__proto__",
+            "constructor",
+            "prototype"
+          ]
+        }
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "$ref": "schema.schema.json#/$defs/schema",
+            "$comment": "ADR 0002 section 7"
+          },
+          "headers": {
+            "$ref": "#/$defs/fields",
+            "$comment": "ADR 0002 section 7",
+            "description": "Response headers: a fields map keyed by name."
+          },
+          "description": {
+            "$ref": "common.schema.json#/$defs/description",
+            "$comment": "ADR 0002 section 7"
+          },
+          "$include": {
+            "$ref": "common.schema.json#/$defs/include"
+          }
+        },
+        "additionalProperties": false
+      },
+      "minProperties": 1
+    },
+    "examples": {
+      "type": "object",
+      "properties": {
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "propertyNames": {
+        "description": "an example name (ADR 0002 section 4)",
+        "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+        "not": {
+          "enum": [
+            "__proto__",
+            "constructor",
+            "prototype"
+          ]
+        }
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer",
+            "minimum": 200,
+            "maximum": 399,
+            "$comment": "ADR 0002 section 12"
+          },
+          "request": {
+            "const": true,
+            "$comment": "ADR 0002 section 12"
+          },
+          "error": {
+            "$ref": "common.schema.json#/$defs/errorCode",
+            "$comment": "ADR 0002 section 12"
+          },
+          "value": {
+            "$comment": "ADR 0002 section 12",
+            "description": "The payload, the request body or the code's params."
+          },
+          "$include": {
+            "$ref": "common.schema.json#/$defs/include"
+          }
+        },
+        "additionalProperties": false,
+        "if": {
+          "properties": {
+            "$include": true
+          },
+          "required": [
+            "$include"
+          ]
+        },
+        "else": {
+          "properties": {
+            "value": true
+          },
+          "required": [
+            "value"
+          ]
+        }
+      }
+    }
+  }
+}

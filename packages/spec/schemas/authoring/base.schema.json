@@ -1,0 +1,208 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact base file",
+  "type": "object",
+  "description": "A base, or the workspace's shared file (ADR 0002 section 1).",
+  "properties": {
+    "packs": {
+      "type": "array",
+      "items": {
+        "title": "pack reference",
+        "description": "A path starting with ./ or ../, or a package name (ADR 0002 section 2).",
+        "type": "string",
+        "pattern": "^[^\\u0000-\\u001F\\u007F-\\u009F\\u061C\\u200E\\u200F\\u202A-\\u202E\\u2066-\\u2069\\u2028\\u2029]+$"
+      },
+      "$comment": "ADR 0002 section 2",
+      "description": "Convention packs, applied in order (ADR 0002 section 2)."
+    },
+    "schemas": {
+      "$ref": "schemas.schema.json",
+      "$comment": "ADR 0002 section 1",
+      "description": "Named schemas, in the schema language of ADR 0003."
+    },
+    "enums": {
+      "$ref": "enums.schema.json",
+      "$comment": "ADR 0002 section 12",
+      "description": "Enums: values, source, reason, fallback (ADR 0002 section 12)."
+    },
+    "scalars": {
+      "$ref": "scalars.schema.json",
+      "$comment": "ADR 0003 section 8",
+      "description": "Named formats: a base type plus portable refinements (ADR 0003 section 8)."
+    },
+    "errors": {
+      "$ref": "errors.schema.json",
+      "$comment": "ADR 0002 section 11",
+      "description": "Error codes, declared once (ADR 0002 section 11)."
+    },
+    "natures": {
+      "$ref": "natures.schema.json",
+      "$comment": "ADR 0002 section 11",
+      "description": "Error natures, each mapped onto a base nature (ADR 0002 section 11)."
+    },
+    "schemes": {
+      "$ref": "schemes.schema.json",
+      "$comment": "ADR 0002 section 9",
+      "description": "Security schemes (ADR 0002 section 9)."
+    },
+    "headers": {
+      "$ref": "headers.schema.json",
+      "$comment": "ADR 0002 section 9",
+      "description": "Identity headers (ADR 0002 section 9)."
+    },
+    "identities": {
+      "$ref": "identities.schema.json",
+      "$comment": "ADR 0002 section 9",
+      "description": "Identities (ADR 0002 section 9)."
+    },
+    "rights": {
+      "$ref": "rights.schema.json",
+      "$comment": "ADR 0002 section 9",
+      "description": "Rights (ADR 0002 section 9)."
+    },
+    "rules": {
+      "$ref": "rules.schema.json",
+      "$comment": "ADR 0002 section 9",
+      "description": "Rules: pre-handler checks that are not rights (ADR 0002 section 9)."
+    },
+    "requirements": {
+      "$ref": "requirements.schema.json",
+      "$comment": "ADR 0002 section 9",
+      "description": "Named requirement items (ADR 0002 section 9)."
+    },
+    "scopes": {
+      "$ref": "scopes.schema.json",
+      "$comment": "ADR 0002 section 9",
+      "description": "Tenancy scopes (ADR 0002 section 9)."
+    },
+    "buckets": {
+      "$ref": "buckets.schema.json",
+      "$comment": "ADR 0002 section 9",
+      "description": "Rate-limit buckets (ADR 0002 section 9)."
+    },
+    "services": {
+      "$ref": "services.schema.json",
+      "$comment": "ADR 0002 section 10",
+      "description": "Upstream services (ADR 0002 section 10)."
+    },
+    "pagings": {
+      "$ref": "pagings.schema.json",
+      "$comment": "ADR 0002 section 14",
+      "description": "Paging styles (ADR 0002 section 14)."
+    },
+    "formats": {
+      "$ref": "formats.schema.json",
+      "$comment": "ADR 0002 section 13",
+      "description": "Wire formats (ADR 0002 section 13)."
+    },
+    "conventions": {
+      "$ref": "conventions.schema.json",
+      "$comment": "ADR 0002 section 13"
+    },
+    "extensions": {
+      "$ref": "#/$defs/extensions",
+      "$comment": "ADR 0002 section 12"
+    },
+    "lint": {
+      "$ref": "common.schema.json#/$defs/lintRules",
+      "$comment": "ADR 0002 section 12"
+    },
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "extensions": {
+      "description": "Consumer extension keys, each declared with a schema under a prefix.",
+      "type": "object",
+      "properties": {
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        },
+        "seampact": {
+          "title": "reserved",
+          "description": "The extension prefix 'seampact' is reserved (ADR 0008).",
+          "not": {}
+        }
+      },
+      "propertyNames": {
+        "description": "an extension prefix (ADR 0002 section 12)",
+        "pattern": "^(?:[a-z][a-z0-9]*|\\$include)$",
+        "not": {
+          "enum": [
+            "__proto__",
+            "constructor",
+            "prototype"
+          ]
+        }
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "$include": {
+            "$ref": "common.schema.json#/$defs/include"
+          }
+        },
+        "propertyNames": {
+          "description": "an extension key (ADR 0002 section 12)",
+          "pattern": "^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*|\\$include)$",
+          "not": {
+            "enum": [
+              "__proto__",
+              "constructor",
+              "prototype"
+            ]
+          }
+        },
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "at": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "api",
+                  "operation",
+                  "schema",
+                  "property",
+                  "right",
+                  "rule",
+                  "scope"
+                ]
+              },
+              "minItems": 1,
+              "$comment": "ADR 0002 section 12"
+            },
+            "schema": {
+              "$ref": "schema.schema.json#/$defs/schema",
+              "$comment": "ADR 0002 section 12"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "at": true,
+              "schema": true
+            },
+            "required": [
+              "at",
+              "schema"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

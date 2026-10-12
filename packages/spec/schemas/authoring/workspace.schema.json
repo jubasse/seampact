@@ -1,0 +1,319 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "seampact workspace file",
+  "type": "object",
+  "description": "The workspace entry file (ADR 0002 section 1).",
+  "properties": {
+    "workspace": {
+      "type": "object",
+      "properties": {
+        "apis": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "an api name (ADR 0002 section 4)",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "common.schema.json#/$defs/path"
+          },
+          "$comment": "ADR 0002 section 1",
+          "description": "Each api name and its api file."
+        },
+        "shared": {
+          "$ref": "common.schema.json#/$defs/path",
+          "$comment": "ADR 0002 section 1",
+          "description": "The file every api builds on, with a base's keys."
+        },
+        "editorSchemas": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 1",
+          "description": "Where compile --editor-schemas writes."
+        },
+        "imports": {
+          "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "propertyNames": {
+            "description": "an api name (ADR 0002 section 4)",
+            "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$",
+            "not": {
+              "enum": [
+                "__proto__",
+                "constructor",
+                "prototype"
+              ]
+            }
+          },
+          "additionalProperties": {
+            "$ref": "#/$defs/import"
+          },
+          "$comment": "ADR 0002 section 1",
+          "description": "Apis held in pinned contract bundles."
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "$comment": "ADR 0002 section 1"
+    },
+    "$include": {
+      "$ref": "common.schema.json#/$defs/include"
+    }
+  },
+  "additionalProperties": false,
+  "if": {
+    "properties": {
+      "$include": true
+    },
+    "required": [
+      "$include"
+    ]
+  },
+  "else": {
+    "properties": {
+      "workspace": true
+    },
+    "required": [
+      "workspace"
+    ]
+  },
+  "$defs": {
+    "import": {
+      "type": "object",
+      "properties": {
+        "package": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 1"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "$comment": "ADR 0002 section 1"
+        },
+        "release": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "ADR 0002 section 1"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "url": true
+            },
+            "required": [
+              "url"
+            ]
+          },
+          "$comment": "ADR 0002 section 1"
+        },
+        "git": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "ADR 0002 section 1"
+            },
+            "tag": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "ADR 0002 section 1"
+            },
+            "directory": {
+              "type": "string",
+              "minLength": 1,
+              "$comment": "ADR 0002 section 1"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "url": true,
+              "tag": true
+            },
+            "required": [
+              "url",
+              "tag"
+            ]
+          },
+          "$comment": "ADR 0002 section 1"
+        },
+        "api": {
+          "$ref": "common.schema.json#/$defs/name",
+          "$comment": "ADR 0002 section 1"
+        },
+        "integrity": {
+          "type": "string",
+          "pattern": "^sha256-",
+          "$comment": "ADR 0002 section 1"
+        },
+        "$include": {
+          "$ref": "common.schema.json#/$defs/include"
+        }
+      },
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "api": true,
+              "integrity": true
+            },
+            "required": [
+              "api",
+              "integrity"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "package": true
+            },
+            "required": [
+              "package"
+            ]
+          },
+          "then": {
+            "properties": {
+              "release": {
+                "title": "conflict",
+                "description": "An import takes one source form: 'package' with 'version', 'release', or 'git'.",
+                "not": {}
+              },
+              "git": {
+                "title": "conflict",
+                "description": "An import takes one source form: 'package' with 'version', 'release', or 'git'.",
+                "not": {}
+              }
+            },
+            "if": {
+              "properties": {
+                "$include": true
+              },
+              "required": [
+                "$include"
+              ]
+            },
+            "else": {
+              "properties": {
+                "version": true
+              },
+              "required": [
+                "version"
+              ]
+            }
+          },
+          "else": {
+            "properties": {
+              "version": {
+                "title": "conflict",
+                "description": "'version' goes with 'package'.",
+                "not": {}
+              }
+            },
+            "if": {
+              "properties": {
+                "release": true
+              },
+              "required": [
+                "release"
+              ]
+            },
+            "then": {
+              "properties": {
+                "git": {
+                  "title": "conflict",
+                  "description": "An import takes one source form: 'package' with 'version', 'release', or 'git'.",
+                  "not": {}
+                }
+              }
+            },
+            "else": {
+              "if": {
+                "properties": {
+                  "git": true
+                },
+                "required": [
+                  "git"
+                ]
+              },
+              "else": {
+                "if": {
+                  "properties": {
+                    "$include": true
+                  },
+                  "required": [
+                    "$include"
+                  ]
+                },
+                "else": {
+                  "title": "choice",
+                  "description": "a source form: 'package' with 'version', 'release', or 'git'",
+                  "properties": {
+                    "package": true
+                  },
+                  "required": [
+                    "package"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
