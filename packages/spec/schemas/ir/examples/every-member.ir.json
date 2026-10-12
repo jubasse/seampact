@@ -320,6 +320,14 @@
       "directions": ["input", "output"],
       "docs": { "summary": "An amount with two decimals." },
       "origin": { "layer": "pack:@acme/pack-tenancy", "pointer": "/scalars/money" }
+    },
+    "resourceId": {
+      "id": "resourceId",
+      "name": { "segments": ["resource", "id"], "role": "schema" },
+      "type": { "kind": "scalar", "type": "string", "format": "uuid", "refinements": {} },
+      "directions": ["input", "output"],
+      "docs": { "summary": "The id of a scope or a resource: a UUID." },
+      "origin": { "layer": "api", "pointer": "/scalars/resourceId" }
     }
   },
   "enums": {
@@ -526,7 +534,13 @@
       "subject": {
         "kind": "resource",
         "type": { "segments": ["task"], "role": "schema" },
-        "idSchema": "Task"
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "scalar": "resourceId",
+          "refinements": {}
+        }
       },
       "errors": [],
       "docs": {},
@@ -539,7 +553,17 @@
       "id": "quota",
       "params": "LockedParams",
       "takesBucket": true,
-      "proof": { "in": "header", "name": "X-Proof", "schema": "Task" },
+      "proof": {
+        "in": "header",
+        "name": "X-Proof",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "scalar": "resourceId",
+          "refinements": {}
+        }
+      },
       "errors": ["tasks.locked"],
       "docs": {},
       "extensions": {},
@@ -549,7 +573,13 @@
   "scopes": {
     "workspace": {
       "id": "workspace",
-      "idSchema": "Task",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "scalar": "resourceId",
+        "refinements": {}
+      },
       "errors": [],
       "docs": {},
       "extensions": {},
@@ -557,7 +587,13 @@
     },
     "channel": {
       "id": "channel",
-      "idSchema": "Task",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "scalar": "resourceId",
+        "refinements": {}
+      },
       "within": "workspace",
       "errors": [],
       "docs": {},

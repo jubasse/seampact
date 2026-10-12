@@ -159,6 +159,28 @@ test("fixed unknown cases", () => {
   });
 });
 
+test("an unknown signature key kind makes the IR invalid for every reader", () => {
+  // SchemeKey sits inside the must-act SignatureVerify: a reader that cannot read the key cannot verify either.
+  const ir = mutateAt(
+    sample("every-member.ir.json"),
+    "/schemes/stripeSignature/signature/key",
+    (key) => {
+      key.kind = "vault";
+    },
+  );
+  expect(validateIr(ir, "open")).toMatchObject({
+    valid: false,
+    unknownKinds: [
+      {
+        pointer: "/schemes/stripeSignature/signature/key",
+        tag: "kind",
+        value: "vault",
+        mustAct: true,
+      },
+    ],
+  });
+});
+
 test("a mapping error the walk did not list fails closed", () => {
   // An unknown tag only the validator saw: whether its union is must-act is unknown, so it counts as must-act.
   const error = {

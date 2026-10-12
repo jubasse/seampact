@@ -79,7 +79,7 @@ export type Feature = string;
 /** The written reason of an exception: non-empty, without leading or trailing white space (A36, ADR 0002 section 4). */
 export type Reason = string;
 
-/** A reference by id to a named object schema of the schemas catalogue (ADR 0004 section 4). */
+/** A reference by id to a named object, map or union schema of the schemas catalogue (ADR 0004 section 4). An id, usually a scalar or a named format, is a TypeUse instead. */
 export type SchemaRef = SchemaId;
 
 /** A declaration kind (ADR 0004 section 2, ADR 0014). */
@@ -244,10 +244,10 @@ export interface HeaderDecl {
   origin: Origin;
 }
 
-/** The key a signature is verified with: an id the application resolves to its secret, never the secret itself, written as a value or read from the request. */
+/** The key a signature is verified with: an id the application resolves to its secret, never the secret itself, written as a value or read from the request. Must act: an unknown tag makes the IR invalid for every reader. */
 export type KnownSchemeKey = ValueSchemeKey | SourceSchemeKey;
 
-/** The key a signature is verified with: an id the application resolves to its secret, never the secret itself, written as a value or read from the request. */
+/** The key a signature is verified with: an id the application resolves to its secret, never the secret itself, written as a value or read from the request. Must act: an unknown tag makes the IR invalid for every reader. */
 export type SchemeKey = KnownSchemeKey | UnknownVariant<"kind">;
 
 export interface ValueSchemeKey {
@@ -470,7 +470,7 @@ export interface ScopeSubject {
 export interface ResourceSubject {
   kind: "resource";
   type: Name;
-  idSchema: SchemaRef;
+  idSchema: TypeUse;
 }
 
 /** A right (ADR 0004 section 4). */
@@ -493,7 +493,7 @@ export type ProofPlacement = "body" | "header" | (string & {});
 export interface RuleProof {
   in: ProofPlacement;
   name: string;
-  schema: SchemaRef;
+  schema: TypeUse;
 }
 
 /** A rule (ADR 0004 section 4). */
@@ -511,7 +511,7 @@ export interface Rule {
 /** A scope (ADR 0004 section 4). */
 export interface Scope {
   id: ScopeId;
-  idSchema: SchemaRef;
+  idSchema: TypeUse;
   within?: ScopeId;
   errors: ErrorCode[];
   docs: Docs;

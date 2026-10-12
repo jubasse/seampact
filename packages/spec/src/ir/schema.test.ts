@@ -20,6 +20,7 @@ const MUST_ACT = [
   "Requirement",
   "RightSubject",
   "SignatureVerify",
+  "SchemeKey",
   "UnknownQuery",
   "Scheme",
   "Identity",

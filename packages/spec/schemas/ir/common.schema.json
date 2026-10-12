@@ -125,7 +125,7 @@
     },
     "SchemaRef": {
       "$ref": "#/$defs/SchemaId",
-      "description": "A reference by id to a named object schema of the schemas catalogue (ADR 0004 section 4)."
+      "description": "A reference by id to a named object, map or union schema of the schemas catalogue (ADR 0004 section 4). An id, usually a scalar or a named format, is a TypeUse instead."
     },
     "DeclarationKind": {
       "type": "string",

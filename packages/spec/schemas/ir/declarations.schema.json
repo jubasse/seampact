@@ -102,7 +102,8 @@
       "type": "object",
       "description": "The key a signature is verified with: an id the application resolves to its secret, never the secret itself, written as a value or read from the request.",
       "discriminator": { "propertyName": "kind" },
-      "oneOf": [{ "$ref": "#/$defs/ValueSchemeKey" }, { "$ref": "#/$defs/SourceSchemeKey" }]
+      "oneOf": [{ "$ref": "#/$defs/ValueSchemeKey" }, { "$ref": "#/$defs/SourceSchemeKey" }],
+      "x-seampact-must-act": true
     },
     "ValueSchemeKey": {
       "type": "object",
@@ -435,7 +436,7 @@
       "properties": {
         "kind": { "type": "string", "const": "resource" },
         "type": { "$ref": "common.schema.json#/$defs/Name" },
-        "idSchema": { "$ref": "common.schema.json#/$defs/SchemaRef" }
+        "idSchema": { "$ref": "schemas.schema.json#/$defs/TypeUse" }
       }
     },
     "Right": {
@@ -466,7 +467,7 @@
       "properties": {
         "in": { "$ref": "#/$defs/ProofPlacement" },
         "name": { "type": "string" },
-        "schema": { "$ref": "common.schema.json#/$defs/SchemaRef" }
+        "schema": { "$ref": "schemas.schema.json#/$defs/TypeUse" }
       }
     },
     "Rule": {
@@ -490,7 +491,7 @@
       "required": ["id", "idSchema", "errors", "docs", "extensions", "origin"],
       "properties": {
         "id": { "$ref": "common.schema.json#/$defs/ScopeId" },
-        "idSchema": { "$ref": "common.schema.json#/$defs/SchemaRef" },
+        "idSchema": { "$ref": "schemas.schema.json#/$defs/TypeUse" },
         "within": { "$ref": "common.schema.json#/$defs/ScopeId" },
         "errors": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/ErrorCode" } },
         "docs": { "$ref": "common.schema.json#/$defs/Docs" },
