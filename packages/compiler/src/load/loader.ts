@@ -19,7 +19,7 @@ import { LOAD_MAX_DEPTH } from "./limits.js";
 import { isInside, joinPath, loadNormalizePath, pointerEscape } from "./paths.js";
 import type { LoadReader } from "./reader.js";
 import { Reporter, type SiteLocation } from "./report.js";
-import { FileStore, nodeSite, type ParsedFile } from "./source.js";
+import { FileStore, nodeSite, type ParsedFile, type PathContext } from "./source.js";
 
 export interface LoadOptions {
   reader: LoadReader;
@@ -78,6 +78,15 @@ interface PackBuild {
 interface ApiState {
   order: PackBuild[];
   done: Set<string>;
+}
+
+/**
+ * ADR 0002 section 2, rule 3: a relative path resolves against the file that wrote it, which is an
+ * included file when an `$include` brought the key. `at` is where the path is written; the
+ * boundary stays the layer's (the workspace root, or a pack's package).
+ */
+function writtenIn(build: LayerBuild<Origin["layer"]>, at: SiteLocation): PathContext {
+  return { path: at.file, boundary: build.parsed.boundary };
 }
 
 export function loadWorkspace(options: LoadOptions): LoadResult {
@@ -245,12 +254,8 @@ class Loader {
           "write shared: ./shared/base.yaml",
         );
       } else {
-        const r = this.store.resolve(
-          entry.parsed,
-          ws.shared,
-          site("/workspace/shared"),
-          "workspace",
-        );
+        const at = site("/workspace/shared");
+        const r = this.store.resolve(writtenIn(entry, at), ws.shared, at, "workspace");
         const pf = r && this.store.parse(r.path, ".");
         if (pf) shared = this.layer(pf, "shared");
       }
@@ -270,7 +275,7 @@ class Loader {
         });
         continue;
       }
-      const r = this.store.resolve(entry.parsed, raw, at, "workspace");
+      const r = this.store.resolve(writtenIn(entry, at), raw, at, "workspace");
       const pf = r && this.store.parse(r.path, ".");
       if (!pf) continue;
       const build = this.layer(pf, "api");
@@ -319,7 +324,7 @@ class Loader {
           at,
         });
       } else {
-        const r = this.store.resolve(api.parsed, ext, at, "extends");
+        const r = this.store.resolve(writtenIn(api, at), ext, at, "extends");
         if (r && r.path === api.parsed.path) {
           this.rep.report({
             rule: "extends-cycle",
@@ -364,7 +369,7 @@ class Loader {
       if (seen.has(p.key) || !this.budget.charge(1, apiSite)) return seen;
       seen.add(p.key);
       for (const e of p.extendsRefs) {
-        const sub = this.findPack(e.ref, p.build);
+        const sub = this.findPack(e.ref, e.at);
         if (sub) closure(sub, seen);
       }
       return seen;
@@ -537,8 +542,9 @@ class Loader {
     state.order.push(pack);
   }
 
-  private findPack(ref: string, from: LayerBuild): PackBuild | undefined {
-    const key = this.packKeyCache.get(`${from.parsed.path}|${ref}`);
+  // Keyed by the file that wrote the reference: the same text resolves against that file.
+  private findPack(ref: string, at: SiteLocation): PackBuild | undefined {
+    const key = this.packKeyCache.get(`${at.file}|${ref}`);
     return key ? (this.packs.get(key) ?? undefined) : undefined;
   }
 
@@ -549,7 +555,7 @@ class Loader {
     let boundary = from.parsed.boundary;
     let pkg: { name: string; version: unknown; dir: string } | undefined;
     if (ref.startsWith("./") || ref.startsWith("../")) {
-      file = this.store.resolve(from.parsed, ref, at, "pack")?.path;
+      file = this.store.resolve(writtenIn(from, at), ref, at, "pack")?.path;
     } else {
       const found = this.resolvePackage(ref, at);
       if (!found) return undefined;
@@ -559,7 +565,7 @@ class Loader {
     }
     if (!file) return undefined;
     const key = `${boundary}|${file}`;
-    this.packKeyCache.set(`${from.parsed.path}|${ref}`, key);
+    this.packKeyCache.set(`${at.file}|${ref}`, key);
     const hit = this.packs.get(key);
     if (hit !== undefined) return hit ?? undefined;
     const pf = this.store.parse(file, boundary);
