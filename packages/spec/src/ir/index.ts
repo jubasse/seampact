@@ -8,6 +8,8 @@ export {
 export type { SchemaNode } from "./schemas.js";
 export { listIrUnknowns, walkIrInstance } from "./instance-walk.js";
 export type { IrInstanceNode, IrUnknowns } from "./instance-walk.js";
+export { checkIrInvariants } from "./invariants.js";
+export type { IrInvariantId, IrInvariantViolation } from "./invariants.js";
 export { isKnownVariant } from "./unions.js";
 export {
   classifyIrErrors,
@@ -31,4 +33,11 @@ export type {
   IrValidator,
   IrValidatorError,
 } from "./validation.js";
+export { checkIrSupport } from "./support.js";
+export type {
+  IrSupport,
+  IrSupportCode,
+  IrSupportInput,
+  IrSupportMismatch,
+} from "./support.js";
 export { IR_REVISION, IR_VERSION } from "./version.js";

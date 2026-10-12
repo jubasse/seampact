@@ -1,0 +1,82 @@
+{
+  "irVersion": 1,
+  "irRevision": 1,
+  "kinds": ["httpOperation", "channel"],
+  "features": ["streaming"],
+  "api": {
+    "id": "tasks",
+    "name": { "segments": ["tasks"], "role": "schema" },
+    "version": { "kind": "path", "number": 1 },
+    "kind": "product",
+    "pathVersion": {
+      "value": "prefix",
+      "origin": { "layer": "base", "pointer": "/conventions/pathVersion" }
+    },
+    "maturity": "stable",
+    "compat": { "policy": "additive-only" },
+    "surfaces": {},
+    "documents": {},
+    "docs": {},
+    "extensions": {},
+    "origin": { "layer": "api", "pointer": "" }
+  },
+  "packs": [],
+  "conventions": {},
+  "formats": {},
+  "pagings": {},
+  "schemas": {},
+  "scalars": {},
+  "enums": {},
+  "errors": {},
+  "natures": {},
+  "schemes": {},
+  "headers": {},
+  "identities": {},
+  "rights": {},
+  "rules": {},
+  "scopes": {},
+  "buckets": {},
+  "services": {},
+  "extensionKeys": {},
+  "lint": { "rules": {}, "allows": [] },
+  "operations": [
+    {
+      "kind": "httpOperation",
+      "id": "health",
+      "name": { "segments": ["health"], "role": "operation" },
+      "surface": "app",
+      "features": ["streaming"],
+      "method": "get",
+      "path": "/v1/health",
+      "safe": true,
+      "params": { "path": [], "query": [], "header": [] },
+      "unknownQuery": { "policy": "refuse" },
+      "access": {
+        "kind": "public",
+        "reason": "Probes.",
+        "origin": { "layer": "api", "pointer": "/access" }
+      },
+      "callerKinds": ["anonymous"],
+      "principalRequires": [],
+      "scopes": [],
+      "requires": [],
+      "bindings": [],
+      "responses": [],
+      "errors": [],
+      "fieldRights": [],
+      "upstream": [],
+      "maturity": {
+        "level": "stable",
+        "source": "api",
+        "origin": { "layer": "api", "pointer": "/maturity" }
+      },
+      "internal": false,
+      "format": "bare",
+      "tags": [],
+      "examples": {},
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/surfaces/app/routes/health" }
+    }
+  ]
+}

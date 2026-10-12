@@ -58,7 +58,9 @@ Every choice between shapes is a tagged union (`Scheme` and `Identity` on `kind`
 - `FieldWire`, by `kind`: the five query wire kinds carry `style`, `explode` and `brackets`; `file` and `json` carry none.
 - `MetaMember`, by `fill`: `source` only for `fill: source`.
 - `HeaderDecl`, by `semantic`: `name` and `in` for every semantic but `versionToken`, which carries `response` and `request`.
-- `Cache`, by `family`: `directives` for every family but `never`, which sets `noStore`.
+- `Cache`, by `family`: `directives` for every family but `never`, which sets `noStore`. `family` is an open string, not an enum: the invariant reads the one reserved name `never`, and any other family is a plain one.
+
+A hand-written partition of a deciding member's values (`ValueSource.in`, `FieldWire.kind`) must stay a disjoint union of the schema's known list: `invariants.test.ts` asserts it, so a new known value fails there until its invariant decides it.
 
 ## Other shapes
 
@@ -68,9 +70,30 @@ Every choice between shapes is a tagged union (`Scheme` and `Identity` on `kind`
 - A numeric refinement (`minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`) is a decimal literal string (`"9223372036854775807"`, `"0.01"`), compared numerically, so no digit is lost in any language. Every other IR number is an integer.
 - `nullable` is a member of `Property` and, for every other position (array items, map values, parameters, headers, bodies), an optional member of every type use but the opaque one (an opaque value already admits `null`).
 
+## Invariants the schema cannot state
+
+The ADR 0003 subset has no conditional keyword, so these cross-member rules live beside the schema, each with a stable id. `checkIrInvariants(ir)` in `@seampact/spec/ir` checks them: pure, without Ajv, run by the compiler's finalize pass (p2-finalize, the owner) after the strict form, and reused by the tests of the native readers. A rule decided by an open-enum value (`semantic`, `role`, `fill`, `in`, `kind`) applies to the values the schema lists in `x-seampact-known` only; an unknown value is the reader's to name. A new invariant is a tightening IR change and relaxing or removing one is breaking (`CHANGE-TEMPLATE.md`).
+
+| Id | Rule |
+|---|---|
+| `ir.name.status` | `Name.status` is present if and only if `role` is `response` (200 to 399, ADR 0007 amendment). |
+| `ir.meta.source` | `MetaMember.source` is present if and only if `fill` is `source`. |
+| `ir.value-source.members` | `ValueSource.name` with `path`, `query`, `header`, `body`, `principal`, `scope` and `holderField`; no `name` with `host`, `subdomain`, `resolver` and `address`; `prefixBits` only with `address`. |
+| `ir.value-source.place` | `in: resolver` only as an operation scope's source; `in: holderField` only as a field right subject's source. |
+| `ir.header.members` | `HeaderDecl.name` and `in` for every semantic but `versionToken`; `response` and `request` for `versionToken` only. |
+| `ir.cache.directives` | `Cache.directives` is absent if and only if the family is `never`, and a `never` family sets `noStore`. |
+| `ir.csrf.cookie` | An unsafe operation whose access accepts a cookie scheme has `csrf` (derived or exempt). |
+| `ir.field-wire.members` | `FieldWire` of kind `file` or `json` has no `style`, `explode` or `brackets`; a query wire kind has all three. |
+| `ir.property.nullable` | A property's type use has no `nullable`: `Property.nullable` holds it. |
+| `ir.scalar.type` | A named format's own type names no `scalar`. |
+| `ir.id.scalar` | `Scope.idSchema` and `ResourceSubject.idSchema` are a `scalar` or `enum` type use without `nullable`; `RuleProof.schema` is anything but `opaque` and `file`. |
+| `ir.ref.resolves` | Every member whose schema is a `$ref` to a catalogue id definition (the key of a top-level or api map, such as `SchemeId` or `SurfaceId`) names an existing key, read with `Object.hasOwn`. |
+| `ir.cache.sensitive-no-store` | Planned (p2-finalize): a response that carries a sensitive field sets `Cache.noStore`. Not checked yet: it needs a walk of the response schemas. |
+
 ## Readers
 
 - Ignore unknown members: an additive IR change adds them (ADR 0005 section 4).
+- Check `irVersion`, `irRevision`, `kinds` and `features` first: `checkIrSupport` in `@seampact/spec/ir` names every mismatch, with the operation id for a per-operation kind or feature.
 - Always read an IR map with `Object.hasOwn` or through a `Map`, never with a bare `obj[key]`: a key is data, rights and principal variants take any name, and a key such as `__proto__` or `constructor` would otherwise reach the prototype.
 - Validate with `createIrValidator(Ajv2020, "open")` (`Ajv2020` from `ajv/dist/2020.js`): it registers the annotation keywords, loads every file, and sorts errors into unknown kinds, unknown values, unknown members and problems. Its options, `IR_AJV_OPTIONS`, are mandatory for the compiler and for any reader wiring its own validator: open tags need a validator that understands `discriminator`, collects every error (`allErrors`: an unknown tag is an expected error and must not hide the real ones after it), and filters the expected mapping errors, as `classifyIrErrors` does. A mapping error that names no union `listIrUnknowns` found fails closed: `classifyIrErrors` counts it as a must-act unknown.
 - A reader of a third-party bundle caps the input size before validating: collecting every error costs time and memory in the size of the input.

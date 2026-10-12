@@ -39,7 +39,7 @@ interface ContractIR {
   features: Feature[];                      // must-understand features used by any operation (ADR 0005); empty at 1.0
   api: Api;
   packs: PackRef[];                         // packs applied, in application order, extended packs included: { name, version }
-  conventions: Conventions;                 // resolved values, each with its origin
+  conventions: Conventions;                 // resolved values, each with its origin; informative only (section 13)
   formats: Record<FormatId, WireFormat>;    // only the formats this api uses, the default included
   pagings: Record<PagingId, PagingStyle>;   // only the paging styles this api uses
   schemas: Record<SchemaId, Schema>;        // named and hoisted inline schemas
@@ -89,7 +89,7 @@ Every IR object of the kinds below has the members it needs from this list, with
 | Member | Meaning |
 |---|---|
 | `id` | the stable key: the catalogue name as written, or for a derived element the canonical identifier of its name (section 9, ADR 0007) |
-| `name` | `{ segments: string[], role: string }`, the canonical name (ADR 0007); never a final identifier |
+| `name` | `{ segments: string[], role: string, status?: number }`, the canonical name (ADR 0007 and its amendment); never a final identifier. `status`, from 200 to 399, is present if and only if `role` is `response` (section 13) |
 | `origin` | where it was declared (section 6) |
 | `derivedFrom` | present on, and only on, an element the compiler derived (section 6) |
 | `docs` | `{ summary?, description? }`, resolved text |
@@ -195,12 +195,13 @@ type TypeUse =                               // what a property, item, body or p
 ### 6. Origins and `derivedFrom`
 
 ```ts
-interface Origin { api?: string; layer: 'api' | 'shared' | 'base' | `pack:${string}`; pointer: string }   // api: set on a copy from another api
+interface Origin { api?: string; layer: 'api' | 'shared' | 'base' | 'workspace' | `pack:${string}`; pointer: string }   // api: set on a copy from another api
 interface DerivedFrom { derivation: DerivationId; from: Origin[] }
 ```
 
 - `pointer` is a JSON Pointer into the merged authoring tree of its layer: `/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign`, `/rights/tasks.update`, `/conventions/idempotency/header`. It names a logical position, never a file, so moving content between files leaves it unchanged (ADR 0002 byte-identity rule).
 - Every declared element has an `origin`. Every inherited setting on an operation carries the origin of the node that set it (FR-2, SCN-003).
+- `layer` is closed, the one exception to the open enums of ADR 0005 section 3: the compiler derives a layer kind from it, and an unknown layer has no meaning for any reader. `workspace` locates a diagnostic on `workspace.yaml` only; no IR element carries it. `pack:<name>` takes no `#`, so the side-table key `<layer>#<pointer>` (section 11) stays unambiguous.
 - An element a relay route copies from another api (ADR 0002 section 7) keeps its origin in that api, with `api` naming it; the location is found through that api's side table, or the pinned bundle's sources.
 - Every derived element carries `derivedFrom`: the derivation id from the derivation table (ADR 0006) and the origins of the declarations that caused it, for example `{ derivation: 'csrf.cookieWrite', from: [/identities/user, /schemes/sessionCookie] }`. A test walks the IR and fails on a derived element without it (SCN-011, CHK-045).
 
@@ -370,7 +371,7 @@ The IR file is the IR value serialised as:
 
 - UTF-8, no byte order mark, LF line endings, a final newline;
 - object members sorted by the UTF-16 code units of their names (the order of RFC 8785), two-space indentation;
-- strings escaped as RFC 8785 does; numbers as RFC 8785 does (all IR numbers are integers or decimal literals copied from refinements);
+- strings escaped as RFC 8785 does; numbers as RFC 8785 does (all IR numbers are integers; numeric refinements are decimal literal strings, section 13);
 - durations as integer milliseconds, sizes as integer bytes, dates as `YYYY-MM-DD` strings, instants never generated;
 - text read through `$file` with line endings normalised to LF and a byte order mark removed; no other Unicode normalisation;
 - no absolute path, file name, time, host, user, locale-dependent value or source position.
@@ -470,6 +471,29 @@ components:
 ```
 
 A moved or added code therefore shows in the committed document's diff (ADR 0011 `checks.openapi`) on every operation it reaches, which is how a reviewer sees an attachment that an indentation slip moved up the tree (ADR 0002 section 8).
+
+### 13. Schema forms (amendment 2026-10-12, M1)
+
+From M1, the merge of the IR JSON Schema (p1-ir-schema), the schema files in `packages/spec/schemas/ir` are normative for member shapes: names, types, optionality and union tags. The TypeScript sketches of sections 2 to 8 and 11 are informative; where they differ, the schema holds, and a change to it is an IR change PR (ADR 0005 section 1). `packages/spec/schemas/ir/README.md` gives the reader rules. The forms the schema chose, each with its reason:
+
+- **Tagged unions.** A union is a wrapper with `discriminator` and `oneOf`; each variant fixes its tag with `const`. Generated Kotlin and PHP models get a sealed hierarchy with an `Unknown` variant, and an unknown tag is named instead of failing as a generic schema error.
+- **Every choice between shapes is tagged.** `principal` is `{ kind: schema, schema }` or `{ kind: variants, variants }`; a signature `key` is `{ kind: value, value }` or `{ kind: from, from }`; `unknownKeys` of a signed identity is `{ policy: ignore | keep, reason }`; an enum `source` is `{ kind: vocabulary, vocabulary }` or `{ kind: enum, enum }`; a `Scheme` is tagged on its `kind`: cookie `{ name, csrf? }`, header `{ name }`, query `{ name }`, bearer `{ bearer? }`, basic `{}`, signature `{ name?, signature }` (the document-only bearer facts are `BearerFacts`, the verification `SignatureVerify`); an `Identity` is tagged on its `kind`: credential `{ schemes: { read, write, optionalRead } }` or signed `{ signed, unknownKeys? }`, so `unknownKeys` exists on signed identities only; `idempotency` and `csrf` are `{ kind: derived, ... }` or `{ kind: exempt, reason, origin }`; a text template part and an object template member name are `{ kind: text, text }` or `{ kind: slot, ... }`; `Api.version` is `{ kind: path, number }` or `{ kind: label, label }`. An untagged union becomes an all-optional bag in every generated model, which ADR 0003 refuses.
+- **Five structs stay.** A definition stays a struct only when one member decides which optional members are present and several of its values share one shape, so a union would repeat that shape once per value; its rule is an invariant that applies to known values only. `ValueSource` is `{ in, name?, prefixBits? }` (by `in`: `name` for the named sources, none for the bare ones, `prefixBits` for `address` only; a scope's `{ resolver: true }` and a field right's `{ holderField }` are the `in` values `resolver` and `holderField`, with `name`); `FieldWire` is `{ kind, style?, explode?, brackets? }` (the five query wire kinds carry all three, `file` and `json` none); a format `meta` member is `{ type, fill, source? }` (`source` only for `fill: source`); `HeaderDecl` is `{ semantic, name?, in?, response?, request? }` (`versionToken` carries `response` and `request`, every other semantic `name` and `in`); `Cache` is `{ family, directives?, anonymous, vary, etag, perCallerKind, noStore, origin, derivedFrom? }` (`directives` for every family but `never`, which sets `noStore`; `family` is an open string, not an enum, and the invariant reads the one reserved name `never`). Each partition of a deciding member's values is tested to equal the schema's known list, so a new known value cannot miss its invariant.
+- **Invariants.** What the subset cannot state (no conditional keyword) has a stable id and is checked by `checkIrInvariants` in `@seampact/spec/ir`, owned by the finalize pass (p2-finalize): `Name.status` and its role, `meta.source` and `fill`, `ValueSource` members by `in` and their places, `HeaderDecl` members by semantic, `Cache.directives` and the `never` family, `csrf` on an unsafe cookie-scheme operation, `FieldWire` members, a property's `nullable`, a named format's own type, the kind of an id (`ir.id.scalar`), and every catalogue id naming an existing entry (`ir.ref.resolves`). A new invariant is a tightening IR change (ADR 0005 section 4); relaxing one is breaking.
+- **Open enums.** A string with its known values in `x-seampact-known`, never a closed `enum` (ADR 0005 section 3). Every object, union and open enum is a named definition, so every generated type has a name.
+- **Must-act definitions.** `x-seampact-must-act` marks the unions and enums of a security boundary: `Access`, `Requirement`, `RightSubject`, `Scheme`, `SignatureVerify` and its `SchemeKey`, `Identity`, `KeysPolicy`, `UnknownQuery`, `Idempotency`, `Csrf`, `RefusedCredential` (`onRefused`), `UnknownKeysPolicy` and `InputPolicy`. An unknown tag (a union) or value (an enum) there makes the IR invalid for every reader, since one that skipped it would generate a weaker check silently; a new tag or value there always comes with a feature name, and adding must-act to an existing definition is a tightening that names one too.
+- **TypeScript unknown arm.** Each generated union is `Known<Name> | UnknownVariant<tag>`, the tag typed `string & {}`. TypeScript narrows no union holding that arm, so `isKnownVariant` narrows to the known variants first; a closed union would let an exhaustive `switch` miss an unknown tag at run time. A producer types each union value it writes as `Known<Name>` (`satisfies`), since `<Name>` also accepts the unknown arm; a closed writer view of the IR for the compiler passes is recorded for p2-pipeline, a package addition and not an IR change. Definition and variant names are the generated type names: renaming one, or switching a struct and a union, is breaking.
+- **`Origin.layer`** is closed and gains `workspace` (section 6).
+- **`Name.status`** is an integer from 200 to 399, as `@seampact/spec/naming` checks. It couples the transport-neutral `Name` to HTTP statuses; that is accepted until a non-HTTP kind derives response names, which then adds its own qualifier as an IR change.
+- **`irVersion`** is an integer from 1, not the constant 1, so a reader names a later version (`checkIrSupport`) instead of failing on a generic schema error.
+- **Numeric refinements** (`minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`) are decimal literal strings (`^-?(0|[1-9][0-9]*)(\.[0-9]+)?$`), one form for every scalar, so an `int64` bound or a `decimal` step keeps every digit in every language; every IR number is an integer (section 10).
+- **`nullable`** is a required member of a property and an optional member of every other type use but an opaque one (array items, map values, parameters, headers, bodies), as ADR 0003 section 6 allows it on any schema; an opaque value already admits `null`.
+- **Named formats.** The `scalars` catalogue holds `{ id, name, type, directions, docs, origin }`, `type` a scalar type use; a use of a named format holds its type and refinements inline and names it in `scalar`, so a target maps it to a native type or checks it with the portable keywords. `format` holds the portable formats of ADR 0003 section 8 only. `Refinements` is `{ minLength?, maxLength?, pattern?: { source, normalized }, minimum?, ... }`.
+- **Ids are type uses.** `Scope.idSchema`, a resource subject's `idSchema` and a rule proof's `schema` are a `TypeUse`, not a `SchemaRef`: ADR 0002 writes an id as a scalar or a named format (`org: { id: OrgId }`), and a `SchemaRef` names an object, map or union schema of the `schemas` catalogue only. Invariant `ir.id.scalar` narrows them: a scope's and a resource subject's id is a `scalar` or `enum` use without `nullable`, and a proof is anything but `opaque` and `file`. `ir.ref.resolves` checks the references inside them (`scalar`, an enum's name, a proof's ref `schema`) like any other.
+- **`conventions`** is informative only: a map from the dotted convention path to `{ value, origin }`, for provenance, `explain` and lint. A target never acts on it; every convention a target acts on (the `int64` wire form, the handling of open output enums) becomes a typed member, as an additive IR change (p2-derive-wire adds them). An absent typed convention member means the ADR 0003 default: `int64` travels as a string, and output enums are closed. Until such a member exists, the compiler refuses a non-default value of that convention by name, so no target meets an IR whose behaviour it cannot read.
+- **Absent, never null.** The subset has no `null` type, so `Cache.directives` is absent for `never`; `noStore` is authoritative (no response is stored when it is true, whatever the directives hold).
+- **Declarations the sketches leave open.** `ExtensionKeyDecl` is `{ id, prefix, key, schema: TypeUse, places, origin }`; `lint.rules` values are `{ severity, origin }`; `FieldRestriction` is `{ right, params?, inputPolicy?, origin? }`; `Param` is `{ name, type, required, wire?, default?, origin?, derivedFrom? }`; `Property.derivedFrom` is optional; `Identity.extensions` is required; a route example's `request` is a boolean; a paging role's `base` is an integer from 0 to 1; a `Slot` is a string.
+- **Ids and strings.** Catalogue keys carry the grammars of ADR 0002 section 4, derived ids the escaped identifiers of the ADR 0007 amendment (`_404GoneError`, `List_`); a right and a principal variant take any name (`__proto__` included), so readers always read IR maps with `Object.hasOwn` or through a `Map`. A `Reason` is non-empty, without leading or trailing white space. `SourceLocation.file` is relative, with forward slashes, no `.` or `..` segment and no `:`. An access's `schemes` list is never empty.
 
 ## Consequences
 

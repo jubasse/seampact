@@ -10,6 +10,7 @@ import {
   mutateAt,
   replaceAt,
   validateIr,
+  validateSourceMap,
   walkInstance,
 } from "./test-support.js";
 import type { ContractIR } from "./types.generated.js";
@@ -125,7 +126,7 @@ test("the samples reach every definition of the schema", () => {
       if (isSchemaNode(def.properties) || isSchemaNode(def.discriminator)) shapes.add(name);
     }
   }
-  // The side table has its own sample and test.
+  // The side table has its own sample and test below.
   const missing = [...shapes].filter((name) => !reached.has(name) && !name.startsWith("Source"));
   expect(missing).toEqual([]);
   expect(definitionNames().length).toBeGreaterThan(shapes.size);
@@ -227,4 +228,19 @@ test("minimal sample", () => {
   const ir: Widened<ContractIR> = minimal;
   expect(validateIr(ir, "open").valid).toBe(true);
   expect(validateIr(ir, "strict").valid).toBe(true);
+});
+
+test("source map sample", () => {
+  const map = sample("minimal.source-map.json") as Record<string, unknown>;
+  const valid = VALID_REPORT;
+  expect(validateSourceMap(map, "open")).toEqual(valid);
+  expect(validateSourceMap(map, "strict")).toEqual(valid);
+  const extended = { ...map, sources: [] };
+  expect(validateSourceMap(extended, "open")).toEqual(valid);
+  expect(validateSourceMap(extended, "strict").unknownMembers).toEqual(["/sources"]);
+  const badKey = {
+    ...map,
+    locations: { "/no-layer": { file: "a", line: 1, column: 1, endLine: 1, endColumn: 1 } },
+  };
+  expect(validateSourceMap(badKey, "open").valid).toBe(false);
 });

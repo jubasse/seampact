@@ -36,6 +36,98 @@
       "origin": { "layer": "base", "pointer": "/conventions/pathVersion" }
     }
   },
+  "formats": {
+    "bare": {
+      "id": "bare",
+      "origin": { "layer": "base", "pointer": "/formats/bare" },
+      "media": "application/json",
+      "absent": "omit",
+      "success": {
+        "item": { "body": { "kind": "slot", "slot": "payload", "path": [] }, "headers": [] },
+        "table": {
+          "body": {
+            "kind": "object",
+            "members": [
+              {
+                "name": { "kind": "text", "text": "data" },
+                "value": { "kind": "slot", "slot": "payload", "path": [] }
+              },
+              {
+                "name": { "kind": "slot", "slot": "resource" },
+                "value": { "kind": "literal", "value": null }
+              }
+            ],
+            "merge": "payload"
+          },
+          "headers": []
+        },
+        "list": {
+          "body": { "kind": "array", "items": [{ "kind": "slot", "slot": "payload", "path": [] }] },
+          "headers": [
+            {
+              "name": "X-Count",
+              "value": {
+                "kind": "text",
+                "parts": [
+                  { "kind": "text", "text": "n=" },
+                  { "kind": "slot", "slot": "meta", "path": ["count"] }
+                ]
+              }
+            }
+          ]
+        },
+        "page": {
+          "body": {
+            "kind": "each",
+            "of": "items",
+            "as": { "kind": "slot", "slot": "item", "path": ["taskId"] }
+          },
+          "headers": []
+        }
+      },
+      "meta": {
+        "now": { "type": { "kind": "scalar", "type": "string", "refinements": {} }, "fill": "now" },
+        "tenant": {
+          "type": { "kind": "scalar", "type": "string", "refinements": {} },
+          "fill": "source",
+          "source": { "in": "principal", "name": "tenant" }
+        }
+      },
+      "error": {
+        "media": "application/problem+json",
+        "body": { "kind": "slot", "slot": "payload", "path": [] },
+        "headers": []
+      }
+    }
+  },
+  "pagings": {
+    "cursor": {
+      "id": "cursor",
+      "origin": { "layer": "pack:@acme/pack-tenancy", "pointer": "/pagings/cursor" },
+      "position": "cursor",
+      "absent": "null",
+      "request": [
+        { "role": "cursor", "in": "query", "name": "cursor" },
+        {
+          "role": "page",
+          "in": "query",
+          "name": "page",
+          "base": 1,
+          "style": "split",
+          "direction": "dir"
+        }
+      ],
+      "response": {
+        "body": { "kind": "slot", "slot": "items", "path": [] },
+        "meta": [{ "name": "next", "value": { "kind": "slot", "slot": "meta", "path": ["next"] } }],
+        "headers": [
+          { "name": "X-Total", "value": { "kind": "slot", "slot": "meta", "path": ["total"] } }
+        ],
+        "links": [{ "rel": "next", "role": "next" }]
+      },
+      "handlerResult": ["nextCursor", "total"]
+    }
+  },
   "schemas": {
     "Task": {
       "kind": "object",
@@ -139,11 +231,10 @@
           "type": {
             "kind": "scalar",
             "type": "number",
-            "refinements": { "exclusiveMaximum": "1", "multipleOf": "0.01" },
-            "nullable": true
+            "refinements": { "exclusiveMaximum": "1", "multipleOf": "0.01" }
           },
           "optional": true,
-          "nullable": false,
+          "nullable": true,
           "sensitive": false,
           "deprecated": false,
           "docs": {},
@@ -642,5 +733,389 @@
         "subtree": true
       }
     ]
-  }
+  },
+  "operations": [
+    {
+      "kind": "httpOperation",
+      "id": "getTask",
+      "name": { "segments": ["gettask"], "role": "operation" },
+      "surface": "app",
+      "features": [],
+      "method": "get",
+      "path": "/v1/getTask",
+      "safe": true,
+      "params": { "path": [], "query": [], "header": [] },
+      "unknownQuery": { "policy": "refuse" },
+      "access": {
+        "kind": "optional",
+        "identity": "user",
+        "schemes": ["bearer"],
+        "reason": "Public preview.",
+        "onRefused": "anonymous",
+        "origin": { "layer": "api", "pointer": "/access" }
+      },
+      "callerKinds": ["anonymous"],
+      "principalRequires": [],
+      "scopes": [],
+      "requires": [],
+      "bindings": [],
+      "responses": [{ "status": 204, "shape": "empty", "headers": [] }],
+      "errors": [],
+      "fieldRights": [],
+      "upstream": [],
+      "maturity": {
+        "level": "stable",
+        "source": "api",
+        "origin": { "layer": "api", "pointer": "/maturity" }
+      },
+      "internal": false,
+      "format": "bare",
+      "tags": [],
+      "examples": {},
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/surfaces/app/routes/getTask" },
+      "idempotency": {
+        "kind": "exempt",
+        "reason": "Reads only.",
+        "origin": { "layer": "api", "pointer": "/idempotency" }
+      },
+      "csrf": {
+        "kind": "exempt",
+        "reason": "Bearer only.",
+        "origin": { "layer": "api", "pointer": "/csrf" }
+      },
+      "paging": {
+        "overLimit": "reject",
+        "sortKeys": [],
+        "origin": { "layer": "api", "pointer": "/paging" }
+      },
+      "cache": {
+        "family": "never",
+        "anonymous": "public",
+        "vary": [],
+        "etag": false,
+        "perCallerKind": [],
+        "noStore": true,
+        "origin": { "layer": "api", "pointer": "/cache" }
+      }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "health",
+      "name": { "segments": ["health"], "role": "operation" },
+      "surface": "app",
+      "features": [],
+      "method": "get",
+      "path": "/v1/health",
+      "safe": true,
+      "params": { "path": [], "query": [], "header": [] },
+      "unknownQuery": { "policy": "refuse" },
+      "access": {
+        "kind": "public",
+        "reason": "Probes call it before any user exists.",
+        "origin": { "layer": "api", "pointer": "/access" }
+      },
+      "callerKinds": ["anonymous"],
+      "principalRequires": [],
+      "scopes": [],
+      "requires": [],
+      "bindings": [],
+      "responses": [],
+      "errors": [],
+      "fieldRights": [],
+      "upstream": [],
+      "maturity": {
+        "level": "stable",
+        "source": "api",
+        "origin": { "layer": "api", "pointer": "/maturity" }
+      },
+      "internal": false,
+      "format": "bare",
+      "tags": [],
+      "examples": {},
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/surfaces/app/routes/health" }
+    },
+    {
+      "kind": "httpOperation",
+      "id": "updateTask",
+      "name": { "segments": ["updatetask"], "role": "operation" },
+      "surface": "app",
+      "features": [],
+      "method": "patch",
+      "path": "/v1/tasks/{taskId}",
+      "safe": false,
+      "params": {
+        "path": [
+          {
+            "name": "taskId",
+            "type": { "kind": "scalar", "type": "string", "refinements": {} },
+            "required": true,
+            "origin": { "layer": "api", "pointer": "/params/taskId" }
+          }
+        ],
+        "query": [
+          {
+            "name": "tags",
+            "type": {
+              "kind": "array",
+              "items": { "kind": "scalar", "type": "string", "refinements": {} }
+            },
+            "required": false,
+            "wire": { "kind": "list", "style": "form", "explode": true, "brackets": true },
+            "default": [],
+            "origin": { "layer": "api", "pointer": "/query/tags" }
+          }
+        ],
+        "header": [
+          {
+            "name": "X-CSRF",
+            "type": { "kind": "scalar", "type": "string", "refinements": {} },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "csrf.cookieWrite",
+              "from": [{ "layer": "api", "pointer": "/schemes/sessionCookie" }]
+            }
+          }
+        ]
+      },
+      "unknownQuery": {
+        "policy": "ignore",
+        "reason": "Legacy clients.",
+        "origin": { "layer": "api", "pointer": "/unknownQuery" }
+      },
+      "access": {
+        "kind": "identity",
+        "identity": "user",
+        "schemes": ["bearer", "sessionCookie"],
+        "origin": { "layer": "api", "pointer": "/access" }
+      },
+      "callerKinds": ["identified"],
+      "principalRequires": [
+        { "field": "verified", "origin": { "layer": "api", "pointer": "/principal/requires" } }
+      ],
+      "scopes": [
+        {
+          "scope": "channel",
+          "source": { "in": "path", "name": "channelId" },
+          "origin": { "layer": "api", "pointer": "/scopes/0" }
+        },
+        {
+          "scope": "workspace",
+          "source": { "in": "resolver" },
+          "origin": { "layer": "api", "pointer": "/scopes/1" }
+        }
+      ],
+      "requires": [
+        {
+          "kind": "right",
+          "right": "tasks.update",
+          "params": { "level": 1 },
+          "subject": { "source": { "in": "path", "name": "taskId" }, "defaulted": false },
+          "entry": "editor",
+          "origin": { "layer": "api", "pointer": "/requires/0" }
+        },
+        {
+          "kind": "rule",
+          "rule": "quota",
+          "params": {},
+          "bucket": "perUser",
+          "entry": "limits",
+          "origin": { "layer": "api", "pointer": "/requires/1" },
+          "derivedFrom": {
+            "derivation": "rule.bucket",
+            "from": [{ "layer": "api", "pointer": "/rules/quota" }]
+          }
+        }
+      ],
+      "bindings": [
+        {
+          "from": { "in": "principal", "name": "tenant" },
+          "to": { "in": "path", "name": "tenant" },
+          "origin": { "layer": "api", "pointer": "/bindings/0" }
+        }
+      ],
+      "responses": [
+        {
+          "status": 200,
+          "media": "application/json",
+          "body": { "kind": "ref", "schema": "Task" },
+          "shape": "item",
+          "headers": [
+            {
+              "name": "ETag",
+              "type": { "kind": "scalar", "type": "string", "refinements": {} },
+              "required": true,
+              "semantic": "versionToken",
+              "origin": { "layer": "api", "pointer": "/responses/200/headers/ETag" },
+              "derivedFrom": {
+                "derivation": "cache.etag",
+                "from": [{ "layer": "api", "pointer": "/cache" }]
+              }
+            }
+          ],
+          "origin": { "layer": "api", "pointer": "/responses/200" },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [{ "layer": "api", "pointer": "/conventions/format" }]
+          }
+        }
+      ],
+      "errors": [
+        {
+          "code": "tasks.locked",
+          "example": { "until": "2026-01-01" },
+          "derivedFrom": {
+            "derivation": "requirement.errors",
+            "from": [{ "layer": "api", "pointer": "/rights/tasks.update" }]
+          },
+          "origin": { "layer": "api", "pointer": "/errors" }
+        }
+      ],
+      "fieldRights": [
+        {
+          "schema": "Task",
+          "pointer": "/effort",
+          "right": "tasks.effort",
+          "params": { "level": 2 },
+          "subject": { "source": { "in": "holderField", "name": "ownerId" } },
+          "direction": "input",
+          "inputPolicy": "strip",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [{ "layer": "api", "pointer": "/schemas/Task/properties/effort" }]
+          }
+        },
+        {
+          "schema": "Task",
+          "pointer": "/effort",
+          "right": "tasks.effort",
+          "subject": { "source": { "in": "path", "name": "taskId" } },
+          "direction": "output",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [{ "layer": "api", "pointer": "/schemas/Task/properties/effort" }]
+          }
+        }
+      ],
+      "upstream": ["billing"],
+      "maturity": {
+        "level": "provisional",
+        "source": "stated",
+        "reason": "New flow.",
+        "origin": { "layer": "api", "pointer": "/maturity" }
+      },
+      "internal": true,
+      "format": "bare",
+      "tags": ["tasks"],
+      "examples": {
+        "ok": { "status": 200, "request": true, "value": { "taskId": "t1" } },
+        "locked": { "error": "tasks.locked", "value": { "until": "2026-01-01" } }
+      },
+      "docs": { "summary": "Update a task." },
+      "extensions": { "acme": { "owner": "team-tasks" } },
+      "origin": { "layer": "api", "pointer": "/surfaces/app/routes/updateTask" },
+      "op": "update",
+      "resource": { "type": "tasks", "idParam": "taskId", "idProperty": "taskId" },
+      "input": {
+        "media": "multipart/form-data",
+        "schema": { "kind": "ref", "schema": "Task" },
+        "bodyLimitBytes": 1048576,
+        "rawBody": false,
+        "fields": [
+          { "name": "attachment", "wire": { "kind": "file" } },
+          {
+            "name": "tags",
+            "wire": { "kind": "list", "style": "form", "explode": true, "brackets": false }
+          }
+        ],
+        "origin": { "layer": "api", "pointer": "/input" }
+      },
+      "idempotency": {
+        "kind": "derived",
+        "header": "Idempotency-Key",
+        "replayHeader": "Idempotency-Replayed",
+        "lifetimeMs": 86400000,
+        "required": true,
+        "enforce": "boundary",
+        "derivedFrom": {
+          "derivation": "idempotency.write",
+          "from": [{ "layer": "api", "pointer": "/conventions/idempotency" }]
+        }
+      },
+      "concurrency": {
+        "version": { "in": "body", "name": "expectedVersion" },
+        "field": "version",
+        "derivedFrom": {
+          "derivation": "concurrency.version",
+          "from": [{ "layer": "api", "pointer": "/conventions/concurrency" }]
+        }
+      },
+      "owner": { "kind": "caller", "origin": { "layer": "api", "pointer": "/owner" } },
+      "cache": {
+        "family": "short",
+        "directives": {
+          "maxAgeMs": 60000,
+          "sharedMaxAgeMs": 120000,
+          "staleWhileRevalidateMs": 1000,
+          "staleIfErrorMs": 2000,
+          "immutable": false,
+          "noCache": false,
+          "mustRevalidate": true
+        },
+        "anonymous": "private",
+        "vary": ["Authorization"],
+        "etag": true,
+        "perCallerKind": [{ "caller": "identified", "cacheControl": "private, max-age=60" }],
+        "noStore": false,
+        "origin": { "layer": "api", "pointer": "/cache" },
+        "derivedFrom": {
+          "derivation": "cache.headers",
+          "from": [{ "layer": "api", "pointer": "/cache" }]
+        }
+      },
+      "paging": {
+        "style": "cursor",
+        "maxLimit": 100,
+        "defaultLimit": 20,
+        "overLimit": "clamp",
+        "token": "opaque",
+        "sortKeys": [
+          {
+            "key": "createdAt",
+            "right": "tasks.read",
+            "derivedFrom": {
+              "derivation": "sortKey.restricted",
+              "from": [{ "layer": "api", "pointer": "/sortable" }]
+            },
+            "origin": { "layer": "api", "pointer": "/sortable/0" }
+          }
+        ],
+        "origin": { "layer": "api", "pointer": "/paging" }
+      },
+      "filteredBy": "tasks.read",
+      "degradable": {
+        "paths": ["/assignee"],
+        "origin": { "layer": "api", "pointer": "/degradable" }
+      },
+      "budgetMs": 500,
+      "deadlineHeader": "X-Deadline",
+      "deprecated": {
+        "sunset": "2027-01-31",
+        "successor": { "kind": "httpOperation", "api": "tasks", "id": "updateTaskV2" },
+        "origin": { "layer": "api", "pointer": "/deprecated" }
+      },
+      "relays": { "kind": "httpOperation", "api": "billing", "id": "updateTask" },
+      "csrf": {
+        "kind": "derived",
+        "header": "X-CSRF",
+        "derivedFrom": {
+          "derivation": "csrf.cookieWrite",
+          "from": [{ "layer": "api", "pointer": "/schemes/sessionCookie" }]
+        }
+      }
+    }
+  ]
 }

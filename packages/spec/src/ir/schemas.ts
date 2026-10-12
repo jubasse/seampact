@@ -1,6 +1,8 @@
 import common from "../../schemas/ir/common.schema.json" with { type: "json" };
 import declarations from "../../schemas/ir/declarations.schema.json" with { type: "json" };
+import formats from "../../schemas/ir/formats.schema.json" with { type: "json" };
 import ir from "../../schemas/ir/ir.schema.json" with { type: "json" };
+import operation from "../../schemas/ir/operation.schema.json" with { type: "json" };
 import schemas from "../../schemas/ir/schemas.schema.json" with { type: "json" };
 import sourceMap from "../../schemas/ir/source-map.schema.json" with { type: "json" };
 
@@ -16,6 +18,8 @@ export const IR_SCHEMA_DOCUMENTS: readonly SchemaNode[] = [
   common,
   declarations,
   schemas,
+  operation,
+  formats,
   ir,
   sourceMap,
 ];
