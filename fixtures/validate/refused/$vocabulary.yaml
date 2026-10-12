@@ -1,0 +1,8 @@
+# ADR 0003 section 1 refuses '$vocabulary'; the validate stage names its reason and fix.
+schemas:
+  Task:
+    type: object
+    required: [title]
+    properties:
+      title: { type: string }
+    $vocabulary: { 'https://json-schema.org/draft/2020-12/vocab/core': true }

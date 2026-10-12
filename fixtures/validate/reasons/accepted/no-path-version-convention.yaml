@@ -1,0 +1,10 @@
+# CHK-142: No path version for the whole api, without a reason.
+api: { name: tasks, version: '2024-06-20' }
+conventions:
+  pathVersion: none
+surfaces:
+  app:
+    prefix: /app
+    identity: user
+    routes:
+      health: { method: get, output: Health }

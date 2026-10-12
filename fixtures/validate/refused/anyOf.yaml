@@ -1,0 +1,8 @@
+# ADR 0003 section 1 refuses 'anyOf'; the validate stage names its reason and fix.
+schemas:
+  Task:
+    type: object
+    required: [title]
+    properties:
+      title: { type: string }
+    anyOf: [{ type: object, properties: { title: { type: string } } }]

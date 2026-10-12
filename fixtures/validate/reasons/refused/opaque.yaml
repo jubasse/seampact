@@ -1,0 +1,7 @@
+# expect: seampact/validate/reason-required /schemas/Blob/properties/data/opaque
+# an opaque value without a reason
+schemas:
+  Blob:
+    type: object
+    properties:
+      data: { opaque: '' }

@@ -1,0 +1,4 @@
+# expect: seampact/validate/reason-required /conventions/query/unknownKeys/ignore
+# conventions.query.unknownKeys without a reason
+conventions:
+  query: { unknownKeys: { ignore: '   ' } }

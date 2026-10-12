@@ -1,0 +1,4 @@
+# expect: seampact/validate/reason-required /conventions/input/unknownKeys
+# conventions.input.unknownKeys without a reason
+conventions:
+  input: { unknownKeys: ignore }

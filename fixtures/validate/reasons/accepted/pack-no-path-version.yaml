@@ -1,0 +1,4 @@
+# CHK-142: A pack makes no path version the house default.
+pack: { name: house, version: 1.0.0, extends: [] }
+conventions:
+  pathVersion: none

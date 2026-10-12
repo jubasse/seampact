@@ -1,0 +1,7 @@
+# expect: seampact/validate/reason-required /schemas/Event/unknownKeys/keep
+# unknownKeys keep on a schema without a reason
+schemas:
+  Event:
+    type: object
+    properties: { id: { type: string } }
+    unknownKeys: { keep: '' }

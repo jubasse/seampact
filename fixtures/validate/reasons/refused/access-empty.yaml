@@ -1,0 +1,8 @@
+# expect: seampact/validate/reason-required /surfaces/app/routes/health/access
+# an access without public or optionalAuth without a reason
+api: { name: tasks, version: 1 }
+surfaces:
+  app:
+    identity: user
+    routes:
+      health: { method: get, access: { onRefused: reject }, output: Health }

@@ -1,0 +1,106 @@
+# shared/base.yaml: the workspace's shared file, seen by both apis
+schemes:
+  sessionCookie: { kind: cookie, name: __Host-session, csrf: csrfToken }
+  csrfToken: { kind: header, name: X-Csrf-Token }
+  bearer: { kind: bearer }
+  internalToken: { kind: bearer, bearerFormat: jwt }
+  stripeSignature:
+    kind: signature
+    name: Stripe-Signature
+    format: 't={ts},v1={sig}'
+    algorithm: hmac-sha256
+    payload: '{ts}.{rawBody}'
+    encoding: hex
+    tolerance: 5m
+    key: { value: stripe }
+
+headers:
+  deadline: { name: X-Deadline, in: request, semantic: deadline }
+  trace: { name: traceparent, in: request, semantic: traceContext }
+  actorSurface: { name: X-Actor-Surface, in: request, semantic: actorSurface }
+
+identities:
+  user:
+    schemes: { read: [sessionCookie, bearer], write: [sessionCookie, bearer] }
+    principal: UserPrincipal
+  service:
+    schemes: { read: [internalToken], write: [internalToken] }
+    principal: ServicePrincipal
+    headers:
+      deadline: { for: all, required: true }
+      trace: { for: all }
+      actorSurface: { for: writes, required: true, schema: { enum: Surface } }
+  stripe:
+    kind: signed
+    scheme: stripeSignature
+    principal: WebhookCaller
+
+scopes:
+  channel: { id: ChannelId, errors: [api.not_found] }
+
+rights:
+  roles:
+    params: { allowed: { type: array, items: { enum: Role }, minItems: 1 } }
+    subject: { scope: channel }
+  tasks.read:
+    subject: { scope: channel }
+  tasks.update:
+    subject: { resource: Task, id: TaskId }
+    errors: [api.forbidden, api.not_found]
+  tasks.seeEffort:
+    subject: { resource: Task, id: TaskId }
+  callerService:
+    params: { allowed: { type: array, items: { enum: Service }, minItems: 1 } }
+
+rules:
+  throttle:
+    bucket: true
+    errors: [api.rate_limited]
+
+buckets:
+  write: { key: [principal.userId], limit: 60, window: 1m }
+
+errors:
+  api.schema_invalid:
+    status: 400
+    nature: refused
+    params: { issues: Issues }
+    example: { issues: [{ pointer: /title, rule: minLength }] }
+  api.rate_limited:
+    status: 429
+    params: { retryAfterMs: { type: integer, minimum: 0 } }
+    example: { retryAfterMs: 1500 }
+
+pagings:
+  cursor:
+    request:
+      cursor: { query: cursor }
+      limit: { query: limit }
+      sort: { query: sort, style: signed }
+    response:
+      body: $items
+      links: { next: $next }
+
+conventions:
+  paging: { default: cursor, maxLimit: 100 }
+  idempotency: { header: Idempotency-Key, replayHeader: Idempotency-Replayed, lifetime: 24h }
+  bodyLimit: 1MiB
+  batch: { maxIds: 200, bodyLimit: 2MiB }
+  cache: { families: { minute: 60s, hour: 3600s } }
+  restrictedInput: reject
+  rateLimit: { header: Retry-After, param: retryAfterMs, unit: s }
+  errors:
+    every: [api.internal]
+    derived:
+      schemaInvalid:
+        code: api.schema_invalid
+        params: { issues: { $each: $issues, $as: { pointer: $item.pointer, rule: $item.rule } } }
+
+enums:
+  Role: { values: [owner, editor, viewer], reason: "Roles are local to this product." }
+  TaskState: { values: [open, done, archived], reason: "Task states belong to this api." }
+  Surface: { values: [app, studio], reason: "The product's entry points." }
+  Service: { values: [catalog, ticketing], reason: "The product's internal services." }
+
+schemas:
+  $include: ./schemas.yaml

@@ -1,0 +1,8 @@
+# expect: seampact/validate/reason-required /surfaces/app/routes/signOut/access/optionalAuth
+# access.optionalAuth without a reason
+api: { name: tasks, version: 1 }
+surfaces:
+  app:
+    identity: user
+    routes:
+      signOut: { method: post, access: { optionalAuth: true }, responses: { 204: {} } }
