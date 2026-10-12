@@ -147,15 +147,6 @@ describe("checkIrInvariants", () => {
       }),
     ).toEqual(one("ir.field-wire.members"));
     expect(
-      broken(
-        "Identity",
-        (identity) => {
-          identity.kind = "signed";
-        },
-        (identity) => identity.kind === "credential",
-      ),
-    ).toEqual(one("ir.identity.kind"));
-    expect(
       broken("Property", (property) => {
         (property.type as Record<string, unknown>).nullable = true;
       }),
@@ -168,15 +159,72 @@ describe("checkIrInvariants", () => {
   });
 
   test("leaves unknown values to the reader", () => {
+    // Each object breaks its rule as read with a known value: a versionToken header has no 'name', a 'source'
+    // meta member has 'source', a response name has 'status', a principal source has 'name'.
+    const later = "zzLater";
     expect(
-      broken("HeaderDecl", (header) => {
-        header.semantic = "zzLater";
-      }),
+      broken(
+        "HeaderDecl",
+        (header) => {
+          header.semantic = later;
+        },
+        (header) => header.semantic === "versionToken",
+      ),
     ).toEqual([]);
     expect(
-      broken("ValueSource", (source) => {
-        source.in = "zzLater";
-      }),
+      broken(
+        "MetaMember",
+        (meta) => {
+          meta.fill = later;
+        },
+        (meta) => meta.fill === "source",
+      ),
     ).toEqual([]);
+    expect(
+      broken(
+        "Name",
+        (name) => {
+          name.role = later;
+        },
+        (name) => name.role === "response",
+      ),
+    ).toEqual([]);
+    expect(
+      broken(
+        "ValueSource",
+        (source) => {
+          source.in = later;
+        },
+        (source) => source.in === "principal",
+      ),
+    ).toEqual([]);
+  });
+
+  test("every catalogue id names an existing entry", () => {
+    const ir = sample("every-member.ir.json");
+    const schemes = ir.schemes as Record<string, Record<string, unknown>>;
+    (schemes.sessionCookie as Record<string, unknown>).csrf = "missing";
+    const identities = ir.identities as Record<string, Record<string, unknown>>;
+    (identities.user as Record<string, unknown>).principal = { kind: "schema", schema: "Missing" };
+    const api = ir.api as Record<string, Record<string, unknown>>;
+    (api.documents as Record<string, Record<string, unknown>>).public = {
+      surfaces: ["nowhere"],
+      internal: "exclude",
+    };
+    // A key read with Object.hasOwn: an id spelled like a prototype member resolves to nothing.
+    const rights = ir.rights as Record<string, Record<string, unknown>>;
+    (rights["tasks.read"] as Record<string, unknown>).id = "constructor";
+    expect(checkIrInvariants(ir)).toEqual([
+      expect.objectContaining({
+        id: "ir.ref.resolves",
+        pointer: "/api/documents/public/surfaces/0",
+      }),
+      expect.objectContaining({ id: "ir.ref.resolves", pointer: "/schemes/sessionCookie/csrf" }),
+      expect.objectContaining({
+        id: "ir.ref.resolves",
+        pointer: "/identities/user/principal/schema",
+      }),
+      expect.objectContaining({ id: "ir.ref.resolves", pointer: "/rights/tasks.read/id" }),
+    ]);
   });
 });

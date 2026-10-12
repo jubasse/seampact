@@ -1,8 +1,15 @@
-import { type IrInstanceNode, walkIrInstance } from "./instance-walk.js";
+import {
+  type IrInstanceNode,
+  irDefinition,
+  KNOWN_VALUES_KEYWORD,
+  walkIrInstance,
+} from "./instance-walk.js";
+import type { SchemaNode } from "./schemas.js";
 
 // The cross-member rules of the IR that the ADR 0003 subset cannot state (no conditional keyword), by stable
 // id. README.md lists them; p2-finalize runs `checkIrInvariants` after the strict form, and native readers'
-// tests reuse it. A rule reads only known values: an unknown tag or open-enum value is the reader's to name.
+// tests reuse it. A rule decided by an open-enum value applies to known values only (the known list read from
+// the schema's `x-seampact-known`): an unknown tag or value is the reader's to name.
 export type IrInvariantId =
   | "ir.name.status"
   | "ir.meta.source"
@@ -12,9 +19,9 @@ export type IrInvariantId =
   | "ir.cache.directives"
   | "ir.csrf.cookie"
   | "ir.field-wire.members"
-  | "ir.identity.kind"
   | "ir.property.nullable"
-  | "ir.scalar.type";
+  | "ir.scalar.type"
+  | "ir.ref.resolves";
 
 export interface IrInvariantViolation {
   id: IrInvariantId;
@@ -35,6 +42,32 @@ const BARE_SOURCES = ["host", "subdomain", "resolver", "address"];
 const QUERY_WIRE_KINDS = ["number", "boolean", "list", "text", "object"];
 const QUERY_WIRE_MEMBERS = ["style", "explode", "brackets"];
 
+// The known values of the open enum that `definition.member` references, read from the schema files.
+function knownValues(definition: string, member: string): readonly string[] {
+  const properties = irDefinition(definition)?.properties as Record<string, SchemaNode> | undefined;
+  let node =
+    properties !== undefined && Object.hasOwn(properties, member) ? properties[member] : undefined;
+  while (typeof node?.$ref === "string")
+    node = irDefinition(node.$ref.slice(node.$ref.lastIndexOf("/") + 1));
+  const known = node?.[KNOWN_VALUES_KEYWORD];
+  if (!Array.isArray(known)) throw new Error(`${definition}.${member} is not an open enum`);
+  return known as string[];
+}
+const isKnown = (definition: string, member: string, value: unknown): boolean =>
+  typeof value === "string" && knownValues(definition, member).includes(value);
+
+// The catalogues an id names, by the id definition that keys them: every map of the top level and of the api
+// whose keys are a `$ref` to an id definition (`schemes` keyed by `SchemeId`, `surfaces` by `SurfaceId`).
+const CATALOGUES = new Map<string, { owner: "ContractIR" | "Api"; member: string }>();
+for (const owner of ["ContractIR", "Api"] as const) {
+  const properties = irDefinition(owner)?.properties as Record<string, SchemaNode> | undefined;
+  for (const [member, schema] of Object.entries(properties ?? {})) {
+    const keys = schema.propertyNames as SchemaNode | undefined;
+    if (typeof keys?.$ref === "string")
+      CATALOGUES.set(keys.$ref.slice(keys.$ref.lastIndexOf("/") + 1), { owner, member });
+  }
+}
+
 // Returns every invariant violation of an IR document, empty for a sound one. Pure and Ajv-free; it expects a
 // document the open form accepts and never throws on one it refuses.
 export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
@@ -43,7 +76,9 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
     violations.push({ id, pointer, message });
   const objects = new Map<string, string | undefined>(); // pointer to definition, for placement rules
   const nodes: Extract<IrInstanceNode, { kind: "object" }>[] = [];
+  const ids: Extract<IrInstanceNode, { kind: "string" }>[] = [];
   walkIrInstance(ir, (node) => {
+    if (node.kind === "string") ids.push(node);
     if (node.kind !== "object") return;
     objects.set(node.pointer, node.definition);
     nodes.push(node);
@@ -51,9 +86,21 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
   const doc = isRecord(ir) ? ir : {};
   const schemes = isRecord(doc.schemes) ? doc.schemes : {};
 
+  // Every member holding a catalogue id names an existing entry (keys read with Object.hasOwn: a right may be
+  // named `__proto__`).
+  for (const { pointer, definition, value } of ids) {
+    const catalogue = CATALOGUES.get(definition);
+    if (catalogue === undefined) continue;
+    const owner = catalogue.owner === "ContractIR" ? doc : doc.api;
+    const entries = isRecord(owner) ? owner[catalogue.member] : undefined;
+    if (isRecord(entries) && !Object.hasOwn(entries, value))
+      fail("ir.ref.resolves", pointer, `'${value}' names no entry of '${catalogue.member}'.`);
+  }
+
   for (const { pointer, definition, value } of nodes) {
     switch (definition) {
       case "Name": {
+        if (!isKnown("Name", "role", value.role)) break;
         if ((value.role === "response") !== has(value, "status"))
           fail(
             "ir.name.status",
@@ -63,6 +110,7 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
         break;
       }
       case "MetaMember": {
+        if (!isKnown("MetaMember", "fill", value.fill)) break;
         if ((value.fill === "source") !== has(value, "source"))
           fail(
             "ir.meta.source",
@@ -73,7 +121,7 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
       }
       case "ValueSource": {
         const source = value.in;
-        if (typeof source !== "string") break;
+        if (typeof source !== "string" || !isKnown("ValueSource", "in", source)) break;
         if (NAMED_SOURCES.includes(source) && (!has(value, "name") || has(value, "prefixBits")))
           fail(
             "ir.value-source.members",
@@ -96,8 +144,8 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
         break;
       }
       case "HeaderDecl": {
+        if (!isKnown("HeaderDecl", "semantic", value.semantic)) break;
         const token = value.semantic === "versionToken";
-        if (typeof value.semantic !== "string") break;
         const tokenMembers = has(value, "response") && has(value, "request");
         const plainMembers = has(value, "name") && has(value, "in");
         const ok = token
@@ -152,7 +200,7 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
               pointer,
               `A '${kind}' field has no style, explode or brackets.`,
             );
-        } else if (typeof kind === "string" && QUERY_WIRE_KINDS.includes(kind)) {
+        } else if (QUERY_WIRE_KINDS.includes(String(kind)) && isKnown("FieldWire", "kind", kind)) {
           if (!QUERY_WIRE_MEMBERS.every((member) => has(value, member)))
             fail(
               "ir.field-wire.members",
@@ -160,17 +208,6 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
               `A '${kind}' field has style, explode and brackets.`,
             );
         }
-        break;
-      }
-      case "Identity": {
-        const kinds = ["credential", "signed"];
-        const schemesKind = isRecord(value.schemes) ? value.schemes.kind : undefined;
-        if (
-          kinds.includes(String(value.kind)) &&
-          kinds.includes(String(schemesKind)) &&
-          value.kind !== schemesKind
-        )
-          fail("ir.identity.kind", pointer, "An identity's 'schemes' carry the identity's kind.");
         break;
       }
       case "Property": {

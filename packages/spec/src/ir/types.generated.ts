@@ -850,10 +850,10 @@ export interface Params {
   header: Param[];
 }
 
-/** Undeclared query keys. Must act: an unknown value makes the IR invalid for every reader. */
+/** Undeclared query keys. Must act: an unknown tag makes the IR invalid for every reader. */
 export type KnownUnknownQuery = RefuseUnknownQuery | IgnoreUnknownQuery;
 
-/** Undeclared query keys. Must act: an unknown value makes the IR invalid for every reader. */
+/** Undeclared query keys. Must act: an unknown tag makes the IR invalid for every reader. */
 export type UnknownQuery = KnownUnknownQuery | UnknownVariant<"policy">;
 
 export interface RefuseUnknownQuery {
@@ -866,10 +866,10 @@ export interface IgnoreUnknownQuery {
   origin: Origin;
 }
 
-/** Who may call the operation. Must act: an unknown value makes the IR invalid for every reader. */
+/** Who may call the operation. Must act: an unknown tag makes the IR invalid for every reader. */
 export type KnownAccess = IdentityAccess | OptionalAccess | PublicAccess;
 
-/** Who may call the operation. Must act: an unknown value makes the IR invalid for every reader. */
+/** Who may call the operation. Must act: an unknown tag makes the IR invalid for every reader. */
 export type Access = KnownAccess | UnknownVariant<"kind">;
 
 export interface IdentityAccess {
@@ -909,10 +909,10 @@ export interface OperationScope {
   origin: Origin;
 }
 
-/** A requirement, in declared order (FR-5). Must act: an unknown value makes the IR invalid for every reader. */
+/** A requirement, in declared order (FR-5). Must act: an unknown tag makes the IR invalid for every reader. */
 export type KnownRequirement = RightRequirement | RuleRequirement;
 
-/** A requirement, in declared order (FR-5). Must act: an unknown value makes the IR invalid for every reader. */
+/** A requirement, in declared order (FR-5). Must act: an unknown tag makes the IR invalid for every reader. */
 export type Requirement = KnownRequirement | UnknownVariant<"kind">;
 
 export interface RequirementSubject {
@@ -1029,10 +1029,10 @@ export interface FieldRight {
   derivedFrom: DerivedFrom;
 }
 
-/** The idempotency key of an unsafe operation: derived settings, or an exemption with its reason. Must act: an unknown value makes the IR invalid for every reader. */
+/** The idempotency key of an unsafe operation: derived settings, or an exemption with its reason. Must act: an unknown tag makes the IR invalid for every reader. */
 export type KnownIdempotency = DerivedIdempotency | ExemptIdempotency;
 
-/** The idempotency key of an unsafe operation: derived settings, or an exemption with its reason. Must act: an unknown value makes the IR invalid for every reader. */
+/** The idempotency key of an unsafe operation: derived settings, or an exemption with its reason. Must act: an unknown tag makes the IR invalid for every reader. */
 export type Idempotency = KnownIdempotency | UnknownVariant<"kind">;
 
 /** Where the idempotency key is enforced. */
@@ -1125,10 +1125,10 @@ export interface Paging {
   origin: Origin;
 }
 
-/** The CSRF check of an unsafe operation reached through a cookie scheme: the derived header, or an exemption with its reason (invariant ir.csrf.cookie). Must act: an unknown value makes the IR invalid for every reader. */
+/** The CSRF check of an unsafe operation reached through a cookie scheme: the derived header, or an exemption with its reason (invariant ir.csrf.cookie). Must act: an unknown tag makes the IR invalid for every reader. */
 export type KnownCsrf = DerivedCsrf | ExemptCsrf;
 
-/** The CSRF check of an unsafe operation reached through a cookie scheme: the derived header, or an exemption with its reason (invariant ir.csrf.cookie). Must act: an unknown value makes the IR invalid for every reader. */
+/** The CSRF check of an unsafe operation reached through a cookie scheme: the derived header, or an exemption with its reason (invariant ir.csrf.cookie). Must act: an unknown tag makes the IR invalid for every reader. */
 export type Csrf = KnownCsrf | UnknownVariant<"kind">;
 
 export interface DerivedCsrf {

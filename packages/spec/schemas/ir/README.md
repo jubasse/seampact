@@ -70,7 +70,7 @@ Every choice between shapes is a tagged union (`Scheme` and `Identity` on `kind`
 
 ## Invariants the schema cannot state
 
-The ADR 0003 subset has no conditional keyword, so these cross-member rules live beside the schema, each with a stable id. `checkIrInvariants(ir)` in `@seampact/spec/ir` checks them: pure, without Ajv, run by the compiler's finalize pass (p2-finalize, the owner) after the strict form, and reused by the tests of the native readers. A rule reads known values only; an unknown tag or value is the reader's to name.
+The ADR 0003 subset has no conditional keyword, so these cross-member rules live beside the schema, each with a stable id. `checkIrInvariants(ir)` in `@seampact/spec/ir` checks them: pure, without Ajv, run by the compiler's finalize pass (p2-finalize, the owner) after the strict form, and reused by the tests of the native readers. A rule decided by an open-enum value (`semantic`, `role`, `fill`, `in`, `kind`) applies to the values the schema lists in `x-seampact-known` only; an unknown value is the reader's to name. A new invariant is a tightening IR change and relaxing or removing one is breaking (`CHANGE-TEMPLATE.md`).
 
 | Id | Rule |
 |---|---|
@@ -82,9 +82,10 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 | `ir.cache.directives` | `Cache.directives` is absent if and only if the family is `never`, and a `never` family sets `noStore`. |
 | `ir.csrf.cookie` | An unsafe operation whose access accepts a cookie scheme has `csrf` (derived or exempt). |
 | `ir.field-wire.members` | `FieldWire` of kind `file` or `json` has no `style`, `explode` or `brackets`; a query wire kind has all three. |
-| `ir.identity.kind` | `Identity.schemes.kind` equals `Identity.kind`. |
 | `ir.property.nullable` | A property's type use has no `nullable`: `Property.nullable` holds it. |
 | `ir.scalar.type` | A named format's own type names no `scalar`. |
+| `ir.ref.resolves` | Every member whose schema is a `$ref` to a catalogue id definition (the key of a top-level or api map, such as `SchemeId` or `SurfaceId`) names an existing key, read with `Object.hasOwn`. |
+| `ir.cache.sensitive-no-store` | Planned (p2-finalize): a response that carries a sensitive field sets `Cache.noStore`. Not checked yet: it needs a walk of the response schemas. |
 
 ## Readers
 
