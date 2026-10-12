@@ -380,7 +380,7 @@ items:
     targets: [core, server, fetch]
   - id: CHK-059
     source: "14 Lifecycle"
-    fact: One OpenAPI document per api, generated, committed and drift-checked.
+    fact: Each OpenAPI document an app writes (without an openapi key, one per api or per declared document) is generated, committed and drift-checked.
     frs: [FR-11]
     scenario: SCN-017
     targets: [core]
@@ -435,7 +435,7 @@ items:
     targets: [nestjs, fastify]
   - id: CHK-068
     source: "14 NestJS binding"
-    fact: Dev docs serve the committed document and are off in production.
+    fact: Dev docs serve the committed seampact document, when the app writes one, and are off in production.
     frs: [FR-16, FR-11]
     scenario: SCN-055
     targets: [server]
@@ -538,8 +538,8 @@ items:
     scenario: SCN-060
     targets: [symfony]
   - id: CHK-085
-    source: "A15"
-    fact: api-platform serves only the seampact OpenAPI document and the contract's envelopes, paging and errors.
+    source: "A15, A43"
+    fact: api-platform serves the contract's envelopes, paging and errors (json by default); which OpenAPI documents it serves is the app config's choice, and with nativeDocs and frameworkDocs left at their defaults the target generates nothing for API Platform's own document and leaves its generation as the app has it.
     frs: [FR-21]
     scenario: SCN-061
     targets: [api-platform]
@@ -734,13 +734,13 @@ items:
     source: "14 Lifecycle"
     fact: A relay route has no field rights, on output or input; the service sends every restricted field without a decide call, and the public operation projects it for its caller.
     frs: [FR-8, FR-23]
-    scenario: SCN-014
+    scenario: SCN-106
     targets: [core, server]
   - id: CHK-118
     source: "A38"
     fact: A pick or omit schema compiles to the same IR object as its properties written out, each keeping its refinements and marks; a field the source lacks, or an overlay key outside the allowed list, is a compile error.
     frs: [FR-3]
-    scenario: SCN-030
+    scenario: SCN-107
     targets: [core, zod]
   - id: CHK-119
     source: "14 Responses"
@@ -752,25 +752,25 @@ items:
     source: "14 Lifecycle"
     fact: The OpenAPI document states every IR member of the mapping in ADR 0004 section 12, natively or through an x-seampact-* extension (access with its reason, a cookie write with its CSRF scheme as one requirement, signature schemes, requirements, scopes, field and sort-key rights, paging, concurrency, idempotency, relays, and each response's codes with their derivation or attaching node), and every extension value validates against its published JSON Schema; this holds with the emitter option extensions all, the default.
     frs: [FR-11]
-    scenario: SCN-049
+    scenario: SCN-108
     targets: [core]
   - id: CHK-121
     source: "14 Access"
-    fact: The lint rule seampact/subtree-exception warns on a public, optionalAuth, csrf or idempotency exemption written on a node that is neither a route nor a surface root, naming the routes it reaches; compile --strict fails on it and lint.allow with a reason silences it.
+    fact: The lint rule seampact/subtree-exception warns on a public, optionalAuth, csrf or idempotency exemption or an ignoring unknownQuery written on a node that is neither a route nor a surface root, naming the routes it reaches; compile --strict fails on it, lint.allow with a reason silences it, and that allow holds for its own node only, never for the nodes below it.
     frs: [FR-12, FR-4]
-    scenario: SCN-018
+    scenario: SCN-109
     targets: [core]
   - id: CHK-122
     source: "A38"
     fact: Every contract file and fragment gets a modeline from init or init --modelines, chosen by its include site, and compile --editor-schemas writes per-kind schemas specialised with the workspace's declared names, so an editor flags an undeclared identity, right, requirement, enum, error code, paging style or schema name.
     frs: [FR-9]
-    scenario: SCN-046
+    scenario: SCN-110
     targets: [core]
   - id: CHK-123
     source: "A38"
     fact: seampact explain <api>.<operationId> prints the operation's access, scopes, requirements, inputs, headers and every error code, each with its derivation and the file and line that caused it.
-    frs: [FR-2, FR-6]
-    scenario: SCN-011
+    frs: [FR-2, FR-6, FR-9]
+    scenario: SCN-111
     targets: [core]
   # ---------- Added with grammar review round 4 (A36 audit, target mapping, A39 to A42) ----------
   - id: CHK-124
@@ -783,7 +783,7 @@ items:
     source: "A40"
     fact: A contract nature mapped onto a base nature is written on the wire by its name, and a generated client takes its retry rule from the base of the code's declaration.
     frs: [FR-6, FR-15]
-    scenario: SCN-037
+    scenario: SCN-112
     targets: [core, fetch]
   - id: CHK-126
     source: "A36"
@@ -801,7 +801,7 @@ items:
     source: "A36"
     fact: Paging styles express a more flag, after and before cursors (both sent answers 400), overLimit clamp (served as maxLimit and reported by the limit role, native paging resolvers included) and a split sort; the Stripe and GitHub styles of ADR 0002 compile and are served.
     frs: [FR-31]
-    scenario: SCN-083
+    scenario: SCN-113
     targets: [core, server, fetch]
   - id: CHK-129
     source: "A36"
@@ -819,7 +819,7 @@ items:
     source: "A40"
     fact: A signature scheme with verify application hands the raw body, the signature header and the declared headers to the authenticate hook unparsed; a missing signature header answers 401 before the hook, and a Standard Webhooks fixture is verified by a hand-written hook.
     frs: [FR-20, FR-25]
-    scenario: SCN-026
+    scenario: SCN-114
     targets: [core, server]
   - id: CHK-132
     source: "A36"
@@ -831,7 +831,7 @@ items:
     source: "A40"
     fact: An optionalAuth route treats a refused credential as anonymous by default and answers 401 with onRefused reject.
     frs: [FR-4, FR-27]
-    scenario: SCN-086
+    scenario: SCN-115
     targets: [core, server]
   - id: CHK-134
     source: "A36"
@@ -843,13 +843,13 @@ items:
     source: "A36"
     fact: unknownKeys keep passes unknown keys to the handler as a map of opaque values, and an opaque schema accepts any JSON value, typed unknown, JsonNode or mixed, and emitted as an empty schema with x-seampact-opaque.
     frs: [FR-3, FR-15]
-    scenario: SCN-028
+    scenario: SCN-116
     targets: [core, server, zod, yup, class-validator]
   - id: CHK-136
     source: "A40"
     fact: The OpenAPI emitter options of the app config (extensions all, none or a list; reasons omit; inputSchemas strict with additionalProperties false on input components; servers) change only what they name, and the defaults give the ADR 0004 section 12 document.
     frs: [FR-11]
-    scenario: SCN-049
+    scenario: SCN-117
     targets: [core]
   - id: CHK-137
     source: "A36"
@@ -933,37 +933,37 @@ items:
     source: "A39"
     fact: A form body (Slack style, signed, with a JSON text field) is decoded with the query rules, its JSON field parsed and validated, and the handler typed.
     frs: [FR-7, FR-20]
-    scenario: SCN-026
+    scenario: SCN-118
     targets: [core, server, fetch]
   - id: CHK-151
     source: "A39"
     fact: A multipart upload with typed fields and files answers 400 for a file outside its media list or above maxSize and 413 above the body limit, and the handler receives the framework's own upload object.
     frs: [FR-7]
-    scenario: SCN-041
+    scenario: SCN-119
     targets: [core, server, fetch]
   - id: CHK-152
     source: "A39"
     fact: A file download sets Content-Type from the declared media and Content-Disposition from the handler's file name, bypasses the wire format, and clients return the content with its media type.
     frs: [FR-7]
-    scenario: SCN-038
+    scenario: SCN-120
     targets: [core, server, fetch]
   - id: CHK-153
     source: "A39"
     fact: A 302 and a 303 carry the derived Location header from a typed handler result, and clients that can read a redirect return its status and location.
     frs: [FR-7]
-    scenario: SCN-038
+    scenario: SCN-121
     targets: [core, server, fetch]
   - id: CHK-154
     source: "A41"
     fact: No target generates the framework controller; the developer's controller implements the generated interface, generated utilities place every step of the check order around it, and all generated code goes to the app's outDir, __generated__ by default.
     frs: [FR-16, FR-39]
-    scenario: SCN-098
+    scenario: SCN-122
     targets: [server]
   - id: CHK-155
     source: "A41"
-    fact: nestjs generates one composite method decorator and one input param decorator per operation, spring-boot one composed meta-annotation per operation, laravel a routes file with middleware and a FormRequest per operation, and symfony and api-platform a generated attribute read by a generated listener with native route registration.
+    fact: nestjs generates one composite method decorator and one input param decorator per operation, spring-boot one composed meta-annotation per operation, laravel a routes file with middleware and a FormRequest per operation, symfony a generated attribute read by a generated kernel.controller listener with native route registration, and api-platform resource metadata with that listener and a decorated deserialize provider.
     frs: [FR-16]
-    scenario: SCN-098
+    scenario: SCN-123
     targets: [nestjs, spring-boot, laravel, symfony, api-platform]
   - id: CHK-156
     source: "A41"
@@ -1005,13 +1005,13 @@ items:
     source: "A42"
     fact: Every target exports each operation's access in the framework's native form, renders the framework's own security refusals (entry points, CSRF, throttling) in the api's error format through their roles, and spring-boot can generate Spring Security request matchers for public and optionalAuth routes.
     frs: [FR-25, FR-42]
-    scenario: SCN-048
+    scenario: SCN-124
     targets: [server]
   - id: CHK-163
     source: "A42"
     fact: With accessHooks false and native access stated with a reason, a target generates no hooks and no access steps, exports the access metadata, refuses an operation that needs the boundary's principal, and its test helper still checks the declared 401 and 403.
     frs: [FR-25, FR-4]
-    scenario: SCN-104
+    scenario: SCN-125
     targets: [server]
   - id: CHK-164
     source: "A41"
@@ -1021,15 +1021,15 @@ items:
     targets: [nestjs, express]
   - id: CHK-165
     source: "A41"
-    fact: The nativeDocs artefact is off by default; when on, the framework's own OpenAPI output agrees with the seampact document on operation ids, response codes and schemas for every contract route.
+    fact: The nativeDocs artefact is off by default, and a target then generates nothing for the framework's own document; when on, the framework's own OpenAPI output agrees with the seampact document on operation ids, response codes and schemas for every contract route, whether or not the app also writes seampact's document.
     frs: [FR-11, FR-39]
-    scenario: SCN-104
+    scenario: SCN-126
     targets: [nestjs, spring-boot, api-platform]
   - id: CHK-166
     source: "A42"
     fact: On the JVM the app config is seampact.config.yaml or the Gradle or Maven DSL with the same keys and schema, both together being an error; output in the build directory with declared task inputs and outputs works, and laravel offers an artisan command.
     frs: [FR-17, FR-19]
-    scenario: SCN-103
+    scenario: SCN-127
     targets: [spring-boot, laravel]
   - id: CHK-167
     source: "A28"
@@ -1049,6 +1049,36 @@ items:
     frs: [FR-19, FR-27]
     scenario: SCN-025
     targets: [angular]
+  - id: CHK-170
+    source: "A43"
+    fact: "Per app, the config writes seampact's documents (the default, at openapi/<api>.yaml without an openapi key), the framework's own document completed by nativeDocs with openapi none, both, or none; with nativeDocs off a target leaves the framework's own generation as the framework has it, API Platform's included; frameworkDocs off writes the framework's own switch, is refused beside nativeDocs on or where the target knows no switch, and the routes of a framework document that is on pass the boot check."
+    frs: [FR-11, FR-39, FR-21]
+    scenario: SCN-104
+    targets: [core, nestjs, spring-boot, api-platform]
+  - id: CHK-171
+    source: "A43"
+    fact: A monorepo root config writes a merged OpenAPI document across the apps it lists, from the operations their server targets generate and the documents of OpenAPI-only apps; an identical element is written once, two different elements under one operation id or component key are refused naming both apis unless one api takes a prefix, a repeated method and path is always refused, and each app keeps its own documents.
+    frs: [FR-17, FR-11]
+    scenario: SCN-103
+    targets: [core]
+  - id: CHK-172
+    source: "A36"
+    fact: An error code equal to a schema id, a derived schema name or <schema>.input is a compile error naming both, so the component keys of every emitted document stay distinct under every emitter option.
+    frs: [FR-6, FR-11]
+    scenario: SCN-037
+    targets: [core]
+  - id: CHK-173
+    source: "A36"
+    fact: The naming vectors cover the error and errors roles, types derived from a digit-led error code (_1042Params, _404GoneError), and a right whose name yields no identifier segment, which is a compile error unless the right sets codeName.
+    frs: [FR-38]
+    scenario: SCN-093
+    targets: [core]
+  - id: CHK-174
+    source: "A41"
+    fact: symfony runs steps 2 to 8 in a kernel.controller listener, before any argument is resolved, and its value resolver only hands over the stored input; api-platform runs steps 2 to 5 in that listener and steps 6 to 8 before denormalisation; adonis runs steps 6 to 8 in generated middleware before the controller; fastify without a validator link validates the whole request with one Ajv validator under the boundary's options and reports every issue.
+    frs: [FR-5, FR-16, FR-21]
+    scenario: SCN-009
+    targets: [symfony, api-platform, adonis, fastify]
 not_in_checklist:
   - source: "A4, A16"
     reason: Process decisions (FAVIR framing, read-only Arthome research); nothing to test in the product.
