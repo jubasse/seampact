@@ -4,7 +4,7 @@ Status: accepted
 
 ## Context
 
-Inbound signed webhooks are in v1, minimal (amendment A5). A third-party caller, such as a payment provider or a media server, has no user token; it proves itself by signing the request with a shared secret. The first consumer is a Stripe-style scheme: a header carrying a timestamp and an HMAC-SHA256 of `"{timestamp}.{raw body}"`, a five-minute tolerance, and a raw body requirement (`.work/arthome-research.md` section 14).
+Inbound signed webhooks are in v1, minimal (amendment A5). A third-party caller, such as a payment provider or a media server, has no user token; it proves itself by signing the request with a shared secret. The first consumer is a Stripe-style scheme: a header carrying a timestamp and an HMAC-SHA256 of `"{timestamp}.{raw body}"`, a five-minute tolerance, and a raw body requirement.
 
 Authentication stays neutral (A25, ADR 0012): the generated boundary must not force a verification implementation on the application. A40 settles the tension between A5's "minimal" and A36: a sender whose signature no template describes must still fit, so the scheme has a neutral form that leaves verification to the application. FR-20 asks for a signed identity kind, a declared scheme, and an optional runtime helper that implements the scheme behind the authenticate hook, with test vectors computed by an independent tool.
 

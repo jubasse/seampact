@@ -6,7 +6,7 @@ Status: accepted
 
 Authentication, rights, roles and tenancy are unopinionated, even at the cost of less generated code (amendment A25). The contract declares what a route requires: an identity and its principal schema, requirements (rights and rules) with typed params and a subject, tenancy scopes, and the errors each can raise. It never says how a credential is checked, how a right is decided or how a tenant is found. Applications keep the libraries they already use: Clerk, better-auth, Passport, CASL, spatie/laravel-permission, Laravel Gates and Policies, Symfony Voters, Spring Security, or hand-written code (A25). seampact adapts to the framework's own mechanisms and never replaces them (A30).
 
-The rights research (`.work/rights-research.md`) proposed mapping each right onto each framework's native authorization mechanism inside the target. A25 overrides that: targets generate neutral hooks only, and native mappings are optional adapter packages. Rights stay flexible (A20), a restricted input field is rejected or stripped by configuration (A21), and tenancy is open (A23). 1.0 ships the CASL and spatie adapters (A24).
+Early research proposed mapping each right onto each framework's native authorization mechanism inside the target. A25 overrides that: targets generate neutral hooks only, and native mappings are optional adapter packages. Rights stay flexible (A20), a restricted input field is rejected or stripped by configuration (A21), and tenancy is open (A23). 1.0 ships the CASL and spatie adapters (A24).
 
 Rights, rules, scopes and identities are declared with the grammar of ADR 0002 and recorded in the IR of ADR 0004. This ADR decides the runtime boundary every server target generates from them.
 
