@@ -86,7 +86,7 @@ input: { $include: ./schemas/task.yaml#/Task }   # an inline copy of Task's body
 pack: { name: '@seampact/pack-crud-rights', version: 1.0.0, extends: [] }
 derive:
   - entry: crud
-    select: { op: [list, get, create, update, delete] }
+    select: { op: [list, get, create, update, delete, batch] }   # batch: tasks.batch, subject the innermost scope
     declareRight:
       name: '{resource}.{op}'
       subject: { member: resource, collection: innermostScope }
@@ -146,7 +146,7 @@ A route declared inline and the same route moved to a file reached through `$inc
 2. `$include` replaces itself with the file's mapping before any other step; after it, the tree is the same as if the content had been written inline.
 3. Relative paths inside an included file resolve against that file, so moving content and fixing its relative paths reaches the same files; the IR stores the content of `$file` and `$ref` targets, never a path.
 4. Names that the compiler derives (operation ids, inline schema names, ADR 0007) come from the position in the tree and the role, never from a file name.
-5. Source locations (file, line, column) live only in the side table (ADR 0004). An element's `origin` in the IR is a logical path in the tree, such as `surfaces.app.routes.channels.member.routes.tasks`, which does not change when content moves between files.
+5. Source locations (file, line, column) live only in the side table (ADR 0004). An element's `origin` in the IR is a layer and a JSON Pointer into the merged tree (ADR 0004 section 6), such as `{ layer: api, pointer: /surfaces/app/routes/channels/member/routes/tasks }`, which does not change when content moves between files.
 
 The loader's property test externalises random nodes of generated trees and asserts byte equality of the IR.
 
@@ -261,7 +261,7 @@ extends: ./base.yaml
 
 A service api (FR-8, section 9 of the brief) states `caller: { identity: service, right: callerService }`. Every route of it runs under that identity, which its surfaces need not repeat and no node may change; a public or optional-auth route is a compile error; a route whose `requires` does not include `caller.right` is a compile error (SCN-014, SCN-045). The names are the contract's own (A20): the core knows only that this api has a caller identity and a caller right.
 
-`documents` declares named OpenAPI documents. Each entry takes `surfaces` (the surfaces it covers, default all) and `internal` (`include`, the default, or `exclude`). An api with no `documents` emits one document holding every route (SCN-044). `documents` says what a document of this api may hold; whether any is written is the app's choice, for every target alike (A43): seampact's documents, the framework's own document completed by the `nativeDocs` artefact, both, or none, and a monorepo's root config may also write one document merged across its apps (ADR 0011). Where each document is written, and how it is rendered (which `x-seampact-*` extensions it carries, whether reasons appear, strict input schemas, `servers`), is app configuration (ADR 0011); what each IR member becomes in it, natively or as an `x-seampact-*` extension, is ADR 0004 section 12.
+`documents` declares named OpenAPI documents. Each entry takes `surfaces` (the surfaces it covers, default all) and `internal` (`include`, the default, or `exclude`). An api with no `documents` emits one document holding every route (SCN-044). `documents` says what a document of this api may hold; whether any is written is the app's choice, for every target alike (A43): seampact's documents (the default for an app with a server target; an app with client targets only writes none unless it asks), the framework's own document completed by the `nativeDocs` artefact, both, or none, and a monorepo's root config may also write one document merged across its apps (ADR 0011). Where each document is written, and how it is rendered (which `x-seampact-*` extensions it carries, whether reasons appear, strict input schemas, `servers`), is app configuration (ADR 0011); what each IR member becomes in it, natively or as an `x-seampact-*` extension, is ADR 0004 section 12.
 
 ### 6. Surfaces and the tree
 
@@ -1803,8 +1803,8 @@ A right never reads the body (section 4): it is decided before the body is valid
 
 ## Consequences
 
-- Phase 1 writes the authoring JSON Schemas, one per file and fragment kind (section 3), from sections 1 to 13 of this ADR; a keyword not listed here is refused by it, and the grammar snapshot test (SM-6) fails when a core keyword is added without an ADR reference.
-- The loader implements sections 1 to 4 (composition, the byte-identity rule, pitfalls); the compiler passes implement sections 5 to 13 as ADR 0006 assigns them.
+- Phase 1 writes the authoring JSON Schemas, one per file and fragment kind (section 3), from sections 1 to 15 of this ADR; a keyword not listed here is refused by it, and the grammar snapshot test (SM-6) fails when a core keyword is added without an ADR reference.
+- The loader implements sections 1 to 4 (composition, the byte-identity rule, pitfalls); the compiler passes implement sections 5 to 14 as ADR 0006 assigns them.
 - Contracts carry no house convention: header names, right names, page shapes and wire formats all come from the base or from packs. Derived errors have default codes in the core (A34), each renamable, so a contract with no pack compiles; a paged list still needs a paging style (A31).
 - The grammar has four shorthands only: a string for a schema reference, `ops` as a list, `paging` as a style name, and a string in `requires` for a `requirements` entry. Each yields the same IR as its long form, the last one with the entry's name.
 - An inherited requirement cannot be removed below; a contract that needs it must restructure its tree. Revisit only with a consumer that cannot.
@@ -1818,7 +1818,7 @@ A right never reads the body (section 4): it is decided before the body is valid
 
 ## Self-check: scenarios and keywords
 
-Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Scenarios about targets, distribution or CI only (SCN-015, SCN-017, SCN-020 to SCN-025, SCN-027, SCN-028, SCN-049, SCN-052 to SCN-061, SCN-074, SCN-075, SCN-089 to SCN-095, SCN-098, SCN-099, SCN-103 to SCN-105, SCN-108, SCN-117, SCN-122 to SCN-127) use no syntax beyond what their fixture contract borrows from the rows below. SCN-072 (framework route allow-list) and the document choices of A43 are app configuration, ADR 0011 and 0012.
+Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Scenarios about targets, distribution or CI only (SCN-015, SCN-017, SCN-020 to SCN-025, SCN-027, SCN-028, SCN-049, SCN-052 to SCN-061, SCN-074, SCN-075, SCN-089 to SCN-095, SCN-098, SCN-099, SCN-103 to SCN-105, SCN-108, SCN-117, SCN-122 to SCN-130) use no syntax beyond what their fixture contract borrows from the rows below. SCN-072 (framework route allow-list) and the document choices of A43 are app configuration, ADR 0011 and 0012.
 
 | Scenario | Keywords (section) |
 |---|---|
@@ -1848,7 +1848,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-034 | `principal.requires` (9) |
 | SCN-035 | `identity` inheritance, `routes` (8, 6) |
 | SCN-036 | `access.public`, `requires` with `bucket`, `buckets` (9) |
-| SCN-037 | `errors` (`status`, `nature`, `family`, `params`, `example`); the base natures and the `natures` catalogue; the error code pattern and `conventions.errors.pattern` (11, 4, 13) |
+| SCN-037 | `errors` (`status`, `nature`, `family`, `params`, `example`); the base natures and the `natures` catalogue; the error code pattern and `conventions.errors.pattern`; a code equal to a schema id or `<schema>.input` refused (ADR 0006 section 3) (11, 4, 13) |
 | SCN-038 | `responses` with several 2xx and `headers`; redirect statuses with their derived `Location` (7, 3) |
 | SCN-039 | `responses` 202 with `Location`, `Retry-After` (7) |
 | SCN-040 | `ops.delete` with `output` (6) |
@@ -1873,7 +1873,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-069 | `scopes` catalogue with `within`, `scopes` on a node with `subdomain` and `path` sources (9, 4) |
 | SCN-070 | `scopes` with `resolver` (9) |
 | SCN-071 | `rights` (no syntax beyond SCN-062) |
-| SCN-073 | `packs` with the CRUD rights pack, its `pack` manifest and `derive` entry (`select.op`, `declareRight`, `require`), `ops`, the `requires` merge order (2, 6, 8) |
+| SCN-073 | `packs` with the CRUD rights pack, its `pack` manifest and `derive` entry (`select.op` with `batch`, `declareRight`, `require`), `ops`, the `requires` merge order (2, 6, 8) |
 | SCN-076 | `identities.principal.variants`, `schemes.optionalRead` (9) |
 | SCN-077 | `schemes` (`kind`: cookie, header, query, bearer, basic, signature; `name`, `csrf`, `bearerFormat`, `oauth2`, `openIdConnect`), `identities.schemes` (9) |
 | SCN-078 | the `headers` catalogue with `deadline`, `traceContext`, `actorSurface`, their use on an identity, `budget` (9, 10) |

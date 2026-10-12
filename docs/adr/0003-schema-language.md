@@ -395,4 +395,4 @@ Every named schema becomes a named type in every target. An inline schema gets a
 ## Traceability
 
 - FRs: FR-3 (subset, direction, unions, optional and nullable, formats, marks, refinements, names, examples), FR-12 (credential lint, allow-list), FR-15 (one payload behaviour for zod, yup and class-validator), FR-23 (`restrictedTo`, input policy), FR-29 (enum uses and emission), FR-30 (defaults), FR-42 and A30 (no envelope in schemas); A36 and A40 (opaque values, unknown-key policies), A39 (files, JSON text fields).
-- CHK items enabled: CHK-002, CHK-024, CHK-025, CHK-026, CHK-033, CHK-047, CHK-048, CHK-049, CHK-053, CHK-080, CHK-092, CHK-134, CHK-135, CHK-139, CHK-146, CHK-151, CHK-158, CHK-159, and from round 5 CHK-135 (`additionalMember`).
+- CHK items enabled: CHK-002, CHK-024, CHK-025, CHK-026, CHK-033, CHK-047, CHK-048, CHK-049, CHK-053, CHK-080, CHK-092, CHK-134, CHK-139, CHK-146, CHK-151, CHK-158, CHK-159, and from round 5 CHK-135 (`additionalMember`).

@@ -184,7 +184,7 @@ items:
     targets: [core, server]
   - id: CHK-027
     source: "14 Responses"
-    fact: A degradable part is removed and listed in the envelope meta through the generated helper, typed in the client.
+    fact: A degradable part is removed and listed in the format's degraded meta field or in conventions.degradedHeader through the generated helper, typed in the client.
     frs: [FR-32]
     scenario: SCN-085
     targets: [server, fetch]
@@ -196,7 +196,7 @@ items:
     targets: [server, fetch]
   - id: CHK-029
     source: "14 Responses"
-    fact: Framework refusals (400, 404, 413, 415) are rendered as error envelopes.
+    fact: Framework refusals (400, 404, 413, 415) are rendered in the api's declared error format.
     frs: [FR-42]
     scenario: SCN-048
     targets: [server]
@@ -380,7 +380,7 @@ items:
     targets: [core, server, fetch]
   - id: CHK-059
     source: "14 Lifecycle"
-    fact: Each OpenAPI document an app writes (without an openapi key, one per api or per declared document) is generated, committed and drift-checked.
+    fact: Each OpenAPI document an app writes (without an openapi key, an app with a server target writes one per api or declared document, and a client-only app writes none) is generated, committed and drift-checked, a drift failing check by default (checks.openapi error, or warning or disabled).
     frs: [FR-11]
     scenario: SCN-017
     targets: [core]
@@ -417,7 +417,7 @@ items:
     targets: [server]
   - id: CHK-065
     source: "14 NestJS binding"
-    fact: The envelope writer and the error filter are generated.
+    fact: The format writer and the error filter are generated.
     frs: [FR-42]
     scenario: SCN-048
     targets: [server]
@@ -539,7 +539,7 @@ items:
     targets: [symfony]
   - id: CHK-085
     source: "A15, A43"
-    fact: api-platform serves the contract's envelopes, paging and errors (json by default); which OpenAPI documents it serves is the app config's choice, and with nativeDocs and frameworkDocs left at their defaults the target generates nothing for API Platform's own document and leaves its generation as the app has it.
+    fact: api-platform serves the contract's wire format, paging and errors (bare payload and problem+json by default); which OpenAPI documents it serves is the app config's choice, and with nativeDocs and frameworkDocs left at their defaults the target generates nothing for API Platform's own document and leaves its generation as the app has it.
     frs: [FR-21]
     scenario: SCN-061
     targets: [api-platform]
@@ -599,7 +599,7 @@ items:
     targets: [server]
   - id: CHK-095
     source: "A24"
-    fact: The opt-in derived CRUD rights pack derives <resource>.<op> rights with derivedFrom; without it nothing is derived.
+    fact: The opt-in derived CRUD rights pack derives <resource>.<op> rights with derivedFrom for the list, get, create, update, delete and batch ops (tasks.batch takes the innermost scope as subject); without it nothing is derived.
     frs: [FR-26]
     scenario: SCN-073
     targets: [core]
@@ -1051,15 +1051,15 @@ items:
     targets: [angular]
   - id: CHK-170
     source: "A43"
-    fact: "Per app, the config writes seampact's documents (the default, at openapi/<api>.yaml without an openapi key), the framework's own document completed by nativeDocs with openapi none, both, or none; with nativeDocs off a target leaves the framework's own generation as the framework has it, API Platform's included; frameworkDocs off writes the framework's own switch, is refused beside nativeDocs on or where the target knows no switch, and the routes of a framework document that is on pass the boot check."
+    fact: "Per app, the config writes seampact's documents (without an openapi key, an app with a server target writes one per api or declared document at openapi/<api>.yaml, and a client-only app writes none), the framework's own document completed by nativeDocs with openapi none, both, or none; with nativeDocs off a target leaves the framework's own generation as the framework has it, API Platform's included; frameworkDocs off writes the framework's own switch, is refused beside nativeDocs on or where the target knows no switch, and the routes of a framework document that is on pass the boot check."
     frs: [FR-11, FR-39, FR-21]
-    scenario: SCN-104
+    scenario: SCN-128
     targets: [core, nestjs, spring-boot, api-platform]
   - id: CHK-171
     source: "A43"
-    fact: A monorepo root config writes a merged OpenAPI document across the apps it lists, from the operations their server targets generate and the documents of OpenAPI-only apps; an identical element is written once, two different elements under one operation id or component key are refused naming both apis unless one api takes a prefix, a repeated method and path is always refused, and each app keeps its own documents.
+    fact: A monorepo root config writes a merged OpenAPI document across the apps it lists, holding each api once from the apps that serve it (the operations their server targets generate, and the documents of OpenAPI-only apps); an app with client targets only contributes nothing, even with its own openapi key; an identical element is written once, two different elements under one operation id or component key are refused naming both apis unless one api takes a prefix, a repeated method and path is always refused, and each app keeps its own documents.
     frs: [FR-17, FR-11]
-    scenario: SCN-103
+    scenario: SCN-129
     targets: [core]
   - id: CHK-172
     source: "A36"
@@ -1077,7 +1077,7 @@ items:
     source: "A41"
     fact: symfony runs steps 2 to 8 in a kernel.controller listener, before any argument is resolved, and its value resolver only hands over the stored input; api-platform runs steps 2 to 5 in that listener and steps 6 to 8 before denormalisation; adonis runs steps 6 to 8 in generated middleware before the controller; fastify without a validator link validates the whole request with one Ajv validator under the boundary's options and reports every issue.
     frs: [FR-5, FR-16, FR-21]
-    scenario: SCN-009
+    scenario: SCN-130
     targets: [symfony, api-platform, adonis, fastify]
 not_in_checklist:
   - source: "A4, A16"
