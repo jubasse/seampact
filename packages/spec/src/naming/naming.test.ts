@@ -183,7 +183,21 @@ describe("naming", () => {
     expect(validate(reservedWords) ? [] : validate.errors).toEqual([]);
     const served = Object.values(reservedWords.lists).flatMap((l) => l.usedBy);
     expect([...served].sort()).toEqual([...LANGUAGES].sort());
-    for (const list of Object.values(reservedWords.lists)) {
+    // A shared list is no longer possible: each list serves its own key.
+    for (const [language, list] of Object.entries(reservedWords.lists)) {
+      expect(list.usedBy, language).toEqual([language]);
+    }
+    const lists = Object.values(reservedWords.lists);
+    for (const list of lists) {
+      if (!list.caseInsensitive) continue;
+      for (const words of [list.keywords, list.types, list.members, list.enumMembers]) {
+        expect(
+          words.filter((w) => w !== w.toLowerCase()),
+          "a caseInsensitive list is lowercase",
+        ).toEqual([]);
+      }
+    }
+    for (const list of lists) {
       for (const words of [list.keywords, list.types, list.members, list.enumMembers]) {
         const sorted = [...new Set(words)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
         expect(words).toEqual(sorted);

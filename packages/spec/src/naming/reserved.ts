@@ -19,7 +19,7 @@ function isLanguage(language: unknown): language is Language {
   return typeof language === "string" && (LANGUAGES as readonly string[]).includes(language);
 }
 
-// One entry per language, read through `usedBy`: a list may serve several languages.
+// One entry per language, read through `usedBy`; the schema pins each list's `usedBy` to its key.
 const LISTS = new Map<Language, Lists>();
 for (const raw of Object.values(data.lists)) {
   const lists: Lists = {
