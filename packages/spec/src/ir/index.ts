@@ -31,4 +31,11 @@ export type {
   IrValidator,
   IrValidatorError,
 } from "./validation.js";
+export { checkIrSupport } from "./support.js";
+export type {
+  IrSupport,
+  IrSupportCode,
+  IrSupportInput,
+  IrSupportMismatch,
+} from "./support.js";
 export { IR_REVISION, IR_VERSION } from "./version.js";

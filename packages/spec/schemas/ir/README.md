@@ -71,6 +71,7 @@ Every choice between shapes is a tagged union (`Scheme` and `Identity` on `kind`
 ## Readers
 
 - Ignore unknown members: an additive IR change adds them (ADR 0005 section 4).
+- Check `irVersion`, `irRevision`, `kinds` and `features` first: `checkIrSupport` in `@seampact/spec/ir` names every mismatch, with the operation id for a per-operation kind or feature.
 - Always read an IR map with `Object.hasOwn` or through a `Map`, never with a bare `obj[key]`: a key is data, rights and principal variants take any name, and a key such as `__proto__` or `constructor` would otherwise reach the prototype.
 - Validate with `createIrValidator(Ajv2020, "open")` (`Ajv2020` from `ajv/dist/2020.js`): it registers the annotation keywords, loads every file, and sorts errors into unknown kinds, unknown values, unknown members and problems. Its options, `IR_AJV_OPTIONS`, are mandatory for the compiler and for any reader wiring its own validator: open tags need a validator that understands `discriminator`, collects every error (`allErrors`: an unknown tag is an expected error and must not hide the real ones after it), and filters the expected mapping errors, as `classifyIrErrors` does. A mapping error that names no union `listIrUnknowns` found fails closed: `classifyIrErrors` counts it as a must-act unknown.
 - A reader of a third-party bundle caps the input size before validating: collecting every error costs time and memory in the size of the input.
