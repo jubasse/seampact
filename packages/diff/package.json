@@ -1,0 +1,13 @@
+{
+  "name": "@seampact/diff",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "seampact": {
+    "role": "core"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}

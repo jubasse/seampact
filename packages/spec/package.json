@@ -6,5 +6,22 @@
   "main": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./ir": "./src/ir/index.ts",
+    "./authoring": "./src/authoring/index.ts",
+    "./naming": "./src/naming/index.ts",
+    "./config": "./src/config/index.ts",
+    "./bundle": "./src/bundle/index.ts",
+    "./compatibility": "./src/compatibility/index.ts",
+    "./schemas/*": "./schemas/*",
+    "./naming/vectors.json": "./vectors/naming/vectors.json"
+  },
+  "seampact": {
+    "role": "core"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0"
   }
 }
