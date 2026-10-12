@@ -4,7 +4,7 @@ Status: accepted
 
 ## Context
 
-The monorepo needs a strict, reproducible toolchain before any package exists. Every later package should get typecheck, lint, format, tests and CI by adding a directory under `packages/`. Dependencies are pinned by exact version and CI actions by commit SHA (brief section 17.7). Nothing is published to npm until the project is complete (amendment A3).
+The monorepo needs a strict, reproducible toolchain before any package exists. Every later package should get typecheck, lint, format, tests and CI by adding a directory under `packages/`. Dependencies are pinned by exact version and CI actions by commit SHA. Nothing is published to npm until the project is complete (amendment [A3](../decisions.md#a3)).
 
 ## Decisions
 
@@ -12,7 +12,7 @@ The monorepo needs a strict, reproducible toolchain before any package exists. E
 
 Options: npm workspaces, pnpm, Yarn.
 
-Choice: pnpm 12, pinned through `packageManager`. Its strict, non-flat `node_modules` catches undeclared dependencies between packages, which matters for a monorepo whose packages must stay independent (amendment A2). The lockfile is deterministic, `--frozen-lockfile` is the CI contract, and the default `minimumReleaseAge` delays freshly published versions, which limits supply-chain exposure. `save-exact=true` keeps pins exact.
+Choice: pnpm 12, pinned through `packageManager`. Its strict, non-flat `node_modules` catches undeclared dependencies between packages, which matters for a monorepo whose packages must stay independent (amendment [A2](../decisions.md#a2)). The lockfile is deterministic, `--frozen-lockfile` is the CI contract, and the default `minimumReleaseAge` delays freshly published versions, which limits supply-chain exposure. `save-exact=true` keeps pins exact.
 
 ### Language and runtime: TypeScript 6 on Node 24
 

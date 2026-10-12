@@ -4,9 +4,9 @@ Status: accepted
 
 ## Context
 
-Phase 2 builds the semantic compiler in three parallel lanes, one pass each (brief section 15): tree, access and derivation. Parallel lanes on one compiler need a seam that is merged first: a pass interface, a fixed order, and a rule for what each pass may read and write, so that two lanes never edit the same field (the devil's advocate review, risk 4; COMP-Pipeline). Derivation is data, not code scattered in targets (brief section 8): the table that says which declaration derives which element must be written down once. And diagnostics are a feature (brief section 17.1): every one names the file, the line, the column, the rule and the fix (FR-1).
+Phase 2 builds the semantic compiler as three passes developed in parallel: tree, access and derivation. Passes developed in parallel on one compiler need a seam that is merged first: a pass interface, a fixed order, and a rule for what each pass may read and write, so that two passes never edit the same field. Derivation is data, not code scattered in targets: the table that says which declaration derives which element must be written down once. And diagnostics are a feature: every one names the file, the line, the column, the rule and the fix (FR-1).
 
-ADR 0008 leaves two values to this ADR: the default code of each derivation role, and the member names of the RFC 9457 error body of the default `bare` format (A30). The core sets no page shape (A31): paging styles are contract or pack data (ADR 0002 section 14).
+ADR 0008 leaves two values to this ADR: the default code of each derivation role, and the member names of the RFC 9457 error body of the default `bare` format ([A30](../decisions.md#a30)). The core sets no page shape ([A31](../decisions.md#a31)): paging styles are contract or pack data (ADR 0002 section 14).
 
 ## Options
 
@@ -14,7 +14,7 @@ ADR 0008 leaves two values to this ADR: the default code of each derivation role
 2. A plugin pipeline where each pass may read and write the whole draft IR.
 3. A fixed sequence of passes, each declaring the draft-IR fields it reads and writes, with the declaration enforced in tests, plus a derivation table held as data.
 
-Option 1 cannot be built by three lanes at once. Option 2 lets passes overwrite each other's fields, so a lane's tests pass alone and fail once merged. Option 3 is chosen.
+Option 1 cannot be built as three passes at once. Option 2 lets passes overwrite each other's fields, so a pass's tests pass alone and fail once merged. Option 3 is chosen.
 
 ## Decision
 
@@ -26,13 +26,13 @@ load -> validate -> tree -> access -> derive -> link -> finalize
 
 | Step | Kind | Input | Output |
 |---|---|---|---|
-| load | stage (p1-loader) | the workspace files | per api, a merged raw tree (api, base, shared file, packs, includes, `$file` content), each name resolved in the layers that may see it (ADR 0002 section 2) and the source map; pitfalls refused (ADR 0002 section 3) |
-| validate | stage (p1-spec) | the raw tree | the raw tree checked against the authoring JSON Schema; refused schema keywords reported with ADR 0003's reasons |
-| tree | pass (p2-tree) | the raw tree | the draft IR fields listed below |
-| access | pass (p2-access) | the raw tree and tree's fields | its fields |
-| derive | pass (p2-derive) | the raw tree and the fields of tree and access | its fields |
-| link | workspace pass (p2-derive) | the IRs of every api, and the IRs of pinned bundles | diagnostics only: `relays` superset checks |
-| finalize | stage (COMP-Pipeline) | a complete draft IR | canonical ids and ordering, the id collision check, validation against the IR JSON Schema, the serialised IR and its side table (ADR 0004) |
+| load | stage | the workspace files | per api, a merged raw tree (api, base, shared file, packs, includes, `$file` content), each name resolved in the layers that may see it (ADR 0002 section 2) and the source map; pitfalls refused (ADR 0002 section 3) |
+| validate | stage | the raw tree | the raw tree checked against the authoring JSON Schema; refused schema keywords reported with ADR 0003's reasons |
+| tree | pass | the raw tree | the draft IR fields listed below |
+| access | pass | the raw tree and tree's fields | its fields |
+| derive | pass | the raw tree and the fields of tree and access | its fields |
+| link | workspace pass, built with derive | the IRs of every api, and the IRs of pinned bundles | diagnostics only: `relays` superset checks |
+| finalize | stage, built with the seam | a complete draft IR | canonical ids and ordering, the id collision check, validation against the IR JSON Schema, the serialised IR and its side table (ADR 0004) |
 
 The order is fixed. Each api of a workspace runs through derive on its own, in relay order: an api with relay routes runs after every workspace api they name, because its tree pass copies the public operations from that api's derived IR (an imported api's IR comes from its pinned bundle). Relays that form a cycle between apis are a compile error naming them. Link then sees all of them. A step that reports an error stops the pipeline after it completes, so later passes always receive consistent input, while every error of the failing step is still reported at once.
 
@@ -53,9 +53,9 @@ export interface PassContext {
 }
 ```
 
-- A pass writes only the fields it declares. In tests, the draft IR is wrapped so that a read or a write outside the declaration throws; a lane's tests therefore fail on the first undeclared access, not at merge time (COMP-Pipeline).
+- A pass writes only the fields it declares. In tests, the draft IR is wrapped so that a read or a write outside the declaration throws; a pass's tests therefore fail on the first undeclared access, not at merge time.
 - `inherited` is the single inherited-setting mechanism, shared by tree, access and derive (which reads node `errors` and `errorRoles` through it). It applies the merge rules of ADR 0002 section 8 and returns the origin of the node that set the value.
-- The seam PR (COMP-Pipeline, merged first in phase 2) holds the interface, `inherited`, the field ownership table below, and two hand-written draft-IR fixtures of the reference contract: after tree, and after tree and access. They are the contract between the three lanes; each lane's golden tests start from the fixture before it.
+- The seam PR (merged first in phase 2) holds the interface, `inherited`, the field ownership table below, and two hand-written draft-IR fixtures of the reference contract: after tree, and after tree and access. They are the contract between the three passes; each pass's golden tests start from the fixture before it.
 
 ### 3. Field ownership
 
@@ -70,7 +70,7 @@ What each pass checks, besides its writes:
 
 - tree: `conventions.ops` and `conventions.operationIds` applied before operation ids are checked, `codeName` and `codeNames` segments, path versions and prefixes (and `pathVersion`, with a string `api.version` only where every surface has none), operation id uniqueness, `ops` inputs, version fields of `concurrency`, list routes and their paging style or its absence (A31), templates against the slot catalogue and each operation's payload (ADR 0002 sections 13 and 14), `idProperty` naming an item property, examples parsed against their schemas (FR-3), enum sources, reasons and narrowings (FR-29), degradable paths optional (FR-32), schema shapes (ADR 0003), `pick` and `omit` sources, fields and overlays, merged into plain objects, scalar names that are not portable format names, `unknownKeys` on input uses only, opaque values outside query, path and header positions, `unknownQuery` and `conventions.query.unknownKeys`, form and multipart inputs (form fields of query kinds or JSON text, files only in multipart or as a download, each file's `maxSize` within the route's body limit), redirect statuses without a body, header-tagged unions only as a route's whole input and their header not declared again.
 - access: deny by default (FR-4), every exception's reason, `onRefused` only beside `optionalAuth`, a signature scheme's keys against its `verify` form, a query scheme's parameter not declared as a query field, `requirements` entries named in `requires`, pack `derive` selectors and templates, right names against `conventions.rights.pattern`, a right name that yields no identifier segment and has no `codeName` (ADR 0007 section 2), identity header uses against their declarations, service api rules (FR-8), guest rights on public routes, subject sources against id schemas, scope subjects and nesting (FR-22, FR-24), sortable rights against field rights (FR-23), body proofs on body-less routes and bucket key sources against the route's input and access (FR-41), field-right subjects (FR-23), scheme references (FR-27).
-- derive: error registry redefinitions (FR-6) and conflicting node declarations (A35), codes against `conventions.errors.pattern`, natures mapped onto a base, error formats that write `$code`, error examples against the operation's codes and their params, role bindings to unregistered codes or codes that cannot receive the role's required data, deprecation successors, bucket limits (a warning).
+- derive: error registry redefinitions (FR-6) and conflicting node declarations ([A35](../decisions.md#a35)), codes against `conventions.errors.pattern`, natures mapped onto a base, error formats that write `$code`, error examples against the operation's codes and their params, role bindings to unregistered codes or codes that cannot receive the role's required data, deprecation successors, bucket limits (a warning).
 - tree, for relay routes: the named api and operation exist, the route name is the public operation id unless `operationId` is set, no other shape key is written, and a copied declaration equals any declaration of the same name in this api.
 - finalize: besides the id collision check of ADR 0004 section 9, every name that becomes a key of `components.schemas` in a document is distinct: an error code equal to a schema id, declared or derived (a hoisted inline schema), or to `<schema id>.input` (the strict input component of ADR 0004 section 12) is a compile error naming the code and the schema, with the fix "rename the code". The check holds for every document option, so a document never depends on an option to stay valid.
 - link: the `relays` superset. The shape (operation id unless `operationId` renames it, path after the prefix, body, paging, success responses) is copied, so only the codes can differ: every code of the public operation outside the gateway's own derivations (ADR 0002 section 7) must be a code of the relay route. A failure names both operations, the missing code and the fix, or the missing api or operation (FR-8, SCN-014).
@@ -110,9 +110,9 @@ Every derived element carries `derivedFrom: { derivation, from }` with a derivat
 | `body.limit` | a request body | `input.bodyLimitBytes` (route, then `batch`, then `conventions.bodyLimit`, 1 MiB by default), 413 | `payloadTooLarge` |
 | `body.media` | a request body | 415 for a media other than the route's `inputMedia` | `unsupportedMediaType` |
 | `identity.authenticate` | identity or optional access | credential parameters of the accepted schemes, 401 (on optional access, only with `onRefused: reject`) | `unauthenticated` |
-| `csrf.cookieWrite` | a non-safe operation whose write schemes include a cookie scheme that declares `csrf` (opt-in, A34), not `csrf.exempt` | the CSRF header parameter, 403 | `csrfInvalid` |
+| `csrf.cookieWrite` | a non-safe operation whose write schemes include a cookie scheme that declares `csrf` (opt-in, [A34](../decisions.md#a34)), not `csrf.exempt` | the CSRF header parameter, 403 | `csrfInvalid` |
 | `idempotency.write` | a non-safe operation when `conventions.idempotency` is set (opt-in, A34) and its `methods` lists the method, not exempt, not under a signed identity | the key header parameter (required unless `required: false`, a missing key answering 400); with `enforce: boundary` also the replay response header, 422 for a key reused with another request, 409 while the first run is in progress | `idempotencyKeyReused`, `idempotencyInProgress`, `schemaInvalid` |
-| `concurrency.version` | `update`, `delete`, or `concurrency: inherit`, on a versioned resource | the version parameter, typed like `field` and added after the authored fields (a body source on a DELETE becomes the query parameter of the same name, A33), `ETag` from `field` with `header.If-Match`; 409 for a body or query version, 412 for a stale `If-Match` and 428 for a missing one | `stateConflict`, `preconditionFailed`, `preconditionRequired` |
+| `concurrency.version` | `update`, `delete`, or `concurrency: inherit`, on a versioned resource | the version parameter, typed like `field` and added after the authored fields (a body source on a DELETE becomes the query parameter of the same name, [A33](../decisions.md#a33)), `ETag` from `field` with `header.If-Match`; 409 for a body or query version, 412 for a stale `If-Match` and 428 for a missing one | `stateConflict`, `preconditionFailed`, `preconditionRequired` |
 | `member.notFound` | a route below a collection's `member` scope, nested resources included, whose path holds a member id that no scope of the operation reads: the client chose that id, and no resolver answers for it (a scope's membership codes answer an id it reads, `scope.errors`) | 404, answered by the handler through its typed error result (ADR 0012) | `notFound` |
 | `owner.caller` | a member route of a collection with `owner: caller` | 404 for another caller's id, answered by the handler through its typed error result | `notFound` |
 | `principal.requires` | `principal.requires` | 403 | `forbidden` |
@@ -213,8 +213,8 @@ Any other format and every paging style declare their own members, parameters an
 
 ## Consequences
 
-- The seam PR of phase 2 (interface, `inherited`, field table, two draft-IR fixtures) must merge before the three pass lanes start coding against it.
-- A pass needing a field another pass owns asks the lead; ownership moves only by a change to this ADR's table.
+- The seam PR of phase 2 (interface, `inherited`, field table, two draft-IR fixtures) must merge before work on the three passes starts against it.
+- A pass needing a field another pass owns cannot take it; ownership moves only by a change to this ADR's table.
 - Adding a derivation is a row in the table and an IR change under ADR 0005 when it needs a new member; targets learn of it through the IR, never through compiler code.
 - The `bare` format's member names are now part of every server and client target's behaviour; changing one is a breaking change of the wire, recorded in an ADR.
 - The core fixes no page shape and no paging parameter name: every paged list names a style, so a contract without a pack writes one before its first list compiles (A31).
@@ -223,4 +223,4 @@ Any other format and every paging style declare their own members, parameters an
 ## Traceability
 
 - FRs: FR-1 (located diagnostics with rule and fix), FR-6 (derivation table, roles, registry), FR-7, FR-8 (relays in link), FR-9, FR-20, FR-22 to FR-24, FR-28, FR-31 to FR-34, FR-41, FR-42 and A30 (the `bare` format), A31 (no default page), A34 (default codes), A35 (errors on tree nodes), FR-37 (field ownership protects the seam).
-- CHK items enabled: CHK-007, CHK-011, CHK-015, CHK-016, CHK-029, CHK-030 to CHK-043, CHK-044 to CHK-046, CHK-052, CHK-055, CHK-058, CHK-073, and from round 4 CHK-124, CHK-125, CHK-127, CHK-128, CHK-131, CHK-133, CHK-134, CHK-137 to CHK-139, CHK-149 to CHK-153, and from round 5 CHK-172 (codes against schema component keys), CHK-173 (rights without segments).
+- CHK items enabled: CHK-007, CHK-011, CHK-015, CHK-016, CHK-029, CHK-030 to CHK-043, CHK-044 to CHK-046, CHK-052, CHK-055, CHK-058, CHK-073, CHK-124, CHK-125, CHK-127, CHK-128, CHK-131, CHK-133, CHK-134, CHK-137 to CHK-139, CHK-149 to CHK-153, CHK-172 (codes against schema component keys), CHK-173 (rights without segments).

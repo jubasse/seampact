@@ -114,6 +114,8 @@ A contract repository publishes a bundle: the YAML sources, the compiled IR and 
 
 ## Design decisions
 
+The ADRs cite product decisions by id (A1 to A44); [`docs/decisions.md`](docs/decisions.md) states each one.
+
 | ADR | Decision |
 |---|---|
 | [0001](docs/adr/0001-toolchain.md) | toolchain |

@@ -4,11 +4,11 @@ Status: accepted
 
 ## Context
 
-Every body, parameter, header, principal, error param and rule param of a contract is described by a schema. The schema language belongs to seampact, not to a validator (lesson 6): no zod, class-validator, Bean Validation, Laravel or Symfony idiom may reach the contract or the IR, and every target maps the IR's schemas onto its own validator and type system (FR-3). Brief section 6 sets the base, a stated subset of JSON Schema 2020-12, and the additions: direction, tagged unions, optional versus nullable, portable formats, marks, portable refinements, deterministic names and parsed examples.
+Every body, parameter, header, principal, error param and rule param of a contract is described by a schema. The schema language belongs to seampact, not to a validator ([lesson 6](../decisions.md#lesson-6)): no zod, class-validator, Bean Validation, Laravel or Symfony idiom may reach the contract or the IR, and every target maps the IR's schemas onto its own validator and type system (FR-3). The base is a stated subset of JSON Schema 2020-12, with these additions: direction, tagged unions, optional versus nullable, portable formats, marks, portable refinements, deterministic names and parsed examples.
 
 The subset has one test: every server target (TypeScript with zod, yup or class-validator, Java with Bean Validation, PHP with Laravel and Symfony validation) and every client target must accept and reject exactly the same payloads for a schema (SCN-028, SM-9). A keyword that one of them cannot check natively and exactly is either refused or given a precise, portable meaning here.
 
-A30 applies: a schema describes the payload only. Envelopes, page shapes and error bodies are wire formats chosen by the contract's conventions (ADR 0002 section 13), never fields of a contract schema.
+[A30](../decisions.md#a30) applies: a schema describes the payload only. Envelopes, page shapes and error bodies are wire formats chosen by the contract's conventions (ADR 0002 section 13), never fields of a contract schema.
 
 Schemas are written where ADR 0002 allows one: the `schemas` catalogue, `item`, `input`, `output`, `responses.*.body`, fields maps (`id`, `pathParams`, `query`, `headers`, `params`), `principal`, and the `schema` of an identity header or rule proof. A plain string in those positions names a schema (ADR 0002 section 2).
 
@@ -18,7 +18,7 @@ Schemas are written where ADR 0002 allows one: the `schemas` catalogue, `item`, 
 2. A new type language (TypeSpec-like or a home-grown IDL in YAML).
 3. A written subset of JSON Schema 2020-12, each kept keyword given one portable meaning, plus a few explicit additions that compile to IR fields.
 
-Option 1 is what Arthome's audit warns against: validator quirks leak into the document, and conditional or dynamic keywords have no counterpart in Bean Validation or Laravel rules, so targets would silently check less (FR-14 forbids a weaker check). Option 2 throws away editor support, OpenAPI familiarity and the existing JSON Schema validators the compiler uses. Option 3 is chosen.
+Option 1 is what experience with validator-shaped contracts warns against: validator quirks leak into the document, and conditional or dynamic keywords have no counterpart in Bean Validation or Laravel rules, so targets would silently check less (FR-14 forbids a weaker check). Option 2 throws away editor support, OpenAPI familiarity and the existing JSON Schema validators the compiler uses. Option 3 is chosen.
 
 ## Decision
 
@@ -86,7 +86,7 @@ Every keyword of the 2020-12 vocabularies, kept or refused. A refused keyword is
 | Keyword | Decision | Reason |
 |---|---|---|
 | `format` | kept, closed set | section 8: the portable formats plus named formats declared by packs; any other value is refused, so every target validates the same strings |
-| `contentMediaType`, `contentSchema` | kept, restricted | on a `string` field of a form or multipart input only, with `contentMediaType: application/json`: the text is parsed and validated against `contentSchema` (ADR 0002 section 7, A39). Files are the `file` shape (section 2), not a string with a media type, because a file has a size limit and several accepted types |
+| `contentMediaType`, `contentSchema` | kept, restricted | on a `string` field of a form or multipart input only, with `contentMediaType: application/json`: the text is parsed and validated against `contentSchema` (ADR 0002 section 7, [A39](../decisions.md#a39)). Files are the `file` shape (section 2), not a string with a media type, because a file has a size limit and several accepted types |
 | `contentEncoding` | refused | base64 inside JSON has no consumer; files travel as multipart parts or downloads |
 | `title`, `description` | kept | docs; `description` may be a `$file` |
 | `default` | kept, with a semantics | section 10 |
@@ -114,7 +114,7 @@ An object needs at least one property, except a union variant, which may hold on
 
 #### Opaque values
 
-Some wire shapes have no type in the subset: a free-form `metadata` blob, a JSON Patch `value`, a webhook's `data.object`, Stripe's expandable field (an id string or an object), a tuple. Refusing them would push the whole route out of the contract, so a schema may say "not checked here", with a reason, since it is an exception to validation (A36, A40):
+Some wire shapes have no type in the subset: a free-form `metadata` blob, a JSON Patch `value`, a webhook's `data.object`, Stripe's expandable field (an id string or an object), a tuple. Refusing them would push the whole route out of the contract, so a schema may say "not checked here", with a reason, since it is an exception to validation ([A36](../decisions.md#a36), [A40](../decisions.md#a40)):
 
 ```yaml
 # hooks/schemas.yaml (excerpt)
@@ -133,7 +133,7 @@ A schema may reference itself, directly or through other schemas, by named refer
 
 #### Derived objects: `pick` and `omit`
 
-A create or update input usually holds some of the item's fields with the same constraints. Restating them is a second copy of each constraint, which drifts when one changes (lesson 1). A derived object keeps them from the source:
+A create or update input usually holds some of the item's fields with the same constraints. Restating them is a second copy of each constraint, which drifts when one changes ([lesson 1](../decisions.md#lesson-1)). A derived object keeps them from the source:
 
 ```yaml
 # studio/schemas.yaml (excerpt)
@@ -235,7 +235,7 @@ input:
 
 Everything else stays strict: a declared field of the wrong type, an unknown enum member or union tag, a missing required field. `conventions.input.unknownKeys` sets the api's default for every body input, so an api that wants the drop-unknown behaviour of Spring's Jackson defaults or Laravel's `validated()` says so once; a use's own value wins, `refuse` included. A signed identity may set it once for the body input of every route under it, with its own reason (ADR 0002 section 9). Query parameters follow `conventions.query.unknownKeys` and `unknownQuery` instead (ADR 0002 section 7, FR-30). The shared payload table of the validator targets holds the cases: an input with unknown keys at the root and in a nested object is accepted, the value the handler receives has neither under `ignore`, and both under `keep`.
 
-Enums are emitted per direction (FR-29): on input always as `enum`; on output as `enum` or, with `conventions.outputEnums: open`, as a string with the members in `x-seampact-enum` (and the fallback in `x-seampact-enum-fallback`). Arthome's documents use the open form, which is why it is a convention and not fixed.
+Enums are emitted per direction (FR-29): on input always as `enum`; on output as `enum` or, with `conventions.outputEnums: open`, as a string with the members in `x-seampact-enum` (and the fallback in `x-seampact-enum-fallback`). Some existing APIs document their output enums in the open form, which is why it is a convention and not fixed.
 
 ### 5. Optional and nullable
 
@@ -246,7 +246,7 @@ The IR keeps both, as two fields of a property (FR-3, SCN-005):
 
 A property may be both. `nullable` replaces JSON Schema's `type: [T, 'null']` and `anyOf` with `null`, because those two spellings would let one fact take two forms; the emitter writes OpenAPI 3.1's type array (or `oneOf` with `null` around a reference).
 
-Both states reach the handler apart, in every language. `UpdateArticle` in section 2 shows why: an absent `publishOn` means "leave it", `null` means "clear it", so `{}` and `{ "publishOn": null }` are two requests. TypeScript has `undefined`; a Java record component or a PHP promoted property does not, so targets of those languages use, for a property that is both optional and nullable and only for it, a three-state type (absent, null, value) from the hooks package (`io.github.jubasse.seampact.hooks.Field<T>`, `Seampact\Hooks\Field`, or its vendored copy, ADR 0009). A required nullable property is a plain nullable type; an optional non-nullable one is `Optional<T>` in Java and a nullable type in PHP that the boundary never fills with `null` from the wire. Stripping a restricted input field (A21 `strip`) sets it absent. The shared payload table holds the two requests above.
+Both states reach the handler apart, in every language. `UpdateArticle` in section 2 shows why: an absent `publishOn` means "leave it", `null` means "clear it", so `{}` and `{ "publishOn": null }` are two requests. TypeScript has `undefined`; a Java record component or a PHP promoted property does not, so targets of those languages use, for a property that is both optional and nullable and only for it, a three-state type (absent, null, value) from the hooks package (`io.github.jubasse.seampact.hooks.Field<T>`, `Seampact\Hooks\Field`, or its vendored copy, ADR 0009). A required nullable property is a plain nullable type; an optional non-nullable one is `Optional<T>` in Java and a nullable type in PHP that the boundary never fills with `null` from the wire. Stripping a restricted input field ([A21](../decisions.md#a21) `strip`) sets it absent. The shared payload table holds the two requests above.
 
 ### 6. Marks and other additions
 
@@ -365,7 +365,7 @@ Semantics are JSON Schema's: a pattern matches anywhere in the string unless anc
 
 ### 10. Defaults
 
-`default` is allowed on an optional input property or query field, and nowhere else. On a named schema used in both directions, it applies to input uses only and is ignored on output. A default is parsed against its schema at compile time with the strict input rules, like an example. The server boundary applies it after validation, so the handler receives the field as present and its type is not optional. A relay route (ADR 0002 section 7) copies the public operation's input, defaults included, and applies them like any route; the public operation applies the same default before it forwards, so the service receives the value it would have filled itself. Arthome's pass-through rule (research section 6) kept a gateway from freezing a service's default; here the default is one fact that both sides compile from, so no pass-through exception is needed. Client targets do not fill defaults; they document them. This answers the question FR-30 leaves to an ADR.
+`default` is allowed on an optional input property or query field, and nowhere else. On a named schema used in both directions, it applies to input uses only and is ignored on output. A default is parsed against its schema at compile time with the strict input rules, like an example. The server boundary applies it after validation, so the handler receives the field as present and its type is not optional. A relay route (ADR 0002 section 7) copies the public operation's input, defaults included, and applies them like any route; the public operation applies the same default before it forwards, so the service receives the value it would have filled itself. A pass-through rule is the usual way to keep a gateway from freezing a service's default; here the default is one fact that both sides compile from, so no pass-through exception is needed. Client targets do not fill defaults; they document them. This answers the question FR-30 leaves to an ADR.
 
 ### 11. Examples
 
@@ -395,4 +395,4 @@ Every named schema becomes a named type in every target. An inline schema gets a
 ## Traceability
 
 - FRs: FR-3 (subset, direction, unions, optional and nullable, formats, marks, refinements, names, examples), FR-12 (credential lint, allow-list), FR-15 (one payload behaviour for zod, yup and class-validator), FR-23 (`restrictedTo`, input policy), FR-29 (enum uses and emission), FR-30 (defaults), FR-42 and A30 (no envelope in schemas); A36 and A40 (opaque values, unknown-key policies), A39 (files, JSON text fields).
-- CHK items enabled: CHK-002, CHK-024, CHK-025, CHK-026, CHK-033, CHK-047, CHK-048, CHK-049, CHK-053, CHK-080, CHK-092, CHK-134, CHK-139, CHK-146, CHK-151, CHK-158, CHK-159, and from round 5 CHK-135 (`additionalMember`).
+- CHK items enabled: CHK-002, CHK-024, CHK-025, CHK-026, CHK-033, CHK-047, CHK-048, CHK-049, CHK-053, CHK-080, CHK-092, CHK-134, CHK-139, CHK-146, CHK-151, CHK-158, CHK-159, CHK-135 (`additionalMember`).
