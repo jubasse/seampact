@@ -1,0 +1,195 @@
+import { type DerivationRow, derivationRowOf } from "../derivations/table.js";
+import type { HalfName } from "./halves.js";
+
+// The field-ownership table of ADR 0006 section 3, split into the six halves (ADR 0006 section 2: ownership moves
+// between passes only by an ADR change; the halves split within a pass). Each row is a draft field at the level
+// where halves meet, with one of three modes:
+// - `owned`: one owner writes the field and everything below it;
+// - `default`: written only where still absent, by the halves of `order` in run order (`unknownKeys` on a body
+//   input use: declared by tree.nodes, then access.identity for a signed identity's routes, then derive.wire
+//   from `conventions.input.unknownKeys`; `maturity`: stated by tree.nodes, else derived by derive.wire);
+// - `elements`: a list several halves append to; each element, and everything below it but its own sub-rows, is
+//   owned by `declared` when it has no `derivedFrom`, else by the `wire` owner of its derivation in the
+//   derivation table (`derivations/table.ts`): declared parameters and responses and the `relay.route`,
+//   `batch.read`, `response.format` and `budget.timeout` elements to tree.nodes, `rule.proof` elements to
+//   access.rights, other derived wire elements to derive.wire.
+// A field above rows (`operations[]`, `operations[].input`) is a container: halves navigate through it, and
+// writing it writes each row below it. The finalize members belong to `finalize`, which no half is.
+//
+// Paths are normalised: `[]` for the items of a list, and a catalogue named by its member (`schemas` covers
+// every schema, `operations[].params.query` every query parameter). The test `every member has one owner` walks
+// the IR schema and fails on a member with no row; `ownership matches ADR 0006` compares the table, projected on
+// passes, with ADR 0006 section 3.
+
+export type DraftOwner = HalfName | "finalize";
+
+export type OwnershipRow =
+  | { field: string; mode: "owned"; owner: DraftOwner }
+  | { field: string; mode: "default"; order: readonly HalfName[] }
+  | { field: string; mode: "elements"; declared: HalfName };
+
+const owned = <F extends string>(owner: DraftOwner, ...fields: F[]) =>
+  fields.map((field) => ({ field, mode: "owned" as const, owner }));
+const op = <M extends string>(member: M): `operations[].${M}` => `operations[].${member}`;
+const ops = <M extends string>(...members: M[]): `operations[].${M}`[] => members.map(op);
+
+/** The ownership table, one row per field. */
+export const pipelineOwnership = [
+  // Finalize computes these from the complete draft (ADR 0004 section 2).
+  ...owned("finalize", "irVersion", "irRevision", "kinds", "features"),
+  // Top level.
+  ...owned("tree.schemas", "schemas", "scalars", "enums", "extensionKeys"),
+  ...owned("tree.nodes", "api", "conventions", "lint", "packs", "formats", "pagings", "services"),
+  ...owned("access.identity", "schemes", "headers", "identities"),
+  ...owned("access.rights", "rights", "rules", "scopes", "buckets"),
+  ...owned("derive.errors", "errors", "natures"),
+  // Per operation, tree.nodes: the route and the shape it declares (ADR 0006 section 3, tree row).
+  ...owned(
+    "tree.nodes",
+    ...ops(
+      "kind",
+      "id",
+      "name",
+      "surface",
+      "op",
+      "resource",
+      "method",
+      "path",
+      "safe",
+      "unknownQuery",
+      "input.media",
+      "input.schema",
+      "input.fields",
+      "input.origin",
+      "concurrency.version",
+      "concurrency.field",
+      "owner",
+      "paging.style",
+      "paging.maxLimit",
+      "paging.defaultLimit",
+      "paging.overLimit",
+      "paging.token",
+      "paging.origin",
+      "paging.sortKeys[].key",
+      "paging.sortKeys[].origin",
+      "degradable",
+      "budgetMs",
+      "deprecated",
+      "relays",
+      "upstream",
+      "internal",
+      "tags",
+      "examples",
+      "format",
+      "docs",
+      "extensions",
+      "origin",
+    ),
+  ),
+  { field: op("params.path"), mode: "elements", declared: "tree.nodes" },
+  { field: op("params.query"), mode: "elements", declared: "tree.nodes" },
+  { field: op("params.header"), mode: "elements", declared: "tree.nodes" },
+  { field: op("responses"), mode: "elements", declared: "tree.nodes" },
+  { field: op("responses[].headers"), mode: "elements", declared: "tree.nodes" },
+  { field: op("maturity"), mode: "default", order: ["tree.nodes", "derive.wire"] },
+  {
+    field: op("input.schema.unknownKeys"),
+    mode: "default",
+    order: ["tree.nodes", "access.identity", "derive.wire"],
+  },
+  // Per operation, access.identity.
+  ...owned(
+    "access.identity",
+    ...ops("access", "callerKinds", "principalRequires", "bindings", "csrf", "input.rawBody"),
+  ),
+  // Per operation, access.rights. A sort key's `derivedFrom` comes with its derived right (`sortKey.restricted`).
+  ...owned(
+    "access.rights",
+    ...ops(
+      "scopes",
+      "requires",
+      "fieldRights",
+      "filteredBy",
+      "paging.sortKeys[].right",
+      "paging.sortKeys[].derivedFrom",
+    ),
+  ),
+  // Per operation, derive.wire.
+  ...owned(
+    "derive.wire",
+    ...ops("features", "input.bodyLimitBytes", "idempotency", "concurrency.derivedFrom", "cache"),
+    op("deadlineHeader"),
+  ),
+  // Per operation, derive.errors: every element of `errors`, a relay route's copied codes included.
+  ...owned("derive.errors", op("errors")),
+] as const satisfies readonly OwnershipRow[];
+
+/** A field of the ownership table. */
+export type DraftOwnedField = (typeof pipelineOwnership)[number]["field"];
+
+/** The containers above the rows: navigable, and written only through the rows below them. */
+export const pipelineContainers = [
+  "operations",
+  "operations[]",
+  "operations[].params",
+  "operations[].input",
+  "operations[].concurrency",
+  "operations[].paging",
+  "operations[].paging.sortKeys",
+  "operations[].paging.sortKeys[]",
+] as const;
+
+export type DraftContainerField = (typeof pipelineContainers)[number];
+
+/** A normalised draft-IR path a half declares it reads or writes (ADR 0006 section 2). */
+export type DraftField = DraftOwnedField | DraftContainerField;
+
+/** The segments of a normalised path: `operations[].requires` is `operations`, `[]`, `requires`. */
+export function draftFieldSegments(field: string): string[] {
+  const segments: string[] = [];
+  for (const part of field.split(".")) {
+    const name = part.endsWith("[]") ? part.slice(0, -2) : part;
+    if (name !== "") segments.push(name);
+    if (part.endsWith("[]")) segments.push("[]");
+  }
+  return segments;
+}
+
+const ROWS = new Map<string, OwnershipRow>(pipelineOwnership.map((row) => [row.field, row]));
+
+/** The row of a field, if the field is a row. */
+export const draftOwnershipRow = (field: string): OwnershipRow | undefined => ROWS.get(field);
+
+/** The owner of an element of an `elements` row: `declared` without `derivedFrom`, else its derivation's. */
+export function draftElementOwner(
+  row: Extract<OwnershipRow, { mode: "elements" }>,
+  element: unknown,
+): { owner: HalfName | undefined; derivation?: string; derivationRow?: DerivationRow } {
+  if (typeof element !== "object" || element === null || !Object.hasOwn(element, "derivedFrom"))
+    return { owner: row.declared };
+  const derivedFrom: unknown = Reflect.get(element, "derivedFrom");
+  const derivation =
+    typeof derivedFrom === "object" && derivedFrom !== null
+      ? Reflect.get(derivedFrom, "derivation")
+      : undefined;
+  if (typeof derivation !== "string") return { owner: undefined };
+  const derivationRow = derivationRowOf(derivation);
+  return {
+    owner: derivationRow?.wire ?? undefined,
+    derivation,
+    ...(derivationRow && { derivationRow }),
+  };
+}
+
+/** The owner of a row, in words, for diagnostics and error messages. */
+export function draftOwnerText(row: OwnershipRow | undefined): string {
+  if (row === undefined) return "no owner";
+  switch (row.mode) {
+    case "owned":
+      return row.owner;
+    case "default":
+      return `the first of ${row.order.join(", ")} to write it (a default, written only where absent)`;
+    case "elements":
+      return `${row.declared} for a declared element, the wire owner of its derivation for a derived one`;
+  }
+}
