@@ -1,0 +1,4 @@
+api:
+  name: demo
+a: .inf
+b: .nan

@@ -1,0 +1,8 @@
+api:
+  name: demo
+examples:
+  one: { value: ~ }
+  two: { value: Null }
+  three:
+    value:
+  four: { value: null }

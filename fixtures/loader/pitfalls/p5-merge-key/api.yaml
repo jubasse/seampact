@@ -1,0 +1,6 @@
+api:
+  name: demo
+base:
+  x: 1
+copy:
+  <<: { x: 2 }

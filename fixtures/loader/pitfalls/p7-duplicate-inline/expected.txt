@@ -1,0 +1,2 @@
+api.yaml:5:1: error seampact/load/duplicate-key: key 'tasks' is defined twice in the same mapping (P7). Fix: remove the duplicate.
+  api.yaml:3:1: first defined here.

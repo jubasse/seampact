@@ -1,0 +1,2 @@
+api.yaml:3:4: error seampact/load/yaml-reserved-scalar: plain '=' is a YAML 1.1 value or merge key (P4). Fix: quote it ('=').
+api.yaml:4:4: error seampact/load/yaml-reserved-scalar: plain '<<' is a YAML 1.1 value or merge key (P4). Fix: quote it ('<<').

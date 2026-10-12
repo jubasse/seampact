@@ -1,0 +1,2 @@
+api.yaml:4:3: error seampact/load/yaml-anchor: anchor '&base' is not allowed (P5). Fix: use $ref to share a declaration, or extends to share a base.
+api.yaml:5:7: error seampact/load/yaml-anchor: alias '*base' is not allowed (P5). Fix: use $ref to share a declaration, or extends to share a base.
