@@ -5,7 +5,7 @@ export {
   type SchemaKeywordDecision,
   schemaKeyword,
 } from "./keywords.js";
-export { isMarker, MARKERS, type Marker } from "./markers.js";
+export { isMarker, MARKERS, type Marker, RESERVED_NAMES } from "./markers.js";
 export {
   AUTHORING_FILES,
   type AuthoringFile,
