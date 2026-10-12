@@ -10,10 +10,10 @@ seampact is a contract system for HTTP APIs. You describe an API in plain YAML f
 
 seampact generates boundaries, not implementations.
 
-- **Generated:** named types, validators, the route table, one handler interface per resource (or tag, or operation) with exact input and output types, typed clients, derived errors and headers, and the utilities that place the access and validation checks around your controller: a decorator per operation in NestJS, a composed annotation in Spring, a FormRequest and middleware in Laravel, an attribute and its listener in Symfony and API Platform.
+- **Generated:** named types, validators, the route table, one handler interface per resource (or tag, or operation) with exact input and output types, typed clients, derived errors and headers, and the utilities that place the access and validation checks around your controller: a decorator per operation in NestJS, a composed annotation in Spring, a FormRequest and middleware in Laravel, an attribute, a listener and a value resolver in Symfony, a listener and a decorated provider in API Platform.
 - **Yours:** the controllers, which implement the generated interfaces, what a handler does, where data lives, how a credential is checked, how a right is decided and which tenant a request belongs to. seampact never generates a controller, and everything it generates goes to one directory, `__generated__` by default.
 
-seampact is not a framework. Generated code uses your framework's own mechanisms (guards, interceptors and exception filters in NestJS, interceptors, argument resolvers and `ProblemDetail` in Spring, Form Requests and API Resources in Laravel, listeners and normalizers in Symfony) and never replaces them. If you also want your framework's own OpenAPI output (`@nestjs/swagger`, springdoc, API Platform's), the opt-in `nativeDocs` artefact generates its annotations, agreeing with seampact's document.
+seampact is not a framework. Generated code uses your framework's own mechanisms (guards, interceptors and exception filters in NestJS, interceptors, argument resolvers and `ProblemDetail` in Spring, Form Requests and API Resources in Laravel, listeners and normalizers in Symfony) and never replaces them. Which OpenAPI documents you get is your choice, per app: seampact's document (the default), your framework's own document (`@nestjs/swagger`, springdoc, API Platform's) completed by the opt-in `nativeDocs` artefact so it agrees with the contract, both, or none. seampact never turns your framework's own generation off unless you ask, and a monorepo can also write one document across its apps.
 
 Access is checked through three generated, typed hooks: authenticate, decide and resolve scope. You answer them with the library you already use (Clerk, better-auth, Passport, CASL, spatie/laravel-permission, Laravel Gates, Symfony Voters, Spring Security) or with your own code. Your application refuses to start while a hook, a requirement or a route handler is missing.
 
@@ -32,7 +32,7 @@ You install the core, then only the generators your project uses. Installing the
 | `@seampact/cli` | the `seampact` command: `init`, `compile`, `check`, `lint`, `diff`, `generate`, `bundle`, and `explain`, which prints one operation whole with where each part comes from |
 | `@seampact/compiler` | reads the YAML, reports errors with file, line and column, and produces the IR |
 | `@seampact/spec` | the JSON Schemas of the YAML files, one per file and fragment kind for your editor, and of the IR, with their TypeScript types |
-| `@seampact/openapi` | writes one OpenAPI 3.1 document per api, with what OpenAPI cannot say as published `x-seampact-*` extensions |
+| `@seampact/openapi` | writes the OpenAPI 3.1 documents your configs ask for (one per api or declared document, or one merged across a monorepo's apps), with what OpenAPI cannot say as published `x-seampact-*` extensions |
 | `@seampact/lint` | lint rules over the IR, and the API to write your own |
 | `@seampact/diff` | classifies changes between two versions as additive or breaking, per direction |
 | `@seampact/codegen-core` | the API code generators are written against |
@@ -44,12 +44,12 @@ You install the core, then only the generators your project uses. Installing the
 | types only | `@seampact/codegen-ts` |
 | validators | `@seampact/codegen-zod`, `@seampact/codegen-yup` or `@seampact/codegen-class-validator` |
 | a typed `fetch` client | `@seampact/codegen-fetch` |
-| a server boundary | `@seampact/codegen-nestjs`, `@seampact/codegen-fastify`, `@seampact/codegen-express` or `@seampact/codegen-adonis`, plus `@seampact/hooks` |
+| a server boundary | `@seampact/codegen-nestjs`, `@seampact/codegen-fastify`, `@seampact/codegen-express` or `@seampact/codegen-adonis`, plus `@seampact/hooks` unless the target vendors its types |
 | a frontend client | `@seampact/codegen-react`, `@seampact/codegen-angular` or `@seampact/codegen-vue` |
 
 A server generator does not install a validator generator. You choose one and link the two in your app's `seampact.config.yaml`, where you also turn each generated artefact on or off. The CLI checks the combination against a published compatibility matrix and, when it does not work, names the ones that do.
 
-Each app of a repository (frontend, backend, service) has its own `seampact.config.yaml`; a monorepo can add a root one that lists the apps and shares contract sources. An app that only needs the OpenAPI document installs no generator at all.
+Each app of a repository (frontend, backend, service) has its own `seampact.config.yaml`; a monorepo can add a root one that lists the apps and shares contract sources. An app that only needs the OpenAPI document installs no generator at all, and an app that wants no seampact document says so.
 
 ### Java and PHP
 
@@ -58,9 +58,9 @@ These run with no Node.js installed. The standalone compiler binary runs `init`,
 | Framework | Install |
 |---|---|
 | Spring Boot | the Gradle plugin `io.github.jubasse.seampact` or the Maven plugin `io.github.jubasse:seampact-maven-plugin` |
-| Laravel | `seampact/laravel` as a development dependency, and `seampact/hooks` |
-| Symfony | `seampact/symfony` as a development dependency, and `seampact/hooks` |
-| API Platform | `seampact/api-platform` as a development dependency, and `seampact/hooks` |
+| Laravel | `seampact/laravel` as a development dependency, and `seampact/hooks` unless the target vendors its types |
+| Symfony | `seampact/symfony` as a development dependency, and `seampact/hooks` unless the target vendors its types |
+| API Platform | `seampact/api-platform` as a development dependency, and `seampact/hooks` unless the target vendors its types |
 
 ### Which generators combine
 
@@ -73,15 +73,16 @@ Every generator renders the default format and every format and paging style you
 | `codegen-class-validator` | DTO classes with decorators | provides `validators` | not applicable: payloads only |
 | `codegen-fetch` | typed client | provides `client` | the client's response readers |
 | `codegen-nestjs` | per-operation decorators, guard, interceptor and input decorators around your controllers | `validators`: zod, yup or class-validator | exception filters and interceptors |
-| `codegen-fastify`, `codegen-express` | server boundary | `validators`: zod or yup | route hooks, middleware |
+| `codegen-fastify` | server boundary | `validators`: zod or yup, or Ajv without a link | route hooks |
+| `codegen-express` | server boundary | `validators`: zod or yup | middleware |
 | `codegen-adonis` | server boundary with VineJS validators | nothing | middleware and exception handler |
 | `codegen-react` | TanStack Query hooks | `client`: fetch | through the fetch client |
 | `codegen-vue` | composables | `client`: fetch | through the fetch client |
 | `codegen-angular` | injectable services over `HttpClient` | nothing | its own response readers |
 | Spring Boot plugin | composed annotations, interceptor and argument resolver around your controllers, with Bean Validation | nothing | `ProblemDetail`, Spring Data `Page` |
 | `seampact/laravel` | routes, middleware and Form Requests around your controllers | nothing | API Resources and paginators |
-| `seampact/symfony` | route loader, attributes, listeners and Validator constraints around your controllers | nothing | normalizers |
-| `seampact/api-platform` | resource metadata and DTOs around your providers and processors | nothing | API Platform's serializer, JSON-LD and Hydra |
+| `seampact/symfony` | route loader, attributes, a listener, a value resolver and Validator constraints around your controllers | nothing | normalizers |
+| `seampact/api-platform` | resource metadata, DTOs, a listener and a decorated provider around your providers and processors | nothing | API Platform's serializer, JSON-LD and Hydra |
 
 In an app config, a link names the other entry's `id`: `link: { validators: validators }` for a server, `link: { client: client }` for React or Vue.
 

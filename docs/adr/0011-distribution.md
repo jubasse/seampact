@@ -52,6 +52,13 @@ sources:
   billing:
     release: { url: https://github.com/acme/contracts/releases/download/billing-v1.4.0/billing.seampact.tgz }
     integrity: sha256-YmlsbG...
+openapi:
+  platform:                                          # one document across the apps (A43)
+    path: openapi/platform.yaml
+    apps: [apps/api, services/billing]               # the apps it covers; default every app of `apps`
+    prefix: { billing: billing }                     # billing.listInvoices, billing.Invoice
+    extensions: none
+checks: { openapi: true }
 ```
 
 ```yaml
@@ -66,7 +73,7 @@ targets:
     api: storefront
     mount: /api                                      # the global prefix main.ts sets
     link: { validators: validators }                 # provider seam, ADR 0009
-    artefacts: { nativeDocs: true }                  # also the @nestjs/swagger decorators
+    artefacts: { nativeDocs: true }                  # also complete the @nestjs/swagger document
     frameworkRoutes:
       - { method: GET, path: /metrics, reason: "Scraped by Prometheus; not part of the api." }
       - { method: GET, path: '/admin/queues/**', reason: "The queue dashboard's own routes." }
@@ -120,9 +127,9 @@ checks: { generated: false }
 ```
 
 Rules:
-- The root config takes `apps` (the app directories), `sources` and `allowLocal`. An app config takes `outDir`, `sources`, `targets`, `openapi`, `checks` and `allowLocal`.
+- The root config takes `apps` (the app directories), `sources`, `allowLocal`, `openapi` (merged documents, below) and `checks`. An app config takes `outDir`, `sources`, `targets`, `openapi`, `checks` and `allowLocal`.
 - `outDir` is the one directory of the app's generated code (A41), `__generated__` at the config's directory by default; a JVM app may name its build directory instead (`build/generated/sources/seampact/main` for Gradle, `target/generated-sources/seampact` for Maven) and leave the output uncommitted. A target's `out` is relative to it and defaults to the entry's `id` (or the target's name), so generated code never mixes with the developer's. An app inside a root's `apps` sees the root's sources beside its own; a name defined in both is an error naming both files. An app config outside any root, or run on its own, uses only its own sources.
-- A target entry takes `id`, `use`, `api` or `apis`, `document`, `out`, `link`, `artefacts`, `options`, `operations`, `allowUntested` and, for a server target, `mount`, `access` and `frameworkRoutes`.
+- A target entry takes `id`, `use`, `api` or `apis`, `document`, `out`, `link`, `artefacts`, `options`, `operations`, `allowUntested` and, for a server target, `mount`, `access`, `frameworkRoutes` and `frameworkDocs`.
 - `operations: { include: [...], exclude: [...] }` keeps or drops operations by tag or operation id, so an app that serves part of an api says so here, not in the contract; the boot check expects handlers for the kept operations only (ADR 0012).
 - `mount` is the path prefix the framework adds before every contract path (a NestJS global prefix, a Laravel route group prefix, a servlet context path, API Platform's route prefix), empty by default; the boot check refuses a framework whose prefix differs (ADR 0012).
 - `access: { native: "<reason>" }` states that the framework's native security enforces access, which `artefacts: { accessHooks: false }` requires; see ADR 0012 "Native access instead of hooks".
@@ -133,10 +140,28 @@ Rules:
 - Only the sources an app uses (by a target, an `openapi` entry or a check) are resolved and checked: a root's `path` source that an app with `allowLocal: false` never names does not fail it.
 - `use` is an npm package name, a Maven `group:artifact` coordinate or a Composer `vendor/name`. Each runner handles the entries of its ecosystem and leaves the others; the forms cannot be confused.
 - `artefacts` switches each artefact a target declares on or off (types, validators, route table, handler interfaces, utilities, access hooks, boot check, client, query hooks, native docs; ADR 0009). Everything a target declares is on by default, except `nativeDocs`. `bootCheck` also takes `{ handlers, frameworkRoutes }` to switch those two checks apart (ADR 0012). `accessHooks: false` needs `access: { native }`.
-- `openapi` maps an api to the path of its one document, or to a mapping from each of its documents (ADR 0002 section 5) to a path. A path may be replaced by `{ path, extensions, reasons, inputSchemas, servers }`, the emitter options of ADR 0004 section 12: `extensions` is `all` (the default), `none` or a list of extension names (`access`, `paging`, ..., the names after `x-seampact-`); `reasons` is `include` (the default) or `omit`; `inputSchemas` is `shared` (the default) or `strict`; `servers` is OpenAPI's list. The options are app configuration, since they shape a rendering and name deployments, never the contract (A40). An app config with `openapi` and no `targets` generates the documents and no code: an OpenAPI-only setup is a first-class one (A37). `checks.openapi: true` checks every document listed there for drift; `checks.generated: true` checks the committed generated files (ADR 0015).
+- `openapi` maps an api to the path of its one document, or to a mapping from each of its documents (ADR 0002 section 5) to a path; `openapi: none` writes no seampact document. Without the key, the app writes seampact's documents of every api its targets generate from, at `openapi/<api>.yaml`, or `openapi/<api>.<document>.yaml` for an api that declares `documents` (A43). A path may be replaced by `{ path, extensions, reasons, inputSchemas, servers }`, the emitter options of ADR 0004 section 12: `extensions` is `all` (the default), `none` or a list of extension names (`access`, `paging`, ..., the names after `x-seampact-`); `reasons` is `include` (the default) or `omit`; `inputSchemas` is `shared` (the default) or `strict`; `servers` is OpenAPI's list. The options are app configuration, since they shape a rendering and name deployments, never the contract (A40). An app config with `openapi` and no `targets` generates the documents and no code: an OpenAPI-only setup is a first-class one (A37). `checks.openapi: true` checks every document listed there for drift; `checks.generated: true` checks the committed generated files (ADR 0015).
+- `frameworkDocs` is `keep` (the default) or `off`; see "Which OpenAPI documents exist" below.
 - `frameworkRoutes` is the allow-list of framework routes outside the contract that the boot check accepts, each with a reason (FR-25, ADR 0012); `path` may be a pattern, `*` matching one segment and `**` any number (`/actuator/**`), so a library that registers many routes takes one entry.
 - The config is validated against the compatibility matrix before anything is generated (ADR 0009); `checks.matrix` is `warn` (the default: a framework version the matrix has not tested is a warning) or `strict` (refused). A version the matrix records as incompatible is always refused.
 - On the JVM the same keys, with the same schema, may be written in the plugin's DSL instead of the file: `seampact { ... }` in Gradle, `<configuration>` in Maven (A42). One app has one source: a `seampact.config.yaml` beside a DSL configuration is an error naming both. The build files also hold the binary pin (ADR 0010).
+
+### Which OpenAPI documents exist
+
+Which documents exist is the user's choice, for every target alike, API Platform included (A43, which lifts A15's and A28's "API Platform's own OpenAPI stays off"). Per app:
+
+| The app wants | `openapi` | `artefacts.nativeDocs` |
+|---|---|---|
+| seampact's documents only (the default) | absent, or the documents it lists | off (the default) |
+| the framework's own document, completed by codegen | `none` | on |
+| both, agreeing on every contract route (ADR 0015) | the documents it lists | on |
+| none | `none` | off |
+
+seampact's documents are written from the IR through ADR 0004 section 12, with the emitter options above. `nativeDocs` (ADR 0009) generates the framework's own annotations or metadata for the contract routes, so the framework's document describes them as seampact's does. With `nativeDocs` off, the target generates nothing for the framework's document and leaves the framework's own generation as the framework has it: an API Platform app serves API Platform's document of its resources by default, and a NestJS app that calls `SwaggerModule.setup` keeps serving its document; that document is then the framework's own view, and nothing checks it against the contract. seampact turns it off only when the app asks: `frameworkDocs: off` on the server target entry makes the target write the framework's or its documentation library's own switch (API Platform's `enable_swagger: false`, which keeps the Hydra documentation the api-platform pack links to, ADR 0008; springdoc's `springdoc.api-docs.enabled: false`) into a generated configuration file the app loads. A target that knows no such switch for its framework refuses `off`, naming the fix: nestjs, whose document exists only where the app calls `SwaggerModule.setup`, answers "remove the setup". `off` beside `nativeDocs: true` is refused too, naming both.
+
+While a framework's own document is on, its routes (API Platform's documentation and entrypoint routes, springdoc's configured paths) are framework routes like any other for the boot check (ADR 0012): the target accepts those it reads from the framework's own configuration and lists them in the boot check's report, and a path the app chooses in code (`SwaggerModule.setup('docs', app, ...)`) goes into `frameworkRoutes`.
+
+A monorepo's root config may also write merged documents with seampact, in its own `openapi` key: each entry names a document and takes `path`, `apps` (the app directories it covers, every app of `apps` by default), `prefix` (per api, a prefix for its operation ids and component keys), and the emitter options above. An app contributes the operations its server targets generate, through their `api` or `apis`, `document` and `operations`; an app with no server target contributes the documents its own `openapi` lists; an app with client targets only contributes nothing, since it serves no route. An api two apps serve is written once, with the union of their operations. Elements of different apis are merged as ADR 0004 section 12 says: an identical element is written once, and two different elements under one name are refused, naming both apis, both elements and the fix (a `prefix` for one of the apis), as are two operations with the same method and path. Each app keeps its own documents, from seampact, from its framework or none, as its own config says: the merged document is one more seampact document, never a replacement. `generate` and `check` at the root write and check the apps, then the merged documents; run in one app, they handle that app only, and deleting the root config removes the merged documents and nothing else. The root's `checks.openapi: true` checks the merged documents for drift.
 
 A contract workspace that relays to an api it does not compile names it in `workspace.imports` (ADR 0002 section 1). Such an entry takes the source forms of `sources` above, plus `api` (the api's name inside the bundle) and `integrity`, which is required there; it goes through the same pinned-bundle check.
 
@@ -185,5 +210,5 @@ Each channel has a CI smoke test (A26): a bundle of the reference contract is bu
 
 ## Traceability
 
-- FRs: FR-17, FR-36, FR-8 (relays to a pinned bundle), FR-11 (committed document checks and emitter options), FR-25 (framework route allow-list, native access); amendments A3, A9, A12, A26, A37, A40, A41, A42.
-- Checklist items enabled: CHK-052 (relays across a pinned bundle), CHK-059 (committed and drift-checked documents), CHK-063 (framework routes allow-listed with a reason), CHK-070 (test consumers), CHK-072 (unpublished installs), CHK-076 (native consumers read bundles), CHK-088 (PHP trees installable through path repositories), CHK-113 and CHK-114 (per-app configs, artefact switches, OpenAPI-only setups), and from round 4 CHK-136 (emitter options), CHK-141 (untested versions), CHK-147 (boot-check knobs, operations filter), CHK-154 (`outDir`), CHK-161 (`mount`), CHK-163 (native access), CHK-165 (`nativeDocs`), CHK-166 (JVM DSL).
+- FRs: FR-17, FR-36, FR-8 (relays to a pinned bundle), FR-11 (committed document checks and emitter options), FR-25 (framework route allow-list, native access); amendments A3, A9, A12, A26, A37, A40, A41, A42, A43 (which documents exist, merged documents).
+- Checklist items enabled: CHK-052 (relays across a pinned bundle), CHK-059 (committed and drift-checked documents), CHK-063 (framework routes allow-listed with a reason), CHK-070 (test consumers), CHK-072 (unpublished installs), CHK-076 (native consumers read bundles), CHK-088 (PHP trees installable through path repositories), CHK-113 and CHK-114 (per-app configs, artefact switches, OpenAPI-only setups), and from round 4 CHK-136 (emitter options), CHK-141 (untested versions), CHK-147 (boot-check knobs, operations filter), CHK-154 (`outDir`), CHK-161 (`mount`), CHK-163 (native access), CHK-165 (`nativeDocs`), CHK-166 (JVM DSL), and from round 5 CHK-170 (the per-app document choices, `frameworkDocs`), CHK-171 (merged documents in the root config).
