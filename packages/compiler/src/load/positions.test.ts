@@ -17,6 +17,14 @@ const closed = (props: Record<string, JsonSchema>): JsonSchema => ({
   additionalProperties: false,
 });
 
+// `if`/`then`/`else` without a `then` literal, which Biome reads as a thenable.
+const when = (cond: JsonSchema, yes?: JsonSchema, no?: JsonSchema): JsonSchema =>
+  Object.fromEntries([
+    ["if", cond],
+    ...(yes ? [["then", yes]] : []),
+    ...(no ? [["else", no]] : []),
+  ]);
+
 describe("alternatives", () => {
   test("a key one alternative types and another leaves free is unknown", () => {
     const schema = { anyOf: [closed({ x: { type: "string" } }), { type: "object" }] };
@@ -26,7 +34,7 @@ describe("alternatives", () => {
   test("the same through then and else, and through oneOf", () => {
     const open = { type: "object", additionalProperties: {} };
     expect(
-      keyOf({ if: { required: ["y"] }, then: closed({ x: { type: "string" } }) }, "x"),
+      keyOf(when({ required: ["y"] }, closed({ x: { type: "string" } })), "x"),
     ).toBeUndefined();
     expect(keyOf({ oneOf: [closed({ x: { type: "string" } }), open] }, "x")?.types).toBe(undefined);
   });
@@ -46,11 +54,7 @@ describe("alternatives", () => {
   });
 
   test("an if on the value's type is chosen when a key is read", () => {
-    const schema = {
-      if: { type: "string" },
-      then: { type: "string" },
-      else: closed({ x: { type: "boolean" } }),
-    };
+    const schema = when({ type: "string" }, { type: "string" }, closed({ x: { type: "boolean" } }));
     expect(types(keyOf(schema, "x"))).toEqual(["boolean"]);
   });
 });
