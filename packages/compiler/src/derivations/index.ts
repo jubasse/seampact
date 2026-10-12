@@ -1,11 +1,14 @@
+export { derivationCopy } from "./freeze.js";
 export type {
   DerivationDatumRequired,
+  DerivationIssueLocation,
   DerivationRole,
   DerivationRoleDatum,
   DerivationRoleName,
 } from "./roles.js";
 export {
   DERIVATION_ISSUE_SCHEMA_ID,
+  derivationIssueLocations,
   derivationIssueMembers,
   derivationRoleOf,
   derivationRoles,

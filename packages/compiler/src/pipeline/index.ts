@@ -41,7 +41,6 @@ export {
 } from "./ownership.js";
 export type {
   TreeSchemaExampleIssue,
-  PassReadonly,
   PassContext,
   PassContextOf,
   PassPart,
@@ -51,4 +50,5 @@ export type {
   WorkspacePass,
   WorkspacePassContext,
 } from "./pass.js";
+export type { PassReadonly } from "./readonly.js";
 export type { TreeNode, TreeNodeKind } from "./tree.js";

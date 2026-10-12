@@ -1,13 +1,14 @@
 import type { HalfName } from "../pipeline/halves.js";
+import { derivationFreeze } from "./freeze.js";
 import type { DerivationRoleName } from "./roles.js";
 
 // ADR 0006 section 5 as data: every derivation id, what triggers it, what it derives, and the role its codes
 // answer. The derive pass applies it, targets render its results and never re-derive (ADR 0006 section 5).
-// The two owner columns say which half writes what a derivation adds to the draft: `codes` the
-// `operations[].errors` elements it answers, `wire` every other element it adds (parameters, responses,
-// response headers, input members, requirements, field rights, sort-key rights, operation members). They are
-// what the field-ownership table reads to own an element by its `derivedFrom.derivation`
-// (`pipeline/ownership.ts`). `null` means the derivation adds no such element.
+// The owner column `wire` says which half writes every element a derivation adds to the draft other than its
+// codes (parameters, responses, response headers, input members, requirements, field rights, sort-key rights,
+// operation members); `null` means it adds none. The field-ownership table reads it to own an element by its
+// `derivedFrom.derivation` (`pipeline/ownership.ts`). The codes a derivation answers need no column: every
+// `operations[].errors` element is derive.errors' (its ownership row), whatever derivation added it.
 //
 // After merge this is a shared file (INDEX rules): a new row is a lead or seam PR that carries the ADR 0006
 // change, and the `derivation table matches ADR 0006` test compares it with the ADR.
@@ -17,12 +18,11 @@ export type DerivationRoles = readonly DerivationRoleName[] | "declared" | "none
 
 export interface DerivationRow {
   /** The derivation id carried by `derivedFrom.derivation`; the pack row is `pack.<pack>.<entry>`. */
-  id: string;
-  trigger: string;
-  derived: string;
-  roles: DerivationRoles;
-  codes: HalfName | null;
-  wire: HalfName | null;
+  readonly id: string;
+  readonly trigger: string;
+  readonly derived: string;
+  readonly roles: DerivationRoles;
+  readonly wire: HalfName | null;
 }
 
 /** The id pattern of a pack derivation entry (ADR 0008): `pack.<pack>.<entry>`. */
@@ -32,19 +32,12 @@ const row = (
   id: string,
   trigger: string,
   derived: string,
-  roles: DerivationRoles,
+  roles: DerivationRoleName[] | "declared" | "none",
   wire: HalfName | null,
-): DerivationRow => ({
-  id,
-  trigger,
-  derived,
-  roles,
-  codes: roles === "none" ? null : "derive.errors",
-  wire,
-});
+): DerivationRow => ({ id, trigger, derived, roles, wire });
 
 /** Every row of ADR 0006 section 5, in the ADR's order. */
-export const derivationTable: readonly DerivationRow[] = Object.freeze([
+export const derivationTable: readonly DerivationRow[] = derivationFreeze([
   row("input.invalid", "any input", "400", ["schemaInvalid"], null),
   row(
     "body.limit",
@@ -279,7 +272,8 @@ export const derivationTable: readonly DerivationRow[] = Object.freeze([
 const BY_ID = new Map(derivationTable.map((entry) => [entry.id, entry]));
 
 // A pack entry id: `pack.` then a pack name and an entry name, neither empty. The pack name may hold dots
-// (`@seampact/pack-crud-rights` does not, a local pack name might), so the entry is the last segment.
+// (`@seampact/pack-crud-rights` does not, a local pack name might), so the entry is the last segment. The shape
+// only: that the pack is one the api loaded (`draft.packs`) is for access.rights to check where it writes one.
 const PACK_ENTRY = /^pack\.[^.\s]+(?:\.[^.\s]+)*\.[^.\s]+$/;
 
 /** True for a derivation id of the table, or a pack entry id `pack.<pack>.<entry>`. */

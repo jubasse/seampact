@@ -1,3 +1,6 @@
+// A leaf module: it imports nothing, so `derivations/table.ts` (its owner columns) and `pipeline/` both import
+// it without a cycle.
+//
 // The six halves of the three passes of ADR 0006, in run order. Each half is a step of the stop rule (ADR 0006
 // section 1): a half that reports an error completes, and no later half of that api runs. The order puts each
 // half after every half it reads: `tree.nodes` needs the type uses of `tree.schemas` (its `TreeSchemaService`),

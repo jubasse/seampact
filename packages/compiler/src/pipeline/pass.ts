@@ -5,20 +5,13 @@ import type { ResolvedConventions } from "./conventions.js";
 import type { DraftIR } from "./draft.js";
 import type { HalfName, PassOf } from "./halves.js";
 import type { InheritedReader } from "./inherited.js";
+import type { PassReadonly } from "./readonly.js";
 import type { DraftField } from "./ownership.js";
 
 // The pass interface of ADR 0006 section 2, with the halves made explicit: each pass is two halves, each half a
 // `PassPart` that declares the draft fields it reads and writes. The guard (`guard.ts`) holds a half to its
 // declaration in tests; the field-ownership table (`ownership.ts`) says which half may write each field.
 
-/** A value no pass may change: the raw tree, the workspace, and the drafts of other apis. */
-export type PassReadonly<T> = T extends (...args: never[]) => unknown
-  ? T
-  : T extends readonly (infer E)[]
-    ? readonly PassReadonly<E>[]
-    : T extends object
-      ? { readonly [K in keyof T]: PassReadonly<T[K]> }
-      : T;
 
 /** A problem an example has against a type use, located inside the example value. */
 export interface TreeSchemaExampleIssue {

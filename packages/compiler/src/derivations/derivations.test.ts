@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { IR_SCHEMA_DOCUMENTS, KNOWN_VALUES_KEYWORD } from "@seampact/spec/ir";
+import { IR_SCHEMA_DOCUMENTS, type IrWriter, KNOWN_VALUES_KEYWORD } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { pipelineHalves } from "../pipeline/halves.js";
-import { derivationRoleOf, derivationRoles } from "./roles.js";
+import { derivationCopy } from "./freeze.js";
+import { derivationIssueMembers, derivationRoleOf, derivationRoles } from "./roles.js";
 import { derivationRowOf, derivationTable, isDerivationId } from "./table.js";
 
 const ADR = readFileSync(
@@ -68,12 +69,9 @@ describe("derivation table", () => {
   test("every row has its owner halves", () => {
     const halves: readonly (string | null)[] = [...pipelineHalves, null];
     for (const row of derivationTable) {
-      expect(halves, row.id).toContain(row.codes);
       expect(halves, row.id).toContain(row.wire);
-      // A derivation that answers a role has its codes written by derive.errors; one that answers none, none.
-      expect(row.codes, row.id).toBe(row.roles === "none" ? null : "derive.errors");
-      // Every row derives something: codes, or another element.
-      expect(row.codes !== null || row.wire !== null, row.id).toBe(true);
+      // Every row derives something: codes (derive.errors writes them), or another element.
+      expect(row.roles !== "none" || row.wire !== null, row.id).toBe(true);
     }
   });
 
@@ -129,3 +127,37 @@ describe("roles", () => {
         );
   });
 });
+
+// Every object reachable from `value`, each time it is reached.
+function objectsOf(value: unknown, found: object[] = []): object[] {
+  if (typeof value !== "object" || value === null) return found;
+  found.push(value);
+  for (const item of Object.values(value)) objectsOf(item, found);
+  return found;
+}
+
+describe("derivation data", () => {
+  test("the data is deep-frozen and shares no object", () => {
+    const objects = objectsOf([derivationTable, derivationRoles, derivationIssueMembers]).slice(1);
+    for (const object of objects) expect(Object.isFrozen(object), JSON.stringify(object)).toBe(true);
+    expect(new Set(objects).size, "an object reached twice").toBe(objects.length);
+  });
+
+  test("a copy of a role's type use is writable and leaves the data unchanged", () => {
+    const datum = derivationRoleOf("payloadTooLarge")?.data[0];
+    if (datum === undefined) throw new Error("no datum");
+    const copy = derivationCopy<IrWriter.TypeUse>(datum.type);
+    expect(copy).toEqual(datum.type);
+    if (copy.kind !== "scalar") throw new Error("no scalar use");
+    copy.refinements.minimum = "1";
+    expect(datum.type).toMatchObject({ refinements: { minimum: "0" } });
+  });
+
+  test("an issue's `in` is one of path, query, header, body", () => {
+    const where = derivationIssueMembers.find((member) => member.name === "in");
+    const pattern = where?.type.kind === "scalar" ? where.type.refinements.pattern : undefined;
+    expect(pattern?.source).toBe("^(?:path|query|header|body)$");
+    expect(pattern?.normalized).toBe(pattern?.source);
+  });
+});
+

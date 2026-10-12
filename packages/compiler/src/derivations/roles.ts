@@ -1,9 +1,18 @@
 import type { IrWriter } from "@seampact/spec/ir";
+import type { PassReadonly } from "../pipeline/readonly.js";
+import { derivationFreeze } from "./freeze.js";
 
 // ADR 0006 section 6 as data: every role, its default code with status and nature, and the data the boundary
 // produces for it. The default codes form part of every api's registry, so a contract with no pack compiles
 // (A34); the derive.errors half registers them and binds roles (A35). Each datum's `type` is the type use of
 // the default code's param of that name.
+//
+// The params schemas of the default codes and the issue schema below become core declarations (origin `core`)
+// that tree.schemas seeds from this data, with reserved ids, once the IR change `feat/ir-1-core-origins-proofs`
+// lands (CR-2, CR-3); until then nothing writes them.
+//
+// The data is deep-frozen and shared by every compile: a half writes a copy into its draft
+// (`derivationCopy<IrWriter.TypeUse>(datum.type)`, a `structuredClone`), never the frozen value itself.
 
 export type DerivationRoleName = IrWriter.ErrorRole;
 
@@ -11,52 +20,77 @@ export type DerivationRoleName = IrWriter.ErrorRole;
 export type DerivationDatumRequired = "always" | "never" | "conditional";
 
 export interface DerivationRoleDatum {
-  name: string;
-  required: DerivationDatumRequired;
+  readonly name: string;
+  readonly required: DerivationDatumRequired;
   /** For `conditional`: when the datum is required, as the ADR states it. */
-  condition?: string;
-  type: IrWriter.TypeUse;
+  readonly condition?: string;
+  readonly type: PassReadonly<IrWriter.TypeUse>;
 }
 
 export interface DerivationRole {
-  role: DerivationRoleName;
-  defaultCode: IrWriter.ErrorCode;
-  status: number;
-  nature: IrWriter.NatureBase;
-  data: readonly DerivationRoleDatum[];
+  readonly role: DerivationRoleName;
+  readonly defaultCode: IrWriter.ErrorCode;
+  readonly status: number;
+  readonly nature: IrWriter.NatureBase;
+  readonly data: readonly DerivationRoleDatum[];
 }
 
-const text: IrWriter.ScalarTypeUse = { kind: "scalar", type: "string", refinements: {} };
-const count: IrWriter.ScalarTypeUse = {
+// Each call a new object, so no two data share one.
+const text = (): IrWriter.ScalarTypeUse => ({ kind: "scalar", type: "string", refinements: {} });
+const count = (): IrWriter.ScalarTypeUse => ({
   kind: "scalar",
   type: "integer",
   refinements: { minimum: "0" },
+});
+
+/** Where an issue of the `schemaInvalid` role sits in the request (ADR 0006 section 6). */
+export type DerivationIssueLocation = "path" | "query" | "header" | "body";
+
+/** The values of an issue's `in`, in the order of ADR 0006 section 6. */
+export const derivationIssueLocations: readonly DerivationIssueLocation[] = derivationFreeze([
+  "path",
+  "query",
+  "header",
+  "body",
+]);
+
+// `in` as a closed set: a string matching one location. The pattern uses no construct ADR 0003 section 9
+// normalises, so its normalised form is its written form.
+const location = (): IrWriter.ScalarTypeUse => {
+  const source = `^(?:${derivationIssueLocations.join("|")})$`;
+  return {
+    kind: "scalar",
+    type: "string",
+    refinements: { pattern: { source, normalized: source } },
+  };
 };
 
 /**
  * The schema id of one item of the `schemaInvalid` role's `issues`: `{ in, pointer, rule }`, `in` one of
- * `path`, `query`, `header`, `body`. The derive.errors half registers it with the default code's params.
+ * `derivationIssueLocations`.
  */
 export const DERIVATION_ISSUE_SCHEMA_ID: IrWriter.SchemaId = "ApiSchemaInvalidIssue";
 
 /** The members of one issue, in the order of ADR 0006 section 6. */
-export const derivationIssueMembers: readonly { name: string; type: IrWriter.TypeUse }[] =
-  Object.freeze([
-    { name: "in", type: text },
-    { name: "pointer", type: text },
-    { name: "rule", type: text },
-  ]);
+export const derivationIssueMembers: readonly {
+  readonly name: string;
+  readonly type: PassReadonly<IrWriter.TypeUse>;
+}[] = derivationFreeze([
+  { name: "in", type: location() },
+  { name: "pointer", type: text() },
+  { name: "rule", type: text() },
+]);
 
 const role = (
   name: DerivationRoleName,
   defaultCode: string,
   status: number,
   nature: IrWriter.NatureBase,
-  data: readonly DerivationRoleDatum[] = [],
+  data: DerivationRoleDatum[] = [],
 ): DerivationRole => ({ role: name, defaultCode, status, nature, data });
 
 /** Every role of ADR 0006 section 6, in the ADR's order. */
-export const derivationRoles: readonly DerivationRole[] = Object.freeze([
+export const derivationRoles: readonly DerivationRole[] = derivationFreeze([
   role("schemaInvalid", "api.schema_invalid", 400, "refused", [
     {
       name: "issues",
@@ -70,12 +104,12 @@ export const derivationRoles: readonly DerivationRole[] = Object.freeze([
       name: "pointer",
       required: "conditional",
       condition: "on an operation with a rejected restricted input field, absent otherwise",
-      type: text,
+      type: text(),
     },
   ]),
   role("csrfInvalid", "api.csrf_invalid", 403, "refused"),
   role("sortKeyForbidden", "api.sort_key_forbidden", 403, "refused", [
-    { name: "key", required: "always", type: text },
+    { name: "key", required: "always", type: text() },
   ]),
   role("notFound", "api.not_found", 404, "refused"),
   role("stateConflict", "state.conflict", 409, "refused"),
@@ -85,7 +119,7 @@ export const derivationRoles: readonly DerivationRole[] = Object.freeze([
   role("preconditionRequired", "api.precondition_required", 428, "refused"),
   role("gone", "api.cursor_too_old", 410, "refused"),
   role("payloadTooLarge", "api.payload_too_large", 413, "refused", [
-    { name: "limitBytes", required: "never", type: count },
+    { name: "limitBytes", required: "never", type: count() },
   ]),
   role("unsupportedMediaType", "api.unsupported_media_type", 415, "refused"),
   role("rateLimited", "api.rate_limited", 429, "unavailable", [
@@ -93,7 +127,7 @@ export const derivationRoles: readonly DerivationRole[] = Object.freeze([
       name: "retryAfterMs",
       required: "conditional",
       condition: "when conventions.rateLimit names it",
-      type: count,
+      type: count(),
     },
   ]),
   role("undeclaredStatus", "api.internal", 500, "failed"),
