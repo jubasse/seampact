@@ -878,7 +878,7 @@ items:
     targets: [core]
   - id: CHK-141
     source: "A36"
-    fact: An untested framework version is a warning, refused only with checks.matrix strict and silenced by allowUntested, while a version the matrix records as incompatible is refused.
+    fact: An untested framework version is a warning, refused only with checks.matrix error (the default is warning) and silenced by allowUntested, while a version the matrix records as incompatible is refused.
     frs: [FR-39, FR-14]
     scenario: SCN-105
     targets: [core]
@@ -1058,7 +1058,7 @@ items:
     targets: [core, nestjs, spring-boot, api-platform]
   - id: CHK-171
     source: "A43"
-    fact: A monorepo root config writes a merged OpenAPI document across the apps it lists, holding each api once from the apps that serve it (the operations their server targets generate, and the documents of OpenAPI-only apps); an app with client targets only contributes nothing, even with its own openapi key; an identical element is written once, two different elements under one operation id or component key are refused naming both apis unless one api takes a prefix, a repeated method and path is always refused, and each app keeps its own documents.
+    fact: A monorepo root config writes a merged OpenAPI document across the apps it lists, holding each api once from the apps that serve or document it (the operations their server targets generate, and the documents an OpenAPI-only app, with an openapi key and no target, lists); only an app with client targets and no server target contributes nothing, even with its own openapi key; an identical element is written once, two different elements under one operation id or component key are refused naming both apis unless one api takes a prefix, a repeated method and path is always refused, and each app keeps its own documents.
     frs: [FR-17, FR-11]
     scenario: SCN-129
     targets: [core]
