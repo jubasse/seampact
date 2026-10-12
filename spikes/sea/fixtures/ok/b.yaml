@@ -1,0 +1,9 @@
+# fixture file b
+operations:
+  - id: createOrder
+    method: post
+  - id: getOrder
+    method: get
+flags:
+  strict: true
+  ratio: 0.5
