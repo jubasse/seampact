@@ -526,7 +526,7 @@
       "subject": {
         "kind": "resource",
         "type": { "segments": ["task"], "role": "schema" },
-        "idSchema": "TaskId"
+        "idSchema": "Task"
       },
       "errors": [],
       "docs": {},
@@ -547,9 +547,17 @@
     }
   },
   "scopes": {
+    "workspace": {
+      "id": "workspace",
+      "idSchema": "Task",
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/scopes/workspace" }
+    },
     "channel": {
       "id": "channel",
-      "idSchema": "TaskId",
+      "idSchema": "Task",
       "within": "workspace",
       "errors": [],
       "docs": {},
