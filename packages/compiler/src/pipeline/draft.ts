@@ -11,7 +11,9 @@ import type { IrWriter } from "@seampact/spec/ir";
 //   start, so a half adds to a container that is always there and never races another half to create it.
 // - `api` and `lint`, objects with no empty form, are optional until `tree.nodes` writes them.
 // - Every member of an operation is optional: `tree.nodes` creates an operation with its own members and each
-//   later half adds its own (field ownership, `ownership.ts`). Two shared objects keep the members another half
+//   later half adds its own (field ownership, `ownership.ts`). tree.nodes creates `params` with its three lists
+//   (`path`, `query`, `header`) and `responses` on every operation, empty when nothing is declared, so a later
+//   half appends its derived elements to lists that are always there (the draft fixtures check it). Two shared objects keep the members another half
 //   adds optional: `input.rawBody` (access.identity) and `input.bodyLimitBytes` (derive.wire), and
 //   `concurrency.derivedFrom` (derive.wire). Everything else keeps the writer view's optionality.
 // Finalize checks completeness: it validates the finished draft against the strict IR schema, which names every

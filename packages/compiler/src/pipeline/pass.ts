@@ -1,4 +1,4 @@
-import type { IrWriter, Origin } from "@seampact/spec/ir";
+import type { ContractIR, IrWriter, Origin } from "@seampact/spec/ir";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
 import type { RawApi, RawWorkspace } from "../raw-tree.js";
 import type { ResolvedConventions } from "./conventions.js";
@@ -22,16 +22,20 @@ export interface TreeSchemaExampleIssue {
 
 /**
  * What `tree.schemas` exposes to `tree.nodes`, which compiles routes, parameters and examples without compiling
- * schemas itself. Pointers are JSON Pointers into the api's merged raw tree (`RawApi.merged`). Each method is
- * pure: it reports nothing (tree.schemas reported every schema problem in its own run), and it answers
- * `undefined` where no schema is written or the schema written there was refused.
+ * schemas itself. `tree.schemas` returns it from its run (`PassResultOf`); the orchestrator hands it to
+ * `tree.nodes` as `context.treeSchemas`. Pointers are JSON Pointers into the api's merged raw tree
+ * (`RawApi.merged`).
+ * - Every hoist happens during tree.schemas' run: each inline object, map or union of the raw tree is in
+ *   `schemas` before the service is returned. The service never writes the draft.
+ * - Each method is pure and reports nothing: tree.schemas reported every schema problem in its own run.
+ * - `undefined` means no schema is written at `pointer` (or `pointer` is no schema position). A refused schema
+ *   never reaches tree.nodes: tree.nodes runs only when tree.schemas reported no error (the stop rule).
  */
 export interface TreeSchemaService {
   /**
    * The type use the schema written at `pointer` compiles to, used in `direction` (a route's `input`, `output`,
    * a `responses.*.body`, a fields-map entry of `id`, `pathParams`, `query`, `headers`, an identity header or a
-   * rule proof schema). An inline object, map or union is hoisted into `schemas` by tree.schemas, and the use
-   * refers to it.
+   * rule proof schema). An inline object, map or union refers to the schema tree.schemas hoisted for it.
    */
   typeUse(pointer: string, direction: IrWriter.Direction): IrWriter.TypeUse | undefined;
   /** The query wire form of the query or form field whose schema is written at `pointer` (ADR 0002 section 7). */
@@ -50,10 +54,16 @@ export interface PassContext {
   /** The origin of a node of the merged raw tree, from `RawApi.leafOrigins` and the layers. */
   origin(pointer: string): Origin | undefined;
   /**
-   * The derived draft of a workspace api that already ran (relay order), or the IR of an import when the
-   * `imports` option supplies one; undefined for an api neither knows.
+   * The derived draft of a workspace api that already ran (relay order), in the closed writer view; undefined
+   * for an api of no workspace or one that has not run.
    */
   relayed(api: string): PassReadonly<DraftIR> | undefined;
+  /**
+   * The IR of an imported api, when the `imports` option supplies one, in the open reader types: an IR from
+   * another compiler version may hold a variant or a value this one does not know. Code that copies from it into
+   * the draft narrows each union with `isKnownVariant` and reports an unknown arm by name instead of copying it.
+   */
+  imported(api: string): PassReadonly<ContractIR> | undefined;
   report(diagnostic: Diagnostic): void;
 }
 
@@ -83,8 +93,8 @@ export type PassParts = { readonly [H in HalfName]: PassPart<H> };
 /** The context of the link pass: the whole workspace, no single api. */
 export interface WorkspacePassContext {
   readonly workspace: PassReadonly<RawWorkspace>;
-  /** The IR of an import, when the `imports` option supplies one. */
-  imported(api: string): PassReadonly<DraftIR> | undefined;
+  /** The IR of an import, when the `imports` option supplies one, in the open reader types. */
+  imported(api: string): PassReadonly<ContractIR> | undefined;
   report(diagnostic: Diagnostic): void;
 }
 
