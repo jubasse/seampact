@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "A naming vector (ADR 0007 section 6)",
+  "description": "One vector of vectors.json: a written name (or the segments of a derived name and their owner), its role, the expected segments, and the expected identifier per language, or the expected error. vectors.json is an array of these, sorted by id.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "category", "role"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z-]+/[A-Za-z0-9-]+$",
+      "description": "Stable unique key, `<category>/<slug>`; the file is sorted by it."
+    },
+    "category": {
+      "enum": ["splitting", "digits", "enum-fallback", "right", "reserved", "php-case", "derived"]
+    },
+    "role": {
+      "enum": [
+        "schema",
+        "input",
+        "output",
+        "query",
+        "headers",
+        "path",
+        "response",
+        "params",
+        "error",
+        "errors",
+        "property",
+        "item",
+        "value",
+        "variant",
+        "endpoints",
+        "operation",
+        "member",
+        "enumMember"
+      ]
+    },
+    "source": {
+      "enum": ["name", "enumValue", "right"],
+      "description": "What the written name is: an enum value without segments becomes value<position>; a right or a name without segments is an error."
+    },
+    "written": { "type": "string", "description": "The name as written in a contract." },
+    "codeName": { "type": "string", "description": "Replaces the segments split from `written`." },
+    "position": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "One-based position of an enum value in its enum."
+    },
+    "owner": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z0-9]+$" },
+      "description": "For a derived name, the segments of the owner (the Name's segments)."
+    },
+    "status": {
+      "type": "string",
+      "pattern": "^[0-9]{3}$",
+      "description": "The status of a `response` role."
+    },
+    "segments": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^[a-z0-9]+$" }
+    },
+    "error": {
+      "const": "no-segment",
+      "description": "The name yields no segment: a compile error naming it."
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["typescript", "kotlin", "java", "php"],
+      "properties": {
+        "typescript": {
+          "type": ["string", "null"],
+          "description": "null when the language has no identifier for the role (an enum member)."
+        },
+        "kotlin": { "type": "string", "minLength": 1 },
+        "java": { "type": "string", "minLength": 1 },
+        "php": { "type": "string", "minLength": 1 }
+      }
+    },
+    "canonicalId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The canonical id of ADR 0004 section 9 (the TypeScript form), for a derived name."
+    },
+    "operationId": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["camel", "snake"],
+      "properties": {
+        "camel": { "type": "string", "minLength": 1 },
+        "snake": { "type": "string", "minLength": 1 }
+      },
+      "description": "The operation id under conventions.operationIds.case, for the operation role."
+    }
+  },
+  "allOf": [
+    {
+      "oneOf": [
+        {
+          "required": ["written", "source"],
+          "not": { "anyOf": [{ "required": ["owner"] }, { "required": ["status"] }] }
+        },
+        {
+          "required": ["owner"],
+          "not": {
+            "anyOf": [
+              { "required": ["written"] },
+              { "required": ["source"] },
+              { "required": ["codeName"] },
+              { "required": ["position"] }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "oneOf": [
+        { "required": ["segments", "expected"], "not": { "required": ["error"] } },
+        {
+          "required": ["error"],
+          "not": { "anyOf": [{ "required": ["segments"] }, { "required": ["expected"] }] }
+        }
+      ]
+    }
+  ]
+}
