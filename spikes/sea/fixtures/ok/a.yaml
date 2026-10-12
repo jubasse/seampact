@@ -1,0 +1,7 @@
+# fixture file a
+name: orders
+version: 3
+tags: [b, a, c]
+nested:
+  zeta: 1
+  alpha: "été ☃"
