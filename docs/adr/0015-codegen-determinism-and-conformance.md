@@ -8,6 +8,11 @@ The same IR and options must give the same files, byte for byte, on every machin
 
 Eight server targets in three languages must also prove the same server boundary (amendment A17). Each target maps the contract onto its framework's own mechanisms and the declared wire format (A30), so the proof must check observable HTTP behaviour, not generated source. FR-35 asks for one black-box HTTP suite, written once, run against every server target and every adapter.
 
+## Options
+
+- Generation: targets free to read their environment and format with whatever the consumer has installed, or a pure generate step with pinned formatters. Choice: pure (FR-14, SM-3), since committed output and drift checks need byte-identical files on every machine.
+- Proof of the boundary: golden tests of generated source only, a test suite written per target, or one black-box HTTP suite run against every server target, beside golden tests. Choice: the shared suite (FR-35, A17). Targets differ in source but must agree on the wire, and a suite written once cannot drift between targets.
+
 ## Decisions
 
 ### Generate is pure
@@ -26,7 +31,7 @@ The file writer (in `codegen-core`, and its equivalent in the native IR packages
 - it keeps a manifest in that directory listing each generated file and its hash, and removes files a previous run generated that are no longer produced;
 - it refuses to overwrite a file it did not generate, and a generated file whose hash shows a hand edit, naming the file and the fix (move the code next to the generated files, then delete the edited file).
 
-`seampact check` with `checks.generated` (ADR 0011) regenerates into memory and fails on any byte difference with the committed files, listing them.
+`seampact check` with `checks.generated` (ADR 0011) regenerates into memory and reports any byte difference with the committed files, listing them; at `error`, the default, the difference fails the check.
 
 ### The generated header
 

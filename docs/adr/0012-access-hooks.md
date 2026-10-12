@@ -10,6 +10,10 @@ The rights research (`.work/rights-research.md`) proposed mapping each right ont
 
 Rights, rules, scopes and identities are declared with the grammar of ADR 0002 and recorded in the IR of ADR 0004. This ADR decides the runtime boundary every server target generates from them.
 
+## Options
+
+- Map each right onto the framework's native authorization inside the target (`#[IsGranted]`, `@PreAuthorize`, policies), as the rights research proposed; generate neutral typed hooks, with native mappings as optional adapters; or generate nothing for access. Choice: neutral hooks (A25), with native access as an opt-in setup (A42, "Native access instead of hooks" below). A native mapping imposes one library per framework, and generating nothing leaves deny by default and the check order unenforced at the boundary.
+
 ## Decisions
 
 ### One neutral, typed hook per concern

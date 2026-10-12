@@ -27,27 +27,28 @@ A pack is distributed as an npm package whose `package.json` names its YAML entr
 
 ### What a pack may set
 
-A pack may set exactly these, each validated against the pack schema published in `@seampact/spec`:
+A pack holds the keys of a base (ADR 0002 section 1: every catalogue, `conventions`, `formats`, `extensions`, `lint`) plus its manifest and `derive`, each validated against the pack schema published in `@seampact/spec`. The table names the values the derivations read:
 
 | Slot | Examples | Served FR |
 |---|---|---|
+| Declarations | `schemas`, `enums`, `schemes`, `identities`, `rights`, `rules`, `scopes`, `buckets`, `services`, beside the catalogues below | FR-1, FR-10 |
 | Header names | the idempotency key and replay headers (`conventions.idempotency`), identity headers in the `headers` catalogue (deadline, trace context, actor surface, rights version), the rate-limit and deprecation header names | FR-7, FR-28 |
-| Wire formats | `formats`: item, table, list and page shapes with body and header templates, meta fields and who fills each, the error body; media types | FR-42, A30 |
-| Paging styles | `pagings`: request roles mapped to parameter names, response roles mapped to members added to the format's page or to a whole page body, headers and `Link` relations (ADR 0002 section 14) | FR-31, A31 |
+| Wire formats | `formats`: item, table, list and page shapes with body and header templates, meta fields and who fills each, the error body; media types; the api's format, `conventions.format` | FR-42, A30 |
+| Paging styles | `pagings`: request roles mapped to parameter names, response roles mapped to members added to the format's page or to a whole page body, headers and `Link` relations (ADR 0002 section 14); the default style, `conventions.paging.default` | FR-31, A31 |
 | Named formats | `scalars`: `money` or `iri-reference`, a base JSON type, portable refinements, a description; never the name of a portable format (ADR 0003 section 8) | FR-3 |
 | Cache families | a name mapped to a max-age or to `Cache-Control` directives; `never` (no-store) is reserved | FR-33 |
 | Error families | error codes with status, nature, family, typed params and an example, added to the registry; an extra code pattern (`conventions.errors.pattern`) | FR-6 |
 | Natures | the `natures` catalogue, each mapped onto a base nature (A40) | FR-6 |
 | Error role bindings | the code each derivation role answers, renaming the core default (A34), with an optional params template; how far a code attached on a node reaches (`conventions.errors.reach`) | FR-6 |
-| Request defaults | idempotency lifetime, methods, whether the key is required and who enforces it, body-limit default, batch `maxIds` and body limit, query encoding and unknown-key policy, body unknown-key policy, int64 wire form, the paging over-limit policy | FR-7, FR-30, FR-32, FR-41 |
-| Route defaults | the path version (`conventions.pathVersion`), the `ops` defaults and operation-id derivation, the URL form | FR-2 |
+| Request defaults | idempotency lifetime, methods, whether the key is required and who enforces it, body-limit default, batch `maxIds` and body limit, query encoding and unknown-key policy, body unknown-key policy, int64 wire form, the paging over-limit policy, a restricted field sent without its right (`conventions.restrictedInput`), how output enums are written (`conventions.outputEnums`) | FR-7, FR-29, FR-30, FR-32, FR-41 |
+| Route defaults | `conventions.pathVersion`, `conventions.pathCase`, `conventions.ops`, `conventions.operationIds`, `conventions.urls` | FR-2 |
 | Lint severities | `lint.rules` (ADR 0002 section 12) | FR-12 |
 | Named requirements | `requirements`: requirement items a route uses by name in `requires` (ADR 0002 section 9) | FR-5 |
 | Right naming | `conventions.rights.pattern`, a pattern every right name must also match, enforced as an error | FR-22 |
 | Derivation entries | `derive`: a selector and effects from closed sets (below) | FR-26 |
 | Extension declarations | consumer extension keys with their JSON Schemas (below) | FR-10 |
 
-Derivation entries are the only way a pack adds to what a route ends up with. A selector (`select`) picks routes by closed criteria: `op` (the `ops` name a route came from), `access` (read or write), `apiKind`, `identity`, `tag`. The effects are `declareRight` (a right from a name template, with its subject), `require` (a requirement attached to the route) and `attachErrors`. Templates may use `{resource}` and `{op}` only. Pack-derived requirements come first in a route's `requires`, in pack order, then the ancestors' and the route's own (ADR 0002 section 8). Every element a derivation entry produces is ordinary IR carrying `derivedFrom`, naming the pack, its version and the entry (FR-6).
+Derivation entries are the only way a pack adds to what a route ends up with. A selector (`select`) picks routes by closed criteria: `op` (the `ops` name a route came from), `access` (read or write), `apiKind`, `identity`, `tag`. The effects are `declareRight` (a right from a name template, with its subject), `require` (a requirement attached to the route) and `attachErrors`. Templates may use `{resource}` and `{op}` only. Pack-derived requirements come first in a route's `requires`, in pack order, then the ancestors' and the route's own (ADR 0002 section 8). Every element a derivation entry produces is ordinary IR carrying `derivedFrom` with the derivation `pack.<pack>.<entry>` (ADR 0006 section 5); the pack's version is recorded once, in the IR's `packs` list (ADR 0004 section 2) (FR-6).
 
 ### What stays core
 
@@ -81,7 +82,7 @@ The layering rule is ADR 0002 section 2, cited here so the two never differ: the
 
 Options: free `x-` keys copied through, keys declared with a JSON Schema, a fixed set of extension slots with typed keys.
 
-Choice: declared keys. A consumer declares a prefix (for example `acme`) and its keys, each with a JSON Schema and the places it may appear on (`at`): `api`, `operation`, `schema`, `property`, `right`, `rule` and `scope` (FR-10). Key names follow ADR 0002 section 4 (`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`). The declaration lives in a pack or in the api's base.
+Choice: declared keys. A consumer declares a prefix (for example `acme`) and its keys, each with a JSON Schema and the places it may appear on (`at`): `api`, `operation`, `schema`, `property`, `right`, `rule` and `scope` (FR-10). Key names follow ADR 0002 section 4 (`^[a-z][a-z0-9]*(-[a-z0-9]+)*$`). The declaration lives in any layer: a pack, the shared file, the base or the api.
 
 - The compiler validates every value against its schema and reports file, line, column, key and the schema violation.
 - Extension schemas use the schema subset of ADR 0003, so every target can emit a named type for each key.
@@ -92,12 +93,12 @@ Choice: declared keys. A consumer declares a prefix (for example `acme`) and its
 An undeclared key is an error, never copied through: a typo must not reach a published document.
 
 ```yaml
-# packs/acme.yaml (excerpt), syntax per ADR 0002 section 12
+# packs/acme.yaml (excerpt), the example of ADR 0002 section 12 moved into a pack
 enums:
-  TaxBasis: { values: [gross, net], reason: "Acme's tax rules." }
+  TaxBasis: { values: [inclusive, exclusive], reason: "Acme's tax rules." }
 extensions:
   acme:
-    tax-basis: { at: [property], schema: { enum: TaxBasis } }
+    tax-basis: { at: [operation, property], schema: { enum: TaxBasis } }
     invalidates: { at: [operation], schema: { type: array, items: { type: string } } }
 ```
 
@@ -105,8 +106,8 @@ extensions:
 
 seampact ships six opt-in packs, all data only, each with its own conformance fixtures (A24, A28, A32). ADR 0002 section 15 writes the presets of the format packs. Each format pack sets `conventions.format` and `conventions.paging.default` to its own presets when applied, named in its entry below; a later layer may choose others.
 
-- `@seampact/pack-crud-rights` (A24, FR-26). For every route produced by the `ops` shorthand, it declares a right `{resource}.{op}` and attaches it as a requirement, first in the route's `requires` (ADR 0002 section 8). On a member route (get, update, delete) the right's subject is the resource, taken from the member id. On a collection route (list, create) the subject is the route's innermost scope when it has one, and none otherwise. A route that already lists the same right does not get it twice. Without the pack nothing is derived and the core imposes no right name (A20).
-- `@seampact/pack-api-platform` (A28, FR-21). JSON-LD items (`jsonld`, the format it sets), Hydra collections and paging (`hydra`, the default style it sets: `page`, `itemsPerPage`, `order[key]`), Hydra or problem+json errors, their media types, and the `iri-reference` named format. The api-platform target renders them through API Platform's own serializer, and serves the JSON-LD contexts the format points at (`/contexts/{resource}`, `/contexts/Error`) and Hydra's API documentation link as API Platform's own routes, allow-listed for the boot check. Since the pack is ordinary data, another target may render it too, provided it serves those contexts; the compatibility matrix refuses a target that claims the pack without them (ADR 0009). Whether API Platform also serves its own OpenAPI document is the app's choice, not the pack's (A43, ADR 0011).
+- `@seampact/pack-crud-rights` (A24, FR-26). For every route of the `list`, `get`, `create`, `update`, `delete` and `batch` ops, it declares a right `{resource}.{op}` and attaches it as a requirement, first in the route's `requires` (ADR 0002 section 8). On a member route (get, update, delete) the right's subject is the resource, taken from the member id. On a collection route (list, create, batch) the subject is the route's innermost scope when it has one, and none otherwise. A batch route gets its own right (`tasks.batch`) rather than `tasks.get`, because a right has one subject and `tasks.get`'s is the member, which a batch of ids has no single value for. A route that already lists the same right does not get it twice. Without the pack nothing is derived and the core imposes no right name (A20).
+- `@seampact/pack-api-platform` (A28, FR-21). JSON-LD items (`jsonld`, the format it sets), Hydra collections and paging (`hydra`, the default style it sets: `page`, `itemsPerPage`, `order[{key}]`), Hydra or problem+json errors, their media types, and the `iri-reference` named format. The api-platform target renders them through API Platform's own serializer, and serves the JSON-LD contexts the format points at (`/contexts/{resource}`, `/contexts/Error`) and Hydra's API documentation link as API Platform's own routes, allow-listed for the boot check. Since the pack is ordinary data, another target may render it too, provided it serves those contexts; the compatibility matrix refuses a target that claims the pack without them (ADR 0009). Whether API Platform also serves its own OpenAPI document is the app's choice, not the pack's (A43, ADR 0011).
 - `@seampact/pack-laravel`. API Resources (`data` wrapping, the `laravel` format it sets, whose page shape is `{ data, meta }`) and the length-aware and cursor paginators (`laravelPages`, the default style it sets, and `laravelCursor`), rendered by the laravel target through Laravel's own resource collections. It covers success bodies and paginators only: errors stay the bare problem+json, because Laravel's validation error body groups issues by field, which the template language does not express (ADR 0002 section 15).
 - `@seampact/pack-spring`. Spring Data's `Page` (`springPage`, the default style it sets: zero-based `page`, `size`, `sort=key,desc`); it sets no format, so errors stay problem+json, which the spring-boot target writes with `ProblemDetail`.
 - `@seampact/pack-jsonapi`. JSON:API resource objects (`jsonapi`, the format it sets), `page[number]` and `page[size]` paging (`jsonapiPages`, the default style it sets), `sort`, and the `errors` array, over `application/vnd.api+json`.

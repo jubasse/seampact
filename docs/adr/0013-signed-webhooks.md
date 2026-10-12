@@ -10,6 +10,10 @@ Authentication stays neutral (A25, ADR 0012): the generated boundary must not fo
 
 The keywords are defined by the grammar (ADR 0002). YAML below is illustration only, syntax per ADR 0002.
 
+## Options
+
+- A closed set of signature templates (A5's minimal form), verification always left to the application, or a template form by default beside a neutral `verify: application` form. Choice: both forms (A40). The template covers Stripe-style schemes with an optional helper and independent test vectors; the neutral form fits senders no template describes (Standard Webhooks, Slack, Discord) behind the authenticate hook (A25).
+
 ## Decisions
 
 ### A signed identity kind with a declared scheme

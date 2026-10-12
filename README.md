@@ -13,9 +13,9 @@ seampact generates boundaries, not implementations.
 - **Generated:** named types, validators, the route table, one handler interface per resource (or tag, or operation) with exact input and output types, typed clients, derived errors and headers, and the utilities that place the access and validation checks around your controller: a decorator per operation in NestJS, a composed annotation in Spring, a FormRequest and middleware in Laravel, an attribute, a listener and a value resolver in Symfony, a listener and a decorated provider in API Platform.
 - **Yours:** the controllers, which implement the generated interfaces, what a handler does, where data lives, how a credential is checked, how a right is decided and which tenant a request belongs to. seampact never generates a controller, and everything it generates goes to one directory, `__generated__` by default.
 
-seampact is not a framework. Generated code uses your framework's own mechanisms (guards, interceptors and exception filters in NestJS, interceptors, argument resolvers and `ProblemDetail` in Spring, Form Requests and API Resources in Laravel, listeners and normalizers in Symfony) and never replaces them. Which OpenAPI documents you get is your choice, per app: seampact's document (the default), your framework's own document (`@nestjs/swagger`, springdoc, API Platform's) completed by the opt-in `nativeDocs` artefact so it agrees with the contract, both, or none. seampact never turns your framework's own generation off unless you ask, and a monorepo can also write one document across its apps.
+seampact is not a framework. Generated code uses your framework's own mechanisms (guards, interceptors and exception filters in NestJS, interceptors, argument resolvers and `ProblemDetail` in Spring, Form Requests and API Resources in Laravel, listeners and normalizers in Symfony) and never replaces them. Which OpenAPI documents you get is your choice, per app: seampact's document (the default for an app that serves routes; a frontend with client targets only writes none unless it asks), your framework's own document (`@nestjs/swagger`, springdoc, API Platform's) completed by the opt-in `nativeDocs` artefact so it agrees with the contract, both, or none. seampact never turns your framework's own generation off unless you ask, and a monorepo can also write one document across its apps.
 
-Access is checked through three generated, typed hooks: authenticate, decide and resolve scope. You answer them with the library you already use (Clerk, better-auth, Passport, CASL, spatie/laravel-permission, Laravel Gates, Symfony Voters, Spring Security) or with your own code. Your application refuses to start while a hook, a requirement or a route handler is missing.
+Access is checked through three generated, typed hooks: authenticate, decide and resolve scope. You answer them with the library you already use (Clerk, better-auth, Passport, CASL, spatie/laravel-permission, Laravel Gates, Symfony Voters, Spring Security) or with your own code. Your application refuses to start while an identity, right, rule or scope has no hook, or a route has no handler. Or keep your framework's own access rules: turn the access hooks off and seampact exports each route's access for them to enforce.
 
 seampact imposes nothing: not a wire format, a page shape, error codes, header names, a versioning scheme, a permission model, a validator, a client library or a code style. Where it needs a value to work, it has a default you can rename; everything else comes from your contract or from opt-in packs. What it does demand is explicitness: every route states who may call it, and every exception states its reason.
 
@@ -57,7 +57,7 @@ These run with no Node.js installed. The standalone compiler binary runs `init`,
 
 | Framework | Install |
 |---|---|
-| Spring Boot | the Gradle plugin `io.github.jubasse.seampact` or the Maven plugin `io.github.jubasse:seampact-maven-plugin` |
+| Spring Boot | the Gradle plugin `io.github.jubasse.seampact` or the Maven plugin `io.github.jubasse:seampact-maven-plugin`, and `io.github.jubasse:seampact-hooks` unless the target vendors its types |
 | Laravel | `seampact/laravel` as a development dependency, and `seampact/hooks` unless the target vendors its types |
 | Symfony | `seampact/symfony` as a development dependency, and `seampact/hooks` unless the target vendors its types |
 | API Platform | `seampact/api-platform` as a development dependency, and `seampact/hooks` unless the target vendors its types |
@@ -90,7 +90,7 @@ In an app config, a link names the other entry's `id`: `link: { validators: vali
 
 | Package | Use it when |
 |---|---|
-| `@seampact/pack-crud-rights` | you want a `<resource>.<op>` right on every CRUD route without declaring each one |
+| `@seampact/pack-crud-rights` | you want a `<resource>.<op>` right on every route the `ops` shorthand generates, `batch` included, without declaring each one |
 | `@seampact/pack-api-platform` | your API Platform api serves JSON-LD items, Hydra pages and Hydra errors |
 | `@seampact/pack-laravel` | your api serves Laravel API Resources and paginators |
 | `@seampact/pack-spring` | your api serves Spring Data `Page` bodies |
@@ -99,6 +99,7 @@ In an app config, a link names the other entry's `id`: `link: { validators: vali
 | `@seampact/nestjs-casl` | your NestJS app decides rights with CASL |
 | `seampact/laravel-spatie` | your Laravel app decides rights with spatie/laravel-permission |
 | `@seampact/signed-webhooks`, and its Java and PHP equivalents | you receive Stripe-style or GitHub-style signed webhooks and want the signature checked for you; other senders (Standard Webhooks, Slack) are verified by your own hook with their own library |
+| `@seampact/http-suite` | you write your own server target and want to prove it against the shared HTTP suite |
 
 ## Sharing a contract between repositories
 
@@ -116,7 +117,12 @@ A contract repository publishes a bundle: the YAML sources, the compiled IR and 
 | ADR | Decision |
 |---|---|
 | [0001](docs/adr/0001-toolchain.md) | toolchain |
-| 0002 to 0007 | YAML grammar, schema language, IR shape, IR evolution, compiler passes, cross-language naming |
+| [0002](docs/adr/0002-grammar.md) | YAML grammar |
+| [0003](docs/adr/0003-schema-language.md) | schema language |
+| [0004](docs/adr/0004-ir-shape.md) | IR shape |
+| [0005](docs/adr/0005-ir-evolution.md) | IR evolution |
+| [0006](docs/adr/0006-compiler-pass-pipeline.md) | compiler passes |
+| [0007](docs/adr/0007-cross-language-naming.md) | cross-language naming |
 | [0008](docs/adr/0008-convention-packs-and-extensions.md) | convention packs and user extensions |
 | [0009](docs/adr/0009-modular-packaging-and-target-composition.md) | packages and how generators compose |
 | [0010](docs/adr/0010-native-generators.md) | Java and PHP generators and the standalone compiler |

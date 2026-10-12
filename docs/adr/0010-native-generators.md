@@ -42,7 +42,7 @@ JVM, groupId `io.github.jubasse`:
 
 Plugin and generator bytecode targets Java 21, the lowest version A13 supports. Both plugins call the same generator library, and a golden test checks they produce identical files. `seampact-hooks` is plain Java so a Spring application does not pull the Kotlin standard library at run time.
 
-Configuration follows each build tool's habit (A42): the app-config keys are written in `seampact.config.yaml` or in the plugin's DSL, with the same schema, never both for one app. Output goes to the app's `outDir`; a JVM app usually sets it to the build directory (`build/generated/sources/seampact/main`, `target/generated-sources/seampact`), leaves it uncommitted and turns `checks.generated` off, while a team that reviews generated diffs keeps the default `__generated__` and commits it (ADR 0011).
+Configuration follows each build tool's habit (A42): the app-config keys are written in `seampact.config.yaml` or in the plugin's DSL, with the same schema, never both for one app. Output goes to the app's `outDir`; a JVM app usually sets it to the build directory (`build/generated/sources/seampact/main`, `target/generated-sources/seampact`), leaves it uncommitted and sets `checks.generated` to `disabled`, while a team that reviews generated diffs keeps the default `__generated__` and commits it (ADR 0011).
 
 Composer, vendor `seampact`:
 
