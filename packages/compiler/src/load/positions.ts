@@ -1,13 +1,26 @@
 // Where the authoring schemas expect which type (ADR 0002 section 3, P6), and where they expect
-// nothing at all (a data position: a payload, an example, a default).
+// any value (a data position, marked `DATA` by the grammar: a payload, an example, a default).
 //
 // The loader reads the schemas of `@seampact/spec/authoring` as plain JSON, without validating
-// anything (the validate stage owns that). A position is a set of schema nodes, reached from the
-// file's root schema one key or index at a time, through `properties`, `patternProperties`,
-// `additionalProperties` and `items`, following `$ref`, `allOf`, `anyOf`, `oneOf` and the `then`
-// and `else` branches. A branch chosen by the keys of the mapping being read (`if` with `required`
-// or a `const` property: a node with `method` is a route) is chosen with `refinePosition`; a
-// condition that cannot be decided, or depends on the value itself, keeps every branch.
+// anything (the validate stage owns that). This is a deliberate, bounded interpreter: it models
+// the keywords in `POSITION_KEYWORDS` and ignores, by name, the value constraints in
+// `IGNORED_KEYWORDS`, which never change where a key leads nor which type a scalar has there.
+// positions.test.ts fails on any other keyword the authoring schemas start to use.
+//
+// A position is one schema node, reached from the file's root schema one key or index at a time.
+// A step keeps the shape of the combinators: the node's own `properties`, `patternProperties`,
+// `additionalProperties` or `items`, its `$ref` and its `allOf` members all hold together (their
+// results join as an `allOf`); the members of an `anyOf` or a `oneOf`, and the `then` and `else`
+// branches, are alternatives (an `anyOf`). An alternative that does not constrain the child at all
+// makes the whole alternative unknown, so a key is never typed by one branch while another branch
+// would take any value there. An alternative that cannot hold the child (a string form, when a key
+// is read; a key its `additionalProperties: false` refuses or a conflict marker forbids) is dropped;
+// in constraints that hold together, it makes the child impossible (the validate stage reports it).
+//
+// A branch chosen by the keys of the mapping being read (`if` with `required` or a `const`
+// property: a node with `method` is a route) is chosen with `refinePosition`; an `if` on the type
+// of the value holding the key (a mapping, or a list) is chosen when stepping. A condition that
+// cannot be decided keeps every branch.
 //
 // The reading is conservative on purpose: a type is expected only when every route to the position
 // states one. Anything the walk cannot decide (an unknown key, a node that states no type) is left
@@ -24,7 +37,7 @@ import {
 export type ScalarType = "string" | "number" | "integer" | "boolean" | "null";
 type TypeName = ScalarType | "object" | "array";
 
-/** The file kinds a layer is read as (the validate stage's own mapping). */
+/** The file kinds a layer is read as (`schemaKindOf`). */
 export type PositionKind = "workspace" | "api" | "base" | "pack";
 
 // The types a node accepts, or `undefined` when it states none.
@@ -35,12 +48,15 @@ export interface Position {
   readonly data: boolean;
   /** What the position accepts, `undefined` when it cannot say. */
   readonly types: Types;
-  readonly nodes: readonly JsonSchema[];
+  /** The schema node of the position; several nodes are joined as an `allOf` or an `anyOf`. */
+  readonly node: JsonSchema;
   readonly children: Map<string, Position | undefined>;
-  /** The schema nodes the keys are looked up in, once branches are opened; lazily filled. */
+  /** Every node reached through references and combinators; lazily filled. */
   leafSet?: readonly JsonSchema[];
   /** The positions refined for one set of branch choices, by choice. */
   readonly refined: Map<string, Position>;
+  /** The `if` nodes the mapping's keys decide, with the branch taken (refined positions). */
+  readonly choices?: ReadonlyMap<JsonSchema, boolean>;
 }
 
 /** What a mapping being read says about itself, to choose among conditional branches. */
@@ -56,6 +72,47 @@ export interface MapView {
 }
 
 export const NOT_SCALAR: unique symbol = Symbol("not a scalar");
+
+/** The schema keywords the reading models. */
+export const POSITION_KEYWORDS: readonly string[] = [
+  "$ref",
+  "allOf",
+  "anyOf",
+  "oneOf",
+  "if",
+  "then",
+  "else",
+  "not",
+  "type",
+  "enum",
+  "const",
+  "properties",
+  "patternProperties",
+  "additionalProperties",
+  "items",
+  "required",
+  "title",
+];
+
+/**
+ * The schema keywords the reading ignores on purpose: annotations, and value constraints that
+ * neither lead to another node nor change a scalar's type (the validate stage checks them).
+ */
+export const IGNORED_KEYWORDS: readonly string[] = [
+  "$schema",
+  "$defs",
+  "$comment",
+  "description",
+  "pattern",
+  "minLength",
+  "minimum",
+  "maximum",
+  "exclusiveMinimum",
+  "minItems",
+  "minProperties",
+  "maxProperties",
+  "propertyNames",
+];
 
 const TYPE_NAMES = new Set<string>([
   "string",
@@ -119,9 +176,24 @@ function subschemas(node: JsonSchema, key: string): JsonSchema[] {
   return list.filter(isSchema).map((n) => tagged(n, fileOf(node)));
 }
 
+function referenced(node: JsonSchema): JsonSchema | undefined {
+  if (typeof node.$ref !== "string") return undefined;
+  const r = resolveRef(node.$ref, fileOf(node));
+  return r ? tagged(r.node, r.file) : undefined;
+}
+
 // A conflict marker (`not: {}`): the key may not appear in this case, whatever its type.
 function isConflict(node: JsonSchema): boolean {
   return isSchema(node.not) && Object.keys(node.not).length === 0;
+}
+
+// A node fragment whose kind an include brings (`node.schema.json#/$defs/includedNode`) lists the
+// keys of every node kind with no constraint, for an editor; the kinds themselves type those keys,
+// so its placeholders never count here.
+let includedNode: JsonSchema | undefined;
+function isIncludedNode(node: JsonSchema): boolean {
+  includedNode ??= resolveRef("node.schema.json#/$defs/includedNode", "node")?.node;
+  return node === includedNode;
 }
 
 function valueType(value: unknown): TypeName | undefined {
@@ -182,10 +254,8 @@ function typesOf(node: JsonSchema): Types {
       const name = valueType(node.const);
       if (name !== undefined) types = intersect(types, new Set([name]));
     }
-    if (typeof node.$ref === "string") {
-      const r = resolveRef(node.$ref, fileOf(node));
-      if (r) types = intersect(types, typesOf(tagged(r.node, r.file)));
-    }
+    const target = referenced(node);
+    if (target) types = intersect(types, typesOf(target));
     for (const member of subschemas(node, "allOf")) types = intersect(types, typesOf(member));
     for (const key of ["anyOf", "oneOf"]) {
       if (key in node) types = intersect(types, union(subschemas(node, key).map(typesOf)));
@@ -208,9 +278,12 @@ function and(parts: (boolean | undefined)[]): boolean | undefined {
   return parts.every((p) => p === true) ? true : undefined;
 }
 
-// Whether a condition (an `if`) holds for the mapping: true, false, or undefined when it cannot be
-// told from its keys. Only the forms the grammar writes are understood.
-function holds(cond: unknown, view: MapView): boolean | undefined {
+type Container = "object" | "array";
+
+// Whether a condition (an `if`) holds for the value holding the child: true, false, or undefined
+// when it cannot be told. `container` is that value's type; `view`, when given, shows its keys.
+// Only the forms the grammar writes are understood.
+function holds(cond: unknown, container: Container, view?: MapView): boolean | undefined {
   if (cond === true || cond === false) return cond;
   if (!isSchema(cond)) return undefined;
   const parts: (boolean | undefined)[] = [];
@@ -220,12 +293,25 @@ function holds(cond: unknown, view: MapView): boolean | undefined {
       case "description":
       case "title":
         break;
+      case "type": {
+        const names = Array.isArray(value) ? value : [value];
+        parts.push(names.includes(container));
+        break;
+      }
       case "required": {
+        if (!view) {
+          parts.push(undefined);
+          break;
+        }
         const keys = Array.isArray(value) ? (value as string[]) : [];
         parts.push(and(keys.map((k) => (view.has(k) ? true : view.open ? undefined : false))));
         break;
       }
       case "properties": {
+        if (!view) {
+          parts.push(undefined);
+          break;
+        }
         const props = isSchema(value) ? value : {};
         for (const [key, sub] of Object.entries(props)) {
           if (sub === true) continue;
@@ -243,14 +329,14 @@ function holds(cond: unknown, view: MapView): boolean | undefined {
       }
       case "anyOf":
       case "allOf": {
-        const members = (Array.isArray(value) ? value : []).map((m) => holds(m, view));
+        const members = (Array.isArray(value) ? value : []).map((m) => holds(m, container, view));
         if (keyword === "allOf") parts.push(and(members));
         else if (members.some((m) => m === true)) parts.push(true);
         else parts.push(members.every((m) => m === false) ? false : undefined);
         break;
       }
       case "not": {
-        const inner = holds(value, view);
+        const inner = holds(value, container, view);
         parts.push(inner === undefined ? undefined : !inner);
         break;
       }
@@ -261,39 +347,35 @@ function holds(cond: unknown, view: MapView): boolean | undefined {
   return and(parts);
 }
 
-// Every node a position's schema node stands for once references and combinators are opened:
-// where a key or index is looked up. With a `view`, a `then` or `else` the mapping's keys rule out
-// is left closed; `trace` records each choice, so equal choices can share one position.
+// Every node a schema node stands for once references and combinators are opened. With a `view`,
+// a `then` or `else` the mapping's keys rule out is left closed, each choice made is recorded in
+// `choices`, and `trace` records the choices in order, so equal choices can share one position.
 function leaves(
   node: JsonSchema,
   out: Set<JsonSchema> = new Set(),
   view?: MapView,
   trace?: string[],
+  choices?: Map<JsonSchema, boolean>,
 ): Set<JsonSchema> {
   if (out.has(node)) return out;
   out.add(node);
-  if (typeof node.$ref === "string") {
-    const r = resolveRef(node.$ref, fileOf(node));
-    if (r) leaves(tagged(r.node, r.file), out, view, trace);
-  }
+  const target = referenced(node);
+  if (target) leaves(target, out, view, trace, choices);
   for (const key of ["allOf", "anyOf", "oneOf"]) {
-    for (const member of subschemas(node, key)) leaves(member, out, view, trace);
+    for (const member of subschemas(node, key)) leaves(member, out, view, trace, choices);
   }
-  const chosen = view && isSchema(node.if) ? holds(node.if, view) : undefined;
+  const chosen = view && isSchema(node.if) ? holds(node.if, "object", view) : undefined;
   if (trace && view && isSchema(node.if)) trace.push(String(chosen));
+  if (choices && chosen !== undefined) choices.set(node, chosen);
   if (chosen !== false)
-    for (const member of subschemas(node, "then")) leaves(member, out, view, trace);
+    for (const member of subschemas(node, "then")) leaves(member, out, view, trace, choices);
   if (chosen !== true)
-    for (const member of subschemas(node, "else")) leaves(member, out, view, trace);
+    for (const member of subschemas(node, "else")) leaves(member, out, view, trace, choices);
   return out;
 }
 
 function leafSetOf(pos: Position): readonly JsonSchema[] {
-  if (pos.leafSet === undefined) {
-    const out = new Set<JsonSchema>();
-    for (const node of pos.nodes) leaves(node, out);
-    pos.leafSet = [...out];
-  }
+  if (pos.leafSet === undefined) pos.leafSet = [...leaves(pos.node)];
   return pos.leafSet;
 }
 
@@ -305,53 +387,143 @@ function leafSetOf(pos: Position): readonly JsonSchema[] {
 export function refinePosition(pos: Position | undefined, view: MapView): Position | undefined {
   if (pos === undefined || pos.data) return pos;
   const trace: string[] = [];
-  const out = new Set<JsonSchema>();
-  for (const node of pos.nodes) leaves(node, out, view, trace);
+  const choices = new Map<JsonSchema, boolean>();
+  const out = leaves(pos.node, new Set(), view, trace, choices);
   const signature = trace.join(",");
   const hit = pos.refined.get(signature);
   if (hit) return hit;
   const refined: Position = {
     data: pos.data,
     types: pos.types,
-    nodes: pos.nodes,
+    node: pos.node,
     children: new Map(),
     leafSet: [...out],
     refined: new Map(),
+    choices,
   };
   pos.refined.set(signature, refined);
   return refined;
 }
 
+// What a node says about one child: a schema node, no constraint at all, or no child possible.
+const FREE: unique symbol = Symbol("no constraint");
+const NONE: unique symbol = Symbol("no child possible");
+type Step = JsonSchema | typeof FREE | typeof NONE;
+
+// Constraints that all hold: a child impossible in one is impossible; no constraint adds nothing.
+function allOfSteps(parts: Step[]): Step {
+  if (parts.includes(NONE)) return NONE;
+  const nodes = parts.filter(isSchema);
+  if (nodes.length === 0) return FREE;
+  return nodes.length === 1 ? (nodes[0] as JsonSchema) : { allOf: nodes };
+}
+
+// Alternatives: an impossible one is dropped; one that constrains nothing frees the child.
+function anyOfSteps(parts: Step[]): Step {
+  const live = parts.filter((p) => p !== NONE);
+  if (live.length === 0) return NONE;
+  if (live.includes(FREE)) return FREE;
+  const nodes = live.filter(isSchema);
+  return nodes.length === 1 ? (nodes[0] as JsonSchema) : { anyOf: nodes };
+}
+
+// The node's own keywords for the child.
+function ownStep(node: JsonSchema, segment: string, isIndex: boolean): Step {
+  const file = fileOf(node);
+  // A conflict marker for the key: the key may not appear in this case.
+  const asStep = (value: unknown): Step =>
+    value === false || (isSchema(value) && isConflict(value))
+      ? NONE
+      : isSchema(value)
+        ? tagged(value, file)
+        : FREE;
+  // `items` is the one form the grammar writes for lists.
+  if (isIndex) return asStep(node.items);
+  const parts: Step[] = [];
+  const properties = isSchema(node.properties) ? node.properties : {};
+  if (Object.hasOwn(properties, segment)) parts.push(asStep(properties[segment]));
+  if (isSchema(node.patternProperties)) {
+    for (const [pattern, schema] of Object.entries(node.patternProperties)) {
+      if (patternOf(pattern).test(segment)) parts.push(asStep(schema));
+    }
+  }
+  if (parts.length === 0) return asStep(node.additionalProperties);
+  return allOfSteps(parts);
+}
+
+const stepping = new Set<JsonSchema>();
+
+function stepNode(
+  node: JsonSchema,
+  segment: string,
+  isIndex: boolean,
+  choices: ReadonlyMap<JsonSchema, boolean> | undefined,
+): Step {
+  if (isIncludedNode(node)) return NONE;
+  const container: Container = isIndex ? "array" : "object";
+  const types = typesOf(node);
+  if (types !== undefined && !types.has(container)) return NONE;
+  // A reference cycle constrains nothing more on its second visit.
+  if (stepping.has(node)) return FREE;
+  stepping.add(node);
+  try {
+    const step = (n: JsonSchema) => stepNode(n, segment, isIndex, choices);
+    const parts: Step[] = [ownStep(node, segment, isIndex)];
+    const target = referenced(node);
+    if (target) parts.push(step(target));
+    for (const member of subschemas(node, "allOf")) parts.push(step(member));
+    for (const key of ["anyOf", "oneOf"]) {
+      if (key in node) parts.push(anyOfSteps(subschemas(node, key).map(step)));
+    }
+    if (isSchema(node.if)) {
+      const chosen = choices?.get(node) ?? holds(node.if, container);
+      const branch = (key: string): Step => {
+        const b = subschemas(node, key)[0];
+        return b ? step(b) : FREE;
+      };
+      const branches: Step[] = [];
+      if (chosen !== false) branches.push(branch("then"));
+      if (chosen !== true) branches.push(branch("else"));
+      parts.push(anyOfSteps(branches));
+    }
+    return allOfSteps(parts);
+  } finally {
+    stepping.delete(node);
+  }
+}
+
+// A data position is one the grammar marks; joined nodes are data when a constraint that holds
+// marks it, or when every alternative does.
 function isData(node: JsonSchema): boolean {
-  return node.title === DATA;
+  if (node.title === DATA) return true;
+  if (Array.isArray(node.allOf)) return subschemas(node, "allOf").some(isData);
+  if (Array.isArray(node.anyOf)) return subschemas(node, "anyOf").every(isData);
+  return false;
 }
 
-// A node fragment whose kind an include brings (`node.schema.json#/$defs/includedNode`) lists the
-// keys of every node kind with no constraint, for an editor; the kinds themselves type those keys,
-// so its placeholders never count here.
-let includedNode: JsonSchema | undefined;
-function isIncludedNode(node: JsonSchema): boolean {
-  includedNode ??= resolveRef("node.schema.json#/$defs/includedNode", "node")?.node;
-  return node === includedNode;
-}
-
-function position(nodes: JsonSchema[]): Position | undefined {
-  const live = nodes.filter((n) => !isConflict(n));
-  if (live.length === 0) return undefined;
-  const data = live.every(isData);
+function position(step: Step): Position | undefined {
+  if (!isSchema(step)) return undefined;
+  const data = isData(step);
   return {
     data,
-    types: data ? undefined : union(live.map(typesOf)),
-    nodes: live,
+    types: data ? undefined : typesOf(step),
+    node: step,
     children: new Map(),
     refined: new Map(),
   };
 }
 
-/** The position of a file's root. */
+/** The position of one schema node, read as the root of a document. */
+export function positionOf(node: JsonSchema): Position | undefined {
+  return position(node);
+}
+
+const roots = new Map<PositionKind, Position | undefined>();
+
+/** The position of a file's root, one per kind: what is learnt below it is kept. */
 export function rootPosition(kind: PositionKind): Position | undefined {
-  const root = schemaFiles()[kind];
-  return position([tagged(root, kind)]);
+  if (!roots.has(kind)) roots.set(kind, position(tagged(schemaFiles()[kind], kind)));
+  return roots.get(kind);
 }
 
 const patterns = new Map<string, RegExp>();
@@ -362,37 +534,6 @@ function patternOf(pattern: string): RegExp {
     patterns.set(pattern, re);
   }
   return re;
-}
-
-function stepNodes(from: Position, segment: string, isIndex: boolean): JsonSchema[] {
-  const found: JsonSchema[] = [];
-  for (const leaf of leafSetOf(from)) {
-    if (isIncludedNode(leaf)) continue;
-    if (isIndex) {
-      // `items` is the one form the grammar writes for lists.
-      if (isSchema(leaf.items)) found.push(tagged(leaf.items, fileOf(leaf)));
-      continue;
-    }
-    const properties = isSchema(leaf.properties) ? leaf.properties : {};
-    let matched = false;
-    if (Object.hasOwn(properties, segment)) {
-      const p = properties[segment];
-      if (isSchema(p)) found.push(tagged(p, fileOf(leaf)));
-      matched = true;
-    }
-    if (isSchema(leaf.patternProperties)) {
-      for (const [pattern, schema] of Object.entries(leaf.patternProperties)) {
-        if (isSchema(schema) && patternOf(pattern).test(segment)) {
-          found.push(tagged(schema, fileOf(leaf)));
-          matched = true;
-        }
-      }
-    }
-    if (!matched && isSchema(leaf.additionalProperties)) {
-      found.push(tagged(leaf.additionalProperties, fileOf(leaf)));
-    }
-  }
-  return found;
 }
 
 function mentions(from: Position, segment: string): boolean {
@@ -416,7 +557,7 @@ export function stepPosition(
   if (from === undefined) return undefined;
   const slot = isIndex ? "\0item" : mentions(from, segment) ? segment : "\0other";
   if (from.children.has(slot)) return from.children.get(slot);
-  const next = position(stepNodes(from, segment, isIndex));
+  const next = position(stepNode(from.node, segment, isIndex, from.choices));
   from.children.set(slot, next);
   return next;
 }
