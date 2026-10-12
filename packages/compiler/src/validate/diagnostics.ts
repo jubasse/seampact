@@ -6,7 +6,13 @@
 // escapes control, bidi and line-separator characters and bounds the length: a contract file is
 // untrusted input, and a message is printed to a terminal.
 
-import { isMarker, type Marker, schemaKeyword } from "@seampact/spec/authoring";
+import {
+  isMarker,
+  MARKERS,
+  type Marker,
+  RESERVED_NAMES,
+  schemaKeyword,
+} from "@seampact/spec/authoring";
 import type { Origin } from "@seampact/spec/ir";
 import type { ErrorObject } from "ajv";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
@@ -31,7 +37,7 @@ type Role =
   | "routes"
   | "name";
 
-const ROLES: Record<Marker, Role> = {
+const ROLES = {
   refused: "refused",
   "refused form": "refusedForm",
   conflict: "conflict",
@@ -56,16 +62,45 @@ const ROLES: Record<Marker, Role> = {
   "header name": "name",
   "rule id": "name",
   "schema reference": "name",
+} as const satisfies Record<Marker, Role>;
+
+// The markers of a mapping whose missing key is a missing reason.
+type HolderMarker = {
+  [M in Marker]: (typeof ROLES)[M] extends "reasonHolder" ? M : never;
+}[Marker];
+
+// The reasoned form of such a mapping, for the fix, spelt with the key that holds it (`unknownQuery`
+// or `conventions.query.unknownKeys` for a query exception); `fallback` when the key is not a plain
+// keyword.
+const HOLDER_FORMS: Record<HolderMarker, { fallback: string; form: (key: string) => string }> = {
+  access: {
+    fallback: "access",
+    form: (k) => `${k}: { public: "<reason>" } or ${k}: { optionalAuth: "<reason>" }`,
+  },
+  "csrf exemption": { fallback: "csrf", form: (k) => `${k}: { exempt: "<reason>" }` },
+  "idempotency exemption": { fallback: "idempotency", form: (k) => `${k}: { exempt: "<reason>" }` },
+  "query exception": { fallback: "unknownQuery", form: (k) => `${k}: { ignore: "<reason>" }` },
+  "unknown keys exception": {
+    fallback: "unknownKeys",
+    form: (k) => `${k}: { ignore: "<reason>" } or ${k}: { keep: "<reason>" }`,
+  },
 };
 
-// The reasoned form of a mapping whose missing key is a missing reason, for the fix.
-const HOLDER_FORMS: Partial<Record<Marker, string>> = {
-  access: 'access: { public: "<reason>" } or access: { optionalAuth: "<reason>" }',
-  "csrf exemption": 'csrf: { exempt: "<reason>" }',
-  "idempotency exemption": 'idempotency: { exempt: "<reason>" }',
-  "query exception": 'unknownQuery: { ignore: "<reason>" }',
-  "unknown keys exception": 'unknownKeys: { ignore: "<reason>" } or { keep: "<reason>" }',
-};
+function isHolder(marker: Marker): marker is HolderMarker {
+  return ROLES[marker] === "reasonHolder";
+}
+
+function holderForm(marker: HolderMarker, key: string): string {
+  const { fallback, form } = HOLDER_FORMS[marker];
+  return form(/^[A-Za-z]+$/.test(key) ? key : fallback);
+}
+
+const RESERVED: ReadonlySet<string> = new Set(RESERVED_NAMES);
+
+// A reserved name, for a key or a right name.
+function reservedName(name: string): string {
+  return `${quote(name)} is a reserved name: it reaches the prototype of a JavaScript object, so no key or right name may be ${RESERVED_NAMES.join(", ")}.`;
+}
 
 const POLICY_REASONS = new Set(["ignore", "keep"]);
 
@@ -159,7 +194,7 @@ function knownKeywords(e: ErrorObject): string[] {
     | undefined;
   if (properties === undefined) return [];
   return Object.entries(properties)
-    .filter(([k, v]) => k !== "$include" && v?.title !== "refused")
+    .filter(([k, v]) => k !== "$include" && v?.title !== MARKERS.refused)
     .map(([k]) => k)
     .sort();
 }
@@ -253,7 +288,8 @@ function exampleFor(key: string): string {
 function convertMarked(e: ErrorObject, marker: Marker): Problem | undefined {
   const key = lastSegment(e.instancePath);
   const pointer = e.instancePath;
-  switch (ROLES[marker]) {
+  const role: Role = ROLES[marker];
+  switch (role) {
     case "refused":
       return e.keyword === "not" ? refusedKeyword(e, false) : undefined;
     case "refusedForm":
@@ -294,8 +330,8 @@ function convertMarked(e: ErrorObject, marker: Marker): Problem | undefined {
       }
       return undefined;
     case "reasonHolder":
-      if (e.keyword !== "required") return undefined;
-      return reasonRequired(pointer, subjectOf(pointer), `Write ${HOLDER_FORMS[marker]}.`);
+      if (e.keyword !== "required" || !isHolder(marker)) return undefined;
+      return reasonRequired(pointer, subjectOf(pointer), `Write ${holderForm(marker, key)}.`);
     case "nodeMarker":
       if (e.keyword !== "required") return undefined;
       return {
@@ -305,7 +341,7 @@ function convertMarked(e: ErrorObject, marker: Marker): Problem | undefined {
         fix: "Add 'method', 'kind: collection', 'kind: single' or, in a surface root's routes, 'relays'.",
       };
     case "deriveEntry":
-      if (e.keyword !== "minProperties") return undefined;
+      if (e.keyword !== "required") return undefined;
       return {
         rule: validateRules.missingKeyword,
         pointer,
@@ -331,6 +367,14 @@ function convertMarked(e: ErrorObject, marker: Marker): Problem | undefined {
     case "routes":
       return undefined;
     case "name":
+      if (e.keyword === "not" && typeof e.data === "string" && RESERVED.has(e.data)) {
+        return {
+          rule: validateRules.invalidName,
+          pointer,
+          message: reservedName(e.data),
+          fix: `Write another ${marker}.`,
+        };
+      }
       if (e.keyword !== "pattern") return undefined;
       return {
         rule: validateRules.invalidName,
@@ -346,6 +390,14 @@ function invalidKey(e: ErrorObject): Problem {
   const schema = e.schema as SchemaNode;
   const what = typeof schema.description === "string" ? schema.description : "a valid key";
   const pointer = `${e.instancePath}/${escapePointer(name)}`;
+  if (RESERVED.has(name)) {
+    return {
+      rule: validateRules.invalidName,
+      pointer,
+      message: reservedName(name),
+      fix: "Rename it.",
+    };
+  }
   if (name === "$include" && markerOf(e) === "routes") {
     return {
       rule: validateRules.invalidName,
@@ -398,8 +450,10 @@ function convertOne(e: ErrorObject, context: ConvertContext): Problem | undefine
       };
     }
     case "maxProperties": {
-      const limit = Number((e.params as { limit: number }).limit);
-      const keys = Object.keys((e.data as SchemaNode | null) ?? {}).filter((k) => k !== "$include");
+      // `$include` beside the keys is not counted (the schema raises the bound by one for it).
+      const all = Object.keys((e.data as SchemaNode | null) ?? {});
+      const keys = all.filter((k) => k !== "$include");
+      const limit = Number((e.params as { limit: number }).limit) - (all.length - keys.length);
       return {
         rule: validateRules.conflictingKeywords,
         pointer,

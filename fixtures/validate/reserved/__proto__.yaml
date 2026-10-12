@@ -1,5 +1,5 @@
 # expect: seampact/validate/invalid-name /schemas/Task/properties/__proto__
-# a key that reaches a JavaScript reader's prototype chain is refused in every mapping.
+# a reserved name as a free key (a schema property).
 schemas:
   Task:
     type: object

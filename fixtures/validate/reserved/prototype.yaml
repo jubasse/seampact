@@ -1,7 +1,8 @@
-# expect: seampact/validate/invalid-name /schemas/Task/properties/prototype
-# a key that reaches a JavaScript reader's prototype chain is refused in every mapping.
-schemas:
-  Task:
-    type: object
-    properties:
-      prototype: { type: string }
+# expect: seampact/validate/invalid-name /surfaces/app/routes/tasks/filteredBy
+# a reserved name as a right name in use.
+api: { name: tasks, version: 1 }
+surfaces:
+  app:
+    identity: user
+    routes:
+      tasks: { method: get, item: Task, filteredBy: prototype }

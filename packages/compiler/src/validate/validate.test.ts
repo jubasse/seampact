@@ -5,6 +5,7 @@ import { REFUSED_SCHEMA_KEYWORDS } from "@seampact/spec/authoring";
 import type { Origin } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { parse } from "yaml";
+import { loadFsReader, loadWorkspace } from "../load/index.js";
 import type { JsonObject, JsonValue, RawApi, RawWorkspace } from "../raw-tree.js";
 import { MAX_DIAGNOSTICS } from "./diagnostics.js";
 import { validateRules } from "./rules.js";
@@ -286,7 +287,8 @@ describe("validate stage", () => {
         layers: [shared, layer("api", `${name}/api.yaml`, { api: { name, version: 1 } })],
       })),
     );
-    const result = validateWorkspace(workspace);
+    const { workspace: own, apis: result } = validateWorkspace(workspace);
+    expect(own).toEqual([]);
     expect(result.map((r) => r.api)).toEqual(["a", "b"]);
     expect(result[0]?.diagnostics.map((d) => d.origin)).toEqual([
       { layer: "shared", pointer: "/conventions/pathcase" },
@@ -301,7 +303,7 @@ describe("validate stage", () => {
         layers: [layer("api", `${name}/api.yaml`, { api: { name, version: 1 }, surface: {} })],
       })),
     );
-    const result = validateWorkspace(workspace);
+    const result = validateWorkspace(workspace).apis;
     expect(
       result.map((r) => [r.api, r.diagnostics.map((d) => [d.origin.layer, d.origin.pointer])]),
     ).toEqual([
@@ -504,6 +506,18 @@ describe("one diagnostic per problem", () => {
       validateRules.reasonRequired,
       "/schemas/T/unknownKeys",
     ],
+    [
+      "a derive entry with an effect but no select",
+      { pack: { name: "p", version: "1.0.0" }, derive: [{ entry: "e", attachErrors: [] }] },
+      validateRules.missingKeyword,
+      "/derive/0",
+    ],
+    [
+      "a requirement with a right and a bucket",
+      api({ method: "get", requires: [{ right: "tasks.read", bucket: "b" }] }),
+      validateRules.conflictingKeywords,
+      "/surfaces/app/routes/health/requires/0/bucket",
+    ],
   ] as const)("%s", (_, tree, rule, pointer) => {
     const t = tree as unknown as JsonObject;
     const kind: ValidateDocumentKind = "workspace" in t ? "workspace" : layerOf(t).kind;
@@ -534,6 +548,50 @@ describe("messages name the problem", () => {
     const d = one("node", { method: "get", paging: { cursor: {}, offset: {} } });
     expect(d.rule).toBe(validateRules.conflictingKeywords);
     expect(d.message).toBe("'paging' takes one key, not 'cursor', 'offset'.");
+  });
+
+  test("two styles beside $include: the bound counts the styles only", () => {
+    const d = one("node", {
+      method: "get",
+      paging: { $include: "./p.yaml", cursor: {}, offset: {} },
+    });
+    expect(d.message).toBe("'paging' takes one key, not 'cursor', 'offset'.");
+  });
+
+  test("a derive entry without an effect", () => {
+    const d = one("pack", {
+      pack: { name: "p", version: "1.0.0" },
+      derive: [{ entry: "e", select: {} }],
+    });
+    expect([d.rule, d.origin.pointer]).toEqual([validateRules.missingKeyword, "/derive/0"]);
+    expect(d.fix).toBe("Add 'declareRight', 'require' or 'attachErrors'.");
+  });
+
+  // The fix spells the reasoned form with the key that holds it.
+  test.each([
+    [
+      "conventions.query.unknownKeys",
+      "conventions",
+      { query: { unknownKeys: {} } },
+      'Write unknownKeys: { ignore: "<reason>" }.',
+    ],
+    [
+      "unknownQuery",
+      "node",
+      { method: "get", unknownQuery: {} },
+      'Write unknownQuery: { ignore: "<reason>" }.',
+    ],
+    [
+      "a schema's unknownKeys",
+      "schema",
+      { type: "object", unknownKeys: {} },
+      'Write unknownKeys: { ignore: "<reason>" } or unknownKeys: { keep: "<reason>" }.',
+    ],
+    ["csrf", "node", { method: "post", csrf: {} }, 'Write csrf: { exempt: "<reason>" }.'],
+  ] as const)("a missing reason in %s", (_, kind, tree, fix) => {
+    const d = one(kind, tree);
+    expect(d.rule).toBe(validateRules.reasonRequired);
+    expect(d.fix).toBe(fix);
   });
 
   test("a string where only a reasoned exception is accepted", () => {
@@ -608,42 +666,65 @@ describe("authored values in diagnostics", () => {
   });
 });
 
+// One fixture per name, each in another position: a free key, a name key, a right name in use.
 describe("reserved names refused", () => {
   const dir = join(FIXTURES, "validate/reserved");
   test.each(["__proto__", "constructor", "prototype"])("%s", (name) => {
     const { text, diagnostics } = check(join(dir, `${name}.yaml`));
     const { rule, pointer } = expectation(text);
     expect(diagnostics.map((d) => [d.rule, d.origin.pointer])).toEqual([[rule, pointer]]);
+    expect(diagnostics[0]?.message).toBe(
+      `'${name}' is a reserved name: it reaches the prototype of a JavaScript object, so no key or right name may be __proto__, constructor, prototype.`,
+    );
+  });
+
+  // JSON text, so `__proto__` is an own key, the way the loader's trees hold it.
+  test.each([
+    [
+      "a catalogue name",
+      '{ "buckets": { "constructor": { "limit": 1, "per": "1m" } } }',
+      "/buckets/constructor",
+    ],
+    ["an extension prefix", '{ "extensions": { "prototype": {} } }', "/extensions/prototype"],
+    ["a right", '{ "rights": { "__proto__": {} } }', "/rights/__proto__"],
+  ] as const)("in %s", (_, json, pointer) => {
+    const t = JSON.parse(json) as JsonObject;
+    expect(validateDocument("base", t, "shared").map((d) => [d.rule, d.origin.pointer])).toEqual([
+      [validateRules.invalidName, pointer],
+    ]);
   });
 });
 
-// C-13: the stage runs on include-resolved trees; an access brought by `$include` is checked then.
-describe("access through $include", () => {
-  const dir = join(FIXTURES, "validate/include");
+// The stage runs on the loader's trees, whose `$include`s are resolved (validate.ts, contract with
+// the loader): end to end from the files.
+describe("load then validate", () => {
+  const loaded = (root: string, entry: string) => {
+    const result = loadWorkspace({ reader: loadFsReader(join(FIXTURES, root)), entry });
+    expect(result.diagnostics).toEqual([]);
+    return result.workspace;
+  };
 
-  // ADR 0002 section 2, rule 2: the included mapping's keys take the place of `$include`.
-  function resolve(value: JsonValue, base: string): JsonValue {
-    if (Array.isArray(value)) return value.map((v) => resolve(v, base));
-    if (value === null || typeof value !== "object") return value;
-    const out: JsonObject = {};
-    for (const [key, v] of Object.entries(value)) {
-      if (key === "$include" && typeof v === "string") {
-        Object.assign(out, resolve(read(join(base, v)).tree, base) as JsonObject);
-      } else {
-        out[key] = resolve(v, base);
-      }
-    }
-    return out;
-  }
-
-  test("the unresolved file passes: $include relieves the mapping of its keys", () => {
-    expect(validateDocument("api", read(join(dir, "access-route.yaml")).tree, "api")).toEqual([]);
+  test("the reference contract loads and validates", () => {
+    expect(validateWorkspace(loaded("reference", "workspace.yaml"))).toEqual({
+      workspace: [],
+      apis: [
+        { api: "tasks", diagnostics: [] },
+        { api: "tasksService", diagnostics: [] },
+      ],
+    });
   });
 
-  test("the resolved tree refuses the empty reason", () => {
-    const { text, tree } = read(join(dir, "access-route.yaml"));
+  // C-13: the file alone passes ($include relieves the mapping of its keys); once the loader has
+  // resolved the include, the empty reason is refused, at a pointer the api's table locates.
+  test("an access brought by $include is checked after resolution", () => {
+    const path = join(FIXTURES, "validate/include/access-route.yaml");
+    const { text, tree } = read(path);
+    expect(validateDocument("api", tree, "api")).toEqual([]);
+    const workspace = loaded("validate/include", "access-route.yaml");
+    const [entry, ...others] = validateWorkspace(workspace).apis;
+    expect(others).toEqual([]);
     const { rule, pointer } = expectation(text);
-    const diagnostics = validateDocument("api", resolve(tree, dir), "api");
-    expect(diagnostics.map((d) => [d.rule, d.origin.pointer])).toEqual([[rule, pointer]]);
+    expect(entry?.diagnostics.map((d) => [d.rule, d.origin.pointer])).toEqual([[rule, pointer]]);
+    expect(workspace.apis[0]?.locations[`api#${pointer}`]).toBeDefined();
   });
 });

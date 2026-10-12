@@ -90,18 +90,30 @@ export function validateLayer(layer: RawLayer): Diagnostic[] {
   return validateDocument(LAYER_SCHEMA[layerKindOf(layer.layer)], layer.tree, layer.layer);
 }
 
-// The diagnostics of one api: its origins name layers of that api only (ADR 0006 section 4).
+// The diagnostics listed under one api: their origins name layers that api reaches, so a consumer
+// locates them through that api's `locations` table.
 export interface ApiDiagnostics {
   api: string;
   diagnostics: Diagnostic[];
 }
 
-// Every layer of every api, each file once: the shared file and a pack reached by several apis are
-// one layer, validated once and listed under the first api that reaches it, in workspace order.
-// Every api has an entry, empty when its layers are valid.
-export function validateWorkspace(workspace: RawWorkspace): ApiDiagnostics[] {
+// The validate stage's output for a workspace.
+export interface WorkspaceDiagnostics {
+  // The workspace file's own diagnostics; empty until the workspace file is validated here
+  // (p1-loader-2 hands the stage that document).
+  workspace: Diagnostic[];
+  // One entry per api, in workspace order.
+  apis: ApiDiagnostics[];
+}
+
+// Every layer of every api, each file once: a layer reached by several apis (the shared file, a
+// pack) is validated once and its diagnostics listed under the first api that reaches it. An empty
+// api entry means no diagnostic is listed there, not that every layer the api reaches is valid.
+// Any diagnostic in any entry, `workspace` included, stops the pipeline after this stage
+// (ADR 0006 section 1).
+export function validateWorkspace(workspace: RawWorkspace): WorkspaceDiagnostics {
   const seen = new Set<string>();
-  return workspace.apis.map((api) => {
+  const apis = workspace.apis.map((api) => {
     const diagnostics: Diagnostic[] = [];
     for (const layer of api.layers) {
       const id = `${layer.layer}\u0000${layer.file}`;
@@ -111,4 +123,5 @@ export function validateWorkspace(workspace: RawWorkspace): ApiDiagnostics[] {
     }
     return { api: api.name, diagnostics: sortDiagnostics(diagnostics) };
   });
+  return { workspace: [], apis };
 }

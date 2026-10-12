@@ -1,7 +1,8 @@
-# expect: seampact/validate/invalid-name /schemas/Task/properties/constructor
-# a key that reaches a JavaScript reader's prototype chain is refused in every mapping.
-schemas:
-  Task:
-    type: object
-    properties:
-      constructor: { type: string }
+# expect: seampact/validate/invalid-name /surfaces/app/routes/constructor
+# a reserved name as a name key (a route), though it matches the name pattern.
+api: { name: tasks, version: 1 }
+surfaces:
+  app:
+    identity: user
+    routes:
+      constructor: { method: get, output: Health }
