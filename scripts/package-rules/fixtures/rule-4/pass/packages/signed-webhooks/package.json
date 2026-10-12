@@ -1,0 +1,12 @@
+{
+  "name": "@seampact/signed-webhooks",
+  "version": "0.0.0",
+  "private": true,
+  "seampact": {
+    "role": "helper"
+  },
+  "dependencies": {
+    "@seampact/hooks": "workspace:*",
+    "zod": "workspace:*"
+  }
+}

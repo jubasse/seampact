@@ -1,0 +1,8 @@
+{
+  "name": "@seampact/http-suite",
+  "version": "0.0.0",
+  "private": true,
+  "seampact": {
+    "role": "tool"
+  }
+}

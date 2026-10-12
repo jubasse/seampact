@@ -1,0 +1,12 @@
+{
+  "name": "@seampact/pack-jsonapi",
+  "version": "0.0.0",
+  "private": true,
+  "seampact": {
+    "role": "pack",
+    "pack": "pack.yaml"
+  },
+  "dependencies": {
+    "@seampact/pack-hal": "workspace:*"
+  }
+}

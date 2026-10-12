@@ -1,0 +1,11 @@
+{
+  "name": "@seampact/codegen-fetch",
+  "version": "0.0.0",
+  "private": true,
+  "seampact": {
+    "role": "target"
+  },
+  "peerDependencies": {
+    "@seampact/spec": "*"
+  }
+}

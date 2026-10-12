@@ -1,0 +1,6 @@
+name: ci
+jobs:
+  ci:
+    steps:
+      # pnpm publish is not run here
+      - run: pnpm gate

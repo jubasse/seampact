@@ -1,0 +1,7 @@
+name: ci
+jobs:
+  ci:
+    steps:
+      - run: pnpm publish -r
+      - run: ./gradlew publishToMavenCentral
+      - run: mvn -B deploy
