@@ -214,6 +214,13 @@ describe("checkIrInvariants", () => {
     // A key read with Object.hasOwn: an id spelled like a prototype member resolves to nothing.
     const rights = ir.rights as Record<string, Record<string, unknown>>;
     (rights["tasks.read"] as Record<string, unknown>).id = "constructor";
+    // Ids are type uses: a scope id names a missing named format, a resource id a missing schema.
+    const scopes = ir.scopes as Record<string, Record<string, unknown>>;
+    ((scopes.workspace as Record<string, unknown>).idSchema as Record<string, unknown>).scalar =
+      "missingId";
+    (
+      (rights["tasks.update"] as Record<string, unknown>).subject as Record<string, unknown>
+    ).idSchema = { kind: "ref", schema: "MissingId" };
     expect(checkIrInvariants(ir)).toEqual([
       expect.objectContaining({
         id: "ir.ref.resolves",
@@ -225,6 +232,14 @@ describe("checkIrInvariants", () => {
         pointer: "/identities/user/principal/schema",
       }),
       expect.objectContaining({ id: "ir.ref.resolves", pointer: "/rights/tasks.read/id" }),
+      expect.objectContaining({
+        id: "ir.ref.resolves",
+        pointer: "/rights/tasks.update/subject/idSchema/schema",
+      }),
+      expect.objectContaining({
+        id: "ir.ref.resolves",
+        pointer: "/scopes/workspace/idSchema/scalar",
+      }),
     ]);
   });
 });
