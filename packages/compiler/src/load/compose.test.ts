@@ -547,6 +547,15 @@ test("derive entries named alike in one pack say so", () => {
   expect(r.printed).toContain("  a.yaml:3:5: first declared here.");
 });
 
+test("derive entries named alike in one api file name the file, not a pack", () => {
+  const r = run({
+    "api.yaml": "api: { name: t }\nderive:\n  - { entry: crud }\n  - { entry: crud }\n",
+  });
+  expect(rules(r)).toEqual(["declaration-twice"]);
+  expect(r.result.diagnostics[0]?.message).toContain("is declared twice in 'api.yaml'");
+  expect(r.result.diagnostics[0]?.message).not.toContain("pack");
+});
+
 test("a later layer filling an empty mapping leaves no stale origin on the mapping", () => {
   const r = run({
     "api.yaml":

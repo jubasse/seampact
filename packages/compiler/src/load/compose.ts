@@ -247,9 +247,11 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
           if (id && owner) {
             // ADR 0002 section 2, clarified: an entry name is unique across every layer.
             const where =
-              owner.layer === b.layer
-                ? `declared twice in the pack '${b.layer.replace(/^pack:/, "")}'`
-                : `declared by both '${owner.layer}' (${owner.file}) and '${b.layer}' (${b.parsed.path})`;
+              owner.layer !== b.layer
+                ? `declared by both '${owner.layer}' (${owner.file}) and '${b.layer}' (${b.parsed.path})`
+                : b.layer.startsWith("pack:")
+                  ? `declared twice in the pack '${b.layer.slice("pack:".length)}'`
+                  : `declared twice in '${b.parsed.path}'`;
             rep.report({
               rule: "declaration-twice",
               message: `derive entry '${String(name)}' is ${where}, and an entry name is unique across every layer`,

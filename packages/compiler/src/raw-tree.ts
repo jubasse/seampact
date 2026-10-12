@@ -50,6 +50,15 @@ export interface RawWorkspace {
    * api's tree, so its key is the same whichever api reached the file: the workspace file, a
    * shared file or a pack read by several apis are located once, here. Every pass after load
    * locates its diagnostics through the table of the api they belong to, `RawApi.locations`.
+   *
+   * This table and any api's `locations` form a union without collisions: every key here has a
+   * pointer starting `/~load/`, which JSON Pointer escaping never produces (`~` is always `~0`
+   * or `~1`), and no key of an api's table does. (The one way to make two keys meet is a layer id
+   * holding `#/~load/`, which only a pack manifest's name could; layer ids are `api`, `base`,
+   * `shared` and `pack:<name>`.) The layer of a load origin is informational:
+   * it is the layer being loaded when the diagnostic was first reported (a file reached by
+   * several apis or layers is reported once), part of the key but not an owner. A consumer that
+   * sorts diagnostics of several apis together looks each one up in its own table first.
    */
   locations: SourceMap["locations"];
   config?: RawWorkspaceConfig;

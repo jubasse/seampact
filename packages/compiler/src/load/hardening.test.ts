@@ -134,6 +134,10 @@ test("C-4 a package name that leaves node_modules is refused before any read", (
     "@scope/",
     "a/b/c",
     "x".repeat(215),
+    "progra~1",
+    "@*/x",
+    "@acme/*",
+    "~x",
   ]) {
     const { reader, reads } = spy(
       loadMemoryReader({ "api.yaml": `api: { name: t }\npacks: ['${name}']\n`, ...victim }),
@@ -174,6 +178,27 @@ test("C-4 seampact.pack is a path inside the package", () => {
     expect(rules(r), entry).toEqual([rule]);
     expect(reads, entry).toEqual(["api.yaml", "node_modules/@acme/p/package.json"]);
   }
+});
+
+test("nit (iteration 2): a package.json linked out of its package is refused, never read", () => {
+  const { reader, reads } = spy(
+    loadMemoryReader(
+      {
+        "api.yaml": "api: { name: t }\npacks: ['@acme/p']\n",
+        "node_modules/@acme/p/pack.yaml": "pack: { name: '@acme/p', version: 1.0.0 }\n",
+        "elsewhere/package.json": JSON.stringify({
+          name: "@acme/p",
+          version: "1.0.0",
+          seampact: { role: "pack", pack: "pack.yaml" },
+        }),
+      },
+      { links: { "node_modules/@acme/p/package.json": "elsewhere/package.json" } },
+    ),
+  );
+  const r = loadWorkspace({ reader, entry: "api.yaml" });
+  expect(rules(r)).toEqual(["path-escape"]);
+  expect(reads).toEqual(["api.yaml"]);
+  expect(printed(r)).not.toContain("elsewhere");
 });
 
 test("C-5 an absolute, drive or UNC path is never inside", () => {

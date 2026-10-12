@@ -29,8 +29,10 @@ export interface LoadResult {
 
 // npm's package-name grammar (validate-npm-package-name, new names): an optional `@scope/`, then
 // lowercase URL-safe characters, no leading `.` or `_`, at most 214 characters. A name outside it
-// could fold `node_modules/<name>` out of `node_modules` (`x/../../..`).
-const PACKAGE_NAME = /^(?:@[a-z0-9-*~][a-z0-9-*._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
+// could fold `node_modules/<name>` out of `node_modules` (`x/../../..`). `~` and `*`, which npm
+// allows, are refused too: `progra~1` is a Windows short name for another directory, and `*` a
+// wildcard for any tool that globs the path.
+const PACKAGE_NAME = /^(?:@[a-z0-9-][a-z0-9-._]*\/)?[a-z0-9-][a-z0-9-._]*$/;
 const PACKAGE_NAME_MAX = 214;
 
 // The keys a pack may hold (ADR 0002 section 1, table of file kinds).
@@ -634,6 +636,11 @@ class Loader {
       if (dir !== `${up}node_modules/${name}`) return refuse(); // kept should the grammar loosen
       const manifestPath = `${dir}/package.json`;
       this.store.touched.add(manifestPath);
+      // Contained and case-checked like any file, its real path read; a missing one is no error,
+      // the walk goes on upward.
+      const checked = this.store.checkFile(manifestPath, dir, at, "packs", manifestPath, true);
+      if (checked === null) continue;
+      if (checked === undefined) return undefined;
       const text = this.store.rawText(manifestPath);
       if (text === undefined) continue;
       let json: unknown;
