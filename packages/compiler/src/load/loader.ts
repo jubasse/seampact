@@ -6,7 +6,7 @@ import type { JsonObject, RawApi, RawWorkspace, RawWorkspaceConfig } from "../ra
 import { mergeLayers } from "./compose.js";
 import { Expander, type LayerBuild, navigate } from "./expand.js";
 import { asObject, isReservedKey, showValue } from "./json.js";
-import { isInside, joinPath, loadNormalizePath } from "./paths.js";
+import { isInside, joinPath, loadNormalizePath, pointerEscape } from "./paths.js";
 import type { LoadReader } from "./reader.js";
 import { Reporter, type SiteLocation } from "./report.js";
 import { FileStore, nodeSite, type ParsedFile } from "./source.js";
@@ -199,7 +199,7 @@ class Loader {
       }
     }
     for (const [name, raw] of Object.entries(list)) {
-      const at = site(`/workspace/apis/${name.replaceAll("~", "~0").replaceAll("/", "~1")}`);
+      const at = site(`/workspace/apis/${pointerEscape(name)}`);
       if (typeof raw !== "string") {
         this.rep.report({
           rule: "workspace-shape",
@@ -334,7 +334,8 @@ class Loader {
           if (l === b.layer) continue;
           const other = byLayer.get(l);
           if (other && Object.hasOwn(asObject(other.tree.schemas) ?? {}, n)) {
-            return { site: other.locs.get(`/schemas/${n}`), layer: l };
+            const at = `/schemas/${pointerEscape(n)}`;
+            return { site: other.locs.get(at), layer: l, source: other.sources.get(at) };
           }
         }
         return undefined;
@@ -364,8 +365,8 @@ class Loader {
           related: [
             {
               at:
-                other.locs.get(`/schemas/${use.name}`) ??
-                other.locs.get(`/enums/${use.name}`) ??
+                other.locs.get(`/schemas/${pointerEscape(use.name)}`) ??
+                other.locs.get(`/enums/${pointerEscape(use.name)}`) ??
                 nodeSite(other.parsed, other.parsed.root),
               message: "declared here",
             },
@@ -551,9 +552,7 @@ class Loader {
           rule: "pack-not-data",
           message: `the pack file '${file}' holds '${k}', which is not a pack key; a pack is data only`,
           fix: "keep to the keys of a pack (pack, the catalogues, conventions, formats, extensions, lint, derive)",
-          at:
-            build.locs.get(`/${k.replaceAll("~", "~0").replaceAll("/", "~1")}`) ??
-            nodeSite(pf, pf.root),
+          at: build.locs.get(`/${pointerEscape(k)}`) ?? nodeSite(pf, pf.root),
         });
       }
     }

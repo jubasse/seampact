@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { expectGolden, loadFixture } from "./golden.js";
+import { expectGolden, loadFixture, must } from "./golden.js";
 
 const golden = (dir: string, rules: string[]) => {
   const result = loadFixture(dir);
@@ -54,4 +54,15 @@ test("fixture: inline and included routes give the same raw tree", () => {
   expect(b?.locations["api#/surfaces/app/routes/tasks/routes/search/method"]?.file).toBe(
     "routes/search.yaml",
   );
+});
+
+test("fixture: a query field named default is not a data position", () => {
+  const r = golden("composition/data-positions", []);
+  const merged = must(r.workspace.apis[0]).merged as {
+    surfaces: { app: { routes: { tasks: { list: Record<string, unknown> } } } };
+  };
+  const list = merged.surfaces.app.routes.tasks.list;
+  expect(list.query).toEqual({ default: { type: "string", maxLength: 20 } });
+  expect(list.examples).toEqual({ raw: { value: { $include: "./never-read.yaml" } } });
+  expect(r.files).not.toContain("never-read.yaml");
 });

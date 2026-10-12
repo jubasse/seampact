@@ -17,6 +17,8 @@ export interface RefUse {
 }
 
 interface FileRef {
+  /** The element's identity, `<real path>#<pointer in the file>`. */
+  id: string;
   name: string;
   file: ParsedFile;
   pair: { key: Node | null; value: Node | null };
@@ -31,8 +33,12 @@ export interface LayerBuild {
   locs: Map<string, SiteLocation>;
   uses: RefUse[];
   refs: Map<string, FileRef>;
-  /** `<file>#<name>` of every schema an `$include` under `schemas` declared. */
-  included: Set<string>;
+  /**
+   * The file element each schema came from (`/schemas/<name>` to `<real path>#<pointer>`), for
+   * those declared by an `$include` under `schemas` or by a file `$ref`. One element reached from
+   * two places, or from two layers, is one declaration (ADR 0002 section 2).
+   */
+  sources: Map<string, string>;
 }
 
 /** One file of the `$include`/`$file` chain: `key` is the real path, `shown` the written one. */
@@ -52,10 +58,17 @@ interface Scope {
 }
 
 // Data positions (ADR 0002 section 2): only a mapping whose sole key is `$file` is processed.
+// Recognised by key name, a stopgap accepted at review: the follow-up PR (with P6) derives the
+// data positions from the authoring schema and removes both exception lists below.
 const DATA_KEYS = new Set(["value", "example", "examples", "default"]);
-// Mappings whose keys are names an author chooses, so `default:` or `value:` there is a name.
-// The loader has no grammar table; this is the known approximation (see the report).
-const NAME_KEYED = new Set([
+// Exceptions, where such a key is not data:
+// - mappings whose keys are names an author chooses, so `default:` or `value:` there is a name
+//   (`query: { default: { type: string } }` declares a query field named `default`);
+// - settings mappings whose `default` or `value` is itself a setting: `paging.default` names a
+//   paging style (section 13), a scheme's `key.value` is a literal identifier (section 9).
+const NOT_DATA_UNDER = new Set([
+  "paging",
+  "key",
   "properties",
   "query",
   "pathParams",
@@ -117,7 +130,7 @@ export class Expander {
       locs: new Map(),
       uses: [],
       refs: new Map(),
-      included: new Set(),
+      sources: new Map(),
     };
     if (!file.root) return build;
     build.locs.set("", nodeSite(file, file.root));
@@ -151,15 +164,16 @@ export class Expander {
   /** Expands the schema files reached only through `$ref`, once the layer's names are known. */
   finishRefs(
     build: LayerBuild,
-    visible: (name: string) => { site: SiteLocation | undefined; layer: string } | undefined,
+    visible: (
+      name: string,
+    ) => { site: SiteLocation | undefined; layer: string; source: string | undefined } | undefined,
   ): void {
     const queue: FileRef[] = [];
     const queued = new Set<string>();
     const enqueueAll = () => {
       for (const r of build.refs.values()) {
-        const id = `${r.file.path}#${r.name}`;
-        if (!queued.has(id)) {
-          queued.add(id);
+        if (!queued.has(r.id)) {
+          queued.add(r.id);
           queue.push(r);
         }
       }
@@ -176,16 +190,19 @@ export class Expander {
     };
     while (queue.length > 0) {
       const ref = queue.shift() as FileRef;
-      const id = `${ref.file.path}#${ref.name}`;
-      if (build.included.has(id)) continue; // declared once, by the include (ADR 0002 section 2)
+      const pointer = `/schemas/${pointerEscape(ref.name)}`;
       const elementSite = pairSite(ref.file, ref.pair.key, ref.pair.value);
       const own = Object.hasOwn(asObject(build.tree.schemas) ?? {}, ref.name);
       const other = own
         ? {
-            site: build.locs.get(`/schemas/${pointerEscape(ref.name)}`),
+            site: build.locs.get(pointer),
             layer: build.layer as string,
+            source: build.sources.get(pointer),
           }
         : visible(ref.name);
+      // The same element, already declared here or by a layer this one builds on (by an include
+      // or another `$ref`): the `$ref` points at it.
+      if (other?.source === ref.id) continue;
       if (other) {
         this.rep.report({
           rule: "declaration-twice",
@@ -196,7 +213,6 @@ export class Expander {
         });
         continue;
       }
-      const pointer = `/schemas/${pointerEscape(ref.name)}`;
       const before = build.uses.length;
       const scope: Scope = {
         file: ref.file,
@@ -214,16 +230,18 @@ export class Expander {
       const value = this.node(build, ref.pair.value, pointer, scope);
       setKey(declared(), ref.name, value);
       build.locs.set(pointer, elementSite);
+      build.sources.set(pointer, ref.id);
       // What the element references in its own file comes along with it.
       const fileRoot = ref.file.root;
       for (const use of build.uses.slice(before)) {
         if (!isMap(fileRoot) || use.at.file !== ref.file.path) continue;
         const pair = fileRoot.items.find((p) => keyString(p.key as Node) === use.name);
         if (pair) {
-          const nid = `${ref.file.path}#${use.name}`;
+          const nid = `${this.store.realOf(ref.file.path)}#/${pointerEscape(use.name)}`;
           if (!queued.has(nid)) {
             queued.add(nid);
             queue.push({
+              id: nid,
               name: use.name,
               file: ref.file,
               pair: { key: pair.key as Node, value: pair.value as Node | null },
@@ -321,6 +339,7 @@ export class Expander {
     seen: Map<string, SiteLocation>,
   ): void {
     const { file } = scope;
+    let includeSite: SiteLocation | undefined;
     for (const pair of map.items) {
       // Every pair counts, `$include` ones too: a chain of includes builds nothing else.
       if (!this.admit(file, pair.key as Node, scope.depth)) return;
@@ -341,6 +360,19 @@ export class Expander {
         continue;
       }
       if (key === "$include" && !scope.data) {
+        // P7 holds for the directive too; `seen` cannot tell, as the included keys join it.
+        const site = nodeSite(file, keyNode);
+        if (includeSite) {
+          this.rep.report({
+            rule: "duplicate-key",
+            message: "key '$include' is defined twice in the same mapping (P7)",
+            fix: "write one $include with a list of paths",
+            at: site,
+            related: [{ at: includeSite, message: "first defined here" }],
+          });
+          continue;
+        }
+        includeSite = site;
         this.include(build, pair, pointer, scope, out, seen);
         continue;
       }
@@ -358,7 +390,7 @@ export class Expander {
       }
       seen.set(key, keySite);
       const child = `${pointer}/${pointerEscape(key)}`;
-      const data = scope.data || (DATA_KEYS.has(key) && !NAME_KEYED.has(scope.parentKey ?? ""));
+      const data = scope.data || (DATA_KEYS.has(key) && !NOT_DATA_UNDER.has(scope.parentKey ?? ""));
       let value = this.node(build, valueNode, child, {
         ...scope,
         data,
@@ -461,8 +493,13 @@ export class Expander {
       };
       this.items(build, mapNode, pointer, inner, out, seen);
       if (pointer === "/schemas") {
+        // A nested include recorded its own keys first; those of this file are the rest.
+        const prefix = `${resolved.real}#${resolved.fragment ?? ""}`;
         for (const k of Object.keys(out)) {
-          if (!before.has(k)) build.included.add(`${pf.path}#${k}`);
+          const declaredAt = `/schemas/${pointerEscape(k)}`;
+          if (!before.has(k) && !build.sources.has(declaredAt)) {
+            build.sources.set(declaredAt, `${prefix}/${pointerEscape(k)}`);
+          }
         }
       }
     }
@@ -671,9 +708,10 @@ export class Expander {
       });
       return value;
     }
-    const id = `${pf.path}#${name}`;
+    const id = `${resolved.real}#/${pointerEscape(name)}`;
     if (!build.refs.has(id)) {
       build.refs.set(id, {
+        id,
         name,
         file: pf,
         pair: { key: element.key as Node, value: element.value as Node | null },

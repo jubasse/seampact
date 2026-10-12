@@ -3,7 +3,8 @@ import type { JsonObject, JsonValue } from "../raw-tree.js";
 import type { LayerBuild } from "./expand.js";
 import { asObject, cloneJson, jsonObject, ownValue, setKey } from "./json.js";
 import { pointerEscape } from "./paths.js";
-import type { Reporter } from "./report.js";
+import type { Reporter, SiteLocation } from "./report.js";
+import { nodeSite } from "./source.js";
 
 // ADR 0002 section 2, Layers and overrides.
 
@@ -43,8 +44,13 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter): Merged {
   // on them, so a merge must never write into one.
   const merged = jsonObject();
   const winner = new Map<string, Origin>();
-  const owners = new Map<string, { layer: string; file: string; at: ReturnType<typeof siteAt> }>();
-  const siteAt = (b: LayerBuild, ptr: string) => b.locs.get(ptr);
+  const owners = new Map<
+    string,
+    { layer: string; file: string; at: SiteLocation; source: string | undefined }
+  >();
+  // A declaration is always reported: without its own position, at its layer file's top.
+  const siteAt = (b: LayerBuild, ptr: string): SiteLocation =>
+    b.locs.get(ptr) ?? b.locs.get("") ?? nodeSite(b.parsed, b.parsed.root);
 
   const clear = (ptr: string) => {
     for (const k of [...winner.keys()]) if (k === ptr || k.startsWith(`${ptr}/`)) winner.delete(k);
@@ -68,21 +74,20 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter): Merged {
     what: string,
   ) => {
     const owner = owners.get(ptr);
+    const source = b.sources.get(ptr);
     if (owner) {
-      const at = siteAt(b, ptr);
-      if (at) {
-        const first = owner.at;
-        rep.report({
-          rule: "declaration-twice",
-          message: `'${name}' (${what}) is declared by both '${owner.layer}' (${owner.file}) and '${b.layer}' (${b.parsed.path}), and a declaration is never overridden, even when the two are identical`,
-          fix: "remove the copy",
-          at,
-          related: first ? [{ at: first, message: "first declared here" }] : [],
-        });
-      }
+      // One file element reached by two layers (through `$ref` or `$include`) is one declaration.
+      if (source !== undefined && owner.source === source) return;
+      rep.report({
+        rule: "declaration-twice",
+        message: `'${name}' (${what}) is declared by both '${owner.layer}' (${owner.file}) and '${b.layer}' (${b.parsed.path}), and a declaration is never overridden, even when the two are identical`,
+        fix: "remove the copy",
+        at: siteAt(b, ptr),
+        related: [{ at: owner.at, message: "first declared here" }],
+      });
       return;
     }
-    owners.set(ptr, { layer: b.layer, file: b.parsed.path, at: siteAt(b, ptr) });
+    owners.set(ptr, { layer: b.layer, file: b.parsed.path, at: siteAt(b, ptr), source });
     setKey(section, name, cloneJson(value));
     winner.set(ptr, { layer: b.layer, pointer: ptr });
     record(value, ptr, b.layer, ptr);
@@ -110,6 +115,13 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter): Merged {
       setKey(parent, key, cloneJson(value));
       record(value, ptr, b.layer, lptr);
     } else if (curObj && valObj) {
+      // An empty mapping is a leaf: a later empty one wins it, a later filled one replaces it
+      // by its own leaves.
+      if (Object.keys(valObj).length === 0) {
+        if (Object.keys(curObj).length === 0) winner.set(ptr, { layer: b.layer, pointer: lptr });
+        return;
+      }
+      winner.delete(ptr);
       for (const [k, v] of Object.entries(valObj)) {
         const cptr = `${ptr}/${pointerEscape(k)}`;
         const lcptr = `${lptr}/${pointerEscape(k)}`;
@@ -175,17 +187,25 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter): Merged {
           const id = typeof name === "string" ? `/derive#${name}` : undefined;
           const owner = id ? owners.get(id) : undefined;
           const at = siteAt(b, `/derive/${i}`);
-          if (id && owner && at) {
+          if (id && owner) {
+            // ADR 0002 section 2, clarified: an entry name is unique across every layer.
+            const where =
+              owner.layer === b.layer
+                ? `declared twice in the pack '${b.layer.replace(/^pack:/, "")}'`
+                : `declared by both '${owner.layer}' (${owner.file}) and '${b.layer}' (${b.parsed.path})`;
             rep.report({
               rule: "declaration-twice",
-              message: `derive entry '${String(name)}' is declared by both '${owner.layer}' (${owner.file}) and '${b.layer}' (${b.parsed.path}), and a declaration is never overridden`,
-              fix: "remove the copy",
+              message: `derive entry '${String(name)}' is ${where}, and an entry name is unique across every layer`,
+              fix:
+                owner.layer === b.layer
+                  ? "rename one of the two entries"
+                  : "remove the copy, or rename one entry",
               at,
-              related: owner.at ? [{ at: owner.at, message: "first declared here" }] : [],
+              related: [{ at: owner.at, message: "first declared here" }],
             });
             return;
           }
-          if (id) owners.set(id, { layer: b.layer, file: b.parsed.path, at });
+          if (id) owners.set(id, { layer: b.layer, file: b.parsed.path, at, source: undefined });
           const mptr = `/derive/${target.length}`;
           target.push(cloneJson(entry));
           record(entry, mptr, b.layer, `/derive/${i}`);
