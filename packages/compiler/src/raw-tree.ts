@@ -1,4 +1,5 @@
 import type { Origin, SourceMap } from "@seampact/spec/ir";
+import { diagnosticLocationKey } from "./diagnostics/print.js";
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | JsonObject;
 export interface JsonObject {
@@ -24,6 +25,15 @@ export interface RawEntryLayer {
   layer: "workspace";
   file: string;
   tree: JsonObject;
+}
+
+/**
+ * The key that locates a pointer of the workspace entry document in `RawWorkspace.locations`,
+ * `workspace#<pointer>` (ADR 0006 section 4). A stage that reports on the entry gives its
+ * diagnostic the origin `{ layer: "workspace", pointer }`; this is the one place the key is spelled.
+ */
+export function entryLocationKey(pointer: string): string {
+  return diagnosticLocationKey({ layer: "workspace", pointer });
 }
 
 export function layerKindOf(layer: ApiLayerId): LayerKind {

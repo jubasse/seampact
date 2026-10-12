@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import { diagnosticLocation, printDiagnostics } from "../diagnostics/print.js";
 import { loadFsReader, loadWorkspace } from "../load/index.js";
 import { loadMemoryReader } from "../load/reader.js";
+import { entryLocationKey } from "../raw-tree.js";
 import { validateWorkspace } from "./validate.js";
 
 const ROOT = fileURLToPath(new URL("../../../../fixtures/reference", import.meta.url));
@@ -55,6 +56,20 @@ test("every diagnostic on workspace.yaml resolves through the workspace table", 
   for (const d of validated.workspace) {
     expect(diagnosticLocation(d.origin, loaded.workspace.locations).line).toBeGreaterThan(0);
   }
+});
+
+test("the entry's keys are spelled by entryLocationKey", () => {
+  const { loaded, validated } = entryOf({
+    "workspace.yaml": "workspace:\n  apis:\n    a: ./a.yaml\n  sharde: x\n",
+    "a.yaml": "api: { name: a, version: 1 }\n",
+  });
+  expect(entryLocationKey("/workspace/apis/a")).toBe("workspace#/workspace/apis/a");
+  expect(loaded.workspace.locations[entryLocationKey("/workspace/apis/a")]).toMatchObject({
+    file: "workspace.yaml",
+    line: 3,
+  });
+  const d = validated.workspace[0];
+  expect(d && loaded.workspace.locations[entryLocationKey(d.origin.pointer)]).toBeDefined();
 });
 
 test("the entry table's keys are disjoint from the load sites and the api tables", () => {

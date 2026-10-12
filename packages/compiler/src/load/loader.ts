@@ -2,12 +2,13 @@ import type { Origin } from "@seampact/spec/ir";
 import { isMap, isScalar } from "yaml";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
 import { diagnosticInert, diagnosticLocationKey, diagnosticSort } from "../diagnostics/print.js";
-import type {
-  ApiLayerId,
-  JsonObject,
-  RawApi,
-  RawWorkspace,
-  RawWorkspaceConfig,
+import {
+  type ApiLayerId,
+  entryLocationKey,
+  type JsonObject,
+  type RawApi,
+  type RawWorkspace,
+  type RawWorkspaceConfig,
 } from "../raw-tree.js";
 import { LoadBudget, loadWorkOf } from "./budget.js";
 import { mergeLayers } from "./compose.js";
@@ -158,7 +159,7 @@ class Loader {
       // never an api layer's, and the load sites' pointers start `/~load/`.
       workspace.entry = { layer: "workspace", file: entryBuild.parsed.path, tree: entryBuild.tree };
       for (const [pointer, site] of entryBuild.locs) {
-        locations[diagnosticLocationKey({ layer: "workspace", pointer })] = site;
+        locations[entryLocationKey(pointer)] = site;
       }
     }
     if (Object.keys(config).length > 0) workspace.config = config;
