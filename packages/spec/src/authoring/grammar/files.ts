@@ -3,8 +3,11 @@
 import {
   A2,
   A8,
+  choice,
+  conflict,
   forbid,
   type JsonSchema,
+  keyNames,
   kw,
   list,
   map,
@@ -16,6 +19,7 @@ import {
   when,
 } from "../dsl.js";
 import { type Catalogue, catalogues } from "./catalogues.js";
+import { MARKERS } from "../markers.js";
 import { KEYS } from "./common.js";
 
 const SEMVER =
@@ -26,7 +30,33 @@ const packReference = (): JsonSchema => ({
   title: "pack reference",
   description: "A path starting with ./ or ../, or a package name (ADR 0002 section 2).",
   type: "string",
-  minLength: 1,
+  pattern: "^[^\\u0000-\\u001F\\u007F]+$",
+});
+
+const ONE_SOURCE =
+  "An import takes one source form: 'package' with 'version', 'release', or 'git'.";
+
+// ADR 0002 section 1, ADR 0011: exactly one source form.
+const importSource = (): JsonSchema => ({
+  ...when(
+    req("package"),
+    {
+      properties: { version: true, release: conflict(ONE_SOURCE), git: conflict(ONE_SOURCE) },
+      required: ["version"],
+    },
+    {
+      properties: { version: conflict("'version' goes with 'package'.") },
+      ...when(req("release"), forbid(["git"], ONE_SOURCE), {
+        ...when(req("git"), undefined, {
+          ...when(
+            req("$include"),
+            undefined,
+            choice("a source form: 'package' with 'version', 'release', or 'git'", "package"),
+          ),
+        }),
+      }),
+    },
+  ),
 });
 
 function catalogueKeys(list: Catalogue[]): Record<string, JsonSchema> {
@@ -100,7 +130,6 @@ export function workspaceDefs(): Record<string, JsonSchema> {
         release: kw(
           A2(1),
           object({
-            include: false,
             props: { url: kw(A2(1), str({ minLength: 1 })) },
             required: ["url"],
           }),
@@ -108,7 +137,6 @@ export function workspaceDefs(): Record<string, JsonSchema> {
         git: kw(
           A2(1),
           object({
-            include: false,
             props: {
               url: kw(A2(1), str({ minLength: 1 })),
               tag: kw(A2(1), str({ minLength: 1 })),
@@ -121,6 +149,7 @@ export function workspaceDefs(): Record<string, JsonSchema> {
         integrity: kw(A2(1), str({ pattern: "^sha256-" })),
       },
       required: ["api", "integrity"],
+      rules: [importSource()],
     }),
   };
 }
@@ -217,18 +246,16 @@ export function baseDefs(): Record<string, JsonSchema> {
       properties: {
         $include: ref("common", "include"),
         seampact: {
-          title: "reserved",
+          title: MARKERS.reserved,
           description: "The extension prefix 'seampact' is reserved (ADR 0008).",
           not: {},
         },
       },
-      propertyNames: {
-        description: "an extension prefix",
-        pattern: `^(?:${KEYS.extensionPrefix}|\\$include)$`,
-      },
+      propertyNames: keyNames(KEYS.extensionPrefix, "an extension prefix", A2(12)),
       additionalProperties: map({
         keys: KEYS.extensionKey,
         keyDescription: "an extension key",
+        keySection: A2(12),
         values: object({
           props: {
             at: kw(
@@ -279,7 +306,7 @@ export function packDefs(): Record<string, JsonSchema> {
     }),
     // ADR 0002 section 2, ADR 0008: a selector and effects from closed sets.
     entry: object({
-      title: "derive entry",
+      title: MARKERS.deriveEntry,
       props: {
         entry: kw(A2(2), ref("common", "name"), "The entry's name, unique in the pack."),
         select: kw(
@@ -322,11 +349,25 @@ export function packDefs(): Record<string, JsonSchema> {
               params: kw(A2(2), { type: "object" }),
               bucket: kw(A2(2), ref("common", "name")),
             },
+            // The node requirement's shape: `{ right }`, or `{ rule, params, bucket }`.
             rules: [
               {
                 ...when(
                   req("right"),
-                  forbid(["rule"], "A requirement names a right or a rule, not both."),
+                  forbid(
+                    ["rule", "params", "bucket"],
+                    "A derived right takes its params from the template; 'rule', 'params' and 'bucket' belong to a rule.",
+                  ),
+                  {
+                    ...when(
+                      req("$include"),
+                      undefined,
+                      choice(
+                        "a right ({ right: <template> }) or a rule ({ rule, params, bucket })",
+                        "rule",
+                      ),
+                    ),
+                  },
                 ),
               },
             ],
@@ -335,7 +376,10 @@ export function packDefs(): Record<string, JsonSchema> {
         attachErrors: kw(A2(2), ref("common", "errorCodes")),
       },
       required: ["entry", "select"],
-      minProperties: 3,
+      // At least one effect beside `entry` and `select`; an included entry may bring it.
+      rules: [
+        { ...when(req("$include"), undefined, { title: MARKERS.deriveEntry, minProperties: 3 }) },
+      ],
     }),
   };
 }

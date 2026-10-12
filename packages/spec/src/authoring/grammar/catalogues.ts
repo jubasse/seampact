@@ -14,7 +14,6 @@ import {
   ref,
   req,
   str,
-  stringOr,
   when,
 } from "../dsl.js";
 import { KEYS } from "./common.js";
@@ -101,7 +100,6 @@ export function catalogues(): Catalogue[] {
                 keys: null,
                 keyDescription: "an enum value",
                 values: str({ minLength: 1 }),
-                include: false,
               }),
             ),
             ...docs(12),
@@ -205,7 +203,13 @@ export function catalogues(): Catalogue[] {
                       ...when(
                         { ...req("kind"), properties: { kind: { enum: ["header", "query"] } } },
                         ref("schemes", "apiKey"),
-                        ref("schemes", "basic"),
+                        {
+                          ...when(
+                            { ...req("kind"), properties: { kind: { const: "basic" } } },
+                            ref("schemes", "basic"),
+                            ref("schemes", "unknownKind"),
+                          ),
+                        },
                       ),
                     },
                   ),
@@ -236,7 +240,6 @@ export function catalogues(): Catalogue[] {
             oauth2: kw(
               A2(9),
               object({
-                include: false,
                 props: { flows: kw(A2(9), { type: "object" }, "An OpenAPI OAuth Flows Object.") },
                 required: ["flows"],
               }),
@@ -252,17 +255,19 @@ export function catalogues(): Catalogue[] {
             },
           ],
         ),
-        basic: object({
+        basic: scheme("basic", {}),
+        // No known kind: a misspelt kind is the one problem reported, and so is a missing one.
+        unknownKind: {
           title: "scheme kind",
-          props: {
+          type: "object",
+          properties: {
             kind: kw(
               A2(9),
               oneOfValues("cookie", "header", "query", "bearer", "basic", "signature"),
             ),
-            lint: lint(),
           },
-          required: ["kind"],
-        }),
+          ...when(req("$include"), undefined, req("kind")),
+        },
         signature: scheme(
           "signature",
           {
@@ -401,7 +406,6 @@ export function catalogues(): Catalogue[] {
           ...when(
             { type: "object", ...req("variants") },
             object({
-              include: false,
               props: {
                 variants: kw(
                   A2(9),
@@ -409,7 +413,6 @@ export function catalogues(): Catalogue[] {
                     keys: KEYS.name,
                     keyDescription: "a variant name",
                     values: schema(),
-                    include: false,
                   }),
                 ),
               },

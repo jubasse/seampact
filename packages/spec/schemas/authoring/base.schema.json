@@ -10,7 +10,7 @@
         "title": "pack reference",
         "description": "A path starting with ./ or ../, or a package name (ADR 0002 section 2).",
         "type": "string",
-        "minLength": 1
+        "pattern": "^[^\\u0000-\\u001F\\u007F]+$"
       },
       "$comment": "ADR 0002 section 2",
       "description": "Convention packs, applied in order (ADR 0002 section 2)."
@@ -127,7 +127,7 @@
         }
       },
       "propertyNames": {
-        "description": "an extension prefix",
+        "description": "an extension prefix (ADR 0002 section 12)",
         "pattern": "^(?:[a-z][a-z0-9]*|\\$include)$"
       },
       "additionalProperties": {
@@ -138,7 +138,7 @@
           }
         },
         "propertyNames": {
-          "description": "an extension key",
+          "description": "an extension key (ADR 0002 section 12)",
           "pattern": "^(?:[a-z][a-z0-9]*(?:-[a-z0-9]+)*|\\$include)$"
         },
         "additionalProperties": {

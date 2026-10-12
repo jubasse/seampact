@@ -9,8 +9,8 @@
     }
   },
   "propertyNames": {
-    "description": "a right name",
-    "pattern": "^(?:[^\\s\\u0000-\\u001F\\u007F-\\u009F](?:[^\\u0000-\\u001F\\u007F-\\u009F]*[^\\s\\u0000-\\u001F\\u007F-\\u009F])?|\\$include)$"
+    "description": "a right name (ADR 0002 section 4)",
+    "pattern": "^(?:(?!(?:__proto__|constructor|prototype)$)[^\\s\\u0000-\\u001F\\u007F-\\u009F](?:[^\\u0000-\\u001F\\u007F-\\u009F]*[^\\s\\u0000-\\u001F\\u007F-\\u009F])?|\\$include)$"
   },
   "additionalProperties": {
     "$ref": "#/$defs/entry"

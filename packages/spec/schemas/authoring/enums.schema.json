@@ -9,7 +9,7 @@
     }
   },
   "propertyNames": {
-    "description": "an enum name",
+    "description": "an enum name (ADR 0002 section 4)",
     "pattern": "^(?:[A-Z][A-Za-z0-9]*|\\$include)$"
   },
   "additionalProperties": {
@@ -43,9 +43,14 @@
         },
         "codeNames": {
           "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
           "propertyNames": {
-            "description": "an enum value",
-            "pattern": "^(?:[^$].*)$"
+            "description": "an enum value (ADR 0002 section 2)",
+            "pattern": "^(?:(?!(?:__proto__|constructor|prototype)$)[^$].*|\\$include)$"
           },
           "additionalProperties": {
             "type": "string",

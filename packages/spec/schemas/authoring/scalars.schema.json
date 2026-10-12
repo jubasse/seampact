@@ -9,7 +9,7 @@
     }
   },
   "propertyNames": {
-    "description": "a scalar (named format) name",
+    "description": "a scalar (named format) name (ADR 0002 section 4)",
     "pattern": "^(?:[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*|\\$include)$"
   },
   "additionalProperties": {

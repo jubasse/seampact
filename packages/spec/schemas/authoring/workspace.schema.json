@@ -15,7 +15,7 @@
             }
           },
           "propertyNames": {
-            "description": "an api name",
+            "description": "an api name (ADR 0002 section 4)",
             "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
           },
           "additionalProperties": {
@@ -43,7 +43,7 @@
             }
           },
           "propertyNames": {
-            "description": "an api name",
+            "description": "an api name (ADR 0002 section 4)",
             "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
           },
           "additionalProperties": {
@@ -101,12 +101,28 @@
               "type": "string",
               "minLength": 1,
               "$comment": "ADR 0002 section 1"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
             }
           },
           "additionalProperties": false,
-          "required": [
-            "url"
-          ],
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "url": true
+            },
+            "required": [
+              "url"
+            ]
+          },
           "$comment": "ADR 0002 section 1"
         },
         "git": {
@@ -126,13 +142,30 @@
               "type": "string",
               "minLength": 1,
               "$comment": "ADR 0002 section 1"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
             }
           },
           "additionalProperties": false,
-          "required": [
-            "url",
-            "tag"
-          ],
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "url": true,
+              "tag": true
+            },
+            "required": [
+              "url",
+              "tag"
+            ]
+          },
           "$comment": "ADR 0002 section 1"
         },
         "api": {
@@ -149,24 +182,112 @@
         }
       },
       "additionalProperties": false,
-      "if": {
-        "properties": {
-          "$include": true
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "api": true,
+              "integrity": true
+            },
+            "required": [
+              "api",
+              "integrity"
+            ]
+          }
         },
-        "required": [
-          "$include"
-        ]
-      },
-      "else": {
-        "properties": {
-          "api": true,
-          "integrity": true
-        },
-        "required": [
-          "api",
-          "integrity"
-        ]
-      }
+        {
+          "if": {
+            "properties": {
+              "package": true
+            },
+            "required": [
+              "package"
+            ]
+          },
+          "then": {
+            "properties": {
+              "version": true,
+              "release": {
+                "title": "conflict",
+                "description": "An import takes one source form: 'package' with 'version', 'release', or 'git'.",
+                "not": {}
+              },
+              "git": {
+                "title": "conflict",
+                "description": "An import takes one source form: 'package' with 'version', 'release', or 'git'.",
+                "not": {}
+              }
+            },
+            "required": [
+              "version"
+            ]
+          },
+          "else": {
+            "properties": {
+              "version": {
+                "title": "conflict",
+                "description": "'version' goes with 'package'.",
+                "not": {}
+              }
+            },
+            "if": {
+              "properties": {
+                "release": true
+              },
+              "required": [
+                "release"
+              ]
+            },
+            "then": {
+              "properties": {
+                "git": {
+                  "title": "conflict",
+                  "description": "An import takes one source form: 'package' with 'version', 'release', or 'git'.",
+                  "not": {}
+                }
+              }
+            },
+            "else": {
+              "if": {
+                "properties": {
+                  "git": true
+                },
+                "required": [
+                  "git"
+                ]
+              },
+              "else": {
+                "if": {
+                  "properties": {
+                    "$include": true
+                  },
+                  "required": [
+                    "$include"
+                  ]
+                },
+                "else": {
+                  "title": "choice",
+                  "description": "a source form: 'package' with 'version', 'release', or 'git'",
+                  "properties": {
+                    "package": true
+                  },
+                  "required": [
+                    "package"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }

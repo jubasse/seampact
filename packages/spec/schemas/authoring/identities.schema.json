@@ -9,7 +9,7 @@
     }
   },
   "propertyNames": {
-    "description": "an identity name",
+    "description": "an identity name (ADR 0002 section 4)",
     "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
   },
   "additionalProperties": {
@@ -91,7 +91,7 @@
             }
           },
           "propertyNames": {
-            "description": "an identity header name",
+            "description": "an identity header name (ADR 0002 section 4)",
             "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
           },
           "additionalProperties": {
@@ -166,14 +166,22 @@
         "properties": {
           "variants": {
             "type": "object",
+            "properties": {
+              "$include": {
+                "$ref": "common.schema.json#/$defs/include"
+              }
+            },
             "propertyNames": {
-              "description": "a variant name",
-              "pattern": "^(?:[a-z][A-Za-z0-9_]*)$"
+              "description": "a variant name (ADR 0002 section 4)",
+              "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
             },
             "additionalProperties": {
               "$ref": "schema.schema.json#/$defs/schema"
             },
             "$comment": "ADR 0002 section 9"
+          },
+          "$include": {
+            "$ref": "common.schema.json#/$defs/include"
           }
         },
         "additionalProperties": false

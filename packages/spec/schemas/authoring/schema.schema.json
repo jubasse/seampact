@@ -13,14 +13,24 @@
         "$ref": "#/$defs/reference"
       },
       "else": {
-        "$ref": "#/$defs/mapping"
+        "if": {
+          "type": "object"
+        },
+        "then": {
+          "$ref": "#/$defs/mapping"
+        },
+        "else": {
+          "title": "alternatives",
+          "description": "a string or a mapping",
+          "type": "object"
+        }
       }
     },
     "reference": {
       "title": "schema reference",
       "description": "A schema name (Task) or a file (./schemas/task.yaml#/Task) (ADR 0002 section 2).",
       "type": "string",
-      "pattern": "^(?:[A-Z][A-Za-z0-9]*|\\.\\.?/[^\\\\#]+(?:#/.*)?)$"
+      "pattern": "^(?:[A-Z][A-Za-z0-9]*|\\.\\.?/[^\\\\#\\u0000-\\u001F\\u007F]+(?:#/[^\\u0000-\\u001F\\u007F]*)?)$"
     },
     "mapping": {
       "type": "object",
@@ -116,32 +126,59 @@
               "$ref": "common.schema.json#/$defs/schemaName"
             },
             "else": {
-              "type": "object",
-              "description": "A narrowing of a catalogue enum to a strict subset (ADR 0003 section 7).",
-              "properties": {
-                "narrow": {
-                  "$ref": "common.schema.json#/$defs/schemaName",
-                  "$comment": "ADR 0003 section 7"
-                },
-                "to": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
+              "if": {
+                "type": "object"
+              },
+              "then": {
+                "type": "object",
+                "description": "A narrowing of a catalogue enum to a strict subset (ADR 0003 section 7).",
+                "properties": {
+                  "narrow": {
+                    "$ref": "common.schema.json#/$defs/schemaName",
+                    "$comment": "ADR 0003 section 7"
                   },
-                  "minItems": 1,
-                  "$comment": "ADR 0003 section 7"
+                  "to": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "minItems": 1,
+                    "$comment": "ADR 0003 section 7"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "$comment": "ADR 0003 section 7",
+                    "description": "Optional docs: why the use narrows the enum."
+                  },
+                  "$include": {
+                    "$ref": "common.schema.json#/$defs/include"
+                  }
                 },
-                "reason": {
-                  "type": "string",
-                  "$comment": "ADR 0003 section 7",
-                  "description": "Optional docs: why the use narrows the enum."
+                "additionalProperties": false,
+                "if": {
+                  "properties": {
+                    "$include": true
+                  },
+                  "required": [
+                    "$include"
+                  ]
+                },
+                "else": {
+                  "properties": {
+                    "narrow": true,
+                    "to": true
+                  },
+                  "required": [
+                    "narrow",
+                    "to"
+                  ]
                 }
               },
-              "additionalProperties": false,
-              "required": [
-                "narrow",
-                "to"
-              ]
+              "else": {
+                "title": "alternatives",
+                "description": "a string or a mapping",
+                "type": "object"
+              }
             }
           },
           "$comment": "ADR 0003 section 7"
@@ -157,9 +194,14 @@
         },
         "oneOf": {
           "type": "object",
+          "properties": {
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
           "propertyNames": {
-            "description": "a union tag",
-            "pattern": "^(?:[^$].*)$"
+            "description": "a union tag (ADR 0002 section 2)",
+            "pattern": "^(?:(?!(?:__proto__|constructor|prototype)$)[^$].*|\\$include)$"
           },
           "additionalProperties": {
             "$ref": "#/$defs/schema"
@@ -179,8 +221,8 @@
             }
           },
           "propertyNames": {
-            "description": "a property name",
-            "pattern": "^(?:[^$].*|\\$include)$"
+            "description": "a property name (ADR 0002 section 2)",
+            "pattern": "^(?:(?!(?:__proto__|constructor|prototype)$)[^$].*|\\$include)$"
           },
           "additionalProperties": {
             "$ref": "#/$defs/schema"
@@ -294,6 +336,9 @@
             "maxSize": {
               "$ref": "common.schema.json#/$defs/size",
               "$comment": "ADR 0003 section 2"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
             }
           },
           "additionalProperties": false,
@@ -826,13 +871,30 @@
               },
               "minItems": 1,
               "$comment": "ADR 0003 section 2"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
             }
           },
           "additionalProperties": false,
-          "required": [
-            "from",
-            "fields"
-          ],
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "from": true,
+              "fields": true
+            },
+            "required": [
+              "from",
+              "fields"
+            ]
+          },
           "$comment": "ADR 0003 section 2",
           "description": "Keeps the listed properties of 'from', in that order."
         },
@@ -850,13 +912,30 @@
               },
               "minItems": 1,
               "$comment": "ADR 0003 section 2"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
             }
           },
           "additionalProperties": false,
-          "required": [
-            "from",
-            "fields"
-          ],
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "from": true,
+              "fields": true
+            },
+            "required": [
+              "from",
+              "fields"
+            ]
+          },
           "$comment": "ADR 0003 section 2",
           "description": "Keeps the other properties of 'from', in its order."
         },
@@ -875,8 +954,8 @@
             }
           },
           "propertyNames": {
-            "description": "a property name",
-            "pattern": "^(?:[^$].*|\\$include)$"
+            "description": "a property name (ADR 0002 section 2)",
+            "pattern": "^(?:(?!(?:__proto__|constructor|prototype)$)[^$].*|\\$include)$"
           },
           "additionalProperties": {
             "$ref": "#/$defs/overlay"
@@ -886,11 +965,27 @@
         },
         "title": {
           "type": "string",
-          "$comment": "ADR 0003 section 1"
+          "$comment": "ADR 0003 section 1",
+          "description": "Docs: the schema's title."
         },
         "description": {
           "$ref": "common.schema.json#/$defs/description",
           "$comment": "ADR 0003 section 1"
+        },
+        "deprecated": {
+          "type": "boolean",
+          "$comment": "ADR 0003 section 1"
+        },
+        "examples": {
+          "type": "array",
+          "items": {},
+          "$comment": "ADR 0003 section 11",
+          "description": "Values parsed against the schema at compile time."
+        },
+        "nullable": {
+          "type": "boolean",
+          "$comment": "ADR 0003 section 5",
+          "description": "The value may be JSON null (ADR 0003 section 5)."
         },
         "typeName": {
           "type": "string",
@@ -1332,28 +1427,54 @@
         "$ref": "common.schema.json#/$defs/rightName"
       },
       "else": {
-        "type": "object",
-        "properties": {
-          "right": {
-            "$ref": "common.schema.json#/$defs/rightName",
-            "$comment": "ADR 0003 section 6"
+        "if": {
+          "type": "object"
+        },
+        "then": {
+          "type": "object",
+          "properties": {
+            "right": {
+              "$ref": "common.schema.json#/$defs/rightName",
+              "$comment": "ADR 0003 section 6"
+            },
+            "params": {
+              "type": "object",
+              "$comment": "ADR 0003 section 6"
+            },
+            "input": {
+              "enum": [
+                "reject",
+                "strip"
+              ],
+              "$comment": "ADR 0003 section 6"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
           },
-          "params": {
-            "type": "object",
-            "$comment": "ADR 0003 section 6"
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
           },
-          "input": {
-            "enum": [
-              "reject",
-              "strip"
-            ],
-            "$comment": "ADR 0003 section 6"
+          "else": {
+            "properties": {
+              "right": true
+            },
+            "required": [
+              "right"
+            ]
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "right"
-        ]
+        "else": {
+          "title": "alternatives",
+          "description": "a string or a mapping",
+          "type": "object"
+        }
       }
     },
     "discriminator": {
@@ -1366,17 +1487,43 @@
         "minLength": 1
       },
       "else": {
-        "type": "object",
-        "properties": {
-          "from": {
-            "$ref": "common.schema.json#/$defs/discriminatorSource",
-            "$comment": "ADR 0003 section 3"
+        "if": {
+          "type": "object"
+        },
+        "then": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "$ref": "common.schema.json#/$defs/discriminatorSource",
+              "$comment": "ADR 0003 section 3"
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "from": true
+            },
+            "required": [
+              "from"
+            ]
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "from"
-        ]
+        "else": {
+          "title": "alternatives",
+          "description": "a string or a mapping",
+          "type": "object"
+        }
       }
     }
   }

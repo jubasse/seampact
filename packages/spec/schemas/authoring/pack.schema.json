@@ -151,7 +151,7 @@
             "title": "pack reference",
             "description": "A path starting with ./ or ../, or a package name (ADR 0002 section 2).",
             "type": "string",
-            "minLength": 1
+            "pattern": "^[^\\u0000-\\u001F\\u007F]+$"
           },
           "$comment": "ADR 0002 section 2",
           "description": "Packs applied just before this one."
@@ -351,9 +351,39 @@
             "properties": {
               "rule": {
                 "title": "conflict",
-                "description": "A requirement names a right or a rule, not both.",
+                "description": "A derived right takes its params from the template; 'rule', 'params' and 'bucket' belong to a rule.",
+                "not": {}
+              },
+              "params": {
+                "title": "conflict",
+                "description": "A derived right takes its params from the template; 'rule', 'params' and 'bucket' belong to a rule.",
+                "not": {}
+              },
+              "bucket": {
+                "title": "conflict",
+                "description": "A derived right takes its params from the template; 'rule', 'params' and 'bucket' belong to a rule.",
                 "not": {}
               }
+            }
+          },
+          "else": {
+            "if": {
+              "properties": {
+                "$include": true
+              },
+              "required": [
+                "$include"
+              ]
+            },
+            "else": {
+              "title": "choice",
+              "description": "a right ({ right: <template> }) or a rule ({ rule, params, bucket })",
+              "properties": {
+                "rule": true
+              },
+              "required": [
+                "rule"
+              ]
             }
           },
           "$comment": "ADR 0002 section 2"
@@ -367,25 +397,43 @@
         }
       },
       "additionalProperties": false,
-      "minProperties": 3,
-      "if": {
-        "properties": {
-          "$include": true
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "entry": true,
+              "select": true
+            },
+            "required": [
+              "entry",
+              "select"
+            ],
+            "title": "derive entry"
+          }
         },
-        "required": [
-          "$include"
-        ]
-      },
-      "else": {
-        "properties": {
-          "entry": true,
-          "select": true
-        },
-        "required": [
-          "entry",
-          "select"
-        ]
-      }
+        {
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "title": "derive entry",
+            "minProperties": 3
+          }
+        }
+      ]
     }
   }
 }

@@ -5,6 +5,7 @@ import {
   A2,
   forbid,
   type JsonSchema,
+  keyNames,
   kw,
   list,
   map,
@@ -16,6 +17,7 @@ import {
   stringOr,
   when,
 } from "../dsl.js";
+import { MARKERS } from "../markers.js";
 import { KEYS } from "./common.js";
 import { ROLE_KEYS } from "./conventions.js";
 
@@ -45,6 +47,7 @@ function inheritedSettings(options: { successor: boolean }): Record<string, Json
       map({
         keys: ROLE_KEYS,
         keyDescription: "an error role",
+        keySection: A2(11),
         values: ref("conventions", "roleBinding"),
       }),
       "Role bindings for this subtree, the nearest winning.",
@@ -139,7 +142,7 @@ function ops(kind: "collection" | "single"): JsonSchema {
   );
   return {
     description: `The ops shorthand: a list of ${names.join(", ")}, or a mapping from op to its settings (ADR 0002 section 6).`,
-    ...when({ type: "array" }, list({ enum: names }), object({ include: false, props })),
+    ...when({ type: "array" }, list({ enum: names }), object({ props })),
   };
 }
 
@@ -150,11 +153,42 @@ const collectionScopeKeys = (): Record<string, JsonSchema> => ({
   resourceType: kw(A2(6), str({ minLength: 1 }), "The value of the $collection slot."),
 });
 
+const routeProps = (): Record<string, JsonSchema> => ({
+  ...routeKeys(),
+  concurrency: kw(A2(6), { const: "inherit" }, "On a member route: opts into the version."),
+  ...inheritedSettings({ successor: true }),
+});
+
+const collectionProps = (): Record<string, JsonSchema> => ({
+  kind: kw(A2(6), oneOfValues("collection")),
+  id: kw(A2(6), fields(), "A fields map with one entry: the member id parameter and its schema."),
+  idProperty: kw(A2(6), str({ minLength: 1 }), "The item property holding the member id."),
+  singular: kw(A2(6), ref("common", "name"), "The noun of member operation ids."),
+  ...collectionScopeKeys(),
+  ops: kw(A2(6), ops("collection")),
+  collection: kw(A2(6), ref("node", "scope"), "The collection scope: settings plus routes."),
+  member: kw(A2(6), ref("node", "scope"), "The member scope: settings plus routes."),
+  ...pathKeys(),
+  ...inheritedSettings({ successor: false }),
+  ...docs(12),
+});
+
+const singleProps = (routes: JsonSchema): Record<string, JsonSchema> => ({
+  kind: kw(A2(6), oneOfValues("single")),
+  ...collectionScopeKeys(),
+  ops: kw(A2(6), ops("single")),
+  routes,
+  ...pathKeys(),
+  ...inheritedSettings({ successor: false }),
+  ...docs(12),
+});
+
 export function nodeDefs(): Record<string, JsonSchema> {
   const routes = (node: string): JsonSchema =>
     kw(
       A2(6),
       map({
+        title: MARKERS.routes,
         keys: KEYS.name,
         keyDescription: "a node name",
         values: ref("node", node),
@@ -187,23 +221,23 @@ export function nodeDefs(): Record<string, JsonSchema> {
         ),
       }),
     },
-    // A node that states no kind: refused, unless a fragment brings the keys through `$include`.
-    unmarked: object({
-      title: "node marker",
-      props: {
+    // A node without `method` and without a known `kind`: a misspelt kind is the one problem
+    // reported, and so is a missing marker; with `$include`, the keys of any node are accepted.
+    unmarked: {
+      title: MARKERS.nodeMarker,
+      type: "object",
+      properties: {
         method: kw(A2(7), ref("common", "method")),
         kind: kw(A2(6), oneOfValues("collection", "single")),
       },
-      required: ["method"],
-    }),
+      ...when(req("$include"), ref("node", "includedNode"), {
+        ...when(req("kind"), undefined, { ...req("method"), title: MARKERS.nodeMarker }),
+      }),
+    },
     route: object({
       extensions: true,
       description: `A route: ${NODE_SETTINGS_DOC}.`,
-      props: {
-        ...routeKeys(),
-        concurrency: kw(A2(6), { const: "inherit" }, "On a member route: opts into the version."),
-        ...inheritedSettings({ successor: true }),
-      },
+      props: routeProps(),
     }),
     // ADR 0002 section 7: a relay route writes only its operationId and the service's own settings.
     relayRoute: object({
@@ -224,6 +258,7 @@ export function nodeDefs(): Record<string, JsonSchema> {
           map({
             keys: ROLE_KEYS,
             keyDescription: "an error role",
+            keySection: A2(11),
             values: ref("conventions", "roleBinding"),
           }),
         ),
@@ -241,36 +276,25 @@ export function nodeDefs(): Record<string, JsonSchema> {
     collection: object({
       extensions: true,
       description: `A collection: ${NODE_SETTINGS_DOC}, ops, and the collection and member scopes.`,
-      props: {
-        kind: kw(A2(6), oneOfValues("collection")),
-        id: kw(
-          A2(6),
-          fields(),
-          "A fields map with one entry: the member id parameter and its schema.",
-        ),
-        idProperty: kw(A2(6), str({ minLength: 1 }), "The item property holding the member id."),
-        singular: kw(A2(6), ref("common", "name"), "The noun of member operation ids."),
-        ...collectionScopeKeys(),
-        ops: kw(A2(6), ops("collection")),
-        collection: kw(A2(6), ref("node", "scope"), "The collection scope: settings plus routes."),
-        member: kw(A2(6), ref("node", "scope"), "The member scope: settings plus routes."),
-        ...pathKeys(),
-        ...inheritedSettings({ successor: false }),
-        ...docs(12),
-      },
+      props: collectionProps(),
     }),
     single: object({
       extensions: true,
       description: `A single: ${NODE_SETTINGS_DOC}, ops and routes; with neither item nor ops, a group.`,
-      props: {
-        kind: kw(A2(6), oneOfValues("single")),
-        ...collectionScopeKeys(),
-        ops: kw(A2(6), ops("single")),
-        routes: routes("node"),
-        ...pathKeys(),
-        ...inheritedSettings({ successor: false }),
-        ...docs(12),
-      },
+      props: singleProps(routes("node")),
+    }),
+    // A node fragment that brings its marker through `$include`: its keys are those of a route, a
+    // collection or a single, each value checked once the include is resolved.
+    includedNode: object({
+      extensions: true,
+      description: "A node whose kind comes from an included file (ADR 0002 section 2).",
+      props: Object.fromEntries(
+        Object.entries({
+          ...routeProps(),
+          ...collectionProps(),
+          ...singleProps(routes("node")),
+        }).map(([key, schema]) => [key, kw(String(schema.$comment), {})]),
+      ),
     }),
     // The `collection` and `member` scopes of a collection.
     scope: object({
@@ -326,7 +350,7 @@ export function nodeDefs(): Record<string, JsonSchema> {
     }),
     // ADR 0002 section 9: access on a node.
     access: object({
-      title: "access",
+      title: MARKERS.access,
       description:
         '{ public: "<reason>" } or { optionalAuth: "<reason>", onRefused } (ADR 0002 section 9).',
       props: {
@@ -352,19 +376,19 @@ export function nodeDefs(): Record<string, JsonSchema> {
             ),
             {
               if: req("$include"),
-              else: req("optionalAuth"),
+              else: { ...req("optionalAuth"), title: MARKERS.access },
             },
           ),
         },
       ],
     }),
     csrf: object({
-      title: "csrf exemption",
+      title: MARKERS.csrfExemption,
       props: { exempt: kw(A2(9), ref("common", "reason"), "No CSRF check here, with the reason.") },
       required: ["exempt"],
     }),
     idempotency: object({
-      title: "idempotency exemption",
+      title: MARKERS.idempotencyExemption,
       props: {
         exempt: kw(
           A2(10),
@@ -412,21 +436,18 @@ export function nodeDefs(): Record<string, JsonSchema> {
         ),
       },
     }),
-    bindings: {
+    bindings: map({
       description: "Maps a request value to a principal field (ADR 0002 section 9).",
-      type: "object",
-      propertyNames: {
-        description: "a binding key (path.<param>, query.<param> or body.<field>)",
-        pattern: "^(?:path\\.[^.\\s]+|query\\.[^.\\s]+|body\\.[^.\\s]+(?:\\.[^.\\s]+)*)$",
-      },
-      additionalProperties: ref("common", "bindingValue"),
-    },
+      keys: "path\\.[^.\\s]+|query\\.[^.\\s]+|body\\.[^.\\s]+(?:\\.[^.\\s]+)*",
+      keyDescription: "a binding key (path.<param>, query.<param> or body.<field>)",
+      keySection: A2(9),
+      values: ref("common", "bindingValue"),
+    }),
     maturity: {
       description: "A level, or { level, reason } (ADR 0002 section 10).",
       ...stringOr(
         ref("common", "maturityLevel"),
         object({
-          include: false,
           props: {
             level: kw(A2(10), ref("common", "maturityLevel")),
             reason: kw(A2(10), str(), "Optional docs: why the level is stated."),
@@ -462,11 +483,11 @@ export function nodeDefs(): Record<string, JsonSchema> {
         "A paging style name, none, or { <style>: { maxLimit, defaultLimit, overLimit, token } }.",
       ...stringOr(ref("common", "name"), {
         type: "object",
-        propertyNames: { description: "a paging style name", pattern: `^${KEYS.name}$` },
+        properties: { $include: ref("common", "include") },
+        propertyNames: keyNames(KEYS.name, "a paging style name", A2(10)),
         minProperties: 1,
         maxProperties: 1,
         additionalProperties: object({
-          include: false,
           props: {
             maxLimit: kw(A2(10), { type: "integer", minimum: 1 }),
             defaultLimit: kw(A2(10), { type: "integer", minimum: 1 }),
@@ -480,7 +501,6 @@ export function nodeDefs(): Record<string, JsonSchema> {
       stringOr(
         str({ minLength: 1 }),
         object({
-          include: false,
           props: {
             key: kw(A2(10), str({ minLength: 1 })),
             right: kw(A2(10), ref("common", "rightName")),
@@ -492,21 +512,20 @@ export function nodeDefs(): Record<string, JsonSchema> {
     ),
     // ADR 0002 section 7: success and redirect responses keyed by status.
     responses: {
-      type: "object",
-      description: "Success (200 to 299) and redirect (301, 302, 303, 307, 308) responses.",
-      propertyNames: {
-        description: "a success or redirect status",
-        pattern: "^(?:2[0-9][0-9]|30[1237]|308)$",
-      },
-      minProperties: 1,
-      additionalProperties: object({
-        include: false,
-        props: {
-          body: kw(A2(7), schema()),
-          headers: kw(A2(7), fields(), "Response headers: a fields map keyed by name."),
-          description: kw(A2(7), ref("common", "description")),
-        },
+      ...map({
+        description: "Success (200 to 299) and redirect (301, 302, 303, 307, 308) responses.",
+        keys: "2[0-9][0-9]|30[1237]|308",
+        keyDescription: "a success or redirect status",
+        keySection: A2(7),
+        values: object({
+          props: {
+            body: kw(A2(7), schema()),
+            headers: kw(A2(7), fields(), "Response headers: a fields map keyed by name."),
+            description: kw(A2(7), ref("common", "description")),
+          },
+        }),
       }),
+      minProperties: 1,
     },
     // ADR 0002 section 12: named examples on a route.
     examples: map({

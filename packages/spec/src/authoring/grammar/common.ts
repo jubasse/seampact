@@ -3,36 +3,26 @@
 
 import {
   A2,
+  forbid,
   type JsonSchema,
   kw,
   list,
   map,
   object,
   oneOfValues,
+  RESERVED_KEYS,
   ref,
+  req,
   str,
   stringOr,
+  when,
 } from "../dsl.js";
-
-// Titles that mark a name position; a pattern failure under one is `invalid-name`.
-export const NAME_TITLES = [
-  "name",
-  "schema name",
-  "scalar name",
-  "right name",
-  "error code",
-  "extension prefix",
-  "extension key",
-  "rule id",
-  "header name",
-  "schema reference",
-] as const;
+import { MARKERS, type Marker } from "../markers.js";
 
 const NAME = "[a-z][A-Za-z0-9_]*";
 const SCHEMA_NAME = "[A-Z][A-Za-z0-9]*";
 const SCALAR_NAME = "[a-z][A-Za-z0-9]*(?:-[a-z0-9]+)*";
-const RIGHT_NAME =
-  "[^\\s\\u0000-\\u001F\\u007F-\\u009F](?:[^\\u0000-\\u001F\\u007F-\\u009F]*[^\\s\\u0000-\\u001F\\u007F-\\u009F])?";
+const RIGHT_NAME = `${RESERVED_KEYS}[^\\s\\u0000-\\u001F\\u007F-\\u009F](?:[^\\u0000-\\u001F\\u007F-\\u009F]*[^\\s\\u0000-\\u001F\\u007F-\\u009F])?`;
 const ERROR_CODE = "[A-Za-z0-9][A-Za-z0-9._-]*";
 const HEADER_NAME = "[!#$%&'*+.^_`|~0-9A-Za-z-]+";
 const RULE_ID = "[^\\s/]+(?:/[^\\s/]+)+";
@@ -50,7 +40,11 @@ export const KEYS = {
   extensionKey: "[a-z][a-z0-9]*(?:-[a-z0-9]+)*",
 } as const;
 
-const PATH = "\\.\\.?/[^\\\\#]+";
+// A relative path: './' or '../', then no backslash, '#' or control character. Containment in the
+// workspace root is the loader's check; this is defence in depth for editors and the stage.
+export const PATH = "\\.\\.?/[^\\\\#\\u0000-\\u001F\\u007F]+";
+// A JSON Pointer after a path's '#', without control characters.
+export const POINTER = "#/[^\\u0000-\\u001F\\u007F]*";
 
 // Value sources (ADR 0002 section 4), one pattern per form.
 const SOURCE = {
@@ -89,7 +83,29 @@ function source(description: string, forms: SourceForm[]): JsonSchema {
   };
 }
 
-function name(title: string, pattern: string, description: string): JsonSchema {
+// `{ ignore: "<reason>" }` or `{ keep: "<reason>" }`: one of the two, never both; neither is a
+// missing reason.
+function unknownKeysException(section: string): JsonSchema {
+  return object({
+    title: MARKERS.unknownKeysException,
+    props: {
+      ignore: kw(section, ref("common", "reason")),
+      keep: kw(section, ref("common", "reason")),
+    },
+    rules: [
+      {
+        ...when(req("ignore"), forbid(["keep"], "Write 'ignore' or 'keep', not both."), {
+          ...when(req("$include"), undefined, {
+            ...req("keep"),
+            title: MARKERS.unknownKeysException,
+          }),
+        }),
+      },
+    ],
+  });
+}
+
+function name(title: Marker, pattern: string, description: string): JsonSchema {
   return { title, description, type: "string", pattern: `^${pattern}$` };
 }
 
@@ -107,16 +123,19 @@ export function commonDefs(): Record<string, JsonSchema> {
       description:
         "A relative path, optionally followed by '#' and a JSON Pointer into that file (ADR 0002 section 2).",
       type: "string",
-      pattern: `^${PATH}(?:#/.*)?$`,
+      pattern: `^${PATH}(?:${POINTER})?$`,
     },
     include: kw(
       A2(2),
-      stringOr(ref("common", "pointerPath"), list(ref("common", "pointerPath"), { minItems: 1 })),
+      stringOr(
+        ref("common", "pointerPath"),
+        list(ref("common", "pointerPath"), { minItems: 1 }),
+        "array",
+      ),
       "Merges the mapping of each file in place of this key, in list order (ADR 0002 section 2).",
     ),
     file: object({
       description: "Replaces this value with a file's content (ADR 0002 section 2).",
-      include: false,
       props: { $file: kw(A2(2), ref("common", "path")) },
       required: ["$file"],
     }),
@@ -127,7 +146,7 @@ export function commonDefs(): Record<string, JsonSchema> {
       "Docs: a string, or { $file: <path> } to a .md or .txt file.",
     ),
     reason: {
-      title: "reason",
+      title: MARKERS.reason,
       description:
         "A reason: a non-empty string. Required on every safety exception, and only there (ADR 0002 section 4, A40).",
       type: "string",
@@ -153,32 +172,32 @@ export function commonDefs(): Record<string, JsonSchema> {
       pattern: "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
     },
     name: name(
-      "name",
+      MARKERS.name,
       NAME,
       "A lowercase letter, then letters, digits or '_': tasks, viewer_or_device (ADR 0002 section 4).",
     ),
     schemaName: name(
-      "schema name",
+      MARKERS.schemaName,
       SCHEMA_NAME,
       "An uppercase letter, then letters or digits: Task, TaskId (ADR 0002 section 4).",
     ),
     scalarName: name(
-      "scalar name",
+      MARKERS.scalarName,
       SCALAR_NAME,
       "A named format: money, iri-reference (ADR 0002 section 4).",
     ),
     rightName: name(
-      "right name",
+      MARKERS.rightName,
       RIGHT_NAME,
-      "Any non-empty string without control characters and without leading or trailing space (ADR 0002 section 4).",
+      "Any non-empty string without control characters and without leading or trailing space, other than __proto__, constructor and prototype (ADR 0002 section 4).",
     ),
     errorCode: name(
-      "error code",
+      MARKERS.errorCode,
       ERROR_CODE,
       "A letter or digit, then letters, digits, '.', '_' or '-': api.forbidden, E1042 (ADR 0002 section 4).",
     ),
-    headerName: name("header name", HEADER_NAME, "An HTTP header name."),
-    ruleId: name("rule id", RULE_ID, "A lint rule id: seampact/<rule> or <plugin>/<rule>."),
+    headerName: name(MARKERS.headerName, HEADER_NAME, "An HTTP header name."),
+    ruleId: name(MARKERS.ruleId, RULE_ID, "A lint rule id: seampact/<rule> or <plugin>/<rule>."),
     errorCodes: list(ref("common", "errorCode")),
     names: list(ref("common", "name")),
     method: oneOfValues("get", "post", "put", "patch", "delete"),
@@ -195,42 +214,22 @@ export function commonDefs(): Record<string, JsonSchema> {
       description:
         'refuse (the default), { ignore: "<reason>" } or { keep: "<reason>" } (ADR 0003 section 4).',
       ...stringOr(
-        { title: "reasoned policy", enum: ["refuse"] },
-        object({
-          include: false,
-          props: {
-            ignore: kw("ADR 0003 section 4", ref("common", "reason")),
-            keep: kw("ADR 0003 section 4", ref("common", "reason")),
-          },
-          minProperties: 1,
-          rules: [{ maxProperties: 1 }],
-        }),
+        { title: MARKERS.reasonedPolicy, enum: ["refuse"] },
+        unknownKeysException("ADR 0003 section 4"),
       ),
     },
     unknownKeysException: {
       title: "unknown keys policy",
       description: '{ ignore: "<reason>" } or { keep: "<reason>" } (ADR 0002 section 9).',
-      ...stringOr(
-        { title: "reasoned policy", not: {} },
-        object({
-          include: false,
-          props: {
-            ignore: kw(A2(9), ref("common", "reason")),
-            keep: kw(A2(9), ref("common", "reason")),
-          },
-          minProperties: 1,
-          rules: [{ maxProperties: 1 }],
-        }),
-      ),
+      ...stringOr({ title: MARKERS.reasonedPolicy, not: {} }, unknownKeysException(A2(9))),
     },
     unknownQueryPolicy: {
       title: "unknown query policy",
       description: 'refuse, or { ignore: "<reason>" } (ADR 0002 section 7).',
       ...stringOr(
-        { title: "reasoned policy", enum: ["refuse"] },
+        { title: MARKERS.reasonedPolicy, enum: ["refuse"] },
         object({
-          title: "query exception",
-          include: false,
+          title: MARKERS.queryException,
           props: { ignore: kw(A2(7), ref("common", "reason")) },
           required: ["ignore"],
         }),
@@ -241,7 +240,12 @@ export function commonDefs(): Record<string, JsonSchema> {
       props: {
         allow: kw(
           A2(12),
-          map({ keys: RULE_ID, keyDescription: "a lint rule id", values: ref("common", "reason") }),
+          map({
+            keys: RULE_ID,
+            keyDescription: "a lint rule id",
+            keySection: A2(12),
+            values: ref("common", "reason"),
+          }),
           "Silences one lint rule here, with a reason.",
         ),
       },
@@ -254,6 +258,7 @@ export function commonDefs(): Record<string, JsonSchema> {
           map({
             keys: RULE_ID,
             keyDescription: "a lint rule id",
+            keySection: A2(12),
             values: oneOfValues("disabled", "warning", "error"),
           }),
           "Each rule's severity: disabled, warning or error.",

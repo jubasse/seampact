@@ -13,6 +13,7 @@ import {
   str,
   stringOr,
 } from "../dsl.js";
+import { KEYS } from "./common.js";
 
 const S = A2(13);
 
@@ -94,7 +95,7 @@ export function conventionsDefs(): Record<string, JsonSchema> {
               families: kw(
                 S,
                 map({
-                  keys: "[a-z][A-Za-z0-9_]*",
+                  keys: KEYS.name,
                   keyDescription: "a cache family name",
                   values: stringOr(
                     ref("common", "duration"),
@@ -202,6 +203,7 @@ export function conventionsDefs(): Record<string, JsonSchema> {
                 map({
                   keys: ROLE_KEYS,
                   keyDescription: "an error role",
+                  keySection: A2(11),
                   values: ref("conventions", "roleBinding"),
                 }),
                 "Role bindings.",
@@ -227,7 +229,6 @@ export function conventionsDefs(): Record<string, JsonSchema> {
     roleBinding: stringOr(
       ref("common", "errorCode"),
       object({
-        include: false,
         props: {
           code: kw(A2(11), ref("common", "errorCode")),
           params: kw(A2(11), ref("common", "template"), "A template over the role's data."),

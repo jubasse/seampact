@@ -19,7 +19,7 @@
         "title": "pack reference",
         "description": "A path starting with ./ or ../, or a package name (ADR 0002 section 2).",
         "type": "string",
-        "minLength": 1
+        "pattern": "^[^\\u0000-\\u001F\\u007F]+$"
       },
       "$comment": "ADR 0002 section 2",
       "description": "Convention packs, applied in order (ADR 0002 section 2)."
@@ -32,7 +32,7 @@
         }
       },
       "propertyNames": {
-        "description": "a surface name",
+        "description": "a surface name (ADR 0002 section 4)",
         "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
       },
       "additionalProperties": {
@@ -271,7 +271,7 @@
             }
           },
           "propertyNames": {
-            "description": "a document name",
+            "description": "a document name (ADR 0002 section 4)",
             "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
           },
           "additionalProperties": {

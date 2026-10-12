@@ -11,7 +11,7 @@ import {
   ref,
 } from "./dsl.js";
 import { catalogues } from "./grammar/catalogues.js";
-import { commonDefs } from "./grammar/common.js";
+import { commonDefs, KEYS } from "./grammar/common.js";
 import { conventionsDefs } from "./grammar/conventions.js";
 import {
   apiDefs,
@@ -69,7 +69,7 @@ function parts(): Record<AuthoringFile, Part> {
         description:
           "A node's errors map: each code attached, narrowed or declared (ADR 0002 section 11).",
         ...map({
-          keys: "[A-Za-z0-9][A-Za-z0-9._-]*",
+          keys: KEYS.errorCode,
           keyDescription: "an error code",
           values: ref("node-errors", "attachment"),
         }),

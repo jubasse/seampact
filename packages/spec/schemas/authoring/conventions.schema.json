@@ -136,7 +136,7 @@
                 }
               },
               "propertyNames": {
-                "description": "a cache family name",
+                "description": "a cache family name (ADR 0002 section 4)",
                 "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
               },
               "additionalProperties": {
@@ -147,7 +147,17 @@
                   "$ref": "common.schema.json#/$defs/duration"
                 },
                 "else": {
-                  "$ref": "#/$defs/cacheDirectives"
+                  "if": {
+                    "type": "object"
+                  },
+                  "then": {
+                    "$ref": "#/$defs/cacheDirectives"
+                  },
+                  "else": {
+                    "title": "alternatives",
+                    "description": "a string or a mapping",
+                    "type": "object"
+                  }
                 }
               },
               "$comment": "ADR 0002 section 13"
@@ -514,7 +524,7 @@
                 }
               },
               "propertyNames": {
-                "description": "an error role",
+                "description": "an error role (ADR 0002 section 11)",
                 "pattern": "^(?:unauthenticated|csrfInvalid|forbidden|sortKeyForbidden|notFound|schemaInvalid|payloadTooLarge|unsupportedMediaType|stateConflict|idempotencyInProgress|gone|preconditionFailed|idempotencyKeyReused|preconditionRequired|rateLimited|undeclaredStatus|upstreamUnavailable|serviceUnavailable|upstreamTimeout|deadlineExceeded|\\$include)$"
               },
               "additionalProperties": {
@@ -582,22 +592,48 @@
         "$ref": "common.schema.json#/$defs/errorCode"
       },
       "else": {
-        "type": "object",
-        "properties": {
-          "code": {
-            "$ref": "common.schema.json#/$defs/errorCode",
-            "$comment": "ADR 0002 section 11"
+        "if": {
+          "type": "object"
+        },
+        "then": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "$ref": "common.schema.json#/$defs/errorCode",
+              "$comment": "ADR 0002 section 11"
+            },
+            "params": {
+              "$ref": "common.schema.json#/$defs/template",
+              "$comment": "ADR 0002 section 11",
+              "description": "A template over the role's data."
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
           },
-          "params": {
-            "$ref": "common.schema.json#/$defs/template",
-            "$comment": "ADR 0002 section 11",
-            "description": "A template over the role's data."
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "code": true
+            },
+            "required": [
+              "code"
+            ]
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "code"
-        ]
+        "else": {
+          "title": "alternatives",
+          "description": "a string or a mapping",
+          "type": "object"
+        }
       }
     }
   }

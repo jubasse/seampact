@@ -9,7 +9,7 @@
     }
   },
   "propertyNames": {
-    "description": "a paging style name",
+    "description": "a paging style name (ADR 0002 section 4)",
     "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
   },
   "additionalProperties": {
@@ -367,8 +367,8 @@
                 }
               },
               "propertyNames": {
-                "description": "a member or header name",
-                "pattern": "^(?:[^$].*|\\$include)$"
+                "description": "a member or header name (ADR 0002 section 2)",
+                "pattern": "^(?:(?!(?:__proto__|constructor|prototype)$)[^$].*|\\$include)$"
               },
               "additionalProperties": {
                 "$ref": "common.schema.json#/$defs/template"
@@ -389,8 +389,8 @@
                 }
               },
               "propertyNames": {
-                "description": "a member or header name",
-                "pattern": "^(?:[^$].*|\\$include)$"
+                "description": "a member or header name (ADR 0002 section 2)",
+                "pattern": "^(?:(?!(?:__proto__|constructor|prototype)$)[^$].*|\\$include)$"
               },
               "additionalProperties": {
                 "$ref": "common.schema.json#/$defs/template"
@@ -406,8 +406,8 @@
                 }
               },
               "propertyNames": {
-                "description": "a member or header name",
-                "pattern": "^(?:[^$].*|\\$include)$"
+                "description": "a member or header name (ADR 0002 section 2)",
+                "pattern": "^(?:(?!(?:__proto__|constructor|prototype)$)[^$].*|\\$include)$"
               },
               "additionalProperties": {
                 "$ref": "common.schema.json#/$defs/template"

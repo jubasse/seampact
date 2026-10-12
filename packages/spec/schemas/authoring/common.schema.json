@@ -7,13 +7,13 @@
       "title": "path",
       "description": "A path relative to the file that holds it, starting with './' or '../', with forward slashes (ADR 0002 section 1).",
       "type": "string",
-      "pattern": "^\\.\\.?/[^\\\\#]+$"
+      "pattern": "^\\.\\.?/[^\\\\#\\u0000-\\u001F\\u007F]+$"
     },
     "pointerPath": {
       "title": "path",
       "description": "A relative path, optionally followed by '#' and a JSON Pointer into that file (ADR 0002 section 2).",
       "type": "string",
-      "pattern": "^\\.\\.?/[^\\\\#]+(?:#/.*)?$"
+      "pattern": "^\\.\\.?/[^\\\\#\\u0000-\\u001F\\u007F]+(?:#/[^\\u0000-\\u001F\\u007F]*)?$"
     },
     "include": {
       "if": {
@@ -23,11 +23,21 @@
         "$ref": "#/$defs/pointerPath"
       },
       "else": {
-        "type": "array",
-        "items": {
-          "$ref": "#/$defs/pointerPath"
+        "if": {
+          "type": "array"
         },
-        "minItems": 1
+        "then": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/pointerPath"
+          },
+          "minItems": 1
+        },
+        "else": {
+          "title": "alternatives",
+          "description": "a string or a list",
+          "type": "array"
+        }
       },
       "$comment": "ADR 0002 section 2",
       "description": "Merges the mapping of each file in place of this key, in list order (ADR 0002 section 2)."
@@ -39,12 +49,28 @@
         "$file": {
           "$ref": "#/$defs/path",
           "$comment": "ADR 0002 section 2"
+        },
+        "$include": {
+          "$ref": "#/$defs/include"
         }
       },
       "additionalProperties": false,
-      "required": [
-        "$file"
-      ]
+      "if": {
+        "properties": {
+          "$include": true
+        },
+        "required": [
+          "$include"
+        ]
+      },
+      "else": {
+        "properties": {
+          "$file": true
+        },
+        "required": [
+          "$file"
+        ]
+      }
     },
     "summary": {
       "type": "string",
@@ -59,7 +85,17 @@
         "type": "string"
       },
       "else": {
-        "$ref": "#/$defs/file"
+        "if": {
+          "type": "object"
+        },
+        "then": {
+          "$ref": "#/$defs/file"
+        },
+        "else": {
+          "title": "alternatives",
+          "description": "a string or a mapping",
+          "type": "object"
+        }
       },
       "$comment": "ADR 0002 section 12",
       "description": "Docs: a string, or { $file: <path> } to a .md or .txt file."
@@ -109,9 +145,9 @@
     },
     "rightName": {
       "title": "right name",
-      "description": "Any non-empty string without control characters and without leading or trailing space (ADR 0002 section 4).",
+      "description": "Any non-empty string without control characters and without leading or trailing space, other than __proto__, constructor and prototype (ADR 0002 section 4).",
       "type": "string",
-      "pattern": "^[^\\s\\u0000-\\u001F\\u007F-\\u009F](?:[^\\u0000-\\u001F\\u007F-\\u009F]*[^\\s\\u0000-\\u001F\\u007F-\\u009F])?$"
+      "pattern": "^(?!(?:__proto__|constructor|prototype)$)[^\\s\\u0000-\\u001F\\u007F-\\u009F](?:[^\\u0000-\\u001F\\u007F-\\u009F]*[^\\s\\u0000-\\u001F\\u007F-\\u009F])?$"
     },
     "errorCode": {
       "title": "error code",
@@ -176,20 +212,68 @@
         ]
       },
       "else": {
-        "type": "object",
-        "properties": {
-          "ignore": {
-            "$ref": "#/$defs/reason",
-            "$comment": "ADR 0003 section 4"
+        "if": {
+          "type": "object"
+        },
+        "then": {
+          "type": "object",
+          "title": "unknown keys exception",
+          "properties": {
+            "ignore": {
+              "$ref": "#/$defs/reason",
+              "$comment": "ADR 0003 section 4"
+            },
+            "keep": {
+              "$ref": "#/$defs/reason",
+              "$comment": "ADR 0003 section 4"
+            },
+            "$include": {
+              "$ref": "#/$defs/include"
+            }
           },
-          "keep": {
-            "$ref": "#/$defs/reason",
-            "$comment": "ADR 0003 section 4"
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "ignore": true
+            },
+            "required": [
+              "ignore"
+            ]
+          },
+          "then": {
+            "properties": {
+              "keep": {
+                "title": "conflict",
+                "description": "Write 'ignore' or 'keep', not both.",
+                "not": {}
+              }
+            }
+          },
+          "else": {
+            "if": {
+              "properties": {
+                "$include": true
+              },
+              "required": [
+                "$include"
+              ]
+            },
+            "else": {
+              "properties": {
+                "keep": true
+              },
+              "required": [
+                "keep"
+              ],
+              "title": "unknown keys exception"
+            }
           }
         },
-        "additionalProperties": false,
-        "minProperties": 1,
-        "maxProperties": 1
+        "else": {
+          "title": "alternatives",
+          "description": "a string or a mapping",
+          "type": "object"
+        }
       }
     },
     "unknownKeysException": {
@@ -203,20 +287,68 @@
         "not": {}
       },
       "else": {
-        "type": "object",
-        "properties": {
-          "ignore": {
-            "$ref": "#/$defs/reason",
-            "$comment": "ADR 0002 section 9"
+        "if": {
+          "type": "object"
+        },
+        "then": {
+          "type": "object",
+          "title": "unknown keys exception",
+          "properties": {
+            "ignore": {
+              "$ref": "#/$defs/reason",
+              "$comment": "ADR 0002 section 9"
+            },
+            "keep": {
+              "$ref": "#/$defs/reason",
+              "$comment": "ADR 0002 section 9"
+            },
+            "$include": {
+              "$ref": "#/$defs/include"
+            }
           },
-          "keep": {
-            "$ref": "#/$defs/reason",
-            "$comment": "ADR 0002 section 9"
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "ignore": true
+            },
+            "required": [
+              "ignore"
+            ]
+          },
+          "then": {
+            "properties": {
+              "keep": {
+                "title": "conflict",
+                "description": "Write 'ignore' or 'keep', not both.",
+                "not": {}
+              }
+            }
+          },
+          "else": {
+            "if": {
+              "properties": {
+                "$include": true
+              },
+              "required": [
+                "$include"
+              ]
+            },
+            "else": {
+              "properties": {
+                "keep": true
+              },
+              "required": [
+                "keep"
+              ],
+              "title": "unknown keys exception"
+            }
           }
         },
-        "additionalProperties": false,
-        "minProperties": 1,
-        "maxProperties": 1
+        "else": {
+          "title": "alternatives",
+          "description": "a string or a mapping",
+          "type": "object"
+        }
       }
     },
     "unknownQueryPolicy": {
@@ -232,18 +364,45 @@
         ]
       },
       "else": {
-        "type": "object",
-        "title": "query exception",
-        "properties": {
-          "ignore": {
-            "$ref": "#/$defs/reason",
-            "$comment": "ADR 0002 section 7"
+        "if": {
+          "type": "object"
+        },
+        "then": {
+          "type": "object",
+          "title": "query exception",
+          "properties": {
+            "ignore": {
+              "$ref": "#/$defs/reason",
+              "$comment": "ADR 0002 section 7"
+            },
+            "$include": {
+              "$ref": "#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "ignore": true
+            },
+            "required": [
+              "ignore"
+            ],
+            "title": "query exception"
           }
         },
-        "additionalProperties": false,
-        "required": [
-          "ignore"
-        ]
+        "else": {
+          "title": "alternatives",
+          "description": "a string or a mapping",
+          "type": "object"
+        }
       }
     },
     "lintAllow": {
@@ -257,7 +416,7 @@
             }
           },
           "propertyNames": {
-            "description": "a lint rule id",
+            "description": "a lint rule id (ADR 0002 section 12)",
             "pattern": "^(?:[^\\s/]+(?:/[^\\s/]+)+|\\$include)$"
           },
           "additionalProperties": {
@@ -283,7 +442,7 @@
             }
           },
           "propertyNames": {
-            "description": "a lint rule id",
+            "description": "a lint rule id (ADR 0002 section 12)",
             "pattern": "^(?:[^\\s/]+(?:/[^\\s/]+)+|\\$include)$"
           },
           "additionalProperties": {

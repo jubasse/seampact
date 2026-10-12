@@ -15,7 +15,8 @@ import {
   when,
 } from "../dsl.js";
 import { REFUSED_SCHEMA_KEYWORDS, schemaKeyword } from "../keywords.js";
-import { KEYS } from "./common.js";
+import { MARKERS } from "../markers.js";
+import { KEYS, PATH, POINTER } from "./common.js";
 
 const S1 = A3(1);
 
@@ -25,7 +26,7 @@ function refusedProps(): Record<string, JsonSchema> {
     REFUSED_SCHEMA_KEYWORDS.map((k) => [
       k.keyword,
       {
-        title: "refused",
+        title: MARKERS.refused,
         description: `Refused (${k.section}): ${k.reason}. Fix: ${k.fix}.`,
         $comment: k.section,
         not: {},
@@ -39,7 +40,7 @@ function refusedForm(keyword: string): JsonSchema {
   const form = schemaKeyword(keyword)?.refusedForm;
   if (form === undefined) throw new Error(`no refused form for ${keyword}`);
   return {
-    title: "refused form",
+    title: MARKERS.refusedForm,
     description: `Refused (${A3(1)}): ${form.reason}. Fix: ${form.fix}.`,
     not: {},
   };
@@ -72,6 +73,13 @@ const marks = (): Record<string, JsonSchema> => ({
   lint: kw(A3(6), ref("common", "lintAllow")),
 });
 
+// A derived object's own annotations: those of any schema but `default` (ADR 0003 section 10
+// places a default on a property, not on an object).
+const annotationsOfDerived = (): Record<string, JsonSchema> => {
+  const { default: _default, ...rest } = annotations();
+  return rest;
+};
+
 const integerBound = (): JsonSchema => ({ type: "integer", minimum: 0 });
 
 function plainProps(): Record<string, JsonSchema> {
@@ -90,7 +98,6 @@ function plainProps(): Record<string, JsonSchema> {
         stringOr(
           ref("common", "schemaName"),
           object({
-            include: false,
             description: "A narrowing of a catalogue enum to a strict subset (ADR 0003 section 7).",
             props: {
               narrow: kw(A3(7), ref("common", "schemaName")),
@@ -113,7 +120,6 @@ function plainProps(): Record<string, JsonSchema> {
         keys: null,
         keyDescription: "a union tag",
         values: ref("schema", "schema"),
-        include: false,
       }),
       "A mapping from tag value to variant (ADR 0003 section 3).",
     ),
@@ -152,7 +158,6 @@ function plainProps(): Record<string, JsonSchema> {
     file: kw(
       A3(2),
       object({
-        include: false,
         props: {
           media: kw(A3(2), list(str({ minLength: 1 }), { minItems: 1 })),
           maxSize: kw(A3(2), ref("common", "size")),
@@ -165,7 +170,6 @@ function plainProps(): Record<string, JsonSchema> {
 
 const derivation = (): JsonSchema =>
   object({
-    include: false,
     props: {
       from: kw(A3(2), ref("schema", "reference")),
       fields: kw(A3(2), list(str(), { minItems: 1 })),
@@ -182,11 +186,11 @@ export function schemaDefs(): Record<string, JsonSchema> {
       ...stringOr(ref("schema", "reference"), ref("schema", "mapping")),
     },
     reference: {
-      title: "schema reference",
+      title: MARKERS.schemaReference,
       description:
         "A schema name (Task) or a file (./schemas/task.yaml#/Task) (ADR 0002 section 2).",
       type: "string",
-      pattern: `^(?:${KEYS.schemaName}|\\.\\.?/[^\\\\#]+(?:#/.*)?)$`,
+      pattern: `^(?:${KEYS.schemaName}|${PATH}(?:${POINTER})?)$`,
     },
     mapping: {
       type: "object",
@@ -222,8 +226,12 @@ export function schemaDefs(): Record<string, JsonSchema> {
           map({ keys: null, keyDescription: "a property name", values: ref("schema", "overlay") }),
           "Overlays of kept properties.",
         ),
-        title: kw(S1, str()),
-        description: kw(S1, ref("common", "description")),
+        ...annotationsOfDerived(),
+        nullable: kw(
+          A3(5),
+          { type: "boolean" },
+          "The value may be JSON null (ADR 0003 section 5).",
+        ),
         typeName: kw(A3(6), str({ minLength: 1 })),
         unknownKeys: kw(A3(4), ref("common", "unknownKeysPolicy")),
         lint: kw(A3(6), ref("common", "lintAllow")),
@@ -255,7 +263,6 @@ export function schemaDefs(): Record<string, JsonSchema> {
       ...stringOr(
         ref("common", "rightName"),
         object({
-          include: false,
           props: {
             right: kw(A3(6), ref("common", "rightName")),
             params: kw(A3(6), { type: "object" }),
@@ -270,7 +277,6 @@ export function schemaDefs(): Record<string, JsonSchema> {
       ...stringOr(
         str({ minLength: 1 }),
         object({
-          include: false,
           props: { from: kw(A3(3), ref("common", "discriminatorSource")) },
           required: ["from"],
         }),

@@ -3,10 +3,11 @@
 //
 // Conventions the validate stage relies on (packages/compiler/src/validate):
 // - every grammar keyword carries its ADR section in `$comment` (the grammar snapshot reads it);
-// - a definition whose failures deserve their own rule is marked by its `title`: `reason`,
-//   `refused`, `refused form`, `conflict`, `reserved`, `reasoned policy`, or a title ending in
-//   ` name` for a name position;
+// - a definition whose failures deserve their own rule is marked by a `title` of `MARKERS`
+//   (markers.ts), never by a literal;
 // - every `required` sits beside a `properties` that lists its keys (Ajv strictRequired).
+
+import { MARKERS } from "./markers.js";
 
 export type JsonSchema = { [key: string]: unknown };
 
@@ -80,7 +81,7 @@ export function req(...keys: string[]): JsonSchema {
 
 // A key that may not appear in this case, because another key excludes it.
 export function conflict(description: string): JsonSchema {
-  return { title: "conflict", description, not: {} };
+  return { title: MARKERS.conflict, description, not: {} };
 }
 
 // `then` constraints that forbid each of `keys`.
@@ -108,7 +109,7 @@ export const EXTENSION_KEY = "^x-[a-z][a-z0-9]*-[a-z][a-z0-9]*(-[a-z0-9]+)*$";
 // Their values are checked against their declarations by a later pass.
 const EXTENSION_PATTERNS: JsonSchema = {
   "^x-seampact-": {
-    title: "reserved",
+    title: MARKERS.reserved,
     description: "The extension prefix 'seampact' is reserved (ADR 0008).",
     not: {},
   },
@@ -146,7 +147,10 @@ export function object(spec: ObjectSpec): JsonSchema {
   if (spec.required !== undefined && spec.required.length > 0) {
     if (include) {
       // A fragment holding `$include` may receive its required keys from the included file.
-      rules.push({ if: req("$include"), else: req(...spec.required) });
+      // The title travels with `required`, whose failure Ajv reports against this subschema.
+      const required = req(...spec.required);
+      if (spec.title !== undefined) required.title = spec.title;
+      rules.push({ if: req("$include"), else: required });
     } else {
       out.required = spec.required;
     }
@@ -157,27 +161,51 @@ export function object(spec: ObjectSpec): JsonSchema {
   return out;
 }
 
+// Keys no mapping of the grammar admits, whatever its key pattern: an object key that would reach
+// the prototype chain of a JavaScript reader (the loader refuses them too).
+export const RESERVED_KEYS = "(?!(?:__proto__|constructor|prototype)$)";
+
+// Any key not starting with `$` (a loader directive, ADR 0002 section 2) and not reserved.
+export const FREE_KEY = `${RESERVED_KEYS}[^$].*`;
+
 export interface MapSpec {
-  // The key pattern, without anchors; `null` accepts any key not starting with `$`.
+  // The key pattern, without anchors; `null` accepts `FREE_KEY`.
   keys: string | null;
   // What a key names, for diagnostics ("a schema name").
   keyDescription: string;
+  // The ADR section that defines the key pattern: section 4 for names (the default), section 2 for
+  // free keys.
+  keySection?: string;
   values: JsonSchema;
+  title?: string;
   description?: string;
+  // Accepts `$include`; true everywhere but a map of named tree nodes (`routes`).
   include?: boolean;
+}
+
+// The `propertyNames` of a map: its pattern, and what a key names with the ADR section saying so.
+export function keyNames(
+  keys: string,
+  keyDescription: string,
+  section: string,
+  include = true,
+): JsonSchema {
+  return {
+    description: `${keyDescription} (${section})`,
+    pattern: include ? `^(?:${keys}|\\$include)$` : `^(?:${keys})$`,
+  };
 }
 
 // A mapping from names to values (a catalogue, `routes`, a fields map).
 export function map(spec: MapSpec): JsonSchema {
   const include = spec.include ?? true;
-  const keys = spec.keys ?? "[^$].*";
+  const keys = spec.keys ?? FREE_KEY;
+  const section = spec.keySection ?? (spec.keys === null ? A2(2) : A2(4));
   const out: JsonSchema = { type: "object" };
+  if (spec.title !== undefined) out.title = spec.title;
   if (spec.description !== undefined) out.description = spec.description;
   if (include) out.properties = { $include: ref("common", "include") };
-  out.propertyNames = {
-    description: spec.keyDescription,
-    pattern: include ? `^(?:${keys}|\\$include)$` : `^(?:${keys})$`,
-  };
+  out.propertyNames = keyNames(keys, spec.keyDescription, section, include);
   out.additionalProperties = spec.values;
   return out;
 }
@@ -191,8 +219,25 @@ export function when(condition: JsonSchema, then?: JsonSchema, otherwise?: JsonS
   return Object.fromEntries(entries);
 }
 
-// A value that is either a string of one form or a mapping of another (`paging: cursor` or
-// `paging: { cursor: {...} }`).
-export function stringOr(stringForm: JsonSchema, objectForm: JsonSchema): JsonSchema {
-  return { ...when({ type: "string" }, stringForm, objectForm) };
+const TYPE_NAMES = { object: "a mapping", array: "a list" } as const;
+
+// A value that is either a string of one form or a mapping (or a list) of another
+// (`paging: cursor` or `paging: { cursor: {...} }`). A value of neither type fails once, under
+// `MARKERS.alternatives`, instead of as "must be a mapping".
+export function stringOr(
+  stringForm: JsonSchema,
+  otherForm: JsonSchema,
+  other: keyof typeof TYPE_NAMES = "object",
+): JsonSchema {
+  const neither = {
+    title: MARKERS.alternatives,
+    description: `a string or ${TYPE_NAMES[other]}`,
+    type: other,
+  };
+  return { ...when({ type: "string" }, stringForm, when({ type: other }, otherForm, neither)) };
+}
+
+// A mapping that needs one key of several: `description` lists them, `first` is the key reported.
+export function choice(description: string, first: string): JsonSchema {
+  return { title: MARKERS.choice, description, ...req(first) };
 }

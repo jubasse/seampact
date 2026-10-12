@@ -9,7 +9,7 @@
     }
   },
   "propertyNames": {
-    "description": "a scheme name",
+    "description": "a scheme name (ADR 0002 section 4)",
     "pattern": "^(?:[a-z][A-Za-z0-9_]*|\\$include)$"
   },
   "additionalProperties": {
@@ -79,7 +79,22 @@
               "$ref": "#/$defs/apiKey"
             },
             "else": {
-              "$ref": "#/$defs/basic"
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "basic"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "then": {
+                "$ref": "#/$defs/basic"
+              },
+              "else": {
+                "$ref": "#/$defs/unknownKind"
+              }
             }
           }
         }
@@ -163,12 +178,28 @@
               "type": "object",
               "$comment": "ADR 0002 section 9",
               "description": "An OpenAPI OAuth Flows Object."
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
             }
           },
           "additionalProperties": false,
-          "required": [
-            "flows"
-          ],
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "flows": true
+            },
+            "required": [
+              "flows"
+            ]
+          },
           "$comment": "ADR 0002 section 9"
         },
         "openIdConnect": {
@@ -206,16 +237,10 @@
     },
     "basic": {
       "type": "object",
-      "title": "scheme kind",
       "properties": {
         "kind": {
           "enum": [
-            "cookie",
-            "header",
-            "query",
-            "bearer",
-            "basic",
-            "signature"
+            "basic"
           ],
           "$comment": "ADR 0002 section 9"
         },
@@ -227,7 +252,24 @@
           "$ref": "common.schema.json#/$defs/include"
         }
       },
-      "additionalProperties": false,
+      "additionalProperties": false
+    },
+    "unknownKind": {
+      "title": "scheme kind",
+      "type": "object",
+      "properties": {
+        "kind": {
+          "enum": [
+            "cookie",
+            "header",
+            "query",
+            "bearer",
+            "basic",
+            "signature"
+          ],
+          "$comment": "ADR 0002 section 9"
+        }
+      },
       "if": {
         "properties": {
           "$include": true
