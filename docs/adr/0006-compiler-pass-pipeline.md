@@ -36,28 +36,48 @@ load -> validate -> tree -> access -> derive -> link -> finalize
 
 The order is fixed. Each api of a workspace runs through derive on its own, in relay order: an api with relay routes runs after every workspace api they name, because its tree pass copies the public operations from that api's derived IR (an imported api's IR comes from its pinned bundle). Relays that form a cycle between apis are a compile error naming them. Link then sees all of them. A step that reports an error stops the pipeline after it completes, so later passes always receive consistent input, while every error of the failing step is still reported at once.
 
-### 2. The pass interface
+### 2. The pass interface (amendment 2026-10-12, p2-pipeline)
+
+Each of the three api passes runs as two halves, each a `PassPart`:
 
 ```ts
-export interface Pass {
-  name: 'tree' | 'access' | 'derive' | 'link';
+export type HalfName =
+  'tree.schemas' | 'tree.nodes' | 'access.identity' | 'access.rights' | 'derive.wire' | 'derive.errors';
+export interface PassPart<H extends HalfName> {
+  pass: PassOf<H>;                          // 'tree' | 'access' | 'derive'
+  half: H;
   reads: DraftField[];                      // draft-IR paths, e.g. 'operations[].requires'
   writes: DraftField[];
-  run(draft: DraftIR, context: PassContext): void;
+  run(draft: DraftIR, context: PassContextOf<H>): PassResultOf<H>;
 }
 export interface PassContext {
-  raw: RawTree;                             // read-only, with origins
+  raw: RawApi;                              // read-only, with origins
+  workspace: RawWorkspace;                  // read-only
   conventions: ResolvedConventions;         // read-only, with origins
-  inherited<T>(node: TreeNode, setting: SettingName): Inherited<T> | undefined;   // value plus origin
+  inherited<S extends SettingName>(node: TreeNode, setting: S): Inherited<S> | undefined;   // value plus origin
+  origin(pointer: string): Origin | undefined;
+  relayed(api: string): DraftIR | undefined;     // read-only: a workspace api's derived draft, closed types
+  imported(api: string): ContractIR | undefined; // read-only: an imported api's IR, open reader types
   report(diagnostic: Diagnostic): void;
+}
+type PassContextOf<H> = H extends 'tree.nodes' ? PassContext & { treeSchemas: TreeSchemaService } : PassContext;
+type PassResultOf<H> = H extends 'tree.schemas' ? TreeSchemaService : undefined;
+export interface WorkspacePass {            // link: diagnostics only
+  name: 'link';
+  reads: DraftField[];
+  run(apis: ReadonlyMap<string, DraftIR>, context: WorkspacePassContext): void;
 }
 ```
 
-- A pass writes only the fields it declares. In tests, the draft IR is wrapped so that a read or a write outside the declaration throws; a pass's tests therefore fail on the first undeclared access, not at merge time.
+- The halves run in the order `tree.schemas`, `tree.nodes`, `access.identity`, `access.rights`, `derive.wire`, `derive.errors`, and each is a step of the stop rule (section 1): a half that reports an error completes, and no later half of that api runs. Each half runs after every half it reads: `tree.nodes` uses the type uses of `tree.schemas`, `access.rights` the access `access.identity` resolved, `derive.wire` both access halves, and `derive.errors` what `derive.wire` wrote (idempotency, cache, concurrency, paging parameters) instead of computing the triggers again.
+- `tree.schemas` hands `tree.nodes` its `TreeSchemaService` by return value, the one value a half returns: the type use and the query wire form of the schema written at a raw pointer, and an example check against a use. Every inline schema is hoisted during `tree.schemas`' run; the service never writes and reports nothing.
+- A half writes only the fields it declares, and only the fields section 3 gives its pass; the field-ownership table splits them between the halves of a pass (ownership moves between passes only by a change to this ADR). A field is owned by one half, or shared in one of two modes: `elements`, a list several halves append to, where an element without `derivedFrom` is the declaring half's and a derived one belongs to the half that owns its derivation (section 5); and `default`, a value written only where still absent, by the halves listed, in run order (`unknownKeys` on a body input use, `maturity`).
+- In tests, the draft IR is wrapped in a guard so that a read or a write outside the half's declaration or its ownership throws; a half's tests therefore fail on the first such access, not at merge time. The guard catches mistakes of the project's own passes, not an adversary, and is off outside tests.
+- `relayed` returns a workspace api's derived draft in the closed writer view; `imported` returns an imported IR in the open reader types, since it may come from another compiler version. Code that copies from an imported IR narrows each union with `isKnownVariant` and reports an unknown arm by name.
 - `inherited` is the single inherited-setting mechanism, shared by tree, access and derive (which reads node `errors` and `errorRoles` through it). It applies the merge rules of ADR 0002 section 8 and returns the origin of the node that set the value.
 - The seam PR (merged first in phase 2) holds the interface, `inherited`, the field ownership table below, and two hand-written draft-IR fixtures of the reference contract: after tree, and after tree and access. They are the contract between the three passes; each pass's golden tests start from the fixture before it.
 
-### 3. Field ownership
+### 3. Field ownership (amendment 2026-10-12, p2-pipeline)
 
 | Pass | Writes |
 |---|---|
