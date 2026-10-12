@@ -42,6 +42,8 @@ Choice: Changesets, with `access: restricted` and no publish workflow or npm tok
 
 One job named `ci` runs `pnpm install --frozen-lockfile` then `pnpm gate` on push and pull request to `main`. Actions are pinned by full commit SHA with the version in a comment. The `ci` job is the check that branch protection will require.
 
+Amended 2026-10-12: git flow, see CONTRIBUTING.md. CI now runs on push and pull request to `main` and `develop`.
+
 ## Consequences
 
 - Adding a package needs only a directory under `packages/` with a `typecheck` script; the gate picks it up.
