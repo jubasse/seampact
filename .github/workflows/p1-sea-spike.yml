@@ -114,22 +114,38 @@ jobs:
         run: |
           want="${MATRIX_ID#*-}"
           got="$(node -p process.arch)"
-          echo "runner: ${{ matrix.runner }}, uname -m: $(uname -m), node arch: $got, binary: $want"
-          [ "$got" = "$want" ] || { echo "runner architecture $got is not $want"; exit 1; }
+          machine="$(uname -m)"
+          case "$machine" in
+            x86_64 | AMD64 | amd64 | x64) machine_arch=x64 ;;
+            aarch64 | arm64) machine_arch=arm64 ;;
+            *) machine_arch="$machine" ;;
+          esac
+          if [ "$RUNNER_OS" = macOS ] && [ "$(sysctl -in sysctl.proc_translated 2>/dev/null || echo 0)" = 1 ]; then
+            machine_arch="$machine_arch (Rosetta)"
+          fi
+          echo "runner: ${{ matrix.runner }}, uname -m: $machine, machine arch: $machine_arch, node arch: $got, binary: $want"
+          [ "$got" = "$want" ] || { echo "node architecture $got is not $want"; exit 1; }
+          [ "$machine_arch" = "$want" ] || { echo "machine architecture $machine_arch is not $want"; exit 1; }
         env:
           MATRIX_ID: ${{ matrix.id }}
       - name: Windows, check the PE security directory is empty
         if: runner.os == 'Windows'
-        run: node spikes/sea/scripts/pe.mjs check "bin/${{ matrix.binary }}"
+        run: |
+          # Fail closed: the script must print its verdict line, or the guard did not run.
+          out="$(node spikes/sea/scripts/pe.mjs check "bin/${{ matrix.binary }}")"
+          echo "$out"
+          [ "$out" = "pe: security directory offset 0, size 0" ] || { echo "pe check did not confirm an empty security directory"; exit 1; }
       - name: macOS, fetch with curl, run before re-signing and show attributes (information only)
         if: runner.os == 'macOS'
         run: |
           mkdir fetched
-          (cd bin && python3 -m http.server 8765 --bind 127.0.0.1 > ../server.log 2>&1 & echo $! > ../server.pid)
-          sleep 2
-          curl --fail --silent --show-error --output "fetched/${{ matrix.binary }}" \
-            "http://127.0.0.1:8765/${{ matrix.binary }}"
-          kill "$(cat server.pid)" || true
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory bin > server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 1 --max-time 120 \
+            --output "fetched/${{ matrix.binary }}" "http://127.0.0.1:8765/${{ matrix.binary }}"
+          kill "$server_pid"
+          wait "$server_pid" 2>/dev/null || true
           cmp "bin/${{ matrix.binary }}" "fetched/${{ matrix.binary }}"
           chmod +x "fetched/${{ matrix.binary }}"
           xattr -l "fetched/${{ matrix.binary }}" || true

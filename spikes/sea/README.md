@@ -26,7 +26,8 @@ size when it picks the release asset format. The size is judged acceptable for a
 download, with no threshold set. The five hosted runners needed no paid signing: the Windows binary
 ran with Node's Authenticode signature removed before injection (`pe.mjs check` passed on the
 runner: security directory offset 0, size 0; ADR 0010: no Authenticode signing of our own), and the
-macOS binaries ran even unsigned, then again after a free ad hoc re-sign, which stays in the plan.
+macOS binaries ran even unsigned on the hosted runners, which do not enforce signing (see the
+caveats), then again after a free ad hoc re-sign, which stays in the plan.
 
 ## What it proves
 
@@ -103,7 +104,7 @@ Linux job (`ubuntu-24.04`):
 - Smoke jobs: 12 to 15 s (Linux), 32 s (Windows), 88 s (macOS arm64) and 103 s (macOS x64); the
   macOS jobs include the curl step (about 37 s each), the re-sign and the extra artefact upload.
 - The linux x64 binary also passed with `TZ=Asia/Kolkata LANG=fr_FR.UTF-8 LC_ALL=fr_FR.UTF-8`
-  (first launch 49 ms, warm 47 ms), and Windows ran from a `core.autocrlf=true` checkout (CRLF
+  (start 49 ms, warm 47 ms), and Windows ran from a `core.autocrlf=true` checkout (CRLF
   fixtures) with output equal to the reference.
 
 ## Runners
@@ -114,7 +115,9 @@ Labels used (GitHub-hosted), with the image versions in the log of run 382372331
 20260824.0482.1), `windows-2025` (image windows-2025-vs2026 20260925.250.1). The step asserting
 `node -p process.arch` equals the matrix architecture passed on all 5 smoke jobs (linux-x64:
 x86_64/x64, linux-arm64: aarch64/arm64, darwin-x64 on macos-15-intel: x86_64/x64, darwin-arm64 on
-macos-15: arm64/arm64, win32-x64: x64), so the darwin-x64 result comes from an Intel runner.
+macos-15: arm64/arm64, win32-x64: x64), so the darwin-x64 result comes from an Intel runner. The step now also checks the machine
+(`uname -m`, and Rosetta translation on macOS), not only Node's architecture; that stricter gate
+was not part of run 38237233164.
 
 ## Caveats for p3-binary
 
@@ -136,24 +139,23 @@ macos-15: arm64/arm64, win32-x64: x64), so the darwin-x64 result comes from an I
   do not match either: they are superseded, and the cause of that older difference was not
   isolated, so do not rely on them. The macOS binaries that p3-binary ships differ from this manifest after the ad hoc
   re-sign (the `signed-darwin-*` artefacts). Hashes depend on the pinned Node archives, esbuild
-  0.28.2, yaml 2.9.1 and postject 1.0.0-alpha.6, which p3-binary must keep pinned. A second
-  build in a different directory was not repeated against this tip.
+  0.28.2, yaml 2.9.1 and postject 1.0.0-alpha.6, which p3-binary must keep pinned. CI built in
+  `/home/runner/work/seampact/seampact/spikes/sea` and the local build in another directory on
+  another host: identical hashes, and the blob embeds no checkout path (0 matches).
 - pnpm 12: `pnpm install --ignore-workspace --frozen-lockfile` fails (exit 1, esbuild build script
   unapproved, because the flag ignores settings files). The spike has its own
   `pnpm-workspace.yaml` (`allowBuilds` esbuild: false) and uses plain `pnpm install
   --frozen-lockfile`; CI ran this fine under pnpm 12.11.2. p3-binary, inside the workspace, needs
   its own approval of esbuild's build script instead.
-- For the lead (contradiction with ADR 0010): ADR 0010 says Apple silicon refuses to run an
-  unsigned binary. The spike did not reproduce that on the hosted macos-15 arm64 runner: the
-  unsigned binary, fetched with curl, exited 0 with stdout identical to the Node reference and an
-  empty stderr (0 bytes). This does not change the Go verdict, the ad hoc re-sign stays regardless,
-  but the ADR sentence should be reworded (observed on a CI runner only, not on users' Macs).
-- macOS, unsigned: the Mach-O binaries come out of the Linux injection with no usable signature
-  (`codesign -dv` on both macOS runners: "code object is not signed at all"). Run before any
-  re-sign, fetched with curl, on both the arm64 and the x64 runner, they exited 0, stdout identical
-  to the Node reference, stderr empty (0 bytes). That is one observation on CI runners, with no
-  quarantine attribute; do not read it as proof that an unsigned arm64 binary runs on users' Macs.
-  The ad hoc re-sign stays in the plan.
+- macOS signing, what the CI cannot show: ADR 0010 says Apple silicon refuses to run an unsigned
+  binary, and that sentence stands. The unsigned binary nevertheless ran on the hosted macos-15
+  arm64 runner (fetched with curl, `codesign -dv`: "code object is not signed at all", exit 0,
+  stdout identical to the Node reference, stderr 0 bytes). The hosted runner did not enforce
+  signing (the cause, for example SIP or AMFI settings in the image, was not checked), so the CI
+  smoke cannot detect a missing or broken signature. p3-binary needs an explicit gate on the
+  shipped macOS binaries: `codesign --verify --strict` and a non-empty `codesign -dv` signature.
+  The same observation was made on the x64 runner (exit 0, stdout identical, stderr empty). It
+  does not change the Go verdict, and the ad hoc re-sign stays in the plan.
 - macOS ad hoc re-sign: `codesign --remove-signature` (tolerated failure) then
   `codesign --force --sign -`, then `codesign --verify --verbose=2` ("valid on disk", "satisfies its
   Designated Requirement") on a macOS runner, as a separate job step after the artefact download.
@@ -161,13 +163,13 @@ macos-15: arm64/arm64, win32-x64: x64), so the darwin-x64 result comes from an I
   after the re-sign, or sign on the macOS job and republish.
 - Quarantine: in run 38237233164 both macOS jobs served `bin/` on localhost, fetched the binary
   with `curl`, `cmp` found it identical to the artefact, and `xattr` showed no quarantine attribute
-  ("quarantine attribute present: 0" on both runners): curl does not set it, as expected, so this
-  does not model a browser download. The behaviour of a quarantined browser download (Gatekeeper
-  without notarisation) cannot be tested from CI. Workflow glitch for the lead: the step's
-  `cat server.pid` failed ("No such file or directory", `kill` got an empty argument) because the
-  `cd bin && python3 ... &` list runs in a background subshell, so `../server.pid` lands outside
-  the working directory; the local server was never killed (harmless in a throwaway job, the fetch
-  and checks were unaffected), and the step took about 37 s.
+  ("quarantine attribute present: 0" on both runners): this shows only that curl sets no
+  quarantine attribute; it does not model a browser download. The behaviour of a quarantined browser download (Gatekeeper
+  without notarisation) cannot be tested from CI. In run 38237233164 the step's
+  `cat server.pid` failed and the local server was never killed (a background-list bug, harmless in
+  a throwaway job, the fetch and checks were unaffected, and the step took about 37 s). The
+  workflow now uses `--directory bin`, `$!`, a kill trap, and curl with retry and `--max-time`;
+  that fix has not run in CI yet.
 - Linux ad hoc signing: signing the Mach-O from Linux with a pinned tool (for example rcodesign) was
   not tried, so the macOS re-sign still needs macOS runners. It could save the extra job.
 - Windows: in run 38235349165 the binary still carried Node's Authenticode signature (PE security
