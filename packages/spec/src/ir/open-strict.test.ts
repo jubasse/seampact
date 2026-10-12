@@ -13,7 +13,7 @@ import {
   walkInstance,
 } from "./test-support.js";
 import type { ContractIR } from "./types.generated.js";
-import { createIrValidator } from "./validation.js";
+import { classifyIrErrors, createIrValidator } from "./validation.js";
 
 const EXAMPLES = new URL("../../schemas/ir/examples/", import.meta.url);
 const sample = (name: string): unknown => JSON.parse(readFileSync(new URL(name, EXAMPLES), "utf8"));
@@ -151,18 +151,25 @@ test("fixed unknown cases", () => {
     unknownKinds: [{ pointer: "/schemas/Point", tag: "kind", value: "tuple", mustAct: false }],
   });
   expect(validateIr(sample("unknown-kind.ir.json"), "strict").valid).toBe(false);
-  // A must-act value (a security scheme kind) makes the IR invalid for every reader.
+  // A must-act tag (a security scheme kind) makes the IR invalid for every reader.
   expect(validateIr(sample("unknown-must-act.ir.json"), "open")).toEqual({
     ...VALID_REPORT,
     valid: false,
-    unknownValues: [
-      {
-        pointer: "/schemes/client/kind",
-        value: "mtls",
-        known: ["cookie", "header", "query", "bearer", "basic", "signature"],
-        mustAct: true,
-      },
-    ],
+    unknownKinds: [{ pointer: "/schemes/client", tag: "kind", value: "mtls", mustAct: true }],
+  });
+});
+
+test("a mapping error the walk did not list fails closed", () => {
+  // An unknown tag only the validator saw: whether its union is must-act is unknown, so it counts as must-act.
+  const error = {
+    instancePath: "/schemes/client",
+    keyword: "discriminator",
+    params: { error: "mapping", tag: "kind", tagValue: "mtls" },
+  };
+  expect(classifyIrErrors([error], "open")).toEqual({
+    ...VALID_REPORT,
+    valid: false,
+    unknownKinds: [{ pointer: "/schemes/client", tag: "kind", value: "mtls", mustAct: true }],
   });
 });
 

@@ -133,7 +133,7 @@
       "required": ["flows"],
       "properties": { "flows": { "description": "OpenAPI OAuth flows, copied as written." } }
     },
-    "BearerScheme": {
+    "BearerFacts": {
       "type": "object",
       "description": "Document-only facts of a bearer scheme.",
       "properties": {
@@ -142,7 +142,7 @@
         "openIdConnectUrl": { "type": "string" }
       }
     },
-    "SignatureScheme": {
+    "SignatureVerify": {
       "type": "object",
       "description": "How a signature is verified (ADR 0004 section 4).",
       "discriminator": { "propertyName": "verify" },
@@ -179,41 +179,92 @@
         "key": { "$ref": "#/$defs/SchemeKey" }
       }
     },
-    "SchemeKind": {
-      "type": "string",
-      "description": "The kind of a security scheme (ADR 0004 section 4).",
-      "x-seampact-known": ["cookie", "header", "query", "bearer", "basic", "signature"],
-      "x-seampact-must-act": true
-    },
     "Scheme": {
       "type": "object",
-      "description": "A security scheme (ADR 0004 section 4).",
-      "required": ["id", "kind", "origin"],
+      "description": "A security scheme (ADR 0004 section 4), tagged on its kind.",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [
+        { "$ref": "#/$defs/CookieScheme" },
+        { "$ref": "#/$defs/HeaderScheme" },
+        { "$ref": "#/$defs/QueryScheme" },
+        { "$ref": "#/$defs/BearerScheme" },
+        { "$ref": "#/$defs/BasicScheme" },
+        { "$ref": "#/$defs/SignatureScheme" }
+      ],
+      "x-seampact-must-act": true
+    },
+    "CookieScheme": {
+      "type": "object",
+      "description": "A credential in a cookie; 'csrf' names the scheme that carries the CSRF token.",
+      "required": ["id", "kind", "name", "origin"],
       "properties": {
         "id": { "$ref": "common.schema.json#/$defs/SchemeId" },
-        "kind": { "$ref": "#/$defs/SchemeKind" },
-        "name": {
-          "type": "string",
-          "description": "The cookie, header or query parameter, or the signature header."
-        },
+        "kind": { "type": "string", "const": "cookie" },
+        "name": { "type": "string", "description": "The cookie name." },
         "csrf": { "$ref": "common.schema.json#/$defs/SchemeId" },
-        "bearer": { "$ref": "#/$defs/BearerScheme" },
-        "signature": { "$ref": "#/$defs/SignatureScheme" },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
     },
-    "IdentitySchemes": {
+    "HeaderScheme": {
       "type": "object",
-      "description": "The schemes of an identity, tagged like its kind.",
-      "discriminator": { "propertyName": "kind" },
-      "oneOf": [{ "$ref": "#/$defs/CredentialSchemes" }, { "$ref": "#/$defs/SignedSchemes" }]
+      "description": "A credential in a request header.",
+      "required": ["id", "kind", "name", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/SchemeId" },
+        "kind": { "type": "string", "const": "header" },
+        "name": { "type": "string", "description": "The header name." },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "QueryScheme": {
+      "type": "object",
+      "description": "A credential in a query parameter.",
+      "required": ["id", "kind", "name", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/SchemeId" },
+        "kind": { "type": "string", "const": "query" },
+        "name": { "type": "string", "description": "The query parameter name." },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "BearerScheme": {
+      "type": "object",
+      "description": "A bearer token in the Authorization header.",
+      "required": ["id", "kind", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/SchemeId" },
+        "kind": { "type": "string", "const": "bearer" },
+        "bearer": { "$ref": "#/$defs/BearerFacts" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "BasicScheme": {
+      "type": "object",
+      "description": "HTTP basic credentials in the Authorization header.",
+      "required": ["id", "kind", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/SchemeId" },
+        "kind": { "type": "string", "const": "basic" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "SignatureScheme": {
+      "type": "object",
+      "description": "A signed request, verified as 'signature' says.",
+      "required": ["id", "kind", "signature", "origin"],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/SchemeId" },
+        "kind": { "type": "string", "const": "signature" },
+        "name": { "type": "string", "description": "The signature header." },
+        "signature": { "$ref": "#/$defs/SignatureVerify" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
     },
     "CredentialSchemes": {
       "type": "object",
       "description": "The schemes of a credential identity.",
-      "required": ["kind", "read", "write", "optionalRead"],
+      "required": ["read", "write", "optionalRead"],
       "properties": {
-        "kind": { "type": "string", "const": "credential" },
         "read": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/SchemeId" } },
         "write": {
           "type": "array",
@@ -224,15 +275,6 @@
           "type": "array",
           "items": { "$ref": "common.schema.json#/$defs/SchemeId" }
         }
-      }
-    },
-    "SignedSchemes": {
-      "type": "object",
-      "description": "The scheme of a signed identity.",
-      "required": ["kind", "signed"],
-      "properties": {
-        "kind": { "type": "string", "const": "signed" },
-        "signed": { "$ref": "common.schema.json#/$defs/SchemeId" }
       }
     },
     "Principal": {
@@ -265,7 +307,8 @@
       "type": "object",
       "description": "Unknown keys of a signed identity's payload: ignored or kept, with the reason.",
       "discriminator": { "propertyName": "policy" },
-      "oneOf": [{ "$ref": "#/$defs/IgnoreKeysPolicy" }, { "$ref": "#/$defs/KeepKeysPolicy" }]
+      "oneOf": [{ "$ref": "#/$defs/IgnoreKeysPolicy" }, { "$ref": "#/$defs/KeepKeysPolicy" }],
+      "x-seampact-must-act": true
     },
     "IgnoreKeysPolicy": {
       "type": "object",
@@ -302,15 +345,16 @@
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
     },
-    "IdentityKind": {
-      "type": "string",
-      "description": "The kind of an identity (ADR 0004 section 4).",
-      "x-seampact-known": ["credential", "signed"],
-      "x-seampact-must-act": true
-    },
     "Identity": {
       "type": "object",
-      "description": "An identity (ADR 0004 section 4); 'schemes' carries the same kind (invariant ir.identity.kind).",
+      "description": "An identity (ADR 0004 section 4), tagged on its kind.",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [{ "$ref": "#/$defs/CredentialIdentity" }, { "$ref": "#/$defs/SignedIdentity" }],
+      "x-seampact-must-act": true
+    },
+    "CredentialIdentity": {
+      "type": "object",
+      "description": "An identity reached through credential schemes.",
       "required": [
         "id",
         "kind",
@@ -324,8 +368,34 @@
       ],
       "properties": {
         "id": { "$ref": "common.schema.json#/$defs/IdentityId" },
-        "kind": { "$ref": "#/$defs/IdentityKind" },
-        "schemes": { "$ref": "#/$defs/IdentitySchemes" },
+        "kind": { "type": "string", "const": "credential" },
+        "schemes": { "$ref": "#/$defs/CredentialSchemes" },
+        "principal": { "$ref": "#/$defs/Principal" },
+        "errors": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/ErrorCode" } },
+        "headers": { "type": "array", "items": { "$ref": "#/$defs/IdentityHeaderUse" } },
+        "docs": { "$ref": "common.schema.json#/$defs/Docs" },
+        "extensions": { "$ref": "common.schema.json#/$defs/Extensions" },
+        "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "SignedIdentity": {
+      "type": "object",
+      "description": "An identity reached through one signature scheme (ADR 0013).",
+      "required": [
+        "id",
+        "kind",
+        "signed",
+        "principal",
+        "errors",
+        "headers",
+        "docs",
+        "extensions",
+        "origin"
+      ],
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/IdentityId" },
+        "kind": { "type": "string", "const": "signed" },
+        "signed": { "$ref": "common.schema.json#/$defs/SchemeId" },
         "principal": { "$ref": "#/$defs/Principal" },
         "unknownKeys": { "$ref": "#/$defs/KeysPolicy" },
         "errors": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/ErrorCode" } },

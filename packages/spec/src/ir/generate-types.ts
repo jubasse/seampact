@@ -66,11 +66,13 @@ export function generateIrTypes(documents: readonly SchemaNode[] = IR_SCHEMA_DOC
   return out.join("\n");
 }
 
-// A definition's description, with the must-act rule when the definition carries it.
+// A definition's description, with the must-act rule when the definition carries it: an unknown tag for a
+// union, an unknown value for an open enum.
 function description(def: SchemaNode): string | undefined {
   if (def[MUST_ACT_KEYWORD] !== true)
     return typeof def.description === "string" ? def.description : undefined;
-  const rule = "Must act: an unknown value makes the IR invalid for every reader.";
+  const unknown = isSchemaNode(def.discriminator) ? "an unknown tag" : "an unknown value";
+  const rule = `Must act: ${unknown} makes the IR invalid for every reader.`;
   return typeof def.description === "string" ? `${def.description} ${rule}` : rule;
 }
 

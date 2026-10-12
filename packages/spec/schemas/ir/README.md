@@ -10,7 +10,7 @@ Each file has a stable `$id` under `https://seampact.dev/schemas/ir/` (`https://
 
 The ids carry no revision: the revision a schema describes is `IR_REVISION` in `@seampact/spec/ir`.
 
-Every object, tagged union and open enum is a named definition, never an anonymous shape inside a member, so every generated model names its types.
+Every object, tagged union and open enum is a named definition, never an anonymous shape inside a member, so every generated model names its types. Definition names are therefore part of the generated-model contract: renaming a definition or a union variant is a breaking IR change (`CHANGE-TEMPLATE.md`).
 
 ## Open enums
 
@@ -50,22 +50,29 @@ A tagged union is a wrapper object with `discriminator` and `oneOf`, whose varia
 - An unknown tag is named, not a generic schema error: the validator reports the tag member, its value and the union's pointer (Ajv: keyword `discriminator`, `params.error` `mapping`). The tag stays open: an IR reader accepts the document and treats the object as an unknown variant, which a reader that must act on it refuses by name. `listIrUnknowns` in `@seampact/spec/ir` lists every unknown tag and open-enum value with its pointer.
 - A model generator maps the wrapper to a sealed class (Kotlin) or an abstract class (PHP), each variant to a subclass, and adds an `Unknown` variant that keeps the raw value (ADR 0010).
 - TypeScript gets `Known<Name>`, the union of the variants, and `<Name>`, that union plus the explicit unknown arm `UnknownVariant<tag>` (its tag typed `string & {}`). TypeScript narrows no union holding such an arm, so a reader narrows first with `isKnownVariant("<Name>", value)`, handles the unknown arm by name, then switches on the tag of the known variants.
+- A producer types each union value it writes as `Known<Name>` (`{ kind: "cookie", ... } satisfies KnownScheme`): `<Name>` also accepts the unknown arm, so a mistyped tag or a missing member would compile there. A closed writer view of the whole IR for the compiler passes is recorded for p2-pipeline; it is a package addition, not an IR change.
 
-A shape whose cases share no tag stays one object, with an invariant saying which members go together: `ValueSource` (by `in`), `FieldWire` (by `kind`) and `MetaMember` (by `fill`). Every other choice between shapes is a tagged union.
+Every choice between shapes is a tagged union (`Scheme` and `Identity` on `kind`, among others), except where one open-enum member decides which optional members are present and several of its values share one shape: a union would repeat that shape once per value. These stay structs, each with a stable-id invariant that applies to its known values only:
+
+- `ValueSource`, by `in`: `name` for the named sources, none for the bare ones, `prefixBits` for `address` only, and `resolver` and `holderField` in one place each.
+- `FieldWire`, by `kind`: the five query wire kinds carry `style`, `explode` and `brackets`; `file` and `json` carry none.
+- `MetaMember`, by `fill`: `source` only for `fill: source`.
+- `HeaderDecl`, by `semantic`: `name` and `in` for every semantic but `versionToken`, which carries `response` and `request`.
+- `Cache`, by `family`: `directives` for every family but `never`, which sets `noStore`.
 
 ## Other shapes
 
-- A catalogue is a map keyed by id: `additionalProperties` with the value definition and `propertyNames` with the id, whose pattern is the grammar of ADR 0002 section 4 (an id never reads as `__proto__`). A declaration is referenced by id, never nested.
+- A catalogue is a map keyed by id: `additionalProperties` with the value definition and `propertyNames` with the id, whose pattern is the grammar of ADR 0002 section 4 (such an id never reads as `__proto__`). A right (`RightId`) and a principal variant (`VariantId`) take any name, `__proto__` included. A declaration is referenced by id, never nested.
 - A schema with no shape keyword (`{}`, optionally with a description) is an opaque value: any JSON value, kept raw.
 - An optional member is one outside `required`.
 - A numeric refinement (`minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`) is a decimal literal string (`"9223372036854775807"`, `"0.01"`), compared numerically, so no digit is lost in any language. Every other IR number is an integer.
-- `nullable` is a member of `Property` and, for every other position (array items, map values, parameters, headers, bodies), an optional member of the type use.
+- `nullable` is a member of `Property` and, for every other position (array items, map values, parameters, headers, bodies), an optional member of every type use but the opaque one (an opaque value already admits `null`).
 
 ## Readers
 
 - Ignore unknown members: an additive IR change adds them (ADR 0005 section 4).
-- Read an IR map with `Object.hasOwn` or through a `Map`, never with a bare `obj[key]`: a key is data, and `constructor` or an enum value such as `__proto__` would otherwise reach the prototype.
-- Validate with `createIrValidator(Ajv2020, "open")` (`Ajv2020` from `ajv/dist/2020.js`): it registers the annotation keywords, loads every file, and sorts errors into unknown kinds, unknown values, unknown members and problems. Its options, `IR_AJV_OPTIONS`, are mandatory for the compiler and for any reader wiring its own validator: open tags need a validator that understands `discriminator`, collects every error (`allErrors`: an unknown tag is an expected error and must not hide the real ones after it), and filters the expected mapping errors, as `classifyIrErrors` does.
+- Always read an IR map with `Object.hasOwn` or through a `Map`, never with a bare `obj[key]`: a key is data, rights and principal variants take any name, and a key such as `__proto__` or `constructor` would otherwise reach the prototype.
+- Validate with `createIrValidator(Ajv2020, "open")` (`Ajv2020` from `ajv/dist/2020.js`): it registers the annotation keywords, loads every file, and sorts errors into unknown kinds, unknown values, unknown members and problems. Its options, `IR_AJV_OPTIONS`, are mandatory for the compiler and for any reader wiring its own validator: open tags need a validator that understands `discriminator`, collects every error (`allErrors`: an unknown tag is an expected error and must not hide the real ones after it), and filters the expected mapping errors, as `classifyIrErrors` does. A mapping error that names no union `listIrUnknowns` found fails closed: `classifyIrErrors` counts it as a must-act unknown.
 - A reader of a third-party bundle caps the input size before validating: collecting every error costs time and memory in the size of the input.
 - The compiler checks its own output against the strict form, `createIrValidator(Ajv2020, "strict")` over `strictIrSchemas()`: the same files with every object closed, computed from them; the strict form also refuses unknown tags and values.
 

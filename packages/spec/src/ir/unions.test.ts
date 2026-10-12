@@ -1,9 +1,9 @@
 import { expect, test } from "vitest";
-import type { Identity } from "./types.generated.js";
+import type { KnownIdentity } from "./types.generated.js";
 import { isKnownVariant } from "./unions.js";
 
 // The principal name a reader derives from an identity: the unknown arm must be handled before the switch.
-function principalSchemas(identity: Identity): string[] {
+function principalSchemas(identity: KnownIdentity): string[] {
   const principal = identity.principal;
   if (!isKnownVariant("Principal", principal))
     throw new Error(`unknown principal ${principal.kind}`);
@@ -15,7 +15,7 @@ function principalSchemas(identity: Identity): string[] {
   }
 }
 
-const identity = (principal: unknown): Identity => ({ principal }) as unknown as Identity;
+const identity = (principal: unknown): KnownIdentity => ({ principal }) as unknown as KnownIdentity;
 
 test("isKnownVariant narrows a union to its known variants", () => {
   expect(principalSchemas(identity({ kind: "schema", schema: "User" }))).toEqual(["User"]);

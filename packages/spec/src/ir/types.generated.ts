@@ -269,17 +269,17 @@ export interface OAuth2 {
 }
 
 /** Document-only facts of a bearer scheme. */
-export interface BearerScheme {
+export interface BearerFacts {
   format?: string;
   oauth2?: OAuth2;
   openIdConnectUrl?: string;
 }
 
-/** How a signature is verified (ADR 0004 section 4). Must act: an unknown value makes the IR invalid for every reader. */
-export type KnownSignatureScheme = TemplateSignature | ApplicationSignature;
+/** How a signature is verified (ADR 0004 section 4). Must act: an unknown tag makes the IR invalid for every reader. */
+export type KnownSignatureVerify = TemplateSignature | ApplicationSignature;
 
-/** How a signature is verified (ADR 0004 section 4). Must act: an unknown value makes the IR invalid for every reader. */
-export type SignatureScheme = KnownSignatureScheme | UnknownVariant<"verify">;
+/** How a signature is verified (ADR 0004 section 4). Must act: an unknown tag makes the IR invalid for every reader. */
+export type SignatureVerify = KnownSignatureVerify | UnknownVariant<"verify">;
 
 /** How a signature is encoded. */
 export type SignatureEncoding = "hex" | "base64" | (string & {});
@@ -300,47 +300,77 @@ export interface ApplicationSignature {
   key?: SchemeKey;
 }
 
-/** The kind of a security scheme (ADR 0004 section 4). Must act: an unknown value makes the IR invalid for every reader. */
-export type SchemeKind =
-  | "cookie"
-  | "header"
-  | "query"
-  | "bearer"
-  | "basic"
-  | "signature"
-  | (string & {});
+/** A security scheme (ADR 0004 section 4), tagged on its kind. Must act: an unknown tag makes the IR invalid for every reader. */
+export type KnownScheme =
+  | CookieScheme
+  | HeaderScheme
+  | QueryScheme
+  | BearerScheme
+  | BasicScheme
+  | SignatureScheme;
 
-/** A security scheme (ADR 0004 section 4). */
-export interface Scheme {
+/** A security scheme (ADR 0004 section 4), tagged on its kind. Must act: an unknown tag makes the IR invalid for every reader. */
+export type Scheme = KnownScheme | UnknownVariant<"kind">;
+
+/** A credential in a cookie; 'csrf' names the scheme that carries the CSRF token. */
+export interface CookieScheme {
   id: SchemeId;
-  kind: SchemeKind;
-  /** The cookie, header or query parameter, or the signature header. */
-  name?: string;
+  kind: "cookie";
+  /** The cookie name. */
+  name: string;
   csrf?: SchemeId;
-  bearer?: BearerScheme;
-  signature?: SignatureScheme;
   origin: Origin;
 }
 
-/** The schemes of an identity, tagged like its kind. */
-export type KnownIdentitySchemes = CredentialSchemes | SignedSchemes;
+/** A credential in a request header. */
+export interface HeaderScheme {
+  id: SchemeId;
+  kind: "header";
+  /** The header name. */
+  name: string;
+  origin: Origin;
+}
 
-/** The schemes of an identity, tagged like its kind. */
-export type IdentitySchemes = KnownIdentitySchemes | UnknownVariant<"kind">;
+/** A credential in a query parameter. */
+export interface QueryScheme {
+  id: SchemeId;
+  kind: "query";
+  /** The query parameter name. */
+  name: string;
+  origin: Origin;
+}
+
+/** A bearer token in the Authorization header. */
+export interface BearerScheme {
+  id: SchemeId;
+  kind: "bearer";
+  bearer?: BearerFacts;
+  origin: Origin;
+}
+
+/** HTTP basic credentials in the Authorization header. */
+export interface BasicScheme {
+  id: SchemeId;
+  kind: "basic";
+  origin: Origin;
+}
+
+/** A signed request, verified as 'signature' says. */
+export interface SignatureScheme {
+  id: SchemeId;
+  kind: "signature";
+  /** The signature header. */
+  name?: string;
+  signature: SignatureVerify;
+  origin: Origin;
+}
 
 /** The schemes of a credential identity. */
 export interface CredentialSchemes {
-  kind: "credential";
   read: SchemeId[];
   /** Empty when the identity is refused on writes. */
   write: SchemeId[];
   optionalRead: SchemeId[];
-}
-
-/** The scheme of a signed identity. */
-export interface SignedSchemes {
-  kind: "signed";
-  signed: SchemeId;
 }
 
 /** The principal schema: one schema, or one per credential variant. */
@@ -359,10 +389,10 @@ export interface VariantsPrincipal {
   variants: Record<VariantId, SchemaRef>;
 }
 
-/** Unknown keys of a signed identity's payload: ignored or kept, with the reason. */
+/** Unknown keys of a signed identity's payload: ignored or kept, with the reason. Must act: an unknown tag makes the IR invalid for every reader. */
 export type KnownKeysPolicy = IgnoreKeysPolicy | KeepKeysPolicy;
 
-/** Unknown keys of a signed identity's payload: ignored or kept, with the reason. */
+/** Unknown keys of a signed identity's payload: ignored or kept, with the reason. Must act: an unknown tag makes the IR invalid for every reader. */
 export type KeysPolicy = KnownKeysPolicy | UnknownVariant<"policy">;
 
 export interface IgnoreKeysPolicy {
@@ -389,14 +419,30 @@ export interface IdentityHeaderUse {
   origin: Origin;
 }
 
-/** The kind of an identity (ADR 0004 section 4). Must act: an unknown value makes the IR invalid for every reader. */
-export type IdentityKind = "credential" | "signed" | (string & {});
+/** An identity (ADR 0004 section 4), tagged on its kind. Must act: an unknown tag makes the IR invalid for every reader. */
+export type KnownIdentity = CredentialIdentity | SignedIdentity;
 
-/** An identity (ADR 0004 section 4); 'schemes' carries the same kind (invariant ir.identity.kind). */
-export interface Identity {
+/** An identity (ADR 0004 section 4), tagged on its kind. Must act: an unknown tag makes the IR invalid for every reader. */
+export type Identity = KnownIdentity | UnknownVariant<"kind">;
+
+/** An identity reached through credential schemes. */
+export interface CredentialIdentity {
   id: IdentityId;
-  kind: IdentityKind;
-  schemes: IdentitySchemes;
+  kind: "credential";
+  schemes: CredentialSchemes;
+  principal: Principal;
+  errors: ErrorCode[];
+  headers: IdentityHeaderUse[];
+  docs: Docs;
+  extensions: Extensions;
+  origin: Origin;
+}
+
+/** An identity reached through one signature scheme (ADR 0013). */
+export interface SignedIdentity {
+  id: IdentityId;
+  kind: "signed";
+  signed: SchemeId;
   principal: Principal;
   unknownKeys?: KeysPolicy;
   errors: ErrorCode[];
@@ -406,10 +452,10 @@ export interface Identity {
   origin: Origin;
 }
 
-/** The subject a right is checked against. Must act: an unknown value makes the IR invalid for every reader. */
+/** The subject a right is checked against. Must act: an unknown tag makes the IR invalid for every reader. */
 export type KnownRightSubject = NoSubject | ScopeSubject | ResourceSubject;
 
-/** The subject a right is checked against. Must act: an unknown value makes the IR invalid for every reader. */
+/** The subject a right is checked against. Must act: an unknown tag makes the IR invalid for every reader. */
 export type RightSubject = KnownRightSubject | UnknownVariant<"kind">;
 
 export interface NoSubject {
@@ -923,10 +969,11 @@ export interface SourceLocation {
 /** Every tagged union of the IR, for `isKnownVariant`. */
 export interface IrUnionMap {
   SchemeKey: { union: SchemeKey; known: KnownSchemeKey };
-  SignatureScheme: { union: SignatureScheme; known: KnownSignatureScheme };
-  IdentitySchemes: { union: IdentitySchemes; known: KnownIdentitySchemes };
+  SignatureVerify: { union: SignatureVerify; known: KnownSignatureVerify };
+  Scheme: { union: Scheme; known: KnownScheme };
   Principal: { union: Principal; known: KnownPrincipal };
   KeysPolicy: { union: KeysPolicy; known: KnownKeysPolicy };
+  Identity: { union: Identity; known: KnownIdentity };
   RightSubject: { union: RightSubject; known: KnownRightSubject };
   EnumSource: { union: EnumSource; known: KnownEnumSource };
   Schema: { union: Schema; known: KnownSchema };

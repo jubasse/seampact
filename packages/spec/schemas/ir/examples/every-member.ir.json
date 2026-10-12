@@ -290,6 +290,17 @@
         "pointer": "/surfaces/app/routes/tasks/routes/create/responses/201/body"
       },
       "properties": []
+    },
+    "LockedParams": {
+      "kind": "object",
+      "id": "LockedParams",
+      "name": { "segments": ["locked", "params"], "role": "schema" },
+      "directions": ["output"],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/errors/tasks.locked/params" },
+      "properties": []
     }
   },
   "scalars": {
@@ -365,6 +376,23 @@
       "csrf": "csrfToken",
       "origin": { "layer": "api", "pointer": "/schemes/sessionCookie" }
     },
+    "csrfToken": {
+      "id": "csrfToken",
+      "kind": "header",
+      "name": "X-CSRF-Token",
+      "origin": { "layer": "api", "pointer": "/schemes/csrfToken" }
+    },
+    "apiKey": {
+      "id": "apiKey",
+      "kind": "query",
+      "name": "api_key",
+      "origin": { "layer": "api", "pointer": "/schemes/apiKey" }
+    },
+    "basicAuth": {
+      "id": "basicAuth",
+      "kind": "basic",
+      "origin": { "layer": "api", "pointer": "/schemes/basicAuth" }
+    },
     "bearer": {
       "id": "bearer",
       "kind": "bearer",
@@ -423,10 +451,9 @@
       "id": "user",
       "kind": "credential",
       "schemes": {
-        "kind": "credential",
-        "read": ["bearer", "sessionCookie"],
+        "read": ["bearer", "sessionCookie", "basicAuth"],
         "write": ["bearer"],
-        "optionalRead": []
+        "optionalRead": ["apiKey"]
       },
       "principal": { "kind": "schema", "schema": "Task" },
       "errors": ["tasks.locked"],
@@ -448,7 +475,7 @@
     "stripe": {
       "id": "stripe",
       "kind": "signed",
-      "schemes": { "kind": "signed", "signed": "stripeSignature" },
+      "signed": "stripeSignature",
       "principal": { "kind": "variants", "variants": { "live": "Task" } },
       "unknownKeys": { "policy": "ignore", "reason": "Stripe adds fields." },
       "errors": [],
@@ -460,7 +487,7 @@
     "partner": {
       "id": "partner",
       "kind": "signed",
-      "schemes": { "kind": "signed", "signed": "appSignature" },
+      "signed": "appSignature",
       "principal": { "kind": "schema", "schema": "Task" },
       "unknownKeys": { "policy": "keep", "reason": "Forwarded as is." },
       "errors": [],

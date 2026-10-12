@@ -16,8 +16,8 @@ for (const document of IR_SCHEMA_DOCUMENTS) {
 export const irDefinition = (name: string): SchemaNode | undefined => DEFINITIONS.get(name);
 export const irDefinitionNames = (): string[] => [...DEFINITIONS.keys()];
 
-// One node of an IR instance, as the schema reads it: an object of a definition, a tagged union object, or
-// the value of an open enum.
+// One node of an IR instance, as the schema reads it: an object of a definition, a tagged union object, the
+// value of an open enum, or a string of a named definition (an id, a code, a reason).
 export type IrInstanceNode =
   | {
       kind: "object";
@@ -40,6 +40,12 @@ export type IrInstanceNode =
       definition: string | undefined;
       known: readonly string[];
       mustAct: boolean;
+      value: string;
+    }
+  | {
+      kind: "string";
+      pointer: string;
+      definition: string;
       value: string;
     };
 
@@ -129,6 +135,8 @@ export function walkIrInstance(
       mustAct: node[MUST_ACT_KEYWORD] === true,
       value,
     });
+  } else if (definition !== undefined && node.type === "string" && typeof value === "string") {
+    visit({ kind: "string", pointer, definition, value });
   }
 }
 

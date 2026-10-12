@@ -121,7 +121,8 @@ export function classifyIrErrors(
           pointer: error.instancePath,
           tag: String(tag),
           value: String(tagValue),
-          mustAct: false,
+          // The walk did not see this union, so whether it is must-act is unknown: fail closed.
+          mustAct: true,
         });
     } else if (error.keyword === "additionalProperties" && typeof additionalProperty === "string") {
       report.unknownMembers.push(`${error.instancePath}/${escapePointer(additionalProperty)}`);
