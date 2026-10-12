@@ -570,19 +570,13 @@ class Loader {
     const nameNode = navigate(pf, "/pack/name");
     const written = isScalar(nameNode) ? nameNode.value : undefined;
     const name = typeof written === "string" ? written : ref;
-    if (name.includes("#")) {
-      // The name is the layer id, which a side table key joins to a pointer with `#`
-      // (`<layer>#<pointer>`): a `#` in it could make a pack's key meet a load site's.
-      this.rep.report({
-        rule: "pack-name",
-        message: `the pack name '${diagnosticInert(name)}' holds a '#'`,
-        fix: "name the pack without '#'",
-        at: nodeSite(pf, isScalar(nameNode) ? nameNode : null),
-      });
+    const layerId = this.packLayerId(name, () =>
+      nodeSite(pf, isScalar(nameNode) ? nameNode : null),
+    );
+    if (layerId === undefined) {
       this.packs.set(key, null);
       return undefined;
     }
-    const layerId: Origin["layer"] = `pack:${name}`;
     const build = this.layer(pf, layerId);
     const saved = this.rep.layer;
     this.rep.layer = layerId;
@@ -667,6 +661,22 @@ class Loader {
     this.rep.layer = saved;
     this.packs.set(key, pack);
     return pack;
+  }
+
+  /**
+   * A pack's layer id, `pack:<name>`, built here only. A side table key joins the layer id to a
+   * pointer with `#` (`<layer>#<pointer>`), so a name holding `#` could make a pack's key meet a
+   * load site's (`<layer>#/~load/...`): it is refused, and the pack is not loaded.
+   */
+  private packLayerId(name: string, at: () => SiteLocation): ApiLayerId | undefined {
+    if (!name.includes("#")) return `pack:${name}`;
+    this.rep.report({
+      rule: "pack-name",
+      message: `the pack name '${diagnosticInert(name)}' holds a '#'`,
+      fix: "name the pack without '#'",
+      at: at(),
+    });
+    return undefined;
   }
 
   /**

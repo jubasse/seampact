@@ -65,8 +65,14 @@ test("C-1 constructor and prototype are refused as keys anywhere, data included"
       "schemas:",
       "  constructor: { type: string }",
       "  T: { properties: { prototype: { type: string } } }",
-      "examples:",
-      "  one: { value: { __proto__: { polluted: 1 } } }",
+      // A data position, the payload of a route's example.
+      "surfaces:",
+      "  app:",
+      "    routes:",
+      "      r:",
+      "        method: get",
+      "        examples:",
+      "          one: { status: 200, value: { __proto__: { polluted: 1 } } }",
       "",
     ].join("\n"),
   });
@@ -94,12 +100,15 @@ test("C-1 reserved api names are refused", () => {
 
 test("C-1 a $file JSON drops and reports a reserved key, and its objects have no prototype", () => {
   const r = run({
-    "api.yaml": "api: { name: t }\nexamples:\n  one: { value: { $file: ./ex.json } }\n",
+    "api.yaml":
+      "api: { name: t }\nsurfaces:\n  app:\n    routes:\n      r:\n        method: get\n        examples:\n          one: { status: 200, value: { $file: ./ex.json } }\n",
     "ex.json": '{"a": {"__proto__": {"polluted": 1}, "b": 1}}',
   });
   expect(rules(r)).toEqual(["reserved-key"]);
-  const value = (must(r.workspace.apis[0]).merged.examples as { one: { value: object } }).one
-    .value as { a: object };
+  const merged = must(r.workspace.apis[0]).merged as {
+    surfaces: { app: { routes: { r: { examples: { one: { value: object } } } } } };
+  };
+  const value = merged.surfaces.app.routes.r.examples.one.value as { a: object };
   expect(JSON.stringify(value)).toBe('{"a":{"b":1}}');
   expect(Object.getPrototypeOf(value.a)).toBeNull();
   expect(({} as Record<string, unknown>).polluted).toBeUndefined();

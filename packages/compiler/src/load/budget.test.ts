@@ -97,8 +97,13 @@ test("D-3 many $file sites of one large JSON string end at the text limit", () =
     run({
       "api.yaml": [
         "api: { name: t }",
-        "examples:",
-        ...times(sites, (i) => `  e${i}: { value: { $file: ./big.json } }`),
+        "surfaces:",
+        "  app:",
+        "    routes:",
+        "      r:",
+        "        method: get",
+        "        examples:",
+        ...times(sites, (i) => `          e${i}: { status: 200, value: { $file: ./big.json } }`),
         "",
       ].join("\n"),
       "big.json": `"${"x".repeat(4 * 1024 * 1024 - 16)}"`,
