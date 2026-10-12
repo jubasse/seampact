@@ -44,8 +44,9 @@ test("markers are distinct and recognised", () => {
 });
 
 function dataPointers(node: unknown, where: string, out: string[]): string[] {
-  if (Array.isArray(node)) node.forEach((child, i) => dataPointers(child, `${where}/${i}`, out));
-  else if (node !== null && typeof node === "object") {
+  if (Array.isArray(node)) {
+    for (const [i, child] of node.entries()) dataPointers(child, `${where}/${i}`, out);
+  } else if (node !== null && typeof node === "object") {
     if ((node as Record<string, unknown>).title === DATA) out.push(where);
     for (const [key, child] of Object.entries(node)) {
       if (key !== "title") dataPointers(child, `${where}/${key}`, out);
