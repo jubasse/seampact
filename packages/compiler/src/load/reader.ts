@@ -10,22 +10,48 @@ export interface LoadReader {
   readText(file: string): string | undefined;
   /** The names in a directory, or undefined when it does not exist. */
   listDir(dir: string): string[] | undefined;
-  /** The root-relative path after following symlinks, or undefined when it does not exist. */
+  /**
+   * The root-relative path after following symlinks, or undefined when it does not exist. A
+   * target the root cannot reach by a relative path (another drive, a UNC share) is returned
+   * absolute, and the loader treats an absolute path as outside every boundary.
+   */
   realPath(file: string): string | undefined;
   /** How many `..` steps above the root the reader can address (bounds the node_modules walk). */
   readonly ascent: number;
 }
 
-function toPosix(p: string): string {
-  return path.sep === "/" ? p : p.split(path.sep).join("/");
+type PathApi = Pick<typeof path, "sep" | "relative" | "isAbsolute" | "parse">;
+
+function toPosix(p: string, api: PathApi): string {
+  return api.sep === "/" ? p : p.split(api.sep).join("/");
 }
 
+/**
+ * `real` relative to `realRoot`, with forward slashes. On Windows `path.relative` gives an
+ * absolute result for another drive or a UNC share; it stays absolute (`D:/x`, `//host/share/x`)
+ * so that `isInside` refuses it.
+ */
+export function loadRootRelative(realRoot: string, real: string, api: PathApi = path): string {
+  const rel = api.relative(realRoot, real);
+  if (api.isAbsolute(rel) || /^[A-Za-z]:/.test(rel)) return toPosix(rel, api);
+  return toPosix(rel, api) || ".";
+}
+
+/** How many directories sit between the file system root (`/`, `C:\`, a UNC share) and `absRoot`. */
+export function loadAscentOf(absRoot: string, api: PathApi = path): number {
+  const { root } = api.parse(absRoot);
+  return absRoot.slice(root.length).split(api.sep).filter(Boolean).length;
+}
+
+/**
+ * Paths resolve against the root's real path, as Node's own module resolution does, so a
+ * lexical path, a checked real path and a `node_modules` walk above the root agree.
+ */
 export function loadFsReader(root: string): LoadReader {
-  const absRoot = path.resolve(root);
-  const realRoot = fs.realpathSync(absRoot);
-  const abs = (file: string) => path.resolve(absRoot, file);
+  const realRoot = fs.realpathSync(path.resolve(root));
+  const abs = (file: string) => path.resolve(realRoot, file);
   return {
-    ascent: absRoot.split(path.sep).filter(Boolean).length,
+    ascent: loadAscentOf(realRoot),
     readText(file) {
       try {
         const target = abs(file);
@@ -44,8 +70,7 @@ export function loadFsReader(root: string): LoadReader {
     },
     realPath(file) {
       try {
-        const real = fs.realpathSync(abs(file));
-        return toPosix(path.relative(realRoot, real)) || ".";
+        return loadRootRelative(realRoot, fs.realpathSync(abs(file)));
       } catch {
         return undefined;
       }

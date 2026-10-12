@@ -1,10 +1,36 @@
 // Regression tests for the security review of p1-loader (iteration 1): every repro of the
 // review, each failing before its fix.
+import * as path from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { printDiagnostics } from "../diagnostics/print.js";
 import { must } from "./golden.js";
 import { loadWorkspace } from "./index.js";
-import { type LoadMemoryOptions, loadMemoryReader } from "./reader.js";
+import { isInside } from "./paths.js";
+import {
+  type LoadMemoryOptions,
+  type LoadReader,
+  loadAscentOf,
+  loadMemoryReader,
+  loadRootRelative,
+} from "./reader.js";
+
+function spy(reader: LoadReader) {
+  const reads: string[] = [];
+  const listed: string[] = [];
+  const wrapped: LoadReader = {
+    ascent: reader.ascent,
+    listDir: (d) => {
+      listed.push(d);
+      return reader.listDir(d);
+    },
+    realPath: (f) => reader.realPath(f),
+    readText: (...args) => {
+      reads.push(args[0]);
+      return reader.readText(...args);
+    },
+  };
+  return { reader: wrapped, reads, listed };
+}
 
 function run(files: Record<string, string>, entry = "api.yaml", options?: LoadMemoryOptions) {
   return loadWorkspace({ reader: loadMemoryReader(files, options), entry });
@@ -85,4 +111,123 @@ test("C-1 merged trees and visibility have no prototype", () => {
   expect(Object.getPrototypeOf(api.merged.conventions)).toBeNull();
   expect(Object.getPrototypeOf(api.visibility)).toBeNull();
   expect((api.merged as Record<string, unknown>).constructor).toBeUndefined();
+});
+
+const victim = {
+  "../../victim/proj/package.json": JSON.stringify({
+    name: "x",
+    version: "1.0.0",
+    seampact: { role: "pack", pack: "pack.yaml" },
+  }),
+  "../../victim/proj/pack.yaml": "pack: { name: x, version: 1.0.0 }\nrights: { stolen: {} }\n",
+};
+
+test("C-4 a package name that leaves node_modules is refused before any read", () => {
+  for (const name of [
+    "x/../../../../victim/proj",
+    "@x/../../../../victim/proj",
+    "..",
+    "x\\..\\..",
+    "Upper",
+    ".hidden",
+    "@scope/",
+    "a/b/c",
+    "x".repeat(215),
+  ]) {
+    const { reader, reads } = spy(
+      loadMemoryReader({ "api.yaml": `api: { name: t }\npacks: ['${name}']\n`, ...victim }),
+    );
+    const r = loadWorkspace({ reader, entry: "api.yaml" });
+    expect(rules(r), name).toEqual(["pack-name"]);
+    expect(reads, name).toEqual(["api.yaml"]);
+    expect(JSON.stringify(r.workspace), name).not.toContain("stolen");
+  }
+});
+
+test("C-4 a pack extends naming a bad package is refused too", () => {
+  const r = run({
+    "api.yaml": "api: { name: t }\npacks: [./p.yaml]\n",
+    "p.yaml": "pack: { name: p, version: 1.0.0, extends: ['x/../../../../victim/proj'] }\n",
+    ...victim,
+  });
+  expect(rules(r)).toEqual(["pack-name"]);
+});
+
+test("C-4 seampact.pack is a path inside the package", () => {
+  for (const [entry, rule] of [
+    ["../../../api.yaml", "path-escape"],
+    ["/etc/passwd", "path-absolute"],
+    ["lib\\pack.yaml", "path-backslash"],
+  ] as const) {
+    const { reader, reads } = spy(
+      loadMemoryReader({
+        "api.yaml": "api: { name: t }\npacks: ['@acme/p']\n",
+        "node_modules/@acme/p/package.json": JSON.stringify({
+          name: "@acme/p",
+          version: "1.0.0",
+          seampact: { role: "pack", pack: entry },
+        }),
+      }),
+    );
+    const r = loadWorkspace({ reader, entry: "api.yaml" });
+    expect(rules(r), entry).toEqual([rule]);
+    expect(reads, entry).toEqual(["api.yaml", "node_modules/@acme/p/package.json"]);
+  }
+});
+
+test("C-5 an absolute, drive or UNC path is never inside", () => {
+  for (const boundary of [".", "node_modules/x"]) {
+    for (const p of ["/etc/passwd", "//host/share/x", "D:/x", "d:x", "C:/ws/node_modules/x/a"]) {
+      expect(isInside(boundary, p), `${boundary} ${p}`).toBe(false);
+    }
+  }
+  expect(isInside(".", "a/b")).toBe(true);
+  expect(isInside("node_modules/x", "node_modules/x/a")).toBe(true);
+});
+
+test("C-5 a real path on another drive or share stays absolute, so it is outside", () => {
+  const w = path.win32;
+  expect(loadRootRelative("C:\\ws", "D:\\x\\y.yaml", w)).toBe("D:/x/y.yaml");
+  expect(loadRootRelative("C:\\ws", "\\\\host\\share\\y.yaml", w)).toBe("//host/share/y.yaml");
+  expect(isInside(".", loadRootRelative("C:\\ws", "D:\\x\\y.yaml", w))).toBe(false);
+  expect(isInside(".", loadRootRelative("C:\\ws", "\\\\host\\share\\y", w))).toBe(false);
+  expect(loadRootRelative("C:\\ws", "C:\\ws\\a\\b.yaml", w)).toBe("a/b.yaml");
+  expect(loadRootRelative("C:\\ws", "C:\\ws", w)).toBe(".");
+  expect(loadRootRelative("/ws", "/ws/a/b.yaml", path.posix)).toBe("a/b.yaml");
+});
+
+test("C-5 the node_modules walk counts the steps above the root, not the drive", () => {
+  expect(loadAscentOf("C:\\a\\b", path.win32)).toBe(2);
+  expect(loadAscentOf("C:\\", path.win32)).toBe(0);
+  expect(loadAscentOf("\\\\host\\share\\a", path.win32)).toBe(1);
+  expect(loadAscentOf("/a/b", path.posix)).toBe(2);
+  expect(loadAscentOf("/", path.posix)).toBe(0);
+});
+
+test("nit: no directory is listed through a link that leaves the root, nor is it named", () => {
+  const { reader, listed } = spy(
+    loadMemoryReader(
+      {
+        "api.yaml": "api: { name: t }\na: { $include: ./out/deep/x.yaml }\n",
+        "../secret/deep/x.yaml": "k: 1\n",
+      },
+      { links: { out: "../secret" } },
+    ),
+  );
+  const r = loadWorkspace({ reader, entry: "api.yaml" });
+  expect(rules(r)).toEqual(["path-escape"]);
+  expect(listed.filter((d) => d.startsWith("out"))).toEqual([]);
+  expect(printed(r)).not.toContain("secret");
+});
+
+test("nit: the checked real path is the one read", () => {
+  const { reader, reads } = spy(
+    loadMemoryReader(
+      { "api.yaml": "api: { name: t }\na: { $include: ./link.yaml }\n", "real.yaml": "k: 1\n" },
+      { links: { "link.yaml": "real.yaml" } },
+    ),
+  );
+  const r = loadWorkspace({ reader, entry: "api.yaml" });
+  expect(r.diagnostics).toEqual([]);
+  expect(reads).toEqual(["api.yaml", "real.yaml"]);
 });

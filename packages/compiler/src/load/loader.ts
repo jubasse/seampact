@@ -25,6 +25,12 @@ export interface LoadResult {
   files: string[];
 }
 
+// npm's package-name grammar (validate-npm-package-name, new names): an optional `@scope/`, then
+// lowercase URL-safe characters, no leading `.` or `_`, at most 214 characters. A name outside it
+// could fold `node_modules/<name>` out of `node_modules` (`x/../../..`).
+const PACKAGE_NAME = /^(?:@[a-z0-9-*~][a-z0-9-*._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
+const PACKAGE_NAME_MAX = 214;
+
 // The keys a pack may hold (ADR 0002 section 1, table of file kinds).
 const PACK_KEYS = new Set([
   "pack",
@@ -94,7 +100,7 @@ class Loader {
         fix: "name an entry file inside the workspace root",
         at: entrySite,
       });
-    } else if (this.store.checkFile(entry, ".", entrySite, "the entry file")) {
+    } else if (this.store.checkFile(entry, ".", entrySite, "the entry file") !== undefined) {
       const pf = this.store.parse(entry, ".");
       if (pf) entryBuild = this.layer(pf, "api");
     }
@@ -576,15 +582,34 @@ class Loader {
     return pack;
   }
 
-  /** Walks `node_modules` from the workspace root upward with the reader (ADR 0008). */
+  /**
+   * Walks `node_modules` from the workspace root upward with the reader (ADR 0008). The name is
+   * checked against npm's grammar, and each candidate directory must be exactly
+   * `<up>/node_modules/<name>`, before anything is read.
+   *
+   * Hook for p3-dist: the first-party packs embedded in the standalone binary (ADR 0002 section 2)
+   * are the fallback when no package resolves, at the `pack-not-found` report below, served
+   * through the injected reader like any other file.
+   */
   private resolvePackage(
     name: string,
     at: SiteLocation,
   ): { file: string; dir: string; version: unknown } | undefined {
     const reader = this.options.reader;
+    const refuse = () => {
+      this.rep.report({
+        rule: "pack-name",
+        message: `'${name}' is neither a path (starting with ./ or ../) nor a package name`,
+        fix: "write a package name such as @seampact/pack-crud-rights, or a path such as ./packs/house.yaml",
+        at,
+      });
+      return undefined;
+    };
+    if (name.length > PACKAGE_NAME_MAX || !PACKAGE_NAME.test(name)) return refuse();
     for (let depth = 0; depth <= reader.ascent; depth++) {
-      const up = depth === 0 ? "." : Array.from({ length: depth }, () => "..").join("/");
-      const dir = joinPath(up, `node_modules/${name}`);
+      const up = depth === 0 ? "" : `${Array.from({ length: depth }, () => "..").join("/")}/`;
+      const dir = joinPath(".", `${up}node_modules/${name}`);
+      if (dir !== `${up}node_modules/${name}`) return refuse(); // kept should the grammar loosen
       const manifestPath = `${dir}/package.json`;
       this.store.touched.add(manifestPath);
       const text = this.store.rawText(manifestPath);
@@ -612,11 +637,14 @@ class Loader {
         });
         return undefined;
       }
-      const file = joinPath(dir, meta.seampact.pack);
-      if (!this.store.checkFile(file, dir, at, `seampact.pack of '${name}'`, meta.seampact.pack)) {
-        return undefined;
-      }
-      return { file, dir, version: meta.version };
+      const entry = this.store.resolve(
+        { path: manifestPath, boundary: dir },
+        meta.seampact.pack,
+        at,
+        "manifest",
+      );
+      if (!entry) return undefined;
+      return { file: entry.path, dir, version: meta.version };
     }
     this.rep.report({
       rule: "pack-not-found",

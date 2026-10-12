@@ -23,8 +23,18 @@ export function joinPath(dir: string, rel: string): string {
   return loadNormalizePath(dir === "." ? rel : `${dir}/${rel}`);
 }
 
-/** `boundary` "." is the workspace root. */
+/** An absolute path in any of its forms: POSIX, UNC (`//host/share`) or a drive (`D:`). */
+export function isAbsolutePath(p: string): boolean {
+  return p.startsWith("/") || /^[A-Za-z]:/.test(p);
+}
+
+/**
+ * `boundary` "." is the workspace root. `file` is root-relative; a reader gives an absolute path
+ * for a real path it cannot express from the root (another drive, a UNC share), and an absolute
+ * path is never inside.
+ */
 export function isInside(boundary: string, file: string): boolean {
+  if (isAbsolutePath(file)) return false;
   if (boundary === ".") return file !== ".." && !file.startsWith("../");
   return file === boundary || file.startsWith(`${boundary}/`);
 }
@@ -47,26 +57,38 @@ export function resolveAuthoredPath(
   const fragment = hash < 0 ? undefined : raw.slice(hash + 1);
   if (target === "") return "empty";
   if (target.includes("\\")) return "backslash";
-  if (target.startsWith("/") || /^[A-Za-z]:/.test(target)) return "absolute";
+  if (isAbsolutePath(target)) return "absolute";
   const resolved = joinPath(dirnameOf(fromFile), target);
   if (!isInside(boundary, resolved)) return "escape";
   return { path: resolved, fragment };
 }
 
-export type CaseCheck = { kind: "ok" } | { kind: "missing" } | { kind: "case"; actual: string };
+export type CaseCheck =
+  | { kind: "ok" }
+  | { kind: "missing" }
+  | { kind: "escape" }
+  | { kind: "case"; actual: string };
 
-/** Checks every segment against the directory listing, so a case-insensitive disk cannot hide a mismatch. */
-export function checkCase(reader: LoadReader, file: string): CaseCheck {
-  let current = "";
-  const actual: string[] = [];
+/**
+ * Checks every segment below `boundary` against the directory listing, so a case-insensitive
+ * disk cannot hide a mismatch. `inside` is asked about each directory before it is listed, so a
+ * directory reached through a link that leaves the boundary is never listed. `file` is inside
+ * `boundary` (lexically), and the boundary itself was built by the loader.
+ */
+export function checkCase(
+  reader: LoadReader,
+  file: string,
+  boundary: string,
+  inside: (dir: string) => boolean,
+): CaseCheck {
+  let current = boundary === "." ? "" : boundary;
+  const actual: string[] = current === "" ? [] : [current];
   let mismatch = false;
-  for (const seg of file.split("/")) {
-    if (seg === "..") {
-      current = current === "" ? ".." : `${current}/..`;
-      actual.push(seg);
-      continue;
-    }
-    const entries = reader.listDir(current === "" ? "." : current);
+  const rest = current === "" ? file : file.slice(current.length + 1);
+  for (const seg of rest.split("/")) {
+    const dir = current === "" ? "." : current;
+    if (!inside(dir)) return { kind: "escape" };
+    const entries = reader.listDir(dir);
     if (!entries) return { kind: "missing" };
     if (entries.includes(seg)) {
       actual.push(seg);

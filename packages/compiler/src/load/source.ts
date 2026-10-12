@@ -24,7 +24,7 @@ export interface ParsedFile {
   root: Node | null;
 }
 
-export type FileKind = "include" | "ref" | "file" | "extends" | "pack" | "workspace";
+export type FileKind = "include" | "ref" | "file" | "extends" | "pack" | "workspace" | "manifest";
 
 const WHAT: Record<FileKind, string> = {
   include: "$include",
@@ -33,6 +33,7 @@ const WHAT: Record<FileKind, string> = {
   extends: "extends",
   pack: "packs",
   workspace: "workspace",
+  manifest: "seampact.pack",
 };
 
 export function siteOf(file: string, lc: LineCounter, start: number, end: number): SiteLocation {
@@ -62,9 +63,21 @@ export function normalizeText(text: string): string {
   return noBom.replace(/\r\n?/g, "\n");
 }
 
+/** Where a path is written from: the containing file and the boundary it must stay inside. */
+export type PathContext = Pick<ParsedFile, "path" | "boundary">;
+
+export interface ResolvedFile {
+  path: string;
+  /** The checked real path (root-relative), the file's identity: cycles and reads use it. */
+  real: string;
+  fragment: string | undefined;
+}
+
 export class FileStore {
   private readonly parsed = new Map<string, ParsedFile | null>();
   private readonly texts = new Map<string, string | null>();
+  /** Lexical path to the real path `checkFile` accepted for it. */
+  private readonly reals = new Map<string, string>();
   /** Every file the load read or tried to read, for the watch primitive. */
   readonly touched = new Set<string>();
 
@@ -73,10 +86,11 @@ export class FileStore {
     private readonly reporter: Reporter,
   ) {}
 
+  /** Reads the real path `checkFile` accepted, not the lexical one (narrows a swap in between). */
   rawText(file: string): string | undefined {
     this.touched.add(file);
     if (!this.texts.has(file)) {
-      const text = this.reader.readText(file);
+      const text = this.reader.readText(this.reals.get(file) ?? file);
       this.texts.set(file, text === undefined ? null : normalizeText(text));
     }
     return this.texts.get(file) ?? undefined;
@@ -89,11 +103,11 @@ export class FileStore {
    * is read.
    */
   resolve(
-    from: ParsedFile,
+    from: PathContext,
     raw: string,
     at: SiteLocation,
     kind: FileKind,
-  ): { path: string; fragment: string | undefined } | undefined {
+  ): ResolvedFile | undefined {
     const what = WHAT[kind];
     const r = resolveAuthoredPath(from.path, raw, from.boundary);
     if (typeof r === "string") {
@@ -116,44 +130,68 @@ export class FileStore {
       this.reporter.report({ rule: `path-${r}`, message, fix, at });
       return undefined;
     }
-    const checked = this.checkFile(r.path, from.boundary, at, what, raw);
-    return checked ? r : undefined;
+    const real = this.checkFile(r.path, from.boundary, at, what, raw);
+    return real === undefined ? undefined : { ...r, real };
   }
 
-  /** Existence, case and symlink checks for a path already inside its boundary. */
-  checkFile(file: string, boundary: string, at: SiteLocation, what: string, raw = file): boolean {
-    this.touched.add(file);
-    const c = checkCase(this.reader, file);
-    if (c.kind === "case") {
-      this.reporter.report({
-        rule: "path-case",
-        message: `path '${raw}' of ${what} differs in case from the file on disk, '${c.actual}'`,
-        fix: `write the path as '${c.actual}'; compilation must not depend on the file system's case rules`,
-        at,
-      });
-      return false;
-    }
-    const real = c.kind === "missing" ? undefined : this.reader.realPath(file);
-    if (real === undefined) {
+  /**
+   * Existence, case and symlink checks for a path already inside its boundary (lexically).
+   * Containment comes first: every directory is checked inside the boundary, after links, before
+   * it is listed, and the file's real path after. Returns the real path, or undefined after
+   * reporting. An escape never names the outside target.
+   */
+  checkFile(
+    file: string,
+    boundary: string,
+    at: SiteLocation,
+    what: string,
+    raw = file,
+  ): string | undefined {
+    const where = boundary === "." ? "the workspace root" : `the package (${boundary})`;
+    const realBoundary = boundary === "." ? "." : this.reader.realPath(boundary);
+    const missing = () => {
+      this.touched.add(file);
       this.reporter.report({
         rule: "file-missing",
         message: `file '${file}' named by ${what} does not exist`,
         fix: "create the file, or fix the path",
         at,
       });
-      return false;
-    }
-    const realBoundary = boundary === "." ? "." : (this.reader.realPath(boundary) ?? boundary);
-    if (!isInside(realBoundary, real)) {
+      return undefined;
+    };
+    const escaped = () => {
       this.reporter.report({
         rule: "path-escape",
-        message: `file '${file}' of ${what} resolves through a symbolic link to '${real}', outside ${boundary === "." ? "the workspace root" : `the package (${boundary})`}`,
+        message: `file '${file}' of ${what} resolves through a symbolic link to a place outside ${where}`,
         fix: "replace the link with a copy of the file, or move the target inside the workspace",
         at,
       });
-      return false;
+      return undefined;
+    };
+    if (realBoundary === undefined) return missing();
+    const inside = (p: string) => {
+      const real = this.reader.realPath(p);
+      return real === undefined || isInside(realBoundary, real);
+    };
+    const c = checkCase(this.reader, file, boundary, inside);
+    if (c.kind === "escape") return escaped();
+    if (c.kind === "missing") return missing();
+    if (c.kind === "case") {
+      this.touched.add(file);
+      this.reporter.report({
+        rule: "path-case",
+        message: `path '${raw}' of ${what} differs in case from the file on disk, '${c.actual}'`,
+        fix: `write the path as '${c.actual}'; compilation must not depend on the file system's case rules`,
+        at,
+      });
+      return undefined;
     }
-    return true;
+    const real = this.reader.realPath(file);
+    if (real === undefined) return missing();
+    if (!isInside(realBoundary, real)) return escaped();
+    this.touched.add(file);
+    this.reals.set(file, real);
+    return real;
   }
 
   /** Parses a file once; pitfalls P1 to P5 and P9 and syntax errors are reported on first parse. */
