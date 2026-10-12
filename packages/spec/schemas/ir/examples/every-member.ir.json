@@ -49,10 +49,13 @@
             "kind": "object",
             "members": [
               {
-                "name": { "text": "data" },
+                "name": { "kind": "text", "text": "data" },
                 "value": { "kind": "slot", "slot": "payload", "path": [] }
               },
-              { "name": { "slot": "resource" }, "value": { "kind": "literal", "value": null } }
+              {
+                "name": { "kind": "slot", "slot": "resource" },
+                "value": { "kind": "literal", "value": null }
+              }
             ],
             "merge": "payload"
           },
@@ -65,7 +68,10 @@
               "name": "X-Count",
               "value": {
                 "kind": "text",
-                "parts": [{ "text": "n=" }, { "slot": "meta", "path": ["count"] }]
+                "parts": [
+                  { "kind": "text", "text": "n=" },
+                  { "kind": "slot", "slot": "meta", "path": ["count"] }
+                ]
               }
             }
           ]
@@ -770,10 +776,15 @@
       "extensions": {},
       "origin": { "layer": "api", "pointer": "/surfaces/app/routes/getTask" },
       "idempotency": {
-        "exempt": "Reads only.",
+        "kind": "exempt",
+        "reason": "Reads only.",
         "origin": { "layer": "api", "pointer": "/idempotency" }
       },
-      "csrf": { "exempt": "Bearer only.", "origin": { "layer": "api", "pointer": "/csrf" } },
+      "csrf": {
+        "kind": "exempt",
+        "reason": "Bearer only.",
+        "origin": { "layer": "api", "pointer": "/csrf" }
+      },
       "paging": {
         "overLimit": "reject",
         "sortKeys": [],
@@ -893,7 +904,7 @@
         },
         {
           "scope": "workspace",
-          "source": { "resolver": true },
+          "source": { "in": "resolver" },
           "origin": { "layer": "api", "pointer": "/scopes/1" }
         }
       ],
@@ -969,7 +980,7 @@
           "pointer": "/effort",
           "right": "tasks.effort",
           "params": { "level": 2 },
-          "subject": { "source": { "holderField": "ownerId" } },
+          "subject": { "source": { "in": "holderField", "name": "ownerId" } },
           "direction": "input",
           "inputPolicy": "strip",
           "derivedFrom": {
@@ -1023,6 +1034,7 @@
         "origin": { "layer": "api", "pointer": "/input" }
       },
       "idempotency": {
+        "kind": "derived",
         "header": "Idempotency-Key",
         "replayHeader": "Idempotency-Replayed",
         "lifetimeMs": 86400000,
@@ -1097,6 +1109,7 @@
       },
       "relays": { "kind": "httpOperation", "api": "billing", "id": "updateTask" },
       "csrf": {
+        "kind": "derived",
         "header": "X-CSRF",
         "derivedFrom": {
           "derivation": "csrf.cookieWrite",

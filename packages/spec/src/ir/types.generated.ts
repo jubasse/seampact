@@ -799,19 +799,36 @@ export interface OperationRef {
   id: OperationId;
 }
 
+/** How a query value is written (FR-30). */
+export type QueryWireKind = "number" | "boolean" | "list" | "text" | "object" | (string & {});
+
+/** The OpenAPI style of a query value. */
+export type QueryStyle = "form" | "deepObject" | (string & {});
+
 /** The wire form of a query parameter (FR-30). */
 export interface QueryWire {
-  kind: "number" | "boolean" | "list" | "text" | "object" | (string & {});
-  style: "form" | "deepObject" | (string & {});
+  kind: QueryWireKind;
+  style: QueryStyle;
   explode: boolean;
   /** A list sent as 'name[]'. */
   brackets: boolean;
 }
 
-/** The wire form of a form or multipart field: a query wire form (style, explode and brackets set), or kind 'file' or 'json' alone. */
+/** How a form or multipart field is written: a query wire kind, 'file' or 'json'. */
+export type FieldWireKind =
+  | "number"
+  | "boolean"
+  | "list"
+  | "text"
+  | "object"
+  | "file"
+  | "json"
+  | (string & {});
+
+/** The wire form of a form or multipart field: a query wire kind with style, explode and brackets, or kind 'file' or 'json' alone (invariant ir.field-wire.members). */
 export interface FieldWire {
-  kind: "number" | "boolean" | "list" | "text" | "object" | "file" | "json" | (string & {});
-  style?: "form" | "deepObject" | (string & {});
+  kind: FieldWireKind;
+  style?: QueryStyle;
   explode?: boolean;
   brackets?: boolean;
 }
@@ -833,10 +850,10 @@ export interface Params {
   header: Param[];
 }
 
-/** Undeclared query keys. */
+/** Undeclared query keys. Must act: an unknown value makes the IR invalid for every reader. */
 export type KnownUnknownQuery = RefuseUnknownQuery | IgnoreUnknownQuery;
 
-/** Undeclared query keys. */
+/** Undeclared query keys. Must act: an unknown value makes the IR invalid for every reader. */
 export type UnknownQuery = KnownUnknownQuery | UnknownVariant<"policy">;
 
 export interface RefuseUnknownQuery {
@@ -849,10 +866,10 @@ export interface IgnoreUnknownQuery {
   origin: Origin;
 }
 
-/** Who may call the operation. */
+/** Who may call the operation. Must act: an unknown value makes the IR invalid for every reader. */
 export type KnownAccess = IdentityAccess | OptionalAccess | PublicAccess;
 
-/** Who may call the operation. */
+/** Who may call the operation. Must act: an unknown value makes the IR invalid for every reader. */
 export type Access = KnownAccess | UnknownVariant<"kind">;
 
 export interface IdentityAccess {
@@ -862,12 +879,15 @@ export interface IdentityAccess {
   origin: Origin;
 }
 
+/** What an optional-auth operation does with a refused credential: serve it as anonymous, or answer 401. Must act: an unknown value makes the IR invalid for every reader. */
+export type RefusedCredential = "anonymous" | "reject" | (string & {});
+
 export interface OptionalAccess {
   kind: "optional";
   identity: IdentityId;
   schemes: SchemeId[];
   reason: Reason;
-  onRefused: "anonymous" | "reject" | (string & {});
+  onRefused: RefusedCredential;
   origin: Origin;
 }
 
@@ -882,24 +902,17 @@ export interface PrincipalRequirement {
   origin: Origin;
 }
 
-/** A value source, or 'resolver: true' alone. */
-export interface ScopeSource {
-  in?: ValueSourceIn;
-  name?: string;
-  prefixBits?: number;
-  resolver?: boolean;
-}
-
 export interface OperationScope {
   scope: ScopeId;
-  source: ScopeSource;
+  /** Where the scope id is read; 'in: resolver' for an application resolver. */
+  source: ValueSource;
   origin: Origin;
 }
 
-/** A requirement, in declared order (FR-5). */
+/** A requirement, in declared order (FR-5). Must act: an unknown value makes the IR invalid for every reader. */
 export type KnownRequirement = RightRequirement | RuleRequirement;
 
-/** A requirement, in declared order (FR-5). */
+/** A requirement, in declared order (FR-5). Must act: an unknown value makes the IR invalid for every reader. */
 export type Requirement = KnownRequirement | UnknownVariant<"kind">;
 
 export interface RequirementSubject {
@@ -942,13 +955,16 @@ export interface InputField {
   wire: FieldWire;
 }
 
+/** The media type of a request body. */
+export type InputMediaType =
+  | "application/json"
+  | "application/x-www-form-urlencoded"
+  | "multipart/form-data"
+  | (string & {});
+
 /** The request body. */
 export interface OperationInput {
-  media:
-    | "application/json"
-    | "application/x-www-form-urlencoded"
-    | "multipart/form-data"
-    | (string & {});
+  media: InputMediaType;
   schema: TypeUse;
   bodyLimitBytes: number;
   rawBody: boolean;
@@ -965,13 +981,24 @@ export interface ResponseHeader {
   derivedFrom?: DerivedFrom;
 }
 
+/** The format shape of a response; 'binary' and 'redirect' bypass the format (ADR 0004 section 8). */
+export type ResponseShape =
+  | "item"
+  | "table"
+  | "list"
+  | "page"
+  | "empty"
+  | "binary"
+  | "redirect"
+  | (string & {});
+
 /** A success or derived non-error response. */
 export interface Response {
   status: number;
   /** Absent for an empty body. */
   media?: string;
   body?: TypeUse;
-  shape: "item" | "table" | "list" | "page" | "empty" | "binary" | "redirect" | (string & {});
+  shape: ResponseShape;
   headers: ResponseHeader[];
   origin?: Origin;
   derivedFrom?: DerivedFrom;
@@ -985,16 +1012,9 @@ export interface OperationError {
   origin?: Origin;
 }
 
-/** A value source, or 'holderField' alone. */
-export interface FieldSubjectSource {
-  in?: ValueSourceIn;
-  name?: string;
-  prefixBits?: number;
-  holderField?: string;
-}
-
 export interface FieldRightSubject {
-  source: FieldSubjectSource;
+  /** Where the subject is read; 'in: holderField' names the holder's property on output. */
+  source: ValueSource;
 }
 
 /** A field right, materialised so targets never walk schemas (FR-23). */
@@ -1005,20 +1025,33 @@ export interface FieldRight {
   params?: unknown;
   subject?: FieldRightSubject;
   direction: Direction;
-  inputPolicy?: "reject" | "strip" | (string & {});
+  inputPolicy?: InputPolicy;
   derivedFrom: DerivedFrom;
 }
 
-/** Either the derived key settings (header, replayHeader, lifetimeMs, required, enforce, derivedFrom) or an exemption (exempt, origin). */
-export interface Idempotency {
-  header?: string;
-  replayHeader?: string;
-  lifetimeMs?: number;
-  required?: boolean;
-  enforce?: "boundary" | "none" | (string & {});
-  derivedFrom?: DerivedFrom;
-  exempt?: Reason;
-  origin?: Origin;
+/** The idempotency key of an unsafe operation: derived settings, or an exemption with its reason. Must act: an unknown value makes the IR invalid for every reader. */
+export type KnownIdempotency = DerivedIdempotency | ExemptIdempotency;
+
+/** The idempotency key of an unsafe operation: derived settings, or an exemption with its reason. Must act: an unknown value makes the IR invalid for every reader. */
+export type Idempotency = KnownIdempotency | UnknownVariant<"kind">;
+
+/** Where the idempotency key is enforced. */
+export type IdempotencyEnforcement = "boundary" | "none" | (string & {});
+
+export interface DerivedIdempotency {
+  kind: "derived";
+  header: string;
+  replayHeader: string;
+  lifetimeMs: number;
+  required: boolean;
+  enforce: IdempotencyEnforcement;
+  derivedFrom: DerivedFrom;
+}
+
+export interface ExemptIdempotency {
+  kind: "exempt";
+  reason: Reason;
+  origin: Origin;
 }
 
 export interface Concurrency {
@@ -1027,8 +1060,11 @@ export interface Concurrency {
   derivedFrom: DerivedFrom;
 }
 
+/** Who owns the resource an operation writes. */
+export type OwnerKind = "caller" | (string & {});
+
 export interface Owner {
-  kind: "caller" | (string & {});
+  kind: OwnerKind;
   origin: Origin;
 }
 
@@ -1047,15 +1083,19 @@ export interface CallerCacheControl {
   cacheControl: string;
 }
 
+/** Whether a shared cache may store an anonymous response. */
+export type CacheVisibility = "public" | "private" | (string & {});
+
 /** Cache settings (ADR 0004 section 7). */
 export interface Cache {
   family: string;
-  /** Absent for 'never' (no-store). */
+  /** Absent if and only if the family is 'never' (invariant ir.cache.directives). */
   directives?: CacheDirectives;
-  anonymous: "public" | "private" | (string & {});
+  anonymous: CacheVisibility;
   vary: string[];
   etag: boolean;
   perCallerKind: CallerCacheControl[];
+  /** Authoritative: when true the response is never stored, whatever 'directives' hold. True when the family is 'never' or a response carries a sensitive field (ADR 0003 section 6). */
   noStore: boolean;
   origin: Origin;
   derivedFrom?: DerivedFrom;
@@ -1068,23 +1108,39 @@ export interface SortKey {
   origin?: Origin;
 }
 
+/** What a limit above maxLimit does. */
+export type OverLimitPolicy = "reject" | "clamp" | (string & {});
+
+/** What a paging token holds. */
+export type PagingToken = "opaque" | "instant" | (string & {});
+
 /** The paging of a list; 'style' is absent for an unpaged list. */
 export interface Paging {
   style?: PagingId;
   maxLimit?: number;
   defaultLimit?: number;
-  overLimit: "reject" | "clamp" | (string & {});
-  token?: "opaque" | "instant" | (string & {});
+  overLimit: OverLimitPolicy;
+  token?: PagingToken;
   sortKeys: SortKey[];
   origin: Origin;
 }
 
-/** Either the derived CSRF header (header, derivedFrom) or an exemption (exempt, origin). */
-export interface Csrf {
-  header?: string;
-  derivedFrom?: DerivedFrom;
-  exempt?: Reason;
-  origin?: Origin;
+/** The CSRF check of an unsafe operation reached through a cookie scheme: the derived header, or an exemption with its reason (invariant ir.csrf.cookie). Must act: an unknown value makes the IR invalid for every reader. */
+export type KnownCsrf = DerivedCsrf | ExemptCsrf;
+
+/** The CSRF check of an unsafe operation reached through a cookie scheme: the derived header, or an exemption with its reason (invariant ir.csrf.cookie). Must act: an unknown value makes the IR invalid for every reader. */
+export type Csrf = KnownCsrf | UnknownVariant<"kind">;
+
+export interface DerivedCsrf {
+  kind: "derived";
+  header: string;
+  derivedFrom: DerivedFrom;
+}
+
+export interface ExemptCsrf {
+  kind: "exempt";
+  reason: Reason;
+  origin: Origin;
 }
 
 export interface Degradable {
@@ -1098,9 +1154,12 @@ export interface Deprecation {
   origin: Origin;
 }
 
+/** Where an operation's maturity comes from. */
+export type MaturitySource = "api" | "upstream" | "stated" | (string & {});
+
 export interface OperationMaturity {
   level: Maturity;
-  source: "api" | "upstream" | "stated" | (string & {});
+  source: MaturitySource;
   reason?: Reason;
   origin: Origin;
 }
@@ -1120,13 +1179,16 @@ export interface OperationExample {
   value: unknown;
 }
 
+/** The ops shorthand an operation came from. */
+export type OpShorthand = "list" | "get" | "create" | "update" | "delete" | "batch" | (string & {});
+
 /** An HTTP operation (ADR 0004 section 7). */
 export interface Operation {
   kind: DeclarationKind;
   id: OperationId;
   name: Name;
   surface: SurfaceId;
-  op?: "list" | "get" | "create" | "update" | "delete" | "batch" | (string & {});
+  op?: OpShorthand;
   resource?: OperationResource;
   features: Feature[];
   method: HttpMethod;
@@ -1191,10 +1253,13 @@ export interface SuccessShapes {
   page: Shape;
 }
 
-/** A member of the format's $meta: 'source' set only when 'fill' is 'source'. */
+/** Who fills a $meta member; 'source' reads the member 'source'. */
+export type MetaFill = "now" | "traceId" | "degraded" | "handler" | "source" | (string & {});
+
+/** A member of the format's $meta: 'source' set if and only if 'fill' is 'source' (invariant ir.meta.source). */
 export interface MetaMember {
   type: TypeUse;
-  fill: "now" | "traceId" | "degraded" | "handler" | "source" | (string & {});
+  fill: MetaFill;
   source?: ValueSource;
 }
 
@@ -1215,21 +1280,30 @@ export interface WireFormat {
   error: ErrorShape;
 }
 
+/** The role of a paging request parameter. */
+export type PagingRole =
+  | "cursor"
+  | "after"
+  | "before"
+  | "page"
+  | "offset"
+  | "since"
+  | "limit"
+  | "sort"
+  | (string & {});
+
+/** Where a paging request parameter is read. */
+export type PagingParamPlacement = "query" | "header" | (string & {});
+
+/** How a sort parameter is written. */
+export type PagingParamStyle = "signed" | "pair" | "keyed" | "split" | (string & {});
+
 export interface PagingRequestRole {
-  role:
-    | "cursor"
-    | "after"
-    | "before"
-    | "page"
-    | "offset"
-    | "since"
-    | "limit"
-    | "sort"
-    | (string & {});
-  in: "query" | "header" | (string & {});
+  role: PagingRole;
+  in: PagingParamPlacement;
   name: string;
   base?: number;
-  style?: "signed" | "pair" | "keyed" | "split" | (string & {});
+  style?: PagingParamStyle;
   /** With style 'split': the direction parameter's name. */
   direction?: string;
 }
@@ -1252,23 +1326,28 @@ export interface PagingResponse {
   links: PagingLink[];
 }
 
+/** How a paging style positions a page. */
+export type PagingPosition = "cursor" | "page" | "offset" | "since" | (string & {});
+
+/** What a handler returns beside a page's items. */
+export type HandlerResultMember =
+  | "nextCursor"
+  | "previousCursor"
+  | "total"
+  | "more"
+  | "nextSince"
+  | "complete"
+  | (string & {});
+
 /** A paging style (A31). */
 export interface PagingStyle {
   id: PagingId;
   origin: Origin;
-  position: "cursor" | "page" | "offset" | "since" | (string & {});
+  position: PagingPosition;
   absent: Absent;
   request: PagingRequestRole[];
   response: PagingResponse;
-  handlerResult: (
-    | "nextCursor"
-    | "previousCursor"
-    | "total"
-    | "more"
-    | "nextSince"
-    | "complete"
-    | (string & {})
-  )[];
+  handlerResult: HandlerResultMember[];
 }
 
 /** A template of the template language (ADR 0002 sections 13 and 14). */
@@ -1289,11 +1368,21 @@ export interface SlotTemplate {
   path: string[];
 }
 
-/** Exactly one of 'text', or 'slot' with 'path'. */
-export interface TextPart {
-  text?: string;
-  slot?: Slot;
-  path?: string[];
+/** A part of a text template: literal text, or a slot with its path. */
+export type KnownTextPart = PlainTextPart | SlotTextPart;
+
+/** A part of a text template: literal text, or a slot with its path. */
+export type TextPart = KnownTextPart | UnknownVariant<"kind">;
+
+export interface PlainTextPart {
+  kind: "text";
+  text: string;
+}
+
+export interface SlotTextPart {
+  kind: "slot";
+  slot: Slot;
+  path: string[];
 }
 
 export interface TextTemplate {
@@ -1306,10 +1395,20 @@ export interface LiteralTemplate {
   value: unknown;
 }
 
-/** Exactly one of 'text' or 'slot'. */
-export interface MemberName {
-  text?: string;
-  slot?: Slot;
+/** The name of an object template member: literal text, or a slot. */
+export type KnownMemberName = PlainMemberName | SlotMemberName;
+
+/** The name of an object template member: literal text, or a slot. */
+export type MemberName = KnownMemberName | UnknownVariant<"kind">;
+
+export interface PlainMemberName {
+  kind: "text";
+  text: string;
+}
+
+export interface SlotMemberName {
+  kind: "slot";
+  slot: Slot;
 }
 
 export interface ObjectTemplateMember {
@@ -1531,6 +1630,10 @@ export interface IrUnionMap {
   UnknownQuery: { union: UnknownQuery; known: KnownUnknownQuery };
   Access: { union: Access; known: KnownAccess };
   Requirement: { union: Requirement; known: KnownRequirement };
+  Idempotency: { union: Idempotency; known: KnownIdempotency };
+  Csrf: { union: Csrf; known: KnownCsrf };
   Template: { union: Template; known: KnownTemplate };
+  TextPart: { union: TextPart; known: KnownTextPart };
+  MemberName: { union: MemberName; known: KnownMemberName };
   ApiVersion: { union: ApiVersion; known: KnownApiVersion };
 }

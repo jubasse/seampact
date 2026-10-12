@@ -19,30 +19,39 @@
         "id": { "$ref": "common.schema.json#/$defs/OperationId" }
       }
     },
+    "QueryWireKind": {
+      "type": "string",
+      "description": "How a query value is written (FR-30).",
+      "x-seampact-known": ["number", "boolean", "list", "text", "object"]
+    },
+    "QueryStyle": {
+      "type": "string",
+      "description": "The OpenAPI style of a query value.",
+      "x-seampact-known": ["form", "deepObject"]
+    },
     "QueryWire": {
       "type": "object",
       "description": "The wire form of a query parameter (FR-30).",
       "required": ["kind", "style", "explode", "brackets"],
       "properties": {
-        "kind": {
-          "type": "string",
-          "x-seampact-known": ["number", "boolean", "list", "text", "object"]
-        },
-        "style": { "type": "string", "x-seampact-known": ["form", "deepObject"] },
+        "kind": { "$ref": "#/$defs/QueryWireKind" },
+        "style": { "$ref": "#/$defs/QueryStyle" },
         "explode": { "type": "boolean" },
         "brackets": { "type": "boolean", "description": "A list sent as 'name[]'." }
       }
     },
+    "FieldWireKind": {
+      "type": "string",
+      "description": "How a form or multipart field is written: a query wire kind, 'file' or 'json'.",
+      "x-seampact-known": ["number", "boolean", "list", "text", "object", "file", "json"]
+    },
     "FieldWire": {
       "type": "object",
-      "description": "The wire form of a form or multipart field: a query wire form (style, explode and brackets set), or kind 'file' or 'json' alone.",
+      "description": "The wire form of a form or multipart field: a query wire kind with style, explode and brackets, or kind 'file' or 'json' alone (invariant ir.field-wire.members).",
       "required": ["kind"],
       "properties": {
-        "kind": {
-          "type": "string",
-          "x-seampact-known": ["number", "boolean", "list", "text", "object", "file", "json"]
-        },
-        "style": { "type": "string", "x-seampact-known": ["form", "deepObject"] },
+        "kind": { "$ref": "#/$defs/FieldWireKind" },
+        "style": { "$ref": "#/$defs/QueryStyle" },
         "explode": { "type": "boolean" },
         "brackets": { "type": "boolean" }
       }
@@ -74,7 +83,8 @@
       "type": "object",
       "description": "Undeclared query keys.",
       "discriminator": { "propertyName": "policy" },
-      "oneOf": [{ "$ref": "#/$defs/RefuseUnknownQuery" }, { "$ref": "#/$defs/IgnoreUnknownQuery" }]
+      "oneOf": [{ "$ref": "#/$defs/RefuseUnknownQuery" }, { "$ref": "#/$defs/IgnoreUnknownQuery" }],
+      "x-seampact-must-act": true
     },
     "RefuseUnknownQuery": {
       "type": "object",
@@ -98,7 +108,8 @@
         { "$ref": "#/$defs/IdentityAccess" },
         { "$ref": "#/$defs/OptionalAccess" },
         { "$ref": "#/$defs/PublicAccess" }
-      ]
+      ],
+      "x-seampact-must-act": true
     },
     "IdentityAccess": {
       "type": "object",
@@ -106,9 +117,19 @@
       "properties": {
         "kind": { "type": "string", "const": "identity" },
         "identity": { "$ref": "common.schema.json#/$defs/IdentityId" },
-        "schemes": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/SchemeId" } },
+        "schemes": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/SchemeId" },
+          "minItems": 1
+        },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
+    },
+    "RefusedCredential": {
+      "type": "string",
+      "description": "What an optional-auth operation does with a refused credential: serve it as anonymous, or answer 401.",
+      "x-seampact-known": ["anonymous", "reject"],
+      "x-seampact-must-act": true
     },
     "OptionalAccess": {
       "type": "object",
@@ -116,9 +137,13 @@
       "properties": {
         "kind": { "type": "string", "const": "optional" },
         "identity": { "$ref": "common.schema.json#/$defs/IdentityId" },
-        "schemes": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/SchemeId" } },
+        "schemes": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/SchemeId" },
+          "minItems": 1
+        },
         "reason": { "$ref": "common.schema.json#/$defs/Reason" },
-        "onRefused": { "type": "string", "x-seampact-known": ["anonymous", "reject"] },
+        "onRefused": { "$ref": "#/$defs/RefusedCredential" },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
     },
@@ -139,22 +164,15 @@
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
     },
-    "ScopeSource": {
-      "type": "object",
-      "description": "A value source, or 'resolver: true' alone.",
-      "properties": {
-        "in": { "$ref": "common.schema.json#/$defs/ValueSourceIn" },
-        "name": { "type": "string" },
-        "prefixBits": { "type": "integer", "minimum": 0, "maximum": 128 },
-        "resolver": { "type": "boolean" }
-      }
-    },
     "OperationScope": {
       "type": "object",
       "required": ["scope", "source", "origin"],
       "properties": {
         "scope": { "$ref": "common.schema.json#/$defs/ScopeId" },
-        "source": { "$ref": "#/$defs/ScopeSource" },
+        "source": {
+          "$ref": "common.schema.json#/$defs/ValueSource",
+          "description": "Where the scope id is read; 'in: resolver' for an application resolver."
+        },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
     },
@@ -162,7 +180,8 @@
       "type": "object",
       "description": "A requirement, in declared order (FR-5).",
       "discriminator": { "propertyName": "kind" },
-      "oneOf": [{ "$ref": "#/$defs/RightRequirement" }, { "$ref": "#/$defs/RuleRequirement" }]
+      "oneOf": [{ "$ref": "#/$defs/RightRequirement" }, { "$ref": "#/$defs/RuleRequirement" }],
+      "x-seampact-must-act": true
     },
     "RequirementSubject": {
       "type": "object",
@@ -218,19 +237,21 @@
       "required": ["name", "wire"],
       "properties": { "name": { "type": "string" }, "wire": { "$ref": "#/$defs/FieldWire" } }
     },
+    "InputMediaType": {
+      "type": "string",
+      "description": "The media type of a request body.",
+      "x-seampact-known": [
+        "application/json",
+        "application/x-www-form-urlencoded",
+        "multipart/form-data"
+      ]
+    },
     "OperationInput": {
       "type": "object",
       "description": "The request body.",
       "required": ["media", "schema", "bodyLimitBytes", "rawBody", "origin"],
       "properties": {
-        "media": {
-          "type": "string",
-          "x-seampact-known": [
-            "application/json",
-            "application/x-www-form-urlencoded",
-            "multipart/form-data"
-          ]
-        },
+        "media": { "$ref": "#/$defs/InputMediaType" },
         "schema": { "$ref": "schemas.schema.json#/$defs/TypeUse" },
         "bodyLimitBytes": { "type": "integer", "minimum": 0 },
         "rawBody": { "type": "boolean" },
@@ -250,6 +271,11 @@
         "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
       }
     },
+    "ResponseShape": {
+      "type": "string",
+      "description": "The format shape of a response; 'binary' and 'redirect' bypass the format (ADR 0004 section 8).",
+      "x-seampact-known": ["item", "table", "list", "page", "empty", "binary", "redirect"]
+    },
     "Response": {
       "type": "object",
       "description": "A success or derived non-error response.",
@@ -258,10 +284,7 @@
         "status": { "type": "integer", "minimum": 100, "maximum": 599 },
         "media": { "type": "string", "description": "Absent for an empty body." },
         "body": { "$ref": "schemas.schema.json#/$defs/TypeUse" },
-        "shape": {
-          "type": "string",
-          "x-seampact-known": ["item", "table", "list", "page", "empty", "binary", "redirect"]
-        },
+        "shape": { "$ref": "#/$defs/ResponseShape" },
         "headers": { "type": "array", "items": { "$ref": "#/$defs/ResponseHeader" } },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" },
         "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
@@ -278,20 +301,15 @@
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
     },
-    "FieldSubjectSource": {
-      "type": "object",
-      "description": "A value source, or 'holderField' alone.",
-      "properties": {
-        "in": { "$ref": "common.schema.json#/$defs/ValueSourceIn" },
-        "name": { "type": "string" },
-        "prefixBits": { "type": "integer", "minimum": 0, "maximum": 128 },
-        "holderField": { "type": "string" }
-      }
-    },
     "FieldRightSubject": {
       "type": "object",
       "required": ["source"],
-      "properties": { "source": { "$ref": "#/$defs/FieldSubjectSource" } }
+      "properties": {
+        "source": {
+          "$ref": "common.schema.json#/$defs/ValueSource",
+          "description": "Where the subject is read; 'in: holderField' names the holder's property on output."
+        }
+      }
     },
     "FieldRight": {
       "type": "object",
@@ -304,21 +322,49 @@
         "params": {},
         "subject": { "$ref": "#/$defs/FieldRightSubject" },
         "direction": { "$ref": "common.schema.json#/$defs/Direction" },
-        "inputPolicy": { "type": "string", "x-seampact-known": ["reject", "strip"] },
+        "inputPolicy": { "$ref": "schemas.schema.json#/$defs/InputPolicy" },
         "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
       }
     },
     "Idempotency": {
       "type": "object",
-      "description": "Either the derived key settings (header, replayHeader, lifetimeMs, required, enforce, derivedFrom) or an exemption (exempt, origin).",
+      "description": "The idempotency key of an unsafe operation: derived settings, or an exemption with its reason.",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [{ "$ref": "#/$defs/DerivedIdempotency" }, { "$ref": "#/$defs/ExemptIdempotency" }],
+      "x-seampact-must-act": true
+    },
+    "IdempotencyEnforcement": {
+      "type": "string",
+      "description": "Where the idempotency key is enforced.",
+      "x-seampact-known": ["boundary", "none"]
+    },
+    "DerivedIdempotency": {
+      "type": "object",
+      "required": [
+        "kind",
+        "header",
+        "replayHeader",
+        "lifetimeMs",
+        "required",
+        "enforce",
+        "derivedFrom"
+      ],
       "properties": {
+        "kind": { "type": "string", "const": "derived" },
         "header": { "type": "string" },
         "replayHeader": { "type": "string" },
         "lifetimeMs": { "type": "integer", "minimum": 0 },
         "required": { "type": "boolean" },
-        "enforce": { "type": "string", "x-seampact-known": ["boundary", "none"] },
-        "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" },
-        "exempt": { "$ref": "common.schema.json#/$defs/Reason" },
+        "enforce": { "$ref": "#/$defs/IdempotencyEnforcement" },
+        "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
+      }
+    },
+    "ExemptIdempotency": {
+      "type": "object",
+      "required": ["kind", "reason", "origin"],
+      "properties": {
+        "kind": { "type": "string", "const": "exempt" },
+        "reason": { "$ref": "common.schema.json#/$defs/Reason" },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
     },
@@ -331,11 +377,16 @@
         "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
       }
     },
+    "OwnerKind": {
+      "type": "string",
+      "description": "Who owns the resource an operation writes.",
+      "x-seampact-known": ["caller"]
+    },
     "Owner": {
       "type": "object",
       "required": ["kind", "origin"],
       "properties": {
-        "kind": { "type": "string", "x-seampact-known": ["caller"] },
+        "kind": { "$ref": "#/$defs/OwnerKind" },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
     },
@@ -360,6 +411,11 @@
         "cacheControl": { "type": "string" }
       }
     },
+    "CacheVisibility": {
+      "type": "string",
+      "description": "Whether a shared cache may store an anonymous response.",
+      "x-seampact-known": ["public", "private"]
+    },
     "Cache": {
       "type": "object",
       "description": "Cache settings (ADR 0004 section 7).",
@@ -368,13 +424,16 @@
         "family": { "type": "string" },
         "directives": {
           "$ref": "#/$defs/CacheDirectives",
-          "description": "Absent for 'never' (no-store)."
+          "description": "Absent if and only if the family is 'never' (invariant ir.cache.directives)."
         },
-        "anonymous": { "type": "string", "x-seampact-known": ["public", "private"] },
+        "anonymous": { "$ref": "#/$defs/CacheVisibility" },
         "vary": { "type": "array", "items": { "type": "string" } },
         "etag": { "type": "boolean" },
         "perCallerKind": { "type": "array", "items": { "$ref": "#/$defs/CallerCacheControl" } },
-        "noStore": { "type": "boolean" },
+        "noStore": {
+          "type": "boolean",
+          "description": "Authoritative: when true the response is never stored, whatever 'directives' hold. True when the family is 'never' or a response carries a sensitive field (ADR 0003 section 6)."
+        },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" },
         "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
       }
@@ -389,6 +448,16 @@
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
     },
+    "OverLimitPolicy": {
+      "type": "string",
+      "description": "What a limit above maxLimit does.",
+      "x-seampact-known": ["reject", "clamp"]
+    },
+    "PagingToken": {
+      "type": "string",
+      "description": "What a paging token holds.",
+      "x-seampact-known": ["opaque", "instant"]
+    },
     "Paging": {
       "type": "object",
       "description": "The paging of a list; 'style' is absent for an unpaged list.",
@@ -397,19 +466,34 @@
         "style": { "$ref": "common.schema.json#/$defs/PagingId" },
         "maxLimit": { "type": "integer", "minimum": 0 },
         "defaultLimit": { "type": "integer", "minimum": 0 },
-        "overLimit": { "type": "string", "x-seampact-known": ["reject", "clamp"] },
-        "token": { "type": "string", "x-seampact-known": ["opaque", "instant"] },
+        "overLimit": { "$ref": "#/$defs/OverLimitPolicy" },
+        "token": { "$ref": "#/$defs/PagingToken" },
         "sortKeys": { "type": "array", "items": { "$ref": "#/$defs/SortKey" } },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
     },
     "Csrf": {
       "type": "object",
-      "description": "Either the derived CSRF header (header, derivedFrom) or an exemption (exempt, origin).",
+      "description": "The CSRF check of an unsafe operation reached through a cookie scheme: the derived header, or an exemption with its reason (invariant ir.csrf.cookie).",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [{ "$ref": "#/$defs/DerivedCsrf" }, { "$ref": "#/$defs/ExemptCsrf" }],
+      "x-seampact-must-act": true
+    },
+    "DerivedCsrf": {
+      "type": "object",
+      "required": ["kind", "header", "derivedFrom"],
       "properties": {
+        "kind": { "type": "string", "const": "derived" },
         "header": { "type": "string" },
-        "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" },
-        "exempt": { "$ref": "common.schema.json#/$defs/Reason" },
+        "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
+      }
+    },
+    "ExemptCsrf": {
+      "type": "object",
+      "required": ["kind", "reason", "origin"],
+      "properties": {
+        "kind": { "type": "string", "const": "exempt" },
+        "reason": { "$ref": "common.schema.json#/$defs/Reason" },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
     },
@@ -430,12 +514,17 @@
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
     },
+    "MaturitySource": {
+      "type": "string",
+      "description": "Where an operation's maturity comes from.",
+      "x-seampact-known": ["api", "upstream", "stated"]
+    },
     "OperationMaturity": {
       "type": "object",
       "required": ["level", "source", "origin"],
       "properties": {
         "level": { "$ref": "common.schema.json#/$defs/Maturity" },
-        "source": { "type": "string", "x-seampact-known": ["api", "upstream", "stated"] },
+        "source": { "$ref": "#/$defs/MaturitySource" },
         "reason": { "$ref": "common.schema.json#/$defs/Reason" },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
@@ -460,6 +549,11 @@
         "error": { "$ref": "common.schema.json#/$defs/ErrorCode" },
         "value": {}
       }
+    },
+    "OpShorthand": {
+      "type": "string",
+      "description": "The ops shorthand an operation came from.",
+      "x-seampact-known": ["list", "get", "create", "update", "delete", "batch"]
     },
     "Operation": {
       "type": "object",
@@ -499,10 +593,7 @@
         "id": { "$ref": "common.schema.json#/$defs/OperationId" },
         "name": { "$ref": "common.schema.json#/$defs/Name" },
         "surface": { "$ref": "common.schema.json#/$defs/SurfaceId" },
-        "op": {
-          "type": "string",
-          "x-seampact-known": ["list", "get", "create", "update", "delete", "batch"]
-        },
+        "op": { "$ref": "#/$defs/OpShorthand" },
         "resource": { "$ref": "#/$defs/OperationResource" },
         "features": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/Feature" } },
         "method": { "$ref": "#/$defs/HttpMethod" },
@@ -534,10 +625,7 @@
         "deadlineHeader": { "type": "string" },
         "deprecated": { "$ref": "#/$defs/Deprecation" },
         "relays": { "$ref": "#/$defs/OperationRef" },
-        "upstream": {
-          "type": "array",
-          "items": { "$ref": "common.schema.json#/$defs/ServiceId" }
-        },
+        "upstream": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/ServiceId" } },
         "maturity": { "$ref": "#/$defs/OperationMaturity" },
         "internal": { "type": "boolean" },
         "csrf": { "$ref": "#/$defs/Csrf" },

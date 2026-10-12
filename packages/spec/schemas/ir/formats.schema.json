@@ -36,16 +36,18 @@
         "page": { "$ref": "#/$defs/Shape" }
       }
     },
+    "MetaFill": {
+      "type": "string",
+      "description": "Who fills a $meta member; 'source' reads the member 'source'.",
+      "x-seampact-known": ["now", "traceId", "degraded", "handler", "source"]
+    },
     "MetaMember": {
       "type": "object",
-      "description": "A member of the format's $meta: 'source' set only when 'fill' is 'source'.",
+      "description": "A member of the format's $meta: 'source' set if and only if 'fill' is 'source' (invariant ir.meta.source).",
       "required": ["type", "fill"],
       "properties": {
         "type": { "$ref": "schemas.schema.json#/$defs/TypeUse" },
-        "fill": {
-          "type": "string",
-          "x-seampact-known": ["now", "traceId", "degraded", "handler", "source"]
-        },
+        "fill": { "$ref": "#/$defs/MetaFill" },
         "source": { "$ref": "common.schema.json#/$defs/ValueSource" }
       }
     },
@@ -72,27 +74,30 @@
         "error": { "$ref": "#/$defs/ErrorShape" }
       }
     },
+    "PagingRole": {
+      "type": "string",
+      "description": "The role of a paging request parameter.",
+      "x-seampact-known": ["cursor", "after", "before", "page", "offset", "since", "limit", "sort"]
+    },
+    "PagingParamPlacement": {
+      "type": "string",
+      "description": "Where a paging request parameter is read.",
+      "x-seampact-known": ["query", "header"]
+    },
+    "PagingParamStyle": {
+      "type": "string",
+      "description": "How a sort parameter is written.",
+      "x-seampact-known": ["signed", "pair", "keyed", "split"]
+    },
     "PagingRequestRole": {
       "type": "object",
       "required": ["role", "in", "name"],
       "properties": {
-        "role": {
-          "type": "string",
-          "x-seampact-known": [
-            "cursor",
-            "after",
-            "before",
-            "page",
-            "offset",
-            "since",
-            "limit",
-            "sort"
-          ]
-        },
-        "in": { "type": "string", "x-seampact-known": ["query", "header"] },
+        "role": { "$ref": "#/$defs/PagingRole" },
+        "in": { "$ref": "#/$defs/PagingParamPlacement" },
         "name": { "type": "string" },
         "base": { "type": "integer", "minimum": 0, "maximum": 1 },
-        "style": { "type": "string", "x-seampact-known": ["signed", "pair", "keyed", "split"] },
+        "style": { "$ref": "#/$defs/PagingParamStyle" },
         "direction": {
           "type": "string",
           "description": "With style 'split': the direction parameter's name."
@@ -122,6 +127,16 @@
         "links": { "type": "array", "items": { "$ref": "#/$defs/PagingLink" } }
       }
     },
+    "PagingPosition": {
+      "type": "string",
+      "description": "How a paging style positions a page.",
+      "x-seampact-known": ["cursor", "page", "offset", "since"]
+    },
+    "HandlerResultMember": {
+      "type": "string",
+      "description": "What a handler returns beside a page's items.",
+      "x-seampact-known": ["nextCursor", "previousCursor", "total", "more", "nextSince", "complete"]
+    },
     "PagingStyle": {
       "type": "object",
       "description": "A paging style (A31).",
@@ -129,27 +144,11 @@
       "properties": {
         "id": { "$ref": "common.schema.json#/$defs/PagingId" },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" },
-        "position": {
-          "type": "string",
-          "x-seampact-known": ["cursor", "page", "offset", "since"]
-        },
+        "position": { "$ref": "#/$defs/PagingPosition" },
         "absent": { "$ref": "#/$defs/Absent" },
         "request": { "type": "array", "items": { "$ref": "#/$defs/PagingRequestRole" } },
         "response": { "$ref": "#/$defs/PagingResponse" },
-        "handlerResult": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "x-seampact-known": [
-              "nextCursor",
-              "previousCursor",
-              "total",
-              "more",
-              "nextSince",
-              "complete"
-            ]
-          }
-        }
+        "handlerResult": { "type": "array", "items": { "$ref": "#/$defs/HandlerResultMember" } }
       }
     },
     "Template": {
@@ -176,9 +175,20 @@
     },
     "TextPart": {
       "type": "object",
-      "description": "Exactly one of 'text', or 'slot' with 'path'.",
+      "description": "A part of a text template: literal text, or a slot with its path.",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [{ "$ref": "#/$defs/PlainTextPart" }, { "$ref": "#/$defs/SlotTextPart" }]
+    },
+    "PlainTextPart": {
+      "type": "object",
+      "required": ["kind", "text"],
+      "properties": { "kind": { "type": "string", "const": "text" }, "text": { "type": "string" } }
+    },
+    "SlotTextPart": {
+      "type": "object",
+      "required": ["kind", "slot", "path"],
       "properties": {
-        "text": { "type": "string" },
+        "kind": { "type": "string", "const": "slot" },
         "slot": { "$ref": "#/$defs/Slot" },
         "path": { "type": "array", "items": { "type": "string" } }
       }
@@ -198,8 +208,22 @@
     },
     "MemberName": {
       "type": "object",
-      "description": "Exactly one of 'text' or 'slot'.",
-      "properties": { "text": { "type": "string" }, "slot": { "$ref": "#/$defs/Slot" } }
+      "description": "The name of an object template member: literal text, or a slot.",
+      "discriminator": { "propertyName": "kind" },
+      "oneOf": [{ "$ref": "#/$defs/PlainMemberName" }, { "$ref": "#/$defs/SlotMemberName" }]
+    },
+    "PlainMemberName": {
+      "type": "object",
+      "required": ["kind", "text"],
+      "properties": { "kind": { "type": "string", "const": "text" }, "text": { "type": "string" } }
+    },
+    "SlotMemberName": {
+      "type": "object",
+      "required": ["kind", "slot"],
+      "properties": {
+        "kind": { "type": "string", "const": "slot" },
+        "slot": { "$ref": "#/$defs/Slot" }
+      }
     },
     "ObjectTemplateMember": {
       "type": "object",
