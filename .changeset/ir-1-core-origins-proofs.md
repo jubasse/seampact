@@ -27,5 +27,6 @@ The source map is unchanged: its key pattern already refuses `core#…`, since a
 - Declare `irRevision: 2`.
 - Render a request body as the properties of `input.schema` followed by the fields of `input.proofs`, each required and sensitive; never re-derive a body proof from `rules`. A proof-only input has the empty schema `ApiEmptyBody`, so the same rule holds. A header proof stays a derived header parameter.
 - In a form or multipart input, send each proof with its `wire`, as an entry of `fields` is sent.
+- In an OpenAPI document (ADR 0004 section 12, `input` row), write the proofs as `allOf: [<input schema>, { type: object, properties: <proofs>, required: <proof names> }]`, a proof-only input as that object alone, each proof property with `x-seampact-derived-from` and, in a form or multipart body, the `encoding` entry its `wire` gives. Under `inputSchemas: strict` the body stays strict and still accepts the proofs (not a top-level `additionalProperties: false` inside the `allOf`).
 - Treat proof names as known keys of the input use: the unknown-key policy never refuses or ignores them, and `keep` never collects them.
 - Accept `core` as an origin layer. A core origin has no source-map entry: never look one up there; a diagnostic about a core element is located at the use that pulled it in.
