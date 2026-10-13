@@ -19,7 +19,7 @@ public data class IrSupport(
     }
 }
 
-/** The codes of `checkIrSupport`, plus the one a must-act unknown gets. */
+/** The codes of `checkIrSupport`, plus the one a must-act unknown gets and the one a too deeply nested document gets. */
 public enum class IrRefusalCode(public val code: String) {
     VERSION_UNSUPPORTED("ir.version.unsupported"),
     REVISION_MISMATCH("ir.revision.mismatch"),
@@ -27,6 +27,7 @@ public enum class IrRefusalCode(public val code: String) {
     FEATURE_UNSUPPORTED("ir.feature.unsupported"),
     SUPPORT_MALFORMED("ir.support.malformed"),
     MUST_ACT_UNKNOWN("ir.must-act.unknown"),
+    NESTING_TOO_DEEP("ir.nesting.too-deep"),
 }
 
 /** One named reason to refuse an IR: [member] is a JSON Pointer, [operation] the operation id when inside one. */
@@ -38,3 +39,9 @@ public data class IrRefusal(
     val operation: String?,
     val message: String,
 )
+
+private const val MAX_MESSAGE_VALUE_LENGTH = 80
+
+/** An untrusted value cut for a message; the refusal's `value` member keeps it whole. */
+internal fun inMessage(value: String): String =
+    if (value.length <= MAX_MESSAGE_VALUE_LENGTH) value else value.take(MAX_MESSAGE_VALUE_LENGTH) + "..."

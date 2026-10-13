@@ -18,38 +18,52 @@ private val OPERATION_POINTER = Regex("^/operations/(\\d+)(/|$)")
  */
 internal fun checkMustActUnknowns(ir: JsonElement): List<IrRefusal> {
     val refusals = mutableListOf<IrRefusal>()
-    MustActWalk(ir, refusals).walk(ir, IrShape.Named(ROOT_DEFINITION), "")
+    MustActWalk(ir, refusals).walk(ir, IrShape.Named(ROOT_DEFINITION), "", 0)
     return refusals
 }
 
 private const val ROOT_DEFINITION = "ContractIR"
 
+// Levels of JSON nesting the walk descends, and the decode after it: past this the IR is refused, because the
+// recursion would overflow the stack. The deepest real IR is a few dozen levels.
+private const val MAX_NESTING_DEPTH = 256
+
 private class MustActWalk(private val document: JsonElement, private val refusals: MutableList<IrRefusal>) {
-    fun walk(value: JsonElement, shape: IrShape, pointer: String) {
+    // The depth counts JSON levels (a struct member, an array item, a map value), not shape nodes.
+    fun walk(value: JsonElement, shape: IrShape, pointer: String, depth: Int) {
+        if (depth > MAX_NESTING_DEPTH) {
+            refuseNesting(pointer)
+            return
+        }
+
         when (shape) {
-            is IrShape.Named -> IR_SHAPES[shape.definition]?.let { walk(value, it, pointer) }
-            is IrShape.Struct -> walkStruct(value, shape, pointer)
-            is IrShape.Union -> walkUnion(value, shape, pointer)
+            is IrShape.Named -> IR_SHAPES[shape.definition]?.let { walk(value, it, pointer, depth) }
+            is IrShape.Struct -> walkStruct(value, shape, pointer, depth)
+            is IrShape.Union -> walkUnion(value, shape, pointer, depth)
             is IrShape.OpenEnum -> walkOpenEnum(value, shape, pointer)
-            is IrShape.Items -> (value as? JsonArray)?.forEachIndexed { index, item -> walk(item, shape.of, "$pointer/$index") }
-            is IrShape.Values -> (value as? JsonObject)?.forEach { (key, item) -> walk(item, shape.of, "$pointer/${escape(key)}") }
+            is IrShape.Items -> (value as? JsonArray)?.forEachIndexed { index, item ->
+                walk(item, shape.of, "$pointer/$index", depth + 1)
+            }
+            is IrShape.Values -> (value as? JsonObject)?.forEach { (key, item) ->
+                walk(item, shape.of, "$pointer/${escape(key)}", depth + 1)
+            }
         }
     }
 
-    private fun walkStruct(value: JsonElement, shape: IrShape.Struct, pointer: String) {
+    private fun walkStruct(value: JsonElement, shape: IrShape.Struct, pointer: String, depth: Int) {
         val members = value as? JsonObject ?: return
         for ((name, child) in members) {
             val memberShape = shape.members[name] ?: continue
-            walk(child, memberShape, "$pointer/${escape(name)}")
+            walk(child, memberShape, "$pointer/${escape(name)}", depth + 1)
         }
     }
 
-    private fun walkUnion(value: JsonElement, shape: IrShape.Union, pointer: String) {
+    private fun walkUnion(value: JsonElement, shape: IrShape.Union, pointer: String, depth: Int) {
         val union = value as? JsonObject ?: return
         val tag = stringOf(union[shape.tag]) ?: return
         val variant = shape.variants[tag]
         if (variant != null) {
-            walk(union, IrShape.Named(variant), pointer)
+            walk(union, IrShape.Named(variant), pointer, depth)
             return
         }
         if (shape.mustAct) refuse("$pointer/${shape.tag}", tag, shape.variants.keys.toList(), "tag")
@@ -58,6 +72,18 @@ private class MustActWalk(private val document: JsonElement, private val refusal
     private fun walkOpenEnum(value: JsonElement, shape: IrShape.OpenEnum, pointer: String) {
         val text = stringOf(value) ?: return
         if (shape.mustAct && text !in shape.known) refuse(pointer, text, shape.known.toList(), "value")
+    }
+
+    private fun refuseNesting(member: String) {
+        refusals += IrRefusal(
+            IrRefusalCode.NESTING_TOO_DEEP,
+            member,
+            MAX_NESTING_DEPTH.toString(),
+            emptyList(),
+            operationAt(member),
+            "The IR is nested more than $MAX_NESTING_DEPTH levels deep at ${inMessage(member)}: " +
+                "this reader refuses it rather than overflow its stack.",
+        )
     }
 
     private fun refuse(member: String, value: String, expected: List<String>, what: String) {
@@ -69,7 +95,7 @@ private class MustActWalk(private val document: JsonElement, private val refusal
             value,
             expected,
             operation,
-            "The $what '$value' at $member$where is unknown to this reader and guards a security boundary: " +
+            "The $what '${inMessage(value)}' at ${inMessage(member)}$where is unknown to this reader and guards a security boundary: " +
                 "a reader that skipped it would apply a weaker check, so it refuses the IR.",
         )
     }

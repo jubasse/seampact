@@ -9,6 +9,12 @@ import kotlinx.serialization.json.JsonPrimitive
 
 private const val MISSING = "missing"
 
+// A number is rendered in plain form only when that form is this short; any other is shown as written.
+private const val MAX_PLAIN_DIGITS = 64
+
+// A longer literal is never read as a number: no version or revision is that long.
+private const val MAX_NUMBER_LITERAL_LENGTH = 64
+
 /** The package a refused version or revision tells the reader to update. */
 internal const val IR_PACKAGE = "io.github.jubasse:seampact-ir"
 
@@ -31,7 +37,7 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
                 shown(version),
                 expected,
                 null,
-                "irVersion ${shown(version)} is not one this reader reads (${expected.joinToString(", ")}). " +
+                "irVersion ${inMessage(shown(version))} is not one this reader reads (${expected.joinToString(", ")}). " +
                     "Update the $IR_PACKAGE package to one that reads it.",
             ),
         )
@@ -46,7 +52,7 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
             shown(revision),
             listOf(support.irRevision.toString()),
             null,
-            "irRevision ${shown(revision)} differs from the revision this reader was built for " +
+            "irRevision ${inMessage(shown(revision))} differs from the revision this reader was built for " +
                 "(${support.irRevision}). Update the $IR_PACKAGE package to the revision of the compiler.",
         )
     }
@@ -81,7 +87,7 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
                 shown(value),
                 known,
                 operation,
-                "The $what '${shown(value)}'$where is not supported by this reader.",
+                "The $what '${inMessage(shown(value))}'$where is not supported by this reader.",
             )
         }
     }
@@ -100,7 +106,7 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
                 shown(kind),
                 support.kinds,
                 id,
-                "The declaration kind '${shown(kind)}' of operation '$id' is not supported by this reader.",
+                "The declaration kind '${inMessage(shown(kind))}' of operation '$id' is not supported by this reader.",
             )
         }
         val member = "/operations/$index/features"
@@ -119,7 +125,10 @@ private fun isStringIn(value: JsonElement?, known: List<String>): Boolean =
     value is JsonPrimitive && value.isString && value.content in known
 
 private fun numberOf(value: JsonElement?): BigDecimal? =
-    (value as? JsonPrimitive)?.takeIf { !it.isString }?.content?.toBigDecimalOrNull()
+    (value as? JsonPrimitive)
+        ?.takeIf { !it.isString && it.content.length <= MAX_NUMBER_LITERAL_LENGTH }
+        ?.content
+        ?.toBigDecimalOrNull()
 
 private fun jsonType(value: JsonElement?): String = when (value) {
     null -> MISSING
@@ -133,13 +142,20 @@ private fun jsonType(value: JsonElement?): String = when (value) {
     }
 }
 
-// A string or a number as written (a number without a trailing fraction of zeros), any other value as JSON.
+// A string or a number as written (a number without a trailing fraction of zeros, unless its plain form is long:
+// 1e2147483647 would not fit in memory), any other value as JSON.
 private fun shown(value: JsonElement?): String {
     if (value == null) return MISSING
     val number = numberOf(value)
     return when {
         value is JsonPrimitive && value.isString -> value.content
-        number != null -> number.stripTrailingZeros().toPlainString()
+        number != null && hasShortPlainForm(number) -> number.stripTrailingZeros().toPlainString()
         else -> value.toString()
     }
+}
+
+private fun hasShortPlainForm(number: BigDecimal): Boolean {
+    val integerDigits = number.precision().toLong() - number.scale()
+
+    return integerDigits <= MAX_PLAIN_DIGITS && number.scale() <= MAX_PLAIN_DIGITS
 }
