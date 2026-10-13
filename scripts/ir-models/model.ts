@@ -272,8 +272,8 @@ function unionOf(name: string, file: string, def: SchemaNode, mustAct: boolean):
     fail(name, "a discriminator without oneOf");
 
   const variants = def.oneOf.map((variant: unknown, index: number) => {
-    if (!isSchemaNode(variant)) fail(`${name}.oneOf[${index}]`, "a variant that is not a schema");
     const at = `${name}.oneOf[${index}]`;
+    if (!isSchemaNode(variant)) fail(at, "a variant that is not a schema");
     assertKeywords(variant, "reference", at);
     return { definition: refName(variant.$ref, at), tagValue: "" };
   });
