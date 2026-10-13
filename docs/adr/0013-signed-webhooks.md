@@ -32,6 +32,8 @@ With `verify: template`, the scheme declares:
 | tolerance | a duration | maximum distance between the signed timestamp and now; required when the format has `{ts}`, refused otherwise |
 | key | `{ value: <literal> }` (one fixed key id), or `{ from: <path, query or header source> }` | the key id the application's secret lookup receives, to choose the secret set; a `from` source must exist on every route of the identity, and a route without it is a compile error naming the route, the identity and the source |
 
+In the templates, `{sig}` and `{rawBody}` appear exactly once and `{ts}` at most once, and the payload signs `{ts}` exactly when the format reads it, since a timestamp the MAC does not cover would let a replay pass with a fresh value (ADR 0002 section 9).
+
 ```yaml
 # illustration, syntax per ADR 0002 section 9
 schemes:

@@ -1,0 +1,14 @@
+lane: p2-access-identity
+proofs:
+  - id: CHK-005
+    fixtures:
+      - fixtures/passes/access-identity/catalogues/api.yaml
+      - fixtures/passes/access-identity/catalogues/catalogues.json
+    tests:
+      - 'core: packages/compiler/src/passes/access/identity/schemes.test.ts#security schemes'
+      - 'core: packages/compiler/src/passes/access/identity/identities.test.ts#access.identity diagnostics are located'
+  - id: CHK-131
+    fixtures:
+      - fixtures/passes/access-identity/catalogues/api.yaml
+    tests:
+      - 'core: packages/compiler/src/passes/access/identity/schemes.test.ts#an application signature takes headers and an optional key'
