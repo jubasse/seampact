@@ -230,12 +230,18 @@ function bodyLimitOf(site: InputSite): BodyLimit | undefined {
   return parsedBodyLimit(reading.value, reading.origin, writtenAt);
 }
 
-// A written limit the size grammar admits but that does not parse (an overflow) would skip the maxSize check.
-function parsedBodyLimit(value: unknown, origin: Origin | undefined, writtenAt: string): BodyLimit {
+// A written limit the size grammar admits but that does not parse (beyond the safe integer range) is reported by
+// `treeNodesCheckBodyLimits`, so the maxSize check has no limit to compare with. A core default always parses.
+function parsedBodyLimit(
+  value: unknown,
+  origin: Origin | undefined,
+  writtenAt: string,
+): BodyLimit | undefined {
   const bytes = typeof value === "string" ? pipelineParseSize(value) : undefined;
-  if (bytes === undefined)
+  if (bytes !== undefined) return { bytes, origin };
+  if (origin === undefined)
     throw new Error(`the body limit at ${writtenAt} does not parse as a size: ${String(value)}`);
-  return { bytes, origin };
+  return undefined;
 }
 
 // Every file reached from `use` (a file itself included), through schemas, items, map values, union variants and
