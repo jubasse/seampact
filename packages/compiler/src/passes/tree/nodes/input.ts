@@ -120,15 +120,35 @@ function formFields(site: InputSite, schema: IrWriter.TypeUse): IrWriter.InputFi
     return undefined;
   }
 
+  const schemaPointer = inputSchemaPointer(site.node, declared.id);
   const fields: IrWriter.InputField[] = [];
   for (const property of declared.properties) {
-    const wire = fieldWire(site, property);
+    const fieldPointer = `${schemaPointer}/properties/${escapePointerSegment(property.name)}`;
+    const wire = fieldWire(site, property, fieldPointer);
     if (wire !== undefined) fields.push({ name: property.name, wire });
   }
   return fields;
 }
 
-function fieldWire(site: InputSite, property: IrWriter.Property): IrWriter.FieldWire | undefined {
+// Where the input schema sits, which keys the wire of each of its fields: the declared schema it names, or the
+// route's own inline input. A field is asked at its position there, not at its origin, which for a derived field
+// (`expectedVersion`) or one from another layer is elsewhere.
+function inputSchemaPointer(node: TreeNode, schemaId: string): string {
+  const written = Object.hasOwn(node.settings, "input") ? node.settings.input : undefined;
+  return typeof written === "string"
+    ? `/schemas/${escapePointerSegment(schemaId)}`
+    : `${node.pointer}/input`;
+}
+
+// RFC 6901: `~` and `/` inside a segment.
+const escapePointerSegment = (segment: string): string =>
+  segment.replaceAll("~", "~0").replaceAll("/", "~1");
+
+function fieldWire(
+  site: InputSite,
+  property: IrWriter.Property,
+  fieldPointer: string,
+): IrWriter.FieldWire | undefined {
   const at = treeNodesLocate(property.origin, site.origin);
 
   if (treeNodesIsFileField(property.type)) {
@@ -140,7 +160,7 @@ function fieldWire(site: InputSite, property: IrWriter.Property): IrWriter.Field
   const wire =
     property.type.kind === "opaque"
       ? undefined
-      : treeNodesFieldWireOf(property.origin.pointer, property.type, site.context.treeSchemas);
+      : treeNodesFieldWireOf(fieldPointer, property.type, site.context.treeSchemas);
   if (wire === undefined)
     site.context.report(
       treeNodesError({

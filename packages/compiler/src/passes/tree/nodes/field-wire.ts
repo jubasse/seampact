@@ -35,8 +35,9 @@ export function treeNodesFieldWireOf(
 }
 
 /**
- * The wire form of the form or multipart field whose schema is written at `schemaPointer` (a JSON Pointer into the
- * api's merged raw tree) and compiles to `use`: `{ kind: file }` for a file or a list of files, `{ kind: json }` for
+ * The wire form of the form or multipart field at `schemaPointer`, its position in the input schema
+ * (`/schemas/<SchemaId>/properties/<name>` for a declared schema, `<route pointer>/input/properties/<name>` for an
+ * inline input, whatever the field's origin), which compiles to `use`: `{ kind: file }` for a file or a list of files, `{ kind: json }` for
  * a text field holding JSON (`contentMediaType: application/json`), else the query wire `treeSchemas.queryWire`
  * answers, with its style, explode and brackets. Throws when the service answers none for a field that needs one:
  * tree.schemas answers every form field and rule proof schema it accepted, and the later halves run only when it

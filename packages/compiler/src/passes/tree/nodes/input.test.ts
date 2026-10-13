@@ -7,6 +7,7 @@ import {
   TREE_NODES_FIXTURES,
   treeNodesApiOf,
   treeNodesLoadDirectory,
+  treeNodesLoadInline,
   treeNodesRun,
   treeNodesStubService,
 } from "./test-support.js";
@@ -249,4 +250,66 @@ test("field wire shared: a field the service has no wire for throws", () => {
   expect(() => treeNodesFieldWire(FIELD, text, treeNodesStubService({}))).toThrow(
     /no query wire for the field at \/schemas\/Form\/properties\/field/,
   );
+});
+
+// A body-versioned update (ADR 0002 section 11): tree.schemas adds `expectedVersion` to the input, with the
+// concurrency setting as its origin. Its wire is still asked at its position in the input schema.
+const FORM_UPDATE = `
+api: { name: tasks, version: 1, kind: product }
+schemas:
+  TaskId: { type: string }
+  Task:
+    type: object
+    required: [taskId, title, version]
+    properties:
+      taskId: TaskId
+      title: { type: string }
+      version: { type: integer }
+  UpdateTask:
+    type: object
+    properties:
+      title: { type: string }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: TaskId }
+        item: Task
+        concurrency: { version: body.expectedVersion, field: version }
+        ops:
+          update: { input: UpdateTask, inputMedia: form }
+`;
+
+test("bodies beyond JSON: a derived form field's wire is asked at its position in the input schema", () => {
+  const workspace = treeNodesLoadInline(FORM_UPDATE);
+  const updateTask = "/schemas/UpdateTask";
+  const treeSchemas = treeNodesStubService({
+    typeUses: {
+      "/surfaces/app/routes/tasks/ops/update/input": { kind: "ref", schema: "UpdateTask" },
+    },
+    queryWires: {
+      [`${updateTask}/properties/title`]: wire("text"),
+      [`${updateTask}/properties/expectedVersion`]: wire("number"),
+    },
+  });
+  const schema = objectSchema("UpdateTask", updateTask, { title: text, expectedVersion: integer });
+  const expectedVersion = schema.properties[1];
+  if (expectedVersion === undefined) throw new Error("the schema has no expectedVersion");
+  expectedVersion.origin = {
+    layer: "api",
+    pointer: "/surfaces/app/routes/tasks/concurrency/version",
+  };
+
+  const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas,
+    draft: draftWith(schema),
+  });
+
+  expect(diagnostics).toEqual([]);
+  expect(draft.operations[0]?.input?.fields).toEqual([
+    { name: "title", wire: fieldWire("text") },
+    { name: "expectedVersion", wire: fieldWire("number") },
+  ]);
 });
