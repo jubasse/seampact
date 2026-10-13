@@ -13,14 +13,19 @@
     "format:check": "biome format .",
     "test": "vitest run",
     "gate": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
-    "changeset": "changeset"
+    "changeset": "changeset",
+    "prepare": "simple-git-hooks"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@changesets/cli": "3.0.3",
     "@types/node": "24.19.1",
+    "simple-git-hooks": "2.14.0",
     "typescript": "6.0.3",
     "vitest": "5.0.3",
     "yaml": "2.9.1"
+  },
+  "simple-git-hooks": {
+    "pre-push": "if [ ! -f scripts/cartography/cli.ts ]; then echo 'pre-push: this branch has no scripts/cartography, map not checked'; exit 0; fi; node scripts/cartography/cli.ts --write && git diff --exit-code HEAD -- docs/agents/cartography.md || { echo 'pre-push: docs/agents/cartography.md differs from the commit; commit the regenerated map, then push again' >&2; exit 1; }"
   }
 }
