@@ -1,5 +1,5 @@
 #!/bin/sh
-# Pre-push check that docs/agents/cartography.md is current. It checks the current checkout,
+# Pre-push: regenerates docs/agents/cartography.md and refuses the push when it changed. It works on the current checkout,
 # not the pushed commits, so it skips when a pushed commit is not HEAD or the tree has
 # uncommitted changes. The CI check (p1-repo-checks.yml) is the guarantee.
 #
@@ -27,7 +27,12 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 0
 fi
 
-if ! node scripts/cartography/cli.ts --check; then
+if ! node scripts/cartography/cli.ts --write; then
   echo "pre-push: push refused, fix the cartography problem printed above, commit, then push again" >&2
+  exit 1
+fi
+
+if ! git diff --quiet HEAD -- docs/agents/cartography.md; then
+  echo "pre-push: push refused, docs/agents/cartography.md was regenerated; commit it, then push again" >&2
   exit 1
 fi

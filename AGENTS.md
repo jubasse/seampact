@@ -18,7 +18,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 - During work: the affected tests (`pnpm vitest run <paths>`), `pnpm typecheck`, `pnpm lint`.
 - Once at the end of a PR: `pnpm install --frozen-lockfile && pnpm gate && node scripts/checklist/cli.ts check && node scripts/cartography/cli.ts --check`, and a clean tree.
-- A stale map: run `node scripts/cartography/cli.ts --write` and commit `docs/agents/cartography.md`. CI checks it on every PR. The pre-push hook also runs `--check`, but only on the current checkout: it skips with a message when a pushed commit is not `HEAD` or the tree has uncommitted changes, so CI is the guarantee.
+- A stale map: run `node scripts/cartography/cli.ts --write` and commit `docs/agents/cartography.md`. CI checks it on every PR. The pre-push hook regenerates the map and refuses the push while it is uncommitted, but only on the current checkout: it skips with a message when a pushed commit is not `HEAD` or the tree has uncommitted changes, so CI is the guarantee.
 - Stop on a classifier refusal and report it; never work around it.
 
 ## Files
