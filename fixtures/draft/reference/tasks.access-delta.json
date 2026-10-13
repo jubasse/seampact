@@ -1,0 +1,1186 @@
+{
+  "access.identity": {
+    "schemes": {
+      "sessionCookie": {
+        "id": "sessionCookie",
+        "kind": "cookie",
+        "name": "__Host-session",
+        "csrf": "csrfToken",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/schemes/sessionCookie"
+        }
+      },
+      "csrfToken": {
+        "id": "csrfToken",
+        "kind": "header",
+        "name": "X-Csrf-Token",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/schemes/csrfToken"
+        }
+      },
+      "bearer": {
+        "id": "bearer",
+        "kind": "bearer",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/schemes/bearer"
+        }
+      },
+      "internalToken": {
+        "id": "internalToken",
+        "kind": "bearer",
+        "bearer": {
+          "format": "jwt"
+        },
+        "origin": {
+          "layer": "shared",
+          "pointer": "/schemes/internalToken"
+        }
+      },
+      "stripeSignature": {
+        "id": "stripeSignature",
+        "kind": "signature",
+        "name": "Stripe-Signature",
+        "signature": {
+          "verify": "template",
+          "format": "t={ts},v1={sig}",
+          "algorithm": "hmac-sha256",
+          "payload": "{ts}.{rawBody}",
+          "encoding": "hex",
+          "toleranceMs": 300000,
+          "key": {
+            "kind": "value",
+            "value": "stripe"
+          }
+        },
+        "origin": {
+          "layer": "shared",
+          "pointer": "/schemes/stripeSignature"
+        }
+      }
+    },
+    "headers": {
+      "deadline": {
+        "id": "deadline",
+        "semantic": "deadline",
+        "name": "X-Deadline",
+        "in": "request",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/headers/deadline"
+        }
+      },
+      "trace": {
+        "id": "trace",
+        "semantic": "traceContext",
+        "name": "traceparent",
+        "in": "request",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/headers/trace"
+        }
+      },
+      "actorSurface": {
+        "id": "actorSurface",
+        "semantic": "actorSurface",
+        "name": "X-Actor-Surface",
+        "in": "request",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/headers/actorSurface"
+        }
+      }
+    },
+    "identities": {
+      "user": {
+        "id": "user",
+        "kind": "credential",
+        "schemes": {
+          "read": ["bearer", "sessionCookie"],
+          "write": ["bearer", "sessionCookie"],
+          "optionalRead": []
+        },
+        "principal": {
+          "kind": "schema",
+          "schema": "UserPrincipal"
+        },
+        "errors": [],
+        "headers": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/identities/user"
+        }
+      },
+      "service": {
+        "id": "service",
+        "kind": "credential",
+        "schemes": {
+          "read": ["internalToken"],
+          "write": ["internalToken"],
+          "optionalRead": []
+        },
+        "principal": {
+          "kind": "schema",
+          "schema": "ServicePrincipal"
+        },
+        "headers": [
+          {
+            "header": "deadline",
+            "for": "all",
+            "required": true,
+            "origin": {
+              "layer": "shared",
+              "pointer": "/identities/service/headers/deadline"
+            }
+          },
+          {
+            "header": "trace",
+            "for": "all",
+            "required": false,
+            "origin": {
+              "layer": "shared",
+              "pointer": "/identities/service/headers/trace"
+            }
+          },
+          {
+            "header": "actorSurface",
+            "for": "writes",
+            "required": true,
+            "schema": {
+              "kind": "enum",
+              "enum": "Surface"
+            },
+            "origin": {
+              "layer": "shared",
+              "pointer": "/identities/service/headers/actorSurface"
+            }
+          }
+        ],
+        "errors": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/identities/service"
+        }
+      },
+      "stripe": {
+        "id": "stripe",
+        "kind": "signed",
+        "signed": "stripeSignature",
+        "principal": {
+          "kind": "schema",
+          "schema": "WebhookCaller"
+        },
+        "errors": [],
+        "headers": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/identities/stripe"
+        }
+      }
+    },
+    "operations": {
+      "health": {
+        "access": {
+          "kind": "public",
+          "reason": "Probes call it before any user exists.",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/health/access"
+          }
+        },
+        "callerKinds": ["anonymous"],
+        "principalRequires": [],
+        "bindings": []
+      },
+      "listChannels": {
+        "access": {
+          "kind": "identity",
+          "identity": "user",
+          "schemes": ["bearer", "sessionCookie"],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/identity"
+          }
+        },
+        "callerKinds": ["identified"],
+        "principalRequires": [],
+        "bindings": []
+      },
+      "getChannel": {
+        "access": {
+          "kind": "identity",
+          "identity": "user",
+          "schemes": ["bearer", "sessionCookie"],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/identity"
+          }
+        },
+        "callerKinds": ["identified"],
+        "principalRequires": [],
+        "bindings": []
+      },
+      "listTasks": {
+        "access": {
+          "kind": "identity",
+          "identity": "user",
+          "schemes": ["bearer", "sessionCookie"],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/identity"
+          }
+        },
+        "callerKinds": ["identified"],
+        "principalRequires": [],
+        "bindings": []
+      },
+      "createTask": {
+        "access": {
+          "kind": "identity",
+          "identity": "user",
+          "schemes": ["bearer", "sessionCookie"],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/identity"
+          }
+        },
+        "callerKinds": ["identified"],
+        "principalRequires": [],
+        "bindings": [],
+        "csrf": {
+          "kind": "derived",
+          "header": "X-Csrf-Token",
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          }
+        },
+        "input": {
+          "rawBody": false
+        }
+      },
+      "getTasksBatch": {
+        "access": {
+          "kind": "identity",
+          "identity": "user",
+          "schemes": ["bearer", "sessionCookie"],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/identity"
+          }
+        },
+        "callerKinds": ["identified"],
+        "principalRequires": [],
+        "bindings": [],
+        "input": {
+          "rawBody": false
+        }
+      },
+      "searchTasks": {
+        "access": {
+          "kind": "identity",
+          "identity": "user",
+          "schemes": ["bearer", "sessionCookie"],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/identity"
+          }
+        },
+        "callerKinds": ["identified"],
+        "principalRequires": [],
+        "bindings": [],
+        "csrf": {
+          "kind": "derived",
+          "header": "X-Csrf-Token",
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          }
+        },
+        "input": {
+          "rawBody": false
+        }
+      },
+      "getTask": {
+        "access": {
+          "kind": "identity",
+          "identity": "user",
+          "schemes": ["bearer", "sessionCookie"],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/identity"
+          }
+        },
+        "callerKinds": ["identified"],
+        "principalRequires": [],
+        "bindings": []
+      },
+      "updateTask": {
+        "access": {
+          "kind": "identity",
+          "identity": "user",
+          "schemes": ["bearer", "sessionCookie"],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/identity"
+          }
+        },
+        "callerKinds": ["identified"],
+        "principalRequires": [],
+        "bindings": [],
+        "csrf": {
+          "kind": "derived",
+          "header": "X-Csrf-Token",
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          }
+        },
+        "input": {
+          "rawBody": false
+        }
+      },
+      "assignTask": {
+        "access": {
+          "kind": "identity",
+          "identity": "user",
+          "schemes": ["bearer", "sessionCookie"],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/identity"
+          }
+        },
+        "callerKinds": ["identified"],
+        "principalRequires": [],
+        "bindings": [],
+        "csrf": {
+          "kind": "derived",
+          "header": "X-Csrf-Token",
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          }
+        },
+        "input": {
+          "rawBody": false
+        }
+      },
+      "archiveTask": {
+        "access": {
+          "kind": "identity",
+          "identity": "user",
+          "schemes": ["bearer", "sessionCookie"],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/identity"
+          }
+        },
+        "callerKinds": ["identified"],
+        "principalRequires": [],
+        "bindings": [],
+        "csrf": {
+          "kind": "derived",
+          "header": "X-Csrf-Token",
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          }
+        },
+        "input": {
+          "rawBody": false
+        }
+      },
+      "getPreferences": {
+        "access": {
+          "kind": "identity",
+          "identity": "user",
+          "schemes": ["bearer", "sessionCookie"],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/identity"
+          }
+        },
+        "callerKinds": ["identified"],
+        "principalRequires": [],
+        "bindings": []
+      },
+      "updatePreferences": {
+        "access": {
+          "kind": "identity",
+          "identity": "user",
+          "schemes": ["bearer", "sessionCookie"],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/identity"
+          }
+        },
+        "callerKinds": ["identified"],
+        "principalRequires": [],
+        "bindings": [],
+        "csrf": {
+          "kind": "derived",
+          "header": "X-Csrf-Token",
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          }
+        },
+        "input": {
+          "rawBody": false
+        }
+      },
+      "getDraft": {
+        "access": {
+          "kind": "identity",
+          "identity": "user",
+          "schemes": ["bearer", "sessionCookie"],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/identity"
+          }
+        },
+        "callerKinds": ["identified"],
+        "principalRequires": [],
+        "bindings": []
+      },
+      "deleteDraft": {
+        "access": {
+          "kind": "identity",
+          "identity": "user",
+          "schemes": ["bearer", "sessionCookie"],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/identity"
+          }
+        },
+        "callerKinds": ["identified"],
+        "principalRequires": [],
+        "bindings": [],
+        "csrf": {
+          "kind": "derived",
+          "header": "X-Csrf-Token",
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          }
+        }
+      },
+      "payments": {
+        "access": {
+          "kind": "identity",
+          "identity": "stripe",
+          "schemes": ["stripeSignature"],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks/identity"
+          }
+        },
+        "callerKinds": ["identified"],
+        "principalRequires": [],
+        "bindings": [],
+        "input": {
+          "rawBody": true
+        }
+      }
+    }
+  },
+  "access.rights": {
+    "rights": {
+      "roles": {
+        "id": "roles",
+        "params": "RolesParams",
+        "subject": {
+          "kind": "scope",
+          "scope": "channel"
+        },
+        "errors": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/rights/roles"
+        }
+      },
+      "tasks.read": {
+        "id": "tasks.read",
+        "subject": {
+          "kind": "scope",
+          "scope": "channel"
+        },
+        "errors": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/rights/tasks.read"
+        }
+      },
+      "tasks.update": {
+        "id": "tasks.update",
+        "subject": {
+          "kind": "resource",
+          "type": {
+            "segments": ["task"],
+            "role": "schema"
+          },
+          "idSchema": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "uuid",
+            "refinements": {}
+          }
+        },
+        "errors": ["api.forbidden", "api.not_found"],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/rights/tasks.update"
+        }
+      },
+      "tasks.seeEffort": {
+        "id": "tasks.seeEffort",
+        "subject": {
+          "kind": "resource",
+          "type": {
+            "segments": ["task"],
+            "role": "schema"
+          },
+          "idSchema": {
+            "kind": "scalar",
+            "type": "string",
+            "format": "uuid",
+            "refinements": {}
+          }
+        },
+        "errors": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/rights/tasks.seeEffort"
+        }
+      },
+      "callerService": {
+        "id": "callerService",
+        "params": "CallerServiceParams",
+        "subject": {
+          "kind": "none"
+        },
+        "errors": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/rights/callerService"
+        }
+      }
+    },
+    "rules": {
+      "throttle": {
+        "id": "throttle",
+        "takesBucket": true,
+        "errors": ["api.rate_limited"],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/rules/throttle"
+        }
+      }
+    },
+    "scopes": {
+      "channel": {
+        "id": "channel",
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        },
+        "errors": ["api.not_found"],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/scopes/channel"
+        }
+      }
+    },
+    "buckets": {
+      "write": {
+        "id": "write",
+        "key": [
+          {
+            "in": "principal",
+            "name": "userId"
+          }
+        ],
+        "limit": 60,
+        "windowMs": 60000,
+        "origin": {
+          "layer": "shared",
+          "pointer": "/buckets/write"
+        }
+      }
+    },
+    "operations": {
+      "health": {
+        "scopes": [],
+        "requires": [],
+        "fieldRights": []
+      },
+      "listChannels": {
+        "scopes": [],
+        "requires": [],
+        "fieldRights": []
+      },
+      "getChannel": {
+        "scopes": [
+          {
+            "scope": "channel",
+            "source": {
+              "in": "path",
+              "name": "channelId"
+            },
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+            }
+          }
+        ],
+        "requires": [],
+        "fieldRights": []
+      },
+      "listTasks": {
+        "scopes": [
+          {
+            "scope": "channel",
+            "source": {
+              "in": "path",
+              "name": "channelId"
+            },
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+            }
+          }
+        ],
+        "requires": [],
+        "fieldRights": [
+          {
+            "schema": "Task",
+            "pointer": "/effort",
+            "right": "tasks.seeEffort",
+            "subject": {
+              "source": {
+                "in": "holderField",
+                "name": "taskId"
+              }
+            },
+            "direction": "output",
+            "derivedFrom": {
+              "derivation": "fieldRight.restricted",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/schemas/Task/properties/effort"
+                }
+              ]
+            }
+          }
+        ],
+        "filteredBy": "tasks.read",
+        "paging": {
+          "sortKeys": {
+            "1": {
+              "right": "tasks.seeEffort",
+              "derivedFrom": {
+                "derivation": "sortKey.restricted",
+                "from": [
+                  {
+                    "layer": "shared",
+                    "pointer": "/schemas/Task/properties/effort"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "createTask": {
+        "scopes": [
+          {
+            "scope": "channel",
+            "source": {
+              "in": "path",
+              "name": "channelId"
+            },
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+            }
+          }
+        ],
+        "requires": [
+          {
+            "kind": "rule",
+            "rule": "throttle",
+            "bucket": "write",
+            "entry": "writeThrottle",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/0"
+            }
+          },
+          {
+            "kind": "right",
+            "right": "roles",
+            "params": {
+              "allowed": ["owner", "editor"]
+            },
+            "subject": {
+              "source": {
+                "in": "scope",
+                "name": "channel"
+              },
+              "defaulted": true
+            },
+            "entry": "channelEditor",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/1"
+            }
+          }
+        ],
+        "fieldRights": [
+          {
+            "schema": "Task",
+            "pointer": "/effort",
+            "right": "tasks.seeEffort",
+            "subject": {
+              "source": {
+                "in": "holderField",
+                "name": "taskId"
+              }
+            },
+            "direction": "output",
+            "derivedFrom": {
+              "derivation": "fieldRight.restricted",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/schemas/Task/properties/effort"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "getTasksBatch": {
+        "scopes": [
+          {
+            "scope": "channel",
+            "source": {
+              "in": "path",
+              "name": "channelId"
+            },
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+            }
+          }
+        ],
+        "requires": [],
+        "fieldRights": [
+          {
+            "schema": "Task",
+            "pointer": "/effort",
+            "right": "tasks.seeEffort",
+            "subject": {
+              "source": {
+                "in": "holderField",
+                "name": "taskId"
+              }
+            },
+            "direction": "output",
+            "derivedFrom": {
+              "derivation": "fieldRight.restricted",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/schemas/Task/properties/effort"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "searchTasks": {
+        "scopes": [
+          {
+            "scope": "channel",
+            "source": {
+              "in": "path",
+              "name": "channelId"
+            },
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+            }
+          }
+        ],
+        "requires": [
+          {
+            "kind": "right",
+            "right": "tasks.read",
+            "subject": {
+              "source": {
+                "in": "scope",
+                "name": "channel"
+              },
+              "defaulted": true
+            },
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/requires/0"
+            }
+          }
+        ],
+        "fieldRights": [
+          {
+            "schema": "TaskSearchResult",
+            "pointer": "/items/*/effort",
+            "right": "tasks.seeEffort",
+            "subject": {
+              "source": {
+                "in": "holderField",
+                "name": "taskId"
+              }
+            },
+            "direction": "output",
+            "derivedFrom": {
+              "derivation": "fieldRight.restricted",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/schemas/Task/properties/effort"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "getTask": {
+        "scopes": [
+          {
+            "scope": "channel",
+            "source": {
+              "in": "path",
+              "name": "channelId"
+            },
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+            }
+          }
+        ],
+        "requires": [],
+        "fieldRights": [
+          {
+            "schema": "Task",
+            "pointer": "/effort",
+            "right": "tasks.seeEffort",
+            "subject": {
+              "source": {
+                "in": "holderField",
+                "name": "taskId"
+              }
+            },
+            "direction": "output",
+            "derivedFrom": {
+              "derivation": "fieldRight.restricted",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/schemas/Task/properties/effort"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "updateTask": {
+        "scopes": [
+          {
+            "scope": "channel",
+            "source": {
+              "in": "path",
+              "name": "channelId"
+            },
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+            }
+          }
+        ],
+        "requires": [
+          {
+            "kind": "right",
+            "right": "tasks.update",
+            "subject": {
+              "source": {
+                "in": "path",
+                "name": "taskId"
+              },
+              "defaulted": true
+            },
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update/requires/0"
+            }
+          }
+        ],
+        "fieldRights": [
+          {
+            "schema": "Task",
+            "pointer": "/effort",
+            "right": "tasks.seeEffort",
+            "subject": {
+              "source": {
+                "in": "holderField",
+                "name": "taskId"
+              }
+            },
+            "direction": "output",
+            "derivedFrom": {
+              "derivation": "fieldRight.restricted",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/schemas/Task/properties/effort"
+                }
+              ]
+            }
+          },
+          {
+            "schema": "UpdateTask",
+            "pointer": "/effort",
+            "right": "tasks.seeEffort",
+            "subject": {
+              "source": {
+                "in": "path",
+                "name": "taskId"
+              }
+            },
+            "direction": "input",
+            "inputPolicy": "reject",
+            "derivedFrom": {
+              "derivation": "fieldRight.restricted",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/schemas/Task/properties/effort"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "assignTask": {
+        "scopes": [
+          {
+            "scope": "channel",
+            "source": {
+              "in": "path",
+              "name": "channelId"
+            },
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+            }
+          }
+        ],
+        "requires": [
+          {
+            "kind": "right",
+            "right": "roles",
+            "params": {
+              "allowed": ["owner", "editor"]
+            },
+            "subject": {
+              "source": {
+                "in": "scope",
+                "name": "channel"
+              },
+              "defaulted": true
+            },
+            "entry": "channelEditor",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/requires/0"
+            }
+          }
+        ],
+        "fieldRights": [
+          {
+            "schema": "Task",
+            "pointer": "/effort",
+            "right": "tasks.seeEffort",
+            "subject": {
+              "source": {
+                "in": "holderField",
+                "name": "taskId"
+              }
+            },
+            "direction": "output",
+            "derivedFrom": {
+              "derivation": "fieldRight.restricted",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/schemas/Task/properties/effort"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "archiveTask": {
+        "scopes": [
+          {
+            "scope": "channel",
+            "source": {
+              "in": "path",
+              "name": "channelId"
+            },
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+            }
+          }
+        ],
+        "requires": [],
+        "fieldRights": [
+          {
+            "schema": "Task",
+            "pointer": "/effort",
+            "right": "tasks.seeEffort",
+            "subject": {
+              "source": {
+                "in": "holderField",
+                "name": "taskId"
+              }
+            },
+            "direction": "output",
+            "derivedFrom": {
+              "derivation": "fieldRight.restricted",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/schemas/Task/properties/effort"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "getPreferences": {
+        "scopes": [],
+        "requires": [],
+        "fieldRights": []
+      },
+      "updatePreferences": {
+        "scopes": [],
+        "requires": [],
+        "fieldRights": []
+      },
+      "getDraft": {
+        "scopes": [],
+        "requires": [],
+        "fieldRights": []
+      },
+      "deleteDraft": {
+        "scopes": [],
+        "requires": [],
+        "fieldRights": []
+      },
+      "payments": {
+        "scopes": [],
+        "requires": [],
+        "fieldRights": []
+      }
+    }
+  }
+}

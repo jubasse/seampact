@@ -1,4 +1,5 @@
-// The seam barrel: every leaf module of `pipeline/`, and never the orchestrator or the registry. A stage module
+// The seam barrel: every leaf module of `pipeline/`, and never the orchestrator or the registry. The test support
+// modules (`draft-schema.ts`, `draft-fixture.ts`) are in no barrel: tests import them by path. A stage module
 // (a half, link, finalize, the relay order) imports pipeline values from here only: the registry imports every
 // stage module, so importing `pipeline/index.js` (which exports the orchestrator) from one would close a cycle,
 // and a value read during that cycle is still in its temporal dead zone. `seam.test.ts` keeps this file
