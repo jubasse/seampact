@@ -373,3 +373,29 @@ test("bodies beyond JSON: a derived form field's wire is asked at its position i
     { name: "expectedVersion", wire: fieldWire("number") },
   ]);
 });
+
+test("bodies beyond JSON: a body limit that does not parse is an internal error", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: uploads, version: 1, kind: product }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      attach:
+        method: post
+        inputMedia: multipart
+        bodyLimit: 99999999999999999999999GiB
+        input:
+          type: object
+          properties:
+            file: { file: { media: [image/png], maxSize: 2MiB } }
+`);
+  const treeSchemas = treeNodesStubService({
+    typeUses: { [ATTACH]: { kind: "ref", schema: "AttachInput" } },
+  });
+  const draft = draftWith(objectSchema("AttachInput", ATTACH, { file: file(2 * MiB) }));
+
+  expect(() => treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas, draft })).toThrow(
+    /the body limit at \/surfaces\/app\/routes\/attach\/bodyLimit does not parse/,
+  );
+});

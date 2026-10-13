@@ -208,19 +208,36 @@ function checkFileField(site: InputSite, property: IrWriter.Property, at: Diagno
   );
 }
 
+interface BodyLimit {
+  readonly bytes: number;
+  /** Undefined for the core default. */
+  readonly origin: Origin | undefined;
+}
+
 // The route's body limit: the nearest `bodyLimit` of the tree, else the convention (`batch.bodyLimit` for a batch).
-function bodyLimitOf(site: InputSite): { bytes: number; origin: Origin | undefined } | undefined {
+function bodyLimitOf(site: InputSite): BodyLimit | undefined {
   const inherited = site.context.inherited(site.node, "bodyLimit");
   if (inherited !== undefined) {
     const { value, origin } = inherited.entry;
-    const bytes = typeof value === "string" ? pipelineParseSize(value) : undefined;
-    return bytes === undefined ? undefined : { bytes, origin };
+    return parsedBodyLimit(value, origin, origin.pointer);
   }
 
   const isBatch = site.node.kind === "op" && site.node.name === "batch";
-  const reading = site.context.conventions.get(isBatch ? "batch.bodyLimit" : "bodyLimit");
-  const bytes = typeof reading?.value === "string" ? pipelineParseSize(reading.value) : undefined;
-  return bytes === undefined ? undefined : { bytes, origin: reading?.origin };
+  const convention = isBatch ? "batch.bodyLimit" : "bodyLimit";
+  const reading = site.context.conventions.get(convention);
+  if (reading === undefined) return undefined;
+  const writtenAt = reading.origin?.pointer ?? `the default conventions.${convention}`;
+  return parsedBodyLimit(reading.value, reading.origin, writtenAt);
+}
+
+// A written limit the size grammar admits but that does not parse (an overflow) would skip the maxSize check.
+function parsedBodyLimit(value: unknown, origin: Origin | undefined, writtenAt: string): BodyLimit {
+  const bytes = typeof value === "string" ? pipelineParseSize(value) : undefined;
+  if (bytes === undefined)
+    throw new Error(
+      `the body limit at ${writtenAt} does not parse as a size: ${String(value)}`,
+    );
+  return { bytes, origin };
 }
 
 // Every file reached from `use` (a file itself included), through schemas, items, map values, union variants and
