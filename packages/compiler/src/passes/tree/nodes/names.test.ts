@@ -229,3 +229,52 @@ test("operation ids are unique", () => {
       expect(Object.hasOwn(raw.locations, diagnosticLocationKey(origin))).toBe(true);
   }
 });
+
+// ADR 0002 section 6: the singular comes from `singular` or `id`, never from the plural.
+const SINGULARS = `
+api: { name: a, version: 1, kind: product }
+schemas:
+  Event: { type: object, properties: { eventKey: { type: string } } }
+  Log: { type: object, properties: { line: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      events:
+        kind: collection
+        singular: event
+        idProperty: eventKey
+        item: Event
+        ops: [list, create]
+      logs:
+        kind: collection
+        item: Log
+        ops: [list, create, get]
+        member:
+          routes:
+            tail: { method: get }
+`;
+
+test("a collection whose operation names need a singular gives singular or id", () => {
+  const workspace = treeNodesLoadInline(SINGULARS);
+  const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas,
+  });
+
+  expect(draft.operations.map(({ id, resource }) => ({ id, resource }))).toEqual([
+    { id: "listEvents", resource: { type: "events", idProperty: "eventKey" } },
+    { id: "createEvent", resource: { type: "events", idProperty: "eventKey" } },
+    { id: "listLogs", resource: { type: "logs" } },
+  ]);
+  expect(
+    diagnostics.map(({ rule, origin, message, fix }) => ({ rule, origin, message, fix })),
+  ).toEqual([
+    {
+      rule: "seampact/tree/collection-singular",
+      origin: { layer: "api", pointer: "/surfaces/app/routes/logs" },
+      message:
+        "The collection logs declares neither singular nor id, so the operation at /surfaces/app/routes/logs/ops/1 has no singular noun for its name.",
+      fix: "Set singular on the collection (or declare its id).",
+    },
+  ]);
+});

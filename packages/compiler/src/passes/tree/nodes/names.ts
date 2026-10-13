@@ -50,13 +50,13 @@ export function treeNodesIdParam(collection: TreeNode): string | undefined {
 }
 
 // The singular of a collection: `singular`, else the id parameter without its `Id` suffix, else the whole
-// parameter. A collection without `id` has no member id: its name stands for the noun.
-function singularWords(collection: TreeNode): string[] {
+// parameter; undefined when it declares neither (ADR 0002 section 6 gives no third source).
+function singularWords(collection: TreeNode): string[] | undefined {
   const singular = textSetting(collection, "singular");
   if (singular !== undefined) return splitName(singular);
 
   const idParam = treeNodesIdParam(collection);
-  if (idParam === undefined) return splitName(collection.name);
+  if (idParam === undefined) return undefined;
 
   const stem =
     idParam.endsWith(ID_SUFFIX) && idParam.length > ID_SUFFIX.length
@@ -71,61 +71,98 @@ function opOwner(op: TreeNode): TreeNode | undefined {
   return parent?.kind === "scope" ? parent.parent : parent;
 }
 
-// The noun words of an operation node, and the verb words before the order is applied.
-function wordsOf(node: TreeNode): { verb: string[]; noun: string[] } {
+/**
+ * The collection whose singular names an operation node: the collection of a member-scope route or of an op that
+ * reads one record. Undefined when the noun is a plural, a single's name or none.
+ */
+export function treeNodesSingularOwner(node: TreeNode): TreeNode | undefined {
   if (node.kind === "op") {
     const owner = opOwner(node);
-    if (owner === undefined) return { verb: splitName(node.name), noun: [] };
-    if (owner.kind === "single") return { verb: splitName(node.name), noun: splitName(owner.name) };
-
-    const plural = PLURAL_OPS.includes(node.name);
-    const noun = plural ? splitName(owner.name) : singularWords(owner);
-    return node.name === "batch"
-      ? { verb: [...BATCH_VERB], noun: [...noun, ...BATCH_SUFFIX] }
-      : { verb: splitName(node.name), noun };
+    return owner?.kind === "collection" && !PLURAL_OPS.includes(node.name) ? owner : undefined;
   }
 
-  const verb = splitName(node.name);
   const parent = node.parent;
-  if (parent === undefined || parent.kind === "surface") return { verb, noun: [] };
-  if (parent.kind === "single") return { verb, noun: splitName(parent.name) };
+  return parent?.kind === "scope" && parent.name === "member" ? parent.parent : undefined;
+}
 
-  const collection = parent.kind === "scope" ? parent.parent : undefined;
-  if (collection === undefined) return { verb, noun: [] };
-  return {
-    verb,
-    noun: parent.name === "member" ? singularWords(collection) : splitName(collection.name),
-  };
+interface Words {
+  readonly verb: string[];
+  readonly noun: string[];
+}
+
+// The verb and noun words of an operation node, before the order is applied; undefined when the noun is the
+// singular of a collection that gives none.
+function wordsOf(node: TreeNode): Words | undefined {
+  const singularOwner = treeNodesSingularOwner(node);
+  if (singularOwner === undefined) return node.kind === "op" ? opWords(node) : routeWords(node);
+
+  const noun = singularWords(singularOwner);
+  return noun === undefined ? undefined : { verb: splitName(node.name), noun };
+}
+
+// An op reading several records: the single's name, or the collection's plural (`getTasksBatch` for a batch).
+function opWords(op: TreeNode): Words {
+  const owner = opOwner(op);
+  if (owner === undefined) return { verb: splitName(op.name), noun: [] };
+
+  const noun = splitName(owner.name);
+  return op.name === "batch" && owner.kind === "collection"
+    ? { verb: [...BATCH_VERB], noun: [...noun, ...BATCH_SUFFIX] }
+    : { verb: splitName(op.name), noun };
+}
+
+// A route off the member scope: the single's name, the collection's plural, or none under a surface root.
+function routeWords(route: TreeNode): Words {
+  const verb = splitName(route.name);
+  const parent = route.parent;
+  if (parent?.kind === "single") return { verb, noun: splitName(parent.name) };
+
+  const collection = parent?.kind === "scope" ? parent.parent : undefined;
+  return { verb, noun: collection === undefined ? [] : splitName(collection.name) };
 }
 
 function idOrder(conventions: ResolvedConventions): IdOrder {
   const order = conventions.get("operationIds.order")?.value;
-  return order === "nounVerb" ? "nounVerb" : "verbNoun";
+  if (order === "verbNoun" || order === "nounVerb") return order;
+  throw new Error(
+    `conventions.operationIds.order resolves to ${String(order)}, no order the grammar admits`,
+  );
 }
 
 function idCase(conventions: ResolvedConventions): OperationIdCase {
   const written = conventions.get("operationIds.case")?.value;
-  return written === "snake" ? "snake" : "camel";
+  if (written === "camel" || written === "snake") return written;
+  throw new Error(
+    `conventions.operationIds.case resolves to ${String(written)}, no case the grammar admits`,
+  );
 }
 
-/** The id and name of one operation node; undefined when its words give no segment (the pass reports it). */
+/**
+ * The id and name of one operation node; undefined when its noun is the singular of a collection that declares
+ * neither `singular` nor `id` (the pass reports it).
+ */
 export function treeNodesOperationName(
   node: TreeNode,
   conventions: ResolvedConventions,
 ): TreeNodesOperationName | undefined {
   const written = textSetting(node, "operationId");
-  if (written !== undefined) return named(written, splitName(written));
+  if (written !== undefined) return named(node, written, splitName(written));
 
-  if (node.kind === "relay") return named(node.name, splitName(node.name));
+  if (node.kind === "relay") return named(node, node.name, splitName(node.name));
 
-  const { verb, noun } = wordsOf(node);
+  const words = wordsOf(node);
+  if (words === undefined) return undefined;
+  const { verb, noun } = words;
   const segments = idOrder(conventions) === "nounVerb" ? [...noun, ...verb] : [...verb, ...noun];
-  if (segments.length === 0) return undefined;
-  return named(operationId(segments, idCase(conventions)), segments);
+  return named(node, operationId(segments, idCase(conventions)), segments);
 }
 
-function named(id: string, segments: string[]): TreeNodesOperationName | undefined {
-  if (segments.length === 0) return undefined;
+// The authoring grammar spells node names and operation ids with a leading letter, so each gives a segment.
+function named(node: TreeNode, id: string, segments: string[]): TreeNodesOperationName {
+  if (segments.length === 0)
+    throw new Error(
+      `the operation at ${node.pointer} has a name with no segment, which the grammar refuses`,
+    );
   return { id, name: { segments, role: ROLE_OPERATION } };
 }
 
@@ -133,7 +170,8 @@ function named(id: string, segments: string[]): TreeNodesOperationName | undefin
  * The id and the name of every operation of the api, keyed by the JSON Pointer of its node in the merged raw tree:
  * the route, the relay route, or the `ops` entry (`.../tasks/ops/get` in a mapping, `.../tasks/ops/1` in a list).
  * Pure: it reads the raw tree and the conventions only, so tree.schemas names inline route schemas with it before
- * tree.nodes runs (ADR 0007 section 3). An operation whose words give no segment is left out; tree.nodes reports it.
+ * tree.nodes runs (ADR 0007 section 3). An operation whose collection gives no singular for its name is left out;
+ * tree.nodes reports it. The ids are not yet checked unique: tree.nodes reports a clash, after tree.schemas.
  */
 export function treeNodesOperationNames(
   raw: PassReadonly<RawApi>,

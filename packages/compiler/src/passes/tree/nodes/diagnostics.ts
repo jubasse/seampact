@@ -11,7 +11,7 @@ import { pipelineCopy } from "../../../pipeline/seam.js";
 
 /** The rules tree.nodes reports, without their `seampact/tree/` prefix. */
 export type TreeNodesRule =
-  | "operation-name"
+  | "collection-singular"
   | "operation-id-unique"
   | "operation-name-unique"
   | "input-file"

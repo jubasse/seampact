@@ -14,6 +14,7 @@ import {
   treeNodesIdParam,
   treeNodesIsOperation,
   treeNodesOperationName,
+  treeNodesSingularOwner,
 } from "./names.js";
 
 // The operations of the api (ADR 0002 sections 6 and 7): one per route, relay route and `ops` entry, in tree order,
@@ -44,27 +45,27 @@ const isHttpMethod = (value: unknown): value is IrWriter.HttpMethod =>
 const isOpShorthand = (value: string): value is IrWriter.OpShorthand =>
   OP_SHORTHANDS.some((op) => op === value);
 
-/** An operation written to the draft, with the node it came from. */
+/** An operation written to the draft, with the node it came from and its name. */
 interface Written {
   readonly node: TreeNode;
-  readonly operation: DraftOperation;
+  readonly name: TreeNodesOperationName;
 }
 
 /** Writes every operation of the api to the draft, in tree order, and reports the id and name clashes. */
 export function treeNodesOperations(draft: DraftIR, context: TreeNodesContext): void {
   const written: Written[] = [];
+  const collectionsWithoutSingular = new Set<string>();
   for (const node of pipelineTreeNodes(context.raw)) {
     if (!treeNodesIsOperation(node)) continue;
 
     const name = treeNodesOperationName(node, context.conventions);
     if (name === undefined) {
-      reportNoSegment(node, context);
+      reportNoSingular(node, collectionsWithoutSingular, context);
       continue;
     }
 
-    const operation = operationOf(node, name, draft, context);
-    draft.operations.push(operation);
-    written.push({ node, operation });
+    draft.operations.push(operationOf(node, name, draft, context));
+    written.push({ node, name });
   }
 
   reportClashes(written, context);
@@ -117,7 +118,7 @@ function methodOf(
 }
 
 // The collection or single an operation belongs to (its nearest one), with the member id parameter when the
-// operation sits on the member scope and the item property holding the id.
+// operation sits on the member scope, and the item property holding the id: `idProperty`, else the id parameter.
 function resourceOf(node: TreeNode): IrWriter.OperationResource | undefined {
   let onMember = false;
   for (let at = node.parent; at !== undefined; at = at.parent) {
@@ -131,23 +132,38 @@ function resourceOf(node: TreeNode): IrWriter.OperationResource | undefined {
     if (at.kind === "single") return { type };
 
     const idParam = treeNodesIdParam(at);
-    if (idParam === undefined) return { type };
     const idPropertyWritten = Object.hasOwn(at.settings, "idProperty")
       ? at.settings.idProperty
       : undefined;
     const idProperty = typeof idPropertyWritten === "string" ? idPropertyWritten : idParam;
-    return onMember ? { type, idParam, idProperty } : { type, idProperty };
+    return {
+      type,
+      ...(onMember && idParam !== undefined ? { idParam } : {}),
+      ...(idProperty === undefined ? {} : { idProperty }),
+    };
   }
   return undefined;
 }
 
-function reportNoSegment(node: TreeNode, context: TreeNodesContext): void {
+// ADR 0002 section 6: the singular comes from `singular` or `id` only. Reported once per collection, at its first
+// operation that needs it.
+function reportNoSingular(
+  node: TreeNode,
+  reportedCollections: Set<string>,
+  context: TreeNodesContext,
+): void {
+  const collection = treeNodesSingularOwner(node);
+  if (collection === undefined)
+    throw new Error(`the operation at ${node.pointer} has no name, yet needs no singular`);
+  if (reportedCollections.has(collection.pointer)) return;
+  reportedCollections.add(collection.pointer);
+
   context.report(
     treeNodesError({
-      rule: "operation-name",
-      origin: treeNodesNodeOrigin(node.origin),
-      message: `The operation at ${node.pointer} has a name with no letter or digit, so it has no operation id.`,
-      fix: "Rename the route, or set operationId.",
+      rule: "collection-singular",
+      origin: treeNodesNodeOrigin(collection.origin),
+      message: `The collection ${collection.name} declares neither singular nor id, so the operation at ${node.pointer} has no singular noun for its name.`,
+      fix: "Set singular on the collection (or declare its id).",
     }),
   );
 }
@@ -159,8 +175,7 @@ function reportClashes(written: readonly Written[], context: TreeNodesContext): 
   const bySegments = new Map<string, Written>();
 
   for (const entry of written) {
-    const { id, name } = entry.operation;
-    if (id === undefined || name === undefined) continue;
+    const { id, name } = entry.name;
 
     const sameId = byId.get(id);
     if (sameId !== undefined) {
@@ -182,8 +197,8 @@ function reportClash(
   rule: "operation-id-unique" | "operation-name-unique",
   context: TreeNodesContext,
 ): void {
-  const id = entry.operation.id ?? "";
-  const firstId = first.operation.id ?? "";
+  const id = entry.name.id;
+  const firstId = first.name.id;
   const message =
     rule === "operation-id-unique"
       ? `The operation id ${id} of ${entry.node.pointer} is also the id of ${first.node.pointer}; operation ids are unique across the api.`

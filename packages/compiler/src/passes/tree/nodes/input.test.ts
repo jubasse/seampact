@@ -232,7 +232,10 @@ test("bodies beyond JSON: files only in multipart within the body limit, form in
     },
     {
       rule: "seampact/tree/input-file",
-      origin: { layer: "api", pointer: `${input("multipartObject")}/properties/doc/properties/scan` },
+      origin: {
+        layer: "api",
+        pointer: `${input("multipartObject")}/properties/doc/properties/scan`,
+      },
       related: [],
     },
     {
