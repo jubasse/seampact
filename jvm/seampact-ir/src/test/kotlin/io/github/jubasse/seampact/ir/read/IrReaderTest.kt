@@ -28,6 +28,9 @@ private const val SMALL_STACK_BYTES = 1L shl 20
 
 private const val DEEP_PLACEHOLDER = "deep-placeholder"
 
+// A linear walk of the 10 MB document takes about 0.1 s; the quadratic one took about 9 s.
+private const val WALK_BUDGET_MILLIS = 3_000L
+
 /** A deeply nested value, as JSON text and as the same elements, built without recursion. */
 private class Deep(val text: String, val element: JsonElement)
 
@@ -357,6 +360,23 @@ class IrReaderTest {
         val unknowns = refusals(replaceAt(mustAct, "schemes", value = schemes))
         assertEquals(100, unknowns.size)
         assertTrue(unknowns.all { it.code == IrRefusalCode.MUST_ACT_UNKNOWN })
+    }
+
+    @Test
+    fun aLongMapKeyKeepsTheMustActWalkLinear() {
+        // The walk once copied the pointer for every node it visited: 400,000 chars times 40,000 properties.
+        val everyMember = example("every-member.ir.json")
+        val task = everyMember.getValue("schemas").jsonObject.getValue("Task").jsonObject
+        val property = task.getValue("properties").jsonArray.first()
+        val schema = JsonObject(task + ("properties" to JsonArray(List(40_000) { property })))
+        val document = replaceAt(everyMember, "schemas", value = JsonObject(mapOf("k".repeat(400_000) to schema)))
+
+        val started = System.nanoTime()
+        val refusals = checkMustActUnknowns(document)
+        val elapsedMillis = (System.nanoTime() - started) / 1_000_000
+
+        assertEquals(emptyList(), refusals)
+        assertTrue(elapsedMillis < WALK_BUDGET_MILLIS, "the walk took $elapsedMillis ms")
     }
 
     @Test

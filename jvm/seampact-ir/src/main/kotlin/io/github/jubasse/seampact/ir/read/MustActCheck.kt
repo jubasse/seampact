@@ -20,14 +20,24 @@ private val OPERATION_POINTER = Regex("^/operations/(\\d+)(/|$)")
  */
 internal fun checkMustActUnknowns(ir: JsonElement): List<IrRefusal> {
     val refusals = mutableListOf<IrRefusal>()
-    MustActWalk(ir, refusals).walk(ir, IrShape.Named(ROOT_DEFINITION), "")
+    MustActWalk(ir, refusals).walk(ir, IrShape.Named(ROOT_DEFINITION), null)
     return refusals
 }
 
 private const val ROOT_DEFINITION = "ContractIR"
 
+// A pointer as a link to its parent: a step costs one node, and the string is built only for a refusal, so a long
+// key is not copied for every node below it. The root document is `null`.
+private class PointerStep(val parent: PointerStep?, val segment: String)
+
+private fun pointerOf(step: PointerStep?): String {
+    val segments = generateSequence(step) { it.parent }.map { escapePointerSegment(it.segment) }.toList()
+
+    return segments.asReversed().joinToString("") { "/$it" }
+}
+
 private class MustActWalk(private val document: JsonElement, private val refusals: MutableList<IrRefusal>) {
-    fun walk(value: JsonElement, shape: IrShape, pointer: String) {
+    fun walk(value: JsonElement, shape: IrShape, pointer: PointerStep?) {
         if (refusals.size >= MAX_REFUSALS) return
 
         when (shape) {
@@ -36,23 +46,23 @@ private class MustActWalk(private val document: JsonElement, private val refusal
             is IrShape.Union -> walkUnion(value, shape, pointer)
             is IrShape.OpenEnum -> walkOpenEnum(value, shape, pointer)
             is IrShape.Items -> (value as? JsonArray)?.forEachIndexed { index, item ->
-                walk(item, shape.of, "$pointer/$index")
+                walk(item, shape.of, PointerStep(pointer, index.toString()))
             }
             is IrShape.Values -> (value as? JsonObject)?.forEach { (key, item) ->
-                walk(item, shape.of, "$pointer/${escapePointerSegment(key)}")
+                walk(item, shape.of, PointerStep(pointer, key))
             }
         }
     }
 
-    private fun walkStruct(value: JsonElement, shape: IrShape.Struct, pointer: String) {
+    private fun walkStruct(value: JsonElement, shape: IrShape.Struct, pointer: PointerStep?) {
         val members = value as? JsonObject ?: return
         for ((name, child) in members) {
             val memberShape = shape.members[name] ?: continue
-            walk(child, memberShape, "$pointer/${escapePointerSegment(name)}")
+            walk(child, memberShape, PointerStep(pointer, name))
         }
     }
 
-    private fun walkUnion(value: JsonElement, shape: IrShape.Union, pointer: String) {
+    private fun walkUnion(value: JsonElement, shape: IrShape.Union, pointer: PointerStep?) {
         val union = value as? JsonObject ?: return
         val tag = stringOf(union[shape.tag]) ?: return
         val variant = shape.variants[tag]
@@ -60,15 +70,16 @@ private class MustActWalk(private val document: JsonElement, private val refusal
             walk(union, IrShape.Named(variant), pointer)
             return
         }
-        if (shape.mustAct) refuse("$pointer/${shape.tag}", tag, shape.variants.keys.toList(), "tag")
+        if (shape.mustAct) refuse(PointerStep(pointer, shape.tag), tag, shape.variants.keys.toList(), "tag")
     }
 
-    private fun walkOpenEnum(value: JsonElement, shape: IrShape.OpenEnum, pointer: String) {
+    private fun walkOpenEnum(value: JsonElement, shape: IrShape.OpenEnum, pointer: PointerStep?) {
         val text = stringOf(value) ?: return
         if (shape.mustAct && text !in shape.known) refuse(pointer, text, shape.known.toList(), "value")
     }
 
-    private fun refuse(member: String, value: String, expected: List<String>, what: String) {
+    private fun refuse(pointer: PointerStep?, value: String, expected: List<String>, what: String) {
+        val member = pointerOf(pointer)
         val operation = operationAt(member)
         val where = if (operation == null) "" else " in operation '${inMessage(operation)}'"
         refusals += IrRefusal(
