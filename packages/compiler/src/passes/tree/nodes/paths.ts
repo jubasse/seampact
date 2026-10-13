@@ -53,12 +53,18 @@ function segmentOf(node: TreeNode, pathCase: PathCase, conventions: ResolvedConv
   return treeNodesText(node, "path") ?? segmentOfName(node.name, pathCase);
 }
 
+/** An operation's path, and the surface prefix it starts with (whose braces are no path parameters). */
+export interface TreeNodesPath {
+  readonly full: string;
+  readonly prefix: string;
+}
+
 /** The path of an operation node; undefined for a relay route, whose path is copied. */
 export function treeNodesPath(
   node: TreeNode,
   prefixes: TreeNodesSurfacePrefixes,
   conventions: ResolvedConventions,
-): string | undefined {
+): TreeNodesPath | undefined {
   if (node.kind === "relay") return undefined;
 
   const pathCase = pathCaseOf(conventions);
@@ -73,5 +79,5 @@ export function treeNodesPath(
   if (prefix === undefined) throw new Error(`the surface ${surface.name} has no resolved prefix`);
 
   const path = [prefix, ...segments.filter((segment) => segment !== "")].join("/");
-  return path === "" ? "/" : path;
+  return { full: path === "" ? "/" : path, prefix };
 }

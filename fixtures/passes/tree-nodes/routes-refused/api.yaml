@@ -1,0 +1,34 @@
+# One refusal of each route check of tree.nodes (ADR 0002 sections 5 to 7 and 10, ADR 0003 sections 2 and 4):
+# a label version with a versioned surface and a literal version segment, an unreadable body limit, member
+# operations without an id, ops without input or item, an item without its id property, a fields map naming no
+# object, path placeholders and parameters that do not match, a header twice, an opaque query field, a
+# header-tagged union whose header is declared again, a redirect with a body.
+api: { name: refused, version: beta, kind: product }
+
+schemas:
+  Id: { type: string }
+  Note: { type: object, properties: { text: { type: string } } }
+  Push: { type: object, properties: { ref: { type: string } } }
+  Ping: { type: object, properties: { zen: { type: string } } }
+  GithubEvent:
+    discriminator: { from: header.X-GitHub-Event }
+    oneOf: { push: Push, ping: Ping }
+
+surfaces:
+  app:
+    prefix: /v2/app
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: Id }
+        item: Note
+        ops: [create]
+      logs: { kind: collection, item: Note, ops: [get] }
+      drafts: { kind: collection, id: { draftId: Id }, ops: [get] }
+      upload: { method: post, bodyLimit: 99999999999999999999MiB }
+      raw: { method: get, query: { payload: { opaque: "Vendor JSON." } } }
+      listed: { method: get, query: Id }
+      misplaced: { method: get, path: 'x/{missing}' }
+      twice: { method: get, headers: { X-A: { type: string }, x-a: { type: string } } }
+      hook: { method: post, input: GithubEvent, headers: { X-GitHub-Event: { type: string } } }
+      moved: { method: get, responses: { 301: { body: Note } } }

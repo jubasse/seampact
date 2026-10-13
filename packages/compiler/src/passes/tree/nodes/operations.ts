@@ -117,7 +117,7 @@ function operationOf(
     ...(op === undefined ? {} : { op }),
     ...(resource === undefined ? {} : { resource }),
     ...(method === undefined ? {} : { method, safe }),
-    ...(path === undefined ? {} : { path }),
+    ...(path === undefined ? {} : { path: path.full }),
     params,
     unknownQuery: treeNodesUnknownQuery(site),
     ...(input === undefined ? {} : { input }),

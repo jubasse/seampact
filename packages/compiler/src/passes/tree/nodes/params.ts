@@ -7,6 +7,7 @@ import {
   treeNodesFields,
   treeNodesFieldTravels,
 } from "./fields.js";
+import type { TreeNodesPath } from "./paths.js";
 import { treeNodesMember, treeNodesSetting, treeNodesTagHeader } from "./raw.js";
 
 // The parameters a route declares (ADR 0002 sections 6 to 8): path parameters from the member ids and `pathParams`
@@ -30,7 +31,7 @@ const REFUSE = "refuse";
 /** One route's declared parameters. */
 export function treeNodesParams(
   site: TreeNodesSite,
-  path: string | undefined,
+  path: TreeNodesPath | undefined,
   safe: boolean,
   input: IrWriter.TypeUse | undefined,
 ): IrWriter.Params {
@@ -167,10 +168,11 @@ function reportTwice(
 // Every placeholder of the path names a path parameter, and every path parameter has its placeholder.
 function checkPlaceholders(
   site: TreeNodesSite,
-  path: string,
+  { full: path, prefix }: TreeNodesPath,
   pathFields: { fields: readonly TreeNodesField[]; complete: boolean },
 ): void {
-  const placeholders = [...path.matchAll(PLACEHOLDER)].map((match) => match[1] ?? "");
+  const belowPrefix = path.slice(prefix.length);
+  const placeholders = [...belowPrefix.matchAll(PLACEHOLDER)].map((match) => match[1] ?? "");
   const declared = pathFields.fields.map(({ name }) => name);
   const nodeOrigin = treeNodesNodeOrigin(site.node.origin);
 
