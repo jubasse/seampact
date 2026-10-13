@@ -24,7 +24,8 @@ export type IrInvariantId =
   | "ir.id.scalar"
   | "ir.ref.resolves"
   | "ir.origin.core"
-  | "ir.input-proof.wire";
+  | "ir.input-proof.wire"
+  | "ir.input-proof.name";
 
 export interface IrInvariantViolation {
   id: IrInvariantId;
@@ -108,6 +109,7 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
   });
   const doc = isRecord(ir) ? ir : {};
   const schemes = isRecord(doc.schemes) ? doc.schemes : {};
+  const schemaEntries = isRecord(doc.schemas) ? doc.schemas : {};
 
   // Every member holding a catalogue id names an existing entry (keys read with Object.hasOwn: a right may be
   // named `__proto__`).
@@ -147,9 +149,35 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
         break;
       }
       case "OperationInput": {
+        const proofs = Array.isArray(value.proofs) ? value.proofs : [];
+        // A proof is identified by its name: one element per name, and no name the body already carries (a
+        // property of the input's object schema, or a form field).
+        const taken = new Set<unknown>();
+        const use = isRecord(value.schema) ? value.schema : {};
+        const target =
+          use.kind === "ref" &&
+          typeof use.schema === "string" &&
+          Object.hasOwn(schemaEntries, use.schema)
+            ? schemaEntries[use.schema]
+            : undefined;
+        if (isRecord(target) && Array.isArray(target.properties))
+          for (const property of target.properties)
+            if (isRecord(property)) taken.add(property.name);
+        if (Array.isArray(value.fields))
+          for (const field of value.fields) if (isRecord(field)) taken.add(field.name);
+        const seen = new Set<unknown>();
+        for (const [i, proof] of proofs.entries()) {
+          if (!isRecord(proof) || typeof proof.name !== "string") continue;
+          if (seen.has(proof.name) || taken.has(proof.name))
+            fail(
+              "ir.input-proof.name",
+              `${pointer}/proofs/${i}`,
+              `The body proof '${proof.name}' repeats a proof, a property of the input schema or a form field.`,
+            );
+          seen.add(proof.name);
+        }
         // A body proof is sent as the input's other fields are: with a wire form in a form or multipart body,
         // none in a JSON one. An unknown media type is the reader's to name.
-        const proofs = Array.isArray(value.proofs) ? value.proofs : [];
         if (!isKnown("OperationInput", "media", value.media)) break;
         const fields = FIELD_MEDIA.includes(String(value.media));
         for (const [i, proof] of proofs.entries())

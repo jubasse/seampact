@@ -325,6 +325,50 @@ describe("checkIrInvariants", () => {
     expect(wire.found).toEqual([{ id: "ir.field-wire.members", pointer: `${wire.at}/wire` }]);
   });
 
+  test("a body proof is identified by a name the body does not already carry", () => {
+    const check = (
+      change: (input: Record<string, unknown>, proofs: Record<string, unknown>[]) => void,
+    ) => {
+      const ir = sample("every-member.ir.json");
+      const [input] = objectsOf(ir, "OperationInput").filter(({ value }) =>
+        Array.isArray(value.proofs),
+      );
+      if (input === undefined) throw new Error("no input with proofs in the sample");
+      change(input.value, input.value.proofs as Record<string, unknown>[]);
+      return {
+        at: (i: number) => `${input.pointer}/proofs/${i}`,
+        found: checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer })),
+      };
+    };
+    const rename = (name: string) =>
+      check((_, proofs) => {
+        if (proofs[0] !== undefined) proofs[0].name = name;
+      });
+    // `title` is a property of Task, the input schema.
+    const property = rename("title");
+    expect(property.found).toEqual([{ id: "ir.input-proof.name", pointer: property.at(0) }]);
+    // A form field named like the proof, and like no property.
+    const field = check((input, proofs) => {
+      const [first] = input.fields as Record<string, unknown>[];
+      if (first !== undefined) first.name = "scan";
+      if (proofs[0] !== undefined) proofs[0].name = "scan";
+    });
+    expect(field.found).toEqual([{ id: "ir.input-proof.name", pointer: field.at(0) }]);
+    const twice = check((_, proofs) => {
+      if (proofs[0] !== undefined) proofs.push(structuredClone(proofs[0]));
+    });
+    expect(twice.found).toEqual([{ id: "ir.input-proof.name", pointer: twice.at(1) }]);
+    // A name is free once the schema no longer holds it.
+    expect(
+      check((input) => {
+        input.schema = { kind: "ref", schema: "Labels" };
+        delete input.fields;
+        input.media = "application/json";
+        for (const proof of input.proofs as Record<string, unknown>[]) delete proof.wire;
+      }).found,
+    ).toEqual([]);
+  });
+
   test("a core origin points at its declaration under its catalogue", () => {
     const origin = (ir: Record<string, unknown>) =>
       (ir.errors as Record<string, Record<string, unknown>>)["api.internal"]?.origin as Record<
