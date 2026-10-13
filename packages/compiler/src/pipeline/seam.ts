@@ -6,11 +6,16 @@
 export type { PipelineContextOptions } from "./context.js";
 export { pipelineContext } from "./context.js";
 export type {
+  ConventionPath,
   ConventionReading,
   PipelineConventionDefault,
   ResolvedConventions,
 } from "./conventions.js";
-export { pipelineConventionDefaults, pipelineConventions } from "./conventions.js";
+export {
+  pipelineConventionDefaults,
+  pipelineConventionLeaves,
+  pipelineConventions,
+} from "./conventions.js";
 export type {
   DraftConcurrency,
   DraftFinalizeMember,
