@@ -87,23 +87,39 @@ export function pipelineViewSource(value: unknown): PipelineViewSource | undefin
  * A plain, writable deep copy of `value`, a read-only view or a plain value: what a half stores in its draft from
  * `raw`, `workspace`, `relayed`, `imported` or an `inherited` entry, with the guard on or off. The copy keeps each
  * object's prototype (none for a catalogue) and defines its members, so a member named `__proto__` stays one.
+ * The draft is JSON-shaped data: a value holding any other object (a `Map`, a `Date`, a class instance) throws,
+ * naming where it sits, instead of being copied into an object that only looks like it.
  */
 export function pipelineCopy<T>(value: T): PassWritable<T> {
   // Only the read-only type is dropped: the copy has the same shape as `value`.
-  return copy(value) as PassWritable<T>;
+  return copy(value, "") as PassWritable<T>;
 }
 
-function copy(value: unknown): unknown {
+function copy(value: unknown, path: string): unknown {
   const plain = isObject(value) ? (targets.get(value)?.target ?? value) : value;
   if (!isObject(plain)) return plain;
-  if (Array.isArray(plain)) return plain.map(copy);
-  const out: object = Object.create(Object.getPrototypeOf(plain));
+
+  if (Array.isArray(plain))
+    return plain.map((item, index) => copy(item, join(path, String(index))));
+
+  const prototype: unknown = Object.getPrototypeOf(plain);
+  if (prototype !== Object.prototype && prototype !== null) throw notJsonShaped(plain, path);
+
+  const out: object = Object.create(prototype);
   for (const [key, item] of Object.entries(plain))
     Object.defineProperty(out, key, {
-      value: copy(item),
+      value: copy(item, join(path, key)),
       writable: true,
       enumerable: true,
       configurable: true,
     });
   return out;
+}
+
+function notJsonShaped(value: object, path: string): TypeError {
+  const kind = value.constructor?.name ?? "object with another prototype";
+  const where = path === "" ? "the value" : `at ${path}`;
+  return new TypeError(
+    `pipelineCopy copies JSON-shaped data only (plain objects, arrays and primitives): ${where}: a ${kind}. Store its data as a plain object instead.`,
+  );
 }

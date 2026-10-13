@@ -76,3 +76,12 @@ test("pipelineCopy copies views and plain values alike", () => {
   thawed.a.push(2);
   expect(thawed.a).toEqual([1, 2]);
 });
+
+test("pipelineCopy refuses a value that is not JSON-shaped data", () => {
+  class Holder {
+    readonly value = 1;
+  }
+  for (const value of [new Map([["a", 1]]), new Date(0), new Holder(), { nested: [new Set([1])] }])
+    expect(() => pipelineCopy(value)).toThrow(/pipelineCopy copies JSON-shaped data only/);
+  expect(() => pipelineCopy({ nested: [new Holder()] })).toThrow(/at nested\.0: a Holder/);
+});

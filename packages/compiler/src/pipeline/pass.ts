@@ -47,7 +47,8 @@ export interface TreeSchemaService {
 /**
  * What every half receives besides the draft (ADR 0006 section 2). A half copies what it stores in its draft from
  * `raw`, `workspace`, `relayed`, `imported` or an `inherited` entry (`pipelineCopy`), with the guard on or off: the
- * draft never aliases what a half reads. With the guard on, storing a read-only view throws; with it off, nothing
+ * draft never aliases what a half reads. Everything read from `raw` counts, tree-node settings and written
+ * convention readings (`conventions.get`) included. With the guard on, storing a read-only view throws; with it off, nothing
  * would catch a later change through the draft reaching the raw tree or another api's draft.
  */
 export interface PassContext {
