@@ -26,6 +26,6 @@
     "yaml": "2.9.1"
   },
   "simple-git-hooks": {
-    "pre-push": "if [ ! -f scripts/cartography/cli.ts ]; then echo 'pre-push: this branch has no scripts/cartography, map not checked'; exit 0; fi; node scripts/cartography/cli.ts --write && git diff --exit-code HEAD -- docs/agents/cartography.md || { echo 'pre-push: docs/agents/cartography.md differs from the commit; commit the regenerated map, then push again' >&2; exit 1; }"
+    "pre-push": "if [ -f scripts/hooks/pre-push.sh ]; then sh scripts/hooks/pre-push.sh; else echo 'pre-push: this branch has no scripts/hooks/pre-push.sh, map not checked'; fi"
   }
 }
