@@ -7,7 +7,9 @@ import type { HalfName } from "./halves.js";
 // - `owned`: one owner writes the field and everything below it;
 // - `default`: written only where still absent, by the halves of `order` in run order (`unknownKeys` on a body
 //   input use: declared by tree.nodes, then access.identity for a signed identity's routes, then derive.wire
-//   from `conventions.input.unknownKeys`; `maturity`: stated by tree.nodes, else derived by derive.wire);
+//   from `conventions.input.unknownKeys`; `maturity`: stated by tree.nodes, else derived by derive.wire; the
+//   input's `media`, `schema` and `origin`: declared by tree.nodes, else written by access.rights for a body
+//   proof on a route without `input`, with `rawBody`, which access.identity writes first, ADR 0006 section 3);
 // - `elements`: a list several halves append to; each element, and everything below it but its own sub-rows, is
 //   owned by `declared` when it has no `derivedFrom`, else by the `wire` owner of its derivation in the
 //   derivation table (`derivations/table.ts`): declared parameters and responses and the `relay.route`,
@@ -43,6 +45,13 @@ const elements = <F extends string>(field: F, ...derived: HalfName[]) => ({
 });
 const op = <M extends string>(member: M): `operations[].${M}` => `operations[].${member}`;
 const ops = <M extends string>(...members: M[]): `operations[].${M}`[] => members.map(op);
+// Members of an operation's input written by `first`, else by access.rights where still absent.
+const inputDefaults = <M extends string>(first: HalfName, ...members: M[]) =>
+  members.map((member) => ({
+    field: op(`input.${member}` as const),
+    mode: "default" as const,
+    order: [first, "access.rights"] as const,
+  }));
 
 /** The ownership table, one row per field. */
 export const pipelineOwnership = [
@@ -69,10 +78,7 @@ export const pipelineOwnership = [
       "path",
       "safe",
       "unknownQuery",
-      "input.media",
-      "input.schema",
       "input.fields",
-      "input.origin",
       "concurrency.version",
       "concurrency.field",
       "owner",
@@ -106,6 +112,11 @@ export const pipelineOwnership = [
   elements(op("responses"), "tree.nodes", "derive.wire"),
   elements(op("responses[].headers"), "tree.nodes", "derive.wire"),
   { field: op("maturity"), mode: "default", order: ["tree.nodes", "derive.wire"] },
+  // The input a route declares, else the proof-only input access.rights writes for a body proof on a route
+  // without `input` (ADR 0002 section 9): media `application/json`, the core empty schema `ApiEmptyBody`,
+  // `rawBody: false` and the origin of the requirement that brought the proof, then `proofs`.
+  ...inputDefaults("tree.nodes", "media", "schema", "origin"),
+  ...inputDefaults("access.identity", "rawBody"),
   {
     field: op("input.schema.unknownKeys"),
     mode: "default",
@@ -114,7 +125,7 @@ export const pipelineOwnership = [
   // Per operation, access.identity.
   ...owned(
     "access.identity",
-    ...ops("access", "callerKinds", "principalRequires", "bindings", "csrf", "input.rawBody"),
+    ...ops("access", "callerKinds", "principalRequires", "bindings", "csrf"),
   ),
   // Per operation, access.rights. A sort key's `derivedFrom` comes with its derived right (`sortKey.restricted`);
   // `input.proofs` holds the body fields of rule proofs (`rule.proof`), each with its `derivedFrom`.
