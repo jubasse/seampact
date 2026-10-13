@@ -505,6 +505,8 @@ schemas:
     ["A: { type: string, minLength: 5, maxLength: 2 }", "refinement-range"],
     ["A: { type: integer, minimum: 10, maximum: 1 }", "refinement-range"],
     ["A: { type: integer, exclusiveMinimum: 1, maximum: 1 }", "refinement-range"],
+    ["A: { type: integer, exclusiveMinimum: 1, exclusiveMaximum: 2 }", "refinement-range"],
+    ["A: { type: integer, minimum: 1.2, maximum: 1.8 }", "refinement-range"],
     [
       "A: { type: string, format: decimal, minimum: 2.5, exclusiveMaximum: 2.5 }",
       "refinement-range",
@@ -528,6 +530,14 @@ schemas:
   test("bounds that leave room for one value are kept; a named format's merged bounds are checked", () => {
     const fits = schemas("  A: { type: integer, minimum: 1, maximum: 1 }");
     expect(fits.diagnostics).toEqual([]);
+    const oneInteger = schemas("  A: { type: integer, exclusiveMinimum: 1, exclusiveMaximum: 3 }");
+    expect(oneInteger.diagnostics).toEqual([]);
+    const fraction = schemas("  A: { type: number, exclusiveMinimum: 1, exclusiveMaximum: 2 }");
+    expect(fraction.diagnostics).toEqual([]);
+    const noInteger = schemas("  A: { type: integer, exclusiveMinimum: 1, exclusiveMaximum: 2 }");
+    expect(noInteger.diagnostics[0]?.message).toContain(
+      "no integer lies between 'exclusiveMinimum' 1 and 'exclusiveMaximum' 2",
+    );
     const merged = treeSchemasRunApi(
       "scalars:\n  code: { type: string, minLength: 5 }\nschemas:\n  A: { format: code, maxLength: 2 }",
     );
