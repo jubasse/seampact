@@ -1,0 +1,444 @@
+{
+  "schemes": {
+    "sessionCookie": {
+      "id": "sessionCookie",
+      "kind": "cookie",
+      "name": "__Host-session",
+      "csrf": "csrfToken",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/sessionCookie"
+      }
+    },
+    "csrfToken": {
+      "id": "csrfToken",
+      "kind": "header",
+      "name": "X-Csrf-Token",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/csrfToken"
+      }
+    },
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/bearer"
+      }
+    },
+    "deviceToken": {
+      "id": "deviceToken",
+      "kind": "header",
+      "name": "X-Device-Token",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/deviceToken"
+      }
+    },
+    "internalToken": {
+      "id": "internalToken",
+      "kind": "bearer",
+      "bearer": {
+        "format": "jwt"
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/internalToken"
+      }
+    },
+    "mapsKey": {
+      "id": "mapsKey",
+      "kind": "query",
+      "name": "key",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/mapsKey"
+      }
+    },
+    "legacyBasic": {
+      "id": "legacyBasic",
+      "kind": "basic",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/legacyBasic"
+      }
+    },
+    "partnerOauth": {
+      "id": "partnerOauth",
+      "kind": "bearer",
+      "bearer": {
+        "oauth2": {
+          "flows": {
+            "clientCredentials": {
+              "tokenUrl": "https://auth.example.com/token",
+              "scopes": {}
+            }
+          }
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/partnerOauth"
+      }
+    },
+    "partnerOidc": {
+      "id": "partnerOidc",
+      "kind": "bearer",
+      "bearer": {
+        "openIdConnectUrl": "https://auth.example.com/.well-known/openid-configuration"
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/partnerOidc"
+      }
+    },
+    "stripeSignature": {
+      "id": "stripeSignature",
+      "kind": "signature",
+      "name": "Stripe-Signature",
+      "signature": {
+        "verify": "template",
+        "format": "t={ts},v1={sig}",
+        "algorithm": "hmac-sha256",
+        "payload": "{ts}.{rawBody}",
+        "encoding": "hex",
+        "toleranceMs": 300000,
+        "key": {
+          "kind": "value",
+          "value": "stripe"
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/stripeSignature"
+      }
+    },
+    "githubSignature": {
+      "id": "githubSignature",
+      "kind": "signature",
+      "name": "X-Hub-Signature-256",
+      "signature": {
+        "verify": "template",
+        "format": "sha256={sig}",
+        "algorithm": "hmac-sha256",
+        "payload": "{rawBody}",
+        "encoding": "hex",
+        "key": {
+          "kind": "from",
+          "from": {
+            "in": "path",
+            "name": "workspaceId"
+          }
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/githubSignature"
+      }
+    },
+    "clerkWebhook": {
+      "id": "clerkWebhook",
+      "kind": "signature",
+      "name": "svix-signature",
+      "signature": {
+        "verify": "application",
+        "headers": ["svix-id", "svix-timestamp"]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/clerkWebhook"
+      }
+    },
+    "slackSignature": {
+      "id": "slackSignature",
+      "kind": "signature",
+      "name": "X-Slack-Signature",
+      "signature": {
+        "verify": "application",
+        "headers": ["X-Slack-Request-Timestamp"]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/slackSignature"
+      }
+    }
+  },
+  "headers": {
+    "deadline": {
+      "id": "deadline",
+      "semantic": "deadline",
+      "name": "X-Deadline",
+      "in": "request",
+      "origin": {
+        "layer": "api",
+        "pointer": "/headers/deadline"
+      }
+    },
+    "trace": {
+      "id": "trace",
+      "semantic": "traceContext",
+      "name": "traceparent",
+      "in": "request",
+      "origin": {
+        "layer": "api",
+        "pointer": "/headers/trace"
+      }
+    },
+    "actorSurface": {
+      "id": "actorSurface",
+      "semantic": "actorSurface",
+      "name": "X-Actor-Surface",
+      "in": "request",
+      "origin": {
+        "layer": "api",
+        "pointer": "/headers/actorSurface"
+      }
+    },
+    "rightsVersion": {
+      "id": "rightsVersion",
+      "semantic": "versionToken",
+      "response": "X-Rights-Version",
+      "request": "If-Rights-Version",
+      "origin": {
+        "layer": "api",
+        "pointer": "/headers/rightsVersion"
+      }
+    }
+  },
+  "identities": {
+    "viewer": {
+      "id": "viewer",
+      "kind": "credential",
+      "schemes": {
+        "read": ["bearer", "sessionCookie"],
+        "write": ["bearer", "sessionCookie"],
+        "optionalRead": ["deviceToken"]
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "ViewerPrincipal"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/viewer"
+      }
+    },
+    "viewer_or_device": {
+      "id": "viewer_or_device",
+      "kind": "credential",
+      "schemes": {
+        "read": ["bearer", "sessionCookie"],
+        "write": ["bearer", "sessionCookie"],
+        "optionalRead": ["deviceToken"]
+      },
+      "principal": {
+        "kind": "variants",
+        "variants": {
+          "viewer": "ViewerPrincipal",
+          "device": "DevicePrincipal"
+        }
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {
+        "summary": "A signed-in viewer or a registered device."
+      },
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/viewer_or_device"
+      }
+    },
+    "operator": {
+      "id": "operator",
+      "kind": "credential",
+      "schemes": {
+        "read": ["sessionCookie"],
+        "write": ["sessionCookie"],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "OperatorPrincipal"
+      },
+      "errors": [],
+      "headers": [
+        {
+          "header": "rightsVersion",
+          "for": "writes",
+          "required": false,
+          "from": {
+            "in": "principal",
+            "name": "rightsVersion"
+          },
+          "stale": "api.rights_version_stale",
+          "origin": {
+            "layer": "api",
+            "pointer": "/identities/operator/headers/rightsVersion"
+          }
+        }
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/operator"
+      }
+    },
+    "service": {
+      "id": "service",
+      "kind": "credential",
+      "schemes": {
+        "read": ["internalToken"],
+        "write": ["internalToken"],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "ServicePrincipal"
+      },
+      "errors": ["api.unavailable"],
+      "headers": [
+        {
+          "header": "deadline",
+          "for": "all",
+          "required": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/identities/service/headers/deadline"
+          }
+        },
+        {
+          "header": "trace",
+          "for": "all",
+          "required": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/identities/service/headers/trace"
+          }
+        },
+        {
+          "header": "actorSurface",
+          "for": "writes",
+          "required": true,
+          "schema": {
+            "kind": "enum",
+            "enum": "Surface"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/identities/service/headers/actorSurface"
+          }
+        }
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/service"
+      }
+    },
+    "partner": {
+      "id": "partner",
+      "kind": "credential",
+      "schemes": {
+        "read": ["legacyBasic", "mapsKey", "partnerOauth", "partnerOidc"],
+        "write": [],
+        "optionalRead": []
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "PartnerPrincipal"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/partner"
+      }
+    },
+    "stripe": {
+      "id": "stripe",
+      "kind": "signed",
+      "signed": "stripeSignature",
+      "principal": {
+        "kind": "schema",
+        "schema": "WebhookCaller"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/stripe"
+      }
+    },
+    "github": {
+      "id": "github",
+      "kind": "signed",
+      "signed": "githubSignature",
+      "unknownKeys": {
+        "policy": "ignore",
+        "reason": "GitHub adds payload fields without notice."
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "WebhookCaller"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/github"
+      }
+    },
+    "clerk": {
+      "id": "clerk",
+      "kind": "signed",
+      "signed": "clerkWebhook",
+      "unknownKeys": {
+        "policy": "keep",
+        "reason": "Clerk adds event fields the handler forwards."
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "WebhookCaller"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/clerk"
+      }
+    },
+    "slack": {
+      "id": "slack",
+      "kind": "signed",
+      "signed": "slackSignature",
+      "principal": {
+        "kind": "schema",
+        "schema": "WebhookCaller"
+      },
+      "errors": [],
+      "headers": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/slack"
+      }
+    }
+  }
+}

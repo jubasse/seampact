@@ -1,0 +1,35 @@
+import { describe, expect, test } from "vitest";
+import {
+  type DraftFixtureApi,
+  draftFixture,
+  draftFixtureHalves,
+  draftFixtureSchemaService,
+} from "../../../pipeline/draft-fixture.js";
+import { accessIdentityReference, accessIdentityRun } from "./test-support.js";
+
+const APIS: readonly DraftFixtureApi[] = ["tasks", "tasksService"];
+const CATALOGUES = ["schemes", "headers", "identities"] as const;
+
+// The access.identity members of the access delta, as the fixture writes them.
+function deltaOf(api: DraftFixtureApi): Record<string, unknown> {
+  const half = draftFixtureHalves(api, "access-delta").find(
+    (item) => item.half === "access.identity",
+  );
+  if (half === undefined) throw new Error(`the access delta of ${api} has no access.identity`);
+  return half.members;
+}
+
+describe("access.identity catalogues", () => {
+  test.each(APIS)("the catalogues of %s match the access delta", (api) => {
+    const contract = accessIdentityReference(api);
+    const { draft, diagnostics } = accessIdentityRun(
+      contract,
+      draftFixture(api, "after-tree"),
+      draftFixtureSchemaService(api),
+    );
+
+    expect(diagnostics).toEqual([]);
+    const delta = deltaOf(api);
+    for (const catalogue of CATALOGUES) expect({ ...draft[catalogue] }).toEqual(delta[catalogue]);
+  });
+});
