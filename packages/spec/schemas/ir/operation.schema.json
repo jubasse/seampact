@@ -271,6 +271,10 @@
       "properties": {
         "name": { "type": "string" },
         "schema": { "$ref": "schemas.schema.json#/$defs/TypeUse" },
+        "wire": {
+          "$ref": "#/$defs/FieldWire",
+          "description": "The proof's wire form, as an input field's: present exactly when the input's media is form or multipart (invariant ir.input-proof.wire)."
+        },
         "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
       }
     },

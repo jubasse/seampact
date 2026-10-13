@@ -88,6 +88,7 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 | `ir.scalar.type` | A named format's own type names no `scalar`. |
 | `ir.id.scalar` | `Scope.idSchema` and `ResourceSubject.idSchema` are a `scalar` or `enum` type use without `nullable`; `RuleProof.schema` and `InputProof.schema` are anything but `opaque` and `file`. |
 | `ir.ref.resolves` | Every member whose schema is a `$ref` to a catalogue id definition (the key of a top-level or api map, such as `SchemeId` or `SurfaceId`) names an existing key, read with `Object.hasOwn`. |
+| `ir.input-proof.wire` | An `InputProof` has `wire` if and only if its input's `media` is `application/x-www-form-urlencoded` or `multipart/form-data` (known media only). |
 | `ir.origin.core` | An `Origin` of layer `core` has a pointer that starts with `/formats/<id>`, `/errors/<code>` or `/schemas/<id>`; without `api`, that entry exists in the document. Only the entry is checked, not the rest of the pointer. |
 | `ir.cache.sensitive-no-store` | Planned (p2-finalize): a response that carries a sensitive field sets `Cache.noStore`. Not checked yet: it needs a walk of the response schemas. |
 

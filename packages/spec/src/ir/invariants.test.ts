@@ -278,6 +278,53 @@ describe("checkIrInvariants", () => {
     ]);
   });
 
+  test("a body proof has a wire form exactly when its input is form or multipart", () => {
+    const check = (
+      change: (input: Record<string, unknown>, proof: Record<string, unknown>) => void,
+    ) => {
+      const ir = sample("every-member.ir.json");
+      const [input] = objectsOf(ir, "OperationInput").filter(({ value }) =>
+        Array.isArray(value.proofs),
+      );
+      if (input === undefined) throw new Error("no input with proofs in the sample");
+      const proof = (input.value.proofs as Record<string, unknown>[])[0];
+      if (proof === undefined) throw new Error("no proof in the sample");
+      change(input.value, proof);
+      return {
+        at: `${input.pointer}/proofs/0`,
+        found: checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer })),
+      };
+    };
+    // The sample's multipart input sends its proof as a text field.
+    expect(check(() => {}).found).toEqual([]);
+    const missing = check((_, proof) => {
+      delete proof.wire;
+    });
+    expect(missing.found).toEqual([{ id: "ir.input-proof.wire", pointer: missing.at }]);
+    const json = check((input) => {
+      input.media = "application/json";
+      delete input.fields;
+    });
+    expect(json.found).toEqual([{ id: "ir.input-proof.wire", pointer: json.at }]);
+    expect(
+      check((input, proof) => {
+        input.media = "application/json";
+        delete input.fields;
+        delete proof.wire;
+      }).found,
+    ).toEqual([]);
+    // An unknown media type is the reader's to name; the wire itself follows ir.field-wire.members.
+    expect(
+      check((input) => {
+        input.media = "application/zz-later";
+      }).found,
+    ).toEqual([]);
+    const wire = check((_, proof) => {
+      proof.wire = { kind: "file", style: "form" };
+    });
+    expect(wire.found).toEqual([{ id: "ir.field-wire.members", pointer: `${wire.at}/wire` }]);
+  });
+
   test("a core origin points at its declaration under its catalogue", () => {
     const origin = (ir: Record<string, unknown>) =>
       (ir.errors as Record<string, Record<string, unknown>>)["api.internal"]?.origin as Record<

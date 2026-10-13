@@ -1050,6 +1050,7 @@
               "scalar": "resourceId",
               "refinements": {}
             },
+            "wire": { "kind": "text", "style": "form", "explode": true, "brackets": false },
             "derivedFrom": {
               "derivation": "rule.proof",
               "from": [{ "layer": "api", "pointer": "/rules/quota" }]

@@ -23,7 +23,8 @@ export type IrInvariantId =
   | "ir.scalar.type"
   | "ir.id.scalar"
   | "ir.ref.resolves"
-  | "ir.origin.core";
+  | "ir.origin.core"
+  | "ir.input-proof.wire";
 
 export interface IrInvariantViolation {
   id: IrInvariantId;
@@ -52,12 +53,16 @@ const QUERY_WIRE_MEMBERS = ["style", "explode", "brackets"];
 const ID_TYPE_KINDS = ["scalar", "enum"]; // an id is a scalar or an enum use
 const PROOF_REFUSED_KINDS = ["opaque", "file"]; // a proof is anything else
 const OTHER_TYPE_KINDS = ["ref", "array"]; // neither an id nor a refused proof
+// The input media whose body is a list of fields, each with a wire form (`fields`, a proof's `wire`), and the rest.
+const FIELD_MEDIA = ["application/x-www-form-urlencoded", "multipart/form-data"];
+const DOCUMENT_MEDIA = ["application/json"];
 // The catalogues of the declarations the compiler supplies (origin layer `core`, ADR 0004 sections 6 and 13).
 const CORE_CATALOGUES = ["formats", "errors", "schemas"];
 export const IR_PARTITIONS = {
   "ValueSource.in": [NAMED_SOURCES, BARE_SOURCES],
   "FieldWire.kind": [QUERY_WIRE_KINDS, PLAIN_WIRE_KINDS],
   "TypeUse.kind": [ID_TYPE_KINDS, PROOF_REFUSED_KINDS, OTHER_TYPE_KINDS],
+  "OperationInput.media": [FIELD_MEDIA, DOCUMENT_MEDIA],
 } as const satisfies Record<string, readonly (readonly string[])[]>;
 
 // The known values of the open enum that `definition.member` references, read from the schema files.
@@ -139,6 +144,21 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
             pointer,
             `A core origin names '${id}', which is no entry of '${catalogue}'.`,
           );
+        break;
+      }
+      case "OperationInput": {
+        // A body proof is sent as the input's other fields are: with a wire form in a form or multipart body,
+        // none in a JSON one. An unknown media type is the reader's to name.
+        const proofs = Array.isArray(value.proofs) ? value.proofs : [];
+        if (!isKnown("OperationInput", "media", value.media)) break;
+        const fields = FIELD_MEDIA.includes(String(value.media));
+        for (const [i, proof] of proofs.entries())
+          if (isRecord(proof) && has(proof, "wire") !== fields)
+            fail(
+              "ir.input-proof.wire",
+              `${pointer}/proofs/${i}`,
+              `A body proof has 'wire' if and only if the input is form or multipart ('${String(value.media)}').`,
+            );
         break;
       }
       case "Name": {

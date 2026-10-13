@@ -978,6 +978,8 @@ export interface OperationInput {
 export interface InputProof {
   name: string;
   schema: TypeUse;
+  /** The proof's wire form, as an input field's: present exactly when the input's media is form or multipart (invariant ir.input-proof.wire). */
+  wire?: FieldWire;
   derivedFrom: DerivedFrom;
 }
 
