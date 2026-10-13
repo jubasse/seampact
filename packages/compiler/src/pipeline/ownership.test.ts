@@ -63,6 +63,31 @@ const rowAtOrAbove = (segments: readonly string[]): OwnershipRow | undefined => 
   return undefined;
 };
 
+const rowWriters = (row: OwnershipRow): readonly string[] =>
+  row.mode === "default"
+    ? row.order
+    : row.mode === "owned"
+      ? [row.owner]
+      : [row.declared, ...row.derived];
+
+// A default written where absent is one write, its sub-rows checked by their own rows (guard.ts): each half of
+// the default's order must also write each row below it, else the guard refuses that half's whole write.
+function defaultHalvesMissingBelow(table: readonly OwnershipRow[]): string[] {
+  const missing: string[] = [];
+  for (const parent of table) {
+    if (parent.mode !== "default") continue;
+    const above = draftFieldSegments(parent.field);
+    const below = table.filter((row) => {
+      const segments = draftFieldSegments(row.field);
+      return segments.length > above.length && above.every((s, i) => segments[i] === s);
+    });
+    for (const row of below)
+      for (const half of parent.order)
+        if (!rowWriters(row).includes(half)) missing.push(`${half} on ${row.field}`);
+  }
+  return missing;
+}
+
 describe("field ownership", () => {
   test("every member has one owner", () => {
     // No field twice, and every row and container is a member of the IR schema.
@@ -107,6 +132,20 @@ describe("field ownership", () => {
     };
     walk([]);
     expect(unowned, "IR members with no owner").toEqual([]);
+  });
+
+  test("each half of a default with rows below it writes each of those rows", () => {
+    expect(defaultHalvesMissingBelow(pipelineOwnership)).toEqual([]);
+
+    // A table that splits them: access.rights writes a proof-only input's schema, not its unknownKeys.
+    const split = pipelineOwnership.map((row) =>
+      row.field === "operations[].input.schema.unknownKeys" && row.mode === "default"
+        ? { ...row, order: row.order.filter((half) => half !== "access.rights") }
+        : row,
+    );
+    expect(defaultHalvesMissingBelow(split)).toEqual([
+      "access.rights on operations[].input.schema.unknownKeys",
+    ]);
   });
 
   test("a list's derived halves are wire owners of derivations", () => {
