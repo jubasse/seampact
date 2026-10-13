@@ -40,10 +40,29 @@ test("extends, packs and pack extends written in an included file resolve agains
     "api.yaml",
   );
   expect(r.diagnostics).toEqual([]);
-  expect(r.workspace.apis[0]?.layers.map((l) => l.file)).toEqual([
-    "parts/packs/m/q.yaml",
-    "parts/packs/p.yaml",
-    "parts/base.yaml",
+  expect(r.workspace.apis[0]?.layers.map((l) => [l.layer, l.file])).toEqual([
+    ["pack:q", "parts/packs/m/q.yaml"],
+    ["pack:p", "parts/packs/p.yaml"],
+    ["base", "parts/base.yaml"],
+    ["api", "api.yaml"],
+  ]);
+});
+
+// A pack is named once its includes are resolved, as the entry file is read: a manifest brought by
+// `$include` names the layer, so two packs of one name clash.
+test("a pack whose manifest comes from an include is named by it", () => {
+  const r = load(
+    {
+      "api.yaml": "api: { name: a, version: 1 }\npacks: [./p1.yaml, ./p2.yaml]\n",
+      "p1.yaml": "$include: ./m.yaml\n",
+      "p2.yaml": "pack: { name: p, version: 1.0.0 }\n",
+      "m.yaml":
+        "pack: { name: p, version: 1.0.0 }\nscalars:\n  Id: { type: string, minLength: x }\n",
+    },
     "api.yaml",
+  );
+  expect(r.diagnostics.map((d) => [d.rule, d.origin.layer])).toEqual([
+    ["seampact/load/scalar-type", "pack:p"],
+    ["seampact/load/pack-name-clash", "pack:p"],
   ]);
 });

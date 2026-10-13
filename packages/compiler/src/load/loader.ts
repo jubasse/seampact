@@ -89,6 +89,9 @@ function writtenIn(build: LayerBuild<Origin["layer"]>, at: SiteLocation): PathCo
   return { path: at.file, boundary: build.parsed.boundary };
 }
 
+// The layer a pack file is read under until its manifest names it; never a layer of a raw tree.
+const PROVISIONAL_PACK = "pack:\u0000naming";
+
 export function loadWorkspace(options: LoadOptions): LoadResult {
   return new Loader(options).run();
 }
@@ -123,8 +126,11 @@ class Loader {
         at: entrySite,
       });
     } else if (typeof this.store.checkFile(entry, ".", entrySite, "the entry file") === "string") {
+      // Its kind, so its layer, is known once it is read: what parsing reported moves to it.
+      const since = this.rep.diagnostics.length;
       const pf = this.store.parse(entry, ".");
       if (pf) entryBuild = this.entryLayer(pf);
+      if (entryBuild?.layer === "workspace") this.rep.relabel(since, "api", "workspace");
     }
     if (entryBuild) {
       // What is reported on the entry from here on is the entry's layer's.
@@ -199,6 +205,15 @@ class Loader {
     return { ...build, layer: "api" };
   }
 
+  /** Parses a file as part of `layer`: what parsing finds (P1 to P5, P9, syntax) is that layer's. */
+  private parseAs(path: string, boundary: string, layer: Origin["layer"]): ParsedFile | undefined {
+    const saved = this.rep.layer;
+    this.rep.layer = layer;
+    const pf = this.store.parse(path, boundary);
+    this.rep.layer = saved;
+    return pf;
+  }
+
   private badShape(
     b: LayerBuild<Origin["layer"]>,
     ptr: string,
@@ -256,7 +271,7 @@ class Loader {
       } else {
         const at = site("/workspace/shared");
         const r = this.store.resolve(writtenIn(entry, at), ws.shared, at, "workspace");
-        const pf = r && this.store.parse(r.path, ".");
+        const pf = r && this.parseAs(r.path, ".", "shared");
         if (pf) shared = this.layer(pf, "shared");
       }
     }
@@ -276,7 +291,7 @@ class Loader {
         continue;
       }
       const r = this.store.resolve(writtenIn(entry, at), raw, at, "workspace");
-      const pf = r && this.store.parse(r.path, ".");
+      const pf = r && this.parseAs(r.path, ".", "api");
       if (!pf) continue;
       const build = this.layer(pf, "api");
       const declared = asObject(build.tree.api)?.name;
@@ -333,7 +348,7 @@ class Loader {
             at,
           });
         } else {
-          const pf = r && this.store.parse(r.path, api.parsed.boundary);
+          const pf = r && this.parseAs(r.path, api.parsed.boundary, "base");
           if (pf) base = this.layer(pf, "base");
         }
       }
@@ -568,24 +583,36 @@ class Loader {
     this.packKeyCache.set(`${at.file}|${ref}`, key);
     const hit = this.packs.get(key);
     if (hit !== undefined) return hit ?? undefined;
-    const pf = this.store.parse(file, boundary);
-    if (!pf?.root) {
-      this.packs.set(key, null);
-      return undefined;
-    }
-    // The layer id is the manifest name; read it from the syntax tree before expanding.
-    const nameNode = navigate(pf, "/pack/name");
-    const written = isScalar(nameNode) ? nameNode.value : undefined;
-    const name = typeof written === "string" ? written : ref;
-    const layerId = this.packLayerId(name, () =>
-      nodeSite(pf, isScalar(nameNode) ? nameNode : null),
-    );
-    if (layerId === undefined) {
-      this.packs.set(key, null);
-      return undefined;
-    }
-    const build = this.layer(pf, layerId);
+    // A pack is named by its manifest once its includes are resolved, as the entry file is read:
+    // it is parsed and expanded under a provisional layer, and what was reported meanwhile moves to
+    // `pack:<name>`, or to the layer that names it when the pack is refused.
     const saved = this.rep.layer;
+    const since = this.rep.diagnostics.length;
+    const refuse = (): undefined => {
+      this.rep.relabel(since, PROVISIONAL_PACK, from.layer);
+      this.rep.layer = saved;
+      this.packs.set(key, null);
+      return undefined;
+    };
+    this.rep.layer = PROVISIONAL_PACK;
+    const pf = this.store.parse(file, boundary);
+    if (!pf?.root) return refuse();
+    // A name written in the file itself and refused is refused before anything is expanded.
+    const nameNode = navigate(pf, "/pack/name");
+    if (isScalar(nameNode) && typeof nameNode.value === "string" && nameNode.value.includes("#")) {
+      this.packLayerId(nameNode.value, () => nodeSite(pf, nameNode));
+      return refuse();
+    }
+    const expanded = this.ex.expandLayer(pf, PROVISIONAL_PACK);
+    const written = asObject(expanded.tree.pack)?.name;
+    const name = typeof written === "string" ? written : ref;
+    const layerId = this.packLayerId(
+      name,
+      () => expanded.locs.get("/pack/name") ?? nodeSite(pf, pf.root),
+    );
+    if (layerId === undefined) return refuse();
+    this.rep.relabel(since, PROVISIONAL_PACK, layerId);
+    const build: LayerBuild = { ...expanded, layer: layerId };
     this.rep.layer = layerId;
     const tree = build.tree;
     const manifest = asObject(tree.pack);
