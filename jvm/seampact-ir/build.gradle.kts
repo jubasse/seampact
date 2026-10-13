@@ -35,11 +35,6 @@ kotlin {
     }
 }
 
-java {
-    sourceCompatibility = JavaVersion.toVersion(bytecodeJavaVersion)
-    targetCompatibility = JavaVersion.toVersion(bytecodeJavaVersion)
-}
-
 tasks.withType<JavaCompile>().configureEach {
     options.release = bytecodeJavaVersion
 }
