@@ -97,7 +97,10 @@ export const POSITION_KEYWORDS: readonly string[] = [
 
 /**
  * The schema keywords the reading ignores on purpose: annotations, and value constraints that
- * neither lead to another node nor change a scalar's type (the validate stage checks them).
+ * neither lead to another node nor change a scalar's type (the validate stage checks them). One
+ * exception: `admitsInteger` reads the integer bounds, `minimum`, `maximum`, `exclusiveMinimum`
+ * and `exclusiveMaximum` (no schema uses the last one yet, so it is not listed here), only to tell
+ * whether a quoted whole number reads as the integer (P6).
  */
 export const IGNORED_KEYWORDS: readonly string[] = [
   "$schema",
