@@ -26,7 +26,10 @@ export class PipelineReadonlyError extends Error {
 }
 
 // Each view's target and source, for `pipelineCopy` and `pipelineViewSource`.
-const targets = new WeakMap<object, { readonly target: object; readonly source: PipelineViewSource }>();
+const targets = new WeakMap<
+  object,
+  { readonly target: object; readonly source: PipelineViewSource }
+>();
 
 const isObject = (value: unknown): value is object => typeof value === "object" && value !== null;
 

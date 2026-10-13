@@ -10,12 +10,28 @@ const SRC = fileURLToPath(new URL("..", import.meta.url));
 
 // Each stage module the registry imports, with the export it reads and a loader (a static import specifier).
 const STAGES: readonly (readonly [string, string, () => Promise<Record<string, unknown>>])[] = [
-  ["passes/tree/schemas/pass.ts", "treeSchemasPass", () => import("../passes/tree/schemas/pass.js")],
+  [
+    "passes/tree/schemas/pass.ts",
+    "treeSchemasPass",
+    () => import("../passes/tree/schemas/pass.js"),
+  ],
   ["passes/tree/nodes/pass.ts", "treeNodesPass", () => import("../passes/tree/nodes/pass.js")],
-  ["passes/access/identity/pass.ts", "accessIdentityPass", () => import("../passes/access/identity/pass.js")],
-  ["passes/access/rights/pass.ts", "accessRightsPass", () => import("../passes/access/rights/pass.js")],
+  [
+    "passes/access/identity/pass.ts",
+    "accessIdentityPass",
+    () => import("../passes/access/identity/pass.js"),
+  ],
+  [
+    "passes/access/rights/pass.ts",
+    "accessRightsPass",
+    () => import("../passes/access/rights/pass.js"),
+  ],
   ["passes/derive/wire/pass.ts", "deriveWirePass", () => import("../passes/derive/wire/pass.js")],
-  ["passes/derive/errors/pass.ts", "deriveErrorsPass", () => import("../passes/derive/errors/pass.js")],
+  [
+    "passes/derive/errors/pass.ts",
+    "deriveErrorsPass",
+    () => import("../passes/derive/errors/pass.js"),
+  ],
   ["passes/link/pass.ts", "linkPass", () => import("../passes/link/pass.js")],
   ["finalize/finalize.ts", "finalizeIr", () => import("../finalize/finalize.js")],
   ["workspace/order.ts", "workspaceRelayOrder", () => import("../workspace/order.js")],
@@ -74,9 +90,12 @@ describe("the seam barrel keeps stage modules out of an import cycle", () => {
     expect(stage[name]).toBeDefined();
     const pipeline = await import("./index.js");
     const parts = pipeline.pipelineDefaultParts();
-    expect([...Object.values(parts.passes), parts.link, parts.relayOrder, parts.finalize]).toContain(
-      stage[name],
-    );
+    expect([
+      ...Object.values(parts.passes),
+      parts.link,
+      parts.relayOrder,
+      parts.finalize,
+    ]).toContain(stage[name]);
   });
 
   test("the package index loads first in a fresh module graph", async () => {

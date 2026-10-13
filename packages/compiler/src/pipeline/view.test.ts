@@ -36,9 +36,9 @@ test("a view written into a guarded draft throws, at any depth; its pipelineCopy
   expect(() => guarded.draft.packs.push(pack)).toThrow(
     /tree\.nodes wrote packs\[0\]: a read-only view of raw is stored as is: copy it first: pipelineCopy\(value\)/,
   );
-  expect(() => guarded.draft.operations.push({ examples: { a: { value: { nested: [pack] } } } })).toThrow(
-    /operations\[0\]: a read-only view of raw/,
-  );
+  expect(() =>
+    guarded.draft.operations.push({ examples: { a: { value: { nested: [pack] } } } }),
+  ).toThrow(/operations\[0\]: a read-only view of raw/);
   expect(draft.packs).toEqual([]);
   expect(draft.operations).toEqual([]);
 
