@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { IR_REVISION, IR_SCHEMA_DOCUMENTS, IR_VERSION, type SchemaNode } from "@seampact/spec/ir";
 import { emitKotlin, KOTLIN_CLAIMED_NAMES, KOTLIN_MODEL_DIRECTORY } from "./kotlin.ts";
-import { buildNeutralModel, type Definition } from "./model.ts";
+import { buildNeutralModel, compareNames, type Definition } from "./model.ts";
 import { type DefinitionNames, definitionNames } from "./names.ts";
 
 // Generates every file of the native IR models (ADR 0010) from the IR JSON Schema: the Kotlin model and the
@@ -53,14 +53,21 @@ export function findStaleFiles(files: Map<string, string>, root: string): string
   return stale;
 }
 
-/** The files of the generated directories under `root` that the generator no longer writes. */
-export function findOrphanFiles(files: Map<string, string>, root: string): string[] {
-  const orphans: string[] = [];
+export interface OrphanEntry {
+  path: string;
+  /** A directory is never removed by `--write`: it is not a file the generator wrote. */
+  isDirectory: boolean;
+}
+
+/** The entries of the generated directories under `root` that the generator does not write. */
+export function findOrphanFiles(files: Map<string, string>, root: string): OrphanEntry[] {
+  const orphans: OrphanEntry[] = [];
   for (const directory of GENERATED_DIRECTORIES) {
     if (!existsSync(join(root, directory))) continue;
-    for (const entry of readdirSync(join(root, directory)).sort()) {
-      const path = `${directory}/${entry}`;
-      if (!files.has(path)) orphans.push(path);
+    const entries = readdirSync(join(root, directory), { withFileTypes: true });
+    for (const entry of entries.sort((left, right) => compareNames(left.name, right.name))) {
+      const path = `${directory}/${entry.name}`;
+      if (!files.has(path)) orphans.push({ path, isDirectory: entry.isDirectory() });
     }
   }
   return orphans;

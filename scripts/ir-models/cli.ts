@@ -46,8 +46,16 @@ function main(argv: string[]): number {
 
   const files = generateIrModels();
   const orphans = findOrphanFiles(files, REPO_ROOT);
+  const orphanDirectories = orphans.filter((orphan) => orphan.isDirectory);
+  if (values.write === true && orphanDirectories.length > 0) {
+    for (const { path } of orphanDirectories)
+      console.error(
+        `ir-models: ${path} is a directory the generator does not write; remove it by hand`,
+      );
+    return EXIT_FAILED;
+  }
   if (values.write === true) {
-    for (const path of orphans) rmSync(join(REPO_ROOT, path));
+    for (const { path } of orphans) rmSync(join(REPO_ROOT, path));
     for (const [path, content] of files) {
       mkdirSync(dirname(join(REPO_ROOT, path)), { recursive: true });
       writeFileSync(join(REPO_ROOT, path), content);
@@ -58,7 +66,7 @@ function main(argv: string[]): number {
 
   const stale = [
     ...findStaleFiles(files, REPO_ROOT),
-    ...orphans.map((path) => `${path} is no longer generated`),
+    ...orphans.map(({ path }) => `${path} is no longer generated`),
   ];
   if (stale.length > 0) {
     for (const problem of stale) console.error(`ir-models: ${problem}`);

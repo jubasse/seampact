@@ -127,12 +127,16 @@ describe("ir-models", () => {
     );
   });
 
-  it("a file the generator no longer writes is reported", () => {
+  it("a file or directory the generator no longer writes is reported", () => {
     const files = generateIrModels();
     const root = temporaryRootWith(files);
     writeFileSync(join(root, KOTLIN_MODEL_DIRECTORY, "Removed.kt"), "");
+    mkdirSync(join(root, KOTLIN_MODEL_DIRECTORY, "nested"));
 
-    expect(findOrphanFiles(files, root)).toEqual([`${KOTLIN_MODEL_DIRECTORY}/Removed.kt`]);
+    expect(findOrphanFiles(files, root)).toEqual([
+      { path: `${KOTLIN_MODEL_DIRECTORY}/Removed.kt`, isDirectory: false },
+      { path: `${KOTLIN_MODEL_DIRECTORY}/nested`, isDirectory: true },
+    ]);
   });
 
   it("every JSON file it writes is Biome-stable", () => {
