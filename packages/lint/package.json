@@ -1,5 +1,6 @@
 {
   "name": "@seampact/lint",
+  "description": "Lint rules over the IR, and the API to write your own.",
   "version": "0.0.0",
   "private": true,
   "type": "module",

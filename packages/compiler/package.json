@@ -1,5 +1,6 @@
 {
   "name": "@seampact/compiler",
+  "description": "Reads the YAML contract, reports errors with file, line and column, and produces the IR.",
   "version": "0.0.0",
   "private": true,
   "type": "module",

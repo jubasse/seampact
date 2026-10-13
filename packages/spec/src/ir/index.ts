@@ -1,3 +1,5 @@
+// The IR (ADR 0004 and 0005): its JSON Schemas, generated types, writer view, validation and invariants.
+
 export type * from "./types.generated.js";
 export type * as IrWriter from "./types.writer.generated.js";
 export {

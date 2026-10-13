@@ -1,5 +1,6 @@
 {
   "name": "@seampact/openapi",
+  "description": "Writes the OpenAPI 3.1 documents from the IR, with what OpenAPI cannot say as x-seampact-* extensions.",
   "version": "0.0.0",
   "private": true,
   "type": "module",
