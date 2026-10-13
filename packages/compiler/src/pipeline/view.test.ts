@@ -2,7 +2,7 @@ import type { IrWriter } from "@seampact/spec/ir";
 import { expect, test } from "vitest";
 import { createDraftIR } from "./draft.js";
 import { pipelineGuard } from "./guard.js";
-import { PipelineReadonlyError, pipelineView } from "./view.js";
+import { PipelineReadonlyError, pipelineCopy, pipelineView } from "./view.js";
 
 test("a view refuses every change and reads as its target", () => {
   const target = { name: "p", list: [{ x: 1 }], frozen: Object.freeze({ y: { z: 2 } }) };
@@ -25,11 +25,24 @@ test("a view refuses every change and reads as its target", () => {
   expect(target).toEqual({ name: "p", list: [{ x: 1 }], frozen: { y: { z: 2 } } });
 });
 
-test("a view written into a guarded draft is stored as a plain copy", () => {
+test("a view written into a guarded draft throws, at any depth; its pipelineCopy is stored", () => {
   const draft = createDraftIR();
   const pack: IrWriter.PackRef = pipelineView({ name: "house", version: "1.0.0" }, "raw");
-  const guarded = pipelineGuard(draft, { half: "tree.nodes", reads: [], writes: ["packs"] });
-  guarded.draft.packs.push(pack);
+  const guarded = pipelineGuard(draft, {
+    half: "tree.nodes",
+    reads: [],
+    writes: ["packs", "operations[].examples"],
+  });
+  expect(() => guarded.draft.packs.push(pack)).toThrow(
+    /tree\.nodes wrote packs\[0\]: a read-only view of raw is stored as is: copy it first: pipelineCopy\(value\)/,
+  );
+  expect(() => guarded.draft.operations.push({ examples: { a: { value: { nested: [pack] } } } })).toThrow(
+    /operations\[0\]: a read-only view of raw/,
+  );
+  expect(draft.packs).toEqual([]);
+  expect(draft.operations).toEqual([]);
+
+  guarded.draft.packs.push(pipelineCopy(pack));
   guarded.dispose();
   const stored = draft.packs[0];
   expect(stored).toEqual({ name: "house", version: "1.0.0" });
@@ -37,4 +50,29 @@ test("a view written into a guarded draft is stored as a plain copy", () => {
   if (stored !== undefined) stored.version = "2.0.0";
   expect(structuredClone(draft.packs)).toEqual([{ name: "house", version: "2.0.0" }]);
   expect(pack.version).toBe("1.0.0");
+});
+
+test("pipelineCopy copies views and plain values alike", () => {
+  // A catalogue (no prototype) holding an entry named `__proto__`.
+  const catalogue = Object.create(null) as Record<string, unknown>;
+  Object.defineProperty(catalogue, "__proto__", {
+    value: { list: [1, { x: 2 }] },
+    enumerable: true,
+    writable: true,
+    configurable: true,
+  });
+  for (const value of [catalogue, pipelineView(catalogue, "relayed")]) {
+    const copy = pipelineCopy(value);
+    expect(copy).not.toBe(value);
+    expect(Object.getPrototypeOf(copy)).toBe(null);
+    expect(Object.keys(copy)).toEqual(["__proto__"]);
+    expect(structuredClone(copy)).toEqual(structuredClone({ ...catalogue }));
+    const inner = copy.__proto__ as { list: unknown[] };
+    inner.list.push(3);
+    expect((catalogue.__proto__ as { list: unknown[] }).list).toEqual([1, { x: 2 }]);
+  }
+  expect(pipelineCopy(7)).toBe(7);
+  const thawed = pipelineCopy(Object.freeze({ a: Object.freeze([1]) }));
+  thawed.a.push(2);
+  expect(thawed.a).toEqual([1, 2]);
 });

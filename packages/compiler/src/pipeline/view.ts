@@ -1,8 +1,12 @@
+import type { PassWritable } from "./readonly.js";
+
 // Read-only views for a guarded run (H-6 of the PR 1 review, ADR 0006 section 2): with the guard on, what a half
 // reads besides its draft (`raw`, `workspace`, `relayed`, `imported`) is a view that throws on any change, so a
 // half that changes the raw tree or another api's draft fails its tests instead of corrupting a later half's
-// input. A view never reaches a draft: the guard stores a plain copy of it (`pipelineViewCopy`), so the draft does
-// not alias the raw tree. Like the guard, a view catches our own lanes' mistakes; it is no defence (ADR 0006).
+// input. A view never reaches a draft: storing one through the guard throws, and the half stores a plain copy
+// (`pipelineCopy`) instead, which it must do with the guard off as well, so the draft never aliases the raw tree or
+// another api's draft and a run with the guard on gives the same result as one with it off. Like the guard, a
+// view catches our own lanes' mistakes; it is no defence (ADR 0006).
 
 /** What a view guards, for the error message. */
 export type PipelineViewSource = "raw" | "workspace" | "relayed" | "imported";
@@ -21,8 +25,8 @@ export class PipelineReadonlyError extends Error {
   }
 }
 
-// Each view's target, for `pipelineViewCopy`.
-const targets = new WeakMap<object, object>();
+// Each view's target and source, for `pipelineCopy` and `pipelineViewSource`.
+const targets = new WeakMap<object, { readonly target: object; readonly source: PipelineViewSource }>();
 
 const isObject = (value: unknown): value is object => typeof value === "object" && value !== null;
 
@@ -46,7 +50,9 @@ export function pipelineView<T>(value: T, source: PipelineViewSource): T {
         get(t, key) {
           const item: unknown = Reflect.get(t, key);
           if (typeof key === "symbol") return item;
-          // A frozen member must read as itself (a proxy invariant); it cannot change anyway.
+          // A frozen member must read as itself (a proxy invariant), so it leaves unwrapped: only a deep-frozen
+          // value is safe there, since a mutable object held by a frozen member is not guarded. The raw tree and
+          // the drafts hold no frozen member; a frozen object an `imports` IR holds is the caller's to deep-freeze.
           const own = Reflect.getOwnPropertyDescriptor(t, key);
           if (own !== undefined && own.configurable === false && own.writable === false)
             return item;
@@ -59,7 +65,7 @@ export function pipelineView<T>(value: T, source: PipelineViewSource): T {
         preventExtensions: () => refuse(),
       });
       byPath.set(path, view);
-      targets.set(view, target);
+      targets.set(view, { target, source });
     }
     return view;
   };
@@ -69,17 +75,23 @@ export function pipelineView<T>(value: T, source: PipelineViewSource): T {
 const join = (path: string, key: string | symbol): string =>
   `${path}${path === "" ? "" : "."}${String(key)}`;
 
+/** The source of a read-only view, or `undefined` when `value` is no view. */
+export function pipelineViewSource(value: unknown): PipelineViewSource | undefined {
+  return isObject(value) ? targets.get(value)?.source : undefined;
+}
+
 /**
- * A plain, writable deep copy of a view's target, or `undefined` when `value` is no view. The copy keeps each
+ * A plain, writable deep copy of `value`, a read-only view or a plain value: what a half stores in its draft from
+ * `raw`, `workspace`, `relayed`, `imported` or an `inherited` entry, with the guard on or off. The copy keeps each
  * object's prototype (none for a catalogue) and defines its members, so a member named `__proto__` stays one.
  */
-export function pipelineViewCopy(value: unknown): unknown {
-  const target = isObject(value) ? targets.get(value) : undefined;
-  return target === undefined ? undefined : copy(target);
+export function pipelineCopy<T>(value: T): PassWritable<T> {
+  // Only the read-only type is dropped: the copy has the same shape as `value`.
+  return copy(value) as PassWritable<T>;
 }
 
 function copy(value: unknown): unknown {
-  const plain = isObject(value) ? (targets.get(value) ?? value) : value;
+  const plain = isObject(value) ? (targets.get(value)?.target ?? value) : value;
   if (!isObject(plain)) return plain;
   if (Array.isArray(plain)) return plain.map(copy);
   const out: object = Object.create(Object.getPrototypeOf(plain));

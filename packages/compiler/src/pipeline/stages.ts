@@ -34,7 +34,13 @@ export interface PipelineFinalized {
   readonly sourceMap: SourceMap;
 }
 
-/** Finalize of one api (p2-finalize, `finalizeIr`); an api whose finalize reports an error produces no IR. */
+/**
+ * Finalize of one api (p2-finalize, `finalizeIr`); an api whose finalize reports an error produces no IR.
+ * - Finalize builds the IR from the draft and never changes the draft: two members of a draft may hold the same
+ *   object (the guard accepts aliasing within a draft), so a change made in place would show twice.
+ * - `undefined` stands for the stub's "nothing produced" (`finalizeIr` of the seam PR); p2-finalize narrows the
+ *   result so that an api finalize reports no error for always has its IR.
+ */
 export type PipelineFinalize = (
   draft: DraftIR,
   context: PipelineFinalizeContext,

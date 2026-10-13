@@ -9,7 +9,7 @@ import {
   pipelineContainers,
   pipelineOwnership,
 } from "./ownership.js";
-import { pipelineViewCopy } from "./view.js";
+import { pipelineViewSource } from "./view.js";
 
 // The read/write guard of ADR 0006 section 2: it wraps the draft for one half's run, so a half's tests fail on
 // its first access outside its declaration instead of at merge time. Off by default in `compileWorkspace`, on
@@ -26,8 +26,9 @@ import { pipelineViewCopy } from "./view.js";
 // - A default is written in one assignment: changing a member inside a present default is a write over it.
 // - A half appends to an `elements` list; moving another half's element (`splice`, `unshift`, `sort`) writes it.
 // - Values are unwrapped before they reach the draft, so the draft never holds a guard. A copy made to unwrap
-//   keeps its source's prototype and defines its members. A read-only view (`view.ts`) is stored as a plain deep
-//   copy, so the draft never aliases the raw tree or another api's draft.
+//   keeps its source's prototype and defines its members. A read-only view (`view.ts`), at any depth of the value
+//   written, throws: the half copies it first (`pipelineCopy`), as it must with the guard off too, where nothing
+//   would catch the draft aliasing the raw tree or another api's draft.
 // - The draft is data. A symbol key, an accessor, a prototype change or making a value non-extensible is
 //   refused. `__proto__`, `constructor` and `prototype` read only as own members (a list's `constructor`
 //   passes, for array methods), and writing a new member defines it, so no setter runs. A catalogue assigned
@@ -247,22 +248,29 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
 
   // The value without any guard inside it, copying only the objects and lists that held one. A copy keeps the
   // prototype of its source (none for a catalogue) and defines its members, so a member named `__proto__` stays
-  // a member instead of setting the copy's prototype.
-  const unwrap = (value: unknown): unknown => {
+  // a member instead of setting the copy's prototype. `at` is where the value is written, for a refusal.
+  const unwrap = (value: unknown, at: Position): unknown => {
     if (!isObject(value)) return value;
     const target = targets.get(value);
     if (target !== undefined) return target;
-    // A read-only view (of the raw tree, another api's draft or an import) is stored as a plain copy.
-    const viewed = pipelineViewCopy(value);
-    if (viewed !== undefined) return viewed;
+    // A read-only view (of the raw tree, another api's draft or an import) is refused rather than copied: the
+    // guard is off outside tests, so a copy made here would hide a draft that aliases what it was read from.
+    const source = pipelineViewSource(value);
+    if (source !== undefined)
+      fail(
+        "write",
+        at,
+        `a read-only view of ${source} is stored as is: copy it first: pipelineCopy(value)`,
+      );
+    const inside = (item: unknown): unknown => unwrap(item, at);
     if (Array.isArray(value)) {
-      const items = value.map(unwrap);
+      const items = value.map(inside);
       return items.some((item, i) => item !== value[i]) ? items : value;
     }
     const prototype: unknown = Object.getPrototypeOf(value);
     if (prototype !== Object.prototype && prototype !== null) return value;
     const members = Object.entries(value);
-    const plain = members.map(([, item]) => unwrap(item));
+    const plain = members.map(([, item]) => inside(item));
     if (plain.every((item, i) => item === members[i]?.[1])) return value;
     const copy: object = Object.create(prototype);
     for (const [i, [member]] of members.entries())
@@ -403,7 +411,7 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
   ): unknown => {
     if (typeof key === "symbol")
       fail("write", position, `a symbol key (${String(key)}) is no draft member`);
-    const plain = unwrap(value);
+    const plain = unwrap(value, child(position, target, key));
     if (Array.isArray(target) && key === "length") {
       // Coerced first, as the array coerces it, so `length = "0"` is checked as the truncation it is. An invalid
       // length changes nothing: storing it throws a RangeError.

@@ -65,7 +65,7 @@ export type {
   WorkspacePassContext,
 } from "./pass.js";
 export { pipelineOrigin } from "./pointer.js";
-export type { PassReadonly } from "./readonly.js";
+export type { PassReadonly, PassWritable } from "./readonly.js";
 export type {
   PipelineFinalize,
   PipelineFinalizeContext,
@@ -78,4 +78,4 @@ export type { TreeNode, TreeNodeKind } from "./tree.js";
 export { pipelineTreeNodes } from "./tree.js";
 export { pipelineParseDuration, pipelineParseSize } from "./units.js";
 export type { PipelineViewSource } from "./view.js";
-export { PipelineReadonlyError } from "./view.js";
+export { PipelineReadonlyError, pipelineCopy } from "./view.js";

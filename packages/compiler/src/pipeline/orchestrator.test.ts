@@ -3,16 +3,18 @@ import { fileURLToPath } from "node:url";
 import type { ContractIR } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
+import { isJsonObject } from "./pointer.js";
 import { loadFsReader } from "../load/index.js";
 import { loadMemoryReader } from "../load/reader.js";
 import type { DraftIR } from "./draft.js";
 import { DraftAccessError } from "./guard.js";
 import type { HalfName } from "./halves.js";
+import type { DraftField } from "./ownership.js";
 import { compileWorkspace, type PipelineOptions } from "./orchestrator.js";
 import type { PassContext, PassParts, TreeSchemaService, WorkspacePass } from "./pass.js";
 import type { PipelineFinalize, PipelineRelayStage } from "./stages.js";
 import { pipelineTreeNodes } from "./tree.js";
-import { PipelineReadonlyError } from "./view.js";
+import { PipelineReadonlyError, pipelineCopy } from "./view.js";
 
 const REFERENCE = fileURLToPath(new URL("../../../../fixtures/reference", import.meta.url));
 const MINIMAL_IR: ContractIR = JSON.parse(
@@ -59,43 +61,57 @@ const NO_SCHEMAS: TreeSchemaService = {
   checkExample: () => [],
 };
 
-// Fake halves that log `<api>:<half>` and run `acts[half]`.
-function fakeParts(log: string[], acts: Partial<Record<HalfName, Act>> = {}): PassParts {
+// Fake halves that log `<api>:<half>` and run `acts[half]`; each declares nothing but `writes[half]`.
+function fakeParts(
+  log: string[],
+  acts: Partial<Record<HalfName, Act>> = {},
+  writes: Partial<Record<HalfName, DraftField[]>> = {},
+): PassParts {
   const body =
     (half: HalfName) =>
     (draft: DraftIR, context: PassContext): undefined => {
       log.push(`${context.raw.name}:${half}`);
       acts[half]?.(draft, context);
     };
-  const declared = { reads: [], writes: [] };
+  const declared = (half: HalfName) => ({ reads: [], writes: writes[half] ?? [] });
   return {
     "tree.schemas": {
       pass: "tree",
       half: "tree.schemas",
-      ...declared,
+      ...declared("tree.schemas"),
       run: (draft, context) => {
         body("tree.schemas")(draft, context);
         return NO_SCHEMAS;
       },
     },
-    "tree.nodes": { pass: "tree", half: "tree.nodes", ...declared, run: body("tree.nodes") },
+    "tree.nodes": {
+      pass: "tree",
+      half: "tree.nodes",
+      ...declared("tree.nodes"),
+      run: body("tree.nodes"),
+    },
     "access.identity": {
       pass: "access",
       half: "access.identity",
-      ...declared,
+      ...declared("access.identity"),
       run: body("access.identity"),
     },
     "access.rights": {
       pass: "access",
       half: "access.rights",
-      ...declared,
+      ...declared("access.rights"),
       run: body("access.rights"),
     },
-    "derive.wire": { pass: "derive", half: "derive.wire", ...declared, run: body("derive.wire") },
+    "derive.wire": {
+      pass: "derive",
+      half: "derive.wire",
+      ...declared("derive.wire"),
+      run: body("derive.wire"),
+    },
     "derive.errors": {
       pass: "derive",
       half: "derive.errors",
-      ...declared,
+      ...declared("derive.errors"),
       run: body("derive.errors"),
     },
   };
@@ -318,5 +334,54 @@ describe("guarded run", () => {
     const run = (guard: boolean) =>
       compile([], { "access.identity": act }, {}, { guard, imports: new Map([["ext", ext]]) });
     expect(() => run(true)).toThrow(error);
+  });
+});
+
+describe("guard on and off", () => {
+  // Halves that store copies of what they read (the raw tree, an inherited node's settings, another api's draft),
+  // then change their copies; finalize reports what it sees of each draft and raw tree.
+  const rename = (value: unknown, name: string): void => {
+    if (typeof value === "object" && value !== null) Reflect.set(value, "name", name);
+  };
+  const acts: Partial<Record<HalfName, Act>> = {
+    "tree.nodes": (draft, context) => {
+      const api = pipelineCopy(context.raw.merged.api);
+      const surface = pipelineTreeNodes(context.raw)[0];
+      const settings = surface && pipelineCopy(surface.settings);
+      const relayed = context.relayed("a")?.operations[0];
+      draft.operations.push({ examples: { api: { value: api }, settings: { value: settings } } });
+      if (relayed !== undefined) draft.operations.push(pipelineCopy(relayed));
+      rename(api, "changed");
+      if (settings !== undefined && isJsonObject(settings)) Reflect.set(settings, "prefix", "/x");
+      rename(draft.operations[1]?.examples?.api?.value, `${context.raw.name}-changed`);
+    },
+  };
+  const finalize: PipelineFinalize = (draft, context) => {
+    const seen = JSON.stringify({ operations: draft.operations, merged: context.raw.merged });
+    context.report({ ...diagnostic("warning", "x/seen", "/api"), message: seen });
+    return undefined;
+  };
+  const run = (guard: boolean) =>
+    compile(
+      [],
+      {},
+      {
+        passes: fakeParts([], acts, { "tree.nodes": ["operations[].examples"] }),
+        finalize,
+      },
+      { guard },
+    );
+
+  test("a run gives byte-equal results with the guard off and on", () => {
+    const off = run(false);
+    expect(JSON.stringify(off)).toBe(JSON.stringify(run(true)));
+    // Nothing a half changed in its copies reached the raw tree or another api's draft.
+    const seen = (api: string) =>
+      JSON.parse(off.apis.find((r) => r.api === api)?.diagnostics[0]?.message ?? "null");
+    expect(seen("a").merged.api.name).toBe("a");
+    expect(seen("a").merged.surfaces.app.prefix).toBe("/a");
+    expect(seen("a").operations[0].examples.api.value.name).toBe("changed");
+    expect(seen("a").operations).toHaveLength(1);
+    expect(seen("b").operations[1].examples.api.value.name).toBe("b-changed");
   });
 });

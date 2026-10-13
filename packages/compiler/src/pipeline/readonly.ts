@@ -8,3 +8,12 @@ export type PassReadonly<T> = T extends (...args: never[]) => unknown
     : T extends object
       ? { readonly [K in keyof T]: PassReadonly<T[K]> }
       : T;
+
+/** The writable form of a value read through `PassReadonly`: what `pipelineCopy` returns. */
+export type PassWritable<T> = T extends (...args: never[]) => unknown
+  ? T
+  : T extends readonly (infer E)[]
+    ? PassWritable<E>[]
+    : T extends object
+      ? { -readonly [K in keyof T]: PassWritable<T[K]> }
+      : T;

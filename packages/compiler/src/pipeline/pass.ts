@@ -25,7 +25,8 @@ export interface TreeSchemaExampleIssue {
  * `tree.nodes` as `context.treeSchemas`. Pointers are JSON Pointers into the api's merged raw tree
  * (`RawApi.merged`).
  * - Every hoist happens during tree.schemas' run: each inline object, map or union of the raw tree is in
- *   `schemas` before the service is returned. The service never writes the draft.
+ *   `schemas` before the service is returned. The service never writes the draft and keeps no reference to the
+ *   draft handed to the run: with the guard on, that draft is revoked when the run ends.
  * - Each method is pure and reports nothing: tree.schemas reported every schema problem in its own run.
  * - `undefined` means no schema is written at `pointer` (or `pointer` is no schema position). A refused schema
  *   never reaches tree.nodes: tree.nodes runs only when tree.schemas reported no error (the stop rule).
@@ -43,7 +44,12 @@ export interface TreeSchemaService {
   checkExample(value: unknown, use: IrWriter.TypeUse): readonly TreeSchemaExampleIssue[];
 }
 
-/** What every half receives besides the draft (ADR 0006 section 2). */
+/**
+ * What every half receives besides the draft (ADR 0006 section 2). A half copies what it stores in its draft from
+ * `raw`, `workspace`, `relayed`, `imported` or an `inherited` entry (`pipelineCopy`), with the guard on or off: the
+ * draft never aliases what a half reads. With the guard on, storing a read-only view throws; with it off, nothing
+ * would catch a later change through the draft reaching the raw tree or another api's draft.
+ */
 export interface PassContext {
   /** The api's merged raw tree, its layers, origins and locations. */
   readonly raw: PassReadonly<RawApi>;
