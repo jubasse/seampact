@@ -5,7 +5,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 ## Before you start
 
 - Read `docs/agents/cartography.md` before exploring: packages, roles, compiler stages and one line per source directory.
-- Product decisions are in `docs/decisions.md` (A1 to A46, cited as `A<n>`), design in `docs/adr/`.
+- Product decisions are in `docs/decisions.md` (cited as `A<n>`), design in `docs/adr/`.
 - Run `pnpm install --frozen-lockfile` first.
 
 ## Git
@@ -18,16 +18,16 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 - During work: the affected tests (`pnpm vitest run <paths>`), `pnpm typecheck`, `pnpm lint`.
 - Once at the end of a PR: `pnpm install --frozen-lockfile && pnpm gate && node scripts/checklist/cli.ts check && node scripts/cartography/cli.ts --check`, and a clean tree.
-- A stale map: run `node scripts/cartography/cli.ts --write` and commit `docs/agents/cartography.md`. The pre-push hook and CI check it.
+- A stale map: run `node scripts/cartography/cli.ts --write` and commit `docs/agents/cartography.md`. CI checks it on every PR. The pre-push hook also runs `--check`, but only on the current checkout: it skips with a message when a pushed commit is not `HEAD` or the tree has uncommitted changes, so CI is the guarantee.
 - Stop on a classifier refusal and report it; never work around it.
 
 ## Files
 
 - Edit only the files your task owns. A needed change elsewhere goes under "For the lead" in your report.
-- Shared files change only in lead or seam PRs: root `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `biome.json`, `.github/workflows/ci.yml`, the `exports` of `packages/spec`, `packages/spec/src/ir/**` and `packages/spec/schemas/ir/**`, the derivation table, `docs/conformance/checklist.yaml`, `README.md`, this file.
+- Shared files change only in lead or seam PRs: root `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `biome.json`, `.github/workflows/ci.yml`, the `exports` of `packages/spec`, `packages/spec/src/ir/**` and `packages/spec/schemas/ir/**`, the derivation table `packages/compiler/src/derivations/table.ts`, `docs/conformance/checklist.yaml`, `README.md`, this file.
 - A lane adds its CI jobs in its own `.github/workflows/<lane-id>.yml`.
 - The IR is change-controlled (ADR 0005): an IR change is asked of the lead, never worked around.
-- Every new source directory gets a one-line header comment at the top of its `index.ts`; the cartography reads it.
+- Every new source directory gets a header the cartography reads: a `//` comment at the top of its `index.ts` whose first sentence says what the directory holds, or a one-line `README.md` when it has no `index.ts`.
 
 ## Proofs
 
@@ -35,7 +35,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 ## Reports
 
-- Your report goes to `.work/<lane>-report.md` of the main checkout, reviews to `.favir/local/review/`; both are git-ignored and never committed.
+- Your report goes to `.work/<lane-id>-report.md` of the primary checkout (not your worktree), reviews to `.favir/local/review/`; both are git-ignored and never committed.
 - Keep the report current: resume state (branch, tip, done, next), then "For the lead".
 
 ## Shell output
