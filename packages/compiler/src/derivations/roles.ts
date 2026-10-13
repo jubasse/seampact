@@ -7,9 +7,9 @@ import { derivationFreeze } from "./freeze.js";
 // (A34); the derive.errors half registers them and binds roles (A35). Each datum's `type` is the type use of
 // the default code's param of that name.
 //
-// The params schemas of the default codes and the issue schema below become core declarations (origin `core`)
-// that tree.schemas seeds from this data, with reserved ids, once the IR change `feat/ir-1-core-origins-proofs`
-// lands (CR-2, CR-3); until then nothing writes them.
+// The params schemas of the default codes and the issue schema below are core declarations (origin `core`, no
+// `derivedFrom`) that tree.schemas seeds from this data; their ids are reserved (ADR 0004 section 13) and
+// finalize drops the ones no element references. No half writes them yet.
 //
 // The data is deep-frozen and shared by every compile: a half writes a copy into its draft
 // (`derivationCopy<IrWriter.TypeUse>(datum.type)`, a `structuredClone`), never the frozen value itself.
