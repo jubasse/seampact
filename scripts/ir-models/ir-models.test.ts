@@ -19,6 +19,7 @@ import { NameCollisionError } from "./names.ts";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../..");
 const BIOME = join(REPO, "node_modules/.bin/biome");
+const STRING = { type: "string" };
 
 const temporaryRoots: string[] = [];
 
@@ -160,6 +161,79 @@ describe("ir-models", () => {
     expect(() => buildNeutralModel(withNumber)).toThrow(/^Price: type "number"/);
     expect(() => buildNeutralModel(withNot)).toThrow(/^Holder\.value: keyword not/);
     expect(() => buildNeutralModel(withInlineObject)).toThrow(/^Holder\.inner: an inline object/);
+  });
+
+  it.each([
+    [
+      "a struct with an additionalProperties schema",
+      { Holder: { type: "object", properties: { a: STRING }, additionalProperties: STRING } },
+      /^Holder: keyword additionalProperties/,
+    ],
+    [
+      "a struct with a oneOf and no discriminator",
+      { Holder: { type: "object", properties: { a: STRING }, oneOf: [STRING] } },
+      /^Holder: keyword oneOf/,
+    ],
+    [
+      "properties on an array",
+      { Holder: { type: "array", properties: { a: STRING }, items: STRING } },
+      /^Holder: a struct of type "array"/,
+    ],
+    [
+      "items on an open enum",
+      { Mode: { type: "string", "x-seampact-known": ["on"], items: STRING } },
+      /^Mode: keyword items/,
+    ],
+    [
+      "a required name without its member",
+      { Holder: { type: "object", required: ["b"], properties: { a: STRING } } },
+      /^Holder: required member b has no property/,
+    ],
+    [
+      "a member name that is not an identifier",
+      { Holder: { type: "object", properties: { "x-y": STRING } } },
+      /^Holder\.x-y: a member name that is not an identifier/,
+    ],
+    [
+      "a map keyed by a struct",
+      {
+        Key: { type: "object", properties: { a: STRING } },
+        Holder: {
+          type: "object",
+          properties: {
+            byKey: {
+              type: "object",
+              propertyNames: { $ref: "#/$defs/Key" },
+              additionalProperties: STRING,
+            },
+          },
+        },
+      },
+      /^Holder\.byKey\{key\}: a map key Key that is not a string alias or an open enum/,
+    ],
+    [
+      "a $ref below a definition",
+      { Holder: { type: "object", properties: { a: { $ref: "#/$defs/Other/properties/b" } } } },
+      /^Holder\.a: a \$ref that does not name a definition/,
+    ],
+    [
+      "a discriminator mapping",
+      {
+        Shape: {
+          type: "object",
+          discriminator: { propertyName: "kind", mapping: { a: "#/$defs/A" } },
+          oneOf: [{ $ref: "#/$defs/A" }],
+        },
+        A: {
+          type: "object",
+          required: ["kind"],
+          properties: { kind: { type: "string", const: "a" } },
+        },
+      },
+      /^Shape: discriminator keyword mapping/,
+    ],
+  ])("unhandled construct fails generation: %s", (_case, definitions, message) => {
+    expect(() => buildNeutralModel(syntheticDocuments(definitions))).toThrow(message);
   });
 
   it("reserved type names are escaped", () => {

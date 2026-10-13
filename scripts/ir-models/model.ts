@@ -15,30 +15,32 @@ export const EXTENSION_SLOT_DEFINITION = "Extensions";
 const SCHEMA_ID_PREFIX = "https://seampact.dev/schemas/ir/";
 const SCHEMA_FILE_SUFFIX = ".schema.json";
 
-// Keywords that only describe or refine a value: the validator checks them, the models keep the plain type.
-const ANNOTATION_KEYWORDS = new Set([
-  "description",
-  "pattern",
-  "minLength",
-  "minimum",
-  "maximum",
-  "minItems",
-]);
+// The keywords each construct may carry. Refinements (`pattern`, `minLength`, `minimum`, `maximum`, `minItems`)
+// only constrain a value: the validator checks them and the models keep the plain type. Any other keyword on a
+// construct is one the generator does not map, so generation fails on it.
+const KEYWORDS = {
+  struct: ["type", "description", "properties", "required"],
+  union: ["type", "description", "discriminator", "oneOf", MUST_ACT_KEYWORD],
+  openEnum: ["type", "description", KNOWN_VALUES_KEYWORD, MUST_ACT_KEYWORD],
+  reference: ["$ref", "description"],
+  opaque: ["description"],
+  tag: ["type", "const", "description"],
+  string: ["type", "description", "pattern", "minLength"],
+  integer: ["type", "description", "minimum", "maximum"],
+  boolean: ["type", "description"],
+  array: ["type", "description", "items", "minItems"],
+  map: ["type", "description", "additionalProperties", "propertyNames"],
+} as const satisfies Record<string, readonly string[]>;
 
-const SHAPE_KEYWORDS = new Set([
-  "type",
-  "$ref",
-  "const",
-  "items",
-  "properties",
-  "required",
-  "additionalProperties",
-  "propertyNames",
-  "discriminator",
-  "oneOf",
-  KNOWN_VALUES_KEYWORD,
-  MUST_ACT_KEYWORD,
-]);
+type Construct = keyof typeof KEYWORDS;
+
+// A member becomes a property in every model language, so its name must be an identifier as written.
+const MEMBER_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+// A reference names a whole definition, of the same file or of a sibling file.
+const DEFINITION_REF = /^(?:[a-z][a-z0-9-]*\.schema\.json)?#\/\$defs\/([A-Za-z_][A-Za-z0-9_]*)$/;
+
+const DISCRIMINATOR_KEYWORDS = ["propertyName"];
 
 const DOCUMENT_KEYWORDS = new Set(["$schema", "$id", "$defs", "$ref", "title", "description"]);
 
@@ -129,14 +131,15 @@ function descriptionOf(node: SchemaNode): string | undefined {
 }
 
 function refName(ref: unknown, at: string): string {
-  if (typeof ref !== "string") fail(at, "a $ref that is not a string");
-  return ref.slice(ref.lastIndexOf("/") + 1);
+  const match = typeof ref === "string" ? DEFINITION_REF.exec(ref) : null;
+  if (match?.[1] === undefined) fail(at, `a $ref that does not name a definition (${String(ref)})`);
+  return match[1];
 }
 
-function assertKnownKeywords(node: SchemaNode, at: string): void {
+function assertKeywords(node: SchemaNode, construct: Construct, at: string): void {
+  const allowed: readonly string[] = KEYWORDS[construct];
   for (const keyword of Object.keys(node)) {
-    if (!SHAPE_KEYWORDS.has(keyword) && !ANNOTATION_KEYWORDS.has(keyword))
-      fail(at, `keyword ${keyword}`);
+    if (!allowed.includes(keyword)) fail(at, `keyword ${keyword} on a ${construct}`);
   }
 }
 
@@ -153,24 +156,33 @@ function fileOf(document: SchemaNode): string {
 
 /** The type of a member, an array item or a map value. Named shapes only: an inline object is refused. */
 function typeRefOf(node: SchemaNode, at: string): TypeRef {
-  assertKnownKeywords(node, at);
-  if (node.$ref !== undefined) return { kind: "named", definition: refName(node.$ref, at) };
+  if (node.$ref !== undefined) {
+    assertKeywords(node, "reference", at);
+    return { kind: "named", definition: refName(node.$ref, at) };
+  }
   if (node.oneOf !== undefined || node.discriminator !== undefined)
     fail(at, "an inline tagged union (a union is a definition of its own)");
   if (node[KNOWN_VALUES_KEYWORD] !== undefined)
     fail(at, "an inline open enum (an open enum is a definition of its own)");
   if (node.const !== undefined) fail(at, "a const outside a union variant's tag");
+  if (node.properties !== undefined)
+    fail(at, "an inline object (an object is a definition of its own)");
 
   switch (node.type) {
     case undefined:
+      assertKeywords(node, "opaque", at);
       return { kind: "opaque" };
     case "string":
+      assertKeywords(node, "string", at);
       return { kind: "string" };
     case "integer":
+      assertKeywords(node, "integer", at);
       return { kind: "integer" };
     case "boolean":
+      assertKeywords(node, "boolean", at);
       return { kind: "boolean" };
     case "array":
+      assertKeywords(node, "array", at);
       if (!isSchemaNode(node.items)) fail(at, "an array without items");
       return { kind: "array", items: typeRefOf(node.items, `${at}[]`) };
     case "object":
@@ -181,8 +193,7 @@ function typeRefOf(node: SchemaNode, at: string): TypeRef {
 }
 
 function mapTypeOf(node: SchemaNode, at: string): TypeRef {
-  if (node.properties !== undefined)
-    fail(at, "an inline object (an object is a definition of its own)");
+  assertKeywords(node, "map", at);
   if (!isSchemaNode(node.additionalProperties)) fail(at, "an object without a shape");
 
   const keys = isSchemaNode(node.propertyNames)
@@ -203,10 +214,14 @@ function structOf(
   def: SchemaNode,
   properties: SchemaNode,
 ): StructDefinition {
-  const required = new Set(Array.isArray(def.required) ? def.required : []);
+  if (def.type !== "object") fail(name, `a struct of type ${JSON.stringify(def.type)}`);
+  assertKeywords(def, "struct", name);
+  const required = requiredNames(name, def, properties);
+
   const members: Member[] = [];
   for (const [member, schema] of Object.entries(properties)) {
     const at = `${name}.${member}`;
+    if (!MEMBER_NAME.test(member)) fail(at, "a member name that is not an identifier");
     if (!isSchemaNode(schema)) fail(at, "a member that is not a schema");
     members.push(memberOf(member, schema, required.has(member), at));
   }
@@ -221,23 +236,40 @@ function structOf(
   };
 }
 
+function requiredNames(name: string, def: SchemaNode, properties: SchemaNode): Set<string> {
+  if (def.required === undefined) return new Set();
+  if (!Array.isArray(def.required)) fail(name, "a required that is not an array");
+
+  const required = new Set<string>();
+  for (const member of def.required) {
+    if (typeof member !== "string" || !Object.hasOwn(properties, member))
+      fail(name, `required member ${String(member)} has no property`);
+    required.add(member);
+  }
+  return required;
+}
+
 // A string `const` is kept as the member's fixed value; `linkVariants` accepts it only as a variant's tag.
 function memberOf(name: string, schema: SchemaNode, required: boolean, at: string): Member {
   const description = descriptionOf(schema);
   if (schema.type === "string" && typeof schema.const === "string") {
-    assertKnownKeywords(schema, at);
+    assertKeywords(schema, "tag", at);
     return { name, type: { kind: "string" }, required, description, constValue: schema.const };
   }
   return { name, type: typeRefOf(schema, at), required, description, constValue: undefined };
 }
 
 function unionOf(name: string, file: string, def: SchemaNode, mustAct: boolean): UnionDefinition {
+  assertKeywords(def, "union", name);
+  if (def.type !== "object") fail(name, `a union of type ${JSON.stringify(def.type)}`);
   const discriminator = def.discriminator;
   if (!isSchemaNode(discriminator) || typeof discriminator.propertyName !== "string")
     fail(name, "a discriminator without a propertyName");
+  for (const keyword of Object.keys(discriminator)) {
+    if (!DISCRIMINATOR_KEYWORDS.includes(keyword)) fail(name, `discriminator keyword ${keyword}`);
+  }
   if (!Array.isArray(def.oneOf) || def.oneOf.length === 0)
     fail(name, "a discriminator without oneOf");
-  if (def.properties !== undefined) fail(name, "a union wrapper with properties");
 
   const variants = def.oneOf.map((variant: unknown, index: number) => {
     if (!isSchemaNode(variant)) fail(`${name}.oneOf[${index}]`, "a variant that is not a schema");
@@ -260,6 +292,7 @@ function openEnumOf(
   def: SchemaNode,
   mustAct: boolean,
 ): OpenEnumDefinition {
+  assertKeywords(def, "openEnum", name);
   const known = def[KNOWN_VALUES_KEYWORD];
   if (def.type !== "string") fail(name, "an open enum that is not a string");
   if (
@@ -279,7 +312,6 @@ function openEnumOf(
 }
 
 function definitionOf(name: string, file: string, def: SchemaNode): Definition {
-  assertKnownKeywords(def, name);
   const mustAct = def[MUST_ACT_KEYWORD] === true;
   const description = descriptionOf(def);
 
@@ -287,7 +319,10 @@ function definitionOf(name: string, file: string, def: SchemaNode): Definition {
   if (mustAct && def[KNOWN_VALUES_KEYWORD] === undefined)
     fail(name, "a must-act mark on a definition that is neither a union nor an open enum");
   if (def[KNOWN_VALUES_KEYWORD] !== undefined) return openEnumOf(name, file, def, mustAct);
-  if (isSchemaNode(def.properties)) return structOf(name, file, def, def.properties);
+  if (def.properties !== undefined) {
+    if (!isSchemaNode(def.properties)) fail(name, "properties that are not an object");
+    return structOf(name, file, def, def.properties);
+  }
   if (name === EXTENSION_SLOT_DEFINITION) return extensionSlotOf(name, file, def);
 
   const target = typeRefOf(def, name);
@@ -357,6 +392,33 @@ function assertReferencesResolve(definitions: Map<string, Definition>): void {
   }
 }
 
+// A map key is a string: a plain string, a string alias (through any chain of aliases) or an open enum.
+function isStringKey(definitions: Map<string, Definition>, type: TypeRef): boolean {
+  if (type.kind === "string") return true;
+  if (type.kind !== "named") return false;
+  const definition = definitions.get(type.definition);
+  if (definition?.kind === "openEnum") return true;
+  return definition?.kind === "alias" && isStringKey(definitions, definition.target);
+}
+
+function assertMapKeysAreStrings(definitions: Map<string, Definition>): void {
+  const check = (type: TypeRef, at: string): void => {
+    if (type.kind === "array") check(type.items, `${at}[]`);
+    if (type.kind !== "map") return;
+    if (!isStringKey(definitions, type.keys)) {
+      const key = type.keys.kind === "named" ? type.keys.definition : type.keys.kind;
+      fail(`${at}{key}`, `a map key ${key} that is not a string alias or an open enum`);
+    }
+    check(type.values, `${at}{}`);
+  };
+  for (const definition of definitions.values()) {
+    if (definition.kind === "struct")
+      for (const member of definition.members)
+        check(member.type, `${definition.name}.${member.name}`);
+    if (definition.kind === "alias") check(definition.target, definition.name);
+  }
+}
+
 /** Builds the neutral model of the IR schema files, failing on any construct it does not map. */
 export function buildNeutralModel(
   documents: readonly SchemaNode[] = IR_SCHEMA_DOCUMENTS,
@@ -380,6 +442,7 @@ export function buildNeutralModel(
   linkVariants(definitions);
   assertConstsAreTags(definitions);
   assertReferencesResolve(definitions);
+  assertMapKeysAreStrings(definitions);
 
   const sorted = [...definitions.values()].sort((left, right) =>
     compareNames(left.name, right.name),
