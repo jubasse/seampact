@@ -6,8 +6,9 @@ import type { HalfName } from "./halves.js";
 // where halves meet, with one of three modes:
 // - `owned`: one owner writes the field and everything below it;
 // - `default`: written only where still absent, by the halves of `order` in run order (`unknownKeys` on a body
-//   input use: declared by tree.nodes, then access.identity for a signed identity's routes, then derive.wire
-//   from `conventions.input.unknownKeys`; `maturity`: stated by tree.nodes, else derived by derive.wire; the
+//   input use: declared by tree.nodes, then access.identity for a signed identity's routes, then access.rights,
+//   which copies the identity's onto a proof-only input it writes, then derive.wire from
+//   `conventions.input.unknownKeys`; `maturity`: stated by tree.nodes, else derived by derive.wire; the
 //   input's `media`, `schema` and `origin`: declared by tree.nodes, else written by access.rights for a body
 //   proof on a route without `input`, with `rawBody`, which access.identity writes first, ADR 0006 section 3);
 // - `elements`: a list several halves append to; each element, and everything below it but its own sub-rows, is
@@ -114,13 +115,14 @@ export const pipelineOwnership = [
   { field: op("maturity"), mode: "default", order: ["tree.nodes", "derive.wire"] },
   // The input a route declares, else the proof-only input access.rights writes for a body proof on a route
   // without `input` (ADR 0002 section 9): media `application/json`, the core empty schema `ApiEmptyBody`,
-  // `rawBody: false` and the origin of the requirement that brought the proof, then `proofs`.
+  // `rawBody: false` and the origin of the requirement that brought the proof, then `proofs`. On a signed
+  // identity's route, access.rights also copies the identity's `unknownKeys` onto it.
   ...inputDefaults("tree.nodes", "media", "schema", "origin"),
   ...inputDefaults("access.identity", "rawBody"),
   {
     field: op("input.schema.unknownKeys"),
     mode: "default",
-    order: ["tree.nodes", "access.identity", "derive.wire"],
+    order: ["tree.nodes", "access.identity", "access.rights", "derive.wire"],
   },
   // Per operation, access.identity.
   ...owned(

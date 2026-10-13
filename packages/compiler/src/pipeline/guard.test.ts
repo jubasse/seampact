@@ -205,14 +205,14 @@ describe("guard refuses undeclared access", () => {
     });
     expect(reason.field).toBe("operations[].input.schema.unknownKeys");
 
-    const rights = pipelineGuard(
+    const errors = pipelineGuard(
       draft(),
-      part("access.rights", [], ["operations[].input.schema.unknownKeys"]),
+      part("derive.errors", [], ["operations[].input.schema.unknownKeys"]),
     );
-    const other = operationOf(rights).input?.schema;
+    const other = operationOf(errors).input?.schema;
     expect(
       refused(() => Object.assign(other ?? {}, { unknownKeys: { policy: "keep" } })).message,
-    ).toContain("tree.nodes, access.identity, derive.wire");
+    ).toContain("tree.nodes, access.identity, access.rights, derive.wire");
   });
 
   // `input.schema` is a default with a row below it (`unknownKeys`): written where absent, it is one write, and
@@ -250,21 +250,25 @@ describe("guard refuses undeclared access", () => {
     };
     expect(operationOf(proofOnly).input?.schema).toEqual({ kind: "ref", schema: "ApiEmptyBody" });
 
-    // A sub-row keeps its own owners: access.rights writes no `unknownKeys`.
-    const refusedRights = pipelineGuard(
-      bare(),
+    // On a signed identity's route, access.rights copies the identity's `unknownKeys` onto the proof-only input.
+    const signed = bare();
+    const identityUnknownKeys: IrWriter.UnknownKeys = {
+      policy: "ignore",
+      reason: "The sender adds fields.",
+      derivedFrom: derivedFrom("identity.unknownKeys"),
+    };
+    const signedRights = pipelineGuard(
+      signed,
       part("access.rights", ["operations[].input"], writes),
     );
-    expect(
-      refused(() => {
-        operationOf(refusedRights).input = {
-          media: "application/json",
-          schema: { kind: "ref", schema: "ApiEmptyBody", unknownKeys: { policy: "refuse" } },
-          rawBody: false,
-          origin,
-        };
-      }).field,
-    ).toBe("operations[].input.schema.unknownKeys");
+    operationOf(signedRights).input = {
+      media: "application/json",
+      schema: { kind: "ref", schema: "ApiEmptyBody", unknownKeys: identityUnknownKeys },
+      rawBody: false,
+      origin,
+    };
+    expect(operationOf(signed).input?.schema).toMatchObject({ unknownKeys: identityUnknownKeys });
+
     // A present default stays one write: changing a member inside it writes over it.
     const over = pipelineGuard(draft(), part("access.rights", ["operations[].input"], writes));
     const schema = operationOf(over).input?.schema;
