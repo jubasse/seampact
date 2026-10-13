@@ -6,6 +6,7 @@ proofs:
     tests:
       - 'core: packages/compiler/src/passes/tree/nodes/input.test.ts#bodies beyond JSON: form and multipart fields with their wires'
       - 'core: packages/compiler/src/passes/tree/nodes/input.test.ts#field wire shared: $expected.kind'
+      - "core: packages/compiler/src/passes/tree/nodes/input.test.ts#bodies beyond JSON: a derived form field's wire is asked at its position in the input schema"
   - id: CHK-151
     fixtures: [fixtures/passes/tree-nodes/bodies, fixtures/passes/tree-nodes/bodies-refused]
     tests:

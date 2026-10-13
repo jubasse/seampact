@@ -1,7 +1,9 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { expect, test } from "vitest";
+import type { Diagnostic } from "../../../diagnostics/diagnostic.js";
 import { diagnosticLocationKey } from "../../../diagnostics/print.js";
 import { createDraftIR, type DraftIR, type TreeSchemaService } from "../../../pipeline/seam.js";
+import type { RawApi } from "../../../raw-tree.js";
 import { treeNodesFieldWire } from "./field-wire.js";
 import {
   TREE_NODES_FIXTURES,
@@ -152,29 +154,31 @@ test("bodies beyond JSON: form and multipart fields with their wires", () => {
   ]);
 });
 
-test("bodies beyond JSON: files only in multipart within the body limit, form inputs are objects", () => {
+const refusedInput = (name: string): string => `${route(name)}/input`;
+
+// The bodies-refused fixture, run with the input uses and schemas tree.schemas would hand over.
+function runBodiesRefused(): { raw: RawApi; diagnostics: Diagnostic[] } {
   const workspace = treeNodesLoadDirectory(`${TREE_NODES_FIXTURES}bodies-refused/`);
   const raw = treeNodesApiOf(workspace);
-  const input = (name: string): string => `${route(name)}/input`;
   const treeSchemas = treeNodesStubService({
     typeUses: {
-      [input("formFile")]: { kind: "ref", schema: "FormFileInput" },
-      [input("tooLarge")]: { kind: "ref", schema: "TooLargeInput" },
-      [input("jsonFile")]: { kind: "ref", schema: "JsonFileInput" },
-      [input("formScalar")]: text,
-      [input("formOpaque")]: { kind: "ref", schema: "FormOpaqueInput" },
-      [input("formJsonText")]: { kind: "ref", schema: "FormJsonTextInput" },
-      [input("multipartObject")]: { kind: "ref", schema: "MultipartObjectInput" },
-      [input("multipartPages")]: { kind: "ref", schema: "MultipartPagesInput" },
-      [input(BATCH)]: { kind: "ref", schema: "ReportsBatchInput" },
+      [refusedInput("formFile")]: { kind: "ref", schema: "FormFileInput" },
+      [refusedInput("tooLarge")]: { kind: "ref", schema: "TooLargeInput" },
+      [refusedInput("jsonFile")]: { kind: "ref", schema: "JsonFileInput" },
+      [refusedInput("formScalar")]: text,
+      [refusedInput("formOpaque")]: { kind: "ref", schema: "FormOpaqueInput" },
+      [refusedInput("formJsonText")]: { kind: "ref", schema: "FormJsonTextInput" },
+      [refusedInput("multipartObject")]: { kind: "ref", schema: "MultipartObjectInput" },
+      [refusedInput("multipartPages")]: { kind: "ref", schema: "MultipartPagesInput" },
+      [refusedInput(BATCH)]: { kind: "ref", schema: "ReportsBatchInput" },
     },
   });
   const draft = draftWith(
-    objectSchema("FormFileInput", input("formFile"), { file: file() }),
-    objectSchema("TooLargeInput", input("tooLarge"), { file: file(2 * MiB) }),
-    objectSchema("JsonFileInput", input("jsonFile"), { file: file() }),
-    objectSchema("FormOpaqueInput", input("formOpaque"), { anything: opaque }),
-    objectSchema("FormJsonTextInput", input("formJsonText"), {
+    objectSchema("FormFileInput", refusedInput("formFile"), { file: file() }),
+    objectSchema("TooLargeInput", refusedInput("tooLarge"), { file: file(2 * MiB) }),
+    objectSchema("JsonFileInput", refusedInput("jsonFile"), { file: file() }),
+    objectSchema("FormOpaqueInput", refusedInput("formOpaque"), { anything: opaque }),
+    objectSchema("FormJsonTextInput", refusedInput("formJsonText"), {
       meta: {
         kind: "scalar",
         type: "string",
@@ -183,46 +187,50 @@ test("bodies beyond JSON: files only in multipart within the body limit, form in
       },
     }),
     objectSchema("WithFile", "/schemas/WithFile", { file: file() }),
-    objectSchema("MultipartObjectInput", input("multipartObject"), {
+    objectSchema("MultipartObjectInput", refusedInput("multipartObject"), {
       doc: { kind: "ref", schema: "MultipartObjectDoc" },
     }),
-    objectSchema("MultipartObjectDoc", `${input("multipartObject")}/properties/doc`, {
+    objectSchema("MultipartObjectDoc", `${refusedInput("multipartObject")}/properties/doc`, {
       scan: file(),
     }),
-    objectSchema("MultipartPagesInput", input("multipartPages"), {
+    objectSchema("MultipartPagesInput", refusedInput("multipartPages"), {
       pages: { kind: "array", items: { kind: "array", items: file() } },
     }),
-    objectSchema("ReportsBatchInput", input(BATCH), { file: file(3 * MiB) }),
+    objectSchema("ReportsBatchInput", refusedInput(BATCH), { file: file(3 * MiB) }),
   );
 
-  const { diagnostics } = treeNodesRun(raw, workspace, { treeSchemas, draft });
+  return { raw, diagnostics: treeNodesRun(raw, workspace, { treeSchemas, draft }).diagnostics };
+}
+
+test("bodies beyond JSON: files only in multipart within the body limit, form inputs are objects", () => {
+  const { diagnostics } = runBodiesRefused();
 
   expect(diagnostics.map(({ rule, origin, related }) => ({ rule, origin, related }))).toEqual([
     {
       rule: "seampact/tree/input-file",
-      origin: { layer: "api", pointer: `${input("formFile")}/properties/file` },
+      origin: { layer: "api", pointer: `${refusedInput("formFile")}/properties/file` },
       related: [],
     },
     {
       rule: "seampact/tree/input-file-size",
-      origin: { layer: "api", pointer: `${input("tooLarge")}/properties/file` },
+      origin: { layer: "api", pointer: `${refusedInput("tooLarge")}/properties/file` },
       related: [
         { origin: { layer: "api", pointer: "/conventions/bodyLimit" }, message: "the body limit" },
       ],
     },
     {
       rule: "seampact/tree/input-file",
-      origin: { layer: "api", pointer: `${input("jsonFile")}/properties/file` },
+      origin: { layer: "api", pointer: `${refusedInput("jsonFile")}/properties/file` },
       related: [],
     },
     {
       rule: "seampact/tree/form-input",
-      origin: { layer: "api", pointer: input("formScalar") },
+      origin: { layer: "api", pointer: refusedInput("formScalar") },
       related: [],
     },
     {
       rule: "seampact/tree/form-field",
-      origin: { layer: "api", pointer: `${input("formOpaque")}/properties/anything` },
+      origin: { layer: "api", pointer: `${refusedInput("formOpaque")}/properties/anything` },
       related: [],
     },
     {
@@ -234,18 +242,18 @@ test("bodies beyond JSON: files only in multipart within the body limit, form in
       rule: "seampact/tree/input-file",
       origin: {
         layer: "api",
-        pointer: `${input("multipartObject")}/properties/doc/properties/scan`,
+        pointer: `${refusedInput("multipartObject")}/properties/doc/properties/scan`,
       },
       related: [],
     },
     {
       rule: "seampact/tree/input-file",
-      origin: { layer: "api", pointer: `${input("multipartPages")}/properties/pages` },
+      origin: { layer: "api", pointer: `${refusedInput("multipartPages")}/properties/pages` },
       related: [],
     },
     {
       rule: "seampact/tree/input-file-size",
-      origin: { layer: "api", pointer: `${input(BATCH)}/properties/file` },
+      origin: { layer: "api", pointer: `${refusedInput(BATCH)}/properties/file` },
       related: [
         {
           origin: { layer: "api", pointer: "/conventions/batch/bodyLimit" },
@@ -265,12 +273,6 @@ test("bodies beyond JSON: files only in multipart within the body limit, form in
   expect(diagnostics[8]?.message).toBe(
     "The file field file of getReportsBatch allows 3145728 bytes, more than the route's body limit of 2097152 bytes.",
   );
-
-  for (const diagnostic of diagnostics) {
-    expect(diagnostic.message.endsWith(".")).toBe(true);
-    for (const origin of [diagnostic.origin, ...diagnostic.related.map((r) => r.origin)])
-      expect(Object.hasOwn(raw.locations, diagnosticLocationKey(origin))).toBe(true);
-  }
 });
 
 const FIELD = "/schemas/Form/properties/field";
@@ -398,4 +400,53 @@ surfaces:
   expect(() => treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas, draft })).toThrow(
     /the body limit at \/surfaces\/app\/routes\/attach\/bodyLimit does not parse/,
   );
+});
+
+// Every rule of tree.nodes, each diagnostic located in the locations table, with a sentence and a fix.
+const NAMING_REFUSED = `
+api: { name: a, version: 1, kind: product }
+schemas:
+  TaskId: { type: string }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      tasks: { kind: collection, id: { taskId: TaskId }, ops: [get] }
+      getTask: { method: get }
+      archive: { method: post, operationId: get_task }
+      logs: { kind: collection, ops: [get] }
+`;
+
+test("tree.nodes diagnostics are located", () => {
+  const naming = treeNodesLoadInline(NAMING_REFUSED);
+  const namingRaw = treeNodesApiOf(naming);
+  const runs = [
+    runBodiesRefused(),
+    {
+      raw: namingRaw,
+      diagnostics: treeNodesRun(namingRaw, naming, { treeSchemas: treeNodesStubService({}) })
+        .diagnostics,
+    },
+  ];
+
+  const rules = new Set(runs.flatMap(({ diagnostics }) => diagnostics.map(({ rule }) => rule)));
+  expect([...rules].sort()).toEqual(
+    [
+      "collection-singular",
+      "form-field",
+      "form-input",
+      "input-file",
+      "input-file-size",
+      "operation-id-unique",
+      "operation-name-unique",
+    ].map((rule) => `seampact/tree/${rule}`),
+  );
+
+  for (const { raw, diagnostics } of runs)
+    for (const diagnostic of diagnostics) {
+      expect(diagnostic.message.endsWith(".")).toBe(true);
+      expect(diagnostic.fix).not.toBe("");
+      for (const origin of [diagnostic.origin, ...diagnostic.related.map((r) => r.origin)])
+        expect(Object.hasOwn(raw.locations, diagnosticLocationKey(origin))).toBe(true);
+    }
 });

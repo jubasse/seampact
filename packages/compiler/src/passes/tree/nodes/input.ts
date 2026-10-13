@@ -234,9 +234,7 @@ function bodyLimitOf(site: InputSite): BodyLimit | undefined {
 function parsedBodyLimit(value: unknown, origin: Origin | undefined, writtenAt: string): BodyLimit {
   const bytes = typeof value === "string" ? pipelineParseSize(value) : undefined;
   if (bytes === undefined)
-    throw new Error(
-      `the body limit at ${writtenAt} does not parse as a size: ${String(value)}`,
-    );
+    throw new Error(`the body limit at ${writtenAt} does not parse as a size: ${String(value)}`);
   return { bytes, origin };
 }
 

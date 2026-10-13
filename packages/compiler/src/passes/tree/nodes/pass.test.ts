@@ -36,6 +36,13 @@ const LATER: Readonly<Record<string, readonly string[]>> = {
 const isObject = (value: JsonValue | undefined): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+function isJsonValue(value: unknown): value is JsonValue {
+  if (value === null || ["string", "number", "boolean"].includes(typeof value)) return true;
+  if (Array.isArray(value)) return value.every(isJsonValue);
+  if (typeof value !== "object") return false;
+  return Object.values(value).every(isJsonValue);
+}
+
 function expectedOperations(api: DraftFixtureApi): JsonObject[] {
   const half = draftFixtureHalves(api, "after-tree").find(({ half }) => half === "tree.nodes");
   const operations = half?.members.operations;
@@ -44,13 +51,17 @@ function expectedOperations(api: DraftFixtureApi): JsonObject[] {
   return operations.filter(isObject).map((operation) => pick(api, operation));
 }
 
-function pick(api: string, operation: JsonObject | object): JsonObject {
-  const id = Reflect.get(operation, "id");
-  const later = LATER[`${api}:${String(id)}`] ?? [];
+// The compared members of an operation, from the fixture or the draft.
+function pick(api: string, operation: object): JsonObject {
+  const members = new Map<string, unknown>(Object.entries(operation));
+  const later = LATER[`${api}:${String(members.get("id"))}`] ?? [];
   const picked: JsonObject = {};
   for (const member of MEMBERS) {
-    const value: JsonValue | undefined = Reflect.get(operation, member);
-    if (value !== undefined && !later.includes(member)) picked[member] = value;
+    const value: unknown = members.get(member);
+    if (value === undefined || later.includes(member)) continue;
+    if (!isJsonValue(value))
+      throw new Error(`the member ${member} of an operation is no JSON value`);
+    picked[member] = value;
   }
   return picked;
 }

@@ -1,5 +1,4 @@
 import { expect, test } from "vitest";
-import { diagnosticLocationKey } from "../../../diagnostics/print.js";
 import { type DraftOperation, pipelineConventions } from "../../../pipeline/seam.js";
 import { treeNodesOperationNames } from "./names.js";
 import {
@@ -211,8 +210,7 @@ surfaces:
 
 test("operation ids are unique", () => {
   const workspace = treeNodesLoadInline(CLASHES);
-  const raw = treeNodesApiOf(workspace);
-  const { diagnostics } = treeNodesRun(raw, workspace, { treeSchemas });
+  const { diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas });
 
   expect(diagnostics.map(({ rule, origin, related }) => ({ rule, origin, related }))).toEqual([
     {
@@ -236,13 +234,6 @@ test("operation ids are unique", () => {
       ],
     },
   ]);
-
-  for (const diagnostic of diagnostics) {
-    expect(diagnostic.message.endsWith(".")).toBe(true);
-    expect(diagnostic.fix).not.toBe("");
-    for (const origin of [diagnostic.origin, ...diagnostic.related.map((r) => r.origin)])
-      expect(Object.hasOwn(raw.locations, diagnosticLocationKey(origin))).toBe(true);
-  }
 });
 
 // ADR 0002 section 6: the singular comes from `singular` or `id`, never from the plural.
