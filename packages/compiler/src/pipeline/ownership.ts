@@ -115,8 +115,9 @@ export const pipelineOwnership = [
   { field: op("maturity"), mode: "default", order: ["tree.nodes", "derive.wire"] },
   // The input a route declares, else the proof-only input access.rights writes for a body proof on a route
   // without `input` (ADR 0002 section 9): media `application/json`, the core empty schema `ApiEmptyBody`,
-  // `rawBody: false` and the origin of the requirement that brought the proof, then `proofs`. On a signed
-  // identity's route, access.rights also copies the identity's `unknownKeys` onto it.
+  // `rawBody` and the origin of the requirement that brought the proof, then `proofs`. On a signed identity's
+  // route, `rawBody` is true, as `signed.identity` writes it for a declared input, and access.rights also copies
+  // the identity's `unknownKeys` onto it; elsewhere `rawBody` is false.
   ...inputDefaults("tree.nodes", "media", "schema", "origin"),
   ...inputDefaults("access.identity", "rawBody"),
   {

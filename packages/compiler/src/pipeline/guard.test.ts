@@ -250,7 +250,8 @@ describe("guard refuses undeclared access", () => {
     };
     expect(operationOf(proofOnly).input?.schema).toEqual({ kind: "ref", schema: "ApiEmptyBody" });
 
-    // On a signed identity's route, access.rights copies the identity's `unknownKeys` onto the proof-only input.
+    // On a signed identity's route, the proof-only input reads the raw body, as `signed.identity` makes a declared
+    // input do, and access.rights copies the identity's `unknownKeys` onto it.
     const signed = bare();
     const identityUnknownKeys: IrWriter.UnknownKeys = {
       policy: "ignore",
@@ -264,10 +265,15 @@ describe("guard refuses undeclared access", () => {
     operationOf(signedRights).input = {
       media: "application/json",
       schema: { kind: "ref", schema: "ApiEmptyBody", unknownKeys: identityUnknownKeys },
-      rawBody: false,
+      rawBody: true,
+      proofs: [{ name: "reauthToken", schema: text, derivedFrom: derivedFrom("rule.proof") }],
       origin,
     };
-    expect(operationOf(signed).input?.schema).toMatchObject({ unknownKeys: identityUnknownKeys });
+    expect(operationOf(signed).input).toMatchObject({
+      rawBody: true,
+      schema: { unknownKeys: identityUnknownKeys },
+      proofs: [{ name: "reauthToken" }],
+    });
 
     // A present default stays one write: changing a member inside it writes over it.
     const over = pipelineGuard(draft(), part("access.rights", ["operations[].input"], writes));
