@@ -52,9 +52,9 @@ interface NestedFile {
 }
 
 /**
- * The input a route or an op entry declares (`input`), or undefined when it declares none. The schema is the
- * input use the schema service answers for the written schema; reads `schemas` for the fields of a form or
- * multipart body.
+ * The input a route or an op entry declares (`input`), or undefined when it declares none or the schema service
+ * answers no use for it. The schema is the input use the service answers for the written schema; reads `schemas`
+ * for the fields of a form or multipart body.
  */
 export function treeNodesInput(
   node: TreeNode,
@@ -69,11 +69,10 @@ export function treeNodesInput(
   if (origin === undefined)
     throw new Error(`the raw tree has no origin for the input at ${pointer}`);
 
+  // The service answers every input tree.schemas accepted, and a refused one stops the run before this half
+  // (the stop rule). It answers none only while tree.schemas is the seam's stub, which knows no schema.
   const schema = context.treeSchemas.typeUse(pointer, "input");
-  if (schema === undefined)
-    throw new Error(
-      `the schema service answers no input use at ${pointer}; tree.schemas compiles every route input it accepts`,
-    );
+  if (schema === undefined) return undefined;
 
   const media = mediaOf(node);
   const site: InputSite = {
