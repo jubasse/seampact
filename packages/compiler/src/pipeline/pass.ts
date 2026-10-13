@@ -20,16 +20,16 @@ export interface TreeSchemaExampleIssue {
 }
 
 /**
- * What `tree.schemas` exposes to `tree.nodes`, which compiles routes, parameters and examples without compiling
- * schemas itself. `tree.schemas` returns it from its run (`PassResultOf`); the orchestrator hands it to
- * `tree.nodes` as `context.treeSchemas`. Pointers are JSON Pointers into the api's merged raw tree
+ * What `tree.schemas` exposes to every later half: `tree.nodes` compiles routes, parameters and examples with it
+ * without compiling schemas itself, and access and derive read type uses through it (LD-1). `tree.schemas` returns
+ * it from its run (`PassResultOf`); the orchestrator hands it to each later half as `context.treeSchemas`. Pointers are JSON Pointers into the api's merged raw tree
  * (`RawApi.merged`).
  * - Every hoist happens during tree.schemas' run: each inline object, map or union of the raw tree is in
  *   `schemas` before the service is returned. The service never writes the draft and keeps no reference to the
  *   draft handed to the run: with the guard on, that draft is revoked when the run ends.
  * - Each method is pure and reports nothing: tree.schemas reported every schema problem in its own run.
  * - `undefined` means no schema is written at `pointer` (or `pointer` is no schema position). A refused schema
- *   never reaches tree.nodes: tree.nodes runs only when tree.schemas reported no error (the stop rule).
+ *   never reaches a later half: they run only when tree.schemas reported no error (the stop rule).
  */
 export interface TreeSchemaService {
   /**
@@ -73,12 +73,12 @@ export interface PassContext {
   report(diagnostic: Diagnostic): void;
 }
 
-/** The context of a half: `tree.nodes` also receives the schema service of `tree.schemas`. */
-export type PassContextOf<H extends HalfName> = H extends "tree.nodes"
-  ? PassContext & { readonly treeSchemas: TreeSchemaService }
-  : PassContext;
+/** The context of a half: every half after `tree.schemas` also receives its schema service. */
+export type PassContextOf<H extends HalfName> = H extends "tree.schemas"
+  ? PassContext
+  : PassContext & { readonly treeSchemas: TreeSchemaService };
 
-/** What a half's run returns: `tree.schemas` hands its schema service to `tree.nodes`. */
+/** What a half's run returns: `tree.schemas` hands its schema service to every later half. */
 export type PassResultOf<H extends HalfName> = H extends "tree.schemas"
   ? TreeSchemaService
   : undefined;

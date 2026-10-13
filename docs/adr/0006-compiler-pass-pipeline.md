@@ -68,7 +68,7 @@ export interface PassContext {
   imported(api: string): ContractIR | undefined; // read-only: an imported api's IR, open reader types
   report(diagnostic: Diagnostic): void;
 }
-type PassContextOf<H> = H extends 'tree.nodes' ? PassContext & { treeSchemas: TreeSchemaService } : PassContext;
+type PassContextOf<H> = H extends 'tree.schemas' ? PassContext : PassContext & { treeSchemas: TreeSchemaService };
 type PassResultOf<H> = H extends 'tree.schemas' ? TreeSchemaService : undefined;
 export interface WorkspacePass {            // link: diagnostics only
   name: 'link';
@@ -78,7 +78,7 @@ export interface WorkspacePass {            // link: diagnostics only
 ```
 
 - The halves run in the order `tree.schemas`, `tree.nodes`, `access.identity`, `access.rights`, `derive.wire`, `derive.errors`, and each is a step of the stop rule (section 1): a half that reports an error completes, and no later half of that api runs. Each half runs after every half it reads: `tree.nodes` uses the type uses of `tree.schemas`, `access.rights` the access `access.identity` resolved, `derive.wire` both access halves, and `derive.errors` what `derive.wire` wrote (idempotency, cache, concurrency, paging parameters) instead of computing the triggers again.
-- `tree.schemas` hands `tree.nodes` its `TreeSchemaService` by return value, the one value a half returns: the type use and the query wire form of the schema written at a raw pointer, and an example check against a use. Every inline schema is hoisted during `tree.schemas`' run; the service never writes and reports nothing.
+- `tree.schemas` hands every later half its `TreeSchemaService` by return value (amendment 2026-10-13, LD-1: not only `tree.nodes`), the one value a half returns: the type use and the query wire form of the schema written at a raw pointer, and an example check against a use. Every inline schema is hoisted during `tree.schemas`' run; the service never writes and reports nothing.
 - A half writes only the fields it declares, and only the fields section 3 gives its pass; the field-ownership table splits them between the halves of a pass (ownership moves between passes only by a change to this ADR). A field is owned by one half, or shared in one of two modes: `elements`, a list several halves append to, where an element without `derivedFrom` is the declaring half's and a derived one belongs to the half that owns its derivation (section 5); and `default`, a value written only where still absent, by the halves listed, in run order (`unknownKeys` on a body input use, `maturity`).
 - In tests, the draft IR is wrapped in a guard so that a read or a write outside the half's declaration or its ownership throws; a half's tests therefore fail on the first such access, not at merge time. The guard catches mistakes of the project's own passes, not an adversary, and is off outside tests.
 - `relayed` returns a workspace api's derived draft in the closed writer view; `imported` returns an imported IR in the open reader types, since it may come from another compiler version. Code that copies from an imported IR narrows each union with `isKnownVariant` and reports an unknown arm by name.
