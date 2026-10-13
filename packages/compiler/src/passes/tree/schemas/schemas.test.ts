@@ -155,6 +155,17 @@ describe("schema shapes", () => {
   });
 });
 
+test("an enum use whose source enums form a cycle names the cycle", () => {
+  const run = treeSchemasRunApi(`enums:
+  A: { source: { enum: B } }
+  B: { source: { enum: A } }
+schemas:
+  S: { type: object, properties: { a: { enum: A } } }
+`);
+  expect(treeSchemasRules(run)).toEqual(["enum-cycle"]);
+  expect(run.diagnostics[0]?.message).toContain("A -> B -> A");
+});
+
 describe("tagged unions", () => {
   const run = schemas(`
   Notice:

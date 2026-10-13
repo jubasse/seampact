@@ -147,6 +147,12 @@ const JSON_MEDIA = "application/json";
 
 const has = (value: TreeSchemasRawObject, key: string): boolean => Object.hasOwn(value, key);
 
+// A string member the authoring schema requires: validate refuses a contract without it before this half runs.
+function guaranteedString(value: TreeSchemasRaw | undefined, key: string, pointer: string): string {
+  if (typeof value === "string") return value;
+  throw new Error(`tree.schemas found no string '${key}' at ${pointer}, which validate guarantees`);
+}
+
 /** The shape a written schema mapping has, or undefined for none (ADR 0003 section 2). */
 export function treeSchemasShapeOf(value: TreeSchemasRawObject): Shape | undefined {
   if (has(value, "$ref")) return "reference";
@@ -367,15 +373,15 @@ export class TreeSchemasCompiler {
     const { pointer } = position;
     switch (shape) {
       case "reference":
-        return typeof value.$ref === "string" ? this.reference(value.$ref, position) : undefined;
+        return this.reference(guaranteedString(value.$ref, "$ref", pointer), position);
       case "derived":
         return this.claimed(position, "object")
           ? plain(this.referenceUse(this.idOf(position)))
           : undefined;
-      case "opaque":
-        return typeof value.opaque === "string"
-          ? plain({ kind: "opaque", reason: value.opaque, origin: this.reporter.origin(pointer) })
-          : undefined;
+      case "opaque": {
+        const reason = guaranteedString(value.opaque, "opaque", pointer);
+        return plain({ kind: "opaque", reason, origin: this.reporter.origin(pointer) });
+      }
       case "file":
         return this.file(value.file, pointer, plain);
       case "enum":
@@ -833,9 +839,7 @@ export class TreeSchemasCompiler {
     if (written === undefined) return undefined;
     const origin = this.reporter.origin(treeSchemasPointer(pointer, "restrictedTo"));
     if (typeof written === "string") return { right: written, origin };
-    const right = treeSchemasMember(written, "right");
-    // The authoring schema requires `right`; a mapping without it never reaches this half.
-    if (typeof right !== "string") return undefined;
+    const right = guaranteedString(treeSchemasMember(written, "right"), "right", pointer);
     const params = treeSchemasMember(written, "params");
     const input = treeSchemasMember(written, "input");
     return {
@@ -988,18 +992,17 @@ export class TreeSchemasCompiler {
     pointer: string,
     plain: (use: IrWriter.TypeUse) => TreeSchemasCompiled,
   ): TreeSchemasCompiled | undefined {
-    const name = typeof written === "string" ? written : treeSchemasMember(written, "narrow");
-    if (typeof name !== "string") return undefined;
-    const values = this.enumValues(name, new Set());
-    if (values === undefined) {
-      this.reporter.error({
-        rule: "enum-unknown",
-        pointer: typeof written === "string" ? pointer : treeSchemasPointer(pointer, "narrow"),
-        message: `no enum '${name}' with values is declared`,
-        fix: "declare it under 'enums', or fix the name",
-      });
+    const name =
+      typeof written === "string"
+        ? written
+        : guaranteedString(treeSchemasMember(written, "narrow"), "narrow", pointer);
+    const found = this.enumValues(name, []);
+    if (found === undefined || "cycle" in found) {
+      const at = typeof written === "string" ? pointer : treeSchemasPointer(pointer, "narrow");
+      this.reportEnumWithoutValues(name, found?.cycle, at);
       return undefined;
     }
+    const { values } = found;
     if (typeof written === "string") return plain({ kind: "enum", enum: name });
 
     const to = treeSchemasMember(written, "to");
@@ -1028,14 +1031,40 @@ export class TreeSchemasCompiler {
     });
   }
 
-  private enumValues(name: string, seen: Set<string>): string[] | undefined {
+  // The values of an enum, followed through `source.enum` (`path` holds the enums already followed).
+  private enumValues(
+    name: string,
+    path: readonly string[],
+  ): { values: string[] } | { cycle: string[] } | undefined {
+    if (path.includes(name)) return { cycle: [...path.slice(path.indexOf(name)), name] };
     const declared = treeSchemasMember(this.enums, name);
     const values = treeSchemasMember(declared, "values");
-    if (Array.isArray(values)) return values.filter((value) => typeof value === "string");
+    if (Array.isArray(values))
+      return { values: values.filter((value) => typeof value === "string") };
     const source = treeSchemasMember(treeSchemasMember(declared, "source"), "enum");
-    if (typeof source !== "string" || seen.has(name)) return undefined;
-    seen.add(name);
-    return this.enumValues(source, seen);
+    return typeof source === "string" ? this.enumValues(source, [...path, name]) : undefined;
+  }
+
+  private reportEnumWithoutValues(
+    name: string,
+    cycle: string[] | undefined,
+    pointer: string,
+  ): void {
+    if (cycle === undefined) {
+      this.reporter.error({
+        rule: "enum-unknown",
+        pointer,
+        message: `no enum '${name}' with values is declared`,
+        fix: "declare it under 'enums', or fix the name",
+      });
+      return;
+    }
+    this.reporter.error({
+      rule: "enum-cycle",
+      pointer,
+      message: `the enum '${name}' takes its values from a cycle of sources: ${cycle.join(" -> ")}`,
+      fix: "give one enum of the cycle its own 'values'",
+    });
   }
 
   private union(
