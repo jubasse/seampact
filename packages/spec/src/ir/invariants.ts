@@ -248,7 +248,9 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
           );
         break;
       }
-      case "RuleProof": {
+      // A rule's proof and the body field it adds to an operation's input (`InputProof`) are typed alike.
+      case "RuleProof":
+      case "InputProof": {
         const use = value.schema;
         if (isRecord(use) && PROOF_REFUSED_KINDS.includes(String(use.kind)))
           fail(

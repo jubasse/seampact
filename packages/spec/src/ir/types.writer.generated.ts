@@ -952,7 +952,16 @@ export interface OperationInput {
   bodyLimitBytes: number;
   rawBody: boolean;
   fields?: InputField[];
+  /** The body fields of the rule proofs read in the body, each once, in requirement order; absent when there is none. Targets render the body as the input schema's properties followed by these fields. */
+  proofs?: InputProof[];
   origin: Origin;
+}
+
+/** A body field the compiler adds to the input for a rule proof read in the body (derivation 'rule.proof'): required and sensitive (ADR 0002 section 9). A proof read in a header is a derived header parameter. */
+export interface InputProof {
+  name: string;
+  schema: TypeUse;
+  derivedFrom: DerivedFrom;
 }
 
 export interface ResponseHeader {

@@ -645,8 +645,8 @@
       "params": "LockedParams",
       "takesBucket": true,
       "proof": {
-        "in": "header",
-        "name": "X-Proof",
+        "in": "body",
+        "name": "quotaProof",
         "schema": {
           "kind": "scalar",
           "type": "string",
@@ -1029,6 +1029,22 @@
           {
             "name": "tags",
             "wire": { "kind": "list", "style": "form", "explode": true, "brackets": false }
+          }
+        ],
+        "proofs": [
+          {
+            "name": "quotaProof",
+            "schema": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "scalar": "resourceId",
+              "refinements": {}
+            },
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [{ "layer": "api", "pointer": "/rules/quota" }]
+            }
           }
         ],
         "origin": { "layer": "api", "pointer": "/input" }

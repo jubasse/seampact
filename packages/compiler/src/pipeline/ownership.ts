@@ -13,9 +13,9 @@ import type { HalfName } from "./halves.js";
 //   derivation table (`derivations/table.ts`): declared parameters and responses and the `relay.route`,
 //   `batch.read`, `response.format` and `budget.timeout` elements to tree.nodes, `rule.proof` elements to
 //   access.rights, other derived wire elements to derive.wire. `derived` lists the halves whose derivations add
-//   elements to the list; a derived element of another half's derivation is refused there. A rule proof is a
-//   derived header parameter; a body proof field goes to `operations[].input.proofs` (access.rights) once the IR
-//   change `feat/ir-1-core-origins-proofs` adds it (CR-1).
+//   elements to the list; a derived element of another half's derivation is refused there. A rule proof read in
+//   a header is a derived header parameter; one read in the body is an element of `operations[].input.proofs`,
+//   which access.rights owns whole.
 // A field above rows (`operations[]`, `operations[].input`) is a container: halves navigate through it, and
 // writing it writes each row below it. The finalize members (top level, and each operation's `features`) belong
 // to `finalize`, which no half is.
@@ -116,7 +116,8 @@ export const pipelineOwnership = [
     "access.identity",
     ...ops("access", "callerKinds", "principalRequires", "bindings", "csrf", "input.rawBody"),
   ),
-  // Per operation, access.rights. A sort key's `derivedFrom` comes with its derived right (`sortKey.restricted`).
+  // Per operation, access.rights. A sort key's `derivedFrom` comes with its derived right (`sortKey.restricted`);
+  // `input.proofs` holds the body fields of rule proofs (`rule.proof`), each with its `derivedFrom`.
   ...owned(
     "access.rights",
     ...ops(
@@ -124,6 +125,7 @@ export const pipelineOwnership = [
       "requires",
       "fieldRights",
       "filteredBy",
+      "input.proofs",
       "paging.sortKeys[].right",
       "paging.sortKeys[].derivedFrom",
     ),

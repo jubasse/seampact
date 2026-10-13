@@ -179,6 +179,11 @@ describe("checkIrInvariants", () => {
         proof.schema = { kind: "file" };
       }),
     ).toEqual(one("ir.id.scalar"));
+    expect(
+      broken("InputProof", (proof) => {
+        proof.schema = { kind: "file", media: ["image/png"] };
+      }),
+    ).toEqual(one("ir.id.scalar"));
     // An unknown use kind is the reader's to name; a proof may be an enum or an array.
     expect(
       broken("Scope", (scope) => {
@@ -261,6 +266,16 @@ describe("checkIrInvariants", () => {
         (source) => source.in === "principal",
       ),
     ).toEqual([]);
+  });
+
+  test("a body proof's type use names existing entries", () => {
+    const ir = sample("every-member.ir.json");
+    const [proof] = objectsOf(ir, "InputProof");
+    if (proof === undefined) throw new Error("no InputProof in the sample");
+    (proof.value.schema as Record<string, unknown>).scalar = "missingId";
+    expect(checkIrInvariants(ir)).toEqual([
+      expect.objectContaining({ id: "ir.ref.resolves", pointer: `${proof.pointer}/schema/scalar` }),
+    ]);
   });
 
   test("every catalogue id names an existing entry", () => {

@@ -256,7 +256,22 @@
         "bodyLimitBytes": { "type": "integer", "minimum": 0 },
         "rawBody": { "type": "boolean" },
         "fields": { "type": "array", "items": { "$ref": "#/$defs/InputField" } },
+        "proofs": {
+          "type": "array",
+          "description": "The body fields of the rule proofs read in the body, each once, in requirement order; absent when there is none. Targets render the body as the input schema's properties followed by these fields.",
+          "items": { "$ref": "#/$defs/InputProof" }
+        },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "InputProof": {
+      "type": "object",
+      "description": "A body field the compiler adds to the input for a rule proof read in the body (derivation 'rule.proof'): required and sensitive (ADR 0002 section 9). A proof read in a header is a derived header parameter.",
+      "required": ["name", "schema", "derivedFrom"],
+      "properties": {
+        "name": { "type": "string" },
+        "schema": { "$ref": "schemas.schema.json#/$defs/TypeUse" },
+        "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
       }
     },
     "ResponseHeader": {
