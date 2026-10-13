@@ -85,6 +85,8 @@ function kotlinSources(files: Map<string, string>): string {
     .join("\n");
 }
 
+const SHAPES_FILE = `${KOTLIN_MODEL_DIRECTORY}/IrShapes.kt`;
+
 describe("ir-models", () => {
   it("models are regenerated", () => {
     const run = spawnSync(
@@ -174,6 +176,22 @@ describe("ir-models", () => {
       } else {
         expect(kotlin).toContain(`public typealias ${kotlinName} = `);
       }
+    }
+  });
+
+  it("every must-act definition is marked in the shape table", () => {
+    const shapes = required(generateIrModels().get(SHAPES_FILE), SHAPES_FILE);
+    const mustAct = buildNeutralModel().definitions.filter((definition) => definition.mustAct);
+
+    expect(mustAct.length).toBeGreaterThan(0);
+    for (const definition of mustAct) {
+      const entry =
+        definition.kind === "union"
+          ? 'IrShape\\.Union\\("\\w+", true,'
+          : "IrShape\\.OpenEnum\\(.*, true\\)\\)$";
+      expect(shapes, definition.name).toMatch(
+        new RegExp(`put\\("${definition.name}", ${entry}`, "m"),
+      );
     }
   });
 

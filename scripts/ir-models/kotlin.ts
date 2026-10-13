@@ -30,6 +30,7 @@ export const KOTLIN_CLAIMED_NAMES = [
   "IrOpenEnumSerializer",
   "IrIntegerSerializer",
   "IrModelVersion",
+  "IrShape",
   "EncodeDefault",
   "ExperimentalSerializationApi",
   "SerialName",
@@ -92,6 +93,10 @@ export function emitKotlin(context: KotlinContext): Map<string, string> {
     `${KOTLIN_MODEL_DIRECTORY}/IrSerialization.kt`,
     fileText(supportHeader, SUPPORT_FILE_ANNOTATIONS, SUPPORT_IMPORTS, supportLines(context)),
   );
+  files.set(
+    `${KOTLIN_MODEL_DIRECTORY}/IrShapes.kt`,
+    fileText(supportHeader, [], [], shapesLines(byFile)),
+  );
   return files;
 }
 
@@ -118,8 +123,7 @@ function fileText(
     "",
     `package ${KOTLIN_PACKAGE}`,
     "",
-    ...imports.map((name) => `import ${name}`),
-    "",
+    ...(imports.length === 0 ? [] : [...imports.map((name) => `import ${name}`), ""]),
     ...body,
   ];
   while (lines.at(-1) === "") lines.pop();
@@ -175,9 +179,13 @@ public object IrModelVersion {
 /** The JSON configuration of the IR model: unknown members are tolerated and dropped (ADR 0005 section 3). */
 public val IrJson: Json = Json { ignoreUnknownKeys = true }
 
+/** The longest number literal the IR reads: no IR integer, version or revision is written longer. */
+internal const val IR_NUMBER_LITERAL_MAX_LENGTH = 64
+
 /**
  * An IR integer as a \`Long\`. An integral number written with a fraction (\`2.0\`), which JSON Schema counts as
- * an integer, reads as that integer; any other value is an error naming it.
+ * an integer, reads as that integer; any other value is an error naming it: a literal as written, a longer
+ * literal by its length, a string, array or object by its JSON type, never its content.
  */
 internal object IrIntegerSerializer : KSerializer<Long> {
     override val descriptor: SerialDescriptor =
@@ -185,17 +193,28 @@ internal object IrIntegerSerializer : KSerializer<Long> {
 
     override fun deserialize(decoder: Decoder): Long {
         val element = jsonDecoder(decoder, "an integer").decodeJsonElement()
-        val number = (element as? JsonPrimitive)?.takeIf { !it.isString }?.content?.toBigDecimalOrNull()
-            ?: throw SerializationException("expected an integer, got $element")
+        val literal = (element as? JsonPrimitive)?.takeIf { !it.isString }?.content
+            ?: throw SerializationException("expected an integer, got the JSON type \${notALiteral(element)}")
+        if (literal.length > IR_NUMBER_LITERAL_MAX_LENGTH) {
+            throw SerializationException("expected an integer, got a literal of \${literal.length} chars")
+        }
+
+        val number = literal.toBigDecimalOrNull() ?: throw SerializationException("expected an integer, got $literal")
         try {
             return number.longValueExact()
         } catch (error: ArithmeticException) {
-            throw SerializationException("expected an integer within 64 bits, got $element", error)
+            throw SerializationException("expected an integer within 64 bits, got $literal", error)
         }
     }
 
     override fun serialize(encoder: Encoder, value: Long) {
         encoder.encodeLong(value)
+    }
+
+    private fun notALiteral(element: JsonElement): String = when (element) {
+        is JsonObject -> "object"
+        is JsonPrimitive -> "string"
+        else -> "array"
     }
 }
 
@@ -203,7 +222,8 @@ internal object IrIntegerSerializer : KSerializer<Long> {
 internal object IrOptionalOpaqueSerializer : KSerializer<JsonElement?> {
     override val descriptor: SerialDescriptor = JsonElement.serializer().descriptor.nullable
 
-    override fun deserialize(decoder: Decoder): JsonElement? = jsonDecoder(decoder, "an opaque value").decodeJsonElement()
+    override fun deserialize(decoder: Decoder): JsonElement? =
+        jsonDecoder(decoder, "an opaque value").decodeJsonElement()
 
     override fun serialize(encoder: Encoder, value: JsonElement?) {
         jsonEncoder(encoder, "an opaque value").encodeJsonElement(value ?: JsonNull)
@@ -255,6 +275,25 @@ internal abstract class IrOpenEnumSerializer<T : Any>(
     }
 }
 
+/**
+ * The shape of the IR the reader walks on the raw JSON to find an unknown tag or value of a must-act definition
+ * (ADR 0005 section 3): a definition by name, a struct's walked members, a tagged union, an open enum, an array
+ * or a map. A member that holds no definition is not listed.
+ */
+internal sealed interface IrShape {
+    class Named(val definition: String) : IrShape
+
+    class Struct(val members: Map<String, IrShape>) : IrShape
+
+    class Union(val tag: String, val mustAct: Boolean, val variants: Map<String, String>) : IrShape
+
+    class OpenEnum(val known: Set<String>, val mustAct: Boolean) : IrShape
+
+    class Items(val of: IrShape) : IrShape
+
+    class Values(val of: IrShape) : IrShape
+}
+
 private fun jsonDecoder(decoder: Decoder, what: String): JsonDecoder =
     decoder as? JsonDecoder ?: throw SerializationException("$what is read from JSON only, through IrJson")
 
@@ -262,6 +301,75 @@ private fun jsonEncoder(encoder: Encoder, what: String): JsonEncoder =
     encoder as? JsonEncoder ?: throw SerializationException("$what is written to JSON only, through IrJson")`.split(
     "\n",
   );
+}
+
+const SHAPES_TABLE = "IR_SHAPES";
+
+/** The shape table: every definition that holds a walked member, a union or an open enum, one function per schema file. */
+function shapesLines(byFile: Map<string, Definition[]>): string[] {
+  const files = [...byFile].sort(([left], [right]) => (left < right ? -1 : 1));
+  const functionName = (schemaFile: string): string =>
+    `${schemaFile.replace(/-(.)/g, (_, letter: string) => letter.toUpperCase())}Shapes`;
+  const lines = [
+    "/** The shape of every IR definition that the must-act walk enters, by schema name. */",
+    `internal val ${SHAPES_TABLE}: Map<String, IrShape> = ${files.map(([schemaFile]) => `${functionName(schemaFile)}()`).join(" + ")}`,
+    "",
+  ];
+  for (const [schemaFile, definitions] of files) {
+    lines.push(
+      `private fun ${functionName(schemaFile)}(): Map<String, IrShape> = buildMap {`,
+      ...definitions.flatMap((definition) => shapeEntry(definition)),
+      "}",
+      "",
+    );
+  }
+  return lines;
+}
+
+function shapeEntry(definition: Definition): string[] {
+  const shape = shapeOf(definition);
+  return shape === undefined ? [] : [`${INDENT}put(${kotlinString(definition.name)}, ${shape})`];
+}
+
+function shapeOf(definition: Definition): string | undefined {
+  switch (definition.kind) {
+    case "struct": {
+      const members = definition.members.flatMap((member) => {
+        const shape = shapeOfType(member.type);
+        return shape === undefined ? [] : [`${kotlinString(member.name)} to ${shape}`];
+      });
+      return `IrShape.Struct(mapOf(${members.join(", ")}))`;
+    }
+    case "union": {
+      const variants = definition.variants.map(
+        (variant) => `${kotlinString(variant.tagValue)} to ${kotlinString(variant.definition)}`,
+      );
+      return `IrShape.Union(${kotlinString(definition.tag)}, ${definition.mustAct}, mapOf(${variants.join(", ")}))`;
+    }
+    case "openEnum":
+      return `IrShape.OpenEnum(setOf(${definition.known.map(kotlinString).join(", ")}), ${definition.mustAct})`;
+    case "alias":
+      return shapeOfType(definition.target);
+    case "extensionSlot":
+      return undefined;
+  }
+}
+
+function shapeOfType(type: TypeRef): string | undefined {
+  switch (type.kind) {
+    case "named":
+      return `IrShape.Named(${kotlinString(type.definition)})`;
+    case "array": {
+      const items = shapeOfType(type.items);
+      return items === undefined ? undefined : `IrShape.Items(${items})`;
+    }
+    case "map": {
+      const values = shapeOfType(type.values);
+      return values === undefined ? undefined : `IrShape.Values(${values})`;
+    }
+    default:
+      return undefined;
+  }
 }
 
 function assertTopLevelNamesDistinct(model: NeutralModel, typeNames: Map<string, string>): void {
