@@ -1,1 +1,1 @@
-export {};
+export { treeSchemasPass } from "./pass.js";

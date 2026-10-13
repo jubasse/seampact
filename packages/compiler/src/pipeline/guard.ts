@@ -9,6 +9,7 @@ import {
   pipelineContainers,
   pipelineOwnership,
 } from "./ownership.js";
+import { pipelineViewCopy } from "./view.js";
 
 // The read/write guard of ADR 0006 section 2: it wraps the draft for one half's run, so a half's tests fail on
 // its first access outside its declaration instead of at merge time. Off by default in `compileWorkspace`, on
@@ -25,7 +26,8 @@ import {
 // - A default is written in one assignment: changing a member inside a present default is a write over it.
 // - A half appends to an `elements` list; moving another half's element (`splice`, `unshift`, `sort`) writes it.
 // - Values are unwrapped before they reach the draft, so the draft never holds a guard. A copy made to unwrap
-//   keeps its source's prototype and defines its members.
+//   keeps its source's prototype and defines its members. A read-only view (`view.ts`) is stored as a plain deep
+//   copy, so the draft never aliases the raw tree or another api's draft.
 // - The draft is data. A symbol key, an accessor, a prototype change or making a value non-extensible is
 //   refused. `__proto__`, `constructor` and `prototype` read only as own members (a list's `constructor`
 //   passes, for array methods), and writing a new member defines it, so no setter runs. A catalogue assigned
@@ -250,6 +252,9 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
     if (!isObject(value)) return value;
     const target = targets.get(value);
     if (target !== undefined) return target;
+    // A read-only view (of the raw tree, another api's draft or an import) is stored as a plain copy.
+    const viewed = pipelineViewCopy(value);
+    if (viewed !== undefined) return viewed;
     if (Array.isArray(value)) {
       const items = value.map(unwrap);
       return items.some((item, i) => item !== value[i]) ? items : value;

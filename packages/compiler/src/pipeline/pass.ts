@@ -94,7 +94,11 @@ export interface WorkspacePassContext {
   readonly workspace: PassReadonly<RawWorkspace>;
   /** The IR of an import, when the `imports` option supplies one, in the open reader types. */
   imported(api: string): PassReadonly<ContractIR> | undefined;
-  report(diagnostic: Diagnostic): void;
+  /**
+   * Reports a diagnostic under the workspace api whose side table locates its origin (the relay route's api for a
+   * `relays` superset failure); an api name outside the workspace throws.
+   */
+  report(api: string, diagnostic: Diagnostic): void;
 }
 
 /** The link pass: diagnostics only, over the derived draft of every api (ADR 0006 section 3). */

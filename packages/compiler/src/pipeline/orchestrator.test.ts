@@ -1,0 +1,322 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import type { ContractIR } from "@seampact/spec/ir";
+import { describe, expect, test } from "vitest";
+import type { Diagnostic } from "../diagnostics/diagnostic.js";
+import { loadFsReader } from "../load/index.js";
+import { loadMemoryReader } from "../load/reader.js";
+import type { DraftIR } from "./draft.js";
+import { DraftAccessError } from "./guard.js";
+import type { HalfName } from "./halves.js";
+import { compileWorkspace, type PipelineOptions } from "./orchestrator.js";
+import type { PassContext, PassParts, TreeSchemaService, WorkspacePass } from "./pass.js";
+import type { PipelineFinalize, PipelineRelayStage } from "./stages.js";
+import { pipelineTreeNodes } from "./tree.js";
+import { PipelineReadonlyError } from "./view.js";
+
+const REFERENCE = fileURLToPath(new URL("../../../../fixtures/reference", import.meta.url));
+const MINIMAL_IR: ContractIR = JSON.parse(
+  readFileSync(
+    fileURLToPath(new URL("../../../spec/schemas/ir/examples/minimal.ir.json", import.meta.url)),
+    "utf8",
+  ),
+);
+
+const api = (name: string) =>
+  `api: { name: ${name}, version: 1 }\nsurfaces:\n  app:\n    prefix: /${name}\n    tags: [${name}]\n    routes:\n      ping: { method: get }\n`;
+const FILES = {
+  "workspace.yaml": "workspace:\n  apis:\n    a: ./a.yaml\n    b: ./b.yaml\n    c: ./c.yaml\n",
+  "a.yaml": api("a"),
+  "b.yaml": api("b"),
+  "c.yaml": api("c"),
+};
+const PING = "/surfaces/app/routes/ping";
+
+// b relays to a; c is independent.
+const relayOrder: PipelineRelayStage = () => ({
+  order: ["a", "b", "c"],
+  relaysTo: new Map([["b", ["a"]]]),
+  diagnostics: [],
+});
+
+const diagnostic = (
+  severity: Diagnostic["severity"],
+  rule: string,
+  pointer: string,
+): Diagnostic => ({
+  severity,
+  rule,
+  message: rule,
+  fix: "none",
+  origin: { layer: "api", pointer },
+  related: [],
+});
+
+type Act = (draft: DraftIR, context: PassContext) => void;
+const NO_SCHEMAS: TreeSchemaService = {
+  typeUse: () => undefined,
+  queryWire: () => undefined,
+  checkExample: () => [],
+};
+
+// Fake halves that log `<api>:<half>` and run `acts[half]`.
+function fakeParts(log: string[], acts: Partial<Record<HalfName, Act>> = {}): PassParts {
+  const body =
+    (half: HalfName) =>
+    (draft: DraftIR, context: PassContext): undefined => {
+      log.push(`${context.raw.name}:${half}`);
+      acts[half]?.(draft, context);
+    };
+  const declared = { reads: [], writes: [] };
+  return {
+    "tree.schemas": {
+      pass: "tree",
+      half: "tree.schemas",
+      ...declared,
+      run: (draft, context) => {
+        body("tree.schemas")(draft, context);
+        return NO_SCHEMAS;
+      },
+    },
+    "tree.nodes": { pass: "tree", half: "tree.nodes", ...declared, run: body("tree.nodes") },
+    "access.identity": {
+      pass: "access",
+      half: "access.identity",
+      ...declared,
+      run: body("access.identity"),
+    },
+    "access.rights": {
+      pass: "access",
+      half: "access.rights",
+      ...declared,
+      run: body("access.rights"),
+    },
+    "derive.wire": { pass: "derive", half: "derive.wire", ...declared, run: body("derive.wire") },
+    "derive.errors": {
+      pass: "derive",
+      half: "derive.errors",
+      ...declared,
+      run: body("derive.errors"),
+    },
+  };
+}
+
+function compile(
+  log: string[],
+  acts: Partial<Record<HalfName, Act>> = {},
+  extra: Partial<PipelineOptions["parts"]> = {},
+  options: Partial<PipelineOptions> = {},
+) {
+  const link: WorkspacePass = {
+    name: "link",
+    reads: [],
+    run: (apis) => {
+      log.push(`link:${[...apis.keys()].join(",")}`);
+    },
+  };
+  const finalize: PipelineFinalize = (_draft, context) => {
+    log.push(`${context.raw.name}:finalize`);
+    return undefined;
+  };
+  return compileWorkspace({
+    reader: loadMemoryReader(FILES),
+    entry: "workspace.yaml",
+    guard: true,
+    parts: { passes: fakeParts(log, acts), relayOrder, link, finalize, ...extra },
+    ...options,
+  });
+}
+
+const ALL = (name: string) =>
+  [
+    "tree.schemas",
+    "tree.nodes",
+    "access.identity",
+    "access.rights",
+    "derive.wire",
+    "derive.errors",
+  ].map((half) => `${name}:${half}`);
+const byApi = (result: ReturnType<typeof compile>) =>
+  Object.fromEntries(result.apis.map((r) => [r.api, r.diagnostics.map((d) => d.rule)]));
+
+describe("stop rule", () => {
+  test("halves in order, an erroring half completes, dependents skipped, independent apis continue", () => {
+    const log: string[] = [];
+    const result = compile(log, {
+      "access.identity": (_draft, context) => {
+        if (context.raw.name !== "a") return;
+        context.report(diagnostic("error", "x/second", PING));
+        context.report(diagnostic("error", "x/first", "/api"));
+        log.push("a:access.identity:completed");
+      },
+    });
+    expect(log).toEqual([
+      "a:tree.schemas",
+      "a:tree.nodes",
+      "a:access.identity",
+      "a:access.identity:completed",
+      ...ALL("c"),
+    ]);
+    // Every error of the step, sorted by location (ADR 0006 section 4); b is skipped with no diagnostic.
+    expect(byApi(result)).toEqual({ a: ["x/first", "x/second"], b: [], c: [] });
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  test("warnings never stop; link and finalize run when no api has an error", () => {
+    const log: string[] = [];
+    const finalize: PipelineFinalize = (draft, context) => {
+      log.push(`${context.raw.name}:finalize`);
+      expect(draft.operations).toEqual([]);
+      return { ir: MINIMAL_IR, sourceMap: { irRevision: 1, locations: {} } };
+    };
+    const result = compile(
+      log,
+      { "tree.nodes": (_d, c) => c.report(diagnostic("warning", "x/warn", PING)) },
+      { finalize },
+    );
+    expect(log).toEqual([
+      ...ALL("a"),
+      ...ALL("b"),
+      ...ALL("c"),
+      "link:a,b,c",
+      "a:finalize",
+      "b:finalize",
+      "c:finalize",
+    ]);
+    expect(byApi(result)).toEqual({ a: ["x/warn"], b: ["x/warn"], c: ["x/warn"] });
+    expect(result.apis.map((r) => r.ir)).toEqual([MINIMAL_IR, MINIMAL_IR, MINIMAL_IR]);
+  });
+
+  test("a link error stops finalize; a finalize error drops that api's IR", () => {
+    const log: string[] = [];
+    const link: WorkspacePass = {
+      name: "link",
+      reads: [],
+      run: (_apis, context) => {
+        context.report("b", diagnostic("error", "link/superset", PING));
+        expect(() => context.report("nope", diagnostic("error", "x", PING))).toThrow(/nope/);
+      },
+    };
+    expect(byApi(compile(log, {}, { link }))).toEqual({ a: [], b: ["link/superset"], c: [] });
+    expect(log.some((line) => line.endsWith(":finalize"))).toBe(false);
+
+    const finalize: PipelineFinalize = (_draft, context) => {
+      if (context.raw.name === "c") context.report(diagnostic("error", "finalize/collision", PING));
+      return { ir: MINIMAL_IR, sourceMap: { irRevision: 1, locations: {} } };
+    };
+    const result = compile([], {}, { finalize });
+    expect(result.apis.map((r) => r.ir === undefined)).toEqual([false, false, true]);
+  });
+
+  test("a relay order error stops its api and the apis relaying to it", () => {
+    const log: string[] = [];
+    const failing: PipelineRelayStage = (workspace) => ({
+      ...relayOrder(workspace),
+      diagnostics: [{ api: "a", diagnostics: [diagnostic("error", "finalize/relay-cycle", PING)] }],
+    });
+    const result = compile(log, {}, { relayOrder: failing });
+    expect(log).toEqual(ALL("c"));
+    expect(byApi(result)).toEqual({ a: ["finalize/relay-cycle"], b: [], c: [] });
+  });
+
+  test("load stops on an error, validate on any diagnostic", () => {
+    const log: string[] = [];
+    const missing = compileWorkspace({
+      reader: loadMemoryReader({}),
+      entry: "workspace.yaml",
+      parts: { passes: fakeParts(log) },
+    });
+    expect(missing.diagnostics.length).toBeGreaterThan(0);
+    expect(missing.apis).toEqual([]);
+
+    const invalid = compileWorkspace({
+      reader: loadMemoryReader({ ...FILES, "c.yaml": `${api("c")}unknownKey: 1\n` }),
+      entry: "workspace.yaml",
+      parts: { passes: fakeParts(log) },
+    });
+    expect(log).toEqual([]);
+    expect(invalid.apis.map((r) => [r.api, r.diagnostics.length > 0])).toEqual([
+      ["a", false],
+      ["b", false],
+      ["c", true],
+    ]);
+  });
+
+  test("the default stubs compile the reference contract without a diagnostic", () => {
+    for (const guard of [false, true]) {
+      const result = compileWorkspace({
+        reader: loadFsReader(REFERENCE),
+        entry: "workspace.yaml",
+        guard,
+      });
+      expect(result.diagnostics).toEqual([]);
+      expect(result.apis.map((r) => [r.api, r.diagnostics, r.ir])).toEqual([
+        ["tasks", [], undefined],
+        ["tasksService", [], undefined],
+      ]);
+      expect(Object.keys(result.locations).length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("guarded run", () => {
+  test("an undeclared write throws, and each half's guard ends with its run", () => {
+    expect(() =>
+      compile([], {
+        "tree.nodes": (draft) => {
+          draft.lint = { rules: {}, allows: [] };
+        },
+      }),
+    ).toThrow(DraftAccessError);
+
+    let kept: DraftIR | undefined;
+    expect(() =>
+      compile([], {
+        "tree.schemas": (draft) => {
+          kept = draft;
+        },
+        "tree.nodes": () => kept?.operations,
+      }),
+    ).toThrow(/revoked/);
+  });
+
+  // A strict-mode assignment, which a frozen object refuses with a TypeError.
+  const poke = (target: unknown, key: string): void => {
+    (target as Record<string, unknown>)[key] = 1;
+  };
+  const ext: ContractIR = structuredClone(MINIMAL_IR);
+
+  test.each<[string, Act, ErrorConstructor | typeof PipelineReadonlyError]>([
+    ["raw", (_d, c) => poke(c.raw.merged, "surfaces"), PipelineReadonlyError],
+    ["raw layers", (_d, c) => poke(c.raw.layers, "length"), PipelineReadonlyError],
+    ["workspace", (_d, c) => poke(c.workspace, "root"), PipelineReadonlyError],
+    [
+      "relayed",
+      (_d, c) => {
+        if (c.raw.name === "b") poke(c.relayed("a"), "operations");
+      },
+      PipelineReadonlyError,
+    ],
+    ["imported", (_d, c) => poke(c.imported("ext"), "irRevision"), PipelineReadonlyError],
+    [
+      "inherited entry",
+      (_d, c) => {
+        const ping = pipelineTreeNodes(c.raw).find((n) => n.name === "ping");
+        poke(ping && c.inherited(ping, "tags")?.entries[0], "value");
+      },
+      TypeError,
+    ],
+    [
+      "inherited value",
+      (_d, c) => {
+        const app = pipelineTreeNodes(c.raw)[0];
+        poke(app && c.inherited(app, "tags")?.entries[0]?.node.settings.tags, "0");
+      },
+      PipelineReadonlyError,
+    ],
+  ])("with the guard on, %s is read-only", (_source, act, error) => {
+    const run = (guard: boolean) =>
+      compile([], { "access.identity": act }, {}, { guard, imports: new Map([["ext", ext]]) });
+    expect(() => run(true)).toThrow(error);
+  });
+});

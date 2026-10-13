@@ -1,1 +1,1 @@
-export {};
+export { deriveErrorsPass } from "./pass.js";
