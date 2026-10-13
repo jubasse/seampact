@@ -88,7 +88,7 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 | `ir.scalar.type` | A named format's own type names no `scalar`. |
 | `ir.id.scalar` | `Scope.idSchema` and `ResourceSubject.idSchema` are a `scalar` or `enum` type use without `nullable`; `RuleProof.schema` and `InputProof.schema` are anything but `opaque` and `file`. |
 | `ir.ref.resolves` | Every member whose schema is a `$ref` to a catalogue id definition (the key of a top-level or api map, such as `SchemeId` or `SurfaceId`) names an existing key, read with `Object.hasOwn`. |
-| `ir.input-proof.wire` | An `InputProof` has `wire` if and only if its input's `media` is `application/x-www-form-urlencoded` or `multipart/form-data` (known media only). |
+| `ir.input-proof.wire` | An `InputProof` has `wire` if and only if its input's `media` is `application/x-www-form-urlencoded` or `multipart/form-data` (known media only), and its `wire.kind` is never `file`. |
 | `ir.input-proof.name` | The names of an input's `proofs` are distinct, and none is the name of a property of the input's object schema (a `ref` use) or of an entry of its `fields`. |
 | `ir.input-proof.input` | An `OperationInput` with `proofs` has a `ref` use as its `schema`, naming an object schema, never a map or a union (known kinds only). |
 | `ir.origin.core` | An `Origin` of layer `core` has a pointer that starts with `/formats/<id>`, `/errors/<code>` or `/schemas/<id>`; without `api`, that entry exists in the document. Only the entry is checked, not the rest of the pointer. |

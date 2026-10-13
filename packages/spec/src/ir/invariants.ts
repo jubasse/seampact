@@ -208,6 +208,14 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
             );
           seen.add(proof.name);
         }
+        // A proof is never a file (ir.id.scalar), so its wire form is never one.
+        for (const [i, proof] of proofs.entries())
+          if (isRecord(proof) && isRecord(proof.wire) && proof.wire.kind === "file")
+            fail(
+              "ir.input-proof.wire",
+              `${pointer}/proofs/${i}`,
+              "A body proof's wire kind is not 'file'.",
+            );
         // A body proof is sent as the input's other fields are: with a wire form in a form or multipart body,
         // none in a JSON one. An unknown media type is the reader's to name.
         if (!isKnown("OperationInput", "media", value.media)) break;

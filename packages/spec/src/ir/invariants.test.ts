@@ -320,9 +320,14 @@ describe("checkIrInvariants", () => {
       }).found,
     ).toEqual([]);
     const wire = check((_, proof) => {
-      proof.wire = { kind: "file", style: "form" };
+      proof.wire = { kind: "json", style: "form" };
     });
     expect(wire.found).toEqual([{ id: "ir.field-wire.members", pointer: `${wire.at}/wire` }]);
+    // A proof is never a file, so neither is its wire form.
+    const file = check((_, proof) => {
+      proof.wire = { kind: "file" };
+    });
+    expect(file.found).toEqual([{ id: "ir.input-proof.wire", pointer: file.at }]);
   });
 
   test("a body proof is identified by a name the body does not already carry", () => {
