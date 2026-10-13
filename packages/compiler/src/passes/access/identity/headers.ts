@@ -154,7 +154,7 @@ export const accessIdentityActorSurfaceRefusal = (
   kind: string,
 ): AccessIdentityProblem => ({
   rule,
-  message: `actorSurface header '${header}' has a ${kind} schema; an actor surface is a strict enum`,
+  message: `actorSurface header '${header}' has a schema of kind ${kind}; an actor surface is a strict enum`,
   fix: "Name the enum of the product's surfaces as the header's schema, such as 'schema: { enum: Surface }'.",
   pointer,
 });

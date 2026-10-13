@@ -162,6 +162,22 @@ describe("identities and principal variants", () => {
     });
   });
 
+  test("a scheme is listed once in each list", () => {
+    expect(
+      refusals(`
+  dup: { schemes: { read: [bearer, session, bearer], write: [bearer] }, principal: UserPrincipal }`),
+    ).toEqual({
+      written: [],
+      diagnostics: [
+        {
+          rule: "seampact/access/scheme-reference",
+          message: "identity 'dup' lists scheme 'bearer' twice in 'read'",
+          pointer: "/identities/dup/schemes/read/2",
+        },
+      ],
+    });
+  });
+
   test("a principal is a named schema in every variant; a map is refused only where a field is read", () => {
     const variant = (id: string, name: string, use: IrWriter.TypeUse) => ({
       pointer: `/identities/${id}/principal/variants/${name}`,
@@ -361,7 +377,7 @@ enums:
       {
         rule: "seampact/access/header-use",
         message:
-          "actorSurface header 'surface' has a scalar schema; an actor surface is a strict enum",
+          "actorSurface header 'surface' has a schema of kind scalar; an actor surface is a strict enum",
         pointer: "/identities/user/headers/surface/schema",
       },
     ]);
@@ -395,6 +411,11 @@ headers:
     headers:
       deadline: { from: principal.userId, stale: api.stale }
       rights: { from: principal.profile.rightsVersion }
+  noFrom:
+    schemes: { read: [session], write: [session] }
+    principal: UserPrincipal
+    headers:
+      rights: { for: writes, stale: api.stale }
   operator:
     schemes: { read: [session], write: [session] }
     principal: UserPrincipal
@@ -417,6 +438,11 @@ headers:
           rule: "seampact/access/header-use",
           message: "identity 'user' uses versionToken header 'rights' without 'stale'",
           pointer: "/identities/user/headers/rights",
+        },
+        {
+          rule: "seampact/access/header-use",
+          message: "identity 'noFrom' uses versionToken header 'rights' without 'from'",
+          pointer: "/identities/noFrom/headers/rights",
         },
         {
           rule: "seampact/access/principal-field",
@@ -462,7 +488,14 @@ describe("access.identity diagnostics are located", () => {
       deadline: { stale: api.stale }
   signedBare: { kind: signed, principal: UserPrincipal }`);
 
-    expect(diagnostics.length).toBeGreaterThanOrEqual(5);
+    expect(diagnostics.map(({ rule }) => rule.replace("seampact/access/", ""))).toEqual([
+      "scheme-reference",
+      "scheme-kind",
+      "header-use",
+      "header-use",
+      "header-use",
+      "identity-member",
+    ]);
     const locations = contract.raw.locations;
     for (const diagnostic of diagnostics) {
       expect(diagnostic.severity).toBe("error");

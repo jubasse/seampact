@@ -137,11 +137,9 @@ function credentialMembers(entry: IdentityEntry): CredentialMembers | undefined 
   const lists = CREDENTIAL_LISTS.map((list) => {
     const names = accessIdentityStrings(schemes, list) ?? [];
     names.forEach((name, index) => {
-      checkCredentialScheme(
-        entry,
-        name,
-        accessIdentityPointer(pointer, "schemes", list, `${index}`),
-      );
+      const schemePointer = accessIdentityPointer(pointer, "schemes", list, `${index}`);
+      if (names.indexOf(name) < index) reportRepeatedScheme(entry, name, list, schemePointer);
+      else checkCredentialScheme(entry, name, schemePointer);
     });
     // ADR 0004 section 9: an identity's scheme lists are sorted.
     return [...names].sort();
@@ -150,6 +148,21 @@ function credentialMembers(entry: IdentityEntry): CredentialMembers | undefined 
 
   const [read = [], write = [], optionalRead = []] = lists;
   return { kind: "credential", schemes: { read, write, optionalRead } };
+}
+
+// Neither the authoring nor the IR schema sets `uniqueItems` on a scheme list.
+function reportRepeatedScheme(
+  entry: IdentityEntry,
+  name: string,
+  list: string,
+  pointer: string,
+): void {
+  entry.reporter.error({
+    rule: "scheme-reference",
+    message: `identity '${entry.id}' lists scheme '${name}' twice in '${list}'`,
+    fix: "List each scheme once.",
+    pointer,
+  });
 }
 
 function checkCredentialScheme(entry: IdentityEntry, name: string, pointer: string): void {
