@@ -215,6 +215,65 @@ describe("guard refuses undeclared access", () => {
     ).toContain("tree.nodes, access.identity, derive.wire");
   });
 
+  // `input.schema` is a default with a row below it (`unknownKeys`): written where absent, it is one write, and
+  // only its sub-rows are checked on their own (ADR 0006 section 3).
+  test("a whole input is written where absent: declared by tree.nodes, or proof-only by access.rights", () => {
+    const bare = (): DraftIR => {
+      const value = draft();
+      delete operationOf(value).input;
+      return value;
+    };
+    const declared = bare();
+    const tree = pipelineGuard(declared, part("tree.nodes", [], ["operations[]"]));
+    operationOf(tree).input = {
+      media: "application/json",
+      schema: {
+        kind: "ref",
+        schema: "NewTask",
+        unknownKeys: { policy: "ignore", reason: "Clients add fields.", origin },
+      },
+      origin,
+    };
+    expect(operationOf(declared).input?.schema).toMatchObject({ schema: "NewTask" });
+
+    const proofOnly = bare();
+    const writes = ["media", "schema", "rawBody", "origin", "proofs"].map(
+      (member) => `operations[].input.${member}` as GuardedPart["writes"][number],
+    );
+    const rights = pipelineGuard(proofOnly, part("access.rights", ["operations[].input"], writes));
+    operationOf(rights).input = {
+      media: "application/json",
+      schema: { kind: "ref", schema: "ApiEmptyBody" },
+      rawBody: false,
+      proofs: [{ name: "reauthToken", schema: text, derivedFrom: derivedFrom("rule.proof") }],
+      origin,
+    };
+    expect(operationOf(proofOnly).input?.schema).toEqual({ kind: "ref", schema: "ApiEmptyBody" });
+
+    // A sub-row keeps its own owners: access.rights writes no `unknownKeys`.
+    const refusedRights = pipelineGuard(
+      bare(),
+      part("access.rights", ["operations[].input"], writes),
+    );
+    expect(
+      refused(() => {
+        operationOf(refusedRights).input = {
+          media: "application/json",
+          schema: { kind: "ref", schema: "ApiEmptyBody", unknownKeys: { policy: "refuse" } },
+          rawBody: false,
+          origin,
+        };
+      }).field,
+    ).toBe("operations[].input.schema.unknownKeys");
+    // A present default stays one write: changing a member inside it writes over it.
+    const over = pipelineGuard(draft(), part("access.rights", ["operations[].input"], writes));
+    const schema = operationOf(over).input?.schema;
+    if (schema?.kind !== "ref") throw new Error("no ref input");
+    expect(refused(() => Object.assign(schema, { schema: "Other" })).message).toContain(
+      "only where absent",
+    );
+  });
+
   test("writing a container checks each row it changes", () => {
     const value = draft();
     const tree = pipelineGuard(value, part("tree.nodes", [], ["operations[]"]));
