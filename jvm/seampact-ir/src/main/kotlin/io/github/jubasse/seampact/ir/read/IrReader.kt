@@ -20,6 +20,10 @@ public class IrMalformedException(message: String, cause: Throwable) : RuntimeEx
  * and `irRevision` and the declaration kinds and features the reader supports (the codes of `checkIrSupport`);
  * then the unknown tags and values of must-act definitions. Every other unknown member, tag and value is
  * tolerated: members are dropped, tags and values are kept as `Unknown`.
+ *
+ * The reader bounds its own work and output: nesting depth, at most 100 refusals per check, and every untrusted
+ * string cut in a message. A refusal still keeps its pointer and operation id whole, so callers bound the size
+ * of the input they read.
  */
 public object IrReader {
     /** @throws IrRefusedException the IR is nested too deep, or not one [support] reads or acts on safely

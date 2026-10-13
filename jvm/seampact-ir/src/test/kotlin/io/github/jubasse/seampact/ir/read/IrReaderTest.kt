@@ -28,7 +28,9 @@ private const val SMALL_STACK_BYTES = 1L shl 20
 
 private const val DEEP_PLACEHOLDER = "deep-placeholder"
 
-// A refusal message with every untrusted string cut, and an exception message with its cause cut.
+// A refusal message with every untrusted string cut, and an exception message with its cause cut. The longest
+// refusal message quotes three cut strings (value, pointer, operation id, 83 chars each) in about 150 chars of
+// text: 600 leaves room for that and still fails on any uncut string of the 100,000 the tests use.
 private const val REFUSAL_MESSAGE_BOUND = 600
 private const val EXCEPTION_MESSAGE_BOUND = 1_000
 

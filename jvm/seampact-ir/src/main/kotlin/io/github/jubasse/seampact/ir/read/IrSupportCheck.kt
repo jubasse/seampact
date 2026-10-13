@@ -14,9 +14,6 @@ private const val MISSING = "missing"
 // any other is shown as written.
 private const val MAX_PLAIN_DIGITS = 64
 
-// A literal longer than IR_NUMBER_LITERAL_MAX_LENGTH is never read as a number. This fails closed where
-// TypeScript reads `1.000...0` written with 72 chars as 1; the native readers refuse it on purpose.
-
 /** The package a refused version or revision tells the reader to update. */
 internal const val IR_PACKAGE = "io.github.jubasse:seampact-ir"
 
@@ -139,6 +136,8 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
 private fun isStringIn(value: JsonElement?, known: List<String>): Boolean =
     value is JsonPrimitive && value.isString && value.content in known
 
+// A literal longer than IR_NUMBER_LITERAL_MAX_LENGTH is never read as a number. This fails closed where
+// TypeScript reads `1.000...0` written with 72 chars as 1; the native readers refuse it on purpose.
 private fun numberOf(value: JsonElement?): BigDecimal? =
     (value as? JsonPrimitive)
         ?.takeIf { !it.isString && it.content.length <= IR_NUMBER_LITERAL_MAX_LENGTH }

@@ -43,12 +43,14 @@ jobs:
             exit 0
           fi
           # The sources of the models and of `regenerate`: the IR and naming schemas, code and vectors, the
-          # generator, the toolchain pins, the models and this workflow.
+          # generator, the spec package's exports, the workspace and toolchain pins, the models and this workflow.
           watched='^(jvm/|php/|scripts/ir-models/|packages/spec/(schemas/ir|src/ir|vectors/ir|src/naming|vectors/naming)/'
-          watched+='|\.github/workflows/p2-native-ir\.yml$|pnpm-lock\.yaml$|package\.json$|\.nvmrc$)'
-          # Both sides of a move, and paths unquoted, so that a moved or non-ASCII path still matches.
-          changed=$(git -c core.quotePath=false diff --name-only --no-renames "origin/$PR_BASE...HEAD")
-          # An empty diff cannot be told apart from a failed one: run everything.
+          watched+='|\.github/workflows/p2-native-ir\.yml$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|package\.json$'
+          watched+='|packages/spec/package\.json$|\.nvmrc$)'
+          # Both sides of a move, with names NUL-separated and never quoted, so that a moved path, or one with a
+          # quote, a backslash, a tab or a non-ASCII byte, still matches.
+          changed=$(git diff -z --name-only --no-renames "origin/$PR_BASE...HEAD" | tr '\0' '\n')
+          # An empty diff runs every job rather than none.
           if [ -z "$changed" ] || grep -Eq "$watched" <<< "$changed"; then
             echo "native-ir=true" >> "$GITHUB_OUTPUT"
           else
