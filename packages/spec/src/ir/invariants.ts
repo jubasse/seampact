@@ -44,9 +44,9 @@ const parentOf = (pointer: string): string => pointer.slice(0, pointer.lastIndex
 const unescapeSegment = (segment: string): string =>
   segment.replaceAll("~1", "/").replaceAll("~0", "~");
 
-// The hand-written partitions of the values that decide a struct's members. Each must be a disjoint union of
-// the schema's known list (`ValueSource.in`, `FieldWire.kind`, `TypeUse.kind`): invariants.test.ts asserts it, so
-// a new known value fails there until its invariant decides it (CHANGE-TEMPLATE.md).
+// The hand-written partitions of the values that decide a struct's members, listed in `IR_PARTITIONS` below. Each
+// must be a disjoint union of the schema's known list: invariants.test.ts asserts it, so a new known value fails
+// there until its invariant decides it (CHANGE-TEMPLATE.md).
 const NAMED_SOURCES = ["path", "query", "header", "body", "principal", "scope", "holderField"];
 const BARE_SOURCES = ["host", "subdomain", "resolver", "address"];
 const QUERY_WIRE_KINDS = ["number", "boolean", "list", "text", "object"];
@@ -56,13 +56,14 @@ const ID_TYPE_KINDS = ["scalar", "enum"]; // an id is a scalar or an enum use
 const PROOF_REFUSED_KINDS = ["opaque", "file"]; // a proof is anything else
 const OTHER_TYPE_KINDS = ["ref", "array"]; // neither an id nor a refused proof
 const KNOWN_TYPE_USE_KINDS = [...ID_TYPE_KINDS, ...PROOF_REFUSED_KINDS, ...OTHER_TYPE_KINDS];
-// The input media whose body is a list of fields, each with a wire form (`fields`, a proof's `wire`), and the rest.
-const FIELD_MEDIA = ["application/x-www-form-urlencoded", "multipart/form-data"];
-const DOCUMENT_MEDIA = ["application/json"];
 // The known schema kinds, object and not: a body proof is a property beside the input's own, so its input is
 // an object schema.
 const OBJECT_SCHEMA_KINDS = ["object"];
 const NON_OBJECT_SCHEMA_KINDS = ["map", "union"];
+const KNOWN_SCHEMA_KINDS = [...OBJECT_SCHEMA_KINDS, ...NON_OBJECT_SCHEMA_KINDS];
+// The input media whose body is a list of fields, each with a wire form (`fields`, a proof's `wire`), and the rest.
+const FIELD_MEDIA = ["application/x-www-form-urlencoded", "multipart/form-data"];
+const DOCUMENT_MEDIA = ["application/json"];
 // The catalogues of the declarations the compiler supplies (origin layer `core`, ADR 0004 sections 6 and 13).
 const CORE_CATALOGUES = ["formats", "errors", "schemas"];
 export const IR_PARTITIONS = {
@@ -123,9 +124,8 @@ function checkProofInput(input: Json, pointer: string, schemaEntries: Json, fail
 
   const target = refTargetOf(use, schemaEntries);
   if (!isRecord(target)) return;
-  const knownSchemaKinds: string[] = [...OBJECT_SCHEMA_KINDS, ...NON_OBJECT_SCHEMA_KINDS];
   const kind = String(target.kind);
-  if (knownSchemaKinds.includes(kind) && !OBJECT_SCHEMA_KINDS.includes(kind))
+  if (KNOWN_SCHEMA_KINDS.includes(kind) && !OBJECT_SCHEMA_KINDS.includes(kind))
     fail(
       "ir.input-proof.input",
       `${pointer}/schema`,

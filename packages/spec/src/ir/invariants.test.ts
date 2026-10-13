@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import { irDefinition, KNOWN_VALUES_KEYWORD, walkIrInstance } from "./instance-walk.js";
 import { checkIrInvariants, IR_PARTITIONS, type IrInvariantId } from "./invariants.js";
+import { isSchemaNode } from "./schema-walk.js";
 import type { SchemaNode } from "./schemas.js";
 
 const sample = (name: string): Record<string, unknown> =>
@@ -206,9 +207,9 @@ describe("checkIrInvariants", () => {
     const knownOf = (key: string): string[] => {
       const [definition, member] = key.split(".") as [string, string];
       // A tagged union's known list is the tag of each variant (`TypeUse`, `Schema`).
-      const variants = irDefinition(definition)?.oneOf as SchemaNode[] | undefined;
-      if (variants !== undefined)
-        return variants.map((variant) => {
+      const variants: unknown = irDefinition(definition)?.oneOf;
+      if (Array.isArray(variants))
+        return variants.filter(isSchemaNode).map((variant) => {
           const name = String(variant.$ref).slice(String(variant.$ref).lastIndexOf("/") + 1);
           const tag = ((irDefinition(name)?.properties ?? {}) as Record<string, SchemaNode>)[
             member
@@ -377,7 +378,9 @@ describe("checkIrInvariants", () => {
   });
 
   test("an input with body proofs is a ref use of an object schema", () => {
-    const check = (change: (input: Record<string, unknown>) => void) => {
+    const check = (
+      change: (input: Record<string, unknown>, ir: Record<string, unknown>) => void,
+    ) => {
       const ir = sample("every-member.ir.json");
       const [input] = objectsOf(ir, "OperationInput").filter(({ value }) =>
         Array.isArray(value.proofs),
@@ -386,7 +389,7 @@ describe("checkIrInvariants", () => {
       input.value.media = "application/json";
       delete input.value.fields;
       for (const proof of input.value.proofs as Record<string, unknown>[]) delete proof.wire;
-      change(input.value);
+      change(input.value, ir);
       return {
         at: `${input.pointer}/schema`,
         found: checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer })),
@@ -411,6 +414,17 @@ describe("checkIrInvariants", () => {
       }).found,
     ).toEqual([]);
     expect(check(useOf({ kind: "zz-later" })).found).toEqual([]);
+    // A ref to a schema of an unknown kind is the reader's to name; a ref to a missing id breaks only
+    // `ir.ref.resolves`.
+    const unknownSchemaKind = check((input, ir) => {
+      const schemas = ir.schemas as Record<string, Record<string, unknown>>;
+      if (schemas.Labels === undefined) throw new Error("no Labels schema in the sample");
+      schemas.Labels.kind = "zz-later";
+      input.schema = { kind: "ref", schema: "Labels" };
+    });
+    expect(unknownSchemaKind.found).toEqual([]);
+    const missing = check(useOf({ kind: "ref", schema: "Missing" }));
+    expect(missing.found.map(({ id }) => id)).toEqual(["ir.ref.resolves"]);
   });
 
   test("a core origin points at its declaration under its catalogue", () => {
