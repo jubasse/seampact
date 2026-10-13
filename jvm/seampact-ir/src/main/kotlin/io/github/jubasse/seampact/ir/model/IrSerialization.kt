@@ -110,6 +110,25 @@ internal abstract class IrOpenEnumSerializer<T : Any>(
     }
 }
 
+/**
+ * The shape of the IR the reader walks on the raw JSON to find an unknown tag or value of a must-act definition
+ * (ADR 0005 section 3): a definition by name, a struct's walked members, a tagged union, an open enum, an array
+ * or a map. A member that holds no definition is not listed.
+ */
+internal sealed interface IrShape {
+    class Named(val definition: String) : IrShape
+
+    class Struct(val members: Map<String, IrShape>) : IrShape
+
+    class Union(val tag: String, val mustAct: Boolean, val variants: Map<String, String>) : IrShape
+
+    class OpenEnum(val known: Set<String>, val mustAct: Boolean) : IrShape
+
+    class Items(val of: IrShape) : IrShape
+
+    class Values(val of: IrShape) : IrShape
+}
+
 private fun jsonDecoder(decoder: Decoder, what: String): JsonDecoder =
     decoder as? JsonDecoder ?: throw SerializationException("$what is read from JSON only, through IrJson")
 

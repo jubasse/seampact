@@ -30,6 +30,7 @@ export const KOTLIN_CLAIMED_NAMES = [
   "IrOpenEnumSerializer",
   "IrIntegerSerializer",
   "IrModelVersion",
+  "IrShape",
   "EncodeDefault",
   "ExperimentalSerializationApi",
   "SerialName",
@@ -92,6 +93,10 @@ export function emitKotlin(context: KotlinContext): Map<string, string> {
     `${KOTLIN_MODEL_DIRECTORY}/IrSerialization.kt`,
     fileText(supportHeader, SUPPORT_FILE_ANNOTATIONS, SUPPORT_IMPORTS, supportLines(context)),
   );
+  files.set(
+    `${KOTLIN_MODEL_DIRECTORY}/IrShapes.kt`,
+    fileText(supportHeader, [], [], shapesLines(byFile)),
+  );
   return files;
 }
 
@@ -118,8 +123,7 @@ function fileText(
     "",
     `package ${KOTLIN_PACKAGE}`,
     "",
-    ...imports.map((name) => `import ${name}`),
-    "",
+    ...(imports.length === 0 ? [] : [...imports.map((name) => `import ${name}`), ""]),
     ...body,
   ];
   while (lines.at(-1) === "") lines.pop();
@@ -255,6 +259,25 @@ internal abstract class IrOpenEnumSerializer<T : Any>(
     }
 }
 
+/**
+ * The shape of the IR the reader walks on the raw JSON to find an unknown tag or value of a must-act definition
+ * (ADR 0005 section 3): a definition by name, a struct's walked members, a tagged union, an open enum, an array
+ * or a map. A member that holds no definition is not listed.
+ */
+internal sealed interface IrShape {
+    class Named(val definition: String) : IrShape
+
+    class Struct(val members: Map<String, IrShape>) : IrShape
+
+    class Union(val tag: String, val mustAct: Boolean, val variants: Map<String, String>) : IrShape
+
+    class OpenEnum(val known: Set<String>, val mustAct: Boolean) : IrShape
+
+    class Items(val of: IrShape) : IrShape
+
+    class Values(val of: IrShape) : IrShape
+}
+
 private fun jsonDecoder(decoder: Decoder, what: String): JsonDecoder =
     decoder as? JsonDecoder ?: throw SerializationException("$what is read from JSON only, through IrJson")
 
@@ -262,6 +285,75 @@ private fun jsonEncoder(encoder: Encoder, what: String): JsonEncoder =
     encoder as? JsonEncoder ?: throw SerializationException("$what is written to JSON only, through IrJson")`.split(
     "\n",
   );
+}
+
+const SHAPES_TABLE = "IR_SHAPES";
+
+/** The shape table: every definition that holds a walked member, a union or an open enum, one function per schema file. */
+function shapesLines(byFile: Map<string, Definition[]>): string[] {
+  const files = [...byFile].sort(([left], [right]) => (left < right ? -1 : 1));
+  const functionName = (schemaFile: string): string =>
+    `${schemaFile.replace(/-(.)/g, (_, letter: string) => letter.toUpperCase())}Shapes`;
+  const lines = [
+    "/** The shape of every IR definition that the must-act walk enters, by schema name. */",
+    `internal val ${SHAPES_TABLE}: Map<String, IrShape> = ${files.map(([schemaFile]) => `${functionName(schemaFile)}()`).join(" + ")}`,
+    "",
+  ];
+  for (const [schemaFile, definitions] of files) {
+    lines.push(
+      `private fun ${functionName(schemaFile)}(): Map<String, IrShape> = buildMap {`,
+      ...definitions.flatMap((definition) => shapeEntry(definition)),
+      "}",
+      "",
+    );
+  }
+  return lines;
+}
+
+function shapeEntry(definition: Definition): string[] {
+  const shape = shapeOf(definition);
+  return shape === undefined ? [] : [`${INDENT}put(${kotlinString(definition.name)}, ${shape})`];
+}
+
+function shapeOf(definition: Definition): string | undefined {
+  switch (definition.kind) {
+    case "struct": {
+      const members = definition.members.flatMap((member) => {
+        const shape = shapeOfType(member.type);
+        return shape === undefined ? [] : [`${kotlinString(member.name)} to ${shape}`];
+      });
+      return `IrShape.Struct(mapOf(${members.join(", ")}))`;
+    }
+    case "union": {
+      const variants = definition.variants.map(
+        (variant) => `${kotlinString(variant.tagValue)} to ${kotlinString(variant.definition)}`,
+      );
+      return `IrShape.Union(${kotlinString(definition.tag)}, ${definition.mustAct}, mapOf(${variants.join(", ")}))`;
+    }
+    case "openEnum":
+      return `IrShape.OpenEnum(setOf(${definition.known.map(kotlinString).join(", ")}), ${definition.mustAct})`;
+    case "alias":
+      return shapeOfType(definition.target);
+    case "extensionSlot":
+      return undefined;
+  }
+}
+
+function shapeOfType(type: TypeRef): string | undefined {
+  switch (type.kind) {
+    case "named":
+      return `IrShape.Named(${kotlinString(type.definition)})`;
+    case "array": {
+      const items = shapeOfType(type.items);
+      return items === undefined ? undefined : `IrShape.Items(${items})`;
+    }
+    case "map": {
+      const values = shapeOfType(type.values);
+      return values === undefined ? undefined : `IrShape.Values(${values})`;
+    }
+    default:
+      return undefined;
+  }
 }
 
 function assertTopLevelNamesDistinct(model: NeutralModel, typeNames: Map<string, string>): void {
