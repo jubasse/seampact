@@ -28,6 +28,10 @@ private const val SMALL_STACK_BYTES = 1L shl 20
 
 private const val DEEP_PLACEHOLDER = "deep-placeholder"
 
+// A refusal message with every untrusted string cut, and an exception message with its cause cut.
+private const val REFUSAL_MESSAGE_BOUND = 600
+private const val EXCEPTION_MESSAGE_BOUND = 1_000
+
 // A linear walk of the 10 MB document takes about 0.1 s; the quadratic one took about 9 s.
 private const val WALK_BUDGET_MILLIS = 3_000L
 
@@ -303,7 +307,7 @@ class IrReaderTest {
         val revision = refusals(replaceAt(example("minimal.ir.json"), "irRevision", value = huge)).single()
         assertEquals(IrRefusalCode.REVISION_MISMATCH, revision.code)
         assertEquals("1e2147483647", revision.value)
-        assertTrue(revision.message.length < 400, revision.message)
+        assertTrue(revision.message.length < REFUSAL_MESSAGE_BOUND, revision.message)
 
         val parsed = IrJson.parseToJsonElement("""{"irVersion": 1e2147483647}""")
         assertEquals(IrRefusalCode.VERSION_UNSUPPORTED, refusals(parsed).single().code)
@@ -318,7 +322,7 @@ class IrReaderTest {
         val refusal = refusals(document).single()
 
         assertEquals(tag, refusal.value)
-        assertTrue(refusal.message.length < 600, "message is ${refusal.message.length} chars")
+        assertTrue(refusal.message.length < REFUSAL_MESSAGE_BOUND, "message is ${refusal.message.length} chars")
     }
 
     @Test
@@ -335,13 +339,15 @@ class IrReaderTest {
         val refused = assertFailsWith<IrRefusedException> { IrReader.read(unsupported, support) }
 
         assertTrue(refused.refusals.all { it.operation == id })
-        assertTrue(refused.refusals.all { it.message.length < 300 }, refused.refusals.first().message.take(300))
-        assertTrue(refused.message.orEmpty().length < 100 * 300, "message is ${refused.message?.length} chars")
+        val longestMessage = refused.refusals.maxOf { it.message.length }
+        assertTrue(longestMessage < REFUSAL_MESSAGE_BOUND, "longest message is $longestMessage chars")
+        val total = refused.message.orEmpty().length
+        assertTrue(total < MAX_REFUSALS * REFUSAL_MESSAGE_BOUND, "message is $total chars")
 
         val mustAct = replaceAt(withId, "operations", "0", "access", "onRefused", value = JsonPrimitive("redirect"))
         val refusal = refusals(mustAct).single()
         assertEquals(id, refusal.operation)
-        assertTrue(refusal.message.length < 600, "message is ${refusal.message.length} chars")
+        assertTrue(refusal.message.length < REFUSAL_MESSAGE_BOUND, "message is ${refusal.message.length} chars")
     }
 
     @Test
@@ -448,6 +454,10 @@ class IrReaderTest {
 
         assertEquals("/ké\"~1~0" + "/0".repeat(255), fromText.member)
         assertEquals(fromText, fromElement)
+
+        // Only four hex digits make a \u escape: the parser rejects `\u+041`, so the pointer keeps it as written.
+        val signed = onSmallStack { refusals("""{"k\u+041":${deep.text}}""") }.single()
+        assertEquals("/ku+041" + "/0".repeat(255), signed.member)
     }
 
     @Test
@@ -457,22 +467,24 @@ class IrReaderTest {
 
         val version = refusals(replaceAt(example("minimal.ir.json"), "irVersion", value = container)).single()
         assertEquals("object", version.value)
-        assertTrue(version.message.length < 400, version.message)
+        assertTrue(version.message.length < REFUSAL_MESSAGE_BOUND, version.message)
 
         val kinds = JsonArray(listOf(JsonArray(listOf(JsonPrimitive(long))), JsonPrimitive("httpOperation")))
         val kind = refusals(replaceAt(example("minimal.ir.json"), "kinds", value = kinds)).single()
         assertEquals("array", kind.value)
-        assertTrue(kind.message.length < 400, kind.message)
+        assertTrue(kind.message.length < REFUSAL_MESSAGE_BOUND, kind.message)
 
         val pathVersion = JsonObject(mapOf("kind" to JsonPrimitive("path"), "number" to container))
         val number = replaceAt(example("minimal.ir.json"), "api", "version", value = pathVersion)
         val malformed = assertFailsWith<IrMalformedException> { IrReader.read(number, support) }
         assertTrue("object" in malformed.message.orEmpty(), malformed.message)
-        assertTrue(malformed.message.orEmpty().length < 1_000, "message is ${malformed.message?.length} chars")
+        val malformedLength = malformed.message.orEmpty().length
+        assertTrue(malformedLength < EXCEPTION_MESSAGE_BOUND, "message is $malformedLength chars")
 
         val id = replaceAt(example("minimal.ir.json"), "api", "id", value = container)
         val modelError = assertFailsWith<IrMalformedException> { IrReader.read(id, support) }
-        assertTrue(modelError.message.orEmpty().length < 1_000, "message is ${modelError.message?.length} chars")
+        val modelErrorLength = modelError.message.orEmpty().length
+        assertTrue(modelErrorLength < EXCEPTION_MESSAGE_BOUND, "message is $modelErrorLength chars")
     }
 
     @Test

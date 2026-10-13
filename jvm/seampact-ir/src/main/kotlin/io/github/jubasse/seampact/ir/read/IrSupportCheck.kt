@@ -1,5 +1,6 @@
 package io.github.jubasse.seampact.ir.read
 
+import io.github.jubasse.seampact.ir.model.IR_NUMBER_LITERAL_MAX_LENGTH
 import java.math.BigDecimal
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -13,9 +14,8 @@ private const val MISSING = "missing"
 // any other is shown as written.
 private const val MAX_PLAIN_DIGITS = 64
 
-// A longer literal is never read as a number: no version or revision is that long. This fails closed where
+// A literal longer than IR_NUMBER_LITERAL_MAX_LENGTH is never read as a number. This fails closed where
 // TypeScript reads `1.000...0` written with 72 chars as 1; the native readers refuse it on purpose.
-private const val MAX_NUMBER_LITERAL_LENGTH = 64
 
 /** The package a refused version or revision tells the reader to update. */
 internal const val IR_PACKAGE = "io.github.jubasse:seampact-ir"
@@ -141,7 +141,7 @@ private fun isStringIn(value: JsonElement?, known: List<String>): Boolean =
 
 private fun numberOf(value: JsonElement?): BigDecimal? =
     (value as? JsonPrimitive)
-        ?.takeIf { !it.isString && it.content.length <= MAX_NUMBER_LITERAL_LENGTH }
+        ?.takeIf { !it.isString && it.content.length <= IR_NUMBER_LITERAL_MAX_LENGTH }
         ?.content
         ?.toBigDecimalOrNull()
 

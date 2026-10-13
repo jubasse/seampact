@@ -30,23 +30,23 @@ public object IrModelVersion {
 /** The JSON configuration of the IR model: unknown members are tolerated and dropped (ADR 0005 section 3). */
 public val IrJson: Json = Json { ignoreUnknownKeys = true }
 
+/** The longest number literal the IR reads: no IR integer, version or revision is written longer. */
+internal const val IR_NUMBER_LITERAL_MAX_LENGTH = 64
+
 /**
  * An IR integer as a `Long`. An integral number written with a fraction (`2.0`), which JSON Schema counts as
  * an integer, reads as that integer; any other value is an error naming it: a literal as written, a longer
  * literal by its length, a string, array or object by its JSON type, never its content.
  */
 internal object IrIntegerSerializer : KSerializer<Long> {
-    // No IR integer is written longer; parsing a longer literal would only cost time.
-    private const val MAX_LITERAL_LENGTH = 64
-
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("io.github.jubasse.seampact.ir.model.IrInteger", PrimitiveKind.LONG)
 
     override fun deserialize(decoder: Decoder): Long {
         val element = jsonDecoder(decoder, "an integer").decodeJsonElement()
         val literal = (element as? JsonPrimitive)?.takeIf { !it.isString }?.content
-            ?: throw SerializationException("expected an integer, got ${notALiteral(element)}")
-        if (literal.length > MAX_LITERAL_LENGTH) {
+            ?: throw SerializationException("expected an integer, got the JSON type ${notALiteral(element)}")
+        if (literal.length > IR_NUMBER_LITERAL_MAX_LENGTH) {
             throw SerializationException("expected an integer, got a literal of ${literal.length} chars")
         }
 
@@ -63,9 +63,9 @@ internal object IrIntegerSerializer : KSerializer<Long> {
     }
 
     private fun notALiteral(element: JsonElement): String = when (element) {
-        is JsonObject -> "an object"
-        is JsonPrimitive -> "a string"
-        else -> "an array"
+        is JsonObject -> "object"
+        is JsonPrimitive -> "string"
+        else -> "array"
     }
 }
 

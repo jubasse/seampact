@@ -12,7 +12,9 @@ internal const val MAX_NESTING_DEPTH = 256
 /**
  * Returns the refusal of a JSON text nested past [MAX_NESTING_DEPTH], or null. One linear scan of the text,
  * before it is parsed: it counts the arrays and objects open outside strings and stops at the first one past the
- * bound. A malformed text is left to the parser.
+ * bound. It counts every array and object as written, a duplicate key's included, so a text too deep is
+ * refused even when it is also malformed or when the parser would drop the duplicate; a shallow malformed text is
+ * left to the parser.
  */
 internal fun checkTextNesting(text: String): IrRefusal? =
     TextNestingScan(text).firstPointerPastBound()?.let(::nestingRefusal)
@@ -96,12 +98,12 @@ private class TextNestingScan(private val text: String) {
         if (key == null) return
 
         if (escaped == 'u') {
-            val code = text.substring(position, minOf(position + UNICODE_ESCAPE_DIGITS, text.length)).toIntOrNull(HEX)
-            if (code == null) {
+            val digits = text.substring(position, minOf(position + UNICODE_ESCAPE_DIGITS, text.length))
+            if (digits.length < UNICODE_ESCAPE_DIGITS || !digits.all { it in HEX_DIGITS }) {
                 key.append(escaped)
                 return
             }
-            key.append(code.toChar())
+            key.append(digits.toInt(HEX).toChar())
             position += UNICODE_ESCAPE_DIGITS
             return
         }
@@ -111,6 +113,7 @@ private class TextNestingScan(private val text: String) {
 
 private const val UNICODE_ESCAPE_DIGITS = 4
 private const val HEX = 16
+private const val HEX_DIGITS = "0123456789abcdefABCDEF"
 
 private val SIMPLE_ESCAPES = mapOf('b' to '\b', 'f' to '\u000C', 'n' to '\n', 'r' to '\r', 't' to '\t')
 
