@@ -38,7 +38,10 @@ export interface TreeSchemaService {
    * rule proof schema). An inline object, map or union refers to the schema tree.schemas hoisted for it.
    */
   typeUse(pointer: string, direction: IrWriter.Direction): IrWriter.TypeUse | undefined;
-  /** The query wire form of the query or form field whose schema is written at `pointer` (ADR 0002 section 7). */
+  /**
+   * The query wire form of the query or form field, or the rule proof schema (`/rules/<id>/proof/schema`, the
+   * `wire` of a form or multipart proof), whose schema is written at `pointer` (ADR 0002 section 7).
+   */
   queryWire(pointer: string): IrWriter.QueryWire | undefined;
   /** Checks an example value against a use (FR-3); an empty list means the example fits. */
   checkExample(value: unknown, use: IrWriter.TypeUse): readonly TreeSchemaExampleIssue[];

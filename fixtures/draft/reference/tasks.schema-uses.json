@@ -109,5 +109,16 @@
       },
       "at": "/rules/recentAuth/proof/schema"
     }
+  ],
+  "queryWires": [
+    {
+      "pointer": "/rules/recentAuth/proof/schema",
+      "wire": {
+        "kind": "text",
+        "style": "form",
+        "explode": true,
+        "brackets": false
+      }
+    }
   ]
 }

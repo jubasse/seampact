@@ -13,7 +13,7 @@ import {
   draftFixtureApply,
   draftFixtureHalves,
   draftFixtureSchemaService,
-  draftFixtureSchemaUses,
+  draftFixtureSchemaTables,
 } from "./draft-fixture.js";
 import { createDraftValidator } from "./draft-schema.js";
 import { DraftAccessError, pipelineGuard } from "./guard.js";
@@ -173,6 +173,24 @@ function valueAtPointer(value: unknown, pointer: string): unknown {
     current = Array.isArray(current) ? current[Number(key)] : current[key];
   }
   return current;
+}
+
+// Members of a schema position in an access catalogue: a type use, or a `SchemaRef` (right and rule params).
+const SCHEMA_POSITION_KEYS = ["schema", "idSchema", "params"];
+
+// Every schema position the access delta writes outside operations, as JSON Pointers into the draft.
+function accessCatalogueSchemaPositions(api: DraftFixtureApi): string[] {
+  const positions: string[] = [];
+  for (const { members } of draftFixtureHalves(api, "access-delta"))
+    for (const [catalogue, entries] of Object.entries(members)) {
+      if (catalogue === "operations") continue;
+      walk(entries, `/${catalogue}`, (value, at) => {
+        const key = at.slice(at.lastIndexOf("/") + 1);
+        if (SCHEMA_POSITION_KEYS.includes(key) && (typeof value === "string" || isRecord(value)))
+          positions.push(at);
+      });
+    }
+  return positions;
 }
 
 describe("draft fixtures", () => {
@@ -400,32 +418,71 @@ describe("draft fixtures", () => {
   });
 
   test.each(APIS)(
-    "%s: each schema use is written in the raw tree and is the use the access delta writes",
+    "%s: the schema uses are written in the raw tree, and are every use the access catalogues write",
     (api) => {
       const draft = draftFixture(api, "after-access");
-      const uses = draftFixtureSchemaUses(api);
-      expect(uses.length).toBeGreaterThan(0);
+      const { typeUses } = draftFixtureSchemaTables(api);
 
-      for (const { pointer, use, at } of uses) {
+      for (const { pointer, use, at } of typeUses) {
         expect(valueAtPointer(rawApi(api).merged, pointer), pointer).toBeDefined();
         const written = valueAtPointer(draft, at);
         // A `SchemaRef` position holds the id of the schema the use refers to.
         if (typeof written === "string") expect(use, at).toEqual({ kind: "ref", schema: written });
         else expect(use, at).toEqual(written);
       }
+
+      expect(typeUses.map(({ at }) => at).sort()).toEqual(
+        accessCatalogueSchemaPositions(api).sort(),
+      );
     },
   );
 
-  test("the fixture schema service answers its table, with copies, and finds the invalid marker", () => {
-    const service = draftFixtureSchemaService("tasks");
-    const [first] = draftFixtureSchemaUses("tasks");
-    if (first === undefined) throw new Error("tasks.schema-uses.json lists no use");
+  test.each(APIS)("%s: the fixture service answers each type use, in its direction only", (api) => {
+    const service = draftFixtureSchemaService(api);
 
-    const answered = service.typeUse(first.pointer, first.direction);
-    expect(answered).toEqual(first.use);
-    expect(answered).not.toBe(service.typeUse(first.pointer, first.direction));
+    for (const { pointer, direction, use } of draftFixtureSchemaTables(api).typeUses) {
+      const otherDirection = direction === "input" ? "output" : "input";
+      const answered = service.typeUse(pointer, direction);
+      expect(answered, pointer).toEqual(use);
+      expect(answered, pointer).not.toBe(service.typeUse(pointer, direction));
+      expect(service.typeUse(pointer, otherDirection), pointer).toBeUndefined();
+    }
     expect(service.typeUse("/surfaces/app/routes/missing", "input")).toBeUndefined();
-    expect(service.queryWire(first.pointer)).toBeUndefined();
+  });
+
+  // The real service answers a rule proof schema's query wire, the `wire` of a form or multipart proof. The
+  // reference proof is read in a JSON body, so its InputProof carries no wire: the table holds what the real
+  // service would answer, for a form proof.
+  test.each(APIS)(
+    "%s: the fixture service answers the query wire of every rule proof schema",
+    (api) => {
+      const service = draftFixtureSchemaService(api);
+      const { queryWires } = draftFixtureSchemaTables(api);
+      const draft = draftFixture(api, "after-access");
+      const proofSchemas = Object.values(draft.rules)
+        .filter((rule) => rule.proof !== undefined)
+        .map((rule) => `/rules/${rule.id}/proof/schema`);
+
+      expect(queryWires.map(({ pointer }) => pointer).sort()).toEqual(proofSchemas.sort());
+      for (const { pointer, wire } of queryWires) {
+        expect(valueAtPointer(rawApi(api).merged, pointer), pointer).toBeDefined();
+        const answered = service.queryWire(pointer);
+        expect(answered, pointer).toEqual(wire);
+        expect(answered, pointer).not.toBe(service.queryWire(pointer));
+      }
+      expect(service.queryWire("/surfaces/app/routes/missing")).toBeUndefined();
+
+      const jsonProofs = draft.operations
+        .filter((operation) => operation.input?.media === "application/json")
+        .flatMap((operation) => operation.input?.proofs ?? []);
+      for (const proof of jsonProofs) expect(proof.wire, proof.name).toBeUndefined();
+    },
+  );
+
+  test("the fixture service finds the invalid example marker, wherever it sits", () => {
+    const service = draftFixtureSchemaService("tasks");
+    const [first] = draftFixtureSchemaTables("tasks").typeUses;
+    if (first === undefined) throw new Error("tasks.schema-uses.json lists no use");
 
     expect(service.checkExample({ title: "ok" }, first.use)).toEqual([]);
     expect(

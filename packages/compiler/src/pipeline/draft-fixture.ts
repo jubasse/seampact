@@ -1,6 +1,13 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import type { IrWriter } from "@seampact/spec/ir";
+import {
+  IR_AJV_OPTIONS,
+  IR_KEYWORDS,
+  IR_SCHEMA_ID,
+  type IrWriter,
+  strictIrSchemas,
+} from "@seampact/spec/ir";
+import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
 import type { JsonObject, JsonValue } from "../raw-tree.js";
 import { createDraftIR, type DraftIR } from "./draft.js";
 import { createDraftValidator, type DraftValidator } from "./draft-schema.js";
@@ -19,7 +26,8 @@ import type { TreeSchemaExampleIssue, TreeSchemaService } from "./pass.js";
 //
 // `<api>.schema-uses.json` is the schema service of the after-tree state (`draftFixtureSchemaService`), for the
 // halves after tree.schemas until its lane lands: the type use of each catalogue position the access halves read,
-// which a test checks against the access delta.
+// which a test checks against the access delta, and the query wire of each rule proof schema. The two apis' tables
+// are identical while every row comes from the shared layer.
 
 /** The apis of the reference contract. */
 export type DraftFixtureApi = "tasks" | "tasksService";
@@ -164,6 +172,19 @@ export interface DraftFixtureSchemaUse {
   at: string;
 }
 
+/** A rule proof schema position and the query wire the service answers for it. */
+export interface DraftFixtureQueryWire {
+  /** The JSON Pointer of the proof schema in the api's merged raw tree (`/rules/<id>/proof/schema`). */
+  pointer: string;
+  wire: IrWriter.QueryWire;
+}
+
+/** The tables of `<api>.schema-uses.json`. */
+export interface DraftFixtureSchemaTables {
+  typeUses: DraftFixtureSchemaUse[];
+  queryWires: DraftFixtureQueryWire[];
+}
+
 /** An example value holding this string anywhere fails `checkExample` of the fixture service, at that place. */
 export const DRAFT_FIXTURE_INVALID_EXAMPLE = "__invalid_example__";
 
@@ -172,44 +193,76 @@ const DIRECTIONS: readonly IrWriter.Direction[] = ["input", "output"];
 const isDirection = (value: JsonValue | undefined): value is IrWriter.Direction =>
   DIRECTIONS.some((direction) => direction === value);
 
-// The draft form checks a type use where the IR holds one: a scope's `idSchema` takes any `TypeUse`.
-function isTypeUse(value: unknown): value is IrWriter.TypeUse {
-  if (value === undefined) return false;
-  validator ??= createDraftValidator();
-  return validator.validate({ ...createDraftIR(), scopes: { probe: { idSchema: value } } }).valid;
+let strictAjv: Ajv2020 | undefined;
+
+// A definition of the strict IR schema, so a table row is checked with every member it requires.
+function strictDefinition(file: string, name: string): ValidateFunction {
+  if (strictAjv === undefined) {
+    strictAjv = new Ajv2020({ ...IR_AJV_OPTIONS });
+    for (const keyword of IR_KEYWORDS) strictAjv.addKeyword(structuredClone(keyword));
+    for (const document of strictIrSchemas()) strictAjv.addSchema(document);
+  }
+
+  const ref = `${new URL(file, IR_SCHEMA_ID).href}#/$defs/${name}`;
+  const validate = strictAjv.getSchema(ref);
+  if (validate === undefined) throw new Error(`the strict IR schema has no definition ${ref}`);
+  return validate;
 }
 
-/** The schema uses of `<api>.schema-uses.json`, each checked for its shape. */
-export function draftFixtureSchemaUses(api: DraftFixtureApi): DraftFixtureSchemaUse[] {
+const isTypeUse = (value: unknown): value is IrWriter.TypeUse =>
+  strictDefinition("schemas.schema.json", "TypeUse")(value) === true;
+
+const isQueryWire = (value: unknown): value is IrWriter.QueryWire =>
+  strictDefinition("operation.schema.json", "QueryWire")(value) === true;
+
+/** The tables of `<api>.schema-uses.json`, each row checked against the strict IR definition it holds. */
+export function draftFixtureSchemaTables(api: DraftFixtureApi): DraftFixtureSchemaTables {
   const path = `${FIXTURES}${api}.schema-uses.json`;
   const parsed: JsonValue = JSON.parse(readFileSync(path, "utf8"));
-  const entries = isJsonObject(parsed) ? parsed.typeUses : undefined;
-  if (!Array.isArray(entries)) throw new Error(`${path}: the file is { typeUses: [...] }`);
+  const typeUseRows = isJsonObject(parsed) ? parsed.typeUses : undefined;
+  const queryWireRows = isJsonObject(parsed) ? parsed.queryWires : undefined;
+  if (!Array.isArray(typeUseRows) || !Array.isArray(queryWireRows))
+    throw new Error(`${path}: the file is { typeUses: [...], queryWires: [...] }`);
 
-  return entries.map((entry, index) => {
-    const { pointer, direction, use, at } = isJsonObject(entry) ? entry : {};
+  const typeUses = typeUseRows.map((row, index) => {
+    const { pointer, direction, use, at } = isJsonObject(row) ? row : {};
     if (typeof pointer !== "string" || typeof at !== "string" || !isDirection(direction))
       throw new Error(`${path}: typeUses/${index} needs a string pointer and at, and a direction`);
-    if (!isTypeUse(use)) throw new Error(`${path}: typeUses/${index}/use is no type use`);
+    if (!isTypeUse(use)) throw new Error(`${path}: typeUses/${index}/use is no strict TypeUse`);
     return { pointer, direction, use, at };
   });
+
+  const queryWires = queryWireRows.map((row, index) => {
+    const { pointer, wire } = isJsonObject(row) ? row : {};
+    if (typeof pointer !== "string")
+      throw new Error(`${path}: queryWires/${index} needs a pointer`);
+    if (!isQueryWire(wire))
+      throw new Error(`${path}: queryWires/${index}/wire is no strict QueryWire`);
+    return { pointer, wire };
+  });
+
+  return { typeUses, queryWires };
 }
 
 /**
- * The schema service of the after-tree state, from `<api>.schema-uses.json`: `typeUse` answers the listed
- * positions (a fresh copy each time) and nothing else; `queryWire` knows no field, since the reference contract
- * declares no query or form field an access half reads; `checkExample` finds each `DRAFT_FIXTURE_INVALID_EXAMPLE`.
+ * The schema service of the after-tree state, from `<api>.schema-uses.json`: `typeUse` and `queryWire` answer the
+ * listed positions (a fresh copy each time) and nothing else, `queryWire` the rule proof schemas as the real service
+ * does (the reference declares no query or form field an access half reads); `checkExample` finds each
+ * `DRAFT_FIXTURE_INVALID_EXAMPLE`.
  */
 export function draftFixtureSchemaService(api: DraftFixtureApi): TreeSchemaService {
-  const uses = draftFixtureSchemaUses(api);
+  const { typeUses, queryWires } = draftFixtureSchemaTables(api);
   return {
     typeUse: (pointer, direction) => {
-      const found = uses.find(
+      const found = typeUses.find(
         (entry) => entry.pointer === pointer && entry.direction === direction,
       );
       return found === undefined ? undefined : structuredClone(found.use);
     },
-    queryWire: () => undefined,
+    queryWire: (pointer) => {
+      const found = queryWires.find((entry) => entry.pointer === pointer);
+      return found === undefined ? undefined : structuredClone(found.wire);
+    },
     checkExample: (value) => invalidExampleMarkers(value, ""),
   };
 }
