@@ -349,6 +349,51 @@ describe("marks", () => {
   });
 });
 
+describe("annotations the contract model cannot hold are refused, not dropped", () => {
+  test("annotations on a property and on named schemas are kept", () => {
+    const run = schemas(`
+  A:
+    type: object
+    examples: [{ b: { c: x } }]
+    properties:
+      b: { type: object, deprecated: true, description: B., examples: [{ c: x }], properties: { c: { type: string } } }
+      d: { type: string, deprecated: true, title: D }
+`);
+    expect(run.diagnostics).toEqual([]);
+    expect(schemaOf(run, "A")?.examples).toEqual([{ b: { c: "x" } }]);
+    expect(schemaOf(run, "AB")).toMatchObject({
+      examples: [{ c: "x" }],
+      docs: { description: "B." },
+    });
+    expect(propertyOf(run, "A", "b")).toMatchObject({ deprecated: true });
+    expect(propertyOf(run, "A", "d")).toMatchObject({ deprecated: true, docs: { summary: "D" } });
+  });
+
+  test.each([
+    ["A: { type: object, deprecated: true, properties: { b: { type: string } } }", "deprecated"],
+    ["A: { type: string, deprecated: true }", "deprecated"],
+    ["A: { type: object, properties: { b: { type: string, examples: [x] } } }", "examples"],
+    [
+      "A: { type: object, properties: { b: { $ref: B, examples: [{}] } } }\n  B: { type: object, properties: { c: { type: string } } }",
+      "examples",
+    ],
+    ["A: { type: array, items: { type: string, examples: [x] } }", "examples"],
+    ["A: { type: string, examples: [x] }", "examples"],
+    ["A: { type: array, items: { type: string, description: An item. } }", "description"],
+    ["A: { type: array, items: { type: string, deprecated: true } }", "deprecated"],
+    ["A: { type: object, additionalProperties: { type: string, title: A value } }", "title"],
+    [
+      "U: { discriminator: k, oneOf: { a: { $ref: B, description: A variant. } } }\n  B: { type: object, properties: { c: { type: string } } }",
+      "description",
+    ],
+  ])("%s is refused, naming '%s'", (yaml, member) => {
+    const run = schemas(`  ${yaml}`);
+    expect(treeSchemasRules(run)).toEqual(["annotation-position"]);
+    expect(run.diagnostics[0]?.message).toContain(`'${member}'`);
+    expect(run.diagnostics[0]?.origin.pointer).toMatch(new RegExp(`/${member}$`));
+  });
+});
+
 describe("portable and named formats", () => {
   const run = treeSchemasRunApi(`scalars:
   money: { type: string, pattern: '^-?(0|[1-9][0-9]*)\\.[0-9]{2}$', description: An amount. }

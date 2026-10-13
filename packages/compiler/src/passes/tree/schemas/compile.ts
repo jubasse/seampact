@@ -131,6 +131,16 @@ const SHAPE_KEYWORDS: Readonly<Record<Shape, readonly string[]>> = {
   ],
 };
 
+// The shapes written as a schema of their own, which holds their examples and docs; a derived object's schema is
+// written by a later step.
+const SCHEMA_WRITING_SHAPES: ReadonlySet<Shape> = new Set([
+  "object",
+  "map",
+  "union",
+  "allOf",
+  "derived",
+]);
+
 const SCALAR_TYPES = new Set(["string", "integer", "number", "boolean"]);
 const HEADER_SOURCE = /^header\.(.+)$/;
 const JSON_MEDIA = "application/json";
@@ -334,6 +344,7 @@ export class TreeSchemasCompiler {
     }
     if (!this.checkKeywords(value, shape, position.pointer)) return undefined;
     if (!this.checkMarks(value, shape, position)) return undefined;
+    if (!this.checkAnnotations(value, shape, position)) return undefined;
 
     const compiled = this.compileShape(value, shape, position);
     if (compiled === undefined) return undefined;
@@ -432,6 +443,37 @@ export class TreeSchemasCompiler {
         pointer: treeSchemasPointer(pointer, key),
         message: `'${key}' sits on ${where}`,
         fix: `remove '${key}' here`,
+      });
+    }
+    return refused.length === 0;
+  }
+
+  // ADR 0004: a written annotation the IR has no member for here is refused, never dropped. `deprecated` is held by
+  // a property only; `examples` by a written schema (an object, map or union); docs by a property or a written
+  // schema, and nowhere else on an item, a map value or a union variant.
+  private checkAnnotations(
+    value: TreeSchemasRawObject,
+    shape: Shape,
+    { pointer, place }: TreeSchemasPosition,
+  ): boolean {
+    const writesSchema = SCHEMA_WRITING_SHAPES.has(shape);
+    const refused: { key: string; fix: string }[] = [];
+    if (has(value, "deprecated") && place !== "property")
+      refused.push({ key: "deprecated", fix: "mark the property that holds this schema instead" });
+    if (has(value, "examples") && !writesSchema)
+      refused.push({ key: "examples", fix: "put the example on the object that holds this value" });
+    if (!writesSchema && (place === "nested" || place === "variant")) {
+      for (const key of ["title", "description"]) {
+        if (has(value, key))
+          refused.push({ key, fix: "document the property or the schema that holds this one" });
+      }
+    }
+    for (const { key, fix } of refused) {
+      this.reporter.error({
+        rule: "annotation-position",
+        pointer: treeSchemasPointer(pointer, key),
+        message: `'${key}' on ${SHAPE_TEXT[shape]} here is not kept by the contract model`,
+        fix: `remove '${key}' here; ${fix}`,
       });
     }
     return refused.length === 0;
@@ -543,7 +585,8 @@ export class TreeSchemasCompiler {
   private idOf(position: TreeSchemasPosition): string {
     if (position.id !== undefined) return position.id;
     const id = position.name === undefined ? undefined : canonicalId(position.name);
-    if (id === undefined) throw new Error(`tree.schemas derived no schema id at ${position.pointer}`);
+    if (id === undefined)
+      throw new Error(`tree.schemas derived no schema id at ${position.pointer}`);
     return id;
   }
 
