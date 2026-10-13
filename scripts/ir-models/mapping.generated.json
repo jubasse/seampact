@@ -1,0 +1,1191 @@
+{
+  "irRevision": 2,
+  "definitions": {
+    "Absent": {
+      "construct": "openEnum",
+      "kotlin": "Absent",
+      "php": "Absent"
+    },
+    "Access": {
+      "construct": "union",
+      "kotlin": "Access",
+      "php": "Access"
+    },
+    "Api": {
+      "construct": "struct",
+      "kotlin": "Api",
+      "php": "Api"
+    },
+    "ApiCaller": {
+      "construct": "struct",
+      "kotlin": "ApiCaller",
+      "php": "ApiCaller"
+    },
+    "ApiDocument": {
+      "construct": "struct",
+      "kotlin": "ApiDocument",
+      "php": "ApiDocument"
+    },
+    "ApiKind": {
+      "construct": "openEnum",
+      "kotlin": "ApiKind",
+      "php": "ApiKind"
+    },
+    "ApiRole": {
+      "construct": "openEnum",
+      "kotlin": "ApiRole",
+      "php": "ApiRole"
+    },
+    "ApiVersion": {
+      "construct": "union",
+      "kotlin": "ApiVersion",
+      "php": "ApiVersion"
+    },
+    "ApplicationSignature": {
+      "construct": "struct",
+      "kotlin": "ApplicationSignature",
+      "php": "ApplicationSignature"
+    },
+    "ArrayTemplate": {
+      "construct": "struct",
+      "kotlin": "ArrayTemplate",
+      "php": "ArrayTemplate"
+    },
+    "ArrayTypeUse": {
+      "construct": "struct",
+      "kotlin": "ArrayTypeUse",
+      "php": "ArrayTypeUse"
+    },
+    "BasicScheme": {
+      "construct": "struct",
+      "kotlin": "BasicScheme",
+      "php": "BasicScheme"
+    },
+    "BearerFacts": {
+      "construct": "struct",
+      "kotlin": "BearerFacts",
+      "php": "BearerFacts"
+    },
+    "BearerScheme": {
+      "construct": "struct",
+      "kotlin": "BearerScheme",
+      "php": "BearerScheme"
+    },
+    "Binding": {
+      "construct": "struct",
+      "kotlin": "Binding",
+      "php": "Binding"
+    },
+    "BodyUnionTag": {
+      "construct": "struct",
+      "kotlin": "BodyUnionTag",
+      "php": "BodyUnionTag"
+    },
+    "Bucket": {
+      "construct": "struct",
+      "kotlin": "Bucket",
+      "php": "Bucket"
+    },
+    "BucketId": {
+      "construct": "alias",
+      "kotlin": "BucketId",
+      "php": "BucketId"
+    },
+    "Cache": {
+      "construct": "struct",
+      "kotlin": "Cache",
+      "php": "Cache"
+    },
+    "CacheDirectives": {
+      "construct": "struct",
+      "kotlin": "CacheDirectives",
+      "php": "CacheDirectives"
+    },
+    "CacheVisibility": {
+      "construct": "openEnum",
+      "kotlin": "CacheVisibility",
+      "php": "CacheVisibility"
+    },
+    "CallerCacheControl": {
+      "construct": "struct",
+      "kotlin": "CallerCacheControl",
+      "php": "CallerCacheControl"
+    },
+    "CallerKind": {
+      "construct": "openEnum",
+      "kotlin": "CallerKind",
+      "php": "CallerKind"
+    },
+    "CatalogueEnumSource": {
+      "construct": "struct",
+      "kotlin": "CatalogueEnumSource",
+      "php": "CatalogueEnumSource"
+    },
+    "Compat": {
+      "construct": "struct",
+      "kotlin": "Compat",
+      "php": "Compat"
+    },
+    "CompatPolicy": {
+      "construct": "openEnum",
+      "kotlin": "CompatPolicy",
+      "php": "CompatPolicy"
+    },
+    "Concurrency": {
+      "construct": "struct",
+      "kotlin": "Concurrency",
+      "php": "Concurrency"
+    },
+    "ContractIR": {
+      "construct": "struct",
+      "kotlin": "ContractIR",
+      "php": "ContractIR"
+    },
+    "ConventionValue": {
+      "construct": "struct",
+      "kotlin": "ConventionValue",
+      "php": "ConventionValue"
+    },
+    "Conventions": {
+      "construct": "alias",
+      "kotlin": "Conventions",
+      "php": "Conventions"
+    },
+    "CookieScheme": {
+      "construct": "struct",
+      "kotlin": "CookieScheme",
+      "php": "CookieScheme"
+    },
+    "CredentialIdentity": {
+      "construct": "struct",
+      "kotlin": "CredentialIdentity",
+      "php": "CredentialIdentity"
+    },
+    "CredentialSchemes": {
+      "construct": "struct",
+      "kotlin": "CredentialSchemes",
+      "php": "CredentialSchemes"
+    },
+    "Csrf": {
+      "construct": "union",
+      "kotlin": "Csrf",
+      "php": "Csrf"
+    },
+    "DecimalLiteral": {
+      "construct": "alias",
+      "kotlin": "DecimalLiteral",
+      "php": "DecimalLiteral"
+    },
+    "DeclarationKind": {
+      "construct": "openEnum",
+      "kotlin": "DeclarationKind",
+      "php": "DeclarationKind"
+    },
+    "Degradable": {
+      "construct": "struct",
+      "kotlin": "Degradable",
+      "php": "Degradable"
+    },
+    "Deprecation": {
+      "construct": "struct",
+      "kotlin": "Deprecation",
+      "php": "Deprecation"
+    },
+    "DerivationId": {
+      "construct": "alias",
+      "kotlin": "DerivationId",
+      "php": "DerivationId"
+    },
+    "DerivedCsrf": {
+      "construct": "struct",
+      "kotlin": "DerivedCsrf",
+      "php": "DerivedCsrf"
+    },
+    "DerivedFrom": {
+      "construct": "struct",
+      "kotlin": "DerivedFrom",
+      "php": "DerivedFrom"
+    },
+    "DerivedIdempotency": {
+      "construct": "struct",
+      "kotlin": "DerivedIdempotency",
+      "php": "DerivedIdempotency"
+    },
+    "Direction": {
+      "construct": "openEnum",
+      "kotlin": "Direction",
+      "php": "Direction"
+    },
+    "Docs": {
+      "construct": "struct",
+      "kotlin": "Docs",
+      "php": "Docs"
+    },
+    "DocumentId": {
+      "construct": "alias",
+      "kotlin": "DocumentId",
+      "php": "DocumentId"
+    },
+    "EachTemplate": {
+      "construct": "struct",
+      "kotlin": "EachTemplate",
+      "php": "EachTemplate"
+    },
+    "Enum": {
+      "construct": "struct",
+      "kotlin": "Enum_",
+      "php": "Enum_",
+      "escapedIn": ["kotlin", "php"]
+    },
+    "EnumId": {
+      "construct": "alias",
+      "kotlin": "EnumId",
+      "php": "EnumId"
+    },
+    "EnumNarrowing": {
+      "construct": "struct",
+      "kotlin": "EnumNarrowing",
+      "php": "EnumNarrowing"
+    },
+    "EnumSource": {
+      "construct": "union",
+      "kotlin": "EnumSource",
+      "php": "EnumSource"
+    },
+    "EnumTypeUse": {
+      "construct": "struct",
+      "kotlin": "EnumTypeUse",
+      "php": "EnumTypeUse"
+    },
+    "ErrorCode": {
+      "construct": "alias",
+      "kotlin": "ErrorCode",
+      "php": "ErrorCode"
+    },
+    "ErrorDecl": {
+      "construct": "struct",
+      "kotlin": "ErrorDecl",
+      "php": "ErrorDecl"
+    },
+    "ErrorHttp": {
+      "construct": "struct",
+      "kotlin": "ErrorHttp",
+      "php": "ErrorHttp"
+    },
+    "ErrorRole": {
+      "construct": "openEnum",
+      "kotlin": "ErrorRole",
+      "php": "ErrorRole"
+    },
+    "ErrorShape": {
+      "construct": "struct",
+      "kotlin": "ErrorShape",
+      "php": "ErrorShape"
+    },
+    "ExemptCsrf": {
+      "construct": "struct",
+      "kotlin": "ExemptCsrf",
+      "php": "ExemptCsrf"
+    },
+    "ExemptIdempotency": {
+      "construct": "struct",
+      "kotlin": "ExemptIdempotency",
+      "php": "ExemptIdempotency"
+    },
+    "ExtensionKey": {
+      "construct": "alias",
+      "kotlin": "ExtensionKey",
+      "php": "ExtensionKey"
+    },
+    "ExtensionKeyDecl": {
+      "construct": "struct",
+      "kotlin": "ExtensionKeyDecl",
+      "php": "ExtensionKeyDecl"
+    },
+    "ExtensionKeyId": {
+      "construct": "alias",
+      "kotlin": "ExtensionKeyId",
+      "php": "ExtensionKeyId"
+    },
+    "ExtensionPlace": {
+      "construct": "openEnum",
+      "kotlin": "ExtensionPlace",
+      "php": "ExtensionPlace"
+    },
+    "ExtensionPrefix": {
+      "construct": "alias",
+      "kotlin": "ExtensionPrefix",
+      "php": "ExtensionPrefix"
+    },
+    "Extensions": {
+      "construct": "extensionSlot",
+      "kotlin": "Extensions",
+      "php": "Extensions"
+    },
+    "Feature": {
+      "construct": "alias",
+      "kotlin": "Feature",
+      "php": "Feature"
+    },
+    "FieldRestriction": {
+      "construct": "struct",
+      "kotlin": "FieldRestriction",
+      "php": "FieldRestriction"
+    },
+    "FieldRight": {
+      "construct": "struct",
+      "kotlin": "FieldRight",
+      "php": "FieldRight"
+    },
+    "FieldRightSubject": {
+      "construct": "struct",
+      "kotlin": "FieldRightSubject",
+      "php": "FieldRightSubject"
+    },
+    "FieldWire": {
+      "construct": "struct",
+      "kotlin": "FieldWire",
+      "php": "FieldWire"
+    },
+    "FieldWireKind": {
+      "construct": "openEnum",
+      "kotlin": "FieldWireKind",
+      "php": "FieldWireKind"
+    },
+    "FileTypeUse": {
+      "construct": "struct",
+      "kotlin": "FileTypeUse",
+      "php": "FileTypeUse"
+    },
+    "FormatId": {
+      "construct": "alias",
+      "kotlin": "FormatId",
+      "php": "FormatId"
+    },
+    "HandlerResultMember": {
+      "construct": "openEnum",
+      "kotlin": "HandlerResultMember",
+      "php": "HandlerResultMember"
+    },
+    "HeaderDecl": {
+      "construct": "struct",
+      "kotlin": "HeaderDecl",
+      "php": "HeaderDecl"
+    },
+    "HeaderId": {
+      "construct": "alias",
+      "kotlin": "HeaderId",
+      "php": "HeaderId"
+    },
+    "HeaderScheme": {
+      "construct": "struct",
+      "kotlin": "HeaderScheme",
+      "php": "HeaderScheme"
+    },
+    "HeaderSemantic": {
+      "construct": "openEnum",
+      "kotlin": "HeaderSemantic",
+      "php": "HeaderSemantic"
+    },
+    "HeaderSide": {
+      "construct": "openEnum",
+      "kotlin": "HeaderSide",
+      "php": "HeaderSide"
+    },
+    "HeaderTemplate": {
+      "construct": "struct",
+      "kotlin": "HeaderTemplate",
+      "php": "HeaderTemplate"
+    },
+    "HeaderUnionTag": {
+      "construct": "struct",
+      "kotlin": "HeaderUnionTag",
+      "php": "HeaderUnionTag"
+    },
+    "HeaderUseFor": {
+      "construct": "openEnum",
+      "kotlin": "HeaderUseFor",
+      "php": "HeaderUseFor"
+    },
+    "HttpMethod": {
+      "construct": "openEnum",
+      "kotlin": "HttpMethod",
+      "php": "HttpMethod"
+    },
+    "Idempotency": {
+      "construct": "union",
+      "kotlin": "Idempotency",
+      "php": "Idempotency"
+    },
+    "IdempotencyEnforcement": {
+      "construct": "openEnum",
+      "kotlin": "IdempotencyEnforcement",
+      "php": "IdempotencyEnforcement"
+    },
+    "Identity": {
+      "construct": "union",
+      "kotlin": "Identity",
+      "php": "Identity"
+    },
+    "IdentityAccess": {
+      "construct": "struct",
+      "kotlin": "IdentityAccess",
+      "php": "IdentityAccess"
+    },
+    "IdentityHeaderUse": {
+      "construct": "struct",
+      "kotlin": "IdentityHeaderUse",
+      "php": "IdentityHeaderUse"
+    },
+    "IdentityId": {
+      "construct": "alias",
+      "kotlin": "IdentityId",
+      "php": "IdentityId"
+    },
+    "IgnoreKeysPolicy": {
+      "construct": "struct",
+      "kotlin": "IgnoreKeysPolicy",
+      "php": "IgnoreKeysPolicy"
+    },
+    "IgnoreUnknownQuery": {
+      "construct": "struct",
+      "kotlin": "IgnoreUnknownQuery",
+      "php": "IgnoreUnknownQuery"
+    },
+    "InputField": {
+      "construct": "struct",
+      "kotlin": "InputField",
+      "php": "InputField"
+    },
+    "InputMediaType": {
+      "construct": "openEnum",
+      "kotlin": "InputMediaType",
+      "php": "InputMediaType"
+    },
+    "InputPolicy": {
+      "construct": "openEnum",
+      "kotlin": "InputPolicy",
+      "php": "InputPolicy"
+    },
+    "InputProof": {
+      "construct": "struct",
+      "kotlin": "InputProof",
+      "php": "InputProof"
+    },
+    "InternalPolicy": {
+      "construct": "openEnum",
+      "kotlin": "InternalPolicy",
+      "php": "InternalPolicy"
+    },
+    "JsonContent": {
+      "construct": "struct",
+      "kotlin": "JsonContent",
+      "php": "JsonContent"
+    },
+    "JsonMediaType": {
+      "construct": "openEnum",
+      "kotlin": "JsonMediaType",
+      "php": "JsonMediaType"
+    },
+    "KeepKeysPolicy": {
+      "construct": "struct",
+      "kotlin": "KeepKeysPolicy",
+      "php": "KeepKeysPolicy"
+    },
+    "KeysPolicy": {
+      "construct": "union",
+      "kotlin": "KeysPolicy",
+      "php": "KeysPolicy"
+    },
+    "LabelApiVersion": {
+      "construct": "struct",
+      "kotlin": "LabelApiVersion",
+      "php": "LabelApiVersion"
+    },
+    "Lint": {
+      "construct": "struct",
+      "kotlin": "Lint",
+      "php": "Lint"
+    },
+    "LintAllow": {
+      "construct": "struct",
+      "kotlin": "LintAllow",
+      "php": "LintAllow"
+    },
+    "LintRule": {
+      "construct": "struct",
+      "kotlin": "LintRule",
+      "php": "LintRule"
+    },
+    "LintSeverity": {
+      "construct": "openEnum",
+      "kotlin": "LintSeverity",
+      "php": "LintSeverity"
+    },
+    "LiteralTemplate": {
+      "construct": "struct",
+      "kotlin": "LiteralTemplate",
+      "php": "LiteralTemplate"
+    },
+    "MapSchema": {
+      "construct": "struct",
+      "kotlin": "MapSchema",
+      "php": "MapSchema"
+    },
+    "Maturity": {
+      "construct": "openEnum",
+      "kotlin": "Maturity",
+      "php": "Maturity"
+    },
+    "MaturitySource": {
+      "construct": "openEnum",
+      "kotlin": "MaturitySource",
+      "php": "MaturitySource"
+    },
+    "MemberName": {
+      "construct": "union",
+      "kotlin": "MemberName",
+      "php": "MemberName"
+    },
+    "MetaFill": {
+      "construct": "openEnum",
+      "kotlin": "MetaFill",
+      "php": "MetaFill"
+    },
+    "MetaMember": {
+      "construct": "struct",
+      "kotlin": "MetaMember",
+      "php": "MetaMember"
+    },
+    "Name": {
+      "construct": "struct",
+      "kotlin": "Name",
+      "php": "Name"
+    },
+    "NameRole": {
+      "construct": "openEnum",
+      "kotlin": "NameRole",
+      "php": "NameRole"
+    },
+    "NamedTemplate": {
+      "construct": "struct",
+      "kotlin": "NamedTemplate",
+      "php": "NamedTemplate"
+    },
+    "NatureBase": {
+      "construct": "openEnum",
+      "kotlin": "NatureBase",
+      "php": "NatureBase"
+    },
+    "NatureDecl": {
+      "construct": "struct",
+      "kotlin": "NatureDecl",
+      "php": "NatureDecl"
+    },
+    "NatureId": {
+      "construct": "alias",
+      "kotlin": "NatureId",
+      "php": "NatureId"
+    },
+    "NoSubject": {
+      "construct": "struct",
+      "kotlin": "NoSubject",
+      "php": "NoSubject"
+    },
+    "OAuth2": {
+      "construct": "struct",
+      "kotlin": "OAuth2",
+      "php": "OAuth2"
+    },
+    "ObjectSchema": {
+      "construct": "struct",
+      "kotlin": "ObjectSchema",
+      "php": "ObjectSchema"
+    },
+    "ObjectTemplate": {
+      "construct": "struct",
+      "kotlin": "ObjectTemplate",
+      "php": "ObjectTemplate"
+    },
+    "ObjectTemplateMember": {
+      "construct": "struct",
+      "kotlin": "ObjectTemplateMember",
+      "php": "ObjectTemplateMember"
+    },
+    "OpShorthand": {
+      "construct": "openEnum",
+      "kotlin": "OpShorthand",
+      "php": "OpShorthand"
+    },
+    "OpaqueTypeUse": {
+      "construct": "struct",
+      "kotlin": "OpaqueTypeUse",
+      "php": "OpaqueTypeUse"
+    },
+    "Operation": {
+      "construct": "struct",
+      "kotlin": "Operation",
+      "php": "Operation"
+    },
+    "OperationError": {
+      "construct": "struct",
+      "kotlin": "OperationError",
+      "php": "OperationError"
+    },
+    "OperationExample": {
+      "construct": "struct",
+      "kotlin": "OperationExample",
+      "php": "OperationExample"
+    },
+    "OperationId": {
+      "construct": "alias",
+      "kotlin": "OperationId",
+      "php": "OperationId"
+    },
+    "OperationInput": {
+      "construct": "struct",
+      "kotlin": "OperationInput",
+      "php": "OperationInput"
+    },
+    "OperationMaturity": {
+      "construct": "struct",
+      "kotlin": "OperationMaturity",
+      "php": "OperationMaturity"
+    },
+    "OperationRef": {
+      "construct": "struct",
+      "kotlin": "OperationRef",
+      "php": "OperationRef"
+    },
+    "OperationResource": {
+      "construct": "struct",
+      "kotlin": "OperationResource",
+      "php": "OperationResource"
+    },
+    "OperationScope": {
+      "construct": "struct",
+      "kotlin": "OperationScope",
+      "php": "OperationScope"
+    },
+    "OptionalAccess": {
+      "construct": "struct",
+      "kotlin": "OptionalAccess",
+      "php": "OptionalAccess"
+    },
+    "Origin": {
+      "construct": "struct",
+      "kotlin": "Origin",
+      "php": "Origin"
+    },
+    "OverLimitPolicy": {
+      "construct": "openEnum",
+      "kotlin": "OverLimitPolicy",
+      "php": "OverLimitPolicy"
+    },
+    "Owner": {
+      "construct": "struct",
+      "kotlin": "Owner",
+      "php": "Owner"
+    },
+    "OwnerKind": {
+      "construct": "openEnum",
+      "kotlin": "OwnerKind",
+      "php": "OwnerKind"
+    },
+    "PackRef": {
+      "construct": "struct",
+      "kotlin": "PackRef",
+      "php": "PackRef"
+    },
+    "Paging": {
+      "construct": "struct",
+      "kotlin": "Paging",
+      "php": "Paging"
+    },
+    "PagingId": {
+      "construct": "alias",
+      "kotlin": "PagingId",
+      "php": "PagingId"
+    },
+    "PagingLink": {
+      "construct": "struct",
+      "kotlin": "PagingLink",
+      "php": "PagingLink"
+    },
+    "PagingParamPlacement": {
+      "construct": "openEnum",
+      "kotlin": "PagingParamPlacement",
+      "php": "PagingParamPlacement"
+    },
+    "PagingParamStyle": {
+      "construct": "openEnum",
+      "kotlin": "PagingParamStyle",
+      "php": "PagingParamStyle"
+    },
+    "PagingPosition": {
+      "construct": "openEnum",
+      "kotlin": "PagingPosition",
+      "php": "PagingPosition"
+    },
+    "PagingRequestRole": {
+      "construct": "struct",
+      "kotlin": "PagingRequestRole",
+      "php": "PagingRequestRole"
+    },
+    "PagingResponse": {
+      "construct": "struct",
+      "kotlin": "PagingResponse",
+      "php": "PagingResponse"
+    },
+    "PagingRole": {
+      "construct": "openEnum",
+      "kotlin": "PagingRole",
+      "php": "PagingRole"
+    },
+    "PagingStyle": {
+      "construct": "struct",
+      "kotlin": "PagingStyle",
+      "php": "PagingStyle"
+    },
+    "PagingToken": {
+      "construct": "openEnum",
+      "kotlin": "PagingToken",
+      "php": "PagingToken"
+    },
+    "Param": {
+      "construct": "struct",
+      "kotlin": "Param",
+      "php": "Param"
+    },
+    "Params": {
+      "construct": "struct",
+      "kotlin": "Params",
+      "php": "Params"
+    },
+    "PathApiVersion": {
+      "construct": "struct",
+      "kotlin": "PathApiVersion",
+      "php": "PathApiVersion"
+    },
+    "PathVersion": {
+      "construct": "struct",
+      "kotlin": "PathVersion",
+      "php": "PathVersion"
+    },
+    "PathVersionMode": {
+      "construct": "openEnum",
+      "kotlin": "PathVersionMode",
+      "php": "PathVersionMode"
+    },
+    "Pattern": {
+      "construct": "struct",
+      "kotlin": "Pattern",
+      "php": "Pattern"
+    },
+    "PlainMemberName": {
+      "construct": "struct",
+      "kotlin": "PlainMemberName",
+      "php": "PlainMemberName"
+    },
+    "PlainTextPart": {
+      "construct": "struct",
+      "kotlin": "PlainTextPart",
+      "php": "PlainTextPart"
+    },
+    "Principal": {
+      "construct": "union",
+      "kotlin": "Principal",
+      "php": "Principal"
+    },
+    "PrincipalRequirement": {
+      "construct": "struct",
+      "kotlin": "PrincipalRequirement",
+      "php": "PrincipalRequirement"
+    },
+    "ProofPlacement": {
+      "construct": "openEnum",
+      "kotlin": "ProofPlacement",
+      "php": "ProofPlacement"
+    },
+    "Property": {
+      "construct": "struct",
+      "kotlin": "Property",
+      "php": "Property"
+    },
+    "PublicAccess": {
+      "construct": "struct",
+      "kotlin": "PublicAccess",
+      "php": "PublicAccess"
+    },
+    "QueryScheme": {
+      "construct": "struct",
+      "kotlin": "QueryScheme",
+      "php": "QueryScheme"
+    },
+    "QueryStyle": {
+      "construct": "openEnum",
+      "kotlin": "QueryStyle",
+      "php": "QueryStyle"
+    },
+    "QueryWire": {
+      "construct": "struct",
+      "kotlin": "QueryWire",
+      "php": "QueryWire"
+    },
+    "QueryWireKind": {
+      "construct": "openEnum",
+      "kotlin": "QueryWireKind",
+      "php": "QueryWireKind"
+    },
+    "Reason": {
+      "construct": "alias",
+      "kotlin": "Reason",
+      "php": "Reason"
+    },
+    "RefTypeUse": {
+      "construct": "struct",
+      "kotlin": "RefTypeUse",
+      "php": "RefTypeUse"
+    },
+    "Refinements": {
+      "construct": "struct",
+      "kotlin": "Refinements",
+      "php": "Refinements"
+    },
+    "RefuseUnknownQuery": {
+      "construct": "struct",
+      "kotlin": "RefuseUnknownQuery",
+      "php": "RefuseUnknownQuery"
+    },
+    "RefusedCredential": {
+      "construct": "openEnum",
+      "kotlin": "RefusedCredential",
+      "php": "RefusedCredential"
+    },
+    "Requirement": {
+      "construct": "union",
+      "kotlin": "Requirement",
+      "php": "Requirement"
+    },
+    "RequirementSubject": {
+      "construct": "struct",
+      "kotlin": "RequirementSubject",
+      "php": "RequirementSubject"
+    },
+    "ResourceSubject": {
+      "construct": "struct",
+      "kotlin": "ResourceSubject",
+      "php": "ResourceSubject"
+    },
+    "Response": {
+      "construct": "struct",
+      "kotlin": "Response",
+      "php": "Response"
+    },
+    "ResponseHeader": {
+      "construct": "struct",
+      "kotlin": "ResponseHeader",
+      "php": "ResponseHeader"
+    },
+    "ResponseShape": {
+      "construct": "openEnum",
+      "kotlin": "ResponseShape",
+      "php": "ResponseShape"
+    },
+    "Right": {
+      "construct": "struct",
+      "kotlin": "Right",
+      "php": "Right"
+    },
+    "RightId": {
+      "construct": "alias",
+      "kotlin": "RightId",
+      "php": "RightId"
+    },
+    "RightRequirement": {
+      "construct": "struct",
+      "kotlin": "RightRequirement",
+      "php": "RightRequirement"
+    },
+    "RightSubject": {
+      "construct": "union",
+      "kotlin": "RightSubject",
+      "php": "RightSubject"
+    },
+    "Rule": {
+      "construct": "struct",
+      "kotlin": "Rule",
+      "php": "Rule"
+    },
+    "RuleId": {
+      "construct": "alias",
+      "kotlin": "RuleId",
+      "php": "RuleId"
+    },
+    "RuleProof": {
+      "construct": "struct",
+      "kotlin": "RuleProof",
+      "php": "RuleProof"
+    },
+    "RuleRequirement": {
+      "construct": "struct",
+      "kotlin": "RuleRequirement",
+      "php": "RuleRequirement"
+    },
+    "Scalar": {
+      "construct": "struct",
+      "kotlin": "Scalar",
+      "php": "Scalar"
+    },
+    "ScalarId": {
+      "construct": "alias",
+      "kotlin": "ScalarId",
+      "php": "ScalarId"
+    },
+    "ScalarType": {
+      "construct": "openEnum",
+      "kotlin": "ScalarType",
+      "php": "ScalarType"
+    },
+    "ScalarTypeUse": {
+      "construct": "struct",
+      "kotlin": "ScalarTypeUse",
+      "php": "ScalarTypeUse"
+    },
+    "Schema": {
+      "construct": "union",
+      "kotlin": "Schema",
+      "php": "Schema"
+    },
+    "SchemaId": {
+      "construct": "alias",
+      "kotlin": "SchemaId",
+      "php": "SchemaId"
+    },
+    "SchemaPrincipal": {
+      "construct": "struct",
+      "kotlin": "SchemaPrincipal",
+      "php": "SchemaPrincipal"
+    },
+    "SchemaRef": {
+      "construct": "alias",
+      "kotlin": "SchemaRef",
+      "php": "SchemaRef"
+    },
+    "Scheme": {
+      "construct": "union",
+      "kotlin": "Scheme",
+      "php": "Scheme"
+    },
+    "SchemeId": {
+      "construct": "alias",
+      "kotlin": "SchemeId",
+      "php": "SchemeId"
+    },
+    "SchemeKey": {
+      "construct": "union",
+      "kotlin": "SchemeKey",
+      "php": "SchemeKey"
+    },
+    "Scope": {
+      "construct": "struct",
+      "kotlin": "Scope",
+      "php": "Scope"
+    },
+    "ScopeId": {
+      "construct": "alias",
+      "kotlin": "ScopeId",
+      "php": "ScopeId"
+    },
+    "ScopeSubject": {
+      "construct": "struct",
+      "kotlin": "ScopeSubject",
+      "php": "ScopeSubject"
+    },
+    "Service": {
+      "construct": "struct",
+      "kotlin": "Service",
+      "php": "Service"
+    },
+    "ServiceId": {
+      "construct": "alias",
+      "kotlin": "ServiceId",
+      "php": "ServiceId"
+    },
+    "Shape": {
+      "construct": "struct",
+      "kotlin": "Shape",
+      "php": "Shape"
+    },
+    "SignatureEncoding": {
+      "construct": "openEnum",
+      "kotlin": "SignatureEncoding",
+      "php": "SignatureEncoding"
+    },
+    "SignatureScheme": {
+      "construct": "struct",
+      "kotlin": "SignatureScheme",
+      "php": "SignatureScheme"
+    },
+    "SignatureVerify": {
+      "construct": "union",
+      "kotlin": "SignatureVerify",
+      "php": "SignatureVerify"
+    },
+    "SignedIdentity": {
+      "construct": "struct",
+      "kotlin": "SignedIdentity",
+      "php": "SignedIdentity"
+    },
+    "Slot": {
+      "construct": "alias",
+      "kotlin": "Slot",
+      "php": "Slot"
+    },
+    "SlotMemberName": {
+      "construct": "struct",
+      "kotlin": "SlotMemberName",
+      "php": "SlotMemberName"
+    },
+    "SlotTemplate": {
+      "construct": "struct",
+      "kotlin": "SlotTemplate",
+      "php": "SlotTemplate"
+    },
+    "SlotTextPart": {
+      "construct": "struct",
+      "kotlin": "SlotTextPart",
+      "php": "SlotTextPart"
+    },
+    "SortKey": {
+      "construct": "struct",
+      "kotlin": "SortKey",
+      "php": "SortKey"
+    },
+    "SourceLocation": {
+      "construct": "struct",
+      "kotlin": "SourceLocation",
+      "php": "SourceLocation"
+    },
+    "SourceMap": {
+      "construct": "struct",
+      "kotlin": "SourceMap",
+      "php": "SourceMap"
+    },
+    "SourceSchemeKey": {
+      "construct": "struct",
+      "kotlin": "SourceSchemeKey",
+      "php": "SourceSchemeKey"
+    },
+    "SuccessShapes": {
+      "construct": "struct",
+      "kotlin": "SuccessShapes",
+      "php": "SuccessShapes"
+    },
+    "Surface": {
+      "construct": "struct",
+      "kotlin": "Surface",
+      "php": "Surface"
+    },
+    "SurfaceId": {
+      "construct": "alias",
+      "kotlin": "SurfaceId",
+      "php": "SurfaceId"
+    },
+    "Template": {
+      "construct": "union",
+      "kotlin": "Template",
+      "php": "Template"
+    },
+    "TemplateSignature": {
+      "construct": "struct",
+      "kotlin": "TemplateSignature",
+      "php": "TemplateSignature"
+    },
+    "TextPart": {
+      "construct": "union",
+      "kotlin": "TextPart",
+      "php": "TextPart"
+    },
+    "TextTemplate": {
+      "construct": "struct",
+      "kotlin": "TextTemplate",
+      "php": "TextTemplate"
+    },
+    "TypeUse": {
+      "construct": "union",
+      "kotlin": "TypeUse",
+      "php": "TypeUse"
+    },
+    "UnionSchema": {
+      "construct": "struct",
+      "kotlin": "UnionSchema",
+      "php": "UnionSchema"
+    },
+    "UnionTag": {
+      "construct": "union",
+      "kotlin": "UnionTag",
+      "php": "UnionTag"
+    },
+    "UnionVariant": {
+      "construct": "struct",
+      "kotlin": "UnionVariant",
+      "php": "UnionVariant"
+    },
+    "UnknownKeys": {
+      "construct": "struct",
+      "kotlin": "UnknownKeys",
+      "php": "UnknownKeys"
+    },
+    "UnknownKeysPolicy": {
+      "construct": "openEnum",
+      "kotlin": "UnknownKeysPolicy",
+      "php": "UnknownKeysPolicy"
+    },
+    "UnknownQuery": {
+      "construct": "union",
+      "kotlin": "UnknownQuery",
+      "php": "UnknownQuery"
+    },
+    "UrlRole": {
+      "construct": "openEnum",
+      "kotlin": "UrlRole",
+      "php": "UrlRole"
+    },
+    "ValueSchemeKey": {
+      "construct": "struct",
+      "kotlin": "ValueSchemeKey",
+      "php": "ValueSchemeKey"
+    },
+    "ValueSource": {
+      "construct": "struct",
+      "kotlin": "ValueSource",
+      "php": "ValueSource"
+    },
+    "ValueSourceIn": {
+      "construct": "openEnum",
+      "kotlin": "ValueSourceIn",
+      "php": "ValueSourceIn"
+    },
+    "VariantId": {
+      "construct": "alias",
+      "kotlin": "VariantId",
+      "php": "VariantId"
+    },
+    "VariantsPrincipal": {
+      "construct": "struct",
+      "kotlin": "VariantsPrincipal",
+      "php": "VariantsPrincipal"
+    },
+    "VocabularyEnumSource": {
+      "construct": "struct",
+      "kotlin": "VocabularyEnumSource",
+      "php": "VocabularyEnumSource"
+    },
+    "WireFormat": {
+      "construct": "struct",
+      "kotlin": "WireFormat",
+      "php": "WireFormat"
+    }
+  }
+}
