@@ -205,20 +205,28 @@ test("in a data position only a mapping holding $file alone is processed", () =>
   const r = run({
     "api.yaml": [
       "api: { name: t }",
-      "examples:",
-      "  one: { value: { $include: ./nope.yaml, $ref: X } }",
-      "  two: { value: { $file: ./ex.json } }",
-      "  three: { value: { $file: ./ex.yaml } }",
+      "surfaces:",
+      "  app:",
+      "    routes:",
+      "      r:",
+      "        method: get",
+      "        examples:",
+      "          one: { status: 200, value: { $include: ./nope.yaml, $ref: X } }",
+      "          two: { status: 200, value: { $file: ./ex.json } }",
+      "          three: { status: 200, value: { $file: ./ex.yaml } }",
       "",
     ].join("\n"),
     "ex.json": '{"a": [1, 2]}',
     "ex.yaml": "b: 1\n",
   });
   expect(r.result.diagnostics).toEqual([]);
-  expect(r.result.workspace.apis[0]?.merged.examples).toEqual({
-    one: { value: { $include: "./nope.yaml", $ref: "X" } },
-    two: { value: { a: [1, 2] } },
-    three: { value: { b: 1 } },
+  const merged = r.result.workspace.apis[0]?.merged as {
+    surfaces: { app: { routes: { r: { examples: unknown } } } };
+  };
+  expect(merged.surfaces.app.routes.r.examples).toEqual({
+    one: { status: 200, value: { $include: "./nope.yaml", $ref: "X" } },
+    two: { status: 200, value: { a: [1, 2] } },
+    three: { status: 200, value: { b: 1 } },
   });
 });
 
@@ -530,10 +538,11 @@ test("two $include keys in one mapping are a duplicate key", () => {
 test("a paging default and a scheme key value are settings, not data", () => {
   const r = run({
     "api.yaml":
-      "api: { name: t }\nconventions:\n  paging: { default: ~ }\nschemes:\n  s: { key: { value: ~ } }\nexamples:\n  e: { value: ~ }\n",
+      "api: { name: t }\nconventions:\n  paging: { default: ~ }\nschemes:\n  s: { kind: signature, key: { value: ~ } }\nsurfaces:\n  app:\n    routes:\n      r:\n        method: get\n        examples:\n          e: { status: 200, value: ~ }\n",
   });
-  expect(rules(r)).toEqual(["data-null"]);
-  expect(r.printed).toContain("api.yaml:7:15:");
+  // The settings are strings, so a null there is a type error (P6); only the example is data.
+  expect(rules(r)).toEqual(["scalar-type", "scalar-type", "data-null"]);
+  expect(r.printed).toContain("api.yaml:12:36:");
 });
 
 test("derive entries named alike in one pack say so", () => {

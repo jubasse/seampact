@@ -56,8 +56,10 @@ const ACTIVE = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}\p{Cs}]/gu;
  * Authored strings and file names reach the terminal through messages: a character a terminal
  * acts on, or one that hides or reorders text (an escape sequence, a bidirectional override, a
  * zero-width joiner), is written as `\uXXXX` instead, `\u{XXXXX}` beyond the basic plane.
+ * The printer applies it to every message; a stage applies it to authored text when it builds a
+ * message, so a renderer other than this printer receives inert text too.
  */
-function inert(text: string): string {
+export function diagnosticInert(text: string): string {
   return text.replace(ACTIVE, (ch) => {
     const code = ch.codePointAt(0) as number;
     const hex = code.toString(16).toUpperCase();
@@ -66,7 +68,7 @@ function inert(text: string): string {
 }
 
 function sentence(text: string): string {
-  const t = inert(text.replace(/\s+/g, " ").trim());
+  const t = diagnosticInert(text.replace(/\s+/g, " ").trim());
   return /[.!?]$/.test(t) ? t : `${t}.`;
 }
 
@@ -81,7 +83,7 @@ export function printDiagnostics(diagnostics: readonly Diagnostic[], locations: 
   for (const d of diagnosticSort(diagnostics, locations)) {
     const at = diagnosticLocation(d.origin, locations);
     lines.push(
-      `${inert(at.file)}:${at.line}:${at.column}: ${d.severity} ${d.rule}: ${sentence(d.message)} Fix: ${sentence(d.fix)}`,
+      `${diagnosticInert(at.file)}:${at.line}:${at.column}: ${d.severity} ${d.rule}: ${sentence(d.message)} Fix: ${sentence(d.fix)}`,
     );
     const related = d.related
       .map((r) => ({ r, at: diagnosticLocation(r.origin, locations) }))
@@ -93,7 +95,9 @@ export function printDiagnostics(diagnostics: readonly Diagnostic[], locations: 
           compare(x.r.message, y.r.message),
       );
     for (const { r, at: rat } of related) {
-      lines.push(`  ${inert(rat.file)}:${rat.line}:${rat.column}: ${sentence(r.message)}`);
+      lines.push(
+        `  ${diagnosticInert(rat.file)}:${rat.line}:${rat.column}: ${sentence(r.message)}`,
+      );
     }
   }
   return lines.join("\n");

@@ -59,10 +59,12 @@ test("fixture: inline and included routes give the same raw tree", () => {
 test("fixture: a query field named default is not a data position", () => {
   const r = golden("composition/data-positions", []);
   const merged = must(r.workspace.apis[0]).merged as {
-    surfaces: { app: { routes: { tasks: { list: Record<string, unknown> } } } };
+    surfaces: { app: { routes: { tasks: Record<string, unknown> } } };
   };
-  const list = merged.surfaces.app.routes.tasks.list;
+  const list = merged.surfaces.app.routes.tasks;
   expect(list.query).toEqual({ default: { type: "string", maxLength: 20 } });
-  expect(list.examples).toEqual({ raw: { value: { $include: "./never-read.yaml" } } });
+  expect(list.examples).toEqual({
+    raw: { status: 200, value: { $include: "./never-read.yaml" } },
+  });
   expect(r.files).not.toContain("never-read.yaml");
 });

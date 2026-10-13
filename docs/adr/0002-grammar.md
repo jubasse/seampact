@@ -100,7 +100,7 @@ conventions:
   rights: { pattern: '^[a-z]+(\.[a-z]+)+$' }
 ```
 
-`pack` is the manifest: `name` (the package name, or for a pack referenced by path a name of the contract's choosing), `version` (semver) and `extends` (packs applied just before this one, in the reference forms of `packs`). The version is written once, in the manifest: for a pack resolved from a package, the compiler refuses a `package.json` whose version differs.
+`pack` is the manifest: `name` (the package name, or for a pack referenced by path a name of the contract's choosing, never holding `#`: the name is the layer id `pack:<name>`, which the side table joins to a pointer with `#`, ADR 0004 section 11), `version` (semver) and `extends` (packs applied just before this one, in the reference forms of `packs`). The version is written once, in the manifest: for a pack resolved from a package, the compiler refuses a `package.json` whose version differs.
 
 `derive` is the only way a pack adds to what a route ends up with (ADR 0008). It is a list of entries, applied in order; each has an `entry` name, unique in the pack, a selector and one or more effects, all from closed sets:
 

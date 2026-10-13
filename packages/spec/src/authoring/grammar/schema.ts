@@ -3,6 +3,7 @@
 import {
   A3,
   conflict,
+  data,
   type JsonSchema,
   kw,
   list,
@@ -52,10 +53,10 @@ const annotations = (): Record<string, JsonSchema> => ({
   deprecated: kw(S1, { type: "boolean" }),
   default: kw(
     A3(10),
-    {},
+    data(),
     "On an optional input property or query field only (ADR 0003 section 10).",
   ),
-  examples: kw(A3(11), list({}), "Values parsed against the schema at compile time."),
+  examples: kw(A3(11), list(data()), "Values parsed against the schema at compile time."),
 });
 
 const marks = (): Record<string, JsonSchema> => ({
@@ -249,12 +250,12 @@ export function schemaDefs(): Record<string, JsonSchema> {
     overlay: object({
       props: {
         nullable: kw(A3(2), { type: "boolean" }),
-        default: kw(A3(2), {}),
+        default: kw(A3(2), data()),
         restrictedTo: kw(A3(2), ref("schema", "restrictedTo")),
         title: kw(A3(2), str()),
         description: kw(A3(2), ref("common", "description")),
         deprecated: kw(A3(2), { type: "boolean" }),
-        examples: kw(A3(2), list({})),
+        examples: kw(A3(2), list(data())),
         ...refusedProps(),
       },
     }),

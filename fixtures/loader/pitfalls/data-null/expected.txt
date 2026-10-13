@@ -1,3 +1,3 @@
-api.yaml:4:17: error seampact/load/data-null: null is written '~' here; in a data position it must be written null. Fix: write null.
-api.yaml:5:17: error seampact/load/data-null: null is written 'Null' here; in a data position it must be written null. Fix: write null.
-api.yaml:7:11: error seampact/load/data-null: null is written '' here; in a data position it must be written null. Fix: write null.
+api.yaml:9:36: error seampact/load/data-null: null is written '~' here; in a data position it must be written null. Fix: write null.
+api.yaml:10:36: error seampact/load/data-null: null is written 'Null' here; in a data position it must be written null. Fix: write null.
+api.yaml:13:19: error seampact/load/data-null: null is written '' here; in a data position it must be written null. Fix: write null.

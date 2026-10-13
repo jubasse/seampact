@@ -1,8 +1,14 @@
 api:
   name: demo
-examples:
-  one: { value: ~ }
-  two: { value: Null }
-  three:
-    value:
-  four: { value: null }
+surfaces:
+  app:
+    routes:
+      one:
+        method: get
+        examples:
+          a: { status: 200, value: ~ }
+          b: { status: 200, value: Null }
+          c:
+            status: 200
+            value:
+          d: { status: 200, value: null }

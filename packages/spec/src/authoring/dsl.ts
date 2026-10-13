@@ -7,7 +7,7 @@
 //   (markers.ts), never by a literal;
 // - every `required` sits beside a `properties` that lists its keys (Ajv strictRequired).
 
-import { MARKERS, RESERVED_NAMES } from "./markers.js";
+import { DATA, MARKERS, RESERVED_NAMES } from "./markers.js";
 
 export type JsonSchema = { [key: string]: unknown };
 
@@ -89,6 +89,11 @@ export function forbid(keys: string[], description: string): JsonSchema {
   return {
     properties: Object.fromEntries(keys.map((k) => [k, conflict(description)])),
   };
+}
+
+// A data position: any value, marked `DATA` for the loader (markers.ts).
+export function data(): JsonSchema {
+  return { title: DATA };
 }
 
 export function str(extra: JsonSchema = {}): JsonSchema {

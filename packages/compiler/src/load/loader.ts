@@ -1,17 +1,25 @@
 import type { Origin } from "@seampact/spec/ir";
-import { isScalar } from "yaml";
+import { isMap, isScalar } from "yaml";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
-import { diagnosticLocationKey, diagnosticSort } from "../diagnostics/print.js";
-import type { JsonObject, RawApi, RawWorkspace, RawWorkspaceConfig } from "../raw-tree.js";
+import { diagnosticInert, diagnosticLocationKey, diagnosticSort } from "../diagnostics/print.js";
+import {
+  type ApiLayerId,
+  entryLocationKey,
+  type JsonObject,
+  type RawApi,
+  type RawWorkspace,
+  type RawWorkspaceConfig,
+} from "../raw-tree.js";
 import { LoadBudget, loadWorkOf } from "./budget.js";
 import { mergeLayers } from "./compose.js";
-import { Expander, type LayerBuild, navigate } from "./expand.js";
+import { Expander, type LayerBuild, mapIndex, navigate } from "./expand.js";
+import { entryRootPosition } from "./positions.js";
 import { asObject, isReservedKey, showValue } from "./json.js";
 import { LOAD_MAX_DEPTH } from "./limits.js";
 import { isInside, joinPath, loadNormalizePath, pointerEscape } from "./paths.js";
 import type { LoadReader } from "./reader.js";
 import { Reporter, type SiteLocation } from "./report.js";
-import { FileStore, nodeSite, type ParsedFile } from "./source.js";
+import { FileStore, nodeSite, type ParsedFile, type PathContext } from "./source.js";
 
 export interface LoadOptions {
   reader: LoadReader;
@@ -72,6 +80,18 @@ interface ApiState {
   done: Set<string>;
 }
 
+/**
+ * ADR 0002 section 2, rule 3: a relative path resolves against the file that wrote it, which is an
+ * included file when an `$include` brought the key. `at` is where the path is written; the
+ * boundary stays the layer's (the workspace root, or a pack's package).
+ */
+function writtenIn(build: LayerBuild<Origin["layer"]>, at: SiteLocation): PathContext {
+  return { path: at.file, boundary: build.parsed.boundary };
+}
+
+// The layer a pack file is read under until its manifest names it; never a layer of a raw tree.
+const PROVISIONAL_PACK = "pack:\u0000naming";
+
 export function loadWorkspace(options: LoadOptions): LoadResult {
   return new Loader(options).run();
 }
@@ -81,8 +101,8 @@ class Loader {
   private readonly budget = new LoadBudget(this.rep);
   private readonly store: FileStore;
   private readonly ex: Expander;
-  private readonly builds = new Map<string, LayerBuild>();
-  private readonly finished = new Set<LayerBuild>();
+  private readonly builds = new Map<string, LayerBuild<Origin["layer"]>>();
+  private readonly finished = new Set<LayerBuild<Origin["layer"]>>();
   private readonly packs = new Map<string, PackBuild | null>();
   private readonly packNames = new Map<string, PackBuild>();
 
@@ -97,7 +117,7 @@ class Loader {
     const entry = loadNormalizePath(this.options.entry);
     const entrySite: SiteLocation = { file: entry, line: 1, column: 1, endLine: 1, endColumn: 1 };
     this.rep.layer = "api";
-    let entryBuild: LayerBuild | undefined;
+    let entryBuild: LayerBuild<"workspace"> | LayerBuild<"api"> | undefined;
     if (!isInside(".", entry)) {
       this.rep.report({
         rule: "path-escape",
@@ -106,15 +126,29 @@ class Loader {
         at: entrySite,
       });
     } else if (typeof this.store.checkFile(entry, ".", entrySite, "the entry file") === "string") {
+      // Its kind, so its layer, is known once it is read: what parsing reported moves to it.
+      const since = this.rep.diagnostics.length;
       const pf = this.store.parse(entry, ".");
-      if (pf) entryBuild = this.layer(pf, "api");
+      if (pf) entryBuild = this.entryLayer(pf);
+      if (entryBuild?.layer === "workspace") this.rep.relabel(since, "api", "workspace");
     }
     if (entryBuild) {
+      // What is reported on the entry from here on is the entry's layer's.
+      this.rep.layer = entryBuild.layer;
       const tree = entryBuild.tree;
       const ws = asObject(tree.workspace);
-      if (ws) {
+      if (tree.workspace !== undefined && tree.api !== undefined) {
+        this.badShape(
+          entryBuild,
+          "/api",
+          "the entry file is both a workspace (workspace:) and an api (api:)",
+          "keep one of them: a workspace names its api files, an api file is the entry of one api",
+        );
+      } else if (entryBuild.layer === "workspace" && !ws) {
+        // `workspace:` holds no mapping: P6 or the validate stage reports it, nothing more here.
+      } else if (ws && entryBuild.layer === "workspace") {
         this.workspaceMode(entryBuild, ws, apis, config);
-      } else if (asObject(tree.api)) {
+      } else if (entryBuild.layer === "api" && asObject(tree.api)) {
         const name = asObject(tree.api)?.name;
         if (typeof name === "string") this.loadApi(name, entryBuild, undefined, apis);
         else
@@ -135,6 +169,14 @@ class Loader {
     }
     const locations = this.rep.locations;
     const workspace: RawWorkspace = { root: ".", apis, locations };
+    if (entryBuild?.layer === "workspace") {
+      // The whole entry document, located by `workspace#<pointer>`: the `workspace` layer id is
+      // never an api layer's, and the load sites' pointers start `/~load/`.
+      workspace.entry = { layer: "workspace", file: entryBuild.parsed.path, tree: entryBuild.tree };
+      for (const [pointer, site] of entryBuild.locs) {
+        locations[entryLocationKey(pointer)] = site;
+      }
+    }
     if (Object.keys(config).length > 0) workspace.config = config;
     return {
       workspace,
@@ -143,7 +185,41 @@ class Loader {
     };
   }
 
-  private badShape(b: LayerBuild, ptr: string, message: string, fix: string): void {
+  /**
+   * The entry file, read as a workspace file when it holds `workspace:` and as an api file
+   * otherwise. When its own keys do not tell (an `$include` brings them, ADR 0002 section 2), it
+   * is read against both root schemas and takes the kind its keys say once its includes are
+   * resolved; what was reported meanwhile moves to that layer.
+   */
+  private entryLayer(pf: ParsedFile): LayerBuild<"workspace"> | LayerBuild<"api"> {
+    const own = isMap(pf.root) ? mapIndex(pf.root) : undefined;
+    if (own?.has("workspace")) return this.layer(pf, "workspace");
+    if (!own?.has("$include") || own.has("api")) return this.layer(pf, "api");
+    const since = this.rep.diagnostics.length;
+    const saved = this.rep.layer;
+    this.rep.layer = "workspace";
+    const build = this.ex.expandLayer(pf, "workspace", entryRootPosition());
+    this.rep.layer = saved;
+    if (build.tree.workspace !== undefined) return build;
+    this.rep.relabel(since, "workspace", "api");
+    return { ...build, layer: "api" };
+  }
+
+  /** Parses a file as part of `layer`: what parsing finds (P1 to P5, P9, syntax) is that layer's. */
+  private parseAs(path: string, boundary: string, layer: Origin["layer"]): ParsedFile | undefined {
+    const saved = this.rep.layer;
+    this.rep.layer = layer;
+    const pf = this.store.parse(path, boundary);
+    this.rep.layer = saved;
+    return pf;
+  }
+
+  private badShape(
+    b: LayerBuild<Origin["layer"]>,
+    ptr: string,
+    message: string,
+    fix: string,
+  ): void {
     this.rep.report({
       rule: "workspace-shape",
       message,
@@ -152,10 +228,10 @@ class Loader {
     });
   }
 
-  private layer(pf: ParsedFile, layer: Origin["layer"]): LayerBuild {
+  private layer<L extends Origin["layer"]>(pf: ParsedFile, layer: L): LayerBuild<L> {
     const key = `${layer}|${pf.boundary}|${pf.path}`;
     const hit = this.builds.get(key);
-    if (hit) return hit;
+    if (hit) return hit as LayerBuild<L>;
     const saved = this.rep.layer;
     this.rep.layer = layer;
     const build = this.ex.expandLayer(pf, layer);
@@ -165,7 +241,7 @@ class Loader {
   }
 
   private workspaceMode(
-    entry: LayerBuild,
+    entry: LayerBuild<"workspace">,
     ws: JsonObject,
     apis: RawApi[],
     config: RawWorkspaceConfig,
@@ -193,19 +269,17 @@ class Loader {
           "write shared: ./shared/base.yaml",
         );
       } else {
-        const r = this.store.resolve(
-          entry.parsed,
-          ws.shared,
-          site("/workspace/shared"),
-          "workspace",
-        );
-        const pf = r && this.store.parse(r.path, ".");
+        const at = site("/workspace/shared");
+        const r = this.store.resolve(writtenIn(entry, at), ws.shared, at, "workspace");
+        const pf = r && this.parseAs(r.path, ".", "shared");
         if (pf) shared = this.layer(pf, "shared");
       }
     }
     for (const [name, raw] of Object.entries(list)) {
       // Once the budget is spent, the apis left would only report what an empty tree lacks.
       if (this.budget.exhausted) break;
+      // Each api entry is read from workspace.yaml; loading the api before it moved the layer.
+      this.rep.layer = entry.layer;
       const at = site(`/workspace/apis/${pointerEscape(name)}`);
       if (typeof raw !== "string") {
         this.rep.report({
@@ -216,12 +290,12 @@ class Loader {
         });
         continue;
       }
-      const r = this.store.resolve(entry.parsed, raw, at, "workspace");
-      const pf = r && this.store.parse(r.path, ".");
+      const r = this.store.resolve(writtenIn(entry, at), raw, at, "workspace");
+      const pf = r && this.parseAs(r.path, ".", "api");
       if (!pf) continue;
-      this.rep.layer = "api";
       const build = this.layer(pf, "api");
       const declared = asObject(build.tree.api)?.name;
+      this.rep.layer = "api";
       if (declared !== name) {
         this.rep.report({
           rule: "api-name-mismatch",
@@ -265,7 +339,7 @@ class Loader {
           at,
         });
       } else {
-        const r = this.store.resolve(api.parsed, ext, at, "extends");
+        const r = this.store.resolve(writtenIn(api, at), ext, at, "extends");
         if (r && r.path === api.parsed.path) {
           this.rep.report({
             rule: "extends-cycle",
@@ -274,7 +348,7 @@ class Loader {
             at,
           });
         } else {
-          const pf = r && this.store.parse(r.path, api.parsed.boundary);
+          const pf = r && this.parseAs(r.path, api.parsed.boundary, "base");
           if (pf) base = this.layer(pf, "base");
         }
       }
@@ -310,21 +384,19 @@ class Loader {
       if (seen.has(p.key) || !this.budget.charge(1, apiSite)) return seen;
       seen.add(p.key);
       for (const e of p.extendsRefs) {
-        const sub = this.findPack(e.ref, p.build);
+        const sub = this.findPack(e.ref, e.at);
         if (sub) closure(sub, seen);
       }
       return seen;
     };
-    const layerName = (key: string) => this.packs.get(key)?.build.layer as Origin["layer"];
+    const layerName = (key: string) => this.packs.get(key)?.build.layer as ApiLayerId;
     const closureNames = (list: PackBuild[]) => {
       const keys = new Set<string>();
       for (const p of list) for (const k of closure(p)) keys.add(k);
       return [...keys].map(layerName);
     };
-    const sharedSees: Origin["layer"][] = shared ? ["shared", ...closureNames(sharedPacks)] : [];
-    const baseSees: Origin["layer"][] = base
-      ? ["base", ...closureNames(basePacks), ...sharedSees]
-      : [];
+    const sharedSees: ApiLayerId[] = shared ? ["shared", ...closureNames(sharedPacks)] : [];
+    const baseSees: ApiLayerId[] = base ? ["base", ...closureNames(basePacks), ...sharedSees] : [];
     // Null prototype: the keys are layer ids, which embed pack names an author chose.
     const vis: RawApi["visibility"] = Object.create(null);
     for (const p of state.order) vis[p.build.layer] = closureNames([p]).sort();
@@ -485,8 +557,9 @@ class Loader {
     state.order.push(pack);
   }
 
-  private findPack(ref: string, from: LayerBuild): PackBuild | undefined {
-    const key = this.packKeyCache.get(`${from.parsed.path}|${ref}`);
+  // Keyed by the file that wrote the reference: the same text resolves against that file.
+  private findPack(ref: string, at: SiteLocation): PackBuild | undefined {
+    const key = this.packKeyCache.get(`${at.file}|${ref}`);
     return key ? (this.packs.get(key) ?? undefined) : undefined;
   }
 
@@ -497,7 +570,7 @@ class Loader {
     let boundary = from.parsed.boundary;
     let pkg: { name: string; version: unknown; dir: string } | undefined;
     if (ref.startsWith("./") || ref.startsWith("../")) {
-      file = this.store.resolve(from.parsed, ref, at, "pack")?.path;
+      file = this.store.resolve(writtenIn(from, at), ref, at, "pack")?.path;
     } else {
       const found = this.resolvePackage(ref, at);
       if (!found) return undefined;
@@ -507,21 +580,39 @@ class Loader {
     }
     if (!file) return undefined;
     const key = `${boundary}|${file}`;
-    this.packKeyCache.set(`${from.parsed.path}|${ref}`, key);
+    this.packKeyCache.set(`${at.file}|${ref}`, key);
     const hit = this.packs.get(key);
     if (hit !== undefined) return hit ?? undefined;
-    const pf = this.store.parse(file, boundary);
-    if (!pf?.root) {
+    // A pack is named by its manifest once its includes are resolved, as the entry file is read:
+    // it is parsed and expanded under a provisional layer, and what was reported meanwhile moves to
+    // `pack:<name>`, or to the layer that names it when the pack is refused.
+    const saved = this.rep.layer;
+    const since = this.rep.diagnostics.length;
+    const refuse = (): undefined => {
+      this.rep.relabel(since, PROVISIONAL_PACK, from.layer);
+      this.rep.layer = saved;
       this.packs.set(key, null);
       return undefined;
-    }
-    // The layer id is the manifest name; read it from the syntax tree before expanding.
+    };
+    this.rep.layer = PROVISIONAL_PACK;
+    const pf = this.store.parse(file, boundary);
+    if (!pf?.root) return refuse();
+    // A name written in the file itself and refused is refused before anything is expanded.
     const nameNode = navigate(pf, "/pack/name");
-    const written = isScalar(nameNode) ? nameNode.value : undefined;
+    if (isScalar(nameNode) && typeof nameNode.value === "string" && nameNode.value.includes("#")) {
+      this.packLayerId(nameNode.value, () => nodeSite(pf, nameNode));
+      return refuse();
+    }
+    const expanded = this.ex.expandLayer(pf, PROVISIONAL_PACK);
+    const written = asObject(expanded.tree.pack)?.name;
     const name = typeof written === "string" ? written : ref;
-    const layerId: Origin["layer"] = `pack:${name}`;
-    const build = this.layer(pf, layerId);
-    const saved = this.rep.layer;
+    const layerId = this.packLayerId(
+      name,
+      () => expanded.locs.get("/pack/name") ?? nodeSite(pf, pf.root),
+    );
+    if (layerId === undefined) return refuse();
+    this.rep.relabel(since, PROVISIONAL_PACK, layerId);
+    const build: LayerBuild = { ...expanded, layer: layerId };
     this.rep.layer = layerId;
     const tree = build.tree;
     const manifest = asObject(tree.pack);
@@ -607,6 +698,22 @@ class Loader {
   }
 
   /**
+   * A pack's layer id, `pack:<name>`, built here only. A side table key joins the layer id to a
+   * pointer with `#` (`<layer>#<pointer>`), so a name holding `#` could make a pack's key meet a
+   * load site's (`<layer>#/~load/...`): it is refused, and the pack is not loaded.
+   */
+  private packLayerId(name: string, at: () => SiteLocation): ApiLayerId | undefined {
+    if (!name.includes("#")) return `pack:${name}`;
+    this.rep.report({
+      rule: "pack-name",
+      message: `the pack name '${diagnosticInert(name)}' holds a '#'`,
+      fix: "name the pack without '#'",
+      at: at(),
+    });
+    return undefined;
+  }
+
+  /**
    * Walks `node_modules` from the workspace root upward with the reader (ADR 0008). The name is
    * checked against npm's grammar, and each candidate directory must be exactly
    * `<up>/node_modules/<name>`, before anything is read.
@@ -623,7 +730,7 @@ class Loader {
     const refuse = () => {
       this.rep.report({
         rule: "pack-name",
-        message: `'${name}' is neither a path (starting with ./ or ../) nor a package name`,
+        message: `'${diagnosticInert(name)}' is neither a path (starting with ./ or ../) nor a package name`,
         fix: "write a package name such as @seampact/pack-crud-rights, or a path such as ./packs/house.yaml",
         at,
       });

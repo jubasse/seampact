@@ -97,8 +97,13 @@ test("D-3 many $file sites of one large JSON string end at the text limit", () =
     run({
       "api.yaml": [
         "api: { name: t }",
-        "examples:",
-        ...times(sites, (i) => `  e${i}: { value: { $file: ./big.json } }`),
+        "surfaces:",
+        "  app:",
+        "    routes:",
+        "      r:",
+        "        method: get",
+        "        examples:",
+        ...times(sites, (i) => `          e${i}: { status: 200, value: { $file: ./big.json } }`),
         "",
       ].join("\n"),
       "big.json": `"${"x".repeat(4 * 1024 * 1024 - 16)}"`,
@@ -198,8 +203,10 @@ test("D-4 a property named key keeps its data positions", () => {
       "",
     ].join("\n"),
   });
-  expect(rules(r)).toEqual(["data-null", "data-null"]);
-  expect(r.diagnostics.map((d) => d.message)).toEqual([
+  // The two schema defaults are data (a property named `key` or `paging` keeps its data position);
+  // the setting `paging.default` and the scheme `key.value` are strings, so a null there is P6.
+  expect(rules(r)).toEqual(["data-null", "data-null", "scalar-type", "scalar-type"]);
+  expect(r.diagnostics.slice(0, 2).map((d) => d.message)).toEqual([
     "null is written '~' here; in a data position it must be written null",
     "null is written '~' here; in a data position it must be written null",
   ]);

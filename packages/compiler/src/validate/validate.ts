@@ -15,13 +15,7 @@ import {
 import type { Origin } from "@seampact/spec/ir";
 import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
-import {
-  type JsonValue,
-  type LayerKind,
-  layerKindOf,
-  type RawLayer,
-  type RawWorkspace,
-} from "../raw-tree.js";
+import { type JsonValue, type RawLayer, type RawWorkspace, schemaKindOf } from "../raw-tree.js";
 import { convertErrors } from "./diagnostics.js";
 
 // The kinds a document may be validated as: the file kinds and the fragment kinds.
@@ -29,13 +23,6 @@ export type ValidateDocumentKind = Exclude<AuthoringFile, "common">;
 
 // An absolute base for the relative `$ref`s between the authoring schemas; never fetched.
 const BASE_URI = "https://seampact.invalid/authoring/";
-
-const LAYER_SCHEMA: Record<LayerKind, ValidateDocumentKind> = {
-  api: "api",
-  base: "base",
-  shared: "base",
-  pack: "pack",
-};
 
 let ajv: Ajv2020 | undefined;
 const compiled = new Map<ValidateDocumentKind, ValidateFunction>();
@@ -87,7 +74,7 @@ export function validateDocument(
 }
 
 export function validateLayer(layer: RawLayer): Diagnostic[] {
-  return validateDocument(LAYER_SCHEMA[layerKindOf(layer.layer)], layer.tree, layer.layer);
+  return validateDocument(schemaKindOf(layer.layer), layer.tree, layer.layer);
 }
 
 // The diagnostics listed under one api: their origins name layers that api reaches, so a consumer
@@ -99,8 +86,9 @@ export interface ApiDiagnostics {
 
 // The validate stage's output for a workspace.
 export interface WorkspaceDiagnostics {
-  // The workspace file's own diagnostics; empty until the workspace file is validated here
-  // (p1-loader-2 hands the stage that document).
+  // The workspace entry file's own diagnostics (kind `workspace`), located through
+  // `RawWorkspace.locations` under `workspace#<pointer>`; empty when the entry is a single api
+  // file, which is listed as the api's own layer.
   workspace: Diagnostic[];
   // One entry per api, in workspace order.
   apis: ApiDiagnostics[];
@@ -123,5 +111,9 @@ export function validateWorkspace(workspace: RawWorkspace): WorkspaceDiagnostics
     }
     return { api: api.name, diagnostics: sortDiagnostics(diagnostics) };
   });
-  return { workspace: [], apis };
+  const entry = workspace.entry;
+  return {
+    workspace: entry ? validateDocument(schemaKindOf(entry.layer), entry.tree, entry.layer) : [],
+    apis,
+  };
 }

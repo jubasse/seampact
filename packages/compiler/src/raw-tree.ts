@@ -1,4 +1,5 @@
 import type { Origin, SourceMap } from "@seampact/spec/ir";
+import { diagnosticLocationKey } from "./diagnostics/print.js";
 
 export type JsonValue = null | boolean | number | string | JsonValue[] | JsonObject;
 export interface JsonObject {
@@ -7,15 +8,51 @@ export interface JsonObject {
 
 export type LayerKind = "api" | "base" | "shared" | "pack";
 
+// The layers of an api: every origin layer but `workspace`, which only names the entry file
+// (ADR 0004 section 6), so a workspace origin can never be cast into a layer kind.
+export type ApiLayerId = Exclude<Origin["layer"], "workspace">;
+
 // `layer` is the single source of truth; the kind is derived by `layerKindOf`.
 export interface RawLayer {
-  layer: Origin["layer"];
+  layer: ApiLayerId;
   file: string;
   tree: JsonObject;
 }
 
-export function layerKindOf(layer: Origin["layer"]): LayerKind {
+// The workspace entry document (ADR 0002 section 1), validated as kind `workspace`. Not a layer of
+// any api: its own type, so no layer-kind function accepts it.
+export interface RawEntryLayer {
+  layer: "workspace";
+  file: string;
+  tree: JsonObject;
+}
+
+/**
+ * The key that locates a pointer of the workspace entry document in `RawWorkspace.locations`,
+ * `workspace#<pointer>` (ADR 0006 section 4). A stage that reports on the entry gives its
+ * diagnostic the origin `{ layer: "workspace", pointer }`; this is the one place the key is spelled.
+ */
+export function entryLocationKey(pointer: string): string {
+  return diagnosticLocationKey({ layer: "workspace", pointer });
+}
+
+export function layerKindOf(layer: ApiLayerId): LayerKind {
   return layer.startsWith("pack:") ? "pack" : (layer as Exclude<LayerKind, "pack">);
+}
+
+// The authoring schema a layer's document is read as (P6, by the load stage) and validated as (by
+// the validate stage): one mapping for both. The shared file is a base (ADR 0002 section 1).
+export type LayerSchemaKind = "workspace" | "api" | "base" | "pack";
+
+const LAYER_SCHEMA: Record<LayerKind, LayerSchemaKind> = {
+  api: "api",
+  base: "base",
+  shared: "base",
+  pack: "pack",
+};
+
+export function schemaKindOf(layer: Origin["layer"]): LayerSchemaKind {
+  return layer === "workspace" ? "workspace" : LAYER_SCHEMA[layerKindOf(layer)];
 }
 
 // ADR 0002 section 2: `layers` in application order.
@@ -31,7 +68,7 @@ export interface RawApi {
    */
   locations: SourceMap["locations"];
   /** ADR 0002 section 2: per layer, the layers whose names it may resolve, itself included, sorted. */
-  visibility: Record<Origin["layer"], Origin["layer"][]>;
+  visibility: Record<ApiLayerId, ApiLayerId[]>;
 }
 
 /** What `workspace.yaml` says besides the apis, passed through unread (p3-cli, p3-dist). */
@@ -61,5 +98,12 @@ export interface RawWorkspace {
    * sorts diagnostics of several apis together looks each one up in its own table first.
    */
   locations: SourceMap["locations"];
+  /**
+   * The whole entry document when it is a `workspace.yaml`, absent for a single api file. Its
+   * pointers are located in `locations` keyed `workspace#<pointer>`, a prefix no key of the
+   * `/~load/` sites or of an api's table has (an api layer id is never `workspace`).
+   */
+  entry?: RawEntryLayer;
+  /** The loader's own read of `editorSchemas` and `imports`, besides `entry`. */
   config?: RawWorkspaceConfig;
 }
