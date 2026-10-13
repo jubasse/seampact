@@ -9,10 +9,12 @@ import kotlinx.serialization.json.JsonPrimitive
 
 private const val MISSING = "missing"
 
-// A number is rendered in plain form only when that form is this short; any other is shown as written.
+// A number is rendered in plain form only when its integer digits and its scale are each at most this many;
+// any other is shown as written.
 private const val MAX_PLAIN_DIGITS = 64
 
-// A longer literal is never read as a number: no version or revision is that long.
+// A longer literal is never read as a number: no version or revision is that long. This fails closed where
+// TypeScript reads `1.000...0` written with 72 chars as 1; the native readers refuse it on purpose.
 private const val MAX_NUMBER_LITERAL_LENGTH = 64
 
 /** The package a refused version or revision tells the reader to update. */
@@ -28,7 +30,9 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
     val document = ir as? JsonObject ?: JsonObject(emptyMap())
     val version = document["irVersion"]
     val versionNumber = numberOf(version)
-    if (versionNumber == null || support.irVersions.none { BigDecimal(it).compareTo(versionNumber) == 0 }) {
+    val versionIsSupported =
+        versionNumber != null && support.irVersions.any { BigDecimal(it).compareTo(versionNumber) == 0 }
+    if (!versionIsSupported) {
         val expected = support.irVersions.map { it.toString() }
         return listOf(
             IrRefusal(
@@ -37,8 +41,8 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
                 shown(version),
                 expected,
                 null,
-                "irVersion ${inMessage(shown(version))} is not one this reader reads (${expected.joinToString(", ")}). " +
-                    "Update the $IR_PACKAGE package to one that reads it.",
+                "irVersion ${inMessage(shown(version))} is not one this reader reads " +
+                    "(${expected.joinToString(", ")}). Update the $IR_PACKAGE package to one that reads it.",
             ),
         )
     }
@@ -80,7 +84,7 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
         val what = if (code == IrRefusalCode.KIND_UNSUPPORTED) "declaration kind" else "feature"
         values.orEmpty().forEachIndexed { index, value ->
             if (isStringIn(value, known)) return@forEachIndexed
-            val where = if (operation == null) "" else " in operation '$operation'"
+            val where = if (operation == null) "" else " in operation '${inMessage(operation)}'"
             refusals += IrRefusal(
                 code,
                 "$member/$index",
@@ -93,7 +97,8 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
     }
 
     unknownIn(list(document["kinds"], "/kinds"), support.kinds, IrRefusalCode.KIND_UNSUPPORTED, "/kinds")
-    unknownIn(list(document["features"], "/features"), support.features, IrRefusalCode.FEATURE_UNSUPPORTED, "/features")
+    val features = list(document["features"], "/features")
+    unknownIn(features, support.features, IrRefusalCode.FEATURE_UNSUPPORTED, "/features")
 
     list(document["operations"], "/operations").orEmpty().forEachIndexed { index, entry ->
         val operation = entry as? JsonObject ?: JsonObject(emptyMap())
@@ -106,7 +111,8 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
                 shown(kind),
                 support.kinds,
                 id,
-                "The declaration kind '${inMessage(shown(kind))}' of operation '$id' is not supported by this reader.",
+                "The declaration kind '${inMessage(shown(kind))}' of operation '${inMessage(id)}' " +
+                    "is not supported by this reader.",
             )
         }
         val member = "/operations/$index/features"
@@ -142,15 +148,16 @@ private fun jsonType(value: JsonElement?): String = when (value) {
     }
 }
 
-// A string or a number as written (a number without a trailing fraction of zeros, unless its plain form is long:
-// 1e2147483647 would not fit in memory), any other value as JSON.
+// A string as is, a number without a trailing fraction of zeros (as written when its plain form is long:
+// 1e2147483647 would not fit in memory), `true`, `false` or `null`, and an array or object by its JSON type:
+// rendering a container would copy any amount of untrusted input into every refusal.
 private fun shown(value: JsonElement?): String {
-    if (value == null) return MISSING
+    if (value !is JsonPrimitive) return jsonType(value)
     val number = numberOf(value)
     return when {
-        value is JsonPrimitive && value.isString -> value.content
+        value.isString -> value.content
         number != null && hasShortPlainForm(number) -> number.stripTrailingZeros().toPlainString()
-        else -> value.toString()
+        else -> value.content
     }
 }
 

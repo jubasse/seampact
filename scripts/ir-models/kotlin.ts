@@ -181,25 +181,40 @@ public val IrJson: Json = Json { ignoreUnknownKeys = true }
 
 /**
  * An IR integer as a \`Long\`. An integral number written with a fraction (\`2.0\`), which JSON Schema counts as
- * an integer, reads as that integer; any other value is an error naming it.
+ * an integer, reads as that integer; any other value is an error naming it: a literal as written, a longer
+ * literal by its length, a string, array or object by its JSON type, never its content.
  */
 internal object IrIntegerSerializer : KSerializer<Long> {
+    // No IR integer is written longer; parsing a longer literal would only cost time.
+    private const val MAX_LITERAL_LENGTH = 64
+
     override val descriptor: SerialDescriptor =
         PrimitiveSerialDescriptor("${KOTLIN_PACKAGE}.IrInteger", PrimitiveKind.LONG)
 
     override fun deserialize(decoder: Decoder): Long {
         val element = jsonDecoder(decoder, "an integer").decodeJsonElement()
-        val number = (element as? JsonPrimitive)?.takeIf { !it.isString }?.content?.toBigDecimalOrNull()
-            ?: throw SerializationException("expected an integer, got $element")
+        val literal = (element as? JsonPrimitive)?.takeIf { !it.isString }?.content
+            ?: throw SerializationException("expected an integer, got \${notALiteral(element)}")
+        if (literal.length > MAX_LITERAL_LENGTH) {
+            throw SerializationException("expected an integer, got a literal of \${literal.length} chars")
+        }
+
+        val number = literal.toBigDecimalOrNull() ?: throw SerializationException("expected an integer, got $literal")
         try {
             return number.longValueExact()
         } catch (error: ArithmeticException) {
-            throw SerializationException("expected an integer within 64 bits, got $element", error)
+            throw SerializationException("expected an integer within 64 bits, got $literal", error)
         }
     }
 
     override fun serialize(encoder: Encoder, value: Long) {
         encoder.encodeLong(value)
+    }
+
+    private fun notALiteral(element: JsonElement): String = when (element) {
+        is JsonObject -> "an object"
+        is JsonPrimitive -> "a string"
+        else -> "an array"
     }
 }
 
@@ -207,7 +222,8 @@ internal object IrIntegerSerializer : KSerializer<Long> {
 internal object IrOptionalOpaqueSerializer : KSerializer<JsonElement?> {
     override val descriptor: SerialDescriptor = JsonElement.serializer().descriptor.nullable
 
-    override fun deserialize(decoder: Decoder): JsonElement? = jsonDecoder(decoder, "an opaque value").decodeJsonElement()
+    override fun deserialize(decoder: Decoder): JsonElement? =
+        jsonDecoder(decoder, "an opaque value").decodeJsonElement()
 
     override fun serialize(encoder: Encoder, value: JsonElement?) {
         jsonEncoder(encoder, "an opaque value").encodeJsonElement(value ?: JsonNull)

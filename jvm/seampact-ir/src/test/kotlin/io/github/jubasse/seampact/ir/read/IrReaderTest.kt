@@ -23,6 +23,43 @@ import kotlinx.serialization.json.JsonUnquotedLiteral
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 
+// The JVM's default thread stack: a test that overflows it overflows a default reader thread.
+private const val SMALL_STACK_BYTES = 1L shl 20
+
+private const val DEEP_PLACEHOLDER = "deep-placeholder"
+
+/** A deeply nested value, as JSON text and as the same elements, built without recursion. */
+private class Deep(val text: String, val element: JsonElement)
+
+private fun nestedArrays(levels: Int): Deep {
+    var element: JsonElement = JsonPrimitive(0)
+    repeat(levels) { element = JsonArray(listOf(element)) }
+    return Deep("[".repeat(levels) + "0" + "]".repeat(levels), element)
+}
+
+private fun nestedObjects(levels: Int): Deep {
+    var element: JsonElement = JsonPrimitive(0)
+    repeat(levels) { element = JsonObject(mapOf("a" to element)) }
+    return Deep("{\"a\":".repeat(levels) + "0" + "}".repeat(levels), element)
+}
+
+// Array type uses nested [levels] deep around a string scalar, whose refinements are one level more.
+private fun arrayTypeUses(levels: Int): Deep {
+    val scalar = """{"kind":"scalar","type":"string","refinements":{}}"""
+    var element: JsonElement = IrJson.parseToJsonElement(scalar)
+    repeat(levels) { element = JsonObject(mapOf("kind" to JsonPrimitive("array"), "items" to element)) }
+    return Deep("""{"kind":"array","items":""".repeat(levels) + scalar + "}".repeat(levels), element)
+}
+
+// Runs [block] on a thread with a 1 MB stack and rethrows whatever it threw, a StackOverflowError included.
+private fun <T> onSmallStack(block: () -> T): T {
+    var outcome: Result<T>? = null
+    val thread = Thread(null, { outcome = runCatching(block) }, "small-stack", SMALL_STACK_BYTES)
+    thread.start()
+    thread.join()
+    return checkNotNull(outcome).getOrThrow()
+}
+
 // The reader against the IR examples: the checks run on the raw document before decoding, with the codes of
 // `checkIrSupport`, and a valid document reads and writes back unchanged up to the unknown members it drops.
 class IrReaderTest {
@@ -41,6 +78,33 @@ class IrReaderTest {
     private fun refusals(document: JsonElement, readerSupport: IrSupport = support): List<IrRefusal> =
         assertFailsWith<IrRefusedException> { IrReader.read(document, readerSupport) }.refusals
 
+    private fun refusals(text: String): List<IrRefusal> =
+        assertFailsWith<IrRefusedException> { IrReader.read(text, support) }.refusals
+
+    // The document with [deep] at [path], as text and as elements.
+    private fun bothWays(base: JsonObject, vararg path: String, deep: Deep): List<() -> ContractIR> {
+        val placeholder = replaceAt(base, *path, value = JsonPrimitive(DEEP_PLACEHOLDER))
+        val text = placeholder.toString().replace("\"$DEEP_PLACEHOLDER\"", deep.text)
+        val document = replaceAt(base, *path, value = deep.element)
+
+        return listOf({ IrReader.read(text, support) }, { IrReader.read(document, support) })
+    }
+
+    private fun readBothWays(base: JsonObject, vararg path: String, deep: Deep) {
+        for (read in bothWays(base, *path, deep = deep)) onSmallStack(read)
+    }
+
+    // The single nesting refusal, the same from the text and from the elements.
+    private fun nestingRefusal(base: JsonObject, vararg path: String, deep: Deep): IrRefusal {
+        val refusals = bothWays(base, *path, deep = deep).map { read ->
+            assertFailsWith<IrRefusedException> { onSmallStack(read) }.refusals.single()
+        }
+
+        assertEquals(IrRefusalCode.NESTING_TOO_DEEP, refusals[0].code)
+        assertEquals(refusals[0], refusals[1])
+        return refusals[0]
+    }
+
     private fun replaceAt(document: JsonObject, vararg path: String, value: JsonElement): JsonObject {
         if (path.size == 1) return JsonObject(document + (path.single() to value))
 
@@ -50,7 +114,11 @@ class IrReaderTest {
             val below = path.drop(2).toTypedArray()
             JsonArray(
                 child.mapIndexed { index, item ->
-                    if (index == position) replaceAt(item.jsonObject, *below, value = value) else item
+                    when {
+                        index != position -> item
+                        below.isEmpty() -> value
+                        else -> replaceAt(item.jsonObject, *below, value = value)
+                    }
                 },
             )
         } else {
@@ -74,9 +142,8 @@ class IrReaderTest {
         val input = example("unknown-member.ir.json")
         val api = input.getValue("api").jsonObject
         val origin = api.getValue("origin").jsonObject
-        val withoutUnknown = JsonObject(
-            (input - "generatedBy") + ("api" to JsonObject((api - "owner") + ("origin" to JsonObject(origin - "column")))),
-        )
+        val apiWithoutUnknown = JsonObject((api - "owner") + ("origin" to JsonObject(origin - "column")))
+        val withoutUnknown = JsonObject((input - "generatedBy") + ("api" to apiWithoutUnknown))
 
         assertEquals(withoutUnknown, write(IrReader.read(exampleText("unknown-member.ir.json"), support)))
     }
@@ -162,7 +229,11 @@ class IrReaderTest {
             features[1].message,
         )
         assertEquals(
-            listOf(IrRefusalCode.KIND_UNSUPPORTED, IrRefusalCode.FEATURE_UNSUPPORTED, IrRefusalCode.FEATURE_UNSUPPORTED),
+            listOf(
+                IrRefusalCode.KIND_UNSUPPORTED,
+                IrRefusalCode.FEATURE_UNSUPPORTED,
+                IrRefusalCode.FEATURE_UNSUPPORTED,
+            ),
             refused.map { it.code },
         )
 
@@ -238,7 +309,8 @@ class IrReaderTest {
     @Test
     fun aLongUntrustedValueIsCutInTheMessageOnly() {
         val tag = "x".repeat(100_000)
-        val document = replaceAt(example("unknown-must-act.ir.json"), "schemes", "client", "kind", value = JsonPrimitive(tag))
+        val document =
+            replaceAt(example("unknown-must-act.ir.json"), "schemes", "client", "kind", value = JsonPrimitive(tag))
 
         val refusal = refusals(document).single()
 
@@ -247,16 +319,123 @@ class IrReaderTest {
     }
 
     @Test
-    fun refusesNestingPastTheDepthBound() {
-        var nested: JsonElement = JsonObject(mapOf("kind" to JsonPrimitive("scalar")))
-        repeat(20_000) { nested = JsonObject(mapOf("kind" to JsonPrimitive("array"), "items" to nested)) }
-        val deepMap = JsonObject(mapOf("kind" to JsonPrimitive("map"), "values" to nested))
-        val document = replaceAt(example("minimal.ir.json"), "schemas", value = JsonObject(mapOf("Deep" to deepMap)))
+    fun aLongOperationIdIsCutInEveryMessage() {
+        val id = "o".repeat(100_000)
+        val features = JsonArray(List(1_000) { JsonPrimitive("feature$it") })
+        val withId = replaceAt(example("every-member.ir.json"), "operations", "0", "id", value = JsonPrimitive(id))
+        val unsupported = replaceAt(
+            replaceAt(withId, "operations", "0", "features", value = features),
+            "operations", "0", "kind",
+            value = JsonPrimitive("channel"),
+        )
 
-        val refusal = refusals(document).single()
+        val refused = assertFailsWith<IrRefusedException> { IrReader.read(unsupported, support) }
 
-        assertEquals(IrRefusalCode.NESTING_TOO_DEEP, refusal.code)
-        assertTrue(refusal.member.startsWith("/schemas/Deep/values/items"), refusal.member)
+        assertEquals(1_001, refused.refusals.size)
+        assertTrue(refused.refusals.all { it.operation == id })
+        assertTrue(refused.refusals.all { it.message.length < 300 }, refused.refusals.first().message.take(300))
+        assertTrue(refused.message.orEmpty().length < 1_001 * 300, "message is ${refused.message?.length} chars")
+
+        val mustAct = replaceAt(withId, "operations", "0", "access", "onRefused", value = JsonPrimitive("redirect"))
+        val refusal = refusals(mustAct).single()
+        assertEquals(id, refusal.operation)
+        assertTrue(refusal.message.length < 600, "message is ${refusal.message.length} chars")
+    }
+
+    @Test
+    fun deepNestingIsRefusedBeforeAnyRecursion() {
+        // Each of these overflowed a 1 MB stack before the bound: the version shown, the array parser, the
+        // integer serializer's message.
+        val places = listOf(
+            listOf("irVersion") to nestedObjects(800),
+            listOf("kinds", "0") to nestedObjects(800),
+            listOf("x") to nestedArrays(2_000),
+            listOf("api", "version", "number") to nestedObjects(3_000),
+        )
+
+        val pathVersion = JsonObject(mapOf("kind" to JsonPrimitive("path"), "number" to JsonPrimitive(1)))
+        val withPathVersion = replaceAt(example("minimal.ir.json"), "api", "version", value = pathVersion)
+        val base = replaceAt(withPathVersion, "kinds", value = JsonArray(listOf(JsonPrimitive("httpOperation"))))
+
+        for ((path, deep) in places) {
+            val refusal = nestingRefusal(base, *path.toTypedArray(), deep = deep)
+
+            assertTrue(refusal.member.startsWith("/" + path.joinToString("/")), refusal.member)
+        }
+    }
+
+    @Test
+    fun exactlyTheBoundIsRead() {
+        // Known members: an array type use chain in a map schema's values, its scalar's refinements one level more.
+        // The root object is level 1, so the first array type use is level 4.
+        val everyMember = example("every-member.ir.json")
+        readBothWays(everyMember, "schemas", "Labels", "values", deep = arrayTypeUses(251))
+        val known = nestingRefusal(everyMember, "schemas", "Labels", "values", deep = arrayTypeUses(252))
+        assertEquals("/schemas/Labels/values" + "/items".repeat(252) + "/refinements", known.member)
+        assertEquals("257", known.value)
+        assertEquals(listOf("256"), known.expected)
+        assertEquals(null, known.operation)
+
+        readBothWays(example("minimal.ir.json"), "x", deep = nestedArrays(255))
+        val unknownMember = nestingRefusal(example("minimal.ir.json"), "x", deep = nestedArrays(256))
+        assertEquals("/x" + "/0".repeat(255), unknownMember.member)
+
+        val unknownKindDocument = example("unknown-kind.ir.json")
+        readBothWays(unknownKindDocument, "schemas", "Point", "items", deep = nestedArrays(253))
+        val unknownKind = nestingRefusal(unknownKindDocument, "schemas", "Point", "items", deep = nestedArrays(254))
+        assertEquals("/schemas/Point/items" + "/0".repeat(253), unknownKind.member)
+    }
+
+    @Test
+    fun aDocumentTooDeepGetsOneRefusal() {
+        val siblings = 10_000
+        val crossing = JsonArray(List(siblings) { JsonArray(listOf(JsonPrimitive(0))) })
+        var element: JsonElement = crossing
+        repeat(254) { element = JsonArray(listOf(element)) }
+        val text = "[".repeat(255) + List(siblings) { "[0]" }.joinToString(",") + "]".repeat(255)
+
+        val refusal = nestingRefusal(example("minimal.ir.json"), "x", deep = Deep(text, element))
+
+        assertEquals("/x" + "/0".repeat(255), refusal.member)
+    }
+
+    @Test
+    fun theTextScanReadsStringsAndKeysAsTheParserDoes() {
+        // Brackets inside strings are not levels; a key's escapes are decoded, then escaped for the pointer.
+        val deep = nestedArrays(256)
+        val text = """{"s":"[[{\"[{\\","k\u00e9\"/~":${deep.text}}"""
+        val element = JsonObject(mapOf("s" to JsonPrimitive("[[{\"[{\\"), "ké\"/~" to deep.element))
+
+        val fromText = onSmallStack { refusals(text) }.single()
+        val fromElement = onSmallStack { refusals(element) }.single()
+
+        assertEquals("/ké\"~1~0" + "/0".repeat(255), fromText.member)
+        assertEquals(fromText, fromElement)
+    }
+
+    @Test
+    fun aContainerIsShownByItsTypeOnly() {
+        val long = "x".repeat(100_000)
+        val container = JsonObject(mapOf("a" to JsonArray(listOf(JsonPrimitive(long)))))
+
+        val version = refusals(replaceAt(example("minimal.ir.json"), "irVersion", value = container)).single()
+        assertEquals("object", version.value)
+        assertTrue(version.message.length < 400, version.message)
+
+        val kinds = JsonArray(listOf(JsonArray(listOf(JsonPrimitive(long))), JsonPrimitive("httpOperation")))
+        val kind = refusals(replaceAt(example("minimal.ir.json"), "kinds", value = kinds)).single()
+        assertEquals("array", kind.value)
+        assertTrue(kind.message.length < 400, kind.message)
+
+        val pathVersion = JsonObject(mapOf("kind" to JsonPrimitive("path"), "number" to container))
+        val number = replaceAt(example("minimal.ir.json"), "api", "version", value = pathVersion)
+        val malformed = assertFailsWith<IrMalformedException> { IrReader.read(number, support) }
+        assertTrue("object" in malformed.message.orEmpty(), malformed.message)
+        assertTrue(malformed.message.orEmpty().length < 1_000, "message is ${malformed.message?.length} chars")
+
+        val id = replaceAt(example("minimal.ir.json"), "api", "id", value = container)
+        val modelError = assertFailsWith<IrMalformedException> { IrReader.read(id, support) }
+        assertTrue(modelError.message.orEmpty().length < 1_000, "message is ${modelError.message?.length} chars")
     }
 
     @Test
