@@ -9,7 +9,7 @@ import { derivationFreeze } from "./freeze.js";
 // the default code's param of that name.
 //
 // The params schemas of the default codes, the issue schema and the empty body schema below are core declarations
-// (origin `core`, no `derivedFrom`) that tree.schemas seeds from this data; their ids, `coreSchemaIds`, are
+// (origin `core`, no `derivedFrom`) that tree.schemas seeds from this data; their ids, `derivationCoreSchemaIds`, are
 // reserved (ADR 0004 section 13) and finalize drops the ones no element references. No half writes them yet.
 //
 // The data is deep-frozen and shared by every compile: a half writes a copy into its draft
@@ -158,7 +158,7 @@ function paramsSchemaId(code: string): IrWriter.SchemaId {
  * The reserved ids of the core schemas (ADR 0004 section 13), in its order: the params schema of each default code
  * that carries data, in the order of ADR 0006 section 6, then the issue schema and the empty body schema.
  */
-export const coreSchemaIds: readonly IrWriter.SchemaId[] = derivationFreeze([
+export const derivationCoreSchemaIds: readonly IrWriter.SchemaId[] = derivationFreeze([
   ...derivationRoles
     .filter((entry) => entry.data.length > 0)
     .map((entry) => paramsSchemaId(entry.defaultCode)),

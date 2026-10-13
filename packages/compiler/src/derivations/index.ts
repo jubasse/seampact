@@ -7,7 +7,9 @@ export type {
   DerivationRoleName,
 } from "./roles.js";
 export {
+  DERIVATION_EMPTY_BODY_SCHEMA_ID,
   DERIVATION_ISSUE_SCHEMA_ID,
+  derivationCoreSchemaIds,
   derivationIssueLocations,
   derivationIssueMembers,
   derivationRoleOf,

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "vitest";
-import { coreSchemaIds } from "./roles.js";
+import { derivationCoreSchemaIds } from "./roles.js";
 
 const ADR = readFileSync(
   fileURLToPath(new URL("../../../../docs/adr/0004-ir-shape.md", import.meta.url)),
@@ -19,8 +19,8 @@ function adrReservedIds(): string[] {
 }
 
 test("the reserved core schema ids match ADR 0004 section 13", () => {
-  expect([...coreSchemaIds]).toEqual(adrReservedIds());
-  expect(coreSchemaIds).toEqual([
+  expect([...derivationCoreSchemaIds]).toEqual(adrReservedIds());
+  expect(derivationCoreSchemaIds).toEqual([
     "ApiSchemaInvalidParams",
     "ApiForbiddenParams",
     "ApiSortKeyForbiddenParams",

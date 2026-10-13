@@ -3,7 +3,7 @@
 "@seampact/compiler": patch
 ---
 
-The IR gains the body fields of rule proofs on an operation's input (`OperationInput.proofs`, with a wire form in a form or multipart input) and the origin layer `core` for the declarations the compiler supplies itself. The compiler keeps `core` out of api layer ids (`ApiLayerId`, with `FileLayerId` for a layer read from a file) and out of diagnostic origins (`DiagnosticOrigin`), lists the reserved core schema ids (`coreSchemaIds`), and lets access.rights write `operations[].input.proofs` and the proof-only input of a route without one. The compiler bump stays a patch before 1.0 although its public types narrow: `Diagnostic.origin`, `RelatedLocation.origin`, `RawLayer.layer`, `RawApi.visibility`, `LayerBuild`, `layerKindOf` and `schemaKindOf` no longer accept `core`.
+The IR gains the body fields of rule proofs on an operation's input (`OperationInput.proofs`, with a wire form in a form or multipart input) and the origin layer `core` for the declarations the compiler supplies itself. The compiler keeps `core` out of api layer ids (`ApiLayerId`, with `FileLayerId` for a layer read from a file) and out of diagnostic origins (`DiagnosticOrigin`), lists the reserved core schema ids (`derivationCoreSchemaIds`), and lets access.rights write `operations[].input.proofs` and the proof-only input of a route without one. The compiler bump stays a patch before 1.0 although its public types narrow: `Diagnostic.origin`, `RelatedLocation.origin`, `RawLayer.layer`, `RawApi.visibility`, `LayerBuild`, `layerKindOf` and `schemaKindOf` no longer accept `core`.
 
 ## IR change
 
