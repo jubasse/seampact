@@ -126,8 +126,12 @@ export function compileWorkspace(options: PipelineOptions): PipelineResult {
     return finish();
 
   const relay = parts.relayOrder(viewed(workspace, "workspace"));
-  if (relay.order.length !== runs.size || new Set(relay.order).size !== runs.size)
-    throw new Error("the relay order must list every workspace api once");
+  if (
+    relay.order.length !== runs.size ||
+    new Set(relay.order).size !== runs.size ||
+    relay.order.some((api) => !runs.has(api))
+  )
+    throw new Error("the relay order must list every workspace api once, and no other name");
   for (const entry of relay.diagnostics) runOf(entry.api).diagnostics.push(...entry.diagnostics);
 
   const drafts = new Map<string, DraftIR>();
@@ -219,10 +223,19 @@ export function compileWorkspace(options: PipelineOptions): PipelineResult {
     for (const run of runs.values()) {
       const draft = draftOf(run.raw.name);
       const reported: Diagnostic[] = [];
-      const finalized = parts.finalize(draft, {
-        raw: viewed(run.raw, "raw"),
-        report: (diagnostic) => reported.push(diagnostic),
-      });
+      let open = true;
+      let finalized: PipelineFinalized | undefined;
+      try {
+        finalized = parts.finalize(draft, {
+          raw: viewed(run.raw, "raw"),
+          report: (diagnostic) => {
+            if (!open) throw new Error("finalize reported a diagnostic after its run ended");
+            reported.push(diagnostic);
+          },
+        });
+      } finally {
+        open = false;
+      }
       run.diagnostics.push(...reported);
       if (finalized !== undefined && !hasError(reported)) run.finalized = finalized;
     }
@@ -243,6 +256,8 @@ function link(
   },
 ): void {
   const part: GuardedPart = { half: "link", reads: pass.reads, writes: [] };
+  // One view per import, so an import read twice is the same object (as `relayed` and `imported` of a half).
+  const importedViews = new Map<string, ContractIR>();
   const guards = apis.map((api) => {
     const draft = draftOf(api);
     return { api, draft, guarded: options.guard ? pipelineGuard(draft, part) : undefined };
@@ -253,7 +268,13 @@ function link(
       workspace: options.workspace,
       imported: (api) => {
         const ir = options.imports?.get(api);
-        return ir === undefined || !options.guard ? ir : pipelineView(ir, "imported");
+        if (ir === undefined || !options.guard) return ir;
+        let view = importedViews.get(api);
+        if (view === undefined) {
+          view = pipelineView(ir, "imported");
+          importedViews.set(api, view);
+        }
+        return view;
       },
       report: (api, diagnostic) => {
         if (!open) throw new Error("link reported a diagnostic after its run ended");

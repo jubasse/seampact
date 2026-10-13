@@ -235,6 +235,41 @@ describe("stop rule", () => {
     expect(byApi(result)).toEqual({ a: ["finalize/relay-cycle"], b: [], c: [] });
   });
 
+  test("a relay order that misses an api, repeats one or names another throws", () => {
+    for (const order of [
+      ["a", "b"],
+      ["a", "b", "b"],
+      ["a", "b", "x"],
+    ]) {
+      const wrong: PipelineRelayStage = (workspace) => ({ ...relayOrder(workspace), order });
+      expect(() => compile([], {}, { relayOrder: wrong }), order.join(",")).toThrow(
+        /every workspace api once, and no other name/,
+      );
+    }
+  });
+
+  test("finalize's report closes when finalize returns; link reads one view per import", () => {
+    let late: ((diagnostic: Diagnostic) => void) | undefined;
+    const finalize: PipelineFinalize = (_draft, context) => {
+      late = context.report;
+      return undefined;
+    };
+    compile([], {}, { finalize });
+    expect(() => late?.(diagnostic("error", "x/late", PING))).toThrow(/after its run ended/);
+
+    const seen: unknown[] = [];
+    const link: WorkspacePass = {
+      name: "link",
+      reads: [],
+      run: (_apis, context) => {
+        seen.push(context.imported("ext"), context.imported("ext"));
+      },
+    };
+    compile([], {}, { link }, { imports: new Map([["ext", MINIMAL_IR]]) });
+    expect(seen[0]).toBeDefined();
+    expect(seen[0]).toBe(seen[1]);
+  });
+
   test("load stops on an error, validate on any diagnostic", () => {
     const log: string[] = [];
     const missing = compileWorkspace({
