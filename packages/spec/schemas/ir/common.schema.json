@@ -115,7 +115,7 @@
     },
     "Feature": {
       "type": "string",
-      "description": "A must-understand feature name (ADR 0005 section 3); none is defined at irRevision 1."
+      "description": "A must-understand feature name (ADR 0005 section 3); none is defined at irRevision 2."
     },
     "Reason": {
       "type": "string",
@@ -203,8 +203,8 @@
         },
         "layer": {
           "type": "string",
-          "pattern": "^(api|shared|base|workspace|pack:[^#]+)$",
-          "description": "'api', 'shared', 'base', 'pack:<name>', or 'workspace' for a diagnostic on workspace.yaml (no IR element carries it). Closed: the one exception to open enums (ADR 0004 section 13)."
+          "pattern": "^(api|shared|base|core|workspace|pack:[^#]+)$",
+          "description": "'api', 'shared', 'base', 'pack:<name>', 'core' for a declaration the compiler supplies (its pointer starts with its entry of formats, errors or schemas, with no side-table entry), or 'workspace' for a diagnostic on workspace.yaml (no IR element carries it). Closed: the one exception to open enums (ADR 0004 section 13)."
         },
         "pointer": { "type": "string", "pattern": "^(/.*)?$" }
       }

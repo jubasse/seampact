@@ -1,6 +1,7 @@
-import type { Origin, SourceMap } from "@seampact/spec/ir";
-import type { Diagnostic } from "../diagnostics/diagnostic.js";
+import type { SourceMap } from "@seampact/spec/ir";
+import type { Diagnostic, DiagnosticOrigin } from "../diagnostics/diagnostic.js";
 import { diagnosticLocationKey } from "../diagnostics/print.js";
+import type { FileLayerId } from "../raw-tree.js";
 import { pointerEscape } from "./paths.js";
 
 export type SiteLocation = SourceMap["locations"][string];
@@ -30,11 +31,11 @@ export class Reporter {
   readonly locations: SourceMap["locations"] = {};
   // Set by the loader before it works on a layer. A file shared by several apis is reported
   // once: its site pointer locates it the same way for every api (`RawWorkspace.locations`).
-  layer: Origin["layer"] = "api";
+  layer: FileLayerId = "api";
   private readonly seen = new Set<string>();
 
-  originAt(site: SiteLocation): Origin {
-    const origin: Origin = { layer: this.layer, pointer: loadSitePointer(site) };
+  originAt(site: SiteLocation): DiagnosticOrigin {
+    const origin: DiagnosticOrigin = { layer: this.layer, pointer: loadSitePointer(site) };
     this.locations[diagnosticLocationKey(origin)] = site;
     return origin;
   }
@@ -44,13 +45,13 @@ export class Reporter {
    * keys with them: for a file whose layer is known only once it is read (an entry file whose
    * `$include` brings `workspace:` or `api:`). Those keys are used by nothing reported before.
    */
-  relabel(since: number, from: Origin["layer"], to: Origin["layer"]): void {
-    const move = (origin: Origin): Origin => {
+  relabel(since: number, from: FileLayerId, to: FileLayerId): void {
+    const move = (origin: DiagnosticOrigin): DiagnosticOrigin => {
       if (origin.layer !== from) return origin;
       const key = diagnosticLocationKey(origin);
       const site = this.locations[key];
       delete this.locations[key];
-      const moved: Origin = { layer: to, pointer: origin.pointer };
+      const moved: DiagnosticOrigin = { layer: to, pointer: origin.pointer };
       if (site) this.locations[diagnosticLocationKey(moved)] = site;
       return moved;
     };

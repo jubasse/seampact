@@ -22,7 +22,11 @@ export type IrInvariantId =
   | "ir.property.nullable"
   | "ir.scalar.type"
   | "ir.id.scalar"
-  | "ir.ref.resolves";
+  | "ir.ref.resolves"
+  | "ir.origin.core"
+  | "ir.input-proof.wire"
+  | "ir.input-proof.name"
+  | "ir.input-proof.input";
 
 export interface IrInvariantViolation {
   id: IrInvariantId;
@@ -37,6 +41,8 @@ const has = (value: Json, member: string): boolean =>
 const isRecord = (value: unknown): value is Json =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const parentOf = (pointer: string): string => pointer.slice(0, pointer.lastIndexOf("/"));
+const unescapeSegment = (segment: string): string =>
+  segment.replaceAll("~1", "/").replaceAll("~0", "~");
 
 // The hand-written partitions of the values that decide a struct's members. Each must be a disjoint union of
 // the schema's known list (`ValueSource.in`, `FieldWire.kind`, `TypeUse.kind`): invariants.test.ts asserts it, so
@@ -49,10 +55,22 @@ const QUERY_WIRE_MEMBERS = ["style", "explode", "brackets"];
 const ID_TYPE_KINDS = ["scalar", "enum"]; // an id is a scalar or an enum use
 const PROOF_REFUSED_KINDS = ["opaque", "file"]; // a proof is anything else
 const OTHER_TYPE_KINDS = ["ref", "array"]; // neither an id nor a refused proof
+const KNOWN_TYPE_USE_KINDS = [...ID_TYPE_KINDS, ...PROOF_REFUSED_KINDS, ...OTHER_TYPE_KINDS];
+// The input media whose body is a list of fields, each with a wire form (`fields`, a proof's `wire`), and the rest.
+const FIELD_MEDIA = ["application/x-www-form-urlencoded", "multipart/form-data"];
+const DOCUMENT_MEDIA = ["application/json"];
+// The known schema kinds, object and not: a body proof is a property beside the input's own, so its input is
+// an object schema.
+const OBJECT_SCHEMA_KINDS = ["object"];
+const NON_OBJECT_SCHEMA_KINDS = ["map", "union"];
+// The catalogues of the declarations the compiler supplies (origin layer `core`, ADR 0004 sections 6 and 13).
+const CORE_CATALOGUES = ["formats", "errors", "schemas"];
 export const IR_PARTITIONS = {
   "ValueSource.in": [NAMED_SOURCES, BARE_SOURCES],
   "FieldWire.kind": [QUERY_WIRE_KINDS, PLAIN_WIRE_KINDS],
   "TypeUse.kind": [ID_TYPE_KINDS, PROOF_REFUSED_KINDS, OTHER_TYPE_KINDS],
+  "OperationInput.media": [FIELD_MEDIA, DOCUMENT_MEDIA],
+  "Schema.kind": [OBJECT_SCHEMA_KINDS, NON_OBJECT_SCHEMA_KINDS],
 } as const satisfies Record<string, readonly (readonly string[])[]>;
 
 // The known values of the open enum that `definition.member` references, read from the schema files.
@@ -81,6 +99,89 @@ for (const owner of ["ContractIR", "Api"] as const) {
   }
 }
 
+type Fail = (id: IrInvariantId, pointer: string, message: string) => void;
+
+const proofsOf = (input: Json): unknown[] => (Array.isArray(input.proofs) ? input.proofs : []);
+
+// The schema entry a `ref` use names, if the document has it.
+function refTargetOf(use: Json, schemaEntries: Json): unknown {
+  if (use.kind !== "ref" || typeof use.schema !== "string") return undefined;
+  return Object.hasOwn(schemaEntries, use.schema) ? schemaEntries[use.schema] : undefined;
+}
+
+// The input of a body proof is a `ref` use of an object schema (`ApiEmptyBody` for a proof-only input). An
+// unknown use or schema kind is the reader's to name, and a missing schema is ir.ref.resolves'.
+function checkProofInput(input: Json, pointer: string, schemaEntries: Json, fail: Fail): void {
+  if (proofsOf(input).length === 0) return;
+  const use = isRecord(input.schema) ? input.schema : {};
+  const message = "An input with body proofs is a 'ref' use of an object schema";
+  if (use.kind !== "ref") {
+    if (KNOWN_TYPE_USE_KINDS.includes(String(use.kind)))
+      fail("ir.input-proof.input", `${pointer}/schema`, `${message}, not a '${use.kind}' use.`);
+    return;
+  }
+
+  const target = refTargetOf(use, schemaEntries);
+  if (!isRecord(target)) return;
+  const knownSchemaKinds: string[] = [...OBJECT_SCHEMA_KINDS, ...NON_OBJECT_SCHEMA_KINDS];
+  const kind = String(target.kind);
+  if (knownSchemaKinds.includes(kind) && !OBJECT_SCHEMA_KINDS.includes(kind))
+    fail(
+      "ir.input-proof.input",
+      `${pointer}/schema`,
+      `${message}: '${String(use.schema)}' is a '${target.kind}' schema.`,
+    );
+}
+
+// The names a body already carries: the properties of the input's object schema and its form fields.
+function bodyNamesOf(input: Json, schemaEntries: Json): Set<unknown> {
+  const names = new Set<unknown>();
+  const target = refTargetOf(isRecord(input.schema) ? input.schema : {}, schemaEntries);
+  const properties = isRecord(target) && Array.isArray(target.properties) ? target.properties : [];
+  const fields = Array.isArray(input.fields) ? input.fields : [];
+  for (const member of [...properties, ...fields]) if (isRecord(member)) names.add(member.name);
+  return names;
+}
+
+// A proof is identified by its name: one element per name, and no name the body already carries.
+function checkProofNames(input: Json, pointer: string, schemaEntries: Json, fail: Fail): void {
+  const taken = bodyNamesOf(input, schemaEntries);
+  const seen = new Set<unknown>();
+  for (const [i, proof] of proofsOf(input).entries()) {
+    if (!isRecord(proof) || typeof proof.name !== "string") continue;
+    if (seen.has(proof.name) || taken.has(proof.name))
+      fail(
+        "ir.input-proof.name",
+        `${pointer}/proofs/${i}`,
+        `The body proof '${proof.name}' repeats a proof, a property of the input schema or a form field.`,
+      );
+    seen.add(proof.name);
+  }
+}
+
+// A body proof is sent as the input's other fields are: with a wire form in a form or multipart body, none in a
+// JSON one, and never a file one, since a proof is no file (ir.id.scalar). An unknown media type is the
+// reader's to name.
+function checkProofWires(input: Json, pointer: string, fail: Fail): void {
+  const mediaKnown = isKnown("OperationInput", "media", input.media);
+  const fieldMedia = FIELD_MEDIA.includes(String(input.media));
+  for (const [i, proof] of proofsOf(input).entries()) {
+    if (!isRecord(proof)) continue;
+    if (isRecord(proof.wire) && proof.wire.kind === "file")
+      fail(
+        "ir.input-proof.wire",
+        `${pointer}/proofs/${i}`,
+        "A body proof's wire kind is not 'file'.",
+      );
+    if (mediaKnown && has(proof, "wire") !== fieldMedia)
+      fail(
+        "ir.input-proof.wire",
+        `${pointer}/proofs/${i}`,
+        `A body proof has 'wire' if and only if the input is form or multipart ('${String(input.media)}').`,
+      );
+  }
+}
+
 // Returns every invariant violation of an IR document, empty for a sound one. Pure and Ajv-free; it expects a
 // document the open form accepts and never throws on one it refuses.
 export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
@@ -98,6 +199,7 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
   });
   const doc = isRecord(ir) ? ir : {};
   const schemes = isRecord(doc.schemes) ? doc.schemes : {};
+  const schemaEntries = isRecord(doc.schemas) ? doc.schemas : {};
 
   // Every member holding a catalogue id names an existing entry (keys read with Object.hasOwn: a right may be
   // named `__proto__`).
@@ -112,6 +214,36 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
 
   for (const { pointer, definition, value } of nodes) {
     switch (definition) {
+      case "Origin": {
+        // A core origin's pointer starts with its entry of a catalogue (`/errors/api.internal`, or
+        // `/errors/api.rate_limited/params` for that code's params schema, ADR 0004 section 6); only that entry is
+        // checked. It has no side-table entry, so the entry must be in this document unless the origin names
+        // another api (a relay route's copy, read in that api).
+        if (value.layer !== "core" || typeof value.pointer !== "string") break;
+        const [catalogue = "", id] = value.pointer.split("/").slice(1).map(unescapeSegment);
+        if (!CORE_CATALOGUES.includes(catalogue) || id === undefined || id === "") {
+          fail(
+            "ir.origin.core",
+            pointer,
+            `A core origin points at an entry of ${CORE_CATALOGUES.join(", ")}: '${value.pointer}' does not.`,
+          );
+          break;
+        }
+        const entries = doc[catalogue];
+        if (!has(value, "api") && isRecord(entries) && !Object.hasOwn(entries, id))
+          fail(
+            "ir.origin.core",
+            pointer,
+            `A core origin names '${id}', which is no entry of '${catalogue}'.`,
+          );
+        break;
+      }
+      case "OperationInput": {
+        checkProofInput(value, pointer, schemaEntries, fail);
+        checkProofNames(value, pointer, schemaEntries, fail);
+        checkProofWires(value, pointer, fail);
+        break;
+      }
       case "Name": {
         if (!isKnown("Name", "role", value.role)) break;
         if ((value.role === "response") !== has(value, "status"))
@@ -235,11 +367,7 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
       case "Scope":
       case "ResourceSubject": {
         const use = value.idSchema;
-        if (
-          !isRecord(use) ||
-          !ID_TYPE_KINDS.concat(PROOF_REFUSED_KINDS, OTHER_TYPE_KINDS).includes(String(use.kind))
-        )
-          break;
+        if (!isRecord(use) || !KNOWN_TYPE_USE_KINDS.includes(String(use.kind))) break;
         if (!ID_TYPE_KINDS.includes(String(use.kind)) || has(use, "nullable"))
           fail(
             "ir.id.scalar",
@@ -248,7 +376,9 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
           );
         break;
       }
-      case "RuleProof": {
+      // A rule's proof and the body field it adds to an operation's input (`InputProof`) are typed alike.
+      case "RuleProof":
+      case "InputProof": {
         const use = value.schema;
         if (isRecord(use) && PROOF_REFUSED_KINDS.includes(String(use.kind)))
           fail(

@@ -1,9 +1,9 @@
-import type { Origin } from "@seampact/spec/ir";
 import { isMap, isScalar } from "yaml";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
 import { diagnosticInert, diagnosticLocationKey, diagnosticSort } from "../diagnostics/print.js";
 import {
   type ApiLayerId,
+  type FileLayerId,
   entryLocationKey,
   type JsonObject,
   type RawApi,
@@ -85,7 +85,7 @@ interface ApiState {
  * included file when an `$include` brought the key. `at` is where the path is written; the
  * boundary stays the layer's (the workspace root, or a pack's package).
  */
-function writtenIn(build: LayerBuild<Origin["layer"]>, at: SiteLocation): PathContext {
+function writtenIn(build: LayerBuild<FileLayerId>, at: SiteLocation): PathContext {
   return { path: at.file, boundary: build.parsed.boundary };
 }
 
@@ -101,8 +101,8 @@ class Loader {
   private readonly budget = new LoadBudget(this.rep);
   private readonly store: FileStore;
   private readonly ex: Expander;
-  private readonly builds = new Map<string, LayerBuild<Origin["layer"]>>();
-  private readonly finished = new Set<LayerBuild<Origin["layer"]>>();
+  private readonly builds = new Map<string, LayerBuild<FileLayerId>>();
+  private readonly finished = new Set<LayerBuild<FileLayerId>>();
   private readonly packs = new Map<string, PackBuild | null>();
   private readonly packNames = new Map<string, PackBuild>();
 
@@ -206,7 +206,7 @@ class Loader {
   }
 
   /** Parses a file as part of `layer`: what parsing finds (P1 to P5, P9, syntax) is that layer's. */
-  private parseAs(path: string, boundary: string, layer: Origin["layer"]): ParsedFile | undefined {
+  private parseAs(path: string, boundary: string, layer: FileLayerId): ParsedFile | undefined {
     const saved = this.rep.layer;
     this.rep.layer = layer;
     const pf = this.store.parse(path, boundary);
@@ -214,12 +214,7 @@ class Loader {
     return pf;
   }
 
-  private badShape(
-    b: LayerBuild<Origin["layer"]>,
-    ptr: string,
-    message: string,
-    fix: string,
-  ): void {
+  private badShape(b: LayerBuild<FileLayerId>, ptr: string, message: string, fix: string): void {
     this.rep.report({
       rule: "workspace-shape",
       message,
@@ -228,7 +223,7 @@ class Loader {
     });
   }
 
-  private layer<L extends Origin["layer"]>(pf: ParsedFile, layer: L): LayerBuild<L> {
+  private layer<L extends FileLayerId>(pf: ParsedFile, layer: L): LayerBuild<L> {
     const key = `${layer}|${pf.boundary}|${pf.path}`;
     const hit = this.builds.get(key);
     if (hit) return hit as LayerBuild<L>;

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import type { ContractIR } from "@seampact/spec/ir";
+import { type ContractIR, IR_REVISION } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
 import { isJsonObject } from "./pointer.js";
@@ -183,7 +183,7 @@ describe("stop rule", () => {
     const finalize: PipelineFinalize = (draft, context) => {
       log.push(`${context.raw.name}:finalize`);
       expect(draft.operations).toEqual([]);
-      return { ir: MINIMAL_IR, sourceMap: { irRevision: 1, locations: {} } };
+      return { ir: MINIMAL_IR, sourceMap: { irRevision: IR_REVISION, locations: {} } };
     };
     const result = compile(
       log,
@@ -218,7 +218,7 @@ describe("stop rule", () => {
 
     const finalize: PipelineFinalize = (_draft, context) => {
       if (context.raw.name === "c") context.report(diagnostic("error", "finalize/collision", PING));
-      return { ir: MINIMAL_IR, sourceMap: { irRevision: 1, locations: {} } };
+      return { ir: MINIMAL_IR, sourceMap: { irRevision: IR_REVISION, locations: {} } };
     };
     const result = compile([], {}, { finalize });
     expect(result.apis.map((r) => r.ir === undefined)).toEqual([false, false, true]);

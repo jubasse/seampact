@@ -2,11 +2,10 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { REFUSED_SCHEMA_KEYWORDS } from "@seampact/spec/authoring";
-import type { Origin } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { parse } from "yaml";
 import { loadFsReader, loadWorkspace } from "../load/index.js";
-import type { ApiLayerId, JsonObject, RawApi, RawWorkspace } from "../raw-tree.js";
+import type { ApiLayerId, FileLayerId, JsonObject, RawApi, RawWorkspace } from "../raw-tree.js";
 import { MAX_DIAGNOSTICS } from "./diagnostics.js";
 import { validateRules } from "./rules.js";
 import {
@@ -25,7 +24,7 @@ function read(path: string): { text: string; tree: JsonObject } {
 }
 
 // The layer a fixture file stands for, from its top-level keys (ADR 0002 section 1).
-function layerOf(tree: JsonObject): { kind: ValidateDocumentKind; layer: Origin["layer"] } {
+function layerOf(tree: JsonObject): { kind: ValidateDocumentKind; layer: FileLayerId } {
   if ("api" in tree) return { kind: "api", layer: "api" };
   const pack = tree.pack as JsonObject | undefined;
   if (pack !== undefined) return { kind: "pack", layer: `pack:${String(pack.name)}` };

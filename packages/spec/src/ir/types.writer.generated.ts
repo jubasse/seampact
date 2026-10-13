@@ -73,7 +73,7 @@ export type OperationId = string;
 /** A derivation id of the derivation table (ADR 0006 section 5), 'pack.<pack>.<entry>' for a pack entry. */
 export type DerivationId = string;
 
-/** A must-understand feature name (ADR 0005 section 3); none is defined at irRevision 1. */
+/** A must-understand feature name (ADR 0005 section 3); none is defined at irRevision 2. */
 export type Feature = string;
 
 /** The written reason of an exception: non-empty, without leading or trailing white space (A36, ADR 0002 section 4). */
@@ -131,8 +131,8 @@ export type Extensions = Record<ExtensionPrefix, Record<ExtensionKey, unknown>>;
 export interface Origin {
   /** Set on an element copied from another api by a relay route. */
   api?: string;
-  /** 'api', 'shared', 'base', 'pack:<name>', or 'workspace' for a diagnostic on workspace.yaml (no IR element carries it). Closed: the one exception to open enums (ADR 0004 section 13). */
-  layer: "api" | "shared" | "base" | "workspace" | `pack:${string}`;
+  /** 'api', 'shared', 'base', 'pack:<name>', 'core' for a declaration the compiler supplies (its pointer starts with its entry of formats, errors or schemas, with no side-table entry), or 'workspace' for a diagnostic on workspace.yaml (no IR element carries it). Closed: the one exception to open enums (ADR 0004 section 13). */
+  layer: "api" | "shared" | "base" | "core" | "workspace" | `pack:${string}`;
   pointer: string;
 }
 
@@ -952,7 +952,18 @@ export interface OperationInput {
   bodyLimitBytes: number;
   rawBody: boolean;
   fields?: InputField[];
+  /** The body fields of the rule proofs read in the body, each once, in requirement order; absent when there is none. Targets render the body as the input schema's properties followed by these fields. */
+  proofs?: InputProof[];
   origin: Origin;
+}
+
+/** A body field the compiler adds to the input for a rule proof read in the body (derivation 'rule.proof'): required and sensitive (ADR 0002 section 9). A proof read in a header is a derived header parameter. */
+export interface InputProof {
+  name: string;
+  schema: TypeUse;
+  /** The proof's wire form, as an input field's: present exactly when the input's media is form or multipart, and never of kind 'file' (invariant ir.input-proof.wire). */
+  wire?: FieldWire;
+  derivedFrom: DerivedFrom;
 }
 
 export interface ResponseHeader {
@@ -1572,7 +1583,7 @@ export interface Lint {
 
 export interface SourceMap {
   irRevision: number;
-  /** Keyed by '<layer>#<pointer>', the serialised form of an Origin. */
+  /** Keyed by '<layer>#<pointer>', the serialised form of an Origin; a 'core' origin has no entry (ADR 0004 section 11). */
   locations: Record<string, SourceLocation>;
 }
 

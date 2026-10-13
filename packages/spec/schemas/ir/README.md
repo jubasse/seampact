@@ -22,7 +22,7 @@ Every IR enum is open (ADR 0005 section 3). It is a string with its known values
 
 The annotation never validates: any string is accepted. A reader that acts on the value and meets one it does not know fails with a diagnostic naming the value, the member and the operation; it never guesses and never skips. A reader that does not act on it ignores it. Register the keyword with your validator (Ajv: `addKeyword`, as `IR_KEYWORDS` in `@seampact/spec/ir` does).
 
-`Origin.layer` is the one closed string: a pattern, `api`, `shared`, `base`, `pack:<name>`, or `workspace` (a diagnostic on `workspace.yaml`; no IR element carries it). It is the exception to open enums recorded in ADR 0004 section 13.
+`Origin.layer` is the one closed string: a pattern, `api`, `shared`, `base`, `pack:<name>`, `core` (a declaration the compiler supplies: its pointer is the one its declaration would have in a layer file, starting with `/formats/<id>`, `/errors/<code>` or `/schemas/<id>`, and it has no source-map entry), or `workspace` (a diagnostic on `workspace.yaml`; no IR element carries it). It is the exception to open enums recorded in ADR 0004 section 13.
 
 ## Must-act unions and enums
 
@@ -86,8 +86,12 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 | `ir.field-wire.members` | `FieldWire` of kind `file` or `json` has no `style`, `explode` or `brackets`; a query wire kind has all three. |
 | `ir.property.nullable` | A property's type use has no `nullable`: `Property.nullable` holds it. |
 | `ir.scalar.type` | A named format's own type names no `scalar`. |
-| `ir.id.scalar` | `Scope.idSchema` and `ResourceSubject.idSchema` are a `scalar` or `enum` type use without `nullable`; `RuleProof.schema` is anything but `opaque` and `file`. |
+| `ir.id.scalar` | `Scope.idSchema` and `ResourceSubject.idSchema` are a `scalar` or `enum` type use without `nullable`; `RuleProof.schema` and `InputProof.schema` are anything but `opaque` and `file`. |
 | `ir.ref.resolves` | Every member whose schema is a `$ref` to a catalogue id definition (the key of a top-level or api map, such as `SchemeId` or `SurfaceId`) names an existing key, read with `Object.hasOwn`. |
+| `ir.input-proof.wire` | An `InputProof` has `wire` if and only if its input's `media` is `application/x-www-form-urlencoded` or `multipart/form-data` (known media only), and its `wire.kind` is never `file`. |
+| `ir.input-proof.name` | The names of an input's `proofs` are distinct, and none is the name of a property of the input's object schema (a `ref` use) or of an entry of its `fields`. |
+| `ir.input-proof.input` | An `OperationInput` with `proofs` has a `ref` use as its `schema` (never a `scalar`, `enum`, `opaque`, `file` or `array` use), naming an `object` schema (never a `map` or `union` schema). Unknown use and schema kinds are left to the reader; a missing schema is `ir.ref.resolves`'. |
+| `ir.origin.core` | An `Origin` of layer `core` has a pointer that starts with `/formats/<id>`, `/errors/<code>` or `/schemas/<id>`; without `api`, that entry exists in the document. Only the entry is checked, not the rest of the pointer. |
 | `ir.cache.sensitive-no-store` | Planned (p2-finalize): a response that carries a sensitive field sets `Cache.noStore`. Not checked yet: it needs a walk of the response schemas. |
 
 ## Readers

@@ -23,7 +23,9 @@ import { pipelineViewSource } from "./view.js";
 //   before and after the write (`declared` for an element without `derivedFrom`, else the wire owner of its
 //   derivation). Writing a container (a new operation, `input`) writes each row below it, and only the rows
 //   that change are checked, so `{ ...op.input, rawBody: true }` checks `rawBody` alone.
-// - A default is written in one assignment: changing a member inside a present default is a write over it.
+// - A default is written in one assignment: changing a member inside a present default is a write over it. A
+//   default written where absent is one write even when rows sit below it (`input.schema` and its
+//   `unknownKeys`); those sub-rows are checked by their own rows.
 // - A half appends to an `elements` list; moving another half's element (`splice`, `unshift`, `sort`) writes it.
 // - Values are unwrapped before they reach the draft, so the draft never holds a guard. A copy made to unwrap
 //   keeps its source's prototype and defines its members. A read-only view (`view.ts`), at any depth of the value
@@ -300,6 +302,17 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
       return;
     }
     const hasRowsBelow = position.node !== undefined && position.node.children.size > 0;
+    // A default with rows below it (`input.schema` and its `unknownKeys`), written where absent: one write of the
+    // default, and only its sub-rows checked on their own. A present default is not taken here, so changing a
+    // member inside it still reaches `checkRow` as a write over it.
+    const atDefault =
+      position.row?.row.mode === "default" && position.row.depth === position.normal.length;
+    if (atDefault && hasRowsBelow && previous === undefined && isObject(next)) {
+      checkRow(position, next, undefined);
+      for (const [segment] of position.node?.children ?? [])
+        checkWrite(child(position, next, segment), member(next, segment), undefined);
+      return;
+    }
     if (!hasRowsBelow || (!isObject(next) && !isObject(previous))) {
       checkRow(position, next, previous);
       return;

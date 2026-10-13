@@ -1,4 +1,5 @@
 import type { IrWriter } from "@seampact/spec/ir";
+import { canonicalId, splitName } from "@seampact/spec/naming";
 import type { PassReadonly } from "../pipeline/readonly.js";
 import { derivationFreeze } from "./freeze.js";
 
@@ -7,9 +8,9 @@ import { derivationFreeze } from "./freeze.js";
 // (A34); the derive.errors half registers them and binds roles (A35). Each datum's `type` is the type use of
 // the default code's param of that name.
 //
-// The params schemas of the default codes and the issue schema below become core declarations (origin `core`)
-// that tree.schemas seeds from this data, with reserved ids, once the IR change `feat/ir-1-core-origins-proofs`
-// lands (CR-2, CR-3); until then nothing writes them.
+// The params schemas of the default codes, the issue schema and the empty body schema below are core declarations
+// (origin `core`, no `derivedFrom`) that tree.schemas seeds from this data; their ids, `derivationCoreSchemaIds`, are
+// reserved (ADR 0004 section 13) and finalize drops the ones no element references. No half writes them yet.
 //
 // The data is deep-frozen and shared by every compile: a half writes a copy into its draft
 // (`derivationCopy<IrWriter.TypeUse>(datum.type)`, a `structuredClone`), never the frozen value itself.
@@ -142,3 +143,25 @@ const BY_ROLE = new Map(derivationRoles.map((entry) => [entry.role, entry]));
 /** The role of a name, with its default code. */
 export const derivationRoleOf = (name: DerivationRoleName): DerivationRole | undefined =>
   BY_ROLE.get(name);
+
+/** The schema id of a proof-only input's body: an object schema with no property (ADR 0004 section 13). */
+export const DERIVATION_EMPTY_BODY_SCHEMA_ID: IrWriter.SchemaId = "ApiEmptyBody";
+
+// The ADR 0007 params name of a default code: `api.rate_limited` gives `ApiRateLimitedParams`.
+function paramsSchemaId(code: string): IrWriter.SchemaId {
+  const id = canonicalId({ segments: splitName(code), role: "params" });
+  if (id === undefined) throw new Error(`default code ${code} names no params schema`);
+  return id;
+}
+
+/**
+ * The reserved ids of the core schemas (ADR 0004 section 13), in its order: the params schema of each default code
+ * that carries data, in the order of ADR 0006 section 6, then the issue schema and the empty body schema.
+ */
+export const derivationCoreSchemaIds: readonly IrWriter.SchemaId[] = derivationFreeze([
+  ...derivationRoles
+    .filter((entry) => entry.data.length > 0)
+    .map((entry) => paramsSchemaId(entry.defaultCode)),
+  DERIVATION_ISSUE_SCHEMA_ID,
+  DERIVATION_EMPTY_BODY_SCHEMA_ID,
+]);

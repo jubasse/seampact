@@ -1,6 +1,6 @@
 {
   "irVersion": 1,
-  "irRevision": 1,
+  "irRevision": 2,
   "kinds": ["httpOperation"],
   "features": [],
   "api": {
@@ -445,6 +445,15 @@
     }
   },
   "errors": {
+    "api.internal": {
+      "code": "api.internal",
+      "family": "api",
+      "nature": "failed",
+      "http": { "status": 500 },
+      "docs": {},
+      "origin": { "layer": "core", "pointer": "/errors/api.internal" },
+      "default": "undeclaredStatus"
+    },
     "tasks.locked": {
       "code": "tasks.locked",
       "family": "tasks",
@@ -645,8 +654,8 @@
       "params": "LockedParams",
       "takesBucket": true,
       "proof": {
-        "in": "header",
-        "name": "X-Proof",
+        "in": "body",
+        "name": "quotaProof",
         "schema": {
           "kind": "scalar",
           "type": "string",
@@ -972,6 +981,13 @@
             "from": [{ "layer": "api", "pointer": "/rights/tasks.update" }]
           },
           "origin": { "layer": "api", "pointer": "/errors" }
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [{ "layer": "core", "pointer": "/errors/api.internal" }]
+          }
         }
       ],
       "fieldRights": [
@@ -1029,6 +1045,23 @@
           {
             "name": "tags",
             "wire": { "kind": "list", "style": "form", "explode": true, "brackets": false }
+          }
+        ],
+        "proofs": [
+          {
+            "name": "quotaProof",
+            "schema": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "scalar": "resourceId",
+              "refinements": {}
+            },
+            "wire": { "kind": "text", "style": "form", "explode": true, "brackets": false },
+            "derivedFrom": {
+              "derivation": "rule.proof",
+              "from": [{ "layer": "api", "pointer": "/rules/quota" }]
+            }
           }
         ],
         "origin": { "layer": "api", "pointer": "/input" }

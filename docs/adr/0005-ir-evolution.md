@@ -49,7 +49,7 @@ One more rule closes the gap the first property opens: a reader that ignores a n
 - the top-level `kinds` list names the declaration kinds present (ADR 0004, ADR 0014);
 - each operation's `features` list names the must-understand features it uses, and the top-level `features` lists their union.
 
-A target declares the kinds and features it supports. An IR naming one it does not know fails `generate` with the kind or feature and the operation (FR-14). A feature name is added in the same PR as the member it guards. The 1.0 IR starts with an empty `features` list: everything in it at 1.0 is understood by every 1.0 target.
+A target declares the kinds and features it supports. An IR naming one it does not know fails `generate` with the kind or feature and the operation (FR-14). A feature name is added in the same PR as the member it guards. Before 1.0, the exact `irRevision` match guards such a member instead (a target reads exactly one revision, section 2), written "exact `irRevision` match (before 1.0)" in its changeset; from 1.0 a feature name is required. The 1.0 IR starts with an empty `features` list: everything in it at 1.0 is understood by every 1.0 target.
 
 ### 4. What is additive and what is breaking
 
@@ -64,7 +64,7 @@ A target declares the kinds and features it supports. An IR naming one it does n
 | changing a member's type, unit or meaning | breaking |
 | making an optional member required, or a nullable one non-nullable | breaking |
 | changing canonical ordering, ids or serialisation (ADR 0004) | breaking: the bytes and the bundle hashes change |
-| a new member whose absence makes older readers generate a weaker check, without a feature name | not allowed |
+| a new member whose absence makes older readers generate a weaker check, without a feature name | not allowed from 1.0; before 1.0, breaking, guarded by the exact `irRevision` match |
 | a new invariant (a rule `checkIrInvariants` enforces on an existing definition) | tightening |
 | must-act added to an existing definition (it names a feature, carried in `features`) | tightening |
 | relaxing or removing an invariant | breaking |

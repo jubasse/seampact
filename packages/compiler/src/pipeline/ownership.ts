@@ -5,17 +5,16 @@ import type { HalfName } from "./halves.js";
 // between passes only by an ADR change; the halves split within a pass). Each row is a draft field at the level
 // where halves meet, with one of three modes:
 // - `owned`: one owner writes the field and everything below it;
-// - `default`: written only where still absent, by the halves of `order` in run order (`unknownKeys` on a body
-//   input use: declared by tree.nodes, then access.identity for a signed identity's routes, then derive.wire
-//   from `conventions.input.unknownKeys`; `maturity`: stated by tree.nodes, else derived by derive.wire);
+// - `default`: written only where still absent, by the halves of `order` in run order (each row's comment says
+//   who writes it and when, ADR 0006 section 3);
 // - `elements`: a list several halves append to; each element, and everything below it but its own sub-rows, is
 //   owned by `declared` when it has no `derivedFrom`, else by the `wire` owner of its derivation in the
 //   derivation table (`derivations/table.ts`): declared parameters and responses and the `relay.route`,
 //   `batch.read`, `response.format` and `budget.timeout` elements to tree.nodes, `rule.proof` elements to
 //   access.rights, other derived wire elements to derive.wire. `derived` lists the halves whose derivations add
-//   elements to the list; a derived element of another half's derivation is refused there. A rule proof is a
-//   derived header parameter; a body proof field goes to `operations[].input.proofs` (access.rights) once the IR
-//   change `feat/ir-1-core-origins-proofs` adds it (CR-1).
+//   elements to the list; a derived element of another half's derivation is refused there. A rule proof read in
+//   a header is a derived header parameter; one read in the body is an element of `operations[].input.proofs`,
+//   which access.rights owns whole.
 // A field above rows (`operations[]`, `operations[].input`) is a container: halves navigate through it, and
 // writing it writes each row below it. The finalize members (top level, and each operation's `features`) belong
 // to `finalize`, which no half is.
@@ -43,6 +42,13 @@ const elements = <F extends string>(field: F, ...derived: HalfName[]) => ({
 });
 const op = <M extends string>(member: M): `operations[].${M}` => `operations[].${member}`;
 const ops = <M extends string>(...members: M[]): `operations[].${M}`[] => members.map(op);
+// Members of an operation's input written by `first`, else by access.rights where still absent.
+const inputDefaults = <M extends string>(first: HalfName, ...members: M[]) =>
+  members.map((member) => ({
+    field: op(`input.${member}` as const),
+    mode: "default" as const,
+    order: [first, "access.rights"] as const,
+  }));
 
 /** The ownership table, one row per field. */
 export const pipelineOwnership = [
@@ -69,10 +75,7 @@ export const pipelineOwnership = [
       "path",
       "safe",
       "unknownQuery",
-      "input.media",
-      "input.schema",
       "input.fields",
-      "input.origin",
       "concurrency.version",
       "concurrency.field",
       "owner",
@@ -105,18 +108,31 @@ export const pipelineOwnership = [
   elements(op("params.header"), "tree.nodes", "access.rights", "derive.wire"),
   elements(op("responses"), "tree.nodes", "derive.wire"),
   elements(op("responses[].headers"), "tree.nodes", "derive.wire"),
+  // Stated by tree.nodes, else derived by derive.wire.
   { field: op("maturity"), mode: "default", order: ["tree.nodes", "derive.wire"] },
+  // The input a route declares, else the proof-only input access.rights writes for a body proof on a route
+  // without `input` (ADR 0002 section 9): media `application/json`, the core empty schema `ApiEmptyBody`,
+  // `rawBody`, the origin of the first requirement, in requirement order, that brings a body proof, then
+  // `proofs`. On a signed identity's route, `rawBody` is true, as `signed.identity` writes it for a declared
+  // input, and access.rights also copies the identity's `unknownKeys` onto it; elsewhere `rawBody` is false.
+  ...inputDefaults("tree.nodes", "media", "schema", "origin"),
+  // Two writers: access.identity, true on a signed identity's declared input; access.rights, on the proof-only
+  // input it writes, true on a signed identity's route and false elsewhere.
+  ...inputDefaults("access.identity", "rawBody"),
+  // Declared by tree.nodes, then access.identity on a signed identity's routes, then access.rights, which copies
+  // the identity's onto a proof-only input it writes, then derive.wire from `conventions.input.unknownKeys`.
   {
     field: op("input.schema.unknownKeys"),
     mode: "default",
-    order: ["tree.nodes", "access.identity", "derive.wire"],
+    order: ["tree.nodes", "access.identity", "access.rights", "derive.wire"],
   },
   // Per operation, access.identity.
   ...owned(
     "access.identity",
-    ...ops("access", "callerKinds", "principalRequires", "bindings", "csrf", "input.rawBody"),
+    ...ops("access", "callerKinds", "principalRequires", "bindings", "csrf"),
   ),
-  // Per operation, access.rights. A sort key's `derivedFrom` comes with its derived right (`sortKey.restricted`).
+  // Per operation, access.rights. A sort key's `derivedFrom` comes with its derived right (`sortKey.restricted`);
+  // `input.proofs` holds the body fields of rule proofs (`rule.proof`), each with its `derivedFrom`.
   ...owned(
     "access.rights",
     ...ops(
@@ -124,6 +140,7 @@ export const pipelineOwnership = [
       "requires",
       "fieldRights",
       "filteredBy",
+      "input.proofs",
       "paging.sortKeys[].right",
       "paging.sortKeys[].derivedFrom",
     ),

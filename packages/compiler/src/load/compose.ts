@@ -1,5 +1,5 @@
 import type { Origin } from "@seampact/spec/ir";
-import type { JsonObject, JsonValue } from "../raw-tree.js";
+import type { ApiLayerId, JsonObject, JsonValue } from "../raw-tree.js";
 import { type LoadBudget, loadWorkOf } from "./budget.js";
 import type { LayerBuild } from "./expand.js";
 import { asObject, jsonObject, ownValue, setKey } from "./json.js";
@@ -88,7 +88,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
       for (const [i, v] of old.entries()) clear(`${ptr}/${i}`, v);
     }
   };
-  const record = (value: JsonValue, mptr: string, layer: Origin["layer"], lptr: string) => {
+  const record = (value: JsonValue, mptr: string, layer: ApiLayerId, lptr: string) => {
     if (!budget.charge(loadWorkOf(mptr), here)) return;
     const obj = asObject(value);
     if (obj && Object.keys(obj).length > 0) {

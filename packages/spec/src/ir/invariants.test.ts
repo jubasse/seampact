@@ -179,6 +179,11 @@ describe("checkIrInvariants", () => {
         proof.schema = { kind: "file" };
       }),
     ).toEqual(one("ir.id.scalar"));
+    expect(
+      broken("InputProof", (proof) => {
+        proof.schema = { kind: "file", media: ["image/png"] };
+      }),
+    ).toEqual(one("ir.id.scalar"));
     // An unknown use kind is the reader's to name; a proof may be an enum or an array.
     expect(
       broken("Scope", (scope) => {
@@ -200,8 +205,10 @@ describe("checkIrInvariants", () => {
   test("each partition is a disjoint union of the schema's known list", () => {
     const knownOf = (key: string): string[] => {
       const [definition, member] = key.split(".") as [string, string];
-      if (definition === "TypeUse")
-        return ((irDefinition("TypeUse")?.oneOf ?? []) as SchemaNode[]).map((variant) => {
+      // A tagged union's known list is the tag of each variant (`TypeUse`, `Schema`).
+      const variants = irDefinition(definition)?.oneOf as SchemaNode[] | undefined;
+      if (variants !== undefined)
+        return variants.map((variant) => {
           const name = String(variant.$ref).slice(String(variant.$ref).lastIndexOf("/") + 1);
           const tag = ((irDefinition(name)?.properties ?? {}) as Record<string, SchemaNode>)[
             member
@@ -260,6 +267,196 @@ describe("checkIrInvariants", () => {
         },
         (source) => source.in === "principal",
       ),
+    ).toEqual([]);
+  });
+
+  test("a body proof's type use names existing entries", () => {
+    const ir = sample("every-member.ir.json");
+    const [proof] = objectsOf(ir, "InputProof");
+    if (proof === undefined) throw new Error("no InputProof in the sample");
+    (proof.value.schema as Record<string, unknown>).scalar = "missingId";
+    expect(checkIrInvariants(ir)).toEqual([
+      expect.objectContaining({ id: "ir.ref.resolves", pointer: `${proof.pointer}/schema/scalar` }),
+    ]);
+  });
+
+  test("a body proof has a wire form exactly when its input is form or multipart", () => {
+    const check = (
+      change: (input: Record<string, unknown>, proof: Record<string, unknown>) => void,
+    ) => {
+      const ir = sample("every-member.ir.json");
+      const [input] = objectsOf(ir, "OperationInput").filter(({ value }) =>
+        Array.isArray(value.proofs),
+      );
+      if (input === undefined) throw new Error("no input with proofs in the sample");
+      const proof = (input.value.proofs as Record<string, unknown>[])[0];
+      if (proof === undefined) throw new Error("no proof in the sample");
+      change(input.value, proof);
+      return {
+        at: `${input.pointer}/proofs/0`,
+        found: checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer })),
+      };
+    };
+    // The sample's multipart input sends its proof as a text field.
+    expect(check(() => {}).found).toEqual([]);
+    const missing = check((_, proof) => {
+      delete proof.wire;
+    });
+    expect(missing.found).toEqual([{ id: "ir.input-proof.wire", pointer: missing.at }]);
+    const json = check((input) => {
+      input.media = "application/json";
+      delete input.fields;
+    });
+    expect(json.found).toEqual([{ id: "ir.input-proof.wire", pointer: json.at }]);
+    expect(
+      check((input, proof) => {
+        input.media = "application/json";
+        delete input.fields;
+        delete proof.wire;
+      }).found,
+    ).toEqual([]);
+    // An unknown media type is the reader's to name; the wire itself follows ir.field-wire.members.
+    expect(
+      check((input) => {
+        input.media = "application/zz-later";
+      }).found,
+    ).toEqual([]);
+    const wire = check((_, proof) => {
+      proof.wire = { kind: "json", style: "form" };
+    });
+    expect(wire.found).toEqual([{ id: "ir.field-wire.members", pointer: `${wire.at}/wire` }]);
+    // A proof is never a file, so neither is its wire form.
+    const file = check((_, proof) => {
+      proof.wire = { kind: "file" };
+    });
+    expect(file.found).toEqual([{ id: "ir.input-proof.wire", pointer: file.at }]);
+  });
+
+  test("a body proof is identified by a name the body does not already carry", () => {
+    const check = (
+      change: (input: Record<string, unknown>, proofs: Record<string, unknown>[]) => void,
+    ) => {
+      const ir = sample("every-member.ir.json");
+      const [input] = objectsOf(ir, "OperationInput").filter(({ value }) =>
+        Array.isArray(value.proofs),
+      );
+      if (input === undefined) throw new Error("no input with proofs in the sample");
+      change(input.value, input.value.proofs as Record<string, unknown>[]);
+      return {
+        at: (i: number) => `${input.pointer}/proofs/${i}`,
+        found: checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer })),
+      };
+    };
+    const rename = (name: string) =>
+      check((_, proofs) => {
+        if (proofs[0] !== undefined) proofs[0].name = name;
+      });
+    // `title` is a property of Task, the input schema.
+    const property = rename("title");
+    expect(property.found).toEqual([{ id: "ir.input-proof.name", pointer: property.at(0) }]);
+    // A form field named like the proof, and like no property.
+    const field = check((input, proofs) => {
+      const [first] = input.fields as Record<string, unknown>[];
+      if (first !== undefined) first.name = "scan";
+      if (proofs[0] !== undefined) proofs[0].name = "scan";
+    });
+    expect(field.found).toEqual([{ id: "ir.input-proof.name", pointer: field.at(0) }]);
+    const twice = check((_, proofs) => {
+      if (proofs[0] !== undefined) proofs.push(structuredClone(proofs[0]));
+    });
+    expect(twice.found).toEqual([{ id: "ir.input-proof.name", pointer: twice.at(1) }]);
+    // A name is free once the schema no longer holds it.
+    expect(
+      check((input) => {
+        input.schema = { kind: "ref", schema: "LockedParams" };
+        delete input.fields;
+        input.media = "application/json";
+        for (const proof of input.proofs as Record<string, unknown>[]) delete proof.wire;
+      }).found,
+    ).toEqual([]);
+  });
+
+  test("an input with body proofs is a ref use of an object schema", () => {
+    const check = (change: (input: Record<string, unknown>) => void) => {
+      const ir = sample("every-member.ir.json");
+      const [input] = objectsOf(ir, "OperationInput").filter(({ value }) =>
+        Array.isArray(value.proofs),
+      );
+      if (input === undefined) throw new Error("no input with proofs in the sample");
+      input.value.media = "application/json";
+      delete input.value.fields;
+      for (const proof of input.value.proofs as Record<string, unknown>[]) delete proof.wire;
+      change(input.value);
+      return {
+        at: `${input.pointer}/schema`,
+        found: checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer })),
+      };
+    };
+    const useOf = (schema: unknown) => (input: Record<string, unknown>) => {
+      input.schema = schema;
+    };
+    expect(check(useOf({ kind: "ref", schema: "Task" })).found).toEqual([]);
+    // Labels is a map schema, Notice a union.
+    for (const schema of ["Labels", "Notice"]) {
+      const result = check(useOf({ kind: "ref", schema }));
+      expect(result.found, schema).toEqual([{ id: "ir.input-proof.input", pointer: result.at }]);
+    }
+    const scalar = check(useOf({ kind: "scalar", type: "string", refinements: {} }));
+    expect(scalar.found).toEqual([{ id: "ir.input-proof.input", pointer: scalar.at }]);
+    // Without proofs any input stands; an unknown use kind is the reader's to name.
+    expect(
+      check((input) => {
+        input.schema = { kind: "ref", schema: "Labels" };
+        delete input.proofs;
+      }).found,
+    ).toEqual([]);
+    expect(check(useOf({ kind: "zz-later" })).found).toEqual([]);
+  });
+
+  test("a core origin points at its declaration under its catalogue", () => {
+    const origin = (ir: Record<string, unknown>) =>
+      (ir.errors as Record<string, Record<string, unknown>>)["api.internal"]?.origin as Record<
+        string,
+        unknown
+      >;
+    const at = "/errors/api.internal/origin";
+    const check = (change: (origin: Record<string, unknown>) => void) => {
+      const ir = sample("every-member.ir.json");
+      change(origin(ir));
+      return checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer }));
+    };
+    expect(check(() => {})).toEqual([]);
+    // Below the entry is fine; a relay route's copy names its api and is read there.
+    expect(
+      check((o) => {
+        o.pointer = "/errors/api.internal/http";
+      }),
+    ).toEqual([]);
+    expect(
+      check((o) => {
+        o.api = "billing";
+        o.pointer = "/errors/api.upstream_timeout";
+      }),
+    ).toEqual([]);
+    const violation = [{ id: "ir.origin.core", pointer: at }];
+    for (const pointer of ["", "/errors", "/errors/", "/rights/tasks.read", "/surfaces/app"])
+      expect(
+        check((o) => {
+          o.pointer = pointer;
+        }),
+        pointer,
+      ).toEqual(violation);
+    expect(
+      check((o) => {
+        o.pointer = "/schemas/ApiSchemaInvalidIssue";
+      }),
+    ).toEqual(violation);
+    // Other layers keep their pointers into the authoring tree.
+    expect(
+      check((o) => {
+        o.layer = "api";
+        o.pointer = "/surfaces/app";
+      }),
     ).toEqual([]);
   });
 

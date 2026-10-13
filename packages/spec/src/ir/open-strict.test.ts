@@ -243,4 +243,12 @@ test("source map sample", () => {
     locations: { "/no-layer": { file: "a", line: 1, column: 1, endLine: 1, endColumn: 1 } },
   };
   expect(validateSourceMap(badKey, "open").valid).toBe(false);
+  // A core declaration has no file: its origin has no side-table entry (ADR 0004 section 11).
+  const coreKey = {
+    ...map,
+    locations: {
+      "core#/errors/api.internal": { file: "a", line: 1, column: 1, endLine: 1, endColumn: 1 },
+    },
+  };
+  expect(validateSourceMap(coreKey, "open").valid).toBe(false);
 });

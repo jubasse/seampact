@@ -12,7 +12,7 @@
         "irRevision": { "type": "integer", "minimum": 1 },
         "locations": {
           "type": "object",
-          "description": "Keyed by '<layer>#<pointer>', the serialised form of an Origin.",
+          "description": "Keyed by '<layer>#<pointer>', the serialised form of an Origin; a 'core' origin has no entry (ADR 0004 section 11).",
           "propertyNames": {
             "type": "string",
             "pattern": "^(api|shared|base|workspace|pack:[^#]+)#(/.*)?$"

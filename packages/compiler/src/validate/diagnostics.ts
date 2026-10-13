@@ -13,9 +13,9 @@ import {
   RESERVED_NAMES,
   schemaKeyword,
 } from "@seampact/spec/authoring";
-import type { Origin } from "@seampact/spec/ir";
 import type { ErrorObject } from "ajv";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
+import type { FileLayerId } from "../raw-tree.js";
 import { validateRules } from "./rules.js";
 import { closestKeyword } from "./suggest.js";
 
@@ -143,7 +143,7 @@ export function quote(value: unknown): string {
 }
 
 export interface ConvertContext {
-  layer: Origin["layer"];
+  layer: FileLayerId;
   // The pack root refuses code and unknown keys (ADR 0008, SCN-047).
   isPackRoot: boolean;
 }
