@@ -32,6 +32,12 @@ const DECIMAL = "decimal";
 
 const LENGTHS = ["minLength", "maxLength"] as const;
 const BOUNDS = ["minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum"] as const;
+const LOWER_BOUNDS = ["minimum", "exclusiveMinimum"] as const;
+const UPPER_BOUNDS = ["maximum", "exclusiveMaximum"] as const;
+
+// A double holds 15 to 17 significant digits: a fraction whose shortest form takes 17 was written with digits the
+// loaded number may no longer hold.
+const MAX_FRACTION_DIGITS = 16;
 
 const portableTypeOf = (format: string): IrWriter.ScalarType | undefined =>
   Object.hasOwn(treeSchemasPortableFormats, format)
@@ -39,16 +45,47 @@ const portableTypeOf = (format: string): IrWriter.ScalarType | undefined =>
     : undefined;
 
 /**
- * A number as a decimal literal string, every digit kept: undefined for an integer beyond the safe range, whose
- * written digits the loaded number no longer holds.
+ * A number as the decimal literal string the loader read: undefined when its written digits may be lost, for an
+ * integer beyond the safe range or a fraction past 16 significant digits.
  */
 function treeSchemasDecimalLiteral(value: number): string | undefined {
   if (Number.isInteger(value)) return Number.isSafeInteger(value) ? String(value) : undefined;
-  const text = String(value);
+  const literal = withoutExponent(String(value));
+  return significantDigits(literal) > MAX_FRACTION_DIGITS ? undefined : literal;
+}
+
+// A fraction's shortest form as plain digits: JavaScript writes one below 1e-6 with an exponent (`1e-7`).
+function withoutExponent(text: string): string {
   const exponent = /^(-?)([0-9])(?:\.([0-9]+))?e-([0-9]+)$/.exec(text);
   if (exponent === null) return text;
   const [, sign = "", lead = "", fraction = "", shift = "1"] = exponent;
   return `${sign}0.${"0".repeat(Number(shift) - 1)}${lead}${fraction}`;
+}
+
+const significantDigits = (literal: string): number =>
+  literal.replace("-", "").replace(".", "").replace(/^0+/, "").length;
+
+// The bounds no value fits between: a lower bound above an upper one, or equal to it with either exclusive.
+function emptyRanges(refinements: IrWriter.Refinements): string[] {
+  const { minLength, maxLength } = refinements;
+  const lengths =
+    minLength !== undefined && maxLength !== undefined && minLength > maxLength
+      ? [`'minLength' ${minLength} is above 'maxLength' ${maxLength}`]
+      : [];
+  const bounds = LOWER_BOUNDS.flatMap((lowerKey) =>
+    UPPER_BOUNDS.flatMap((upperKey) => {
+      const lower = refinements[lowerKey];
+      const upper = refinements[upperKey];
+      if (lower === undefined || upper === undefined) return [];
+      const exclusive = lowerKey === "exclusiveMinimum" || upperKey === "exclusiveMaximum";
+      if (Number(lower) > Number(upper))
+        return [`'${lowerKey}' ${lower} is above '${upperKey}' ${upper}`];
+      if (Number(lower) === Number(upper) && exclusive)
+        return [`'${lowerKey}' ${lower} equals '${upperKey}' ${upper}, one of them exclusive`];
+      return [];
+    }),
+  );
+  return [...lengths, ...bounds];
 }
 
 interface RefinementTarget {
@@ -80,7 +117,7 @@ export class TreeSchemasScalars {
     if (format !== undefined && !this.checkFormatBesideType(format, type, pointer))
       return undefined;
     const refinements = this.refinements(value, pointer, { type, decimal: format === DECIMAL });
-    if (refinements === undefined) return undefined;
+    if (refinements === undefined || !this.checkRanges(refinements, pointer)) return undefined;
     return { kind: "scalar", type, ...(format === undefined ? {} : { format }), refinements };
   }
 
@@ -115,7 +152,7 @@ export class TreeSchemasScalars {
     }
     const type = value.type === "integer" ? "integer" : "string";
     const refinements = this.refinements(value, pointer, { type, decimal: false });
-    if (refinements === undefined) return undefined;
+    if (refinements === undefined || !this.checkRanges(refinements, pointer)) return undefined;
     return {
       id,
       name: { segments: splitName(id), role: "schema" },
@@ -189,12 +226,22 @@ export class TreeSchemasScalars {
       });
     }
     if (conflicts.length > 0) return undefined;
-    return {
-      kind: "scalar",
-      type: declared.type.type,
-      scalar: format,
-      refinements: { ...structuredClone(declared.type.refinements), ...own },
-    };
+    const refinements = { ...structuredClone(declared.type.refinements), ...own };
+    if (!this.checkRanges(refinements, pointer)) return undefined;
+    return { kind: "scalar", type: declared.type.type, scalar: format, refinements };
+  }
+
+  private checkRanges(refinements: IrWriter.Refinements, pointer: string): boolean {
+    const empty = emptyRanges(refinements);
+    for (const problem of empty) {
+      this.reporter.error({
+        rule: "refinement-range",
+        pointer,
+        message: `no value fits the schema: ${problem}`,
+        fix: "lower the minimum or raise the maximum",
+      });
+    }
+    return empty.length === 0;
   }
 
   private passwordFormat(pointer: string): undefined {
@@ -283,11 +330,16 @@ export class TreeSchemasScalars {
       out[key] = literal;
       return true;
     }
+    const integer = Number.isInteger(bound);
     this.reporter.error({
       rule: "refinement-precision",
       pointer: treeSchemasPointer(pointer, key),
-      message: `'${key}' is an integer beyond the safe range, whose written digits the contract reader cannot keep`,
-      fix: "write a bound between -(2^53 - 1) and 2^53 - 1",
+      message: integer
+        ? `'${key}' is an integer beyond the safe range, whose written digits the contract reader cannot keep`
+        : `'${key}' has more significant digits than the contract reader keeps`,
+      fix: integer
+        ? "write a bound between -(2^53 - 1) and 2^53 - 1"
+        : `write the bound with at most ${MAX_FRACTION_DIGITS} significant digits`,
     });
     return false;
   }

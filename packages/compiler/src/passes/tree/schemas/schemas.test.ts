@@ -452,6 +452,19 @@ schemas:
     ["A: { type: string, minimum: 1 }", "refinement-type"],
     ["A: { type: integer, maximum: 9007199254740993 }", "refinement-precision"],
     ["A: { type: string, pattern: '(?=a)' }", "pattern"],
+    [
+      "A: { type: string, format: decimal, minimum: 0.12345678901234567890123 }",
+      "refinement-precision",
+    ],
+    ["A: { type: number, maximum: 123456789012.345678 }", "refinement-precision"],
+    ["A: { type: string, minLength: 5, maxLength: 2 }", "refinement-range"],
+    ["A: { type: integer, minimum: 10, maximum: 1 }", "refinement-range"],
+    ["A: { type: integer, exclusiveMinimum: 1, maximum: 1 }", "refinement-range"],
+    [
+      "A: { type: string, format: decimal, minimum: 2.5, exclusiveMaximum: 2.5 }",
+      "refinement-range",
+    ],
+    ["A: { type: array, items: { type: string }, minItems: 4, maxItems: 1 }", "refinement-range"],
   ])("%s is refused (%s)", (yaml, rule) => {
     expect(treeSchemasRules(schemas(`  ${yaml}`))).toContain(rule);
   });
@@ -465,6 +478,16 @@ schemas:
     expect(result.diagnostics[0]?.fix).toContain(
       name === "uuid" ? "type: string, format: uuid" : "sensitive",
     );
+  });
+
+  test("bounds that leave room for one value are kept; a named format's merged bounds are checked", () => {
+    const fits = schemas("  A: { type: integer, minimum: 1, maximum: 1 }");
+    expect(fits.diagnostics).toEqual([]);
+    const merged = treeSchemasRunApi(
+      "scalars:\n  code: { type: string, minLength: 5 }\nschemas:\n  A: { format: code, maxLength: 2 }",
+    );
+    expect(treeSchemasRules(merged)).toEqual(["refinement-range"]);
+    expect(merged.diagnostics[0]?.message).toContain("'minLength' 5 is above 'maxLength' 2");
   });
 
   test("a named format beside a type is refused", () => {

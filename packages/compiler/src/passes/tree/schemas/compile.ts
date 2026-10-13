@@ -908,6 +908,15 @@ export class TreeSchemasCompiler {
     });
     if (items === undefined) return undefined;
     const { minItems, maxItems } = value;
+    if (typeof minItems === "number" && typeof maxItems === "number" && minItems > maxItems) {
+      this.reporter.error({
+        rule: "refinement-range",
+        pointer: position.pointer,
+        message: `no value fits the schema: 'minItems' ${minItems} is above 'maxItems' ${maxItems}`,
+        fix: "lower the minimum or raise the maximum",
+      });
+      return undefined;
+    }
     return plain({
       kind: "array",
       items: items.use,
