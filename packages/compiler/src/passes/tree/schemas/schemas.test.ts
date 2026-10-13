@@ -397,11 +397,45 @@ describe("annotations the contract model cannot hold are refused, not dropped", 
       "U: { discriminator: k, oneOf: { a: { $ref: B, description: A variant. } } }\n  B: { type: object, properties: { c: { type: string } } }",
       "description",
     ],
+    ["A: { type: string, format: uuid, description: An id. }", "description"],
+    ["A: { type: array, items: { type: string }, title: Tags }", "title"],
+    [
+      "A: { $ref: B, description: An alias. }\n  B: { type: object, properties: { c: { type: string } } }",
+      "description",
+    ],
+    [
+      "A: { allOf: [B, { type: object, description: More., properties: { d: { type: string } } }] }\n  B: { type: object, properties: { c: { type: string } } }",
+      "description",
+    ],
+    [
+      "A: { allOf: [{ type: object, examples: [{ d: x }], properties: { d: { type: string } } }] }",
+      "examples",
+    ],
+    [
+      "A: { allOf: [{ type: object, deprecated: true, properties: { d: { type: string } } }] }",
+      "deprecated",
+    ],
   ])("%s is refused, naming '%s'", (yaml, member) => {
     const run = schemas(`  ${yaml}`);
     expect(treeSchemasRules(run)).toEqual(["annotation-position"]);
     expect(run.diagnostics[0]?.message).toContain(`'${member}'`);
     expect(run.diagnostics[0]?.origin.pointer).toMatch(new RegExp(`/${member}$`));
+  });
+
+  test("docs on a route position schema are refused", () => {
+    const run = treeSchemasRunApi(`schemas:
+  Item: { type: object, properties: { id: { type: string } } }
+surfaces:
+  app:
+    routes:
+      inline:
+        method: post
+        output: { type: array, items: Item, description: The items. }
+`);
+    expect(treeSchemasRules(run)).toEqual(["annotation-position"]);
+    expect(run.diagnostics[0]?.origin.pointer).toBe(
+      "/surfaces/app/routes/inline/output/description",
+    );
   });
 });
 

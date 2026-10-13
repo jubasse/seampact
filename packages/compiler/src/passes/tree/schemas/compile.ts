@@ -141,6 +141,14 @@ const SCHEMA_WRITING_SHAPES: ReadonlySet<Shape> = new Set([
   "derived",
 ]);
 
+// The written annotations, each with where the author moves it when this position cannot keep it.
+const ANNOTATION_FIX: Readonly<Record<string, string>> = {
+  deprecated: "mark the property that holds this schema instead",
+  examples: "put the example on the object that holds this value",
+  title: "document the property or the schema that holds this one",
+  description: "document the property or the schema that holds this one",
+};
+
 const SCALAR_TYPES = new Set(["string", "integer", "number", "boolean"]);
 const HEADER_SOURCE = /^header\.(.+)$/;
 const JSON_MEDIA = "application/json";
@@ -457,30 +465,33 @@ export class TreeSchemasCompiler {
 
   // ADR 0004: a written annotation the IR has no member for here is refused, never dropped. `deprecated` is held by
   // a property only; `examples` by a written schema (an object, map or union); docs by a property or a written
-  // schema, and nowhere else on an item, a map value or a union variant.
+  // schema.
   private checkAnnotations(
     value: TreeSchemasRawObject,
     shape: Shape,
     { pointer, place }: TreeSchemasPosition,
   ): boolean {
     const writesSchema = SCHEMA_WRITING_SHAPES.has(shape);
-    const refused: { key: string; fix: string }[] = [];
-    if (has(value, "deprecated") && place !== "property")
-      refused.push({ key: "deprecated", fix: "mark the property that holds this schema instead" });
-    if (has(value, "examples") && !writesSchema)
-      refused.push({ key: "examples", fix: "put the example on the object that holds this value" });
-    if (!writesSchema && (place === "nested" || place === "variant")) {
-      for (const key of ["title", "description"]) {
-        if (has(value, key))
-          refused.push({ key, fix: "document the property or the schema that holds this one" });
-      }
-    }
-    for (const { key, fix } of refused) {
+    const held = new Set([
+      ...(place === "property" ? ["deprecated", "title", "description"] : []),
+      ...(writesSchema ? ["examples", "title", "description"] : []),
+    ]);
+    return this.refuseAnnotations(value, `${SHAPE_TEXT[shape]} here`, pointer, held);
+  }
+
+  private refuseAnnotations(
+    value: TreeSchemasRawObject,
+    what: string,
+    pointer: string,
+    held: ReadonlySet<string>,
+  ): boolean {
+    const refused = Object.keys(ANNOTATION_FIX).filter((key) => has(value, key) && !held.has(key));
+    for (const key of refused) {
       this.reporter.error({
         rule: "annotation-position",
         pointer: treeSchemasPointer(pointer, key),
-        message: `'${key}' on ${SHAPE_TEXT[shape]} here is not kept by the contract model`,
-        fix: `remove '${key}' here; ${fix}`,
+        message: `'${key}' on ${what} is not kept by the contract model`,
+        fix: `remove '${key}' here; ${ANNOTATION_FIX[key]}`,
       });
     }
     return refused.length === 0;
@@ -1192,6 +1203,12 @@ export class TreeSchemasCompiler {
     pointer: string,
     words: string[] | undefined,
   ): IrWriter.Property[] | "derived" | undefined {
+    // A member's own annotations have no place: the merged object holds the `allOf` schema's.
+    if (
+      treeSchemasIsObject(member) &&
+      !this.refuseAnnotations(member, "a member of 'allOf'", pointer, new Set())
+    )
+      return undefined;
     const name = typeof member === "string" ? member : treeSchemasMember(member, "$ref");
     if (typeof name === "string") return this.declaredProperties(name, pointer);
     const shape = treeSchemasIsObject(member) ? treeSchemasShapeOf(member) : undefined;
