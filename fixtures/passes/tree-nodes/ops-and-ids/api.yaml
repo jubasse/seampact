@@ -6,6 +6,19 @@ conventions:
   ops: { update: { method: put } }
   operationIds: { order: nounVerb, case: snake }
 
+schemas:
+  UserId: { type: string }
+  Member:
+    type: object
+    required: [userId]
+    properties:
+      userId: UserId
+      role: { type: string }
+  UpdateMember:
+    type: object
+    properties:
+      role: { type: string }
+
 surfaces:
   app:
     prefix: /v{version}

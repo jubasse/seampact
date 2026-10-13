@@ -18,6 +18,18 @@ function contract(conventions: string): string {
   return `
 api: { name: shop, version: 1, kind: product }
 ${conventions}
+schemas:
+  UserId: { type: string }
+  Member:
+    type: object
+    required: [userId]
+    properties:
+      userId: UserId
+      role: { type: string }
+  UpdateMember:
+    type: object
+    properties:
+      role: { type: string }
 surfaces:
   app:
     prefix: /v{version}
@@ -26,6 +38,7 @@ surfaces:
         kind: collection
         id: { userId: UserId }
         singular: member
+        item: Member
         ops:
           list: {}
           get: {}
@@ -185,6 +198,8 @@ surfaces:
 
 const CLASHES = `
 api: { name: a, version: 1, kind: product }
+schemas:
+  TaskId: { type: string }
 surfaces:
   app:
     prefix: /v{version}

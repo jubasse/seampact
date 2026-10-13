@@ -3,6 +3,10 @@
 api: { name: uploads, version: 1, kind: product }
 
 schemas:
+  SlackPayload:
+    type: object
+    properties:
+      channel: { type: string }
   SlackCommand:
     type: object
     required: [text]
