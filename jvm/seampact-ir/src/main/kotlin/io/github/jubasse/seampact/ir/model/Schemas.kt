@@ -1,6 +1,7 @@
 // Generated from packages/spec/schemas/ir/schemas.schema.json by scripts/ir-models for IR revision 2. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 @file:OptIn(ExperimentalSerializationApi::class)
+@file:UseSerializers(IrIntegerSerializer::class)
 
 package io.github.jubasse.seampact.ir.model
 
@@ -8,9 +9,11 @@ import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 @Serializable
 public data class ArrayTypeUse(
@@ -20,13 +23,21 @@ public data class ArrayTypeUse(
     public val maxItems: Long? = null,
     /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
     public val nullable: Boolean? = null,
-) : TypeUse
+) : TypeUse {
+    init {
+        require(kind == "array") { "ArrayTypeUse: kind is \"array\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class BodyUnionTag(
     @SerialName("in") @EncodeDefault public override val in_: String = "body",
     public val property: String,
-) : UnionTag
+) : UnionTag {
+    init {
+        require(in_ == "body") { "BodyUnionTag: in is \"body\", got \"" + in_ + "\"" }
+    }
+}
 
 /** A number written as a decimal literal string, so an int64 or decimal bound and a long multipleOf keep every digit in every language (ADR 0003 section 8). */
 public typealias DecimalLiteral = String
@@ -44,7 +55,11 @@ public data class EnumTypeUse(
     public val narrowedTo: EnumNarrowing? = null,
     /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
     public val nullable: Boolean? = null,
-) : TypeUse
+) : TypeUse {
+    init {
+        require(kind == "enum") { "EnumTypeUse: kind is \"enum\", got \"" + kind + "\"" }
+    }
+}
 
 /** A restrictedTo mark (ADR 0003 section 6). */
 @Serializable
@@ -63,13 +78,21 @@ public data class FileTypeUse(
     public val maxSizeBytes: Long? = null,
     /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
     public val nullable: Boolean? = null,
-) : TypeUse
+) : TypeUse {
+    init {
+        require(kind == "file") { "FileTypeUse: kind is \"file\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class HeaderUnionTag(
     @SerialName("in") @EncodeDefault public override val in_: String = "header",
     public val name: String,
-) : UnionTag
+) : UnionTag {
+    init {
+        require(in_ == "header") { "HeaderUnionTag: in is \"header\", got \"" + in_ + "\"" }
+    }
+}
 
 /** What the boundary does with a restricted input field sent without the right (A21). Must act: an unknown value makes the IR invalid for every reader. */
 @Serializable(with = InputPolicySerializer::class)
@@ -79,8 +102,12 @@ public sealed interface InputPolicy {
     public data object REJECT : InputPolicy { override val value: String = "reject" }
     public data object STRIP : InputPolicy { override val value: String = "strip" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : InputPolicy
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : InputPolicy {
+        init {
+            require(InputPolicy.known.none { it.value == value }) { "InputPolicy.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -110,8 +137,12 @@ public sealed interface JsonMediaType {
 
     public data object APPLICATION_JSON : JsonMediaType { override val value: String = "application/json" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : JsonMediaType
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : JsonMediaType {
+        init {
+            require(JsonMediaType.known.none { it.value == value }) { "JsonMediaType.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -139,7 +170,11 @@ public data class MapSchema(
     public val docs: Docs,
     public val extensions: Extensions,
     public val origin: Origin,
-) : Schema
+) : Schema {
+    init {
+        require(kind == "map") { "MapSchema: kind is \"map\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class ObjectSchema(
@@ -153,7 +188,11 @@ public data class ObjectSchema(
     public val docs: Docs,
     public val extensions: Extensions,
     public val origin: Origin,
-) : Schema
+) : Schema {
+    init {
+        require(kind == "object") { "ObjectSchema: kind is \"object\", got \"" + kind + "\"" }
+    }
+}
 
 /** Any JSON value, unchecked (ADR 0003 section 2). */
 @Serializable
@@ -161,7 +200,11 @@ public data class OpaqueTypeUse(
     @EncodeDefault public override val kind: String = "opaque",
     public val reason: Reason,
     public val origin: Origin,
-) : TypeUse
+) : TypeUse {
+    init {
+        require(kind == "opaque") { "OpaqueTypeUse: kind is \"opaque\", got \"" + kind + "\"" }
+    }
+}
 
 /** A pattern refinement: the written text and its normalised form (ADR 0003 section 9). */
 @Serializable
@@ -195,7 +238,11 @@ public data class RefTypeUse(
     public val unknownKeys: UnknownKeys? = null,
     /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
     public val nullable: Boolean? = null,
-) : TypeUse
+) : TypeUse {
+    init {
+        require(kind == "ref") { "RefTypeUse: kind is \"ref\", got \"" + kind + "\"" }
+    }
+}
 
 /** The refinements of a scalar (ADR 0003 sections 1 and 8); numeric ones are decimal literal strings, compared numerically. */
 @Serializable
@@ -231,8 +278,12 @@ public sealed interface ScalarType {
     public data object NUMBER : ScalarType { override val value: String = "number" }
     public data object BOOLEAN : ScalarType { override val value: String = "boolean" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : ScalarType
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : ScalarType {
+        init {
+            require(ScalarType.known.none { it.value == value }) { "ScalarType.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -263,7 +314,11 @@ public data class ScalarTypeUse(
     public val content: JsonContent? = null,
     /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
     public val nullable: Boolean? = null,
-) : TypeUse
+) : TypeUse {
+    init {
+        require(kind == "scalar") { "ScalarTypeUse: kind is \"scalar\", got \"" + kind + "\"" }
+    }
+}
 
 /** A named schema: objects, maps and unions are always named (ADR 0004 section 5). */
 @Serializable(with = SchemaSerializer::class)
@@ -271,8 +326,13 @@ public sealed interface Schema {
     /** The tag member 'kind': it picks the variant. */
     public val kind: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val kind: String, public val raw: JsonObject) : Schema
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val kind: String, public val raw: JsonObject) : Schema {
+        init {
+            require(kind !in setOf("object", "map", "union")) { "Schema.Unknown: \"" + kind + "\" is a known kind" }
+            require(raw["kind"] == JsonPrimitive(kind)) { "Schema.Unknown: raw's kind is not \"" + kind + "\"" }
+        }
+    }
 }
 
 internal object SchemaSerializer : IrUnionSerializer<Schema>("Schema", "kind") {
@@ -299,8 +359,13 @@ public sealed interface TypeUse {
     /** The tag member 'kind': it picks the variant. */
     public val kind: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val kind: String, public val raw: JsonObject) : TypeUse
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val kind: String, public val raw: JsonObject) : TypeUse {
+        init {
+            require(kind !in setOf("ref", "opaque", "file", "enum", "scalar", "array")) { "TypeUse.Unknown: \"" + kind + "\" is a known kind" }
+            require(raw["kind"] == JsonPrimitive(kind)) { "TypeUse.Unknown: raw's kind is not \"" + kind + "\"" }
+        }
+    }
 }
 
 internal object TypeUseSerializer : IrUnionSerializer<TypeUse>("TypeUse", "kind") {
@@ -340,7 +405,11 @@ public data class UnionSchema(
     public val docs: Docs,
     public val extensions: Extensions,
     public val origin: Origin,
-) : Schema
+) : Schema {
+    init {
+        require(kind == "union") { "UnionSchema: kind is \"union\", got \"" + kind + "\"" }
+    }
+}
 
 /** Where a union's tag is read; 'header' only for a route's whole input. */
 @Serializable(with = UnionTagSerializer::class)
@@ -348,8 +417,13 @@ public sealed interface UnionTag {
     /** The tag member 'in': it picks the variant. */
     public val in_: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val in_: String, public val raw: JsonObject) : UnionTag
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val in_: String, public val raw: JsonObject) : UnionTag {
+        init {
+            require(in_ !in setOf("body", "header")) { "UnionTag.Unknown: \"" + in_ + "\" is a known in" }
+            require(raw["in"] == JsonPrimitive(in_)) { "UnionTag.Unknown: raw's in is not \"" + in_ + "\"" }
+        }
+    }
 }
 
 internal object UnionTagSerializer : IrUnionSerializer<UnionTag>("UnionTag", "in") {
@@ -392,8 +466,12 @@ public sealed interface UnknownKeysPolicy {
     public data object IGNORE : UnknownKeysPolicy { override val value: String = "ignore" }
     public data object KEEP : UnknownKeysPolicy { override val value: String = "keep" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : UnknownKeysPolicy
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : UnknownKeysPolicy {
+        init {
+            require(UnknownKeysPolicy.known.none { it.value == value }) { "UnknownKeysPolicy.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */

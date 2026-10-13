@@ -19,13 +19,31 @@ export const KOTLIN_PACKAGE = "io.github.jubasse.seampact.ir.model";
 export const KOTLIN_MODEL_DIRECTORY =
   "jvm/seampact-ir/src/main/kotlin/io/github/jubasse/seampact/ir/model";
 
-/** The helpers written beside the definitions; no definition may take these names. */
-export const KOTLIN_HELPER_NAMES = [
+/**
+ * The names the generated files define beside the definitions, import, or take from `kotlin.*`: a definition
+ * with one of these names would shadow it, so generation fails instead.
+ */
+export const KOTLIN_CLAIMED_NAMES = [
   "IrJson",
   "IrOptionalOpaqueSerializer",
   "IrUnionSerializer",
   "IrOpenEnumSerializer",
+  "IrIntegerSerializer",
   "IrModelVersion",
+  "EncodeDefault",
+  "ExperimentalSerializationApi",
+  "SerialName",
+  "Serializable",
+  "UseSerializers",
+  "Json",
+  "JsonElement",
+  "JsonObject",
+  "JsonPrimitive",
+  "String",
+  "Long",
+  "Boolean",
+  "List",
+  "Map",
 ] as const;
 
 const SERIALIZER_SUFFIX = "Serializer";
@@ -62,14 +80,14 @@ export function emitKotlin(context: KotlinContext): Map<string, string> {
     const body = definitions.flatMap((definition) => emitter.definition(definition));
     files.set(
       `${KOTLIN_MODEL_DIRECTORY}/${kotlinFileName(schemaFile)}`,
-      fileText(header, MODEL_IMPORTS, body),
+      fileText(header, MODEL_FILE_ANNOTATIONS, MODEL_IMPORTS, body),
     );
   }
 
   const supportHeader = headerLines("scripts/ir-models/kotlin.ts", context);
   files.set(
     `${KOTLIN_MODEL_DIRECTORY}/IrSerialization.kt`,
-    fileText(supportHeader, SUPPORT_IMPORTS, supportLines(context)),
+    fileText(supportHeader, SUPPORT_FILE_ANNOTATIONS, SUPPORT_IMPORTS, supportLines(context)),
   );
   return files;
 }
@@ -85,10 +103,15 @@ function headerLines(source: string, context: KotlinContext): string[] {
   ];
 }
 
-function fileText(header: string[], imports: readonly string[], body: string[]): string {
+function fileText(
+  header: string[],
+  fileAnnotations: readonly string[],
+  imports: readonly string[],
+  body: string[],
+): string {
   const lines = [
     ...header,
-    "@file:OptIn(ExperimentalSerializationApi::class)",
+    ...fileAnnotations,
     "",
     `package ${KOTLIN_PACKAGE}`,
     "",
@@ -100,14 +123,24 @@ function fileText(header: string[], imports: readonly string[], body: string[]):
   return `${lines.join("\n")}\n`;
 }
 
+// `@EncodeDefault` writes a variant's fixed tag; every `Long` reads through the IR integer serializer.
+const MODEL_FILE_ANNOTATIONS = [
+  "@file:OptIn(ExperimentalSerializationApi::class)",
+  "@file:UseSerializers(IrIntegerSerializer::class)",
+];
+
+const SUPPORT_FILE_ANNOTATIONS = ["@file:OptIn(ExperimentalSerializationApi::class)"];
+
 const MODEL_IMPORTS = [
   "kotlinx.serialization.EncodeDefault",
   "kotlinx.serialization.ExperimentalSerializationApi",
   "kotlinx.serialization.SerialName",
   "kotlinx.serialization.Serializable",
+  "kotlinx.serialization.UseSerializers",
   "kotlinx.serialization.json.Json",
   "kotlinx.serialization.json.JsonElement",
   "kotlinx.serialization.json.JsonObject",
+  "kotlinx.serialization.json.JsonPrimitive",
 ];
 
 const SUPPORT_IMPORTS = [
@@ -139,8 +172,32 @@ public object IrModelVersion {
 /** The JSON configuration of the IR model: unknown members are tolerated and dropped (ADR 0005 section 3). */
 public val IrJson: Json = Json { ignoreUnknownKeys = true }
 
+/**
+ * An IR integer as a \`Long\`. An integral number written with a fraction (\`2.0\`), which JSON Schema counts as
+ * an integer, reads as that integer; any other value is an error naming it.
+ */
+internal object IrIntegerSerializer : KSerializer<Long> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("${KOTLIN_PACKAGE}.IrInteger", PrimitiveKind.LONG)
+
+    override fun deserialize(decoder: Decoder): Long {
+        val element = jsonDecoder(decoder, "an integer").decodeJsonElement()
+        val number = (element as? JsonPrimitive)?.takeIf { !it.isString }?.content?.toBigDecimalOrNull()
+            ?: throw SerializationException("expected an integer, got $element")
+        try {
+            return number.longValueExact()
+        } catch (error: ArithmeticException) {
+            throw SerializationException("expected an integer within 64 bits, got $element", error)
+        }
+    }
+
+    override fun serialize(encoder: Encoder, value: Long) {
+        encoder.encodeLong(value)
+    }
+}
+
 /** An optional opaque member: absent is \`null\`, a JSON \`null\` is [JsonNull]. */
-public object IrOptionalOpaqueSerializer : KSerializer<JsonElement?> {
+internal object IrOptionalOpaqueSerializer : KSerializer<JsonElement?> {
     override val descriptor: SerialDescriptor = JsonElement.serializer().descriptor.nullable
 
     override fun deserialize(decoder: Decoder): JsonElement? = jsonDecoder(decoder, "an opaque value").decodeJsonElement()
@@ -151,11 +208,12 @@ public object IrOptionalOpaqueSerializer : KSerializer<JsonElement?> {
 }
 
 /** A tagged union: the tag member picks the variant; an unknown tag is kept as the union's \`Unknown\` variant. */
-public abstract class IrUnionSerializer<T : Any>(
+internal abstract class IrUnionSerializer<T : Any>(
     private val union: String,
     private val tagMember: String,
 ) : KSerializer<T> {
-    override val descriptor: SerialDescriptor = JsonObject.serializer().descriptor
+    override val descriptor: SerialDescriptor =
+        SerialDescriptor("${KOTLIN_PACKAGE}.$union", JsonObject.serializer().descriptor)
 
     protected abstract fun decodeKnown(json: Json, tag: String, element: JsonObject): T?
 
@@ -179,7 +237,7 @@ public abstract class IrUnionSerializer<T : Any>(
 }
 
 /** An open enum: a known value maps to its constant, any other string to the enum's \`Unknown\`. */
-public abstract class IrOpenEnumSerializer<T : Any>(
+internal abstract class IrOpenEnumSerializer<T : Any>(
     enumName: String,
     private val of: (String) -> T,
     private val valueOf: (T) -> String,
@@ -205,7 +263,7 @@ private fun jsonEncoder(encoder: Encoder, what: String): JsonEncoder =
 
 function assertTopLevelNamesDistinct(model: NeutralModel, typeNames: Map<string, string>): void {
   const owners = new Map<string, string>(
-    KOTLIN_HELPER_NAMES.map((name) => [name, `the helper ${name}`]),
+    KOTLIN_CLAIMED_NAMES.map((name) => [name, `the name ${name} the generated files use`]),
   );
   const claim = (name: string, owner: string): void => {
     const previous = owners.get(name);
@@ -239,7 +297,9 @@ function serialNameAnnotation(member: string): string {
 
 function kdoc(description: string | undefined, indent: string): string[] {
   if (description === undefined) return [];
-  return [`${indent}/** ${description.replaceAll("*/", "*&#47;")} */`];
+  // Kotlin block comments nest, so both delimiters are neutralised.
+  const text = description.replaceAll("*/", "*&#47;").replaceAll("/*", "&#47;*");
+  return [`${indent}/** ${text} */`];
 }
 
 function definitionDoc(definition: Definition): string | undefined {
@@ -311,12 +371,29 @@ class KotlinEmitter {
     const parameters = definition.members.flatMap((member) => this.parameter(definition, member));
     const supertype =
       definition.variantOf === undefined ? "" : ` : ${this.typeName(definition.variantOf.union)}`;
+    const tag = definition.variantOf;
+    if (tag === undefined)
+      return [
+        ...kdoc(definitionDoc(definition), ""),
+        "@Serializable",
+        `public data class ${name}(`,
+        ...parameters,
+        ")",
+        "",
+      ];
+
+    // The tag is fixed: a variant decoded on its own (`Scalar.type`) or built by hand cannot carry another one.
+    const property = propertyName(tag.member);
     return [
       ...kdoc(definitionDoc(definition), ""),
       "@Serializable",
       `public data class ${name}(`,
       ...parameters,
-      `)${supertype}`,
+      `)${supertype} {`,
+      `${INDENT}init {`,
+      `${INDENT}${INDENT}require(${property} == ${kotlinString(tag.value)}) { ${kotlinString(`${definition.name}: ${tag.member} is "${tag.value}", got "`)} + ${property} + ${kotlinString('"')} }`,
+      `${INDENT}}`,
+      "}",
       "",
     ];
   }
@@ -330,7 +407,7 @@ class KotlinEmitter {
     if (tag !== undefined && tag.member === member.name) {
       return [
         ...doc,
-        `${INDENT}${serialName}@EncodeDefault public override val ${property}: String = ${JSON.stringify(tag.value)},`,
+        `${INDENT}${serialName}@EncodeDefault public override val ${property}: String = ${kotlinString(tag.value)},`,
       ];
     }
 
@@ -349,10 +426,13 @@ class KotlinEmitter {
     const name = this.typeName(definition.name);
     const serializer = `${name}${SERIALIZER_SUFFIX}`;
     const tag = propertyName(definition.tag);
+    const knownTags = definition.variants
+      .map((variant) => kotlinString(variant.tagValue))
+      .join(", ");
 
     const decodeCases = definition.variants.map((variant) => {
       const variantName = this.typeName(variant.definition);
-      return `${INDENT}${INDENT}${JSON.stringify(variant.tagValue)} -> json.decodeFromJsonElement(${variantName}.serializer(), element)`;
+      return `${INDENT}${INDENT}${kotlinString(variant.tagValue)} -> json.decodeFromJsonElement(${variantName}.serializer(), element)`;
     });
     const encodeCases = definition.variants.map((variant) => {
       const variantName = this.typeName(variant.definition);
@@ -366,11 +446,16 @@ class KotlinEmitter {
       `${INDENT}/** The tag member '${definition.tag}': it picks the variant. */`,
       `${INDENT}public val ${tag}: String`,
       "",
-      `${INDENT}/** A variant this IR revision does not know, kept raw with its tag. */`,
-      `${INDENT}public data class ${UNKNOWN_VARIANT}(override val ${tag}: String, public val raw: JsonObject) : ${name}`,
+      `${INDENT}/** A variant this IR revision does not know, kept raw; its tag is the raw object's. */`,
+      `${INDENT}public data class ${UNKNOWN_VARIANT}(override val ${tag}: String, public val raw: JsonObject) : ${name} {`,
+      `${INDENT}${INDENT}init {`,
+      `${INDENT}${INDENT}${INDENT}require(${tag} !in setOf(${knownTags})) { ${kotlinString(`${definition.name}.Unknown: "`)} + ${tag} + ${kotlinString(`" is a known ${definition.tag}`)} }`,
+      `${INDENT}${INDENT}${INDENT}require(raw[${kotlinString(definition.tag)}] == JsonPrimitive(${tag})) { ${kotlinString(`${definition.name}.Unknown: raw's ${definition.tag} is not "`)} + ${tag} + ${kotlinString('"')} }`,
+      `${INDENT}${INDENT}}`,
+      `${INDENT}}`,
       "}",
       "",
-      `internal object ${serializer} : IrUnionSerializer<${name}>(${JSON.stringify(definition.name)}, ${JSON.stringify(definition.tag)}) {`,
+      `internal object ${serializer} : IrUnionSerializer<${name}>(${kotlinString(definition.name)}, ${kotlinString(definition.tag)}) {`,
       `${INDENT}override fun decodeKnown(json: Json, tag: String, element: JsonObject): ${name}? = when (tag) {`,
       ...decodeCases,
       `${INDENT}${INDENT}else -> null`,
@@ -400,11 +485,15 @@ class KotlinEmitter {
       "",
       ...constants.map(
         ({ constant, value }) =>
-          `${INDENT}public data object ${constant} : ${name} { override val value: String = ${JSON.stringify(value)} }`,
+          `${INDENT}public data object ${constant} : ${name} { override val value: String = ${kotlinString(value)} }`,
       ),
       "",
-      `${INDENT}/** A value this IR revision does not know. */`,
-      `${INDENT}public data class ${UNKNOWN_VARIANT}(override val value: String) : ${name}`,
+      `${INDENT}/** A value this IR revision does not know; a known value is always its constant. */`,
+      `${INDENT}public data class ${UNKNOWN_VARIANT}(override val value: String) : ${name} {`,
+      `${INDENT}${INDENT}init {`,
+      `${INDENT}${INDENT}${INDENT}require(${name}.known.none { it.value == value }) { ${kotlinString(`${definition.name}.Unknown: "`)} + value + ${kotlinString(`" is a known value`)} }`,
+      `${INDENT}${INDENT}}`,
+      `${INDENT}}`,
       "",
       `${INDENT}public companion object {`,
       `${INDENT}${INDENT}/** The values this IR revision knows, in the schema's order. */`,
@@ -412,18 +501,22 @@ class KotlinEmitter {
       "",
       `${INDENT}${INDENT}public fun of(value: String): ${name} = when (value) {`,
       ...constants.map(
-        ({ constant, value }) =>
-          `${INDENT}${INDENT}${INDENT}${JSON.stringify(value)} -> ${constant}`,
+        ({ constant, value }) => `${INDENT}${INDENT}${INDENT}${kotlinString(value)} -> ${constant}`,
       ),
       `${INDENT}${INDENT}${INDENT}else -> ${UNKNOWN_VARIANT}(value)`,
       `${INDENT}${INDENT}}`,
       `${INDENT}}`,
       "}",
       "",
-      `internal object ${serializer} : IrOpenEnumSerializer<${name}>(${JSON.stringify(definition.name)}, ${name}::of, ${name}::value)`,
+      `internal object ${serializer} : IrOpenEnumSerializer<${name}>(${kotlinString(definition.name)}, ${name}::of, ${name}::value)`,
       "",
     ];
   }
+}
+
+/** A Kotlin string literal: JSON escapes, and `$` escaped so it never starts a template. */
+function kotlinString(value: string): string {
+  return JSON.stringify(value).replaceAll("$", "\\$");
 }
 
 /** The constant of each known value: the ADR 0007 enum member identifier (`application/json` gives `APPLICATION_JSON`). */

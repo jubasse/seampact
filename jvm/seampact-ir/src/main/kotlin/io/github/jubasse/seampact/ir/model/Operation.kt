@@ -1,6 +1,7 @@
 // Generated from packages/spec/schemas/ir/operation.schema.json by scripts/ir-models for IR revision 2. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 @file:OptIn(ExperimentalSerializationApi::class)
+@file:UseSerializers(IrIntegerSerializer::class)
 
 package io.github.jubasse.seampact.ir.model
 
@@ -8,9 +9,11 @@ import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /** Who may call the operation. Must act: an unknown tag makes the IR invalid for every reader. */
 @Serializable(with = AccessSerializer::class)
@@ -18,8 +21,13 @@ public sealed interface Access {
     /** The tag member 'kind': it picks the variant. */
     public val kind: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val kind: String, public val raw: JsonObject) : Access
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val kind: String, public val raw: JsonObject) : Access {
+        init {
+            require(kind !in setOf("identity", "optional", "public")) { "Access.Unknown: \"" + kind + "\" is a known kind" }
+            require(raw["kind"] == JsonPrimitive(kind)) { "Access.Unknown: raw's kind is not \"" + kind + "\"" }
+        }
+    }
 }
 
 internal object AccessSerializer : IrUnionSerializer<Access>("Access", "kind") {
@@ -82,8 +90,12 @@ public sealed interface CacheVisibility {
     public data object PUBLIC : CacheVisibility { override val value: String = "public" }
     public data object PRIVATE : CacheVisibility { override val value: String = "private" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : CacheVisibility
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : CacheVisibility {
+        init {
+            require(CacheVisibility.known.none { it.value == value }) { "CacheVisibility.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -112,8 +124,12 @@ public sealed interface CallerKind {
     public data object ANONYMOUS : CallerKind { override val value: String = "anonymous" }
     public data object IDENTIFIED : CallerKind { override val value: String = "identified" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : CallerKind
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : CallerKind {
+        init {
+            require(CallerKind.known.none { it.value == value }) { "CallerKind.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -142,8 +158,13 @@ public sealed interface Csrf {
     /** The tag member 'kind': it picks the variant. */
     public val kind: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val kind: String, public val raw: JsonObject) : Csrf
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val kind: String, public val raw: JsonObject) : Csrf {
+        init {
+            require(kind !in setOf("derived", "exempt")) { "Csrf.Unknown: \"" + kind + "\" is a known kind" }
+            require(raw["kind"] == JsonPrimitive(kind)) { "Csrf.Unknown: raw's kind is not \"" + kind + "\"" }
+        }
+    }
 }
 
 internal object CsrfSerializer : IrUnionSerializer<Csrf>("Csrf", "kind") {
@@ -180,7 +201,11 @@ public data class DerivedCsrf(
     @EncodeDefault public override val kind: String = "derived",
     public val header: String,
     public val derivedFrom: DerivedFrom,
-) : Csrf
+) : Csrf {
+    init {
+        require(kind == "derived") { "DerivedCsrf: kind is \"derived\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class DerivedIdempotency(
@@ -191,21 +216,33 @@ public data class DerivedIdempotency(
     public val required: Boolean,
     public val enforce: IdempotencyEnforcement,
     public val derivedFrom: DerivedFrom,
-) : Idempotency
+) : Idempotency {
+    init {
+        require(kind == "derived") { "DerivedIdempotency: kind is \"derived\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class ExemptCsrf(
     @EncodeDefault public override val kind: String = "exempt",
     public val reason: Reason,
     public val origin: Origin,
-) : Csrf
+) : Csrf {
+    init {
+        require(kind == "exempt") { "ExemptCsrf: kind is \"exempt\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class ExemptIdempotency(
     @EncodeDefault public override val kind: String = "exempt",
     public val reason: Reason,
     public val origin: Origin,
-) : Idempotency
+) : Idempotency {
+    init {
+        require(kind == "exempt") { "ExemptIdempotency: kind is \"exempt\", got \"" + kind + "\"" }
+    }
+}
 
 /** A field right, materialised so targets never walk schemas (FR-23). */
 @Serializable
@@ -248,8 +285,12 @@ public sealed interface FieldWireKind {
     public data object FILE : FieldWireKind { override val value: String = "file" }
     public data object JSON : FieldWireKind { override val value: String = "json" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : FieldWireKind
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : FieldWireKind {
+        init {
+            require(FieldWireKind.known.none { it.value == value }) { "FieldWireKind.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -280,8 +321,12 @@ public sealed interface HttpMethod {
     public data object PATCH : HttpMethod { override val value: String = "patch" }
     public data object DELETE : HttpMethod { override val value: String = "delete" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : HttpMethod
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : HttpMethod {
+        init {
+            require(HttpMethod.known.none { it.value == value }) { "HttpMethod.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -306,8 +351,13 @@ public sealed interface Idempotency {
     /** The tag member 'kind': it picks the variant. */
     public val kind: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val kind: String, public val raw: JsonObject) : Idempotency
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val kind: String, public val raw: JsonObject) : Idempotency {
+        init {
+            require(kind !in setOf("derived", "exempt")) { "Idempotency.Unknown: \"" + kind + "\" is a known kind" }
+            require(raw["kind"] == JsonPrimitive(kind)) { "Idempotency.Unknown: raw's kind is not \"" + kind + "\"" }
+        }
+    }
 }
 
 internal object IdempotencySerializer : IrUnionSerializer<Idempotency>("Idempotency", "kind") {
@@ -334,8 +384,12 @@ public sealed interface IdempotencyEnforcement {
     public data object BOUNDARY : IdempotencyEnforcement { override val value: String = "boundary" }
     public data object NONE : IdempotencyEnforcement { override val value: String = "none" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : IdempotencyEnforcement
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : IdempotencyEnforcement {
+        init {
+            require(IdempotencyEnforcement.known.none { it.value == value }) { "IdempotencyEnforcement.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -357,14 +411,22 @@ public data class IdentityAccess(
     public val identity: IdentityId,
     public val schemes: List<SchemeId>,
     public val origin: Origin,
-) : Access
+) : Access {
+    init {
+        require(kind == "identity") { "IdentityAccess: kind is \"identity\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class IgnoreUnknownQuery(
     @EncodeDefault public override val policy: String = "ignore",
     public val reason: Reason,
     public val origin: Origin,
-) : UnknownQuery
+) : UnknownQuery {
+    init {
+        require(policy == "ignore") { "IgnoreUnknownQuery: policy is \"ignore\", got \"" + policy + "\"" }
+    }
+}
 
 @Serializable
 public data class InputField(
@@ -381,8 +443,12 @@ public sealed interface InputMediaType {
     public data object APPLICATION_X_WWW_FORM_URLENCODED : InputMediaType { override val value: String = "application/x-www-form-urlencoded" }
     public data object MULTIPART_FORM_DATA : InputMediaType { override val value: String = "multipart/form-data" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : InputMediaType
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : InputMediaType {
+        init {
+            require(InputMediaType.known.none { it.value == value }) { "InputMediaType.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -418,8 +484,12 @@ public sealed interface MaturitySource {
     public data object UPSTREAM : MaturitySource { override val value: String = "upstream" }
     public data object STATED : MaturitySource { override val value: String = "stated" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : MaturitySource
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : MaturitySource {
+        init {
+            require(MaturitySource.known.none { it.value == value }) { "MaturitySource.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -448,8 +518,12 @@ public sealed interface OpShorthand {
     public data object DELETE : OpShorthand { override val value: String = "delete" }
     public data object BATCH : OpShorthand { override val value: String = "batch" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : OpShorthand
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : OpShorthand {
+        init {
+            require(OpShorthand.known.none { it.value == value }) { "OpShorthand.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -588,7 +662,11 @@ public data class OptionalAccess(
     public val reason: Reason,
     public val onRefused: RefusedCredential,
     public val origin: Origin,
-) : Access
+) : Access {
+    init {
+        require(kind == "optional") { "OptionalAccess: kind is \"optional\", got \"" + kind + "\"" }
+    }
+}
 
 /** What a limit above maxLimit does. */
 @Serializable(with = OverLimitPolicySerializer::class)
@@ -598,8 +676,12 @@ public sealed interface OverLimitPolicy {
     public data object REJECT : OverLimitPolicy { override val value: String = "reject" }
     public data object CLAMP : OverLimitPolicy { override val value: String = "clamp" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : OverLimitPolicy
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : OverLimitPolicy {
+        init {
+            require(OverLimitPolicy.known.none { it.value == value }) { "OverLimitPolicy.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -628,8 +710,12 @@ public sealed interface OwnerKind {
 
     public data object CALLER : OwnerKind { override val value: String = "caller" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : OwnerKind
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : OwnerKind {
+        init {
+            require(OwnerKind.known.none { it.value == value }) { "OwnerKind.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -664,8 +750,12 @@ public sealed interface PagingToken {
     public data object OPAQUE : PagingToken { override val value: String = "opaque" }
     public data object INSTANT : PagingToken { override val value: String = "instant" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : PagingToken
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : PagingToken {
+        init {
+            require(PagingToken.known.none { it.value == value }) { "PagingToken.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -711,7 +801,11 @@ public data class PublicAccess(
     @EncodeDefault public override val kind: String = "public",
     public val reason: Reason,
     public val origin: Origin,
-) : Access
+) : Access {
+    init {
+        require(kind == "public") { "PublicAccess: kind is \"public\", got \"" + kind + "\"" }
+    }
+}
 
 /** The OpenAPI style of a query value. */
 @Serializable(with = QueryStyleSerializer::class)
@@ -721,8 +815,12 @@ public sealed interface QueryStyle {
     public data object FORM : QueryStyle { override val value: String = "form" }
     public data object DEEP_OBJECT : QueryStyle { override val value: String = "deepObject" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : QueryStyle
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : QueryStyle {
+        init {
+            require(QueryStyle.known.none { it.value == value }) { "QueryStyle.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -759,8 +857,12 @@ public sealed interface QueryWireKind {
     public data object TEXT : QueryWireKind { override val value: String = "text" }
     public data object OBJECT : QueryWireKind { override val value: String = "object" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : QueryWireKind
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : QueryWireKind {
+        init {
+            require(QueryWireKind.known.none { it.value == value }) { "QueryWireKind.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -782,7 +884,11 @@ internal object QueryWireKindSerializer : IrOpenEnumSerializer<QueryWireKind>("Q
 @Serializable
 public data class RefuseUnknownQuery(
     @EncodeDefault public override val policy: String = "refuse",
-) : UnknownQuery
+) : UnknownQuery {
+    init {
+        require(policy == "refuse") { "RefuseUnknownQuery: policy is \"refuse\", got \"" + policy + "\"" }
+    }
+}
 
 /** What an optional-auth operation does with a refused credential: serve it as anonymous, or answer 401. Must act: an unknown value makes the IR invalid for every reader. */
 @Serializable(with = RefusedCredentialSerializer::class)
@@ -792,8 +898,12 @@ public sealed interface RefusedCredential {
     public data object ANONYMOUS : RefusedCredential { override val value: String = "anonymous" }
     public data object REJECT : RefusedCredential { override val value: String = "reject" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : RefusedCredential
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : RefusedCredential {
+        init {
+            require(RefusedCredential.known.none { it.value == value }) { "RefusedCredential.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -815,8 +925,13 @@ public sealed interface Requirement {
     /** The tag member 'kind': it picks the variant. */
     public val kind: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val kind: String, public val raw: JsonObject) : Requirement
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val kind: String, public val raw: JsonObject) : Requirement {
+        init {
+            require(kind !in setOf("right", "rule")) { "Requirement.Unknown: \"" + kind + "\" is a known kind" }
+            require(raw["kind"] == JsonPrimitive(kind)) { "Requirement.Unknown: raw's kind is not \"" + kind + "\"" }
+        }
+    }
 }
 
 internal object RequirementSerializer : IrUnionSerializer<Requirement>("Requirement", "kind") {
@@ -877,8 +992,12 @@ public sealed interface ResponseShape {
     public data object BINARY : ResponseShape { override val value: String = "binary" }
     public data object REDIRECT : ResponseShape { override val value: String = "redirect" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : ResponseShape
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : ResponseShape {
+        init {
+            require(ResponseShape.known.none { it.value == value }) { "ResponseShape.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -910,7 +1029,11 @@ public data class RightRequirement(
     public val entry: String? = null,
     public val origin: Origin? = null,
     public val derivedFrom: DerivedFrom? = null,
-) : Requirement
+) : Requirement {
+    init {
+        require(kind == "right") { "RightRequirement: kind is \"right\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class RuleRequirement(
@@ -923,7 +1046,11 @@ public data class RuleRequirement(
     public val entry: String? = null,
     public val origin: Origin? = null,
     public val derivedFrom: DerivedFrom? = null,
-) : Requirement
+) : Requirement {
+    init {
+        require(kind == "rule") { "RuleRequirement: kind is \"rule\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class SortKey(
@@ -939,8 +1066,13 @@ public sealed interface UnknownQuery {
     /** The tag member 'policy': it picks the variant. */
     public val policy: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val policy: String, public val raw: JsonObject) : UnknownQuery
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val policy: String, public val raw: JsonObject) : UnknownQuery {
+        init {
+            require(policy !in setOf("refuse", "ignore")) { "UnknownQuery.Unknown: \"" + policy + "\" is a known policy" }
+            require(raw["policy"] == JsonPrimitive(policy)) { "UnknownQuery.Unknown: raw's policy is not \"" + policy + "\"" }
+        }
+    }
 }
 
 internal object UnknownQuerySerializer : IrUnionSerializer<UnknownQuery>("UnknownQuery", "policy") {

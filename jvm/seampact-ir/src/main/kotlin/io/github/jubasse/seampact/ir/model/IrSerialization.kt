@@ -30,8 +30,32 @@ public object IrModelVersion {
 /** The JSON configuration of the IR model: unknown members are tolerated and dropped (ADR 0005 section 3). */
 public val IrJson: Json = Json { ignoreUnknownKeys = true }
 
+/**
+ * An IR integer as a `Long`. An integral number written with a fraction (`2.0`), which JSON Schema counts as
+ * an integer, reads as that integer; any other value is an error naming it.
+ */
+internal object IrIntegerSerializer : KSerializer<Long> {
+    override val descriptor: SerialDescriptor =
+        PrimitiveSerialDescriptor("io.github.jubasse.seampact.ir.model.IrInteger", PrimitiveKind.LONG)
+
+    override fun deserialize(decoder: Decoder): Long {
+        val element = jsonDecoder(decoder, "an integer").decodeJsonElement()
+        val number = (element as? JsonPrimitive)?.takeIf { !it.isString }?.content?.toBigDecimalOrNull()
+            ?: throw SerializationException("expected an integer, got $element")
+        try {
+            return number.longValueExact()
+        } catch (error: ArithmeticException) {
+            throw SerializationException("expected an integer within 64 bits, got $element", error)
+        }
+    }
+
+    override fun serialize(encoder: Encoder, value: Long) {
+        encoder.encodeLong(value)
+    }
+}
+
 /** An optional opaque member: absent is `null`, a JSON `null` is [JsonNull]. */
-public object IrOptionalOpaqueSerializer : KSerializer<JsonElement?> {
+internal object IrOptionalOpaqueSerializer : KSerializer<JsonElement?> {
     override val descriptor: SerialDescriptor = JsonElement.serializer().descriptor.nullable
 
     override fun deserialize(decoder: Decoder): JsonElement? = jsonDecoder(decoder, "an opaque value").decodeJsonElement()
@@ -42,11 +66,12 @@ public object IrOptionalOpaqueSerializer : KSerializer<JsonElement?> {
 }
 
 /** A tagged union: the tag member picks the variant; an unknown tag is kept as the union's `Unknown` variant. */
-public abstract class IrUnionSerializer<T : Any>(
+internal abstract class IrUnionSerializer<T : Any>(
     private val union: String,
     private val tagMember: String,
 ) : KSerializer<T> {
-    override val descriptor: SerialDescriptor = JsonObject.serializer().descriptor
+    override val descriptor: SerialDescriptor =
+        SerialDescriptor("io.github.jubasse.seampact.ir.model.$union", JsonObject.serializer().descriptor)
 
     protected abstract fun decodeKnown(json: Json, tag: String, element: JsonObject): T?
 
@@ -70,7 +95,7 @@ public abstract class IrUnionSerializer<T : Any>(
 }
 
 /** An open enum: a known value maps to its constant, any other string to the enum's `Unknown`. */
-public abstract class IrOpenEnumSerializer<T : Any>(
+internal abstract class IrOpenEnumSerializer<T : Any>(
     enumName: String,
     private val of: (String) -> T,
     private val valueOf: (T) -> String,

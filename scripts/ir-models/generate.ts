@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { IR_REVISION, IR_SCHEMA_DOCUMENTS, IR_VERSION, type SchemaNode } from "@seampact/spec/ir";
-import { emitKotlin, KOTLIN_HELPER_NAMES, KOTLIN_MODEL_DIRECTORY } from "./kotlin.ts";
+import { emitKotlin, KOTLIN_CLAIMED_NAMES, KOTLIN_MODEL_DIRECTORY } from "./kotlin.ts";
 import { buildNeutralModel, type Definition } from "./model.ts";
 import { type DefinitionNames, definitionNames } from "./names.ts";
 
@@ -28,7 +28,7 @@ export function generateIrModels(
   documents: readonly SchemaNode[] = IR_SCHEMA_DOCUMENTS,
 ): Map<string, string> {
   const model = buildNeutralModel(documents);
-  const names = definitionNames(model, { kotlin: KOTLIN_HELPER_NAMES, php: [] });
+  const names = definitionNames(model, { kotlin: KOTLIN_CLAIMED_NAMES, php: [] });
 
   const files = emitKotlin({
     model,

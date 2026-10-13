@@ -1,6 +1,7 @@
 // Generated from packages/spec/schemas/ir/common.schema.json by scripts/ir-models for IR revision 2. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 @file:OptIn(ExperimentalSerializationApi::class)
+@file:UseSerializers(IrIntegerSerializer::class)
 
 package io.github.jubasse.seampact.ir.model
 
@@ -8,9 +9,11 @@ import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /** The id of a rate-limit bucket: its catalogue key (ADR 0004 section 9, ADR 0002 section 4). */
 public typealias BucketId = String
@@ -22,8 +25,12 @@ public sealed interface DeclarationKind {
 
     public data object HTTP_OPERATION : DeclarationKind { override val value: String = "httpOperation" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : DeclarationKind
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : DeclarationKind {
+        init {
+            require(DeclarationKind.known.none { it.value == value }) { "DeclarationKind.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -55,8 +62,12 @@ public sealed interface Direction {
     public data object INPUT : Direction { override val value: String = "input" }
     public data object OUTPUT : Direction { override val value: String = "output" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : Direction
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : Direction {
+        init {
+            require(Direction.known.none { it.value == value }) { "Direction.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -120,8 +131,12 @@ public sealed interface Maturity {
     public data object PROVISIONAL : Maturity { override val value: String = "provisional" }
     public data object STABLE : Maturity { override val value: String = "stable" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : Maturity
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : Maturity {
+        init {
+            require(Maturity.known.none { it.value == value }) { "Maturity.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -171,8 +186,12 @@ public sealed interface NameRole {
     public data object MEMBER : NameRole { override val value: String = "member" }
     public data object ENUM_MEMBER : NameRole { override val value: String = "enumMember" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : NameRole
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : NameRole {
+        init {
+            require(NameRole.known.none { it.value == value }) { "NameRole.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -278,8 +297,12 @@ public sealed interface ValueSourceIn {
     public data object RESOLVER : ValueSourceIn { override val value: String = "resolver" }
     public data object HOLDER_FIELD : ValueSourceIn { override val value: String = "holderField" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : ValueSourceIn
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : ValueSourceIn {
+        init {
+            require(ValueSourceIn.known.none { it.value == value }) { "ValueSourceIn.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */

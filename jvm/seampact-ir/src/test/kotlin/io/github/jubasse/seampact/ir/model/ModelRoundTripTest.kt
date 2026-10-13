@@ -4,10 +4,14 @@ import java.nio.file.Path
 import kotlin.io.path.readText
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.jsonObject
 
 // The generated model reads the IR examples and writes back the same document, up to member order and the
@@ -79,5 +83,60 @@ class ModelRoundTripTest {
     @Test
     fun reservedTypeNameIsEscaped() {
         assertEquals("Enum_", Enum_::class.simpleName)
+    }
+
+    @Test
+    fun unknownUnionTagIsKeptRaw() {
+        val document = example("unknown-kind.ir.json")
+        val contract = IrJson.decodeFromJsonElement(ContractIR.serializer(), document)
+        val point = assertIs<Schema.Unknown>(contract.schemas.getValue("Point"))
+
+        assertEquals("tuple", point.kind)
+        assertEquals(document.jsonObject.getValue("schemas").jsonObject.getValue("Point"), point.raw)
+        assertEquals(document, roundTrip(document))
+    }
+
+    @Test
+    fun missingTagNamesTheUnion() {
+        val error = assertFailsWith<SerializationException> {
+            IrJson.decodeFromString(TypeUse.serializer(), """{"schema": "Task"}""")
+        }
+
+        assertTrue(error.message.orEmpty().startsWith("TypeUse: the tag member 'kind'"), error.message)
+    }
+
+    @Test
+    fun sourceMapRoundTrips() {
+        val document = example("minimal.source-map.json")
+        val sourceMap = IrJson.decodeFromJsonElement(SourceMap.serializer(), document)
+
+        assertEquals(document, IrJson.encodeToJsonElement(SourceMap.serializer(), sourceMap))
+    }
+
+    @Test
+    fun variantTagIsFixed() {
+        assertFailsWith<IllegalArgumentException> {
+            IrJson.decodeFromString(BodyUnionTag.serializer(), """{"in": "header", "property": "kind"}""")
+        }
+        assertFailsWith<IllegalArgumentException> { BodyUnionTag(in_ = "header", property = "kind") }
+    }
+
+    @Test
+    fun unknownCasesStayUnknown() {
+        val raw = JsonObject(mapOf("kind" to JsonPrimitive("tuple")))
+
+        assertFailsWith<IllegalArgumentException> { Schema.Unknown("object", JsonObject(mapOf("kind" to JsonPrimitive("object")))) }
+        assertFailsWith<IllegalArgumentException> { Schema.Unknown("pair", raw) }
+        assertFailsWith<IllegalArgumentException> { Maturity.Unknown("stable") }
+        assertEquals(Maturity.STABLE, Maturity.of("stable"))
+    }
+
+    @Test
+    fun integralNumberReadsAsInteger() {
+        val withFraction = IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": 404.0}""")
+
+        assertEquals(404L, withFraction.status)
+        assertFailsWith<SerializationException> { IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": 404.5}""") }
+        assertFailsWith<SerializationException> { IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": "404"}""") }
     }
 }

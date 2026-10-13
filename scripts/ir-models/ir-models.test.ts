@@ -3,18 +3,18 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { IR_SCHEMA_DOCUMENTS, type SchemaNode } from "@seampact/spec/ir";
+import { IR_REVISION, IR_SCHEMA_DOCUMENTS, type SchemaNode } from "@seampact/spec/ir";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   findOrphanFiles,
   findStaleFiles,
   generateIrModels,
   MAPPING_TABLE_FILE,
-  type MappingEntry,
+  mappingTable,
 } from "./generate.ts";
 import { KOTLIN_MODEL_DIRECTORY } from "./kotlin.ts";
 import { buildNeutralModel, UnhandledSchemaError } from "./model.ts";
-import { NameCollisionError } from "./names.ts";
+import { definitionNames, NameCollisionError } from "./names.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../..");
@@ -48,15 +48,34 @@ function syntheticDocuments(definitions: Record<string, SchemaNode>): SchemaNode
   ];
 }
 
-function definitionNamesOfSchema(): string[] {
-  return IR_SCHEMA_DOCUMENTS.flatMap((document) => Object.keys(document.$defs as SchemaNode));
+function required<T>(value: T | undefined, what: string): T {
+  if (value === undefined) throw new Error(`${what} is missing`);
+  return value;
 }
 
-function mappingOf(files: Map<string, string>): Record<string, MappingEntry> {
-  const table = JSON.parse(files.get(MAPPING_TABLE_FILE) as string) as {
-    definitions: Record<string, MappingEntry>;
-  };
-  return table.definitions;
+function isSchemaNode(value: unknown): value is SchemaNode {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function definitionsOf(document: SchemaNode): Map<string, SchemaNode> {
+  const defs = document.$defs;
+  if (!isSchemaNode(defs)) throw new Error(`${String(document.$id)} has no $defs`);
+
+  const definitions = new Map<string, SchemaNode>();
+  for (const name of Object.keys(defs)) {
+    const definition = defs[name];
+    if (!isSchemaNode(definition)) throw new Error(`${name} is not a schema`);
+    definitions.set(name, definition);
+  }
+  return definitions;
+}
+
+function definitionNamesOfSchema(): string[] {
+  return IR_SCHEMA_DOCUMENTS.flatMap((document) => [...definitionsOf(document).keys()]);
+}
+
+function committedMappingTable(files: Map<string, string>): unknown {
+  return JSON.parse(required(files.get(MAPPING_TABLE_FILE), MAPPING_TABLE_FILE));
 }
 
 function kotlinSources(files: Map<string, string>): string {
@@ -83,18 +102,23 @@ describe("ir-models", () => {
     const root = temporaryRootWith(files);
     expect(findStaleFiles(files, root)).toEqual([]);
 
-    const kotlinFile = [...files.keys()].find((path) => path.endsWith("/Operation.kt")) as string;
+    const kotlinFile = required(
+      [...files.keys()].find((path) => path.endsWith("/Operation.kt")),
+      "Operation.kt",
+    );
     writeFileSync(join(root, kotlinFile), `${files.get(kotlinFile)}// hand edit\n`);
     expect(findStaleFiles(files, root)).toEqual([`${kotlinFile} is stale`]);
 
     const withHead = IR_SCHEMA_DOCUMENTS.map((document) => {
-      const definitions = document.$defs as Record<string, SchemaNode>;
-      const httpMethod = definitions.HttpMethod;
+      const definitions = definitionsOf(document);
+      const httpMethod = definitions.get("HttpMethod");
       if (httpMethod === undefined) return document;
-      const known = [...(httpMethod["x-seampact-known"] as string[]), "head"];
+      const known = httpMethod["x-seampact-known"];
+      if (!Array.isArray(known)) throw new Error("HttpMethod lists no known value");
+      const withHeadKnown = { ...httpMethod, "x-seampact-known": [...known, "head"] };
       return {
         ...document,
-        $defs: { ...definitions, HttpMethod: { ...httpMethod, "x-seampact-known": known } },
+        $defs: { ...Object.fromEntries(definitions), HttpMethod: withHeadKnown },
       };
     });
     const regenerated = generateIrModels(withHead);
@@ -128,17 +152,18 @@ describe("ir-models", () => {
 
   it("every definition is generated", () => {
     const files = generateIrModels();
-    const mapping = mappingOf(files);
     const model = buildNeutralModel();
+    const table = mappingTable(model.definitions, definitionNames(model));
     const kotlin = kotlinSources(files);
 
-    expect(Object.keys(mapping).sort()).toEqual(definitionNamesOfSchema().sort());
+    expect(Object.keys(table).sort()).toEqual(definitionNamesOfSchema().sort());
+    expect(committedMappingTable(files)).toEqual({ irRevision: IR_REVISION, definitions: table });
     for (const definition of model.definitions) {
-      const kotlinName = mapping[definition.name]?.kotlin as string;
+      const kotlinName = required(table[definition.name], definition.name).kotlin;
       if (definition.kind === "union" || definition.kind === "openEnum") {
         expect(kotlin).toContain(`public sealed interface ${kotlinName} {`);
         expect(kotlin).toMatch(
-          new RegExp(`public data class Unknown\\([^)]*\\) : ${kotlinName}\\n`),
+          new RegExp(`public data class Unknown\\([^)]*\\) : ${kotlinName} \\{\\n`),
         );
       } else if (definition.kind === "struct") {
         expect(kotlin).toContain(`public data class ${kotlinName}(`);
@@ -238,13 +263,11 @@ describe("ir-models", () => {
 
   it("reserved type names are escaped", () => {
     const files = generateIrModels();
-    const mapping = mappingOf(files);
 
-    expect(mapping.Enum).toEqual({
-      construct: "struct",
-      kotlin: "Enum_",
-      php: "Enum_",
-      escapedIn: ["kotlin", "php"],
+    expect(committedMappingTable(files)).toMatchObject({
+      definitions: {
+        Enum: { construct: "struct", kotlin: "Enum_", php: "Enum_", escapedIn: ["kotlin", "php"] },
+      },
     });
     expect(kotlinSources(files)).toContain("public data class Enum_(");
     expect(kotlinSources(files)).toContain("public val enums: Map<EnumId, Enum_>,");
@@ -258,6 +281,16 @@ describe("ir-models", () => {
       /^Enum_: its kotlin name Enum_ collides with the definition Enum/,
     );
   });
+
+  it.each(["JsonObject", "Serializable", "IrIntegerSerializer", "JsonPrimitive"])(
+    "a definition named %s, a name the Kotlin files use, fails generation",
+    (name) => {
+      const documents = syntheticDocuments({ [name]: { type: "string" } });
+
+      expect(() => generateIrModels(documents)).toThrow(NameCollisionError);
+      expect(() => generateIrModels(documents)).toThrow(new RegExp(`^${name}: its kotlin name`));
+    },
+  );
 
   it("Kotlin keyword members keep their JSON name", () => {
     const kotlin = kotlinSources(generateIrModels());

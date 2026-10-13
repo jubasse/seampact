@@ -1,6 +1,7 @@
 // Generated from packages/spec/schemas/ir/formats.schema.json by scripts/ir-models for IR revision 2. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 @file:OptIn(ExperimentalSerializationApi::class)
+@file:UseSerializers(IrIntegerSerializer::class)
 
 package io.github.jubasse.seampact.ir.model
 
@@ -8,9 +9,11 @@ import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 @Serializable(with = AbsentSerializer::class)
 public sealed interface Absent {
@@ -19,8 +22,12 @@ public sealed interface Absent {
     public data object OMIT : Absent { override val value: String = "omit" }
     public data object NULL : Absent { override val value: String = "null" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : Absent
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : Absent {
+        init {
+            require(Absent.known.none { it.value == value }) { "Absent.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -40,14 +47,22 @@ internal object AbsentSerializer : IrOpenEnumSerializer<Absent>("Absent", Absent
 public data class ArrayTemplate(
     @EncodeDefault public override val kind: String = "array",
     public val items: List<Template>,
-) : Template
+) : Template {
+    init {
+        require(kind == "array") { "ArrayTemplate: kind is \"array\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class EachTemplate(
     @EncodeDefault public override val kind: String = "each",
     public val of: Slot,
     @SerialName("as") public val as_: Template,
-) : Template
+) : Template {
+    init {
+        require(kind == "each") { "EachTemplate: kind is \"each\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class ErrorShape(
@@ -68,8 +83,12 @@ public sealed interface HandlerResultMember {
     public data object NEXT_SINCE : HandlerResultMember { override val value: String = "nextSince" }
     public data object COMPLETE : HandlerResultMember { override val value: String = "complete" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : HandlerResultMember
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : HandlerResultMember {
+        init {
+            require(HandlerResultMember.known.none { it.value == value }) { "HandlerResultMember.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -99,7 +118,11 @@ public data class HeaderTemplate(
 public data class LiteralTemplate(
     @EncodeDefault public override val kind: String = "literal",
     public val value: JsonElement,
-) : Template
+) : Template {
+    init {
+        require(kind == "literal") { "LiteralTemplate: kind is \"literal\", got \"" + kind + "\"" }
+    }
+}
 
 /** The name of an object template member: literal text, or a slot. */
 @Serializable(with = MemberNameSerializer::class)
@@ -107,8 +130,13 @@ public sealed interface MemberName {
     /** The tag member 'kind': it picks the variant. */
     public val kind: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val kind: String, public val raw: JsonObject) : MemberName
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val kind: String, public val raw: JsonObject) : MemberName {
+        init {
+            require(kind !in setOf("text", "slot")) { "MemberName.Unknown: \"" + kind + "\" is a known kind" }
+            require(raw["kind"] == JsonPrimitive(kind)) { "MemberName.Unknown: raw's kind is not \"" + kind + "\"" }
+        }
+    }
 }
 
 internal object MemberNameSerializer : IrUnionSerializer<MemberName>("MemberName", "kind") {
@@ -138,8 +166,12 @@ public sealed interface MetaFill {
     public data object HANDLER : MetaFill { override val value: String = "handler" }
     public data object SOURCE : MetaFill { override val value: String = "source" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : MetaFill
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : MetaFill {
+        init {
+            require(MetaFill.known.none { it.value == value }) { "MetaFill.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -177,7 +209,11 @@ public data class ObjectTemplate(
     @EncodeDefault public override val kind: String = "object",
     public val members: List<ObjectTemplateMember>,
     public val merge: Slot? = null,
-) : Template
+) : Template {
+    init {
+        require(kind == "object") { "ObjectTemplate: kind is \"object\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class ObjectTemplateMember(
@@ -199,8 +235,12 @@ public sealed interface PagingParamPlacement {
     public data object QUERY : PagingParamPlacement { override val value: String = "query" }
     public data object HEADER : PagingParamPlacement { override val value: String = "header" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : PagingParamPlacement
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : PagingParamPlacement {
+        init {
+            require(PagingParamPlacement.known.none { it.value == value }) { "PagingParamPlacement.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -226,8 +266,12 @@ public sealed interface PagingParamStyle {
     public data object KEYED : PagingParamStyle { override val value: String = "keyed" }
     public data object SPLIT : PagingParamStyle { override val value: String = "split" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : PagingParamStyle
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : PagingParamStyle {
+        init {
+            require(PagingParamStyle.known.none { it.value == value }) { "PagingParamStyle.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -255,8 +299,12 @@ public sealed interface PagingPosition {
     public data object OFFSET : PagingPosition { override val value: String = "offset" }
     public data object SINCE : PagingPosition { override val value: String = "since" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : PagingPosition
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : PagingPosition {
+        init {
+            require(PagingPosition.known.none { it.value == value }) { "PagingPosition.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -308,8 +356,12 @@ public sealed interface PagingRole {
     public data object LIMIT : PagingRole { override val value: String = "limit" }
     public data object SORT : PagingRole { override val value: String = "sort" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : PagingRole
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : PagingRole {
+        init {
+            require(PagingRole.known.none { it.value == value }) { "PagingRole.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -347,13 +399,21 @@ public data class PagingStyle(
 public data class PlainMemberName(
     @EncodeDefault public override val kind: String = "text",
     public val text: String,
-) : MemberName
+) : MemberName {
+    init {
+        require(kind == "text") { "PlainMemberName: kind is \"text\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class PlainTextPart(
     @EncodeDefault public override val kind: String = "text",
     public val text: String,
-) : TextPart
+) : TextPart {
+    init {
+        require(kind == "text") { "PlainTextPart: kind is \"text\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class Shape(
@@ -368,21 +428,33 @@ public typealias Slot = String
 public data class SlotMemberName(
     @EncodeDefault public override val kind: String = "slot",
     public val slot: Slot,
-) : MemberName
+) : MemberName {
+    init {
+        require(kind == "slot") { "SlotMemberName: kind is \"slot\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class SlotTemplate(
     @EncodeDefault public override val kind: String = "slot",
     public val slot: Slot,
     public val path: List<String>,
-) : Template
+) : Template {
+    init {
+        require(kind == "slot") { "SlotTemplate: kind is \"slot\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class SlotTextPart(
     @EncodeDefault public override val kind: String = "slot",
     public val slot: Slot,
     public val path: List<String>,
-) : TextPart
+) : TextPart {
+    init {
+        require(kind == "slot") { "SlotTextPart: kind is \"slot\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class SuccessShapes(
@@ -398,8 +470,13 @@ public sealed interface Template {
     /** The tag member 'kind': it picks the variant. */
     public val kind: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val kind: String, public val raw: JsonObject) : Template
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val kind: String, public val raw: JsonObject) : Template {
+        init {
+            require(kind !in setOf("slot", "text", "literal", "object", "array", "each")) { "Template.Unknown: \"" + kind + "\" is a known kind" }
+            require(raw["kind"] == JsonPrimitive(kind)) { "Template.Unknown: raw's kind is not \"" + kind + "\"" }
+        }
+    }
 }
 
 internal object TemplateSerializer : IrUnionSerializer<Template>("Template", "kind") {
@@ -432,8 +509,13 @@ public sealed interface TextPart {
     /** The tag member 'kind': it picks the variant. */
     public val kind: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val kind: String, public val raw: JsonObject) : TextPart
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val kind: String, public val raw: JsonObject) : TextPart {
+        init {
+            require(kind !in setOf("text", "slot")) { "TextPart.Unknown: \"" + kind + "\" is a known kind" }
+            require(raw["kind"] == JsonPrimitive(kind)) { "TextPart.Unknown: raw's kind is not \"" + kind + "\"" }
+        }
+    }
 }
 
 internal object TextPartSerializer : IrUnionSerializer<TextPart>("TextPart", "kind") {
@@ -456,7 +538,11 @@ internal object TextPartSerializer : IrUnionSerializer<TextPart>("TextPart", "ki
 public data class TextTemplate(
     @EncodeDefault public override val kind: String = "text",
     public val parts: List<TextPart>,
-) : Template
+) : Template {
+    init {
+        require(kind == "text") { "TextTemplate: kind is \"text\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable(with = UrlRoleSerializer::class)
 public sealed interface UrlRole {
@@ -468,8 +554,12 @@ public sealed interface UrlRole {
     public data object NEXT : UrlRole { override val value: String = "next" }
     public data object LAST : UrlRole { override val value: String = "last" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : UrlRole
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : UrlRole {
+        init {
+            require(UrlRole.known.none { it.value == value }) { "UrlRole.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */

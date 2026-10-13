@@ -1,6 +1,7 @@
 // Generated from packages/spec/schemas/ir/declarations.schema.json by scripts/ir-models for IR revision 2. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 @file:OptIn(ExperimentalSerializationApi::class)
+@file:UseSerializers(IrIntegerSerializer::class)
 
 package io.github.jubasse.seampact.ir.model
 
@@ -8,16 +9,22 @@ import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 @Serializable
 public data class ApplicationSignature(
     @EncodeDefault public override val verify: String = "application",
     public val headers: List<String>,
     public val key: SchemeKey? = null,
-) : SignatureVerify
+) : SignatureVerify {
+    init {
+        require(verify == "application") { "ApplicationSignature: verify is \"application\", got \"" + verify + "\"" }
+    }
+}
 
 /** HTTP basic credentials in the Authorization header. */
 @Serializable
@@ -25,7 +32,11 @@ public data class BasicScheme(
     public val id: SchemeId,
     @EncodeDefault public override val kind: String = "basic",
     public val origin: Origin,
-) : Scheme
+) : Scheme {
+    init {
+        require(kind == "basic") { "BasicScheme: kind is \"basic\", got \"" + kind + "\"" }
+    }
+}
 
 /** Document-only facts of a bearer scheme. */
 @Serializable
@@ -42,7 +53,11 @@ public data class BearerScheme(
     @EncodeDefault public override val kind: String = "bearer",
     public val bearer: BearerFacts? = null,
     public val origin: Origin,
-) : Scheme
+) : Scheme {
+    init {
+        require(kind == "bearer") { "BearerScheme: kind is \"bearer\", got \"" + kind + "\"" }
+    }
+}
 
 /** A rate-limit bucket (ADR 0004 section 4). */
 @Serializable
@@ -58,7 +73,11 @@ public data class Bucket(
 public data class CatalogueEnumSource(
     @EncodeDefault public override val kind: String = "enum",
     public val enum: EnumId,
-) : EnumSource
+) : EnumSource {
+    init {
+        require(kind == "enum") { "CatalogueEnumSource: kind is \"enum\", got \"" + kind + "\"" }
+    }
+}
 
 /** A credential in a cookie; 'csrf' names the scheme that carries the CSRF token. */
 @Serializable
@@ -69,7 +88,11 @@ public data class CookieScheme(
     public val name: String,
     public val csrf: SchemeId? = null,
     public val origin: Origin,
-) : Scheme
+) : Scheme {
+    init {
+        require(kind == "cookie") { "CookieScheme: kind is \"cookie\", got \"" + kind + "\"" }
+    }
+}
 
 /** An identity reached through credential schemes. */
 @Serializable
@@ -83,7 +106,11 @@ public data class CredentialIdentity(
     public val docs: Docs,
     public val extensions: Extensions,
     public val origin: Origin,
-) : Identity
+) : Identity {
+    init {
+        require(kind == "credential") { "CredentialIdentity: kind is \"credential\", got \"" + kind + "\"" }
+    }
+}
 
 /** The schemes of a credential identity. */
 @Serializable
@@ -116,8 +143,13 @@ public sealed interface EnumSource {
     /** The tag member 'kind': it picks the variant. */
     public val kind: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val kind: String, public val raw: JsonObject) : EnumSource
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val kind: String, public val raw: JsonObject) : EnumSource {
+        init {
+            require(kind !in setOf("vocabulary", "enum")) { "EnumSource.Unknown: \"" + kind + "\" is a known kind" }
+            require(raw["kind"] == JsonPrimitive(kind)) { "EnumSource.Unknown: raw's kind is not \"" + kind + "\"" }
+        }
+    }
 }
 
 internal object EnumSourceSerializer : IrUnionSerializer<EnumSource>("EnumSource", "kind") {
@@ -185,8 +217,12 @@ public sealed interface ErrorRole {
     public data object UPSTREAM_TIMEOUT : ErrorRole { override val value: String = "upstreamTimeout" }
     public data object UNDECLARED_STATUS : ErrorRole { override val value: String = "undeclaredStatus" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : ErrorRole
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : ErrorRole {
+        init {
+            require(ErrorRole.known.none { it.value == value }) { "ErrorRole.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -241,7 +277,11 @@ public data class HeaderScheme(
     /** The header name. */
     public val name: String,
     public val origin: Origin,
-) : Scheme
+) : Scheme {
+    init {
+        require(kind == "header") { "HeaderScheme: kind is \"header\", got \"" + kind + "\"" }
+    }
+}
 
 /** What an identity header carries (ADR 0002 section 9). */
 @Serializable(with = HeaderSemanticSerializer::class)
@@ -253,8 +293,12 @@ public sealed interface HeaderSemantic {
     public data object ACTOR_SURFACE : HeaderSemantic { override val value: String = "actorSurface" }
     public data object VERSION_TOKEN : HeaderSemantic { override val value: String = "versionToken" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : HeaderSemantic
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : HeaderSemantic {
+        init {
+            require(HeaderSemantic.known.none { it.value == value }) { "HeaderSemantic.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -280,8 +324,12 @@ public sealed interface HeaderSide {
     public data object REQUEST : HeaderSide { override val value: String = "request" }
     public data object RESPONSE : HeaderSide { override val value: String = "response" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : HeaderSide
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : HeaderSide {
+        init {
+            require(HeaderSide.known.none { it.value == value }) { "HeaderSide.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -306,8 +354,12 @@ public sealed interface HeaderUseFor {
     public data object READS : HeaderUseFor { override val value: String = "reads" }
     public data object WRITES : HeaderUseFor { override val value: String = "writes" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : HeaderUseFor
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : HeaderUseFor {
+        init {
+            require(HeaderUseFor.known.none { it.value == value }) { "HeaderUseFor.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -330,8 +382,13 @@ public sealed interface Identity {
     /** The tag member 'kind': it picks the variant. */
     public val kind: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val kind: String, public val raw: JsonObject) : Identity
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val kind: String, public val raw: JsonObject) : Identity {
+        init {
+            require(kind !in setOf("credential", "signed")) { "Identity.Unknown: \"" + kind + "\" is a known kind" }
+            require(raw["kind"] == JsonPrimitive(kind)) { "Identity.Unknown: raw's kind is not \"" + kind + "\"" }
+        }
+    }
 }
 
 internal object IdentitySerializer : IrUnionSerializer<Identity>("Identity", "kind") {
@@ -366,13 +423,21 @@ public data class IdentityHeaderUse(
 public data class IgnoreKeysPolicy(
     @EncodeDefault public override val policy: String = "ignore",
     public val reason: Reason,
-) : KeysPolicy
+) : KeysPolicy {
+    init {
+        require(policy == "ignore") { "IgnoreKeysPolicy: policy is \"ignore\", got \"" + policy + "\"" }
+    }
+}
 
 @Serializable
 public data class KeepKeysPolicy(
     @EncodeDefault public override val policy: String = "keep",
     public val reason: Reason,
-) : KeysPolicy
+) : KeysPolicy {
+    init {
+        require(policy == "keep") { "KeepKeysPolicy: policy is \"keep\", got \"" + policy + "\"" }
+    }
+}
 
 /** Unknown keys of a signed identity's payload: ignored or kept, with the reason. Must act: an unknown tag makes the IR invalid for every reader. */
 @Serializable(with = KeysPolicySerializer::class)
@@ -380,8 +445,13 @@ public sealed interface KeysPolicy {
     /** The tag member 'policy': it picks the variant. */
     public val policy: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val policy: String, public val raw: JsonObject) : KeysPolicy
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val policy: String, public val raw: JsonObject) : KeysPolicy {
+        init {
+            require(policy !in setOf("ignore", "keep")) { "KeysPolicy.Unknown: \"" + policy + "\" is a known policy" }
+            require(raw["policy"] == JsonPrimitive(policy)) { "KeysPolicy.Unknown: raw's policy is not \"" + policy + "\"" }
+        }
+    }
 }
 
 internal object KeysPolicySerializer : IrUnionSerializer<KeysPolicy>("KeysPolicy", "policy") {
@@ -409,8 +479,12 @@ public sealed interface NatureBase {
     public data object UNAVAILABLE : NatureBase { override val value: String = "unavailable" }
     public data object FAILED : NatureBase { override val value: String = "failed" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : NatureBase
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : NatureBase {
+        init {
+            require(NatureBase.known.none { it.value == value }) { "NatureBase.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -439,7 +513,11 @@ public data class NatureDecl(
 @Serializable
 public data class NoSubject(
     @EncodeDefault public override val kind: String = "none",
-) : RightSubject
+) : RightSubject {
+    init {
+        require(kind == "none") { "NoSubject: kind is \"none\", got \"" + kind + "\"" }
+    }
+}
 
 /** The OAuth 2 facts of a bearer scheme, for documents only. */
 @Serializable
@@ -454,8 +532,13 @@ public sealed interface Principal {
     /** The tag member 'kind': it picks the variant. */
     public val kind: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val kind: String, public val raw: JsonObject) : Principal
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val kind: String, public val raw: JsonObject) : Principal {
+        init {
+            require(kind !in setOf("schema", "variants")) { "Principal.Unknown: \"" + kind + "\" is a known kind" }
+            require(raw["kind"] == JsonPrimitive(kind)) { "Principal.Unknown: raw's kind is not \"" + kind + "\"" }
+        }
+    }
 }
 
 internal object PrincipalSerializer : IrUnionSerializer<Principal>("Principal", "kind") {
@@ -482,8 +565,12 @@ public sealed interface ProofPlacement {
     public data object BODY : ProofPlacement { override val value: String = "body" }
     public data object HEADER : ProofPlacement { override val value: String = "header" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : ProofPlacement
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : ProofPlacement {
+        init {
+            require(ProofPlacement.known.none { it.value == value }) { "ProofPlacement.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -507,14 +594,22 @@ public data class QueryScheme(
     /** The query parameter name. */
     public val name: String,
     public val origin: Origin,
-) : Scheme
+) : Scheme {
+    init {
+        require(kind == "query") { "QueryScheme: kind is \"query\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class ResourceSubject(
     @EncodeDefault public override val kind: String = "resource",
     public val type: Name,
     public val idSchema: TypeUse,
-) : RightSubject
+) : RightSubject {
+    init {
+        require(kind == "resource") { "ResourceSubject: kind is \"resource\", got \"" + kind + "\"" }
+    }
+}
 
 /** A right (ADR 0004 section 4). */
 @Serializable
@@ -537,8 +632,13 @@ public sealed interface RightSubject {
     /** The tag member 'kind': it picks the variant. */
     public val kind: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val kind: String, public val raw: JsonObject) : RightSubject
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val kind: String, public val raw: JsonObject) : RightSubject {
+        init {
+            require(kind !in setOf("none", "scope", "resource")) { "RightSubject.Unknown: \"" + kind + "\" is a known kind" }
+            require(raw["kind"] == JsonPrimitive(kind)) { "RightSubject.Unknown: raw's kind is not \"" + kind + "\"" }
+        }
+    }
 }
 
 internal object RightSubjectSerializer : IrUnionSerializer<RightSubject>("RightSubject", "kind") {
@@ -583,7 +683,11 @@ public data class RuleProof(
 public data class SchemaPrincipal(
     @EncodeDefault public override val kind: String = "schema",
     public val schema: SchemaRef,
-) : Principal
+) : Principal {
+    init {
+        require(kind == "schema") { "SchemaPrincipal: kind is \"schema\", got \"" + kind + "\"" }
+    }
+}
 
 /** A security scheme (ADR 0004 section 4), tagged on its kind. Must act: an unknown tag makes the IR invalid for every reader. */
 @Serializable(with = SchemeSerializer::class)
@@ -591,8 +695,13 @@ public sealed interface Scheme {
     /** The tag member 'kind': it picks the variant. */
     public val kind: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val kind: String, public val raw: JsonObject) : Scheme
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val kind: String, public val raw: JsonObject) : Scheme {
+        init {
+            require(kind !in setOf("cookie", "header", "query", "bearer", "basic", "signature")) { "Scheme.Unknown: \"" + kind + "\" is a known kind" }
+            require(raw["kind"] == JsonPrimitive(kind)) { "Scheme.Unknown: raw's kind is not \"" + kind + "\"" }
+        }
+    }
 }
 
 internal object SchemeSerializer : IrUnionSerializer<Scheme>("Scheme", "kind") {
@@ -625,8 +734,13 @@ public sealed interface SchemeKey {
     /** The tag member 'kind': it picks the variant. */
     public val kind: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val kind: String, public val raw: JsonObject) : SchemeKey
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val kind: String, public val raw: JsonObject) : SchemeKey {
+        init {
+            require(kind !in setOf("value", "from")) { "SchemeKey.Unknown: \"" + kind + "\" is a known kind" }
+            require(raw["kind"] == JsonPrimitive(kind)) { "SchemeKey.Unknown: raw's kind is not \"" + kind + "\"" }
+        }
+    }
 }
 
 internal object SchemeKeySerializer : IrUnionSerializer<SchemeKey>("SchemeKey", "kind") {
@@ -661,7 +775,11 @@ public data class Scope(
 public data class ScopeSubject(
     @EncodeDefault public override val kind: String = "scope",
     public val scope: ScopeId,
-) : RightSubject
+) : RightSubject {
+    init {
+        require(kind == "scope") { "ScopeSubject: kind is \"scope\", got \"" + kind + "\"" }
+    }
+}
 
 /** An upstream service (ADR 0004 section 4). */
 @Serializable
@@ -679,8 +797,12 @@ public sealed interface SignatureEncoding {
     public data object HEX : SignatureEncoding { override val value: String = "hex" }
     public data object BASE64 : SignatureEncoding { override val value: String = "base64" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : SignatureEncoding
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : SignatureEncoding {
+        init {
+            require(SignatureEncoding.known.none { it.value == value }) { "SignatureEncoding.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -705,7 +827,11 @@ public data class SignatureScheme(
     public val name: String? = null,
     public val signature: SignatureVerify,
     public val origin: Origin,
-) : Scheme
+) : Scheme {
+    init {
+        require(kind == "signature") { "SignatureScheme: kind is \"signature\", got \"" + kind + "\"" }
+    }
+}
 
 /** How a signature is verified (ADR 0004 section 4). Must act: an unknown tag makes the IR invalid for every reader. */
 @Serializable(with = SignatureVerifySerializer::class)
@@ -713,8 +839,13 @@ public sealed interface SignatureVerify {
     /** The tag member 'verify': it picks the variant. */
     public val verify: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val verify: String, public val raw: JsonObject) : SignatureVerify
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val verify: String, public val raw: JsonObject) : SignatureVerify {
+        init {
+            require(verify !in setOf("template", "application")) { "SignatureVerify.Unknown: \"" + verify + "\" is a known verify" }
+            require(raw["verify"] == JsonPrimitive(verify)) { "SignatureVerify.Unknown: raw's verify is not \"" + verify + "\"" }
+        }
+    }
 }
 
 internal object SignatureVerifySerializer : IrUnionSerializer<SignatureVerify>("SignatureVerify", "verify") {
@@ -746,14 +877,22 @@ public data class SignedIdentity(
     public val docs: Docs,
     public val extensions: Extensions,
     public val origin: Origin,
-) : Identity
+) : Identity {
+    init {
+        require(kind == "signed") { "SignedIdentity: kind is \"signed\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class SourceSchemeKey(
     @EncodeDefault public override val kind: String = "from",
     /** Where the request carries the key id (path, query or header). */
     public val from: ValueSource,
-) : SchemeKey
+) : SchemeKey {
+    init {
+        require(kind == "from") { "SourceSchemeKey: kind is \"from\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class TemplateSignature(
@@ -764,23 +903,39 @@ public data class TemplateSignature(
     public val encoding: SignatureEncoding,
     public val toleranceMs: Long? = null,
     public val key: SchemeKey,
-) : SignatureVerify
+) : SignatureVerify {
+    init {
+        require(verify == "template") { "TemplateSignature: verify is \"template\", got \"" + verify + "\"" }
+    }
+}
 
 @Serializable
 public data class ValueSchemeKey(
     @EncodeDefault public override val kind: String = "value",
     /** The key id the application looks its secret up by; never the secret. */
     public val value: String,
-) : SchemeKey
+) : SchemeKey {
+    init {
+        require(kind == "value") { "ValueSchemeKey: kind is \"value\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class VariantsPrincipal(
     @EncodeDefault public override val kind: String = "variants",
     public val variants: Map<VariantId, SchemaRef>,
-) : Principal
+) : Principal {
+    init {
+        require(kind == "variants") { "VariantsPrincipal: kind is \"variants\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class VocabularyEnumSource(
     @EncodeDefault public override val kind: String = "vocabulary",
     public val vocabulary: String,
-) : EnumSource
+) : EnumSource {
+    init {
+        require(kind == "vocabulary") { "VocabularyEnumSource: kind is \"vocabulary\", got \"" + kind + "\"" }
+    }
+}

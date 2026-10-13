@@ -1,6 +1,7 @@
 // Generated from packages/spec/schemas/ir/ir.schema.json by scripts/ir-models for IR revision 2. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 @file:OptIn(ExperimentalSerializationApi::class)
+@file:UseSerializers(IrIntegerSerializer::class)
 
 package io.github.jubasse.seampact.ir.model
 
@@ -8,9 +9,11 @@ import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 
 /** The api (ADR 0004 section 2). */
 @Serializable
@@ -51,8 +54,12 @@ public sealed interface ApiKind {
     public data object PRODUCT : ApiKind { override val value: String = "product" }
     public data object SERVICE : ApiKind { override val value: String = "service" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : ApiKind
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : ApiKind {
+        init {
+            require(ApiKind.known.none { it.value == value }) { "ApiKind.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -75,8 +82,12 @@ public sealed interface ApiRole {
 
     public data object GATEWAY : ApiRole { override val value: String = "gateway" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : ApiRole
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : ApiRole {
+        init {
+            require(ApiRole.known.none { it.value == value }) { "ApiRole.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -97,8 +108,13 @@ public sealed interface ApiVersion {
     /** The tag member 'kind': it picks the variant. */
     public val kind: String
 
-    /** A variant this IR revision does not know, kept raw with its tag. */
-    public data class Unknown(override val kind: String, public val raw: JsonObject) : ApiVersion
+    /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
+    public data class Unknown(override val kind: String, public val raw: JsonObject) : ApiVersion {
+        init {
+            require(kind !in setOf("path", "label")) { "ApiVersion.Unknown: \"" + kind + "\" is a known kind" }
+            require(raw["kind"] == JsonPrimitive(kind)) { "ApiVersion.Unknown: raw's kind is not \"" + kind + "\"" }
+        }
+    }
 }
 
 internal object ApiVersionSerializer : IrUnionSerializer<ApiVersion>("ApiVersion", "kind") {
@@ -130,8 +146,12 @@ public sealed interface CompatPolicy {
     public data object ADDITIVE_ONLY : CompatPolicy { override val value: String = "additive-only" }
     public data object NONE : CompatPolicy { override val value: String = "none" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : CompatPolicy
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : CompatPolicy {
+        init {
+            require(CompatPolicy.known.none { it.value == value }) { "CompatPolicy.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -213,8 +233,12 @@ public sealed interface ExtensionPlace {
     public data object RULE : ExtensionPlace { override val value: String = "rule" }
     public data object SCOPE : ExtensionPlace { override val value: String = "scope" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : ExtensionPlace
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : ExtensionPlace {
+        init {
+            require(ExtensionPlace.known.none { it.value == value }) { "ExtensionPlace.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -243,8 +267,12 @@ public sealed interface InternalPolicy {
     public data object INCLUDE : InternalPolicy { override val value: String = "include" }
     public data object EXCLUDE : InternalPolicy { override val value: String = "exclude" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : InternalPolicy
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : InternalPolicy {
+        init {
+            require(InternalPolicy.known.none { it.value == value }) { "InternalPolicy.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -264,7 +292,11 @@ internal object InternalPolicySerializer : IrOpenEnumSerializer<InternalPolicy>(
 public data class LabelApiVersion(
     @EncodeDefault public override val kind: String = "label",
     public val label: String,
-) : ApiVersion
+) : ApiVersion {
+    init {
+        require(kind == "label") { "LabelApiVersion: kind is \"label\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class Lint(
@@ -297,8 +329,12 @@ public sealed interface LintSeverity {
     public data object WARNING : LintSeverity { override val value: String = "warning" }
     public data object ERROR : LintSeverity { override val value: String = "error" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : LintSeverity
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : LintSeverity {
+        init {
+            require(LintSeverity.known.none { it.value == value }) { "LintSeverity.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
@@ -327,7 +363,11 @@ public data class PathApiVersion(
     @EncodeDefault public override val kind: String = "path",
     /** The number paths carry ('/v1'). */
     public val number: Long,
-) : ApiVersion
+) : ApiVersion {
+    init {
+        require(kind == "path") { "PathApiVersion: kind is \"path\", got \"" + kind + "\"" }
+    }
+}
 
 @Serializable
 public data class PathVersion(
@@ -343,8 +383,12 @@ public sealed interface PathVersionMode {
     public data object PREFIX : PathVersionMode { override val value: String = "prefix" }
     public data object NONE : PathVersionMode { override val value: String = "none" }
 
-    /** A value this IR revision does not know. */
-    public data class Unknown(override val value: String) : PathVersionMode
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : PathVersionMode {
+        init {
+            require(PathVersionMode.known.none { it.value == value }) { "PathVersionMode.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
 
     public companion object {
         /** The values this IR revision knows, in the schema's order. */
