@@ -331,15 +331,32 @@ class IrReaderTest {
 
         val refused = assertFailsWith<IrRefusedException> { IrReader.read(unsupported, support) }
 
-        assertEquals(1_001, refused.refusals.size)
         assertTrue(refused.refusals.all { it.operation == id })
         assertTrue(refused.refusals.all { it.message.length < 300 }, refused.refusals.first().message.take(300))
-        assertTrue(refused.message.orEmpty().length < 1_001 * 300, "message is ${refused.message?.length} chars")
+        assertTrue(refused.message.orEmpty().length < 100 * 300, "message is ${refused.message?.length} chars")
 
         val mustAct = replaceAt(withId, "operations", "0", "access", "onRefused", value = JsonPrimitive("redirect"))
         val refusal = refusals(mustAct).single()
         assertEquals(id, refusal.operation)
         assertTrue(refusal.message.length < 600, "message is ${refusal.message.length} chars")
+    }
+
+    @Test
+    fun refusalsStopAtTheBound() {
+        // A long key repeats in the pointer of every refusal below it: the count bounds that copy.
+        val features = JsonArray(List(1_000) { JsonPrimitive("feature$it") })
+        val unsupported = replaceAt(example("minimal.ir.json"), "features", value = features)
+
+        val unsupportedFeatures = refusals(unsupported)
+        assertEquals(100, unsupportedFeatures.size)
+        assertEquals("/features/99", unsupportedFeatures.last().member)
+
+        val mustAct = example("unknown-must-act.ir.json")
+        val scheme = mustAct.getValue("schemes").jsonObject.getValue("client")
+        val schemes = JsonObject((0 until 1_000).associate { "client$it" to scheme })
+        val unknowns = refusals(replaceAt(mustAct, "schemes", value = schemes))
+        assertEquals(100, unknowns.size)
+        assertTrue(unknowns.all { it.code == IrRefusalCode.MUST_ACT_UNKNOWN })
     }
 
     @Test

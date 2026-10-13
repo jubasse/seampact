@@ -24,7 +24,8 @@ internal const val IR_PACKAGE = "io.github.jubasse:seampact-ir"
  * Returns one named refusal per unsupported `irVersion`, different `irRevision`, unknown kind or unknown
  * feature, top level and per operation (the port of `checkIrSupport`). An unsupported `irVersion` is returned
  * alone: the rest of the document may have another shape. A list that is missing or not an array is named
- * (`ir.support.malformed`), never read as empty. Reads the document as untrusted data and never throws.
+ * (`ir.support.malformed`), never read as empty. Stops after [MAX_REFUSALS]. Reads the document as untrusted
+ * data and never throws.
  */
 internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal> {
     val document = ir as? JsonObject ?: JsonObject(emptyMap())
@@ -48,9 +49,15 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
     }
 
     val refusals = mutableListOf<IrRefusal>()
+    fun isFull(): Boolean = refusals.size >= MAX_REFUSALS
+
+    fun refuse(refusal: IrRefusal) {
+        if (!isFull()) refusals += refusal
+    }
+
     val revision = document["irRevision"]
     if (numberOf(revision)?.compareTo(BigDecimal(support.irRevision)) != 0) {
-        refusals += IrRefusal(
+        refuse(IrRefusal(
             IrRefusalCode.REVISION_MISMATCH,
             "/irRevision",
             shown(revision),
@@ -58,19 +65,19 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
             null,
             "irRevision ${inMessage(shown(revision))} differs from the revision this reader was built for " +
                 "(${support.irRevision}). Update the $IR_PACKAGE package to the revision of the compiler.",
-        )
+        ))
     }
 
     fun list(value: JsonElement?, member: String, operation: String? = null): List<JsonElement>? {
         if (value is JsonArray) return value
-        refusals += IrRefusal(
+        refuse(IrRefusal(
             IrRefusalCode.SUPPORT_MALFORMED,
             member,
             jsonType(value),
             listOf("array"),
             operation,
             "$member is ${jsonType(value)}, not an array: this reader cannot check what it supports.",
-        )
+        ))
         return null
     }
 
@@ -82,17 +89,18 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
         operation: String? = null,
     ) {
         val what = if (code == IrRefusalCode.KIND_UNSUPPORTED) "declaration kind" else "feature"
-        values.orEmpty().forEachIndexed { index, value ->
-            if (isStringIn(value, known)) return@forEachIndexed
+        for ((index, value) in values.orEmpty().withIndex()) {
+            if (isFull()) return
+            if (isStringIn(value, known)) continue
             val where = if (operation == null) "" else " in operation '${inMessage(operation)}'"
-            refusals += IrRefusal(
+            refuse(IrRefusal(
                 code,
                 "$member/$index",
                 shown(value),
                 known,
                 operation,
                 "The $what '${inMessage(shown(value))}'$where is not supported by this reader.",
-            )
+            ))
         }
     }
 
@@ -100,12 +108,13 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
     val features = list(document["features"], "/features")
     unknownIn(features, support.features, IrRefusalCode.FEATURE_UNSUPPORTED, "/features")
 
-    list(document["operations"], "/operations").orEmpty().forEachIndexed { index, entry ->
+    for ((index, entry) in list(document["operations"], "/operations").orEmpty().withIndex()) {
+        if (isFull()) break
         val operation = entry as? JsonObject ?: JsonObject(emptyMap())
         val id = (operation["id"] as? JsonPrimitive)?.takeIf { it.isString }?.content ?: "#$index"
         val kind = operation["kind"]
         if (!isStringIn(kind, support.kinds)) {
-            refusals += IrRefusal(
+            refuse(IrRefusal(
                 IrRefusalCode.KIND_UNSUPPORTED,
                 "/operations/$index/kind",
                 shown(kind),
@@ -113,7 +122,7 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
                 id,
                 "The declaration kind '${inMessage(shown(kind))}' of operation '${inMessage(id)}' " +
                     "is not supported by this reader.",
-            )
+            ))
         }
         val member = "/operations/$index/features"
         unknownIn(

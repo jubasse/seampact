@@ -7,7 +7,7 @@ import kotlinx.serialization.json.JsonElement
 // The cause's message can quote untrusted input: the exception's own message keeps this much of it.
 private const val MAX_CAUSE_MESSAGE_LENGTH = 400
 
-/** The IR is one this reader must not act on: every reason, named (ADR 0005 sections 2 and 3). */
+/** The IR is one this reader must not act on: every reason, named, up to 100 (ADR 0005 sections 2 and 3). */
 public class IrRefusedException(public val refusals: List<IrRefusal>) :
     RuntimeException(refusals.joinToString("\n") { "${it.code.code}: ${it.message}" })
 

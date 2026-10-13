@@ -15,7 +15,8 @@ private val OPERATION_POINTER = Regex("^/operations/(\\d+)(/|$)")
  * not must-act is left to the model (it keeps it as `Unknown`). Array items and map values are walked; unknown
  * members and opaque values are data, never walked, and a union with an unknown tag is not descended into. Never
  * throws on a malformed document: a shape the schema refuses is skipped, and the decoding that follows reports
- * it. The walk recurses per level: `IrReader` bounds the nesting of the whole document first.
+ * it. Stops after [MAX_REFUSALS]. The walk recurses per level: `IrReader` bounds the nesting of the whole
+ * document first.
  */
 internal fun checkMustActUnknowns(ir: JsonElement): List<IrRefusal> {
     val refusals = mutableListOf<IrRefusal>()
@@ -27,6 +28,8 @@ private const val ROOT_DEFINITION = "ContractIR"
 
 private class MustActWalk(private val document: JsonElement, private val refusals: MutableList<IrRefusal>) {
     fun walk(value: JsonElement, shape: IrShape, pointer: String) {
+        if (refusals.size >= MAX_REFUSALS) return
+
         when (shape) {
             is IrShape.Named -> IR_SHAPES[shape.definition]?.let { walk(value, it, pointer) }
             is IrShape.Struct -> walkStruct(value, shape, pointer)
