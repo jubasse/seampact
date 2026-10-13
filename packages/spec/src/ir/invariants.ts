@@ -58,8 +58,9 @@ const OTHER_TYPE_KINDS = ["ref", "array"]; // neither an id nor a refused proof
 // The input media whose body is a list of fields, each with a wire form (`fields`, a proof's `wire`), and the rest.
 const FIELD_MEDIA = ["application/x-www-form-urlencoded", "multipart/form-data"];
 const DOCUMENT_MEDIA = ["application/json"];
-// The known schema kinds that are no object: a body proof is a property beside the input's own, so its input
-// is an object schema.
+// The known schema kinds, object and not: a body proof is a property beside the input's own, so its input is
+// an object schema.
+const OBJECT_SCHEMA_KINDS = ["object"];
 const NON_OBJECT_SCHEMA_KINDS = ["map", "union"];
 // The catalogues of the declarations the compiler supplies (origin layer `core`, ADR 0004 sections 6 and 13).
 const CORE_CATALOGUES = ["formats", "errors", "schemas"];
@@ -68,6 +69,7 @@ export const IR_PARTITIONS = {
   "FieldWire.kind": [QUERY_WIRE_KINDS, PLAIN_WIRE_KINDS],
   "TypeUse.kind": [ID_TYPE_KINDS, PROOF_REFUSED_KINDS, OTHER_TYPE_KINDS],
   "OperationInput.media": [FIELD_MEDIA, DOCUMENT_MEDIA],
+  "Schema.kind": [OBJECT_SCHEMA_KINDS, NON_OBJECT_SCHEMA_KINDS],
 } as const satisfies Record<string, readonly (readonly string[])[]>;
 
 // The known values of the open enum that `definition.member` references, read from the schema files.
@@ -120,7 +122,10 @@ function checkProofInput(input: Json, pointer: string, schemaEntries: Json, fail
   }
 
   const target = refTargetOf(use, schemaEntries);
-  if (isRecord(target) && NON_OBJECT_SCHEMA_KINDS.includes(String(target.kind)))
+  if (!isRecord(target)) return;
+  const knownSchemaKinds: string[] = [...OBJECT_SCHEMA_KINDS, ...NON_OBJECT_SCHEMA_KINDS];
+  const kind = String(target.kind);
+  if (knownSchemaKinds.includes(kind) && !OBJECT_SCHEMA_KINDS.includes(kind))
     fail(
       "ir.input-proof.input",
       `${pointer}/schema`,

@@ -205,8 +205,10 @@ describe("checkIrInvariants", () => {
   test("each partition is a disjoint union of the schema's known list", () => {
     const knownOf = (key: string): string[] => {
       const [definition, member] = key.split(".") as [string, string];
-      if (definition === "TypeUse")
-        return ((irDefinition("TypeUse")?.oneOf ?? []) as SchemaNode[]).map((variant) => {
+      // A tagged union's known list is the tag of each variant (`TypeUse`, `Schema`).
+      const variants = irDefinition(definition)?.oneOf as SchemaNode[] | undefined;
+      if (variants !== undefined)
+        return variants.map((variant) => {
           const name = String(variant.$ref).slice(String(variant.$ref).lastIndexOf("/") + 1);
           const tag = ((irDefinition(name)?.properties ?? {}) as Record<string, SchemaNode>)[
             member
