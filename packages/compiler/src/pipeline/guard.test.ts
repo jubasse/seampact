@@ -237,9 +237,13 @@ describe("guard refuses undeclared access", () => {
     expect(operationOf(declared).input?.schema).toMatchObject({ schema: "NewTask" });
 
     const proofOnly = bare();
-    const writes = ["media", "schema", "rawBody", "origin", "proofs"].map(
-      (member) => `operations[].input.${member}` as GuardedPart["writes"][number],
-    );
+    const writes: GuardedPart["writes"] = [
+      "operations[].input.media",
+      "operations[].input.schema",
+      "operations[].input.rawBody",
+      "operations[].input.origin",
+      "operations[].input.proofs",
+    ];
     const rights = pipelineGuard(proofOnly, part("access.rights", ["operations[].input"], writes));
     operationOf(rights).input = {
       media: "application/json",

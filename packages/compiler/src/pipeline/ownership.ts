@@ -5,12 +5,8 @@ import type { HalfName } from "./halves.js";
 // between passes only by an ADR change; the halves split within a pass). Each row is a draft field at the level
 // where halves meet, with one of three modes:
 // - `owned`: one owner writes the field and everything below it;
-// - `default`: written only where still absent, by the halves of `order` in run order (`unknownKeys` on a body
-//   input use: declared by tree.nodes, then access.identity for a signed identity's routes, then access.rights,
-//   which copies the identity's onto a proof-only input it writes, then derive.wire from
-//   `conventions.input.unknownKeys`; `maturity`: stated by tree.nodes, else derived by derive.wire; the
-//   input's `media`, `schema` and `origin`: declared by tree.nodes, else written by access.rights for a body
-//   proof on a route without `input`, with `rawBody`, which access.identity writes first, ADR 0006 section 3);
+// - `default`: written only where still absent, by the halves of `order` in run order (each row's comment says
+//   who writes it and when, ADR 0006 section 3);
 // - `elements`: a list several halves append to; each element, and everything below it but its own sub-rows, is
 //   owned by `declared` when it has no `derivedFrom`, else by the `wire` owner of its derivation in the
 //   derivation table (`derivations/table.ts`): declared parameters and responses and the `relay.route`,
@@ -112,6 +108,7 @@ export const pipelineOwnership = [
   elements(op("params.header"), "tree.nodes", "access.rights", "derive.wire"),
   elements(op("responses"), "tree.nodes", "derive.wire"),
   elements(op("responses[].headers"), "tree.nodes", "derive.wire"),
+  // Stated by tree.nodes, else derived by derive.wire.
   { field: op("maturity"), mode: "default", order: ["tree.nodes", "derive.wire"] },
   // The input a route declares, else the proof-only input access.rights writes for a body proof on a route
   // without `input` (ADR 0002 section 9): media `application/json`, the core empty schema `ApiEmptyBody`,
@@ -119,7 +116,10 @@ export const pipelineOwnership = [
   // `proofs`. On a signed identity's route, `rawBody` is true, as `signed.identity` writes it for a declared
   // input, and access.rights also copies the identity's `unknownKeys` onto it; elsewhere `rawBody` is false.
   ...inputDefaults("tree.nodes", "media", "schema", "origin"),
+  // Written by access.identity on a signed identity's declared input, else by access.rights.
   ...inputDefaults("access.identity", "rawBody"),
+  // Declared by tree.nodes, then access.identity on a signed identity's routes, then access.rights, which copies
+  // the identity's onto a proof-only input it writes, then derive.wire from `conventions.input.unknownKeys`.
   {
     field: op("input.schema.unknownKeys"),
     mode: "default",

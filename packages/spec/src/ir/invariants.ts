@@ -98,10 +98,18 @@ for (const owner of ["ContractIR", "Api"] as const) {
 
 type Fail = (id: IrInvariantId, pointer: string, message: string) => void;
 
+const proofsOf = (input: Json): unknown[] => (Array.isArray(input.proofs) ? input.proofs : []);
+
+// The schema entry a `ref` use names, if the document has it.
+function refTargetOf(use: Json, schemaEntries: Json): unknown {
+  if (use.kind !== "ref" || typeof use.schema !== "string") return undefined;
+  return Object.hasOwn(schemaEntries, use.schema) ? schemaEntries[use.schema] : undefined;
+}
+
 // The input of a body proof is a `ref` use of an object schema (`ApiEmptyBody` for a proof-only input). An
 // unknown use or schema kind is the reader's to name, and a missing schema is ir.ref.resolves'.
 function checkProofInput(input: Json, pointer: string, schemaEntries: Json, fail: Fail): void {
-  if (!Array.isArray(input.proofs) || input.proofs.length === 0) return;
+  if (proofsOf(input).length === 0) return;
   const use = isRecord(input.schema) ? input.schema : {};
   const knownUseKinds: string[] = [...ID_TYPE_KINDS, ...PROOF_REFUSED_KINDS, ...OTHER_TYPE_KINDS];
   const message = "An input with body proofs is a 'ref' use of an object schema";
@@ -111,16 +119,62 @@ function checkProofInput(input: Json, pointer: string, schemaEntries: Json, fail
     return;
   }
 
-  const target =
-    typeof use.schema === "string" && Object.hasOwn(schemaEntries, use.schema)
-      ? schemaEntries[use.schema]
-      : undefined;
+  const target = refTargetOf(use, schemaEntries);
   if (isRecord(target) && NON_OBJECT_SCHEMA_KINDS.includes(String(target.kind)))
     fail(
       "ir.input-proof.input",
       `${pointer}/schema`,
       `${message}: '${String(use.schema)}' is a '${target.kind}' schema.`,
     );
+}
+
+// The names a body already carries: the properties of the input's object schema and its form fields.
+function bodyNamesOf(input: Json, schemaEntries: Json): Set<unknown> {
+  const names = new Set<unknown>();
+  const target = refTargetOf(isRecord(input.schema) ? input.schema : {}, schemaEntries);
+  const properties = isRecord(target) && Array.isArray(target.properties) ? target.properties : [];
+  const fields = Array.isArray(input.fields) ? input.fields : [];
+  for (const member of [...properties, ...fields]) if (isRecord(member)) names.add(member.name);
+  return names;
+}
+
+// A proof is identified by its name: one element per name, and no name the body already carries.
+function checkProofNames(input: Json, pointer: string, schemaEntries: Json, fail: Fail): void {
+  const taken = bodyNamesOf(input, schemaEntries);
+  const seen = new Set<unknown>();
+  for (const [i, proof] of proofsOf(input).entries()) {
+    if (!isRecord(proof) || typeof proof.name !== "string") continue;
+    if (seen.has(proof.name) || taken.has(proof.name))
+      fail(
+        "ir.input-proof.name",
+        `${pointer}/proofs/${i}`,
+        `The body proof '${proof.name}' repeats a proof, a property of the input schema or a form field.`,
+      );
+    seen.add(proof.name);
+  }
+}
+
+// A body proof is sent as the input's other fields are: with a wire form in a form or multipart body, none in a
+// JSON one, and never a file one, since a proof is no file (ir.id.scalar). An unknown media type is the
+// reader's to name.
+function checkProofWires(input: Json, pointer: string, fail: Fail): void {
+  const mediaKnown = isKnown("OperationInput", "media", input.media);
+  const fieldMedia = FIELD_MEDIA.includes(String(input.media));
+  for (const [i, proof] of proofsOf(input).entries()) {
+    if (!isRecord(proof)) continue;
+    if (isRecord(proof.wire) && proof.wire.kind === "file")
+      fail(
+        "ir.input-proof.wire",
+        `${pointer}/proofs/${i}`,
+        "A body proof's wire kind is not 'file'.",
+      );
+    if (mediaKnown && has(proof, "wire") !== fieldMedia)
+      fail(
+        "ir.input-proof.wire",
+        `${pointer}/proofs/${i}`,
+        `A body proof has 'wire' if and only if the input is form or multipart ('${String(input.media)}').`,
+      );
+  }
 }
 
 // Returns every invariant violation of an IR document, empty for a sound one. Pure and Ajv-free; it expects a
@@ -181,52 +235,8 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
       }
       case "OperationInput": {
         checkProofInput(value, pointer, schemaEntries, fail);
-        const proofs = Array.isArray(value.proofs) ? value.proofs : [];
-        // A proof is identified by its name: one element per name, and no name the body already carries (a
-        // property of the input's object schema, or a form field).
-        const taken = new Set<unknown>();
-        const use = isRecord(value.schema) ? value.schema : {};
-        const target =
-          use.kind === "ref" &&
-          typeof use.schema === "string" &&
-          Object.hasOwn(schemaEntries, use.schema)
-            ? schemaEntries[use.schema]
-            : undefined;
-        if (isRecord(target) && Array.isArray(target.properties))
-          for (const property of target.properties)
-            if (isRecord(property)) taken.add(property.name);
-        if (Array.isArray(value.fields))
-          for (const field of value.fields) if (isRecord(field)) taken.add(field.name);
-        const seen = new Set<unknown>();
-        for (const [i, proof] of proofs.entries()) {
-          if (!isRecord(proof) || typeof proof.name !== "string") continue;
-          if (seen.has(proof.name) || taken.has(proof.name))
-            fail(
-              "ir.input-proof.name",
-              `${pointer}/proofs/${i}`,
-              `The body proof '${proof.name}' repeats a proof, a property of the input schema or a form field.`,
-            );
-          seen.add(proof.name);
-        }
-        // A proof is never a file (ir.id.scalar), so its wire form is never one.
-        for (const [i, proof] of proofs.entries())
-          if (isRecord(proof) && isRecord(proof.wire) && proof.wire.kind === "file")
-            fail(
-              "ir.input-proof.wire",
-              `${pointer}/proofs/${i}`,
-              "A body proof's wire kind is not 'file'.",
-            );
-        // A body proof is sent as the input's other fields are: with a wire form in a form or multipart body,
-        // none in a JSON one. An unknown media type is the reader's to name.
-        if (!isKnown("OperationInput", "media", value.media)) break;
-        const fields = FIELD_MEDIA.includes(String(value.media));
-        for (const [i, proof] of proofs.entries())
-          if (isRecord(proof) && has(proof, "wire") !== fields)
-            fail(
-              "ir.input-proof.wire",
-              `${pointer}/proofs/${i}`,
-              `A body proof has 'wire' if and only if the input is form or multipart ('${String(value.media)}').`,
-            );
+        checkProofNames(value, pointer, schemaEntries, fail);
+        checkProofWires(value, pointer, fail);
         break;
       }
       case "Name": {
