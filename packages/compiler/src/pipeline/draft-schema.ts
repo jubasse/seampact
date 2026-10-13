@@ -56,6 +56,7 @@ function variantTags(documents: readonly SchemaObject[]): Map<string, string> {
 
 /** The IR schema documents in the derived draft form. */
 export function draftIrSchemas(): SchemaNode[] {
+  // `strictIrSchemas()` clones each document deeply; the shallow copy only types it as writable.
   const documents: SchemaObject[] = strictIrSchemas().map((document) => ({ ...document }));
   const tags = variantTags(documents);
 

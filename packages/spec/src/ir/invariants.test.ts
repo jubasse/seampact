@@ -204,23 +204,27 @@ describe("checkIrInvariants", () => {
   // Each hand-written partition is a disjoint union equal to the schema's known list, so a new known value of
   // a deciding member cannot slip past its invariant unnoticed.
   test("each partition is a disjoint union of the schema's known list", () => {
+    const propertyOf = (schema: SchemaNode | undefined, member: string): SchemaNode | undefined => {
+      const properties = schema?.properties;
+      const property = isSchemaNode(properties) ? properties[member] : undefined;
+      return isSchemaNode(property) ? property : undefined;
+    };
+    const definitionName = (ref: unknown): string =>
+      String(ref).slice(String(ref).lastIndexOf("/") + 1);
     const knownOf = (key: string): string[] => {
-      const [definition, member] = key.split(".") as [string, string];
+      const [definition = "", member = ""] = key.split(".");
       // A tagged union's known list is the tag of each variant (`TypeUse`, `Schema`).
       const variants: unknown = irDefinition(definition)?.oneOf;
       if (Array.isArray(variants))
-        return variants.filter(isSchemaNode).map((variant) => {
-          const name = String(variant.$ref).slice(String(variant.$ref).lastIndexOf("/") + 1);
-          const tag = ((irDefinition(name)?.properties ?? {}) as Record<string, SchemaNode>)[
-            member
-          ];
-          return String(tag?.const);
-        });
-      const properties = irDefinition(definition)?.properties as Record<string, SchemaNode>;
-      let node: SchemaNode | undefined = properties[member];
-      while (typeof node?.$ref === "string")
-        node = irDefinition(node.$ref.slice(node.$ref.lastIndexOf("/") + 1));
-      return node?.[KNOWN_VALUES_KEYWORD] as string[];
+        return variants
+          .filter(isSchemaNode)
+          .map((variant) =>
+            String(propertyOf(irDefinition(definitionName(variant.$ref)), member)?.const),
+          );
+      let node = propertyOf(irDefinition(definition), member);
+      while (typeof node?.$ref === "string") node = irDefinition(definitionName(node.$ref));
+      const known = node?.[KNOWN_VALUES_KEYWORD];
+      return Array.isArray(known) ? known.map(String) : [];
     };
     for (const [key, parts] of Object.entries(IR_PARTITIONS)) {
       const flat = parts.flat();

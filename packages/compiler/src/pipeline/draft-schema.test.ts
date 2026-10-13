@@ -72,3 +72,14 @@ describe("the derived draft form", () => {
     expect(report.valid).toBe(false);
   });
 });
+
+// The variant tags are keyed by bare definition name, so a name may not repeat across the IR schema files.
+test("every $defs name is unique across the IR schema documents", () => {
+  const definitionNames = draftIrSchemas().flatMap(({ $defs }) =>
+    typeof $defs === "object" && $defs !== null ? Object.keys($defs) : [],
+  );
+  expect(definitionNames.length).toBeGreaterThan(0);
+  expect(definitionNames.filter((name, index) => definitionNames.indexOf(name) !== index)).toEqual(
+    [],
+  );
+});

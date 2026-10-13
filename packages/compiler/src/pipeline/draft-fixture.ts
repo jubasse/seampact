@@ -104,7 +104,13 @@ function mergeObject(target: object, members: JsonObject, path: string): void {
   for (const [key, value] of Object.entries(members)) {
     const at = join(path, key);
     if (!Object.hasOwn(target, key)) {
-      Reflect.set(target, key, value);
+      // Defined, not assigned: a `__proto__` key stays a member, and a refusal throws instead of doing nothing.
+      Object.defineProperty(target, key, {
+        value,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
       continue;
     }
 
