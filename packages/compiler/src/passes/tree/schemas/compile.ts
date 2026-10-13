@@ -1,5 +1,12 @@
 import type { IrWriter } from "@seampact/spec/ir";
-import { canonicalId, deriveName, type Name, splitName, suffixWords } from "@seampact/spec/naming";
+import {
+  canonicalId,
+  deriveName,
+  type Name,
+  type Role,
+  splitName,
+  suffixWords,
+} from "@seampact/spec/naming";
 import { pipelineCopy, pipelineParseSize } from "../../../pipeline/seam.js";
 import {
   type TreeSchemasRaw,
@@ -159,6 +166,28 @@ export function treeSchemasNeedsHoist(value: TreeSchemasRaw | undefined): boolea
 const wordsOf = (name: Name | undefined): string[] | undefined =>
   name === undefined ? undefined : [...name.segments, ...suffixWords(name)];
 
+interface Claim {
+  id: string;
+  pointer: string;
+}
+
+// The keys a schema claims: its id, and the identifier it gives in every language as its words, since two names
+// with equal words collide (ADR 0007 section 2) whatever their spelling.
+const claimKeys = (id: string, name: Name): string[] => [
+  `id ${id}`,
+  `words ${[...name.segments, ...suffixWords(name)].join(" ")}`,
+];
+
+// What the author renames when a derived name meets another; an operation-derived name also takes operationId.
+const COLLISION_FIX: Partial<Readonly<Record<Role, string>>> = {
+  property: "rename the schema or the property",
+  variant: "rename the schema or the variant's tag",
+  item: "rename the schema or the array's owner",
+  value: "rename the schema or the map's owner",
+  params: "rename the schema, or the right, rule or error",
+};
+const OPERATION_COLLISION_FIX = "rename the schema or set operationId";
+
 const childName = (
   words: string[] | undefined,
   own: readonly string[],
@@ -199,7 +228,11 @@ export class TreeSchemasCompiler {
   private readonly catalogue: TreeSchemasRaw | undefined;
   private readonly enums: TreeSchemasRaw | undefined;
   private readonly declared = new Map<string, TreeSchemasCompiled | "compiling" | undefined>();
-  private readonly claims = new Map<string, string>();
+  /**
+   * The schema holding each id and each identifier (by its words): every declared schema, then each hoisted one.
+   * Both are checked: `AB` declared gives the words `ab`, the hoisted `A.b` gives `a b`, and both have the id `AB`.
+   */
+  private readonly claims = new Map<string, Claim>();
   private readonly derived = new Set<string>();
   private readonly bodyTags: {
     pointer: string;
@@ -214,6 +247,12 @@ export class TreeSchemasCompiler {
     this.catalogue = treeSchemasMember(merged, "schemas");
     this.enums = treeSchemasMember(merged, "enums");
     this.scalars = new TreeSchemasScalars(treeSchemasMember(merged, "scalars"), reporter);
+    for (const [id] of treeSchemasEntries(this.catalogue)) {
+      const claim = { id, pointer: treeSchemasPointer("/schemas", id) };
+      for (const key of claimKeys(id, { segments: splitName(id), role: "schema" })) {
+        if (!this.claims.has(key)) this.claims.set(key, claim);
+      }
+    }
   }
 
   /** Compiles every declared schema of the `schemas` catalogue, in written order. */
@@ -503,11 +542,13 @@ export class TreeSchemasCompiler {
 
   private idOf(position: TreeSchemasPosition): string {
     if (position.id !== undefined) return position.id;
-    if (position.name === undefined) throw new Error(`no name at ${position.pointer}`);
-    return canonicalId(position.name) ?? position.pointer;
+    const id = position.name === undefined ? undefined : canonicalId(position.name);
+    if (id === undefined) throw new Error(`tree.schemas derived no schema id at ${position.pointer}`);
+    return id;
   }
 
-  // Takes the id a named schema is written under; a derived id equal to another is refused (ADR 0007 section 3).
+  // Takes the identifier a hoisted schema is written under; one equal to another schema's is refused (ADR 0007
+  // sections 2 and 3). Two declared schemas are compared apart (`checkNames`).
   private claimed(position: TreeSchemasPosition, kind: NamedKind): boolean {
     if (position.name === undefined) {
       this.reporter.error({
@@ -519,24 +560,32 @@ export class TreeSchemasCompiler {
       return false;
     }
     const id = this.idOf(position);
-    const declaredAt = treeSchemasPointer("/schemas", id);
-    const other =
-      position.id === undefined && treeSchemasMember(this.catalogue, id) !== undefined
-        ? declaredAt
-        : this.claims.get(id);
-    if (other !== undefined && other !== position.pointer) {
-      this.reporter.error({
-        rule: "name-collision",
-        pointer: position.pointer,
-        message: `the name '${id}' this schema derives is already the name of another schema`,
-        fix: "rename the schema or set operationId",
-        related: [{ pointer: other, message: `'${id}' is named here` }],
-      });
+    if (position.id === undefined && !this.claimHoisted(id, position.name, position.pointer))
       return false;
-    }
-    this.claims.set(id, position.pointer);
     if (kind === "object" && !this.schemas.has(id)) this.derived.add(id);
     return true;
+  }
+
+  private claimHoisted(id: string, name: Name, pointer: string): boolean {
+    const keys = claimKeys(id, name);
+    const other = keys
+      .map((key) => this.claims.get(key))
+      .find((claim) => claim !== undefined && claim.pointer !== pointer);
+    if (other === undefined) {
+      for (const key of keys) this.claims.set(key, { id, pointer });
+      return true;
+    }
+    this.reporter.error({
+      rule: "name-collision",
+      pointer,
+      message:
+        other.id === id
+          ? `the name '${id}' this schema derives is already the name of another schema`
+          : `the name '${id}' this schema derives gives the same identifier as the schema '${other.id}'`,
+      fix: COLLISION_FIX[name.role] ?? OPERATION_COLLISION_FIX,
+      related: [{ pointer: other.pointer, message: `'${other.id}' is named here` }],
+    });
+    return false;
   }
 
   private hoist(

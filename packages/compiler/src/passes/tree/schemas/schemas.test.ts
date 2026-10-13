@@ -500,6 +500,31 @@ errors:
     const result = treeSchemasRunApi(yaml);
     expect(treeSchemasRules(result)).toContain(rule);
   });
+
+  test("a hoisted name is compared with declared names by identifier, not spelling", () => {
+    const result = treeSchemasRunApi(`schemas:
+  Order: { type: object, properties: { address: { type: object, properties: { city: { type: string } } } } }
+  ORDERAddress: { type: object, properties: { street: { type: string } } }
+`);
+    expect(result.diagnostics.map((d) => [d.rule, d.fix, d.related[0]?.message])).toEqual([
+      [
+        "seampact/tree/name-collision",
+        "rename the schema or the property",
+        "'ORDERAddress' is named here",
+      ],
+    ]);
+  });
+
+  test("two hoisted names with one identifier collide", () => {
+    const result = treeSchemasRunApi(`schemas:
+  A:
+    type: object
+    properties:
+      b: { type: object, properties: { c: { type: object, properties: { x: { type: string } } } } }
+      bC: { type: object, properties: { z: { type: string } } }
+`);
+    expect(treeSchemasRules(result)).toEqual(["name-collision"]);
+  });
 });
 
 describe("schema service", () => {
