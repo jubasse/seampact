@@ -2,7 +2,8 @@ name: Native IR models
 
 # The native IR models generated from the IR JSON Schema (ADR 0010): the regenerate-and-diff check, then the
 # Kotlin model's tests on Java 21 and 25 (A13), with bytecode for Java 21. On a pull request they run only when
-# the change touches the models, their sources or this workflow; `native-ir` is the one check to require.
+# the change touches the models, their sources, the toolchain pins or this workflow; `native-ir` is the one check
+# to require.
 
 on:
   push:
@@ -31,17 +32,24 @@ jobs:
           persist-credentials: false
       - name: Detect a change to the native IR models or their sources
         id: detect
+        shell: bash
         env:
           EVENT: ${{ github.event_name }}
           PR_BASE: ${{ github.base_ref }}
         run: |
+          set -euo pipefail
           if [ "$EVENT" != "pull_request" ]; then
             echo "native-ir=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          watched='^(jvm/|scripts/ir-models/|packages/spec/schemas/ir/|packages/spec/src/ir/|packages/spec/vectors/ir/|php/|\.github/workflows/p2-native-ir\.yml$)'
-          changed=$(git diff --name-only "origin/$PR_BASE...HEAD")
-          if printf '%s\n' "$changed" | grep -Eq "$watched"; then
+          # The sources of the models and of `regenerate`: the IR and naming schemas, code and vectors, the
+          # generator, the toolchain pins, the models and this workflow.
+          watched='^(jvm/|php/|scripts/ir-models/|packages/spec/(schemas/ir|src/ir|vectors/ir|src/naming|vectors/naming)/'
+          watched+='|\.github/workflows/p2-native-ir\.yml$|pnpm-lock\.yaml$|package\.json$|\.nvmrc$)'
+          # Both sides of a move, and paths unquoted, so that a moved or non-ASCII path still matches.
+          changed=$(git -c core.quotePath=false diff --name-only --no-renames "origin/$PR_BASE...HEAD")
+          # An empty diff cannot be told apart from a failed one: run everything.
+          if [ -z "$changed" ] || grep -Eq "$watched" <<< "$changed"; then
             echo "native-ir=true" >> "$GITHUB_OUTPUT"
           else
             echo "native-ir=false" >> "$GITHUB_OUTPUT"
@@ -93,15 +101,18 @@ jobs:
 
   # The required check: a skipped job (no change to watch) counts as passed, a failed or cancelled one does not.
   native-ir:
+    # Every job this check stands for is listed here, or its failure would not reach the required check.
     needs: [changes, regenerate, kotlin]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Fail when a needed job failed or was cancelled
+        shell: bash
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
+          set -euo pipefail
           for result in $RESULTS; do
             if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
               echo "A native IR job ended in $result (results: $RESULTS)."
