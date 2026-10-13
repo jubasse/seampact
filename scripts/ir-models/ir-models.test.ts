@@ -246,6 +246,22 @@ describe("ir-models", () => {
       /^Holder\.a: a \$ref that does not name a definition/,
     ],
     [
+      "a union variant with keywords beside its $ref",
+      {
+        Shape: {
+          type: "object",
+          discriminator: { propertyName: "kind" },
+          oneOf: [{ $ref: "#/$defs/A", properties: {} }],
+        },
+        A: {
+          type: "object",
+          required: ["kind"],
+          properties: { kind: { type: "string", const: "a" } },
+        },
+      },
+      /^Shape\.oneOf\[0\]: keyword properties on a reference/,
+    ],
+    [
       "a discriminator mapping",
       {
         Shape: {
@@ -286,7 +302,7 @@ describe("ir-models", () => {
     );
   });
 
-  it.each(["JsonObject", "Serializable", "IrIntegerSerializer", "JsonPrimitive"])(
+  it.each(["JsonObject", "Serializable", "IrIntegerSerializer", "JsonPrimitive", "OptIn"])(
     "a definition named %s, a name the Kotlin files use, fails generation",
     (name) => {
       const documents = syntheticDocuments({ [name]: { type: "string" } });

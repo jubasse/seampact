@@ -44,6 +44,9 @@ export const KOTLIN_CLAIMED_NAMES = [
   "Boolean",
   "List",
   "Map",
+  "Any",
+  "OptIn",
+  "ArithmeticException",
 ] as const;
 
 const SERIALIZER_SUFFIX = "Serializer";
