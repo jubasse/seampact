@@ -1,13 +1,5 @@
 lane: p2-access-identity
 proofs:
-  - id: CHK-004
-    fixtures:
-      - fixtures/passes/access-identity/catalogues/api.yaml
-      - fixtures/passes/access-identity/catalogues/catalogues.json
-    tests:
-      - 'core: packages/compiler/src/passes/access/identity/identities.test.ts#identities and principal variants'
-      - 'core: packages/compiler/src/passes/access/identity/identities.test.ts#identity headers'
-      - 'core: packages/compiler/src/passes/access/identity/catalogues.test.ts#access.identity catalogues'
   - id: CHK-005
     fixtures:
       - fixtures/passes/access-identity/catalogues/api.yaml
@@ -20,9 +12,3 @@ proofs:
       - fixtures/passes/access-identity/catalogues/api.yaml
     tests:
       - 'core: packages/compiler/src/passes/access/identity/schemes.test.ts#an application signature takes headers and an optional key'
-  - id: CHK-132
-    fixtures:
-      - fixtures/passes/access-identity/catalogues/api.yaml
-      - fixtures/passes/access-identity/catalogues/catalogues.json
-    tests:
-      - 'core: packages/compiler/src/passes/access/identity/schemes.test.ts#security schemes'
