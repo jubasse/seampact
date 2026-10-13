@@ -15,6 +15,10 @@ const MAX_CODE_POINT = 0x10ffff;
 // RE2 refuses a repetition count above 1000, so a portable pattern stays within it.
 const MAX_REPEAT = 1000;
 
+// The parser recurses once per group: deeper nesting is refused before it exhausts the stack. No real pattern
+// comes near it.
+const MAX_GROUP_DEPTH = 100;
+
 const METACHARACTERS = new Set([..."\\^$.|?*+()[]{}/"]);
 const DIGITS: readonly Range[] = [[0x30, 0x39]];
 const WORD: readonly Range[] = [
@@ -93,6 +97,7 @@ function classText(ranges: readonly Range[], negated: boolean): string {
 
 class PatternParser {
   private at = 0;
+  private groupDepth = 0;
 
   constructor(private readonly chars: readonly string[]) {}
 
@@ -165,8 +170,12 @@ class PatternParser {
       this.at += 2;
       open = "(?:";
     }
+    this.groupDepth++;
+    if (this.groupDepth > MAX_GROUP_DEPTH)
+      refuse(`groups nested more than ${MAX_GROUP_DEPTH} deep are not portable`);
     const inner = this.alternation();
     if (this.next() !== ")") refuse("a group is not closed");
+    this.groupDepth--;
     return `${open}${inner})`;
   }
 

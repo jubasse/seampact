@@ -48,4 +48,10 @@ describe("portable patterns", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toContain(reason);
   });
+
+  test("deeply nested groups are refused, not left to overflow the stack", () => {
+    const result = treeSchemasNormalizePattern(`${"(".repeat(5000)}a${")".repeat(5000)}`);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain("nested");
+  });
 });
