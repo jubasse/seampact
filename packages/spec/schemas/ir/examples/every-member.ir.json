@@ -981,6 +981,13 @@
             "from": [{ "layer": "api", "pointer": "/rights/tasks.update" }]
           },
           "origin": { "layer": "api", "pointer": "/errors" }
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [{ "layer": "core", "pointer": "/errors/api.internal" }]
+          }
         }
       ],
       "fieldRights": [
