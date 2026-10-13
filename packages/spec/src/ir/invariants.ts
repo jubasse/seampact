@@ -25,7 +25,8 @@ export type IrInvariantId =
   | "ir.ref.resolves"
   | "ir.origin.core"
   | "ir.input-proof.wire"
-  | "ir.input-proof.name";
+  | "ir.input-proof.name"
+  | "ir.input-proof.input";
 
 export interface IrInvariantViolation {
   id: IrInvariantId;
@@ -57,6 +58,9 @@ const OTHER_TYPE_KINDS = ["ref", "array"]; // neither an id nor a refused proof
 // The input media whose body is a list of fields, each with a wire form (`fields`, a proof's `wire`), and the rest.
 const FIELD_MEDIA = ["application/x-www-form-urlencoded", "multipart/form-data"];
 const DOCUMENT_MEDIA = ["application/json"];
+// The known schema kinds that are no object: a body proof is a property beside the input's own, so its input
+// is an object schema.
+const NON_OBJECT_SCHEMA_KINDS = ["map", "union"];
 // The catalogues of the declarations the compiler supplies (origin layer `core`, ADR 0004 sections 6 and 13).
 const CORE_CATALOGUES = ["formats", "errors", "schemas"];
 export const IR_PARTITIONS = {
@@ -90,6 +94,33 @@ for (const owner of ["ContractIR", "Api"] as const) {
     if (typeof keys?.$ref === "string")
       CATALOGUES.set(keys.$ref.slice(keys.$ref.lastIndexOf("/") + 1), { owner, member });
   }
+}
+
+type Fail = (id: IrInvariantId, pointer: string, message: string) => void;
+
+// The input of a body proof is a `ref` use of an object schema (`ApiEmptyBody` for a proof-only input). An
+// unknown use or schema kind is the reader's to name, and a missing schema is ir.ref.resolves'.
+function checkProofInput(input: Json, pointer: string, schemaEntries: Json, fail: Fail): void {
+  if (!Array.isArray(input.proofs) || input.proofs.length === 0) return;
+  const use = isRecord(input.schema) ? input.schema : {};
+  const knownUseKinds: string[] = [...ID_TYPE_KINDS, ...PROOF_REFUSED_KINDS, ...OTHER_TYPE_KINDS];
+  const message = "An input with body proofs is a 'ref' use of an object schema";
+  if (use.kind !== "ref") {
+    if (knownUseKinds.includes(String(use.kind)))
+      fail("ir.input-proof.input", `${pointer}/schema`, `${message}, not a '${use.kind}' use.`);
+    return;
+  }
+
+  const target =
+    typeof use.schema === "string" && Object.hasOwn(schemaEntries, use.schema)
+      ? schemaEntries[use.schema]
+      : undefined;
+  if (isRecord(target) && NON_OBJECT_SCHEMA_KINDS.includes(String(target.kind)))
+    fail(
+      "ir.input-proof.input",
+      `${pointer}/schema`,
+      `${message}: '${String(use.schema)}' is a '${target.kind}' schema.`,
+    );
 }
 
 // Returns every invariant violation of an IR document, empty for a sound one. Pure and Ajv-free; it expects a
@@ -149,6 +180,7 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
         break;
       }
       case "OperationInput": {
+        checkProofInput(value, pointer, schemaEntries, fail);
         const proofs = Array.isArray(value.proofs) ? value.proofs : [];
         // A proof is identified by its name: one element per name, and no name the body already carries (a
         // property of the input's object schema, or a form field).

@@ -361,12 +361,49 @@ describe("checkIrInvariants", () => {
     // A name is free once the schema no longer holds it.
     expect(
       check((input) => {
-        input.schema = { kind: "ref", schema: "Labels" };
+        input.schema = { kind: "ref", schema: "LockedParams" };
         delete input.fields;
         input.media = "application/json";
         for (const proof of input.proofs as Record<string, unknown>[]) delete proof.wire;
       }).found,
     ).toEqual([]);
+  });
+
+  test("an input with body proofs is a ref use of an object schema", () => {
+    const check = (change: (input: Record<string, unknown>) => void) => {
+      const ir = sample("every-member.ir.json");
+      const [input] = objectsOf(ir, "OperationInput").filter(({ value }) =>
+        Array.isArray(value.proofs),
+      );
+      if (input === undefined) throw new Error("no input with proofs in the sample");
+      input.value.media = "application/json";
+      delete input.value.fields;
+      for (const proof of input.value.proofs as Record<string, unknown>[]) delete proof.wire;
+      change(input.value);
+      return {
+        at: `${input.pointer}/schema`,
+        found: checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer })),
+      };
+    };
+    const useOf = (schema: unknown) => (input: Record<string, unknown>) => {
+      input.schema = schema;
+    };
+    expect(check(useOf({ kind: "ref", schema: "Task" })).found).toEqual([]);
+    // Labels is a map schema, Notice a union.
+    for (const schema of ["Labels", "Notice"]) {
+      const result = check(useOf({ kind: "ref", schema }));
+      expect(result.found, schema).toEqual([{ id: "ir.input-proof.input", pointer: result.at }]);
+    }
+    const scalar = check(useOf({ kind: "scalar", type: "string", refinements: {} }));
+    expect(scalar.found).toEqual([{ id: "ir.input-proof.input", pointer: scalar.at }]);
+    // Without proofs any input stands; an unknown use kind is the reader's to name.
+    expect(
+      check((input) => {
+        input.schema = { kind: "ref", schema: "Labels" };
+        delete input.proofs;
+      }).found,
+    ).toEqual([]);
+    expect(check(useOf({ kind: "zz-later" })).found).toEqual([]);
   });
 
   test("a core origin points at its declaration under its catalogue", () => {
