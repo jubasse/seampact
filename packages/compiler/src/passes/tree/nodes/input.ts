@@ -85,7 +85,7 @@ export function treeNodesInput(
   };
 
   if (media === JSON_MEDIA) {
-    reportNestedFiles(site, filesBelow(schema, draft, ""), undefined);
+    reportNestedFiles(site, filesBelow(schema, draft, undefined), undefined);
     return { media, schema, origin };
   }
 
@@ -154,7 +154,9 @@ function fieldWire(
   if (treeNodesIsFileField(property.type)) {
     checkFileField(site, property, at);
   } else {
-    reportNestedFiles(site, filesBelow(property.type, site.draft, property.name), property.name);
+    const nestedFiles = filesBelow(property.type, site.draft, property.origin);
+    reportNestedFiles(site, nestedFiles, property.name);
+    if (nestedFiles.length > 0) return undefined;
   }
 
   const wire =
@@ -221,8 +223,13 @@ function bodyLimitOf(site: InputSite): { bytes: number; origin: Origin | undefin
   return bytes === undefined ? undefined : { bytes, origin: reading?.origin };
 }
 
-// Every file reached from `use` (a file itself included), through schemas, items, map values and union variants.
-function filesBelow(use: IrWriter.TypeUse, draft: DraftIR, path: string): NestedFile[] {
+// Every file reached from `use` (a file itself included), through schemas, items, map values, union variants and
+// the schema of a JSON text field; each at its path below `use`, located at the nearest property, else `useOrigin`.
+function filesBelow(
+  use: IrWriter.TypeUse,
+  draft: DraftIR,
+  useOrigin: Origin | undefined,
+): NestedFile[] {
   const found: NestedFile[] = [];
   const visited = new Set<string>();
 
@@ -230,6 +237,8 @@ function filesBelow(use: IrWriter.TypeUse, draft: DraftIR, path: string): Nested
     if (at.kind === "file") found.push({ path: atPath, origin });
     else if (at.kind === "array") visit(at.items, atPath, origin);
     else if (at.kind === "ref") visitSchema(at.schema, atPath);
+    else if (at.kind === "scalar" && at.content !== undefined)
+      visit(at.content.schema, atPath, origin);
   };
 
   const visitSchema = (id: string, atPath: string): void => {
@@ -246,7 +255,7 @@ function filesBelow(use: IrWriter.TypeUse, draft: DraftIR, path: string): Nested
         visitSchema(variant.schema, joinPath(atPath, variant.tag));
   };
 
-  visit(use, path, undefined);
+  visit(use, "", useOrigin);
   return found;
 }
 
@@ -260,11 +269,11 @@ function reportNestedFiles(
   field: string | undefined,
 ): void {
   for (const file of files) {
-    const where = file.path === "" ? "as its whole body" : `at ${file.path}`;
+    const at = file.path === "" ? "" : ` at ${file.path}`;
     const message =
       field === undefined
-        ? `The JSON input of ${site.operationId} holds a file ${where}, but a file travels only in a multipart input or as a download.`
-        : `The ${mediaWord(site.media)} input of ${site.operationId} holds a file at ${file.path} inside the field ${field}, but a file is a top-level field.`;
+        ? `The JSON input of ${site.operationId} holds a file${at === "" ? " as its whole body" : at}, but a file travels only in a multipart input or as a download.`
+        : `The ${mediaWord(site.media)} input of ${site.operationId} holds a file${at} inside the field ${field}, but a file is a top-level field.`;
     site.context.report(
       treeNodesError({
         rule: "input-file",

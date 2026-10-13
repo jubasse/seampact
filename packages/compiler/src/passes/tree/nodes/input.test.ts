@@ -85,6 +85,7 @@ function draftWith(...schemas: IrWriter.Schema[]): DraftIR {
 const route = (name: string): string => `/surfaces/app/routes/${name}`;
 const SLACK = "/schemas/SlackCommand";
 const ATTACH = `${route("attach")}/input`;
+const BATCH = "reports/ops/batch";
 
 test("bodies beyond JSON: form and multipart fields with their wires", () => {
   const workspace = treeNodesLoadDirectory(`${TREE_NODES_FIXTURES}bodies/`);
@@ -162,6 +163,10 @@ test("bodies beyond JSON: files only in multipart within the body limit, form in
       [input("jsonFile")]: { kind: "ref", schema: "JsonFileInput" },
       [input("formScalar")]: text,
       [input("formOpaque")]: { kind: "ref", schema: "FormOpaqueInput" },
+      [input("formJsonText")]: { kind: "ref", schema: "FormJsonTextInput" },
+      [input("multipartObject")]: { kind: "ref", schema: "MultipartObjectInput" },
+      [input("multipartPages")]: { kind: "ref", schema: "MultipartPagesInput" },
+      [input(BATCH)]: { kind: "ref", schema: "ReportsBatchInput" },
     },
   });
   const draft = draftWith(
@@ -169,6 +174,25 @@ test("bodies beyond JSON: files only in multipart within the body limit, form in
     objectSchema("TooLargeInput", input("tooLarge"), { file: file(2 * MiB) }),
     objectSchema("JsonFileInput", input("jsonFile"), { file: file() }),
     objectSchema("FormOpaqueInput", input("formOpaque"), { anything: opaque }),
+    objectSchema("FormJsonTextInput", input("formJsonText"), {
+      meta: {
+        kind: "scalar",
+        type: "string",
+        refinements: {},
+        content: { media: "application/json", schema: { kind: "ref", schema: "WithFile" } },
+      },
+    }),
+    objectSchema("WithFile", "/schemas/WithFile", { file: file() }),
+    objectSchema("MultipartObjectInput", input("multipartObject"), {
+      doc: { kind: "ref", schema: "MultipartObjectDoc" },
+    }),
+    objectSchema("MultipartObjectDoc", `${input("multipartObject")}/properties/doc`, {
+      scan: file(),
+    }),
+    objectSchema("MultipartPagesInput", input("multipartPages"), {
+      pages: { kind: "array", items: { kind: "array", items: file() } },
+    }),
+    objectSchema("ReportsBatchInput", input(BATCH), { file: file(3 * MiB) }),
   );
 
   const { diagnostics } = treeNodesRun(raw, workspace, { treeSchemas, draft });
@@ -201,9 +225,42 @@ test("bodies beyond JSON: files only in multipart within the body limit, form in
       origin: { layer: "api", pointer: `${input("formOpaque")}/properties/anything` },
       related: [],
     },
+    {
+      rule: "seampact/tree/input-file",
+      origin: { layer: "api", pointer: "/schemas/WithFile/properties/file" },
+      related: [],
+    },
+    {
+      rule: "seampact/tree/input-file",
+      origin: { layer: "api", pointer: `${input("multipartObject")}/properties/doc/properties/scan` },
+      related: [],
+    },
+    {
+      rule: "seampact/tree/input-file",
+      origin: { layer: "api", pointer: `${input("multipartPages")}/properties/pages` },
+      related: [],
+    },
+    {
+      rule: "seampact/tree/input-file-size",
+      origin: { layer: "api", pointer: `${input(BATCH)}/properties/file` },
+      related: [
+        {
+          origin: { layer: "api", pointer: "/conventions/batch/bodyLimit" },
+          message: "the body limit",
+        },
+      ],
+    },
   ]);
   expect(diagnostics[1]?.message).toBe(
     "The file field file of tooLarge allows 2097152 bytes, more than the route's body limit of 1048576 bytes.",
+  );
+  expect(diagnostics.slice(5, 8).map(({ message }) => message)).toEqual([
+    "The form input of formJsonText holds a file at file inside the field meta, but a file is a top-level field.",
+    "The multipart input of multipartObject holds a file at scan inside the field doc, but a file is a top-level field.",
+    "The multipart input of multipartPages holds a file inside the field pages, but a file is a top-level field.",
+  ]);
+  expect(diagnostics[8]?.message).toBe(
+    "The file field file of getReportsBatch allows 3145728 bytes, more than the route's body limit of 2097152 bytes.",
   );
 
   for (const diagnostic of diagnostics) {
