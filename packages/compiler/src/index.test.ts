@@ -12,7 +12,7 @@ test("exposes the shared compiler types and helpers through the barrel", () => {
 });
 
 test("builds a Diagnostic from an Origin of the spec subpath", () => {
-  const origin: Origin = { layer: "api", pointer: "/operations/a" };
+  const origin = { layer: "api", pointer: "/operations/a" } satisfies Origin;
   const diagnostic: Diagnostic = {
     severity: "error",
     rule: "seampact/access/deny-by-default",

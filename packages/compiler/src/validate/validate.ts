@@ -12,10 +12,15 @@ import {
   authoringSchemaFileName,
   authoringSchemas,
 } from "@seampact/spec/authoring";
-import type { Origin } from "@seampact/spec/ir";
 import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
-import { type JsonValue, type RawLayer, type RawWorkspace, schemaKindOf } from "../raw-tree.js";
+import {
+  type FileLayerId,
+  type JsonValue,
+  type RawLayer,
+  type RawWorkspace,
+  schemaKindOf,
+} from "../raw-tree.js";
 import { convertErrors } from "./diagnostics.js";
 
 // The kinds a document may be validated as: the file kinds and the fragment kinds.
@@ -64,7 +69,7 @@ function sortDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
 export function validateDocument(
   kind: ValidateDocumentKind,
   tree: JsonValue,
-  layer: Origin["layer"],
+  layer: FileLayerId,
 ): Diagnostic[] {
   const validate = validatorFor(kind);
   if (validate(tree)) return [];
