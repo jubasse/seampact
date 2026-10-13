@@ -1,1 +1,1 @@
-export {};
+export { linkPass } from "./pass.js";

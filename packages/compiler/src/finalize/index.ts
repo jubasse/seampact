@@ -1,1 +1,1 @@
-export {};
+export { finalizeIr } from "./finalize.js";

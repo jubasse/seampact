@@ -1,1 +1,1 @@
-export {};
+export { deriveWirePass } from "./pass.js";

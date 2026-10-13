@@ -1,1 +1,1 @@
-export {};
+export { accessRightsPass } from "./pass.js";
