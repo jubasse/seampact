@@ -171,8 +171,9 @@ export function treeSchemasNeedsHoist(value: TreeSchemasRaw | undefined): boolea
   return shape === "object" || shape === "map" || shape === "union" || shape === "allOf";
 }
 
-// The words a child name starts with: the parent's segments, then its role's suffix words (`RolesParams` gives
-// `roles params`), so the child of a derived schema never meets the child of its declared namesake.
+// The words a child name starts with: the parent's segments, then its role's default suffix words (`RolesParams`
+// gives `roles params`), so the child of a derived schema never meets the child of its declared namesake (ADR 0007,
+// amendment 2026-10-12, item 10).
 const wordsOf = (name: Name | undefined): string[] | undefined =>
   name === undefined ? undefined : [...name.segments, ...suffixWords(name)];
 
