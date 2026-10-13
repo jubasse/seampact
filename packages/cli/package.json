@@ -1,5 +1,6 @@
 {
   "name": "@seampact/cli",
+  "description": "The seampact command: init, compile, check, lint, diff, generate, bundle and explain.",
   "version": "0.0.0",
   "private": true,
   "type": "module",

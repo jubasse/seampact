@@ -1,5 +1,6 @@
 {
   "name": "@seampact/spec",
+  "description": "The JSON Schemas of the YAML files and of the IR, with their TypeScript types, and the naming vectors.",
   "version": "0.0.0",
   "private": true,
   "type": "module",

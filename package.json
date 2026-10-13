@@ -13,14 +13,19 @@
     "format:check": "biome format .",
     "test": "vitest run",
     "gate": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
-    "changeset": "changeset"
+    "changeset": "changeset",
+    "prepare": "simple-git-hooks"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@changesets/cli": "3.0.3",
     "@types/node": "24.19.1",
+    "simple-git-hooks": "2.14.0",
     "typescript": "6.0.3",
     "vitest": "5.0.3",
     "yaml": "2.9.1"
+  },
+  "simple-git-hooks": {
+    "pre-push": "if [ -f scripts/hooks/pre-push.sh ]; then sh scripts/hooks/pre-push.sh; else echo 'pre-push: this branch has no scripts/hooks/pre-push.sh, map not checked'; fi"
   }
 }

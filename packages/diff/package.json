@@ -1,5 +1,6 @@
 {
   "name": "@seampact/diff",
+  "description": "Classifies the changes between two contract versions as additive or breaking, per direction.",
   "version": "0.0.0",
   "private": true,
   "type": "module",

@@ -1,5 +1,6 @@
 {
   "name": "@seampact/codegen-core",
+  "description": "The API the code generators are written against.",
   "version": "0.0.0",
   "private": true,
   "type": "module",

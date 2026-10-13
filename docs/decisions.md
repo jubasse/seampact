@@ -1,6 +1,6 @@
 # Product decisions
 
-The ADRs and the conformance checklist cite product decisions by id, from A1 to A44. This log states each decision as it stands now. When a later decision refines an earlier one, the entry gives the final form and names the decision that refined it. The ids are stable: a decision is never renumbered.
+The ADRs and the conformance checklist cite product decisions by id, from A1 to A46. This log states each decision as it stands now. When a later decision refines an earlier one, the entry gives the final form and names the decision that refined it. The ids are stable: a decision is never renumbered.
 
 A36 is the governing principle: where an older decision reads as imposing a convention, A36 prevails.
 
@@ -139,6 +139,12 @@ The ADRs also cite six design lessons, listed under [Lessons](#lessons) below, a
 
 <a id="a44"></a>
 **A44.** Development process: git flow, with `feat/` branches squash-merged into develop, `release/` branches merged into main and back into develop, and `hotfix/` branches from main merged into main and develop. develop is the default branch until 1.0 and main from then on; both are protected (required `ci` check, no force push, no deletion) and receive no direct commits.
+
+<a id="a45"></a>
+**A45.** Validation beyond the portable subset of ADR 0003 is added in the app's code, through each framework's native mechanism, on top of the generated schemas and classes. Every validator and server target emits output an app can extend: generated classes are never final, rules come in a form a subclass can merge, zod object schemas are exported unrefined, and the generated boundary accepts the app's own derived class or schema. The contract has no `extraRules` key and the config no per-target rule mapping, so the contract stays the portable subset (lesson 6); named formats keep their target-option mapping of ADR 0003 section 8. The user guide documents, per framework, how to add rules on top of the generated validation. (Revises the first form of A45, which declared named checks in the contract and mapped them per target in the config.)
+
+<a id="a46"></a>
+**A46.** The loader's trust model: contract files and the packs installed beside them are trusted like any dependency the user chooses to install, as an npm package, an ESLint or a Babel plugin is (a pack, unlike those, is data only). seampact is not an antivirus. The loader keeps the guarantees that are correctness or safety bugs whoever wrote the files: root containment (nothing is read outside the workspace root, or outside a pack's package directory, through links and `../` included), prototype keys refused (`__proto__`, `constructor` and `prototype` as keys and api names), a depth limit, a per-file size limit and a per-load budget of work and text, which turn a runaway include or expansion into a located error instead of a hang. Defending against an adversarial contract or pack author, and denial of service beyond those limits, are non-goals. ADR 0006 section 1 states the same model, and the loader's module comment points to it.
 
 ## Lessons
 

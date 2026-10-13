@@ -1,3 +1,5 @@
+// The authoring grammar: the JSON Schemas of the YAML files (ADR 0002), their schema keywords and markers.
+
 export {
   REFUSED_SCHEMA_KEYWORDS,
   SCHEMA_KEYWORDS,

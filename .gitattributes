@@ -3,3 +3,6 @@
 # checks the two lists match.
 packages/spec/schemas/authoring/** linguist-generated
 packages/spec/src/authoring/grammar.snapshot.json linguist-generated
+
+# Compared byte for byte by `node scripts/cartography/cli.ts --check`; LF on every platform.
+docs/agents/cartography.md text eol=lf

@@ -1,3 +1,5 @@
+// The derivation table and the derivation roles of ADR 0006 sections 5 and 6, held as data.
+
 export { derivationCopy } from "./freeze.js";
 export type {
   DerivationDatumRequired,

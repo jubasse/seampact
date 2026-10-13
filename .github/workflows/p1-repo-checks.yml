@@ -1,7 +1,8 @@
 name: Repository checks
 
-# The conformance checklist (ids, proofs, per-target report). The package role, dependency
-# rule and namespace checks run in `pnpm gate` (CI).
+# The conformance checklist (ids, proofs, per-target report) and the agent cartography
+# (docs/agents/cartography.md). The package role, dependency rule and namespace checks run in
+# `pnpm gate` (CI).
 
 on:
   push:
@@ -50,5 +51,7 @@ jobs:
           else
             node scripts/checklist/cli.ts check
           fi
+      - name: Check the agent cartography is current
+        run: node scripts/cartography/cli.ts --check
       - name: Report the share of items proven per target
         run: node scripts/checklist/cli.ts report >> "$GITHUB_STEP_SUMMARY"
