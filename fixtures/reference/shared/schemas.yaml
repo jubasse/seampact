@@ -30,3 +30,4 @@ Task:
     effort: { type: integer, minimum: 0, restrictedTo: tasks.seeEffort }
     version: { type: integer, minimum: 1 }
     createdAt: { type: string, format: date-time }
+ReauthToken: { type: string, minLength: 1, maxLength: 512 }

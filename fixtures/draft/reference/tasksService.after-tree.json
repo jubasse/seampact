@@ -401,6 +401,41 @@
           }
         ]
       },
+      "RecentAuthParams": {
+        "kind": "object",
+        "id": "RecentAuthParams",
+        "name": {
+          "segments": ["recent", "auth"],
+          "role": "params"
+        },
+        "directions": ["input"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/rules/recentAuth/params"
+        },
+        "properties": [
+          {
+            "name": "intent",
+            "type": {
+              "kind": "enum",
+              "enum": "ReauthIntent"
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/rules/recentAuth/params/intent"
+            }
+          }
+        ]
+      },
       "ApiSchemaInvalidParams": {
         "kind": "object",
         "id": "ApiSchemaInvalidParams",
@@ -664,6 +699,21 @@
         "origin": {
           "layer": "shared",
           "pointer": "/enums/Service"
+        }
+      },
+      "ReauthIntent": {
+        "id": "ReauthIntent",
+        "name": {
+          "segments": ["reauth", "intent"],
+          "role": "schema"
+        },
+        "values": ["purge_task"],
+        "localReason": "The actions that ask for a fresh sign-in.",
+        "directions": ["input"],
+        "docs": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/enums/ReauthIntent"
         }
       }
     }

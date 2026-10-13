@@ -251,6 +251,30 @@ describe("draft fixtures", () => {
     },
   );
 
+  // ADR 0004 section 13 and LD-8: the origin is the first requirement that brings a body proof.
+  test("tasks: access.rights writes a proof-only input where tree left none", () => {
+    const operationsWithoutInput = draftFixture("tasks", "after-tree")
+      .operations.filter((operation) => operation.input === undefined)
+      .map((operation) => operation.id);
+    const proofOnlyInputs = draftFixture("tasks", "after-access").operations.filter(
+      (operation) =>
+        operationsWithoutInput.includes(operation.id) && operation.input?.proofs !== undefined,
+    );
+
+    expect(proofOnlyInputs.map((operation) => operation.id)).toEqual(["purgeTask"]);
+
+    for (const { id, input } of proofOnlyInputs) {
+      const firstProofOrigin = input?.proofs?.[0]?.derivedFrom.from?.[0];
+
+      expect(input, id).toMatchObject({
+        media: "application/json",
+        schema: { kind: "ref", schema: "ApiEmptyBody" },
+        rawBody: false,
+      });
+      expect(input?.origin, id).toEqual(firstProofOrigin);
+    }
+  });
+
   test("the reference contract loads with no diagnostic", () => {
     expect(loaded.diagnostics).toEqual([]);
   });

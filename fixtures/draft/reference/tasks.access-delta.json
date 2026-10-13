@@ -443,6 +443,37 @@
           "rawBody": false
         }
       },
+      "purgeTask": {
+        "access": {
+          "kind": "identity",
+          "identity": "user",
+          "schemes": ["bearer", "sessionCookie"],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/identity"
+          }
+        },
+        "callerKinds": ["identified"],
+        "principalRequires": [],
+        "bindings": [],
+        "csrf": {
+          "kind": "derived",
+          "header": "X-Csrf-Token",
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          }
+        }
+      },
       "getPreferences": {
         "access": {
           "kind": "identity",
@@ -658,6 +689,30 @@
           "layer": "shared",
           "pointer": "/rules/throttle"
         }
+      },
+      "recentAuth": {
+        "id": "recentAuth",
+        "params": "RecentAuthParams",
+        "takesBucket": false,
+        "proof": {
+          "in": "body",
+          "name": "reauthToken",
+          "schema": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "minLength": 1,
+              "maxLength": 512
+            }
+          }
+        },
+        "errors": ["api.reauthentication_required"],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/rules/recentAuth"
+        }
       }
     },
     "scopes": {
@@ -825,6 +880,31 @@
           }
         ],
         "fieldRights": [
+          {
+            "schema": "CreateTask",
+            "pointer": "/effort",
+            "right": "roles",
+            "params": {
+              "allowed": ["owner"]
+            },
+            "subject": {
+              "source": {
+                "in": "scope",
+                "name": "channel"
+              }
+            },
+            "direction": "input",
+            "inputPolicy": "reject",
+            "derivedFrom": {
+              "derivation": "fieldRight.restricted",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/schemas/CreateTask/properties/effort/restrictedTo"
+                }
+              ]
+            }
+          },
           {
             "schema": "Task",
             "pointer": "/effort",
@@ -1155,6 +1235,73 @@
             }
           }
         ]
+      },
+      "purgeTask": {
+        "scopes": [
+          {
+            "scope": "channel",
+            "source": {
+              "in": "path",
+              "name": "channelId"
+            },
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/scopes/channel"
+            }
+          }
+        ],
+        "requires": [
+          {
+            "kind": "rule",
+            "rule": "recentAuth",
+            "params": {
+              "intent": "purge_task"
+            },
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/requires/0"
+            }
+          }
+        ],
+        "fieldRights": [],
+        "input": {
+          "media": "application/json",
+          "schema": {
+            "kind": "ref",
+            "schema": "ApiEmptyBody"
+          },
+          "rawBody": false,
+          "proofs": [
+            {
+              "name": "reauthToken",
+              "schema": {
+                "kind": "scalar",
+                "type": "string",
+                "refinements": {
+                  "minLength": 1,
+                  "maxLength": 512
+                }
+              },
+              "derivedFrom": {
+                "derivation": "rule.proof",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/requires/0"
+                  },
+                  {
+                    "layer": "shared",
+                    "pointer": "/rules/recentAuth/proof"
+                  }
+                ]
+              }
+            }
+          ],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/requires/0"
+          }
+        }
       },
       "getPreferences": {
         "scopes": [],

@@ -306,6 +306,30 @@
           "layer": "shared",
           "pointer": "/rules/throttle"
         }
+      },
+      "recentAuth": {
+        "id": "recentAuth",
+        "params": "RecentAuthParams",
+        "takesBucket": false,
+        "proof": {
+          "in": "body",
+          "name": "reauthToken",
+          "schema": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {
+              "minLength": 1,
+              "maxLength": 512
+            }
+          }
+        },
+        "errors": ["api.reauthentication_required"],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/rules/recentAuth"
+        }
       }
     },
     "scopes": {

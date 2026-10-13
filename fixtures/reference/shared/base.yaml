@@ -56,6 +56,10 @@ rules:
   throttle:
     bucket: true
     errors: [api.rate_limited]
+  recentAuth:
+    params: { intent: { enum: ReauthIntent } }
+    proof: { in: body, name: reauthToken, schema: ReauthToken }
+    errors: [api.reauthentication_required]
 
 buckets:
   write: { key: [principal.userId], limit: 60, window: 1m }
@@ -70,6 +74,7 @@ errors:
     status: 429
     params: { retryAfterMs: { type: integer, minimum: 0 } }
     example: { retryAfterMs: 1500 }
+  api.reauthentication_required: { status: 401 }
 
 pagings:
   cursor:
@@ -101,6 +106,7 @@ enums:
   TaskState: { values: [open, done, archived], reason: "Task states belong to this api." }
   Surface: { values: [app, studio], reason: "The product's entry points." }
   Service: { values: [catalog, ticketing], reason: "The product's internal services." }
+  ReauthIntent: { values: [purge_task], reason: "The actions that ask for a fresh sign-in." }
 
 schemas:
   $include: ./schemas.yaml

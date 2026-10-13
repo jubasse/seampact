@@ -1503,6 +1503,10 @@ rules:
   throttle:
     bucket: true
     errors: [api.rate_limited]
+  recentAuth:
+    params: { intent: { enum: ReauthIntent } }
+    proof: { in: body, name: reauthToken, schema: ReauthToken }
+    errors: [api.reauthentication_required]
 
 buckets:
   write: { key: [principal.userId], limit: 60, window: 1m }
@@ -1517,6 +1521,7 @@ errors:
     status: 429
     params: { retryAfterMs: { type: integer, minimum: 0 } }
     example: { retryAfterMs: 1500 }
+  api.reauthentication_required: { status: 401 }
 
 pagings:
   cursor:
@@ -1548,6 +1553,7 @@ enums:
   TaskState: { values: [open, done, archived], reason: "Task states belong to this api." }
   Surface: { values: [app, studio], reason: "The product's entry points." }
   Service: { values: [catalog, ticketing], reason: "The product's internal services." }
+  ReauthIntent: { values: [purge_task], reason: "The actions that ask for a fresh sign-in." }
 
 schemas:
   $include: ./schemas.yaml
@@ -1586,9 +1592,10 @@ Task:
     effort: { type: integer, minimum: 0, restrictedTo: tasks.seeEffort }
     version: { type: integer, minimum: 1 }
     createdAt: { type: string, format: date-time }
+ReauthToken: { type: string, minLength: 1, maxLength: 512 }
 ```
 
-`tasks/schemas.yaml` (not shown) declares the api's own schemas in the same way: `Health`, `Channel`, `CreateTask` and `UpdateTask` (picked from `Task`, ADR 0003 section 2), `ArchiveTask` (its reason; `concurrency` adds `expectedVersion`), `Preferences`, `UpdatePreferences`, `DraftId`, `Draft`, `PaymentEvent`, `TaskQuery` and `TaskSearchResult`.
+`tasks/schemas.yaml` (not shown) declares the api's own schemas in the same way: `Health`, `Channel`, `CreateTask` and `UpdateTask` (picked from `Task`, ADR 0003 section 2; `CreateTask` overlays `effort` with `restrictedTo: { right: roles, params: { allowed: [owner] } }`, a scope right, since a create has no member id for `tasks.seeEffort`, section 6 of ADR 0003), `ArchiveTask` (its reason; `concurrency` adds `expectedVersion` to it and to `UpdateTask`), `Preferences`, `UpdatePreferences`, `DraftId`, `Draft`, `PaymentEvent`, `TaskQuery` and `TaskSearchResult`.
 
 ```yaml
 # tasks/api.yaml
@@ -1664,6 +1671,11 @@ surfaces:
                     input: ArchiveTask
                     output: Task
                     internal: true
+                  purge:
+                    method: post
+                    requires: [{ rule: recentAuth, params: { intent: purge_task } }]
+                    responses:
+                      204: {}
       me:
         kind: single
         routes:
@@ -1728,9 +1740,10 @@ What the example shows, by route:
 - Errors: the base declares only `api.schema_invalid` (its `Issues` carry no `in`, so the role is bound with a params template) and `api.rate_limited` (an example, and a nature left to its status). Every other derived error answers its role's default code (A34), and `api.internal`, `api.not_found` and `api.forbidden` are default codes attached by name.
 
 - `listTasks` (`GET /v1/channels/{channelId}/tasks`): identity `user` from the surface, scope `channel` from the member path of `channels`, the base's `cursor` style (the item array as the body, the next page in a `Link` header) capped at 50, the restricted sort key `effort` (it inherits `tasks.seeEffort` from `Task.effort`), `filteredBy`. A missing channel answers the scope's `api.not_found` only: the `channel` scope reads `path.channelId`, so `member.notFound` derives no second 404 for it (ADR 0006 section 5).
-- `createTask`: the `writeThrottle` and `channelEditor` entries, so `throttle` then `roles` in that order, a body, an idempotency key from the conventions, CSRF from `sessionCookie` on a write.
+- `createTask`: the `writeThrottle` and `channelEditor` entries, so `throttle` then `roles` in that order, a body whose `effort` only an `owner` of the channel may send, an idempotency key from the conventions, CSRF from `sessionCookie` on a write.
 - `updateTask`: `tasks.update` with the subject defaulting to `path.taskId`, the version read from `body.expectedVersion` and compared to `Task.version`, 409 `state.conflict`.
 - `archiveTask`: a member action that opts into the version, kept out of the `public` document.
+- `purgeTask`: a member action without `input` under the `recentAuth` rule, whose body proof `reauthToken` becomes the whole input (section 9; ADR 0004 section 13).
 - `searchTasks`: an included route, idempotency exempt with its reason, a 300 ms budget, a named example.
 - `getPreferences` and `updatePreferences`: a single owned by the caller, conditional GET; `deleteDraft` answers 200 with the deleted record.
 - `payments` (`POST /v1/hooks/payments`): the signed `stripe` identity, raw body, no CSRF and no idempotency key, 204.
