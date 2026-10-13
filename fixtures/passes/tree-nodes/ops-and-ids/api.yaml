@@ -1,0 +1,48 @@
+# The ops shorthand and operation ids under changed conventions (ADR 0002 section 6): `update` sent as PUT, ids
+# derived noun first and spelled in snake case, a collection whose singular is not its id parameter's stem.
+api: { name: shop, version: 1, kind: product }
+
+conventions:
+  ops: { update: { method: put } }
+  operationIds: { order: nounVerb, case: snake }
+
+schemas:
+  UserId: { type: string }
+  Member:
+    type: object
+    required: [userId]
+    properties:
+      userId: UserId
+      role: { type: string }
+  UpdateMember:
+    type: object
+    properties:
+      role: { type: string }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      members:
+        kind: collection
+        id: { userId: UserId }
+        singular: member
+        item: Member
+        ops:
+          list: {}
+          get: {}
+          update: { input: UpdateMember }
+          delete: { method: post, operationId: removeMember }
+          batch: {}
+        collection:
+          routes:
+            search: { method: post }
+        member:
+          routes:
+            promote: { method: post }
+      me:
+        kind: single
+        ops: [get]
+        routes:
+          avatar: { method: get }
+      ping: { method: get }
