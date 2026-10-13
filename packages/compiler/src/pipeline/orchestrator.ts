@@ -75,11 +75,12 @@ const hasError = (diagnostics: readonly Diagnostic[]): boolean =>
 /** Compiles a workspace (ADR 0006 section 1); see the module comment for the stop rule. */
 export function compileWorkspace(options: PipelineOptions): PipelineResult {
   const guard = options.guard === true;
+  const defaults = pipelineDefaultParts();
   const parts: PipelineParts = {
-    passes: { ...pipelineDefaultParts.passes, ...options.parts?.passes },
-    link: options.parts?.link ?? pipelineDefaultParts.link,
-    relayOrder: options.parts?.relayOrder ?? pipelineDefaultParts.relayOrder,
-    finalize: options.parts?.finalize ?? pipelineDefaultParts.finalize,
+    passes: { ...defaults.passes, ...options.parts?.passes },
+    link: options.parts?.link ?? defaults.link,
+    relayOrder: options.parts?.relayOrder ?? defaults.relayOrder,
+    finalize: options.parts?.finalize ?? defaults.finalize,
   };
   const loaded = loadWorkspace({ reader: options.reader, entry: options.entry });
   const workspace = loaded.workspace;
