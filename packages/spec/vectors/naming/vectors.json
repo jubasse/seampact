@@ -307,6 +307,20 @@
     "canonicalId": "OrderAddress"
   },
   {
+    "id": "derived/property-of-params",
+    "category": "derived",
+    "owner": ["roles", "params", "scope"],
+    "role": "property",
+    "segments": ["roles", "params", "scope"],
+    "expected": {
+      "typescript": "RolesParamsScope",
+      "kotlin": "RolesParamsScope",
+      "java": "RolesParamsScope",
+      "php": "RolesParamsScope"
+    },
+    "canonicalId": "RolesParamsScope"
+  },
+  {
     "id": "derived/query",
     "category": "derived",
     "owner": ["list", "tasks"],

@@ -33,14 +33,28 @@ export interface TreeSchemaExampleIssue {
  */
 export interface TreeSchemaService {
   /**
-   * The type use the schema written at `pointer` compiles to, used in `direction` (a route's `input`, `output`,
-   * a `responses.*.body`, a fields-map entry of `id`, `pathParams`, `query`, `headers`, an identity header or a
-   * rule proof schema). An inline object, map or union refers to the schema tree.schemas hoisted for it.
+   * The type use the schema written at `pointer` compiles to, used in `direction`. An inline object, map or
+   * union refers to the schema tree.schemas hoisted for it. The positions, each with its direction (ADR 0003
+   * section 4):
+   * - input: a route's `input`, a fields-map entry of `id` (the member path parameter), `pathParams`, `query` or
+   *   request `headers`, a form or multipart field, the batch ids input (at the `batch` op entry,
+   *   `.../ops/batch`), right and rule `params`, a scope's `id` and a resource subject's `id`, a rule proof schema
+   *   (`/rules/<id>/proof/schema`);
+   * - output: a route's `output` and `item`, a `responses.*.body`, an identity's `principal` and each of its
+   *   `variants`, error `params`;
+   * - a header declaration's `schema` and an identity header use's `schema`: the declaration's `in` (`request`
+   *   input, `response` output); a `versionToken` declaration (no `in`, a response and a request name) is input
+   *   and output, and a use's `for` sets no direction;
+   * - a declaration of the `schemas` catalogue: the direction of the use that names it;
+   * - a schema a relay route copies: the direction of the public operation's use.
    */
   typeUse(pointer: string, direction: IrWriter.Direction): IrWriter.TypeUse | undefined;
   /**
-   * The query wire form of the query or form field, or the rule proof schema (`/rules/<id>/proof/schema`, the
-   * `wire` of a form or multipart proof), whose schema is written at `pointer` (ADR 0002 section 7).
+   * The query wire form of the query or form field at `pointer` (ADR 0002 section 7): a query field, or a form or
+   * multipart field keyed by its position in the input schema, not by its origin: `/schemas/<id>/properties/<field>`
+   * for a declared schema, `<route>/input/properties/<field>` for an inline input, the same for a derived property
+   * (the concurrency version property) or one a schema takes from another layer or schema; also a rule proof
+   * schema (`/rules/<id>/proof/schema`), the `wire` a form or multipart proof of that type gets.
    */
   queryWire(pointer: string): IrWriter.QueryWire | undefined;
   /** Checks an example value against a use (FR-3); an empty list means the example fits. */
