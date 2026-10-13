@@ -25,10 +25,16 @@ const isSignatureEncoding = (text: string): text is IrWriter.SignatureEncoding =
 // would reach every target unchecked.
 const SIGNATURE_ALGORITHMS: readonly string[] = ["hmac-sha256"];
 
-// ADR 0013: a format is comma-separated `name={placeholder}` pairs, or a literal prefix and `{sig}`.
-const FORMAT_PAIR = /^[^=,{}]+=\{(sig|ts)\}$/;
+// ADR 0013: a format is comma-separated `name={placeholder}` pairs, each name a distinct token, or a literal
+// prefix and `{sig}`.
+const FORMAT_PAIR = /^([!#$%&'*+.^_`|~0-9A-Za-z-]+)=\{(sig|ts)\}$/;
 const FORMAT_PREFIX = /^[^{}]*\{sig\}$/;
 const PLACEHOLDER = /\{([A-Za-z]+)\}/g;
+
+// A cookie or header name is an HTTP token (RFC 9110, RFC 6265), as the authoring `headerName` is; a query name
+// keeps to the unreserved characters (RFC 3986), so no name needs escaping or can split its line.
+const HTTP_TOKEN = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/;
+const QUERY_NAME = /^[A-Za-z0-9._~-]+$/;
 
 const TEMPLATE_MEMBERS = ["format", "algorithm", "payload", "encoding"] as const;
 
@@ -106,16 +112,34 @@ function schemeOf(
 // The cookie, header, query or signature header name, which the authoring schema leaves optional.
 function requiredName(entry: SchemeEntry): string | undefined {
   const name = accessIdentityString(entry.raw, "name");
-  if (name !== undefined) return name;
-
   const kind = accessIdentityString(entry.raw, "kind") ?? "scheme";
+  if (name === undefined) {
+    entry.reporter.error({
+      rule: "scheme-member",
+      message: `${kind} scheme '${entry.id}' has no 'name'`,
+      fix: `Set 'name' to the ${kind === "signature" ? "header carrying the signature" : `${kind} name`}.`,
+      pointer: entry.pointer,
+    });
+    return undefined;
+  }
+
+  return checkName(entry, kind, name) ? name : undefined;
+}
+
+// The name is quoted as JSON so a control character in it shows instead of breaking the diagnostic's line.
+function checkName(entry: SchemeEntry, kind: string, name: string): boolean {
+  const query = kind === "query";
+  if ((query ? QUERY_NAME : HTTP_TOKEN).test(name)) return true;
+
   entry.reporter.error({
     rule: "scheme-member",
-    message: `${kind} scheme '${entry.id}' has no 'name'`,
-    fix: `Set 'name' to the ${kind === "signature" ? "header carrying the signature" : `${kind} name`}.`,
-    pointer: entry.pointer,
+    message: `${kind} scheme '${entry.id}' has name ${JSON.stringify(name)}, which is not ${query ? "letters, digits and -._~" : "an HTTP token"}`,
+    fix: query
+      ? "Write the query parameter name with letters, digits and -._~ only."
+      : "Write the name as an HTTP token: letters, digits and !#$%&'*+-.^_`|~, without spaces, ';' or line breaks.",
+    pointer: accessIdentityPointer(entry.pointer, "name"),
   });
-  return undefined;
+  return false;
 }
 
 function cookieScheme(
@@ -255,6 +279,13 @@ function templateSignature(entry: SchemeEntry): IrWriter.KnownSignatureVerify | 
   } satisfies IrWriter.KnownSignatureVerify;
 }
 
+// Comma-separated `name={placeholder}` pairs whose names are distinct tokens.
+function isPairFormat(format: string): boolean {
+  const names = format.split(",").map((item) => FORMAT_PAIR.exec(item)?.[1]);
+  const written = names.filter((name) => name !== undefined);
+  return written.length === names.length && new Set(written).size === written.length;
+}
+
 function checkFormat(entry: SchemeEntry, format: string): void {
   const placeholders = placeholdersOf(format);
   const pointer = accessIdentityPointer(entry.pointer, "format");
@@ -263,12 +294,12 @@ function checkFormat(entry: SchemeEntry, format: string): void {
     countOf(placeholders, "sig") === 1 &&
     countOf(placeholders, "ts") <= 1 &&
     unknown.length === 0 &&
-    (format.split(",").every((item) => FORMAT_PAIR.test(item)) || FORMAT_PREFIX.test(format));
+    (isPairFormat(format) || FORMAT_PREFIX.test(format));
   if (fits) return;
 
   entry.reporter.error({
     rule: "signature-template",
-    message: `the format '${format}' of signature scheme '${entry.id}' is neither comma-separated 'name={placeholder}' pairs nor a literal prefix and '{sig}', with '{sig}' once and '{ts}' at most once`,
+    message: `the format '${format}' of signature scheme '${entry.id}' is neither comma-separated 'name={placeholder}' pairs with distinct token names nor a literal prefix and '{sig}', with '{sig}' once and '{ts}' at most once`,
     fix: "Write the header layout as 't={ts},v1={sig}' pairs or as a prefix and '{sig}', such as 'sha256={sig}' (ADR 0013).",
     pointer,
   });
@@ -361,7 +392,7 @@ function tolerance(entry: SchemeEntry, format: string, payload: string): number 
   if (toleranceMs === undefined)
     entry.reporter.error({
       rule: "signature-tolerance",
-      message: `the tolerance '${written}' of signature scheme '${entry.id}' is too large`,
+      message: `the tolerance '${written}' of signature scheme '${entry.id}' is beyond ${Number.MAX_SAFE_INTEGER} milliseconds`,
       fix: "Write a tolerance of minutes, such as '5m'.",
       pointer,
     });

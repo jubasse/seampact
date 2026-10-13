@@ -65,6 +65,38 @@ describe("security schemes", () => {
     });
   });
 
+  test("a cookie or header name is an HTTP token, a query name unreserved characters", () => {
+    expect(
+      refusals(`
+  session: { kind: cookie, name: "s;id" }
+  apiKey: { kind: header, name: "X-Key\\r\\nSet-Cookie: a" }
+  mapsKey: { kind: query, name: "api key" }
+  plain: { kind: header, name: X-Api-Key }
+  token: { kind: query, name: access_token }`),
+    ).toEqual({
+      written: ["plain", "token"],
+      diagnostics: [
+        {
+          rule: "seampact/access/scheme-member",
+          message: "cookie scheme 'session' has name \"s;id\", which is not an HTTP token",
+          pointer: "/schemes/session/name",
+        },
+        {
+          rule: "seampact/access/scheme-member",
+          message:
+            "header scheme 'apiKey' has name \"X-Key\\r\\nSet-Cookie: a\", which is not an HTTP token",
+          pointer: "/schemes/apiKey/name",
+        },
+        {
+          rule: "seampact/access/scheme-member",
+          message:
+            "query scheme 'mapsKey' has name \"api key\", which is not letters, digits and -._~",
+          pointer: "/schemes/mapsKey/name",
+        },
+      ],
+    });
+  });
+
   test("a cookie's csrf names a declared header scheme", () => {
     expect(
       refusals(`
@@ -169,6 +201,9 @@ describe("security schemes", () => {
     ["{ts}{sig}", "{ts}.{rawBody}", false],
     ["sha256={sig},extra", "{rawBody}", false],
     ["t={ts},v1={sig},id={id}", "{ts}.{rawBody}", false],
+    ["v1={ts},v1={sig}", "{ts}.{rawBody}", false],
+    ["t={ts}, v1={sig}", "{ts}.{rawBody}", false],
+    ["t ={ts},v1={sig}", "{ts}.{rawBody}", false],
   ])("the format '%s' with payload '%s' fits: %s", (format, payload, fits) => {
     const ts = format.includes("{ts}") ? "\n    tolerance: 5m" : "";
     const { diagnostics } = refusals(`
@@ -246,6 +281,23 @@ describe("security schemes", () => {
         pointer: `/schemes/${id}/algorithm`,
       })),
     });
+  });
+
+  test("a tolerance beyond the safe-integer range of milliseconds is refused", () => {
+    expect(
+      refusals(`
+  sig:${STRIPE}
+    format: 't={ts},v1={sig}'
+    payload: '{ts}.{rawBody}'
+    tolerance: 999999999999d`).diagnostics,
+    ).toEqual([
+      {
+        rule: "seampact/access/signature-tolerance",
+        message:
+          "the tolerance '999999999999d' of signature scheme 'sig' is beyond 9007199254740991 milliseconds",
+        pointer: "/schemes/sig/tolerance",
+      },
+    ]);
   });
 
   test("tolerance is required with {ts} and refused without", () => {

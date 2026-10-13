@@ -28,7 +28,8 @@ const CREDENTIAL_LISTS = ["read", "write", "optionalRead"] as const;
 
 const HEADER_USE_FOR: readonly IrWriter.HeaderUseFor[] = ["all", "reads", "writes"];
 
-// ADR 0002 section 9 gives no default for `for`; `all` applies the header to every operation of the identity.
+// ADR 0002 section 11: `all` is the default of an identity header's `for`. A versionToken's request header still
+// goes on writes only, whatever `for` says: identity.versionToken (ADR 0006 section 5) is the specific rule (LD-49).
 const DEFAULT_HEADER_USE_FOR: IrWriter.HeaderUseFor = "all";
 
 const isHeaderUseFor = (text: string | undefined): text is IrWriter.HeaderUseFor =>
