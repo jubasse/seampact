@@ -10,17 +10,38 @@ const EXIT_OK = 0;
 const EXIT_FAILED = 1;
 const EXIT_USAGE = 2;
 
+const USAGE = "usage: node scripts/cartography/cli.ts (--write | --check) [--root <directory>]";
+
+interface CliOptions {
+  root?: string;
+  write?: boolean;
+  check?: boolean;
+}
+
+function parseOptions(argv: string[]): CliOptions | string {
+  try {
+    const { values } = parseArgs({
+      args: argv,
+      options: {
+        root: { type: "string" },
+        write: { type: "boolean" },
+        check: { type: "boolean" },
+      },
+    });
+    return values;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+}
+
 function main(argv: string[]): number {
-  const { values } = parseArgs({
-    args: argv,
-    options: {
-      root: { type: "string" },
-      write: { type: "boolean" },
-      check: { type: "boolean" },
-    },
-  });
+  const values = parseOptions(argv);
+  if (typeof values === "string") {
+    console.error(`cartography: ${values}\n${USAGE}`);
+    return EXIT_USAGE;
+  }
   if (values.write === values.check) {
-    console.error("cartography: pass exactly one of --write and --check");
+    console.error(`cartography: pass exactly one of --write and --check\n${USAGE}`);
     return EXIT_USAGE;
   }
 
@@ -28,7 +49,9 @@ function main(argv: string[]): number {
   const { markdown, problems } = buildCartography({ root, stages: COMPILER_STAGES });
   if (problems.length > 0) {
     for (const problem of problems) console.error(problem);
-    console.error(`cartography: ${problems.length} problem(s), ${CARTOGRAPHY_FILE} not written`);
+    console.error(
+      `cartography: ${problems.length} problem(s) to fix first; ${CARTOGRAPHY_FILE} left unchanged`,
+    );
     return EXIT_FAILED;
   }
 

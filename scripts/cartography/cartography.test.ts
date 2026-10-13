@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -35,7 +35,7 @@ function repositoryWith(files: Record<string, string>): string {
   return root;
 }
 
-function manifest(name: string, description?: string, role?: string): string {
+function manifest(name: string | undefined, description?: string, role?: string): string {
   return JSON.stringify({
     name,
     ...(description === undefined ? {} : { description }),
@@ -43,8 +43,8 @@ function manifest(name: string, description?: string, role?: string): string {
   });
 }
 
-function runCli(root: string, mode: string) {
-  const run = spawnSync(process.execPath, [CLI, mode, "--root", root], { encoding: "utf8" });
+function runCli(root: string, ...flags: string[]) {
+  const run = spawnSync(process.execPath, [CLI, ...flags, "--root", root], { encoding: "utf8" });
   return { status: run.status, stderr: run.stderr };
 }
 
@@ -121,6 +121,21 @@ describe("cartography", () => {
     ]);
   });
 
+  it("reports a package.json that is not valid JSON or has no name", () => {
+    const root = repositoryWith({
+      "packages/alpha/package.json": "{ not json",
+      "packages/beta/package.json": manifest(undefined, "Beta.", "core"),
+    });
+
+    const { problems } = buildCartography({ root, stages: NO_STAGES });
+
+    expect(problems).toHaveLength(2);
+    expect(problems[0]).toMatch(
+      /^packages\/alpha\/package\.json: not valid JSON \(.+\); fix the file$/,
+    );
+    expect(problems[1]).toBe("packages/beta/package.json: no `name`; add the package name");
+  });
+
   it("reports a missing stage directory", () => {
     const root = repositoryWith({ "packages/alpha/package.json": manifest("@x/a", "A.", "core") });
     const stages = [{ name: "load", directories: ["packages/alpha/src/load"] }];
@@ -153,5 +168,32 @@ describe("cartography", () => {
     const stale = runCli(root, "--check");
     expect(stale.status).toBe(1);
     expect(stale.stderr).toContain(`${CARTOGRAPHY_FILE} is stale; run \`${WRITE_COMMAND}\``);
+  });
+
+  it("exits 2 with the usage on an unknown or missing flag", () => {
+    const root = repositoryWith({});
+
+    for (const flags of [["--check", "--bogus"], []]) {
+      const run = runCli(root, ...flags);
+
+      expect(run.status).toBe(2);
+      expect(run.stderr).toContain("usage: node scripts/cartography/cli.ts (--write | --check)");
+      expect(run.stderr).not.toContain("    at ");
+    }
+  });
+
+  it("exits 1 and writes nothing when there are problems, in both modes", () => {
+    const root = repositoryWith({
+      "packages/alpha/package.json": manifest("@x/alpha"),
+    });
+
+    for (const mode of ["--write", "--check"]) {
+      const run = runCli(root, mode);
+
+      expect(run.status).toBe(1);
+      expect(run.stderr).toContain("no `description`");
+      expect(run.stderr).toContain(`${CARTOGRAPHY_FILE} left unchanged`);
+      expect(existsSync(join(root, CARTOGRAPHY_FILE))).toBe(false);
+    }
   });
 });

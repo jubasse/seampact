@@ -104,7 +104,8 @@ function readPackages(root: string, problems: string[]): PackageEntry[] {
     const manifestPath = join(root, directory, "package.json");
     if (!existsSync(manifestPath)) continue;
 
-    entries.push(readPackage(root, directory, manifestPath, problems));
+    const entry = readPackage(root, directory, manifestPath, problems);
+    if (entry !== undefined) entries.push(entry);
   }
   return entries;
 }
@@ -114,11 +115,16 @@ function readPackage(
   directory: string,
   manifestPath: string,
   problems: string[],
-): PackageEntry {
-  const manifest: unknown = JSON.parse(readFileSync(manifestPath, "utf8"));
+): PackageEntry | undefined {
   const manifestFile = `${directory}/package.json`;
+  const manifest = parseManifest(manifestPath, manifestFile, problems);
+  if (manifest === undefined) return undefined;
 
-  const name = stringField(manifest, "name") ?? directory;
+  const name = stringField(manifest, "name");
+  if (name === undefined) {
+    problems.push(`${manifestFile}: no \`name\`; add the package name`);
+  }
+
   const description = stringField(manifest, "description");
   if (description === undefined) {
     problems.push(`${manifestFile}: no \`description\`; add a one-line description of the package`);
@@ -136,7 +142,7 @@ function readPackage(
     : [];
 
   return {
-    name,
+    name: name ?? directory,
     directory,
     role: role ?? "",
     description: description ?? "",
@@ -177,8 +183,18 @@ function readSourceDirectories(
   return found.sort((left, right) => compareText(left.path, right.path));
 }
 
+function parseManifest(manifestPath: string, manifestFile: string, problems: string[]): unknown {
+  try {
+    return JSON.parse(readFileSync(manifestPath, "utf8"));
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    problems.push(`${manifestFile}: not valid JSON (${reason}); fix the file`);
+    return undefined;
+  }
+}
+
 /** The first sentence of the leading `//` comment of index.ts, else the first line of README.md. */
-export function readHeader(directory: string): string | undefined {
+function readHeader(directory: string): string | undefined {
   const indexPath = join(directory, INDEX_FILE);
   if (existsSync(indexPath)) {
     const comment = leadingComment(readFileSync(indexPath, "utf8"));
