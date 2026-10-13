@@ -71,6 +71,11 @@ surfaces:
                     input: ArchiveTask
                     output: Task
                     internal: true
+                  purge:
+                    method: post
+                    requires: [{ rule: recentAuth, params: { intent: purge_task } }]
+                    responses:
+                      204: {}
       me:
         kind: single
         routes:

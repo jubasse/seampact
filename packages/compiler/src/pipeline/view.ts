@@ -87,23 +87,53 @@ export function pipelineViewSource(value: unknown): PipelineViewSource | undefin
  * A plain, writable deep copy of `value`, a read-only view or a plain value: what a half stores in its draft from
  * `raw`, `workspace`, `relayed`, `imported` or an `inherited` entry, with the guard on or off. The copy keeps each
  * object's prototype (none for a catalogue) and defines its members, so a member named `__proto__` stays one.
+ * The draft is JSON-shaped data: a value holding any other object (a `Map`, a `Date`, a class instance), a
+ * function, a bigint, a symbol or an accessor throws, naming where it sits, instead of being copied into an object
+ * that only looks like it. `undefined` is copied as is; a half leaves an optional member absent rather than
+ * writing `undefined`.
  */
 export function pipelineCopy<T>(value: T): PassWritable<T> {
   // Only the read-only type is dropped: the copy has the same shape as `value`.
-  return copy(value) as PassWritable<T>;
+  return copy(value, "") as PassWritable<T>;
 }
 
-function copy(value: unknown): unknown {
+// Primitives JSON has no form for: a function (a method of a facade), a bigint, a symbol.
+const NOT_JSON_PRIMITIVES = new Set(["function", "bigint", "symbol"]);
+
+function copy(value: unknown, path: string): unknown {
   const plain = isObject(value) ? (targets.get(value)?.target ?? value) : value;
+  if (NOT_JSON_PRIMITIVES.has(typeof plain)) throw notJsonShaped(`a ${typeof plain}`, path);
   if (!isObject(plain)) return plain;
-  if (Array.isArray(plain)) return plain.map(copy);
-  const out: object = Object.create(Object.getPrototypeOf(plain));
-  for (const [key, item] of Object.entries(plain))
+
+  if (Array.isArray(plain))
+    return plain.map((item, index) => copy(item, join(path, String(index))));
+
+  const prototype: unknown = Object.getPrototypeOf(plain);
+  if (prototype !== Object.prototype && prototype !== null)
+    throw notJsonShaped(`a ${plain.constructor?.name ?? "object with another prototype"}`, path);
+
+  const out: object = Object.create(prototype);
+  for (const key of Object.keys(plain)) {
+    const at = join(path, key);
+    // A getter would be read once and frozen into a value: refuse it, as a facade's `size` is.
+    const descriptor = Object.getOwnPropertyDescriptor(plain, key);
+    // A proxy may list a key in `ownKeys` and then hide its descriptor.
+    if (descriptor === undefined) throw notJsonShaped("a member with no descriptor", at);
+    if (!("value" in descriptor)) throw notJsonShaped("an accessor", at);
+
     Object.defineProperty(out, key, {
-      value: copy(item),
+      value: copy(descriptor.value, at),
       writable: true,
       enumerable: true,
       configurable: true,
     });
+  }
   return out;
+}
+
+function notJsonShaped(kind: string, path: string): TypeError {
+  const where = path === "" ? "the value" : `at ${path}`;
+  return new TypeError(
+    `pipelineCopy copies JSON-shaped data only (plain objects, arrays and primitives): ${where}: ${kind}. Store its data as a plain object instead.`,
+  );
 }

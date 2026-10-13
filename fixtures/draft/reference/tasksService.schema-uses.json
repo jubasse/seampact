@@ -1,0 +1,124 @@
+{
+  "typeUses": [
+    {
+      "pointer": "/identities/user/principal",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "UserPrincipal"
+      },
+      "at": ["/identities/user/principal/schema"]
+    },
+    {
+      "pointer": "/identities/service/principal",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "ServicePrincipal"
+      },
+      "at": ["/identities/service/principal/schema"]
+    },
+    {
+      "pointer": "/identities/stripe/principal",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "WebhookCaller"
+      },
+      "at": ["/identities/stripe/principal/schema"]
+    },
+    {
+      "pointer": "/identities/service/headers/actorSurface/schema",
+      "direction": "input",
+      "use": {
+        "kind": "enum",
+        "enum": "Surface"
+      },
+      "at": ["/identities/service/headers/2/schema"]
+    },
+    {
+      "pointer": "/scopes/channel/id",
+      "direction": "input",
+      "use": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "at": ["/scopes/channel/idSchema"]
+    },
+    {
+      "pointer": "/rights/roles/params",
+      "direction": "input",
+      "use": {
+        "kind": "ref",
+        "schema": "RolesParams"
+      },
+      "at": ["/rights/roles/params"]
+    },
+    {
+      "pointer": "/rights/tasks.update/subject/id",
+      "direction": "input",
+      "use": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "at": ["/rights/tasks.update/subject/idSchema"]
+    },
+    {
+      "pointer": "/rights/tasks.seeEffort/subject/id",
+      "direction": "input",
+      "use": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "at": ["/rights/tasks.seeEffort/subject/idSchema"]
+    },
+    {
+      "pointer": "/rights/callerService/params",
+      "direction": "input",
+      "use": {
+        "kind": "ref",
+        "schema": "CallerServiceParams"
+      },
+      "at": ["/rights/callerService/params"]
+    },
+    {
+      "pointer": "/rules/recentAuth/params",
+      "direction": "input",
+      "use": {
+        "kind": "ref",
+        "schema": "RecentAuthParams"
+      },
+      "at": ["/rules/recentAuth/params"]
+    },
+    {
+      "pointer": "/rules/recentAuth/proof/schema",
+      "direction": "input",
+      "use": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {
+          "minLength": 1,
+          "maxLength": 512
+        }
+      },
+      "at": ["/rules/recentAuth/proof/schema"]
+    }
+  ],
+  "queryWires": [
+    {
+      "pointer": "/rules/recentAuth/proof/schema",
+      "wire": {
+        "kind": "text",
+        "style": "form",
+        "explode": true,
+        "brackets": false
+      }
+    }
+  ]
+}

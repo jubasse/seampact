@@ -8,7 +8,7 @@ import { loadFsReader } from "../load/index.js";
 import { loadMemoryReader } from "../load/reader.js";
 import type { DraftIR } from "./draft.js";
 import { DraftAccessError } from "./guard.js";
-import type { HalfName } from "./halves.js";
+import { type HalfName, pipelineHalves } from "./halves.js";
 import type { DraftField } from "./ownership.js";
 import { compileWorkspace, type PipelineOptions } from "./orchestrator.js";
 import type { PassContext, PassParts, TreeSchemaService, WorkspacePass } from "./pass.js";
@@ -373,6 +373,21 @@ describe("guarded run", () => {
     const run = (guard: boolean) =>
       compile([], { "access.identity": act }, {}, { guard, imports: new Map([["ext", ext]]) });
     expect(() => run(true)).toThrow(error);
+  });
+});
+
+describe("schema service", () => {
+  test("every half after tree.schemas receives the service tree.schemas returned", () => {
+    const received: Partial<Record<HalfName, unknown>> = {};
+    const record =
+      (half: HalfName): Act =>
+      (_draft, context) => {
+        received[half] = Reflect.get(context, "treeSchemas");
+      };
+    const acts = Object.fromEntries(pipelineHalves.map((half) => [half, record(half)]));
+    compile([], {}, { passes: fakeParts([], acts) });
+    expect(received["tree.schemas"]).toBeUndefined();
+    for (const half of pipelineHalves.slice(1)) expect(received[half], half).toBe(NO_SCHEMAS);
   });
 });
 

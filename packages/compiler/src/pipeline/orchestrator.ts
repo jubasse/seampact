@@ -185,12 +185,11 @@ export function compileWorkspace(options: PipelineOptions): PipelineResult {
       const passed = step(run, draft, parts.passes[half], (guarded, context) => {
         if (half === "tree.schemas") {
           treeSchemas = parts.passes[half].run(guarded, context);
-        } else if (half === "tree.nodes") {
-          if (treeSchemas === undefined) throw new Error("tree.schemas returned no schema service");
-          parts.passes[half].run(guarded, Object.freeze({ ...context, treeSchemas }));
-        } else {
-          parts.passes[half].run(guarded, context);
+          return;
         }
+
+        if (treeSchemas === undefined) throw new Error("tree.schemas returned no schema service");
+        parts.passes[half].run(guarded, Object.freeze({ ...context, treeSchemas }));
       });
       if (!passed) return undefined;
     }

@@ -49,6 +49,14 @@ function valueImports(file: string): string[] {
 const resolve = (from: string, specifier: string): string =>
   relative(SRC, join(SRC, dirname(from), specifier)).replace(/\.js$/, ".ts");
 
+// The modules that import every stage, directly or not: reaching one from a stage closes a cycle.
+const CYCLE_MODULES = [
+  "index.ts",
+  "pipeline/index.ts",
+  "pipeline/orchestrator.ts",
+  "pipeline/registry.ts",
+];
+
 // Every module `file` reaches through run-time imports, itself included.
 function reach(file: string): Set<string> {
   const seen = new Set<string>();
@@ -81,6 +89,13 @@ describe("the seam barrel keeps stage modules out of an import cycle", () => {
     expect(pipeline.length).toBeGreaterThan(0);
     for (const specifier of pipeline) expect(specifier).toMatch(/\/pipeline\/seam\.js$/);
     expect(text).toContain("`pipeline/seam.js` only");
+  });
+
+  // An indirect import closes the cycle as surely as a direct one. The stubs import types only today; a lane's
+  // value import from a module that reaches a barrel fails here.
+  test.each(STAGES)("%s reaches no barrel, orchestrator or registry", (file) => {
+    const reached = [...reach(file)];
+    expect(reached.filter((module) => CYCLE_MODULES.includes(module))).toEqual([]);
   });
 
   // A fresh module graph each time, entered first by the module named, read by a value import.

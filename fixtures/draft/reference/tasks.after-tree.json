@@ -1,0 +1,3211 @@
+{
+  "tree.schemas": {
+    "schemas": {
+      "UserPrincipal": {
+        "kind": "object",
+        "id": "UserPrincipal",
+        "name": {
+          "segments": ["user", "principal"],
+          "role": "schema"
+        },
+        "directions": ["output"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/schemas/UserPrincipal"
+        },
+        "properties": [
+          {
+            "name": "userId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/UserPrincipal/properties/userId"
+            }
+          }
+        ]
+      },
+      "ServicePrincipal": {
+        "kind": "object",
+        "id": "ServicePrincipal",
+        "name": {
+          "segments": ["service", "principal"],
+          "role": "schema"
+        },
+        "directions": ["output"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/schemas/ServicePrincipal"
+        },
+        "properties": [
+          {
+            "name": "service",
+            "type": {
+              "kind": "enum",
+              "enum": "Service"
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/ServicePrincipal/properties/service"
+            }
+          },
+          {
+            "name": "userId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/ServicePrincipal/properties/userId"
+            }
+          }
+        ]
+      },
+      "WebhookCaller": {
+        "kind": "object",
+        "id": "WebhookCaller",
+        "name": {
+          "segments": ["webhook", "caller"],
+          "role": "schema"
+        },
+        "directions": ["output"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/schemas/WebhookCaller"
+        },
+        "properties": [
+          {
+            "name": "account",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/WebhookCaller/properties/account"
+            }
+          }
+        ]
+      },
+      "IssuesItem": {
+        "kind": "object",
+        "id": "IssuesItem",
+        "name": {
+          "segments": ["issues"],
+          "role": "item"
+        },
+        "directions": ["output"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/schemas/Issues/items"
+        },
+        "properties": [
+          {
+            "name": "pointer",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/Issues/items/properties/pointer"
+            }
+          },
+          {
+            "name": "rule",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/Issues/items/properties/rule"
+            }
+          }
+        ]
+      },
+      "Task": {
+        "kind": "object",
+        "id": "Task",
+        "name": {
+          "segments": ["task"],
+          "role": "schema"
+        },
+        "directions": ["output"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/schemas/Task"
+        },
+        "properties": [
+          {
+            "name": "taskId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/Task/properties/taskId"
+            }
+          },
+          {
+            "name": "title",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/Task/properties/title"
+            }
+          },
+          {
+            "name": "state",
+            "type": {
+              "kind": "enum",
+              "enum": "TaskState"
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/Task/properties/state"
+            }
+          },
+          {
+            "name": "effort",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "0"
+              }
+            },
+            "optional": true,
+            "nullable": false,
+            "sensitive": false,
+            "restrictedTo": {
+              "right": "tasks.seeEffort",
+              "origin": {
+                "layer": "shared",
+                "pointer": "/schemas/Task/properties/effort/restrictedTo"
+              }
+            },
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/Task/properties/effort"
+            }
+          },
+          {
+            "name": "version",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1"
+              }
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/Task/properties/version"
+            }
+          },
+          {
+            "name": "createdAt",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "date-time",
+              "refinements": {}
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/Task/properties/createdAt"
+            }
+          }
+        ]
+      },
+      "RolesParams": {
+        "kind": "object",
+        "id": "RolesParams",
+        "name": {
+          "segments": ["roles"],
+          "role": "params"
+        },
+        "directions": ["input"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/rights/roles/params"
+        },
+        "properties": [
+          {
+            "name": "allowed",
+            "type": {
+              "kind": "array",
+              "items": {
+                "kind": "enum",
+                "enum": "Role"
+              },
+              "minItems": 1
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/rights/roles/params/allowed"
+            }
+          }
+        ]
+      },
+      "CallerServiceParams": {
+        "kind": "object",
+        "id": "CallerServiceParams",
+        "name": {
+          "segments": ["caller", "service"],
+          "role": "params"
+        },
+        "directions": ["input"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/rights/callerService/params"
+        },
+        "properties": [
+          {
+            "name": "allowed",
+            "type": {
+              "kind": "array",
+              "items": {
+                "kind": "enum",
+                "enum": "Service"
+              },
+              "minItems": 1
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/rights/callerService/params/allowed"
+            }
+          }
+        ]
+      },
+      "RecentAuthParams": {
+        "kind": "object",
+        "id": "RecentAuthParams",
+        "name": {
+          "segments": ["recent", "auth"],
+          "role": "params"
+        },
+        "directions": ["input"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/rules/recentAuth/params"
+        },
+        "properties": [
+          {
+            "name": "intent",
+            "type": {
+              "kind": "enum",
+              "enum": "ReauthIntent"
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/rules/recentAuth/params/intent"
+            }
+          }
+        ]
+      },
+      "ApiSchemaInvalidParams": {
+        "kind": "object",
+        "id": "ApiSchemaInvalidParams",
+        "name": {
+          "segments": ["api", "schema", "invalid"],
+          "role": "params"
+        },
+        "directions": ["output"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/errors/api.schema_invalid/params"
+        },
+        "properties": [
+          {
+            "name": "issues",
+            "type": {
+              "kind": "array",
+              "items": {
+                "kind": "ref",
+                "schema": "IssuesItem"
+              }
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/errors/api.schema_invalid/params/issues"
+            }
+          }
+        ]
+      },
+      "ApiRateLimitedParams": {
+        "kind": "object",
+        "id": "ApiRateLimitedParams",
+        "name": {
+          "segments": ["api", "rate", "limited"],
+          "role": "params"
+        },
+        "directions": ["output"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/errors/api.rate_limited/params"
+        },
+        "properties": [
+          {
+            "name": "retryAfterMs",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "0"
+              }
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/errors/api.rate_limited/params/retryAfterMs"
+            }
+          }
+        ]
+      },
+      "ApiForbiddenParams": {
+        "kind": "object",
+        "id": "ApiForbiddenParams",
+        "name": {
+          "segments": ["api", "forbidden"],
+          "role": "params"
+        },
+        "directions": ["output"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "core",
+          "pointer": "/errors/api.forbidden/params"
+        },
+        "properties": [
+          {
+            "name": "pointer",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "optional": true,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "core",
+              "pointer": "/errors/api.forbidden/params/pointer"
+            }
+          }
+        ]
+      },
+      "ApiSortKeyForbiddenParams": {
+        "kind": "object",
+        "id": "ApiSortKeyForbiddenParams",
+        "name": {
+          "segments": ["api", "sort", "key", "forbidden"],
+          "role": "params"
+        },
+        "directions": ["output"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "core",
+          "pointer": "/errors/api.sort_key_forbidden/params"
+        },
+        "properties": [
+          {
+            "name": "key",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "core",
+              "pointer": "/errors/api.sort_key_forbidden/params/key"
+            }
+          }
+        ]
+      },
+      "ApiPayloadTooLargeParams": {
+        "kind": "object",
+        "id": "ApiPayloadTooLargeParams",
+        "name": {
+          "segments": ["api", "payload", "too", "large"],
+          "role": "params"
+        },
+        "directions": ["output"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "core",
+          "pointer": "/errors/api.payload_too_large/params"
+        },
+        "properties": [
+          {
+            "name": "limitBytes",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "0"
+              }
+            },
+            "optional": true,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "core",
+              "pointer": "/errors/api.payload_too_large/params/limitBytes"
+            }
+          }
+        ]
+      },
+      "ApiEmptyBody": {
+        "kind": "object",
+        "id": "ApiEmptyBody",
+        "name": {
+          "segments": ["api", "empty", "body"],
+          "role": "schema"
+        },
+        "directions": ["input"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "core",
+          "pointer": "/schemas/ApiEmptyBody"
+        },
+        "properties": []
+      },
+      "Health": {
+        "kind": "object",
+        "id": "Health",
+        "name": {
+          "segments": ["health"],
+          "role": "schema"
+        },
+        "directions": ["output"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/Health"
+        },
+        "properties": [
+          {
+            "name": "status",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/Health/properties/status"
+            }
+          }
+        ]
+      },
+      "Channel": {
+        "kind": "object",
+        "id": "Channel",
+        "name": {
+          "segments": ["channel"],
+          "role": "schema"
+        },
+        "directions": ["output"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/Channel"
+        },
+        "properties": [
+          {
+            "name": "channelId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/Channel/properties/channelId"
+            }
+          },
+          {
+            "name": "name",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "minLength": 1,
+                "maxLength": 100
+              }
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/Channel/properties/name"
+            }
+          }
+        ]
+      },
+      "CreateTask": {
+        "kind": "object",
+        "id": "CreateTask",
+        "name": {
+          "segments": ["create", "task"],
+          "role": "schema"
+        },
+        "directions": ["input"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/CreateTask"
+        },
+        "properties": [
+          {
+            "name": "title",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/Task/properties/title"
+            }
+          },
+          {
+            "name": "effort",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "0"
+              }
+            },
+            "optional": true,
+            "nullable": false,
+            "sensitive": false,
+            "restrictedTo": {
+              "right": "roles",
+              "params": {
+                "allowed": ["owner"]
+              },
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/CreateTask/properties/effort/restrictedTo"
+              }
+            },
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/Task/properties/effort"
+            }
+          }
+        ]
+      },
+      "UpdateTask": {
+        "kind": "object",
+        "id": "UpdateTask",
+        "name": {
+          "segments": ["update", "task"],
+          "role": "schema"
+        },
+        "directions": ["input"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/UpdateTask"
+        },
+        "properties": [
+          {
+            "name": "title",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "optional": true,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/Task/properties/title"
+            }
+          },
+          {
+            "name": "state",
+            "type": {
+              "kind": "enum",
+              "enum": "TaskState"
+            },
+            "optional": true,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/Task/properties/state"
+            }
+          },
+          {
+            "name": "effort",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "0"
+              }
+            },
+            "optional": true,
+            "nullable": false,
+            "sensitive": false,
+            "restrictedTo": {
+              "right": "tasks.seeEffort",
+              "origin": {
+                "layer": "shared",
+                "pointer": "/schemas/Task/properties/effort/restrictedTo"
+              }
+            },
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/Task/properties/effort"
+            }
+          },
+          {
+            "name": "expectedVersion",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1"
+              }
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/concurrency/version"
+            },
+            "derivedFrom": {
+              "derivation": "concurrency.version",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/channels/member/routes/tasks/concurrency/version"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "ArchiveTask": {
+        "kind": "object",
+        "id": "ArchiveTask",
+        "name": {
+          "segments": ["archive", "task"],
+          "role": "schema"
+        },
+        "directions": ["input"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/ArchiveTask"
+        },
+        "properties": [
+          {
+            "name": "reason",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "minLength": 1,
+                "maxLength": 500
+              }
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/ArchiveTask/properties/reason"
+            }
+          },
+          {
+            "name": "expectedVersion",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "1"
+              }
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/concurrency/version"
+            },
+            "derivedFrom": {
+              "derivation": "concurrency.version",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/channels/member/routes/tasks/concurrency/version"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/concurrency"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "Preferences": {
+        "kind": "object",
+        "id": "Preferences",
+        "name": {
+          "segments": ["preferences"],
+          "role": "schema"
+        },
+        "directions": ["output"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/Preferences"
+        },
+        "properties": [
+          {
+            "name": "locale",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "minLength": 2,
+                "maxLength": 35
+              }
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/Preferences/properties/locale"
+            }
+          },
+          {
+            "name": "digest",
+            "type": {
+              "kind": "scalar",
+              "type": "boolean",
+              "refinements": {}
+            },
+            "optional": true,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/Preferences/properties/digest"
+            }
+          }
+        ]
+      },
+      "UpdatePreferences": {
+        "kind": "object",
+        "id": "UpdatePreferences",
+        "name": {
+          "segments": ["update", "preferences"],
+          "role": "schema"
+        },
+        "directions": ["input"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/UpdatePreferences"
+        },
+        "properties": [
+          {
+            "name": "locale",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "minLength": 2,
+                "maxLength": 35
+              }
+            },
+            "optional": true,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/Preferences/properties/locale"
+            }
+          },
+          {
+            "name": "digest",
+            "type": {
+              "kind": "scalar",
+              "type": "boolean",
+              "refinements": {}
+            },
+            "optional": true,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/Preferences/properties/digest"
+            }
+          }
+        ]
+      },
+      "Draft": {
+        "kind": "object",
+        "id": "Draft",
+        "name": {
+          "segments": ["draft"],
+          "role": "schema"
+        },
+        "directions": ["output"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/Draft"
+        },
+        "properties": [
+          {
+            "name": "draftId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/Draft/properties/draftId"
+            }
+          },
+          {
+            "name": "body",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "maxLength": 20000
+              }
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/Draft/properties/body"
+            }
+          }
+        ]
+      },
+      "PaymentEvent": {
+        "kind": "object",
+        "id": "PaymentEvent",
+        "name": {
+          "segments": ["payment", "event"],
+          "role": "schema"
+        },
+        "directions": ["input"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/PaymentEvent"
+        },
+        "properties": [
+          {
+            "name": "id",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/PaymentEvent/properties/id"
+            }
+          },
+          {
+            "name": "type",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/PaymentEvent/properties/type"
+            }
+          },
+          {
+            "name": "data",
+            "type": {
+              "kind": "opaque",
+              "reason": "Stripe's object depends on the event type and its API version.",
+              "origin": {
+                "layer": "api",
+                "pointer": "/schemas/PaymentEvent/properties/data"
+              }
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/PaymentEvent/properties/data"
+            }
+          }
+        ]
+      },
+      "TaskQuery": {
+        "kind": "object",
+        "id": "TaskQuery",
+        "name": {
+          "segments": ["task", "query"],
+          "role": "schema"
+        },
+        "directions": ["input"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/TaskQuery"
+        },
+        "properties": [
+          {
+            "name": "text",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "maxLength": 200
+              }
+            },
+            "optional": true,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/TaskQuery/properties/text"
+            }
+          },
+          {
+            "name": "states",
+            "type": {
+              "kind": "array",
+              "items": {
+                "kind": "enum",
+                "enum": "TaskState"
+              },
+              "maxItems": 3
+            },
+            "optional": true,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/TaskQuery/properties/states"
+            }
+          }
+        ]
+      },
+      "TaskSearchResult": {
+        "kind": "object",
+        "id": "TaskSearchResult",
+        "name": {
+          "segments": ["task", "search", "result"],
+          "role": "schema"
+        },
+        "directions": ["output"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/schemas/TaskSearchResult"
+        },
+        "properties": [
+          {
+            "name": "items",
+            "type": {
+              "kind": "array",
+              "items": {
+                "kind": "ref",
+                "schema": "Task"
+              }
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/TaskSearchResult/properties/items"
+            }
+          },
+          {
+            "name": "total",
+            "type": {
+              "kind": "scalar",
+              "type": "integer",
+              "refinements": {
+                "minimum": "0"
+              }
+            },
+            "optional": true,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/TaskSearchResult/properties/total"
+            }
+          }
+        ]
+      },
+      "AssignTaskInput": {
+        "kind": "object",
+        "id": "AssignTaskInput",
+        "name": {
+          "segments": ["assign", "task"],
+          "role": "input"
+        },
+        "directions": ["input"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/input"
+        },
+        "properties": [
+          {
+            "name": "userId",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "format": "uuid",
+              "refinements": {}
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/input/properties/userId"
+            }
+          }
+        ]
+      },
+      "GetTasksBatchInput": {
+        "kind": "object",
+        "id": "GetTasksBatchInput",
+        "name": {
+          "segments": ["get", "tasks", "batch"],
+          "role": "input"
+        },
+        "directions": ["input"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch"
+        },
+        "properties": [
+          {
+            "name": "ids",
+            "type": {
+              "kind": "array",
+              "items": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "maxItems": 200
+            },
+            "optional": false,
+            "nullable": false,
+            "sensitive": false,
+            "derivedFrom": {
+              "derivation": "batch.read",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch"
+                }
+              ]
+            },
+            "deprecated": false,
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch/maxIds"
+            }
+          }
+        ]
+      }
+    },
+    "enums": {
+      "Role": {
+        "id": "Role",
+        "name": {
+          "segments": ["role"],
+          "role": "schema"
+        },
+        "values": ["owner", "editor", "viewer"],
+        "localReason": "Roles are local to this product.",
+        "directions": ["input"],
+        "docs": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/enums/Role"
+        }
+      },
+      "TaskState": {
+        "id": "TaskState",
+        "name": {
+          "segments": ["task", "state"],
+          "role": "schema"
+        },
+        "values": ["open", "done", "archived"],
+        "localReason": "Task states belong to this api.",
+        "directions": ["input", "output"],
+        "docs": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/enums/TaskState"
+        }
+      },
+      "Surface": {
+        "id": "Surface",
+        "name": {
+          "segments": ["surface"],
+          "role": "schema"
+        },
+        "values": ["app", "studio"],
+        "localReason": "The product's entry points.",
+        "directions": ["input"],
+        "docs": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/enums/Surface"
+        }
+      },
+      "Service": {
+        "id": "Service",
+        "name": {
+          "segments": ["service"],
+          "role": "schema"
+        },
+        "values": ["catalog", "ticketing"],
+        "localReason": "The product's internal services.",
+        "directions": ["input", "output"],
+        "docs": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/enums/Service"
+        }
+      },
+      "ReauthIntent": {
+        "id": "ReauthIntent",
+        "name": {
+          "segments": ["reauth", "intent"],
+          "role": "schema"
+        },
+        "values": ["purge_task"],
+        "localReason": "The actions that ask for a fresh sign-in.",
+        "directions": ["input"],
+        "docs": {},
+        "origin": {
+          "layer": "shared",
+          "pointer": "/enums/ReauthIntent"
+        }
+      }
+    }
+  },
+  "tree.nodes": {
+    "api": {
+      "id": "tasks",
+      "name": {
+        "segments": ["tasks"],
+        "role": "schema"
+      },
+      "version": {
+        "kind": "path",
+        "number": 1
+      },
+      "kind": "product",
+      "pathVersion": {
+        "value": "prefix",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/version"
+        }
+      },
+      "maturity": "provisional",
+      "compat": {
+        "policy": "additive-only"
+      },
+      "surfaces": {
+        "app": {
+          "name": {
+            "segments": ["app"],
+            "role": "schema"
+          },
+          "prefix": "/v1",
+          "pathVersion": "prefix",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app"
+          }
+        },
+        "hooks": {
+          "name": {
+            "segments": ["hooks"],
+            "role": "schema"
+          },
+          "prefix": "/v1/hooks",
+          "pathVersion": "prefix",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks"
+          }
+        }
+      },
+      "documents": {
+        "public": {
+          "surfaces": ["app"],
+          "internal": "exclude"
+        },
+        "full": {
+          "surfaces": ["app", "hooks"],
+          "internal": "include"
+        }
+      },
+      "docs": {
+        "summary": "Tasks shared inside channels."
+      },
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/api"
+      }
+    },
+    "conventions": {
+      "paging.default": {
+        "value": "cursor",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/conventions/paging/default"
+        }
+      },
+      "paging.maxLimit": {
+        "value": 100,
+        "origin": {
+          "layer": "shared",
+          "pointer": "/conventions/paging/maxLimit"
+        }
+      },
+      "idempotency.header": {
+        "value": "Idempotency-Key",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/conventions/idempotency/header"
+        }
+      },
+      "idempotency.replayHeader": {
+        "value": "Idempotency-Replayed",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/conventions/idempotency/replayHeader"
+        }
+      },
+      "idempotency.lifetime": {
+        "value": "24h",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/conventions/idempotency/lifetime"
+        }
+      },
+      "bodyLimit": {
+        "value": "1MiB",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/conventions/bodyLimit"
+        }
+      },
+      "batch.maxIds": {
+        "value": 200,
+        "origin": {
+          "layer": "shared",
+          "pointer": "/conventions/batch/maxIds"
+        }
+      },
+      "batch.bodyLimit": {
+        "value": "2MiB",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/conventions/batch/bodyLimit"
+        }
+      },
+      "cache.families": {
+        "value": {
+          "minute": "60s",
+          "hour": "3600s"
+        },
+        "origin": {
+          "layer": "shared",
+          "pointer": "/conventions/cache/families"
+        }
+      },
+      "restrictedInput": {
+        "value": "reject",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/conventions/restrictedInput"
+        }
+      },
+      "rateLimit.header": {
+        "value": "Retry-After",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/conventions/rateLimit/header"
+        }
+      },
+      "rateLimit.param": {
+        "value": "retryAfterMs",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/conventions/rateLimit/param"
+        }
+      },
+      "rateLimit.unit": {
+        "value": "s",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/conventions/rateLimit/unit"
+        }
+      },
+      "errors.every": {
+        "value": ["api.internal"],
+        "origin": {
+          "layer": "shared",
+          "pointer": "/conventions/errors/every"
+        }
+      },
+      "errors.derived": {
+        "value": {
+          "schemaInvalid": {
+            "code": "api.schema_invalid",
+            "params": {
+              "issues": {
+                "$each": "$issues",
+                "$as": {
+                  "pointer": "$item.pointer",
+                  "rule": "$item.rule"
+                }
+              }
+            }
+          }
+        },
+        "origin": {
+          "layer": "shared",
+          "pointer": "/conventions/errors/derived"
+        }
+      }
+    },
+    "lint": {
+      "rules": {},
+      "allows": []
+    },
+    "formats": {
+      "bare": {
+        "id": "bare",
+        "origin": {
+          "layer": "core",
+          "pointer": "/formats/bare"
+        },
+        "media": "application/json",
+        "absent": "omit",
+        "success": {
+          "item": {
+            "body": {
+              "kind": "slot",
+              "slot": "payload",
+              "path": []
+            },
+            "headers": []
+          },
+          "table": {
+            "body": {
+              "kind": "slot",
+              "slot": "payload",
+              "path": []
+            },
+            "headers": []
+          },
+          "list": {
+            "body": {
+              "kind": "slot",
+              "slot": "payload",
+              "path": []
+            },
+            "headers": []
+          },
+          "page": {
+            "body": {
+              "kind": "slot",
+              "slot": "items",
+              "path": []
+            },
+            "headers": []
+          }
+        },
+        "meta": {},
+        "error": {
+          "media": "application/problem+json",
+          "body": {
+            "kind": "object",
+            "members": [
+              {
+                "name": {
+                  "kind": "text",
+                  "text": "type"
+                },
+                "value": {
+                  "kind": "slot",
+                  "slot": "code",
+                  "path": []
+                }
+              },
+              {
+                "name": {
+                  "kind": "text",
+                  "text": "title"
+                },
+                "value": {
+                  "kind": "slot",
+                  "slot": "title",
+                  "path": []
+                }
+              },
+              {
+                "name": {
+                  "kind": "text",
+                  "text": "status"
+                },
+                "value": {
+                  "kind": "slot",
+                  "slot": "status",
+                  "path": []
+                }
+              },
+              {
+                "name": {
+                  "kind": "text",
+                  "text": "detail"
+                },
+                "value": {
+                  "kind": "slot",
+                  "slot": "detail",
+                  "path": []
+                }
+              },
+              {
+                "name": {
+                  "kind": "text",
+                  "text": "instance"
+                },
+                "value": {
+                  "kind": "slot",
+                  "slot": "instance",
+                  "path": []
+                }
+              },
+              {
+                "name": {
+                  "kind": "text",
+                  "text": "code"
+                },
+                "value": {
+                  "kind": "slot",
+                  "slot": "code",
+                  "path": []
+                }
+              },
+              {
+                "name": {
+                  "kind": "text",
+                  "text": "nature"
+                },
+                "value": {
+                  "kind": "slot",
+                  "slot": "nature",
+                  "path": []
+                }
+              },
+              {
+                "name": {
+                  "kind": "text",
+                  "text": "traceId"
+                },
+                "value": {
+                  "kind": "slot",
+                  "slot": "traceId",
+                  "path": []
+                }
+              }
+            ],
+            "merge": "params"
+          },
+          "headers": []
+        }
+      }
+    },
+    "pagings": {
+      "cursor": {
+        "id": "cursor",
+        "origin": {
+          "layer": "shared",
+          "pointer": "/pagings/cursor"
+        },
+        "position": "cursor",
+        "absent": "omit",
+        "request": [
+          {
+            "role": "cursor",
+            "in": "query",
+            "name": "cursor"
+          },
+          {
+            "role": "limit",
+            "in": "query",
+            "name": "limit"
+          },
+          {
+            "role": "sort",
+            "in": "query",
+            "name": "sort",
+            "style": "signed"
+          }
+        ],
+        "response": {
+          "body": {
+            "kind": "slot",
+            "slot": "items",
+            "path": []
+          },
+          "meta": [],
+          "headers": [],
+          "links": [
+            {
+              "rel": "next",
+              "role": "next"
+            }
+          ]
+        },
+        "handlerResult": ["nextCursor"]
+      }
+    },
+    "operations": [
+      {
+        "kind": "httpOperation",
+        "id": "health",
+        "name": {
+          "segments": ["health"],
+          "role": "operation"
+        },
+        "surface": "app",
+        "method": "get",
+        "path": "/v1/health",
+        "safe": true,
+        "params": {
+          "path": [],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "responses": [
+          {
+            "status": 200,
+            "media": "application/json",
+            "body": {
+              "kind": "ref",
+              "schema": "Health"
+            },
+            "shape": "item",
+            "headers": [],
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/health/output"
+            }
+          }
+        ],
+        "upstream": [],
+        "internal": false,
+        "format": "bare",
+        "tags": [],
+        "examples": {},
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/health"
+        }
+      },
+      {
+        "kind": "httpOperation",
+        "id": "listChannels",
+        "name": {
+          "segments": ["list", "channels"],
+          "role": "operation"
+        },
+        "surface": "app",
+        "op": "list",
+        "resource": {
+          "type": "channels",
+          "idProperty": "channelId"
+        },
+        "method": "get",
+        "path": "/v1/channels",
+        "safe": true,
+        "params": {
+          "path": [],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "responses": [
+          {
+            "status": 200,
+            "media": "application/json",
+            "body": {
+              "kind": "ref",
+              "schema": "Channel"
+            },
+            "shape": "page",
+            "headers": [],
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/item"
+            }
+          }
+        ],
+        "paging": {
+          "style": "cursor",
+          "maxLimit": 100,
+          "defaultLimit": 100,
+          "overLimit": "reject",
+          "sortKeys": [],
+          "origin": {
+            "layer": "shared",
+            "pointer": "/conventions/paging/default"
+          }
+        },
+        "upstream": [],
+        "internal": false,
+        "format": "bare",
+        "tags": [],
+        "examples": {},
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/ops/0"
+        }
+      },
+      {
+        "kind": "httpOperation",
+        "id": "getChannel",
+        "name": {
+          "segments": ["get", "channel"],
+          "role": "operation"
+        },
+        "surface": "app",
+        "op": "get",
+        "resource": {
+          "type": "channels",
+          "idParam": "channelId",
+          "idProperty": "channelId"
+        },
+        "method": "get",
+        "path": "/v1/channels/{channelId}",
+        "safe": true,
+        "params": {
+          "path": [
+            {
+              "name": "channelId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/id/channelId"
+              }
+            }
+          ],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "responses": [
+          {
+            "status": 200,
+            "media": "application/json",
+            "body": {
+              "kind": "ref",
+              "schema": "Channel"
+            },
+            "shape": "item",
+            "headers": [],
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/item"
+            }
+          }
+        ],
+        "upstream": [],
+        "internal": false,
+        "format": "bare",
+        "tags": [],
+        "examples": {},
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/ops/1"
+        }
+      },
+      {
+        "kind": "httpOperation",
+        "id": "listTasks",
+        "name": {
+          "segments": ["list", "tasks"],
+          "role": "operation"
+        },
+        "surface": "app",
+        "op": "list",
+        "resource": {
+          "type": "tasks",
+          "idProperty": "taskId"
+        },
+        "method": "get",
+        "path": "/v1/channels/{channelId}/tasks",
+        "safe": true,
+        "params": {
+          "path": [
+            {
+              "name": "channelId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/id/channelId"
+              }
+            }
+          ],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "responses": [
+          {
+            "status": 200,
+            "media": "application/json",
+            "body": {
+              "kind": "ref",
+              "schema": "Task"
+            },
+            "shape": "page",
+            "headers": [],
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item"
+            }
+          }
+        ],
+        "paging": {
+          "style": "cursor",
+          "maxLimit": 50,
+          "defaultLimit": 50,
+          "overLimit": "reject",
+          "sortKeys": [
+            {
+              "key": "createdAt",
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/sortable/0"
+              }
+            },
+            {
+              "key": "effort",
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/sortable/1"
+              }
+            }
+          ],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging"
+          }
+        },
+        "upstream": [],
+        "internal": false,
+        "format": "bare",
+        "tags": [],
+        "examples": {},
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list"
+        }
+      },
+      {
+        "kind": "httpOperation",
+        "id": "createTask",
+        "name": {
+          "segments": ["create", "task"],
+          "role": "operation"
+        },
+        "surface": "app",
+        "op": "create",
+        "resource": {
+          "type": "tasks",
+          "idProperty": "taskId"
+        },
+        "method": "post",
+        "path": "/v1/channels/{channelId}/tasks",
+        "safe": false,
+        "params": {
+          "path": [
+            {
+              "name": "channelId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/id/channelId"
+              }
+            }
+          ],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "input": {
+          "media": "application/json",
+          "schema": {
+            "kind": "ref",
+            "schema": "CreateTask"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/input"
+          }
+        },
+        "responses": [
+          {
+            "status": 201,
+            "media": "application/json",
+            "body": {
+              "kind": "ref",
+              "schema": "Task"
+            },
+            "shape": "item",
+            "headers": [],
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item"
+            }
+          }
+        ],
+        "upstream": [],
+        "internal": false,
+        "format": "bare",
+        "tags": [],
+        "examples": {},
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create"
+        }
+      },
+      {
+        "kind": "httpOperation",
+        "id": "getTasksBatch",
+        "name": {
+          "segments": ["get", "tasks", "batch"],
+          "role": "operation"
+        },
+        "surface": "app",
+        "op": "batch",
+        "resource": {
+          "type": "tasks",
+          "idProperty": "taskId"
+        },
+        "method": "post",
+        "path": "/v1/channels/{channelId}/tasks/batch",
+        "safe": true,
+        "params": {
+          "path": [
+            {
+              "name": "channelId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/id/channelId"
+              }
+            }
+          ],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "input": {
+          "media": "application/json",
+          "schema": {
+            "kind": "ref",
+            "schema": "GetTasksBatchInput"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch"
+          }
+        },
+        "responses": [
+          {
+            "status": 200,
+            "media": "application/json",
+            "body": {
+              "kind": "ref",
+              "schema": "Task"
+            },
+            "shape": "table",
+            "headers": [],
+            "derivedFrom": {
+              "derivation": "batch.read",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch"
+                }
+              ]
+            }
+          }
+        ],
+        "upstream": [],
+        "internal": false,
+        "format": "bare",
+        "tags": [],
+        "examples": {},
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch"
+        }
+      },
+      {
+        "kind": "httpOperation",
+        "id": "searchTasks",
+        "name": {
+          "segments": ["search", "tasks"],
+          "role": "operation"
+        },
+        "surface": "app",
+        "resource": {
+          "type": "tasks",
+          "idProperty": "taskId"
+        },
+        "method": "post",
+        "path": "/v1/channels/{channelId}/tasks/search",
+        "safe": false,
+        "params": {
+          "path": [
+            {
+              "name": "channelId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/id/channelId"
+              }
+            }
+          ],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "input": {
+          "media": "application/json",
+          "schema": {
+            "kind": "ref",
+            "schema": "TaskQuery"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/input"
+          }
+        },
+        "responses": [
+          {
+            "status": 200,
+            "media": "application/json",
+            "body": {
+              "kind": "ref",
+              "schema": "TaskSearchResult"
+            },
+            "shape": "item",
+            "headers": [],
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/output"
+            }
+          }
+        ],
+        "budgetMs": 300,
+        "upstream": [],
+        "internal": false,
+        "format": "bare",
+        "tags": [],
+        "examples": {
+          "firstPage": {
+            "status": 200,
+            "value": {
+              "items": [
+                {
+                  "taskId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42",
+                  "title": "Write the brief",
+                  "state": "open",
+                  "version": 1,
+                  "createdAt": "2027-01-15T09:30:00Z"
+                }
+              ],
+              "total": 1
+            }
+          }
+        },
+        "docs": {
+          "summary": "Search the channel's tasks with a structured query."
+        },
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search"
+        }
+      },
+      {
+        "kind": "httpOperation",
+        "id": "getTask",
+        "name": {
+          "segments": ["get", "task"],
+          "role": "operation"
+        },
+        "surface": "app",
+        "op": "get",
+        "resource": {
+          "type": "tasks",
+          "idParam": "taskId",
+          "idProperty": "taskId"
+        },
+        "method": "get",
+        "path": "/v1/channels/{channelId}/tasks/{taskId}",
+        "safe": true,
+        "params": {
+          "path": [
+            {
+              "name": "channelId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/id/channelId"
+              }
+            },
+            {
+              "name": "taskId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/id/taskId"
+              }
+            }
+          ],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "responses": [
+          {
+            "status": 200,
+            "media": "application/json",
+            "body": {
+              "kind": "ref",
+              "schema": "Task"
+            },
+            "shape": "item",
+            "headers": [],
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item"
+            }
+          }
+        ],
+        "upstream": [],
+        "internal": false,
+        "format": "bare",
+        "tags": [],
+        "examples": {},
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/get"
+        }
+      },
+      {
+        "kind": "httpOperation",
+        "id": "updateTask",
+        "name": {
+          "segments": ["update", "task"],
+          "role": "operation"
+        },
+        "surface": "app",
+        "op": "update",
+        "resource": {
+          "type": "tasks",
+          "idParam": "taskId",
+          "idProperty": "taskId"
+        },
+        "method": "patch",
+        "path": "/v1/channels/{channelId}/tasks/{taskId}",
+        "safe": false,
+        "params": {
+          "path": [
+            {
+              "name": "channelId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/id/channelId"
+              }
+            },
+            {
+              "name": "taskId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/id/taskId"
+              }
+            }
+          ],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "input": {
+          "media": "application/json",
+          "schema": {
+            "kind": "ref",
+            "schema": "UpdateTask"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update/input"
+          }
+        },
+        "responses": [
+          {
+            "status": 200,
+            "media": "application/json",
+            "body": {
+              "kind": "ref",
+              "schema": "Task"
+            },
+            "shape": "item",
+            "headers": [],
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item"
+            }
+          }
+        ],
+        "concurrency": {
+          "version": {
+            "in": "body",
+            "name": "expectedVersion"
+          },
+          "field": "version"
+        },
+        "upstream": [],
+        "internal": false,
+        "format": "bare",
+        "tags": [],
+        "examples": {},
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update"
+        }
+      },
+      {
+        "kind": "httpOperation",
+        "id": "assignTask",
+        "name": {
+          "segments": ["assign", "task"],
+          "role": "operation"
+        },
+        "surface": "app",
+        "resource": {
+          "type": "tasks",
+          "idParam": "taskId",
+          "idProperty": "taskId"
+        },
+        "method": "post",
+        "path": "/v1/channels/{channelId}/tasks/{taskId}/assign",
+        "safe": false,
+        "params": {
+          "path": [
+            {
+              "name": "channelId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/id/channelId"
+              }
+            },
+            {
+              "name": "taskId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/id/taskId"
+              }
+            }
+          ],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "input": {
+          "media": "application/json",
+          "schema": {
+            "kind": "ref",
+            "schema": "AssignTaskInput"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/input"
+          }
+        },
+        "responses": [
+          {
+            "status": 200,
+            "media": "application/json",
+            "body": {
+              "kind": "ref",
+              "schema": "Task"
+            },
+            "shape": "item",
+            "headers": [],
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/output"
+            }
+          }
+        ],
+        "upstream": [],
+        "internal": false,
+        "format": "bare",
+        "tags": [],
+        "examples": {},
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign"
+        }
+      },
+      {
+        "kind": "httpOperation",
+        "id": "archiveTask",
+        "name": {
+          "segments": ["archive", "task"],
+          "role": "operation"
+        },
+        "surface": "app",
+        "resource": {
+          "type": "tasks",
+          "idParam": "taskId",
+          "idProperty": "taskId"
+        },
+        "method": "post",
+        "path": "/v1/channels/{channelId}/tasks/{taskId}/archive",
+        "safe": false,
+        "params": {
+          "path": [
+            {
+              "name": "channelId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/id/channelId"
+              }
+            },
+            {
+              "name": "taskId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/id/taskId"
+              }
+            }
+          ],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "input": {
+          "media": "application/json",
+          "schema": {
+            "kind": "ref",
+            "schema": "ArchiveTask"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/input"
+          }
+        },
+        "responses": [
+          {
+            "status": 200,
+            "media": "application/json",
+            "body": {
+              "kind": "ref",
+              "schema": "Task"
+            },
+            "shape": "item",
+            "headers": [],
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/output"
+            }
+          }
+        ],
+        "concurrency": {
+          "version": {
+            "in": "body",
+            "name": "expectedVersion"
+          },
+          "field": "version"
+        },
+        "upstream": [],
+        "internal": true,
+        "format": "bare",
+        "tags": [],
+        "examples": {},
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive"
+        }
+      },
+      {
+        "kind": "httpOperation",
+        "id": "purgeTask",
+        "name": {
+          "segments": ["purge", "task"],
+          "role": "operation"
+        },
+        "surface": "app",
+        "resource": {
+          "type": "tasks",
+          "idParam": "taskId",
+          "idProperty": "taskId"
+        },
+        "method": "post",
+        "path": "/v1/channels/{channelId}/tasks/{taskId}/purge",
+        "safe": false,
+        "params": {
+          "path": [
+            {
+              "name": "channelId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/id/channelId"
+              }
+            },
+            {
+              "name": "taskId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/id/taskId"
+              }
+            }
+          ],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "responses": [
+          {
+            "status": 204,
+            "shape": "empty",
+            "headers": [],
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/responses/204"
+            }
+          }
+        ],
+        "upstream": [],
+        "format": "bare",
+        "tags": [],
+        "examples": {},
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge"
+        }
+      },
+      {
+        "kind": "httpOperation",
+        "id": "getPreferences",
+        "name": {
+          "segments": ["get", "preferences"],
+          "role": "operation"
+        },
+        "surface": "app",
+        "op": "get",
+        "resource": {
+          "type": "preferences"
+        },
+        "method": "get",
+        "path": "/v1/me/preferences",
+        "safe": true,
+        "params": {
+          "path": [],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "responses": [
+          {
+            "status": 200,
+            "media": "application/json",
+            "body": {
+              "kind": "ref",
+              "schema": "Preferences"
+            },
+            "shape": "item",
+            "headers": [],
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/me/routes/preferences/item"
+            }
+          }
+        ],
+        "owner": {
+          "kind": "caller",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/me/routes/preferences/owner"
+          }
+        },
+        "upstream": [],
+        "internal": false,
+        "format": "bare",
+        "tags": [],
+        "examples": {},
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/me/routes/preferences/ops/get"
+        }
+      },
+      {
+        "kind": "httpOperation",
+        "id": "updatePreferences",
+        "name": {
+          "segments": ["update", "preferences"],
+          "role": "operation"
+        },
+        "surface": "app",
+        "op": "update",
+        "resource": {
+          "type": "preferences"
+        },
+        "method": "patch",
+        "path": "/v1/me/preferences",
+        "safe": false,
+        "params": {
+          "path": [],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "input": {
+          "media": "application/json",
+          "schema": {
+            "kind": "ref",
+            "schema": "UpdatePreferences"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/me/routes/preferences/ops/update/input"
+          }
+        },
+        "responses": [
+          {
+            "status": 200,
+            "media": "application/json",
+            "body": {
+              "kind": "ref",
+              "schema": "Preferences"
+            },
+            "shape": "item",
+            "headers": [],
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/me/routes/preferences/item"
+            }
+          }
+        ],
+        "owner": {
+          "kind": "caller",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/me/routes/preferences/owner"
+          }
+        },
+        "upstream": [],
+        "internal": false,
+        "format": "bare",
+        "tags": [],
+        "examples": {},
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/me/routes/preferences/ops/update"
+        }
+      },
+      {
+        "kind": "httpOperation",
+        "id": "getDraft",
+        "name": {
+          "segments": ["get", "draft"],
+          "role": "operation"
+        },
+        "surface": "app",
+        "op": "get",
+        "resource": {
+          "type": "drafts",
+          "idParam": "draftId",
+          "idProperty": "draftId"
+        },
+        "method": "get",
+        "path": "/v1/me/drafts/{draftId}",
+        "safe": true,
+        "params": {
+          "path": [
+            {
+              "name": "draftId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/me/routes/drafts/id/draftId"
+              }
+            }
+          ],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "responses": [
+          {
+            "status": 200,
+            "media": "application/json",
+            "body": {
+              "kind": "ref",
+              "schema": "Draft"
+            },
+            "shape": "item",
+            "headers": [],
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/me/routes/drafts/item"
+            }
+          }
+        ],
+        "owner": {
+          "kind": "caller",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/me/routes/drafts/owner"
+          }
+        },
+        "upstream": [],
+        "internal": false,
+        "format": "bare",
+        "tags": [],
+        "examples": {},
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/me/routes/drafts/ops/get"
+        }
+      },
+      {
+        "kind": "httpOperation",
+        "id": "deleteDraft",
+        "name": {
+          "segments": ["delete", "draft"],
+          "role": "operation"
+        },
+        "surface": "app",
+        "op": "delete",
+        "resource": {
+          "type": "drafts",
+          "idParam": "draftId",
+          "idProperty": "draftId"
+        },
+        "method": "delete",
+        "path": "/v1/me/drafts/{draftId}",
+        "safe": false,
+        "params": {
+          "path": [
+            {
+              "name": "draftId",
+              "type": {
+                "kind": "scalar",
+                "type": "string",
+                "format": "uuid",
+                "refinements": {}
+              },
+              "required": true,
+              "origin": {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/me/routes/drafts/id/draftId"
+              }
+            }
+          ],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "responses": [
+          {
+            "status": 200,
+            "media": "application/json",
+            "body": {
+              "kind": "ref",
+              "schema": "Draft"
+            },
+            "shape": "item",
+            "headers": [],
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/me/routes/drafts/ops/delete/output"
+            }
+          }
+        ],
+        "owner": {
+          "kind": "caller",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/me/routes/drafts/owner"
+          }
+        },
+        "upstream": [],
+        "internal": false,
+        "format": "bare",
+        "tags": [],
+        "examples": {},
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/me/routes/drafts/ops/delete"
+        }
+      },
+      {
+        "kind": "httpOperation",
+        "id": "payments",
+        "name": {
+          "segments": ["payments"],
+          "role": "operation"
+        },
+        "surface": "hooks",
+        "method": "post",
+        "path": "/v1/hooks/payments",
+        "safe": false,
+        "params": {
+          "path": [],
+          "query": [],
+          "header": []
+        },
+        "unknownQuery": {
+          "policy": "refuse"
+        },
+        "input": {
+          "media": "application/json",
+          "schema": {
+            "kind": "ref",
+            "schema": "PaymentEvent"
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/hooks/routes/payments/input"
+          }
+        },
+        "responses": [
+          {
+            "status": 204,
+            "shape": "empty",
+            "headers": [],
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/hooks/routes/payments/responses/204"
+            }
+          }
+        ],
+        "upstream": [],
+        "internal": false,
+        "format": "bare",
+        "tags": [],
+        "examples": {},
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/hooks/routes/payments"
+        }
+      }
+    ]
+  }
+}

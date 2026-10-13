@@ -11,6 +11,8 @@ Channel:
     name: { type: string, minLength: 1, maxLength: 100 }
 CreateTask:
   pick: { from: Task, fields: [title, effort] }
+  properties:
+    effort: { restrictedTo: { right: roles, params: { allowed: [owner] } } }
 UpdateTask:
   pick: { from: Task, fields: [title, state, effort] }
   required: []

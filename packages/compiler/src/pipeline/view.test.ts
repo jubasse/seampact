@@ -76,3 +76,33 @@ test("pipelineCopy copies views and plain values alike", () => {
   thawed.a.push(2);
   expect(thawed.a).toEqual([1, 2]);
 });
+
+test("pipelineCopy refuses a value that is not JSON-shaped data", () => {
+  class Holder {
+    readonly value = 1;
+  }
+  for (const value of [new Map([["a", 1]]), new Date(0), new Holder(), { nested: [new Set([1])] }])
+    expect(() => pipelineCopy(value)).toThrow(/pipelineCopy copies JSON-shaped data only/);
+  expect(() => pipelineCopy({ nested: [new Holder()] })).toThrow(/at nested\.0: a Holder/);
+});
+
+test("pipelineCopy refuses functions, bigints, symbols and accessors, such as a read-only map facade", () => {
+  const entries = new Map([["owner", 1]]);
+  const readonlyMapFacade = Object.freeze({
+    get size() {
+      return entries.size;
+    },
+    get: (key: string) => entries.get(key),
+    has: (key: string) => entries.has(key),
+  });
+  const withAccessor = Object.defineProperty({}, "computed", { get: () => 1, enumerable: true });
+
+  for (const value of [{ run: () => 1 }, { count: 1n }, { tag: Symbol("tag") }])
+    expect(() => pipelineCopy(value)).toThrow(/pipelineCopy copies JSON-shaped data only/);
+  expect(() => pipelineCopy({ entries: readonlyMapFacade })).toThrow(
+    /at entries\.size: an accessor/,
+  );
+  expect(() => pipelineCopy(withAccessor)).toThrow(/at computed: an accessor/);
+  expect(() => pipelineCopy({ nested: [() => 1] })).toThrow(/at nested\.0: a function/);
+  expect(pipelineCopy({ absent: undefined })).toEqual({ absent: undefined });
+});

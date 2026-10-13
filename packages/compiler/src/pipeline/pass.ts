@@ -20,16 +20,16 @@ export interface TreeSchemaExampleIssue {
 }
 
 /**
- * What `tree.schemas` exposes to `tree.nodes`, which compiles routes, parameters and examples without compiling
- * schemas itself. `tree.schemas` returns it from its run (`PassResultOf`); the orchestrator hands it to
- * `tree.nodes` as `context.treeSchemas`. Pointers are JSON Pointers into the api's merged raw tree
- * (`RawApi.merged`).
+ * What `tree.schemas` exposes to every later half (ADR 0006 section 2): `tree.nodes` compiles routes, parameters
+ * and examples with it without compiling schemas itself, and access and derive read type uses through it.
+ * `tree.schemas` returns it from its run (`PassResultOf`); the orchestrator hands it to each later half as
+ * `context.treeSchemas`. Pointers are JSON Pointers into the api's merged raw tree (`RawApi.merged`).
  * - Every hoist happens during tree.schemas' run: each inline object, map or union of the raw tree is in
  *   `schemas` before the service is returned. The service never writes the draft and keeps no reference to the
  *   draft handed to the run: with the guard on, that draft is revoked when the run ends.
  * - Each method is pure and reports nothing: tree.schemas reported every schema problem in its own run.
  * - `undefined` means no schema is written at `pointer` (or `pointer` is no schema position). A refused schema
- *   never reaches tree.nodes: tree.nodes runs only when tree.schemas reported no error (the stop rule).
+ *   never reaches a later half: they run only when tree.schemas reported no error (the stop rule).
  */
 export interface TreeSchemaService {
   /**
@@ -38,7 +38,10 @@ export interface TreeSchemaService {
    * rule proof schema). An inline object, map or union refers to the schema tree.schemas hoisted for it.
    */
   typeUse(pointer: string, direction: IrWriter.Direction): IrWriter.TypeUse | undefined;
-  /** The query wire form of the query or form field whose schema is written at `pointer` (ADR 0002 section 7). */
+  /**
+   * The query wire form of the query or form field, or the rule proof schema (`/rules/<id>/proof/schema`, the
+   * `wire` of a form or multipart proof), whose schema is written at `pointer` (ADR 0002 section 7).
+   */
   queryWire(pointer: string): IrWriter.QueryWire | undefined;
   /** Checks an example value against a use (FR-3); an empty list means the example fits. */
   checkExample(value: unknown, use: IrWriter.TypeUse): readonly TreeSchemaExampleIssue[];
@@ -46,9 +49,10 @@ export interface TreeSchemaService {
 
 /**
  * What every half receives besides the draft (ADR 0006 section 2). A half copies what it stores in its draft from
- * `raw`, `workspace`, `relayed`, `imported` or an `inherited` entry (`pipelineCopy`), with the guard on or off: the
- * draft never aliases what a half reads. With the guard on, storing a read-only view throws; with it off, nothing
- * would catch a later change through the draft reaching the raw tree or another api's draft.
+ * `raw`, `workspace`, `relayed`, `imported` or an `inherited` entry (`pipelineCopy`), with the guard on or off:
+ * the draft never aliases what a half reads. Everything read from `raw` counts, tree-node settings and written
+ * convention readings (`conventions.get`) included. With the guard on, storing a read-only view throws; with it
+ * off, nothing would catch a later change through the draft reaching the raw tree or another api's draft.
  */
 export interface PassContext {
   /** The api's merged raw tree, its layers, origins and locations. */
@@ -72,12 +76,12 @@ export interface PassContext {
   report(diagnostic: Diagnostic): void;
 }
 
-/** The context of a half: `tree.nodes` also receives the schema service of `tree.schemas`. */
-export type PassContextOf<H extends HalfName> = H extends "tree.nodes"
-  ? PassContext & { readonly treeSchemas: TreeSchemaService }
-  : PassContext;
+/** The context of a half: every half after `tree.schemas` also receives its schema service. */
+export type PassContextOf<H extends HalfName> = H extends "tree.schemas"
+  ? PassContext
+  : PassContext & { readonly treeSchemas: TreeSchemaService };
 
-/** What a half's run returns: `tree.schemas` hands its schema service to `tree.nodes`. */
+/** What a half's run returns: `tree.schemas` hands its schema service to every later half. */
 export type PassResultOf<H extends HalfName> = H extends "tree.schemas"
   ? TreeSchemaService
   : undefined;

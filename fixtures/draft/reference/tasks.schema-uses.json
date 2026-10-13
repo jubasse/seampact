@@ -1,0 +1,323 @@
+{
+  "typeUses": [
+    {
+      "pointer": "/identities/user/principal",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "UserPrincipal"
+      },
+      "at": ["/identities/user/principal/schema"]
+    },
+    {
+      "pointer": "/identities/service/principal",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "ServicePrincipal"
+      },
+      "at": ["/identities/service/principal/schema"]
+    },
+    {
+      "pointer": "/identities/stripe/principal",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "WebhookCaller"
+      },
+      "at": ["/identities/stripe/principal/schema"]
+    },
+    {
+      "pointer": "/identities/service/headers/actorSurface/schema",
+      "direction": "input",
+      "use": {
+        "kind": "enum",
+        "enum": "Surface"
+      },
+      "at": ["/identities/service/headers/2/schema"]
+    },
+    {
+      "pointer": "/scopes/channel/id",
+      "direction": "input",
+      "use": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "at": ["/scopes/channel/idSchema"]
+    },
+    {
+      "pointer": "/rights/roles/params",
+      "direction": "input",
+      "use": {
+        "kind": "ref",
+        "schema": "RolesParams"
+      },
+      "at": ["/rights/roles/params"]
+    },
+    {
+      "pointer": "/rights/tasks.update/subject/id",
+      "direction": "input",
+      "use": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "at": ["/rights/tasks.update/subject/idSchema"]
+    },
+    {
+      "pointer": "/rights/tasks.seeEffort/subject/id",
+      "direction": "input",
+      "use": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "at": ["/rights/tasks.seeEffort/subject/idSchema"]
+    },
+    {
+      "pointer": "/rights/callerService/params",
+      "direction": "input",
+      "use": {
+        "kind": "ref",
+        "schema": "CallerServiceParams"
+      },
+      "at": ["/rights/callerService/params"]
+    },
+    {
+      "pointer": "/rules/recentAuth/params",
+      "direction": "input",
+      "use": {
+        "kind": "ref",
+        "schema": "RecentAuthParams"
+      },
+      "at": ["/rules/recentAuth/params"]
+    },
+    {
+      "pointer": "/rules/recentAuth/proof/schema",
+      "direction": "input",
+      "use": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {
+          "minLength": 1,
+          "maxLength": 512
+        }
+      },
+      "at": ["/rules/recentAuth/proof/schema"]
+    },
+    {
+      "pointer": "/surfaces/app/routes/health/output",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "Health"
+      },
+      "at": ["/operations/0/responses/0/body"]
+    },
+    {
+      "pointer": "/surfaces/app/routes/channels/item",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "Channel"
+      },
+      "at": ["/operations/1/responses/0/body", "/operations/2/responses/0/body"]
+    },
+    {
+      "pointer": "/surfaces/app/routes/channels/id/channelId",
+      "direction": "input",
+      "use": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "at": [
+        "/operations/2/params/path/0/type",
+        "/operations/3/params/path/0/type",
+        "/operations/4/params/path/0/type",
+        "/operations/5/params/path/0/type",
+        "/operations/6/params/path/0/type",
+        "/operations/7/params/path/0/type",
+        "/operations/8/params/path/0/type",
+        "/operations/9/params/path/0/type",
+        "/operations/10/params/path/0/type",
+        "/operations/11/params/path/0/type"
+      ]
+    },
+    {
+      "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "Task"
+      },
+      "at": [
+        "/operations/3/responses/0/body",
+        "/operations/4/responses/0/body",
+        "/operations/7/responses/0/body",
+        "/operations/8/responses/0/body"
+      ]
+    },
+    {
+      "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create/input",
+      "direction": "input",
+      "use": {
+        "kind": "ref",
+        "schema": "CreateTask"
+      },
+      "at": ["/operations/4/input/schema"]
+    },
+    {
+      "pointer": "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/input",
+      "direction": "input",
+      "use": {
+        "kind": "ref",
+        "schema": "TaskQuery"
+      },
+      "at": ["/operations/6/input/schema"]
+    },
+    {
+      "pointer": "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/output",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "TaskSearchResult"
+      },
+      "at": ["/operations/6/responses/0/body"]
+    },
+    {
+      "pointer": "/surfaces/app/routes/channels/member/routes/tasks/id/taskId",
+      "direction": "input",
+      "use": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "at": [
+        "/operations/7/params/path/1/type",
+        "/operations/8/params/path/1/type",
+        "/operations/9/params/path/1/type",
+        "/operations/10/params/path/1/type",
+        "/operations/11/params/path/1/type"
+      ]
+    },
+    {
+      "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/update/input",
+      "direction": "input",
+      "use": {
+        "kind": "ref",
+        "schema": "UpdateTask"
+      },
+      "at": ["/operations/8/input/schema"]
+    },
+    {
+      "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/input",
+      "direction": "input",
+      "use": {
+        "kind": "ref",
+        "schema": "AssignTaskInput"
+      },
+      "at": ["/operations/9/input/schema"]
+    },
+    {
+      "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/output",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "Task"
+      },
+      "at": ["/operations/9/responses/0/body"]
+    },
+    {
+      "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/input",
+      "direction": "input",
+      "use": {
+        "kind": "ref",
+        "schema": "ArchiveTask"
+      },
+      "at": ["/operations/10/input/schema"]
+    },
+    {
+      "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/output",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "Task"
+      },
+      "at": ["/operations/10/responses/0/body"]
+    },
+    {
+      "pointer": "/surfaces/app/routes/me/routes/preferences/item",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "Preferences"
+      },
+      "at": ["/operations/12/responses/0/body", "/operations/13/responses/0/body"]
+    },
+    {
+      "pointer": "/surfaces/app/routes/me/routes/preferences/ops/update/input",
+      "direction": "input",
+      "use": {
+        "kind": "ref",
+        "schema": "UpdatePreferences"
+      },
+      "at": ["/operations/13/input/schema"]
+    },
+    {
+      "pointer": "/surfaces/app/routes/me/routes/drafts/id/draftId",
+      "direction": "input",
+      "use": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "at": ["/operations/14/params/path/0/type", "/operations/15/params/path/0/type"]
+    },
+    {
+      "pointer": "/surfaces/app/routes/me/routes/drafts/item",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "Draft"
+      },
+      "at": ["/operations/14/responses/0/body"]
+    },
+    {
+      "pointer": "/surfaces/app/routes/me/routes/drafts/ops/delete/output",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "Draft"
+      },
+      "at": ["/operations/15/responses/0/body"]
+    },
+    {
+      "pointer": "/surfaces/hooks/routes/payments/input",
+      "direction": "input",
+      "use": {
+        "kind": "ref",
+        "schema": "PaymentEvent"
+      },
+      "at": ["/operations/16/input/schema"]
+    }
+  ],
+  "queryWires": [
+    {
+      "pointer": "/rules/recentAuth/proof/schema",
+      "wire": {
+        "kind": "text",
+        "style": "form",
+        "explode": true,
+        "brackets": false
+      }
+    }
+  ]
+}
