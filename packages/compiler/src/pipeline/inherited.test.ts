@@ -15,11 +15,13 @@ surfaces:
     tags: [app]
     requires: [r1]
     errorRoles: { notFound: a.missing, forbidden: a.denied }
+    errors: { app.gone: { reach: resource } }
     routes:
       tasks:
         kind: collection
         id: { taskId: TaskId }
         tags: [app, tasks]
+        errors: { app.gone: { reach: resource }, tasks.locked: {} }
         requires: [r2]
         ops: { list: {}, get: { identity: admin, tags: [read] } }
         member:
@@ -144,6 +146,17 @@ test("inherited merge shapes", () => {
     `${TASKS}/ops/get/tags/0`,
   ]);
 
+  // errors: every attachment is kept with its node, an equal one re-attached on a nested node included, so
+  // derive.errors applies `reach: resource` to each (the root's stops at its own resource, the nested one's
+  // reaches `get`).
+  const errors = inherited(get, "errors");
+  expect(errors?.shape).toBe("union");
+  expect(errors?.entries.map((e) => [e.key, e.value, e.node.name, e.origin.pointer])).toEqual([
+    ["app.gone", { reach: "resource" }, "app", "/surfaces/app/errors/app.gone"],
+    ["app.gone", { reach: "resource" }, "tasks", `${TASKS}/errors/app.gone`],
+    ["tasks.locked", {}, "tasks", `${TASKS}/errors/tasks.locked`],
+  ]);
+
   // per key: the nearest node wins for each key.
   const roles = inherited(assign, "errorRoles");
   expect(roles?.shape).toBe("perKey");
@@ -159,4 +172,26 @@ test("inherited merge shapes", () => {
 
   // @ts-expect-error `owner` is not inherited (ADR 0002 section 8).
   expect(() => inherited(get, "owner")).toThrow(/no merge shape/);
+});
+
+test("a union entry's identity ignores key order", () => {
+  // A hand-made merged tree: the readers are generic over the values, and no union setting of the grammar holds
+  // objects yet.
+  const merged = {
+    surfaces: {
+      app: {
+        tags: [{ a: 1, b: [{ c: 1, d: 2 }] }, "app"],
+        routes: { ping: { method: "get", tags: [{ b: [{ d: 2, c: 1 }], a: 1 }, "ping"] } },
+      },
+    },
+  };
+  const handMade: RawApi = { ...raw, merged, leafOrigins: {} };
+  const ping = pipelineTreeNodes(handMade).find((n) => n.name === "ping");
+  if (ping === undefined) throw new Error("no ping");
+  const tags = pipelineInherited(handMade)(ping, "tags");
+  expect(tags?.entries.map((e) => [e.value, e.node.name])).toEqual([
+    [{ a: 1, b: [{ c: 1, d: 2 }] }, "app"],
+    ["app", "app"],
+    ["ping", "ping"],
+  ]);
 });

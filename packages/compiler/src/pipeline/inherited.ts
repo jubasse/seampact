@@ -7,7 +7,9 @@ import type { TreeNode } from "./tree.js";
 // The inherited settings of ADR 0002 section 8 and the merge shape of each (ADR 0006 section 2). `inherited`
 // applies the merge and returns each value with the origin of the node that set it; it reports nothing: the
 // conflict diagnostics and the filters (`query` on safe routes, `errors` within `reach` and `for`, pack-derived
-// requirements first) belong to the half that owns the setting. A setting ADR 0002 section 8 does not inherit
+// requirements first) belong to the half that owns the setting. `errors` is the one union `inherited` does not
+// reduce: an equal attachment on a nested node is kept, because `reach` and `for` apply per attachment (ADR 0002
+// section 11), so derive.errors filters each attachment first and then unions by code. A setting ADR 0002 section 8 does not inherit
 // (`owner`, `concurrency`, `paging`, `examples`, ...) is not a `SettingName`, so asking for it fails to compile.
 
 /** The nearest node that sets it wins. */
@@ -39,7 +41,10 @@ export type OrderedSetting =
   | "query"
   | "lint.allow";
 
-/** The union of the entries of every node, from the root down to the node. */
+/**
+ * The union of the entries of every node, from the root down to the node. For `errors`, every attachment is kept
+ * (derive.errors unions by code after its `reach` and `for` filter).
+ */
 export type UnionSetting = "principal.requires" | "errors" | "tags";
 
 export type SettingName = NearestSetting | PerKeySetting | OrderedSetting | UnionSetting;
@@ -70,7 +75,10 @@ export interface InheritedList {
   /**
    * Each entry with its node, from the root down to the node, in written order within a node: a list's items, a
    * map's entries (with `key`), or a whole value of another form (a fields map written as a schema name). For
-   * `union`, an entry equal to an earlier one (same key and value) is dropped, so the first setter's origin stays.
+   * `tags` and `principal.requires`, an entry equal to an earlier one (same key, and the same value whatever its
+   * key order) is dropped, so the first setter's origin stays. For `errors`, every attachment from the root down
+   * to the node is kept with its node and origin, equal ones included: an equal attachment on a nested node with
+   * `reach: resource` reaches where the root's does not, so the owning half filters each one before the union.
    */
   readonly entries: readonly InheritedEntry[];
 }
@@ -186,10 +194,12 @@ export function pipelineInherited(raw: PassReadonly<RawApi>): InheritedReader {
         for (const [key, item] of Object.entries(value)) entries.push(entryOf(at, path, item, key));
       else entries.push(entryOf(at, path, value));
     }
-    if (shape === "ordered") return Object.freeze({ shape, entries: Object.freeze(entries) });
+    // `errors` is reduced by derive.errors, after it filters each attachment (see the module comment).
+    if (shape === "ordered" || setting === "errors")
+      return Object.freeze({ shape, entries: Object.freeze(entries) });
     const seen = new Set<string>();
     const union = entries.filter((entry) => {
-      const id = JSON.stringify([entry.key ?? null, entry.value]);
+      const id = canonical([entry.key ?? null, entry.value]);
       if (seen.has(id)) return false;
       seen.add(id);
       return true;
@@ -197,6 +207,20 @@ export function pipelineInherited(raw: PassReadonly<RawApi>): InheritedReader {
     return Object.freeze({ shape, entries: Object.freeze(union) });
   }
   return read;
+}
+
+// A value's text with every object's keys sorted, so two equal values written in another key order are one.
+function canonical(value: unknown): string {
+  const sorted = (item: unknown): unknown => {
+    if (Array.isArray(item)) return item.map(sorted);
+    if (typeof item !== "object" || item === null) return item;
+    return Object.fromEntries(
+      Object.keys(item)
+        .sort()
+        .map((key) => [key, sorted(Reflect.get(item, key))]),
+    );
+  };
+  return JSON.stringify(sorted(value));
 }
 
 // A map no caller can change: a frozen object over a private `Map`, since freezing a `Map` leaves `set` working.
