@@ -89,7 +89,8 @@ export function pipelineViewSource(value: unknown): PipelineViewSource | undefin
  * object's prototype (none for a catalogue) and defines its members, so a member named `__proto__` stays one.
  * The draft is JSON-shaped data: a value holding any other object (a `Map`, a `Date`, a class instance), a
  * function, a bigint, a symbol or an accessor throws, naming where it sits, instead of being copied into an object
- * that only looks like it. `undefined` is kept: an optional member is absent, so it never reaches the draft.
+ * that only looks like it. `undefined` is copied as is; a half leaves an optional member absent rather than
+ * writing `undefined`.
  */
 export function pipelineCopy<T>(value: T): PassWritable<T> {
   // Only the read-only type is dropped: the copy has the same shape as `value`.
@@ -116,8 +117,9 @@ function copy(value: unknown, path: string): unknown {
     const at = join(path, key);
     // A getter would be read once and frozen into a value: refuse it, as a facade's `size` is.
     const descriptor = Object.getOwnPropertyDescriptor(plain, key);
-    if (descriptor === undefined || !("value" in descriptor))
-      throw notJsonShaped("an accessor", at);
+    // A proxy may list a key in `ownKeys` and then hide its descriptor.
+    if (descriptor === undefined) throw notJsonShaped("a member with no descriptor", at);
+    if (!("value" in descriptor)) throw notJsonShaped("an accessor", at);
 
     Object.defineProperty(out, key, {
       value: copy(descriptor.value, at),
