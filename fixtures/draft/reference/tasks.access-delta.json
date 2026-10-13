@@ -810,7 +810,7 @@
               "from": [
                 {
                   "layer": "shared",
-                  "pointer": "/schemas/Task/properties/effort"
+                  "pointer": "/schemas/Task/properties/effort/restrictedTo"
                 }
               ]
             }
@@ -826,7 +826,7 @@
                 "from": [
                   {
                     "layer": "shared",
-                    "pointer": "/schemas/Task/properties/effort"
+                    "pointer": "/schemas/Task/properties/effort/restrictedTo"
                   }
                 ]
               }
@@ -921,7 +921,7 @@
               "from": [
                 {
                   "layer": "shared",
-                  "pointer": "/schemas/Task/properties/effort"
+                  "pointer": "/schemas/Task/properties/effort/restrictedTo"
                 }
               ]
             }
@@ -960,7 +960,7 @@
               "from": [
                 {
                   "layer": "shared",
-                  "pointer": "/schemas/Task/properties/effort"
+                  "pointer": "/schemas/Task/properties/effort/restrictedTo"
                 }
               ]
             }
@@ -1015,7 +1015,7 @@
               "from": [
                 {
                   "layer": "shared",
-                  "pointer": "/schemas/Task/properties/effort"
+                  "pointer": "/schemas/Task/properties/effort/restrictedTo"
                 }
               ]
             }
@@ -1054,7 +1054,7 @@
               "from": [
                 {
                   "layer": "shared",
-                  "pointer": "/schemas/Task/properties/effort"
+                  "pointer": "/schemas/Task/properties/effort/restrictedTo"
                 }
               ]
             }
@@ -1109,7 +1109,7 @@
               "from": [
                 {
                   "layer": "shared",
-                  "pointer": "/schemas/Task/properties/effort"
+                  "pointer": "/schemas/Task/properties/effort/restrictedTo"
                 }
               ]
             }
@@ -1131,7 +1131,7 @@
               "from": [
                 {
                   "layer": "shared",
-                  "pointer": "/schemas/Task/properties/effort"
+                  "pointer": "/schemas/Task/properties/effort/restrictedTo"
                 }
               ]
             }
@@ -1190,7 +1190,7 @@
               "from": [
                 {
                   "layer": "shared",
-                  "pointer": "/schemas/Task/properties/effort"
+                  "pointer": "/schemas/Task/properties/effort/restrictedTo"
                 }
               ]
             }
@@ -1229,7 +1229,7 @@
               "from": [
                 {
                   "layer": "shared",
-                  "pointer": "/schemas/Task/properties/effort"
+                  "pointer": "/schemas/Task/properties/effort/restrictedTo"
                 }
               ]
             }

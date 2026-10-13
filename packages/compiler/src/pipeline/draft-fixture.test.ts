@@ -1,11 +1,11 @@
 import { fileURLToPath } from "node:url";
-import type { Origin } from "@seampact/spec/ir";
+import type { IrWriter, Origin } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { isDerivationId } from "../derivations/table.js";
 import { diagnosticLocationKey } from "../diagnostics/print.js";
 import { loadFsReader, loadWorkspace } from "../load/index.js";
-import type { RawApi } from "../raw-tree.js";
-import { createDraftIR } from "./draft.js";
+import type { JsonObject, RawApi } from "../raw-tree.js";
+import { createDraftIR, type DraftIR } from "./draft.js";
 import {
   type DraftFixtureApi,
   draftFixture,
@@ -53,11 +53,7 @@ function writableFields(half: HalfName): DraftField[] {
 }
 
 // Applies each half's members to `draft` under that half's guard, as the half itself would write them.
-function applyGuarded(
-  draft: ReturnType<typeof createDraftIR>,
-  api: DraftFixtureApi,
-  file: "after-tree" | "access-delta",
-) {
+function applyGuarded(draft: DraftIR, api: DraftFixtureApi, file: "after-tree" | "access-delta") {
   for (const { half, members } of draftFixtureHalves(api, file)) {
     const guard = pipelineGuard(draft, {
       half,
@@ -106,25 +102,63 @@ function originsOf(draft: object): FoundOrigin[] {
   return found;
 }
 
-// The elements of every `elements` list of the ownership table, in each operation of `draft`.
-function elementsOf(draft: ReturnType<typeof createDraftIR>): { at: string; element: unknown }[] {
-  const found: { at: string; element: unknown }[] = [];
-  for (const [index, operation] of draft.operations.entries()) {
-    const lists: [string, readonly unknown[] | undefined][] = [
-      ["params/path", operation.params?.path],
-      ["params/query", operation.params?.query],
-      ["params/header", operation.params?.header],
-      ["responses", operation.responses],
-      ...(operation.responses ?? []).map((response, status): [string, readonly unknown[]] => [
-        `responses/${status}/headers`,
-        response.headers,
-      ]),
-    ];
-    for (const [list, elements] of lists)
-      for (const [position, element] of (elements ?? []).entries())
-        found.push({ at: `/operations/${index}/${list}/${position}`, element });
+interface FoundElement {
+  at: string;
+  element: unknown;
+}
+
+// The lists a draft field names (`operations[].responses[].headers`), each `[]` segment walking every element.
+function listsAt(value: unknown, segments: readonly string[], at: string): FoundElement[] {
+  const [segment, ...rest] = segments;
+  if (segment === undefined)
+    return Array.isArray(value)
+      ? value.map((element, position) => ({ at: `${at}/${position}`, element }))
+      : [];
+
+  const name = segment.replace(/\[\]$/, "");
+  const member = isRecord(value) ? value[name] : undefined;
+  if (name === segment) return listsAt(member, rest, `${at}/${name}`);
+  if (!Array.isArray(member)) return [];
+  return member.flatMap((element, position) => listsAt(element, rest, `${at}/${name}/${position}`));
+}
+
+// The elements of every `elements` list of the ownership table in `draft`.
+function elementsOf(draft: DraftIR): FoundElement[] {
+  return pipelineOwnership
+    .filter((row) => row.mode === "elements")
+    .flatMap((row) => listsAt(draft, row.field.split("."), ""));
+}
+
+// The restriction of the property a field-right pointer names (`/items/*/effort`), through refs and array items.
+function restrictionOf(
+  draft: DraftIR,
+  schemaId: string,
+  pointer: string,
+): IrWriter.FieldRestriction | undefined {
+  const [propertyName, ...rest] = pointer.split("/");
+  const property = propertiesOf(draft, schemaId).find(({ name }) => name === propertyName);
+  if (rest.length === 0 || property === undefined) return property?.restrictedTo;
+
+  let type = property.type;
+  while (type.kind === "array" && rest[0] === "*") {
+    type = type.items;
+    rest.shift();
   }
-  return found;
+  return type.kind === "ref" ? restrictionOf(draft, type.schema, rest.join("/")) : undefined;
+}
+
+function propertiesOf(draft: DraftIR, schemaId: string) {
+  const schema = draft.schemas[schemaId];
+  return schema?.kind === "object" ? schema.properties : [];
+}
+
+// The operation ids whose `input.rawBody` a half's delta members write.
+function rawBodyWriters(members: JsonObject | undefined): string[] {
+  const operations = members?.operations;
+  if (!isRecord(operations)) return [];
+  return Object.entries(operations)
+    .filter(([, entry]) => isRecord(entry) && isRecord(entry.input) && "rawBody" in entry.input)
+    .map(([id]) => id);
 }
 
 describe("draft fixtures", () => {
@@ -214,7 +248,9 @@ describe("draft fixtures", () => {
     "%s: every element is declared or derived, and each derivation is in the table",
     (api) => {
       const draft = draftFixture(api, "after-access");
-      for (const { at, element } of elementsOf(draft)) {
+      const elements = elementsOf(draft);
+      expect(elements.length).toBeGreaterThan(draft.operations.length);
+      for (const { at, element } of elements) {
         expect(isRecord(element), at).toBe(true);
         if (isRecord(element))
           expect(isOrigin(element.origin) || isRecord(element.derivedFrom), at).toBe(true);
@@ -251,7 +287,7 @@ describe("draft fixtures", () => {
     },
   );
 
-  // ADR 0004 section 13 and LD-8: the origin is the first requirement that brings a body proof.
+  // ADR 0004 section 13: the origin is the first requirement that brings a body proof.
   test("tasks: access.rights writes a proof-only input where tree left none", () => {
     const operationsWithoutInput = draftFixture("tasks", "after-tree")
       .operations.filter((operation) => operation.input === undefined)
@@ -273,6 +309,80 @@ describe("draft fixtures", () => {
       });
       expect(input?.origin, id).toEqual(firstProofOrigin);
     }
+  });
+
+  test("tasks: a restricted field or sort key derives from its property's restrictedTo", () => {
+    const draft = draftFixture("tasks", "after-access");
+    const checked: string[] = [];
+
+    for (const operation of draft.operations) {
+      for (const fieldRight of operation.fieldRights ?? []) {
+        const restriction = restrictionOf(draft, fieldRight.schema, fieldRight.pointer.slice(1));
+        expect(fieldRight.derivedFrom.from?.[0], operation.id).toEqual(restriction?.origin);
+        checked.push(`${operation.id} ${fieldRight.schema}${fieldRight.pointer}`);
+      }
+
+      const item = operation.responses?.find((response) => response.body?.kind === "ref")?.body;
+      for (const sortKey of operation.paging?.sortKeys ?? []) {
+        if (sortKey.derivedFrom === undefined || item?.kind !== "ref") continue;
+        const restriction = restrictionOf(draft, item.schema, sortKey.key);
+        expect(sortKey.derivedFrom.from?.[0], operation.id).toEqual(restriction?.origin);
+        checked.push(`${operation.id} sort ${sortKey.key}`);
+      }
+    }
+
+    expect(checked).toContain("createTask CreateTask/effort");
+    expect(checked).toContain("listTasks sort effort");
+  });
+
+  // ADR 0002 section 6: tree.schemas adds the version property that tree.nodes' concurrency names.
+  test("tasks: the version property is the last of each body-versioned input, and only there", () => {
+    const draft = draftFixture("tasks", "after-tree");
+    const versionedInputs = new Set<string>();
+
+    for (const operation of draft.operations) {
+      const version = operation.concurrency?.version;
+      const input = operation.input?.schema;
+      const item = operation.responses?.find((response) => response.body?.kind === "ref")?.body;
+      if (version?.in !== "body" || input?.kind !== "ref" || item?.kind !== "ref") continue;
+
+      versionedInputs.add(input.schema);
+      const versionProperty = propertiesOf(draft, input.schema).at(-1);
+      const itemField = propertiesOf(draft, item.schema).find(
+        (property) => property.name === operation.concurrency?.field,
+      );
+      expect(versionProperty, operation.id).toMatchObject({
+        name: version.name,
+        type: itemField?.type,
+        derivedFrom: { derivation: "concurrency.version" },
+      });
+    }
+
+    const schemasWithVersionProperty = Object.keys(draft.schemas).filter((id) =>
+      propertiesOf(draft, id).some(
+        (property) => property.derivedFrom?.derivation === "concurrency.version",
+      ),
+    );
+    expect(schemasWithVersionProperty.sort()).toEqual([...versionedInputs].sort());
+    expect(versionedInputs.size).toBeGreaterThan(0);
+  });
+
+  // access.identity writes rawBody on every declared input, access.rights only on a proof-only one.
+  test.each(APIS)("%s: input.rawBody is written by the half the input calls for", (api) => {
+    const declaredInputs = draftFixture(api, "after-tree")
+      .operations.filter((operation) => operation.input !== undefined)
+      .map((operation) => operation.id);
+    const afterAccess = draftFixture(api, "after-access").operations;
+    const proofOnlyInputs = afterAccess
+      .filter(
+        (operation) =>
+          !declaredInputs.includes(operation.id) && operation.input?.proofs !== undefined,
+      )
+      .map((operation) => operation.id);
+    const [identity, rights] = draftFixtureHalves(api, "access-delta");
+
+    expect(rawBodyWriters(identity?.members).sort()).toEqual([...declaredInputs].sort());
+    expect(rawBodyWriters(rights?.members).sort()).toEqual([...proofOnlyInputs].sort());
   });
 
   test("the reference contract loads with no diagnostic", () => {
