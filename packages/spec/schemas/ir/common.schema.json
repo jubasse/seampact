@@ -115,7 +115,7 @@
     },
     "Feature": {
       "type": "string",
-      "description": "A must-understand feature name (ADR 0005 section 3); none is defined at irRevision 1."
+      "description": "A must-understand feature name (ADR 0005 section 3); none is defined at irRevision 2."
     },
     "Reason": {
       "type": "string",

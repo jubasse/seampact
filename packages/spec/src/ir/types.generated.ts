@@ -73,7 +73,7 @@ export type OperationId = string;
 /** A derivation id of the derivation table (ADR 0006 section 5), 'pack.<pack>.<entry>' for a pack entry. */
 export type DerivationId = string;
 
-/** A must-understand feature name (ADR 0005 section 3); none is defined at irRevision 1. */
+/** A must-understand feature name (ADR 0005 section 3); none is defined at irRevision 2. */
 export type Feature = string;
 
 /** The written reason of an exception: non-empty, without leading or trailing white space (A36, ADR 0002 section 4). */
