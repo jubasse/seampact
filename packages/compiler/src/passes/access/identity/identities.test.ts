@@ -1,6 +1,7 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { diagnosticLocationKey } from "../../../diagnostics/print.js";
+import type { TreeSchemaService } from "../../../pipeline/seam.js";
 import {
   type AccessIdentitySchemaUseRow,
   accessIdentityCataloguesExpected,
@@ -311,6 +312,29 @@ headers:
         },
       ],
     });
+  });
+
+  test("a stored schema use is a copy, even when the service answers one shared object", () => {
+    const shared: IrWriter.TypeUse = { kind: "enum", enum: "Surface" };
+    const contract = accessIdentityInline(`api: { name: a, version: 1 }
+headers:
+  first: { name: X-First, in: request, semantic: actorSurface, schema: { enum: Surface } }
+  second: { name: X-Second, in: request, semantic: actorSurface, schema: { enum: Surface } }
+enums:
+  Surface: { values: [app, studio], reason: "The product's entry points." }
+`);
+    const sharedService: TreeSchemaService = {
+      typeUse: () => shared,
+      queryWire: () => undefined,
+      checkExample: () => [],
+    };
+    const { draft } = accessIdentityRun(contract, accessIdentityDraft(), sharedService);
+
+    Object.assign(shared, { enum: "Changed" });
+    expect([draft.headers.first?.schema, draft.headers.second?.schema]).toEqual([
+      SURFACE_USE,
+      SURFACE_USE,
+    ]);
   });
 
   test("an actorSurface schema is an enum", () => {
