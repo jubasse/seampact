@@ -290,11 +290,22 @@ function checkPayload(entry: SchemeEntry, format: string, payload: string): void
       pointer,
     });
 
-  if (placeholders.includes("ts") && !placeholdersOf(format).includes("ts"))
+  const signsTimestamp = placeholders.includes("ts");
+  const readsTimestamp = placeholdersOf(format).includes("ts");
+  if (signsTimestamp && !readsTimestamp)
     entry.reporter.error({
       rule: "signature-template",
       message: `the payload of signature scheme '${entry.id}' signs '{ts}', which its format does not read`,
       fix: "Add the '{ts}' pair to the format, or remove '{ts}' from the payload.",
+      pointer,
+    });
+
+  // A timestamp the MAC does not cover is replayable with a fresh value, so the tolerance would protect nothing.
+  if (readsTimestamp && !signsTimestamp)
+    entry.reporter.error({
+      rule: "signature-template",
+      message: `the format of signature scheme '${entry.id}' reads '{ts}', which its payload does not sign`,
+      fix: "Add '{ts}' to the payload, such as '{ts}.{rawBody}', or remove the '{ts}' pair from the format.",
       pointer,
     });
 }

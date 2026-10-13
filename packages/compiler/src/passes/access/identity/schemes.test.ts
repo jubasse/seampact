@@ -180,7 +180,7 @@ describe("security schemes", () => {
     );
   });
 
-  test("a payload holds {rawBody} once, {ts} at most once and only from the format", () => {
+  test("a payload holds {rawBody} once, and {ts} exactly when the format reads it", () => {
     const payloadErrors = (format: string, payload: string, tolerance = "") =>
       refusals(`
   sig:${STRIPE}
@@ -192,6 +192,10 @@ describe("security schemes", () => {
     ]);
     expect(payloadErrors("sha256={sig}", "{ts}.{rawBody}", "\n    tolerance: 5m")).toEqual([
       "the payload of signature scheme 'sig' signs '{ts}', which its format does not read",
+    ]);
+    // A timestamp the MAC does not cover lets a replayed request pass with a fresh 't='.
+    expect(payloadErrors("t={ts},v1={sig}", "{rawBody}", "\n    tolerance: 5m")).toEqual([
+      "the format of signature scheme 'sig' reads '{ts}', which its payload does not sign",
     ]);
   });
 
