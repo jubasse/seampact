@@ -1377,9 +1377,9 @@ requires:
   - { right: tasks.update, subject: path.taskId }   # tasks/api.yaml:53; the subject defaults to the member id
 input: UpdateTask                                # tasks/api.yaml:52; concurrency.version adds expectedVersion
 concurrency: { version: body.expectedVersion, field: version }   # tasks, tasks/api.yaml:41
-headers: { Idempotency-Key: required }           # idempotency.write, shared/base.yaml:86
+headers: { Idempotency-Key: required }           # idempotency.write, shared/base.yaml:91
 errors:
-  - { status: 400, code: api.schema_invalid }    # input.invalid, idempotency.write; bound at shared/base.yaml:95
+  - { status: 400, code: api.schema_invalid }    # input.invalid, idempotency.write; bound at shared/base.yaml:100
   - { status: 401, code: api.unauthenticated }   # identity.authenticate; the role's default code
   - { status: 403, code: api.csrf_invalid }      # csrf.cookieWrite; the role's default code
   - { status: 403, code: api.forbidden }         # requirement.errors, rights.tasks.update, shared/base.yaml:49

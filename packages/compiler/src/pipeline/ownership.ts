@@ -117,7 +117,7 @@ export const pipelineOwnership = [
   // input, and access.rights also copies the identity's `unknownKeys` onto it; elsewhere `rawBody` is false.
   ...inputDefaults("tree.nodes", "media", "schema", "origin"),
   // Two writers: access.identity, on every declared input, true on a signed identity's route and false elsewhere
-  // (LD-7); access.rights, on the proof-only input it writes, by the same rule.
+  // (ADR 0006 section 3); access.rights, on the proof-only input it writes, by the same rule.
   ...inputDefaults("access.identity", "rawBody"),
   // Declared by tree.nodes, then access.identity on a signed identity's routes, then access.rights, which copies
   // the identity's onto a proof-only input it writes, then derive.wire from `conventions.input.unknownKeys`.

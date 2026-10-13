@@ -20,10 +20,10 @@ export interface TreeSchemaExampleIssue {
 }
 
 /**
- * What `tree.schemas` exposes to every later half: `tree.nodes` compiles routes, parameters and examples with it
- * without compiling schemas itself, and access and derive read type uses through it (LD-1). `tree.schemas` returns
- * it from its run (`PassResultOf`); the orchestrator hands it to each later half as `context.treeSchemas`. Pointers are JSON Pointers into the api's merged raw tree
- * (`RawApi.merged`).
+ * What `tree.schemas` exposes to every later half (ADR 0006 section 2): `tree.nodes` compiles routes, parameters
+ * and examples with it without compiling schemas itself, and access and derive read type uses through it.
+ * `tree.schemas` returns it from its run (`PassResultOf`); the orchestrator hands it to each later half as
+ * `context.treeSchemas`. Pointers are JSON Pointers into the api's merged raw tree (`RawApi.merged`).
  * - Every hoist happens during tree.schemas' run: each inline object, map or union of the raw tree is in
  *   `schemas` before the service is returned. The service never writes the draft and keeps no reference to the
  *   draft handed to the run: with the guard on, that draft is revoked when the run ends.
@@ -46,10 +46,10 @@ export interface TreeSchemaService {
 
 /**
  * What every half receives besides the draft (ADR 0006 section 2). A half copies what it stores in its draft from
- * `raw`, `workspace`, `relayed`, `imported` or an `inherited` entry (`pipelineCopy`), with the guard on or off: the
- * draft never aliases what a half reads. Everything read from `raw` counts, tree-node settings and written
- * convention readings (`conventions.get`) included. With the guard on, storing a read-only view throws; with it off, nothing
- * would catch a later change through the draft reaching the raw tree or another api's draft.
+ * `raw`, `workspace`, `relayed`, `imported` or an `inherited` entry (`pipelineCopy`), with the guard on or off:
+ * the draft never aliases what a half reads. Everything read from `raw` counts, tree-node settings and written
+ * convention readings (`conventions.get`) included. With the guard on, storing a read-only view throws; with it
+ * off, nothing would catch a later change through the draft reaching the raw tree or another api's draft.
  */
 export interface PassContext {
   /** The api's merged raw tree, its layers, origins and locations. */
