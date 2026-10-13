@@ -1,9 +1,11 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import type { IrWriter } from "@seampact/spec/ir";
 import type { JsonObject, JsonValue } from "../raw-tree.js";
 import { createDraftIR, type DraftIR } from "./draft.js";
 import { createDraftValidator, type DraftValidator } from "./draft-schema.js";
 import { type HalfName, pipelineHalves } from "./halves.js";
+import type { TreeSchemaExampleIssue, TreeSchemaService } from "./pass.js";
 
 // Test support, outside every barrel: the two hand-written draft-IR fixtures of the reference contract (ADR 0006
 // section 2), `fixtures/draft/reference/`. They are the contract between the passes: each pass's golden tests start
@@ -14,6 +16,10 @@ import { type HalfName, pipelineHalves } from "./halves.js";
 // - `<api>.access-delta.json`: `access.identity` and `access.rights`; `operations` is keyed by operation id, each
 //   entry the members the half adds to that operation.
 // `draftFixture` applies them, in run order, to a new draft (`createDraftIR`), with `draftFixtureApply`.
+//
+// `<api>.schema-uses.json` is the schema service of the after-tree state (`draftFixtureSchemaService`), for the
+// halves after tree.schemas until its lane lands: the type use of each catalogue position the access halves read,
+// which a test checks against the access delta.
 
 /** The apis of the reference contract. */
 export type DraftFixtureApi = "tasks" | "tasksService";
@@ -147,3 +153,73 @@ function mergeList(list: unknown[], value: JsonValue, path: string): void {
 
 const operationById = (operations: unknown[], id: string): unknown =>
   operations.find((operation) => isObject(operation) && Reflect.get(operation, "id") === id);
+
+/** A raw-tree position whose schema the fixture service answers, and where the fixtures write its use. */
+export interface DraftFixtureSchemaUse {
+  /** The JSON Pointer of the written schema in the api's merged raw tree. */
+  pointer: string;
+  direction: IrWriter.Direction;
+  use: IrWriter.TypeUse;
+  /** The JSON Pointer of the use in the after-access draft; a `SchemaRef` position there holds the schema id only. */
+  at: string;
+}
+
+/** An example value holding this string anywhere fails `checkExample` of the fixture service, at that place. */
+export const DRAFT_FIXTURE_INVALID_EXAMPLE = "__invalid_example__";
+
+const DIRECTIONS: readonly IrWriter.Direction[] = ["input", "output"];
+
+const isDirection = (value: JsonValue | undefined): value is IrWriter.Direction =>
+  DIRECTIONS.some((direction) => direction === value);
+
+// The draft form checks a type use where the IR holds one: a scope's `idSchema` takes any `TypeUse`.
+function isTypeUse(value: unknown): value is IrWriter.TypeUse {
+  if (value === undefined) return false;
+  validator ??= createDraftValidator();
+  return validator.validate({ ...createDraftIR(), scopes: { probe: { idSchema: value } } }).valid;
+}
+
+/** The schema uses of `<api>.schema-uses.json`, each checked for its shape. */
+export function draftFixtureSchemaUses(api: DraftFixtureApi): DraftFixtureSchemaUse[] {
+  const path = `${FIXTURES}${api}.schema-uses.json`;
+  const parsed: JsonValue = JSON.parse(readFileSync(path, "utf8"));
+  const entries = isJsonObject(parsed) ? parsed.typeUses : undefined;
+  if (!Array.isArray(entries)) throw new Error(`${path}: the file is { typeUses: [...] }`);
+
+  return entries.map((entry, index) => {
+    const { pointer, direction, use, at } = isJsonObject(entry) ? entry : {};
+    if (typeof pointer !== "string" || typeof at !== "string" || !isDirection(direction))
+      throw new Error(`${path}: typeUses/${index} needs a string pointer and at, and a direction`);
+    if (!isTypeUse(use)) throw new Error(`${path}: typeUses/${index}/use is no type use`);
+    return { pointer, direction, use, at };
+  });
+}
+
+/**
+ * The schema service of the after-tree state, from `<api>.schema-uses.json`: `typeUse` answers the listed
+ * positions (a fresh copy each time) and nothing else; `queryWire` knows no field, since the reference contract
+ * declares no query or form field an access half reads; `checkExample` finds each `DRAFT_FIXTURE_INVALID_EXAMPLE`.
+ */
+export function draftFixtureSchemaService(api: DraftFixtureApi): TreeSchemaService {
+  const uses = draftFixtureSchemaUses(api);
+  return {
+    typeUse: (pointer, direction) => {
+      const found = uses.find(
+        (entry) => entry.pointer === pointer && entry.direction === direction,
+      );
+      return found === undefined ? undefined : structuredClone(found.use);
+    },
+    queryWire: () => undefined,
+    checkExample: (value) => invalidExampleMarkers(value, ""),
+  };
+}
+
+function invalidExampleMarkers(value: unknown, pointer: string): TreeSchemaExampleIssue[] {
+  if (value === DRAFT_FIXTURE_INVALID_EXAMPLE)
+    return [{ pointer, message: "the example holds the fixture's invalid marker" }];
+  if (!isObject(value)) return [];
+
+  return Object.entries(value).flatMap(([key, member]) =>
+    invalidExampleMarkers(member, `${pointer}/${key.replaceAll("~", "~0").replaceAll("/", "~1")}`),
+  );
+}

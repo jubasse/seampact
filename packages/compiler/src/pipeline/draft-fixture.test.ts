@@ -7,10 +7,13 @@ import { loadFsReader, loadWorkspace } from "../load/index.js";
 import type { JsonObject, RawApi } from "../raw-tree.js";
 import { createDraftIR, type DraftIR } from "./draft.js";
 import {
+  DRAFT_FIXTURE_INVALID_EXAMPLE,
   type DraftFixtureApi,
   draftFixture,
   draftFixtureApply,
   draftFixtureHalves,
+  draftFixtureSchemaService,
+  draftFixtureSchemaUses,
 } from "./draft-fixture.js";
 import { createDraftValidator } from "./draft-schema.js";
 import { DraftAccessError, pipelineGuard } from "./guard.js";
@@ -159,6 +162,17 @@ function rawBodyWriters(members: JsonObject | undefined): string[] {
   return Object.entries(operations)
     .filter(([, entry]) => isRecord(entry) && isRecord(entry.input) && "rawBody" in entry.input)
     .map(([id]) => id);
+}
+
+// The value a JSON Pointer names inside `value`, undefined when a step is missing.
+function valueAtPointer(value: unknown, pointer: string): unknown {
+  let current = value;
+  for (const segment of pointer.split("/").slice(1)) {
+    const key = segment.replaceAll("~1", "/").replaceAll("~0", "~");
+    if (!Array.isArray(current) && !isRecord(current)) return undefined;
+    current = Array.isArray(current) ? current[Number(key)] : current[key];
+  }
+  return current;
 }
 
 describe("draft fixtures", () => {
@@ -383,6 +397,40 @@ describe("draft fixtures", () => {
 
     expect(rawBodyWriters(identity?.members).sort()).toEqual([...declaredInputs].sort());
     expect(rawBodyWriters(rights?.members).sort()).toEqual([...proofOnlyInputs].sort());
+  });
+
+  test.each(APIS)(
+    "%s: each schema use is written in the raw tree and is the use the access delta writes",
+    (api) => {
+      const draft = draftFixture(api, "after-access");
+      const uses = draftFixtureSchemaUses(api);
+      expect(uses.length).toBeGreaterThan(0);
+
+      for (const { pointer, use, at } of uses) {
+        expect(valueAtPointer(rawApi(api).merged, pointer), pointer).toBeDefined();
+        const written = valueAtPointer(draft, at);
+        // A `SchemaRef` position holds the id of the schema the use refers to.
+        if (typeof written === "string") expect(use, at).toEqual({ kind: "ref", schema: written });
+        else expect(use, at).toEqual(written);
+      }
+    },
+  );
+
+  test("the fixture schema service answers its table, with copies, and finds the invalid marker", () => {
+    const service = draftFixtureSchemaService("tasks");
+    const [first] = draftFixtureSchemaUses("tasks");
+    if (first === undefined) throw new Error("tasks.schema-uses.json lists no use");
+
+    const answered = service.typeUse(first.pointer, first.direction);
+    expect(answered).toEqual(first.use);
+    expect(answered).not.toBe(service.typeUse(first.pointer, first.direction));
+    expect(service.typeUse("/surfaces/app/routes/missing", "input")).toBeUndefined();
+    expect(service.queryWire(first.pointer)).toBeUndefined();
+
+    expect(service.checkExample({ title: "ok" }, first.use)).toEqual([]);
+    expect(
+      service.checkExample({ items: [{ "a/b": DRAFT_FIXTURE_INVALID_EXAMPLE }] }, first.use),
+    ).toEqual([{ pointer: "/items/0/a~1b", message: expect.any(String) }]);
   });
 
   test("the reference contract loads with no diagnostic", () => {
