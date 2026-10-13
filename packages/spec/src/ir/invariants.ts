@@ -118,8 +118,9 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
   for (const { pointer, definition, value } of nodes) {
     switch (definition) {
       case "Origin": {
-        // A core origin points at its declaration's id under its catalogue (`/errors/api.internal`), or below it;
-        // it has no side-table entry, so the declaration must be in this document unless the origin names
+        // A core origin's pointer starts with its entry of a catalogue (`/errors/api.internal`, or
+        // `/errors/api.rate_limited/params` for that code's params schema, ADR 0004 section 6); only that entry is
+        // checked. It has no side-table entry, so the entry must be in this document unless the origin names
         // another api (a relay route's copy, read in that api).
         if (value.layer !== "core" || typeof value.pointer !== "string") break;
         const [catalogue = "", id] = value.pointer.split("/").slice(1).map(unescapeSegment);

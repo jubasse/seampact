@@ -204,7 +204,7 @@
         "layer": {
           "type": "string",
           "pattern": "^(api|shared|base|core|workspace|pack:[^#]+)$",
-          "description": "'api', 'shared', 'base', 'pack:<name>', 'core' for a declaration the compiler supplies (its pointer is its id under its catalogue, with no side-table entry), or 'workspace' for a diagnostic on workspace.yaml (no IR element carries it). Closed: the one exception to open enums (ADR 0004 section 13)."
+          "description": "'api', 'shared', 'base', 'pack:<name>', 'core' for a declaration the compiler supplies (its pointer starts with its entry of formats, errors or schemas, with no side-table entry), or 'workspace' for a diagnostic on workspace.yaml (no IR element carries it). Closed: the one exception to open enums (ADR 0004 section 13)."
         },
         "pointer": { "type": "string", "pattern": "^(/.*)?$" }
       }

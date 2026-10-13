@@ -22,7 +22,7 @@ Every IR enum is open (ADR 0005 section 3). It is a string with its known values
 
 The annotation never validates: any string is accepted. A reader that acts on the value and meets one it does not know fails with a diagnostic naming the value, the member and the operation; it never guesses and never skips. A reader that does not act on it ignores it. Register the keyword with your validator (Ajv: `addKeyword`, as `IR_KEYWORDS` in `@seampact/spec/ir` does).
 
-`Origin.layer` is the one closed string: a pattern, `api`, `shared`, `base`, `pack:<name>`, `core` (a declaration the compiler supplies: its pointer is its id under its catalogue, `/errors/<code>`, and it has no source-map entry), or `workspace` (a diagnostic on `workspace.yaml`; no IR element carries it). It is the exception to open enums recorded in ADR 0004 section 13.
+`Origin.layer` is the one closed string: a pattern, `api`, `shared`, `base`, `pack:<name>`, `core` (a declaration the compiler supplies: its pointer is the one its declaration would have in a layer file, starting with `/formats/<id>`, `/errors/<code>` or `/schemas/<id>`, and it has no source-map entry), or `workspace` (a diagnostic on `workspace.yaml`; no IR element carries it). It is the exception to open enums recorded in ADR 0004 section 13.
 
 ## Must-act unions and enums
 
@@ -88,7 +88,7 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 | `ir.scalar.type` | A named format's own type names no `scalar`. |
 | `ir.id.scalar` | `Scope.idSchema` and `ResourceSubject.idSchema` are a `scalar` or `enum` type use without `nullable`; `RuleProof.schema` and `InputProof.schema` are anything but `opaque` and `file`. |
 | `ir.ref.resolves` | Every member whose schema is a `$ref` to a catalogue id definition (the key of a top-level or api map, such as `SchemeId` or `SurfaceId`) names an existing key, read with `Object.hasOwn`. |
-| `ir.origin.core` | An `Origin` of layer `core` has the pointer `/formats/<id>`, `/errors/<code>` or `/schemas/<id>`, or a position below one; without `api`, that entry exists in the document. |
+| `ir.origin.core` | An `Origin` of layer `core` has a pointer that starts with `/formats/<id>`, `/errors/<code>` or `/schemas/<id>`; without `api`, that entry exists in the document. Only the entry is checked, not the rest of the pointer. |
 | `ir.cache.sensitive-no-store` | Planned (p2-finalize): a response that carries a sensitive field sets `Cache.noStore`. Not checked yet: it needs a walk of the response schemas. |
 
 ## Readers

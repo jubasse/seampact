@@ -131,7 +131,7 @@ export type Extensions = Record<ExtensionPrefix, Record<ExtensionKey, unknown>>;
 export interface Origin {
   /** Set on an element copied from another api by a relay route. */
   api?: string;
-  /** 'api', 'shared', 'base', 'pack:<name>', 'core' for a declaration the compiler supplies (its pointer is its id under its catalogue, with no side-table entry), or 'workspace' for a diagnostic on workspace.yaml (no IR element carries it). Closed: the one exception to open enums (ADR 0004 section 13). */
+  /** 'api', 'shared', 'base', 'pack:<name>', 'core' for a declaration the compiler supplies (its pointer starts with its entry of formats, errors or schemas, with no side-table entry), or 'workspace' for a diagnostic on workspace.yaml (no IR element carries it). Closed: the one exception to open enums (ADR 0004 section 13). */
   layer: "api" | "shared" | "base" | "core" | "workspace" | `pack:${string}`;
   pointer: string;
 }
