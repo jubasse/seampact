@@ -49,10 +49,11 @@ export interface TreeSchemaService {
    */
   typeUse(pointer: string, direction: IrWriter.Direction): IrWriter.TypeUse | undefined;
   /**
-   * The query wire form of the query or form field whose schema is written at `pointer` (ADR 0002 section 7): a
-   * query field, or a form or multipart field at its property's declaration pointer
-   * (`/schemas/<id>/properties/<field>`, or `<route>/input/properties/<field>` for an inline input); also a rule
-   * proof schema (`/rules/<id>/proof/schema`), the `wire` a form or multipart proof of that type gets.
+   * The query wire form of the query or form field at `pointer` (ADR 0002 section 7): a query field, or a form or
+   * multipart field keyed by its position in the input schema, not by its origin: `/schemas/<id>/properties/<field>`
+   * for a declared schema, `<route>/input/properties/<field>` for an inline input, the same for a derived property
+   * (the concurrency version property) or one a schema takes from another layer or schema; also a rule proof
+   * schema (`/rules/<id>/proof/schema`), the `wire` a form or multipart proof of that type gets.
    */
   queryWire(pointer: string): IrWriter.QueryWire | undefined;
   /** Checks an example value against a use (FR-3); an empty list means the example fits. */
