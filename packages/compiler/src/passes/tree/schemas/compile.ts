@@ -60,6 +60,14 @@ type Shape =
 
 type NamedKind = "object" | "map" | "union";
 
+interface DeclaredTarget {
+  id: string;
+  kind: NamedKind | undefined;
+  value: TreeSchemasRaw;
+  /** An alias on the way to the target is nullable; the target's own `nullable` is read where it compiles. */
+  nullable: boolean;
+}
+
 const SHAPE_TEXT: Readonly<Record<Shape, string>> = {
   reference: "a reference",
   derived: "a derived object",
@@ -412,24 +420,23 @@ export class TreeSchemasCompiler {
           };
     if (compiled === undefined) return undefined;
     if (!this.checkHeaderUnion(compiled.headerUnion, position)) return undefined;
-    return {
-      use: structuredClone(compiled.use),
-      sensitive: compiled.sensitive,
-      headerUnion: compiled.headerUnion,
-    };
+    const use = structuredClone(compiled.use);
+    if (target.nullable && use.kind !== "opaque") use.nullable = true;
+    return { use, sensitive: compiled.sensitive, headerUnion: compiled.headerUnion };
   }
 
-  // A declared name followed through plain references: its kind when it is a named object, map or union.
-  private declaredTarget(
-    name: string,
-    seen: Set<string>,
-  ): { id: string; kind: NamedKind | undefined; value: TreeSchemasRaw } | undefined {
+  // A declared name followed through plain references: its kind when it is a named object, map or union, and
+  // whether an alias on the way is nullable (`MaybeFoo: { $ref: Foo, nullable: true }`).
+  private declaredTarget(name: string, seen: Set<string>): DeclaredTarget | undefined {
     const value = treeSchemasMember(this.catalogue, name);
     if (value === undefined) return undefined;
     const alias = typeof value === "string" ? value : treeSchemasMember(value, "$ref");
     if (typeof alias === "string" && !seen.has(name)) {
       seen.add(name);
-      return this.declaredTarget(alias, seen) ?? { id: name, kind: undefined, value };
+      const target = this.declaredTarget(alias, seen);
+      if (target === undefined) return { id: name, kind: undefined, value, nullable: false };
+      const nullable = target.nullable || treeSchemasMember(value, "nullable") === true;
+      return { ...target, nullable };
     }
     const shape = treeSchemasIsObject(value) ? treeSchemasShapeOf(value) : undefined;
     const kind: NamedKind | undefined =
@@ -438,7 +445,7 @@ export class TreeSchemasCompiler {
         : shape === "map" || shape === "union"
           ? shape
           : undefined;
-    return { id: name, kind, value };
+    return { id: name, kind, value, nullable: false };
   }
 
   private compileDeclared(id: string): TreeSchemasCompiled | undefined {
@@ -955,11 +962,16 @@ export class TreeSchemasCompiler {
       }
       failed = true;
       if (compiled === undefined) continue;
+      const nullable = use?.kind === "ref" && use.nullable === true;
       this.reporter.error({
         rule: "union-variant",
         pointer: at,
-        message: `the variant '${written}' is not an object schema`,
-        fix: "make the variant an object, or name an object schema",
+        message: nullable
+          ? `the variant '${written}' is nullable, and a variant is an object that is never null`
+          : `the variant '${written}' is not an object schema`,
+        fix: nullable
+          ? "name the object schema itself, without 'nullable'"
+          : "make the variant an object, or name an object schema",
       });
     }
     if (variants.length === 0 && !failed) {

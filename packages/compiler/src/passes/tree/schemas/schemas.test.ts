@@ -245,6 +245,45 @@ describe("optional and nullable", () => {
       items: { kind: "ref", schema: "Tag", nullable: true },
     });
   });
+
+  test("a nullable alias of an object, map or scalar keeps nullable at each use", () => {
+    const aliases = schemas(`
+  Foo: { type: object, properties: { a: { type: string } } }
+  Labels: { type: object, additionalProperties: { type: string } }
+  Id: { type: string, format: uuid }
+  MaybeFoo: { $ref: Foo, nullable: true }
+  MaybeMaybeFoo: MaybeFoo
+  MaybeLabels: { $ref: Labels, nullable: true }
+  MaybeId: { $ref: Id, nullable: true }
+  Holder:
+    type: object
+    required: [foo, deep, labels, id]
+    properties:
+      foo: MaybeFoo
+      deep: MaybeMaybeFoo
+      labels: MaybeLabels
+      id: MaybeId
+      list: { type: array, items: MaybeFoo }
+`);
+    expect(aliases.diagnostics).toEqual([]);
+    for (const name of ["foo", "deep", "labels", "id"])
+      expect([name, propertyOf(aliases, "Holder", name)?.nullable]).toEqual([name, true]);
+    expect(typeOf(aliases, "Holder", "foo")).toEqual({ kind: "ref", schema: "Foo" });
+    expect(typeOf(aliases, "Holder", "list")).toEqual({
+      kind: "array",
+      items: { kind: "ref", schema: "Foo", nullable: true },
+    });
+  });
+
+  test("a nullable alias of an object is refused as a union variant", () => {
+    const run = schemas(`
+  Foo: { type: object, properties: { a: { type: string } } }
+  MaybeFoo: { $ref: Foo, nullable: true }
+  U: { discriminator: k, oneOf: { a: MaybeFoo } }
+`);
+    expect(treeSchemasRules(run)).toEqual(["union-variant"]);
+    expect(run.diagnostics[0]?.message).toContain("nullable");
+  });
 });
 
 describe("marks", () => {
