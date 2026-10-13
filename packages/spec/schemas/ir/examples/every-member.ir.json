@@ -445,6 +445,15 @@
     }
   },
   "errors": {
+    "api.internal": {
+      "code": "api.internal",
+      "family": "api",
+      "nature": "failed",
+      "http": { "status": 500 },
+      "docs": {},
+      "origin": { "layer": "core", "pointer": "/errors/api.internal" },
+      "default": "undeclaredStatus"
+    },
     "tasks.locked": {
       "code": "tasks.locked",
       "family": "tasks",

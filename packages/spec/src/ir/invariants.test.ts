@@ -278,6 +278,53 @@ describe("checkIrInvariants", () => {
     ]);
   });
 
+  test("a core origin points at its declaration under its catalogue", () => {
+    const origin = (ir: Record<string, unknown>) =>
+      (ir.errors as Record<string, Record<string, unknown>>)["api.internal"]?.origin as Record<
+        string,
+        unknown
+      >;
+    const at = "/errors/api.internal/origin";
+    const check = (change: (origin: Record<string, unknown>) => void) => {
+      const ir = sample("every-member.ir.json");
+      change(origin(ir));
+      return checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer }));
+    };
+    expect(check(() => {})).toEqual([]);
+    // Below the entry is fine; a relay route's copy names its api and is read there.
+    expect(
+      check((o) => {
+        o.pointer = "/errors/api.internal/http";
+      }),
+    ).toEqual([]);
+    expect(
+      check((o) => {
+        o.api = "billing";
+        o.pointer = "/errors/api.upstream_timeout";
+      }),
+    ).toEqual([]);
+    const violation = [{ id: "ir.origin.core", pointer: at }];
+    for (const pointer of ["", "/errors", "/errors/", "/rights/tasks.read", "/surfaces/app"])
+      expect(
+        check((o) => {
+          o.pointer = pointer;
+        }),
+        pointer,
+      ).toEqual(violation);
+    expect(
+      check((o) => {
+        o.pointer = "/schemas/ApiSchemaInvalidIssue";
+      }),
+    ).toEqual(violation);
+    // Other layers keep their pointers into the authoring tree.
+    expect(
+      check((o) => {
+        o.layer = "api";
+        o.pointer = "/surfaces/app";
+      }),
+    ).toEqual([]);
+  });
+
   test("every catalogue id names an existing entry", () => {
     const ir = sample("every-member.ir.json");
     const schemes = ir.schemes as Record<string, Record<string, unknown>>;

@@ -8,9 +8,13 @@ export interface JsonObject {
 
 export type LayerKind = "api" | "base" | "shared" | "pack";
 
-// The layers of an api: every origin layer but `workspace`, which only names the entry file
-// (ADR 0004 section 6), so a workspace origin can never be cast into a layer kind.
-export type ApiLayerId = Exclude<Origin["layer"], "workspace">;
+// The layers of an api: every origin layer but `workspace`, which only names the entry file, and
+// `core`, a declaration the compiler supplies with no file and no side-table entry (ADR 0004
+// section 6), so neither can be cast into a layer kind.
+export type ApiLayerId = Exclude<Origin["layer"], "workspace" | "core">;
+
+// A layer read from a file: a layer of an api, or the workspace entry file. Never `core`.
+export type FileLayerId = ApiLayerId | "workspace";
 
 // `layer` is the single source of truth; the kind is derived by `layerKindOf`.
 export interface RawLayer {
@@ -51,7 +55,7 @@ const LAYER_SCHEMA: Record<LayerKind, LayerSchemaKind> = {
   pack: "pack",
 };
 
-export function schemaKindOf(layer: Origin["layer"]): LayerSchemaKind {
+export function schemaKindOf(layer: FileLayerId): LayerSchemaKind {
   return layer === "workspace" ? "workspace" : LAYER_SCHEMA[layerKindOf(layer)];
 }
 

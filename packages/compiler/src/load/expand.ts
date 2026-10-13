@@ -1,7 +1,12 @@
-import type { Origin } from "@seampact/spec/ir";
 import { isAlias, isMap, isScalar, isSeq, type Node, type Pair, Scalar, type YAMLMap } from "yaml";
 import { diagnosticInert } from "../diagnostics/print.js";
-import { type ApiLayerId, type JsonObject, type JsonValue, schemaKindOf } from "../raw-tree.js";
+import {
+  type ApiLayerId,
+  type FileLayerId,
+  type JsonObject,
+  type JsonValue,
+  schemaKindOf,
+} from "../raw-tree.js";
 import { type LoadBudget, loadWorkOf } from "./budget.js";
 import { asObject, cloneJson, isReservedKey, jsonObject, setKey } from "./json.js";
 import { LOAD_MAX_DEPTH } from "./limits.js";
@@ -42,7 +47,7 @@ interface FileRef {
 }
 
 /** One layer file, expanded. `locs` maps a layer pointer to where it is written. */
-export interface LayerBuild<L extends Origin["layer"] = ApiLayerId> {
+export interface LayerBuild<L extends FileLayerId = ApiLayerId> {
   layer: L;
   parsed: ParsedFile;
   tree: JsonObject;
@@ -151,7 +156,7 @@ export class Expander {
    * Expands a whole file as one layer, its scalars typed from `root` (by default, the root schema
    * of the layer's kind).
    */
-  expandLayer<L extends Origin["layer"]>(
+  expandLayer<L extends FileLayerId>(
     file: ParsedFile,
     layer: L,
     root: Position | undefined = rootPosition(schemaKindOf(layer)),
@@ -311,7 +316,7 @@ export class Expander {
     return true;
   }
 
-  private node<L extends Origin["layer"]>(
+  private node<L extends FileLayerId>(
     build: LayerBuild<L>,
     node: Node | null,
     pointer: string,
@@ -412,7 +417,7 @@ export class Expander {
     });
   }
 
-  private map<L extends Origin["layer"]>(
+  private map<L extends FileLayerId>(
     build: LayerBuild<L>,
     node: YAMLMap,
     pointer: string,
@@ -436,7 +441,7 @@ export class Expander {
     return out;
   }
 
-  private items<L extends Origin["layer"]>(
+  private items<L extends FileLayerId>(
     build: LayerBuild<L>,
     map: YAMLMap,
     pointer: string,
@@ -528,7 +533,7 @@ export class Expander {
     }
   }
 
-  private include<L extends Origin["layer"]>(
+  private include<L extends FileLayerId>(
     build: LayerBuild<L>,
     pair: YAMLMap["items"][number],
     pointer: string,
@@ -646,7 +651,7 @@ export class Expander {
     });
   }
 
-  private fileDirective<L extends Origin["layer"]>(
+  private fileDirective<L extends FileLayerId>(
     build: LayerBuild<L>,
     pair: YAMLMap["items"][number],
     pointer: string,
@@ -785,7 +790,7 @@ export class Expander {
     return out;
   }
 
-  private ref<L extends Origin["layer"]>(
+  private ref<L extends FileLayerId>(
     build: LayerBuild<L>,
     value: string,
     valueNode: Node | null,

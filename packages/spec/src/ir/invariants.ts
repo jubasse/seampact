@@ -22,7 +22,8 @@ export type IrInvariantId =
   | "ir.property.nullable"
   | "ir.scalar.type"
   | "ir.id.scalar"
-  | "ir.ref.resolves";
+  | "ir.ref.resolves"
+  | "ir.origin.core";
 
 export interface IrInvariantViolation {
   id: IrInvariantId;
@@ -37,6 +38,8 @@ const has = (value: Json, member: string): boolean =>
 const isRecord = (value: unknown): value is Json =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 const parentOf = (pointer: string): string => pointer.slice(0, pointer.lastIndexOf("/"));
+const unescapeSegment = (segment: string): string =>
+  segment.replaceAll("~1", "/").replaceAll("~0", "~");
 
 // The hand-written partitions of the values that decide a struct's members. Each must be a disjoint union of
 // the schema's known list (`ValueSource.in`, `FieldWire.kind`, `TypeUse.kind`): invariants.test.ts asserts it, so
@@ -49,6 +52,8 @@ const QUERY_WIRE_MEMBERS = ["style", "explode", "brackets"];
 const ID_TYPE_KINDS = ["scalar", "enum"]; // an id is a scalar or an enum use
 const PROOF_REFUSED_KINDS = ["opaque", "file"]; // a proof is anything else
 const OTHER_TYPE_KINDS = ["ref", "array"]; // neither an id nor a refused proof
+// The catalogues of the declarations the compiler supplies (origin layer `core`, ADR 0004 sections 6 and 13).
+const CORE_CATALOGUES = ["formats", "errors", "schemas"];
 export const IR_PARTITIONS = {
   "ValueSource.in": [NAMED_SOURCES, BARE_SOURCES],
   "FieldWire.kind": [QUERY_WIRE_KINDS, PLAIN_WIRE_KINDS],
@@ -112,6 +117,29 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
 
   for (const { pointer, definition, value } of nodes) {
     switch (definition) {
+      case "Origin": {
+        // A core origin points at its declaration's id under its catalogue (`/errors/api.internal`), or below it;
+        // it has no side-table entry, so the declaration must be in this document unless the origin names
+        // another api (a relay route's copy, read in that api).
+        if (value.layer !== "core" || typeof value.pointer !== "string") break;
+        const [catalogue = "", id] = value.pointer.split("/").slice(1).map(unescapeSegment);
+        if (!CORE_CATALOGUES.includes(catalogue) || id === undefined || id === "") {
+          fail(
+            "ir.origin.core",
+            pointer,
+            `A core origin points at an entry of ${CORE_CATALOGUES.join(", ")}: '${value.pointer}' does not.`,
+          );
+          break;
+        }
+        const entries = doc[catalogue];
+        if (!has(value, "api") && isRecord(entries) && !Object.hasOwn(entries, id))
+          fail(
+            "ir.origin.core",
+            pointer,
+            `A core origin names '${id}', which is no entry of '${catalogue}'.`,
+          );
+        break;
+      }
       case "Name": {
         if (!isKnown("Name", "role", value.role)) break;
         if ((value.role === "response") !== has(value, "status"))
