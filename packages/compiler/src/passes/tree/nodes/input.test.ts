@@ -2,14 +2,16 @@ import type { IrWriter } from "@seampact/spec/ir";
 import { expect, test } from "vitest";
 import type { Diagnostic } from "../../../diagnostics/diagnostic.js";
 import { diagnosticLocationKey } from "../../../diagnostics/print.js";
-import { createDraftIR, type DraftIR, type TreeSchemaService } from "../../../pipeline/seam.js";
+import type { TreeSchemaService } from "../../../pipeline/seam.js";
 import type { RawApi } from "../../../raw-tree.js";
 import { treeNodesFieldWire } from "./field-wire.js";
 import {
   TREE_NODES_FIXTURES,
   treeNodesApiOf,
+  treeNodesDraftWith,
   treeNodesLoadDirectory,
   treeNodesLoadInline,
+  treeNodesObjectSchema,
   treeNodesRun,
   treeNodesStubService,
 } from "./test-support.js";
@@ -50,39 +52,6 @@ const fieldWire = (kind: IrWriter.QueryWireKind, explode = true): IrWriter.Field
 });
 
 // An object schema as tree.schemas writes it: one property per entry, located at `<pointer>/properties/<name>`.
-function objectSchema(
-  id: string,
-  pointer: string,
-  properties: Record<string, IrWriter.TypeUse>,
-): IrWriter.ObjectSchema {
-  return {
-    kind: "object",
-    id,
-    name: { segments: [id.toLowerCase()], role: "schema" },
-    directions: ["input"],
-    examples: [],
-    docs: {},
-    extensions: {},
-    origin: { layer: "api", pointer },
-    properties: Object.entries(properties).map(([name, type]) => ({
-      name,
-      type,
-      optional: false,
-      nullable: false,
-      sensitive: false,
-      deprecated: false,
-      docs: {},
-      extensions: {},
-      origin: { layer: "api", pointer: `${pointer}/properties/${name}` },
-    })),
-  };
-}
-
-function draftWith(...schemas: IrWriter.Schema[]): DraftIR {
-  const draft = createDraftIR();
-  for (const schema of schemas) draft.schemas[schema.id] = schema;
-  return draft;
-}
 
 const route = (name: string): string => `/surfaces/app/routes/${name}`;
 const SLACK = "/schemas/SlackCommand";
@@ -103,14 +72,14 @@ test("bodies beyond JSON: form and multipart fields with their wires", () => {
       [`${ATTACH}/properties/caption`]: wire("text"),
     },
   });
-  const draft = draftWith(
-    objectSchema("SlackCommand", SLACK, {
+  const draft = treeNodesDraftWith(
+    treeNodesObjectSchema("SlackCommand", SLACK, {
       text,
       count: integer,
       tags: textList,
       payload: jsonText,
     }),
-    objectSchema("AttachInput", ATTACH, {
+    treeNodesObjectSchema("AttachInput", ATTACH, {
       file: file(20 * MiB),
       pages: { kind: "array", items: file() },
       caption: text,
@@ -173,12 +142,12 @@ function runBodiesRefused(): { raw: RawApi; diagnostics: Diagnostic[] } {
       [refusedInput(BATCH)]: { kind: "ref", schema: "ReportsBatchInput" },
     },
   });
-  const draft = draftWith(
-    objectSchema("FormFileInput", refusedInput("formFile"), { file: file() }),
-    objectSchema("TooLargeInput", refusedInput("tooLarge"), { file: file(2 * MiB) }),
-    objectSchema("JsonFileInput", refusedInput("jsonFile"), { file: file() }),
-    objectSchema("FormOpaqueInput", refusedInput("formOpaque"), { anything: opaque }),
-    objectSchema("FormJsonTextInput", refusedInput("formJsonText"), {
+  const draft = treeNodesDraftWith(
+    treeNodesObjectSchema("FormFileInput", refusedInput("formFile"), { file: file() }),
+    treeNodesObjectSchema("TooLargeInput", refusedInput("tooLarge"), { file: file(2 * MiB) }),
+    treeNodesObjectSchema("JsonFileInput", refusedInput("jsonFile"), { file: file() }),
+    treeNodesObjectSchema("FormOpaqueInput", refusedInput("formOpaque"), { anything: opaque }),
+    treeNodesObjectSchema("FormJsonTextInput", refusedInput("formJsonText"), {
       meta: {
         kind: "scalar",
         type: "string",
@@ -186,17 +155,21 @@ function runBodiesRefused(): { raw: RawApi; diagnostics: Diagnostic[] } {
         content: { media: "application/json", schema: { kind: "ref", schema: "WithFile" } },
       },
     }),
-    objectSchema("WithFile", "/schemas/WithFile", { file: file() }),
-    objectSchema("MultipartObjectInput", refusedInput("multipartObject"), {
+    treeNodesObjectSchema("WithFile", "/schemas/WithFile", { file: file() }),
+    treeNodesObjectSchema("MultipartObjectInput", refusedInput("multipartObject"), {
       doc: { kind: "ref", schema: "MultipartObjectDoc" },
     }),
-    objectSchema("MultipartObjectDoc", `${refusedInput("multipartObject")}/properties/doc`, {
-      scan: file(),
-    }),
-    objectSchema("MultipartPagesInput", refusedInput("multipartPages"), {
+    treeNodesObjectSchema(
+      "MultipartObjectDoc",
+      `${refusedInput("multipartObject")}/properties/doc`,
+      {
+        scan: file(),
+      },
+    ),
+    treeNodesObjectSchema("MultipartPagesInput", refusedInput("multipartPages"), {
       pages: { kind: "array", items: { kind: "array", items: file() } },
     }),
-    objectSchema("ReportsBatchInput", refusedInput(BATCH), { file: file(3 * MiB) }),
+    treeNodesObjectSchema("ReportsBatchInput", refusedInput(BATCH), { file: file(3 * MiB) }),
   );
 
   return { raw, diagnostics: treeNodesRun(raw, workspace, { treeSchemas, draft }).diagnostics };
@@ -356,7 +329,10 @@ test("bodies beyond JSON: a derived form field's wire is asked at its position i
       [`${updateTask}/properties/expectedVersion`]: wire("number"),
     },
   });
-  const schema = objectSchema("UpdateTask", updateTask, { title: text, expectedVersion: integer });
+  const schema = treeNodesObjectSchema("UpdateTask", updateTask, {
+    title: text,
+    expectedVersion: integer,
+  });
   const expectedVersion = schema.properties[1];
   if (expectedVersion === undefined) throw new Error("the schema has no expectedVersion");
   expectedVersion.origin = {
@@ -366,7 +342,7 @@ test("bodies beyond JSON: a derived form field's wire is asked at its position i
 
   const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
     treeSchemas,
-    draft: draftWith(schema),
+    draft: treeNodesDraftWith(schema),
   });
 
   expect(diagnostics).toEqual([]);
@@ -376,9 +352,11 @@ test("bodies beyond JSON: a derived form field's wire is asked at its position i
   ]);
 });
 
-test("bodies beyond JSON: a body limit that does not parse is an internal error", () => {
+test("bodies beyond JSON: a body limit beyond a safe integer is reported where written", () => {
   const workspace = treeNodesLoadInline(`
 api: { name: uploads, version: 1, kind: product }
+conventions:
+  batch: { bodyLimit: 99999999999999999999MiB }
 surfaces:
   app:
     prefix: /v{version}
@@ -386,7 +364,7 @@ surfaces:
       attach:
         method: post
         inputMedia: multipart
-        bodyLimit: 99999999999999999999999GiB
+        bodyLimit: 99999999999999999999MiB
         input:
           type: object
           properties:
@@ -395,14 +373,28 @@ surfaces:
   const treeSchemas = treeNodesStubService({
     typeUses: { [ATTACH]: { kind: "ref", schema: "AttachInput" } },
   });
-  const draft = draftWith(objectSchema("AttachInput", ATTACH, { file: file(2 * MiB) }));
-
-  expect(() => treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas, draft })).toThrow(
-    /the body limit at \/surfaces\/app\/routes\/attach\/bodyLimit does not parse/,
+  const draft = treeNodesDraftWith(
+    treeNodesObjectSchema("AttachInput", ATTACH, { file: file(2 * MiB) }),
   );
+
+  const { diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas,
+    draft,
+  });
+
+  expect(diagnostics.map(({ rule, origin }) => ({ rule, origin }))).toEqual([
+    {
+      rule: "seampact/tree/body-limit",
+      origin: { layer: "api", pointer: "/surfaces/app/routes/attach/bodyLimit" },
+    },
+    {
+      rule: "seampact/tree/body-limit",
+      origin: { layer: "api", pointer: "/conventions/batch/bodyLimit" },
+    },
+  ]);
 });
 
-// Every rule of tree.nodes, each diagnostic located in the locations table, with a sentence and a fix.
+// The rules of bodies and operation names, each diagnostic located in the locations table, with a sentence and a fix.
 const NAMING_REFUSED = `
 api: { name: a, version: 1, kind: product }
 schemas:
@@ -411,13 +403,13 @@ surfaces:
   app:
     prefix: /v{version}
     routes:
-      tasks: { kind: collection, id: { taskId: TaskId }, ops: [get] }
-      getTask: { method: get }
-      archive: { method: post, operationId: get_task }
-      logs: { kind: collection, ops: [get] }
+      tasks: { kind: collection, id: { taskId: TaskId }, item: TaskId, ops: [list] }
+      listTasks: { method: get }
+      archive: { method: post, operationId: list_tasks }
+      logs: { kind: collection, ops: { create: { input: TaskId } } }
 `;
 
-test("tree.nodes diagnostics are located", () => {
+test("tree.nodes diagnostics are located: bodies and operation names", () => {
   const naming = treeNodesLoadInline(NAMING_REFUSED);
   const namingRaw = treeNodesApiOf(naming);
   const runs = [

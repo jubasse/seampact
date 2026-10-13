@@ -34,13 +34,67 @@ export function treeNodesLoadDirectory(directory: string, entry = "api.yaml"): R
 
 /** A one-api workspace from an inline api file; load diagnostics throw. */
 export function treeNodesLoadInline(apiYaml: string): RawWorkspace {
-  const loaded = loadWorkspace({
-    reader: loadMemoryReader({ "api.yaml": apiYaml }),
-    entry: "api.yaml",
-  });
+  return treeNodesLoadFiles({ "api.yaml": apiYaml });
+}
+
+/** A one-api workspace from inline files, its entry `api.yaml` (packs beside it); load diagnostics throw. */
+export function treeNodesLoadFiles(files: Readonly<Record<string, string>>): RawWorkspace {
+  const loaded = loadWorkspace({ reader: loadMemoryReader({ ...files }), entry: "api.yaml" });
   if (loaded.diagnostics.length > 0)
     throw new Error(`the inline api does not load: ${JSON.stringify(loaded.diagnostics)}`);
   return loaded.workspace;
+}
+
+/** An object schema of the draft catalogue, each property required, declared at `pointer`. */
+export function treeNodesObjectSchema(
+  id: string,
+  pointer: string,
+  properties: Record<string, IrWriter.TypeUse>,
+): IrWriter.ObjectSchema {
+  return {
+    kind: "object",
+    id,
+    name: { segments: [id.toLowerCase()], role: "schema" },
+    directions: ["input"],
+    examples: [],
+    docs: {},
+    extensions: {},
+    origin: { layer: "api", pointer },
+    properties: Object.entries(properties).map(([name, type]) => ({
+      name,
+      type,
+      optional: false,
+      nullable: false,
+      sensitive: false,
+      deprecated: false,
+      docs: {},
+      extensions: {},
+      origin: { layer: "api", pointer: `${pointer}/properties/${name}` },
+    })),
+  };
+}
+
+/** A union of the draft catalogue whose tag is read from the request header `header`. */
+export function treeNodesHeaderUnion(id: string, header: string): IrWriter.UnionSchema {
+  return {
+    kind: "union",
+    id,
+    name: { segments: [id.toLowerCase()], role: "schema" },
+    tag: { in: "header", name: header },
+    variants: [],
+    directions: ["input", "output"],
+    examples: [],
+    docs: {},
+    extensions: {},
+    origin: { layer: "api", pointer: `/schemas/${id}` },
+  };
+}
+
+/** A new draft holding `schemas`, as tree.schemas would leave it. */
+export function treeNodesDraftWith(...schemas: IrWriter.Schema[]): DraftIR {
+  const draft = createDraftIR();
+  for (const schema of schemas) draft.schemas[schema.id] = schema;
+  return draft;
 }
 
 export function treeNodesApiOf(workspace: RawWorkspace, name?: string): RawApi {
