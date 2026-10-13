@@ -5,7 +5,12 @@ import {
   draftFixtureHalves,
   draftFixtureSchemaService,
 } from "../../../pipeline/draft-fixture.js";
-import { accessIdentityReference, accessIdentityRun } from "./test-support.js";
+import { createDraftValidator } from "../../../pipeline/draft-schema.js";
+import {
+  accessIdentityCataloguesRun,
+  accessIdentityReference,
+  accessIdentityRun,
+} from "./test-support.js";
 
 const APIS: readonly DraftFixtureApi[] = ["tasks", "tasksService"];
 const CATALOGUES = ["schemes", "headers", "identities"] as const;
@@ -31,5 +36,11 @@ describe("access.identity catalogues", () => {
     expect(diagnostics).toEqual([]);
     const delta = deltaOf(api);
     for (const catalogue of CATALOGUES) expect({ ...draft[catalogue] }).toEqual(delta[catalogue]);
+  });
+
+  test("the catalogues of the lane fixture fit the draft form", () => {
+    const { draft, diagnostics } = accessIdentityCataloguesRun();
+    expect(diagnostics).toEqual([]);
+    expect(createDraftValidator().validate(draft)).toMatchObject({ valid: true });
   });
 });

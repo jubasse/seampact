@@ -115,7 +115,7 @@ export function accessIdentityObjectSchema(
 }
 
 /** A new draft holding these schemas, as tree.schemas leaves it. */
-export function accessIdentityDraft(schemas: readonly IrWriter.ObjectSchema[] = []): DraftIR {
+export function accessIdentityDraft(schemas: readonly IrWriter.KnownSchema[] = []): DraftIR {
   const draft = createDraftIR();
   for (const schema of schemas) draft.schemas[schema.id] = schema;
   return draft;

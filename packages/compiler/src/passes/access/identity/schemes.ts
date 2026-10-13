@@ -42,16 +42,24 @@ const placeholdersOf = (template: string): string[] =>
 const countOf = (items: readonly string[], item: string): number =>
   items.filter((candidate) => candidate === item).length;
 
+/** Each written scheme's `kind`, also for a scheme left out of the catalogue for an error. */
+export const accessIdentitySchemeKinds = (context: PassContext): Map<string, string | undefined> =>
+  new Map(
+    accessIdentityEntries(context.raw.merged, "schemes").map(([id, raw]) => [
+      id,
+      accessIdentityString(raw, "kind"),
+    ]),
+  );
+
 /** The schemes of the api, by id, in written order; a scheme with an error is left out. */
 export function accessIdentitySchemes(
   context: PassContext,
+  kinds: ReadonlyMap<string, string | undefined>,
   reporter: AccessIdentityReporter,
 ): Map<string, IrWriter.KnownScheme> {
   const schemes = new Map<string, IrWriter.KnownScheme>();
-  const written = accessIdentityEntries(context.raw.merged, "schemes");
-  const kinds = new Map(written.map(([id, raw]) => [id, accessIdentityString(raw, "kind")]));
 
-  for (const [id, raw] of written) {
+  for (const [id, raw] of accessIdentityEntries(context.raw.merged, "schemes")) {
     const pointer = accessIdentityPointer("", "schemes", id);
     const origin = context.origin(pointer);
     if (origin === undefined) throw new Error(`the scheme at ${pointer} has no origin`);

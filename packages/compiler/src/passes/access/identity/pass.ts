@@ -1,9 +1,8 @@
 import type { DraftIR, PassContextOf, PassPart } from "../../../pipeline/seam.js";
 import { accessIdentityHeaders } from "./headers.js";
 import { accessIdentityIdentities } from "./identities.js";
-import { accessIdentityEntries, accessIdentityString } from "./read.js";
 import { accessIdentityReporter } from "./report.js";
-import { accessIdentitySchemes } from "./schemes.js";
+import { accessIdentitySchemeKinds, accessIdentitySchemes } from "./schemes.js";
 
 // The access.identity half (ADR 0006 sections 2 and 3): the `schemes`, `headers` and `identities` catalogues and
 // their checks. It reads `schemas` for the principal schemas tree.schemas wrote.
@@ -22,14 +21,9 @@ export const accessIdentityPass: PassPart<"access.identity"> = {
 
 function accessIdentityCatalogues(draft: DraftIR, context: PassContextOf<"access.identity">): void {
   const reporter = accessIdentityReporter(context);
-  const schemes = accessIdentitySchemes(context, reporter);
+  const schemeKinds = accessIdentitySchemeKinds(context);
+  const schemes = accessIdentitySchemes(context, schemeKinds, reporter);
   const headers = accessIdentityHeaders(context, reporter);
-  const schemeKinds = new Map(
-    accessIdentityEntries(context.raw.merged, "schemes").map(([id, raw]) => [
-      id,
-      accessIdentityString(raw, "kind"),
-    ]),
-  );
   const identities = accessIdentityIdentities(
     context,
     { schemeKinds, headers, schemas: draft.schemas },

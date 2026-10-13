@@ -96,7 +96,9 @@ function headerOf(
     : undefined;
 
   if (semantic === "actorSurface" && schema !== undefined && schema.kind !== "enum") {
-    reporter.error(accessIdentityActorSurfaceRefusal(id, schemaPointer, schema.kind));
+    reporter.error(
+      accessIdentityActorSurfaceRefusal("header-declaration", id, schemaPointer, schema.kind),
+    );
     return undefined;
   }
 
@@ -155,11 +157,12 @@ function versionTokenSides(raw: AccessIdentityRawObject): HeaderSides {
 
 /** The refusal of an actorSurface header schema that is no enum (ADR 0002 section 9: a strict enum). */
 export const accessIdentityActorSurfaceRefusal = (
+  rule: "header-declaration" | "header-use",
   header: string,
   pointer: string,
   kind: string,
 ): AccessIdentityProblem => ({
-  rule: "header-declaration",
+  rule,
   message: `actorSurface header '${header}' has a ${kind} schema; an actor surface is a strict enum`,
   fix: "Name the enum of the product's surfaces as the header's schema, such as 'schema: { enum: Surface }'.",
   pointer,

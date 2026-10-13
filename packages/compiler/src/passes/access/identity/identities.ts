@@ -332,7 +332,9 @@ function useSchema(
   if (!written) return undefined;
   const schema = accessIdentitySchemaUse(entry.context, schemaPointer, declared.direction);
   if (semantic === "actorSurface" && schema !== undefined && schema.kind !== "enum") {
-    reporter.error(accessIdentityActorSurfaceRefusal(header, schemaPointer, schema.kind));
+    reporter.error(
+      accessIdentityActorSurfaceRefusal("header-use", header, schemaPointer, schema.kind),
+    );
     return undefined;
   }
   return schema;
