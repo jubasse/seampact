@@ -14,7 +14,7 @@ The IR gains the body fields of rule proofs on an operation's input (`OperationI
 |---|---|---|---|---|
 | `proofs` | `operation.schema.json#/$defs/OperationInput/properties/proofs` | added (optional); a body proof moves out of the input schema into it | breaking (change of meaning) | exact `irRevision` match (before 1.0) |
 | `InputProof` | `operation.schema.json#/$defs/InputProof` | added: `{ name, schema: TypeUse, wire?: FieldWire, derivedFrom }` | breaking (with `proofs`) | exact `irRevision` match (before 1.0) |
-| `layer` | `common.schema.json#/$defs/Origin/properties/layer` | closed value `core` added | breaking | none |
+| `layer` | `common.schema.json#/$defs/Origin/properties/layer` | closed value `core` added | breaking | exact `irRevision` match (before 1.0) |
 | `ir.origin.core` | `checkIrInvariants` (`README.md`) | invariant added: a core pointer starts with an entry of `formats`, `errors` or `schemas`, present in the document unless `api` is set; only that entry is checked | tightening (no revision 1 IR holds a core origin) | none |
 | `ir.input-proof.wire` | `checkIrInvariants` (`README.md`) | invariant added: a proof has `wire` exactly when its input is form or multipart (partition `OperationInput.media`), never of kind `file` | tightening (the new member only) | none |
 | `ir.input-proof.name` | `checkIrInvariants` (`README.md`) | invariant added: proof names are distinct and name no property of a `ref` input schema and no `fields` entry | tightening (the new member only) | none |

@@ -16,7 +16,7 @@ Copy into `.changeset/<branch>.md` for every IR change PR (ADR 0005 section 1). 
 
 | Field or kind | Schema path | Change | Additive, tightening or breaking | Guarded by |
 |---|---|---|---|---|
-| `<member>` | `<file>.schema.json#/$defs/<Def>/properties/<member>` | added, removed, renamed, type changed, enum value added, must-act added | additive | `<feature or kind name>`, or none |
+| `<member>` | `<file>.schema.json#/$defs/<Def>/properties/<member>` | added, removed, renamed, type changed, enum value added, must-act added | additive | `<feature or kind name>`, exact `irRevision` match (before 1.0), or none |
 
 ### What a target must do
 
@@ -27,7 +27,7 @@ Copy into `.changeset/<branch>.md` for every IR change PR (ADR 0005 section 1). 
 
 Rules the reviewer checks:
 
-- A new member whose absence makes an older reader generate a weaker check comes with a feature or kind name in the same PR; without one it is not allowed.
+- A new member whose absence makes an older reader generate a weaker check is guarded. Before 1.0, the exact `irRevision` match guards it, written "exact `irRevision` match (before 1.0)" in the "Guarded by" column. From 1.0, it comes with a feature or kind name in the same PR; without one it is not allowed.
 - A new tag or value on a must-act union or enum (`"x-seampact-must-act": true`, README.md) always names its feature in the "Guarded by" column; must-act is never removed from a definition.
 - Adding must-act to an existing definition is a tightening, and names its feature in the "Guarded by" column.
 - A new invariant (README.md, `checkIrInvariants`) is a tightening; relaxing or removing one is breaking.
