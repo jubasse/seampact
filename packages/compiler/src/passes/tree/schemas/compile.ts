@@ -8,6 +8,7 @@ import {
   suffixWords,
 } from "@seampact/spec/naming";
 import { pipelineCopy, pipelineParseSize } from "../../../pipeline/seam.js";
+import type { TreeSchemasReservation } from "./core.js";
 import {
   type TreeSchemasRaw,
   type TreeSchemasRawObject,
@@ -194,6 +195,8 @@ const wordsOf = (name: Name | undefined): string[] | undefined =>
 interface Claim {
   id: string;
   pointer: string;
+  /** Set on a reserved id, whose pointer may be a core one that locates nothing. */
+  reservation?: TreeSchemasReservation;
 }
 
 // The keys a schema claims: its id, and the identifier it gives in every language as its words, since two names
@@ -212,6 +215,11 @@ const COLLISION_FIX: Partial<Readonly<Record<Role, string>>> = {
   params: "rename the schema, or the right, rule or error",
 };
 const OPERATION_COLLISION_FIX = "rename the schema or set operationId";
+
+const reservedMessage = (what: string, id: string, reservation: TreeSchemasReservation): string =>
+  id === reservation.id
+    ? `${what} '${id}' is reserved for ${reservation.purpose}`
+    : `${what} '${id}' gives the same identifier as '${reservation.id}', reserved for ${reservation.purpose}`;
 
 const childName = (
   words: string[] | undefined,
@@ -278,6 +286,35 @@ export class TreeSchemasCompiler {
         if (!this.claims.has(key)) this.claims.set(key, claim);
       }
     }
+  }
+
+  /**
+   * Reserves the core schema ids and seeds their core schemas (ADR 0004 section 13). A declared schema with a
+   * reserved id or identifier is refused and not compiled; a hoist onto one is refused, but for the layer params a
+   * reservation yields to.
+   */
+  reserve(reservations: readonly TreeSchemasReservation[]): void {
+    for (const reservation of reservations) {
+      const claim: Claim = { id: reservation.id, pointer: reservation.pointer, reservation };
+      for (const key of claimKeys(reservation.id, reservation.name)) {
+        const declared = this.claims.get(key);
+        if (declared !== undefined && !this.declared.has(declared.id))
+          this.refuseDeclaredReserved(declared, reservation);
+        this.claims.set(key, claim);
+      }
+      if (reservation.seed !== undefined)
+        this.schemas.set(reservation.id, structuredClone(reservation.seed));
+    }
+  }
+
+  private refuseDeclaredReserved(declared: Claim, reservation: TreeSchemasReservation): void {
+    this.declared.set(declared.id, undefined);
+    this.reporter.error({
+      rule: "schema-reserved",
+      pointer: declared.pointer,
+      message: reservedMessage("the schema", declared.id, reservation),
+      fix: "declare the schema under another name",
+    });
   }
 
   /** Compiles every declared schema of the `schemas` catalogue, in written order. */
@@ -635,6 +672,15 @@ export class TreeSchemasCompiler {
     if (other === undefined) {
       for (const key of keys) this.claims.set(key, { id, pointer });
       return true;
+    }
+    if (other.reservation !== undefined) {
+      this.reporter.error({
+        rule: "schema-reserved",
+        pointer,
+        message: reservedMessage("the name", id, other.reservation),
+        fix: COLLISION_FIX[name.role] ?? OPERATION_COLLISION_FIX,
+      });
+      return false;
     }
     this.reporter.error({
       rule: "name-collision",

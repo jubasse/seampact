@@ -17,13 +17,9 @@ const typeOf = (run: TreeSchemasRun, id: string, name: string) => propertyOf(run
 const schemas = (yaml: string) => treeSchemasRunApi(`schemas:\n${yaml}`);
 const at = (pointer: string) => ({ layer: "api", pointer });
 
-// What later steps of this half write: core declarations, derived objects, route-position hoists, the batch ids
-// input, the concurrency version property and every direction.
+// What later steps of this half write: derived objects, route-position hoists, the batch ids input, the
+// concurrency version property and every direction.
 const NOT_YET = new Set([
-  "ApiEmptyBody",
-  "ApiForbiddenParams",
-  "ApiSortKeyForbiddenParams",
-  "ApiPayloadTooLargeParams",
   "CreateTask",
   "UpdateTask",
   "UpdatePreferences",
@@ -574,7 +570,9 @@ errors:
   test("an inline schema takes the name of its position (ADR 0007 section 3)", () => {
     expect(run.diagnostics).toEqual([]);
     const names = Object.fromEntries(
-      Object.values(run.draft.schemas).map((schema) => [schema.id, schema.name]),
+      Object.values(run.draft.schemas)
+        .filter((schema) => schema.origin.layer !== "core")
+        .map((schema) => [schema.id, schema.name]),
     );
     expect(names).toEqual({
       OrderAddress: { segments: ["order", "address"], role: "property" },
