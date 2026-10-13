@@ -55,6 +55,7 @@ const QUERY_WIRE_MEMBERS = ["style", "explode", "brackets"];
 const ID_TYPE_KINDS = ["scalar", "enum"]; // an id is a scalar or an enum use
 const PROOF_REFUSED_KINDS = ["opaque", "file"]; // a proof is anything else
 const OTHER_TYPE_KINDS = ["ref", "array"]; // neither an id nor a refused proof
+const KNOWN_TYPE_USE_KINDS = [...ID_TYPE_KINDS, ...PROOF_REFUSED_KINDS, ...OTHER_TYPE_KINDS];
 // The input media whose body is a list of fields, each with a wire form (`fields`, a proof's `wire`), and the rest.
 const FIELD_MEDIA = ["application/x-www-form-urlencoded", "multipart/form-data"];
 const DOCUMENT_MEDIA = ["application/json"];
@@ -113,10 +114,9 @@ function refTargetOf(use: Json, schemaEntries: Json): unknown {
 function checkProofInput(input: Json, pointer: string, schemaEntries: Json, fail: Fail): void {
   if (proofsOf(input).length === 0) return;
   const use = isRecord(input.schema) ? input.schema : {};
-  const knownUseKinds: string[] = [...ID_TYPE_KINDS, ...PROOF_REFUSED_KINDS, ...OTHER_TYPE_KINDS];
   const message = "An input with body proofs is a 'ref' use of an object schema";
   if (use.kind !== "ref") {
-    if (knownUseKinds.includes(String(use.kind)))
+    if (KNOWN_TYPE_USE_KINDS.includes(String(use.kind)))
       fail("ir.input-proof.input", `${pointer}/schema`, `${message}, not a '${use.kind}' use.`);
     return;
   }
@@ -367,11 +367,7 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
       case "Scope":
       case "ResourceSubject": {
         const use = value.idSchema;
-        if (
-          !isRecord(use) ||
-          !ID_TYPE_KINDS.concat(PROOF_REFUSED_KINDS, OTHER_TYPE_KINDS).includes(String(use.kind))
-        )
-          break;
+        if (!isRecord(use) || !KNOWN_TYPE_USE_KINDS.includes(String(use.kind))) break;
         if (!ID_TYPE_KINDS.includes(String(use.kind)) || has(use, "nullable"))
           fail(
             "ir.id.scalar",

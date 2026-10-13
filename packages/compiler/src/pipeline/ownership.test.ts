@@ -63,12 +63,28 @@ const rowAtOrAbove = (segments: readonly string[]): OwnershipRow | undefined => 
   return undefined;
 };
 
-const rowWriters = (row: OwnershipRow): readonly string[] =>
-  row.mode === "default"
-    ? row.order
-    : row.mode === "owned"
-      ? [row.owner]
-      : [row.declared, ...row.derived];
+function rowWriters(row: OwnershipRow): readonly string[] {
+  switch (row.mode) {
+    case "default":
+      return row.order;
+    case "owned":
+      return [row.owner];
+    case "elements":
+      return [row.declared, ...row.derived];
+  }
+}
+
+// The rows strictly below `parent` in the table.
+function rowsBelow(table: readonly OwnershipRow[], parent: OwnershipRow): OwnershipRow[] {
+  const parentSegments = draftFieldSegments(parent.field);
+  return table.filter((row) => {
+    const rowSegments = draftFieldSegments(row.field);
+    return (
+      rowSegments.length > parentSegments.length &&
+      parentSegments.every((segment, index) => rowSegments[index] === segment)
+    );
+  });
+}
 
 // A default written where absent is one write, its sub-rows checked by their own rows (guard.ts): each half of
 // the default's order must also write each row below it, else the guard refuses that half's whole write.
@@ -76,12 +92,7 @@ function defaultHalvesMissingBelow(table: readonly OwnershipRow[]): string[] {
   const missing: string[] = [];
   for (const parent of table) {
     if (parent.mode !== "default") continue;
-    const above = draftFieldSegments(parent.field);
-    const below = table.filter((row) => {
-      const segments = draftFieldSegments(row.field);
-      return segments.length > above.length && above.every((s, i) => segments[i] === s);
-    });
-    for (const row of below)
+    for (const row of rowsBelow(table, parent))
       for (const half of parent.order)
         if (!rowWriters(row).includes(half)) missing.push(`${half} on ${row.field}`);
   }
