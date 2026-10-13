@@ -1,0 +1,33 @@
+# Bodies beyond JSON (ADR 0002 section 7): a Slack-style form with a JSON text field, and a multipart upload with
+# typed fields and files within the route's body limit.
+api: { name: uploads, version: 1, kind: product }
+
+schemas:
+  SlackCommand:
+    type: object
+    required: [text]
+    properties:
+      text: { type: string }
+      count: { type: integer }
+      tags: { type: array, items: { type: string } }
+      payload: { type: string, contentMediaType: application/json, contentSchema: SlackPayload }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      slackCommand:
+        method: post
+        inputMedia: form
+        input: SlackCommand
+      attach:
+        method: post
+        inputMedia: multipart
+        bodyLimit: 25MiB
+        input:
+          type: object
+          required: [file]
+          properties:
+            file: { file: { media: [image/png, application/pdf], maxSize: 20MiB } }
+            pages: { type: array, items: { file: { media: [image/png] } } }
+            caption: { type: string, maxLength: 200 }
