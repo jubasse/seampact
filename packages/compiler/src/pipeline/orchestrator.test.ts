@@ -244,6 +244,8 @@ describe("stop rule", () => {
     });
     expect(missing.diagnostics.length).toBeGreaterThan(0);
     expect(missing.apis).toEqual([]);
+    // The files the load tried to read come back on the early return too (the watch primitive needs them).
+    expect(missing.files).toEqual(["workspace.yaml"]);
 
     const invalid = compileWorkspace({
       reader: loadMemoryReader({ ...FILES, "c.yaml": `${api("c")}unknownKey: 1\n` }),
@@ -271,6 +273,8 @@ describe("stop rule", () => {
         ["tasksService", [], undefined],
       ]);
       expect(Object.keys(result.locations).length).toBeGreaterThan(0);
+      expect(result.files).toContain("workspace.yaml");
+      expect(result.files).toEqual([...result.files].sort());
     }
   });
 });

@@ -55,6 +55,8 @@ export interface PipelineApiResult {
 }
 
 export interface PipelineResult {
+  /** Every file the load stage read or tried to read, sorted (`LoadResult.files`), for the watch primitive. */
+  readonly files: readonly string[];
   /** The load stage's diagnostics and the workspace entry's, sorted, located through `locations`. */
   readonly diagnostics: readonly Diagnostic[];
   /** The workspace table (`RawWorkspace.locations`), beside each api's own (ADR 0006 section 4). */
@@ -82,12 +84,18 @@ export function compileWorkspace(options: PipelineOptions): PipelineResult {
     relayOrder: options.parts?.relayOrder ?? defaults.relayOrder,
     finalize: options.parts?.finalize ?? defaults.finalize,
   };
-  const loaded = loadWorkspace({ reader: options.reader, entry: options.entry });
+  // The options whole: a load option added later reaches the load stage without a change here.
+  const loaded = loadWorkspace(options);
   const workspace = loaded.workspace;
   const workspaceDiagnostics = [...loaded.diagnostics];
   const sortedWorkspace = () => diagnosticSort(workspaceDiagnostics, workspace.locations);
   if (hasError(loaded.diagnostics))
-    return { diagnostics: sortedWorkspace(), locations: workspace.locations, apis: [] };
+    return {
+      files: loaded.files,
+      diagnostics: sortedWorkspace(),
+      locations: workspace.locations,
+      apis: [],
+    };
 
   const runs = new Map<string, ApiRun>(
     workspace.apis.map((raw) => [raw.name, { raw, diagnostics: [] }]),
@@ -98,6 +106,7 @@ export function compileWorkspace(options: PipelineOptions): PipelineResult {
     return run;
   };
   const finish = (): PipelineResult => ({
+    files: loaded.files,
     diagnostics: sortedWorkspace(),
     locations: workspace.locations,
     apis: [...runs.values()].map(({ raw, diagnostics, finalized }) => ({
