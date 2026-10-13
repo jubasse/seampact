@@ -1,10 +1,6 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import type { PassContextOf, PassReadonly } from "../../../pipeline/seam.js";
-import {
-  type AccessIdentityHeader,
-  accessIdentityActorSurfaceRefusal,
-  accessIdentitySchemaUse,
-} from "./headers.js";
+import { type AccessIdentityHeader, accessIdentityActorSurfaceRefusal } from "./headers.js";
 import { accessIdentityPrincipal, accessIdentityPrincipalHasField } from "./principal.js";
 import {
   type AccessIdentityRawObject,
@@ -17,6 +13,7 @@ import {
   accessIdentityStrings,
 } from "./read.js";
 import type { AccessIdentityReporter } from "./report.js";
+import { accessIdentitySchemaUse } from "./schema-use.js";
 import { accessIdentityValueSource } from "./source.js";
 
 // The `identities` catalogue (ADR 0002 section 9, ADR 0013): credential identities with their read, write and
@@ -54,10 +51,7 @@ interface IdentityEntry {
   reporter: AccessIdentityReporter;
 }
 
-/**
- * The identities of the api, by id, in written order. An identity with an error is left out, and so is one whose
- * principal the schema service does not answer, which only the seam's stub service does.
- */
+/** The identities of the api, by id, in written order; an identity with an error is left out. */
 export function accessIdentityIdentities(
   context: Context,
   catalogues: AccessIdentityCatalogues,
@@ -331,7 +325,7 @@ function useSchema(
 
   if (!written) return undefined;
   const schema = accessIdentitySchemaUse(entry.context, schemaPointer, declared.direction);
-  if (semantic === "actorSurface" && schema !== undefined && schema.kind !== "enum") {
+  if (semantic === "actorSurface" && schema.kind !== "enum") {
     reporter.error(
       accessIdentityActorSurfaceRefusal("header-use", header, schemaPointer, schema.kind),
     );

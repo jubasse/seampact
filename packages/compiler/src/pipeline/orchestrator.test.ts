@@ -3,15 +3,20 @@ import { fileURLToPath } from "node:url";
 import { type ContractIR, IR_REVISION } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
-import { isJsonObject } from "./pointer.js";
 import { loadFsReader } from "../load/index.js";
 import { loadMemoryReader } from "../load/reader.js";
 import type { DraftIR } from "./draft.js";
+import {
+  draftFixtureApply,
+  draftFixtureHalves,
+  draftFixtureSchemaService,
+} from "./draft-fixture.js";
 import { DraftAccessError } from "./guard.js";
 import { type HalfName, pipelineHalves } from "./halves.js";
-import type { DraftField } from "./ownership.js";
 import { compileWorkspace, type PipelineOptions } from "./orchestrator.js";
+import type { DraftField } from "./ownership.js";
 import type { PassContext, PassParts, TreeSchemaService, WorkspacePass } from "./pass.js";
+import { isJsonObject } from "./pointer.js";
 import type { PipelineFinalize, PipelineRelayStage } from "./stages.js";
 import { pipelineTreeNodes } from "./tree.js";
 import { PipelineReadonlyError, pipelineCopy } from "./view.js";
@@ -301,6 +306,7 @@ describe("stop rule", () => {
         reader: loadFsReader(REFERENCE),
         entry: "workspace.yaml",
         guard,
+        parts: { passes: { "tree.schemas": referenceTreeSchemas } },
       });
       expect(result.diagnostics).toEqual([]);
       expect(result.apis.map((r) => [r.api, r.diagnostics, r.ir])).toEqual([
@@ -313,6 +319,24 @@ describe("stop rule", () => {
     }
   });
 });
+
+// tree.schemas as its fixture writes it for the reference contract: the after-tree schemas and enums, and the
+// schema service answering the reference contract's route positions, principals and headers. The halves after it
+// that are no longer stubs read both.
+const referenceTreeSchemas: PassParts["tree.schemas"] = {
+  pass: "tree",
+  half: "tree.schemas",
+  reads: [],
+  writes: ["schemas", "scalars", "enums", "extensionKeys"],
+  run: (draft, context) => {
+    const api = context.raw.name;
+    if (api !== "tasks" && api !== "tasksService")
+      throw new Error(`the reference contract has no api ${api}`);
+    for (const { half, members } of draftFixtureHalves(api, "after-tree"))
+      if (half === "tree.schemas") draftFixtureApply(draft, members);
+    return draftFixtureSchemaService(api);
+  },
+};
 
 describe("guarded run", () => {
   test("an undeclared write throws, and each half's guard ends with its run", () => {

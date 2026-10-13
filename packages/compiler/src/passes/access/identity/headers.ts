@@ -8,6 +8,7 @@ import {
   accessIdentityString,
 } from "./read.js";
 import type { AccessIdentityProblem, AccessIdentityReporter } from "./report.js";
+import { accessIdentitySchemaUse } from "./schema-use.js";
 
 // The `headers` catalogue (FR-28, ADR 0002 section 9): identity header declarations by semantic, `name` and `in`
 // for every semantic but `versionToken`, which declares `response` and `request` instead (the authoring schema
@@ -34,16 +35,6 @@ export interface AccessIdentityHeader {
   /** The direction of the header's schema: its `in` side, input for a `versionToken` (input and output). */
   direction: IrWriter.Direction;
 }
-
-/**
- * The type use of a schema written at `pointer`, or undefined when the schema service does not answer it, which
- * only the seam's stub service does (tree.schemas compiles every written schema).
- */
-export const accessIdentitySchemaUse = (
-  context: Context,
-  pointer: string,
-  direction: IrWriter.Direction,
-): IrWriter.TypeUse | undefined => context.treeSchemas.typeUse(pointer, direction);
 
 /** The identity headers of the api, by id, in written order; a declaration with an error is left out. */
 export function accessIdentityHeaders(

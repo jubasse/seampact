@@ -7,6 +7,7 @@ import {
   accessIdentityPointer,
 } from "./read.js";
 import type { AccessIdentityReporter } from "./report.js";
+import { accessIdentitySchemaUse } from "./schema-use.js";
 
 // The principal of an identity (ADR 0002 section 9): one schema, or one per credential variant, each a named
 // object schema whose use the schema service answers (an inline schema is hoisted by tree.schemas), and the
@@ -16,14 +17,10 @@ type Context = PassContextOf<"access.identity">;
 
 type Schemas = PassReadonly<Record<string, IrWriter.Schema>>;
 
-/**
- * A principal resolved, refused (an error was reported), or unanswered: the schema service answers every schema
- * written in the raw tree once tree.schemas compiles it, and only the seam's stub service answers none.
- */
+/** A principal resolved, or refused with an error reported. */
 export type AccessIdentityPrincipalResult =
   | { status: "resolved"; principal: IrWriter.KnownPrincipal }
-  | { status: "refused" }
-  | { status: "unanswered" };
+  | { status: "refused" };
 
 /** The schema of a schema id in the draft; tree.schemas wrote every schema a use names. */
 function schemaOf(schemas: Schemas, id: string): PassReadonly<IrWriter.Schema> {
@@ -42,9 +39,8 @@ function principalSchema(
   context: Context,
   schemas: Schemas,
   reporter: AccessIdentityReporter,
-): string | "refused" | "unanswered" {
-  const use = context.treeSchemas.typeUse(pointer, "output");
-  if (use === undefined) return "unanswered";
+): string | "refused" {
+  const use = accessIdentitySchemaUse(context, pointer, "output");
 
   const kind = use.kind === "ref" ? schemaOf(schemas, use.schema).kind : use.kind;
   if (use.kind === "ref" && kind === "object") return use.schema;
@@ -75,7 +71,7 @@ export function accessIdentityPrincipal(
 
   if (variants === undefined) {
     const schema = principalSchema(pointer, identityId, context, schemas, reporter);
-    if (schema === "refused" || schema === "unanswered") return { status: schema };
+    if (schema === "refused") return { status: schema };
     return { status: "resolved", principal: { kind: "schema", schema } };
   }
 
@@ -104,17 +100,14 @@ function variantsPrincipal(
   // A variant may be named `__proto__` (ADR 0004 section 13): the map has no prototype.
   const resolved: Record<string, string> = Object.create(null);
   let refused = false;
-  let unanswered = false;
   for (const name of names) {
     const variantPointer = accessIdentityPointer(pointer, "variants", name);
     const schema = principalSchema(variantPointer, identityId, context, schemas, reporter);
     if (schema === "refused") refused = true;
-    else if (schema === "unanswered") unanswered = true;
     else Object.defineProperty(resolved, name, { value: schema, enumerable: true, writable: true });
   }
 
   if (refused) return { status: "refused" };
-  if (unanswered) return { status: "unanswered" };
   return { status: "resolved", principal: { kind: "variants", variants: resolved } };
 }
 

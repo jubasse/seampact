@@ -218,19 +218,27 @@ describe("identities and principal variants", () => {
     });
   });
 
-  test("an identity whose principal the schema service does not answer is left out, unreported", () => {
-    const contract = accessIdentityInline(
-      `${CATALOGUES}identities:\n  user: { schemes: { read: [bearer], write: [bearer] }, principal: UserPrincipal }\n`,
+  test("a written schema the schema service does not answer is an internal error naming the pointer", () => {
+    const principal = accessIdentityInline(
+      `api: { name: a, version: 1 }
+schemes:
+  bearer: { kind: bearer }
+identities:
+  user: { schemes: { read: [bearer], write: [bearer] }, principal: UserPrincipal }
+`,
     );
-    const { draft, diagnostics } = accessIdentityRun(
-      contract,
-      accessIdentityDraft(),
-      accessIdentityTableService([]),
+    expect(() =>
+      accessIdentityRun(principal, accessIdentityDraft(), accessIdentityTableService([])),
+    ).toThrow(
+      "the schema service answers no output type use for the schema written at /identities/user/principal",
     );
 
-    expect(diagnostics).toEqual([]);
-    expect(Object.keys(draft.identities)).toEqual([]);
-    expect(Object.keys(draft.schemes)).toEqual(["session", "bearer", "hook"]);
+    const header = accessIdentityInline(CATALOGUES);
+    expect(() =>
+      accessIdentityRun(header, accessIdentityDraft(), accessIdentityTableService([])),
+    ).toThrow(
+      "the schema service answers no input type use for the schema written at /headers/typedSurface/schema",
+    );
   });
 });
 
