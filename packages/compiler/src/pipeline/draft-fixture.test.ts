@@ -178,6 +178,28 @@ function valueAtPointer(value: unknown, pointer: string): unknown {
 // Members of a schema position in an access catalogue: a type use, or a `SchemaRef` (right and rule params).
 const SCHEMA_POSITION_KEYS = ["schema", "idSchema", "params"];
 
+// Every type use tree.nodes writes from a schema written on a route: declared params, inputs and response bodies.
+// Derived elements are not read through the service (a relay route copies them), and neither is a batch input,
+// which tree.schemas builds from `ops.batch` rather than from a written schema.
+function declaredRouteSchemaPositions(draft: DraftIR): string[] {
+  return draft.operations.flatMap((operation, index) => {
+    const base = `/operations/${index}`;
+    const params = (["path", "query", "header"] as const).flatMap((kind) =>
+      (operation.params?.[kind] ?? []).flatMap((param, position) =>
+        param.derivedFrom === undefined ? [`${base}/params/${kind}/${position}/type`] : [],
+      ),
+    );
+    const input =
+      operation.input !== undefined && operation.op !== "batch" ? [`${base}/input/schema`] : [];
+    const bodies = (operation.responses ?? []).flatMap((response, position) =>
+      response.body !== undefined && response.derivedFrom === undefined
+        ? [`${base}/responses/${position}/body`]
+        : [],
+    );
+    return [...params, ...input, ...bodies];
+  });
+}
+
 // Every schema position the access delta writes outside operations, as JSON Pointers into the draft.
 function accessCatalogueSchemaPositions(api: DraftFixtureApi): string[] {
   const positions: string[] = [];
@@ -418,22 +440,27 @@ describe("draft fixtures", () => {
   });
 
   test.each(APIS)(
-    "%s: the schema uses are written in the raw tree, and are every use the access catalogues write",
+    "%s: the schema uses are written in the raw tree, and are every use tree.nodes and the access catalogues write",
     (api) => {
       const draft = draftFixture(api, "after-access");
       const { typeUses } = draftFixtureSchemaTables(api);
 
       for (const { pointer, use, at } of typeUses) {
         expect(valueAtPointer(rawApi(api).merged, pointer), pointer).toBeDefined();
-        const written = valueAtPointer(draft, at);
-        // A `SchemaRef` position holds the id of the schema the use refers to.
-        if (typeof written === "string") expect(use, at).toEqual({ kind: "ref", schema: written });
-        else expect(use, at).toEqual(written);
+        for (const position of at) {
+          const written = valueAtPointer(draft, position);
+          // A `SchemaRef` position holds the id of the schema the use refers to.
+          if (typeof written === "string")
+            expect(use, position).toEqual({ kind: "ref", schema: written });
+          else expect(use, position).toEqual(written);
+        }
       }
 
-      expect(typeUses.map(({ at }) => at).sort()).toEqual(
-        accessCatalogueSchemaPositions(api).sort(),
-      );
+      const expectedPositions = [
+        ...declaredRouteSchemaPositions(draftFixture(api, "after-tree")),
+        ...accessCatalogueSchemaPositions(api),
+      ];
+      expect(typeUses.flatMap(({ at }) => at).sort()).toEqual(expectedPositions.sort());
     },
   );
 
@@ -454,7 +481,7 @@ describe("draft fixtures", () => {
   // reference proof is read in a JSON body, so its InputProof carries no wire: the table holds what the real
   // service would answer, for a form proof.
   test.each(APIS)(
-    "%s: the fixture service answers the query wire of every rule proof schema",
+    "%s: the fixture service answers the query wire of every declared query field and rule proof schema",
     (api) => {
       const service = draftFixtureSchemaService(api);
       const { queryWires } = draftFixtureSchemaTables(api);
@@ -463,7 +490,23 @@ describe("draft fixtures", () => {
         .filter((rule) => rule.proof !== undefined)
         .map((rule) => `/rules/${rule.id}/proof/schema`);
 
-      expect(queryWires.map(({ pointer }) => pointer).sort()).toEqual(proofSchemas.sort());
+      const declaredQueryFields = draft.operations.flatMap((operation) =>
+        (operation.params?.query ?? []).flatMap((param) =>
+          param.derivedFrom === undefined && param.origin !== undefined
+            ? [{ pointer: param.origin.pointer, wire: param.wire }]
+            : [],
+        ),
+      );
+      // A form or multipart input would need its field rows too; the reference declares none.
+      expect(draft.operations.filter((operation) => operation.input?.fields !== undefined)).toEqual(
+        [],
+      );
+
+      expect(queryWires.map(({ pointer }) => pointer).sort()).toEqual(
+        [...proofSchemas, ...declaredQueryFields.map(({ pointer }) => pointer)].sort(),
+      );
+      for (const { pointer, wire } of declaredQueryFields)
+        expect(service.queryWire(pointer), pointer).toEqual(wire);
       for (const { pointer, wire } of queryWires) {
         expect(valueAtPointer(rawApi(api).merged, pointer), pointer).toBeDefined();
         const answered = service.queryWire(pointer);

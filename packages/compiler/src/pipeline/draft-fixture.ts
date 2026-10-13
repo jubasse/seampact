@@ -25,9 +25,9 @@ import type { TreeSchemaExampleIssue, TreeSchemaService } from "./pass.js";
 // `draftFixture` applies them, in run order, to a new draft (`createDraftIR`), with `draftFixtureApply`.
 //
 // `<api>.schema-uses.json` is the schema service of the after-tree state (`draftFixtureSchemaService`), for the
-// halves after tree.schemas until its lane lands: the type use of each catalogue position the access halves read,
-// which a test checks against the access delta, and the query wire of each rule proof schema. The two apis' tables
-// are identical while every row comes from the shared layer.
+// halves after tree.schemas until its lane lands: the type use of each declared route position tree.nodes reads
+// (params, input, response bodies) and of each catalogue position the access halves read, which tests check
+// against the after-tree fixture and the access delta, and the query wire of each rule proof schema.
 
 /** The apis of the reference contract. */
 export type DraftFixtureApi = "tasks" | "tasksService";
@@ -168,8 +168,8 @@ export interface DraftFixtureSchemaUse {
   pointer: string;
   direction: IrWriter.Direction;
   use: IrWriter.TypeUse;
-  /** The JSON Pointer of the use in the after-access draft; a `SchemaRef` position there holds the schema id only. */
-  at: string;
+  /** The JSON Pointers of the use in the after-access draft; a `SchemaRef` position holds the schema id only. */
+  at: string[];
 }
 
 /** A rule proof schema position and the query wire the service answers for it. */
@@ -226,10 +226,15 @@ export function draftFixtureSchemaTables(api: DraftFixtureApi): DraftFixtureSche
 
   const typeUses = typeUseRows.map((row, index) => {
     const { pointer, direction, use, at } = isJsonObject(row) ? row : {};
-    if (typeof pointer !== "string" || typeof at !== "string" || !isDirection(direction))
-      throw new Error(`${path}: typeUses/${index} needs a string pointer and at, and a direction`);
+    const positions = Array.isArray(at)
+      ? at.filter((position) => typeof position === "string")
+      : [];
+    if (typeof pointer !== "string" || !isDirection(direction))
+      throw new Error(`${path}: typeUses/${index} needs a string pointer and a direction`);
+    if (!Array.isArray(at) || positions.length === 0 || positions.length !== at.length)
+      throw new Error(`${path}: typeUses/${index}/at is a non-empty list of JSON Pointers`);
     if (!isTypeUse(use)) throw new Error(`${path}: typeUses/${index}/use is no strict TypeUse`);
-    return { pointer, direction, use, at };
+    return { pointer, direction, use, at: positions };
   });
 
   const queryWires = queryWireRows.map((row, index) => {
@@ -247,8 +252,7 @@ export function draftFixtureSchemaTables(api: DraftFixtureApi): DraftFixtureSche
 /**
  * The schema service of the after-tree state, from `<api>.schema-uses.json`: `typeUse` and `queryWire` answer the
  * listed positions (a fresh copy each time) and nothing else, `queryWire` the rule proof schemas as the real service
- * does (the reference declares no query or form field an access half reads); `checkExample` finds each
- * `DRAFT_FIXTURE_INVALID_EXAMPLE`.
+ * does (the reference declares no query or form field); `checkExample` finds each `DRAFT_FIXTURE_INVALID_EXAMPLE`.
  */
 export function draftFixtureSchemaService(api: DraftFixtureApi): TreeSchemaService {
   const { typeUses, queryWires } = draftFixtureSchemaTables(api);

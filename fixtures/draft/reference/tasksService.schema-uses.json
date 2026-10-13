@@ -7,7 +7,7 @@
         "kind": "ref",
         "schema": "UserPrincipal"
       },
-      "at": "/identities/user/principal/schema"
+      "at": ["/identities/user/principal/schema"]
     },
     {
       "pointer": "/identities/service/principal",
@@ -16,7 +16,7 @@
         "kind": "ref",
         "schema": "ServicePrincipal"
       },
-      "at": "/identities/service/principal/schema"
+      "at": ["/identities/service/principal/schema"]
     },
     {
       "pointer": "/identities/stripe/principal",
@@ -25,7 +25,7 @@
         "kind": "ref",
         "schema": "WebhookCaller"
       },
-      "at": "/identities/stripe/principal/schema"
+      "at": ["/identities/stripe/principal/schema"]
     },
     {
       "pointer": "/identities/service/headers/actorSurface/schema",
@@ -34,7 +34,7 @@
         "kind": "enum",
         "enum": "Surface"
       },
-      "at": "/identities/service/headers/2/schema"
+      "at": ["/identities/service/headers/2/schema"]
     },
     {
       "pointer": "/scopes/channel/id",
@@ -45,7 +45,7 @@
         "format": "uuid",
         "refinements": {}
       },
-      "at": "/scopes/channel/idSchema"
+      "at": ["/scopes/channel/idSchema"]
     },
     {
       "pointer": "/rights/roles/params",
@@ -54,7 +54,7 @@
         "kind": "ref",
         "schema": "RolesParams"
       },
-      "at": "/rights/roles/params"
+      "at": ["/rights/roles/params"]
     },
     {
       "pointer": "/rights/tasks.update/subject/id",
@@ -65,7 +65,7 @@
         "format": "uuid",
         "refinements": {}
       },
-      "at": "/rights/tasks.update/subject/idSchema"
+      "at": ["/rights/tasks.update/subject/idSchema"]
     },
     {
       "pointer": "/rights/tasks.seeEffort/subject/id",
@@ -76,7 +76,7 @@
         "format": "uuid",
         "refinements": {}
       },
-      "at": "/rights/tasks.seeEffort/subject/idSchema"
+      "at": ["/rights/tasks.seeEffort/subject/idSchema"]
     },
     {
       "pointer": "/rights/callerService/params",
@@ -85,7 +85,7 @@
         "kind": "ref",
         "schema": "CallerServiceParams"
       },
-      "at": "/rights/callerService/params"
+      "at": ["/rights/callerService/params"]
     },
     {
       "pointer": "/rules/recentAuth/params",
@@ -94,7 +94,7 @@
         "kind": "ref",
         "schema": "RecentAuthParams"
       },
-      "at": "/rules/recentAuth/params"
+      "at": ["/rules/recentAuth/params"]
     },
     {
       "pointer": "/rules/recentAuth/proof/schema",
@@ -107,7 +107,7 @@
           "maxLength": 512
         }
       },
-      "at": "/rules/recentAuth/proof/schema"
+      "at": ["/rules/recentAuth/proof/schema"]
     }
   ],
   "queryWires": [
