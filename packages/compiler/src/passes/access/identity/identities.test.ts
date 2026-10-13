@@ -162,7 +162,7 @@ describe("identities and principal variants", () => {
     });
   });
 
-  test("a principal is an object schema, in every variant", () => {
+  test("a principal is a named schema in every variant; a map is refused only where a field is read", () => {
     const variant = (id: string, name: string, use: IrWriter.TypeUse) => ({
       pointer: `/identities/${id}/principal/variants/${name}`,
       direction: "output" as const,
@@ -173,47 +173,56 @@ describe("identities and principal variants", () => {
       refusals(
         `
   scalar: { schemes: { read: [bearer], write: [bearer] }, principal: { type: string } }
+  inlineVariant:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: { variants: { viewer: UserPrincipal, tags: { type: array, items: { type: string } } } }
+  none:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: { variants: {} }
   map: { schemes: { read: [bearer], write: [bearer] }, principal: Settings }
   mixed:
     schemes: { read: [bearer], write: [bearer] }
     principal: { variants: { viewer: UserPrincipal, device: Settings } }
-  none:
-    schemes: { read: [bearer], write: [bearer] }
-    principal: { variants: {} }
-  both:
-    schemes: { read: [bearer], write: [bearer] }
-    principal: { variants: { viewer: UserPrincipal, device: DevicePrincipal } }`,
+  mapField:
+    schemes: { read: [session], write: [session] }
+    principal: Settings
+    headers:
+      rights: { from: principal.version, for: writes, stale: api.stale }`,
         [
           principalOf("scalar", STRING),
+          variant("inlineVariant", "viewer", ref("UserPrincipal")),
+          variant("inlineVariant", "tags", { kind: "array", items: STRING }),
           principalOf("map", ref("Settings")),
           variant("mixed", "viewer", ref("UserPrincipal")),
           variant("mixed", "device", ref("Settings")),
-          variant("both", "viewer", ref("UserPrincipal")),
-          variant("both", "device", ref("DevicePrincipal")),
+          principalOf("mapField", ref("Settings")),
         ],
       ),
     ).toEqual({
-      written: ["both"],
+      written: ["map", "mixed"],
       diagnostics: [
         {
           rule: "seampact/access/principal",
-          message: "the principal of identity 'scalar' is a scalar, not an object schema",
+          message:
+            "the principal of identity 'scalar' is an inline schema of kind scalar, not a named schema",
           pointer: "/identities/scalar/principal",
         },
         {
           rule: "seampact/access/principal",
-          message: "the principal of identity 'map' is a map, not an object schema",
-          pointer: "/identities/map/principal",
-        },
-        {
-          rule: "seampact/access/principal",
-          message: "the principal of identity 'mixed' is a map, not an object schema",
-          pointer: "/identities/mixed/principal/variants/device",
+          message:
+            "the principal of identity 'inlineVariant' is an inline schema of kind array, not a named schema",
+          pointer: "/identities/inlineVariant/principal/variants/tags",
         },
         {
           rule: "seampact/access/principal",
           message: "the principal of identity 'none' lists no variant",
           pointer: "/identities/none/principal/variants",
+        },
+        {
+          rule: "seampact/access/principal-field",
+          message:
+            "identity 'mapField' reads header 'rights' from principal field 'version', which its principal does not hold",
+          pointer: "/identities/mapField/headers/rights/from",
         },
       ],
     });

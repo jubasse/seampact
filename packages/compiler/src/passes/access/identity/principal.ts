@@ -10,8 +10,9 @@ import type { AccessIdentityReporter } from "./report.js";
 import { accessIdentitySchemaUse } from "./schema-use.js";
 
 // The principal of an identity (ADR 0002 section 9): one schema, or one per credential variant, each a named
-// object schema whose use the schema service answers (an inline schema is hoisted by tree.schemas), and the
-// lookup of a principal field, which every variant must hold.
+// schema (ADR 0004: a SchemaRef) whose use the schema service answers (an inline object is hoisted by tree.schemas),
+// and the lookup of a principal field, which every variant must hold. A map or union principal is refused only
+// where a field is read off it (LD-49), so here only by that lookup.
 
 type Context = PassContextOf<"access.identity">;
 
@@ -32,22 +33,19 @@ function schemaOf(schemas: Schemas, id: string): PassReadonly<IrWriter.Schema> {
   return schema;
 }
 
-// The object schema a principal position names, or a reported refusal.
+// The named schema a principal position names, or a reported refusal.
 function principalSchema(
   pointer: string,
   identityId: string,
   context: Context,
-  schemas: Schemas,
   reporter: AccessIdentityReporter,
 ): string | "refused" {
   const use = accessIdentitySchemaUse(context, pointer, "output");
-
-  const kind = use.kind === "ref" ? schemaOf(schemas, use.schema).kind : use.kind;
-  if (use.kind === "ref" && kind === "object") return use.schema;
+  if (use.kind === "ref") return use.schema;
 
   reporter.error({
     rule: "principal",
-    message: `the principal of identity '${identityId}' is a ${kind}, not an object schema`,
+    message: `the principal of identity '${identityId}' is an inline schema of kind ${use.kind}, not a named schema`,
     fix: "Name an object schema, or write one inline, whose properties are the principal's fields.",
     pointer,
   });
@@ -60,7 +58,6 @@ export function accessIdentityPrincipal(
   identityPointer: string,
   written: AccessIdentityRawValue,
   context: Context,
-  schemas: Schemas,
   reporter: AccessIdentityReporter,
 ): AccessIdentityPrincipalResult {
   const pointer = accessIdentityPointer(identityPointer, "principal");
@@ -70,12 +67,12 @@ export function accessIdentityPrincipal(
       : undefined;
 
   if (variants === undefined) {
-    const schema = principalSchema(pointer, identityId, context, schemas, reporter);
+    const schema = principalSchema(pointer, identityId, context, reporter);
     if (schema === "refused") return { status: schema };
     return { status: "resolved", principal: { kind: "schema", schema } };
   }
 
-  return variantsPrincipal(identityId, pointer, variants, context, schemas, reporter);
+  return variantsPrincipal(identityId, pointer, variants, context, reporter);
 }
 
 function variantsPrincipal(
@@ -83,7 +80,6 @@ function variantsPrincipal(
   pointer: string,
   variants: AccessIdentityRawValue,
   context: Context,
-  schemas: Schemas,
   reporter: AccessIdentityReporter,
 ): AccessIdentityPrincipalResult {
   const names = accessIdentityIsObject(variants) ? Object.keys(variants) : [];
@@ -102,7 +98,7 @@ function variantsPrincipal(
   let refused = false;
   for (const name of names) {
     const variantPointer = accessIdentityPointer(pointer, "variants", name);
-    const schema = principalSchema(variantPointer, identityId, context, schemas, reporter);
+    const schema = principalSchema(variantPointer, identityId, context, reporter);
     if (schema === "refused") refused = true;
     else Object.defineProperty(resolved, name, { value: schema, enumerable: true, writable: true });
   }

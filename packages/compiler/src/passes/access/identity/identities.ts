@@ -88,14 +88,7 @@ function identityOf(entry: IdentityEntry): IrWriter.KnownIdentity | undefined {
     return undefined;
   }
 
-  const principal = accessIdentityPrincipal(
-    id,
-    pointer,
-    writtenPrincipal,
-    context,
-    entry.catalogues.schemas,
-    reporter,
-  );
+  const principal = accessIdentityPrincipal(id, pointer, writtenPrincipal, context, reporter);
   if (principal.status !== "resolved") return undefined;
 
   const headers = headerUses(entry, principal.principal);
