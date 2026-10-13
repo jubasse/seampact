@@ -215,6 +215,35 @@ describe("security schemes", () => {
     ]);
   });
 
+  test("an algorithm other than hmac-sha256 is refused", () => {
+    expect(
+      refusals(`
+  none:
+    kind: signature
+    name: X-Sig
+    format: 'sha256={sig}'
+    algorithm: none
+    payload: '{rawBody}'
+    encoding: hex
+    key: { value: k }
+  sha1:
+    kind: signature
+    name: X-Sig
+    format: 'sha1={sig}'
+    algorithm: sha1
+    payload: '{rawBody}'
+    encoding: hex
+    key: { value: k }`),
+    ).toEqual({
+      written: [],
+      diagnostics: ["none", "sha1"].map((id) => ({
+        rule: "seampact/access/signature-template",
+        message: `signature scheme '${id}' has algorithm '${id}', which is not hmac-sha256`,
+        pointer: `/schemes/${id}/algorithm`,
+      })),
+    });
+  });
+
   test("tolerance is required with {ts} and refused without", () => {
     expect(
       refusals(`

@@ -21,6 +21,10 @@ const SIGNATURE_ENCODINGS: readonly IrWriter.SignatureEncoding[] = ["hex", "base
 const isSignatureEncoding = (text: string): text is IrWriter.SignatureEncoding =>
   SIGNATURE_ENCODINGS.some((encoding) => encoding === text);
 
+// ADR 0013: `hmac-sha256` is the one v1 MAC. The IR enum is open and not must-act, so a weaker value written here
+// would reach every target unchecked.
+const SIGNATURE_ALGORITHMS: readonly string[] = ["hmac-sha256"];
+
 // ADR 0013: a format is comma-separated `name={placeholder}` pairs, or a literal prefix and `{sig}`.
 const FORMAT_PAIR = /^[^=,{}]+=\{(sig|ts)\}$/;
 const FORMAT_PREFIX = /^[^{}]*\{sig\}$/;
@@ -224,6 +228,7 @@ function templateSignature(entry: SchemeEntry): IrWriter.KnownSignatureVerify | 
   if (missing.length === 0) {
     checkFormat(entry, format);
     checkPayload(entry, format, payload);
+    checkAlgorithm(entry, algorithm);
     checkEncoding(entry, encoding);
     toleranceMs = tolerance(entry, format, payload);
   }
@@ -292,6 +297,16 @@ function checkPayload(entry: SchemeEntry, format: string, payload: string): void
       fix: "Add the '{ts}' pair to the format, or remove '{ts}' from the payload.",
       pointer,
     });
+}
+
+function checkAlgorithm(entry: SchemeEntry, algorithm: string): void {
+  if (SIGNATURE_ALGORITHMS.includes(algorithm)) return;
+  entry.reporter.error({
+    rule: "signature-template",
+    message: `signature scheme '${entry.id}' has algorithm '${algorithm}', which is not ${SIGNATURE_ALGORITHMS.join(" or ")}`,
+    fix: "Set 'algorithm' to 'hmac-sha256', or set 'verify: application' to verify any other MAC in the authenticate hook.",
+    pointer: accessIdentityPointer(entry.pointer, "algorithm"),
+  });
 }
 
 function checkEncoding(entry: SchemeEntry, encoding: string): void {
