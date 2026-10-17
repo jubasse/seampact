@@ -15,6 +15,7 @@ import {
 import { KOTLIN_MODEL_DIRECTORY } from "./kotlin.ts";
 import { buildNeutralModel, UnhandledSchemaError } from "./model.ts";
 import { definitionNames, NameCollisionError } from "./names.ts";
+import { PHP_MODEL_DIRECTORY } from "./php.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = resolve(HERE, "../..");
@@ -83,6 +84,11 @@ function kotlinSources(files: Map<string, string>): string {
     .filter(([path]) => path.startsWith(KOTLIN_MODEL_DIRECTORY))
     .map(([, content]) => content)
     .join("\n");
+}
+
+function phpFile(files: Map<string, string>, className: string): string {
+  const path = `${PHP_MODEL_DIRECTORY}/${className}.php`;
+  return required(files.get(path), path);
 }
 
 const SHAPES_FILE = `${KOTLIN_MODEL_DIRECTORY}/IrShapes.kt`;
@@ -176,6 +182,48 @@ describe("ir-models", () => {
       } else {
         expect(kotlin).toContain(`public typealias ${kotlinName} = `);
       }
+    }
+  });
+
+  it("every definition is generated in PHP", () => {
+    const files = generateIrModels();
+    const model = buildNeutralModel();
+    const table = mappingTable(model.definitions, definitionNames(model));
+    const types = phpFile(files, "IrTypes");
+
+    for (const definition of model.definitions) {
+      const phpName = required(table[definition.name], definition.name).php;
+      if (definition.kind === "union") {
+        expect(phpFile(files, phpName), definition.name).toContain(
+          `abstract readonly class ${phpName}\n`,
+        );
+        expect(phpFile(files, `${phpName}Unknown`), definition.name).toContain(
+          `final readonly class ${phpName}Unknown extends ${phpName}\n`,
+        );
+      } else if (definition.kind === "struct") {
+        expect(phpFile(files, phpName), definition.name).toMatch(
+          new RegExp(`final readonly class ${phpName}( extends \\w+)?\\n`),
+        );
+      } else if (definition.kind === "openEnum") {
+        expect(phpFile(files, phpName), definition.name).toContain(
+          "public static function of(string $value): self",
+        );
+      } else {
+        expect(types, definition.name).toContain(` * @phpstan-type ${phpName} `);
+      }
+    }
+  });
+
+  it("every must-act definition is marked in the PHP shape table", () => {
+    const shapes = phpFile(generateIrModels(), "IrShapes");
+    const mustAct = buildNeutralModel().definitions.filter((definition) => definition.mustAct);
+
+    for (const definition of mustAct) {
+      const entry =
+        definition.kind === "union"
+          ? "IrShape::union\\('\\w+', true,"
+          : "IrShape::openEnum\\(\\[.*\\], true\\),$";
+      expect(shapes, definition.name).toMatch(new RegExp(`'${definition.name}' => ${entry}`, "m"));
     }
   });
 
@@ -309,6 +357,7 @@ describe("ir-models", () => {
     });
     expect(kotlinSources(files)).toContain("public data class Enum_(");
     expect(kotlinSources(files)).toContain("public val enums: Map<EnumId, Enum_>,");
+    expect(phpFile(files, "Enum_")).toContain("final readonly class Enum_\n");
   });
 
   it("escaped name collision fails generation", () => {
@@ -329,6 +378,57 @@ describe("ir-models", () => {
       expect(() => generateIrModels(documents)).toThrow(new RegExp(`^${name}: its kotlin name`));
     },
   );
+
+  it.each(["IrHydration", "IrShape", "irmodelexception"])(
+    "a definition named %s, a class the PHP files use, fails generation",
+    (name) => {
+      const documents = syntheticDocuments({ [name]: { type: "object", properties: {} } });
+
+      expect(() => generateIrModels(documents)).toThrow(NameCollisionError);
+      expect(() => generateIrModels(documents)).toThrow(
+        new RegExp(`^${name}: its (kotlin|php) name`),
+      );
+    },
+  );
+
+  it("a definition named like a union's Unknown subclass fails generation", () => {
+    const documents = syntheticDocuments({
+      Kind: {
+        type: "object",
+        discriminator: { propertyName: "kind" },
+        oneOf: [{ $ref: "#/$defs/Leaf" }],
+      },
+      Leaf: {
+        type: "object",
+        properties: { kind: { type: "string", const: "leaf" } },
+        required: ["kind"],
+      },
+      KindUnknown: { type: "object", properties: {} },
+    });
+
+    expect(() => generateIrModels(documents)).toThrow(NameCollisionError);
+    expect(() => generateIrModels(documents)).toThrow(/Unknown subclass/);
+  });
+
+  it("PHP member names that PHP reserves keep their JSON name", () => {
+    const documents = syntheticDocuments({
+      Holder: {
+        type: "object",
+        properties: { this: { type: "string" } },
+        required: ["this"],
+      },
+    });
+    const holder = required(
+      generateIrModels(documents).get(`${PHP_MODEL_DIRECTORY}/Holder.php`),
+      "Holder.php",
+    );
+
+    expect(holder).toContain("public string $this_,");
+    expect(holder).toContain(
+      "this_: IrHydration::string(IrHydration::required($members, 'this', 'Holder'), 'Holder.this')",
+    );
+    expect(holder).toContain("$json->{'this'} = $this->this_;");
+  });
 
   it("Kotlin keyword members keep their JSON name", () => {
     const kotlin = kotlinSources(generateIrModels());
