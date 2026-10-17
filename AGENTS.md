@@ -27,7 +27,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 ## Files
 
 - Edit only the files your task owns. A needed change elsewhere goes under "For the lead" in your report.
-- Shared files change only in lead or seam PRs: root `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `biome.json`, `.github/workflows/ci.yml`, the `exports` of `packages/core/spec`, `packages/core/spec/src/ir/**` and `packages/core/spec/schemas/ir/**`, the derivation table `packages/core/compiler/src/derivations/table.ts`, `docs/conformance/checklist.yaml`, `README.md`, this file.
+- Shared files change only in lead or seam PRs: root `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `biome.json`, `.github/workflows/ci.yml`, the `exports` of `packages/core/spec`, `packages/core/spec/src/ir/**` and `packages/core/spec/schemas/ir/**`, the derivation table `packages/core/compiler/src/derivations/table.ts`, `docs/conformance/checklist.yaml`, `README.md`, the agent types in `.claude/agents/`, this file.
 - A lane adds its CI jobs in its own `.github/workflows/<lane-id>.yml`.
 - The IR is change-controlled (ADR 0005): an IR change is asked of the lead, never worked around.
 - Every new source directory gets a header the cartography reads: a `//` comment at the top of its `index.ts` whose first sentence says what the directory holds, or a one-line `README.md` when it has no `index.ts`.
@@ -57,7 +57,7 @@ Run this on your own diff, before the final gates:
 - Every new branch has a test that reaches it; a bug fix has a test that failed before.
 - No copied helper: search for an existing one first, else one shared helper.
 - Rule ids, messages and fixes are consistent across code, tests and docs.
-- No committed comment, doc or test string points into `.work/` or another git-ignored path.
+- No committed comment, doc or test string points into `.work/` or another git-ignored path (the agent types in `.claude/agents/` excepted: they name the lead's working files).
 - Proofs (`docs/conformance/proofs/<lane-id>.yaml`) and the changeset are updated.
 - Every new source directory has its header; the cartography map is current.
 - `git diff --stat` lists only files your task owns.
