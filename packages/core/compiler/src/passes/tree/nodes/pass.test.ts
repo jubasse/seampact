@@ -66,8 +66,22 @@ function withBatchInput(service: TreeSchemaService): TreeSchemaService {
   };
 }
 
-// The api-wide members tree.nodes writes so far; `formats` and `pagings` come later.
-const API_MEMBERS = ["api", "conventions", "lint", "packs", "services"] as const;
+// The api-wide members tree.nodes writes.
+const API_MEMBERS = [
+  "api",
+  "conventions",
+  "lint",
+  "packs",
+  "formats",
+  "pagings",
+  "services",
+] as const;
+
+// Api-wide members written later: the format a relay route copies, and a style no operation of the api pages with
+// (the fixture lists the style conventions.paging.default names; tree.nodes writes the styles lists use).
+const LATER_API: Readonly<Record<string, readonly string[]>> = {
+  tasksService: ["formats", "pagings"],
+};
 
 const isObject = (value: JsonValue | undefined): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -99,6 +113,8 @@ function expectedApiMembers(api: DraftFixtureApi): JsonObject {
     conventions: members.conventions ?? {},
     lint: members.lint ?? null,
     packs: members.packs ?? [],
+    formats: members.formats ?? {},
+    pagings: members.pagings ?? {},
     services: members.services ?? {},
   };
 }
@@ -141,9 +157,12 @@ test.each<DraftFixtureApi>(["tasks", "tasksService"])(
     });
 
     expect(diagnostics).toEqual([]);
-    expect(
-      Object.fromEntries(API_MEMBERS.map((member) => [member, draft[member] ?? null])),
-    ).toEqual(expectedApiMembers(api));
+    const compared = API_MEMBERS.filter((member) => !LATER_API[api]?.includes(member));
+    const expected = expectedApiMembers(api);
+
+    expect(Object.fromEntries(compared.map((member) => [member, draft[member] ?? null]))).toEqual(
+      Object.fromEntries(compared.map((member) => [member, expected[member]])),
+    );
     expect(draft.operations.map((operation) => pick(api, operation))).toEqual(
       expectedOperations(api),
     );
