@@ -6,11 +6,12 @@ import {
 } from "../../../pipeline/seam.js";
 import { TreeSchemasCompiler } from "./compile.js";
 import { treeSchemasCoreReservations } from "./core.js";
+import { treeSchemasCompileEnums } from "./enums.js";
 import { treeSchemasCompileDeclarations, treeSchemasCompileRoutes } from "./positions.js";
 import { TreeSchemasReporter } from "./raw.js";
 
-// The tree.schemas half (ADR 0006 sections 2 and 3): it seeds the core schemas, compiles every schema of the api
-// into `schemas` and `scalars`, and returns the schema service every later half receives.
+// The tree.schemas half (ADR 0006 sections 2 and 3): it seeds the core schemas, compiles every schema and enum of
+// the api into `schemas`, `scalars` and `enums`, and returns the schema service every later half receives.
 //
 // Import pipeline values and types from `pipeline/seam.js` only, never from `pipeline/index.js`, the orchestrator
 // or the registry: the registry imports this module, so any of those would close an import cycle (`seam.ts`).
@@ -36,17 +37,21 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
   reads: [],
   writes: ["schemas", "scalars", "enums", "extensionKeys"],
   run: (draft, context) => {
-    const compiler = new TreeSchemasCompiler(context.raw.merged, new TreeSchemasReporter(context));
+    const reporter = new TreeSchemasReporter(context);
+    const compiler = new TreeSchemasCompiler(context.raw.merged, reporter);
 
     compiler.reserve(treeSchemasCoreReservations(context.raw.merged));
     compiler.compileCatalogue();
     treeSchemasCompileDeclarations(compiler, context.raw.merged);
     treeSchemasCompileRoutes(compiler, pipelineTreeNodes(context.raw));
     compiler.finish();
+    const enums = treeSchemasCompileEnums(context.raw.merged.enums, reporter);
 
     for (const scalar of compiler.scalars.all()) draft.scalars[scalar.id] = structuredClone(scalar);
 
     for (const [id, schema] of compiler.schemas) draft.schemas[id] = structuredClone(schema);
+
+    for (const declared of enums) draft.enums[declared.id] = structuredClone(declared);
 
     return treeSchemasService(compiler.uses);
   },

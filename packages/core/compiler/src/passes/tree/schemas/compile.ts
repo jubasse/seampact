@@ -10,6 +10,7 @@ import {
 import { pipelineCopy, pipelineParseSize } from "../../../pipeline/seam.js";
 import type { TreeSchemasReservation } from "./core.js";
 import { type TreeSchemasDerivedHost, treeSchemasDerivedProperties } from "./derived.js";
+import { treeSchemasEnumValues, treeSchemasReportEnumWithoutValues } from "./enums.js";
 import {
   type TreeSchemasRaw,
   type TreeSchemasRawObject,
@@ -425,6 +426,11 @@ export class TreeSchemasCompiler {
       this.scalars.all().map((scalar) => scalar.id),
       "/scalars",
       "named formats",
+    );
+    this.checkNames(
+      treeSchemasEntries(this.enums).map(([id]) => id),
+      "/enums",
+      "enums",
     );
   }
 
@@ -1235,12 +1241,12 @@ export class TreeSchemasCompiler {
       typeof written === "string"
         ? written
         : guaranteedString(treeSchemasMember(written, "narrow"), "narrow", pointer);
-    const found = this.enumValues(name, []);
+    const found = treeSchemasEnumValues(this.enums, name);
 
     if (found === undefined || "cycle" in found) {
       const at = typeof written === "string" ? pointer : treeSchemasPointer(pointer, "narrow");
 
-      this.reportEnumWithoutValues(name, found?.cycle, at);
+      treeSchemasReportEnumWithoutValues(this.reporter, name, found, at);
 
       return undefined;
     }
@@ -1276,46 +1282,6 @@ export class TreeSchemasCompiler {
         values: values.filter((value) => subset.includes(value)),
         ...(typeof reason === "string" ? { reason } : {}),
       },
-    });
-  }
-
-  // The values of an enum, followed through `source.enum` (`path` holds the enums already followed).
-  private enumValues(
-    name: string,
-    path: readonly string[],
-  ): { values: string[] } | { cycle: string[] } | undefined {
-    if (path.includes(name)) return { cycle: [...path.slice(path.indexOf(name)), name] };
-    const declared = treeSchemasMember(this.enums, name);
-    const values = treeSchemasMember(declared, "values");
-
-    if (Array.isArray(values))
-      return { values: values.filter((value) => typeof value === "string") };
-    const source = treeSchemasMember(treeSchemasMember(declared, "source"), "enum");
-
-    return typeof source === "string" ? this.enumValues(source, [...path, name]) : undefined;
-  }
-
-  private reportEnumWithoutValues(
-    name: string,
-    cycle: string[] | undefined,
-    pointer: string,
-  ): void {
-    if (cycle === undefined) {
-      this.reporter.error({
-        rule: "enum-unknown",
-        pointer,
-        message: `no enum '${name}' with values is declared`,
-        fix: "declare it under 'enums', or fix the name",
-      });
-
-      return;
-    }
-
-    this.reporter.error({
-      rule: "enum-cycle",
-      pointer,
-      message: `the enum '${name}' takes its values from a cycle of sources: ${cycle.join(" -> ")}`,
-      fix: "give one enum of the cycle its own 'values'",
     });
   }
 

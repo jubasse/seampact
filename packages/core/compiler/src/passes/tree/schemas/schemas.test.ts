@@ -33,7 +33,7 @@ function withoutLaterMembers(schema: IrWriter.Schema): object {
 }
 
 describe("tree.schemas matches the after-tree fixture", () => {
-  test.each(["tasks", "tasksService"] as const)("%s: schemas and scalars", (api) => {
+  test.each(["tasks", "tasksService"] as const)("%s: schemas, scalars and enums", (api) => {
     const run = treeSchemasRunReference(api);
 
     expect(run.diagnostics).toEqual([]);
@@ -50,6 +50,11 @@ describe("tree.schemas matches the after-tree fixture", () => {
     );
     expect(written.map((s) => s.id).sort()).toEqual(expected.map((s) => s.id).sort());
     expect(run.draft.scalars).toEqual({});
+    const withoutDirections = ({ directions: _directions, ...rest }: IrWriter.Enum) => rest;
+
+    expect(Object.values(run.draft.enums).map(withoutDirections)).toEqual(
+      Object.values(draftFixture(api, "after-tree").enums).map(withoutDirections),
+    );
   });
 
   test.each(["tasks", "tasksService"] as const)(
@@ -165,7 +170,13 @@ schemas:
   S: { type: object, properties: { a: { enum: A } } }
 `);
 
-  expect(treeSchemasRules(run)).toEqual(["enum-cycle"]);
+  // The use, then each enum of the catalogue.
+  expect(run.diagnostics.map((d) => d.origin.pointer)).toEqual([
+    "/schemas/S/properties/a/enum",
+    "/enums/A/source/enum",
+    "/enums/B/source/enum",
+  ]);
+  expect(new Set(treeSchemasRules(run))).toEqual(new Set(["enum-cycle"]));
   expect(run.diagnostics[0]?.message).toContain("A -> B -> A");
 });
 
