@@ -46,7 +46,9 @@ function singleKind(use: IrWriter.TypeUse): SingleKind | undefined {
 
   if (use.type === "string") return "text";
 
-  return use.type === "boolean" ? "boolean" : "number";
+  if (use.type === "boolean") return "boolean";
+
+  return use.type === "integer" || use.type === "number" ? "number" : undefined;
 }
 
 const isListOfSingles = (use: IrWriter.TypeUse): boolean =>

@@ -4,6 +4,7 @@ import { pipelineCopy, type ResolvedConventions, type TreeNode } from "../../../
 import type { TreeNodesOperationName } from "../nodes/index.js";
 import { treeNodesOpOwner } from "../nodes/names.js";
 import type { TreeSchemasCompiler } from "./compile.js";
+import { treeSchemasDerivedProperty } from "./property.js";
 import {
   type TreeSchemasReporter,
   treeSchemasEntries,
@@ -19,24 +20,6 @@ const BATCH_OP = "batch";
 const VERSIONED_OPS = new Set(["update", "delete"]);
 const BODY_SOURCE = /^body\.(.+)$/;
 const INHERIT = "inherit";
-
-const property = (
-  name: string,
-  type: IrWriter.TypeUse,
-  origin: IrWriter.Origin,
-  derivedFrom: IrWriter.DerivedFrom,
-): IrWriter.Property => ({
-  name,
-  type,
-  optional: false,
-  nullable: false,
-  sensitive: false,
-  deprecated: false,
-  docs: {},
-  extensions: {},
-  origin,
-  derivedFrom,
-});
 
 /** Writes the ids input of each `batch` op without a declared `input`, and its use at the op entry. */
 export function treeSchemasCompileBatchInputs(
@@ -95,15 +78,13 @@ function batchIds(
   if (origin === undefined)
     throw new Error("conventions.batch.maxIds has no core default, so it is written");
 
-  return property(
-    "ids",
-    { kind: "array", items: structuredClone(idType), maxItems: maxIds },
-    pipelineCopy(origin),
-    {
-      derivation: "batch.read",
-      from: [reporter.origin(node.pointer)],
-    },
-  );
+  return treeSchemasDerivedProperty({
+    name: "ids",
+    type: { kind: "array", items: structuredClone(idType), maxItems: maxIds },
+    optional: false,
+    origin: pipelineCopy(origin),
+    derivedFrom: { derivation: "batch.read", from: [reporter.origin(node.pointer)] },
+  });
 }
 
 // The type of a collection's one id parameter: the entry of its `id` fields map, or the one property of the
@@ -287,14 +268,20 @@ function addVersionProperty(
   );
 
   properties.push(
-    property(version.property, type, origin, {
-      derivation: "concurrency.version",
-      from: [
-        pipelineCopy(origin),
-        ...routes.flatMap(({ version: { inherited } = {} }) =>
-          inherited === undefined ? [] : [reporter.origin(inherited)],
-        ),
-      ],
+    treeSchemasDerivedProperty({
+      name: version.property,
+      type,
+      optional: false,
+      origin,
+      derivedFrom: {
+        derivation: "concurrency.version",
+        from: [
+          pipelineCopy(origin),
+          ...routes.flatMap(({ version: { inherited } = {} }) =>
+            inherited === undefined ? [] : [reporter.origin(inherited)],
+          ),
+        ],
+      },
     }),
   );
 }
@@ -306,7 +293,10 @@ function useOutsideInputs(
   schema: string,
   routes: readonly BodyRoute[],
 ): string | undefined {
-  const own = new Set([treeSchemasPointer("/schemas", schema), ...routes.map((route) => route.pointer)]);
+  const own = new Set([
+    treeSchemasPointer("/schemas", schema),
+    ...routes.map((route) => route.pointer),
+  ]);
 
   for (const [pointer, use] of compiler.uses) {
     if (!own.has(pointer) && refersToSchema(use, schema)) return pointer;

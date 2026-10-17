@@ -8,4 +8,12 @@ The tree pass seeds the compiler's own error params, issue and empty body schema
 
 The tree pass refuses integer bounds with no integer between them.
 
-The tree pass merges `pick` and `omit` schemas, compiles the enums catalogue, names inline route schemas after their operation, adds the batch ids input and the concurrency version property, and gives every query and form field its query wire.
+The tree pass merges `pick` and `omit` schemas into plain objects.
+
+The tree pass compiles the enums catalogue, naming a value without letters or digits by its position.
+
+The tree pass names each inline route schema after its operation and position.
+
+The tree pass derives the ids input of a `batch` op and the version property of a versioned write.
+
+The tree pass gives every query and form field its query wire.

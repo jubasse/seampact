@@ -1,5 +1,4 @@
 import { fileURLToPath } from "node:url";
-import type { IrWriter } from "@seampact/spec/ir";
 import type { Diagnostic } from "../../../diagnostics/diagnostic.js";
 import { loadFsReader, loadWorkspace } from "../../../load/index.js";
 import { loadMemoryReader } from "../../../load/reader.js";

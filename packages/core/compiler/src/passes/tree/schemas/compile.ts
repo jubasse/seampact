@@ -697,12 +697,7 @@ export class TreeSchemasCompiler {
     const state = this.declared.get(id);
 
     if (state === "compiling") {
-      this.reporter.error({
-        rule: "schema-cycle",
-        pointer,
-        message: `the schema '${id}' reaches itself through schemas that are not objects, maps or unions`,
-        fix: "break the cycle with a named object, or remove the self-reference",
-      });
+      this.reportCycle(id, pointer);
       this.declared.set(id, undefined);
 
       return undefined;
@@ -720,6 +715,23 @@ export class TreeSchemasCompiler {
     this.declared.set(id, compiled);
 
     return compiled;
+  }
+
+  // A derived object compiles its source first, so a chain of `pick` and `omit` sources can reach itself too.
+  private reportCycle(id: string, pointer: string): void {
+    const value = treeSchemasMember(this.catalogue, id);
+    const derived = treeSchemasIsObject(value) && treeSchemasShapeOf(value) === "derived";
+
+    this.reporter.error({
+      rule: "schema-cycle",
+      pointer,
+      message: derived
+        ? `the derived object '${id}' reaches itself through the sources of its 'pick' or 'omit' chain`
+        : `the schema '${id}' reaches itself through schemas that are not objects, maps or unions`,
+      fix: derived
+        ? "derive the chain from a schema that is not derived from it"
+        : "break the cycle with a named object, or remove the self-reference",
+    });
   }
 
   private referenceUse(id: string): IrWriter.TypeUse {

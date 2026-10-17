@@ -9,6 +9,7 @@ import {
   derivationRoleOf,
   derivationRoles,
 } from "../../../derivations/index.js";
+import { treeSchemasDerivedProperty } from "./property.js";
 import { type TreeSchemasRawObject, treeSchemasMember, treeSchemasPointer } from "./raw.js";
 
 // The core schemas of ADR 0004 section 13: the params schema of each default code that carries data, the schema of
@@ -48,17 +49,7 @@ function coreProperty(
   optional: boolean,
   pointer: string,
 ): IrWriter.Property {
-  return {
-    name,
-    type,
-    optional,
-    nullable: false,
-    sensitive: false,
-    deprecated: false,
-    docs: {},
-    extensions: {},
-    origin: coreOrigin(pointer),
-  };
+  return treeSchemasDerivedProperty({ name, type, optional, origin: coreOrigin(pointer) });
 }
 
 function coreObject(

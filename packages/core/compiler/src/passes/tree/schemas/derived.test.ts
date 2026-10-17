@@ -131,6 +131,9 @@ describe("pick and omit", () => {
       ["schema-unknown", "/schemas/FromNothing/omit/from"],
       ["schema-cycle", "/schemas/CycleA"],
     ]);
+    expect(refused.diagnostics.at(-1)?.message).toBe(
+      "the derived object 'CycleA' reaches itself through the sources of its 'pick' or 'omit' chain",
+    );
     expect(refused.located).toBe(true);
     expect(refused.draft.schemas.Lacks).toBeUndefined();
   });
