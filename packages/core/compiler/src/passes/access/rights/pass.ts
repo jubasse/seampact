@@ -35,7 +35,7 @@ import { type AccessRightsSortKeyRights, accessRightsSortKeyRights } from "./sor
 // included), `fieldRights`, `filteredBy`, the rights of its sort keys and its rule proofs (header parameters,
 // `input.proofs`, or a proof-only input where tree.nodes wrote none), and checks the key sources of each bucket it
 // counts in. It reads each operation's `id`, `op`, `method`, `safe`, `origin`, input, query and header params,
-// responses and sort keys (tree.nodes), its `access` and the `identities` (access.identity), `packs` to name a pack
+// responses and sort keys (tree.nodes), its `access`, the `identities` and the `schemes` (access.identity), `packs` to name a pack
 // derivation, and `schemas` for the principal fields a subject reads, the restricted fields and the input fields.
 //
 // Import pipeline values and types from `pipeline/seam.js` only, never from `pipeline/index.js`, the orchestrator
@@ -47,6 +47,7 @@ export const accessRightsPass: PassPart<"access.rights"> = {
     "packs",
     "schemas",
     "identities",
+    "schemes",
     "operations[].id",
     "operations[].op",
     "operations[].method",
@@ -132,6 +133,7 @@ function accessRightsRun(draft: DraftIR, context: AccessRightsContext): void {
       requires,
       schemas: draft.schemas,
       identities: draft.identities,
+      schemes: draft.schemes,
     });
 
     accessRightsCheckBucketKeys(reporter, catalogues, {
@@ -188,6 +190,7 @@ const inputAfterProofs = (
   return {
     ...(input === undefined ? {} : { input }),
     proofs: proofs.createdInput?.proofs ?? proofs.proofs,
+    refusedProofs: proofs.refusedBodyProofs,
   };
 };
 

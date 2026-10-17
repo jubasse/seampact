@@ -4,7 +4,6 @@ import type { DraftIR } from "../../../pipeline/seam.js";
 import type { AccessRightsRule } from "./report.js";
 import {
   accessRightsApiOf,
-  accessRightsListPaging,
   accessRightsLoadFixture,
   accessRightsRunContract,
 } from "./test-support.js";
@@ -19,16 +18,6 @@ const REFUSED_FIXTURES = [
   "fields-refused",
   "proofs-refused",
 ] as const;
-
-// What tree.nodes does not write yet, set before access.rights runs: the list paging of `fields-refused`.
-const AFTER_TREE: Partial<Record<(typeof REFUSED_FIXTURES)[number], (draft: DraftIR) => void>> = {
-  "fields-refused": (draft) =>
-    accessRightsListPaging(draft, {
-      operation: "listCrates",
-      sortable: "/surfaces/app/routes/crates/ops/list/sortable",
-      keys: ["weight"],
-    }),
-};
 
 const REFUSED: Record<(typeof REFUSED_FIXTURES)[number], [AccessRightsRule, string, string][]> = {
   "catalogues-refused": [
@@ -158,7 +147,7 @@ describe("access.rights diagnostics are located", () => {
     for (const fixture of REFUSED_FIXTURES) {
       const workspace = accessRightsLoadFixture(fixture);
       const locations = accessRightsApiOf(workspace).locations;
-      const { diagnostics } = accessRightsRunContract(workspace, AFTER_TREE[fixture]);
+      const { diagnostics } = accessRightsRunContract(workspace);
 
       expect(
         diagnostics.map(({ rule, origin }) => [

@@ -88,6 +88,7 @@ On every route whose identity is signed (FR-20):
 - the raw body is required: the IR marks the operation so every target captures the exact request bytes before any parsing;
 - the CSRF companion and the idempotency key are not derived;
 - 401 is derived for a missing, malformed, stale or wrong signature, with `derivedFrom` naming the identity;
+- a signed identity's route has a body: a route under it without `input`, a `get` included, is a compile error naming the identity;
 - a cookie scheme cannot be combined with a signed identity (compile error).
 
 The body is still validated against the route's input schema after authentication, in the normal check order (ADR 0012).

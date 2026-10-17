@@ -49,7 +49,7 @@ In pipeline order (ADR 0006 section 1).
 - `packages/core/compiler/src/finalize`: The finalize stage (ADR 0006 section 1): canonical ids and ordering, the id collision check, IR validation and serialisation.
 - `packages/core/compiler/src/load`: The load stage (ADR 0006 section 1): contract workspaces read into located raw trees.
 - `packages/core/compiler/src/passes/access/identity`: The access.identity half (ADR 0006): schemes, headers, identities, per-operation access, bindings and CSRF.
-- `packages/core/compiler/src/passes/access/rights`: The access.rights half (ADR 0006): rights, rules, scopes, buckets and per-operation requirements.
+- `packages/core/compiler/src/passes/access/rights`: The access.rights half (ADR 0006): rights, rules, scopes, buckets, per-operation requirements, rule proofs and bucket key checks.
 - `packages/core/compiler/src/passes/derive/errors`: The derive.errors half (ADR 0006): errors, natures and per-operation errors.
 - `packages/core/compiler/src/passes/derive/wire`: The derive.wire half (ADR 0006): the derived wire members.
 - `packages/core/compiler/src/passes/link`: The link pass (ADR 0006): workspace checks across the apis' IRs, such as the relays superset check.

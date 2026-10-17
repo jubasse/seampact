@@ -19,11 +19,16 @@ import type { AccessRightsContext } from "./schema-use.js";
 // requirement order, one per name: two requirements reading one name with one schema share an element whose
 // `derivedFrom.from` lists both. A route without `input` that a body proof applies to gets a proof-only input on
 // the core empty schema. A signed identity's route must end with an input, since its signature covers the raw body.
+// A header proof may not take the name of a request header the route already reads: a declared one, or the
+// credential or CSRF header of its identity's schemes.
 
 const PROOF_DERIVATION = "rule.proof";
 const UNKNOWN_KEYS_DERIVATION = "identity.unknownKeys";
 const PROOF_ONLY_MEDIA = "application/json";
 const EMPTY_BODY_SCHEMA = "ApiEmptyBody";
+const AUTHORIZATION_HEADER = "Authorization";
+const SIGNED_INPUT_FIX = "declare `input`";
+const SIGNED_GET_FIX = "serve the signed deliveries on a route with a body (a `post` with `input`)";
 const FIELD_MEDIA: readonly IrWriter.InputMediaType[] = [
   "application/x-www-form-urlencoded",
   "multipart/form-data",
@@ -36,6 +41,7 @@ export interface AccessRightsProofsInput {
   readonly requires: readonly IrWriter.Requirement[];
   readonly schemas: PassReadonly<DraftIR["schemas"]>;
   readonly identities: PassReadonly<DraftIR["identities"]>;
+  readonly schemes: PassReadonly<DraftIR["schemes"]>;
 }
 
 export interface AccessRightsProofs {
@@ -45,6 +51,16 @@ export interface AccessRightsProofs {
   readonly proofs: IrWriter.InputProof[];
   /** The proof-only input this half writes where tree.nodes wrote none, its proofs included. */
   readonly createdInput?: DraftOperationInput;
+  /** The names of the body proofs refused on the route, already reported. */
+  readonly refusedBodyProofs: readonly string[];
+}
+
+/** A request header the route already reads, which no header proof may name. */
+interface RouteHeader {
+  readonly name: string;
+  /** What the header is, for the message: "a declared header", "the credential header of scheme 'bearer'". */
+  readonly role: string;
+  readonly pointer: string;
 }
 
 /** One requirement reading a proof, with the origins its element lists. */
@@ -65,22 +81,31 @@ export function accessRightsProofs(
   input: AccessRightsProofsInput,
 ): AccessRightsProofs {
   const uses = proofUses(context, catalogues, input.requires);
-  const headers = sharedByName(reporter, input.route, uses, "header").map(headerParamOf);
+  const takenHeaders = routeHeaders(input);
+  const headers = sharedByName(reporter, input.route, uses, "header")
+    .filter((use) => !takesRouteHeader(reporter, input.route, takenHeaders, use))
+    .map(headerParamOf);
   const bodyUses = sharedByName(reporter, input.route, uses, "body");
   const declared = input.route.operation.input;
   const identity = signedIdentityOf(input);
+  const refused = { headers, proofs: [], refusedBodyProofs: bodyUses.map((use) => use.proof.name) };
 
   if (bodyUses.length === 0) {
     if (declared === undefined && identity !== undefined)
       reportSignedWithoutInput(reporter, input.route, identity);
 
-    return { headers, proofs: [] };
+    return { headers, proofs: [], refusedBodyProofs: [] };
   }
 
-  if (declared === undefined)
-    return { headers, proofs: [], ...createdInput(reporter, input, bodyUses, identity) };
+  if (declared === undefined) {
+    const created = createdInput(reporter, input, bodyUses, identity);
 
-  if (!fitsDeclaredInput(reporter, input, declared, bodyUses)) return { headers, proofs: [] };
+    return created === undefined
+      ? refused
+      : { headers, proofs: [], createdInput: created, refusedBodyProofs: [] };
+  }
+
+  if (!fitsDeclaredInput(reporter, input, declared, bodyUses)) return refused;
 
   const fieldMedia = FIELD_MEDIA.includes(declared.media);
 
@@ -90,6 +115,7 @@ export function accessRightsProofs(
       ...inputProofOf(use),
       ...(fieldMedia ? { wire: proofWire(context, use) } : {}),
     })),
+    refusedBodyProofs: [],
   };
 }
 
@@ -174,6 +200,93 @@ function sharedByName(
   return [...byName.values()];
 }
 
+// The declared request headers, then the credential and CSRF headers of the route identity's schemes.
+function routeHeaders(input: AccessRightsProofsInput): RouteHeader[] {
+  const route = input.route;
+  const declared = (route.operation.params?.header ?? []).map((param) => ({
+    name: param.name,
+    role: "a declared header",
+    pointer: param.origin?.pointer ?? param.derivedFrom?.from[0]?.pointer ?? route.node.pointer,
+  }));
+
+  return [...declared, ...identitySchemeIds(input).flatMap((id) => schemeHeaders(input.schemes, id))];
+}
+
+function identitySchemeIds(input: AccessRightsProofsInput): string[] {
+  const name = input.route.identity;
+
+  if (name === undefined || !Object.hasOwn(input.identities, name)) return [];
+
+  const identity = input.identities[name];
+
+  if (identity === undefined) return [];
+
+  if (identity.kind === "signed") return [identity.signed];
+
+  const { read, write, optionalRead } = identity.schemes;
+
+  return [...new Set([...read, ...write, ...optionalRead])];
+}
+
+// access.identity resolves every scheme an identity names, so an unknown id is already its error.
+function schemeHeaders(schemes: PassReadonly<DraftIR["schemes"]>, id: string): RouteHeader[] {
+  const scheme = Object.hasOwn(schemes, id) ? schemes[id] : undefined;
+
+  if (scheme === undefined) return [];
+
+  const credential = (name: string): RouteHeader[] => [
+    { name, role: `the credential header of scheme '${id}'`, pointer: scheme.origin.pointer },
+  ];
+
+  switch (scheme.kind) {
+    case "bearer":
+    case "basic":
+      return credential(AUTHORIZATION_HEADER);
+    case "header":
+      return credential(scheme.name);
+    case "signature":
+      return scheme.name === undefined ? [] : credential(scheme.name);
+    case "cookie":
+      return scheme.csrf === undefined ? [] : csrfHeaders(schemes, scheme.csrf);
+    case "query":
+      return [];
+  }
+}
+
+function csrfHeaders(schemes: PassReadonly<DraftIR["schemes"]>, id: string): RouteHeader[] {
+  const scheme = Object.hasOwn(schemes, id) ? schemes[id] : undefined;
+
+  if (scheme?.kind !== "header") return [];
+
+  return [{ name: scheme.name, role: `the CSRF header of scheme '${id}'`, pointer: scheme.origin.pointer }];
+}
+
+// Whether a header proof takes a header the route already reads; that clash is reported and the proof dropped.
+function takesRouteHeader(
+  reporter: AccessRightsReporter,
+  route: AccessRightsRoute,
+  takenHeaders: readonly RouteHeader[],
+  use: ProofUse,
+): boolean {
+  const key = nameKey("header", use.proof.name);
+  const taken = takenHeaders.find((header) => nameKey("header", header.name) === key);
+
+  if (taken === undefined) return false;
+
+  reporter.error({
+    rule: "proof-name",
+    message: `rule '${use.rule}' reads its header proof '${use.proof.name}' on route '${route.id}', which already reads '${taken.name}', ${taken.role}`,
+    fix: "give the proof another name",
+    pointer: use.usePointer,
+    related: [
+      { pointer: use.proofPointer, message: "the proof is declared here" },
+      { pointer: taken.pointer, message: "the header is declared here" },
+    ],
+  });
+
+  return true;
+}
+
 function reportSchemaClash(
   reporter: AccessRightsReporter,
   route: AccessRightsRoute,
@@ -240,7 +353,7 @@ function reportSignedWithoutInput(
   reporter.error({
     rule: "signed-input",
     message: `route '${route.id}' runs under signed identity '${identity.id}', whose signature covers the raw body, and has no input`,
-    fix: "declare `input`",
+    fix: route.operation.method === "get" ? SIGNED_GET_FIX : SIGNED_INPUT_FIX,
     pointer: route.node.pointer,
   });
 }
@@ -251,7 +364,7 @@ function createdInput(
   input: AccessRightsProofsInput,
   uses: readonly ProofUse[],
   identity: PassReadonly<IrWriter.SignedIdentity> | undefined,
-): Pick<AccessRightsProofs, "createdInput"> {
+): DraftOperationInput | undefined {
   const route = input.route;
   const method = route.operation.method;
   const [first] = uses;
@@ -271,7 +384,7 @@ function createdInput(
         related: [{ pointer: use.proofPointer, message: "the proof is declared here" }],
       });
 
-    return {};
+    return undefined;
   }
 
   const [origin] = first.from;
@@ -280,17 +393,15 @@ function createdInput(
   const unknownKeys = identity === undefined ? undefined : identityUnknownKeys(identity);
 
   return {
-    createdInput: {
-      media: PROOF_ONLY_MEDIA,
-      schema: {
-        kind: "ref",
-        schema: EMPTY_BODY_SCHEMA,
-        ...(unknownKeys === undefined ? {} : { unknownKeys }),
-      },
-      origin: pipelineCopy(origin),
-      rawBody: identity !== undefined,
-      proofs: uses.map(inputProofOf),
+    media: PROOF_ONLY_MEDIA,
+    schema: {
+      kind: "ref",
+      schema: EMPTY_BODY_SCHEMA,
+      ...(unknownKeys === undefined ? {} : { unknownKeys }),
     },
+    origin: pipelineCopy(origin),
+    rawBody: identity !== undefined,
+    proofs: uses.map(inputProofOf),
   };
 }
 
@@ -331,10 +442,17 @@ function fitsDeclaredInput(
     const [first] = uses;
 
     if (first === undefined) throw new Error("a declared input is checked for a body proof");
+
+    const unbuilt = schema.kind === "ref" && object === undefined;
+
     reporter.error({
       rule: "proof-input",
-      message: `rule '${first.rule}' reads its proof '${first.proof.name}' from the body of route '${route.id}', whose input is no named object schema`,
-      fix: "make the route's input an object schema, or read the proof in a header",
+      message: unbuilt
+        ? `rule '${first.rule}' reads its proof '${first.proof.name}' from the body of route '${route.id}', whose input schema '${schema.schema}' is not among the compiled schemas`
+        : `rule '${first.rule}' reads its proof '${first.proof.name}' from the body of route '${route.id}', whose input is no named object schema`,
+      fix: unbuilt
+        ? "declare the input schema under `schemas`, or read the proof in a header"
+        : "make the route's input an object schema, or read the proof in a header",
       pointer: first.usePointer,
       related: [
         { pointer: declared.origin.pointer, message: "the route's input is declared here" },

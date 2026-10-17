@@ -223,7 +223,7 @@ rules:
     errors: [api.reauthentication_required]
 ```
 
-A rule is a pre-handler check that is not a right: no subject, no use on fields, sort keys or lists. `params` and `errors` are as for rights. `bucket: true` makes each use name a bucket, whose key sources and limits reach the decide hook; the 429 reply and its `Retry-After` come from the conventions (FR-41, SCN-096). `proof` declares a value the rule reads from the request (`in: body` or `in: header`): the compiler adds the field to the route's input once, after the authored fields, and marks it sensitive (SCN-097). A body proof is refused on a route without a body, which is a `get`, or a `delete` without `input`; on any other route without `input` (a POST action such as `revealStreamKey`), the proof becomes the whole input.
+A rule is a pre-handler check that is not a right: no subject, no use on fields, sort keys or lists. `params` and `errors` are as for rights. `bucket: true` makes each use name a bucket, whose key sources and limits reach the decide hook; the 429 reply and its `Retry-After` come from the conventions (FR-41, SCN-096). `proof` declares a value the rule reads from the request (`in: body` or `in: header`): the compiler adds the field to the route's input once, after the authored fields, and marks it sensitive (SCN-097). A body proof is refused on a route without a body, which is a `get`, or a `delete` without `input`; on any other route without `input` (a POST action such as `revealStreamKey`), the proof becomes the whole input. A header proof never takes the name, in any case, of a header the route already reads: a declared request header, the credential header of its identity's schemes (`Authorization` for `bearer` and `basic`, the `name` of a `header` or `signature` scheme) or the CSRF header; that is a compile error naming the rule and the route.
 
 #### Buckets
 
@@ -234,7 +234,7 @@ buckets:
   export: { key: [principal.accountId] }
 ```
 
-`key` lists the sources counted; `limit` and `window` may be left for the server to bind, and the compiler then warns (SCN-096). A bucket key is checked at each use: a `body.<field>` key must name a string or integer field of the route's input, checked against that field's schema when the rule reads it (step 5 of the check order, as for a body proof); a missing field, and a `principal.<field>` key on a public or optional-auth route, where the principal may be null, are compile errors naming the bucket and the route.
+`key` lists the sources counted; `limit` and `window` may be left for the server to bind, and the compiler then warns (SCN-096). A bucket key is checked at each use: a `body.<field>` key must name a string or integer field of the route's input, checked against that field's schema when the rule reads it (step 5 of the check order, as for a body proof); a missing field, and a `principal.<field>` key on a public or optional-auth route, where the principal may be null, are compile errors naming the bucket and the route. A `body.<field>` key on an optional or nullable field is a compile error too, since the key would be absent or null and targets could count it two ways. A body proof or a `sensitive` field is never a bucket key, since the key reaches the decide hook and the counter store: a compile error.
 
 #### Scopes
 

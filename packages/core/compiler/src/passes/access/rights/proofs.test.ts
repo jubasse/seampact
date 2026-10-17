@@ -118,6 +118,84 @@ describe("header proofs", () => {
   });
 });
 
+describe("header proofs on a header the route already reads", () => {
+  const headerContract = `api: { name: vault, version: 1 }
+schemes:
+  bearer: { kind: bearer }
+  apiKey: { kind: header, name: X-Api-Key }
+  session: { kind: cookie, name: sid, csrf: csrfToken }
+  csrfToken: { kind: header, name: X-Csrf-Token }
+  sig: { kind: signature, name: Sig, format: 'v1={sig}', algorithm: hmac-sha256, payload: '{rawBody}', encoding: hex, key: { value: hook } }
+identities:
+  user: { schemes: { read: [bearer], write: [bearer] }, principal: Caller }
+  keyed: { schemes: { read: [apiKey], write: [apiKey] }, principal: Caller }
+  browser: { schemes: { read: [session], write: [session] }, principal: Caller }
+  hook: { kind: signed, scheme: sig, principal: Caller }
+schemas:
+  Caller: { type: object, required: [account], properties: { account: { type: string } } }
+  Event: { type: object, required: [kind], properties: { kind: { type: string } } }
+rules:
+  otp: { proof: { in: header, name: X-Otp, schema: { type: string } } }
+  bearerProof: { proof: { in: header, name: authorization, schema: { type: string } } }
+  keyProof: { proof: { in: header, name: X-API-KEY, schema: { type: string } } }
+  csrfProof: { proof: { in: header, name: x-csrf-token, schema: { type: string } } }
+  sigProof: { proof: { in: header, name: sig, schema: { type: string } } }
+surfaces:
+  app:
+    identity: user
+    routes:
+      declared: { method: post, headers: { x-otp: { type: string } }, requires: [{ rule: otp }], responses: { 204: {} } }
+      bearer: { method: post, requires: [{ rule: bearerProof }], responses: { 204: {} } }
+  keys:
+    prefix: /keys
+    identity: keyed
+    routes:
+      keyed: { method: post, requires: [{ rule: keyProof }], responses: { 204: {} } }
+  web:
+    prefix: /web
+    identity: browser
+    routes:
+      browser: { method: post, requires: [{ rule: csrfProof }], responses: { 204: {} } }
+  hooks:
+    prefix: /hooks
+    identity: hook
+    routes:
+      hook: { method: post, input: Event, requires: [{ rule: sigProof }], responses: { 204: {} } }
+`;
+
+  test("a declared, credential or CSRF header of that name is proof-name at the requirement, and the proof is dropped", () => {
+    const { draft, diagnostics } = accessRightsRunContract(
+      accessRightsLoadFiles({ "api.yaml": headerContract }),
+    );
+
+    expect(located(diagnostics)).toEqual([
+      ["proof-name", "/surfaces/app/routes/declared/requires/0"],
+      ["proof-name", "/surfaces/app/routes/bearer/requires/0"],
+      ["proof-name", "/surfaces/keys/routes/keyed/requires/0"],
+      ["proof-name", "/surfaces/web/routes/browser/requires/0"],
+      ["proof-name", "/surfaces/hooks/routes/hook/requires/0"],
+    ]);
+    expect(diagnostics.map((diagnostic) => diagnostic.message)).toEqual([
+      "rule 'otp' reads its header proof 'X-Otp' on route 'declared', which already reads 'x-otp', a declared header",
+      "rule 'bearerProof' reads its header proof 'authorization' on route 'bearer', which already reads 'Authorization', the credential header of scheme 'bearer'",
+      "rule 'keyProof' reads its header proof 'X-API-KEY' on route 'keyed', which already reads 'X-Api-Key', the credential header of scheme 'apiKey'",
+      "rule 'csrfProof' reads its header proof 'x-csrf-token' on route 'browser', which already reads 'X-Csrf-Token', the CSRF header of scheme 'csrfToken'",
+      "rule 'sigProof' reads its header proof 'sig' on route 'hook', which already reads 'Sig', the credential header of scheme 'sig'",
+    ]);
+    expect(diagnostics[0]?.related.map((item) => item.origin.pointer)).toEqual([
+      "/rules/otp/proof",
+      "/surfaces/app/routes/declared/headers/x-otp",
+    ]);
+    expect(diagnostics[1]?.related.map((item) => item.origin.pointer)).toEqual([
+      "/rules/bearerProof/proof",
+      "/schemes/bearer",
+    ]);
+    expect(operationOf(draft, "declared").params?.header.map((param) => param.name)).toEqual([
+      "x-otp",
+    ]);
+  });
+});
+
 describe("body proofs", () => {
   test("proofs join a declared JSON, form or signed input in requirement order, shared by name, with a wire in a form", () => {
     const { draft, diagnostics } = fixtureRun();
@@ -152,6 +230,25 @@ describe("body proofs", () => {
     expect(diagnostics[0]?.related.map((item) => item.origin.pointer)).toEqual([
       "/rules/recentAuth/proof",
       "/schemas/Note/properties/token",
+    ]);
+  });
+
+  test("an input whose schema is not among the compiled schemas is refused with its own message", () => {
+    const { diagnostics } = accessRightsRunContract(
+      accessRightsLoadFiles({
+        "api.yaml": contract(`      ping: { method: post, input: Note, requires: [{ rule: recentAuth }], responses: { 204: {} } }`),
+      }),
+      (draft) => {
+        delete draft.schemas.Note;
+      },
+    );
+
+    expect(located(diagnostics)).toEqual([["proof-input", "/surfaces/app/routes/ping/requires/0"]]);
+    expect(diagnostics.map(({ message, fix }) => [message, fix])).toEqual([
+      [
+        "rule 'recentAuth' reads its proof 'token' from the body of route 'ping', whose input schema 'Note' is not among the compiled schemas",
+        "declare the input schema under `schemas`, or read the proof in a header",
+      ],
     ]);
   });
 
@@ -249,7 +346,7 @@ describe("signed proof-only input copies the identity policy", () => {
 });
 
 describe("signed route without input", () => {
-  test("(e) a signed identity's route left without input is refused, naming the route, the identity and the fix", () => {
+  test("(e) a signed identity's route left without input, a get or a delete included, is refused with a fix by method", () => {
     const { draft, diagnostics } = accessRightsRunContract(
       accessRightsLoadFiles({
         "api.yaml": `api: { name: hooks, version: 1 }
@@ -267,6 +364,8 @@ surfaces:
     routes:
       ping: { method: post, responses: { 204: {} } }
       pong: { method: post, requires: [{ rule: recentAuth }], responses: { 204: {} } }
+      peek: { method: get }
+      drop: { method: delete, responses: { 204: {} } }
 `,
       }),
     );
@@ -285,6 +384,20 @@ surfaces:
           "route 'ping' runs under signed identity 'hook', whose signature covers the raw body, and has no input",
         fix: "declare `input`",
         pointer: "/surfaces/hooks/routes/ping",
+      },
+      {
+        rule: "seampact/access/signed-input",
+        message:
+          "route 'peek' runs under signed identity 'hook', whose signature covers the raw body, and has no input",
+        fix: "serve the signed deliveries on a route with a body (a `post` with `input`)",
+        pointer: "/surfaces/hooks/routes/peek",
+      },
+      {
+        rule: "seampact/access/signed-input",
+        message:
+          "route 'drop' runs under signed identity 'hook', whose signature covers the raw body, and has no input",
+        fix: "declare `input`",
+        pointer: "/surfaces/hooks/routes/drop",
       },
     ]);
 
