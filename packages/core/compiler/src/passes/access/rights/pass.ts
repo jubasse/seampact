@@ -39,6 +39,7 @@ export const accessRightsPass: PassPart<"access.rights"> = {
     "operations[].safe",
     "operations[].origin",
     "operations[].relays",
+    "operations[].access",
     "operations[].input.schema",
     "operations[].input.origin",
     "operations[].responses",
