@@ -1,0 +1,74 @@
+# Per-operation scopes and requirements access.rights refuses (ADR 0002 sections 2, 8 and 9): scopes undeclared,
+# entered twice or below a child scope; requirement entries, rights and rules that are not declared; params a
+# right does not take or that do not fit; buckets a rule does not take, needs or does not declare; subjects of the
+# wrong schema; an equal requirement twice; pack entries a route cannot take.
+api: { name: shop, version: 1 }
+packs: [./pack.yaml]
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  user:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: UserPrincipal
+
+schemas:
+  ShopId: { type: string, format: uuid }
+  ItemId: { type: string, format: uuid }
+  Item:
+    type: object
+    required: [itemId]
+    properties: { itemId: ItemId }
+  UserPrincipal:
+    type: object
+    required: [userId]
+    properties: { userId: { type: string } }
+
+scopes:
+  shop: { id: ShopId }
+  aisle: { id: ShopId, within: shop }
+
+rights:
+  items.read: {}
+  items.edit: { subject: { resource: Item, id: ItemId } }
+  staff: { params: { level: { type: integer } } }
+
+rules:
+  throttle: { bucket: true }
+
+buckets:
+  perUser: { key: [principal.userId] }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      health: { method: get }
+      brands: { kind: collection, ops: [list] }
+      shops:
+        kind: collection
+        id: { shopId: ShopId }
+        scopes: { aisle: resolver }
+        member:
+          scopes: { aisle: resolver, shop: path.shopId, till: resolver }
+          routes:
+            items:
+              kind: collection
+              id: { itemId: ItemId }
+              item: Item
+              ops: [list]
+              member:
+                routes:
+                  restock:
+                    method: post
+                    requires:
+                      - managerOnly
+                      - { right: items.close }
+                      - { right: items.read, params: { now: true } }
+                      - { right: staff, params: { level: __invalid_example__ } }
+                      - { rule: throttle }
+                      - { right: items.edit, subject: path.shopId }
+                      - { right: items.edit }
+                      - { right: items.edit, subject: path.itemId }

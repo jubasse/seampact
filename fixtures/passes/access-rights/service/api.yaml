@@ -1,0 +1,39 @@
+# A service api (ADR 0002 section 5, FR-8, SCN-045): every route requires the caller right, here from the
+# surface with the services it allows; a surface whose route does not require it is an error naming the route.
+api:
+  name: billing
+  version: 1
+  kind: service
+  caller: { identity: service, right: callerService }
+
+schemes:
+  internalToken: { kind: bearer, bearerFormat: jwt }
+
+identities:
+  service:
+    schemes: { read: [internalToken], write: [internalToken] }
+    principal: ServicePrincipal
+
+enums:
+  Service: { values: [catalog, ticketing], reason: The product's internal services. }
+
+schemas:
+  ServicePrincipal:
+    type: object
+    required: [service]
+    properties: { service: { enum: Service } }
+
+rights:
+  callerService:
+    params: { allowed: { type: array, items: { enum: Service }, minItems: 1 } }
+
+surfaces:
+  internal:
+    prefix: /internal/v{version}
+    requires: [{ right: callerService, params: { allowed: [catalog] } }]
+    routes:
+      invoices: { method: get }
+  maintenance:
+    prefix: /maintenance/v{version}
+    routes:
+      reindex: { method: post }

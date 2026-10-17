@@ -1,0 +1,84 @@
+# A tenant api (ADR 0002 sections 8 and 9): nested scopes resolved ancestor first, and parent before child inside
+# one node; a resolver; requirements from the surface, the collection's member scope and the route, one through
+# a requirements entry; subjects defaulted to the nearest member id of the right's id schema, to the route's
+# scope, or read from a header and a principal field.
+api: { name: studio, version: 1 }
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  member:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: MemberPrincipal
+
+schemas:
+  OrgId: { type: string, format: uuid }
+  ProjectId: { type: string, format: uuid }
+  BoardId: { type: string, format: uuid }
+  DocId: { type: string, format: uuid }
+  Doc:
+    type: object
+    required: [docId]
+    properties: { docId: DocId, title: { type: string } }
+  MemberPrincipal:
+    type: object
+    required: [memberId, homeDoc]
+    properties: { memberId: { type: string }, homeDoc: DocId }
+
+scopes:
+  org: { id: OrgId, errors: [api.not_found] }
+  project: { id: ProjectId, within: org, errors: [api.not_found] }
+  board: { id: BoardId, within: project }
+
+rights:
+  orgMember: { subject: { scope: org } }
+  projectRole:
+    params: { role: { type: string } }
+    subject: { scope: project }
+  docs.edit: { subject: { resource: Doc, id: DocId } }
+  docs.copy: { subject: { resource: Doc, id: DocId } }
+
+rules:
+  throttle: { bucket: true, errors: [api.rate_limited] }
+
+buckets:
+  perMember: { key: [principal.memberId], limit: 100, window: 1m }
+
+requirements:
+  editor: { right: projectRole, params: { role: editor } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: member
+    scopes: { org: subdomain }
+    requires: [{ right: orgMember }]
+    routes:
+      projects:
+        kind: collection
+        id: { projectId: ProjectId }
+        member:
+          scopes: { board: resolver, project: path.projectId }
+          requires: [editor]
+          routes:
+            docs:
+              kind: collection
+              id: { docId: DocId }
+              item: Doc
+              ops:
+                get: {}
+                update:
+                  input: Doc
+                  requires: [{ rule: throttle, bucket: perMember }, { right: docs.edit }]
+              collection:
+                routes:
+                  copy:
+                    method: post
+                    headers: { X-Source-Doc: DocId }
+                    requires: [{ right: docs.copy, subject: header.X-Source-Doc }]
+                    output: Doc
+                  copyHome:
+                    method: post
+                    requires: [{ right: docs.copy, subject: principal.homeDoc }]
+                    output: Doc

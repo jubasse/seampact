@@ -1,0 +1,263 @@
+{
+  "rights": {
+    "read:articles": {
+      "id": "read:articles",
+      "subject": {
+        "kind": "none"
+      },
+      "guest": "Published articles are readable without an account.",
+      "errors": [],
+      "docs": {
+        "summary": "Read the published articles."
+      },
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/read:articles"
+      }
+    },
+    "edit articles": {
+      "id": "edit articles",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": [
+            "article"
+          ],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": [
+        "api.forbidden",
+        "api.not_found"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/edit articles"
+      }
+    },
+    "ROLE_ADMIN": {
+      "id": "ROLE_ADMIN",
+      "params": "RoleAdminParams",
+      "subject": {
+        "kind": "scope",
+        "scope": "org"
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {
+        "acme": {
+          "tier": "platinum"
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/ROLE_ADMIN"
+      }
+    },
+    "update-post": {
+      "id": "update-post",
+      "subject": {
+        "kind": "scope",
+        "scope": "project"
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/update-post"
+      }
+    },
+    "*": {
+      "id": "*",
+      "subject": {
+        "kind": "none"
+      },
+      "errors": [],
+      "docs": {
+        "description": "Any right at all, for the superuser."
+      },
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/*"
+      },
+      "codeName": {
+        "segments": [
+          "any",
+          "right"
+        ],
+        "role": "schema"
+      }
+    }
+  },
+  "rules": {
+    "throttle": {
+      "id": "throttle",
+      "takesBucket": true,
+      "errors": [
+        "api.rate_limited"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/throttle"
+      }
+    },
+    "recentAuth": {
+      "id": "recentAuth",
+      "params": "RecentAuthParams",
+      "takesBucket": false,
+      "proof": {
+        "in": "body",
+        "name": "reauthToken",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "refinements": {
+            "minLength": 1,
+            "maxLength": 512
+          }
+        }
+      },
+      "errors": [
+        "api.reauthentication_required"
+      ],
+      "docs": {},
+      "extensions": {
+        "acme": {
+          "tier": "silver"
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/recentAuth"
+      }
+    },
+    "signedRecently": {
+      "id": "signedRecently",
+      "takesBucket": false,
+      "proof": {
+        "in": "header",
+        "name": "X-Signed-At",
+        "schema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "date-time",
+          "refinements": {}
+        }
+      },
+      "errors": [],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rules/signedRecently"
+      }
+    }
+  },
+  "scopes": {
+    "org": {
+      "id": "org",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "errors": [
+        "api.not_found"
+      ],
+      "docs": {
+        "summary": "An organisation the caller belongs to."
+      },
+      "extensions": {
+        "acme": {
+          "tier": "gold"
+        }
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/org"
+      }
+    },
+    "project": {
+      "id": "project",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {
+          "minLength": 1
+        }
+      },
+      "within": "org",
+      "errors": [
+        "api.forbidden"
+      ],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/project"
+      }
+    }
+  },
+  "buckets": {
+    "perAddress": {
+      "id": "perAddress",
+      "key": [
+        {
+          "in": "address",
+          "prefixBits": 64
+        },
+        {
+          "in": "address"
+        }
+      ],
+      "limit": 10,
+      "windowMs": 900000,
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perAddress"
+      }
+    },
+    "perUser": {
+      "id": "perUser",
+      "key": [
+        {
+          "in": "principal",
+          "name": "userId"
+        }
+      ],
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perUser"
+      }
+    },
+    "perEmail": {
+      "id": "perEmail",
+      "key": [
+        {
+          "in": "body",
+          "name": "email"
+        }
+      ],
+      "limit": 5,
+      "windowMs": 3600000,
+      "origin": {
+        "layer": "api",
+        "pointer": "/buckets/perEmail"
+      }
+    }
+  }
+}
