@@ -146,9 +146,6 @@ export function treeSchemasCompileDeclarations(
         OUTPUT,
       );
   }
-
-  for (const [code, error] of treeSchemasEntries(merged.errors))
-    paramsAt(compiler, error, treeSchemasPointer("/errors", code), splitName(code), OUTPUT);
 }
 
 // The name an inline schema at a route position is hoisted under: the operation's segments and the position's
@@ -222,10 +219,6 @@ export function treeSchemasCompileRoutes(
     const at = (...segments: string[]) => treeSchemasPointer(node.pointer, ...segments);
 
     positionAt(compiler, settings.item, at("item"), OUTPUT);
-
-    // A code declared on a node hoists its params as the catalogue's do (`<Code>Params`).
-    for (const [code, error] of treeSchemasEntries(settings.errors))
-      paramsAt(compiler, error, at("errors", code), splitName(code), OUTPUT);
 
     if (settings.input !== undefined)
       compiler.position(

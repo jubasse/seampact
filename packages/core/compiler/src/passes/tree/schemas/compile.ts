@@ -382,6 +382,13 @@ export class TreeSchemasCompiler {
     if (compiled !== undefined) this.recordUse(position.pointer, compiled.use, directions);
   }
 
+  /** Records at `pointer` a copy of the use compiled at `from`, if any: one schema declared at both. */
+  shareUse(from: string, pointer: string, directions: readonly IrWriter.Direction[]): void {
+    const use = this.uses.get(from);
+
+    if (use !== undefined) this.recordUse(pointer, structuredClone(use), directions);
+  }
+
   private recordUse(
     pointer: string,
     use: IrWriter.TypeUse,

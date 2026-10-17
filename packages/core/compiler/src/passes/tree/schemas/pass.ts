@@ -5,6 +5,7 @@ import {
   type TreeSchemaService,
 } from "../../../pipeline/seam.js";
 import { treeNodesOperationNames } from "../nodes/index.js";
+import { treeSchemasCodeParamsDeclarations, treeSchemasCompileCodeParams } from "./code-params.js";
 import { TreeSchemasCompiler } from "./compile.js";
 import { treeSchemasCoreReservations } from "./core.js";
 import { treeSchemasRefuseOutputUnknownKeys, treeSchemasWriteDirections } from "./directions.js";
@@ -76,10 +77,13 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
     const reporter = new TreeSchemasReporter(context);
     const compiler = new TreeSchemasCompiler(context.raw.merged, reporter);
 
-    compiler.reserve(treeSchemasCoreReservations(context.raw.merged));
+    const nodes = pipelineTreeNodes(context.raw);
+    const codeParams = treeSchemasCodeParamsDeclarations(context.raw.merged, nodes);
+
+    compiler.reserve(treeSchemasCoreReservations(codeParams));
     compiler.compileCatalogue();
     treeSchemasCompileDeclarations(compiler, context.raw.merged);
-    const nodes = pipelineTreeNodes(context.raw);
+    treeSchemasCompileCodeParams(compiler, codeParams);
     const operationNames = treeNodesOperationNames(context.raw, context.conventions);
 
     treeSchemasCompileRoutes(compiler, nodes, operationNames);
