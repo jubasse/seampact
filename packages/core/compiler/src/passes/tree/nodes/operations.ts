@@ -7,16 +7,30 @@ import {
   type TreeNode,
 } from "../../../pipeline/seam.js";
 import type { TreeNodesSurfacePrefixes } from "./api.js";
+import { treeNodesDocs } from "./api.js";
 import { treeNodesReportIdlessCollection } from "./collections.js";
+import { treeNodesDegradable } from "./degradable.js";
 import {
   type TreeNodesReportOnce,
   treeNodesError,
   treeNodesNodeOrigin,
   treeNodesReportOnce,
 } from "./diagnostics.js";
+import { treeNodesExamples } from "./examples.js";
 import type { TreeNodesSite } from "./fields.js";
-import { treeNodesInput } from "./input.js";
+import { treeNodesBatchInput, treeNodesInput } from "./input.js";
 import {
+  treeNodesBudgetMs,
+  treeNodesCheckSuccessor,
+  treeNodesDeprecated,
+  treeNodesExtensions,
+  treeNodesInternal,
+  treeNodesStatedMaturity,
+  treeNodesTags,
+  treeNodesUpstream,
+} from "./lifecycle.js";
+import {
+  TREE_NODES_BATCH_OP,
   type TreeNodesOperationName,
   type TreeNodesRawSchemas,
   treeNodesIdlessCollection,
@@ -26,10 +40,12 @@ import {
   treeNodesOpShorthand,
   treeNodesSingularOwner,
 } from "./names.js";
+import { treeNodesPaging } from "./paging.js";
 import { treeNodesParams, treeNodesUnknownQuery } from "./params.js";
 import { treeNodesCheckPathParts, treeNodesPath } from "./paths.js";
 import { type TreeNodesContext, treeNodesSetting } from "./raw.js";
 import { treeNodesFormat, treeNodesResponses } from "./responses.js";
+import { treeNodesConcurrency, treeNodesOwner } from "./writes.js";
 
 // The operations of the api (ADR 0002 sections 6 and 7): one per route, relay route and `ops` entry, in tree order,
 // each with its id, name, surface, op, resource, method, path, safety, declared parameters, input and responses,
@@ -39,8 +55,7 @@ const OPERATION_KIND = "httpOperation";
 
 const HTTP_METHODS: readonly IrWriter.HttpMethod[] = ["get", "post", "put", "patch", "delete"];
 
-// ADR 0002 section 6: a batch is a safe read sent as POST.
-const SAFE_OP: IrWriter.OpShorthand = "batch";
+// ADR 0002 section 6: a get is safe, and so is a batch, a read sent as POST.
 const SAFE_METHOD: IrWriter.HttpMethod = "get";
 
 // ADR 0002 section 6: the item schema holds fields a client never sends, so these ops have no default input.
@@ -99,6 +114,16 @@ export function treeNodesOperations(
 
   reportClashes(written, context);
   reportRouteClashes(written, context);
+  checkSuccessors(draft, context);
+}
+
+// A successor names an operation of this api, known once every operation is written.
+function checkSuccessors(draft: DraftIR, context: TreeNodesContext): void {
+  const ids = new Set(draft.operations.flatMap((operation) => operation.id ?? []));
+
+  for (const operation of draft.operations)
+    if (operation.deprecated !== undefined && operation.id !== undefined)
+      treeNodesCheckSuccessor({ context, operationId: operation.id }, operation.deprecated, ids);
 }
 
 // A member route under a collection whose `id` gives no parameter has no placeholder in its path; the `id` is
@@ -166,8 +191,11 @@ function operationOf(
   const op = treeNodesOpShorthand(node);
   const resource = resourceOf(node, context.raw.merged.schemas);
   const method = methodOf(node, op, site);
-  const safe = method === SAFE_METHOD || op === SAFE_OP;
-  const input = treeNodesInput(node, name.id, draft, context);
+  const safe = method === SAFE_METHOD || op === TREE_NODES_BATCH_OP;
+  const input =
+    op === TREE_NODES_BATCH_OP && treeNodesSetting(node, "input") === undefined
+      ? treeNodesBatchInput(node, context)
+      : treeNodesInput(node, name.id, draft, context);
 
   if (
     op !== undefined &&
@@ -180,9 +208,6 @@ function operationOf(
 
   if (path !== undefined) treeNodesCheckPathParts(site, path);
   const params = treeNodesParams(site, path, safe, input?.schema);
-  // A relay route's format and responses are copied from the operation it relays.
-  const format = node.kind === "relay" ? undefined : treeNodesFormat(site);
-  const responses = format === undefined ? [] : treeNodesResponses(site, format);
 
   return {
     kind: OPERATION_KIND,
@@ -196,9 +221,53 @@ function operationOf(
     params,
     unknownQuery: treeNodesUnknownQuery(site),
     ...(input === undefined ? {} : { input }),
-    responses,
-    ...(format === undefined ? {} : { format }),
+    // A relay route's shape (format, responses, write semantics, paging) is copied from the operation it relays.
+    ...(node.kind === "relay" ? { responses: [] } : shapeOf(site, input?.schema, params)),
+    ...lifecycleOf(site),
     origin: pipelineCopy(node.origin),
+  };
+}
+
+// The members a route's own shape gives: format, responses, write semantics, paging, degradable and examples.
+function shapeOf(
+  site: TreeNodesSite,
+  input: IrWriter.TypeUse | undefined,
+  params: IrWriter.Params,
+): DraftOperation {
+  const format = treeNodesFormat(site);
+  const responses = treeNodesResponses(site, format);
+  const owner = treeNodesOwner(site);
+  const concurrency = treeNodesConcurrency(site, input, params);
+  const paging = treeNodesPaging(site, responses, params.query);
+  const degradable = treeNodesDegradable(site, format, responses);
+
+  return {
+    responses,
+    ...(concurrency === undefined ? {} : { concurrency }),
+    ...(owner === undefined ? {} : { owner }),
+    ...(paging === undefined ? {} : { paging }),
+    ...(degradable === undefined ? {} : { degradable }),
+    format,
+    examples: treeNodesExamples(site, input, responses),
+  };
+}
+
+// The lifecycle members (ADR 0002 section 10), docs and extensions, on every operation, a relay route's too.
+function lifecycleOf(site: TreeNodesSite): DraftOperation {
+  const budgetMs = treeNodesBudgetMs(site);
+  const deprecated = treeNodesDeprecated(site);
+  const maturity = treeNodesStatedMaturity(site);
+
+  return {
+    ...(budgetMs === undefined ? {} : { budgetMs }),
+    ...(deprecated === undefined ? {} : { deprecated }),
+    upstream: treeNodesUpstream(site),
+    ...(maturity === undefined ? {} : { maturity }),
+    internal: treeNodesInternal(site),
+    tags: treeNodesTags(site),
+    ...(site.node.kind === "relay" ? { examples: {} } : {}),
+    docs: treeNodesDocs(site.node.settings),
+    extensions: treeNodesExtensions(site.node),
   };
 }
 

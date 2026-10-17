@@ -1,9 +1,11 @@
+import type { IrWriter } from "@seampact/spec/ir";
 import { expect, test } from "vitest";
 import {
   type DraftFixtureApi,
   draftFixtureHalves,
   draftFixtureSchemaService,
 } from "../../../pipeline/draft-fixture.js";
+import type { TreeSchemaService } from "../../../pipeline/seam.js";
 import type { JsonObject, JsonValue } from "../../../raw-tree.js";
 import {
   REFERENCE_CONTRACT,
@@ -28,15 +30,41 @@ const MEMBERS = [
   "unknownQuery",
   "input",
   "responses",
+  "concurrency",
+  "owner",
+  "paging",
+  "degradable",
+  "budgetMs",
+  "deprecated",
+  "upstream",
+  "maturity",
+  "internal",
+  "tags",
+  "examples",
   "format",
+  "docs",
+  "extensions",
   "origin",
 ] as const;
 
-// Members written later: a relay route's copied shape, and the batch ids input and table response.
+// Members written later: a relay route's copied shape.
 const LATER: Readonly<Record<string, readonly string[]>> = {
   "tasksService:getTask": ["method", "safe", "path", "params", "responses", "format"],
-  "tasks:getTasksBatch": ["input", "responses"],
 };
+
+// The fixture service has no row for the batch ids input, the schema tree.schemas hoists at the batch op entry.
+const BATCH_OP = "/surfaces/app/routes/channels/member/routes/tasks/ops/batch";
+const BATCH_INPUT: IrWriter.TypeUse = { kind: "ref", schema: "GetTasksBatchInput" };
+
+function withBatchInput(service: TreeSchemaService): TreeSchemaService {
+  return {
+    ...service,
+    typeUse: (pointer, direction) =>
+      pointer === BATCH_OP && direction === "input"
+        ? structuredClone(BATCH_INPUT)
+        : service.typeUse(pointer, direction),
+  };
+}
 
 // The api-wide members tree.nodes writes so far; `formats` and `pagings` come later.
 const API_MEMBERS = ["api", "conventions", "lint", "packs", "services"] as const;
@@ -109,7 +137,7 @@ test.each<DraftFixtureApi>(["tasks", "tasksService"])(
   "tree.nodes matches the after-tree fixture (%s)",
   (api) => {
     const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace, api), workspace, {
-      treeSchemas: draftFixtureSchemaService(api),
+      treeSchemas: withBatchInput(draftFixtureSchemaService(api)),
     });
 
     expect(diagnostics).toEqual([]);

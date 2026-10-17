@@ -3,6 +3,12 @@
 # right does not take or that do not fit; buckets a rule does not take, needs or does not declare; subjects of the
 # wrong schema; an equal requirement twice; pack entries a route cannot take.
 api: { name: shop, version: 1 }
+pagings:
+  cursor:
+    request: { cursor: { query: cursor }, limit: { query: limit } }
+    response: { body: $items }
+conventions:
+  paging: { default: cursor, maxLimit: 50 }
 packs: [./pack.yaml]
 
 schemes:

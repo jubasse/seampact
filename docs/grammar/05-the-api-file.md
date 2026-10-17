@@ -19,11 +19,11 @@ extends: ./base.yaml
 | Key | Meaning |
 |---|---|
 | `name` | the api name, unique in the workspace |
-| `version` | an integer, from which the path version derives (section 6); or a quoted string (`'2024-06-20'`, a date-versioned api) when every surface's path version is `none` |
+| `version` | an integer, from which the path version derives (section 6); or a quoted string (`'2024-06-20'`, a date-versioned api) when every surface's path version is `none`; a quoted version beside a surface with a path version is a compile error, and that surface's paths still carry the quoted text, so the checks after it name them |
 | `kind` | `product` (default: an api for end users and their clients) or `service` (an internal api with a caller identity, below) |
 | `role` | `gateway`: every route derives 502, 503 and 504 from the `upstreamUnavailable`, `serviceUnavailable` and `upstreamTimeout` roles (FR-34) |
 | `caller` | service apis only: `{ identity, right }`; see below |
-| `maturity` | `experimental`, `provisional` or `stable`; the default maturity of every operation |
+| `maturity` | `experimental`, `provisional` or `stable`; the default maturity of every operation, and of every service that states none; `experimental` when unset, so an api that states none promises the least |
 | `compat` | `{ policy: additive-only }` or `{ policy: none }`; gates releases and `maturity: stable` (FR-13, SCN-019, SCN-050) |
 | `documents` | the OpenAPI documents to emit; see below |
 | `summary`, `description` | docs; `description` may be a `$file` |

@@ -32,8 +32,13 @@ derive:
 `;
 
 const REFUSED_API = `api: { name: shop, version: 1 }
+pagings:
+  cursor:
+    request: { cursor: { query: cursor }, limit: { query: limit } }
+    response: { body: $items }
 packs: [./pack.yaml]
 conventions:
+  paging: { default: cursor, maxLimit: 50 }
   rights: { pattern: '^[a-z]+\\.[a-z]+$' }
 schemas:
   ItemId: { type: string }
@@ -75,8 +80,13 @@ derive:
 `;
 
 const EXTRA_API = `api: { name: shop, version: 1 }
+pagings:
+  cursor:
+    request: { cursor: { query: cursor }, limit: { query: limit } }
+    response: { body: $items }
 packs: [./pack.yaml]
 conventions:
+  paging: { default: cursor, maxLimit: 50 }
   rights: { pattern: '^[a-z]+\\.[a-z]+$' }
 schemes:
   bearer: { kind: bearer }

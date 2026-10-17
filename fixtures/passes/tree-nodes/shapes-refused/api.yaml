@@ -1,0 +1,86 @@
+# One refusal of each operation-shape check of tree.nodes (ADR 0002 sections 6, 10, 12 and 14): concurrency on a
+# caller-owned resource, an inherit with nothing to inherit, an item without the version field, an input declaring
+# the version; paging on a route that is no list, a list with no style, an undeclared style, a style parameter
+# named like a query field, sort keys without a sort role or naming no item property, a default limit above
+# maxLimit, a token on a style without since; degradable paths naming a required property or nothing, without a
+# degraded header; a budget too long, a deprecation without sunset or with an unknown successor, an undeclared
+# upstream service, an undeclared format, examples with no target or a value that does not fit.
+api: { name: shapes, version: 1, kind: product }
+
+conventions:
+  paging: { maxLimit: 50 }
+
+services:
+  catalog: { maturity: stable }
+
+pagings:
+  cursor:
+    request: { cursor: { query: cursor }, limit: { query: limit } }
+    response: { body: $items }
+  sorted:
+    request: { cursor: { query: cursor }, sort: { query: sort, style: signed } }
+    response: { body: $items }
+
+schemas:
+  Id: { type: string }
+  Note:
+    type: object
+    required: [noteId, text]
+    properties:
+      noteId: Id
+      text: { type: string }
+      extra: { type: string }
+  NewNote:
+    type: object
+    properties:
+      text: { type: string }
+      expectedVersion: { type: integer }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      drafts:
+        kind: collection
+        id: { noteId: Id }
+        item: Note
+        owner: caller
+        concurrency: { version: body.expectedVersion, field: text }
+        ops: { update: { input: NewNote } }
+      notes:
+        kind: collection
+        id: { noteId: Id }
+        item: Note
+        concurrency: { version: body.expectedVersion, field: revision }
+        ops: { list: { paging: { cursor: { token: instant } } } }
+        member:
+          routes:
+            pin: { method: post, concurrency: inherit }
+      tags:
+        kind: collection
+        id: { noteId: Id }
+        item: Note
+        ops: { list: { paging: sorted, sortable: [colour] }, get: { paging: cursor } }
+        member:
+          routes:
+            flag: { method: post, concurrency: inherit }
+      pages: { method: get, item: Note, paging: pages }
+      unpaged: { method: get, item: Note }
+      limited: { method: get, item: Note, paging: { cursor: { maxLimit: 10, defaultLimit: 20 } } }
+      searched: { method: get, item: Note, paging: none, sortable: [text] }
+      queried: { method: get, item: Note, paging: cursor, query: { cursor?: Id } }
+      partial:
+        method: get
+        output: Note
+        degradable: [text, missing]
+        budget: 99999999999999999999d
+        deprecated: { successor: gone }
+        upstream: [catalog, ledger]
+      wrapped:
+        method: get
+        output: Note
+        format: house
+        deprecated: { sunset: '2027-06-30', successor: unknownRoute }
+        examples:
+          bare: { value: {} }
+          wrong: { status: 200, value: { noteId: n1, text: invalid } }

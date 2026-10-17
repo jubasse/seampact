@@ -7,8 +7,20 @@ import {
   treeNodesFields,
   treeNodesFieldTravels,
 } from "./fields.js";
-import { treeNodesOpOwner, treeNodesOpShorthand } from "./names.js";
-import { type TreeNodesJson, treeNodesIsObject, treeNodesMember, treeNodesSetting } from "./raw.js";
+import {
+  TREE_NODES_BATCH_OP,
+  TREE_NODES_DELETE_OP,
+  TREE_NODES_LIST_OP,
+  treeNodesOpOwner,
+  treeNodesOpShorthand,
+} from "./names.js";
+import {
+  type TreeNodesJson,
+  treeNodesIsObject,
+  treeNodesMember,
+  treeNodesPointer,
+  treeNodesSetting,
+} from "./raw.js";
 
 // The success and redirect responses a route declares (ADR 0002 sections 6, 7 and 10), sorted by status: its
 // `responses`, else its `output` (the op's status, or 200), else its `item` (a list), else the op's default from the
@@ -20,15 +32,23 @@ const DEFAULT_STATUS = 200;
 const NO_CONTENT = 204;
 const REDIRECT_STATUSES: readonly number[] = [301, 302, 303, 307, 308];
 const DEFAULT_MEDIA = "application/json";
-const PAGING_NONE = "none";
+
+/** `paging: none`: a list served whole. */
+export const TREE_NODES_PAGING_NONE = "none";
 
 type Op = IrWriter.OpShorthand;
 
 // The ops whose default response is the owner's `item`.
 const ITEM_OPS: readonly Op[] = ["get", "create", "update"];
-const LIST_OP: Op = "list";
-const DELETE_OP: Op = "delete";
-const BATCH_OP: Op = "batch";
+
+// ADR 0006 section 5: a download and a redirect bypass the format.
+const BYPASSING_SHAPES: readonly IrWriter.ResponseShape[] = ["binary", "redirect"];
+const FORMAT_DERIVATION: IrWriter.DerivationId = "response.format";
+const BATCH_DERIVATION: IrWriter.DerivationId = "batch.read";
+
+// ADR 0004 section 6: the core `bare` format, where no layer declares one.
+const CORE_FORMAT = "bare";
+const CORE_FORMAT_ORIGIN: Origin = { layer: "core", pointer: "/formats/bare" };
 
 const RESPONSES_INSTEAD_OF: readonly string[] = ["output", "item"];
 
@@ -54,7 +74,10 @@ function mediaOf(site: TreeNodesSite, format: string): string {
   return typeof media === "string" ? media : DEFAULT_MEDIA;
 }
 
-/** The responses a route declares, sorted by status. */
+/**
+ * The responses a route declares, sorted by status. Each response but a download or a redirect records that its
+ * shape travels in the operation's format (`response.format`, ADR 0006 section 5), from the format's declaration.
+ */
 export function treeNodesResponses(site: TreeNodesSite, format: string): IrWriter.Response[] {
   const node = site.node;
   const media = mediaOf(site, format);
@@ -64,7 +87,59 @@ export function treeNodesResponses(site: TreeNodesSite, format: string): IrWrite
 
   for (const response of responses) checkNoContentBody(site, response);
 
-  return responses;
+  const formatOrigin = formatOriginOf(site, format);
+
+  if (formatOrigin === undefined) return responses;
+
+  return responses.map((response) =>
+    response.derivedFrom !== undefined || BYPASSING_SHAPES.includes(response.shape)
+      ? response
+      : {
+          ...response,
+          derivedFrom: { derivation: FORMAT_DERIVATION, from: [pipelineCopy(formatOrigin)] },
+        },
+  );
+}
+
+/** Whether a route is a list: the list op, or a route that sets `item` instead of `output` (ADR 0002 section 10). */
+export function treeNodesIsList(node: TreeNode): boolean {
+  const op = treeNodesOpShorthand(node);
+
+  if (op !== undefined) return op === TREE_NODES_LIST_OP;
+
+  return (
+    treeNodesSetting(node, "responses") === undefined &&
+    treeNodesSetting(node, "output") === undefined &&
+    treeNodesSetting(node, "item") !== undefined
+  );
+}
+
+// A declared format's origin, else the core `bare`'s; a format declared nowhere is refused where it is named.
+function formatOriginOf(site: TreeNodesSite, format: string): Origin | undefined {
+  const declared = site.context.origin(treeNodesPointer("/formats", format));
+
+  if (declared !== undefined) return declared;
+
+  if (format === CORE_FORMAT) return CORE_FORMAT_ORIGIN;
+
+  const named =
+    site.context.inherited(site.node, "format")?.entry.origin ??
+    site.context.conventions.get("format")?.origin;
+
+  if (named === undefined)
+    throw new Error(`the format ${format} of ${site.operationId} is named nowhere`);
+
+  site.once(
+    `format-unknown:${named.layer}#${named.pointer}`,
+    treeNodesError({
+      rule: "format-unknown",
+      origin: treeNodesNodeOrigin(named),
+      message: `The format ${format} of ${site.operationId} is not declared in formats.`,
+      fix: `Declare ${format} in formats (a format pack provides some), or name a declared format.`,
+    }),
+  );
+
+  return undefined;
 }
 
 function declaredResponses(
@@ -130,16 +205,14 @@ function checkNoContentBody(site: TreeNodesSite, response: IrWriter.Response): v
 // The `ops` table's default response: the op's own `item`, else the owner's, for list, get, create and update; no
 // body for delete.
 function opResponses(site: TreeNodesSite, op: Op, media: string): IrWriter.Response[] {
-  if (op === BATCH_OP) return [];
-
   const status = opStatus(site, op);
 
-  if (op === DELETE_OP) return [emptyResponse(status, site.node.origin)];
+  if (op === TREE_NODES_DELETE_OP) return [emptyResponse(status, site.node.origin)];
 
   const owner = treeNodesOpOwner(site.node);
-  const isList = op === LIST_OP;
+  const isList = op === TREE_NODES_LIST_OP;
 
-  if (owner === undefined || (!isList && !ITEM_OPS.includes(op)))
+  if (owner === undefined || (!isList && op !== TREE_NODES_BATCH_OP && !ITEM_OPS.includes(op)))
     throw new Error(`the op at ${site.node.pointer} has no owner or no default response`);
 
   const itemWriter = treeNodesSetting(site.node, "item") === undefined ? owner : site.node;
@@ -150,9 +223,34 @@ function opResponses(site: TreeNodesSite, op: Op, media: string): IrWriter.Respo
     return [];
   }
 
+  if (op === TREE_NODES_BATCH_OP) return batchTable(site, itemWriter, status, media);
+
   const shape = isList ? listShape(site.node) : "item";
 
   return bodyResponse(site, itemWriter, "item", status, shape, media);
+}
+
+// ADR 0002 section 6 and ADR 0006 section 5 (`batch.read`): the id-keyed table of the owner's items.
+function batchTable(
+  site: TreeNodesSite,
+  itemWriter: TreeNode,
+  status: number,
+  media: string,
+): IrWriter.Response[] {
+  const body = site.context.treeSchemas.typeUse(`${itemWriter.pointer}/item`, "output");
+
+  if (body === undefined) return [];
+
+  return [
+    {
+      status,
+      media,
+      body: pipelineCopy(body),
+      shape: "table",
+      headers: [],
+      derivedFrom: { derivation: BATCH_DERIVATION, from: [pipelineCopy(site.node.origin)] },
+    },
+  ];
 }
 
 function opStatus(site: TreeNodesSite, op: Op): number {
@@ -169,11 +267,11 @@ function outputStatus(site: TreeNodesSite, op: Op | undefined): number {
   if (op === undefined) return DEFAULT_STATUS;
   const status = opStatus(site, op);
 
-  return op === DELETE_OP && status === NO_CONTENT ? DEFAULT_STATUS : status;
+  return op === TREE_NODES_DELETE_OP && status === NO_CONTENT ? DEFAULT_STATUS : status;
 }
 
 const listShape = (node: TreeNode): IrWriter.ResponseShape =>
-  treeNodesSetting(node, "paging") === PAGING_NONE ? "list" : "page";
+  treeNodesSetting(node, "paging") === TREE_NODES_PAGING_NONE ? "list" : "page";
 
 function emptyResponse(status: number, origin: Origin): IrWriter.Response {
   return { status, shape: "empty", headers: [], origin: pipelineCopy(origin) };

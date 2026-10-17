@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 import { type DraftOperation, pipelineConventions } from "../../../pipeline/seam.js";
 import { treeNodesOperationNames } from "./names.js";
 import {
+  TREE_NODES_CURSOR_PAGING,
   TREE_NODES_FIXTURES,
   treeNodesApiOf,
   treeNodesLoadDirectory,
@@ -39,7 +40,7 @@ surfaces:
         singular: member
         item: Member
         ops:
-          list: {}
+          list: { paging: none }
           get: {}
           update: { input: UpdateMember }
           delete: { method: post, operationId: removeMember }
@@ -67,7 +68,7 @@ interface Row {
   path: string;
   safe: boolean;
   op?: string;
-  /** The status of the declared response; absent for the batch op, whose table response is derived. */
+  /** The status of the first response: the declared one, or the batch op's derived table. */
   status?: number;
 }
 
@@ -93,6 +94,7 @@ const DEFAULT_ROWS: Row[] = [
     path: `${MEMBERS}/batch`,
     safe: true,
     op: "batch",
+    status: 200,
   },
   {
     id: "searchMembers",
@@ -342,6 +344,7 @@ test("operation ids are unique", () => {
 // collection needs `id`, its path parameter.
 const SINGULARS = `
 api: { name: a, version: 1, kind: product }
+${TREE_NODES_CURSOR_PAGING}
 schemas:
   Event: { type: object, properties: { eventKey: { type: string } } }
   Log: { type: object, properties: { line: { type: string } } }

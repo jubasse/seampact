@@ -207,7 +207,8 @@ const SCHEMA_POSITION_KEYS = ["schema", "idSchema", "params"];
 
 // Every type use tree.nodes writes from a schema written on a route: declared params, inputs and response bodies.
 // Derived elements are not read through the service (a relay route copies them), and neither is a batch input,
-// which tree.schemas builds from `ops.batch` rather than from a written schema.
+// which tree.schemas builds from `ops.batch` rather than from a written schema. A declared response keeps its
+// written body beside its `response.format` record.
 function declaredRouteSchemaPositions(draft: DraftIR): string[] {
   return draft.operations.flatMap((operation, index) => {
     const base = `/operations/${index}`;
@@ -219,7 +220,8 @@ function declaredRouteSchemaPositions(draft: DraftIR): string[] {
     const input =
       operation.input !== undefined && operation.op !== "batch" ? [`${base}/input/schema`] : [];
     const bodies = (operation.responses ?? []).flatMap((response, position) =>
-      response.body !== undefined && response.derivedFrom === undefined
+      response.body !== undefined &&
+      (response.derivedFrom === undefined || response.derivedFrom.derivation === "response.format")
         ? [`${base}/responses/${position}/body`]
         : [],
     );

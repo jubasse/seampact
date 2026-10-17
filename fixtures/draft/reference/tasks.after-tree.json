@@ -1932,6 +1932,15 @@
             "origin": {
               "layer": "api",
               "pointer": "/surfaces/app/routes/health/output"
+            },
+            "derivedFrom": {
+              "derivation": "response.format",
+              "from": [
+                {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                }
+              ]
             }
           }
         ],
@@ -1984,6 +1993,15 @@
             "origin": {
               "layer": "api",
               "pointer": "/surfaces/app/routes/channels/item"
+            },
+            "derivedFrom": {
+              "derivation": "response.format",
+              "from": [
+                {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                }
+              ]
             }
           }
         ],
@@ -2063,6 +2081,15 @@
             "origin": {
               "layer": "api",
               "pointer": "/surfaces/app/routes/channels/item"
+            },
+            "derivedFrom": {
+              "derivation": "response.format",
+              "from": [
+                {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                }
+              ]
             }
           }
         ],
@@ -2130,6 +2157,15 @@
             "origin": {
               "layer": "api",
               "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item"
+            },
+            "derivedFrom": {
+              "derivation": "response.format",
+              "from": [
+                {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                }
+              ]
             }
           }
         ],
@@ -2234,6 +2270,15 @@
             "origin": {
               "layer": "api",
               "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item"
+            },
+            "derivedFrom": {
+              "derivation": "response.format",
+              "from": [
+                {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                }
+              ]
             }
           }
         ],
@@ -2394,6 +2439,15 @@
             "origin": {
               "layer": "api",
               "pointer": "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/output"
+            },
+            "derivedFrom": {
+              "derivation": "response.format",
+              "from": [
+                {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                }
+              ]
             }
           }
         ],
@@ -2495,6 +2549,15 @@
             "origin": {
               "layer": "api",
               "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item"
+            },
+            "derivedFrom": {
+              "derivation": "response.format",
+              "from": [
+                {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                }
+              ]
             }
           }
         ],
@@ -2588,6 +2651,15 @@
             "origin": {
               "layer": "api",
               "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item"
+            },
+            "derivedFrom": {
+              "derivation": "response.format",
+              "from": [
+                {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                }
+              ]
             }
           }
         ],
@@ -2687,6 +2759,15 @@
             "origin": {
               "layer": "api",
               "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/output"
+            },
+            "derivedFrom": {
+              "derivation": "response.format",
+              "from": [
+                {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                }
+              ]
             }
           }
         ],
@@ -2779,6 +2860,15 @@
             "origin": {
               "layer": "api",
               "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/output"
+            },
+            "derivedFrom": {
+              "derivation": "response.format",
+              "from": [
+                {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                }
+              ]
             }
           }
         ],
@@ -2862,10 +2952,20 @@
             "origin": {
               "layer": "api",
               "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/responses/204"
+            },
+            "derivedFrom": {
+              "derivation": "response.format",
+              "from": [
+                {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                }
+              ]
             }
           }
         ],
         "upstream": [],
+        "internal": false,
         "format": "bare",
         "tags": [],
         "examples": {},
@@ -2912,6 +3012,15 @@
             "origin": {
               "layer": "api",
               "pointer": "/surfaces/app/routes/me/routes/preferences/item"
+            },
+            "derivedFrom": {
+              "derivation": "response.format",
+              "from": [
+                {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                }
+              ]
             }
           }
         ],
@@ -2981,6 +3090,15 @@
             "origin": {
               "layer": "api",
               "pointer": "/surfaces/app/routes/me/routes/preferences/item"
+            },
+            "derivedFrom": {
+              "derivation": "response.format",
+              "from": [
+                {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                }
+              ]
             }
           }
         ],
@@ -3056,6 +3174,15 @@
             "origin": {
               "layer": "api",
               "pointer": "/surfaces/app/routes/me/routes/drafts/item"
+            },
+            "derivedFrom": {
+              "derivation": "response.format",
+              "from": [
+                {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                }
+              ]
             }
           }
         ],
@@ -3131,6 +3258,15 @@
             "origin": {
               "layer": "api",
               "pointer": "/surfaces/app/routes/me/routes/drafts/ops/delete/output"
+            },
+            "derivedFrom": {
+              "derivation": "response.format",
+              "from": [
+                {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                }
+              ]
             }
           }
         ],
@@ -3191,6 +3327,15 @@
             "origin": {
               "layer": "api",
               "pointer": "/surfaces/hooks/routes/payments/responses/204"
+            },
+            "derivedFrom": {
+              "derivation": "response.format",
+              "from": [
+                {
+                  "layer": "core",
+                  "pointer": "/formats/bare"
+                }
+              ]
             }
           }
         ],

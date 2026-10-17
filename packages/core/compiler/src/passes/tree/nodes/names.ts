@@ -84,6 +84,10 @@ function singularWords(collection: TreeNode, schemas: TreeNodesRawSchemas): stri
   return splitName(stem);
 }
 
+export const TREE_NODES_LIST_OP: IrWriter.OpShorthand = "list";
+export const TREE_NODES_DELETE_OP: IrWriter.OpShorthand = "delete";
+export const TREE_NODES_BATCH_OP: IrWriter.OpShorthand = "batch";
+
 const OP_SHORTHANDS: readonly IrWriter.OpShorthand[] = [
   "list",
   "get",

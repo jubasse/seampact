@@ -36,7 +36,28 @@ export type TreeNodesRule =
   | "redirect-body"
   | "responses-output"
   | "no-content-body"
-  | "annotation-position";
+  | "annotation-position"
+  | "owner-concurrency"
+  | "concurrency-inherit"
+  | "concurrency-input"
+  | "paging-list"
+  | "paging-style"
+  | "paging-unknown"
+  | "paging-param"
+  | "paging-sort"
+  | "paging-limit"
+  | "paging-token"
+  | "sort-key"
+  | "degradable-path"
+  | "degradable-header"
+  | "budget-duration"
+  | "deprecated-sunset"
+  | "deprecated-successor"
+  | "upstream-service"
+  | "internal-product"
+  | "format-unknown"
+  | "example-target"
+  | "example-value";
 
 export const treeNodesRuleId = (rule: TreeNodesRule): string => `seampact/tree/${rule}`;
 

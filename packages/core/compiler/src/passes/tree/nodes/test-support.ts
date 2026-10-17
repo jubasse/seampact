@@ -24,6 +24,19 @@ export const TREE_NODES_FIXTURES = `${FIXTURES}passes/tree-nodes/`;
 /** The directory of the reference contract. */
 export const REFERENCE_CONTRACT = `${FIXTURES}reference/`;
 
+/**
+ * A cursor paging style and the conventions naming it, for an inline contract whose lists are not what its test
+ * checks: every list names a style or `paging: none` (ADR 0002 section 10).
+ */
+export const TREE_NODES_CURSOR_PAGING = `
+pagings:
+  cursor:
+    request: { cursor: { query: cursor }, limit: { query: limit } }
+    response: { body: $items }
+conventions:
+  paging: { default: cursor, maxLimit: 50 }
+`;
+
 /** A workspace loaded from a directory, its entry `api.yaml` unless named; load diagnostics throw. */
 export function treeNodesLoadDirectory(directory: string, entry = "api.yaml"): RawWorkspace {
   const loaded = loadWorkspace({ reader: loadFsReader(directory), entry });
@@ -120,7 +133,10 @@ export interface TreeNodesStubRows {
   readonly queryWires?: Readonly<Record<string, IrWriter.QueryWire>>;
 }
 
-/** A schema service answering the listed pointers in either direction, and no example issue. */
+/** An example value holding this string anywhere fails `checkExample` of the stub service, at that place. */
+export const TREE_NODES_INVALID_EXAMPLE = "invalid";
+
+/** A schema service answering the listed pointers in either direction; an example fails where it holds the marker. */
 export function treeNodesStubService(rows: TreeNodesStubRows): TreeSchemaService {
   const typeUses = rows.typeUses ?? {};
   const queryWires = rows.queryWires ?? {};
@@ -130,8 +146,17 @@ export function treeNodesStubService(rows: TreeNodesStubRows): TreeSchemaService
       Object.hasOwn(typeUses, pointer) ? structuredClone(typeUses[pointer]) : undefined,
     queryWire: (pointer) =>
       Object.hasOwn(queryWires, pointer) ? structuredClone(queryWires[pointer]) : undefined,
-    checkExample: () => [],
+    checkExample: (value) =>
+      markersIn(value, "").map((pointer) => ({ pointer, message: "the value is invalid" })),
   };
+}
+
+function markersIn(value: unknown, pointer: string): string[] {
+  if (value === TREE_NODES_INVALID_EXAMPLE) return [pointer];
+
+  if (typeof value !== "object" || value === null) return [];
+
+  return Object.entries(value).flatMap(([key, member]) => markersIn(member, `${pointer}/${key}`));
 }
 
 export interface TreeNodesRunOptions {
