@@ -139,4 +139,20 @@ class ModelRoundTripTest {
         assertFailsWith<SerializationException> { IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": 404.5}""") }
         assertFailsWith<SerializationException> { IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": "404"}""") }
     }
+
+    @Test
+    fun integersStayInTheSafeRange() {
+        val largest = IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": 9007199254740991}""")
+        val smallest = IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": -9007199254740991}""")
+
+        assertEquals(9_007_199_254_740_991L, largest.status)
+        assertEquals(-9_007_199_254_740_991L, smallest.status)
+        for (outside in listOf("9007199254740992", "-9007199254740992", "9007199254740992.0", "9223372036854775807")) {
+            val error = assertFailsWith<SerializationException>(outside) {
+                IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": $outside}""")
+            }
+
+            assertEquals("expected an integer from -(2^53 - 1) to 2^53 - 1, got $outside", error.message)
+        }
+    }
 }

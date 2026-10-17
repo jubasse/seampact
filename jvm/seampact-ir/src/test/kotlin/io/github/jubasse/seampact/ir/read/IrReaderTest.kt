@@ -178,17 +178,18 @@ class IrReaderTest {
 
     @Test
     fun refusesOtherRevision() {
-        val otherRevision = JsonPrimitive(IrModelVersion.IR_REVISION + 6)
-        val document = replaceAt(example("minimal.ir.json"), "irRevision", value = otherRevision)
+        val revision = IrModelVersion.IR_REVISION.toString()
+        val otherRevision = (IrModelVersion.IR_REVISION + 6).toString()
+        val document = replaceAt(example("minimal.ir.json"), "irRevision", value = JsonPrimitive(otherRevision.toLong()))
 
         val refusal = refusals(document).single()
 
         assertEquals(IrRefusalCode.REVISION_MISMATCH, refusal.code)
         assertEquals("/irRevision", refusal.member)
-        assertEquals("8", refusal.value)
-        assertEquals(listOf("2"), refusal.expected)
+        assertEquals(otherRevision, refusal.value)
+        assertEquals(listOf(revision), refusal.expected)
         assertTrue("io.github.jubasse:seampact-ir" in refusal.message, refusal.message)
-        assertTrue("(2)" in refusal.message && "irRevision 8" in refusal.message, refusal.message)
+        assertTrue("($revision)" in refusal.message && "irRevision $otherRevision" in refusal.message, refusal.message)
     }
 
     @Test

@@ -1,6 +1,6 @@
 <?php
 
-// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 2. Do not edit.
+// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 3. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 
 declare(strict_types=1);
@@ -11,5 +11,5 @@ namespace Seampact\Ir\Model;
 final class IrModelVersion
 {
     public const IR_VERSION = 1;
-    public const IR_REVISION = 2;
+    public const IR_REVISION = 3;
 }

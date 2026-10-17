@@ -192,10 +192,14 @@ public val IrJson: Json = Json { ignoreUnknownKeys = true }
 /** The longest number literal the IR reads: no IR integer, version or revision is written longer. */
 internal const val IR_NUMBER_LITERAL_MAX_LENGTH = 64
 
+/** The largest IR integer, 2^53 - 1: IR integers are in the safe range of I-JSON (RFC 7493). */
+internal const val IR_INTEGER_MAX: Long = ${Number.MAX_SAFE_INTEGER}L
+
 /**
- * An IR integer as a \`Long\`. An integral number written with a fraction (\`2.0\`), which JSON Schema counts as
- * an integer, reads as that integer; any other value is an error naming it: a literal as written, a longer
- * literal by its length, a string, array or object by its JSON type, never its content.
+ * An IR integer as a \`Long\`, from -(2^53 - 1) to 2^53 - 1. An integral number written with a fraction
+ * (\`2.0\`), which JSON Schema counts as an integer, reads as that integer; any other value is an error naming
+ * it: a literal as written, a longer literal by its length, a string, array or object by its JSON type, never
+ * its content.
  */
 internal object IrIntegerSerializer : KSerializer<Long> {
     override val descriptor: SerialDescriptor =
@@ -210,11 +214,16 @@ internal object IrIntegerSerializer : KSerializer<Long> {
         }
 
         val number = literal.toBigDecimalOrNull() ?: throw SerializationException("expected an integer, got $literal")
-        try {
-            return number.longValueExact()
+        val integer = try {
+            number.longValueExact()
         } catch (error: ArithmeticException) {
-            throw SerializationException("expected an integer within 64 bits, got $literal", error)
+            throw SerializationException("expected an integer from -(2^53 - 1) to 2^53 - 1, got $literal", error)
         }
+        if (integer < -IR_INTEGER_MAX || integer > IR_INTEGER_MAX) {
+            throw SerializationException("expected an integer from -(2^53 - 1) to 2^53 - 1, got $literal")
+        }
+
+        return integer
     }
 
     override fun serialize(encoder: Encoder, value: Long) {

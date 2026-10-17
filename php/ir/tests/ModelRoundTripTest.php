@@ -153,6 +153,21 @@ final class ModelRoundTripTest extends TestCase
         }
     }
 
+    public function testIntegersStayInTheSafeRange(): void
+    {
+        self::assertSame(9007199254740991, ErrorHttp::fromJson(json_decode('{"status": 9007199254740991}', false))->status);
+        self::assertSame(-9007199254740991, ErrorHttp::fromJson(json_decode('{"status": -9007199254740991}', false))->status);
+
+        foreach (['9007199254740992', '-9007199254740992', '9007199254740992.0', '9223372036854775807'] as $outside) {
+            try {
+                ErrorHttp::fromJson(json_decode('{"status": ' . $outside . '}', false));
+                self::fail($outside);
+            } catch (IrModelException $error) {
+                self::assertSame('ErrorHttp.status: expected an integer from -(2^53 - 1) to 2^53 - 1', $error->getMessage(), $outside);
+            }
+        }
+    }
+
     public function testAMemberOfTheWrongTypeNamesTheMember(): void
     {
         $this->expectExceptionMessage('ErrorHttp.status: expected an integer, got the JSON type object');

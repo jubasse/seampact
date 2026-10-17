@@ -158,11 +158,11 @@ final class IrReaderTest extends TestCase
         self::assertCount(1, $refusals);
         self::assertSame(IrRefusalCode::RevisionMismatch, $refusals[0]->code);
         self::assertSame('/irRevision', $refusals[0]->member);
-        self::assertSame('8', $refusals[0]->value);
-        self::assertSame(['2'], $refusals[0]->expected);
+        self::assertSame((string) $otherRevision, $refusals[0]->value);
+        self::assertSame([(string) IrModelVersion::IR_REVISION], $refusals[0]->expected);
         self::assertStringContainsString('seampact/ir', $refusals[0]->message);
-        self::assertStringContainsString('(2)', $refusals[0]->message);
-        self::assertStringContainsString('irRevision 8', $refusals[0]->message);
+        self::assertStringContainsString('(' . IrModelVersion::IR_REVISION . ')', $refusals[0]->message);
+        self::assertStringContainsString('irRevision ' . $otherRevision, $refusals[0]->message);
     }
 
     public function testRefusesOtherVersion(): void

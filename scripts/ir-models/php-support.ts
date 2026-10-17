@@ -105,7 +105,8 @@ const HYDRATION = String.raw`/**
  */
 final class IrHydration
 {
-    private const MAX_EXACT_FLOAT_INTEGER = 9007199254740992.0;
+    /** The largest IR integer, 2^53 - 1: IR integers are in the safe range of I-JSON (RFC 7493). */
+    private const MAX_SAFE_INTEGER = 9007199254740991;
 
     public static function jsonType(mixed $value): string
     {
@@ -166,17 +167,14 @@ final class IrHydration
         throw new IrModelException(sprintf('%s: expected a boolean, got the JSON type %s', $at, self::jsonType($value)));
     }
 
-    /** An IR integer: a JSON integer, or a number written with a fraction of zero ('2.0') within 2^53. */
+    /** An IR integer from -(2^53 - 1) to 2^53 - 1: a JSON integer, or a number written with a fraction of zero ('2.0'). */
     public static function integer(mixed $value, string $at): int
     {
-        if (is_int($value)) {
-            return $value;
-        }
-        if (!is_float($value)) {
+        if (!is_int($value) && !is_float($value)) {
             throw new IrModelException(sprintf('%s: expected an integer, got the JSON type %s', $at, self::jsonType($value)));
         }
-        if (floor($value) !== $value || abs($value) > self::MAX_EXACT_FLOAT_INTEGER) {
-            throw new IrModelException(sprintf('%s: expected an integer within 2^53', $at));
+        if ((is_float($value) && floor($value) !== $value) || abs($value) > self::MAX_SAFE_INTEGER) {
+            throw new IrModelException(sprintf('%s: expected an integer from -(2^53 - 1) to 2^53 - 1', $at));
         }
 
         return (int) $value;

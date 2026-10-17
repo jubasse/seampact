@@ -1,6 +1,6 @@
 <?php
 
-// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 2. Do not edit.
+// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 3. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 
 declare(strict_types=1);
@@ -17,11 +17,15 @@ final readonly class FileTypeUse extends TypeUse
      * @param list<string> $media
      * @param int|null $maxSizeBytes
      * @param bool|null $nullable The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable).
+     * @param Docs|null $docs The docs written on a nested position: the items of an array use, the keys or values of a map schema, the schema of a JSON content. Any other type use leaves them out, since its holder keeps them, and an inline object, map or union keeps them on its hoisted schema (invariant ir.type-use.annotations).
+     * @param list<mixed>|null $examples The examples written on a nested position, placed as docs are (invariant ir.type-use.annotations).
      */
     public function __construct(
         public array $media,
         public ?int $maxSizeBytes = null,
         public ?bool $nullable = null,
+        public ?Docs $docs = null,
+        public ?array $examples = null,
     ) {
         $this->kind = 'file';
     }
@@ -35,6 +39,8 @@ final readonly class FileTypeUse extends TypeUse
             media: IrHydration::listOf(IrHydration::required($members, 'media', 'FileTypeUse'), 'FileTypeUse.media', static fn (mixed $item): string => IrHydration::string($item, 'FileTypeUse.media[]')),
             maxSizeBytes: IrHydration::optional($members, 'maxSizeBytes', static fn (mixed $item): int => IrHydration::integer($item, 'FileTypeUse.maxSizeBytes')),
             nullable: IrHydration::optional($members, 'nullable', static fn (mixed $item): bool => IrHydration::boolean($item, 'FileTypeUse.nullable')),
+            docs: IrHydration::optional($members, 'docs', static fn (mixed $item): Docs => Docs::fromJson($item)),
+            examples: IrHydration::optional($members, 'examples', static fn (mixed $item): array => IrHydration::listOf($item, 'FileTypeUse.examples', static fn (mixed $item): mixed => IrHydration::copy($item))),
         );
     }
 
@@ -48,6 +54,12 @@ final readonly class FileTypeUse extends TypeUse
         }
         if ($this->nullable !== null) {
             $json->{'nullable'} = $this->nullable;
+        }
+        if ($this->docs !== null) {
+            $json->{'docs'} = $this->docs->toJson();
+        }
+        if ($this->examples !== null) {
+            $json->{'examples'} = IrHydration::encodeList($this->examples, static fn (mixed $item): mixed => IrHydration::copy($item));
         }
         return $json;
     }

@@ -1,6 +1,6 @@
 <?php
 
-// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 2. Do not edit.
+// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 3. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 
 declare(strict_types=1);
@@ -18,6 +18,7 @@ final readonly class Response
      * @param TypeUse|null $body
      * @param Origin|null $origin
      * @param DerivedFrom|null $derivedFrom
+     * @param Docs|null $docs The docs written on the response.
      */
     public function __construct(
         public int $status,
@@ -27,6 +28,7 @@ final readonly class Response
         public ?TypeUse $body = null,
         public ?Origin $origin = null,
         public ?DerivedFrom $derivedFrom = null,
+        public ?Docs $docs = null,
     ) {
     }
 
@@ -42,6 +44,7 @@ final readonly class Response
             body: IrHydration::optional($members, 'body', static fn (mixed $item): TypeUse => TypeUse::fromJson($item)),
             origin: IrHydration::optional($members, 'origin', static fn (mixed $item): Origin => Origin::fromJson($item)),
             derivedFrom: IrHydration::optional($members, 'derivedFrom', static fn (mixed $item): DerivedFrom => DerivedFrom::fromJson($item)),
+            docs: IrHydration::optional($members, 'docs', static fn (mixed $item): Docs => Docs::fromJson($item)),
         );
     }
 
@@ -62,6 +65,9 @@ final readonly class Response
         }
         if ($this->derivedFrom !== null) {
             $json->{'derivedFrom'} = $this->derivedFrom->toJson();
+        }
+        if ($this->docs !== null) {
+            $json->{'docs'} = $this->docs->toJson();
         }
         return $json;
     }

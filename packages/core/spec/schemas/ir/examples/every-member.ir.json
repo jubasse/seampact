@@ -1,6 +1,6 @@
 {
   "irVersion": 1,
-  "irRevision": 2,
+  "irRevision": 3,
   "kinds": ["httpOperation"],
   "features": [],
   "api": {
@@ -292,9 +292,15 @@
               "refinements": {},
               "content": {
                 "media": "application/json",
-                "schema": { "kind": "ref", "schema": "Notice" }
+                "schema": {
+                  "kind": "ref",
+                  "schema": "Notice",
+                  "docs": { "summary": "The notice." }
+                }
               },
-              "nullable": true
+              "nullable": true,
+              "docs": { "description": "One tag, a notice as JSON text." },
+              "examples": ["{\"kind\":\"done\"}"]
             },
             "minItems": 0,
             "maxItems": 10
@@ -305,7 +311,8 @@
           "deprecated": false,
           "docs": {},
           "extensions": {},
-          "origin": { "layer": "api", "pointer": "/schemas/Task/properties/tags" }
+          "origin": { "layer": "api", "pointer": "/schemas/Task/properties/tags" },
+          "examples": [["{\"kind\":\"done\"}"]]
         },
         {
           "name": "notice",
@@ -341,8 +348,16 @@
       "docs": {},
       "extensions": {},
       "origin": { "layer": "shared", "pointer": "/schemas/Labels" },
-      "keys": { "kind": "scalar", "type": "string", "refinements": {} },
-      "values": { "kind": "scalar", "type": "string", "refinements": {}, "nullable": true }
+      "deprecated": true,
+      "keys": { "kind": "scalar", "type": "string", "refinements": {}, "examples": ["team"] },
+      "values": {
+        "kind": "scalar",
+        "type": "string",
+        "refinements": {},
+        "nullable": true,
+        "docs": { "summary": "A label." },
+        "examples": ["core"]
+      }
     },
     "Notice": {
       "kind": "union",
@@ -354,7 +369,9 @@
       "extensions": {},
       "origin": { "layer": "shared", "pointer": "/schemas/Notice" },
       "tag": { "in": "body", "property": "kind" },
-      "variants": [{ "tag": "done", "schema": "Task" }]
+      "variants": [
+        { "tag": "done", "schema": "Task", "docs": { "description": "A finished task." } }
+      ]
     },
     "GithubEvent": {
       "kind": "union",
@@ -952,6 +969,7 @@
           "media": "application/json",
           "body": { "kind": "ref", "schema": "Task" },
           "shape": "item",
+          "docs": { "description": "The task." },
           "headers": [
             {
               "name": "ETag",

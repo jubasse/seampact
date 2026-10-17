@@ -167,7 +167,7 @@
         "algorithm": { "type": "string" },
         "payload": { "type": "string" },
         "encoding": { "$ref": "#/$defs/SignatureEncoding" },
-        "toleranceMs": { "type": "integer", "minimum": 0 },
+        "toleranceMs": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "key": { "$ref": "#/$defs/SchemeKey" }
       }
     },
@@ -506,8 +506,8 @@
       "properties": {
         "id": { "$ref": "common.schema.json#/$defs/BucketId" },
         "key": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/ValueSource" } },
-        "limit": { "type": "integer", "minimum": 0 },
-        "windowMs": { "type": "integer", "minimum": 0 },
+        "limit": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "windowMs": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
     },

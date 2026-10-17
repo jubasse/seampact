@@ -1,6 +1,6 @@
 <?php
 
-// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 2. Do not edit.
+// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 3. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 
 declare(strict_types=1);
@@ -25,6 +25,7 @@ final readonly class MapSchema extends Schema
      * @param Origin $origin
      * @param TypeUse|null $keys
      * @param string|null $typeName
+     * @param bool|null $deprecated The schema is deprecated (ADR 0003 section 1); absent means false.
      */
     public function __construct(
         public TypeUse $values,
@@ -37,6 +38,7 @@ final readonly class MapSchema extends Schema
         public Origin $origin,
         public ?TypeUse $keys = null,
         public ?string $typeName = null,
+        public ?bool $deprecated = null,
     ) {
         $this->kind = 'map';
         $this->extensions = IrHydration::copyObject($extensions);
@@ -63,6 +65,7 @@ final readonly class MapSchema extends Schema
             origin: Origin::fromJson(IrHydration::required($members, 'origin', 'MapSchema')),
             keys: IrHydration::optional($members, 'keys', static fn (mixed $item): TypeUse => TypeUse::fromJson($item)),
             typeName: IrHydration::optional($members, 'typeName', static fn (mixed $item): string => IrHydration::string($item, 'MapSchema.typeName')),
+            deprecated: IrHydration::optional($members, 'deprecated', static fn (mixed $item): bool => IrHydration::boolean($item, 'MapSchema.deprecated')),
         );
     }
 
@@ -84,6 +87,9 @@ final readonly class MapSchema extends Schema
         $json->{'docs'} = $this->docs->toJson();
         $json->{'extensions'} = IrHydration::copy($this->extensions);
         $json->{'origin'} = $this->origin->toJson();
+        if ($this->deprecated !== null) {
+            $json->{'deprecated'} = $this->deprecated;
+        }
         return $json;
     }
 
