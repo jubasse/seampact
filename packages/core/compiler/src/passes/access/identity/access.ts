@@ -143,7 +143,9 @@ function identitySource(
   if (scope.caller === undefined) return undefined;
   const origin = scope.context.origin(SERVICE_CALLER_POINTER);
   if (origin === undefined)
-    throw new Error(`the service api has a caller identity, yet nothing at ${SERVICE_CALLER_POINTER}`);
+    throw new Error(
+      `the service api has a caller identity, yet nothing at ${SERVICE_CALLER_POINTER}`,
+    );
   return { name: scope.caller, pointer: SERVICE_CALLER_POINTER, origin };
 }
 
@@ -201,7 +203,12 @@ function writtenAccess(
 
   const onRefused: IrWriter.RefusedCredential =
     accessIdentityString(written, "onRefused") === "reject" ? "reject" : "anonymous";
-  return optionalAccess(route, { reason: optionalReason ?? "", onRefused, origin, pointer }, source, scope);
+  return optionalAccess(
+    route,
+    { reason: optionalReason ?? "", onRefused, origin, pointer },
+    source,
+    scope,
+  );
 }
 
 interface OptionalWritten {

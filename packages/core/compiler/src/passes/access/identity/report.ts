@@ -94,7 +94,9 @@ export function accessIdentityReporter(context: PassContext): AccessIdentityRepo
  * that does not name the route would repeat. `errors` counts every problem, repeated or not, so a builder still
  * knows its element had one.
  */
-export function accessIdentityOnceReporter(reporter: AccessIdentityReporter): AccessIdentityReporter {
+export function accessIdentityOnceReporter(
+  reporter: AccessIdentityReporter,
+): AccessIdentityReporter {
   const reported = new Set<string>();
   let errors = 0;
 

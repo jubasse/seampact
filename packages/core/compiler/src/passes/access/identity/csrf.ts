@@ -26,7 +26,8 @@ export function accessIdentityCsrf(
     const reason = accessIdentityIsObject(exempt.value)
       ? accessIdentityString(exempt.value, "exempt")
       : undefined;
-    if (reason === undefined) throw new Error(`the csrf set at ${exempt.node.pointer} has no exempt reason`);
+    if (reason === undefined)
+      throw new Error(`the csrf set at ${exempt.node.pointer} has no exempt reason`);
     return { kind: "exempt", reason, origin: pipelineCopy(exempt.origin) };
   }
 
@@ -43,7 +44,9 @@ function derivedCsrf(
 ): IrWriter.KnownCsrf | undefined {
   const cookies = schemes
     .map((id) => scope.built.schemes.get(id))
-    .filter((scheme): scheme is CookieScheme => scheme?.kind === "cookie" && scheme.csrf !== undefined);
+    .filter(
+      (scheme): scheme is CookieScheme => scheme?.kind === "cookie" && scheme.csrf !== undefined,
+    );
   if (cookies.length === 0) return undefined;
 
   // A csrf header scheme left out of the catalogue for an error of its own is already reported.
@@ -76,7 +79,10 @@ function derivedCsrf(
     header: name,
     derivedFrom: {
       derivation: CSRF_DERIVATION,
-      from: [pipelineCopy(identity.origin), ...cookies.map((cookie) => pipelineCopy(cookie.origin))],
+      from: [
+        pipelineCopy(identity.origin),
+        ...cookies.map((cookie) => pipelineCopy(cookie.origin)),
+      ],
     },
   };
 }

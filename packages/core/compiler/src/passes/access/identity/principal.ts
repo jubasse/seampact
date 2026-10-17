@@ -138,7 +138,8 @@ export function accessIdentityPrincipalField(
   field: string,
 ): AccessIdentityFieldLookup {
   const segments = field.split(".");
-  if (principal.kind === "schema") return accessIdentitySchemaField(schemas, principal.schema, segments);
+  if (principal.kind === "schema")
+    return accessIdentitySchemaField(schemas, principal.schema, segments);
 
   for (const id of Object.values(principal.variants)) {
     const lookup = accessIdentitySchemaField(schemas, id, segments);

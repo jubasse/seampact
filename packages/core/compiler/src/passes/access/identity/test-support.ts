@@ -13,6 +13,7 @@ import {
 } from "../../../pipeline/seam.js";
 import type { RawApi, RawWorkspace } from "../../../raw-tree.js";
 import { validateWorkspace } from "../../../validate/index.js";
+import { treeNodesPass } from "../../tree/nodes/pass.js";
 import { accessIdentityPass } from "./pass.js";
 
 // Test support of the access.identity half, outside every barrel: the half run guarded (ADR 0006 section 2) on a
@@ -73,16 +74,20 @@ export function accessIdentityFixtureJson(name: string, file: string): unknown {
   return JSON.parse(readFileSync(`${ACCESS_IDENTITY_FIXTURES}${name}/${file}`, "utf8"));
 }
 
-/** A schema service answering the rows' positions (a copy each time) and nothing else. */
+/** A schema service answering the rows' positions and the query wires by field pointer (a copy each time). */
 export function accessIdentityTableService(
   rows: readonly AccessIdentitySchemaUseRow[],
+  queryWires: Readonly<Record<string, IrWriter.QueryWire>> = {},
 ): TreeSchemaService {
   return {
     typeUse: (pointer, direction) => {
       const found = rows.find((row) => row.pointer === pointer && row.direction === direction);
       return found === undefined ? undefined : structuredClone(found.use);
     },
-    queryWire: () => undefined,
+    queryWire: (pointer) => {
+      const wire = Object.hasOwn(queryWires, pointer) ? queryWires[pointer] : undefined;
+      return wire === undefined ? undefined : structuredClone(wire);
+    },
     checkExample: () => [],
   };
 }
@@ -149,6 +154,30 @@ export function accessIdentityRun(
     guard.dispose();
   }
   return { draft, diagnostics };
+}
+
+/**
+ * Runs tree.nodes, then `prepare` (which stands in for the members a later lane of tree.nodes writes, such as
+ * params), then the half guarded, all on `draft` with the same schema service.
+ */
+export function accessIdentityRoutesRun(
+  contract: AccessIdentityContract,
+  draft: DraftIR,
+  treeSchemas: TreeSchemaService,
+  prepare: (draft: DraftIR) => void = () => {},
+): AccessIdentityRun {
+  const treeDiagnostics: Diagnostic[] = [];
+  const context = pipelineContext({
+    raw: contract.raw,
+    workspace: contract.workspace,
+    report: (diagnostic) => treeDiagnostics.push(diagnostic),
+  });
+  treeNodesPass.run(draft, Object.freeze({ ...context, treeSchemas }));
+  if (treeDiagnostics.length > 0)
+    throw new Error(`tree.nodes refused the test contract: ${JSON.stringify(treeDiagnostics)}`);
+
+  prepare(draft);
+  return accessIdentityRun(contract, draft, treeSchemas);
 }
 
 const STRING_USE: IrWriter.TypeUse = { kind: "scalar", type: "string", refinements: {} };

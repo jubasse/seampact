@@ -62,7 +62,9 @@ export function accessIdentityCheckSignatureKey(
   const source = key.from;
   const name = source.name;
   if (name === undefined || !isParameterLocation(source.in))
-    throw new Error(`signature scheme '${scheme.id}' reads its key from an unnamed or ${source.in} source`);
+    throw new Error(
+      `signature scheme '${scheme.id}' reads its key from an unnamed or ${source.in} source`,
+    );
   if (accessIdentityRouteHasParameter(route.operation, source.in, name)) return;
   scope.reporter.error({
     rule: "signature-key-source",
@@ -70,7 +72,10 @@ export function accessIdentityCheckSignatureKey(
     fix: "Declare the parameter on the route (a path placeholder, a query field or a request header), or read the key from a source every route of the identity has.",
     pointer: route.node.pointer,
     related: [
-      { pointer: accessIdentityPointer("", "schemes", scheme.id, "key", "from"), message: "the key source" },
+      {
+        pointer: accessIdentityPointer("", "schemes", scheme.id, "key", "from"),
+        message: "the key source",
+      },
     ],
   });
 }
@@ -97,7 +102,10 @@ export function accessIdentityCheckQuerySchemes(
       fix: "Rename the query field or the scheme's parameter: a query scheme's parameter is never a declared query field.",
       pointer: route.node.pointer,
       related: [
-        { pointer: accessIdentityPointer("", "schemes", id, "name"), message: "the scheme's parameter" },
+        {
+          pointer: accessIdentityPointer("", "schemes", id, "name"),
+          message: "the scheme's parameter",
+        },
       ],
     });
   }

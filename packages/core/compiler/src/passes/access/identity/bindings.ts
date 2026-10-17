@@ -84,8 +84,11 @@ const bySource = (left: IrWriter.Binding, right: IrWriter.Binding): number => {
 // The pointer of a written requirement: the first item naming the field on the node that set it.
 function requirementPointer(entry: InheritedEntry, field: string): string {
   const principal = accessIdentityObject(entry.node.settings, "principal");
-  const index = (principal === undefined ? [] : (accessIdentityStrings(principal, "requires") ?? [])).indexOf(field);
-  if (index < 0) throw new Error(`the principal requirement '${field}' is not written at ${entry.node.pointer}`);
+  const index = (
+    principal === undefined ? [] : (accessIdentityStrings(principal, "requires") ?? [])
+  ).indexOf(field);
+  if (index < 0)
+    throw new Error(`the principal requirement '${field}' is not written at ${entry.node.pointer}`);
   return accessIdentityPointer(entry.node.pointer, "principal", "requires", `${index}`);
 }
 
@@ -133,7 +136,10 @@ function reportConflict(
     fix: "Bind each request value to one principal field: remove one of the two bindings.",
     pointer,
     related: [
-      { pointer: accessIdentityPointer(first.node.pointer, "bindings", key), message: "the first binding" },
+      {
+        pointer: accessIdentityPointer(first.node.pointer, "bindings", key),
+        message: "the first binding",
+      },
     ],
   });
 }
@@ -166,8 +172,14 @@ function bindingSourceFound(
   return false;
 }
 
-function bodyHasField(route: AccessIdentityRoute, field: string, scope: AccessIdentityScope): boolean {
+function bodyHasField(
+  route: AccessIdentityRoute,
+  field: string,
+  scope: AccessIdentityScope,
+): boolean {
   const schema = route.operation.input?.schema;
   if (schema?.kind !== "ref") return false;
-  return accessIdentitySchemaField(scope.schemas, schema.schema, field.split(".")).status === "held";
+  return (
+    accessIdentitySchemaField(scope.schemas, schema.schema, field.split(".")).status === "held"
+  );
 }

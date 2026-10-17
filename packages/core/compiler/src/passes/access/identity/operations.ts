@@ -81,13 +81,17 @@ function writeOperation(route: AccessIdentityRoute, scope: AccessIdentityScope):
   writeInputFacts(operation, resolved.identity);
 }
 
-function writeInputFacts(operation: DraftOperation, identity: IrWriter.KnownIdentity | undefined): void {
+function writeInputFacts(
+  operation: DraftOperation,
+  identity: IrWriter.KnownIdentity | undefined,
+): void {
   const facts = accessIdentityInputFacts(operation, identity);
   const input = operation.input;
   if (facts === undefined || input === undefined) return;
 
   input.rawBody = facts.rawBody;
-  if (facts.unknownKeys !== undefined && input.schema.kind === "ref") input.schema.unknownKeys = facts.unknownKeys;
+  if (facts.unknownKeys !== undefined && input.schema.kind === "ref")
+    input.schema.unknownKeys = facts.unknownKeys;
 }
 
 // ADR 0002 section 5: a service api names its caller identity at `api.caller.identity`.
@@ -110,13 +114,17 @@ function operationNodes(nodes: readonly TreeNode[]): Map<string, TreeNode> {
 }
 
 // tree.nodes writes each operation with its node's origin, an id, and `safe` beside its method.
-function routeOf(operation: DraftOperation, nodeByOrigin: ReadonlyMap<string, TreeNode>): AccessIdentityRoute {
+function routeOf(
+  operation: DraftOperation,
+  nodeByOrigin: ReadonlyMap<string, TreeNode>,
+): AccessIdentityRoute {
   const { id, origin } = operation;
   if (id === undefined || origin === undefined)
     throw new Error("tree.nodes wrote an operation without its id or origin");
 
   const node = nodeByOrigin.get(originKey(origin));
-  if (node === undefined) throw new Error(`operation '${id}' has no tree node at ${originKey(origin)}`);
+  if (node === undefined)
+    throw new Error(`operation '${id}' has no tree node at ${originKey(origin)}`);
 
   return { id, node, safe: operation.safe === true, operation };
 }
