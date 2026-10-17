@@ -1,4 +1,4 @@
-import { splitName, segmentsOf } from "@seampact/spec/naming";
+import { segmentsOf, splitName } from "@seampact/spec/naming";
 import type { TreeNode } from "../../../pipeline/seam.js";
 import {
   type TreeSchemasCompiler,

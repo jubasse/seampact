@@ -19,15 +19,9 @@ const typeOf = (run: TreeSchemasRun, id: string, name: string) => propertyOf(run
 const schemas = (yaml: string) => treeSchemasRunApi(`schemas:\n${yaml}`);
 const at = (pointer: string) => ({ layer: "api", pointer });
 
-// What later steps of this half write: derived objects, route-position hoists, the batch ids input, the
-// concurrency version property and every direction.
-const NOT_YET = new Set([
-  "CreateTask",
-  "UpdateTask",
-  "UpdatePreferences",
-  "AssignTaskInput",
-  "GetTasksBatchInput",
-]);
+// What later steps of this half write: route-position hoists, the batch ids input, the concurrency version
+// property and every direction.
+const NOT_YET = new Set(["AssignTaskInput", "GetTasksBatchInput"]);
 const ROUTE_HOISTS = new Set(["AssignTaskInput"]);
 
 function withoutLaterMembers(schema: IrWriter.Schema): object {
