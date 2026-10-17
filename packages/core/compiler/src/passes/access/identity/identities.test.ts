@@ -237,7 +237,7 @@ describe("identities and principal variants", () => {
         {
           rule: "seampact/access/principal-field",
           message:
-            "identity 'mapField' reads header 'rights' from principal field 'version', which its principal does not hold",
+            "identity 'mapField' reads header 'rights' from principal field 'version', but the principal schema 'Settings' is a map, not an object schema",
           pointer: "/identities/mapField/headers/rights/from",
         },
       ],

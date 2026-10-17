@@ -54,7 +54,7 @@ identities:
 ```
 
 Header parsing is fixed by the format:
-- A format made of comma-separated `name={placeholder}` items is parsed as comma-separated `name=value` pairs. The pair bound to `{sig}` may repeat; each value is a candidate signature, which supports secret rotation. Pairs whose name is not in the format are ignored (Stripe's `v0`, for example). The `{ts}` pair must appear exactly once and be a whole number of Unix seconds.
+- A format made of comma-separated `name={placeholder}` items, each name a distinct HTTP token, is parsed as comma-separated `name=value` pairs. The pair bound to `{sig}` may repeat; each value is a candidate signature, which supports secret rotation. Pairs whose name is not in the format are ignored (Stripe's `v0`, for example). The `{ts}` pair must appear exactly once and be a whole number of Unix seconds.
 - A format made of a literal prefix and `{sig}` (`sha256={sig}`) is parsed by removing the prefix.
 - A header that is missing or does not parse answers 401 at once; the authenticate hook is not called.
 

@@ -1,7 +1,11 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import type { PassContextOf, PassReadonly } from "../../../pipeline/seam.js";
 import { type AccessIdentityHeader, accessIdentityActorSurfaceRefusal } from "./headers.js";
-import { accessIdentityPrincipal, accessIdentityPrincipalHasField } from "./principal.js";
+import {
+  accessIdentityPrincipal,
+  accessIdentityPrincipalField,
+  accessIdentityPrincipalFieldRefusal,
+} from "./principal.js";
 import {
   type AccessIdentityRawObject,
   accessIdentityBoolean,
@@ -29,7 +33,7 @@ const CREDENTIAL_LISTS = ["read", "write", "optionalRead"] as const;
 const HEADER_USE_FOR: readonly IrWriter.HeaderUseFor[] = ["all", "reads", "writes"];
 
 // ADR 0002 section 11: `all` is the default of an identity header's `for`. A versionToken's request header still
-// goes on writes only, whatever `for` says: identity.versionToken (ADR 0006 section 5) is the specific rule (LD-49).
+// goes on writes only, whatever `for` says: identity.versionToken (ADR 0006 section 5) is the specific rule.
 const DEFAULT_HEADER_USE_FOR: IrWriter.HeaderUseFor = "all";
 
 const isHeaderUseFor = (text: string | undefined): text is IrWriter.HeaderUseFor =>
@@ -384,11 +388,12 @@ function versionTokenMembers(
 
   const source = accessIdentityValueSource(from);
   const field = source.name ?? "";
-  if (!accessIdentityPrincipalHasField(entry.catalogues.schemas, principal, field)) {
+  const lookup = accessIdentityPrincipalField(entry.catalogues.schemas, principal, field);
+  if (lookup.status !== "held") {
+    const reader = `identity '${entry.id}' reads header '${header}' from`;
     reporter.error({
       rule: "principal-field",
-      message: `identity '${entry.id}' reads header '${header}' from principal field '${field}', which its principal does not hold${principal.kind === "variants" ? " in every variant" : ""}`,
-      fix: "Name a field of the principal schema, or add it to the schema.",
+      ...accessIdentityPrincipalFieldRefusal(reader, field, principal, lookup),
       pointer: accessIdentityPointer(pointer, "from"),
     });
     return undefined;

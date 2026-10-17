@@ -18,7 +18,19 @@ export type AccessIdentityRule =
   | "principal"
   | "principal-field"
   | "header-declaration"
-  | "header-use";
+  | "header-use"
+  | "deny-by-default"
+  | "identity-reference"
+  | "optional-identity"
+  | "access-schemes"
+  | "signed-access"
+  | "signature-key-source"
+  | "scheme-query-field"
+  | "csrf-header"
+  | "service-identity"
+  | "service-access"
+  | "binding-source"
+  | "binding-conflict";
 
 export interface AccessIdentityRelated {
   /** A pointer of the merged raw tree. */
@@ -70,6 +82,29 @@ export function accessIdentityReporter(context: PassContext): AccessIdentityRepo
         origin: locate(problem.pointer),
         related,
       });
+    },
+    get errors() {
+      return errors;
+    },
+  };
+}
+
+/**
+ * A reporter that reports a problem once: a setting written on a node reaches every route below it, so a problem
+ * that does not name the route would repeat. `errors` counts every problem, repeated or not, so a builder still
+ * knows its element had one.
+ */
+export function accessIdentityOnceReporter(reporter: AccessIdentityReporter): AccessIdentityReporter {
+  const reported = new Set<string>();
+  let errors = 0;
+
+  return {
+    error(problem) {
+      errors += 1;
+      const key = JSON.stringify([problem.rule, problem.pointer, problem.message]);
+      if (reported.has(key)) return;
+      reported.add(key);
+      reporter.error(problem);
     },
     get errors() {
       return errors;
