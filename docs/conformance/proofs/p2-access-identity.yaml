@@ -25,7 +25,6 @@ proofs:
       - fixtures/passes/access-identity/routes/api.yaml
     tests:
       - 'core: packages/core/compiler/src/passes/access/identity/operations.test.ts#deny by default'
-      - 'core: packages/core/compiler/src/passes/access/identity/catalogues.test.ts#access.identity catalogues'
   - id: CHK-009
     fixtures:
       - fixtures/passes/access-identity/routes/api.yaml
@@ -37,6 +36,7 @@ proofs:
       - fixtures/reference/tasks-service/api.yaml
     tests:
       - 'core: packages/core/compiler/src/passes/access/identity/operations.test.ts#service api identity'
+      - 'core: packages/core/compiler/src/passes/access/identity/catalogues.test.ts#access.identity catalogues'
   - id: CHK-073
     fixtures:
       - fixtures/passes/access-identity/routes/api.yaml
