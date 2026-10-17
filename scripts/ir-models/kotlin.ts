@@ -161,6 +161,8 @@ const MODEL_IMPORTS = [
 ];
 
 const SUPPORT_IMPORTS = [
+  "kotlin.math.abs",
+  "kotlin.math.floor",
   "kotlinx.serialization.ExperimentalSerializationApi",
   "kotlinx.serialization.KSerializer",
   "kotlinx.serialization.SerializationException",
@@ -189,17 +191,14 @@ public object IrModelVersion {
 /** The JSON configuration of the IR model: unknown members are tolerated and dropped (ADR 0005 section 3). */
 public val IrJson: Json = Json { ignoreUnknownKeys = true }
 
-/** The longest number literal the IR reads: no IR integer, version or revision is written longer. */
-internal const val IR_NUMBER_LITERAL_MAX_LENGTH = 64
-
 /** The largest IR integer, 2^53 - 1: IR integers are in the safe range of I-JSON (RFC 7493). */
 internal const val IR_INTEGER_MAX: Long = ${Number.MAX_SAFE_INTEGER}L
 
 /**
- * An IR integer as a \`Long\`, from -(2^53 - 1) to 2^53 - 1. An integral number written with a fraction
- * (\`2.0\`), which JSON Schema counts as an integer, reads as that integer; any other value is an error naming
- * it: a literal as written, a longer literal by its length, a string, array or object by its JSON type, never
- * its content.
+ * An IR integer as a \`Long\`, from -(2^53 - 1) to 2^53 - 1. A number literal is read as the correctly
+ * rounded double, as JavaScript and PHP read it, so the three readers accept the same literals: \`2.0\` and
+ * \`3.0000000000000000001\` read as 2 and 3. Any other value is an error naming it: a literal as written, a
+ * string, array or object by its JSON type, never its content.
  */
 internal object IrIntegerSerializer : KSerializer<Long> {
     override val descriptor: SerialDescriptor =
@@ -209,21 +208,15 @@ internal object IrIntegerSerializer : KSerializer<Long> {
         val element = jsonDecoder(decoder, "an integer").decodeJsonElement()
         val literal = (element as? JsonPrimitive)?.takeIf { !it.isString }?.content
             ?: throw SerializationException("expected an integer, got the JSON type \${notALiteral(element)}")
-        if (literal.length > IR_NUMBER_LITERAL_MAX_LENGTH) {
-            throw SerializationException("expected an integer, got a literal of \${literal.length} chars")
+        val number = literal.toDoubleOrNull() ?: throw SerializationException("expected an integer, got $literal")
+        if (!number.isFinite() || number != floor(number)) {
+            throw SerializationException("expected an integer, got $literal")
         }
-
-        val number = literal.toBigDecimalOrNull() ?: throw SerializationException("expected an integer, got $literal")
-        val integer = try {
-            number.longValueExact()
-        } catch (error: ArithmeticException) {
-            throw SerializationException("expected an integer from -(2^53 - 1) to 2^53 - 1, got $literal", error)
-        }
-        if (integer < -IR_INTEGER_MAX || integer > IR_INTEGER_MAX) {
+        if (abs(number) > IR_INTEGER_MAX.toDouble()) {
             throw SerializationException("expected an integer from -(2^53 - 1) to 2^53 - 1, got $literal")
         }
 
-        return integer
+        return number.toLong()
     }
 
     override fun serialize(encoder: Encoder, value: Long) {

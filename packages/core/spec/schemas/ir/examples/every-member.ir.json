@@ -139,6 +139,7 @@
       "docs": {},
       "extensions": {},
       "origin": { "layer": "api", "pointer": "/schemas/Task" },
+      "deprecated": true,
       "properties": [
         {
           "name": "taskId",
@@ -246,7 +247,9 @@
           "type": {
             "kind": "opaque",
             "reason": "Third-party payload.",
-            "origin": { "layer": "api", "pointer": "/schemas/Task/properties/data" }
+            "origin": { "layer": "api", "pointer": "/schemas/Task/properties/data" },
+            "docs": { "summary": "Any payload." },
+            "examples": [{ "any": 1 }]
           },
           "optional": true,
           "nullable": false,
@@ -258,7 +261,13 @@
         },
         {
           "name": "attachment",
-          "type": { "kind": "file", "media": ["image/png"], "maxSizeBytes": 1048576 },
+          "type": {
+            "kind": "file",
+            "media": ["image/png"],
+            "maxSizeBytes": 1048576,
+            "docs": { "summary": "A picture." },
+            "examples": ["picture.png"]
+          },
           "optional": true,
           "nullable": false,
           "sensitive": false,
@@ -272,7 +281,9 @@
           "type": {
             "kind": "enum",
             "enum": "State",
-            "narrowedTo": { "values": ["open"], "reason": "Only open tasks." }
+            "narrowedTo": { "values": ["open"], "reason": "Only open tasks." },
+            "docs": { "summary": "The state." },
+            "examples": ["open"]
           },
           "optional": false,
           "nullable": false,
@@ -303,7 +314,9 @@
               "examples": ["{\"kind\":\"done\"}"]
             },
             "minItems": 0,
-            "maxItems": 10
+            "maxItems": 10,
+            "docs": { "summary": "The tags." },
+            "examples": [[]]
           },
           "optional": true,
           "nullable": false,
@@ -319,6 +332,7 @@
           "type": {
             "kind": "ref",
             "schema": "Notice",
+            "examples": [{ "kind": "done" }],
             "unknownKeys": {
               "policy": "ignore",
               "reason": "The sender adds fields.",
@@ -368,6 +382,7 @@
       "docs": {},
       "extensions": {},
       "origin": { "layer": "shared", "pointer": "/schemas/Notice" },
+      "deprecated": true,
       "tag": { "in": "body", "property": "kind" },
       "variants": [
         { "tag": "done", "schema": "Task", "docs": { "description": "A finished task." } }

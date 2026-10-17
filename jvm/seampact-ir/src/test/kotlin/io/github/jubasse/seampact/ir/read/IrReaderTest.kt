@@ -193,6 +193,16 @@ class IrReaderTest {
     }
 
     @Test
+    fun readsVersionLiteralsAsJavaScriptDoes() {
+        // Read as the rounded double, as the TypeScript and PHP readers read them: no length cap either.
+        val text = exampleText("minimal.ir.json")
+            .replace("\"irVersion\": 1,", "\"irVersion\": 1.${"0".repeat(70)},")
+            .replace("\"irRevision\": ${IrModelVersion.IR_REVISION},", "\"irRevision\": ${IrModelVersion.IR_REVISION}.0000000000000000001,")
+
+        assertEquals(IrModelVersion.IR_REVISION, IrReader.read(text, support).irRevision)
+    }
+
+    @Test
     fun refusesOtherVersion() {
         // The rest of the document has another shape: nothing but the version is read, and it is named alone.
         val document = JsonObject(

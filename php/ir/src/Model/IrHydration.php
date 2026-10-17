@@ -85,7 +85,10 @@ final class IrHydration
         if (!is_int($value) && !is_float($value)) {
             throw new IrModelException(sprintf('%s: expected an integer, got the JSON type %s', $at, self::jsonType($value)));
         }
-        if ((is_float($value) && floor($value) !== $value) || abs($value) > self::MAX_SAFE_INTEGER) {
+        if (is_float($value) && (!is_finite($value) || floor($value) !== $value)) {
+            throw new IrModelException(sprintf('%s: expected an integer', $at));
+        }
+        if (abs($value) > self::MAX_SAFE_INTEGER) {
             throw new IrModelException(sprintf('%s: expected an integer from -(2^53 - 1) to 2^53 - 1', $at));
         }
 

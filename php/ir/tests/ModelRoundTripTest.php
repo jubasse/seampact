@@ -157,6 +157,18 @@ final class ModelRoundTripTest extends TestCase
     {
         self::assertSame(9007199254740991, ErrorHttp::fromJson(json_decode('{"status": 9007199254740991}', false))->status);
         self::assertSame(-9007199254740991, ErrorHttp::fromJson(json_decode('{"status": -9007199254740991}', false))->status);
+        // Rounded as JavaScript rounds them, so the three readers accept the same literals.
+        self::assertSame(3, ErrorHttp::fromJson(json_decode('{"status": 3.0000000000000000001}', false))->status);
+        self::assertSame(9007199254740991, ErrorHttp::fromJson(json_decode('{"status": 9007199254740990.6}', false))->status);
+
+        foreach (['404.5', '-0.5'] as $fraction) {
+            try {
+                ErrorHttp::fromJson(json_decode('{"status": ' . $fraction . '}', false));
+                self::fail($fraction);
+            } catch (IrModelException $error) {
+                self::assertSame('ErrorHttp.status: expected an integer', $error->getMessage(), $fraction);
+            }
+        }
 
         foreach (['9007199254740992', '-9007199254740992', '9007199254740992.0', '9223372036854775807'] as $outside) {
             try {

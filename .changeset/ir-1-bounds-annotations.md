@@ -14,7 +14,7 @@ The derivation table credits tree with the `binary` and `redirect` response shap
 
 | Field or kind | Schema path | Change | Additive, tightening or breaking | Guarded by |
 |---|---|---|---|---|
-| every integer | `*.schema.json`, each `"type": "integer"` | `maximum` 9007199254740991 added where none was tighter (`irVersion`, `irRevision`, `PathApiVersion.number`, sizes, durations, limits, `SourceLocation` positions) | tightening | none |
+| every integer | `*.schema.json`, each `"type": "integer"` | `maximum` 9007199254740991 added where none was tighter (`irVersion`, `irRevision`, `PathApiVersion.number`, sizes, durations, limits, `SourceLocation` positions) | tightening | exact `irRevision` match (before 1.0) |
 | `deprecated` | `schemas.schema.json#/$defs/ObjectSchema/properties/deprecated`, same on `MapSchema` and `UnionSchema` | added (optional boolean, absent means false) | additive | none |
 | `examples` | `schemas.schema.json#/$defs/Property/properties/examples` | added (optional list of values) | additive | none |
 | `docs` | `schemas.schema.json#/$defs/UnionVariant/properties/docs` | added (optional `Docs`) | additive | none |
@@ -24,5 +24,5 @@ The derivation table credits tree with the `binary` and `redirect` response shap
 ### What a target must do
 
 - Declare `irRevision: 3`.
-- Read IR integers as values from -(2^53 - 1) to 2^53 - 1; the Kotlin and PHP models refuse any other as a read error.
+- Read IR integers as values from -(2^53 - 1) to 2^53 - 1, each literal as the correctly rounded double; the Kotlin and PHP models refuse any other as a read error, and the Kotlin model no longer caps a number literal at 64 characters.
 - Emit a schema's `deprecated`, a property's `examples`, a variant's `docs`, a response's `docs` and a nested use's `docs` and `examples` where the target writes documentation (OpenAPI: natively, ADR 0004 section 12), or ignore them: none changes a check.

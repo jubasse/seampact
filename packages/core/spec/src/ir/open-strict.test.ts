@@ -221,16 +221,23 @@ test("an integer past the safe range is a problem in both forms", () => {
   expect(validateIr(past, "strict")).toMatchObject({ valid: false, problems: [problem] });
 });
 
-test("a type use of any kind holds docs and examples at any position", () => {
-  const annotated = { docs: { description: "Annotated." }, examples: [{}] };
-  const ir = mutateAt(sample("every-member.ir.json"), "/schemas/Task/properties/6", (property) => {
-    Object.assign(property.type as Record<string, unknown>, annotated);
-  });
-  const bodies = mutateAt(ir, "/operations/2/responses/0", (response) => {
-    Object.assign(response.body as Record<string, unknown>, annotated);
+// One use of each type-use kind in the sample, and a response body: docs and examples are valid on each.
+test.each([
+  ["ref", "/schemas/Task/properties/0/type"],
+  ["opaque", "/schemas/Task/properties/5/type"],
+  ["file", "/schemas/Task/properties/6/type"],
+  ["enum", "/schemas/Task/properties/7/type"],
+  ["array", "/schemas/Task/properties/8/type"],
+  ["scalar", "/schemas/Task/properties/8/type/items"],
+  ["ref", "/operations/2/responses/0/body"],
+])("a %s use at %s holds docs and examples", (kind, pointer) => {
+  const ir = mutateAt(sample("every-member.ir.json"), pointer, (use) => {
+    expect(use.kind).toBe(kind);
+    use.docs = { description: "Annotated." };
+    use.examples = [{}];
   });
 
-  expect(validateIr(bodies, "strict")).toEqual(VALID_REPORT);
+  expect(validateIr(ir, "strict")).toEqual(VALID_REPORT);
 });
 
 test("a mapping error the walk did not list fails closed", () => {

@@ -147,6 +147,22 @@ class ModelRoundTripTest {
 
         assertEquals(9_007_199_254_740_991L, largest.status)
         assertEquals(-9_007_199_254_740_991L, smallest.status)
+        // Rounded as JavaScript and PHP round them, so the three readers accept the same literals.
+        for ((literal, read) in listOf(
+            "3.0000000000000000001" to 3L,
+            "9007199254740990.6" to 9_007_199_254_740_991L,
+            "1.${"0".repeat(70)}" to 1L,
+            "1e2" to 100L,
+        )) {
+            assertEquals(read, IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": $literal}""").status, literal)
+        }
+        for (fraction in listOf("404.5", "-0.5")) {
+            val error = assertFailsWith<SerializationException>(fraction) {
+                IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": $fraction}""")
+            }
+
+            assertEquals("expected an integer, got $fraction", error.message)
+        }
         for (outside in listOf("9007199254740992", "-9007199254740992", "9007199254740992.0", "9223372036854775807")) {
             val error = assertFailsWith<SerializationException>(outside) {
                 IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": $outside}""")
