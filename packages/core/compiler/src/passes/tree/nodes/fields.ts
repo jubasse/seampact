@@ -10,7 +10,6 @@ import {
   type TreeNodesContext,
   type TreeNodesJson,
   treeNodesIsObject,
-  type treeNodesMember,
   treeNodesObjectOf,
   treeNodesPointer,
 } from "./raw.js";

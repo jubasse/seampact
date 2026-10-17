@@ -985,3 +985,32 @@ surfaces:
     diagnostics: idless,
   });
 });
+
+test("a collection id naming a non-object schema is refused once, without a route clash", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+schemas:
+  Missing: { type: string }
+  Task: { type: object, properties: { taskId: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      tasks: { kind: collection, id: Missing, singular: task, item: Task, ops: [get, list] }
+`);
+  const treeSchemas = treeNodesStubService({
+    typeUses: {
+      [`${TASKS}/id`]: ref("Missing"),
+      [`${TASKS}/item`]: ref("Task"),
+    },
+  });
+  const draft = treeNodesDraftWith(
+    treeNodesObjectSchema("Task", "/schemas/Task", { taskId: text }),
+  );
+  const raw = treeNodesApiOf(workspace);
+  const { diagnostics } = treeNodesRun(raw, workspace, { treeSchemas, draft });
+
+  expect(
+    diagnostics.map(({ rule, origin }) => [rule.replace("seampact/tree/", ""), origin.pointer]),
+  ).toEqual([["fields-schema", `${TASKS}/id`]]);
+});

@@ -171,7 +171,7 @@ function paramOf(
 }
 
 // Merged-bag frameworks read a path parameter and a query key of one name as one value, so a query field takes no
-// path parameter's name (LD-59). Body and form fields may.
+// path parameter's name (a stricter rule than the grammar's). Body and form fields may.
 function checkQueryNotNamedLikePath(
   site: TreeNodesSite,
   pathFields: readonly TreeNodesField[],

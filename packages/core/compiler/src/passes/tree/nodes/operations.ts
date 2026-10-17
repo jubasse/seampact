@@ -88,15 +88,27 @@ export function treeNodesOperations(
     const site: TreeNodesSite = { node, operationId: name.id, draft, context, once };
     const operation = operationOf(site, name, prefixes);
     draft.operations.push(operation);
-    written.push({ node, name, route: routeOf(operation) });
+    const route = memberIdFailed(node, context) ? undefined : routeOf(operation);
+    written.push({ node, name, route });
   }
 
   reportClashes(written, context);
   reportRouteClashes(written, context);
 }
 
+// A member route under a collection whose `id` gives no parameter has no placeholder in its path; the `id` is
+// already refused, so comparing that path would only repeat the error as a route clash.
+function memberIdFailed(node: TreeNode, context: TreeNodesContext): boolean {
+  for (let at = node.parent; at !== undefined; at = at.parent) {
+    const collection = at.kind === "scope" && at.name === "member" ? at.parent : undefined;
+    if (collection !== undefined && Object.hasOwn(collection.settings, "id"))
+      return treeNodesIdParam(collection, context.raw.merged.schemas) === undefined;
+  }
+  return false;
+}
+
 // The method and the path, each placeholder compared by position only: `/tasks/{id}` and `/tasks/{taskId}` are one
-// route to a router, `/tasks/me` beside `/tasks/{id}` is not (LD-59). Undefined for a relay route until its path
+// route to a router, `/tasks/me` beside `/tasks/{id}` is not. Undefined for a relay route until its path
 // is copied.
 function routeOf(operation: DraftOperation): Route | undefined {
   if (operation.method === undefined || operation.path === undefined) return undefined;

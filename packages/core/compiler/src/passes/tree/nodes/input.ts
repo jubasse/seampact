@@ -4,7 +4,6 @@ import {
   type DraftIR,
   type DraftOperationInput,
   pipelineCopy,
-  pipelineParseSize,
   type TreeNode,
 } from "../../../pipeline/seam.js";
 import { treeNodesError, treeNodesLocate, treeNodesNodeOrigin } from "./diagnostics.js";

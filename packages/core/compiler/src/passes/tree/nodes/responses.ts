@@ -32,7 +32,7 @@ const BATCH_OP: Op = "batch";
 
 const RESPONSES_INSTEAD_OF: readonly string[] = ["output", "item"];
 
-// The response annotations the IR cannot hold yet (`Response.docs` is asked of the lead IR PR, LD-59).
+// The response annotations the IR cannot hold yet (`Response.docs` is asked of the lead IR PR).
 const UNHELD_RESPONSE_ANNOTATIONS: readonly string[] = ["description"];
 
 /** The wire format of an operation: the nearest `format`, else `conventions.format`. */
@@ -186,7 +186,7 @@ function bodyResponse(
 }
 
 // One entry of `responses`: its body and headers; a redirect status with no body. Undefined while the schema
-// service answers no type for a written body (the seam's stub, LD-43; an internal error from PR 4).
+// service answers no type for a written body (the seam's stub; an internal error from PR 4).
 function writtenResponse(
   site: TreeNodesSite,
   statusKey: string,
@@ -221,7 +221,7 @@ function writtenResponse(
   };
 }
 
-// A written annotation the IR has no member for is refused, never dropped (LD-54).
+// A written annotation the IR has no member for is refused, never dropped.
 function refuseUnheldAnnotations(
   site: TreeNodesSite,
   entry: TreeNodesJson | undefined,
