@@ -5,11 +5,12 @@ import {
   type TreeSchemaService,
 } from "../../../pipeline/seam.js";
 import { TreeSchemasCompiler } from "./compile.js";
+import { treeSchemasCoreReservations } from "./core.js";
 import { treeSchemasCompileDeclarations, treeSchemasCompileRoutes } from "./positions.js";
 import { TreeSchemasReporter } from "./raw.js";
 
-// The tree.schemas half (ADR 0006 sections 2 and 3): it compiles every schema of the api into `schemas` and
-// `scalars`, and returns the schema service every later half receives.
+// The tree.schemas half (ADR 0006 sections 2 and 3): it seeds the core schemas, compiles every schema of the api
+// into `schemas` and `scalars`, and returns the schema service every later half receives.
 //
 // Import pipeline values and types from `pipeline/seam.js` only, never from `pipeline/index.js`, the orchestrator
 // or the registry: the registry imports this module, so any of those would close an import cycle (`seam.ts`).
@@ -34,6 +35,7 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
   writes: ["schemas", "scalars", "enums", "extensionKeys"],
   run: (draft, context) => {
     const compiler = new TreeSchemasCompiler(context.raw.merged, new TreeSchemasReporter(context));
+    compiler.reserve(treeSchemasCoreReservations(context.raw.merged));
     compiler.compileCatalogue();
     treeSchemasCompileDeclarations(compiler, context.raw.merged);
     treeSchemasCompileRoutes(compiler, pipelineTreeNodes(context.raw));

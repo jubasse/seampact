@@ -17,13 +17,9 @@ const typeOf = (run: TreeSchemasRun, id: string, name: string) => propertyOf(run
 const schemas = (yaml: string) => treeSchemasRunApi(`schemas:\n${yaml}`);
 const at = (pointer: string) => ({ layer: "api", pointer });
 
-// What later steps of this half write: core declarations, derived objects, route-position hoists, the batch ids
-// input, the concurrency version property and every direction.
+// What later steps of this half write: derived objects, route-position hoists, the batch ids input, the
+// concurrency version property and every direction.
 const NOT_YET = new Set([
-  "ApiEmptyBody",
-  "ApiForbiddenParams",
-  "ApiSortKeyForbiddenParams",
-  "ApiPayloadTooLargeParams",
   "CreateTask",
   "UpdateTask",
   "UpdatePreferences",
@@ -505,6 +501,8 @@ schemas:
     ["A: { type: string, minLength: 5, maxLength: 2 }", "refinement-range"],
     ["A: { type: integer, minimum: 10, maximum: 1 }", "refinement-range"],
     ["A: { type: integer, exclusiveMinimum: 1, maximum: 1 }", "refinement-range"],
+    ["A: { type: integer, exclusiveMinimum: 1, exclusiveMaximum: 2 }", "refinement-range"],
+    ["A: { type: integer, minimum: 1.2, maximum: 1.8 }", "refinement-range"],
     [
       "A: { type: string, format: decimal, minimum: 2.5, exclusiveMaximum: 2.5 }",
       "refinement-range",
@@ -528,6 +526,14 @@ schemas:
   test("bounds that leave room for one value are kept; a named format's merged bounds are checked", () => {
     const fits = schemas("  A: { type: integer, minimum: 1, maximum: 1 }");
     expect(fits.diagnostics).toEqual([]);
+    const oneInteger = schemas("  A: { type: integer, exclusiveMinimum: 1, exclusiveMaximum: 3 }");
+    expect(oneInteger.diagnostics).toEqual([]);
+    const fraction = schemas("  A: { type: number, exclusiveMinimum: 1, exclusiveMaximum: 2 }");
+    expect(fraction.diagnostics).toEqual([]);
+    const noInteger = schemas("  A: { type: integer, exclusiveMinimum: 1, exclusiveMaximum: 2 }");
+    expect(noInteger.diagnostics[0]?.message).toContain(
+      "no integer lies between 'exclusiveMinimum' 1 and 'exclusiveMaximum' 2",
+    );
     const merged = treeSchemasRunApi(
       "scalars:\n  code: { type: string, minLength: 5 }\nschemas:\n  A: { format: code, maxLength: 2 }",
     );
@@ -564,7 +570,9 @@ errors:
   test("an inline schema takes the name of its position (ADR 0007 section 3)", () => {
     expect(run.diagnostics).toEqual([]);
     const names = Object.fromEntries(
-      Object.values(run.draft.schemas).map((schema) => [schema.id, schema.name]),
+      Object.values(run.draft.schemas)
+        .filter((schema) => schema.origin.layer !== "core")
+        .map((schema) => [schema.id, schema.name]),
     );
     expect(names).toEqual({
       OrderAddress: { segments: ["order", "address"], role: "property" },
