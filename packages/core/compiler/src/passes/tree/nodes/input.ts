@@ -4,6 +4,7 @@ import {
   type DraftIR,
   type DraftOperationInput,
   type PassContextOf,
+  pipelineCopy,
   pipelineParseSize,
   type TreeNode,
 } from "../../../pipeline/seam.js";
@@ -86,11 +87,12 @@ export function treeNodesInput(
 
   if (media === JSON_MEDIA) {
     reportNestedFiles(site, filesBelow(schema, draft, undefined), undefined);
-    return { media, schema, origin };
+    return { media, schema: pipelineCopy(schema), origin: pipelineCopy(origin) };
   }
 
   const fields = formFields(site, schema);
-  return fields === undefined ? { media, schema, origin } : { media, schema, origin, fields };
+  const input = { media, schema: pipelineCopy(schema), origin: pipelineCopy(origin) };
+  return fields === undefined ? input : { ...input, fields };
 }
 
 function mediaOf(node: TreeNode): Media {

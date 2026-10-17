@@ -1,7 +1,8 @@
 import type { IrWriter, Origin } from "@seampact/spec/ir";
 import { pipelineCopy, type TreeNode } from "../../../pipeline/seam.js";
-import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
+import { treeNodesError, treeNodesLocate, treeNodesNodeOrigin } from "./diagnostics.js";
 import {
+  type TreeNodesField,
   type TreeNodesSite,
   treeNodesFields,
   treeNodesFieldTravels,
@@ -25,11 +26,18 @@ const PAGING_NONE = "none";
 
 type Op = IrWriter.OpShorthand;
 
+type Json = Parameters<typeof treeNodesMember>[0];
+
 // The ops whose default response is the owner's `item`.
 const ITEM_OPS: readonly Op[] = ["get", "create", "update"];
 const LIST_OP: Op = "list";
 const DELETE_OP: Op = "delete";
 const BATCH_OP: Op = "batch";
+
+const RESPONSES_INSTEAD_OF: readonly string[] = ["output", "item"];
+
+// The response annotations the IR cannot hold yet (`Response.docs` is asked of the lead IR PR, LD-59).
+const UNHELD_RESPONSE_ANNOTATIONS: readonly string[] = ["description"];
 
 /** The wire format of an operation: the nearest `format`, else `conventions.format`. */
 export function treeNodesFormat(site: TreeNodesSite): string {
@@ -53,11 +61,24 @@ export function treeNodesResponses(site: TreeNodesSite, format: string): IrWrite
   const media = mediaOf(site, format);
   const op = treeNodesOpShorthand(node);
 
+  const responses = declaredResponses(site, op, media);
+  for (const response of responses) checkNoContentBody(site, response);
+  return responses;
+}
+
+function declaredResponses(
+  site: TreeNodesSite,
+  op: Op | undefined,
+  media: string,
+): IrWriter.Response[] {
+  const node = site.node;
   const written = treeNodesSetting(node, "responses");
-  if (treeNodesIsObject(written))
+  if (treeNodesIsObject(written)) {
+    checkResponsesAlone(site);
     return Object.keys(written)
-      .map((status) => writtenResponse(site, status, media))
+      .flatMap((status) => writtenResponse(site, status, media) ?? [])
       .sort((a, b) => a.status - b.status);
+  }
 
   if (treeNodesSetting(node, "output") !== undefined)
     return bodyResponse(site, node, "output", outputStatus(site, op), "item", media);
@@ -66,6 +87,37 @@ export function treeNodesResponses(site: TreeNodesSite, format: string): IrWrite
 
   if (op === undefined) return [emptyResponse(NO_CONTENT, node.origin)];
   return opResponses(site, op, media);
+}
+
+// ADR 0002 section 7: `responses` is written instead of `output` (and of a list's `item`), never beside them.
+function checkResponsesAlone(site: TreeNodesSite): void {
+  const beside = RESPONSES_INSTEAD_OF.filter(
+    (member) => treeNodesSetting(site.node, member) !== undefined,
+  );
+  for (const member of beside) {
+    const pointer = `${site.node.pointer}/${member}`;
+    site.context.report(
+      treeNodesError({
+        rule: "responses-output",
+        origin: treeNodesNodeOrigin(site.context.origin(pointer) ?? site.node.origin),
+        message: `The route ${site.operationId} writes both responses and ${member}; responses replaces ${member}.`,
+        fix: `Move the ${member} schema into a responses entry, or remove responses.`,
+      }),
+    );
+  }
+}
+
+// 204 No Content carries no body (RFC 9110 section 15.3.5).
+function checkNoContentBody(site: TreeNodesSite, response: IrWriter.Response): void {
+  if (response.status !== NO_CONTENT || response.body === undefined) return;
+  site.context.report(
+    treeNodesError({
+      rule: "no-content-body",
+      origin: treeNodesNodeOrigin(response.origin ?? site.node.origin),
+      message: `The 204 response of ${site.operationId} has a body, which a 204 No Content never carries.`,
+      fix: "Answer the body with 200, or remove the body.",
+    }),
+  );
 }
 
 // The `ops` table's default response: the op's own `item`, else the owner's, for list, get, create and update; no
@@ -130,7 +182,7 @@ function bodyResponse(
     {
       status,
       ...(body.kind === "file" ? {} : { media }),
-      body,
+      body: pipelineCopy(body),
       shape: body.kind === "file" ? "binary" : shape,
       headers: [],
       origin: pipelineCopy(origin),
@@ -138,58 +190,113 @@ function bodyResponse(
   ];
 }
 
-// One entry of `responses`: its body and headers; a redirect status with no body.
-function writtenResponse(site: TreeNodesSite, statusKey: string, media: string): IrWriter.Response {
+// One entry of `responses`: its body and headers; a redirect status with no body. Undefined while the schema
+// service answers no type for a written body (the seam's stub, LD-43; an internal error from PR 4).
+function writtenResponse(
+  site: TreeNodesSite,
+  statusKey: string,
+  media: string,
+): IrWriter.Response | undefined {
   const pointer = `${site.node.pointer}/responses/${statusKey}`;
   const entry = treeNodesMember(treeNodesSetting(site.node, "responses"), statusKey);
   const origin = site.context.origin(pointer) ?? site.node.origin;
   const status = Number(statusKey);
+  refuseUnheldAnnotations(site, entry, pointer, status);
   const headers = responseHeaders(site, treeNodesMember(entry, "headers"), `${pointer}/headers`);
 
   const writtenBody = treeNodesMember(entry, "body");
-  const body =
-    writtenBody === undefined
-      ? undefined
-      : site.context.treeSchemas.typeUse(`${pointer}/body`, "output");
-
   if (REDIRECT_STATUSES.includes(status)) {
     if (writtenBody !== undefined) reportRedirectBody(site, status, `${pointer}/body`);
     return { status, shape: "redirect", headers, origin: pipelineCopy(origin) };
   }
-  if (body === undefined) return { status, shape: "empty", headers, origin: pipelineCopy(origin) };
+  if (writtenBody === undefined)
+    return { status, shape: "empty", headers, origin: pipelineCopy(origin) };
+
+  const body = site.context.treeSchemas.typeUse(`${pointer}/body`, "output");
+  if (body === undefined) return undefined;
 
   checkNotHeaderUnion(site, body, origin, "response body");
   const isFile = body.kind === "file";
   return {
     status,
     ...(isFile ? {} : { media }),
-    body,
+    body: pipelineCopy(body),
     shape: isFile ? "binary" : "item",
     headers,
     origin: pipelineCopy(origin),
   };
 }
 
+// A written annotation the IR has no member for is refused, never dropped (LD-54).
+function refuseUnheldAnnotations(
+  site: TreeNodesSite,
+  entry: Json | undefined,
+  pointer: string,
+  status: number,
+): void {
+  for (const key of UNHELD_RESPONSE_ANNOTATIONS.filter(
+    (annotation) => treeNodesMember(entry, annotation) !== undefined,
+  )) {
+    const at = `${pointer}/${key}`;
+    site.context.report(
+      treeNodesError({
+        rule: "annotation-position",
+        origin: treeNodesNodeOrigin(site.context.origin(at) ?? site.node.origin),
+        message: `The ${key} of the ${status} response of ${site.operationId} is not kept by the contract model.`,
+        fix: `Remove ${key} here; describe the response in the route's description.`,
+      }),
+    );
+  }
+}
+
+// Each header name once, in any case (RFC 9110 section 5.1).
 function responseHeaders(
   site: TreeNodesSite,
-  written: Parameters<typeof treeNodesMember>[0] | undefined,
+  written: Json | undefined,
   pointer: string,
 ): IrWriter.ResponseHeader[] {
   const headers: IrWriter.ResponseHeader[] = [];
-  const seen = new Set<string>();
+  const seen = new Map<string, TreeNodesField>();
   for (const field of treeNodesFields(site, written, pointer, "output").fields) {
     const name = field.name.toLowerCase();
-    if (seen.has(name) || field.type === undefined) continue;
-    seen.add(name);
-    if (!treeNodesFieldTravels(site, field, "response header")) continue;
+    const first = seen.get(name);
+    if (first !== undefined) {
+      reportHeaderTwice(site, field, first);
+      continue;
+    }
+    seen.set(name, field);
+
+    if (field.type === undefined || !treeNodesFieldTravels(site, field, "response header"))
+      continue;
     headers.push({
       name: field.name,
-      type: field.type,
+      type: pipelineCopy(field.type),
       required: field.required,
       origin: pipelineCopy(field.origin),
     });
   }
   return headers;
+}
+
+function reportHeaderTwice(
+  site: TreeNodesSite,
+  field: TreeNodesField,
+  first: TreeNodesField,
+): void {
+  const fallback = treeNodesNodeOrigin(site.node.origin);
+  const origin = treeNodesLocate(field.origin, fallback);
+  site.once(
+    `param-unique:${origin.layer}#${origin.pointer}:${field.name}`,
+    treeNodesError({
+      rule: "param-unique",
+      origin,
+      message: `The response header ${field.name} of ${site.operationId} is declared twice.`,
+      fix: "Remove one of the two declarations.",
+      related: [
+        { origin: treeNodesLocate(first.origin, fallback), message: "the first declaration" },
+      ],
+    }),
+  );
 }
 
 function checkNotHeaderUnion(

@@ -820,3 +820,70 @@ surfaces:
     },
   ]);
 });
+
+test("declared responses: refused beside output, a 204 body, a description, a header twice; an unanswered body left out", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+schemas:
+  Note: { type: object, properties: { text: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      both: { method: get, output: Note, responses: { 200: { body: Note } } }
+      empty: { method: post, responses: { 204: { body: Note } } }
+      told: { method: get, responses: { 202: { description: Accepted for later. } } }
+      twice:
+        method: get
+        responses: { 202: { headers: { Retry-After: { type: string }, retry-after: { type: string } } } }
+      pending: { method: get, responses: { 200: { body: Note }, 202: {} } }
+`);
+  const twice = `${ROUTES}/twice/responses/202/headers`;
+  const treeSchemas = treeNodesStubService({
+    typeUses: {
+      [`${ROUTES}/both/output`]: ref("Note"),
+      [`${ROUTES}/both/responses/200/body`]: ref("Note"),
+      [`${ROUTES}/empty/responses/204/body`]: ref("Note"),
+      [`${twice}/Retry-After`]: text,
+      [`${twice}/retry-after`]: text,
+    },
+  });
+  const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas,
+  });
+
+  expect(
+    operation(draft.operations, "twice").responses?.[0]?.headers.map(({ name }) => name),
+  ).toEqual(["Retry-After"]);
+  expect(operation(draft.operations, "pending").responses?.map(({ status }) => status)).toEqual([
+    202,
+  ]);
+  expect(
+    diagnostics.map(({ rule, origin, message, related }) => ({ rule, origin, message, related })),
+  ).toEqual([
+    {
+      rule: "seampact/tree/responses-output",
+      origin: at(`${ROUTES}/both/output`),
+      message: "The route both writes both responses and output; responses replaces output.",
+      related: [],
+    },
+    {
+      rule: "seampact/tree/no-content-body",
+      origin: at(`${ROUTES}/empty/responses/204`),
+      message: "The 204 response of empty has a body, which a 204 No Content never carries.",
+      related: [],
+    },
+    {
+      rule: "seampact/tree/annotation-position",
+      origin: at(`${ROUTES}/told/responses/202/description`),
+      message: "The description of the 202 response of told is not kept by the contract model.",
+      related: [],
+    },
+    {
+      rule: "seampact/tree/param-unique",
+      origin: at(`${twice}/retry-after`),
+      message: "The response header retry-after of twice is declared twice.",
+      related: [{ origin: at(`${twice}/Retry-After`), message: "the first declaration" }],
+    },
+  ]);
+});

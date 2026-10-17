@@ -32,7 +32,10 @@ export type TreeNodesRule =
   | "fields-schema"
   | "opaque-parameter"
   | "header-union"
-  | "redirect-body";
+  | "redirect-body"
+  | "responses-output"
+  | "no-content-body"
+  | "annotation-position";
 
 export const treeNodesRuleId = (rule: TreeNodesRule): string => `seampact/tree/${rule}`;
 
