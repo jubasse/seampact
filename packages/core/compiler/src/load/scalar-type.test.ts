@@ -6,6 +6,7 @@ import { loadMemoryReader } from "./reader.js";
 function load(files: Record<string, string>, entry = "api.yaml") {
   const result = loadWorkspace({ reader: loadMemoryReader(files), entry });
   const rules = result.diagnostics.map((d) => d.rule.replace("seampact/load/", ""));
+
   return {
     result,
     rules,
@@ -82,6 +83,7 @@ describe("p6 typed scalar", () => {
     describe(c.name, () => {
       test.each(c.refused)("refuses %j", (value) => {
         const r = load({ "api.yaml": c.doc.replace("$V", value) });
+
         expect(r.rules).toEqual(["scalar-type"]);
         expect(r.result.diagnostics[0]?.message).toContain(`the schema expects ${c.expects}`);
         expect(r.printed).toMatch(
@@ -90,6 +92,7 @@ describe("p6 typed scalar", () => {
       });
       test.each(c.accepted)("accepts %j", (value) => {
         const r = load({ "api.yaml": c.doc.replace("$V", value) });
+
         expect(r.rules).toEqual([]);
       });
     });
@@ -104,12 +107,14 @@ describe("p6 typed scalar", () => {
     // `name: 12` also leaves the api without a name (workspace-shape).
     const r = load({ "api.yaml": doc });
     const p6 = r.result.diagnostics.filter((d) => d.rule === "seampact/load/scalar-type");
+
     expect(p6).toHaveLength(1);
     expect(p6[0]?.fix).toContain(fix);
   });
 
   test("the diagnostic is located at the scalar", () => {
     const r = load({ "api.yaml": "api:\n  name: t\n  summary: 12\n" });
+
     expect(r.printed.split(" ")[0]).toBe("api.yaml:3:12:");
   });
 
@@ -117,6 +122,7 @@ describe("p6 typed scalar", () => {
     const r = load({
       "api.yaml": "api: { name: t }\nscalars:\n  Id: { type: string, minLength: '3' }\n",
     });
+
     expect(r.result.diagnostics[0]?.message).toContain("'\"3\"' is a string");
   });
 
@@ -125,15 +131,18 @@ describe("p6 typed scalar", () => {
       "api.yaml":
         "api: { name: t }\nnotAKeyword: 12\nsurfaces:\n  app:\n    routes:\n      r:\n        method: get\n        madeUp: [1, true, ~]\n",
     });
+
     expect(r.rules).toEqual([]);
   });
 
   test("a data position takes any type, null written null", () => {
     const doc = (v: string) =>
       `api: { name: t }\nsurfaces:\n  app:\n    routes:\n      r:\n        method: get\n        examples:\n          e: { status: 200, value: ${v} }\n`;
+
     for (const v of ["12", "true", "'x'", "[1, null]", "null", "{ a: 1.5 }"]) {
       expect(load({ "api.yaml": doc(v) }).rules).toEqual([]);
     }
+
     expect(load({ "api.yaml": doc("~") }).rules).toEqual(["data-null"]);
   });
 
@@ -143,6 +152,7 @@ describe("p6 typed scalar", () => {
       "p.yaml":
         "pack: { name: p, version: 1.0.0 }\nscalars:\n  Id: { type: string, minLength: x }\n",
     });
+
     expect(r.rules).toEqual(["scalar-type"]);
     expect(r.printed).toContain("p.yaml:3:");
   });
@@ -152,6 +162,7 @@ describe("p6 typed scalar", () => {
       "api.yaml": "api: { name: t }\nscalars:\n  Id: { type: string, $include: ./id.yaml }\n",
       "id.yaml": "minLength: x\n",
     });
+
     expect(r.rules).toEqual(["scalar-type"]);
     expect(r.printed).toContain("id.yaml:1:12:");
   });
@@ -163,6 +174,7 @@ describe("data positions are the ones the grammar marks", () => {
       "api.yaml": "api:\n  name: t\n  x-acme-note: ~\n  x-acme-doc: { $file: ./a.md, b: 1 }\n",
       "a.md": "text\n",
     });
+
     expect(r.rules).toEqual(["directive-siblings"]);
   });
 
@@ -172,6 +184,7 @@ describe("data positions are the ones the grammar marks", () => {
         "api: { name: t }\nsurfaces:\n  app:\n    routes:\n      r:\n        $include: ./r.yaml\n        internal: ~\n        examples:\n          e: { status: 200, value: ~ }\n",
       "r.yaml": "method: get\n",
     });
+
     expect(r.rules).toEqual(["scalar-type", "data-null"]);
     expect(r.printed).toContain("api.yaml:7:19: error seampact/load/scalar-type");
   });
@@ -183,6 +196,7 @@ describe("p6 beside p1 to p4", () => {
       const r = load({
         "api.yaml": `api: { name: t }\nscalars:\n  Id: { type: integer, maximum: ${v} }\n`,
       });
+
       expect(r.rules).toHaveLength(1);
       expect(r.rules).not.toContain("scalar-type");
     }
@@ -194,8 +208,10 @@ describe("authored text in messages", () => {
     const r = load({
       "api.yaml": 'api: { name: t }\nscalars:\n  Id: { type: string, minLength: "a\\u202Eb" }\n',
     });
+
     expect(r.rules).toEqual(["scalar-type"]);
     const d = r.result.diagnostics[0];
+
     expect(d?.message).not.toMatch(/\u202E/u);
     expect(d?.message).toContain("\\u202E");
     expect(d?.fix).not.toMatch(/\u202E/u);
@@ -206,6 +222,7 @@ describe("authored text in messages", () => {
       "api.yaml": "api: { name: t }\npacks: [./p.yaml]\n",
       "p.yaml": 'pack: { name: "a#\\u202Eb", version: 1.0.0 }\n',
     });
+
     expect(r.rules).toEqual(["pack-name"]);
     expect(r.result.diagnostics[0]?.message).not.toMatch(/\u202E/u);
     expect(r.result.diagnostics[0]?.message).toContain("\\u202E");
@@ -214,6 +231,7 @@ describe("authored text in messages", () => {
 
 test("a package-name message writes an active character escaped", () => {
   const r = load({ "api.yaml": 'api: { name: t }\npacks: ["a\\u202Eb"]\n' });
+
   expect(r.rules).toEqual(["pack-name"]);
   expect(r.result.diagnostics[0]?.message).not.toMatch(/\u202E/u);
   expect(r.result.diagnostics[0]?.message).toContain("\\u202E");
@@ -225,6 +243,7 @@ describe("pack names", () => {
       "api.yaml": "api: { name: t }\npacks: [./p.yaml]\n",
       "p.yaml": "pack: { name: 'a#/~load/x', version: 1.0.0 }\n",
     });
+
     expect(r.rules).toEqual(["pack-name"]);
     expect(r.printed).toContain("p.yaml:1:15:");
     expect(r.result.diagnostics[0]?.message).toContain("holds a '#'");
@@ -238,9 +257,11 @@ describe("data positions in lists", () => {
         "api: { name: t }\nschemas:\n  T:\n    type: string\n    examples: [~, { $include: ./x.yaml }, { $ref: X }]\n",
       "x.yaml": "a: 1\n",
     });
+
     expect(r.rules).toEqual(["data-null"]);
     expect(r.printed).toContain("api.yaml:5:16:");
     const schemas = r.result.workspace.apis[0]?.merged.schemas as Record<string, unknown>;
+
     expect((schemas.T as { examples: unknown }).examples).toEqual([
       null,
       { $include: "./x.yaml" },

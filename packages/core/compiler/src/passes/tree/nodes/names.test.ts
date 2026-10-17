@@ -160,8 +160,11 @@ const DEFAULT_ROWS: Row[] = [
 // The same tree with `conventions.ops` changing an op's path and statuses.
 const OPS_CONVENTION_ROWS: Row[] = DEFAULT_ROWS.map((row) => {
   if (row.id === "listMembers") return { ...row, path: `${MEMBERS}/all`, status: 206 };
+
   if (row.id === "getMembersBatch") return { ...row, path: `${MEMBERS}/lookup` };
+
   if (row.id === "removeMember") return { ...row, status: 202 };
+
   return row;
 });
 
@@ -191,6 +194,7 @@ const NOUN_VERB_SNAKE_ROWS: Row[] = DEFAULT_ROWS.map((row, index) => {
     ["ping"],
   ];
   const method = row.op === "update" ? "put" : row.method;
+
   return { ...row, id: ids[index] ?? "", segments: segments[index] ?? [], method };
 });
 
@@ -205,6 +209,7 @@ const treeSchemas = treeNodesStubService({
 const rowsOf = (operations: readonly DraftOperation[]): Row[] =>
   operations.map(({ id, name, method, path, safe, op, responses }) => {
     const status = responses?.[0]?.status;
+
     return {
       id: id ?? "",
       segments: name?.segments ?? [],
@@ -391,6 +396,7 @@ test("a collection whose operation names need a singular gives singular or id, i
 
   const raw = treeNodesApiOf(workspace);
   const names = treeNodesOperationNames(raw, pipelineConventions(raw));
+
   expect([...names.values()].map(({ id }) => id)).toEqual([
     "listEvents",
     "createEvent",

@@ -24,6 +24,7 @@ test("a workspace origin is never a layer kind (checked by typecheck)", () => {
   const kind = () => layerKindOf(origin);
   // @ts-expect-error the entry document is not a layer of an api
   const layer: RawLayer = entry;
+
   expect(typeof kind).toBe("function");
   expect(layer.layer).toBe("workspace");
 });
@@ -39,6 +40,7 @@ test("maps every layer form to its authoring schema kind", () => {
     ["pack:acme", "pack"],
     ["pack:@acme/pack-x", "pack"],
   ];
+
   for (const [layer, kind] of forms) {
     expect(schemaKindOf(layer)).toBe(kind);
     expect(AUTHORING_FILES).toContain(schemaKindOf(layer));

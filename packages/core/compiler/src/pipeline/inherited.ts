@@ -128,15 +128,21 @@ const covered: [
   Missing<OrderedSetting, (typeof ORDERED)[number]>,
   Missing<UnionSetting, (typeof UNION)[number]>,
 ] = [true, true, true];
+
 void covered;
 
 // A name outside the unions (a cast, or JavaScript) throws instead of reading as some shape.
 function shapeOf(setting: string): "nearest" | "perKey" | "ordered" | "union" {
   const listed = (list: readonly string[]): boolean => list.includes(setting);
+
   if (setting.startsWith("x-") || listed(NEAREST)) return "nearest";
+
   if (setting === "errorRoles") return "perKey";
+
   if (listed(ORDERED)) return "ordered";
+
   if (listed(UNION)) return "union";
+
   throw new Error(`setting ${setting} has no merge shape: ADR 0002 section 8 does not inherit it`);
 }
 
@@ -155,6 +161,7 @@ export function pipelineInherited(raw: PassReadonly<RawApi>): InheritedReader {
   ): InheritedEntry => {
     const pointer = pointerBelow(node.pointer, ...path, ...(key === undefined ? [] : [key]));
     const origin = pipelineOrigin(raw, pointer) ?? { ...node.origin };
+
     return Object.freeze({
       value,
       ...(typeof key === "string" ? { key } : {}),
@@ -168,26 +175,35 @@ export function pipelineInherited(raw: PassReadonly<RawApi>): InheritedReader {
     const shape = shapeOf(setting);
     const path = setting.startsWith("x-") ? [setting] : setting.split(".");
     const chain: TreeNode[] = [];
+
     for (let at: TreeNode | undefined = node; at !== undefined; at = at.parent) chain.unshift(at);
     const written = chain.flatMap((at) => {
       const value = jsonAt(at.settings, path);
+
       return value === undefined ? [] : [{ at, value }];
     });
     const nearest = written[written.length - 1];
+
     if (nearest === undefined) return undefined;
 
     if (shape === "nearest")
       return Object.freeze({ shape, entry: entryOf(nearest.at, path, nearest.value) });
+
     if (shape === "perKey") {
       const entries = new Map<string, InheritedEntry>();
+
       for (const { at, value } of written) {
         if (!isJsonObject(value)) continue;
+
         for (const [key, item] of Object.entries(value))
           entries.set(key, entryOf(at, path, item, key));
       }
+
       return Object.freeze({ shape, entries: readonlyMap(entries) });
     }
+
     const entries: InheritedEntry[] = [];
+
     for (const { at, value } of written) {
       if (isJsonList(value))
         for (const [i, item] of value.entries()) entries.push(entryOf(at, path, item, i));
@@ -195,18 +211,23 @@ export function pipelineInherited(raw: PassReadonly<RawApi>): InheritedReader {
         for (const [key, item] of Object.entries(value)) entries.push(entryOf(at, path, item, key));
       else entries.push(entryOf(at, path, value));
     }
+
     // `errors` is reduced by derive.errors, after it filters each attachment (see the module comment).
     if (shape === "ordered" || setting === "errors")
       return Object.freeze({ shape, entries: Object.freeze(entries) });
     const seen = new Set<string>();
     const union = entries.filter((entry) => {
       const id = canonical([entry.key ?? null, entry.value]);
+
       if (seen.has(id)) return false;
       seen.add(id);
+
       return true;
     });
+
     return Object.freeze({ shape, entries: Object.freeze(union) });
   }
+
   return read;
 }
 
@@ -227,5 +248,6 @@ function readonlyMap<K, V>(map: Map<K, V>): ReadonlyMap<K, V> {
     values: () => map.values(),
     [Symbol.iterator]: () => map[Symbol.iterator](),
   };
+
   return Object.freeze(view);
 }

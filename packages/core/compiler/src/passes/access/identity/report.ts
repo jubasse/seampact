@@ -63,8 +63,10 @@ export function accessIdentityReporter(context: PassContext): AccessIdentityRepo
   // Every pointer reported is one the half read from the raw tree, so it always has an origin.
   const locate = (pointer: string): DiagnosticOrigin => {
     const origin = context.origin(pointer);
+
     if (origin === undefined || !isDiagnosticOrigin(origin))
       throw new Error(`access.identity located a diagnostic at ${pointer}, which has no origin`);
+
     return origin;
   };
 
@@ -75,6 +77,7 @@ export function accessIdentityReporter(context: PassContext): AccessIdentityRepo
         origin: locate(item.pointer),
         message: item.message,
       }));
+
       context.report({
         severity: "error",
         rule: `seampact/access/${problem.rule}`,
@@ -105,6 +108,7 @@ export function accessIdentityOnceReporter(
     error(problem) {
       errors += 1;
       const key = JSON.stringify([problem.rule, problem.pointer, problem.message]);
+
       if (reported.has(key)) return;
       reported.add(key);
       reporter.error(problem);

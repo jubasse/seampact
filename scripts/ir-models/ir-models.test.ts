@@ -30,11 +30,14 @@ afterEach(() => {
 
 function temporaryRootWith(files: Map<string, string>): string {
   const root = mkdtempSync(join(tmpdir(), "ir-models-"));
+
   temporaryRoots.push(root);
+
   for (const [path, content] of files) {
     mkdirSync(dirname(join(root, path)), { recursive: true });
     writeFileSync(join(root, path), content);
   }
+
   return root;
 }
 
@@ -51,6 +54,7 @@ function syntheticDocuments(definitions: Record<string, SchemaNode>): SchemaNode
 
 function required<T>(value: T | undefined, what: string): T {
   if (value === undefined) throw new Error(`${what} is missing`);
+
   return value;
 }
 
@@ -60,14 +64,18 @@ function isSchemaNode(value: unknown): value is SchemaNode {
 
 function definitionsOf(document: SchemaNode): Map<string, SchemaNode> {
   const defs = document.$defs;
+
   if (!isSchemaNode(defs)) throw new Error(`${String(document.$id)} has no $defs`);
 
   const definitions = new Map<string, SchemaNode>();
+
   for (const name of Object.keys(defs)) {
     const definition = defs[name];
+
     if (!isSchemaNode(definition)) throw new Error(`${name} is not a schema`);
     definitions.set(name, definition);
   }
+
   return definitions;
 }
 
@@ -88,6 +96,7 @@ function kotlinSources(files: Map<string, string>): string {
 
 function phpFile(files: Map<string, string>, className: string): string {
   const path = `${PHP_MODEL_DIRECTORY}/${className}.php`;
+
   return required(files.get(path), path);
 }
 
@@ -108,28 +117,34 @@ describe("ir-models", () => {
   it("a hand edit or a schema change without regeneration is stale", () => {
     const files = generateIrModels();
     const root = temporaryRootWith(files);
+
     expect(findStaleFiles(files, root)).toEqual([]);
 
     const kotlinFile = required(
       [...files.keys()].find((path) => path.endsWith("/Operation.kt")),
       "Operation.kt",
     );
+
     writeFileSync(join(root, kotlinFile), `${files.get(kotlinFile)}// hand edit\n`);
     expect(findStaleFiles(files, root)).toEqual([`${kotlinFile} is stale`]);
 
     const withHead = IR_SCHEMA_DOCUMENTS.map((document) => {
       const definitions = definitionsOf(document);
       const httpMethod = definitions.get("HttpMethod");
+
       if (httpMethod === undefined) return document;
       const known = httpMethod["x-seampact-known"];
+
       if (!Array.isArray(known)) throw new Error("HttpMethod lists no known value");
       const withHeadKnown = { ...httpMethod, "x-seampact-known": [...known, "head"] };
+
       return {
         ...document,
         $defs: { ...Object.fromEntries(definitions), HttpMethod: withHeadKnown },
       };
     });
     const regenerated = generateIrModels(withHead);
+
     expect(findStaleFiles(regenerated, temporaryRootWith(files))).toContain(
       `${kotlinFile} is stale`,
     );
@@ -138,6 +153,7 @@ describe("ir-models", () => {
   it("a file or directory the generator no longer writes is reported", () => {
     const files = generateIrModels();
     const root = temporaryRootWith(files);
+
     writeFileSync(join(root, KOTLIN_MODEL_DIRECTORY, "Removed.kt"), "");
     mkdirSync(join(root, KOTLIN_MODEL_DIRECTORY, "nested"));
 
@@ -149,6 +165,7 @@ describe("ir-models", () => {
 
   it("every JSON file it writes is Biome-stable", () => {
     const jsonFiles = [...generateIrModels()].filter(([path]) => path.endsWith(".json"));
+
     expect(jsonFiles.length).toBeGreaterThan(0);
 
     for (const [path, content] of jsonFiles) {
@@ -157,6 +174,7 @@ describe("ir-models", () => {
         input: content,
         encoding: "utf8",
       });
+
       expect(run.status, `${path}: ${run.stderr}`).toBe(0);
       expect(run.stdout, path).toBe(content);
     }
@@ -170,8 +188,10 @@ describe("ir-models", () => {
 
     expect(Object.keys(table).sort()).toEqual(definitionNamesOfSchema().sort());
     expect(committedMappingTable(files)).toEqual({ irRevision: IR_REVISION, definitions: table });
+
     for (const definition of model.definitions) {
       const kotlinName = required(table[definition.name], definition.name).kotlin;
+
       if (definition.kind === "union" || definition.kind === "openEnum") {
         expect(kotlin).toContain(`public sealed interface ${kotlinName} {`);
         expect(kotlin).toMatch(
@@ -193,6 +213,7 @@ describe("ir-models", () => {
 
     for (const definition of model.definitions) {
       const phpName = required(table[definition.name], definition.name).php;
+
       if (definition.kind === "union") {
         expect(phpFile(files, phpName), definition.name).toContain(
           `abstract readonly class ${phpName}\n`,
@@ -223,6 +244,7 @@ describe("ir-models", () => {
         definition.kind === "union"
           ? "IrShape::union\\('\\w+', true,"
           : "IrShape::openEnum\\(\\[.*\\], true\\),$";
+
       expect(shapes, definition.name).toMatch(new RegExp(`'${definition.name}' => ${entry}`, "m"));
     }
   });
@@ -232,11 +254,13 @@ describe("ir-models", () => {
     const mustAct = buildNeutralModel().definitions.filter((definition) => definition.mustAct);
 
     expect(mustAct.length).toBeGreaterThan(0);
+
     for (const definition of mustAct) {
       const entry =
         definition.kind === "union"
           ? 'IrShape\\.Union\\("\\w+", true,'
           : "IrShape\\.OpenEnum\\(.*, true\\)\\)$";
+
       expect(shapes, definition.name).toMatch(
         new RegExp(`put\\("${definition.name}", ${entry}`, "m"),
       );

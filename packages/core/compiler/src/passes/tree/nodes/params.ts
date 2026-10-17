@@ -40,6 +40,7 @@ export function treeNodesParams(
   input: IrWriter.TypeUse | undefined,
 ): IrWriter.Params {
   const pathFields = pathParamFields(site);
+
   if (path !== undefined) checkPlaceholders(site, path, pathFields);
 
   const header = paramsOf(
@@ -47,9 +48,11 @@ export function treeNodesParams(
     inheritedFields(site, "headers", () => true),
     "header",
   );
+
   checkTagHeaderNotDeclared(site, header, input);
 
   const queryFields = inheritedFields(site, "query", (at) => at === site.node || safe);
+
   checkQueryNotNamedLikePath(site, pathFields.fields, queryFields);
 
   return {
@@ -64,8 +67,10 @@ export function treeNodesParams(
 function pathParamFields(site: TreeNodesSite): { fields: TreeNodesField[]; complete: boolean } {
   const fields: TreeNodesField[] = [];
   let complete = true;
+
   for (const at of chainOf(site.node)) {
     const collection = at.kind === "scope" && at.name === "member" ? at.parent : undefined;
+
     if (collection !== undefined) {
       const id = treeNodesFields(
         site,
@@ -73,6 +78,7 @@ function pathParamFields(site: TreeNodesSite): { fields: TreeNodesField[]; compl
         `${collection.pointer}/id`,
         "input",
       );
+
       fields.push(...id.fields.map((field) => ({ ...field, required: true })));
     }
 
@@ -82,15 +88,19 @@ function pathParamFields(site: TreeNodesSite): { fields: TreeNodesField[]; compl
       `${at.pointer}/pathParams`,
       "input",
     );
+
     complete &&= declared.complete;
     fields.push(...declared.fields.map((field) => ({ ...field, required: true })));
   }
+
   return { fields, complete };
 }
 
 function chainOf(node: TreeNode): TreeNode[] {
   const chain: TreeNode[] = [];
+
   for (let at: TreeNode | undefined = node; at !== undefined; at = at.parent) chain.unshift(at);
+
   return chain;
 }
 
@@ -101,9 +111,11 @@ function inheritedFields(
   reaches: (at: TreeNode) => boolean,
 ): TreeNodesField[] {
   const inherited = site.context.inherited(site.node, setting);
+
   if (inherited === undefined) return [];
 
   const writers: TreeNode[] = [];
+
   for (const entry of inherited.entries)
     if (!writers.includes(entry.node) && reaches(entry.node)) writers.push(entry.node);
 
@@ -126,16 +138,20 @@ function paramsOf(
   for (const field of fields) {
     const key = list === "header" ? field.name.toLowerCase() : field.name;
     const first = seen.get(key);
+
     if (first !== undefined) {
       reportTwice(site, field, first, list);
       continue;
     }
+
     seen.set(key, field);
 
     if (field.type === undefined || !treeNodesFieldTravels(site, field, PLACE[list])) continue;
     const param = paramOf(site, field, field.type, list);
+
     if (param !== undefined) params.push(param);
   }
+
   return params;
 }
 
@@ -152,12 +168,15 @@ function paramOf(
     required: field.required,
     origin: pipelineCopy(field.origin),
   };
+
   if (list !== "query") return param;
 
   const wire = site.context.treeSchemas.queryWire(field.wirePointer);
+
   if (wire !== undefined) return { ...param, wire: pipelineCopy(wire) };
 
   const origin = treeNodesLocate(field.origin, treeNodesNodeOrigin(site.node.origin));
+
   site.once(
     `query-field:${origin.layer}#${origin.pointer}:${field.name}`,
     treeNodesError({
@@ -167,6 +186,7 @@ function paramOf(
       fix: "Give the field a number, boolean, text, enum or list of them, or an object of them.",
     }),
   );
+
   return undefined;
 }
 
@@ -178,11 +198,14 @@ function checkQueryNotNamedLikePath(
   queryFields: readonly TreeNodesField[],
 ): void {
   const fallback = treeNodesNodeOrigin(site.node.origin);
+
   for (const query of queryFields) {
     const path = pathFields.find(({ name }) => name === query.name);
+
     if (path === undefined) continue;
 
     const origin = treeNodesLocate(query.origin, fallback);
+
     site.once(
       `param-unique:${origin.layer}#${origin.pointer}:${query.name}:path`,
       treeNodesError({
@@ -206,6 +229,7 @@ function reportTwice(
 ): void {
   const fallback = treeNodesNodeOrigin(site.node.origin);
   const origin = treeNodesLocate(field.origin, fallback);
+
   site.once(
     `param-unique:${origin.layer}#${origin.pointer}:${field.name}`,
     treeNodesError({
@@ -235,7 +259,9 @@ function checkPlaceholders(
     for (const placeholder of placeholdersOf(part.text)) {
       const origin = treeNodesLocate(part.origin, nodeOrigin);
       const repeated = placeholders.includes(placeholder);
+
       placeholders.push(placeholder);
+
       if (repeated) reportRepeatedPlaceholder(site, path.full, placeholder, origin);
       else if (pathFields.complete && !declared.includes(placeholder))
         reportUndeclaredPlaceholder(site, path.full, placeholder, origin);
@@ -243,6 +269,7 @@ function checkPlaceholders(
 
   for (const field of pathFields.fields.filter(({ name }) => !placeholders.includes(name))) {
     const origin = treeNodesLocate(field.origin, nodeOrigin);
+
     site.once(
       `path-param:${origin.layer}#${origin.pointer}:${field.name}`,
       treeNodesError({
@@ -300,9 +327,11 @@ function checkTagHeaderNotDeclared(
 ): void {
   const tagHeader = treeNodesTagHeader(site.draft, input)?.toLowerCase();
   const declared = headers.find(({ name }) => name.toLowerCase() === tagHeader);
+
   if (declared?.origin === undefined) return;
 
   const origin = treeNodesLocate(declared.origin, treeNodesNodeOrigin(site.node.origin));
+
   site.once(
     `union-header:${origin.layer}#${origin.pointer}:${site.node.pointer}`,
     treeNodesError({
@@ -317,9 +346,11 @@ function checkTagHeaderNotDeclared(
 /** The policy for undeclared query keys: the nearest `unknownQuery`, else `conventions.query.unknownKeys`. */
 export function treeNodesUnknownQuery(site: TreeNodesSite): IrWriter.UnknownQuery {
   const nearest = site.context.inherited(site.node, "unknownQuery");
+
   if (nearest !== undefined) return policyOf(nearest.entry.value, nearest.entry.origin);
 
   const reading = site.context.conventions.get("query.unknownKeys");
+
   return policyOf(reading?.value, reading?.origin);
 }
 
@@ -330,9 +361,11 @@ function policyOf(
   if (value === REFUSE) return { policy: "refuse" };
 
   const reason = treeNodesMember(value, "ignore");
+
   if (typeof reason !== "string" || origin === undefined)
     throw new Error(
       `an unknown-query policy is refuse or { ignore: <reason> }, got ${JSON.stringify(value)}`,
     );
+
   return { policy: "ignore", reason, origin: pipelineCopy(origin) };
 }

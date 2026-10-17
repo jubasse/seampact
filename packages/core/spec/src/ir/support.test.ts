@@ -23,6 +23,7 @@ describe("checkIrSupport", () => {
 
   test("checkIrSupport names the mismatch", () => {
     const ir = { ...sample("unknown-kind-and-feature.ir.json"), irRevision: 8 };
+
     expect(validateIr(ir, "open").valid).toBe(true);
     expect(checkIrSupport(ir, { ...READER, irRevision: 7 })).toEqual([
       {
@@ -65,6 +66,7 @@ describe("checkIrSupport", () => {
       expected: [1],
       message: "irVersion 2 is not one this reader reads (1).",
     };
+
     expect(checkIrSupport({ irVersion: 2, operations: {}, kinds: "all" }, READER)).toEqual([
       version,
     ]);
@@ -81,6 +83,7 @@ describe("checkIrSupport", () => {
     const ir = sample("every-member.ir.json") as unknown as Record<string, unknown>;
     const { kinds: _kinds, ...withoutKinds } = ir;
     const operations = [{ id: "health", kind: "httpOperation", features: "none" }];
+
     expect(checkIrSupport({ ...withoutKinds, features: {}, operations }, READER)).toEqual([
       expect.objectContaining({ code: "ir.support.malformed", member: "/kinds", value: "missing" }),
       expect.objectContaining({
@@ -105,6 +108,7 @@ describe("checkIrSupport", () => {
     const operations = ir.operations.map((operation) =>
       operation.id === "health" ? { ...operation, kind: "rpcMethod" } : operation,
     );
+
     expect(
       checkIrSupport({ ...ir, kinds: ["httpOperation", "rpcMethod"], operations }, READER),
     ).toEqual([

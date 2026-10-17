@@ -85,6 +85,7 @@ export function isTypeRole(role: Role): boolean {
       return false;
     default: {
       const unknown: never = role;
+
       throw new Error(`unknown naming role ${JSON.stringify(unknown)}`);
     }
   }
@@ -115,6 +116,7 @@ function defaultSuffix(role: Role): string | undefined {
       return undefined;
     default: {
       const unknown: never = role;
+
       throw new Error(`unknown naming role ${JSON.stringify(unknown)}`);
     }
   }
@@ -137,6 +139,7 @@ export function assertSegments(segments: readonly string[]): void {
   if (!Array.isArray(segments)) {
     throw new Error(`naming segments are an array, got ${JSON.stringify(segments)}`);
   }
+
   for (const segment of segments) {
     if (typeof segment !== "string" || !SEGMENT.test(segment)) {
       throw new Error(`a naming segment is [a-z0-9]+, got ${JSON.stringify(segment)}`);
@@ -151,8 +154,10 @@ export function assertSegments(segments: readonly string[]): void {
 export function assertName(name: Name): void {
   const role: unknown = name.role;
   const status: unknown = name.status;
+
   assertRole(role);
   assertSegments(name.segments);
+
   if (role === "response") assertStatus(status);
   else if (status !== undefined) {
     throw new Error(`role ${role} has no status, got ${String(status)}`);
@@ -166,15 +171,20 @@ export function assertName(name: Name): void {
 export function suffixWords(name: Name, suffixes?: Suffixes): string[] {
   assertName(name);
   const base = defaultSuffix(name.role);
+
   if (base === undefined) return [];
   let word = base;
+
   if (suffixes !== undefined && Object.hasOwn(suffixes, name.role)) {
     word = suffixes[name.role as SuffixRole] as string;
+
     if (typeof word !== "string" || !SEGMENT.test(word)) {
       throw new Error(`the suffix of role ${name.role} is [a-z0-9]+, got ${JSON.stringify(word)}`);
     }
   }
+
   if (name.role === "response") return [word, String(name.status)];
+
   return [word];
 }
 
@@ -202,6 +212,8 @@ export function deriveName(owner: readonly string[], role: Role, status?: number
       ? { segments: [...owner], role, status: status as number }
       : { segments: [...owner], role, ...(status === undefined ? {} : { status }) }
   ) as Name;
+
   assertName(name);
+
   return name;
 }

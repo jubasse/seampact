@@ -34,16 +34,20 @@ export function treeNodesBodyLimit(
   context: TreeNodesContext,
 ): TreeNodesBodyLimit | undefined {
   const inherited = context.inherited(node, "bodyLimit");
+
   if (inherited !== undefined) {
     const { value, origin } = inherited.entry;
+
     return parsedBodyLimit(value, origin, origin.pointer);
   }
 
   const isBatch = node.kind === "op" && node.name === "batch";
   const convention = isBatch ? "batch.bodyLimit" : "bodyLimit";
   const reading = context.conventions.get(convention);
+
   if (reading === undefined) return undefined;
   const writtenAt = reading.origin?.pointer ?? `the default conventions.${convention}`;
+
   return parsedBodyLimit(reading.value, reading.origin, writtenAt);
 }
 
@@ -53,9 +57,12 @@ function parsedBodyLimit(
   writtenAt: string,
 ): TreeNodesBodyLimit | undefined {
   const bytes = typeof value === "string" ? pipelineParseSize(value) : undefined;
+
   if (bytes !== undefined) return { bytes, origin };
+
   if (origin === undefined)
     throw new Error(`the body limit at ${writtenAt} does not parse as a size: ${String(value)}`);
+
   return undefined;
 }
 
@@ -63,13 +70,16 @@ function parsedBodyLimit(
 export function treeNodesCheckBodyLimits(context: TreeNodesContext): void {
   for (const node of pipelineTreeNodes(context.raw)) {
     const value = treeNodesSetting(node, "bodyLimit");
+
     if (value === undefined) continue;
     const origin = context.origin(`${node.pointer}/bodyLimit`) ?? node.origin;
+
     checkLimit(value, origin, context);
   }
 
   for (const path of LIMIT_CONVENTIONS) {
     const reading = treeNodesWrittenConvention(context, path);
+
     if (reading !== undefined) checkLimit(reading.value, reading.origin, context);
   }
 }

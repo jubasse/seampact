@@ -67,6 +67,7 @@ function compileIdentities(identities: string, rows: AccessIdentitySchemaUseRow[
   const contract = accessIdentityInline(`${CATALOGUES}identities:\n${identities}`);
   const written = Object.keys(contract.raw.merged.identities ?? {});
   const principals = written.map((id) => principalOf(id));
+
   return {
     contract,
     ...accessIdentityRun(
@@ -79,6 +80,7 @@ function compileIdentities(identities: string, rows: AccessIdentitySchemaUseRow[
 
 function refusals(identities: string, rows: AccessIdentitySchemaUseRow[] = []) {
   const { draft, diagnostics } = compileIdentities(identities, rows);
+
   return {
     written: Object.keys(draft.identities),
     diagnostics: diagnostics.map(({ rule, message, origin, related }) => ({
@@ -93,6 +95,7 @@ function refusals(identities: string, rows: AccessIdentitySchemaUseRow[] = []) {
 describe("identities and principal variants", () => {
   test("credential and signed identities, with one principal or variants", () => {
     const { draft, diagnostics } = accessIdentityCataloguesRun();
+
     expect(diagnostics).toEqual([]);
     expect({ ...draft.identities }).toEqual(accessIdentityCataloguesExpected("identities"));
   });
@@ -253,6 +256,7 @@ identities:
   user: { schemes: { read: [bearer], write: [bearer] }, principal: UserPrincipal }
 `,
     );
+
     expect(() =>
       accessIdentityRun(principal, accessIdentityDraft(), accessIdentityTableService([])),
     ).toThrow(
@@ -260,6 +264,7 @@ identities:
     );
 
     const header = accessIdentityInline(CATALOGUES);
+
     expect(() =>
       accessIdentityRun(header, accessIdentityDraft(), accessIdentityTableService([])),
     ).toThrow(
@@ -271,6 +276,7 @@ identities:
 describe("identity headers", () => {
   test("declarations by semantic, and uses with their facts", () => {
     const { draft } = accessIdentityCataloguesRun();
+
     expect({ ...draft.headers }).toEqual(accessIdentityCataloguesExpected("headers"));
   });
 
@@ -497,11 +503,13 @@ describe("access.identity diagnostics are located", () => {
       "identity-member",
     ]);
     const locations = contract.raw.locations;
+
     for (const diagnostic of diagnostics) {
       expect(diagnostic.severity).toBe("error");
       expect(diagnostic.rule).toMatch(/^seampact\/access\/[a-z]+(-[a-z]+)*$/);
       expect(diagnostic.message).not.toBe("");
       expect(diagnostic.fix).toMatch(/\.$/);
+
       for (const origin of [diagnostic.origin, ...diagnostic.related.map((item) => item.origin)])
         expect(Object.hasOwn(locations, diagnosticLocationKey(origin))).toBe(true);
     }

@@ -36,7 +36,9 @@ export class Reporter {
 
   originAt(site: SiteLocation): DiagnosticOrigin {
     const origin: DiagnosticOrigin = { layer: this.layer, pointer: loadSitePointer(site) };
+
     this.locations[diagnosticLocationKey(origin)] = site;
+
     return origin;
   }
 
@@ -50,11 +52,15 @@ export class Reporter {
       if (origin.layer !== from) return origin;
       const key = diagnosticLocationKey(origin);
       const site = this.locations[key];
+
       delete this.locations[key];
       const moved: DiagnosticOrigin = { layer: to, pointer: origin.pointer };
+
       if (site) this.locations[diagnosticLocationKey(moved)] = site;
+
       return moved;
     };
+
     for (const d of this.diagnostics.slice(since)) {
       d.origin = move(d.origin);
       d.related = d.related.map((r) => ({ ...r, origin: move(r.origin) }));
@@ -63,6 +69,7 @@ export class Reporter {
 
   report(p: PendingDiagnostic): void {
     const identity = `${p.rule}|${p.at.file}|${p.at.line}|${p.at.column}|${p.message}`;
+
     if (this.seen.has(identity)) return;
     this.seen.add(identity);
     this.diagnostics.push({

@@ -66,6 +66,7 @@ const FIELD_MEDIA = ["application/x-www-form-urlencoded", "multipart/form-data"]
 const DOCUMENT_MEDIA = ["application/json"];
 // The catalogues of the declarations the compiler supplies (origin layer `core`, ADR 0004 sections 6 and 13).
 const CORE_CATALOGUES = ["formats", "errors", "schemas"];
+
 export const IR_PARTITIONS = {
   "ValueSource.in": [NAMED_SOURCES, BARE_SOURCES],
   "FieldWire.kind": [QUERY_WIRE_KINDS, PLAIN_WIRE_KINDS],
@@ -79,22 +80,29 @@ function knownValues(definition: string, member: string): readonly string[] {
   const properties = irDefinition(definition)?.properties as Record<string, SchemaNode> | undefined;
   let node =
     properties !== undefined && Object.hasOwn(properties, member) ? properties[member] : undefined;
+
   while (typeof node?.$ref === "string")
     node = irDefinition(node.$ref.slice(node.$ref.lastIndexOf("/") + 1));
   const known = node?.[KNOWN_VALUES_KEYWORD];
+
   if (!Array.isArray(known)) throw new Error(`${definition}.${member} is not an open enum`);
+
   return known as string[];
 }
+
 const isKnown = (definition: string, member: string, value: unknown): boolean =>
   typeof value === "string" && knownValues(definition, member).includes(value);
 
 // The catalogues an id names, by the id definition that keys them: every map of the top level and of the api
 // whose keys are a `$ref` to an id definition (`schemes` keyed by `SchemeId`, `surfaces` by `SurfaceId`).
 const CATALOGUES = new Map<string, { owner: "ContractIR" | "Api"; member: string }>();
+
 for (const owner of ["ContractIR", "Api"] as const) {
   const properties = irDefinition(owner)?.properties as Record<string, SchemaNode> | undefined;
+
   for (const [member, schema] of Object.entries(properties ?? {})) {
     const keys = schema.propertyNames as SchemaNode | undefined;
+
     if (typeof keys?.$ref === "string")
       CATALOGUES.set(keys.$ref.slice(keys.$ref.lastIndexOf("/") + 1), { owner, member });
   }
@@ -107,6 +115,7 @@ const proofsOf = (input: Json): unknown[] => (Array.isArray(input.proofs) ? inpu
 // The schema entry a `ref` use names, if the document has it.
 function refTargetOf(use: Json, schemaEntries: Json): unknown {
   if (use.kind !== "ref" || typeof use.schema !== "string") return undefined;
+
   return Object.hasOwn(schemaEntries, use.schema) ? schemaEntries[use.schema] : undefined;
 }
 
@@ -116,15 +125,19 @@ function checkProofInput(input: Json, pointer: string, schemaEntries: Json, fail
   if (proofsOf(input).length === 0) return;
   const use = isRecord(input.schema) ? input.schema : {};
   const message = "An input with body proofs is a 'ref' use of an object schema";
+
   if (use.kind !== "ref") {
     if (KNOWN_TYPE_USE_KINDS.includes(String(use.kind)))
       fail("ir.input-proof.input", `${pointer}/schema`, `${message}, not a '${use.kind}' use.`);
+
     return;
   }
 
   const target = refTargetOf(use, schemaEntries);
+
   if (!isRecord(target)) return;
   const kind = String(target.kind);
+
   if (KNOWN_SCHEMA_KINDS.includes(kind) && !OBJECT_SCHEMA_KINDS.includes(kind))
     fail(
       "ir.input-proof.input",
@@ -139,7 +152,9 @@ function bodyNamesOf(input: Json, schemaEntries: Json): Set<unknown> {
   const target = refTargetOf(isRecord(input.schema) ? input.schema : {}, schemaEntries);
   const properties = isRecord(target) && Array.isArray(target.properties) ? target.properties : [];
   const fields = Array.isArray(input.fields) ? input.fields : [];
+
   for (const member of [...properties, ...fields]) if (isRecord(member)) names.add(member.name);
+
   return names;
 }
 
@@ -147,8 +162,10 @@ function bodyNamesOf(input: Json, schemaEntries: Json): Set<unknown> {
 function checkProofNames(input: Json, pointer: string, schemaEntries: Json, fail: Fail): void {
   const taken = bodyNamesOf(input, schemaEntries);
   const seen = new Set<unknown>();
+
   for (const [i, proof] of proofsOf(input).entries()) {
     if (!isRecord(proof) || typeof proof.name !== "string") continue;
+
     if (seen.has(proof.name) || taken.has(proof.name))
       fail(
         "ir.input-proof.name",
@@ -165,14 +182,17 @@ function checkProofNames(input: Json, pointer: string, schemaEntries: Json, fail
 function checkProofWires(input: Json, pointer: string, fail: Fail): void {
   const mediaKnown = isKnown("OperationInput", "media", input.media);
   const fieldMedia = FIELD_MEDIA.includes(String(input.media));
+
   for (const [i, proof] of proofsOf(input).entries()) {
     if (!isRecord(proof)) continue;
+
     if (isRecord(proof.wire) && proof.wire.kind === "file")
       fail(
         "ir.input-proof.wire",
         `${pointer}/proofs/${i}`,
         "A body proof's wire kind is not 'file'.",
       );
+
     if (mediaKnown && has(proof, "wire") !== fieldMedia)
       fail(
         "ir.input-proof.wire",
@@ -191,8 +211,10 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
   const objects = new Map<string, string | undefined>(); // pointer to definition, for placement rules
   const nodes: Extract<IrInstanceNode, { kind: "object" }>[] = [];
   const ids: Extract<IrInstanceNode, { kind: "string" }>[] = [];
+
   walkIrInstance(ir, (node) => {
     if (node.kind === "string") ids.push(node);
+
     if (node.kind !== "object") return;
     objects.set(node.pointer, node.definition);
     nodes.push(node);
@@ -205,9 +227,11 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
   // named `__proto__`).
   for (const { pointer, definition, value } of ids) {
     const catalogue = CATALOGUES.get(definition);
+
     if (catalogue === undefined) continue;
     const owner = catalogue.owner === "ContractIR" ? doc : doc.api;
     const entries = isRecord(owner) ? owner[catalogue.member] : undefined;
+
     if (isRecord(entries) && !Object.hasOwn(entries, value))
       fail("ir.ref.resolves", pointer, `'${value}' names no entry of '${catalogue.member}'.`);
   }
@@ -221,6 +245,7 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
         // another api (a relay route's copy, read in that api).
         if (value.layer !== "core" || typeof value.pointer !== "string") break;
         const [catalogue = "", id] = value.pointer.split("/").slice(1).map(unescapeSegment);
+
         if (!CORE_CATALOGUES.includes(catalogue) || id === undefined || id === "") {
           fail(
             "ir.origin.core",
@@ -229,7 +254,9 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
           );
           break;
         }
+
         const entries = doc[catalogue];
+
         if (!has(value, "api") && isRecord(entries) && !Object.hasOwn(entries, id))
           fail(
             "ir.origin.core",
@@ -238,14 +265,17 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
           );
         break;
       }
+
       case "OperationInput": {
         checkProofInput(value, pointer, schemaEntries, fail);
         checkProofNames(value, pointer, schemaEntries, fail);
         checkProofWires(value, pointer, fail);
         break;
       }
+
       case "Name": {
         if (!isKnown("Name", "role", value.role)) break;
+
         if ((value.role === "response") !== has(value, "status"))
           fail(
             "ir.name.status",
@@ -254,8 +284,10 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
           );
         break;
       }
+
       case "MetaMember": {
         if (!isKnown("MetaMember", "fill", value.fill)) break;
+
         if ((value.fill === "source") !== has(value, "source"))
           fail(
             "ir.meta.source",
@@ -264,22 +296,29 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
           );
         break;
       }
+
       case "ValueSource": {
         const source = value.in;
+
         if (typeof source !== "string" || !isKnown("ValueSource", "in", source)) break;
+
         if (NAMED_SOURCES.includes(source) && (!has(value, "name") || has(value, "prefixBits")))
           fail(
             "ir.value-source.members",
             pointer,
             `A '${source}' source has 'name' and no 'prefixBits'.`,
           );
+
         if (BARE_SOURCES.includes(source) && has(value, "name"))
           fail("ir.value-source.members", pointer, `A '${source}' source has no 'name'.`);
+
         if (source !== "address" && BARE_SOURCES.includes(source) && has(value, "prefixBits"))
           fail("ir.value-source.members", pointer, "Only an 'address' source has 'prefixBits'.");
         const parent = objects.get(parentOf(pointer));
+
         if (source === "resolver" && parent !== "OperationScope")
           fail("ir.value-source.place", pointer, "A 'resolver' source is a scope source only.");
+
         if (source === "holderField" && parent !== "FieldRightSubject")
           fail(
             "ir.value-source.place",
@@ -288,6 +327,7 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
           );
         break;
       }
+
       case "HeaderDecl": {
         if (!isKnown("HeaderDecl", "semantic", value.semantic)) break;
         const token = value.semantic === "versionToken";
@@ -296,6 +336,7 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
         const ok = token
           ? tokenMembers && !has(value, "name") && !has(value, "in")
           : plainMembers && !has(value, "response") && !has(value, "request");
+
         if (!ok)
           fail(
             "ir.header.members",
@@ -306,28 +347,36 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
           );
         break;
       }
+
       case "Cache": {
         const never = value.family === "never";
+
         if (never === has(value, "directives"))
           fail(
             "ir.cache.directives",
             pointer,
             "Cache 'directives' are absent if and only if the family is 'never'.",
           );
+
         if (never && value.noStore !== true)
           fail("ir.cache.directives", pointer, "A 'never' cache family sets 'noStore'.");
         break;
       }
+
       case "Operation": {
         const access = value.access;
+
         if (value.safe !== false || !isRecord(access)) break;
+
         if (access.kind !== "identity" && access.kind !== "optional") break;
         const accepted = Array.isArray(access.schemes) ? access.schemes : [];
         const cookie = accepted.some((id) => {
           const scheme =
             typeof id === "string" && Object.hasOwn(schemes, id) ? schemes[id] : undefined;
+
           return isRecord(scheme) && scheme.kind === "cookie";
         });
+
         if (cookie && !has(value, "csrf"))
           fail(
             "ir.csrf.cookie",
@@ -336,8 +385,10 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
           );
         break;
       }
+
       case "FieldWire": {
         const kind = value.kind;
+
         if (PLAIN_WIRE_KINDS.includes(String(kind))) {
           if (QUERY_WIRE_MEMBERS.some((member) => has(value, member)))
             fail(
@@ -353,8 +404,10 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
               `A '${kind}' field has style, explode and brackets.`,
             );
         }
+
         break;
       }
+
       case "Property": {
         if (isRecord(value.type) && has(value.type, "nullable"))
           fail(
@@ -364,10 +417,13 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
           );
         break;
       }
+
       case "Scope":
       case "ResourceSubject": {
         const use = value.idSchema;
+
         if (!isRecord(use) || !KNOWN_TYPE_USE_KINDS.includes(String(use.kind))) break;
+
         if (!ID_TYPE_KINDS.includes(String(use.kind)) || has(use, "nullable"))
           fail(
             "ir.id.scalar",
@@ -376,10 +432,12 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
           );
         break;
       }
+
       // A rule's proof and the body field it adds to an operation's input (`InputProof`) are typed alike.
       case "RuleProof":
       case "InputProof": {
         const use = value.schema;
+
         if (isRecord(use) && PROOF_REFUSED_KINDS.includes(String(use.kind)))
           fail(
             "ir.id.scalar",
@@ -388,6 +446,7 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
           );
         break;
       }
+
       case "Scalar": {
         if (isRecord(value.type) && has(value.type, "scalar"))
           fail("ir.scalar.type", pointer, "A named format's own type names no 'scalar'.");
@@ -395,5 +454,6 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
       }
     }
   }
+
   return violations;
 }

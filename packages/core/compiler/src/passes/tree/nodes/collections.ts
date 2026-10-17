@@ -36,13 +36,16 @@ export function treeNodesCheckIdProperties(draft: DraftIR, context: TreeNodesCon
 
     const written = treeNodesText(collection, "idProperty");
     const idProperty = written ?? treeNodesIdParam(collection, context.raw.merged.schemas);
+
     if (idProperty === undefined) continue;
 
     const itemUse = context.treeSchemas.typeUse(`${collection.pointer}/item`, "output");
     const item = treeNodesObjectOf(draft, itemUse);
+
     if (item === undefined || item.properties.some(({ name }) => name === idProperty)) continue;
 
     const at = idPropertyPointer(collection, idProperty, written);
+
     context.report(
       treeNodesError({
         rule: "id-property",
@@ -63,6 +66,8 @@ function idPropertyPointer(
   if (written !== undefined) return `${collection.pointer}/idProperty`;
 
   const idPointer = `${collection.pointer}/id`;
+
   if (typeof treeNodesSetting(collection, "id") === "string") return idPointer;
+
   return treeNodesPointer(idPointer, idProperty);
 }

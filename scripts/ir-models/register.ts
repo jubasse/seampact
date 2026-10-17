@@ -18,6 +18,7 @@ registerHooks({
     } catch (error) {
       const parentUrl = context.parentURL ?? "";
       const fromPackages = parentUrl.startsWith(REPOSITORY_PACKAGES_URL);
+
       if (!isMissingModule(error) || !fromPackages || !specifier.endsWith(".js")) throw error;
 
       return nextResolve(`${specifier.slice(0, -".js".length)}.ts`, context);

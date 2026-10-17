@@ -23,8 +23,10 @@ const proofFile = "docs/conformance/proofs/lane-a.yaml";
 /** Each failing fixture: the one problem expected, as file, id and message parts. */
 function expectOne(name: string, file: string, id: string | undefined, part: string) {
   const out = lines(check({ root: fx(name) }));
+
   expect(out, name).toHaveLength(1);
   expect(out[0]).toContain(file);
+
   if (id) expect(out[0]).toContain(id);
   expect(out[0]).toContain(part);
 }
@@ -119,6 +121,7 @@ describe("checklist check", () => {
     const out = lines(
       check({ root: fx("consumer-tests"), consumers: fx("consumer-tests/consumers") }),
     );
+
     expect(out).toHaveLength(1);
     expect(out[0]).toContain("test-seampact-nestjs/y.test.txt");
     expect(out[0]).toContain("CHK-001");
@@ -127,8 +130,10 @@ describe("checklist check", () => {
   it("release gate names id and target", () => {
     expect(check({ root: fx("release-gate") })).toEqual([]);
     const out = lines(check({ root: fx("release-gate"), releaseGate: true }));
+
     expect(out).toContain(`${CHECKLIST}: CHK-001: release gate: no test for target nestjs`);
     expect(out).toContain(`${CHECKLIST}: CHK-002: release gate: no fixture`);
+
     for (const t of [
       "adonis",
       "api-platform",
@@ -146,6 +151,7 @@ describe("checklist check", () => {
 
 describe("checklist check against a base ref", () => {
   const tmp = mkdtempSync(join(tmpdir(), "seampact-checklist-"));
+
   afterAll(() => rmSync(tmp, { recursive: true, force: true }));
   const git = (...args: string[]) =>
     execFileSync(
@@ -157,6 +163,7 @@ describe("checklist check against a base ref", () => {
       },
     );
   let original = "";
+
   beforeAll(() => {
     cpSync(fx("ok"), tmp, { recursive: true });
     git("init", "-q", "-b", "base");
@@ -170,6 +177,7 @@ describe("checklist check against a base ref", () => {
     // CHK-001 renamed to CHK-000: the old id vanished and the new one sits below the base's highest.
     edit(original.replace("id: CHK-001", "id: CHK-000"));
     const out = lines(check({ root: tmp, base: "base" }));
+
     expect(out.some((l) => l.includes("CHK-001") && l.includes("removed instead of retired"))).toBe(
       true,
     );
@@ -187,6 +195,7 @@ describe("checklist check against a base ref", () => {
     expect(original).toContain("retired:");
     edit(original.replace(/\n\s+retired:.*/, ""));
     const out = lines(check({ root: tmp, base: "base" }));
+
     expect(out).toHaveLength(1);
     expect(out[0]).toContain("CHK-002");
     expect(out[0]).toContain("retired at base but live again");
@@ -205,6 +214,7 @@ describe("checklist report", () => {
   it("report shares per target", () => {
     expect(problems).toEqual([]);
     const byTarget = Object.fromEntries(shares(model, fx("report")).map((s) => [s.target, s]));
+
     // server expands to eight targets; CHK-001 has a fixture and core and nestjs tests.
     expect(byTarget.core).toMatchObject({ items: 2, fixtures: 2, tests: 2 });
     expect(byTarget.nestjs).toMatchObject({ items: 2, fixtures: 2, tests: 1 });
@@ -213,6 +223,7 @@ describe("checklist report", () => {
       [...shares(model, fx("report")).map((s) => s.target)].sort(),
     );
     const text = renderReport(model, fx("report"));
+
     expect(text).toContain("| core | 2 | 2/2 (100.0%) | 2/2 (100.0%) |");
     expect(text).toContain("| fastify | 1 | 1/1 (100.0%) | 0/1 (0.0%) |");
     expect(renderReport(model, fx("report"))).toBe(text);
@@ -226,6 +237,7 @@ describe("checklist report", () => {
     const byTarget = Object.fromEntries(
       shares(model, fx("report"), results).map((s) => [s.target, s]),
     );
+
     // CHK-002's only test fails, so its fixture and test do not count; CHK-003 names no test.
     expect(byTarget.core).toMatchObject({ items: 2, fixtures: 1, tests: 1 });
     expect(byTarget.nestjs).toMatchObject({ items: 2, fixtures: 1, tests: 1 });
@@ -238,6 +250,7 @@ describe("checklist report", () => {
       assertionResults: statuses.map((status) => ({ title: "works", status })),
     });
     const at = (...files: ReturnType<typeof run>[]) => ({ testResults: files });
+
     expect(testPassed(ref, "/r", at(run("/r/src/a.test.ts", "passed")))).toBe(true);
     // One passed and one failed assertion of the same title: not passed.
     expect(testPassed(ref, "/r", at(run("/r/src/a.test.ts", "passed", "failed")))).toBe(false);
@@ -253,10 +266,12 @@ describe("ids export", () => {
   it("ids export has no private detail", () => {
     // Forbidden terms come from SEAMPACT_PRIVATE_TERMS or an untracked file, never from source.
     const lower = committed.toLowerCase();
+
     for (const term of privateTerms()) expect(lower).not.toContain(term);
     const prd = { features: [{ id: "FR-1", name: "Loading" }] };
     const clean = { scenarios: [{ id: "SCN-025", title: "A neutral title" }] };
     const leaky = { scenarios: [{ id: "SCN-025", title: "Runs at Zorblax scale" }] };
+
     expect(buildIds(prd, clean, ["zorblax"])).toContain("SCN-025");
     expect(() => buildIds(prd, leaky, ["zorblax"])).toThrow(/private term/);
     expect(privateTerms({ SEAMPACT_PRIVATE_TERMS: "Zorblax, Other" }, "/nonexistent")).toEqual([
@@ -270,9 +285,11 @@ describe("ids export", () => {
       frs: Record<string, string>;
       scenarios: Record<string, string>;
     };
+
     for (let n = 1; n <= 42; n++) expect(ids.frs).toHaveProperty(`FR-${n}`);
     expect(Object.keys(ids)).toEqual(["frs", "scenarios"]);
     const sorted = (o: Record<string, string>) => Object.keys(o);
+
     expect(sorted(ids.frs)).toEqual(
       [...sorted(ids.frs)].sort((a, b) => Number(a.slice(3)) - Number(b.slice(3))),
     );
@@ -284,6 +301,7 @@ describe("ids export", () => {
   });
 
   const favir = process.env.SEAMPACT_FAVIR_DIR;
+
   it.skipIf(!favir)("matches the framing when the framing directory is present", () => {
     expect(exportFromDir(favir as string)).toBe(committed);
   });
@@ -303,11 +321,13 @@ describe("checklist cli", () => {
 
   it("check exits non-zero and names the problem", () => {
     let stderr = "";
+
     try {
       run("check", "--root", fx("unknown-fr"));
     } catch (e) {
       stderr = String((e as { stderr: unknown }).stderr);
     }
+
     expect(stderr).toContain("CHK-001");
     expect(stderr).toContain("unknown FR id FR-99");
   });

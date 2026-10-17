@@ -70,16 +70,19 @@ export function treeNodesOperations(
 ): void {
   const written: Written[] = [];
   const once = treeNodesReportOnce((diagnostic) => context.report(diagnostic));
+
   for (const node of pipelineTreeNodes(context.raw)) {
     if (!treeNodesIsOperation(node)) continue;
 
     const idlessCollection = treeNodesIdlessCollection(node);
+
     if (idlessCollection !== undefined) {
       treeNodesReportIdlessCollection(node, idlessCollection, once);
       continue;
     }
 
     const name = treeNodesOperationName(node, context.conventions, context.raw.merged.schemas);
+
     if (name === undefined) {
       reportNoSingular(node, once);
       continue;
@@ -87,8 +90,10 @@ export function treeNodesOperations(
 
     const site: TreeNodesSite = { node, operationId: name.id, draft, context, once };
     const operation = operationOf(site, name, prefixes);
+
     draft.operations.push(operation);
     const route = memberIdFailed(node, context) ? undefined : routeOf(operation);
+
     written.push({ node, name, route });
   }
 
@@ -101,9 +106,11 @@ export function treeNodesOperations(
 function memberIdFailed(node: TreeNode, context: TreeNodesContext): boolean {
   for (let at = node.parent; at !== undefined; at = at.parent) {
     const collection = at.kind === "scope" && at.name === "member" ? at.parent : undefined;
+
     if (collection !== undefined && Object.hasOwn(collection.settings, "id"))
       return treeNodesIdParam(collection, context.raw.merged.schemas) === undefined;
   }
+
   return false;
 }
 
@@ -113,6 +120,7 @@ function memberIdFailed(node: TreeNode, context: TreeNodesContext): boolean {
 function routeOf(operation: DraftOperation): Route | undefined {
   if (operation.method === undefined || operation.path === undefined) return undefined;
   const method = operation.method.toUpperCase();
+
   return {
     key: `${method} ${operation.path.replace(/\{[^{}]+\}/g, "{}")}`,
     text: `${method} ${operation.path}`,
@@ -122,9 +130,11 @@ function routeOf(operation: DraftOperation): Route | undefined {
 // ADR 0006 section 3: two operations of one api never share a method and a path, whatever their origin.
 function reportRouteClashes(written: readonly Written[], context: TreeNodesContext): void {
   const byRoute = new Map<string, Written>();
+
   for (const entry of written) {
     if (entry.route === undefined) continue;
     const first = byRoute.get(entry.route.key);
+
     if (first?.route === undefined) {
       byRoute.set(entry.route.key, entry);
       continue;
@@ -158,6 +168,7 @@ function operationOf(
   const method = methodOf(node, op, site);
   const safe = method === SAFE_METHOD || op === SAFE_OP;
   const input = treeNodesInput(node, name.id, draft, context);
+
   if (
     op !== undefined &&
     OPS_NEEDING_INPUT.includes(op) &&
@@ -166,6 +177,7 @@ function operationOf(
     reportNoInput(site, op);
 
   const path = treeNodesPath(node, prefixes, context);
+
   if (path !== undefined) treeNodesCheckPathParts(site, path);
   const params = treeNodesParams(site, path, safe, input?.schema);
   // A relay route's format and responses are copied from the operation it relays.
@@ -203,7 +215,9 @@ function reportNoInput(site: TreeNodesSite, op: IrWriter.OpShorthand): void {
 
 function surfaceOf(node: TreeNode): string {
   let at = node;
+
   while (at.parent !== undefined) at = at.parent;
+
   return at.name;
 }
 
@@ -218,8 +232,10 @@ function methodOf(
   const own = Object.hasOwn(node.settings, "method") ? node.settings.method : undefined;
   const method =
     own ?? (op === undefined ? undefined : context.conventions.get(`ops.${op}.method`)?.value);
+
   if (!isHttpMethod(method))
     throw new Error(`the operation at ${node.pointer} has no method the grammar admits`);
+
   return method;
 }
 
@@ -230,14 +246,17 @@ function resourceOf(
   schemas: TreeNodesRawSchemas,
 ): IrWriter.OperationResource | undefined {
   let onMember = false;
+
   for (let at = node.parent; at !== undefined; at = at.parent) {
     if (at.kind === "scope") onMember = at.name === "member";
+
     if (at.kind !== "collection" && at.kind !== "single") continue;
 
     const written = Object.hasOwn(at.settings, "resourceType")
       ? at.settings.resourceType
       : undefined;
     const type = typeof written === "string" ? written : at.name;
+
     if (at.kind === "single") return { type };
 
     const idParam = treeNodesIdParam(at, schemas);
@@ -245,12 +264,14 @@ function resourceOf(
       ? at.settings.idProperty
       : undefined;
     const idProperty = typeof idPropertyWritten === "string" ? idPropertyWritten : idParam;
+
     return {
       type,
       ...(onMember && idParam !== undefined ? { idParam } : {}),
       ...(idProperty === undefined ? {} : { idProperty }),
     };
   }
+
   return undefined;
 }
 
@@ -258,6 +279,7 @@ function resourceOf(
 // operation that needs it.
 function reportNoSingular(node: TreeNode, once: TreeNodesReportOnce): void {
   const collection = treeNodesSingularOwner(node);
+
   if (collection === undefined)
     throw new Error(`the operation at ${node.pointer} has no name, yet needs no singular`);
 
@@ -282,14 +304,17 @@ function reportClashes(written: readonly Written[], context: TreeNodesContext): 
     const { id, name } = entry.name;
 
     const sameId = byId.get(id);
+
     if (sameId !== undefined) {
       reportClash(entry, sameId, "operation-id-unique", context);
       continue;
     }
+
     byId.set(id, entry);
 
     const segments = name.segments.join(" ");
     const sameName = bySegments.get(segments);
+
     if (sameName !== undefined) reportClash(entry, sameName, "operation-name-unique", context);
     else bySegments.set(segments, entry);
   }
@@ -307,6 +332,7 @@ function reportClash(
     rule === "operation-id-unique"
       ? `The operation id ${id} of ${entry.node.pointer} is also the id of ${first.node.pointer}; operation ids are unique across the api.`
       : `The operation ${id} of ${entry.node.pointer} has the same name words as ${firstId} of ${first.node.pointer}, so the two collide in every language.`;
+
   context.report(
     treeNodesError({
       rule,

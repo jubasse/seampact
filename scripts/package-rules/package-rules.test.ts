@@ -13,8 +13,10 @@ const fixture = (name: string, side: "pass" | "fail") =>
 function proves(name: string, rule: string, file: string, ...parts: string[]) {
   expect(fixture(name, "pass"), `${name}/pass`).toEqual([]);
   const out = fixture(name, "fail");
+
   expect(out, `${name}/fail`).toHaveLength(1);
   expect(out[0]).toContain(`${file}: ${rule}: `);
+
   for (const p of parts) expect(out[0]).toContain(p);
 }
 
@@ -99,6 +101,7 @@ describe("package rules", () => {
 
   it("namespaces and no publish", () => {
     const fail = fixture("npm-namespace", "fail");
+
     expect(fixture("npm-namespace", "pass")).toEqual([]);
     expect(fail).toHaveLength(2);
     expect(fail.join("\n")).toContain('npm name "seampact-spec"');
@@ -108,6 +111,7 @@ describe("package rules", () => {
 
     expect(fixture("workflow-publish", "pass")).toEqual([]);
     const wf = fixture("workflow-publish", "fail");
+
     expect(wf).toHaveLength(3);
     expect(wf[0]).toContain(".github/workflows/ci.yml: namespaces: line 5");
     expect(wf.join("\n")).toContain("Gradle publish");
@@ -117,6 +121,7 @@ describe("package rules", () => {
 
     expect(fixture("gradle", "pass")).toEqual([]);
     const g = fixture("gradle", "fail");
+
     expect(g).toHaveLength(2);
     expect(g.join("\n")).toContain('Gradle group "com.acme" must be io.github.jubasse');
     expect(g.join("\n")).toContain('Gradle plugin id "com.acme.seampact"');
@@ -130,6 +135,7 @@ describe("package rules", () => {
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       });
+
     expect(() => run(join(HERE, "fixtures/roles/pass"))).not.toThrow();
     expect(() => run(join(HERE, "fixtures/roles/fail"))).toThrow();
   });

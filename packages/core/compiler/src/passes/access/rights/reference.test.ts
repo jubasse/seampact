@@ -16,7 +16,9 @@ function rightsDelta(api: DraftFixtureApi): JsonObject {
   const half = draftFixtureHalves(api, "access-delta").find(
     (candidate) => candidate.half === "access.rights",
   );
+
   if (half === undefined) throw new Error(`the ${api} access delta has no access.rights half`);
+
   return half.members;
 }
 
@@ -28,17 +30,22 @@ describe("access.rights matches the after-access fixture", () => {
     (api) => {
       const { draft, diagnostics } = accessRightsRunReference(workspace, api);
       const delta = rightsDelta(api);
+
       expect(diagnostics).toEqual([]);
 
       for (const catalogue of WRITTEN_CATALOGUES)
         expect({ ...draft[catalogue] }, catalogue).toEqual(delta[catalogue]);
 
       const operations = delta.operations;
+
       if (!isObject(operations)) throw new Error("the delta's operations are keyed by id");
       expect(draft.operations.map((operation) => operation.id)).toEqual(Object.keys(operations));
+
       for (const operation of draft.operations) {
         const expected = operations[operation.id ?? ""];
+
         if (!isObject(expected)) throw new Error(`the delta has no operation ${operation.id}`);
+
         for (const member of WRITTEN_OPERATION_MEMBERS)
           expect(operation[member], `${operation.id}.${member}`).toEqual(expected[member]);
       }

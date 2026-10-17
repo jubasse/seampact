@@ -22,23 +22,29 @@ function requiredLists(): { at: string; required: unknown }[] {
   const found: { at: string; required: unknown }[] = [];
   const visit = (value: unknown, at: string): void => {
     if (typeof value !== "object" || value === null) return;
+
     for (const [key, member] of Object.entries(value)) {
       if (key === "required" && Array.isArray(member)) found.push({ at, required: member });
       else visit(member, `${at}/${key}`);
     }
   };
+
   for (const document of draftIrSchemas()) visit(document, String(document.$id));
+
   return found;
 }
 
 describe("the derived draft form", () => {
   test("keeps no required member but each union variant's tag", () => {
     const lists = requiredLists();
+
     expect(lists.length).toBeGreaterThan(0);
+
     for (const { at, required } of lists) {
       expect(at, at).toMatch(/#?\/\$defs\/[A-Za-z0-9]+$/);
       expect(required, at).toHaveLength(1);
     }
+
     expect(lists).toContainEqual({
       at: expect.stringMatching(/\/\$defs\/IdentityAccess$/),
       required: ["kind"],
@@ -53,22 +59,27 @@ describe("the derived draft form", () => {
 
   test("refuses an unknown member, union tag or open-enum value, and a wrong type", () => {
     const unknownMember = validator.validate(operationDraft({ id: "getTask", later: true }));
+
     expect(unknownMember.unknownMembers).toEqual(["/operations/0/later"]);
 
     const unknownTag = validator.validate(operationDraft({ access: { kind: "zz-later" } }));
+
     expect(unknownTag.valid).toBe(false);
     expect(unknownTag.unknownKinds.map(({ value }) => value)).toEqual(["zz-later"]);
 
     const unknownValue = validator.validate(operationDraft({ method: "trace" }));
+
     expect(unknownValue.valid).toBe(false);
     expect(unknownValue.unknownValues.map(({ value }) => value)).toEqual(["trace"]);
 
     const wrongType = validator.validate(operationDraft({ safe: "yes" }));
+
     expect(wrongType.problems.map(({ pointer }) => pointer)).toEqual(["/operations/0/safe"]);
   });
 
   test("refuses a union element without its tag", () => {
     const report = validator.validate(operationDraft({ access: { identity: "user" } }));
+
     expect(report.valid).toBe(false);
   });
 });
@@ -78,6 +89,7 @@ test("every $defs name is unique across the IR schema documents", () => {
   const definitionNames = draftIrSchemas().flatMap(({ $defs }) =>
     typeof $defs === "object" && $defs !== null ? Object.keys($defs) : [],
   );
+
   expect(definitionNames.length).toBeGreaterThan(0);
   expect(definitionNames.filter((name, index) => definitionNames.indexOf(name) !== index)).toEqual(
     [],

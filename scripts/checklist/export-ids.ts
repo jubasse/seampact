@@ -22,6 +22,7 @@ export function privateTerms(
     env.SEAMPACT_PRIVATE_TERMS ?? "",
     existsSync(file) ? readFileSync(file, "utf8") : "",
   ];
+
   return raw
     .join("\n")
     .split(/[,\n]/)
@@ -46,13 +47,17 @@ function collect(
 ): Record<string, string> {
   if (!Array.isArray(rows)) throw new Error(`expected a list of ${prefix} entries`);
   const out: Record<string, string> = {};
+
   for (const row of rows as Record<string, unknown>[]) {
     const id = row.id;
+
     if (typeof id !== "string" || !id.startsWith(`${prefix}-`)) continue;
     const text = overrides[id] ?? row[field];
+
     if (typeof text !== "string" || text.trim() === "") throw new Error(`${id}: missing ${field}`);
     out[id] = text.replace(/\s+/g, " ").trim();
   }
+
   return out;
 }
 
@@ -76,13 +81,16 @@ export function buildIds(
   ];
   const text = `${HEADER}${[...section("frs", frs), ...section("scenarios", scns)].join("\n")}\n`;
   const lower = text.toLowerCase();
+
   if (forbidden.some((t) => lower.includes(t)))
     throw new Error("the export would contain a private term (SEAMPACT_PRIVATE_TERMS)");
+
   return text;
 }
 
 export function exportFromDir(favirDir: string): string {
   const read = (f: string) => parse(readFileSync(join(favirDir, f), "utf8")) as unknown;
+
   return buildIds(read("prd.yaml"), read("scenarios.yaml"));
 }
 
@@ -90,19 +98,24 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const { values } = parseArgs({
     options: { favir: { type: "string" }, out: { type: "string" }, check: { type: "boolean" } },
   });
+
   if (!values.favir) {
     console.error("usage: export-ids.ts --favir <FEAT-001 directory> [--out <file>] [--check]");
     process.exit(2);
   }
+
   const out =
     values.out ??
     resolve(dirname(fileURLToPath(import.meta.url)), "../../docs/conformance/ids.yaml");
   const text = exportFromDir(values.favir);
+
   if (values.check) {
     const same = readFileSync(out, "utf8") === text;
+
     console.error(same ? "ids export: up to date" : `ids export: ${out} is stale`);
     process.exit(same ? 0 : 1);
   }
+
   writeFileSync(out, text);
   console.error(`ids export: wrote ${out}`);
 }

@@ -116,8 +116,10 @@ class Loader {
     const config: RawWorkspaceConfig = {};
     const entry = loadNormalizePath(this.options.entry);
     const entrySite: SiteLocation = { file: entry, line: 1, column: 1, endLine: 1, endColumn: 1 };
+
     this.rep.layer = "api";
     let entryBuild: LayerBuild<"workspace"> | LayerBuild<"api"> | undefined;
+
     if (!isInside(".", entry)) {
       this.rep.report({
         rule: "path-escape",
@@ -129,14 +131,18 @@ class Loader {
       // Its kind, so its layer, is known once it is read: what parsing reported moves to it.
       const since = this.rep.diagnostics.length;
       const pf = this.store.parse(entry, ".");
+
       if (pf) entryBuild = this.entryLayer(pf);
+
       if (entryBuild?.layer === "workspace") this.rep.relabel(since, "api", "workspace");
     }
+
     if (entryBuild) {
       // What is reported on the entry from here on is the entry's layer's.
       this.rep.layer = entryBuild.layer;
       const tree = entryBuild.tree;
       const ws = asObject(tree.workspace);
+
       if (tree.workspace !== undefined && tree.api !== undefined) {
         this.badShape(
           entryBuild,
@@ -150,6 +156,7 @@ class Loader {
         this.workspaceMode(entryBuild, ws, apis, config);
       } else if (entryBuild.layer === "api" && asObject(tree.api)) {
         const name = asObject(tree.api)?.name;
+
         if (typeof name === "string") this.loadApi(name, entryBuild, undefined, apis);
         else
           this.badShape(
@@ -167,17 +174,22 @@ class Loader {
         );
       }
     }
+
     const locations = this.rep.locations;
     const workspace: RawWorkspace = { root: ".", apis, locations };
+
     if (entryBuild?.layer === "workspace") {
       // The whole entry document, located by `workspace#<pointer>`: the `workspace` layer id is
       // never an api layer's, and the load sites' pointers start `/~load/`.
       workspace.entry = { layer: "workspace", file: entryBuild.parsed.path, tree: entryBuild.tree };
+
       for (const [pointer, site] of entryBuild.locs) {
         locations[entryLocationKey(pointer)] = site;
       }
     }
+
     if (Object.keys(config).length > 0) workspace.config = config;
+
     return {
       workspace,
       diagnostics: diagnosticSort(this.rep.diagnostics, locations),
@@ -193,24 +205,33 @@ class Loader {
    */
   private entryLayer(pf: ParsedFile): LayerBuild<"workspace"> | LayerBuild<"api"> {
     const own = isMap(pf.root) ? mapIndex(pf.root) : undefined;
+
     if (own?.has("workspace")) return this.layer(pf, "workspace");
+
     if (!own?.has("$include") || own.has("api")) return this.layer(pf, "api");
     const since = this.rep.diagnostics.length;
     const saved = this.rep.layer;
+
     this.rep.layer = "workspace";
     const build = this.ex.expandLayer(pf, "workspace", entryRootPosition());
+
     this.rep.layer = saved;
+
     if (build.tree.workspace !== undefined) return build;
     this.rep.relabel(since, "workspace", "api");
+
     return { ...build, layer: "api" };
   }
 
   /** Parses a file as part of `layer`: what parsing finds (P1 to P5, P9, syntax) is that layer's. */
   private parseAs(path: string, boundary: string, layer: FileLayerId): ParsedFile | undefined {
     const saved = this.rep.layer;
+
     this.rep.layer = layer;
     const pf = this.store.parse(path, boundary);
+
     this.rep.layer = saved;
+
     return pf;
   }
 
@@ -226,12 +247,16 @@ class Loader {
   private layer<L extends FileLayerId>(pf: ParsedFile, layer: L): LayerBuild<L> {
     const key = `${layer}|${pf.boundary}|${pf.path}`;
     const hit = this.builds.get(key);
+
     if (hit) return hit as LayerBuild<L>;
     const saved = this.rep.layer;
+
     this.rep.layer = layer;
     const build = this.ex.expandLayer(pf, layer);
+
     this.rep.layer = saved;
     this.builds.set(key, build);
+
     return build;
   }
 
@@ -242,9 +267,12 @@ class Loader {
     config: RawWorkspaceConfig,
   ): void {
     const site = (ptr: string) => entry.locs.get(ptr) ?? nodeSite(entry.parsed, entry.parsed.root);
+
     if (typeof ws.editorSchemas === "string") config.editorSchemas = ws.editorSchemas;
+
     if (ws.imports !== undefined) config.imports = ws.imports;
     const list = asObject(ws.apis);
+
     if (!list || Object.keys(list).length === 0) {
       this.badShape(
         entry,
@@ -252,9 +280,12 @@ class Loader {
         "workspace.apis maps no api",
         "write workspace: { apis: { <name>: ./api.yaml } }",
       );
+
       return;
     }
+
     let shared: LayerBuild | undefined;
+
     if (ws.shared !== undefined) {
       if (typeof ws.shared !== "string") {
         this.badShape(
@@ -267,15 +298,18 @@ class Loader {
         const at = site("/workspace/shared");
         const r = this.store.resolve(writtenIn(entry, at), ws.shared, at, "workspace");
         const pf = r && this.parseAs(r.path, ".", "shared");
+
         if (pf) shared = this.layer(pf, "shared");
       }
     }
+
     for (const [name, raw] of Object.entries(list)) {
       // Once the budget is spent, the apis left would only report what an empty tree lacks.
       if (this.budget.exhausted) break;
       // Each api entry is read from workspace.yaml; loading the api before it moved the layer.
       this.rep.layer = entry.layer;
       const at = site(`/workspace/apis/${pointerEscape(name)}`);
+
       if (typeof raw !== "string") {
         this.rep.report({
           rule: "workspace-shape",
@@ -285,12 +319,16 @@ class Loader {
         });
         continue;
       }
+
       const r = this.store.resolve(writtenIn(entry, at), raw, at, "workspace");
       const pf = r && this.parseAs(r.path, ".", "api");
+
       if (!pf) continue;
       const build = this.layer(pf, "api");
       const declared = asObject(build.tree.api)?.name;
+
       this.rep.layer = "api";
+
       if (declared !== name) {
         this.rep.report({
           rule: "api-name-mismatch",
@@ -300,6 +338,7 @@ class Loader {
           related: [{ at, message: "named here" }],
         });
       }
+
       this.loadApi(name, build, shared, apis);
     }
   }
@@ -311,6 +350,7 @@ class Loader {
     apis: RawApi[],
   ): void {
     this.rep.layer = "api";
+
     if (isReservedKey(name)) {
       this.rep.report({
         rule: "reserved-key",
@@ -318,14 +358,18 @@ class Loader {
         fix: "rename the api",
         at: api.locs.get("/api/name") ?? nodeSite(api.parsed, api.parsed.root),
       });
+
       return;
     }
+
     const state: ApiState = { order: [], done: new Set() };
     // base
     let base: LayerBuild | undefined;
     const ext = api.tree.extends;
+
     if (ext !== undefined) {
       const at = api.locs.get("/extends") ?? nodeSite(api.parsed, api.parsed.root);
+
       if (typeof ext !== "string") {
         this.rep.report({
           rule: "extends-shape",
@@ -335,6 +379,7 @@ class Loader {
         });
       } else {
         const r = this.store.resolve(writtenIn(api, at), ext, at, "extends");
+
         if (r && r.path === api.parsed.path) {
           this.rep.report({
             rule: "extends-cycle",
@@ -344,10 +389,12 @@ class Loader {
           });
         } else {
           const pf = r && this.parseAs(r.path, api.parsed.boundary, "base");
+
           if (pf) base = this.layer(pf, "base");
         }
       }
     }
+
     for (const [what, b] of [
       ["shared file", shared],
       ["base", base],
@@ -362,8 +409,10 @@ class Loader {
         });
       }
     }
+
     const sharedPacks = shared ? this.applyList(shared, state) : [];
     const basePacks = base ? this.applyList(base, state) : [];
+
     this.applyList(api, state);
 
     const order: LayerBuild[] = [
@@ -378,44 +427,60 @@ class Loader {
     const closure = (p: PackBuild, seen = new Set<string>()): Set<string> => {
       if (seen.has(p.key) || !this.budget.charge(1, apiSite)) return seen;
       seen.add(p.key);
+
       for (const e of p.extendsRefs) {
         const sub = this.findPack(e.ref, e.at);
+
         if (sub) closure(sub, seen);
       }
+
       return seen;
     };
+
     const layerName = (key: string) => this.packs.get(key)?.build.layer as ApiLayerId;
     const closureNames = (list: PackBuild[]) => {
       const keys = new Set<string>();
+
       for (const p of list) for (const k of closure(p)) keys.add(k);
+
       return [...keys].map(layerName);
     };
+
     const sharedSees: ApiLayerId[] = shared ? ["shared", ...closureNames(sharedPacks)] : [];
     const baseSees: ApiLayerId[] = base ? ["base", ...closureNames(basePacks), ...sharedSees] : [];
     // Null prototype: the keys are layer ids, which embed pack names an author chose.
     const vis: RawApi["visibility"] = Object.create(null);
+
     for (const p of state.order) vis[p.build.layer] = closureNames([p]).sort();
+
     if (shared) vis.shared = [...sharedSees].sort();
+
     if (base) vis.base = [...new Set(baseSees)].sort();
     vis.api = order.map((b) => b.layer).sort();
 
     // Finish each layer once its visible layers are finished: schema files reached by `$ref`.
     const byLayer = new Map(order.map((b) => [b.layer as string, b]));
+
     for (const b of order) {
       if (this.finished.has(b)) continue;
       this.finished.add(b);
       this.rep.layer = b.layer;
       this.ex.finishRefs(b, (n) => {
         const sees = vis[b.layer] ?? [];
+
         if (!this.budget.charge(sees.length, apiSite)) return undefined;
+
         for (const l of sees) {
           if (l === b.layer) continue;
           const other = byLayer.get(l);
+
           if (other && Object.hasOwn(asObject(other.tree.schemas) ?? {}, n)) {
             const at = `/schemas/${pointerEscape(n)}`;
+
             return { site: other.locs.get(at), layer: l, source: other.sources.get(at) };
           }
         }
+
         return undefined;
       });
     }
@@ -423,23 +488,30 @@ class Loader {
     // Names a layer uses but only a layer it does not build on declares. The declaring layers of
     // each name are indexed once per api, in application order, and every lookup is charged.
     const declaredBy = new Map<string, LayerBuild[]>();
+
     for (const b of order) {
       for (const section of [asObject(b.tree.schemas), asObject(b.tree.enums)]) {
         for (const n of Object.keys(section ?? {})) {
           if (!this.budget.charge(1, apiSite)) break;
           const list = declaredBy.get(n);
+
           if (!list) declaredBy.set(n, [b]);
           else if (list[list.length - 1] !== b) list.push(b);
         }
       }
     }
+
     for (const b of order) {
       const sees = new Set(vis[b.layer] ?? []);
+
       for (const use of b.uses) {
         const by = declaredBy.get(use.name) ?? [];
+
         if (!this.budget.charge(1 + by.length, apiSite)) break;
+
         if (by.some((o) => o === b || sees.has(o.layer))) continue;
         const other = by[0];
+
         if (!other) continue;
         this.rep.layer = b.layer;
         this.rep.report({
@@ -465,13 +537,16 @@ class Loader {
     // ADR 0004 section 11: this api's own table, keyed exactly as its origins serialise. Each
     // entry is charged: a layer shared by many apis is written into each one's table.
     const locations: RawApi["locations"] = {};
+
     for (const b of order) {
       for (const [pointer, site] of b.locs) {
         const key = diagnosticLocationKey({ layer: b.layer, pointer });
+
         if (!this.budget.charge(loadWorkOf(key), site)) break;
         locations[key] = site;
       }
     }
+
     apis.push({
       name,
       layers: order.map((b) => ({ layer: b.layer, file: b.parsed.path, tree: b.tree })),
@@ -487,8 +562,10 @@ class Loader {
   private applyList(owner: LayerBuild, state: ApiState): PackBuild[] {
     const raw = owner.tree.packs;
     const reached: PackBuild[] = [];
+
     if (raw === undefined) return reached;
     this.rep.layer = owner.layer;
+
     if (!Array.isArray(raw)) {
       this.rep.report({
         rule: "pack-shape",
@@ -496,10 +573,13 @@ class Loader {
         fix: "write packs: ['@seampact/pack-crud-rights', ./packs/house.yaml]",
         at: owner.locs.get("/packs") ?? nodeSite(owner.parsed, owner.parsed.root),
       });
+
       return reached;
     }
+
     raw.forEach((ref, i) => {
       const at = owner.locs.get(`/packs/${i}`) ?? nodeSite(owner.parsed, owner.parsed.root);
+
       if (typeof ref !== "string") {
         this.rep.layer = owner.layer;
         this.rep.report({
@@ -508,23 +588,29 @@ class Loader {
           fix: "write a string",
           at,
         });
+
         return;
       }
+
       this.rep.layer = owner.layer;
       const pack = this.loadPack(ref, owner, at);
+
       if (pack) {
         reached.push(pack);
         this.visit(pack, [], state);
       }
     });
+
     return reached;
   }
 
   private visit(pack: PackBuild, stack: PackBuild[], state: ApiState): void {
     if (state.done.has(pack.key)) return;
     const at = stack.findIndex((p) => p.key === pack.key);
+
     if (at >= 0) {
       const cycle = [...stack.slice(at), pack];
+
       this.rep.layer = pack.build.layer;
       this.rep.report({
         rule: "pack-cycle",
@@ -536,18 +622,25 @@ class Loader {
           message: `'${p.name}' extends from here`,
         })),
       });
+
       return;
     }
+
     if (stack.length >= LOAD_MAX_DEPTH) {
       this.store.reportTooDeep(nodeSite(pack.build.parsed, pack.build.parsed.root));
+
       return;
     }
+
     const next = [...stack, pack];
+
     for (const e of pack.extendsRefs) {
       this.rep.layer = pack.build.layer;
       const sub = this.loadPack(e.ref, pack.build, e.at);
+
       if (sub) this.visit(sub, next, state);
     }
+
     state.done.add(pack.key);
     state.order.push(pack);
   }
@@ -555,6 +648,7 @@ class Loader {
   // Keyed by the file that wrote the reference: the same text resolves against that file.
   private findPack(ref: string, at: SiteLocation): PackBuild | undefined {
     const key = this.packKeyCache.get(`${at.file}|${ref}`);
+
     return key ? (this.packs.get(key) ?? undefined) : undefined;
   }
 
@@ -564,19 +658,24 @@ class Loader {
     let file: string | undefined;
     let boundary = from.parsed.boundary;
     let pkg: { name: string; version: unknown; dir: string } | undefined;
+
     if (ref.startsWith("./") || ref.startsWith("../")) {
       file = this.store.resolve(writtenIn(from, at), ref, at, "pack")?.path;
     } else {
       const found = this.resolvePackage(ref, at);
+
       if (!found) return undefined;
       file = found.file;
       boundary = found.dir;
       pkg = { name: ref, version: found.version, dir: found.dir };
     }
+
     if (!file) return undefined;
     const key = `${boundary}|${file}`;
+
     this.packKeyCache.set(`${at.file}|${ref}`, key);
     const hit = this.packs.get(key);
+
     if (hit !== undefined) return hit ?? undefined;
     // A pack is named by its manifest once its includes are resolved, as the entry file is read:
     // it is parsed and expanded under a provisional layer, and what was reported meanwhile moves to
@@ -587,17 +686,23 @@ class Loader {
       this.rep.relabel(since, PROVISIONAL_PACK, from.layer);
       this.rep.layer = saved;
       this.packs.set(key, null);
+
       return undefined;
     };
+
     this.rep.layer = PROVISIONAL_PACK;
     const pf = this.store.parse(file, boundary);
+
     if (!pf?.root) return refuse();
     // A name written in the file itself and refused is refused before anything is expanded.
     const nameNode = navigate(pf, "/pack/name");
+
     if (isScalar(nameNode) && typeof nameNode.value === "string" && nameNode.value.includes("#")) {
       this.packLayerId(nameNode.value, () => nodeSite(pf, nameNode));
+
       return refuse();
     }
+
     const expanded = this.ex.expandLayer(pf, PROVISIONAL_PACK);
     const written = asObject(expanded.tree.pack)?.name;
     const name = typeof written === "string" ? written : ref;
@@ -605,13 +710,16 @@ class Loader {
       name,
       () => expanded.locs.get("/pack/name") ?? nodeSite(pf, pf.root),
     );
+
     if (layerId === undefined) return refuse();
     this.rep.relabel(since, PROVISIONAL_PACK, layerId);
     const build: LayerBuild = { ...expanded, layer: layerId };
+
     this.rep.layer = layerId;
     const tree = build.tree;
     const manifest = asObject(tree.pack);
     const extendsRefs: PackBuild["extendsRefs"] = [];
+
     if (!manifest || typeof manifest.name !== "string" || typeof manifest.version !== "string") {
       this.rep.report({
         rule: "pack-manifest",
@@ -621,6 +729,7 @@ class Loader {
       });
     } else {
       const ext = manifest.extends;
+
       if (ext !== undefined && !Array.isArray(ext)) {
         this.rep.report({
           rule: "pack-manifest",
@@ -638,6 +747,7 @@ class Loader {
           }
         });
       }
+
       if (pkg) {
         if (manifest.version !== pkg.version) {
           this.rep.report({
@@ -647,6 +757,7 @@ class Loader {
             at: build.locs.get("/pack/version") ?? nodeSite(pf, pf.root),
           });
         }
+
         if (manifest.name !== pkg.name) {
           this.rep.report({
             rule: "pack-name-mismatch",
@@ -657,6 +768,7 @@ class Loader {
         }
       }
     }
+
     for (const k of Object.keys(tree)) {
       if (!PACK_KEYS.has(k)) {
         this.rep.report({
@@ -667,8 +779,10 @@ class Loader {
         });
       }
     }
+
     const pack: PackBuild = { key, name, build, extendsRefs };
     const clash = this.packNames.get(name);
+
     if (clash && clash.key !== key) {
       this.rep.report({
         rule: "pack-name-clash",
@@ -687,8 +801,10 @@ class Loader {
     } else {
       this.packNames.set(name, pack);
     }
+
     this.rep.layer = saved;
     this.packs.set(key, pack);
+
     return pack;
   }
 
@@ -705,6 +821,7 @@ class Loader {
       fix: "name the pack without '#'",
       at: at(),
     });
+
     return undefined;
   }
 
@@ -729,23 +846,32 @@ class Loader {
         fix: "write a package name such as @seampact/pack-crud-rights, or a path such as ./packs/house.yaml",
         at,
       });
+
       return undefined;
     };
+
     if (name.length > PACKAGE_NAME_MAX || !PACKAGE_NAME.test(name)) return refuse();
+
     for (let depth = 0; depth <= reader.ascent; depth++) {
       const up = depth === 0 ? "" : `${Array.from({ length: depth }, () => "..").join("/")}/`;
       const dir = joinPath(".", `${up}node_modules/${name}`);
+
       if (dir !== `${up}node_modules/${name}`) return refuse(); // kept should the grammar loosen
       const manifestPath = `${dir}/package.json`;
+
       this.store.touched.add(manifestPath);
       // Contained and case-checked like any file, its real path read; a missing one is no error,
       // the walk goes on upward.
       const checked = this.store.checkFile(manifestPath, dir, at, "packs", manifestPath, true);
+
       if (checked === null) continue;
+
       if (checked === undefined) return undefined;
       const text = this.store.rawText(manifestPath);
+
       if (text === undefined) continue;
       let json: unknown;
+
       try {
         json = JSON.parse(text);
       } catch {
@@ -755,10 +881,13 @@ class Loader {
           fix: "fix the package.json",
           at,
         });
+
         return undefined;
       }
+
       const meta =
         (json as { seampact?: { role?: unknown; pack?: unknown }; version?: unknown }) ?? {};
+
       if (meta.seampact?.role !== "pack" || typeof meta.seampact.pack !== "string") {
         this.rep.report({
           rule: "pack-package",
@@ -766,23 +895,29 @@ class Loader {
           fix: "install a convention pack, or reference a pack file by path",
           at,
         });
+
         return undefined;
       }
+
       const entry = this.store.resolve(
         { path: manifestPath, boundary: dir },
         meta.seampact.pack,
         at,
         "manifest",
       );
+
       if (!entry) return undefined;
+
       return { file: entry.path, dir, version: meta.version };
     }
+
     this.rep.report({
       rule: "pack-not-found",
       message: `the package '${name}' named in packs is not installed at or above the workspace root`,
       fix: `install ${name}, or write the pack as a path (./packs/${name.split("/").pop()}.yaml)`,
       at,
     });
+
     return undefined;
   }
 }

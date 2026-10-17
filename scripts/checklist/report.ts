@@ -18,8 +18,10 @@ export function loadResults(file: string): VitestJson {
 
 export function parseResults(text: string, file = "results"): VitestJson {
   const raw = JSON.parse(text) as VitestJson;
+
   if (!raw || !Array.isArray(raw.testResults))
     throw new Error(`${file}: not Vitest JSON reporter output (no testResults)`);
+
   return raw;
 }
 
@@ -33,6 +35,7 @@ export function testPassed(t: TestRef, root: string, results: VitestJson): boole
     .filter((f) => f.name === file)
     .flatMap((f) => f.assertionResults)
     .filter((a) => a.title === t.name || a.fullName === t.name);
+
   return matching.length > 0 && matching.every((a) => a.status === "passed");
 }
 
@@ -55,18 +58,25 @@ export function shares(model: Model, root: string, results?: VitestJson): Share[
   const fixtureOk = (p: Proof): boolean => {
     if (p.fixtures.length === 0 || !p.fixtures.every((f) => existsSync(join(root, f))))
       return false;
+
     if (!results) return true;
     const own = p.tests.filter((t) => !t.path.startsWith(CONSUMER_PREFIX));
+
     return own.length > 0 && own.every((t) => testPassed(t, root, results));
   };
+
   for (const item of model.items) {
     if (item.retired !== undefined) continue;
     const mine = proofs.get(item.id) ?? [];
     const hasFixture = mine.some(fixtureOk);
+
     for (const target of expandTargets(item.targets)) {
       const s = per.get(target) ?? { target, items: 0, fixtures: 0, tests: 0 };
+
       s.items += 1;
+
       if (hasFixture) s.fixtures += 1;
+
       if (
         mine.some((p) =>
           p.tests.some((t) => t.target === target && (!results || testPassed(t, root, results))),
@@ -76,6 +86,7 @@ export function shares(model: Model, root: string, results?: VitestJson): Share[
       per.set(target, s);
     }
   }
+
   return [...per.values()].sort((a, b) => (a.target < b.target ? -1 : a.target > b.target ? 1 : 0));
 }
 
@@ -96,5 +107,6 @@ export function renderReport(model: Model, root: string, results?: VitestJson): 
     ),
     "",
   ];
+
   return lines.join("\n");
 }

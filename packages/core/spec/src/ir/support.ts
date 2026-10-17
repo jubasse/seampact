@@ -54,6 +54,7 @@ const shown = (value: unknown): string | number =>
 export function checkIrSupport(ir: unknown, support: IrSupport): IrSupportMismatch[] {
   const doc = (typeof ir === "object" && ir !== null ? ir : {}) as Record<string, unknown>;
   const version = doc.irVersion;
+
   if (typeof version !== "number" || !support.irVersions.includes(version)) {
     return [
       {
@@ -65,7 +66,9 @@ export function checkIrSupport(ir: unknown, support: IrSupport): IrSupportMismat
       },
     ];
   }
+
   const mismatches: IrSupportMismatch[] = [];
+
   if (doc.irRevision !== support.irRevision) {
     mismatches.push({
       code: "ir.revision.mismatch",
@@ -75,6 +78,7 @@ export function checkIrSupport(ir: unknown, support: IrSupport): IrSupportMismat
       message: `irRevision ${shown(doc.irRevision)} differs from the revision this reader was built for (${support.irRevision}).`,
     });
   }
+
   const list = (value: unknown, member: string, operation?: string): unknown[] | undefined => {
     if (Array.isArray(value)) return value;
     mismatches.push({
@@ -85,8 +89,10 @@ export function checkIrSupport(ir: unknown, support: IrSupport): IrSupportMismat
       ...(operation === undefined ? {} : { operation }),
       message: `${member} is ${jsonType(value)}, not an array: this reader cannot check what it supports.`,
     });
+
     return undefined;
   };
+
   const unknownIn = (
     values: unknown[] | undefined,
     known: readonly string[],
@@ -95,9 +101,11 @@ export function checkIrSupport(ir: unknown, support: IrSupport): IrSupportMismat
     operation?: string,
   ) => {
     const what = code === "ir.kind.unsupported" ? "declaration kind" : "feature";
+
     (values ?? []).forEach((value, index) => {
       if (typeof value === "string" && known.includes(value)) return;
       const where = operation === undefined ? "" : ` in operation '${operation}'`;
+
       mismatches.push({
         code,
         member: `${member}/${index}`,
@@ -108,6 +116,7 @@ export function checkIrSupport(ir: unknown, support: IrSupport): IrSupportMismat
       });
     });
   };
+
   unknownIn(list(doc.kinds, "/kinds"), support.kinds, "ir.kind.unsupported", "/kinds");
   unknownIn(
     list(doc.features, "/features"),
@@ -121,6 +130,7 @@ export function checkIrSupport(ir: unknown, support: IrSupport): IrSupportMismat
       unknown
     >;
     const id = typeof operation.id === "string" ? operation.id : `#${index}`;
+
     if (typeof operation.kind !== "string" || !support.kinds.includes(operation.kind)) {
       mismatches.push({
         code: "ir.kind.unsupported",
@@ -131,7 +141,9 @@ export function checkIrSupport(ir: unknown, support: IrSupport): IrSupportMismat
         message: `The declaration kind '${shown(operation.kind)}' of operation '${id}' is not supported by this reader.`,
       });
     }
+
     const member = `/operations/${index}/features`;
+
     unknownIn(
       list(operation.features, member, id),
       support.features,
@@ -140,5 +152,6 @@ export function checkIrSupport(ir: unknown, support: IrSupport): IrSupportMismat
       id,
     );
   });
+
   return mismatches;
 }

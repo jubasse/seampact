@@ -72,12 +72,15 @@ export function accessRightsReporter(context: PassContext): AccessRightsReporter
   // Every pointer reported is one the half read from an authored layer, so it has an authored origin.
   const locate = (pointer: string): DiagnosticOrigin => {
     const origin = context.origin(pointer);
+
     if (origin === undefined)
       throw new Error(`access.rights located a diagnostic at ${pointer}, which has no origin`);
+
     if (!isDiagnosticOrigin(origin))
       throw new Error(
         `access.rights located a diagnostic at ${pointer}, whose origin is the core, not an authored layer`,
       );
+
     return origin;
   };
 
@@ -85,6 +88,7 @@ export function accessRightsReporter(context: PassContext): AccessRightsReporter
     error(problem) {
       errors += 1;
       const key = JSON.stringify([problem.rule, problem.pointer]);
+
       if (reported.has(key)) return;
       reported.add(key);
 
@@ -92,6 +96,7 @@ export function accessRightsReporter(context: PassContext): AccessRightsReporter
         origin: locate(item.pointer),
         message: item.message,
       }));
+
       context.report({
         severity: "error",
         rule: `seampact/access/${problem.rule}`,

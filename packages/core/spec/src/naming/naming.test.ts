@@ -44,7 +44,9 @@ const ALL = vectors as Vector[];
 
 function find(id: string): Vector {
   const found = ALL.find((v) => v.id === id);
+
   if (!found) throw new Error(`missing vector ${id}`);
+
   return found;
 }
 
@@ -61,28 +63,37 @@ function check(v: Vector): string[] {
         ...(v.codeName !== undefined ? { codeName: v.codeName } : {}),
         ...(v.position !== undefined ? { position: v.position } : {}),
       });
+
   if (v.error !== undefined) {
     if (result.ok) problems.push(`${v.id}: expected error ${v.error}, got ${result.segments}`);
     else if (result.reason !== v.error) problems.push(`${v.id}: reason ${result.reason}`);
+
     return problems;
   }
+
   if (!result.ok) return [`${v.id}: unexpected error ${result.reason}`];
   expect(result.segments, v.id).toEqual(v.segments);
   const name = deriveName(result.segments, v.role, v.status);
+
   for (const language of LANGUAGES) {
     const got = ids(language, name);
     const want = v.expected?.[language];
+
     if (got !== want) problems.push(`${v.id} ${language}: expected ${want}, got ${got}`);
   }
+
   if (v.canonicalId !== undefined && canonicalId(name) !== v.canonicalId) {
     problems.push(`${v.id} canonicalId: expected ${v.canonicalId}, got ${canonicalId(name)}`);
   }
+
   if (v.operationId) {
     for (const idCase of ["camel", "snake"] as const) {
       const got = canonicalId(name, { operationIdCase: idCase });
+
       if (got !== v.operationId[idCase]) problems.push(`${v.id} ${idCase}: got ${got}`);
     }
   }
+
   return problems;
 }
 
@@ -112,8 +123,10 @@ describe("naming", () => {
       [["tasks"], "endpoints", "TasksEndpoints"],
       [["assign", "task"], "operation", "assignTask"],
     ];
+
     for (const [owner, role, expected, status] of table) {
       const n = name(owner, role, status);
+
       for (const language of LANGUAGES) expect(identifier(n, language), expected).toBe(expected);
       expect(canonicalId(n)).toBe(expected);
       // Each example is also a vector of the shared file.
@@ -125,11 +138,14 @@ describe("naming", () => {
         `vector for ${expected}`,
       ).toBe(true);
     }
+
     // Section 4 table: [assign, task] + input.
     const assign = name(["assign", "task"], "input");
+
     expect(identifier(assign, "typescript")).toBe("AssignTaskInput");
     // Section 5: List per language.
     const list = name(["list"], "schema");
+
     expect(LANGUAGES.map((l) => identifier(list, l))).toEqual(["List", "List_", "List_", "List_"]);
     expect(find("reserved/schema-list").expected).toEqual({
       typescript: "List",
@@ -144,6 +160,7 @@ describe("naming", () => {
   test("vectors pass for every language", () => {
     expect(ALL.length).toBeGreaterThan(100);
     const problems = ALL.flatMap(check);
+
     expect(problems).toEqual([]);
   });
 
@@ -151,10 +168,13 @@ describe("naming", () => {
     const validate = new Ajv2020({ allErrors: true, strict: true, strictRequired: false }).compile(
       schema,
     );
+
     expect(validate(vectors) ? [] : validate.errors).toEqual([]);
     const idList = ALL.map((v) => v.id);
+
     expect(new Set(idList).size).toBe(idList.length);
     const sorted = [...idList].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+
     expect(idList).toEqual(sorted);
     // The schema rejects what the decisions forbid.
     const ok = find("derived/response-201");
@@ -175,21 +195,28 @@ describe("naming", () => {
         expected: { ...find("derived/input").expected, typescript: null },
       },
     ];
+
     for (const v of bad) expect(validate([v]), JSON.stringify(v)).toBe(false);
   });
 
   test("reserved-words.json matches its schema and is sorted", () => {
     const validate = new Ajv2020({ allErrors: true, strict: true }).compile(reservedSchema);
+
     expect(validate(reservedWords) ? [] : validate.errors).toEqual([]);
     const served = Object.values(reservedWords.lists).flatMap((l) => l.usedBy);
+
     expect([...served].sort()).toEqual([...LANGUAGES].sort());
+
     // A shared list is no longer possible: each list serves its own key.
     for (const [language, list] of Object.entries(reservedWords.lists)) {
       expect(list.usedBy, language).toEqual([language]);
     }
+
     const lists = Object.values(reservedWords.lists);
+
     for (const list of lists) {
       if (!list.caseInsensitive) continue;
+
       for (const words of [list.keywords, list.types, list.members, list.enumMembers]) {
         expect(
           words.filter((w) => w !== w.toLowerCase()),
@@ -197,9 +224,11 @@ describe("naming", () => {
         ).toEqual([]);
       }
     }
+
     for (const list of lists) {
       for (const words of [list.keywords, list.types, list.members, list.enumMembers]) {
         const sorted = [...new Set(words)].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+
         expect(words).toEqual(sorted);
       }
     }
@@ -208,6 +237,7 @@ describe("naming", () => {
   test("vectors cover the required cases", () => {
     // SCN-093, CHK-173.
     const covered = (category: string) => ALL.filter((v) => v.category === category).length;
+
     for (const category of [
       "splitting",
       "digits",
@@ -219,16 +249,21 @@ describe("naming", () => {
     ]) {
       expect(covered(category), category).toBeGreaterThan(0);
     }
+
     const derivedRoles = new Set(ALL.filter((v) => v.category === "derived").map((v) => v.role));
+
     for (const role of ROLES.filter((r) => r !== "schema" && r !== "enumMember")) {
       expect(derivedRoles.has(role), `derived role ${role}`).toBe(true);
     }
+
     const schemas = new Set(
       ALL.filter((v) => v.role === "schema" && v.category === "reserved").map((v) => v.written),
     );
+
     for (const word of ["list", "match", "record", "error", "promise"]) {
       expect(schemas.has(word), word).toBe(true);
     }
+
     expect(find("digits/error-code-params-1042").expected?.php).toBe("_1042Params");
     expect(find("digits/error-code-error-404-gone").expected?.kotlin).toBe("_404GoneError");
     expect(find("enum-fallback/plus-at-3").segments).toEqual(["value3"]);
@@ -254,29 +289,37 @@ describe("naming", () => {
       ["val", "member", "java", "val"],
       ["let", "member", "typescript", "let_"],
     ];
+
     for (const [word, role, language, expected] of cases) {
       expect(identifier(name([word], role), language), `${word} ${language}`).toBe(expected);
     }
+
     // A shadowed type name does not escape a member; a keyword escapes both.
     expect(isReserved("Error", "typescript", "schema")).toBe(true);
     expect(isReserved("Error", "typescript", "member")).toBe(false);
     expect(isReserved("class", "typescript", "member")).toBe(true);
+
     // Every listed word is escaped for the roles it applies to, with the casing of its list.
     for (const language of LANGUAGES) {
       const list = Object.values(reservedWords.lists).find((l) =>
         (l.usedBy as string[]).includes(language),
       ) as (typeof reservedWords.lists)[Language];
+
       for (const word of list.keywords) {
         for (const role of ROLES)
           expect(isReserved(word, language, role), `${word} ${role}`).toBe(true);
       }
+
       for (const word of list.types) expect(isReserved(word, language, "schema"), word).toBe(true);
+
       for (const word of list.members)
         expect(isReserved(word, language, "member"), word).toBe(true);
+
       for (const word of list.enumMembers) {
         expect(isReserved(word, language, "enumMember"), word).toBe(true);
       }
     }
+
     // Minimal escaping: PHP keywords block type names (and the enum case `class`), not members.
     expect(identifier(name(["list"], "member"), "php")).toBe("list");
     expect(identifier(name(["list"], "enumMember"), "php")).toBe("List");
@@ -295,13 +338,17 @@ describe("naming", () => {
     for (const word of ["list", "LIST", "List", "lIsT", "Fn", "FN", "Match", "ARRAY"]) {
       expect(isReserved(word, "php", "schema"), word).toBe(true);
     }
+
     // Other languages compare exactly.
     expect(isReserved("LIST", "kotlin", "schema")).toBe(false);
     expect(isReserved("Class", "typescript", "member")).toBe(false);
+
     for (const written of ["list", "LIST", "List"]) {
       const segments = splitName(written);
+
       expect(identifier(name(segments, "schema"), "php")).toBe("List_");
     }
+
     expect(identifier(name(["class"], "enumMember"), "php")).toBe("Class_");
     expect(reservedWords.lists.php.caseInsensitive).toBe(true);
   });
@@ -313,6 +360,7 @@ describe("naming", () => {
     expect(identifier(name(["1042"], "params"), "php")).toBe("_1042Params");
     expect(identifier(name(["404", "gone"], "error"), "java")).toBe("_404GoneError");
     expect(identifier(name(["404", "gone"], "schema"), "typescript")).toBe("_404Gone");
+
     // Every role takes the leading underscore.
     for (const role of ROLES) {
       for (const language of LANGUAGES) {
@@ -320,9 +368,11 @@ describe("naming", () => {
           name(["7up"], role, role === "response" ? 200 : undefined),
           language,
         );
+
         if (got !== undefined) expect(got.startsWith("_7"), `${role} ${language}`).toBe(true);
       }
     }
+
     // An operation id string is pure casing.
     expect(operationId(["2fa", "verify"])).toBe("2faVerify");
   });
@@ -352,12 +402,14 @@ describe("naming", () => {
       segments: ["value3"],
     });
     expect(segmentsOf("+", "name")).toEqual({ ok: false, reason: "no-segment" });
+
     // An enum value needs a positive integer position.
     for (const position of [undefined, 0, -1, 1.5, Number.NaN]) {
       expect(() =>
         segmentsOf("+", "enumValue", position === undefined ? {} : { position }),
       ).toThrow(/position/);
     }
+
     expect(() => segmentsOf("active", "enumValue")).toThrow(/position/);
   });
 
@@ -378,15 +430,20 @@ describe("naming", () => {
     let seed = 7;
     const next = (): number => {
       seed = (Math.imul(seed, 1103515245) + 12345) & 0x7fffffff;
+
       return seed;
     };
+
     const alphabet = "aAzZ09_-. éİ\n";
+
     for (let n = 0; n < 500; n++) {
       let s = "";
       const length = next() % 12;
+
       for (let i = 0; i < length; i++) s += alphabet[next() % alphabet.length];
       samples.push(s);
     }
+
     for (const s of samples) {
       for (const segment of splitName(s)) expect(segment).toMatch(/^[a-z0-9]+$/);
     }
@@ -408,19 +465,24 @@ describe("naming", () => {
     expect(name(["create", "task"], "input").status).toBeUndefined();
     const bad = (segments: string[], role: Role, status?: unknown) => () =>
       deriveName(segments, role, status as number);
+
     expect(bad(["a"], "response")).toThrow(/status/);
     expect(bad(["a"], "response", "201")).toThrow(/status/);
     expect(bad(["a"], "response", 20.5)).toThrow(/status/);
+
     // 200 to 399: success and redirect, what `responses` admits.
     for (const status of [100, 199, 400, 404, 599, 600]) {
       expect(bad(["a"], "response", status), String(status)).toThrow(/status/);
     }
+
     for (const status of [200, 204, 399]) {
       expect(bad(["a"], "response", status), String(status)).not.toThrow();
     }
+
     expect(bad(["a"], "input", 200)).toThrow(/no status/);
     // A hand-built name is checked by identifier, canonicalId and suffixWords too.
     const forged = (n: unknown) => n as Name;
+
     for (const fn of [
       (n: Name) => identifier(n, "typescript"),
       (n: Name) => canonicalId(n),
@@ -438,14 +500,17 @@ describe("naming", () => {
 
   test("fails closed on a malformed name", () => {
     const forged = (segments: string[], role: string) => ({ segments, role }) as unknown as Name;
+
     for (const segments of [["Task"], ["a b"], ["a_b"], [""], ["é"]]) {
       expect(() => deriveName(segments, "schema"), segments.join()).toThrow(/segment/);
       expect(() => identifier(forged(segments, "schema"), "typescript")).toThrow(/segment/);
     }
+
     expect(() => operationId(["List"])).toThrow(/segment/);
     expect(() => operationId([])).toThrow(/segment/);
     // `segments` must be an array: a string would pass character by character.
     const text = "list" as unknown as string[];
+
     expect(() => operationId(text)).toThrow(/array/);
     expect(() => deriveName(text, "schema")).toThrow(/array/);
     expect(() => identifier({ segments: text, role: "schema" }, "typescript")).toThrow(/array/);
@@ -462,20 +527,24 @@ describe("naming", () => {
     expect(() => identifier(forged(["a"], "widget"), "java")).toThrow(/"widget"/);
     expect(() => isReserved("a", "java", "widget" as Role)).toThrow(/"widget"/);
     expect(() => isTypeRole("widget" as Role)).toThrow(/"widget"/);
+
     // An unknown language, including an inherited property name, is refused.
     for (const language of ["go", "constructor", "__proto__"]) {
       expect(() => identifier(name(["a"], "schema"), language as Language)).toThrow(/language/);
     }
+
     expect(() => suffixWords(name(["a"], "input"), { constructor: "x" } as never)).not.toThrow();
   });
 
   test("isTypeRole classifies every role", () => {
     const nonTypes = new Set<Role>(["operation", "member", "enumMember"]);
+
     for (const role of ROLES) expect(isTypeRole(role), role).toBe(!nonTypes.has(role));
   });
 
   test("options seam: suffixes, escape and enumCase", () => {
     const input = name(["assign", "task"], "input");
+
     expect(identifier(input, "java", { suffixes: { input: "dto" } })).toBe("AssignTaskDto");
     expect(identifier(input, "typescript", { suffixes: { input: "request" } })).toBe(
       "AssignTaskRequest",
@@ -503,6 +572,7 @@ describe("naming", () => {
     ).toBe("myclass");
     // An enum member takes the casing asked for; TypeScript still has none.
     const ok = name(["in", "progress"], "enumMember");
+
     expect(identifier(ok, "kotlin", { enumCase: "pascal" })).toBe("InProgress");
     expect(identifier(ok, "php", { enumCase: "upperSnake" })).toBe("IN_PROGRESS");
     expect(identifier(ok, "java", { enumCase: "camel" })).toBe("inProgress");
@@ -535,8 +605,10 @@ describe("naming", () => {
   test("no locale-dependent calls", () => {
     const dir = fileURLToPath(new URL(".", import.meta.url));
     const sources = readdirSync(dir).filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"));
+
     expect(sources.length).toBeGreaterThan(3);
     const forbidden = /toLocale\w*|localeCompare|Intl\./;
+
     for (const file of sources) {
       expect(readFileSync(`${dir}${file}`, "utf8"), file).not.toMatch(forbidden);
     }

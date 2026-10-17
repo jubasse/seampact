@@ -36,7 +36,9 @@ const loaded = loadWorkspace({ reader: loadFsReader(REFERENCE), entry: "workspac
 
 function rawApi(name: string): RawApi {
   const api = loaded.workspace.apis.find((candidate) => candidate.name === name);
+
   if (api === undefined) throw new Error(`the reference contract has no api ${name}`);
+
   return api;
 }
 
@@ -46,12 +48,14 @@ function mayWrite(row: OwnershipRow, half: HalfName): boolean {
 
   const writers: readonly HalfName[] =
     row.mode === "default" ? row.order : [row.declared, ...row.derived];
+
   return writers.includes(half);
 }
 
 // Every field the ownership table lets `half` write, with the containers it navigates through.
 function writableFields(half: HalfName): DraftField[] {
   const rows = pipelineOwnership.filter((row) => mayWrite(row, half));
+
   return [...pipelineContainers, ...rows.map((row) => row.field)];
 }
 
@@ -63,6 +67,7 @@ function applyGuarded(draft: DraftIR, api: DraftFixtureApi, file: "after-tree" |
       reads: ["operations[].id"],
       writes: writableFields(half),
     });
+
     try {
       draftFixtureApply(guard.draft, members);
     } finally {
@@ -85,23 +90,32 @@ const isOrigin = (value: unknown): value is Origin =>
 // Every value of `draft` with its path, depth first.
 function walk(value: unknown, at: string, visit: (value: unknown, at: string) => void): void {
   visit(value, at);
+
   if (!Array.isArray(value) && !isRecord(value)) return;
+
   for (const [key, member] of Object.entries(value)) walk(member, `${at}/${key}`, visit);
 }
 
 function originsOf(draft: object): FoundOrigin[] {
   const found: FoundOrigin[] = [];
+
   walk(draft, "", (value, at) => {
     if (!isRecord(value)) return;
+
     for (const key of ["origin", "at"]) {
       const origin = value[key];
+
       if (isOrigin(origin)) found.push({ at: `${at}/${key}`, origin });
     }
+
     const derivedFrom = value.derivedFrom;
+
     if (!isRecord(derivedFrom) || !Array.isArray(derivedFrom.from)) return;
+
     for (const [index, origin] of Object.entries(derivedFrom.from))
       if (isOrigin(origin)) found.push({ at: `${at}/derivedFrom/from/${index}`, origin });
   });
+
   return found;
 }
 
@@ -113,6 +127,7 @@ interface FoundElement {
 // The lists a draft field names (`operations[].responses[].headers`), each `[]` segment walking every element.
 function listsAt(value: unknown, segments: readonly string[], at: string): FoundElement[] {
   const [segment, ...rest] = segments;
+
   if (segment === undefined)
     return Array.isArray(value)
       ? value.map((element, position) => ({ at: `${at}/${position}`, element }))
@@ -120,8 +135,11 @@ function listsAt(value: unknown, segments: readonly string[], at: string): Found
 
   const name = segment.replace(/\[\]$/, "");
   const member = isRecord(value) ? value[name] : undefined;
+
   if (name === segment) return listsAt(member, rest, `${at}/${name}`);
+
   if (!Array.isArray(member)) return [];
+
   return member.flatMap((element, position) => listsAt(element, rest, `${at}/${name}/${position}`));
 }
 
@@ -140,25 +158,31 @@ function restrictionOf(
 ): IrWriter.FieldRestriction | undefined {
   const [propertyName, ...rest] = pointer.split("/");
   const property = propertiesOf(draft, schemaId).find(({ name }) => name === propertyName);
+
   if (rest.length === 0 || property === undefined) return property?.restrictedTo;
 
   let type = property.type;
+
   while (type.kind === "array" && rest[0] === "*") {
     type = type.items;
     rest.shift();
   }
+
   return type.kind === "ref" ? restrictionOf(draft, type.schema, rest.join("/")) : undefined;
 }
 
 function propertiesOf(draft: DraftIR, schemaId: string) {
   const schema = draft.schemas[schemaId];
+
   return schema?.kind === "object" ? schema.properties : [];
 }
 
 // The operation ids whose `input.rawBody` a half's delta members write.
 function rawBodyWriters(members: JsonObject | undefined): string[] {
   const operations = members?.operations;
+
   if (!isRecord(operations)) return [];
+
   return Object.entries(operations)
     .filter(([, entry]) => isRecord(entry) && isRecord(entry.input) && "rawBody" in entry.input)
     .map(([id]) => id);
@@ -167,11 +191,14 @@ function rawBodyWriters(members: JsonObject | undefined): string[] {
 // The value a JSON Pointer names inside `value`, undefined when a step is missing.
 function valueAtPointer(value: unknown, pointer: string): unknown {
   let current = value;
+
   for (const segment of pointer.split("/").slice(1)) {
     const key = segment.replaceAll("~1", "/").replaceAll("~0", "~");
+
     if (!Array.isArray(current) && !isRecord(current)) return undefined;
     current = Array.isArray(current) ? current[Number(key)] : current[key];
   }
+
   return current;
 }
 
@@ -196,6 +223,7 @@ function declaredRouteSchemaPositions(draft: DraftIR): string[] {
         ? [`${base}/responses/${position}/body`]
         : [],
     );
+
     return [...params, ...input, ...bodies];
   });
 }
@@ -203,15 +231,18 @@ function declaredRouteSchemaPositions(draft: DraftIR): string[] {
 // Every schema position the access delta writes outside operations, as JSON Pointers into the draft.
 function accessCatalogueSchemaPositions(api: DraftFixtureApi): string[] {
   const positions: string[] = [];
+
   for (const { members } of draftFixtureHalves(api, "access-delta"))
     for (const [catalogue, entries] of Object.entries(members)) {
       if (catalogue === "operations") continue;
       walk(entries, `/${catalogue}`, (value, at) => {
         const key = at.slice(at.lastIndexOf("/") + 1);
+
         if (SCHEMA_POSITION_KEYS.includes(key) && (typeof value === "string" || isRecord(value)))
           positions.push(at);
       });
     }
+
   return positions;
 }
 
@@ -221,6 +252,7 @@ describe("draft fixtures", () => {
   test.each(APIS)("%s: each fixture validates against the derived draft form", (api) => {
     for (const stage of ["after-tree", "after-access"] as const) {
       const report = validator.validate(draftFixture(api, stage));
+
       expect(report, `${api} ${stage}`).toMatchObject({
         valid: true,
         problems: [],
@@ -233,6 +265,7 @@ describe("draft fixtures", () => {
     "%s: tree writes the after-tree draft and access the delta, as ownership allows",
     (api) => {
       const draft = createDraftIR();
+
       expect(draftFixtureHalves(api, "after-tree").map(({ half }) => half)).toEqual(TREE_HALVES);
       applyGuarded(draft, api, "after-tree");
       expect(draft).toEqual(draftFixture(api, "after-tree"));
@@ -252,6 +285,7 @@ describe("draft fixtures", () => {
       reads: [],
       writes: writableFields("tree.nodes"),
     });
+
     expect(() => draftFixtureApply(guard.draft, { rights: { roles: {} } })).toThrow(
       DraftAccessError,
     );
@@ -263,6 +297,7 @@ describe("draft fixtures", () => {
 
   test("draftFixtureApply adds members and never replaces one", () => {
     const draft = createDraftIR();
+
     draftFixtureApply(draft, { operations: [{ id: "getTask", params: { path: [] } }] });
     draftFixtureApply(draft, {
       operations: { getTask: { safe: true, params: { path: [{ name: "taskId" }] } } },
@@ -281,7 +316,9 @@ describe("draft fixtures", () => {
   test.each(APIS)("%s: every origin resolves in its api's side table, but a core one", (api) => {
     const draft = draftFixture(api, "after-access");
     const origins = originsOf(draft);
+
     expect(origins.length).toBeGreaterThan(0);
+
     for (const { at, origin } of origins) {
       if (origin.layer === "core") {
         expect(
@@ -290,7 +327,9 @@ describe("draft fixtures", () => {
         ).toBe(true);
         continue;
       }
+
       const locations = rawApi(origin.api ?? api).locations;
+
       expect(
         Object.hasOwn(locations, diagnosticLocationKey(origin)),
         `${at}: ${diagnosticLocationKey(origin)}`,
@@ -303,15 +342,20 @@ describe("draft fixtures", () => {
     (api) => {
       const draft = draftFixture(api, "after-access");
       const elements = elementsOf(draft);
+
       expect(elements.length).toBeGreaterThan(draft.operations.length);
+
       for (const { at, element } of elements) {
         expect(isRecord(element), at).toBe(true);
+
         if (isRecord(element))
           expect(isOrigin(element.origin) || isRecord(element.derivedFrom), at).toBe(true);
       }
+
       walk(draft, "", (value, at) => {
         if (!isRecord(value) || !isRecord(value.derivedFrom)) return;
         const derivation = value.derivedFrom.derivation;
+
         expect(
           typeof derivation === "string" && isDerivationId(derivation),
           `${at}: ${String(derivation)}`,
@@ -327,9 +371,11 @@ describe("draft fixtures", () => {
       const routes = pipelineTreeNodes(rawApi(api)).filter((node) =>
         ["route", "relay", "op"].includes(node.kind),
       );
+
       expect(draft.operations.map((operation) => operation.origin)).toEqual(
         routes.map((node) => node.origin),
       );
+
       for (const operation of draft.operations) {
         expect(operation.params, operation.id).toEqual({
           path: expect.any(Array),
@@ -372,14 +418,17 @@ describe("draft fixtures", () => {
     for (const operation of draft.operations) {
       for (const fieldRight of operation.fieldRights ?? []) {
         const restriction = restrictionOf(draft, fieldRight.schema, fieldRight.pointer.slice(1));
+
         expect(fieldRight.derivedFrom.from?.[0], operation.id).toEqual(restriction?.origin);
         checked.push(`${operation.id} ${fieldRight.schema}${fieldRight.pointer}`);
       }
 
       const item = operation.responses?.find((response) => response.body?.kind === "ref")?.body;
+
       for (const sortKey of operation.paging?.sortKeys ?? []) {
         if (sortKey.derivedFrom === undefined || item?.kind !== "ref") continue;
         const restriction = restrictionOf(draft, item.schema, sortKey.key);
+
         expect(sortKey.derivedFrom.from?.[0], operation.id).toEqual(restriction?.origin);
         checked.push(`${operation.id} sort ${sortKey.key}`);
       }
@@ -398,6 +447,7 @@ describe("draft fixtures", () => {
       const version = operation.concurrency?.version;
       const input = operation.input?.schema;
       const item = operation.responses?.find((response) => response.body?.kind === "ref")?.body;
+
       if (version?.in !== "body" || input?.kind !== "ref" || item?.kind !== "ref") continue;
 
       versionedInputs.add(input.schema);
@@ -405,6 +455,7 @@ describe("draft fixtures", () => {
       const itemField = propertiesOf(draft, item.schema).find(
         (property) => property.name === operation.concurrency?.field,
       );
+
       expect(versionProperty, operation.id).toMatchObject({
         name: version.name,
         type: itemField?.type,
@@ -417,6 +468,7 @@ describe("draft fixtures", () => {
         (property) => property.derivedFrom?.derivation === "concurrency.version",
       ),
     );
+
     expect(schemasWithVersionProperty.sort()).toEqual([...versionedInputs].sort());
     expect(versionedInputs.size).toBeGreaterThan(0);
   });
@@ -447,8 +499,10 @@ describe("draft fixtures", () => {
 
       for (const { pointer, use, at } of typeUses) {
         expect(valueAtPointer(rawApi(api).merged, pointer), pointer).toBeDefined();
+
         for (const position of at) {
           const written = valueAtPointer(draft, position);
+
           // A `SchemaRef` position holds the id of the schema the use refers to.
           if (typeof written === "string")
             expect(use, position).toEqual({ kind: "ref", schema: written });
@@ -460,6 +514,7 @@ describe("draft fixtures", () => {
         ...declaredRouteSchemaPositions(draftFixture(api, "after-tree")),
         ...accessCatalogueSchemaPositions(api),
       ];
+
       expect(typeUses.flatMap(({ at }) => at).sort()).toEqual(expectedPositions.sort());
     },
   );
@@ -470,10 +525,12 @@ describe("draft fixtures", () => {
     for (const { pointer, direction, use } of draftFixtureSchemaTables(api).typeUses) {
       const otherDirection = direction === "input" ? "output" : "input";
       const answered = service.typeUse(pointer, direction);
+
       expect(answered, pointer).toEqual(use);
       expect(answered, pointer).not.toBe(service.typeUse(pointer, direction));
       expect(service.typeUse(pointer, otherDirection), pointer).toBeUndefined();
     }
+
     expect(service.typeUse("/surfaces/app/routes/missing", "input")).toBeUndefined();
   });
 
@@ -497,6 +554,7 @@ describe("draft fixtures", () => {
             : [],
         ),
       );
+
       // A form or multipart input would need its field rows too; the reference declares none.
       expect(draft.operations.filter((operation) => operation.input?.fields !== undefined)).toEqual(
         [],
@@ -505,19 +563,24 @@ describe("draft fixtures", () => {
       expect(queryWires.map(({ pointer }) => pointer).sort()).toEqual(
         [...proofSchemas, ...declaredQueryFields.map(({ pointer }) => pointer)].sort(),
       );
+
       for (const { pointer, wire } of declaredQueryFields)
         expect(service.queryWire(pointer), pointer).toEqual(wire);
+
       for (const { pointer, wire } of queryWires) {
         expect(valueAtPointer(rawApi(api).merged, pointer), pointer).toBeDefined();
         const answered = service.queryWire(pointer);
+
         expect(answered, pointer).toEqual(wire);
         expect(answered, pointer).not.toBe(service.queryWire(pointer));
       }
+
       expect(service.queryWire("/surfaces/app/routes/missing")).toBeUndefined();
 
       const jsonProofs = draft.operations
         .filter((operation) => operation.input?.media === "application/json")
         .flatMap((operation) => operation.input?.proofs ?? []);
+
       for (const proof of jsonProofs) expect(proof.wire, proof.name).toBeUndefined();
     },
   );
@@ -525,6 +588,7 @@ describe("draft fixtures", () => {
   test("the fixture service finds the invalid example marker, wherever it sits", () => {
     const service = draftFixtureSchemaService("tasks");
     const [first] = draftFixtureSchemaTables("tasks").typeUses;
+
     if (first === undefined) throw new Error("tasks.schema-uses.json lists no use");
 
     expect(service.checkExample({ title: "ok" }, first.use)).toEqual([]);

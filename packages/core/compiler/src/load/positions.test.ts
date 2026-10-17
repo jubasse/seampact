@@ -28,11 +28,13 @@ const when = (cond: JsonSchema, yes?: JsonSchema, no?: JsonSchema): JsonSchema =
 describe("alternatives", () => {
   test("a key one alternative types and another leaves free is unknown", () => {
     const schema = { anyOf: [closed({ x: { type: "string" } }), { type: "object" }] };
+
     expect(keyOf(schema, "x")).toBeUndefined();
   });
 
   test("the same through then and else, and through oneOf", () => {
     const open = { type: "object", additionalProperties: {} };
+
     expect(
       keyOf(when({ required: ["y"] }, closed({ x: { type: "string" } })), "x"),
     ).toBeUndefined();
@@ -43,6 +45,7 @@ describe("alternatives", () => {
     const schema = {
       anyOf: [closed({ x: { type: "string" } }), closed({ x: { type: "integer" } })],
     };
+
     expect(types(keyOf(schema, "x"))).toEqual(["integer", "string"]);
   });
 
@@ -50,11 +53,13 @@ describe("alternatives", () => {
     const schema = {
       anyOf: [{ type: "string" }, closed({ x: { type: "integer" } }), closed({ y: {} })],
     };
+
     expect(types(keyOf(schema, "x"))).toEqual(["integer"]);
   });
 
   test("an if on the value's type is chosen when a key is read", () => {
     const schema = when({ type: "string" }, { type: "string" }, closed({ x: { type: "boolean" } }));
+
     expect(types(keyOf(schema, "x"))).toEqual(["boolean"]);
   });
 });
@@ -62,6 +67,7 @@ describe("alternatives", () => {
 describe("constraints that hold together", () => {
   test("a rule beside the properties types nothing away", () => {
     const schema = { ...closed({ x: { type: "string" } }), allOf: [{ required: ["x"] }] };
+
     expect(types(keyOf(schema, "x"))).toEqual(["string"]);
   });
 
@@ -70,6 +76,7 @@ describe("constraints that hold together", () => {
       ...closed({ x: { type: "string" } }),
       allOf: [{ properties: { x: { title: "conflict", not: {} } } }],
     };
+
     expect(keyOf(schema, "x")).toBeUndefined();
   });
 });
@@ -85,8 +92,10 @@ describe("data positions", () => {
 // Every keyword the authoring schemas use, at schema positions.
 function keywords(node: unknown, out: Set<string>): Set<string> {
   if (node === null || typeof node !== "object" || Array.isArray(node)) return out;
+
   for (const [key, value] of Object.entries(node)) {
     out.add(key);
+
     if (["properties", "patternProperties", "$defs", "dependentSchemas"].includes(key)) {
       for (const child of Object.values(value as object)) keywords(child, out);
     } else if (["allOf", "anyOf", "oneOf", "prefixItems"].includes(key)) {
@@ -97,6 +106,7 @@ function keywords(node: unknown, out: Set<string>): Set<string> {
       keywords(value, out);
     }
   }
+
   return out;
 }
 
@@ -104,8 +114,10 @@ function keywords(node: unknown, out: Set<string>): Set<string> {
 // nor ignores on purpose could change where a key leads or what a scalar must be, unseen.
 test("the authoring schemas use no keyword the position reading does not account for", () => {
   const used = new Set<string>();
+
   for (const file of AUTHORING_FILES) keywords(authoringSchemas()[file], used);
   const known = new Set([...POSITION_KEYWORDS, ...IGNORED_KEYWORDS]);
+
   expect([...used].filter((k) => !known.has(k)).sort()).toEqual([]);
   // The ignored list names only what the schemas use, so a new keyword is a decision made here.
   expect(IGNORED_KEYWORDS.filter((k) => !used.has(k))).toEqual([]);

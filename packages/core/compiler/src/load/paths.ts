@@ -6,16 +6,20 @@ import type { LoadReader } from "./reader.js";
 
 export function loadNormalizePath(p: string): string {
   const parts: string[] = [];
+
   for (const seg of p.split("/")) {
     if (seg === "" || seg === ".") continue;
+
     if (seg === ".." && parts.length > 0 && parts[parts.length - 1] !== "..") parts.pop();
     else parts.push(seg);
   }
+
   return parts.length === 0 ? "." : parts.join("/");
 }
 
 export function dirnameOf(file: string): string {
   const i = file.lastIndexOf("/");
+
   return i < 0 ? "." : file.slice(0, i);
 }
 
@@ -35,7 +39,9 @@ export function isAbsolutePath(p: string): boolean {
  */
 export function isInside(boundary: string, file: string): boolean {
   if (isAbsolutePath(file)) return false;
+
   if (boundary === ".") return file !== ".." && !file.startsWith("../");
+
   return file === boundary || file.startsWith(`${boundary}/`);
 }
 
@@ -55,11 +61,16 @@ export function resolveAuthoredPath(
   const hash = raw.indexOf("#");
   const target = hash < 0 ? raw : raw.slice(0, hash);
   const fragment = hash < 0 ? undefined : raw.slice(hash + 1);
+
   if (target === "") return "empty";
+
   if (target.includes("\\")) return "backslash";
+
   if (isAbsolutePath(target)) return "absolute";
   const resolved = joinPath(dirnameOf(fromFile), target);
+
   if (!isInside(boundary, resolved)) return "escape";
+
   return { path: resolved, fragment };
 }
 
@@ -84,15 +95,20 @@ const listingIndexes = new WeakMap<
 
 function listingIndex(entries: readonly string[]) {
   let index = listingIndexes.get(entries);
+
   if (!index) {
     const folded = new Map<string, string>();
+
     for (const e of [...entries].sort()) {
       const k = e.toLowerCase();
+
       if (!folded.has(k)) folded.set(k, e);
     }
+
     index = { names: new Set(entries), folded };
     listingIndexes.set(entries, index);
   }
+
   return index;
 }
 
@@ -106,24 +122,31 @@ export function checkCase(
   const actual: string[] = current === "" ? [] : [current];
   let mismatch = false;
   const rest = current === "" ? file : file.slice(current.length + 1);
+
   for (const seg of rest.split("/")) {
     const dir = current === "" ? "." : current;
+
     if (!inside(dir)) return { kind: "escape" };
     const entries = reader.listDir(dir);
+
     if (!entries) return { kind: "missing" };
     const index = listingIndex(entries);
+
     if (index.names.has(seg)) {
       actual.push(seg);
     } else {
       const hit = index.folded.get(seg.toLowerCase());
+
       if (hit === undefined) return { kind: "missing" };
       actual.push(hit);
       mismatch = true;
       current = current === "" ? hit : `${current}/${hit}`;
       continue;
     }
+
     current = current === "" ? seg : `${current}/${seg}`;
   }
+
   return mismatch ? { kind: "case", actual: actual.join("/") } : { kind: "ok" };
 }
 
@@ -133,7 +156,9 @@ export function pointerEscape(seg: string): string {
 
 export function pointerSegments(pointer: string): string[] | undefined {
   if (pointer === "") return [];
+
   if (!pointer.startsWith("/")) return undefined;
+
   return pointer
     .slice(1)
     .split("/")

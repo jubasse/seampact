@@ -1,12 +1,16 @@
 // ADR 0007 section 2: splitting a written name into segments.
 
 const Kind = { Other: 0, Lower: 1, Upper: 2, Digit: 3 } as const;
+
 type Kind = (typeof Kind)[keyof typeof Kind];
 
 function kindOf(code: number): Kind {
   if (code >= 97 && code <= 122) return Kind.Lower;
+
   if (code >= 65 && code <= 90) return Kind.Upper;
+
   if (code >= 48 && code <= 57) return Kind.Digit;
+
   return Kind.Other;
 }
 
@@ -19,20 +23,25 @@ export function splitName(written: string): string[] {
   const segments: string[] = [];
   let start = -1; // index where the current segment starts, -1 outside a run
   const length = written.length;
+
   for (let i = 0; i < length; i++) {
     const kind = kindOf(written.charCodeAt(i));
+
     if (kind === Kind.Other) {
       if (start >= 0) segments.push(written.slice(start, i).toLowerCase());
       start = -1;
       continue;
     }
+
     if (start < 0) {
       start = i;
       continue;
     }
+
     if (kind !== Kind.Upper) continue;
     const previous = kindOf(written.charCodeAt(i - 1));
     const next = i + 1 < length ? kindOf(written.charCodeAt(i + 1)) : Kind.Other;
+
     // Rule 2: an uppercase letter after a lowercase letter or a digit starts a segment; so does
     // one that ends an uppercase run and is followed by a lowercase letter (`HTTPServer`).
     if (
@@ -44,7 +53,9 @@ export function splitName(written: string): string[] {
       start = i;
     }
   }
+
   if (start >= 0) segments.push(written.slice(start).toLowerCase());
+
   return segments;
 }
 
@@ -72,13 +83,18 @@ export function segmentsOf(
   options: { codeName?: string; position?: number } = {},
 ): SegmentsResult {
   const { codeName, position } = options;
+
   if (source === "enumValue" && (!Number.isInteger(position) || (position as number) < 1)) {
     throw new Error(`an enum value needs its one-based position, got ${String(position)}`);
   }
+
   const split = splitName(codeName ?? written);
+
   if (split.length > 0) return { ok: true, segments: split };
+
   if (source === "enumValue" && codeName === undefined) {
     return { ok: true, segments: [`value${position}`] };
   }
+
   return { ok: false, reason: "no-segment" };
 }

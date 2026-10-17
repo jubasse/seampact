@@ -63,6 +63,7 @@ function accessRightsRun(draft: DraftIR, context: AccessRightsContext): void {
         });
 
   const checks = accessRightsItemChecks();
+
   accessRightsCheckRequirementEntries(context, reporter, catalogues, checks);
   const built = routes.map(({ route, scopes }) => ({
     scopes,
@@ -76,9 +77,11 @@ function accessRightsRun(draft: DraftIR, context: AccessRightsContext): void {
   }));
 
   writeCatalogues(draft, catalogues);
+
   // `accessRightsRoutes` maps the draft's operations in order, so the two lists pair by index.
   for (const [index, operation] of draft.operations.entries()) {
     const members = built[index];
+
     if (members === undefined)
       throw new Error(`access.rights built no route for operation ${operation.id ?? index}`);
     operation.scopes = members.scopes;
@@ -94,7 +97,10 @@ const entriesWith = (
 
 function writeCatalogues(draft: DraftIR, catalogues: AccessRightsCatalogues): void {
   for (const [id, right] of catalogues.rights) draft.rights[id] = right;
+
   for (const [id, rule] of catalogues.rules) draft.rules[id] = rule;
+
   for (const [id, scope] of catalogues.scopes) draft.scopes[id] = scope;
+
   for (const [id, bucket] of catalogues.buckets) draft.buckets[id] = bucket;
 }

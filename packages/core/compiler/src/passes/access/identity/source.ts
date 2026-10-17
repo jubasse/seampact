@@ -15,6 +15,7 @@ const isNamedSource = (text: string): text is NamedSource =>
 export function accessIdentityValueSource(text: string): IrWriter.ValueSource {
   const dot = text.indexOf(".");
   const kind = dot < 0 ? text : text.slice(0, dot);
+
   if (dot < 0 || !isNamedSource(kind))
     throw new Error(
       `access.identity reads named value sources only (${NAMED_SOURCES.join(", ")}): '${text}'`,

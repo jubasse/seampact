@@ -129,8 +129,10 @@ const TYPE_NAMES = new Set<string>([
 ]);
 
 let schemas: Readonly<Record<AuthoringFile, JsonSchema>> | undefined;
+
 function schemaFiles(): Readonly<Record<AuthoringFile, JsonSchema>> {
   schemas ??= authoringSchemas();
+
   return schemas;
 }
 
@@ -151,14 +153,18 @@ interface Resolved {
 function resolveRef(ref: string, from: AuthoringFile): Resolved | undefined {
   const [target = "", fragment = ""] = ref.split("#");
   const file = target === "" ? from : FILE_OF.get(target);
+
   if (file === undefined) return undefined;
   let node: unknown = schemaFiles()[file];
   const segments = fragment === "" ? [] : fragment.split("/").slice(1);
+
   for (const segment of segments) {
     const key = segment.replace(/~1/g, "/").replace(/~0/g, "~");
+
     if (!isSchema(node)) return undefined;
     node = node[key];
   }
+
   return isSchema(node) ? { node, file } : undefined;
 }
 
@@ -167,6 +173,7 @@ const fileOfNode = new WeakMap<JsonSchema, AuthoringFile>();
 
 function tagged(node: JsonSchema, file: AuthoringFile): JsonSchema {
   if (!fileOfNode.has(node)) fileOfNode.set(node, file);
+
   return node;
 }
 
@@ -177,12 +184,14 @@ function fileOf(node: JsonSchema): AuthoringFile {
 function subschemas(node: JsonSchema, key: string): JsonSchema[] {
   const value = node[key];
   const list = Array.isArray(value) ? value : [value];
+
   return list.filter(isSchema).map((n) => tagged(n, fileOf(node)));
 }
 
 function referenced(node: JsonSchema): JsonSchema | undefined {
   if (typeof node.$ref !== "string") return undefined;
   const r = resolveRef(node.$ref, fileOf(node));
+
   return r ? tagged(r.node, r.file) : undefined;
 }
 
@@ -195,34 +204,47 @@ function isConflict(node: JsonSchema): boolean {
 // keys of every node kind with no constraint, for an editor; the kinds themselves type those keys,
 // so its placeholders never count here.
 let includedNode: JsonSchema | undefined;
+
 function isIncludedNode(node: JsonSchema): boolean {
   includedNode ??= resolveRef("node.schema.json#/$defs/includedNode", "node")?.node;
+
   return node === includedNode;
 }
 
 function valueType(value: unknown): TypeName | undefined {
   if (value === null) return "null";
+
   if (typeof value === "string") return "string";
+
   if (typeof value === "boolean") return "boolean";
+
   if (typeof value === "number") return Number.isInteger(value) ? "integer" : "number";
+
   if (Array.isArray(value)) return "array";
+
   if (isSchema(value)) return "object";
+
   return undefined;
 }
 
 function union(parts: Types[]): Types {
   const out = new Set<TypeName>();
+
   for (const part of parts) {
     if (part === undefined) return undefined;
+
     for (const t of part) out.add(t);
   }
+
   return out;
 }
 
 function intersect(a: Types, b: Types): Types {
   if (a === undefined) return b;
+
   if (b === undefined) return a;
   const out = new Set<TypeName>();
+
   for (const x of a) {
     for (const y of b) {
       if (x === y) out.add(x);
@@ -230,6 +252,7 @@ function intersect(a: Types, b: Types): Types {
       else if (x === "number" && y === "integer") out.add("integer");
     }
   }
+
   // Contradictory constraints: no reading, the validate stage reports it.
   return out.size === 0 ? undefined : out;
 }
@@ -242,35 +265,49 @@ const resolving = new Set<JsonSchema>();
 function typesOf(node: JsonSchema): Types {
   if (resolving.has(node)) return undefined;
   resolving.add(node);
+
   try {
     let types: Types;
     const t = node.type;
+
     if (typeof t === "string" && TYPE_NAMES.has(t)) types = new Set([t as TypeName]);
     else if (Array.isArray(t)) {
       types = new Set(t.filter((x): x is TypeName => TYPE_NAMES.has(x as string)));
     }
+
     if (Array.isArray(node.enum)) {
       const names = node.enum.map(valueType);
+
       if (names.every((n) => n !== undefined))
         types = intersect(types, new Set(names as TypeName[]));
     }
+
     if ("const" in node) {
       const name = valueType(node.const);
+
       if (name !== undefined) types = intersect(types, new Set([name]));
     }
+
     const target = referenced(node);
+
     if (target) types = intersect(types, typesOf(target));
+
     for (const member of subschemas(node, "allOf")) types = intersect(types, typesOf(member));
+
     for (const key of ["anyOf", "oneOf"]) {
       if (key in node) types = intersect(types, union(subschemas(node, key).map(typesOf)));
     }
+
     if (isSchema(node.if)) {
       const branch = (key: string): Types => {
         const b = subschemas(node, key)[0];
+
         return b ? typesOf(b) : undefined;
       };
+
       types = intersect(types, union([branch("then"), branch("else")]));
     }
+
     return types;
   } finally {
     resolving.delete(node);
@@ -279,6 +316,7 @@ function typesOf(node: JsonSchema): Types {
 
 function and(parts: (boolean | undefined)[]): boolean | undefined {
   if (parts.some((p) => p === false)) return false;
+
   return parts.every((p) => p === true) ? true : undefined;
 }
 
@@ -289,8 +327,10 @@ type Container = "object" | "array";
 // Only the forms the grammar writes are understood.
 function holds(cond: unknown, container: Container, view?: MapView): boolean | undefined {
   if (cond === true || cond === false) return cond;
+
   if (!isSchema(cond)) return undefined;
   const parts: (boolean | undefined)[] = [];
+
   for (const [keyword, value] of Object.entries(cond)) {
     switch (keyword) {
       case "$comment":
@@ -299,55 +339,72 @@ function holds(cond: unknown, container: Container, view?: MapView): boolean | u
         break;
       case "type": {
         const names = Array.isArray(value) ? value : [value];
+
         parts.push(names.includes(container));
         break;
       }
+
       case "required": {
         if (!view) {
           parts.push(undefined);
           break;
         }
+
         const keys = Array.isArray(value) ? (value as string[]) : [];
+
         parts.push(and(keys.map((k) => (view.has(k) ? true : view.open ? undefined : false))));
         break;
       }
+
       case "properties": {
         if (!view) {
           parts.push(undefined);
           break;
         }
+
         const props = isSchema(value) ? value : {};
+
         for (const [key, sub] of Object.entries(props)) {
           if (sub === true) continue;
+
           if (!view.has(key)) {
             // Vacuous when absent, unless an include may still bring it.
             if (view.open) parts.push(undefined);
             continue;
           }
+
           if (isSchema(sub) && "const" in sub && Object.keys(sub).length === 1) {
             const actual = view.scalar(key);
+
             parts.push(actual === NOT_SCALAR ? undefined : actual === sub.const);
           } else parts.push(undefined);
         }
+
         break;
       }
+
       case "anyOf":
       case "allOf": {
         const members = (Array.isArray(value) ? value : []).map((m) => holds(m, container, view));
+
         if (keyword === "allOf") parts.push(and(members));
         else if (members.some((m) => m === true)) parts.push(true);
         else parts.push(members.every((m) => m === false) ? false : undefined);
         break;
       }
+
       case "not": {
         const inner = holds(value, container, view);
+
         parts.push(inner === undefined ? undefined : !inner);
         break;
       }
+
       default:
         parts.push(undefined);
     }
   }
+
   return and(parts);
 }
 
@@ -364,22 +421,31 @@ function leaves(
   if (out.has(node)) return out;
   out.add(node);
   const target = referenced(node);
+
   if (target) leaves(target, out, view, trace, choices);
+
   for (const key of ["allOf", "anyOf", "oneOf"]) {
     for (const member of subschemas(node, key)) leaves(member, out, view, trace, choices);
   }
+
   const chosen = view && isSchema(node.if) ? holds(node.if, "object", view) : undefined;
+
   if (trace && view && isSchema(node.if)) trace.push(String(chosen));
+
   if (choices && chosen !== undefined) choices.set(node, chosen);
+
   if (chosen !== false)
     for (const member of subschemas(node, "then")) leaves(member, out, view, trace, choices);
+
   if (chosen !== true)
     for (const member of subschemas(node, "else")) leaves(member, out, view, trace, choices);
+
   return out;
 }
 
 function leafSetOf(pos: Position): readonly JsonSchema[] {
   if (pos.leafSet === undefined) pos.leafSet = [...leaves(pos.node)];
+
   return pos.leafSet;
 }
 
@@ -395,6 +461,7 @@ export function refinePosition(pos: Position | undefined, view: MapView): Positi
   const out = leaves(pos.node, new Set(), view, trace, choices);
   const signature = trace.join(",");
   const hit = pos.refined.get(signature);
+
   if (hit) return hit;
   const refined: Position = {
     data: pos.data,
@@ -405,29 +472,37 @@ export function refinePosition(pos: Position | undefined, view: MapView): Positi
     refined: new Map(),
     choices,
   };
+
   pos.refined.set(signature, refined);
+
   return refined;
 }
 
 // What a node says about one child: a schema node, no constraint at all, or no child possible.
 const FREE: unique symbol = Symbol("no constraint");
 const NONE: unique symbol = Symbol("no child possible");
+
 type Step = JsonSchema | typeof FREE | typeof NONE;
 
 // Constraints that all hold: a child impossible in one is impossible; no constraint adds nothing.
 function allOfSteps(parts: Step[]): Step {
   if (parts.includes(NONE)) return NONE;
   const nodes = parts.filter(isSchema);
+
   if (nodes.length === 0) return FREE;
+
   return nodes.length === 1 ? (nodes[0] as JsonSchema) : { allOf: nodes };
 }
 
 // Alternatives: an impossible one is dropped; one that constrains nothing frees the child.
 function anyOfSteps(parts: Step[]): Step {
   const live = parts.filter((p) => p !== NONE);
+
   if (live.length === 0) return NONE;
+
   if (live.includes(FREE)) return FREE;
   const nodes = live.filter(isSchema);
+
   return nodes.length === 1 ? (nodes[0] as JsonSchema) : { anyOf: nodes };
 }
 
@@ -441,17 +516,22 @@ function ownStep(node: JsonSchema, segment: string, isIndex: boolean): Step {
       : isSchema(value)
         ? tagged(value, file)
         : FREE;
+
   // `items` is the one form the grammar writes for lists.
   if (isIndex) return asStep(node.items);
   const parts: Step[] = [];
   const properties = isSchema(node.properties) ? node.properties : {};
+
   if (Object.hasOwn(properties, segment)) parts.push(asStep(properties[segment]));
+
   if (isSchema(node.patternProperties)) {
     for (const [pattern, schema] of Object.entries(node.patternProperties)) {
       if (patternOf(pattern).test(segment)) parts.push(asStep(schema));
     }
   }
+
   if (parts.length === 0) return asStep(node.additionalProperties);
+
   return allOfSteps(parts);
 }
 
@@ -466,30 +546,42 @@ function stepNode(
   if (isIncludedNode(node)) return NONE;
   const container: Container = isIndex ? "array" : "object";
   const types = typesOf(node);
+
   if (types !== undefined && !types.has(container)) return NONE;
+
   // A reference cycle constrains nothing more on its second visit.
   if (stepping.has(node)) return FREE;
   stepping.add(node);
+
   try {
     const step = (n: JsonSchema) => stepNode(n, segment, isIndex, choices);
     const parts: Step[] = [ownStep(node, segment, isIndex)];
     const target = referenced(node);
+
     if (target) parts.push(step(target));
+
     for (const member of subschemas(node, "allOf")) parts.push(step(member));
+
     for (const key of ["anyOf", "oneOf"]) {
       if (key in node) parts.push(anyOfSteps(subschemas(node, key).map(step)));
     }
+
     if (isSchema(node.if)) {
       const chosen = choices?.get(node) ?? holds(node.if, container);
       const branch = (key: string): Step => {
         const b = subschemas(node, key)[0];
+
         return b ? step(b) : FREE;
       };
+
       const branches: Step[] = [];
+
       if (chosen !== false) branches.push(branch("then"));
+
       if (chosen !== true) branches.push(branch("else"));
       parts.push(anyOfSteps(branches));
     }
+
     return allOfSteps(parts);
   } finally {
     stepping.delete(node);
@@ -500,14 +592,18 @@ function stepNode(
 // marks it, or when every alternative does.
 function isData(node: JsonSchema): boolean {
   if (node.title === DATA) return true;
+
   if (Array.isArray(node.allOf)) return subschemas(node, "allOf").some(isData);
+
   if (Array.isArray(node.anyOf)) return subschemas(node, "anyOf").every(isData);
+
   return false;
 }
 
 function position(step: Step): Position | undefined {
   if (!isSchema(step)) return undefined;
   const data = isData(step);
+
   return {
     data,
     types: data ? undefined : typesOf(step),
@@ -527,6 +623,7 @@ const roots = new Map<PositionKind, Position | undefined>();
 /** The position of a file's root, one per kind: what is learnt below it is kept. */
 export function rootPosition(kind: PositionKind): Position | undefined {
   if (!roots.has(kind)) roots.set(kind, position(tagged(schemaFiles()[kind], kind)));
+
   return roots.get(kind);
 }
 
@@ -540,26 +637,33 @@ let entryRoot: Position | undefined;
 export function entryRootPosition(): Position | undefined {
   const ws = rootPosition("workspace");
   const api = rootPosition("api");
+
   if (!ws || !api) return ws ?? api;
   entryRoot ??= position({ anyOf: [ws.node, api.node] });
+
   return entryRoot;
 }
 
 const patterns = new Map<string, RegExp>();
+
 function patternOf(pattern: string): RegExp {
   let re = patterns.get(pattern);
+
   if (!re) {
     re = new RegExp(pattern, "u");
     patterns.set(pattern, re);
   }
+
   return re;
 }
 
 function mentions(from: Position, segment: string): boolean {
   for (const leaf of leafSetOf(from)) {
     if (isSchema(leaf.properties) && Object.hasOwn(leaf.properties, segment)) return true;
+
     if (isSchema(leaf.patternProperties)) return true;
   }
+
   return false;
 }
 
@@ -575,31 +679,41 @@ export function stepPosition(
 ): Position | undefined {
   if (from === undefined) return undefined;
   const slot = isIndex ? "\0item" : mentions(from, segment) ? segment : "\0other";
+
   if (from.children.has(slot)) return from.children.get(slot);
   const next = position(stepNode(from.node, segment, isIndex, from.choices));
+
   from.children.set(slot, next);
+
   return next;
 }
 
 /** The position of a pointer given as unescaped segments (a list index is a decimal segment). */
 export function positionAt(kind: PositionKind, segments: string[]): Position | undefined {
   let pos = rootPosition(kind);
+
   for (const s of segments) pos = stepPosition(pos, s, false);
+
   return pos;
 }
 
 /** YAML type of a resolved scalar, the vocabulary of a position's `types`. */
 export function scalarType(value: unknown): ScalarType | undefined {
   if (value === null) return "null";
+
   if (typeof value === "string") return "string";
+
   if (typeof value === "boolean") return "boolean";
+
   if (typeof value === "number") return Number.isInteger(value) ? "integer" : "number";
+
   return undefined;
 }
 
 /** What the position accepts, written for a message: `a string`, `an integer or a string`. */
 export function expectedTypes(pos: Position): string[] | undefined {
   const types = pos.types;
+
   if (types === undefined) return undefined;
   const words: Record<TypeName, string> = {
     string: "a string",
@@ -610,6 +724,7 @@ export function expectedTypes(pos: Position): string[] | undefined {
     object: "a mapping",
     array: "a list",
   };
+
   return [...types].sort().map((t) => words[t]);
 }
 
@@ -621,15 +736,19 @@ export function expectedTypes(pos: Position): string[] | undefined {
 export function admitsInteger(pos: Position, n: number): boolean {
   const forms = leafSetOf(pos).filter((node) => {
     const t = node.type;
+
     return t === "integer" || (Array.isArray(t) && t.includes("integer"));
   });
+
   if (forms.length === 0) return true;
   const num = (v: unknown) => (typeof v === "number" ? v : undefined);
+
   return forms.some((node) => {
     const min = num(node.minimum);
     const max = num(node.maximum);
     const xmin = num(node.exclusiveMinimum);
     const xmax = num(node.exclusiveMaximum);
+
     return (
       (min === undefined || n >= min) &&
       (max === undefined || n <= max) &&
@@ -642,8 +761,11 @@ export function admitsInteger(pos: Position, n: number): boolean {
 /** True when a scalar of this type is a type the position does not accept. */
 export function refusesScalar(pos: Position | undefined, type: ScalarType): boolean {
   const types = pos?.types;
+
   if (types === undefined || types.size === 0) return false;
+
   if (types.has(type)) return false;
+
   // A whole number is a number; an integer position does not take a fraction.
   return !(type === "integer" && types.has("number"));
 }

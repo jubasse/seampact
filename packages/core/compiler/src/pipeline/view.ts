@@ -40,25 +40,32 @@ export function pipelineView<T>(value: T, source: PipelineViewSource): T {
   const wrap = (target: unknown, path: string): unknown => {
     if (!isObject(target)) return target;
     let byPath = views.get(target);
+
     if (byPath === undefined) {
       byPath = new Map();
       views.set(target, byPath);
     }
+
     let view = byPath.get(path);
+
     if (view === undefined) {
       const refuse = (key?: string | symbol): never => {
         throw new PipelineReadonlyError(source, key === undefined ? path : join(path, key));
       };
+
       view = new Proxy(target, {
         get(t, key) {
           const item: unknown = Reflect.get(t, key);
+
           if (typeof key === "symbol") return item;
           // A frozen member must read as itself (a proxy invariant), so it leaves unwrapped: only a deep-frozen
           // value is safe there, since a mutable object held by a frozen member is not guarded. The raw tree and
           // the drafts hold no frozen member; a frozen object an `imports` IR holds is the caller's to deep-freeze.
           const own = Reflect.getOwnPropertyDescriptor(t, key);
+
           if (own !== undefined && own.configurable === false && own.writable === false)
             return item;
+
           return wrap(item, join(path, key));
         },
         set: (_t, key) => refuse(key),
@@ -70,8 +77,10 @@ export function pipelineView<T>(value: T, source: PipelineViewSource): T {
       byPath.set(path, view);
       targets.set(view, { target, source });
     }
+
     return view;
   };
+
   return wrap(value, "") as T;
 }
 
@@ -102,23 +111,29 @@ const NOT_JSON_PRIMITIVES = new Set(["function", "bigint", "symbol"]);
 
 function copy(value: unknown, path: string): unknown {
   const plain = isObject(value) ? (targets.get(value)?.target ?? value) : value;
+
   if (NOT_JSON_PRIMITIVES.has(typeof plain)) throw notJsonShaped(`a ${typeof plain}`, path);
+
   if (!isObject(plain)) return plain;
 
   if (Array.isArray(plain))
     return plain.map((item, index) => copy(item, join(path, String(index))));
 
   const prototype: unknown = Object.getPrototypeOf(plain);
+
   if (prototype !== Object.prototype && prototype !== null)
     throw notJsonShaped(`a ${plain.constructor?.name ?? "object with another prototype"}`, path);
 
   const out: object = Object.create(prototype);
+
   for (const key of Object.keys(plain)) {
     const at = join(path, key);
     // A getter would be read once and frozen into a value: refuse it, as a facade's `size` is.
     const descriptor = Object.getOwnPropertyDescriptor(plain, key);
+
     // A proxy may list a key in `ownKeys` and then hide its descriptor.
     if (descriptor === undefined) throw notJsonShaped("a member with no descriptor", at);
+
     if (!("value" in descriptor)) throw notJsonShaped("an accessor", at);
 
     Object.defineProperty(out, key, {
@@ -128,11 +143,13 @@ function copy(value: unknown, path: string): unknown {
       configurable: true,
     });
   }
+
   return out;
 }
 
 function notJsonShaped(kind: string, path: string): TypeError {
   const where = path === "" ? "the value" : `at ${path}`;
+
   return new TypeError(
     `pipelineCopy copies JSON-shaped data only (plain objects, arrays and primitives): ${where}: ${kind}. Store its data as a plain object instead.`,
   );

@@ -279,12 +279,15 @@ const PACK_ENTRY = /^pack\.[^.\s]+(?:\.[^.\s]+)*\.[^.\s]+$/;
 /** True for a derivation id of the table, or a pack entry id `pack.<pack>.<entry>`. */
 export function isDerivationId(id: string): boolean {
   if (id === PACK_DERIVATION_ROW) return false;
+
   return BY_ID.has(id) || PACK_ENTRY.test(id);
 }
 
 /** The row of a derivation id; a pack entry id resolves to the `pack.<pack>.<entry>` row. */
 export function derivationRowOf(id: string): DerivationRow | undefined {
   if (id === PACK_DERIVATION_ROW) return undefined;
+
   if (BY_ID.has(id)) return BY_ID.get(id);
+
   return PACK_ENTRY.test(id) ? BY_ID.get(PACK_DERIVATION_ROW) : undefined;
 }

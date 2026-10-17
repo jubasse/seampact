@@ -6,17 +6,20 @@ import { loadWatchFiles } from "./watch.js";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const dirs: string[] = [];
+
 afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
 
 function workspace() {
   const root = mkdtempSync(join(tmpdir(), "seampact-watch-"));
+
   dirs.push(root);
   mkdirSync(join(root, "sub"));
   writeFileSync(join(root, "api.yaml"), "api: { name: t }\n");
   writeFileSync(join(root, "sub/part.yaml"), "a: 1\n");
   writeFileSync(join(root, "unrelated.yaml"), "z: 1\n");
+
   return root;
 }
 
@@ -28,6 +31,7 @@ test("watch notifies once per change burst, only for the files it was given", as
     debounceMs: 80,
     onChange: () => calls++,
   });
+
   try {
     await sleep(50);
     // One burst: three saves in quick succession, across two watched directories.
@@ -49,6 +53,7 @@ test("watch notifies once per change burst, only for the files it was given", as
   } finally {
     watcher.close();
   }
+
   writeFileSync(join(root, "unrelated.yaml"), "z: 4\n");
   await sleep(200);
   expect(calls).toBe(2);
@@ -56,8 +61,10 @@ test("watch notifies once per change burst, only for the files it was given", as
 
 test("watch ignores files outside the root, but for a node_modules above it", async () => {
   const base = mkdtempSync(join(tmpdir(), "seampact-watch-out-"));
+
   dirs.push(base);
   const root = join(base, "ws");
+
   mkdirSync(root);
   mkdirSync(join(base, "node_modules/p"), { recursive: true });
   writeFileSync(join(base, "outside.yaml"), "x: 1\n");
@@ -71,6 +78,7 @@ test("watch ignores files outside the root, but for a node_modules above it", as
       onChange: () => calls++,
     },
   );
+
   try {
     await sleep(50);
     writeFileSync(join(base, "outside.yaml"), "x: 2\n");
@@ -88,6 +96,7 @@ test("watch update after close watches nothing", async () => {
   const root = workspace();
   let calls = 0;
   const watcher = loadWatchFiles([], { root, debounceMs: 30, onChange: () => calls++ });
+
   watcher.close();
   watcher.update(["api.yaml"]);
   writeFileSync(join(root, "api.yaml"), "api: { name: t }\n# 9\n");

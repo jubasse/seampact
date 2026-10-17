@@ -68,6 +68,7 @@ export function accessIdentityIdentities(
     const pointer = accessIdentityPointer("", "identities", id);
     const before = reporter.errors;
     const identity = identityOf({ id, pointer, raw, context, catalogues, reporter });
+
     if (identity !== undefined && reporter.errors === before) identities.set(id, identity);
   }
 
@@ -77,12 +78,14 @@ export function accessIdentityIdentities(
 function identityOf(entry: IdentityEntry): IrWriter.KnownIdentity | undefined {
   const { id, pointer, raw, context, reporter } = entry;
   const origin = context.origin(pointer);
+
   if (origin === undefined) throw new Error(`the identity at ${pointer} has no origin`);
 
   const signed = accessIdentityString(raw, "kind") === "signed";
   const kindMembers = signed ? signedMembers(entry) : credentialMembers(entry);
 
   const writtenPrincipal = accessIdentityMember(raw, "principal");
+
   if (writtenPrincipal === undefined) {
     reporter.error({
       rule: "identity-member",
@@ -90,13 +93,16 @@ function identityOf(entry: IdentityEntry): IrWriter.KnownIdentity | undefined {
       fix: "Name the principal schema the authenticate hook answers, or 'variants: { <name>: <schema> }'.",
       pointer,
     });
+
     return undefined;
   }
 
   const principal = accessIdentityPrincipal(id, pointer, writtenPrincipal, context, reporter);
+
   if (principal.status !== "resolved") return undefined;
 
   const headers = headerUses(entry, principal.principal);
+
   if (kindMembers === undefined || headers === undefined) return undefined;
 
   return {
@@ -114,6 +120,7 @@ function identityOf(entry: IdentityEntry): IrWriter.KnownIdentity | undefined {
 function docsOf(raw: AccessIdentityRawObject): IrWriter.Docs {
   const summary = accessIdentityString(raw, "summary");
   const description = accessIdentityString(raw, "description");
+
   return {
     ...(summary === undefined ? {} : { summary }),
     ...(description === undefined ? {} : { description }),
@@ -127,6 +134,7 @@ type SignedMembers = Pick<IrWriter.SignedIdentity, "kind" | "signed" | "unknownK
 function credentialMembers(entry: IdentityEntry): CredentialMembers | undefined {
   const { id, pointer, raw, reporter } = entry;
   const schemes = accessIdentityObject(raw, "schemes");
+
   if (schemes === undefined) {
     reporter.error({
       rule: "identity-member",
@@ -134,23 +142,29 @@ function credentialMembers(entry: IdentityEntry): CredentialMembers | undefined 
       fix: "List the schemes accepted on reads and on writes, as 'schemes: { read: [...], write: [...] }', or set 'kind: signed' and name its 'scheme'.",
       pointer,
     });
+
     return undefined;
   }
 
   const before = reporter.errors;
   const lists = CREDENTIAL_LISTS.map((list) => {
     const names = accessIdentityStrings(schemes, list) ?? [];
+
     names.forEach((name, index) => {
       const schemePointer = accessIdentityPointer(pointer, "schemes", list, `${index}`);
+
       if (names.indexOf(name) < index) reportRepeatedScheme(entry, name, list, schemePointer);
       else checkCredentialScheme(entry, name, schemePointer);
     });
+
     // ADR 0004 section 9: an identity's scheme lists are sorted.
     return [...names].sort();
   });
+
   if (reporter.errors > before) return undefined;
 
   const [read = [], write = [], optionalRead = []] = lists;
+
   return { kind: "credential", schemes: { read, write, optionalRead } };
 }
 
@@ -171,6 +185,7 @@ function reportRepeatedScheme(
 
 function checkCredentialScheme(entry: IdentityEntry, name: string, pointer: string): void {
   const kinds = entry.catalogues.schemeKinds;
+
   if (!kinds.has(name)) {
     entry.reporter.error({
       rule: "scheme-reference",
@@ -178,6 +193,7 @@ function checkCredentialScheme(entry: IdentityEntry, name: string, pointer: stri
       fix: "Declare the scheme under 'schemes', or name a declared one.",
       pointer,
     });
+
     return;
   }
 
@@ -194,6 +210,7 @@ function signedMembers(entry: IdentityEntry): SignedMembers | undefined {
   const { id, pointer, raw, reporter } = entry;
   const scheme = accessIdentityString(raw, "scheme");
   const kinds = entry.catalogues.schemeKinds;
+
   if (scheme === undefined) {
     reporter.error({
       rule: "identity-member",
@@ -201,12 +218,15 @@ function signedMembers(entry: IdentityEntry): SignedMembers | undefined {
       fix: "Name the one signature scheme its requests are signed with: 'scheme: <name>'.",
       pointer,
     });
+
     return undefined;
   }
 
   const schemePointer = accessIdentityPointer(pointer, "scheme");
+
   if (!kinds.has(scheme) || kinds.get(scheme) !== "signature") {
     const declared = kinds.has(scheme);
+
     reporter.error({
       rule: declared ? "scheme-kind" : "scheme-reference",
       message: declared
@@ -215,10 +235,12 @@ function signedMembers(entry: IdentityEntry): SignedMembers | undefined {
       fix: "Name a scheme of 'kind: signature' (ADR 0013), or make the identity a credential one.",
       pointer: schemePointer,
     });
+
     return undefined;
   }
 
   const unknownKeys = keysPolicy(raw);
+
   return {
     kind: "signed",
     signed: scheme,
@@ -229,12 +251,16 @@ function signedMembers(entry: IdentityEntry): SignedMembers | undefined {
 // The authoring schema writes exactly one of `ignore` and `keep`, each with its reason.
 function keysPolicy(raw: AccessIdentityRawObject): IrWriter.KnownKeysPolicy | undefined {
   const written = accessIdentityObject(raw, "unknownKeys");
+
   if (written === undefined) return undefined;
 
   const ignore = accessIdentityString(written, "ignore");
+
   if (ignore !== undefined) return { policy: "ignore", reason: ignore };
   const keep = accessIdentityString(written, "keep");
+
   if (keep !== undefined) return { policy: "keep", reason: keep };
+
   throw new Error("an identity's unknownKeys holds neither 'ignore' nor 'keep'");
 }
 
@@ -248,6 +274,7 @@ function headerUses(
   for (const [header, raw] of accessIdentityEntries(entry.raw, "headers")) {
     const pointer = accessIdentityPointer(entry.pointer, "headers", header);
     const use = headerUse(entry, principal, header, pointer, raw);
+
     if (use !== undefined) uses.push(use);
   }
 
@@ -263,9 +290,11 @@ function headerUse(
 ): IrWriter.IdentityHeaderUse | undefined {
   const { context, reporter } = entry;
   const declared = entry.catalogues.headers.get(header);
+
   if (declared === undefined) {
     // A declaration with an error of its own is left out of the catalogue and already reported.
     const written = accessIdentityObject(context.raw.merged, "headers");
+
     if (written === undefined || !Object.hasOwn(written, header))
       reporter.error({
         rule: "header-use",
@@ -273,18 +302,22 @@ function headerUse(
         fix: "Declare the header under 'headers' with its name and semantic, or use a declared one.",
         pointer,
       });
+
     return undefined;
   }
 
   const origin = context.origin(pointer);
+
   if (origin === undefined) throw new Error(`the header use at ${pointer} has no origin`);
 
   const before = reporter.errors;
   const schema = useSchema(entry, declared, header, pointer, raw);
   const tokenMembers = versionTokenMembers(entry, principal, declared, header, pointer, raw);
+
   if (reporter.errors > before || tokenMembers === undefined) return undefined;
 
   const useFor = accessIdentityString(raw, "for");
+
   return {
     header,
     for: isHeaderUseFor(useFor) ? useFor : DEFAULT_HEADER_USE_FOR,
@@ -320,10 +353,12 @@ function useSchema(
         },
       ],
     });
+
     return undefined;
   }
 
   const semantic = declared.declaration.semantic;
+
   if (semantic === "actorSurface" && !written && !declared.schemaWritten) {
     reporter.error({
       rule: "header-use",
@@ -331,17 +366,21 @@ function useSchema(
       fix: "Name the enum of the product's surfaces, as 'schema: { enum: Surface }', on the declaration or the use.",
       pointer,
     });
+
     return undefined;
   }
 
   if (!written) return undefined;
   const schema = accessIdentitySchemaUse(entry.context, schemaPointer, declared.direction);
+
   if (semantic === "actorSurface" && schema.kind !== "enum") {
     reporter.error(
       accessIdentityActorSurfaceRefusal("header-use", header, schemaPointer, schema.kind),
     );
+
     return undefined;
   }
+
   return schema;
 }
 
@@ -366,6 +405,7 @@ function versionTokenMembers(
       ...(from === undefined ? [] : ["from"]),
       ...(stale === undefined ? [] : ["stale"]),
     ];
+
     if (written.length === 0) return {};
     reporter.error({
       rule: "header-use",
@@ -373,6 +413,7 @@ function versionTokenMembers(
       fix: "Remove them: only a versionToken use names the principal field it carries and its stale code.",
       pointer,
     });
+
     return undefined;
   }
 
@@ -383,19 +424,23 @@ function versionTokenMembers(
       fix: "Name the principal field the token carries, 'from: principal.<field>', and the code a stale request header answers, 'stale: <code>'.",
       pointer,
     });
+
     return undefined;
   }
 
   const source = accessIdentityValueSource(from);
   const field = source.name ?? "";
   const lookup = accessIdentityPrincipalField(entry.catalogues.schemas, principal, field);
+
   if (lookup.status !== "held") {
     const reader = `identity '${entry.id}' reads header '${header}' from`;
+
     reporter.error({
       rule: "principal-field",
       ...accessIdentityPrincipalFieldRefusal(reader, field, principal, lookup),
       pointer: accessIdentityPointer(pointer, "from"),
     });
+
     return undefined;
   }
 

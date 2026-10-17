@@ -13,8 +13,10 @@ const ADR = readFileSync(
 function adrReservedIds(): string[] {
   const start = ADR.indexOf("The core schema ids are reserved:");
   const end = ADR.indexOf("A reserved params id belongs", start);
+
   if (start < 0 || end < 0)
     throw new Error("ADR 0004 section 13 lists no reserved core schema ids");
+
   return [...ADR.slice(start, end).matchAll(/`(Api[A-Za-z]+)`/g)].map((m) => m[1] ?? "");
 }
 

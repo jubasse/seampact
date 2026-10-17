@@ -27,6 +27,7 @@ function parseOptions(argv: string[]): CliOptions | string {
       args: argv,
       options: { write: { type: "boolean" }, check: { type: "boolean" } },
     });
+
     return values;
   } catch (error) {
     return error instanceof Error ? error.message : String(error);
@@ -35,32 +36,42 @@ function parseOptions(argv: string[]): CliOptions | string {
 
 function main(argv: string[]): number {
   const values = parseOptions(argv);
+
   if (typeof values === "string") {
     console.error(`ir-models: ${values}\n${USAGE}`);
+
     return EXIT_USAGE;
   }
+
   if (values.write === values.check) {
     console.error(`ir-models: pass exactly one of --write and --check\n${USAGE}`);
+
     return EXIT_USAGE;
   }
 
   const files = generateIrModels();
   const orphans = findOrphanFiles(files, REPO_ROOT);
   const orphanDirectories = orphans.filter((orphan) => orphan.isDirectory);
+
   if (values.write === true && orphanDirectories.length > 0) {
     for (const { path } of orphanDirectories)
       console.error(
         `ir-models: ${path} is a directory the generator does not write; remove it by hand`,
       );
+
     return EXIT_FAILED;
   }
+
   if (values.write === true) {
     for (const { path } of orphans) rmSync(join(REPO_ROOT, path));
+
     for (const [path, content] of files) {
       mkdirSync(dirname(join(REPO_ROOT, path)), { recursive: true });
       writeFileSync(join(REPO_ROOT, path), content);
     }
+
     console.error(`ir-models: wrote ${files.size} files`);
+
     return EXIT_OK;
   }
 
@@ -68,12 +79,16 @@ function main(argv: string[]): number {
     ...findStaleFiles(files, REPO_ROOT),
     ...orphans.map(({ path }) => `${path} is no longer generated`),
   ];
+
   if (stale.length > 0) {
     for (const problem of stale) console.error(`ir-models: ${problem}`);
     console.error(`ir-models: run \`${WRITE_COMMAND}\` and commit the result`);
+
     return EXIT_FAILED;
   }
+
   console.error(`ir-models: ${files.size} files are current`);
+
   return EXIT_OK;
 }
 

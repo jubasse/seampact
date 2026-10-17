@@ -194,6 +194,7 @@ function compile(
     accessIdentityTableService(rows, { "/schemas/Event/properties/workspaceId": TEXT_WIRE }),
     prepare,
   );
+
   return {
     draft,
     rules: diagnostics.map((diagnostic) => diagnostic.rule),
@@ -201,7 +202,9 @@ function compile(
     pairs: diagnostics.map((diagnostic) => [diagnostic.rule, diagnostic.origin.pointer]),
     operation: (id) => {
       const found = draft.operations.find((operation) => operation.id === id);
+
       if (found === undefined) throw new Error(`no operation ${id}`);
+
       return found;
     },
   };
@@ -209,12 +212,14 @@ function compile(
 
 const access = (id: string, compiled: Compiled) => {
   const { access: written, callerKinds, csrf } = compiled.operation(id);
+
   return { access: written, callerKinds, csrf };
 };
 
 describe("access.identity per operation on the routes fixture", () => {
   test("every operation gets the members of operations.json and the draft fits its form", () => {
     const { draft, diagnostics } = accessIdentityRoutesFixtureRun();
+
     expect(diagnostics).toEqual([]);
 
     const written = Object.fromEntries(
@@ -237,9 +242,11 @@ describe("access.identity per operation on the routes fixture", () => {
           principalRequires,
           bindings,
         };
+
         return [operation.id, { ...members, ...inputFacts }];
       }),
     );
+
     expect(written).toEqual(accessIdentityFixtureJson("routes", "operations.json"));
     expect(createDraftValidator().validate(draft)).toMatchObject({ valid: true });
   });
@@ -251,6 +258,7 @@ describe("deny by default", () => {
     routes:
       ping: { method: get, output: Event }
 `);
+
     expect(compiled.rules).toEqual(["seampact/access/deny-by-default"]);
     expect(compiled.messages[0]).toContain("route 'ping' has no identity and no public access");
     expect(compiled.operation("ping").access).toBeUndefined();
@@ -262,6 +270,7 @@ describe("deny by default", () => {
     routes:
       ping: { method: get, output: Event }
 `);
+
     expect(compiled.rules).toEqual([]);
     expect(access("ping", compiled)).toEqual({
       access: {
@@ -282,6 +291,7 @@ describe("deny by default", () => {
       ping: { method: get, output: Event }
       pong: { method: get, output: Event }
 `);
+
     expect(compiled.rules).toEqual(["seampact/access/identity-reference"]);
   });
 
@@ -292,6 +302,7 @@ describe("deny by default", () => {
       ping: { method: get, output: Event }
       poke: { method: post, input: Event }
 `);
+
     expect(compiled.rules).toEqual(["seampact/access/access-schemes"]);
     expect(compiled.messages[0]).toContain("route 'poke' is a write under identity 'reader'");
     expect(compiled.operation("ping").access).toMatchObject({ schemes: ["bearer", "mapsKey"] });
@@ -308,6 +319,7 @@ describe("reasons on access exceptions", () => {
         access: { public: "Probes call it before any user exists." }
         output: Event
 `);
+
     expect(compiled.rules).toEqual([]);
     expect(access("health", compiled)).toEqual({
       access: {
@@ -329,6 +341,7 @@ describe("reasons on access exceptions", () => {
         access: { public: "Probes." }
         output: Event
 `);
+
     expect(compiled.pairs).toEqual([
       ["seampact/access/public-identity", "/surfaces/app/routes/health/access"],
     ]);
@@ -343,6 +356,7 @@ describe("reasons on access exceptions", () => {
       open: { method: get, output: Event }
       closed: { method: get, identity: viewer, output: Event }
 `);
+
     expect(compiled.rules).toEqual([]);
     expect(compiled.operation("open").access?.kind).toBe("public");
     expect(compiled.operation("closed").access?.kind).toBe("identity");
@@ -357,6 +371,7 @@ describe("reasons on access exceptions", () => {
         csrf: { exempt: "The login form has no session yet." }
         input: Event
 `);
+
     expect(compiled.rules).toEqual([]);
     expect(compiled.operation("login").csrf).toEqual({
       kind: "exempt",
@@ -381,6 +396,7 @@ describe("optional access and onRefused", () => {
 
   test("a safe optional route takes read plus optionalRead, a write its write schemes only", () => {
     const compiled = compile(OPTIONAL);
+
     expect(compiled.rules).toEqual([]);
     expect(access("feed", compiled)).toEqual({
       access: {
@@ -403,6 +419,7 @@ describe("optional access and onRefused", () => {
         access: { optionalAuth: "A bad credential reads as anonymous.", onRefused: anonymous }
         output: Event
 `);
+
     expect(compiled.rules).toEqual([]);
     expect(compiled.operation("feed").access).toMatchObject({ onRefused: "anonymous" });
     expect(compiled.operation("strict").access).toMatchObject({ onRefused: "reject" });
@@ -421,6 +438,7 @@ describe("optional access and onRefused", () => {
     routes:
       payments: { method: post, input: Event }
 `);
+
     expect(compiled.pairs).toEqual([
       ["seampact/access/optional-identity", "/surfaces/app/access"],
       ["seampact/access/signed-access", "/surfaces/hooks/access"],
@@ -436,6 +454,7 @@ describe("csrf derived on cookie writes", () => {
     routes:
       save: { method: post, input: Event }
 `);
+
     expect(compiled.operation("save").csrf).toEqual({
       kind: "derived",
       header: "X-Csrf",
@@ -471,7 +490,9 @@ describe("csrf derived on cookie writes", () => {
 `,
       { "/surfaces/app/routes/items/id/itemId": STRING },
     );
+
     expect(compiled.rules).toEqual([]);
+
     for (const id of ["read", "getItemsBatch", "save", "payments"])
       expect(compiled.operation(id).csrf).toBeUndefined();
   });
@@ -483,6 +504,7 @@ describe("csrf derived on cookie writes", () => {
       save: { method: post, input: Event }
       remove: { method: delete }
 `);
+
     expect(compiled.pairs).toEqual([
       ["seampact/access/csrf-header", "/identities/twoCookies/schemes/write"],
     ]);
@@ -510,12 +532,14 @@ describe("csrf derived on cookie writes", () => {
     routes:
       payments: { method: post, input: Event }
 `);
+
     expect(compiled.rules).toEqual([]);
     expect(compiled.operation("save").csrf).toEqual({
       kind: "exempt",
       reason: "Called by a trusted origin only.",
       origin: { layer: "api", pointer: "/surfaces/app/csrf" },
     });
+
     for (const id of ["read", "open", "save2", "payments"])
       expect(compiled.operation(id).csrf).toBeUndefined();
   });
@@ -531,8 +555,10 @@ describe("signed identities", () => {
 `,
       { "/surfaces/hooks/routes/payments/input": ref("Event") },
     );
+
     expect(compiled.rules).toEqual([]);
     const payments = compiled.operation("payments");
+
     expect(payments.access).toEqual({
       kind: "identity",
       identity: "stripe",
@@ -562,6 +588,7 @@ describe("signed identities", () => {
       { "/surfaces/hooks/routes/push/input": ref("Event") },
       (draft) => withPathParam(draft, "push", "workspaceId"),
     );
+
     expect(compiled.rules).toEqual([]);
     expect(compiled.operation("push").input?.schema).toEqual({
       kind: "ref",
@@ -601,6 +628,7 @@ describe("signed identities", () => {
         withPathParam(draft, "blob", "workspaceId");
       },
     );
+
     expect(compiled.rules).toEqual([]);
     expect(compiled.operation("strict").input?.schema).toEqual(own);
     expect(compiled.operation("blob").input).toMatchObject({ rawBody: true, schema: opaque });
@@ -612,6 +640,7 @@ describe("signed identities", () => {
     routes:
       ping: { method: post }
 `);
+
     expect(compiled.rules).toEqual([]);
     expect(compiled.operation("ping").input).toBeUndefined();
   });
@@ -627,6 +656,7 @@ describe("signed identities", () => {
       {},
       (draft) => withPathParam(draft, "push", "workspaceId"),
     );
+
     expect(compiled.rules).toEqual(["seampact/access/signature-key-source"]);
     expect(compiled.messages[0]).toContain(
       "route 'ping' under signed identity 'github' has no path parameter 'workspaceId'",
@@ -646,6 +676,7 @@ describe("signed identities", () => {
 `,
       { "/surfaces/hooks/routes/commands/input": form },
     );
+
     expect(compiled.rules).toEqual([]);
     expect(compiled.operation("commands").access).toMatchObject({ schemes: ["slackSig"] });
     expect(compiled.operation("commands").input).toMatchObject({ rawBody: true });
@@ -663,6 +694,7 @@ describe("raw body on every declared input", () => {
 `,
       { "/surfaces/app/routes/save/input": ref("Event") },
     );
+
     expect(compiled.operation("save").input).toMatchObject({ rawBody: false });
     expect(compiled.operation("save").input?.schema).toEqual(ref("Event"));
     expect(compiled.operation("read").input).toBeUndefined();
@@ -680,6 +712,7 @@ describe("security schemes", () => {
       {},
       (draft) => withQueryParam(draft, "tiles", "key"),
     );
+
     expect(compiled.rules).toEqual(["seampact/access/scheme-query-field"]);
     expect(compiled.messages[0]).toContain("route 'tiles' declares query field 'key'");
   });
@@ -702,8 +735,10 @@ describe("principal requires and bindings", () => {
       { "/surfaces/app/routes/save/input": ref("Event") },
       (draft) => withPathParam(draft, "save", "workspaceId"),
     );
+
     expect(compiled.rules).toEqual([]);
     const save = compiled.operation("save");
+
     expect(save.principalRequires).toEqual([
       {
         field: "workspaceId",
@@ -738,6 +773,7 @@ describe("principal requires and bindings", () => {
 `,
       { "/surfaces/app/routes/save/input": ref("Event") },
     );
+
     expect(compiled.rules).toEqual([
       "seampact/access/principal-field",
       "seampact/access/binding-source",
@@ -759,6 +795,7 @@ describe("principal requires and bindings", () => {
 `,
       { "/surfaces/app/routes/save/input": ref("Event") },
     );
+
     expect(compiled.rules).toEqual([]);
     expect(compiled.operation("save").bindings).toEqual([
       {
@@ -778,6 +815,7 @@ describe("principal requires and bindings", () => {
         principal: { requires: [userId] }
         output: Event
 `);
+
     expect(compiled.pairs).toEqual([
       ["seampact/access/principal-field", "/surfaces/app/routes/health/principal/requires/0"],
     ]);
@@ -791,6 +829,7 @@ describe("principal requires and bindings", () => {
       one: { method: get, output: Event }
       two: { method: get, output: Event }
 `);
+
     expect(compiled.pairs).toEqual([
       ["seampact/access/principal-field", "/surfaces/app/principal/requires/0"],
     ]);
@@ -810,6 +849,7 @@ describe("service api identity", () => {
       undefined,
       SERVICE_API,
     );
+
     expect(compiled.rules).toEqual([]);
     expect(compiled.operation("ping").access).toEqual({
       kind: "identity",
@@ -834,6 +874,7 @@ describe("service api identity", () => {
       undefined,
       SERVICE_API,
     );
+
     expect(compiled.rules).toEqual([
       "seampact/access/service-identity",
       "seampact/access/service-access",
@@ -859,6 +900,7 @@ describe("refusals reached from a route", () => {
       {},
       (draft) => withPathParam(draft, "save", "workspaceId"),
     );
+
     expect(compiled.pairs).toEqual([
       ["seampact/access/principal-field", "/surfaces/app/routes/save/principal/requires/0"],
       ["seampact/access/principal-field", "/surfaces/app/routes/save/bindings/path.workspaceId"],
@@ -876,6 +918,7 @@ describe("refusals reached from a route", () => {
       map: { method: get, principal: { requires: [settings.theme] }, output: Event }
       missing: { method: get, principal: { requires: [profile.nope] }, output: Event }
 `);
+
     expect(compiled.pairs).toEqual([
       ["seampact/access/principal-field", "/surfaces/app/routes/map/principal/requires/0"],
       ["seampact/access/principal-field", "/surfaces/app/routes/missing/principal/requires/0"],
@@ -901,6 +944,7 @@ describe("refusals reached from a route", () => {
 `,
       { "/surfaces/app/routes/save/input": STRING },
     );
+
     expect(compiled.pairs).toEqual([
       ["seampact/access/binding-source", "/surfaces/app/routes/save/bindings/body.workspaceId"],
     ]);
@@ -913,6 +957,7 @@ describe("refusals reached from a route", () => {
       read: { method: get, output: Event }
       save: { method: post, input: Event }
 `);
+
     expect(compiled.pairs).toEqual([
       ["seampact/access/access-schemes", "/surfaces/app/routes/read"],
     ]);
@@ -939,6 +984,7 @@ describe("refusals reached from a route", () => {
         withQueryParam(draft, "queryKeyed", "keyId");
       },
     );
+
     expect(compiled.pairs).toEqual([
       ["seampact/access/signature-key-source", "/surfaces/hub/routes/unkeyed"],
       ["seampact/access/signature-key-source", "/surfaces/queried/routes/queryUnkeyed"],
@@ -958,6 +1004,7 @@ describe("refusals reached from a route", () => {
       undefined,
       "api: { name: a, version: 1, kind: service, caller: { identity: nobody, right: callerService } }",
     );
+
     expect(compiled.pairs).toEqual([
       ["seampact/access/identity-reference", "/api/caller/identity"],
     ]);
@@ -977,13 +1024,16 @@ describe("relay routes", () => {
       (draft) => {
         const save = draft.operations.find((operation) => operation.id === "save");
         const relay = draft.operations.find((operation) => operation.id === "getTask");
+
         if (save?.input === undefined || relay === undefined) throw new Error("no save or relay");
         relay.input = structuredClone(save.input);
       },
       SERVICE_API,
     );
+
     expect(compiled.rules).toEqual([]);
     const relay = compiled.operation("getTask");
+
     expect(relay).not.toHaveProperty("access");
     expect(relay).not.toHaveProperty("callerKinds");
     expect(relay).not.toHaveProperty("csrf");
@@ -997,8 +1047,10 @@ describe("relay routes", () => {
     routes:
       getTask: { relays: tasks.getTask }
 `);
+
     expect(compiled.rules).toEqual([]);
     const relay = compiled.operation("getTask");
+
     expect(relay).not.toHaveProperty("access");
     expect(relay).not.toHaveProperty("callerKinds");
     expect(relay).not.toHaveProperty("csrf");
@@ -1011,8 +1063,10 @@ describe("relay routes", () => {
     routes:
       getTask: { relays: tasks.getTask }
 `);
+
     expect(compiled.rules).toEqual([]);
     const relay = compiled.operation("getTask");
+
     expect(relay).not.toHaveProperty("access");
     expect(relay).not.toHaveProperty("callerKinds");
     expect(relay).not.toHaveProperty("csrf");
@@ -1054,6 +1108,7 @@ describe("operation nodes", () => {
       origin: { layer: "api", pointer: "/surfaces/app" },
     });
     const written = kinds.filter((kind) => treeNodesIsOperation(nodeOf(kind)));
+
     expect([...ACCESS_IDENTITY_OPERATION_NODE_KINDS]).toEqual(written);
   });
 });
@@ -1086,10 +1141,12 @@ ${BASE}surfaces:
       "seampact/access/binding-conflict",
       "seampact/access/identity-reference",
     ]);
+
     for (const diagnostic of diagnostics) {
       expect(diagnostic.fix).not.toBe("");
       expect(diagnostic.origin.layer).toBe("api");
     }
+
     expect(diagnostics[0]?.origin.pointer).toBe("/surfaces/app/routes/save/bindings/query.owner");
     expect(diagnostics[0]?.related.map((item) => item.origin.pointer)).toEqual([
       "/surfaces/app/bindings/query.owner",
@@ -1100,24 +1157,30 @@ ${BASE}surfaces:
 
 function withPathParam(draft: DraftIR, id: string, name: string): void {
   const operation = draft.operations.find((item) => item.id === id);
+
   if (operation === undefined) throw new Error(`no operation ${id}`);
   const params = operation.params ?? { path: [], query: [], header: [] };
+
   params.path.push(PATH_STRING(name, `/routes/${id}`));
   operation.params = params;
 }
 
 function withHeaderParam(draft: DraftIR, id: string, name: string): void {
   const operation = draft.operations.find((item) => item.id === id);
+
   if (operation === undefined) throw new Error(`no operation ${id}`);
   const params = operation.params ?? { path: [], query: [], header: [] };
+
   params.header.push(PATH_STRING(name, `/routes/${id}`));
   operation.params = params;
 }
 
 function withQueryParam(draft: DraftIR, id: string, name: string): void {
   const operation = draft.operations.find((item) => item.id === id);
+
   if (operation === undefined) throw new Error(`no operation ${id}`);
   const params = operation.params ?? { path: [], query: [], header: [] };
+
   params.query.push({ ...PATH_STRING(name, `/routes/${id}`), required: false });
   operation.params = params;
 }

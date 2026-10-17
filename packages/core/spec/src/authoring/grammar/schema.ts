@@ -39,7 +39,9 @@ function refusedProps(): Record<string, JsonSchema> {
 // A refused value form of a kept keyword (`additionalProperties: false`, `type: [string, 'null']`).
 function refusedForm(keyword: string): JsonSchema {
   const form = schemaKeyword(keyword)?.refusedForm;
+
   if (form === undefined) throw new Error(`no refused form for ${keyword}`);
+
   return {
     title: MARKERS.refusedForm,
     description: `Refused (${A3(1)}): ${form.reason}. Fix: ${form.fix}.`,
@@ -78,6 +80,7 @@ const marks = (): Record<string, JsonSchema> => ({
 // places a default on a property, not on an object).
 const annotationsOfDerived = (): Record<string, JsonSchema> => {
   const { default: _default, ...rest } = annotations();
+
   return rest;
 };
 

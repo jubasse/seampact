@@ -91,32 +91,40 @@ const result = await build({
   logLevel: "warning",
 });
 const used = new Set();
+
 for (const [file, input] of Object.entries(result.metafile.inputs)) {
   for (const imp of input.imports) {
     if (!imp.external) continue;
     const name = imp.path.replace(/^node:/, "");
     const via = TOLERATED.get(name);
+
     if (via && file.includes(via)) continue;
     used.add(name);
   }
 }
+
 const extra = [...used].filter((name) => !ALLOWED_BUILTINS.has(name));
+
 if (extra.length > 0) fail(`Node APIs beyond fs, path, crypto and process: ${extra.join(", ")}`);
 const bundleText = readFileSync(join(dist, "bundle.cjs"), "utf8");
 // esbuild marks each module with a `// <path>` comment line: the tolerated import must sit in
 // the section of its allowed package.
 const sectionOf = (index) => {
   const marks = [...bundleText.slice(0, index).matchAll(/^\/\/ (\S.*)$/gm)];
+
   return marks.length > 0 ? marks[marks.length - 1][1] : "";
 };
+
 const dynamic = [...bundleText.matchAll(/require\(\s*["'`]([^"'`]+)["'`]\s*\)/g)]
   .map((m) => [m[1].replace(/^node:/, ""), m.index])
   .filter(([name, index]) => {
     if (ALLOWED_BUILTINS.has(name)) return false;
     const via = TOLERATED.get(name);
+
     return !(via && `/${sectionOf(index)}`.includes(via));
   })
   .map(([name]) => name);
+
 if (dynamic.length > 0)
   fail(`bundle requires beyond fs, path, crypto and process: ${dynamic.join(", ")}`);
 console.log(`build: bundle ok, builtins used: ${[...used].sort().join(", ")}`);
@@ -124,6 +132,7 @@ console.log(`build: bundle ok, builtins used: ${[...used].sort().join(", ")}`);
 // 2. SEA blob: code cache and snapshot off (cross-platform), warning disabled. The paths are
 // relative to dist/ (cwd of the blob step) so the blob does not depend on the checkout directory.
 const seaConfig = join(dist, "sea-config.json");
+
 writeFileSync(
   seaConfig,
   `${JSON.stringify(
@@ -144,6 +153,7 @@ run(process.execPath, ["--experimental-sea-config", "sea-config.json"], { cwd: d
 const base = `https://nodejs.org/dist/v${NODE_VERSION}`;
 const download = (name) => {
   const file = join(cache, name);
+
   if (!existsSync(file))
     run("curl", [
       "--fail",
@@ -154,14 +164,18 @@ const download = (name) => {
       file,
       `${base}/${name}`,
     ]);
+
   return file;
 };
+
 const shasums = download(`SHASUMS256.txt`);
 const asc = download(`SHASUMS256.txt.asc`);
 const gnupgHome = join(cache, "gnupg");
+
 rmSync(gnupgHome, { recursive: true, force: true });
 mkdirSync(gnupgHome, { mode: 0o700 });
 const gpgEnv = { ...process.env, GNUPGHOME: gnupgHome, LC_ALL: "C" };
+
 run("gpg", ["--batch", "--quiet", "--import", join(root, "node-release-keys.asc")], {
   env: gpgEnv,
 });
@@ -171,20 +185,24 @@ const status = execFileSync("gpg", ["--batch", "--status-fd", "1", "--verify", a
   encoding: "utf8",
   stdio: ["ignore", "pipe", "ignore"],
 });
+
 if (!/^\[GNUPG:\] GOODSIG /m.test(status) || !/^\[GNUPG:\] VALIDSIG /m.test(status)) {
   fail("SHASUMS256.txt.asc signature is not good");
 }
+
 const signed = execFileSync("gpg", ["--batch", "--decrypt", asc], {
   env: gpgEnv,
   encoding: "utf8",
   stdio: ["ignore", "pipe", "ignore"],
 });
+
 if (
   signed.replace(/\r\n/g, "\n").trim() !==
   readFileSync(shasums, "utf8").replace(/\r\n/g, "\n").trim()
 ) {
   fail("SHASUMS256.txt differs from the signed text");
 }
+
 console.log("build: SHASUMS256.txt signature verified against the pinned Node release keys");
 const expected = new Map(
   signed
@@ -192,6 +210,7 @@ const expected = new Map(
     .filter(Boolean)
     .map((line) => {
       const [hash, name] = line.split(/\s+/);
+
       return [name, hash];
     }),
 );
@@ -200,15 +219,20 @@ const expected = new Map(
 const postject = join(root, "node_modules/.bin/postject");
 const manifest = [];
 const sizes = [];
+
 for (const t of targets) {
   const name = `node-v${NODE_VERSION}-${t.archive}`;
   const archive = download(name);
   const want = expected.get(name);
+
   if (!want) fail(`${name} is not listed in SHASUMS256.txt`);
+
   if (sha256(archive) !== want) fail(`${name} does not match SHASUMS256.txt`);
   const work = join(cache, `x-${t.id}`);
+
   rmSync(work, { recursive: true, force: true });
   mkdirSync(work);
+
   if (t.archive.endsWith(".zip")) run("unzip", ["-q", archive, "-d", work]);
   else run("tar", ["-xf", archive, "-C", work]);
   const inner = join(
@@ -217,30 +241,40 @@ for (const t of targets) {
     t.exe,
   );
   const out = join(dist, "bin", t.out);
+
   copyFileSync(inner, out);
   chmodSync(out, 0o755);
+
   if (t.id === "win32-x64") {
     // The injection invalidates Node's Authenticode signature: remove it first (Node docs do
     // the same with `signtool remove /s`), then check the PE security directory is empty.
     const removed = stripSignature(out);
+
     if (removed === 0) fail("node.exe carried no signature to strip (expected one in 24.21.0)");
     console.log(`build: win32-x64 Authenticode signature removed (${removed} bytes)`);
   }
+
   const args = [out, "NODE_SEA_BLOB", join(dist, "sea.blob"), "--sentinel-fuse", SENTINEL];
+
   if (t.macho) args.push("--macho-segment-name", "NODE_SEA");
   run(postject, args);
+
   if (t.id === "win32-x64") {
     const { offset, size } = securityDirectory(out);
+
     if (offset !== 0 || size !== 0) fail("win32-x64 binary has a PE security directory");
   }
+
   sizes.push(
     `${t.out} ${statSync(out).size} gzip-9 ${gzipSync(readFileSync(out), { level: 9 }).length}`,
   );
   manifest.push(`${sha256(out)}  ${t.out}`);
   console.log(`build: ${t.id} done`);
 }
+
 writeFileSync(join(dist, "sizes.txt"), `${sizes.join("\n")}\n`);
 writeFileSync(join(dist, "bin", "SHA256SUMS"), `${manifest.join("\n")}\n`);
 const seconds = ((Date.now() - started) / 1000).toFixed(1);
+
 writeFileSync(join(dist, "build-seconds.txt"), `${seconds}\n`);
 console.log(`build: five binaries in ${seconds} s`);

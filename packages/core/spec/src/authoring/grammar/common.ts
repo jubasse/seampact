@@ -66,6 +66,7 @@ const SOURCE = {
   address: "address(?:/[0-9]{1,3})?",
   resolver: "resolver",
 } as const;
+
 type SourceForm = keyof typeof SOURCE;
 
 const SOURCE_SPELLING: Record<SourceForm, string> = {

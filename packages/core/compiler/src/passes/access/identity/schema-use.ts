@@ -12,9 +12,11 @@ export function accessIdentitySchemaUse(
   direction: IrWriter.Direction,
 ): IrWriter.TypeUse {
   const use = context.treeSchemas.typeUse(pointer, direction);
+
   if (use === undefined)
     throw new Error(
       `the schema service answers no ${direction} type use for the schema written at ${pointer}`,
     );
+
   return pipelineCopy(use);
 }

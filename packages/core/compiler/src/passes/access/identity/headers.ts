@@ -46,6 +46,7 @@ export function accessIdentityHeaders(
   for (const [id, raw] of accessIdentityEntries(context.raw.merged, "headers")) {
     const pointer = accessIdentityPointer("", "headers", id);
     const header = headerOf(id, pointer, raw, context, reporter);
+
     if (header !== undefined) headers.set(id, header);
   }
 
@@ -61,11 +62,13 @@ function headerOf(
 ): AccessIdentityHeader | undefined {
   const semantic = accessIdentityString(raw, "semantic");
   const origin = context.origin(pointer);
+
   // The authoring schema requires a known semantic.
   if (!isHeaderSemantic(semantic) || origin === undefined)
     throw new Error(`the identity header at ${pointer} has no known semantic or no origin`);
 
   const sides = semantic === "versionToken" ? versionTokenSides(raw) : namedSides(raw);
+
   if (sides.missing.length > 0) {
     reporter.error({
       rule: "header-declaration",
@@ -76,6 +79,7 @@ function headerOf(
           : "Declare the header's 'name' and the message it travels in, 'in: request' or 'in: response'.",
       pointer,
     });
+
     return undefined;
   }
 
@@ -90,6 +94,7 @@ function headerOf(
     reporter.error(
       accessIdentityActorSurfaceRefusal("header-declaration", id, schemaPointer, schema.kind),
     );
+
     return undefined;
   }
 
@@ -100,6 +105,7 @@ function headerOf(
     ...(schema === undefined ? {} : { schema }),
     origin,
   };
+
   return { declaration, pointer, schemaWritten, direction };
 }
 

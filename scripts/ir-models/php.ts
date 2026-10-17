@@ -47,11 +47,13 @@ export interface PhpContext {
 export function emitPhp(context: PhpContext): Map<string, string> {
   const typeNames = new Map(context.names.map((entry) => [entry.definition, entry.names.php]));
   const definitions = new Map(context.model.definitions.map((entry) => [entry.name, entry]));
+
   assertClassNamesDistinct(context.model, typeNames);
   const emitter = new PhpEmitter(definitions, typeNames);
 
   const header = headerLines(context);
   const files = new Map<string, string>();
+
   for (const definition of context.model.definitions) {
     for (const [className, body] of emitter.classes(definition)) {
       files.set(`${PHP_MODEL_DIRECTORY}/${className}.php`, fileText(header, body));
@@ -70,9 +72,11 @@ export function emitPhp(context: PhpContext): Map<string, string> {
     `${PHP_MODEL_DIRECTORY}/IrModelVersion.php`,
     fileText(header, versionClass(context.irVersion, context.irRevision)),
   );
+
   for (const [className, body] of PHP_SUPPORT_FILES) {
     files.set(`${PHP_MODEL_DIRECTORY}/${className}.php`, fileText(header, body.split("\n")));
   }
+
   return files;
 }
 
@@ -95,7 +99,9 @@ function fileText(header: string[], body: string[]): string {
     "",
     ...body,
   ];
+
   while (lines.at(-1) === "") lines.pop();
+
   return `${lines.join("\n")}\n`;
 }
 
@@ -117,6 +123,7 @@ function phpString(value: string): string {
 
 function docLine(description: string | undefined, indent: string): string[] {
   if (description === undefined) return [];
+
   return [`${indent}/** ${neutralisedComment(description)} */`];
 }
 
@@ -128,6 +135,7 @@ function definitionDoc(definition: Definition): string | undefined {
   if (!definition.mustAct) return definition.description;
   const unknown = definition.kind === "union" ? "an unknown tag" : "an unknown value";
   const rule = `Must act: ${unknown} makes the IR invalid for every reader.`;
+
   return definition.description === undefined ? rule : `${definition.description} ${rule}`;
 }
 
@@ -146,6 +154,7 @@ function assertClassNamesDistinct(model: NeutralModel, typeNames: Map<string, st
   );
   const claim = (name: string, owner: string): void => {
     const previous = owners.get(name.toLowerCase());
+
     if (previous !== undefined)
       throw new NameCollisionError(`${owner}: its PHP name ${name} collides with ${previous}`);
     owners.set(name.toLowerCase(), owner);
@@ -154,7 +163,9 @@ function assertClassNamesDistinct(model: NeutralModel, typeNames: Map<string, st
   for (const definition of model.definitions) {
     if (definition.kind === "alias" || definition.kind === "extensionSlot") continue;
     const name = phpTypeName(typeNames, definition.name);
+
     claim(name, definition.name);
+
     if (definition.kind === "union")
       claim(`${name}${UNKNOWN_SUFFIX}`, `${definition.name}'s Unknown subclass`);
   }
@@ -162,7 +173,9 @@ function assertClassNamesDistinct(model: NeutralModel, typeNames: Map<string, st
 
 function phpTypeName(typeNames: Map<string, string>, definition: string): string {
   const name = typeNames.get(definition);
+
   if (name === undefined) throw new Error(`${definition}: no PHP name was computed for it`);
+
   return name;
 }
 
@@ -198,7 +211,9 @@ class PhpEmitter {
 
   private definition(name: string): Definition {
     const definition = this.definitions.get(name);
+
     if (definition === undefined) throw new Error(`${name}: no such definition`);
+
     return definition;
   }
 
@@ -207,10 +222,14 @@ class PhpEmitter {
     switch (type.kind) {
       case "named": {
         const definition = this.definition(type.definition);
+
         if (definition.kind === "alias") return this.native(definition.target);
+
         if (definition.kind === "extensionSlot") return "\\stdClass";
+
         return this.className(definition.name);
       }
+
       case "string":
         return "string";
       case "integer":
@@ -230,10 +249,14 @@ class PhpEmitter {
     switch (type.kind) {
       case "named": {
         const definition = this.definition(type.definition);
+
         if (definition.kind === "alias" && keepAlias) return definition.name;
+
         if (definition.kind === "alias") return this.doc(definition.target);
+
         return this.native(type);
       }
+
       case "array":
         return `list<${this.doc(type.items)}>`;
       case "map":
@@ -247,11 +270,15 @@ class PhpEmitter {
     switch (type.kind) {
       case "named": {
         const definition = this.definition(type.definition);
+
         if (definition.kind === "alias") return this.hydrate(definition.target, value, at);
+
         if (definition.kind === "extensionSlot")
           return `${HYDRATION}::copyObject(${HYDRATION}::object(${value}, ${phpString(at)}))`;
+
         return `${this.className(definition.name)}::fromJson(${value})`;
       }
+
       case "string":
         return `${HYDRATION}::string(${value}, ${phpString(at)})`;
       case "integer":
@@ -276,25 +303,34 @@ class PhpEmitter {
     switch (type.kind) {
       case "named": {
         const definition = this.definition(type.definition);
+
         if (definition.kind === "alias") return this.encode(definition.target, value);
+
         if (definition.kind === "extensionSlot") return `${HYDRATION}::copy(${value})`;
+
         return `${value}->toJson()`;
       }
+
       case "opaque":
         return `${HYDRATION}::copy(${value})`;
       case "array": {
         const item = this.encode(type.items, "$item");
+
         if (item === undefined) return undefined;
+
         return `${HYDRATION}::encodeList(${value}, static fn (${this.native(type.items)} $item): mixed => ${item})`;
       }
+
       case "map": {
         const item = this.encode(type.values, "$item");
         const encoder =
           item === undefined
             ? ""
             : `, static fn (${this.native(type.values)} $item): mixed => ${item}`;
+
         return `${HYDRATION}::encodeMap(${value}${encoder})`;
       }
+
       default:
         return undefined;
     }
@@ -306,18 +342,21 @@ class PhpEmitter {
 
   private isExtensionSlot(member: Member): boolean {
     if (member.type.kind !== "named") return false;
+
     return this.native(member.type) === "\\stdClass";
   }
 
   private memberNative(member: Member): string {
     if (this.isOptionalOpaque(member)) return "?IrOpaque";
     const native = this.native(member.type);
+
     return member.required || native === "mixed" ? native : `?${native}`;
   }
 
   private memberDoc(member: Member): string {
     if (this.isOptionalOpaque(member)) return "IrOpaque|null";
     const doc = this.doc(member.type);
+
     return member.required || doc === "mixed" ? doc : `${doc}|null`;
   }
 
@@ -336,6 +375,7 @@ class PhpEmitter {
       `final readonly class ${name}${variant === undefined ? "" : ` extends ${this.className(variant.union)}`}`,
       "{",
     ];
+
     if (variant !== undefined) {
       lines.push(
         `${INDENT}/** The tag member '${variant.member}': fixed to ${phpString(variant.value)}. */`,
@@ -343,9 +383,11 @@ class PhpEmitter {
         "",
       );
     }
+
     lines.push(...this.constructorLines(ordered, variant));
     lines.push("", ...this.fromJson(definition, ordered));
     lines.push("", ...this.toJson(definition));
+
     if (variant !== undefined) {
       lines.push(
         "",
@@ -355,7 +397,9 @@ class PhpEmitter {
         `${INDENT}}`,
       );
     }
+
     lines.push("}", "");
+
     return lines;
   }
 
@@ -363,11 +407,13 @@ class PhpEmitter {
     const docs = members.map((member) => {
       const description =
         member.description === undefined ? "" : ` ${neutralisedComment(member.description)}`;
+
       return `${INDENT} * @param ${this.memberDoc(member)} $${propertyName(member.name)}${description}`;
     });
     const parameters = members.map((member) => {
       const optional = member.required ? "" : " = null";
       const promotion = this.isExtensionSlot(member) ? "" : "public ";
+
       return `${INDENT}${INDENT}${promotion}${this.memberNative(member)} $${propertyName(member.name)}${optional},`;
     });
     const slots = members.filter((member) => this.isExtensionSlot(member));
@@ -395,6 +441,7 @@ class PhpEmitter {
           ]),
       ...slotCopies,
     ];
+
     return [
       ...slotProperties,
       ...(docs.length === 0 ? [] : [`${INDENT}/**`, ...docs, `${INDENT} */`]),
@@ -414,30 +461,39 @@ class PhpEmitter {
       `${INDENT}{`,
       `${INDENT}${INDENT}$members = ${HYDRATION}::object($value, ${phpString(definition.name)});`,
     ];
+
     if (variant !== undefined) {
       lines.push(
         `${INDENT}${INDENT}${HYDRATION}::tag($members, ${phpString(variant.member)}, ${phpString(variant.value)}, ${phpString(definition.name)});`,
       );
     }
+
     lines.push("", `${INDENT}${INDENT}return new self(`);
+
     for (const member of members) {
       lines.push(
         `${INDENT}${INDENT}${INDENT}${propertyName(member.name)}: ${this.memberHydration(definition, member)},`,
       );
     }
+
     lines.push(`${INDENT}${INDENT});`, `${INDENT}}`);
+
     return lines;
   }
 
   private memberHydration(definition: StructDefinition, member: Member): string {
     const at = `${definition.name}.${member.name}`;
     const memberName = phpString(member.name);
+
     if (this.isOptionalOpaque(member))
       return `${HYDRATION}::optionalOpaque($members, ${memberName})`;
+
     if (member.required) {
       const raw = `${HYDRATION}::required($members, ${memberName}, ${phpString(definition.name)})`;
+
       return this.hydrate(member.type, raw, at);
     }
+
     return `${HYDRATION}::optional($members, ${memberName}, ${this.hydrator(member.type, at)})`;
   }
 
@@ -447,9 +503,11 @@ class PhpEmitter {
       `${INDENT}{`,
       `${INDENT}${INDENT}$json = new \\stdClass();`,
     ];
+
     for (const member of definition.members) {
       const property = `$this->${propertyName(member.name)}`;
       const key = `$json->{${phpString(member.name)}}`;
+
       if (this.isOptionalOpaque(member)) {
         lines.push(
           `${INDENT}${INDENT}if (${property} !== null) {`,
@@ -458,18 +516,23 @@ class PhpEmitter {
         );
         continue;
       }
+
       const encoded = this.encode(member.type, property) ?? property;
+
       if (member.required || member.type.kind === "opaque") {
         lines.push(`${INDENT}${INDENT}${key} = ${encoded};`);
         continue;
       }
+
       lines.push(
         `${INDENT}${INDENT}if (${property} !== null) {`,
         `${INDENT}${INDENT}${INDENT}${key} = ${encoded};`,
         `${INDENT}${INDENT}}`,
       );
     }
+
     lines.push(`${INDENT}${INDENT}return $json;`, `${INDENT}}`);
+
     return lines;
   }
 
@@ -543,6 +606,7 @@ class PhpEmitter {
       "}",
       "",
     ];
+
     return [
       [name, base],
       [unknown, unknownClass],
@@ -603,6 +667,7 @@ class PhpEmitter {
   /** The class carrying one `@phpstan-type` per alias definition and extension slot. */
   typesClass(model: NeutralModel): string[] {
     const lines = ["/**", " * The IR's alias definitions, as type aliases for static analysis."];
+
     for (const definition of model.definitions) {
       if (definition.kind === "alias") {
         lines.push(
@@ -612,7 +677,9 @@ class PhpEmitter {
         lines.push(` * @phpstan-type ${this.className(definition.name)} \\stdClass`);
       }
     }
+
     lines.push(" */", "final class IrTypes", "{", "}", "");
+
     return lines;
   }
 }
@@ -620,22 +687,28 @@ class PhpEmitter {
 /** The constant of each known value: the ADR 0007 enum member identifier (`application/json` gives `ApplicationJson`). */
 function enumConstants(definition: OpenEnumDefinition): { constant: string; value: string }[] {
   const seen = new Map<string, string>();
+
   return definition.known.map((value) => {
     const segments = splitName(value);
+
     if (segments.length === 0)
       throw new NameCollisionError(
         `${definition.name}: the known value ${JSON.stringify(value)} has no name segment`,
       );
     const constant = identifier({ segments, role: "enumMember" }, "php");
+
     if (constant === undefined)
       throw new Error(`${definition.name}: PHP has no enum member identifier`);
     const previous = seen.get(constant);
+
     if (previous !== undefined) {
       throw new NameCollisionError(
         `${definition.name}: the known values ${JSON.stringify(previous)} and ${JSON.stringify(value)} both give the PHP constant ${constant}`,
       );
     }
+
     seen.set(constant, value);
+
     return { constant, value };
   });
 }
@@ -648,14 +721,18 @@ function phpShape(shape: Shape): string {
       const members = shape.members.map(
         (member) => `${phpString(member.name)} => ${phpShape(member.shape)}`,
       );
+
       return `IrShape::struct([${members.join(", ")}])`;
     }
+
     case "union": {
       const variants = shape.variants.map(
         (variant) => `${phpString(variant.tagValue)} => ${phpString(variant.definition)}`,
       );
+
       return `IrShape::union(${phpString(shape.tag)}, ${shape.mustAct}, [${variants.join(", ")}])`;
     }
+
     case "openEnum":
       return `IrShape::openEnum([${shape.known.map(phpString).join(", ")}], ${shape.mustAct})`;
     case "items":
@@ -669,10 +746,12 @@ function phpShape(shape: Shape): string {
 function shapesClass(definitions: readonly Definition[]): string[] {
   const entries = definitions.flatMap((definition) => {
     const shape = shapeOfDefinition(definition);
+
     return shape === undefined
       ? []
       : [`${INDENT}${INDENT}${INDENT}${phpString(definition.name)} => ${phpShape(shape)},`];
   });
+
   return [
     "/** The shape of every IR definition that the must-act walk enters, by schema name. */",
     "final class IrShapes",

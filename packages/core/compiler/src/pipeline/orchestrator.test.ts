@@ -78,7 +78,9 @@ function fakeParts(
       log.push(`${context.raw.name}:${half}`);
       acts[half]?.(draft, context);
     };
+
   const declared = (half: HalfName) => ({ reads: [], writes: writes[half] ?? [] });
+
   return {
     "tree.schemas": {
       pass: "tree",
@@ -86,6 +88,7 @@ function fakeParts(
       ...declared("tree.schemas"),
       run: (draft, context) => {
         body("tree.schemas")(draft, context);
+
         return NO_SCHEMAS;
       },
     },
@@ -137,8 +140,10 @@ function compile(
   };
   const finalize: PipelineFinalize = (_draft, context) => {
     log.push(`${context.raw.name}:finalize`);
+
     return undefined;
   };
+
   return compileWorkspace({
     reader: loadMemoryReader(FILES),
     entry: "workspace.yaml",
@@ -171,6 +176,7 @@ describe("stop rule", () => {
         log.push("a:access.identity:completed");
       },
     });
+
     expect(log).toEqual([
       "a:tree.schemas",
       "a:tree.nodes",
@@ -188,13 +194,16 @@ describe("stop rule", () => {
     const finalize: PipelineFinalize = (draft, context) => {
       log.push(`${context.raw.name}:finalize`);
       expect(draft.operations).toEqual([]);
+
       return { ir: MINIMAL_IR, sourceMap: { irRevision: IR_REVISION, locations: {} } };
     };
+
     const result = compile(
       log,
       { "tree.nodes": (_d, c) => c.report(diagnostic("warning", "x/warn", PING)) },
       { finalize },
     );
+
     expect(log).toEqual([
       ...ALL("a"),
       ...ALL("b"),
@@ -218,14 +227,18 @@ describe("stop rule", () => {
         expect(() => context.report("nope", diagnostic("error", "x", PING))).toThrow(/nope/);
       },
     };
+
     expect(byApi(compile(log, {}, { link }))).toEqual({ a: [], b: ["link/superset"], c: [] });
     expect(log.some((line) => line.endsWith(":finalize"))).toBe(false);
 
     const finalize: PipelineFinalize = (_draft, context) => {
       if (context.raw.name === "c") context.report(diagnostic("error", "finalize/collision", PING));
+
       return { ir: MINIMAL_IR, sourceMap: { irRevision: IR_REVISION, locations: {} } };
     };
+
     const result = compile([], {}, { finalize });
+
     expect(result.apis.map((r) => r.ir === undefined)).toEqual([false, false, true]);
   });
 
@@ -236,6 +249,7 @@ describe("stop rule", () => {
       diagnostics: [{ api: "a", diagnostics: [diagnostic("error", "finalize/relay-cycle", PING)] }],
     });
     const result = compile(log, {}, { relayOrder: failing });
+
     expect(log).toEqual(ALL("c"));
     expect(byApi(result)).toEqual({ a: ["finalize/relay-cycle"], b: [], c: [] });
   });
@@ -247,6 +261,7 @@ describe("stop rule", () => {
       ["a", "b", "x"],
     ]) {
       const wrong: PipelineRelayStage = (workspace) => ({ ...relayOrder(workspace), order });
+
       expect(() => compile([], {}, { relayOrder: wrong }), order.join(",")).toThrow(
         /every workspace api once, and no other name/,
       );
@@ -257,8 +272,10 @@ describe("stop rule", () => {
     let late: ((diagnostic: Diagnostic) => void) | undefined;
     const finalize: PipelineFinalize = (_draft, context) => {
       late = context.report;
+
       return undefined;
     };
+
     compile([], {}, { finalize });
     expect(() => late?.(diagnostic("error", "x/late", PING))).toThrow(/after its run ended/);
 
@@ -270,6 +287,7 @@ describe("stop rule", () => {
         seen.push(context.imported("ext"), context.imported("ext"));
       },
     };
+
     compile([], {}, { link }, { imports: new Map([["ext", MINIMAL_IR]]) });
     expect(seen[0]).toBeDefined();
     expect(seen[0]).toBe(seen[1]);
@@ -282,6 +300,7 @@ describe("stop rule", () => {
       entry: "workspace.yaml",
       parts: { passes: fakeParts(log) },
     });
+
     expect(missing.diagnostics.length).toBeGreaterThan(0);
     expect(missing.apis).toEqual([]);
     // The files the load tried to read come back on the early return too (the watch primitive needs them).
@@ -292,6 +311,7 @@ describe("stop rule", () => {
       entry: "workspace.yaml",
       parts: { passes: fakeParts(log) },
     });
+
     expect(log).toEqual([]);
     expect(invalid.apis.map((r) => [r.api, r.diagnostics.length > 0])).toEqual([
       ["a", false],
@@ -308,6 +328,7 @@ describe("stop rule", () => {
         guard,
         parts: { passes: { "tree.schemas": referenceTreeSchemas } },
       });
+
       expect(result.diagnostics).toEqual([]);
       expect(result.apis.map((r) => [r.api, r.diagnostics, r.ir])).toEqual([
         ["tasks", [], undefined],
@@ -330,10 +351,13 @@ const referenceTreeSchemas: PassParts["tree.schemas"] = {
   writes: ["schemas", "scalars", "enums", "extensionKeys"],
   run: (draft, context) => {
     const api = context.raw.name;
+
     if (api !== "tasks" && api !== "tasksService")
       throw new Error(`the reference contract has no api ${api}`);
+
     for (const { half, members } of draftFixtureHalves(api, "after-tree"))
       if (half === "tree.schemas") draftFixtureApply(draft, members);
+
     return draftFixtureSchemaService(api);
   },
 };
@@ -349,6 +373,7 @@ describe("guarded run", () => {
     ).toThrow(DraftAccessError);
 
     let kept: DraftIR | undefined;
+
     expect(() =>
       compile([], {
         "tree.schemas": (draft) => {
@@ -363,6 +388,7 @@ describe("guarded run", () => {
   const poke = (target: unknown, key: string): void => {
     (target as Record<string, unknown>)[key] = 1;
   };
+
   const ext: ContractIR = structuredClone(MINIMAL_IR);
 
   test.each<[string, Act, ErrorConstructor | typeof PipelineReadonlyError]>([
@@ -381,6 +407,7 @@ describe("guarded run", () => {
       "inherited entry",
       (_d, c) => {
         const ping = pipelineTreeNodes(c.raw).find((n) => n.name === "ping");
+
         poke(ping && c.inherited(ping, "tags")?.entries[0], "value");
       },
       TypeError,
@@ -389,6 +416,7 @@ describe("guarded run", () => {
       "inherited value",
       (_d, c) => {
         const app = pipelineTreeNodes(c.raw)[0];
+
         poke(app && c.inherited(app, "tags")?.entries[0]?.node.settings.tags, "0");
       },
       PipelineReadonlyError,
@@ -396,6 +424,7 @@ describe("guarded run", () => {
   ])("with the guard on, %s is read-only", (_source, act, error) => {
     const run = (guard: boolean) =>
       compile([], { "access.identity": act }, {}, { guard, imports: new Map([["ext", ext]]) });
+
     expect(() => run(true)).toThrow(error);
   });
 });
@@ -408,9 +437,12 @@ describe("schema service", () => {
       (_draft, context) => {
         received[half] = Reflect.get(context, "treeSchemas");
       };
+
     const acts = Object.fromEntries(pipelineHalves.map((half) => [half, record(half)]));
+
     compile([], {}, { passes: fakeParts([], acts) });
     expect(received["tree.schemas"]).toBeUndefined();
+
     for (const half of pipelineHalves.slice(1)) expect(received[half], half).toBe(NO_SCHEMAS);
   });
 });
@@ -421,24 +453,31 @@ describe("guard on and off", () => {
   const rename = (value: unknown, name: string): void => {
     if (typeof value === "object" && value !== null) Reflect.set(value, "name", name);
   };
+
   const acts: Partial<Record<HalfName, Act>> = {
     "tree.nodes": (draft, context) => {
       const api = pipelineCopy(context.raw.merged.api);
       const surface = pipelineTreeNodes(context.raw)[0];
       const settings = surface && pipelineCopy(surface.settings);
       const relayed = context.relayed("a")?.operations[0];
+
       draft.operations.push({ examples: { api: { value: api }, settings: { value: settings } } });
+
       if (relayed !== undefined) draft.operations.push(pipelineCopy(relayed));
       rename(api, "changed");
+
       if (settings !== undefined && isJsonObject(settings)) Reflect.set(settings, "prefix", "/x");
       rename(draft.operations[1]?.examples?.api?.value, `${context.raw.name}-changed`);
     },
   };
   const finalize: PipelineFinalize = (draft, context) => {
     const seen = JSON.stringify({ operations: draft.operations, merged: context.raw.merged });
+
     context.report({ ...diagnostic("warning", "x/seen", "/api"), message: seen });
+
     return undefined;
   };
+
   const run = (guard: boolean) =>
     compile(
       [],
@@ -452,10 +491,12 @@ describe("guard on and off", () => {
 
   test("a run gives byte-equal results with the guard off and on", () => {
     const off = run(false);
+
     expect(JSON.stringify(off)).toBe(JSON.stringify(run(true)));
     // Nothing a half changed in its copies reached the raw tree or another api's draft.
     const seen = (api: string) =>
       JSON.parse(off.apis.find((r) => r.api === api)?.diagnostics[0]?.message ?? "null");
+
     expect(seen("a").merged.api.name).toBe("a");
     expect(seen("a").merged.surfaces.app.prefix).toBe("/a");
     expect(seen("a").operations[0].examples.api.value.name).toBe("changed");

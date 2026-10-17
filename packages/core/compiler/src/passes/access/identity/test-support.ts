@@ -44,16 +44,20 @@ export interface AccessIdentitySchemaUseRow {
 
 function contractOf(reader: LoadReader, entry: string, api: string): AccessIdentityContract {
   const loaded = loadWorkspace({ reader, entry });
+
   if (loaded.diagnostics.length > 0)
     throw new Error(`the contract does not load: ${JSON.stringify(loaded.diagnostics)}`);
 
   const validated = validateWorkspace(loaded.workspace);
   const refused = [...validated.workspace, ...validated.apis.flatMap((item) => item.diagnostics)];
+
   if (refused.length > 0)
     throw new Error(`the contract does not validate: ${JSON.stringify(refused)}`);
 
   const raw = loaded.workspace.apis.find((candidate) => candidate.name === api);
+
   if (raw === undefined) throw new Error(`the contract has no api ${api}`);
+
   return { workspace: loaded.workspace, raw };
 }
 
@@ -83,6 +87,7 @@ export function accessIdentityTableService(
     ...treeNodesStubService({ queryWires }),
     typeUse: (pointer, direction) => {
       const found = rows.find((row) => row.pointer === pointer && row.direction === direction);
+
       return found === undefined ? undefined : structuredClone(found.use);
     },
   };
@@ -94,6 +99,7 @@ export function accessIdentityObjectSchema(
   fields: Record<string, IrWriter.TypeUse>,
 ): IrWriter.ObjectSchema {
   const origin = { layer: "api" as const, pointer: `/schemas/${id}` };
+
   return {
     kind: "object",
     id,
@@ -120,7 +126,9 @@ export function accessIdentityObjectSchema(
 /** A new draft holding these schemas, as tree.schemas leaves it. */
 export function accessIdentityDraft(schemas: readonly IrWriter.KnownSchema[] = []): DraftIR {
   const draft = createDraftIR();
+
   for (const schema of schemas) draft.schemas[schema.id] = schema;
+
   return draft;
 }
 
@@ -144,11 +152,13 @@ export function accessIdentityRun(
   });
 
   const guard = pipelineGuard(draft, accessIdentityPass);
+
   try {
     accessIdentityPass.run(guard.draft, Object.freeze({ ...context, treeSchemas }));
   } finally {
     guard.dispose();
   }
+
   return { draft, diagnostics };
 }
 
@@ -163,10 +173,12 @@ export function accessIdentityRoutesRun(
   prepare: (draft: DraftIR) => void = () => {},
 ): AccessIdentityRun {
   const tree = treeNodesRun(contract.raw, contract.workspace, { treeSchemas, draft });
+
   if (tree.diagnostics.length > 0)
     throw new Error(`tree.nodes refused the test contract: ${JSON.stringify(tree.diagnostics)}`);
 
   prepare(draft);
+
   return accessIdentityRun(contract, draft, treeSchemas);
 }
 
@@ -220,8 +232,10 @@ export const accessIdentityCataloguesRun = (): AccessIdentityRun =>
 /** The expected catalogues of the `catalogues` fixture (`catalogues.json`), keyed by catalogue. */
 export function accessIdentityCataloguesExpected(catalogue: string): unknown {
   const expected = accessIdentityFixtureJson("catalogues", "catalogues.json");
+
   if (typeof expected !== "object" || expected === null || !Object.hasOwn(expected, catalogue))
     throw new Error(`catalogues.json has no ${catalogue}`);
+
   return Reflect.get(expected, catalogue);
 }
 

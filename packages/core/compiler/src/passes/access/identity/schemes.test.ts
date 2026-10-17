@@ -11,12 +11,14 @@ import {
 // Runs the half on an api file holding these schemes and no identity.
 function compileSchemes(schemes: string) {
   const contract = accessIdentityInline(`api: { name: a, version: 1 }\nschemes:\n${schemes}`);
+
   return accessIdentityRun(contract, accessIdentityDraft(), accessIdentityTableService([]));
 }
 
 // The rules and messages of the diagnostics of `schemes`, and the ids of the schemes written.
 function refusals(schemes: string) {
   const { draft, diagnostics } = compileSchemes(schemes);
+
   return {
     written: Object.keys(draft.schemes),
     diagnostics: diagnostics.map(({ rule, message, origin }) => ({
@@ -37,6 +39,7 @@ const STRIPE = `
 describe("security schemes", () => {
   test("each kind compiles to its tagged form", () => {
     const { draft, diagnostics } = accessIdentityCataloguesRun();
+
     expect(diagnostics).toEqual([]);
     expect({ ...draft.schemes }).toEqual(accessIdentityCataloguesExpected("schemes"));
   });
@@ -150,6 +153,7 @@ describe("security schemes", () => {
     const { draft, diagnostics } = compileSchemes(`
   slack: { kind: signature, verify: application, name: X-Slack-Signature }
   keyed: { kind: signature, verify: application, name: X-Sig, key: { from: header.X-Key-Id } }`);
+
     expect(diagnostics).toEqual([]);
     expect({ ...draft.schemes }).toEqual({
       slack: {
@@ -210,6 +214,7 @@ describe("security schemes", () => {
   sig:${STRIPE}
     format: '${format}'
     payload: '${payload}'${ts}`);
+
     expect(diagnostics.map(({ rule }) => rule)).toEqual(
       fits ? [] : ["seampact/access/signature-template"],
     );

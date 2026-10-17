@@ -5,8 +5,10 @@ import { isKnownVariant } from "./unions.js";
 // The principal name a reader derives from an identity: the unknown arm must be handled before the switch.
 function principalSchemas(identity: KnownIdentity): string[] {
   const principal = identity.principal;
+
   if (!isKnownVariant("Principal", principal))
     throw new Error(`unknown principal ${principal.kind}`);
+
   switch (principal.kind) {
     case "schema":
       return [principal.schema];

@@ -34,7 +34,9 @@ export interface TreeSchemasReservation {
 // The code whose `issues` items are the issue schema.
 function schemaInvalidCode(): string {
   const role = derivationRoleOf("schemaInvalid");
+
   if (role === undefined) throw new Error("the role data has no schemaInvalid role");
+
   return role.defaultCode;
 }
 
@@ -91,10 +93,12 @@ function paramsReservation(
   const code = role.defaultCode;
   const name: Name = { segments: splitName(code), role: "params" };
   const id = canonicalId(name);
+
   if (id === undefined) throw new Error(`the default code ${code} names no params schema`);
 
   const pointer = treeSchemasPointer("/errors", code, "params");
   const purpose = `the params of the default code '${code}'`;
+
   if (declaresParams(merged, code))
     return { id, name, purpose, pointer, seed: undefined, yields: false };
 
@@ -108,6 +112,7 @@ function paramsReservation(
     ),
   );
   const seed = coreObject(id, name, "output", pointer, properties);
+
   return { id, name, purpose, pointer, seed, yields: false };
 }
 
@@ -124,6 +129,7 @@ function issueReservation(code: string, yields: boolean): TreeSchemasReservation
     ),
   );
   const seed = coreObject(id, name, "output", pointer, properties);
+
   return { id, name, purpose: `one issue of the default code '${code}'`, pointer, seed, yields };
 }
 
@@ -132,6 +138,7 @@ function emptyBodyReservation(): TreeSchemasReservation {
   const name: Name = { segments: splitName(id), role: "schema" };
   const pointer = treeSchemasPointer("/schemas", id);
   const seed = coreObject(id, name, "input", pointer, []);
+
   return {
     id,
     name,
@@ -151,5 +158,6 @@ export function treeSchemasCoreReservations(
     .map((role) => paramsReservation(merged, role));
   const code = schemaInvalidCode();
   const issue = issueReservation(code, declaresParams(merged, code));
+
   return [...params, issue, emptyBodyReservation()];
 }

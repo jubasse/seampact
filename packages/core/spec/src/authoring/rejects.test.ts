@@ -7,8 +7,10 @@ const ajv = authoringAjv();
 
 function errors(file: AuthoringFile, doc: unknown): string[] {
   const validate = ajv.getSchema(schemaId(file));
+
   if (validate === undefined) throw new Error(file);
   validate(doc);
+
   return (validate.errors ?? [])
     .filter((e) => e.keyword !== "if")
     .map((e) => `${e.keyword} ${e.instancePath}`);
@@ -300,6 +302,7 @@ test.each([
   ],
 ] as const)("derive entry: %s", (_, entry, expected) => {
   const validate = ajv.getSchema(schemaId("pack"));
+
   if (validate === undefined) throw new Error("pack");
   validate(pack(entry));
   expect(
@@ -316,6 +319,7 @@ test("a derived object accepts nullable, deprecated and examples", () => {
     deprecated: true,
     examples: [{ title: "a" }],
   };
+
   expect(errors("schema", derived)).toEqual([]);
 });
 

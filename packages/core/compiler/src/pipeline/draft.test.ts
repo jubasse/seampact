@@ -21,6 +21,7 @@ test("writer view refuses unknown variants", () => {
   const maturity: IrWriter.Service = { id: "mail", maturity: "beta", origin };
   // @ts-expect-error an operation's features are finalize's: no half writes them
   const features: DraftOperation = { kind: "httpOperation", features: [] };
+
   expect([operation, body, scheme, maturity, features]).toHaveLength(5);
 });
 
@@ -31,11 +32,13 @@ test("a complete draft, with finalize's members, is a ContractIR", () => {
     Complete extends Omit<ContractIR, FinalizeMembers> ? true : false,
     IrWriter.Operation extends DraftOperation ? true : false,
   ] = [true, true];
+
   expect(assignable).toEqual([true, true]);
 });
 
 test("a new draft holds empty catalogues without a prototype", () => {
   const draft = createDraftIR();
+
   expect(draft.operations).toEqual([]);
   expect(draft.packs).toEqual([]);
   expect(draft.api).toBeUndefined();
@@ -49,6 +52,7 @@ test("a new draft holds empty catalogues without a prototype", () => {
     origin,
   };
   const key = "__proto__";
+
   draft.rights[key] = right;
   expect(Object.hasOwn(draft.rights, "__proto__")).toBe(true);
   expect(Object.getPrototypeOf(draft.rights)).toBeNull();

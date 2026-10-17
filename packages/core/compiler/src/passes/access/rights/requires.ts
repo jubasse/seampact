@@ -73,21 +73,26 @@ export function accessRightsRequirements(
   let routeFailed = reporter.errors !== errorsBeforeUses;
 
   const built: BuiltRequirement[] = [];
+
   for (const use of uses) {
     const checked = checkItem(context, reporter, catalogues, checks, use);
     const requirement =
       checked === undefined
         ? undefined
         : requirementOf(context, reporter, catalogues, input, use, checked.params);
+
     if (requirement === undefined) {
       routeFailed = true;
       continue;
     }
+
     built.push({ use, requirement, key: equalityKey(requirement) });
   }
 
   const requirements = withoutRepeats(reporter, built);
+
   if (!routeFailed) checkCallerRight(reporter, catalogues, input, requirements);
+
   return requirements;
 }
 
@@ -103,6 +108,7 @@ export function accessRightsCheckRequirementEntries(
 ): void {
   for (const [name, item] of accessRightsEntries(context.raw.merged, "requirements")) {
     const itemPointer = pipelinePointerBelow("/requirements", name);
+
     checkItem(context, reporter, catalogues, checks, {
       ...targetOf(item, itemPointer),
       item,
@@ -119,8 +125,10 @@ function derivedUses(
   { route, api, entries }: AccessRightsRequiresInput,
 ): RequirementUse[] {
   const uses: RequirementUse[] = [];
+
   for (const entry of entries) {
     const require = accessRightsMember(entry.settings, "require");
+
     if (require === undefined || !accessRightsSelects(context, entry, route, api)) continue;
 
     const pointer = pipelinePointerBelow(entry.pointer, "require");
@@ -129,10 +137,12 @@ function derivedUses(
       from: [accessRightsOriginOf(context, pointer)],
     };
     const target = derivedTarget(reporter, require, pointer, route);
+
     if (target === undefined) continue;
 
     uses.push({ ...target, item: require, itemPointer: pointer, usePointer: pointer, derivedFrom });
   }
+
   return uses;
 }
 
@@ -144,9 +154,11 @@ function derivedTarget(
   route: AccessRightsRoute,
 ): Pick<RequirementUse, "kind" | "target"> | undefined {
   const rule = accessRightsString(require, "rule");
+
   if (rule !== undefined) return { kind: "rule", target: rule };
 
   const template = accessRightsString(require, "right");
+
   if (template === undefined)
     throw new Error(`the pack require at ${pointer} names neither a right nor a rule`);
   const right = accessRightsExpand(
@@ -154,6 +166,7 @@ function derivedTarget(
     { text: template, pointer: pipelinePointerBelow(pointer, "right") },
     route,
   );
+
   return right === undefined ? undefined : { kind: "right", target: right };
 }
 
@@ -167,14 +180,17 @@ function writtenUses(
 
   // The inherited entries flatten each node's list in order, so an item's index counts within its node.
   const indexInNode = new Map<unknown, number>();
+
   for (const written of context.inherited(route.node, "requires")?.entries ?? []) {
     const index = indexInNode.get(written.node) ?? 0;
+
     indexInNode.set(written.node, index + 1);
     const usePointer = pipelinePointerBelow(written.node.pointer, "requires", index);
     const origin = pipelineCopy(written.origin);
 
     if (typeof written.value === "string") {
       const item = accessRightsMember(requirementsCatalogue, written.value);
+
       if (!pipelineIsJsonObject(item)) {
         reporter.error({
           rule: "requirement-entry",
@@ -184,7 +200,9 @@ function writtenUses(
         });
         continue;
       }
+
       const itemPointer = pipelinePointerBelow("/requirements", written.value);
+
       uses.push({
         ...targetOf(item, itemPointer),
         item,
@@ -204,6 +222,7 @@ function writtenUses(
       origin,
     });
   }
+
   return uses;
 }
 
@@ -213,11 +232,14 @@ function targetOf(
   pointer: string,
 ): Pick<RequirementUse, "kind" | "target"> {
   const right = accessRightsString(item, "right");
+
   if (right !== undefined) return { kind: "right", target: right };
 
   const rule = accessRightsString(item, "rule");
+
   if (rule === undefined)
     throw new Error(`the requirement item at ${pointer} names neither a right nor a rule`);
+
   return { kind: "rule", target: rule };
 }
 
@@ -230,10 +252,13 @@ function checkItem(
   use: RequirementUse,
 ): { readonly params?: unknown } | undefined {
   const key = `${use.itemPointer}\n${use.kind}\n${use.target}`;
+
   if (checks.checked.has(key)) return checks.checked.get(key);
 
   const result = checkTargetAndParams(context, reporter, catalogues, use);
+
   checks.checked.set(key, result);
+
   return result;
 }
 
@@ -245,8 +270,10 @@ function checkTargetAndParams(
 ): { readonly params?: unknown } | undefined {
   const target =
     use.kind === "right" ? catalogues.rights.get(use.target) : catalogues.rules.get(use.target);
+
   if (target === undefined) {
     const declared = use.kind === "right" ? catalogues.declared.rights : catalogues.declared.rules;
+
     if (!declared.has(use.target))
       reporter.error({
         rule: "requirement-target",
@@ -254,6 +281,7 @@ function checkTargetAndParams(
         fix: `declare the ${use.kind} in '${use.kind}s', or name a declared one`,
         pointer: pipelinePointerBelow(use.itemPointer, use.kind),
       });
+
     return undefined;
   }
 
@@ -265,6 +293,7 @@ function checkTargetAndParams(
 
   const params = accessRightsMember(use.item, "params");
   const paramsPointer = pipelinePointerBelow(use.itemPointer, "params");
+
   if (target.params === undefined) {
     if (params === undefined) return {};
     reporter.error({
@@ -273,6 +302,7 @@ function checkTargetAndParams(
       fix: `remove 'params', or declare params on the ${use.kind}`,
       pointer: paramsPointer,
     });
+
     return undefined;
   }
 
@@ -280,6 +310,7 @@ function checkTargetAndParams(
     kind: "ref",
     schema: target.params,
   });
+
   if (issues.length === 0) return params === undefined ? {} : { params: pipelineCopy(params) };
   reporter.error({
     rule: "requirement-params",
@@ -287,6 +318,7 @@ function checkTargetAndParams(
     fix: `give params that fit ${target.params}`,
     pointer: params === undefined ? use.itemPointer : paramsPointer,
   });
+
   return undefined;
 }
 
@@ -300,6 +332,7 @@ function listedIssues(issues: readonly { pointer: string; message: string }[]): 
       accessRightsQuoted(`${issue.pointer === "" ? "(params)" : issue.pointer}: ${issue.message}`),
     );
   const more = issues.length - listed.length;
+
   return more > 0 ? `${listed.join("; ")}; and ${more} more` : listed.join("; ");
 }
 
@@ -312,6 +345,7 @@ function checkBucket(
 ): boolean {
   const bucket = accessRightsString(use.item, "bucket");
   const pointer = pipelinePointerBelow(use.itemPointer, "bucket");
+
   if (rule?.takesBucket !== true) {
     if (bucket === undefined) return true;
     reporter.error({
@@ -320,6 +354,7 @@ function checkBucket(
       fix: "remove 'bucket', or declare the rule with 'bucket: true'",
       pointer,
     });
+
     return false;
   }
 
@@ -330,10 +365,12 @@ function checkBucket(
       fix: "name a declared bucket in the requirement's 'bucket'",
       pointer: use.itemPointer,
     });
+
     return false;
   }
 
   if (catalogues.buckets.has(bucket)) return true;
+
   if (!catalogues.declared.buckets.has(bucket))
     reporter.error({
       rule: "requirement-bucket",
@@ -341,6 +378,7 @@ function checkBucket(
       fix: "declare the bucket in 'buckets', or name a declared one",
       pointer,
     });
+
   return false;
 }
 
@@ -362,6 +400,7 @@ function requirementOf(
 
   if (use.kind === "rule") {
     const bucket = accessRightsString(use.item, "bucket");
+
     return {
       kind: "rule",
       rule: use.target,
@@ -371,7 +410,9 @@ function requirementOf(
   }
 
   const right = catalogues.rights.get(use.target);
+
   if (right === undefined) return undefined;
+
   if (!checkGuest(reporter, input.route, right, use)) return undefined;
 
   const subjectText = accessRightsString(use.item, "subject");
@@ -389,6 +430,7 @@ function requirementOf(
         }),
     usePointer: use.usePointer,
   });
+
   if (resolved === undefined) return undefined;
 
   return {
@@ -410,6 +452,7 @@ function checkGuest(
 
   // A pack derived the right or the requirement: the author changes the entry's selector or declares the right.
   const derived = right.derivedFrom !== undefined || use.derivedFrom !== undefined;
+
   reporter.error({
     rule: "guest-right",
     message: `right '${right.id}' is required on ${route.access === "public" ? "public" : "optional-auth"} route '${route.id}', where an anonymous caller reaches it, and the right has no 'guest' reason`,
@@ -422,6 +465,7 @@ function checkGuest(
         ? []
         : [{ pointer: route.accessPointer, message: "the route's access is set here" }],
   });
+
   return false;
 }
 
@@ -454,13 +498,16 @@ function withoutRepeats(
 
   for (const candidate of built) {
     const derived = candidate.use.derivedFrom !== undefined;
+
     if (derived && writtenKeys.has(candidate.key)) continue;
 
     const earlier = kept.find(({ key }) => key === candidate.key);
+
     if (earlier === undefined) {
       kept.push(candidate);
       continue;
     }
+
     reporter.error({
       rule: "requirement-twice",
       message: `the route requires ${candidate.requirement.kind} '${candidate.requirement.kind === "right" ? candidate.requirement.right : candidate.requirement.rule}' twice with equal params`,
@@ -469,6 +516,7 @@ function withoutRepeats(
       related: [{ pointer: earlier.use.usePointer, message: "first required here" }],
     });
   }
+
   return kept.map(({ requirement }) => requirement);
 }
 
@@ -481,8 +529,11 @@ function checkCallerRight(
   requirements: readonly IrWriter.Requirement[],
 ): void {
   const caller = api.caller;
+
   if (api.kind !== "service" || caller === undefined) return;
+
   if (!catalogues.rights.has(caller.right) && catalogues.declared.rights.has(caller.right)) return;
+
   if (
     requirements.some(
       (requirement) => requirement.kind === "right" && requirement.right === caller.right,

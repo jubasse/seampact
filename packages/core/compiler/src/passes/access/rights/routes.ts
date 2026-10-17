@@ -40,6 +40,7 @@ export function accessRightsApi(context: AccessRightsContext): AccessRightsApi {
   const caller = accessRightsMember(api, "caller");
   const identity = accessRightsString(caller, "identity");
   const right = accessRightsString(caller, "right");
+
   return {
     kind: accessRightsString(api, "kind") ?? API_KIND_DEFAULT,
     ...(identity === undefined || right === undefined ? {} : { caller: { identity, right } }),
@@ -58,6 +59,7 @@ export function accessRightsRoutes(
     const id = operation.id;
     const pointer = operation.origin?.pointer;
     const node = pointer === undefined ? undefined : nodes.get(pointer);
+
     if (id === undefined || node === undefined)
       throw new Error(
         `tree.nodes wrote an operation (${id ?? "no id"}) whose origin ${pointer ?? "(none)"} is no tree node`,
@@ -69,7 +71,9 @@ export function accessRightsRoutes(
 
 const depthOf = (node: TreeNode): number => {
   let depth = 0;
+
   for (let at = node.parent; at !== undefined; at = at.parent) depth += 1;
+
   return depth;
 };
 
@@ -90,16 +94,20 @@ function accessOf(
   const accessApplies =
     access !== undefined &&
     (identityEntry === undefined || depthOf(access.node) >= depthOf(identityEntry.node));
+
   if (!accessApplies)
     return identity === undefined ? { access: "identity" } : { access: "identity", identity };
 
   const accessPointer = pipelinePointerBelow(access.node.pointer, "access");
+
   if (accessRightsMember(access.value, "public") !== undefined)
     return { access: "public", accessPointer };
+
   if (accessRightsMember(access.value, "optionalAuth") !== undefined)
     return identity === undefined
       ? { access: "optional", accessPointer }
       : { access: "optional", accessPointer, identity };
+
   return identity === undefined ? { access: "identity" } : { access: "identity", identity };
 }
 
@@ -109,6 +117,7 @@ export function accessRightsScopeOf(
 ): { readonly scope: TreeNode; readonly collection: TreeNode } | undefined {
   for (let at: TreeNode | undefined = node; at !== undefined; at = at.parent)
     if (at.kind === "scope" && at.parent !== undefined) return { scope: at, collection: at.parent };
+
   return undefined;
 }
 
@@ -116,5 +125,6 @@ export function accessRightsScopeOf(
 export function accessRightsResourceOf(node: TreeNode): TreeNode | undefined {
   for (let at = node.parent; at !== undefined; at = at.parent)
     if (at.kind === "collection" || at.kind === "single") return at;
+
   return undefined;
 }

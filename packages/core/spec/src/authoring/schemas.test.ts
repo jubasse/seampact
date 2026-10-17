@@ -6,8 +6,10 @@ import { authoringAjv, schemaId } from "./test-ajv.js";
 
 describe("metaschema", () => {
   const ajv = authoringAjv();
+
   test.each(AUTHORING_FILES)("%s validates against the 2020-12 metaschema", (file) => {
     const valid = ajv.validateSchema(authoringSchemas()[file]);
+
     expect(ajv.errors ?? []).toEqual([]);
     expect(valid).toBe(true);
   });
@@ -42,5 +44,6 @@ test("biome.json and .gitattributes name the same generated files", () => {
     .filter((line) => /\slinguist-generated$/.test(line))
     .map((line) => line.split(/\s/)[0])
     .sort();
+
   expect(generated).toEqual(unformatted);
 });

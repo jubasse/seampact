@@ -14,6 +14,7 @@ export function accessIdentityServiceCaller(
 ): string | undefined {
   const api = accessIdentityObject(context.raw.merged, "api");
   const caller = api === undefined ? undefined : accessIdentityObject(api, "caller");
+
   return caller === undefined ? undefined : accessIdentityString(caller, "identity");
 }
 
@@ -25,6 +26,7 @@ export function accessIdentityServiceNodes(
 ): void {
   for (const node of nodes) {
     const written = Object.hasOwn(node.settings, "identity") ? node.settings.identity : undefined;
+
     if (written === undefined || written === caller) continue;
 
     reporter.error({

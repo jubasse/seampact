@@ -22,7 +22,9 @@ function deltaOf(api: DraftFixtureApi): JsonObject {
   const half = draftFixtureHalves(api, "access-delta").find(
     (item) => item.half === "access.identity",
   );
+
   if (half === undefined) throw new Error(`the access delta of ${api} has no access.identity`);
+
   return half.members;
 }
 
@@ -37,6 +39,7 @@ describe("access.identity catalogues", () => {
 
     expect(diagnostics).toEqual([]);
     const delta = deltaOf(api);
+
     for (const catalogue of CATALOGUES) expect({ ...draft[catalogue] }).toEqual(delta[catalogue]);
   });
 
@@ -49,12 +52,14 @@ describe("access.identity catalogues", () => {
 
     expect(diagnostics).toEqual([]);
     const expected = draftFixture(api, "after-tree");
+
     draftFixtureApply(expected, deltaOf(api));
     expect(draft).toEqual(expected);
   });
 
   test("the catalogues of the lane fixture fit the draft form", () => {
     const { draft, diagnostics } = accessIdentityCataloguesRun();
+
     expect(diagnostics).toEqual([]);
     expect(createDraftValidator().validate(draft)).toMatchObject({ valid: true });
   });

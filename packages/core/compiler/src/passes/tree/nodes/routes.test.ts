@@ -33,7 +33,9 @@ const at = (pointer: string): IrWriter.Origin => ({ layer: "api", pointer });
 
 const operation = (operations: readonly DraftOperation[], id: string): DraftOperation => {
   const found = operations.find((candidate) => candidate.id === id);
+
   if (found === undefined) throw new Error(`no operation ${id}`);
+
   return found;
 };
 
@@ -85,6 +87,7 @@ test("declared params: path, query reaching safe routes, headers, each name once
   });
   const filter = treeNodesObjectSchema("Filter", "/schemas/Filter", { state: text });
   const state = filter.properties[0];
+
   if (state !== undefined) state.optional = true;
 
   const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
@@ -108,6 +111,7 @@ test("declared params: path, query reaching safe routes, headers, each name once
     },
   ];
   const show = operation(draft.operations, "showProjects");
+
   expect(show.path).toBe("/v1/orgs/{orgId}/projects/{projectId}/show");
   expect(show.params).toEqual({
     path: pathParams,
@@ -247,6 +251,7 @@ surfaces:
 
   const json = "application/json";
   const item = { media: json, body: ref("Task"), headers: [], origin: at(`${TASKS}/item`) };
+
   expect(diagnostics).toEqual([]);
   expect(draft.operations.map(({ id, responses, format }) => ({ id, responses, format }))).toEqual([
     { id: "listTasks", responses: [{ status: 200, shape: "list", ...item }], format: "bare" },
@@ -392,6 +397,7 @@ surfaces:
 test("header-tagged unions: tree.schemas refuses them off the whole input, tree.nodes their tag header declared again", () => {
   // The real tree.schemas reports every route position but the whole input, so tree.nodes checks only the params.
   const schemas = treeSchemasRunApi(GITHUB.replace(/^\napi: .*\n/, "\n"));
+
   expect(schemas.diagnostics.map(({ rule, origin }) => ({ rule, origin }))).toEqual([
     { rule: "seampact/tree/union-header", origin: at(`${ROUTES}/replay/output`) },
     { rule: "seampact/tree/union-header", origin: at(`${ROUTES}/search/query/events?/items`) },
@@ -557,9 +563,11 @@ test("tree.nodes diagnostics are located: routes", () => {
     ["route-unique", `${ROUTES}/twice`],
     ["id-property", `${ROUTES}/notes/id/noteId`],
   ]);
+
   for (const diagnostic of diagnostics) {
     expect(diagnostic.message.endsWith(".")).toBe(true);
     expect(diagnostic.fix).not.toBe("");
+
     for (const origin of [
       diagnostic.origin,
       ...diagnostic.related.map((related) => related.origin),
@@ -659,6 +667,7 @@ surfaces:
     { rule: "seampact/tree/id-property", origin: at(`${ROUTES}/notes/id`) },
   ]);
   const get = operation(draft.operations, "getTask");
+
   expect(get.path).toBe("/v1/tasks/{taskId}");
   expect(get.resource).toEqual({ type: "tasks", idParam: "taskId", idProperty: "taskId" });
   expect(get.params?.path.map(({ name, origin }) => ({ name, origin }))).toEqual([
@@ -953,6 +962,7 @@ surfaces:
     const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
       treeSchemas,
     });
+
     return {
       operations: draft.operations.map(({ id, responses }) => ({
         id,
@@ -968,6 +978,7 @@ surfaces:
     responses: [{ status: 200, shape: "binary", media: undefined }],
   };
   const idless = [{ rule: "seampact/tree/collection-id", origin: at(`${ROUTES}/logs`) }];
+
   expect(statusesOf("")).toEqual({
     operations: [
       { id: "createTask", responses: [{ status: 201, shape: "item", media: json }] },

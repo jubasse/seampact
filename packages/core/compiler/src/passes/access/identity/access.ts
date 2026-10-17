@@ -85,6 +85,7 @@ export function accessIdentityAccess(
       fix: "Set 'identity: <name>' on it or an ancestor, or 'access: { public: \"<reason>\" }'.",
       pointer: route.node.pointer,
     });
+
     return undefined;
   }
 
@@ -106,7 +107,9 @@ export function accessIdentityCallerKinds(access: IrWriter.KnownAccess): IrWrite
 // Whether `node` sits strictly below `ancestor`: the identity set there makes the identity required again.
 function isBelow(node: TreeNode | undefined, ancestor: TreeNode): boolean {
   if (node === undefined || node === ancestor) return false;
+
   for (let at = node.parent; at !== undefined; at = at.parent) if (at === ancestor) return true;
+
   return false;
 }
 
@@ -118,6 +121,7 @@ function identitySource(
     // The authoring schema writes an identity as its name.
     if (typeof entry.value !== "string")
       throw new Error(`the identity set at ${entry.node.pointer} is not a name`);
+
     return {
       name: entry.value,
       pointer: accessIdentityPointer(entry.node.pointer, "identity"),
@@ -127,10 +131,12 @@ function identitySource(
 
   if (scope.caller === undefined) return undefined;
   const origin = scope.context.origin(ACCESS_IDENTITY_SERVICE_CALLER_POINTER);
+
   if (origin === undefined)
     throw new Error(
       `the service api has a caller identity, yet nothing at ${ACCESS_IDENTITY_SERVICE_CALLER_POINTER}`,
     );
+
   return { name: scope.caller, pointer: ACCESS_IDENTITY_SERVICE_CALLER_POINTER, origin };
 }
 
@@ -143,10 +149,12 @@ function identityOf(
   if (scope.caller !== undefined && source.name !== scope.caller) return undefined;
 
   const identity = scope.built.identities.get(source.name);
+
   if (identity !== undefined) return identity;
 
   // An identity left out of the catalogue for an error of its own is already reported.
   const written = accessIdentityObject(scope.context.raw.merged, "identities");
+
   if (written !== undefined && Object.hasOwn(written, source.name)) return undefined;
 
   scope.reporter.error({
@@ -155,6 +163,7 @@ function identityOf(
     fix: "Declare the identity under 'identities', or name a declared one.",
     pointer: source.pointer,
   });
+
   return undefined;
 }
 
@@ -170,6 +179,7 @@ function writtenAccess(
   const reason = written === undefined ? undefined : accessIdentityString(written, "public");
   const optionalReason =
     written === undefined ? undefined : accessIdentityString(written, "optionalAuth");
+
   if (written === undefined || (reason === undefined && optionalReason === undefined))
     throw new Error(`the access at ${pointer} is neither public nor optionalAuth`);
 
@@ -180,13 +190,16 @@ function writtenAccess(
       fix: "Remove 'access': the routes of a service api are identified by 'api.caller.identity'.",
       pointer,
     });
+
     return undefined;
   }
 
   const origin = pipelineCopy(entry.origin);
+
   if (reason !== undefined) return publicAccess(route, entry, { reason, origin, pointer }, scope);
 
   const onRefused = refusedCredential(accessIdentityString(written, "onRefused"), pointer);
+
   return optionalAccess(
     route,
     { reason: optionalReason ?? "", onRefused, origin, pointer },
@@ -201,7 +214,9 @@ function refusedCredential(
   pointer: string,
 ): IrWriter.RefusedCredential {
   if (written === undefined || written === "anonymous") return "anonymous";
+
   if (written === "reject") return "reject";
+
   throw new Error(`the access at ${pointer} has onRefused ${JSON.stringify(written)}`);
 }
 
@@ -227,11 +242,13 @@ function publicAccess(
         { pointer: accessIdentityPointer(route.node.pointer, "identity"), message: "the identity" },
       ],
     });
+
     return undefined;
   }
 
   // A public access does not depend on the direction; a relay route still leaves it out, as every member that may.
   if (route.safe === undefined) return {};
+
   return { access: { kind: "public", reason: written.reason, origin: written.origin } };
 }
 
@@ -257,10 +274,12 @@ function optionalAccess(
       pointer: written.pointer,
       related: [{ pointer: route.node.pointer, message: "a route it reaches" }],
     });
+
     return undefined;
   }
 
   const identity = identityOf(source, scope);
+
   if (identity === undefined) return undefined;
 
   // ADR 0013: a signed route always carries the signature, so an anonymous caller never reaches it.
@@ -272,12 +291,15 @@ function optionalAccess(
       pointer: written.pointer,
       related: [{ pointer: source.pointer, message: "the signed identity" }],
     });
+
     return undefined;
   }
 
   if (route.safe === undefined) return { identity };
   const schemes = credentialSchemes(route, route.safe, identity, "optional", scope);
+
   if (schemes === undefined) return undefined;
+
   return {
     access: {
       kind: "optional",
@@ -297,7 +319,9 @@ function requiredAccess(
   scope: AccessIdentityScope,
 ): AccessIdentityResolved | undefined {
   const identity = identityOf(source, scope);
+
   if (identity === undefined) return undefined;
+
   if (route.safe === undefined) return { identity };
 
   if (identity.kind === "signed")
@@ -312,7 +336,9 @@ function requiredAccess(
     };
 
   const schemes = credentialSchemes(route, route.safe, identity, "required", scope);
+
   if (schemes === undefined) return undefined;
+
   return {
     access: { kind: "identity", identity: identity.id, schemes, origin: source.origin },
     identity,
@@ -331,9 +357,11 @@ function credentialSchemes(
   const list = safe ? "read" : "write";
   const extra = access === "optional" && safe ? identity.schemes.optionalRead : [];
   const schemes = [...new Set([...identity.schemes[list], ...extra])].sort();
+
   if (schemes.length > 0) return schemes;
 
   const direction = safe ? "reads" : "writes";
+
   scope.reporter.error({
     rule: "access-schemes",
     message: `route '${route.id}' is a ${safe ? "read" : "write"} under identity '${identity.id}', which accepts no scheme on ${direction}`,
@@ -346,5 +374,6 @@ function credentialSchemes(
       },
     ],
   });
+
   return undefined;
 }

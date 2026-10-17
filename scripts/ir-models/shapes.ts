@@ -25,6 +25,7 @@ export function shapeOfDefinition(definition: Definition): Shape | undefined {
         kind: "struct",
         members: definition.members.flatMap((member) => {
           const shape = shapeOfType(member.type);
+
           return shape === undefined ? [] : [{ name: member.name, shape }];
         }),
       };
@@ -53,12 +54,16 @@ function shapeOfType(type: TypeRef): Shape | undefined {
       return { kind: "named", definition: type.definition };
     case "array": {
       const items = shapeOfType(type.items);
+
       return items === undefined ? undefined : { kind: "items", of: items };
     }
+
     case "map": {
       const values = shapeOfType(type.values);
+
       return values === undefined ? undefined : { kind: "values", of: values };
     }
+
     default:
       return undefined;
   }

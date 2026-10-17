@@ -18,8 +18,10 @@ test("workspace.apis and workspace.shared written in an included file resolve ag
     },
     "workspace.yaml",
   );
+
   expect(r.diagnostics).toEqual([]);
   const api = r.workspace.apis[0];
+
   expect(api?.layers.map((l) => [l.layer, l.file])).toEqual([
     ["shared", "sub/shared.yaml"],
     ["api", "sub/a.yaml"],
@@ -39,6 +41,7 @@ test("extends, packs and pack extends written in an included file resolve agains
     },
     "api.yaml",
   );
+
   expect(r.diagnostics).toEqual([]);
   expect(r.workspace.apis[0]?.layers.map((l) => [l.layer, l.file])).toEqual([
     ["pack:q", "parts/packs/m/q.yaml"],
@@ -61,6 +64,7 @@ test("a pack whose manifest comes from an include is named by it", () => {
     },
     "api.yaml",
   );
+
   expect(r.diagnostics.map((d) => [d.rule, d.origin.layer])).toEqual([
     ["seampact/load/scalar-type", "pack:p"],
     ["seampact/load/pack-name-clash", "pack:p"],

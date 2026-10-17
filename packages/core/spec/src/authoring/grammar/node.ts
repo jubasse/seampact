@@ -142,6 +142,7 @@ function ops(kind: "collection" | "single"): JsonSchema {
   const props = Object.fromEntries(
     names.map((op) => [op, kw(A2(6), ref("node", op === "batch" ? "batchOp" : "op"))]),
   );
+
   return {
     description: `The ops shorthand: a list of ${names.join(", ")}, or a mapping from op to its settings (ADR 0002 section 6).`,
     ...when({ type: "array" }, list({ enum: names }), object({ props })),
@@ -198,6 +199,7 @@ export function nodeDefs(): Record<string, JsonSchema> {
       }),
       "The named children: a mapping from child name to node.",
     );
+
   return {
     // A surface root's child: a node or a relay route (ADR 0002 section 6).
     surfaceChild: {
@@ -573,6 +575,7 @@ export function nodeErrorsDefs(): Record<string, JsonSchema> {
     ),
     for: kw(A2(11), oneOfValues("all", "reads", "writes")),
   };
+
   return {
     attachment: {
       description:

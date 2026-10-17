@@ -55,11 +55,13 @@ export function treeNodesFields(
   direction: IrWriter.Direction,
 ): TreeNodesFields {
   if (typeof written === "string") return namedSchemaFields(site, written, pointer, direction);
+
   if (!treeNodesIsObject(written)) return { fields: [], complete: true };
 
   const fields = Object.keys(written).map((key): TreeNodesField => {
     const fieldPointer = treeNodesPointer(pointer, key);
     const optional = key.endsWith(OPTIONAL_SUFFIX);
+
     return {
       name: optional ? key.slice(0, -OPTIONAL_SUFFIX.length) : key,
       required: !optional,
@@ -68,6 +70,7 @@ export function treeNodesFields(
       wirePointer: fieldPointer,
     };
   });
+
   return { fields, complete: true };
 }
 
@@ -79,11 +82,14 @@ function namedSchemaFields(
   direction: IrWriter.Direction,
 ): TreeNodesFields {
   const use = site.context.treeSchemas.typeUse(pointer, direction);
+
   if (use === undefined) return { fields: [], complete: false };
 
   const schema = treeNodesObjectOf(site.draft, use);
+
   if (schema === undefined) {
     const origin = treeNodesNodeOrigin(site.context.origin(pointer) ?? site.node.origin);
+
     site.once(
       `fields-schema:${pointer}`,
       treeNodesError({
@@ -93,6 +99,7 @@ function namedSchemaFields(
         fix: "Name an object schema, or write the fields as a map.",
       }),
     );
+
     return { fields: [], complete: false };
   }
 
@@ -106,6 +113,7 @@ function namedSchemaFields(
       wirePointer: treeNodesPointer(schemaPointer, "properties", property.name),
     }),
   );
+
   return { fields, complete: true };
 }
 
@@ -131,6 +139,7 @@ export function treeNodesFieldTravels(
 
   const innermost = treeNodesInnermost(field.type);
   const textless = innermost === undefined ? undefined : TEXTLESS_KINDS[innermost.kind];
+
   if (textless !== undefined) {
     site.once(
       `opaque-position:${key}`,
@@ -141,6 +150,7 @@ export function treeNodesFieldTravels(
         fix: "Give it a schema with a text form, or move it into the body.",
       }),
     );
+
     return false;
   }
 
@@ -152,6 +162,8 @@ export function treeNodesInnermost(
   use: IrWriter.TypeUse | undefined,
 ): IrWriter.TypeUse | undefined {
   let at = use;
+
   while (at?.kind === "array") at = at.items;
+
   return at;
 }

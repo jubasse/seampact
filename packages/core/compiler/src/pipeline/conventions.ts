@@ -183,32 +183,42 @@ export function pipelineConventionSchemaLeaves(): ReadonlyMap<string, RegExp | u
   const leaves = new Map<string, RegExp | undefined>();
   const walk = (schema: unknown, prefix: string): void => {
     const properties = isRecord(schema) ? schema.properties : undefined;
+
     if (!isRecord(properties)) return;
+
     for (const [key, item] of Object.entries(properties)) {
       if (key === "$include" || !isRecord(item)) continue;
       const path = prefix === "" ? key : `${prefix}.${key}`;
+
       if (item.type === "object" && item.additionalProperties === false) walk(item, path);
       else {
         const names = item.propertyNames;
         const pattern = isRecord(names) ? names.pattern : undefined;
+
         leaves.set(path, typeof pattern === "string" ? new RegExp(pattern) : undefined);
       }
     }
   };
+
   const defs = authoringSchemas().conventions.$defs;
+
   walk(isRecord(defs) ? defs.conventions : undefined, "");
+
   if (leaves.size === 0) throw new Error("the conventions authoring schema has no leaf");
   schemaLeaves = leaves;
+
   return leaves;
 }
 
 // Whether `path` is a schema leaf, or one entry of a map leaf whose key its pattern accepts.
 function isConventionPath(path: string): boolean {
   const leaves = pipelineConventionSchemaLeaves();
+
   if (leaves.has(path)) return true;
   const dot = path.lastIndexOf(".");
   const entries = dot === -1 ? undefined : leaves.get(path.slice(0, dot));
   const key = path.slice(dot + 1);
+
   return entries !== undefined && key !== "$include" && entries.test(key);
 }
 
@@ -219,19 +229,27 @@ export function pipelineConventions(raw: PassReadonly<RawApi>): ResolvedConventi
   const get = (path: string, depth: number): ConventionReading | undefined => {
     const segments = path.split(".");
     const value = isJsonObject(written) ? jsonAt(written, segments) : undefined;
+
     if (value !== undefined) {
       const origin = pipelineOrigin(raw, pointerBelow("/conventions", ...segments));
+
       return Object.freeze(
         origin === undefined ? { value } : { value, origin: Object.freeze(origin) },
       );
     }
+
     const fallback = DEFAULTS.get(path);
+
     if (fallback === undefined || depth > DEFAULTS.size) return undefined;
+
     if ("from" in fallback) return get(fallback.from, depth + 1);
+
     if (fallback.within !== undefined && get(fallback.within, depth + 1) === undefined)
       return undefined;
+
     return Object.freeze({ value: fallback.value });
   };
+
   return Object.freeze({
     get: (path: ConventionPath) => {
       if (!isConventionPath(path))
@@ -239,6 +257,7 @@ export function pipelineConventions(raw: PassReadonly<RawApi>): ResolvedConventi
           `conventions.${path} is no leaf of the conventions schema (ADR 0002 section 13): read a leaf such as ` +
             "bodyLimit or idempotency.header, or an entry such as errors.derived.notFound",
         );
+
       return get(path, 0);
     },
   });

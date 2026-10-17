@@ -35,17 +35,23 @@ const compiled = new Map<ValidateDocumentKind, ValidateFunction>();
 // The schemas are added once and each kind compiled on first use.
 function validatorFor(kind: ValidateDocumentKind): ValidateFunction {
   const cached = compiled.get(kind);
+
   if (cached !== undefined) return cached;
+
   if (ajv === undefined) {
     ajv = new Ajv2020({ strict: true, allErrors: true, verbose: true });
     const schemas = authoringSchemas();
+
     for (const file of AUTHORING_FILES) {
       ajv.addSchema({ ...schemas[file], $id: BASE_URI + authoringSchemaFileName(file) });
     }
   }
+
   const validate = ajv.getSchema(BASE_URI + authoringSchemaFileName(kind));
+
   if (validate === undefined) throw new Error(`no authoring schema for ${kind}`);
   compiled.set(kind, validate);
+
   return validate;
 }
 
@@ -53,14 +59,18 @@ function validatorFor(kind: ValidateDocumentKind): ValidateFunction {
 // layer, then pointer, then rule, so its output is stable on its own.
 function sortDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
   const key = (d: Diagnostic): string[] => [d.origin.layer, d.origin.pointer, d.rule, d.message];
+
   return [...diagnostics].sort((a, b) => {
     const ka = key(a);
     const kb = key(b);
+
     for (let i = 0; i < ka.length; i++) {
       const x = ka[i] ?? "";
       const y = kb[i] ?? "";
+
       if (x !== y) return x < y ? -1 : 1;
     }
+
     return 0;
   });
 }
@@ -72,7 +82,9 @@ export function validateDocument(
   layer: FileLayerId,
 ): Diagnostic[] {
   const validate = validatorFor(kind);
+
   if (validate(tree)) return [];
+
   return sortDiagnostics(
     convertErrors(validate.errors ?? [], { layer, isPackRoot: kind === "pack" }),
   );
@@ -108,15 +120,19 @@ export function validateWorkspace(workspace: RawWorkspace): WorkspaceDiagnostics
   const seen = new Set<string>();
   const apis = workspace.apis.map((api) => {
     const diagnostics: Diagnostic[] = [];
+
     for (const layer of api.layers) {
       const id = `${layer.layer}\u0000${layer.file}`;
+
       if (seen.has(id)) continue;
       seen.add(id);
       diagnostics.push(...validateLayer(layer));
     }
+
     return { api: api.name, diagnostics: sortDiagnostics(diagnostics) };
   });
   const entry = workspace.entry;
+
   return {
     workspace: entry ? validateDocument(schemaKindOf(entry.layer), entry.tree, entry.layer) : [],
     apis,

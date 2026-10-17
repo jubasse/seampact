@@ -10,8 +10,10 @@ export const PACKAGES_DIR = "packages";
  */
 export function packageDirectories(root: string): string[] {
   const found: string[] = [];
+
   for (const name of sortedSubdirectories(join(root, PACKAGES_DIR))) {
     const directory = `${PACKAGES_DIR}/${name}`;
+
     if (existsSync(join(root, directory, "package.json"))) {
       found.push(directory);
       continue;
@@ -19,9 +21,11 @@ export function packageDirectories(root: string): string[] {
 
     for (const member of sortedSubdirectories(join(root, directory))) {
       const memberDirectory = `${directory}/${member}`;
+
       if (existsSync(join(root, memberDirectory, "package.json"))) found.push(memberDirectory);
     }
   }
+
   return found;
 }
 

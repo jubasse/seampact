@@ -23,20 +23,24 @@ function spy(reader: LoadReader) {
     ascent: reader.ascent,
     listDir: (d) => {
       listed.push(d);
+
       return reader.listDir(d);
     },
     realPath: (f) => reader.realPath(f),
     readText: (...args) => {
       reads.push(args[0]);
+
       return reader.readText(...args);
     },
   };
+
   return { reader: wrapped, reads, listed };
 }
 
 function run(files: Record<string, string>, entry = "api.yaml", options?: LoadMemoryOptions) {
   return loadWorkspace({ reader: loadMemoryReader(files, options), entry });
 }
+
 const rules = (r: ReturnType<typeof run>) =>
   r.diagnostics.map((d) => d.rule.replace("seampact/load/", ""));
 const printed = (r: ReturnType<typeof run>) =>
@@ -52,6 +56,7 @@ test("C-1 an authored __proto__ key never reaches Object.prototype", () => {
     "api.yaml": "api: { name: t }\npacks: [./p.yaml]\nextensions:\n  __proto__: { polluted: 1 }\n",
     "p.yaml": "pack: { name: p, version: 1.0.0 }\nextensions:\n  __proto__: { evil: 1 }\n",
   });
+
   expect(({} as Record<string, unknown>).polluted).toBeUndefined();
   expect(({} as Record<string, unknown>).evil).toBeUndefined();
   expect(rules(r)).toEqual(["reserved-key", "reserved-key"]);
@@ -77,8 +82,10 @@ test("C-1 constructor and prototype are refused as keys anywhere, data included"
       "",
     ].join("\n"),
   });
+
   expect(rules(r)).toEqual(["reserved-key", "reserved-key", "reserved-key"]);
   const merged = must(r.workspace.apis[0]).merged;
+
   expect(Object.keys(merged.schemas as object)).toEqual(["T"]);
   expect(({} as Record<string, unknown>).polluted).toBeUndefined();
 });
@@ -92,9 +99,11 @@ test("C-1 reserved api names are refused", () => {
     },
     "workspace.yaml",
   );
+
   expect(rules(ws)).toEqual(["reserved-key"]);
   expect(ws.workspace.apis.map((a) => a.name)).toEqual(["ok"]);
   const single = run({ "api.yaml": "api: { name: constructor }\n" });
+
   expect(rules(single)).toEqual(["reserved-key"]);
   expect(single.workspace.apis).toEqual([]);
 });
@@ -105,11 +114,13 @@ test("C-1 a $file JSON drops and reports a reserved key, and its objects have no
       "api: { name: t }\nsurfaces:\n  app:\n    routes:\n      r:\n        method: get\n        examples:\n          one: { status: 200, value: { $file: ./ex.json } }\n",
     "ex.json": '{"a": {"__proto__": {"polluted": 1}, "b": 1}}',
   });
+
   expect(rules(r)).toEqual(["reserved-key"]);
   const merged = must(r.workspace.apis[0]).merged as {
     surfaces: { app: { routes: { r: { examples: { one: { value: object } } } } } };
   };
   const value = merged.surfaces.app.routes.r.examples.one.value as { a: object };
+
   expect(JSON.stringify(value)).toBe('{"a":{"b":1}}');
   expect(Object.getPrototypeOf(value.a)).toBeNull();
   expect(({} as Record<string, unknown>).polluted).toBeUndefined();
@@ -118,6 +129,7 @@ test("C-1 a $file JSON drops and reports a reserved key, and its objects have no
 test("C-1 merged trees and visibility have no prototype", () => {
   const r = run({ "api.yaml": "api: { name: t }\nconventions: { paging: { maxLimit: 1 } }\n" });
   const api = must(r.workspace.apis[0]);
+
   expect(Object.getPrototypeOf(api.merged)).toBeNull();
   expect(Object.getPrototypeOf(api.merged.conventions)).toBeNull();
   expect(Object.getPrototypeOf(api.visibility)).toBeNull();
@@ -153,6 +165,7 @@ test("C-4 a package name that leaves node_modules is refused before any read", (
       loadMemoryReader({ "api.yaml": `api: { name: t }\npacks: ['${name}']\n`, ...victim }),
     );
     const r = loadWorkspace({ reader, entry: "api.yaml" });
+
     expect(rules(r), name).toEqual(["pack-name"]);
     expect(reads, name).toEqual(["api.yaml"]);
     expect(JSON.stringify(r.workspace), name).not.toContain("stolen");
@@ -165,6 +178,7 @@ test("C-4 a pack extends naming a bad package is refused too", () => {
     "p.yaml": "pack: { name: p, version: 1.0.0, extends: ['x/../../../../victim/proj'] }\n",
     ...victim,
   });
+
   expect(rules(r)).toEqual(["pack-name"]);
 });
 
@@ -185,6 +199,7 @@ test("C-4 seampact.pack is a path inside the package", () => {
       }),
     );
     const r = loadWorkspace({ reader, entry: "api.yaml" });
+
     expect(rules(r), entry).toEqual([rule]);
     expect(reads, entry).toEqual(["api.yaml", "node_modules/@acme/p/package.json"]);
   }
@@ -206,6 +221,7 @@ test("nit (iteration 2): a package.json linked out of its package is refused, ne
     ),
   );
   const r = loadWorkspace({ reader, entry: "api.yaml" });
+
   expect(rules(r)).toEqual(["path-escape"]);
   expect(reads).toEqual(["api.yaml"]);
   expect(printed(r)).not.toContain("elsewhere");
@@ -217,12 +233,14 @@ test("C-5 an absolute, drive or UNC path is never inside", () => {
       expect(isInside(boundary, p), `${boundary} ${p}`).toBe(false);
     }
   }
+
   expect(isInside(".", "a/b")).toBe(true);
   expect(isInside("node_modules/x", "node_modules/x/a")).toBe(true);
 });
 
 test("C-5 a real path on another drive or share stays absolute, so it is outside", () => {
   const w = path.win32;
+
   expect(loadRootRelative("C:\\ws", "D:\\x\\y.yaml", w)).toBe("D:/x/y.yaml");
   expect(loadRootRelative("C:\\ws", "\\\\host\\share\\y.yaml", w)).toBe("//host/share/y.yaml");
   expect(isInside(".", loadRootRelative("C:\\ws", "D:\\x\\y.yaml", w))).toBe(false);
@@ -251,6 +269,7 @@ test("nit: no directory is listed through a link that leaves the root, nor is it
     ),
   );
   const r = loadWorkspace({ reader, entry: "api.yaml" });
+
   expect(rules(r)).toEqual(["path-escape"]);
   expect(listed.filter((d) => d.startsWith("out"))).toEqual([]);
   expect(printed(r)).not.toContain("secret");
@@ -264,6 +283,7 @@ test("nit: the checked real path is the one read", () => {
     ),
   );
   const r = loadWorkspace({ reader, entry: "api.yaml" });
+
   expect(r.diagnostics).toEqual([]);
   expect(reads).toEqual(["api.yaml", "real.yaml"]);
 });
@@ -272,21 +292,25 @@ function fanOut(n: number): Record<string, string> {
   const files: Record<string, string> = {
     "api.yaml": "api: { name: t }\nx:\n  $include: ./f0.yaml\n",
   };
+
   for (let i = 0; i < n; i++) {
     files[`f${i}.yaml`] =
       i + 1 < n ? `a:\n  $include: ./f${i + 1}.yaml\nb:\n  $include: ./f${i + 1}.yaml\n` : "z: 1\n";
   }
+
   return files;
 }
 
 test("C-6 an include fan-out stops at the expansion limit", () => {
   const r = run(fanOut(18));
+
   expect(rules(r)).toEqual(["expansion-limit"]);
   expect(r.diagnostics[0]?.message).toContain(`more than ${LOAD_MAX_WORK} units of work`);
 }, 30_000);
 
 test("C-6 an exponential include fan-out ends quickly", () => {
   const r = withinCpuBudget(LINEAR_CPU_BUDGET_MILLISECONDS, () => run(fanOut(30)));
+
   expect(rules(r)).toEqual(["expansion-limit"]);
 }, 30_000);
 
@@ -299,6 +323,7 @@ test("C-6 a cycle through a directory link is found on the real path", () => {
     "api.yaml",
     { links: { loop: "." } },
   );
+
   expect(rules(r)).toEqual(["include-cycle"]);
   expect(r.diagnostics[0]?.message).toContain("a.yaml -> loop/a.yaml");
 });
@@ -309,14 +334,17 @@ function deepChain(files: number, depth: number): Record<string, string> {
   const out: Record<string, string> = {
     "api.yaml": "api: { name: t }\nx:\n  $include: ./f0.yaml\n",
   };
+
   for (let i = 0; i < files; i++) {
     out[`f${i}.yaml`] = block(i + 1 < files ? `$include: ./f${i + 1}.yaml` : "z: 1");
   }
+
   return out;
 }
 
 test("C-8 nesting deeper than the limit, through includes, is a located error, not a crash", () => {
   const r = run(deepChain(50, 60));
+
   expect(rules(r)).toEqual(["too-deep"]);
   expect(printed(r)).toMatch(/^f4\.yaml:\d+:\d+: error seampact\/load\/too-deep: /);
 });
@@ -324,6 +352,7 @@ test("C-8 nesting deeper than the limit, through includes, is a located error, n
 test("C-8 a file larger than the byte cap is refused unread", () => {
   const big = `k: '${"x".repeat(4 * 1024 * 1024)}'\n`;
   const r = run({ "api.yaml": "api: { name: t }\nx:\n  $include: ./big.yaml\n", "big.yaml": big });
+
   expect(rules(r)).toEqual(["file-too-large"]);
   expect(printed(r)).toContain("big.yaml:1:1: error seampact/load/file-too-large");
 });
@@ -334,11 +363,13 @@ test("C-8 deep JSON data is bounded too", () => {
     "api.yaml": "api: { name: t }\nexamples:\n  one: { value: { $file: ./deep.json } }\n",
     "deep.json": `${"[".repeat(n)}${"]".repeat(n)}`,
   });
+
   expect(rules(r)).toEqual(["too-deep"]);
 });
 
 test("C-9 an authored key with escape sequences prints inert", () => {
   const r = run({ "api.yaml": 'api: { name: t }\nx:\n  "\\e[2J": 1\n  "\\e[2J": 2\n' });
+
   expect(rules(r)).toEqual(["duplicate-key"]);
   expect(printed(r)).toContain("key '\\u001B[2J' is defined twice");
   expect(printed(r)).not.toContain(String.fromCharCode(27));

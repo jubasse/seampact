@@ -37,12 +37,14 @@ const ESCAPE_TEXT = /^[A-Za-z0-9_]+$/;
  */
 export function styleOf(role: Role, language: Language): Style | undefined {
   assertLanguage(language);
+
   switch (role) {
     case "operation":
     case "member":
       return "camel";
     case "enumMember":
       if (language === "typescript") return undefined;
+
       return language === "php" ? "pascal" : "upperSnake";
     case "schema":
     case "input":
@@ -63,6 +65,7 @@ export function styleOf(role: Role, language: Language): Style | undefined {
     default: {
       // ADR 0005 open enums: a role this version does not know is never guessed.
       const unknown: never = role;
+
       throw new Error(`unknown naming role ${JSON.stringify(unknown)}`);
     }
   }
@@ -70,18 +73,23 @@ export function styleOf(role: Role, language: Language): Style | undefined {
 
 function capitalize(word: string): string {
   const first = word.charCodeAt(0);
+
   // Segments are `[a-z0-9]+`; a digit has no uppercase form and stays as it is.
   if (first >= 97 && first <= 122) return String.fromCharCode(first - 32) + word.slice(1);
+
   return word;
 }
 
 function join(words: readonly string[], style: Style): string {
   let out = "";
+
   for (let i = 0; i < words.length; i++) {
     const word = words[i] as string;
+
     if (style === "upperSnake") out += (i > 0 ? "_" : "") + word.toUpperCase();
     else out += style === "camel" && i === 0 ? word : capitalize(word);
   }
+
   return out;
 }
 
@@ -91,15 +99,19 @@ function isDigit(code: number): boolean {
 
 function escapeOf(options: IdentifierOptions): { position: "suffix" | "prefix"; text: string } {
   const spec = options.escape ?? { position: "suffix", text: "_" };
+
   if (spec.position !== "suffix" && spec.position !== "prefix") {
     throw new Error(`escape position is suffix or prefix, got ${JSON.stringify(spec.position)}`);
   }
+
   if (typeof spec.text !== "string" || !ESCAPE_TEXT.test(spec.text)) {
     throw new Error(`escape text is [A-Za-z0-9_]+, got ${JSON.stringify(spec.text)}`);
   }
+
   if (spec.position === "prefix" && isDigit(spec.text.charCodeAt(0))) {
     throw new Error("a prefix escape cannot start with a digit");
   }
+
   return spec;
 }
 
@@ -119,23 +131,31 @@ export function identifier(
   assertLanguage(language);
   assertName(name);
   let style = styleOf(name.role, language);
+
   if (style === undefined) return undefined;
+
   if (name.role === "enumMember" && options.enumCase !== undefined) {
     if (!STYLES.includes(options.enumCase)) {
       throw new Error(
         `enumCase is pascal, camel or upperSnake, got ${JSON.stringify(options.enumCase)}`,
       );
     }
+
     style = options.enumCase;
   }
+
   const spec = escapeOf(options);
   const words = [...name.segments, ...suffixWords(name, options.suffixes)];
+
   if (words.length === 0) throw new Error(`a ${name.role} name without segment has no identifier`);
   let out = join(words, style);
+
   if (isDigit(out.charCodeAt(0))) out = `_${out}`;
+
   if (isReserved(out, language, name.role)) {
     out = spec.position === "prefix" ? spec.text + out : out + spec.text;
   }
+
   return out;
 }
 
@@ -150,10 +170,13 @@ export function operationId(
   idCase: OperationIdCase = "camel",
 ): string {
   assertSegments(segments);
+
   if (segments.length === 0) throw new Error("an operation id needs at least one segment");
+
   if (idCase !== "camel" && idCase !== "snake") {
     throw new Error(`operation id case is camel or snake, got ${JSON.stringify(idCase)}`);
   }
+
   return idCase === "snake" ? segments.join("_") : join(segments, "camel");
 }
 
@@ -167,6 +190,8 @@ export function canonicalId(
   options: { operationIdCase?: OperationIdCase } = {},
 ): string | undefined {
   assertName(name);
+
   if (name.role === "operation") return operationId(name.segments, options.operationIdCase);
+
   return identifier(name, "typescript");
 }

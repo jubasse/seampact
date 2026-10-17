@@ -29,9 +29,12 @@ function rawApi(api: string, shared: string): RawApi {
     }),
     entry: "workspace.yaml",
   });
+
   expect(loaded.diagnostics).toEqual([]);
   const raw = loaded.workspace.apis[0];
+
   if (raw === undefined) throw new Error("no api");
+
   return raw;
 }
 
@@ -42,6 +45,7 @@ test("conventions read written values with their origins, else the core defaults
       "conventions:\n  bodyLimit: 2MiB\n  paging: { maxLimit: 100, default: cursor }\n",
     ),
   );
+
   // The api's leaf wins over the shared file's, and keeps the shared file's other leaves.
   expect(conventions.get("paging.maxLimit")).toEqual({
     value: 50,
@@ -69,6 +73,7 @@ test("conventions read written values with their origins, else the core defaults
   const idempotent = pipelineConventions(
     rawApi("conventions:\n  idempotency: { header: Idempotency-Key }\n", "{}\n"),
   );
+
   expect(idempotent.get("idempotency.methods")).toEqual({
     value: ["post", "put", "patch", "delete"],
   });
@@ -77,6 +82,7 @@ test("conventions read written values with their origins, else the core defaults
 test("conventions read only a leaf of the conventions schema, or an entry of a map leaf", () => {
   const conventions = pipelineConventions(rawApi("", "{}\n"));
   const refused = (path: string) => () => conventions.get(path as ConventionPath);
+
   // A typo, an object, an entry below a value leaf, a key a map leaf refuses, `$include`, nothing at all.
   for (const path of [
     "bodylimit",
@@ -99,9 +105,12 @@ test("conventions read only a leaf of the conventions schema, or an entry of a m
 
 test("the convention paths equal the conventions schema's leaves", () => {
   const leaves = pipelineConventionSchemaLeaves();
+
   expect([...pipelineConventionLeaves].sort()).toEqual([...leaves.keys()].sort());
   const maps = [...leaves].flatMap(([path, entries]) => (entries === undefined ? [] : [path]));
+
   expect(maps.sort()).toEqual(["cache.families", "errors.derived"]);
+
   for (const role of derivationRoles)
     expect(leaves.get("errors.derived")?.test(role.role), role.role).toBe(true);
 });
@@ -128,6 +137,7 @@ function adrTable(source: string, heading: string, header: string): string[][] {
   const lines = section.split("\n");
   const start = lines.findIndex((line) => line.startsWith(header));
   const rows: string[][] = [];
+
   for (const line of lines.slice(start + 2)) {
     if (!line.startsWith("|")) break;
     rows.push(
@@ -137,6 +147,7 @@ function adrTable(source: string, heading: string, header: string): string[][] {
         .map((cell) => cell.trim().replaceAll("\\|", "|")),
     );
   }
+
   return rows;
 }
 
@@ -149,6 +160,7 @@ test("every convention default traces to the ADR 0002 section 13 table", () => {
     }),
   );
   const ops = adrTable(ADR_0002_SECTION_6, "#### The `ops` shorthand", "| Op | On |");
+
   expect(table.length).toBeGreaterThan(20);
   const rowOf = (path: string) =>
     table
@@ -161,30 +173,40 @@ test("every convention default traces to the ADR 0002 section 13 table", () => {
 
   for (const entry of pipelineConventionDefaults) {
     const row = rowOf(entry.path);
+
     expect(row, entry.path).toBeDefined();
+
     if (row === undefined) continue;
+
     if ("from" in entry) {
       expect(row.fallback, entry.path).toContain(`\`${entry.from.split(".").pop()}\``);
       continue;
     }
+
     // The default column states the default; the `idempotency.*` ones, under an unset key, are in its meaning.
     const text = entry.within === undefined ? row.fallback : row.meaning;
     const member = entry.path.slice(row.key.length + 1);
+
     if (entry.within !== undefined) expect(row.fallback, entry.path).toMatch(/^unset/);
     const value = entry.value;
+
     // A default stated in prose names its member: "`enforce` is `boundary`".
     if (text.includes(`\`${member}\` is `))
       expect(text, entry.path).toContain(`\`${member}\` is \`${String(value)}\``);
+
     if (entry.path.startsWith("ops.")) {
       // The defaults of the `ops` table of section 6: method and path, and the success status.
       const [, op = "", field = ""] = entry.path.split(".");
       const [, , route = "", , , success = ""] = ops.find(([name]) => name === `\`${op}\``) ?? [];
+
       if (field === "method")
         expect(route, entry.path).toContain(`${String(value).toUpperCase()} /`);
+
       if (field === "path")
         expect(route.split(",")[0], entry.path).toMatch(
           value === "" ? /\/tasks(\/\{taskId\})?`$/ : /\/batch`$/,
         );
+
       if (field === "status")
         expect(success, entry.path).toMatch(new RegExp(`^\`${String(value)}\``));
     } else if (entry.path.startsWith("errors.derived.")) {
@@ -204,6 +226,7 @@ test("every convention default traces to the ADR 0002 section 13 table", () => {
       expect(row.fallback, entry.path).toMatch(/^empty/);
     }
   }
+
   // Every row that states a default has one in the table, under its key.
   for (const row of table.filter((r) => !/^(none|unset)/.test(r.fallback)))
     expect(
@@ -216,22 +239,28 @@ test("every convention default traces to the ADR 0002 section 13 table", () => {
 
 test("every convention default is a valid convention value", () => {
   const tree: JsonObject = {};
+
   for (const entry of pipelineConventionDefaults) {
     if (!("value" in entry)) continue;
     const segments = entry.path.split(".");
     let at = tree;
+
     for (const segment of segments.slice(0, -1)) {
       const next = at[segment];
+
       if (typeof next === "object" && next !== null && !Array.isArray(next)) {
         at = next;
       } else {
         const fresh: JsonObject = {};
+
         at[segment] = fresh;
         at = fresh;
       }
     }
+
     at[segments[segments.length - 1] as string] = structuredClone(entry.value) as JsonValue;
   }
+
   expect(validateDocument("conventions", tree, "api")).toEqual([]);
   expect(Object.isFrozen(pipelineConventionDefaults[0])).toBe(true);
 });
@@ -243,14 +272,18 @@ test("unit readers follow the grammar", () => {
   expect(pipelineParseDuration("150ms")).toBe(150);
   expect(pipelineParseDuration("24h")).toBe(86_400_000);
   expect(pipelineParseDuration("2d")).toBe(172_800_000);
+
   for (const text of ["1 MiB", "1GiB", "-1s", "1.5s", "s", ""]) {
     expect(pipelineParseSize(text)).toBeUndefined();
     expect(pipelineParseDuration(text)).toBeUndefined();
   }
+
   expect(pipelineParseSize(`${"9".repeat(20)}MiB`)).toBeUndefined();
+
   // Each reader knows every unit its grammar pattern accepts, and no other.
   for (const kind of ["size", "duration"] as const) {
     const units = /\(\?:([^)]*)\)/.exec(pipelineUnitPattern(kind))?.[1]?.split("|");
+
     expect(units?.sort()).toEqual(Object.keys(pipelineUnits[kind]).sort());
   }
 });

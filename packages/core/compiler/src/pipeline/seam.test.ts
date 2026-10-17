@@ -41,8 +41,10 @@ const STAGES: readonly (readonly [string, string, () => Promise<Record<string, u
 function valueImports(file: string): string[] {
   const text = readFileSync(join(SRC, file), "utf8");
   const specifiers: string[] = [];
+
   for (const match of text.matchAll(/^(?:import|export)\s+(?!type\b)[^;]*?from\s+"(\.[^"]+)"/gms))
     if (match[1] !== undefined) specifiers.push(match[1]);
+
   return specifiers;
 }
 
@@ -63,15 +65,19 @@ function reach(file: string): Set<string> {
   const visit = (at: string): void => {
     if (seen.has(at)) return;
     seen.add(at);
+
     for (const specifier of valueImports(at)) visit(resolve(at, specifier));
   };
+
   visit(file);
+
   return seen;
 }
 
 describe("the seam barrel keeps stage modules out of an import cycle", () => {
   test("the seam reaches neither the orchestrator, the registry nor any stage", () => {
     const reached = [...reach("pipeline/seam.ts")];
+
     expect(reached).toContain("pipeline/guard.ts");
     const outside = reached.filter(
       (file) =>
@@ -80,13 +86,16 @@ describe("the seam barrel keeps stage modules out of an import cycle", () => {
         file === "pipeline/registry.ts" ||
         /^(passes|finalize|workspace)\//.test(file),
     );
+
     expect(outside).toEqual([]);
   });
 
   test.each(STAGES)("%s imports the pipeline through the seam only", (file) => {
     const text = readFileSync(join(SRC, file), "utf8");
     const pipeline = [...text.matchAll(/from\s+"([^"]*pipeline\/[^"]*)"/g)].map((m) => m[1]);
+
     expect(pipeline.length).toBeGreaterThan(0);
+
     for (const specifier of pipeline) expect(specifier).toMatch(/\/pipeline\/seam\.js$/);
     expect(text).toContain("`pipeline/seam.js` only");
   });
@@ -95,6 +104,7 @@ describe("the seam barrel keeps stage modules out of an import cycle", () => {
   // value import from a module that reaches a barrel fails here.
   test.each(STAGES)("%s reaches no barrel, orchestrator or registry", (file) => {
     const reached = [...reach(file)];
+
     expect(reached.filter((module) => CYCLE_MODULES.includes(module))).toEqual([]);
   });
 
@@ -102,9 +112,11 @@ describe("the seam barrel keeps stage modules out of an import cycle", () => {
   test.each(STAGES)("%s loads first in a fresh module graph", async (_file, name, load) => {
     vi.resetModules();
     const stage = await load();
+
     expect(stage[name]).toBeDefined();
     const pipeline = await import("./index.js");
     const parts = pipeline.pipelineDefaultParts();
+
     expect([
       ...Object.values(parts.passes),
       parts.link,
@@ -117,6 +129,7 @@ describe("the seam barrel keeps stage modules out of an import cycle", () => {
     vi.resetModules();
     const index = await import("../index.js");
     const parts = index.pipelineDefaultParts();
+
     expect(parts.passes["tree.schemas"]).toBe(index.treeSchemasPass);
     expect(parts.link).toBe(index.linkPass);
     expect(parts.finalize).toBe(index.finalizeIr);

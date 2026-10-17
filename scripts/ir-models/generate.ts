@@ -45,20 +45,25 @@ export function generateIrModels(
     irRevision: IR_REVISION,
     regenerateCommand: WRITE_COMMAND,
   });
+
   for (const [path, content] of phpFiles) files.set(path, content);
   files.set(MAPPING_TABLE_FILE, mappingTableJson(model.definitions, names));
+
   return files;
 }
 
 /** The generated files whose committed copy under `root` differs, each with why. */
 export function findStaleFiles(files: Map<string, string>, root: string): string[] {
   const stale: string[] = [];
+
   for (const [path, content] of files) {
     const target = join(root, path);
     const committed = existsSync(target) ? readFileSync(target, "utf8") : undefined;
+
     if (committed !== content)
       stale.push(`${path} ${committed === undefined ? "is missing" : "is stale"}`);
   }
+
   return stale;
 }
 
@@ -71,14 +76,18 @@ export interface OrphanEntry {
 /** The entries of the generated directories under `root` that the generator does not write. */
 export function findOrphanFiles(files: Map<string, string>, root: string): OrphanEntry[] {
   const orphans: OrphanEntry[] = [];
+
   for (const directory of GENERATED_DIRECTORIES) {
     if (!existsSync(join(root, directory))) continue;
     const entries = readdirSync(join(root, directory), { withFileTypes: true });
+
     for (const entry of entries.sort((left, right) => compareNames(left.name, right.name))) {
       const path = `${directory}/${entry.name}`;
+
       if (!files.has(path)) orphans.push({ path, isDirectory: entry.isDirectory() });
     }
   }
+
   return orphans;
 }
 
@@ -88,8 +97,10 @@ export function mappingTable(
 ): Record<string, MappingEntry> {
   const namesByDefinition = new Map(names.map((entry) => [entry.definition, entry]));
   const table: Record<string, MappingEntry> = {};
+
   for (const definition of definitions) {
     const entry = namesByDefinition.get(definition.name);
+
     if (entry === undefined) throw new Error(`${definition.name}: no names were computed for it`);
     table[definition.name] = {
       construct: definition.kind,
@@ -98,6 +109,7 @@ export function mappingTable(
       ...(entry.escapedIn.length === 0 ? {} : { escapedIn: entry.escapedIn }),
     };
   }
+
   return table;
 }
 
@@ -106,6 +118,7 @@ function mappingTableJson(
   names: readonly DefinitionNames[],
 ): string {
   const document = { irRevision: IR_REVISION, definitions: mappingTable(definitions, names) };
+
   return `${biomeStableJson(document, "")}\n`;
 }
 
@@ -120,16 +133,21 @@ export function biomeStableJson(value: JsonValue, indent: string): string {
     if (value.every((item) => item === null || typeof item !== "object"))
       return `[${value.map((item) => JSON.stringify(item)).join(", ")}]`;
     const inner = indent + JSON_INDENT;
+
     return `[\n${value.map((item) => inner + biomeStableJson(item, inner)).join(",\n")}\n${indent}]`;
   }
+
   if (value !== null && typeof value === "object") {
     const entries = Object.entries(value);
+
     if (entries.length === 0) return "{}";
     const inner = indent + JSON_INDENT;
     const lines = entries.map(
       ([member, item]) => `${inner}${JSON.stringify(member)}: ${biomeStableJson(item, inner)}`,
     );
+
     return `{\n${lines.join(",\n")}\n${indent}}`;
   }
+
   return JSON.stringify(value);
 }
