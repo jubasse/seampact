@@ -1,13 +1,13 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { type InheritedEntry, pipelineCopy } from "../../../pipeline/seam.js";
 import type { AccessIdentityResolved, AccessIdentityRoute, AccessIdentityScope } from "./access.js";
+import { accessIdentityRouteHasParameter } from "./params.js";
 import {
   accessIdentityPrincipalField,
   accessIdentityPrincipalFieldRefusal,
   accessIdentitySchemaField,
 } from "./principal.js";
 import { accessIdentityObject, accessIdentityPointer, accessIdentityStrings } from "./read.js";
-import { accessIdentityRouteHasParameter } from "./signed.js";
 import { accessIdentityValueSource } from "./source.js";
 
 // Principal requirements and bindings of an operation (ADR 0002 section 9): the union of `principal.requires`, each

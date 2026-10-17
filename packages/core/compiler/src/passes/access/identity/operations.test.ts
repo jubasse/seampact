@@ -1,7 +1,9 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { createDraftValidator } from "../../../pipeline/draft-schema.js";
-import type { DraftIR, DraftOperation } from "../../../pipeline/seam.js";
+import type { DraftIR, DraftOperation, TreeNode, TreeNodeKind } from "../../../pipeline/seam.js";
+import { treeNodesIsOperation } from "../../tree/nodes/names.js";
+import { ACCESS_IDENTITY_OPERATION_NODE_KINDS } from "./operations.js";
 import {
   type AccessIdentitySchemaUseRow,
   accessIdentityDraft,
@@ -1000,6 +1002,29 @@ describe("relay routes", () => {
         },
       ),
     ).toThrow("operation 'ping' at /surfaces/app/routes/ping has no safe");
+  });
+});
+
+describe("operation nodes", () => {
+  test("the node kinds read as operations are the ones tree.nodes writes an operation for", () => {
+    const kinds: TreeNodeKind[] = [
+      "surface",
+      "single",
+      "collection",
+      "scope",
+      "route",
+      "relay",
+      "op",
+    ];
+    const nodeOf = (kind: TreeNodeKind): TreeNode => ({
+      kind,
+      name: kind,
+      pointer: "/surfaces/app",
+      settings: {},
+      origin: { layer: "api", pointer: "/surfaces/app" },
+    });
+    const written = kinds.filter((kind) => treeNodesIsOperation(nodeOf(kind)));
+    expect([...ACCESS_IDENTITY_OPERATION_NODE_KINDS]).toEqual(written);
   });
 });
 

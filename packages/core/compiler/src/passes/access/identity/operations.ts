@@ -4,6 +4,7 @@ import {
   type DraftOperation,
   pipelineTreeNodes,
   type TreeNode,
+  type TreeNodeKind,
 } from "../../../pipeline/seam.js";
 import {
   type AccessIdentityBuilt,
@@ -11,17 +12,13 @@ import {
   type AccessIdentityScope,
   accessIdentityAccess,
   accessIdentityCallerKinds,
-  accessIdentityServiceNodes,
 } from "./access.js";
 import { accessIdentityBindings, accessIdentityPrincipalRequires } from "./bindings.js";
 import { accessIdentityCsrf } from "./csrf.js";
-import { accessIdentityObject, accessIdentityString } from "./read.js";
+import { accessIdentityCheckQuerySchemes } from "./params.js";
 import { type AccessIdentityReporter, accessIdentityOnceReporter } from "./report.js";
-import {
-  accessIdentityCheckQuerySchemes,
-  accessIdentityCheckSignatureKey,
-  accessIdentityInputFacts,
-} from "./signed.js";
+import { accessIdentityServiceCaller, accessIdentityServiceNodes } from "./service.js";
+import { accessIdentityCheckSignatureKey, accessIdentityInputFacts } from "./signed.js";
 
 // The per-operation members of the half (ADR 0004 section 7): each operation tree.nodes wrote, matched back to
 // the tree node it was written from, gets its access, caller kinds, CSRF decision, principal requirements and
@@ -32,8 +29,12 @@ import {
 
 type Context = AccessIdentityScope["context"];
 
-// The node kinds tree.nodes writes an operation for: a route, a relay route, an `ops` entry.
-const OPERATION_NODE_KINDS: readonly string[] = ["route", "relay", "op"];
+/** The node kinds tree.nodes writes an operation for: a route, a relay route, an `ops` entry. */
+export const ACCESS_IDENTITY_OPERATION_NODE_KINDS: readonly TreeNodeKind[] = [
+  "route",
+  "relay",
+  "op",
+];
 
 const originKey = (origin: IrWriter.Origin): string => `${origin.layer}:${origin.pointer}`;
 
@@ -46,7 +47,7 @@ export function accessIdentityOperations(
 ): void {
   const reporter = accessIdentityOnceReporter(catalogueReporter);
   const nodes = pipelineTreeNodes(context.raw);
-  const caller = serviceCaller(context);
+  const caller = accessIdentityServiceCaller(context);
   if (caller !== undefined) accessIdentityServiceNodes(nodes, caller, reporter);
 
   const scope: AccessIdentityScope = {
@@ -99,17 +100,10 @@ function writeInputFacts(
     input.schema.unknownKeys = facts.unknownKeys;
 }
 
-// ADR 0002 section 5: a service api names its caller identity at `api.caller.identity`.
-function serviceCaller(context: Context): string | undefined {
-  const api = accessIdentityObject(context.raw.merged, "api");
-  const caller = api === undefined ? undefined : accessIdentityObject(api, "caller");
-  return caller === undefined ? undefined : accessIdentityString(caller, "identity");
-}
-
 function operationNodes(nodes: readonly TreeNode[]): Map<string, TreeNode> {
   const byOrigin = new Map<string, TreeNode>();
   for (const node of nodes) {
-    if (!OPERATION_NODE_KINDS.includes(node.kind)) continue;
+    if (!ACCESS_IDENTITY_OPERATION_NODE_KINDS.includes(node.kind)) continue;
 
     const key = originKey(node.origin);
     if (byOrigin.has(key)) throw new Error(`two operation nodes share the origin ${key}`);

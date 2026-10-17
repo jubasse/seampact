@@ -14,6 +14,7 @@ import {
   accessIdentityString,
 } from "./read.js";
 import type { AccessIdentityReporter } from "./report.js";
+import { ACCESS_IDENTITY_SERVICE_CALLER_POINTER } from "./service.js";
 
 // Who may call each operation (ADR 0002 sections 5 and 9, ADR 0004 section 7): `identity` and `access` are
 // inherited separately, the nearest winning for each, and a node setting `identity` below the nearest `access`
@@ -22,9 +23,6 @@ import type { AccessIdentityReporter } from "./report.js";
 // operation node setting both `identity` and a public access is refused: nothing below it could use the identity.
 
 type Context = PassContextOf<"access.identity">;
-
-// ADR 0002 section 5: a service api states its caller identity at `api.caller.identity`.
-const SERVICE_CALLER_POINTER = "/api/caller/identity";
 
 /** The catalogues this half built, for the per-operation members. */
 export interface AccessIdentityBuilt {
@@ -105,25 +103,6 @@ export function accessIdentityCallerKinds(access: IrWriter.KnownAccess): IrWrite
   }
 }
 
-/** Reports every node of a service api that sets an identity other than the caller's. */
-export function accessIdentityServiceNodes(
-  nodes: readonly TreeNode[],
-  caller: string,
-  reporter: AccessIdentityReporter,
-): void {
-  for (const node of nodes) {
-    const written = Object.hasOwn(node.settings, "identity") ? node.settings.identity : undefined;
-    if (written === undefined || written === caller) continue;
-
-    reporter.error({
-      rule: "service-identity",
-      message: `${node.kind} '${node.name}' of a service api sets identity ${JSON.stringify(written)}, while every route of the api runs under its caller identity '${caller}'`,
-      fix: "Remove the identity: the routes of a service api run under 'api.caller.identity', which surfaces need not repeat.",
-      pointer: accessIdentityPointer(node.pointer, "identity"),
-    });
-  }
-}
-
 // Whether `node` sits strictly below `ancestor`: the identity set there makes the identity required again.
 function isBelow(node: TreeNode | undefined, ancestor: TreeNode): boolean {
   if (node === undefined || node === ancestor) return false;
@@ -147,12 +126,12 @@ function identitySource(
   }
 
   if (scope.caller === undefined) return undefined;
-  const origin = scope.context.origin(SERVICE_CALLER_POINTER);
+  const origin = scope.context.origin(ACCESS_IDENTITY_SERVICE_CALLER_POINTER);
   if (origin === undefined)
     throw new Error(
-      `the service api has a caller identity, yet nothing at ${SERVICE_CALLER_POINTER}`,
+      `the service api has a caller identity, yet nothing at ${ACCESS_IDENTITY_SERVICE_CALLER_POINTER}`,
     );
-  return { name: scope.caller, pointer: SERVICE_CALLER_POINTER, origin };
+  return { name: scope.caller, pointer: ACCESS_IDENTITY_SERVICE_CALLER_POINTER, origin };
 }
 
 // The identity a source names; undefined when it is refused (reported here, or with the identity itself).
@@ -272,7 +251,8 @@ function optionalAccess(
   if (source === undefined) {
     scope.reporter.error({
       rule: "optional-identity",
-      message: "optional access is written where no identity reaches, so there is none to make optional",
+      message:
+        "optional access is written where no identity reaches, so there is none to make optional",
       fix: "Set 'identity: <name>' on it or an ancestor, or make the access 'public' with its reason.",
       pointer: written.pointer,
       related: [{ pointer: route.node.pointer, message: "a route it reaches" }],

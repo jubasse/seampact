@@ -13,7 +13,7 @@ import {
 } from "../../../pipeline/seam.js";
 import type { RawApi, RawWorkspace } from "../../../raw-tree.js";
 import { validateWorkspace } from "../../../validate/index.js";
-import { treeNodesPass } from "../../tree/nodes/pass.js";
+import { treeNodesRun, treeNodesStubService } from "../../tree/nodes/test-support.js";
 import { accessIdentityPass } from "./pass.js";
 
 // Test support of the access.identity half, outside every barrel: the half run guarded (ADR 0006 section 2) on a
@@ -80,15 +80,11 @@ export function accessIdentityTableService(
   queryWires: Readonly<Record<string, IrWriter.QueryWire>> = {},
 ): TreeSchemaService {
   return {
+    ...treeNodesStubService({ queryWires }),
     typeUse: (pointer, direction) => {
       const found = rows.find((row) => row.pointer === pointer && row.direction === direction);
       return found === undefined ? undefined : structuredClone(found.use);
     },
-    queryWire: (pointer) => {
-      const wire = Object.hasOwn(queryWires, pointer) ? queryWires[pointer] : undefined;
-      return wire === undefined ? undefined : structuredClone(wire);
-    },
-    checkExample: () => [],
   };
 }
 
@@ -157,8 +153,8 @@ export function accessIdentityRun(
 }
 
 /**
- * Runs tree.nodes, then `prepare` (which stands in for the members a later lane of tree.nodes writes, such as
- * params), then the half guarded, all on `draft` with the same schema service.
+ * Runs tree.nodes guarded, then `prepare` (which stands in for the members a later lane of tree.nodes writes, such
+ * as params), then the half guarded, all on `draft` with the same schema service.
  */
 export function accessIdentityRoutesRun(
   contract: AccessIdentityContract,
@@ -166,15 +162,9 @@ export function accessIdentityRoutesRun(
   treeSchemas: TreeSchemaService,
   prepare: (draft: DraftIR) => void = () => {},
 ): AccessIdentityRun {
-  const treeDiagnostics: Diagnostic[] = [];
-  const context = pipelineContext({
-    raw: contract.raw,
-    workspace: contract.workspace,
-    report: (diagnostic) => treeDiagnostics.push(diagnostic),
-  });
-  treeNodesPass.run(draft, Object.freeze({ ...context, treeSchemas }));
-  if (treeDiagnostics.length > 0)
-    throw new Error(`tree.nodes refused the test contract: ${JSON.stringify(treeDiagnostics)}`);
+  const tree = treeNodesRun(contract.raw, contract.workspace, { treeSchemas, draft });
+  if (tree.diagnostics.length > 0)
+    throw new Error(`tree.nodes refused the test contract: ${JSON.stringify(tree.diagnostics)}`);
 
   prepare(draft);
   return accessIdentityRun(contract, draft, treeSchemas);

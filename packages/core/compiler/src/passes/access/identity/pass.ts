@@ -36,11 +36,11 @@ export const accessIdentityPass: PassPart<"access.identity"> = {
     "operations[].input.schema.unknownKeys",
   ],
   run: (draft, context) => {
-    accessIdentityRun(draft, context);
+    accessIdentityPassRun(draft, context);
   },
 };
 
-function accessIdentityRun(draft: DraftIR, context: PassContextOf<"access.identity">): void {
+function accessIdentityPassRun(draft: DraftIR, context: PassContextOf<"access.identity">): void {
   const reporter = accessIdentityReporter(context);
   const schemeKinds = accessIdentitySchemeKinds(context);
   const schemes = accessIdentitySchemes(context, schemeKinds, reporter);
