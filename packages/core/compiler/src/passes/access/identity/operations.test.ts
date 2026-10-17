@@ -29,6 +29,8 @@ const BASE = `schemes:
   session: { kind: cookie, name: s, csrf: csrfHeader }
   plainSession: { kind: cookie, name: p }
   csrfHeader: { kind: header, name: X-Csrf }
+  otherSession: { kind: cookie, name: o, csrf: otherCsrf }
+  otherCsrf: { kind: header, name: X-Other-Csrf }
   bearer: { kind: bearer }
   device: { kind: header, name: X-Device }
   mapsKey: { kind: query, name: key }
@@ -60,6 +62,9 @@ identities:
   reader:
     schemes: { read: [bearer, mapsKey], write: [] }
     principal: Viewer
+  twoCookies:
+    schemes: { read: [session, otherSession], write: [session, otherSession] }
+    principal: Viewer
   stripe: { kind: signed, scheme: stripeSig, principal: Caller }
   github:
     kind: signed
@@ -86,6 +91,7 @@ const PRINCIPALS: AccessIdentitySchemaUseRow[] = [
   { pointer: "/identities/viewer/principal", direction: "output", use: ref("Viewer") },
   { pointer: "/identities/plain/principal", direction: "output", use: ref("Viewer") },
   { pointer: "/identities/reader/principal", direction: "output", use: ref("Viewer") },
+  { pointer: "/identities/twoCookies/principal", direction: "output", use: ref("Viewer") },
   ...["stripe", "github", "slack"].map((id) => ({
     pointer: `/identities/${id}/principal`,
     direction: "output" as const,
@@ -386,6 +392,16 @@ describe("csrf derived on cookie writes", () => {
     for (const id of ["read", "getItemsBatch", "save", "payments"])
       expect(compiled.operation(id).csrf).toBeUndefined();
   });
+
+  test("cookie write schemes naming different csrf headers are refused", () => {
+    const compiled = compile(`  app:
+      identity: twoCookies
+      routes:
+        save: { method: post, input: Event }
+  `);
+    expect(compiled.rules).toEqual(["seampact/access/csrf-header"]);
+    expect(compiled.operation("save").csrf).toBeUndefined();
+  });
 });
 
 describe("signed identities", () => {
@@ -608,6 +624,29 @@ describe("principal requires and bindings", () => {
       "seampact/access/binding-source",
       "seampact/access/binding-conflict",
       "seampact/access/binding-source",
+    ]);
+  });
+
+  test("a key bound again to the same field below keeps the first binding", () => {
+    const compiled = compile(
+      `  app:
+    identity: viewer
+    bindings: { body.workspaceId: principal.workspaceId }
+    routes:
+      save:
+        method: post
+        input: Event
+        bindings: { body.workspaceId: principal.workspaceId }
+`,
+      { "/surfaces/app/routes/save/input": ref("Event") },
+    );
+    expect(compiled.rules).toEqual([]);
+    expect(compiled.operation("save").bindings).toEqual([
+      {
+        from: { in: "body", name: "workspaceId" },
+        to: { in: "principal", name: "workspaceId" },
+        origin: { layer: "api", pointer: "/surfaces/app/bindings/body.workspaceId" },
+      },
     ]);
   });
 
