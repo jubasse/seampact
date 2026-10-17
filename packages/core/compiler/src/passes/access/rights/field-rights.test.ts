@@ -59,9 +59,7 @@ const ITEM = `  Item:
 
 describe("field rights", () => {
   test("every restricted field reached from an input or output, per pointer and direction, on the fields fixture", () => {
-    const { draft, diagnostics } = accessRightsRunContract(
-      accessRightsLoadFixture("fields"),
-        );
+    const { draft, diagnostics } = accessRightsRunContract(accessRightsLoadFixture("fields"));
     const expected = JSON.parse(
       readFileSync(`${ACCESS_RIGHTS_FIXTURES}fields/operations.json`, "utf8"),
     );

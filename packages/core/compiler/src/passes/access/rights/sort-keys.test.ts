@@ -97,9 +97,7 @@ const listOf = (draft: DraftIR) =>
 
 describe("sort-key rights", () => {
   test("a key inherits its field's right with sortKey.restricted, or states its own, on the fields fixture", () => {
-    const { draft, diagnostics } = accessRightsRunContract(
-      accessRightsLoadFixture("fields"),
-        );
+    const { draft, diagnostics } = accessRightsRunContract(accessRightsLoadFixture("fields"));
     const list = draft.operations.find((operation) => operation.id === "listNotes");
 
     expect(diagnostics).toEqual([]);

@@ -209,7 +209,10 @@ function routeHeaders(input: AccessRightsProofsInput): RouteHeader[] {
     pointer: param.origin?.pointer ?? param.derivedFrom?.from[0]?.pointer ?? route.node.pointer,
   }));
 
-  return [...declared, ...identitySchemeIds(input).flatMap((id) => schemeHeaders(input.schemes, id))];
+  return [
+    ...declared,
+    ...identitySchemeIds(input).flatMap((id) => schemeHeaders(input.schemes, id)),
+  ];
 }
 
 function identitySchemeIds(input: AccessRightsProofsInput): string[] {
@@ -258,7 +261,13 @@ function csrfHeaders(schemes: PassReadonly<DraftIR["schemes"]>, id: string): Rou
 
   if (scheme?.kind !== "header") return [];
 
-  return [{ name: scheme.name, role: `the CSRF header of scheme '${id}'`, pointer: scheme.origin.pointer }];
+  return [
+    {
+      name: scheme.name,
+      role: `the CSRF header of scheme '${id}'`,
+      pointer: scheme.origin.pointer,
+    },
+  ];
 }
 
 // Whether a header proof takes a header the route already reads; that clash is reported and the proof dropped.

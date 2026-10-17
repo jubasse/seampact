@@ -236,7 +236,9 @@ describe("body proofs", () => {
   test("an input whose schema is not among the compiled schemas is refused with its own message", () => {
     const { diagnostics } = accessRightsRunContract(
       accessRightsLoadFiles({
-        "api.yaml": contract(`      ping: { method: post, input: Note, requires: [{ rule: recentAuth }], responses: { 204: {} } }`),
+        "api.yaml": contract(
+          `      ping: { method: post, input: Note, requires: [{ rule: recentAuth }], responses: { 204: {} } }`,
+        ),
       }),
       (draft) => {
         delete draft.schemas.Note;
