@@ -1,4 +1,4 @@
-import type { IrWriter, Origin } from "@seampact/spec/ir";
+import type { IrWriter } from "@seampact/spec/ir";
 import {
   type DraftIR,
   type PassContextOf,
@@ -71,12 +71,14 @@ function lintRules(context: TreeNodesContext): Record<string, IrWriter.LintRule>
 }
 
 // Every `lint.allow`: on a tree node (reaching the nodes below it, except the subtree-exception rule), then on a
-// catalogue entry and on a property of a declared schema (holding there only).
+// catalogue entry, on a property of a declared schema at any depth, and on an inline schema a route writes and its
+// properties (holding there only).
 function lintAllows(context: TreeNodesContext): IrWriter.LintAllow[] {
   const allows: IrWriter.LintAllow[] = [];
-  const add = (owner: Json | undefined, at: Origin, onNode: boolean): void => {
+  const add: AddAllows = (owner, pointer, onNode) => {
     const written = treeNodesMember(treeNodesMember(owner, "lint"), "allow");
-    if (!treeNodesIsObject(written)) return;
+    const at = context.origin(pointer);
+    if (!treeNodesIsObject(written) || at === undefined) return;
     for (const [rule, reason] of Object.entries(written)) {
       if (typeof reason !== "string") continue;
       allows.push({
@@ -88,34 +90,82 @@ function lintAllows(context: TreeNodesContext): IrWriter.LintAllow[] {
     }
   };
 
-  for (const node of pipelineTreeNodes(context.raw)) add(node.settings, node.origin, true);
+  for (const node of pipelineTreeNodes(context.raw)) {
+    add(node.settings, node.pointer, true);
+    addRoutePositionAllows(node.settings, node.pointer, add);
+  }
 
   for (const catalogue of ALLOWING_CATALOGUES) {
     const entries = treeNodesMember(context.raw.merged, catalogue);
     if (!treeNodesIsObject(entries)) continue;
     for (const [id, entry] of Object.entries(entries)) {
       const pointer = treeNodesPointer(`/${catalogue}`, id);
-      const origin = context.origin(pointer);
-      if (origin !== undefined) add(entry, origin, false);
-      if (catalogue === "schemas") addPropertyAllows(entry, pointer, context, add);
+      add(entry, pointer, false);
+      if (catalogue === "schemas") addNestedAllows(entry, pointer, add);
     }
   }
   return allows;
 }
 
-function addPropertyAllows(
-  schema: Json | undefined,
-  pointer: string,
-  context: TreeNodesContext,
-  add: (owner: Json | undefined, at: Origin, onNode: boolean) => void,
-): void {
-  const properties = treeNodesMember(schema, "properties");
-  if (!treeNodesIsObject(properties)) return;
-  for (const [name, property] of Object.entries(properties)) {
-    const origin = context.origin(treeNodesPointer(pointer, "properties", name));
-    if (origin !== undefined) add(property, origin, false);
+type AddAllows = (owner: Json | undefined, pointer: string, onNode: boolean) => void;
+
+// The schema positions of a node (ADR 0002 sections 4 and 7): an inline schema there holds its own allows.
+const ROUTE_SCHEMA_POSITIONS = ["input", "output", "item"] as const;
+const ROUTE_FIELDS_MAPS = ["id", "pathParams", "query", "headers"] as const;
+
+function addRoutePositionAllows(settings: Json, pointer: string, add: AddAllows): void {
+  for (const position of ROUTE_SCHEMA_POSITIONS)
+    addInlineSchemaAllows(treeNodesMember(settings, position), `${pointer}/${position}`, add);
+  for (const map of ROUTE_FIELDS_MAPS)
+    addFieldsMapAllows(treeNodesMember(settings, map), `${pointer}/${map}`, add);
+
+  const responses = treeNodesMember(settings, "responses");
+  if (!treeNodesIsObject(responses)) return;
+  for (const [status, response] of Object.entries(responses)) {
+    const at = treeNodesPointer(`${pointer}/responses`, status);
+    addInlineSchemaAllows(treeNodesMember(response, "body"), `${at}/body`, add);
+    addFieldsMapAllows(treeNodesMember(response, "headers"), `${at}/headers`, add);
   }
 }
+
+// A schema name holds no allow of its own; its declaration does.
+function addInlineSchemaAllows(schema: Json | undefined, pointer: string, add: AddAllows): void {
+  if (!treeNodesIsObject(schema)) return;
+  add(schema, pointer, false);
+  addNestedAllows(schema, pointer, add);
+}
+
+function addFieldsMapAllows(fields: Json | undefined, pointer: string, add: AddAllows): void {
+  if (!treeNodesIsObject(fields)) return;
+  for (const [name, field] of Object.entries(fields))
+    addInlineSchemaAllows(field, treeNodesPointer(pointer, name), add);
+}
+
+// The allows below a schema: on each property, list item, variant and member, at any depth (ADR 0003).
+function addNestedAllows(schema: Json | undefined, pointer: string, add: AddAllows): void {
+  for (const member of NESTED_SCHEMA_MAPS) {
+    const entries = treeNodesMember(schema, member);
+    if (!treeNodesIsObject(entries)) continue;
+    for (const [key, nested] of Object.entries(entries))
+      addInlineSchemaAllows(nested, treeNodesPointer(pointer, member, key), add);
+  }
+
+  for (const member of NESTED_SCHEMA_LISTS) {
+    const entries = treeNodesMember(schema, member);
+    if (!Array.isArray(entries)) continue;
+    entries.forEach((nested, index) => {
+      addInlineSchemaAllows(nested, treeNodesPointer(pointer, member, String(index)), add);
+    });
+  }
+
+  for (const member of NESTED_SCHEMAS)
+    addInlineSchemaAllows(treeNodesMember(schema, member), treeNodesPointer(pointer, member), add);
+}
+
+// Where a schema holds other schemas: by name, in a list, or one schema.
+const NESTED_SCHEMA_MAPS = ["properties", "oneOf"] as const;
+const NESTED_SCHEMA_LISTS = ["allOf", "oneOf"] as const;
+const NESTED_SCHEMAS = ["items", "additionalProperties", "contentSchema"] as const;
 
 // The pack layers in application order (the loader's layer order), each with its manifest's name and version.
 function packsOf(context: TreeNodesContext): IrWriter.PackRef[] {

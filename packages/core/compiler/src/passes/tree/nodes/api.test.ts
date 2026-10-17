@@ -194,6 +194,12 @@ schemas:
     type: object
     properties:
       token: { type: string, lint: { allow: { seampact/credential-name: "A public share token." } } }
+      lines:
+        type: array
+        items:
+          type: object
+          properties:
+            secret: { type: string, lint: { allow: { seampact/credential-name: "A line label." } } }
     lint: { allow: { seampact/unused-declaration: "Kept for the next version." } }
 surfaces:
   app:
@@ -204,14 +210,17 @@ surfaces:
         kind: single
         lint: { allow: { seampact/redundant-maturity: "Stated for the docs." } }
         routes:
-          list: { method: get }
+          list:
+            method: get
+            query:
+              apiKey?: { type: string, lint: { allow: { seampact/credential-name: "A public key." } } }
   ops:
     prefix: /ops
     routes:
       health: { method: get }
 `;
 
-test("api, conventions, lint, packs and services", () => {
+test("api, conventions, lint, packs and services, with allows at any schema depth", () => {
   const workspace = treeNodesLoadFiles({ "api.yaml": SETTINGS_API, "house.yaml": HOUSE_PACK });
   const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
     treeSchemas,
@@ -287,6 +296,12 @@ test("api, conventions, lint, packs and services", () => {
         subtree: true,
       },
       {
+        rule: "seampact/credential-name",
+        at: { layer: "api", pointer: "/surfaces/app/routes/invoices/routes/list/query/apiKey?" },
+        reason: "A public key.",
+        subtree: false,
+      },
+      {
         rule: "seampact/unused-declaration",
         at: { layer: "api", pointer: "/schemas/Invoice" },
         reason: "Kept for the next version.",
@@ -296,6 +311,12 @@ test("api, conventions, lint, packs and services", () => {
         rule: "seampact/credential-name",
         at: { layer: "api", pointer: "/schemas/Invoice/properties/token" },
         reason: "A public share token.",
+        subtree: false,
+      },
+      {
+        rule: "seampact/credential-name",
+        at: { layer: "api", pointer: "/schemas/Invoice/properties/lines/items/properties/secret" },
+        reason: "A line label.",
         subtree: false,
       },
     ],
