@@ -445,14 +445,8 @@ type MergingObject = IrWriter.ObjectTemplate & { readonly merge: string };
 
 function mergingObjects(template: IrWriter.Template): MergingObject[] {
   switch (template.kind) {
-    case "object": {
-      const inner = template.members.flatMap((member) => mergingObjects(member.value));
-      const { merge } = template;
-
-      return merge !== undefined && PAYLOAD_SLOTS.includes(merge)
-        ? [{ ...template, merge }, ...inner]
-        : inner;
-    }
+    case "object":
+      return objectMerges(template);
     case "array":
       return template.items.flatMap(mergingObjects);
     case "each":
@@ -460,6 +454,15 @@ function mergingObjects(template: IrWriter.Template): MergingObject[] {
     default:
       return [];
   }
+}
+
+function objectMerges(template: IrWriter.ObjectTemplate): MergingObject[] {
+  const inner = template.members.flatMap((member) => mergingObjects(member.value));
+  const { merge } = template;
+
+  return merge !== undefined && PAYLOAD_SLOTS.includes(merge)
+    ? [{ ...template, merge }, ...inner]
+    : inner;
 }
 
 interface PayloadFault {
