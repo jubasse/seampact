@@ -88,7 +88,25 @@ export function treeSchemasQueryWires(
       record(treeSchemasPointer(pointer, "properties", property.name), property.type);
   }
 
-  for (const pointer of compiler.queryPositions) record(pointer, compiler.uses.get(pointer));
+  for (const pointer of compiler.queryPositions) {
+    const use = compiler.uses.get(pointer);
+
+    if (isMap(compiler, use)) refuseMapField(compiler, pointer);
+    else record(pointer, use);
+  }
 
   return wires;
+}
+
+const isMap = (compiler: TreeSchemasCompiler, use: IrWriter.TypeUse | undefined): boolean =>
+  use?.kind === "ref" && compiler.schemas.get(use.schema)?.kind === "map";
+
+// A query string or a form names each value by a declared key: no wire encodes a map's free keys.
+function refuseMapField(compiler: TreeSchemasCompiler, pointer: string): void {
+  compiler.reporter.error({
+    rule: "query-map",
+    pointer,
+    message: "a query or form field holds no map: no query wire encodes its keys",
+    fix: "declare the keys as the fields of an object, or send the value in a JSON body",
+  });
 }

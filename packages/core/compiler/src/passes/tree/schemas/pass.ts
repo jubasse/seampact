@@ -7,7 +7,9 @@ import {
 import { treeNodesOperationNames } from "../nodes/index.js";
 import { TreeSchemasCompiler } from "./compile.js";
 import { treeSchemasCoreReservations } from "./core.js";
+import { treeSchemasRefuseOutputUnknownKeys, treeSchemasWriteDirections } from "./directions.js";
 import { treeSchemasCompileEnums } from "./enums.js";
+import { TreeSchemasExampleChecker, treeSchemasCheckWrittenExamples } from "./example-check.js";
 import {
   treeSchemasCompileBatchInputs,
   treeSchemasCompileVersionProperties,
@@ -22,29 +24,46 @@ import { TreeSchemasReporter } from "./raw.js";
 // Import pipeline values and types from `pipeline/seam.js` only, never from `pipeline/index.js`, the orchestrator
 // or the registry: the registry imports this module, so any of those would close an import cycle (`seam.ts`).
 
+/** What the run compiled that the service answers from. */
+export interface TreeSchemasServiceState {
+  uses: ReadonlyMap<string, IrWriter.TypeUse>;
+  queryWires: ReadonlyMap<string, IrWriter.QueryWire>;
+  schemas: ReadonlyMap<string, IrWriter.Schema>;
+  enums: readonly IrWriter.Enum[];
+}
+
+const copiedMap = <Value>(entries: ReadonlyMap<string, Value>): Map<string, Value> =>
+  new Map([...entries].map(([key, value]) => [key, structuredClone(value)]));
+
 /**
- * The schema service over the type uses and query wires the run compiled: each answer a new copy, the run's state
- * unreachable.
+ * The schema service over the type uses, query wires, schemas and enums the run compiled: each answer a new copy,
+ * the run's state unreachable. An output answer holds no `unknownKeys`, which acts on input uses only.
  */
-export function treeSchemasService(
-  uses: ReadonlyMap<string, IrWriter.TypeUse>,
-  queryWires: ReadonlyMap<string, IrWriter.QueryWire>,
-): TreeSchemaService {
-  const answers = new Map(uses);
-  const wires = new Map(queryWires);
+export function treeSchemasService(state: TreeSchemasServiceState): TreeSchemaService {
+  const answers = copiedMap(state.uses);
+  const wires = copiedMap(state.queryWires);
+  const checker = new TreeSchemasExampleChecker(
+    copiedMap(state.schemas),
+    new Map(state.enums.map((declared) => [declared.id, structuredClone(declared)])),
+  );
 
   return {
-    typeUse: (pointer) => {
+    typeUse: (pointer, direction) => {
       const use = answers.get(pointer);
 
-      return use === undefined ? undefined : structuredClone(use);
+      if (use === undefined) return undefined;
+      const answer = structuredClone(use);
+
+      if (direction === "output" && answer.kind === "ref") delete answer.unknownKeys;
+
+      return answer;
     },
     queryWire: (pointer) => {
       const wire = wires.get(pointer);
 
       return wire === undefined ? undefined : structuredClone(wire);
     },
-    checkExample: () => [],
+    checkExample: (value, use) => checker.check(value, use),
   };
 }
 
@@ -69,12 +88,28 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
     compiler.finish();
     const enums = treeSchemasCompileEnums(context.raw.merged.enums, reporter);
 
+    treeSchemasWriteDirections(compiler, enums);
+    treeSchemasRefuseOutputUnknownKeys(compiler, reporter);
+    treeSchemasCheckWrittenExamples(
+      compiler.exampleChecks,
+      new TreeSchemasExampleChecker(
+        compiler.schemas,
+        new Map(enums.map((declared) => [declared.id, declared])),
+      ),
+      reporter,
+    );
+
     for (const scalar of compiler.scalars.all()) draft.scalars[scalar.id] = structuredClone(scalar);
 
     for (const [id, schema] of compiler.schemas) draft.schemas[id] = structuredClone(schema);
 
     for (const declared of enums) draft.enums[declared.id] = structuredClone(declared);
 
-    return treeSchemasService(compiler.uses, treeSchemasQueryWires(compiler, context.conventions));
+    return treeSchemasService({
+      uses: compiler.uses,
+      queryWires: treeSchemasQueryWires(compiler, context.conventions),
+      schemas: compiler.schemas,
+      enums,
+    });
   },
 };

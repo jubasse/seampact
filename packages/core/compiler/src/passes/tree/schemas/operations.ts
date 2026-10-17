@@ -37,7 +37,9 @@ export function treeSchemasCompileBatchInputs(
     const ids = batchIds(compiler, node, conventions);
 
     if (ids !== undefined)
-      compiler.derivedObject([ids], node.pointer, deriveName(operation.segments, "input"));
+      compiler.derivedObject([ids], node.pointer, deriveName(operation.segments, "input"), [
+        "input",
+      ]);
   }
 }
 

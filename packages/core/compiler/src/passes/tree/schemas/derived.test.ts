@@ -106,7 +106,7 @@ describe("pick and omit", () => {
     properties: { body: { nullable: true } }
   Required:
     pick: { from: Article, fields: [title] }
-    properties: { title: { default: Untitled, examples: [A] } }
+    properties: { title: { default: Untitled } }
   StillRequired:
     pick: { from: Article, fields: [title] }
     properties: { title: { default: Untitled } }
@@ -124,7 +124,7 @@ describe("pick and omit", () => {
       ["derived-field", "/schemas/Lacks/pick/fields/1"],
       ["derived-field", "/schemas/Lacks/pick/fields/2"],
       ["required-unknown", "/schemas/NotKept/required"],
-      ["annotation-position", "/schemas/Required/properties/title/examples"],
+      ["required-property", "/schemas/Required/properties/title"],
       ["required-property", "/schemas/StillRequired/properties/title"],
       ["required-property", "/schemas/Restricted/properties/title"],
       ["derived-source", "/schemas/FromMap/pick/from"],
@@ -136,6 +136,20 @@ describe("pick and omit", () => {
     );
     expect(refused.located).toBe(true);
     expect(refused.draft.schemas.Lacks).toBeUndefined();
+  });
+
+  test("an overlay's examples replace the source's and are parsed against the property", () => {
+    const run = schemas(`${SOURCE}
+  Titled:
+    pick: { from: Article, fields: [title] }
+    properties: { title: { examples: [A title] } }
+  Wrong:
+    pick: { from: Article, fields: [title] }
+    properties: { title: { examples: [12] } }
+`);
+
+    expect(located(run)).toEqual([["example-value", "/schemas/Wrong/properties/title/examples/0"]]);
+    expect(propertiesOf(run, "Titled")[0]?.examples).toEqual(["A title"]);
   });
 
   test("an overlay of a property the object does not keep is refused", () => {

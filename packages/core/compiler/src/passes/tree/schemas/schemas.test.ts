@@ -19,9 +19,16 @@ const typeOf = (run: TreeSchemasRun, id: string, name: string) => propertyOf(run
 const schemas = (yaml: string) => treeSchemasRunApi(`schemas:\n${yaml}`);
 const at = (pointer: string) => ({ layer: "api", pointer });
 
-// Directions are written by a later step of this half.
-function withoutLaterMembers(schema: IrWriter.Schema): object {
-  const { directions: _directions, ...rest } = schema;
+// The schemas only a relay route reaches, whose directions come from the relayed operation: relay-copied
+// declarations are not compiled yet, so their directions are left out of the comparison.
+const RELAY_REACHED: Readonly<Record<string, readonly string[]>> = {
+  tasks: [],
+  tasksService: ["Task", "TaskState"],
+};
+
+function withoutRelayDirections(api: string, declared: IrWriter.Schema | IrWriter.Enum): object {
+  if (!RELAY_REACHED[api]?.includes(declared.id)) return declared;
+  const { directions: _directions, ...rest } = declared;
 
   return rest;
 }
@@ -37,15 +44,15 @@ describe("tree.schemas matches the after-tree fixture", () => {
       (schema) => schema.id !== "ApiSchemaInvalidIssue" || expected.some((e) => e.id === schema.id),
     );
 
-    expect(written.map(withoutLaterMembers)).toEqual(
-      expect.arrayContaining(expected.map(withoutLaterMembers)),
+    expect(written.map((schema) => withoutRelayDirections(api, schema))).toEqual(
+      expect.arrayContaining(expected.map((schema) => withoutRelayDirections(api, schema))),
     );
     expect(written.map((s) => s.id).sort()).toEqual(expected.map((s) => s.id).sort());
     expect(run.draft.scalars).toEqual({});
-    const withoutDirections = ({ directions: _directions, ...rest }: IrWriter.Enum) => rest;
-
-    expect(Object.values(run.draft.enums).map(withoutDirections)).toEqual(
-      Object.values(draftFixture(api, "after-tree").enums).map(withoutDirections),
+    expect(Object.values(run.draft.enums).map((e) => withoutRelayDirections(api, e))).toEqual(
+      Object.values(draftFixture(api, "after-tree").enums).map((e) =>
+        withoutRelayDirections(api, e),
+      ),
     );
   });
 
@@ -390,23 +397,38 @@ describe("annotations the contract model cannot hold are refused, not dropped", 
     expect(propertyOf(run, "A", "d")).toMatchObject({ deprecated: true, docs: { summary: "D" } });
   });
 
+  test("a schema's deprecation, property examples, variant docs and nested docs and examples are kept", () => {
+    const run = schemas(`
+  A:
+    type: object
+    deprecated: true
+    properties:
+      b: { type: string, examples: [x] }
+      c: { $ref: B, examples: [{ d: why }] }
+      list: { type: array, items: { type: string, description: An item., examples: [z] } }
+      table: { type: object, additionalProperties: { type: integer, title: A count } }
+  B: { type: object, properties: { d: { type: string } } }
+  U: { discriminator: k, oneOf: { a: { $ref: B, description: A variant. } } }
+`);
+
+    expect(run.diagnostics).toEqual([]);
+    expect(schemaOf(run, "A")?.deprecated).toBe(true);
+    expect(schemaOf(run, "B")?.deprecated).toBeUndefined();
+    expect(propertyOf(run, "A", "b")?.examples).toEqual(["x"]);
+    expect(propertyOf(run, "A", "c")?.examples).toEqual([{ d: "why" }]);
+    expect(typeOf(run, "A", "list")).toMatchObject({
+      items: { docs: { description: "An item." }, examples: ["z"] },
+    });
+    expect(schemaOf(run, "ATable")).toMatchObject({ values: { docs: { summary: "A count" } } });
+    expect(schemaOf(run, "U")).toMatchObject({
+      variants: [{ tag: "a", schema: "B", docs: { description: "A variant." } }],
+    });
+  });
+
   test.each([
-    ["A: { type: object, deprecated: true, properties: { b: { type: string } } }", "deprecated"],
     ["A: { type: string, deprecated: true }", "deprecated"],
-    ["A: { type: object, properties: { b: { type: string, examples: [x] } } }", "examples"],
-    [
-      "A: { type: object, properties: { b: { $ref: B, examples: [{}] } } }\n  B: { type: object, properties: { c: { type: string } } }",
-      "examples",
-    ],
-    ["A: { type: array, items: { type: string, examples: [x] } }", "examples"],
     ["A: { type: string, examples: [x] }", "examples"],
-    ["A: { type: array, items: { type: string, description: An item. } }", "description"],
     ["A: { type: array, items: { type: string, deprecated: true } }", "deprecated"],
-    ["A: { type: object, additionalProperties: { type: string, title: A value } }", "title"],
-    [
-      "U: { discriminator: k, oneOf: { a: { $ref: B, description: A variant. } } }\n  B: { type: object, properties: { c: { type: string } } }",
-      "description",
-    ],
     ["A: { type: string, format: uuid, description: An id. }", "description"],
     ["A: { type: array, items: { type: string }, title: Tags }", "title"],
     [
