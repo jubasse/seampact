@@ -45,8 +45,9 @@ const portableTypeOf = (format: string): IrWriter.ScalarType | undefined =>
     : undefined;
 
 /**
- * A number as the decimal literal string the loader read: undefined when its written digits may be lost, for an
- * integer beyond the safe range or a fraction past 16 significant digits.
+ * A number as the decimal literal string of its loaded value: undefined for an integer beyond the safe range or a
+ * fraction whose shortest form takes more than 16 significant digits. Only the loaded number is checked: digits the
+ * loader already rounded away (`0.10000000000000001` loads as `0.1`) are not seen here.
  */
 function treeSchemasDecimalLiteral(value: number): string | undefined {
   if (Number.isInteger(value)) return Number.isSafeInteger(value) ? String(value) : undefined;
@@ -65,8 +66,9 @@ function withoutExponent(text: string): string {
 const significantDigits = (literal: string): number =>
   literal.replace("-", "").replace(".", "").replace(/^0+/, "").length;
 
-// The bounds no value fits between: a lower bound above an upper one, or equal to it with either exclusive.
-function emptyRanges(refinements: IrWriter.Refinements): string[] {
+// The bounds no value fits between: a lower bound above an upper one, equal to it with either exclusive, or, for an
+// integer, no integer left between them.
+function emptyRanges(refinements: IrWriter.Refinements, type: IrWriter.ScalarType): string[] {
   const { minLength, maxLength } = refinements;
   const lengths =
     minLength !== undefined && maxLength !== undefined && minLength > maxLength
@@ -77,16 +79,43 @@ function emptyRanges(refinements: IrWriter.Refinements): string[] {
       const lower = refinements[lowerKey];
       const upper = refinements[upperKey];
       if (lower === undefined || upper === undefined) return [];
-      const exclusive = lowerKey === "exclusiveMinimum" || upperKey === "exclusiveMaximum";
-      if (Number(lower) > Number(upper))
-        return [`'${lowerKey}' ${lower} is above '${upperKey}' ${upper}`];
-      if (Number(lower) === Number(upper) && exclusive)
-        return [`'${lowerKey}' ${lower} equals '${upperKey}' ${upper}, one of them exclusive`];
-      return [];
+      const problem = emptyBetween(
+        { key: lowerKey, literal: lower },
+        { key: upperKey, literal: upper },
+        type,
+      );
+      return problem === undefined ? [] : [problem];
     }),
   );
   return [...lengths, ...bounds];
 }
+
+interface Bound<Key extends string> {
+  key: Key;
+  literal: string;
+}
+
+function emptyBetween(
+  lower: Bound<(typeof LOWER_BOUNDS)[number]>,
+  upper: Bound<(typeof UPPER_BOUNDS)[number]>,
+  type: IrWriter.ScalarType,
+): string | undefined {
+  const lowerText = `'${lower.key}' ${lower.literal}`;
+  const upperText = `'${upper.key}' ${upper.literal}`;
+  const exclusive = lower.key === "exclusiveMinimum" || upper.key === "exclusiveMaximum";
+  if (Number(lower.literal) > Number(upper.literal)) return `${lowerText} is above ${upperText}`;
+  if (Number(lower.literal) === Number(upper.literal) && exclusive)
+    return `${lowerText} equals ${upperText}, one of them exclusive`;
+  if (type === "integer" && lowestInteger(lower) > highestInteger(upper))
+    return `no integer lies between ${lowerText} and ${upperText}`;
+  return undefined;
+}
+
+const lowestInteger = ({ key, literal }: Bound<string>): number =>
+  key === "minimum" ? Math.ceil(Number(literal)) : Math.floor(Number(literal)) + 1;
+
+const highestInteger = ({ key, literal }: Bound<string>): number =>
+  key === "maximum" ? Math.floor(Number(literal)) : Math.ceil(Number(literal)) - 1;
 
 interface RefinementTarget {
   type: IrWriter.ScalarType;
@@ -117,7 +146,8 @@ export class TreeSchemasScalars {
     if (format !== undefined && !this.checkFormatBesideType(format, type, pointer))
       return undefined;
     const refinements = this.refinements(value, pointer, { type, decimal: format === DECIMAL });
-    if (refinements === undefined || !this.checkRanges(refinements, pointer)) return undefined;
+    if (refinements === undefined || !this.checkRanges(refinements, type, pointer))
+      return undefined;
     return { kind: "scalar", type, ...(format === undefined ? {} : { format }), refinements };
   }
 
@@ -152,7 +182,8 @@ export class TreeSchemasScalars {
     }
     const type = value.type === "integer" ? "integer" : "string";
     const refinements = this.refinements(value, pointer, { type, decimal: false });
-    if (refinements === undefined || !this.checkRanges(refinements, pointer)) return undefined;
+    if (refinements === undefined || !this.checkRanges(refinements, type, pointer))
+      return undefined;
     return {
       id,
       name: { segments: splitName(id), role: "schema" },
@@ -227,12 +258,16 @@ export class TreeSchemasScalars {
     }
     if (conflicts.length > 0) return undefined;
     const refinements = { ...structuredClone(declared.type.refinements), ...own };
-    if (!this.checkRanges(refinements, pointer)) return undefined;
+    if (!this.checkRanges(refinements, declared.type.type, pointer)) return undefined;
     return { kind: "scalar", type: declared.type.type, scalar: format, refinements };
   }
 
-  private checkRanges(refinements: IrWriter.Refinements, pointer: string): boolean {
-    const empty = emptyRanges(refinements);
+  private checkRanges(
+    refinements: IrWriter.Refinements,
+    type: IrWriter.ScalarType,
+    pointer: string,
+  ): boolean {
+    const empty = emptyRanges(refinements, type);
     for (const problem of empty) {
       this.reporter.error({
         rule: "refinement-range",
