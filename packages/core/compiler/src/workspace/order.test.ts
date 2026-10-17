@@ -52,8 +52,8 @@ describe("relay order follows relays", () => {
       relaysTo: { top: ["left", "right"], left: ["base"], right: ["base"], base: [] },
     },
     {
-      name: "a relay to an import or to no api is not ordered",
-      apis: { a: ["billing.getInvoice", "nowhere.get", "b.get", "b.list"], b: [] },
+      name: "a relay to an import, to no api or with no api name is not ordered",
+      apis: { a: ["billing.getInvoice", "nowhere.get", "b.get", "b.list", "b", ".get"], b: [] },
       order: ["b", "a"],
       relaysTo: { a: ["b"], b: [] },
     },
