@@ -314,6 +314,7 @@ function requirementOf(
     right,
     idName: catalogues.rightIdNames.get(right.id),
     scopes: input.scopes,
+    scopeRefused: right.subject.kind === "scope" && !catalogues.scopes.has(right.subject.scope),
     schemas: input.schemas,
     ...(subjectText === undefined
       ? {}

@@ -18,19 +18,35 @@ import type { AccessRightsRoute } from "./routes.js";
 import { type AccessRightsContext, accessRightsTypeUse } from "./schema-use.js";
 import { accessRightsSourceText, accessRightsValueSource } from "./source.js";
 
-// The subject of a right requirement (ADR 0002 section 9, SCN-062): a resource subject defaults to the nearest
-// member id whose schema is the right's id schema, else `subject` is required, and a written source's schema must
-// equal the id schema; a scope subject takes the route's resolved scope.
+// The subject of a right requirement (ADR 0002 section 9, SCN-062): a resource subject defaults to the member id
+// of the nearest collection whose schema is the right's id schema, else `subject` is required, and a written
+// source's schema must equal the id schema; a scope subject takes the route's resolved scope. A subject is a
+// required value: an optional query field or header, or the principal of a route an anonymous caller reaches, is
+// refused.
 //
-// Two schemas are equal when their type uses are, and, when both positions name a schema, when they name the same
-// one: `ChannelId` and `TaskId` compile to one uuid type use but are different ids, so a `tasks.update` right
-// never defaults to a channel id.
+// Two schemas are equal when both name the same schema, or both are inline with the same canonical shape; a named
+// schema never equals an inline one. `ChannelId` and `TaskId` compile to one uuid type use but are different ids,
+// so a `tasks.update` right never defaults to a channel id.
 
 /** The schema a value source reads: its type use, and the schema it names when the position names one. */
 interface SourceSchema {
   readonly use: IrWriter.TypeUse;
   readonly name?: string;
+  /** Set on an optional query field or header, which a caller may omit. */
+  readonly optional?: true;
 }
+
+/** A member id of a collection whose member scope holds the route. */
+interface MemberId {
+  readonly name: string;
+  readonly pointer: string;
+  readonly collection: TreeNode;
+}
+
+type DefaultSubject =
+  | { readonly kind: "found"; readonly source: IrWriter.ValueSource }
+  | { readonly kind: "ambiguous"; readonly candidates: readonly MemberId[] }
+  | { readonly kind: "none" };
 
 export interface AccessRightsSubjectInput {
   readonly route: AccessRightsRoute;
@@ -38,6 +54,8 @@ export interface AccessRightsSubjectInput {
   /** The schema the right's resource id names (`TaskId`), when it names one. */
   readonly idName: string | undefined;
   readonly scopes: readonly IrWriter.OperationScope[];
+  /** The right's scope is declared but refused: its declaration has the error, so a use adds none. */
+  readonly scopeRefused: boolean;
   readonly schemas: PassReadonly<DraftIR["schemas"]>;
   /** The written `subject`, with the pointer of the requirement item that holds it. */
   readonly written?: { readonly text: string; readonly pointer: string };
@@ -75,9 +93,10 @@ export function accessRightsSubject(
 
 function scopeSubject(
   reporter: AccessRightsReporter,
-  { route, right, scopes, written, usePointer }: AccessRightsSubjectInput,
+  { route, right, scopes, scopeRefused, written, usePointer }: AccessRightsSubjectInput,
   scope: string,
 ): AccessRightsSubjectResult {
+  if (scopeRefused) return undefined;
   if (!scopes.some((resolved) => resolved.scope === scope)) {
     reporter.error({
       rule: "requirement-subject",
@@ -108,31 +127,41 @@ function resourceSubject(
   input: AccessRightsSubjectInput,
   subject: IrWriter.ResourceSubject,
 ): AccessRightsSubjectResult {
-  const { route, right, idName, written, usePointer } = input;
+  const { route, right, idName, written } = input;
   const expected: SourceSchema = {
     use: subject.idSchema,
     ...(idName === undefined ? {} : { name: idName }),
   };
 
-  if (written === undefined) {
-    const defaulted = defaultMemberId(context, route.node, expected);
-    if (defaulted !== undefined) return { subject: { source: defaulted, defaulted: true } };
+  if (written === undefined) return defaultedSubject(context, reporter, input, expected);
+
+  const source = accessRightsValueSource(written.text);
+  if (source?.in === "principal" && route.access !== "identity") {
     reporter.error({
       rule: "requirement-subject",
-      message: `right '${right.id}' needs a subject on route '${route.id}', and no member id of the route has its id schema`,
-      fix: "write the requirement's 'subject', a source whose schema is the right's id schema",
-      pointer: usePointer,
+      message: `the subject ${written.text} of right '${right.id}' reads the principal, which is null for an anonymous caller of ${route.access === "public" ? "public" : "optional-auth"} route '${route.id}'`,
+      fix: "read the subject from a request value, or require the right on an identified route",
+      pointer: written.pointer,
     });
     return undefined;
   }
 
-  const source = accessRightsValueSource(written.text);
   const found = source === undefined ? undefined : sourceSchema(context, input, source);
   if (source === undefined || found === undefined) {
     reporter.error({
       rule: "requirement-subject",
       message: `the subject ${written.text} of right '${right.id}' names nothing route '${route.id}' reads`,
       fix: "read the subject from a parameter, header, principal field or scope of the route",
+      pointer: written.pointer,
+    });
+    return undefined;
+  }
+
+  if (found.optional === true) {
+    reporter.error({
+      rule: "requirement-subject",
+      message: `the subject ${written.text} of right '${right.id}' is an optional field, which a caller of route '${route.id}' may omit; the subject must be a required field`,
+      fix: "make the field required, or read the subject from a required one",
       pointer: written.pointer,
     });
     return undefined;
@@ -148,17 +177,49 @@ function resourceSubject(
   return undefined;
 }
 
+function defaultedSubject(
+  context: AccessRightsContext,
+  reporter: AccessRightsReporter,
+  { route, right, usePointer }: AccessRightsSubjectInput,
+  expected: SourceSchema,
+): AccessRightsSubjectResult {
+  const defaulted = defaultMemberId(context, route.node, expected);
+  if (defaulted.kind === "found") return { subject: { source: defaulted.source, defaulted: true } };
+
+  if (defaulted.kind === "ambiguous") {
+    reporter.error({
+      rule: "requirement-subject",
+      message: `ambiguous default subject: right '${right.id}' on route '${route.id}' could read member id ${defaulted.candidates.map(({ name }) => `'${name}'`).join(" or ")}, each of its id schema`,
+      fix: "write the requirement's 'subject', naming one of the member ids",
+      pointer: usePointer,
+      related: defaulted.candidates.map((candidate) => ({
+        pointer: candidate.pointer,
+        message: `member id '${candidate.name}' has the right's id schema`,
+      })),
+    });
+    return undefined;
+  }
+
+  reporter.error({
+    rule: "requirement-subject",
+    message: `right '${right.id}' needs a subject on route '${route.id}', and no member id of the route has its id schema`,
+    fix: "write the requirement's 'subject', a source whose schema is the right's id schema",
+    pointer: usePointer,
+  });
+  return undefined;
+}
+
 function sameSchema(found: SourceSchema, expected: SourceSchema): boolean {
-  if (accessRightsCanonical(found.use) !== accessRightsCanonical(expected.use)) return false;
-  return found.name === undefined || expected.name === undefined || found.name === expected.name;
+  if (found.name !== undefined || expected.name !== undefined) return found.name === expected.name;
+  return accessRightsCanonical(found.use) === accessRightsCanonical(expected.use);
 }
 
 const describe = (schema: SourceSchema): string =>
-  schema.name === undefined ? `a ${schema.use.kind} use` : `'${schema.name}'`;
+  schema.name === undefined ? `an inline ${schema.use.kind} schema` : `'${schema.name}'`;
 
 /** The member ids of the collections whose member scope holds `node`, nearest first, each in written order. */
-function memberIds(node: TreeNode): { name: string; pointer: string; collection: TreeNode }[] {
-  const ids: { name: string; pointer: string; collection: TreeNode }[] = [];
+function memberIds(node: TreeNode): MemberId[] {
+  const ids: MemberId[] = [];
   for (let at: TreeNode | undefined = node; at !== undefined; at = at.parent) {
     const collection = at.parent;
     if (at.kind !== "scope" || at.name !== "member" || collection === undefined) continue;
@@ -171,16 +232,25 @@ function memberIds(node: TreeNode): { name: string; pointer: string; collection:
   return ids;
 }
 
+// The nearest collection with a member id of the expected schema decides: one such id is the default, two or more
+// are ambiguous.
 function defaultMemberId(
   context: AccessRightsContext,
   node: TreeNode,
   expected: SourceSchema,
-): IrWriter.ValueSource | undefined {
-  for (const id of memberIds(node)) {
-    const found = positionSchema(context, id.pointer);
-    if (sameSchema(found, expected)) return { in: "path", name: id.name };
+): DefaultSubject {
+  const ids = memberIds(node);
+  for (const collection of new Set(ids.map((id) => id.collection))) {
+    const fitting = ids.filter(
+      (id) =>
+        id.collection === collection && sameSchema(positionSchema(context, id.pointer), expected),
+    );
+    const [only, ...others] = fitting;
+    if (only === undefined) continue;
+    if (others.length === 0) return { kind: "found", source: { in: "path", name: only.name } };
+    return { kind: "ambiguous", candidates: fitting };
   }
-  return undefined;
+  return { kind: "none" };
 }
 
 // The schema written at a raw position, compiled by the schema service.
@@ -249,9 +319,12 @@ function fieldsSchema(
   for (const entry of [...entries].reverse()) {
     const key = entry.key;
     if (key === undefined) continue;
-    const field = key.endsWith(OPTIONAL_FIELD) ? key.slice(0, -OPTIONAL_FIELD.length) : key;
-    if (matches(field))
-      return positionSchema(context, accessRightsPointer(entry.node.pointer, setting, key));
+    const optional = key.endsWith(OPTIONAL_FIELD);
+    const field = optional ? key.slice(0, -OPTIONAL_FIELD.length) : key;
+    if (!matches(field)) continue;
+
+    const schema = positionSchema(context, accessRightsPointer(entry.node.pointer, setting, key));
+    return optional ? { ...schema, optional: true } : schema;
   }
   return undefined;
 }
@@ -262,7 +335,7 @@ function principalSchema(
   { route, schemas }: AccessRightsSubjectInput,
   path: string,
 ): SourceSchema | undefined {
-  if (route.access === "public" || route.identity === undefined) return undefined;
+  if (route.identity === undefined) return undefined;
   const identity = accessRightsMember(context.raw.merged.identities, route.identity);
   let schemaId = accessRightsSchemaName(accessRightsMember(identity, "principal"));
   let found: SourceSchema | undefined;
