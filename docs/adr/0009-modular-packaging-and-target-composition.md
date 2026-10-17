@@ -125,7 +125,7 @@ A target maps the contract onto its framework's idiomatic mechanisms (A30): Nest
 
 ### Repository layout
 
-- npm packages: `packages/<name>`, one pnpm workspace (ADR 0001).
+- npm packages: `packages/<group>/<name>` (`core`, `targets`, `packs`, `runtime`), the directory named after the package name suffix, one pnpm workspace (ADR 0001).
 - JVM: one Gradle build under `jvm/`, one subproject per artifact.
 - PHP: `php/<name>`, one directory per Composer package, each with its own `composer.json`; CI pushes each to its read-only mirror ([A19](../decisions.md#a19), ADR 0011).
 

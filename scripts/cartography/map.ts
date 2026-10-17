@@ -1,10 +1,10 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { PACKAGES_DIR, packageDirectories } from "../workspace/index.ts";
 
 export const CARTOGRAPHY_FILE = "docs/agents/cartography.md";
 export const WRITE_COMMAND = "node scripts/cartography/cli.ts --write";
 
-const PACKAGES_DIR = "packages";
 const SOURCE_DIR = "src";
 const INDEX_FILE = "index.ts";
 const README_FILE = "README.md";
@@ -99,31 +99,13 @@ function readPackages(root: string, problems: string[]): PackageEntry[] {
   }
 
   const entries: PackageEntry[] = [];
-  for (const directory of packageDirectories(root, packagesRoot)) {
+  for (const directory of packageDirectories(root)) {
     const manifestPath = join(root, directory, "package.json");
 
     const entry = readPackage(root, directory, manifestPath, problems);
     if (entry !== undefined) entries.push(entry);
   }
   return entries;
-}
-
-/** Package directories: `packages/<name>`, or `packages/<group>/<name>` under a group directory. */
-function packageDirectories(root: string, packagesRoot: string): string[] {
-  const found: string[] = [];
-  for (const name of sortedSubdirectories(packagesRoot)) {
-    const directory = `${PACKAGES_DIR}/${name}`;
-    if (existsSync(join(root, directory, "package.json"))) {
-      found.push(directory);
-      continue;
-    }
-
-    for (const member of sortedSubdirectories(join(packagesRoot, name))) {
-      const memberDirectory = `${directory}/${member}`;
-      if (existsSync(join(root, memberDirectory, "package.json"))) found.push(memberDirectory);
-    }
-  }
-  return found;
 }
 
 function readPackage(
