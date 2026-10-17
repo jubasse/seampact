@@ -93,12 +93,10 @@ export function treeSchemasCompileDeclarations(
 
     paramsAt(compiler, rule, at, splitName(id));
     const proof = treeSchemasMember(rule, "proof");
+    const proofPointer = treeSchemasPointer(at, "proof", "schema");
 
-    positionAt(
-      compiler,
-      treeSchemasMember(proof, "schema"),
-      treeSchemasPointer(at, "proof", "schema"),
-    );
+    positionAt(compiler, treeSchemasMember(proof, "schema"), proofPointer);
+    compiler.queryPositions.add(proofPointer);
   }
 
   for (const [code, error] of treeSchemasEntries(merged.errors))
@@ -213,5 +211,9 @@ export function treeSchemasCompileRoutes(
         at(key),
         role === undefined ? undefined : routeName(operation, role),
       );
+
+    // A query field written as a schema name has its wire at the schema's properties.
+    for (const [key] of treeSchemasEntries(settings.query))
+      compiler.queryPositions.add(at("query", key));
   }
 }

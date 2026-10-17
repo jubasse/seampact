@@ -260,6 +260,10 @@ export class TreeSchemasCompiler {
   readonly schemas = new Map<string, IrWriter.Schema>();
   /** The type use at each schema position the half answers for. */
   readonly uses = new Map<string, IrWriter.TypeUse>();
+  /** The pointer each schema this run wrote is written at: its declaration, or the position it is hoisted from. */
+  readonly writtenAt = new Map<string, string>();
+  /** The positions whose use a query wire is answered for, besides object properties: query fields, rule proofs. */
+  readonly queryPositions = new Set<string>();
   readonly scalars: TreeSchemasScalars;
 
   private readonly catalogue: TreeSchemasRaw | undefined;
@@ -839,6 +843,7 @@ export class TreeSchemasCompiler {
     const typeName = treeSchemasMember(value, "typeName");
     const examples = treeSchemasMember(value, "examples");
 
+    this.writtenAt.set(id, position.pointer);
     this.schemas.set(id, {
       ...body,
       id,

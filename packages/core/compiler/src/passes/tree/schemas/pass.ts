@@ -13,6 +13,7 @@ import {
   treeSchemasCompileVersionProperties,
 } from "./operations.js";
 import { treeSchemasCompileDeclarations, treeSchemasCompileRoutes } from "./positions.js";
+import { treeSchemasQueryWires } from "./query-wire.js";
 import { TreeSchemasReporter } from "./raw.js";
 
 // The tree.schemas half (ADR 0006 sections 2 and 3): it seeds the core schemas, compiles every schema and enum of
@@ -21,9 +22,16 @@ import { TreeSchemasReporter } from "./raw.js";
 // Import pipeline values and types from `pipeline/seam.js` only, never from `pipeline/index.js`, the orchestrator
 // or the registry: the registry imports this module, so any of those would close an import cycle (`seam.ts`).
 
-/** The schema service over the type uses the run compiled: each answer a new copy, the run's state unreachable. */
-export function treeSchemasService(uses: ReadonlyMap<string, IrWriter.TypeUse>): TreeSchemaService {
+/**
+ * The schema service over the type uses and query wires the run compiled: each answer a new copy, the run's state
+ * unreachable.
+ */
+export function treeSchemasService(
+  uses: ReadonlyMap<string, IrWriter.TypeUse>,
+  queryWires: ReadonlyMap<string, IrWriter.QueryWire>,
+): TreeSchemaService {
   const answers = new Map(uses);
+  const wires = new Map(queryWires);
 
   return {
     typeUse: (pointer) => {
@@ -31,7 +39,11 @@ export function treeSchemasService(uses: ReadonlyMap<string, IrWriter.TypeUse>):
 
       return use === undefined ? undefined : structuredClone(use);
     },
-    queryWire: () => undefined,
+    queryWire: (pointer) => {
+      const wire = wires.get(pointer);
+
+      return wire === undefined ? undefined : structuredClone(wire);
+    },
     checkExample: () => [],
   };
 }
@@ -63,6 +75,6 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
 
     for (const declared of enums) draft.enums[declared.id] = structuredClone(declared);
 
-    return treeSchemasService(compiler.uses);
+    return treeSchemasService(compiler.uses, treeSchemasQueryWires(compiler, context.conventions));
   },
 };
