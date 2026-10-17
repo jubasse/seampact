@@ -1062,3 +1062,36 @@ surfaces:
     ],
   ]);
 });
+
+test("query defaults: an optional query field keeps its written default, inline or from its schema property", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+schemas:
+  Filter: { type: object, properties: { state: { type: string, default: open } }, required: [] }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      inline: { method: get, query: { "size?": { type: integer, default: 20 }, "q?": { type: string } } }
+      named: { method: get, query: Filter }
+`);
+  const filter = treeNodesObjectSchema("Filter", "/schemas/Filter", { state: text });
+  const draft = treeNodesDraftWith({
+    ...filter,
+    properties: filter.properties.map((state) => ({ ...state, optional: true, default: "open" })),
+  });
+  const treeSchemas = treeNodesStubService({
+    typeUses: { [`${ROUTES}/named/query`]: ref("Filter") },
+    queryWires: { "/schemas/Filter/properties/state": wire("text") },
+  });
+  const run = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas, draft });
+  const defaults = (id: string) =>
+    operation(run.draft.operations, id).params?.query.map((param) => [param.name, param.default]);
+
+  expect(run.diagnostics).toEqual([]);
+  expect(defaults("inline")).toEqual([
+    ["size", 20],
+    ["q", undefined],
+  ]);
+  expect(defaults("named")).toEqual([["state", "open"]]);
+});

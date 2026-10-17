@@ -1,5 +1,5 @@
 import type { IrWriter, Origin } from "@seampact/spec/ir";
-import type { DraftIR, TreeNode } from "../../../pipeline/seam.js";
+import { type DraftIR, pipelineCopy, type TreeNode } from "../../../pipeline/seam.js";
 import {
   type TreeNodesReportOnce,
   treeNodesError,
@@ -11,6 +11,7 @@ import {
   type TreeNodesJson,
   treeNodesAnsweredUse,
   treeNodesIsObject,
+  treeNodesMember,
   treeNodesObjectOf,
   treeNodesPointer,
 } from "./raw.js";
@@ -34,6 +35,8 @@ export interface TreeNodesField {
   readonly name: string;
   readonly required: boolean;
   readonly type: IrWriter.TypeUse;
+  /** The `default` written on the field or its property (ADR 0003 section 10), absent when none is. */
+  readonly default?: unknown;
   readonly origin: Origin;
   /** Where the schema service answers the field's query wire. */
   readonly wirePointer: string;
@@ -46,6 +49,7 @@ export interface TreeNodesFields {
 }
 
 const OPTIONAL_SUFFIX = "?";
+const DEFAULT_KEY = "default";
 
 /** The fields of the map written at `pointer`, each schema compiled in `direction`. */
 export function treeNodesFields(
@@ -62,10 +66,13 @@ export function treeNodesFields(
     const fieldPointer = treeNodesPointer(pointer, key);
     const optional = key.endsWith(OPTIONAL_SUFFIX);
 
+    const writtenDefault = treeNodesMember(treeNodesMember(written, key), DEFAULT_KEY);
+
     return {
       name: optional ? key.slice(0, -OPTIONAL_SUFFIX.length) : key,
       required: !optional,
       type: treeNodesAnsweredUse(site.context, fieldPointer, direction),
+      ...(writtenDefault === undefined ? {} : { default: pipelineCopy(writtenDefault) }),
       origin: site.context.origin(fieldPointer) ?? site.node.origin,
       wirePointer: fieldPointer,
     };
@@ -106,6 +113,7 @@ function namedSchemaFields(
       name: property.name,
       required: !property.optional,
       type: property.type,
+      ...(property.default === undefined ? {} : { default: property.default }),
       origin: property.origin,
       wirePointer: treeNodesPointer(schemaPointer, "properties", property.name),
     }),
