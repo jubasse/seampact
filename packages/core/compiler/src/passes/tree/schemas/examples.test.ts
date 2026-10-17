@@ -127,3 +127,132 @@ describe("examples parsed", () => {
     );
   });
 });
+
+describe("examples parsed, by shape", () => {
+  const run = treeSchemasRunApi(`schemas:
+  Push: { type: object, properties: { ref: { type: string } }, required: [ref] }
+  Ping: { type: object, properties: { zen: { type: string } }, required: [zen] }
+  Hook:
+    discriminator: { from: header.X-Kind }
+    oneOf: { push: Push, ping: Ping }
+  Upload: { type: object, properties: { content: { file: { media: [image/png] } } } }
+  Inner: { type: object, properties: { count: { type: integer } }, required: [count] }
+  Note:
+    type: object
+    properties:
+      body: { type: string, contentMediaType: application/json, contentSchema: Inner }
+  Maybe: { type: object, nullable: true, properties: { a: { type: string } }, examples: [null] }
+`);
+  const check = (value: unknown, use: IrWriter.TypeUse) => run.service.checkExample(value, use);
+
+  test("a header-tagged union fits a value that fits one variant", () => {
+    expect(run.diagnostics).toEqual([]);
+    expect(check({ zen: "calm" }, ref("Hook"))).toEqual([]);
+    expect(check({ other: 1 }, ref("Hook"))).toEqual([
+      { pointer: "", message: "the value fits no variant of Hook" },
+    ]);
+  });
+
+  test("a file example is any string", () => {
+    expect(check({ content: "photo.png" }, ref("Upload"))).toEqual([]);
+    expect(check({ content: 7 }, ref("Upload"))).toEqual([
+      { pointer: "/content", message: "a file example is a string" },
+    ]);
+  });
+
+  test("every issue of a JSON text is reported at the string that holds it", () => {
+    expect(check({ body: '{"count": "x", "m": 1}' }, ref("Note"))).toEqual([
+      {
+        pointer: "/body",
+        message: "the JSON text does not fit at '/m': 'm' is not a property of Inner",
+      },
+      { pointer: "/body", message: "the JSON text does not fit at '/count': 'x' is not a number" },
+    ]);
+  });
+
+  test("an authored value in a message is quoted and cut short", () => {
+    const [unsafe] = check({ count: 1, "a\u202e": 1 }, ref("Inner"));
+    const [long] = check({ count: 1, [`k${"x".repeat(200)}`]: 1 }, ref("Inner"));
+
+    expect(unsafe?.message).toBe("'a\\u202E' is not a property of Inner");
+    expect(long?.message).toMatch(/^'kx+…' is not a property of Inner$/);
+    expect(long?.message.length).toBeLessThan(120);
+  });
+
+  test("a null example written on a schema declared nullable fits it", () => {
+    expect(located(run)).toEqual([]);
+    expect(run.draft.schemas.Maybe?.examples).toEqual([null]);
+  });
+
+  test("an example of a schema whose property failed to compile reports no second issue", () => {
+    const refused = treeSchemasRunApi(`schemas:
+  Broken:
+    type: object
+    examples: [{ bad: 1 }]
+    properties: { bad: { $ref: Missing } }
+`);
+
+    expect(located(refused)).toEqual([["schema-unknown", "/schemas/Broken/properties/bad"]]);
+  });
+});
+
+describe("text examples parsed by the wire form", () => {
+  const run = treeSchemasRunApi(CATALOGUES);
+  const text = (value: string, use: IrWriter.TypeUse) =>
+    run.service.checkTextExample(value, use).map((issue) => issue.message);
+  const scalar = (
+    type: IrWriter.ScalarTypeUse["type"],
+    refinements: IrWriter.Refinements = {},
+    format?: IrWriter.ScalarTypeUse["format"],
+  ): IrWriter.TypeUse => ({
+    kind: "scalar",
+    type,
+    refinements,
+    ...(format === undefined ? {} : { format }),
+  });
+
+  test("a number, boolean, int64, string or enum text stands for its value", () => {
+    expect(text("12", scalar("integer", { minimum: "1" }))).toEqual([]);
+    expect(text("1.5e2", scalar("number"))).toEqual([]);
+    expect(text("true", scalar("boolean"))).toEqual([]);
+    expect(text("9223372036854775807", scalar("integer", {}, "int64"))).toEqual([]);
+    expect(text("abc", scalar("string", { maxLength: 3 }))).toEqual([]);
+    expect(text("open", { kind: "enum", enum: "State" })).toEqual([]);
+  });
+
+  test("a text that its wire form does not read, or whose value does not fit, is refused", () => {
+    expect(text("twelve", scalar("integer"))).toEqual(["'twelve' is not a number"]);
+    expect(text("1.5", scalar("integer"))).toEqual(["1.5 is not an integer in the safe range"]);
+    expect(text("0", scalar("integer", { minimum: "1" }))).toEqual(["0 is not at least 1"]);
+    expect(text("yes", scalar("boolean"))).toEqual(["'yes' is not 'true' or 'false'"]);
+    expect(text("closed", { kind: "enum", enum: "State" })).toEqual([
+      "'closed' is not a value of State",
+    ]);
+    expect(text("x", ref("Task"))).toEqual(["a ref use has no text form"]);
+  });
+});
+
+describe("defaults parsed like an example", () => {
+  test("a default that fits is kept, one that does not is refused at its pointer", () => {
+    const run = treeSchemasRunApi(`schemas:
+  Settings:
+    type: object
+    properties:
+      size: { type: integer, minimum: 1, default: 10 }
+      note: { type: string, nullable: true, default: null }
+      limits: { type: array, items: { type: integer }, default: [1, "two"] }
+      level: { type: integer, default: low }
+  Small: { pick: { from: Settings, fields: [size] }, properties: { size: { default: 0 } } }
+`);
+
+    expect(located(run)).toEqual([
+      ["default-value", "/schemas/Settings/properties/limits/default/1"],
+      ["default-value", "/schemas/Settings/properties/level/default"],
+      ["default-value", "/schemas/Small/properties/size/default"],
+    ]);
+    expect(run.diagnostics[1]?.message).toBe(
+      "the default does not fit its schema at '': 'low' is not a number",
+    );
+    expect(run.located).toBe(true);
+  });
+});

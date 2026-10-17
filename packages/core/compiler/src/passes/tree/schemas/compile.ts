@@ -78,12 +78,19 @@ interface DeclaredTarget {
   keysFrom: string | undefined;
 }
 
-/** An example written in the run, parsed against its use once every schema and enum is compiled. */
+/** What a written value is: an entry of `examples` or a `default`; both are parsed like an example. */
+export type TreeSchemasWrittenValue = "example" | "default";
+
+/**
+ * A value written in the run, an example or a default, parsed against its use once every schema and enum is
+ * compiled (ADR 0003 sections 10 and 11).
+ */
 export interface TreeSchemasExampleCheck {
-  /** The pointer of the written `examples` list. */
+  /** The pointer of the written value. */
   pointer: string;
-  values: readonly unknown[];
+  value: unknown;
   use: IrWriter.TypeUse;
+  written: TreeSchemasWrittenValue;
 }
 
 const SHAPE_TEXT: Readonly<Record<Shape, string>> = {
@@ -274,12 +281,16 @@ export class TreeSchemasCompiler {
   readonly writtenAt = new Map<string, string>();
   /** The positions whose use a query wire is answered for, besides object properties: query fields, rule proofs. */
   readonly queryPositions = new Set<string>();
+  /** The body rule proofs among them: a JSON body holds a map, so a map there is no query wire but no fault. */
+  readonly bodyProofPositions = new Set<string>();
   /** The direction of each position use (ADR 0003 section 4); a declaration of `schemas` has none of its own. */
   readonly positionDirections = new Map<string, readonly IrWriter.Direction[]>();
   /** Every written example, checked once the catalogues are complete. */
   readonly exampleChecks: TreeSchemasExampleCheck[] = [];
   /** The pointer of every `unknownKeys` written on a use, checked against its directions. */
   readonly writtenUnknownKeys: string[] = [];
+  /** The pointers of the uses that carry a declaration's `unknownKeys`, by the pointer of that `unknownKeys`. */
+  readonly unknownKeysUses = new Map<string, string[]>();
   readonly scalars: TreeSchemasScalars;
 
   private readonly catalogue: TreeSchemasRaw | undefined;
@@ -380,6 +391,13 @@ export class TreeSchemasCompiler {
     const compiled = this.compileAt(value, position);
 
     if (compiled !== undefined) this.recordUse(position.pointer, compiled.use, directions);
+  }
+
+  /** Records at `pointer` a copy of the use compiled at `from`, if any: one schema declared at both. */
+  shareUse(from: string, pointer: string, directions: readonly IrWriter.Direction[]): void {
+    const use = this.uses.get(from);
+
+    if (use !== undefined) this.recordUse(pointer, structuredClone(use), directions);
   }
 
   private recordUse(
@@ -532,7 +550,8 @@ export class TreeSchemasCompiler {
 
     if (unknownKeys === undefined) return true;
 
-    if (use.kind === "ref") {
+    // A map's keys are free (ADR 0003 section 4 names an object, a union or a reference to one).
+    if (use.kind === "ref" && this.kindOf(use.schema) !== "map") {
       use.unknownKeys = unknownKeys;
       this.writtenUnknownKeys.push(treeSchemasPointer(pointer, "unknownKeys"));
 
@@ -543,7 +562,7 @@ export class TreeSchemasCompiler {
       rule: "unknown-keys",
       pointer: treeSchemasPointer(pointer, "unknownKeys"),
       message:
-        "'unknownKeys' acts on the keys of an object, a map or a union, and this schema is none",
+        "'unknownKeys' acts on the declared keys of an object or a union, and this schema is neither",
       fix: "remove 'unknownKeys' here, or set it on the object that holds this value",
     });
 
@@ -592,13 +611,35 @@ export class TreeSchemasCompiler {
     const examples = treeSchemasMember(value, "examples");
 
     if (!Array.isArray(examples)) return undefined;
-    this.exampleChecks.push({
-      pointer: treeSchemasPointer(pointer, "examples"),
-      values: pipelineCopy(examples),
-      use: structuredClone(use),
-    });
+
+    for (const [index, example] of examples.entries())
+      this.exampleChecks.push({
+        pointer: treeSchemasPointer(pointer, "examples", String(index)),
+        value: pipelineCopy(example),
+        use: structuredClone(use),
+        written: "example",
+      });
 
     return pipelineCopy(examples);
+  }
+
+  // A copy of the written default, queued to be parsed against `use` like an example (ADR 0003 section 10).
+  private writtenDefault(
+    value: TreeSchemasRaw | undefined,
+    pointer: string,
+    use: IrWriter.TypeUse,
+  ): unknown {
+    const written = treeSchemasMember(value, "default");
+
+    if (written === undefined) return undefined;
+    this.exampleChecks.push({
+      pointer: treeSchemasPointer(pointer, "default"),
+      value: pipelineCopy(written),
+      use: structuredClone(use),
+      written: "default",
+    });
+
+    return pipelineCopy(written);
   }
 
   private compileShape(
@@ -774,11 +815,21 @@ export class TreeSchemasCompiler {
     if (compiled === undefined) return undefined;
 
     if (!this.checkHeaderUnion(compiled.headerUnion, position)) return undefined;
+
+    if (target.keysFrom !== undefined) this.recordUnknownKeysUse(target.keysFrom, position.pointer);
     const use = structuredClone(compiled.use);
 
     if (target.nullable && use.kind !== "opaque") use.nullable = true;
 
     return { use, sensitive: compiled.sensitive, headerUnion: compiled.headerUnion };
+  }
+
+  private recordUnknownKeysUse(declaration: string, pointer: string): void {
+    const written = treeSchemasPointer("/schemas", declaration, "unknownKeys");
+    const uses = this.unknownKeysUses.get(written) ?? [];
+
+    uses.push(pointer);
+    this.unknownKeysUses.set(written, uses);
   }
 
   // A declared name followed through plain references: its kind when it is a named object, map or union, and
@@ -996,7 +1047,13 @@ export class TreeSchemasCompiler {
     const id = this.idOf(position);
     const name = irName(position.name as Name);
     const typeName = treeSchemasMember(value, "typeName");
-    const examples = this.writtenExamples(value, position.pointer, { kind: "ref", schema: id });
+    // A schema written `nullable` takes a null example (ADR 0003 section 1).
+    const nullable = treeSchemasMember(value, "nullable") === true;
+    const examples = this.writtenExamples(value, position.pointer, {
+      kind: "ref",
+      schema: id,
+      ...(nullable ? { nullable } : {}),
+    });
     // A property's own `deprecated` marks the property (ADR 0003 section 1).
     const deprecated =
       position.place !== "property" && treeSchemasMember(value, "deprecated") === true;
@@ -1055,6 +1112,7 @@ export class TreeSchemasCompiler {
         return restriction;
       },
       examples: (value, pointer, use) => this.writtenExamples(value, pointer, use),
+      defaultValue: (value, pointer, use) => this.writtenDefault(value, pointer, use),
     };
   }
 
@@ -1185,6 +1243,7 @@ export class TreeSchemasCompiler {
     const writesSchema = fieldShape !== undefined && SCHEMA_WRITING_SHAPES.has(fieldShape);
     // An inline object, map or union keeps its examples on its hoisted schema.
     const examples = writesSchema ? undefined : this.writtenExamples(field, pointer, compiled.use);
+    const defaulted = this.writtenDefault(field, pointer, compiled.use);
 
     return {
       name: wire,
@@ -1193,7 +1252,7 @@ export class TreeSchemasCompiler {
       nullable,
       sensitive: treeSchemasMember(field, "sensitive") === true || compiled.sensitive,
       ...(restrictedTo === undefined ? {} : { restrictedTo }),
-      ...(defaultValue === undefined ? {} : { default: pipelineCopy(defaultValue) }),
+      ...(defaulted === undefined ? {} : { default: defaulted }),
       deprecated: treeSchemasMember(field, "deprecated") === true,
       ...(codeName === undefined ? {} : { codeName }),
       ...(examples === undefined ? {} : { examples }),

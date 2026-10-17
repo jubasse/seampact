@@ -1,12 +1,13 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import type { TreeSchemaExampleIssue } from "../../../pipeline/seam.js";
+import { quote } from "../../../validate/diagnostics.js";
+import type { TreeSchemasExampleCheck, TreeSchemasWrittenValue } from "./compile.js";
 import {
   type TreeSchemasDecimal,
   treeSchemasCompareDecimals,
   treeSchemasDecimalOf,
   treeSchemasIsMultipleOf,
 } from "./decimal.js";
-import type { TreeSchemasExampleCheck } from "./compile.js";
 import { type TreeSchemasReporter, treeSchemasPointer } from "./raw.js";
 
 // Example values parsed against a type use with the strict input rules (ADR 0003 section 11): unknown keys,
@@ -20,6 +21,9 @@ const DATE_TIME =
   /^([0-9]{4}-[0-9]{2}-[0-9]{2})[Tt]([0-9]{2}):([0-9]{2}):([0-9]{2})(?:\.[0-9]{1,9})?(?:[Zz]|[+-]([0-9]{2}):([0-9]{2}))$/;
 const INT64 = /^-?(0|[1-9][0-9]*)$/;
 const DECIMAL = /^-?(0|[1-9][0-9]*)(\.[0-9]+)?$/;
+// A JSON number, the text form of a number on the wire.
+const NUMBER_TEXT = /^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$/;
+const BOOLEAN_TEXT: Readonly<Record<string, boolean>> = { true: true, false: false };
 const INT64_MIN = -(2n ** 63n);
 const INT64_MAX = 2n ** 63n - 1n;
 const HOURS = 24;
@@ -32,10 +36,11 @@ const BOUND_CHECKS = [
   ["exclusiveMaximum", (order: number) => order < 0, "below"],
 ] as const;
 
+// A text read by its wire form: the value it stands for, or why it stands for none.
+type TextReading = { value: unknown } | { problem: string };
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
-
-const textOf = (value: unknown): string => JSON.stringify(value) ?? String(value);
 
 function isCalendarDate(text: string): boolean {
   const match = DATE.exec(text);
@@ -88,6 +93,36 @@ export class TreeSchemasExampleChecker {
     this.use(value, use, "", issues);
 
     return issues;
+  }
+
+  /**
+   * The issues of a text, a path segment, a query value or a key, read by the use's wire form: a string, an
+   * `int64`, a decimal or an enum value as written, a number or a boolean as its JSON text. Only a scalar or an
+   * enum use has a text form.
+   */
+  checkText(text: string, use: IrWriter.TypeUse): TreeSchemaExampleIssue[] {
+    const read = this.textValue(text, use);
+
+    return "problem" in read
+      ? [{ pointer: "", message: read.problem }]
+      : this.check(read.value, use);
+  }
+
+  private textValue(text: string, use: IrWriter.TypeUse): TextReading {
+    if (use.kind === "enum") return { value: text };
+
+    if (use.kind !== "scalar") return { problem: `a ${use.kind} use has no text form` };
+
+    if (use.type === "string" || use.format === "int64") return { value: text };
+
+    if (use.type === "boolean")
+      return Object.hasOwn(BOOLEAN_TEXT, text)
+        ? { value: BOOLEAN_TEXT[text] }
+        : { problem: `${quote(text)} is not 'true' or 'false'` };
+
+    return NUMBER_TEXT.test(text)
+      ? { value: Number(text) }
+      : { problem: `${quote(text)} is not a number` };
   }
 
   private use(
@@ -173,14 +208,17 @@ export class TreeSchemasExampleChecker {
       if (key !== tagProperty && !schema.properties.some((property) => property.name === key))
         issues.push({
           pointer: treeSchemasPointer(pointer, key),
-          message: `'${key}' is not a property of ${schema.id}`,
+          message: `${quote(key)} is not a property of ${schema.id}`,
         });
     }
 
     for (const property of schema.properties) {
       if (!Object.hasOwn(value, property.name)) {
         if (!property.optional)
-          issues.push({ pointer, message: `the required property '${property.name}' is missing` });
+          issues.push({
+            pointer,
+            message: `the required property ${quote(property.name)} is missing`,
+          });
         continue;
       }
 
@@ -209,7 +247,10 @@ export class TreeSchemasExampleChecker {
 
       if (schema.keys !== undefined) {
         for (const issue of this.check(key, schema.keys))
-          issues.push({ pointer: at, message: `the key '${key}' does not fit: ${issue.message}` });
+          issues.push({
+            pointer: at,
+            message: `the key ${quote(key)} does not fit: ${issue.message}`,
+          });
       }
 
       this.use(entry, schema.values, at, issues);
@@ -236,7 +277,10 @@ export class TreeSchemasExampleChecker {
     const property = schema.tag.property;
 
     if (!isRecord(value) || typeof value[property] !== "string") {
-      issues.push({ pointer, message: `the value holds no tag '${property}' of ${schema.id}` });
+      issues.push({
+        pointer,
+        message: `the value holds no tag ${quote(property)} of ${schema.id}`,
+      });
 
       return;
     }
@@ -248,7 +292,7 @@ export class TreeSchemasExampleChecker {
     if (variantSchema?.kind !== "object") {
       issues.push({
         pointer: treeSchemasPointer(pointer, property),
-        message: `'${tag}' is no tag of ${schema.id}`,
+        message: `${quote(tag)} is no tag of ${schema.id}`,
       });
 
       return;
@@ -269,7 +313,7 @@ export class TreeSchemasExampleChecker {
       throw new Error(`tree.schemas checks an example against no enum '${use.enum}'`);
 
     if (typeof value !== "string" || !values.includes(value))
-      issues.push({ pointer, message: `${textOf(value)} is not a value of ${use.enum}` });
+      issues.push({ pointer, message: `${quote(value)} is not a value of ${use.enum}` });
   }
 
   private array(
@@ -302,7 +346,14 @@ export class TreeSchemasExampleChecker {
   ): void {
     const problem = this.scalarProblem(value, use);
 
-    if (problem !== undefined) issues.push({ pointer, message: problem });
+    if (problem !== undefined) {
+      issues.push({ pointer, message: problem });
+
+      return;
+    }
+
+    if (use.content !== undefined && typeof value === "string")
+      this.content(value, use.content, pointer, issues);
   }
 
   private scalarProblem(value: unknown, use: IrWriter.ScalarTypeUse): string | undefined {
@@ -310,19 +361,19 @@ export class TreeSchemasExampleChecker {
 
     if (stringTyped) {
       if (typeof value !== "string")
-        return `${textOf(value)} is not a string${use.format === "int64" ? " (an int64 is sent as a string)" : ""}`;
+        return `${quote(value)} is not a string${use.format === "int64" ? " (an int64 is sent as a string)" : ""}`;
 
       return this.stringProblem(value, use);
     }
 
     if (use.type === "boolean")
-      return typeof value === "boolean" ? undefined : `${textOf(value)} is not a boolean`;
+      return typeof value === "boolean" ? undefined : `${quote(value)} is not a boolean`;
 
     if (typeof value !== "number" || !Number.isFinite(value))
-      return `${textOf(value)} is not a number`;
+      return `${quote(value)} is not a number`;
 
     if (use.type === "integer" && !Number.isSafeInteger(value))
-      return `${textOf(value)} is not an integer in the safe range`;
+      return `${quote(value)} is not an integer in the safe range`;
 
     return this.boundsProblem(value, use.refinements);
   }
@@ -335,40 +386,48 @@ export class TreeSchemasExampleChecker {
         : undefined;
 
     if (formatCheck !== undefined && !formatCheck(value))
-      return `'${value}' is not a valid ${format}`;
+      return `${quote(value)} is not a valid ${format}`;
     const { minLength, maxLength, pattern } = use.refinements;
     const length = [...value].length;
 
     if (minLength !== undefined && length < minLength)
-      return `'${value}' is shorter than ${minLength} characters`;
+      return `${quote(value)} is shorter than ${minLength} characters`;
 
     if (maxLength !== undefined && length > maxLength)
-      return `'${value}' is longer than ${maxLength} characters`;
+      return `${quote(value)} is longer than ${maxLength} characters`;
 
     if (pattern !== undefined && !new RegExp(pattern.normalized, "u").test(value))
-      return `'${value}' does not match the pattern ${pattern.source}`;
-
-    if (use.content !== undefined) return this.contentProblem(value, use.content);
+      return `${quote(value)} does not match the pattern ${quote(pattern.source)}`;
 
     return format === "int64" || format === "decimal"
       ? this.boundsProblem(value, use.refinements)
       : undefined;
   }
 
-  private contentProblem(value: string, content: IrWriter.JsonContent): string | undefined {
+  // Every issue of the JSON text is reported at the string that holds it.
+  private content(
+    value: string,
+    content: IrWriter.JsonContent,
+    pointer: string,
+    issues: TreeSchemaExampleIssue[],
+  ): void {
     let parsed: unknown;
 
     try {
       parsed = JSON.parse(value);
-    } catch {
-      return "the value is not JSON text";
+    } catch (error) {
+      const reason = error instanceof Error ? `: ${error.message}` : "";
+
+      issues.push({ pointer, message: `the value is not JSON text${reason}` });
+
+      return;
     }
 
-    const [first] = this.check(parsed, content.schema);
-
-    return first === undefined
-      ? undefined
-      : `the JSON text does not fit at '${first.pointer}': ${first.message}`;
+    for (const issue of this.check(parsed, content.schema))
+      issues.push({
+        pointer,
+        message: `the JSON text does not fit at ${quote(issue.pointer)}: ${issue.message}`,
+      });
   }
 
   private boundsProblem(
@@ -377,19 +436,19 @@ export class TreeSchemasExampleChecker {
   ): string | undefined {
     const decimal = treeSchemasDecimalOf(value);
 
-    if (decimal === undefined) return `${textOf(value)} is not a decimal number`;
+    if (decimal === undefined) return `${quote(value)} is not a decimal number`;
 
     for (const [key, fits, words] of BOUND_CHECKS) {
       const bound = boundOf(refinements[key]);
 
       if (bound !== undefined && !fits(treeSchemasCompareDecimals(decimal, bound)))
-        return `${String(value)} is not ${words} ${refinements[key]}`;
+        return `${quote(value)} is not ${words} ${refinements[key]}`;
     }
 
     const step = boundOf(refinements.multipleOf);
 
     if (step !== undefined && !treeSchemasIsMultipleOf(decimal, step))
-      return `${String(value)} is not a multiple of ${refinements.multipleOf}`;
+      return `${quote(value)} is not a multiple of ${refinements.multipleOf}`;
 
     return undefined;
   }
@@ -399,29 +458,30 @@ function boundOf(literal: string | undefined): TreeSchemasDecimal | undefined {
   return literal === undefined ? undefined : treeSchemasDecimalOf(literal);
 }
 
+const WRITTEN_FIX: Readonly<Record<TreeSchemasWrittenValue, string>> = {
+  example: "correct the example, or the schema it is parsed against",
+  default: "correct the default, or the schema it is parsed against",
+};
+
 /**
- * Parses every example the run wrote against its use: each issue fails compilation at its pointer inside the
- * value, or at the deepest node of it the tree holds (a missing property is reported at its object).
+ * Parses every example and default the run wrote against its use: each issue fails compilation at its pointer
+ * inside the value, or at the deepest node of it the tree holds (a missing property is reported at its object).
  */
 export function treeSchemasCheckWrittenExamples(
   checks: readonly TreeSchemasExampleCheck[],
   checker: TreeSchemasExampleChecker,
   reporter: TreeSchemasReporter,
 ): void {
-  for (const { pointer, values, use } of checks) {
-    for (const [index, value] of values.entries()) {
-      const at = treeSchemasPointer(pointer, String(index));
+  for (const { pointer, value, use, written } of checks) {
+    for (const issue of checker.check(value, use)) {
+      const inside = `${pointer}${issue.pointer}`;
 
-      for (const issue of checker.check(value, use)) {
-        const inside = `${at}${issue.pointer}`;
-
-        reporter.error({
-          rule: "example-value",
-          pointer: reporter.resolves(inside) ? inside : at,
-          message: `the example does not fit its schema at '${issue.pointer}': ${issue.message}`,
-          fix: "correct the example, or the schema it is parsed against",
-        });
-      }
+      reporter.error({
+        rule: `${written}-value`,
+        pointer: reporter.resolves(inside) ? inside : pointer,
+        message: `the ${written} does not fit its schema at ${quote(issue.pointer)}: ${issue.message}`,
+        fix: WRITTEN_FIX[written],
+      });
     }
   }
 }

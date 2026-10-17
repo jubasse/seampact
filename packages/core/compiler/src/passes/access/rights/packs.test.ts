@@ -186,6 +186,7 @@ surfaces:
       typeUse: () => undefined,
       queryWire: () => undefined,
       checkExample: () => [],
+      checkTextExample: () => [],
     });
 
     expect(() => accessRightsRunOn(raw, workspace, createDraftIR(), service)).toThrow(

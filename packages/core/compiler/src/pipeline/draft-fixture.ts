@@ -295,6 +295,7 @@ export function draftFixtureSchemaService(api: DraftFixtureApi): TreeSchemaServi
       return found === undefined ? undefined : structuredClone(found.wire);
     },
     checkExample: (value) => invalidExampleMarkers(value, ""),
+    checkTextExample: (text) => invalidExampleMarkers(text, ""),
   };
 }
 

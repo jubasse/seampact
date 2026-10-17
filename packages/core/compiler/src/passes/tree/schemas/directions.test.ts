@@ -94,6 +94,36 @@ surfaces:
     ]);
     expect(refused.located).toBe(true);
   });
+
+  test("unknownKeys on an alias declaration that only output uses reach is refused", () => {
+    const refused = treeSchemasRunApi(`schemas:
+  Answer: { type: object, properties: { a: { type: string } } }
+  Strict: { $ref: Answer, unknownKeys: refuse }
+  Loose: { $ref: Answer, unknownKeys: refuse }
+surfaces:
+  app:
+    routes:
+      send:
+        method: post
+        input: { type: object, properties: { loose: Loose } }
+        output: Strict
+`);
+
+    expect(located(refused)).toEqual([["unknown-keys", "/schemas/Strict/unknownKeys"]]);
+  });
+
+  test("unknownKeys on a map, whose keys are free, is refused", () => {
+    const refused = treeSchemasRunApi(`schemas:
+  Labels: { type: object, additionalProperties: { type: string }, unknownKeys: refuse }
+  Tags: { type: object, additionalProperties: { type: string } }
+  Holder: { type: object, properties: { tags: { $ref: Tags, unknownKeys: refuse } } }
+`);
+
+    expect(located(refused)).toEqual([
+      ["unknown-keys", "/schemas/Labels/unknownKeys"],
+      ["unknown-keys", "/schemas/Holder/properties/tags/unknownKeys"],
+    ]);
+  });
 });
 
 describe("schema service", () => {

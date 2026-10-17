@@ -106,15 +106,33 @@ export function treeSchemasWriteDirections(
 const within = (pointer: string, holder: string): boolean =>
   pointer === holder || pointer.startsWith(`${holder}/`);
 
+interface DirectionHolder {
+  pointer: string;
+  directions: readonly IrWriter.Direction[];
+}
+
+// The directions of the nearest position or written schema holding `pointer`; none when no use reaches it yet.
+function directionsAt(
+  holders: readonly DirectionHolder[],
+  pointer: string,
+): readonly IrWriter.Direction[] {
+  const nearest = holders
+    .filter((holder) => within(pointer, holder.pointer))
+    .sort((a, b) => b.pointer.length - a.pointer.length)[0];
+
+  return nearest?.directions ?? [];
+}
+
 /**
  * Refuses each written `unknownKeys` whose nearest holder, a position or a written schema, is used in output
- * only. A holder no use reaches yet (an unused declaration) is left alone.
+ * only. One on an alias declaration, which writes no schema, takes the directions of the uses that carry it. A
+ * holder no use reaches yet (an unused declaration) is left alone.
  */
 export function treeSchemasRefuseOutputUnknownKeys(
   compiler: TreeSchemasCompiler,
   reporter: TreeSchemasReporter,
 ): void {
-  const holders: { pointer: string; directions: readonly IrWriter.Direction[] }[] = [
+  const holders: DirectionHolder[] = [
     ...[...compiler.positionDirections].map(([pointer, directions]) => ({ pointer, directions })),
     ...[...compiler.writtenAt].map(([id, pointer]) => ({
       pointer,
@@ -123,13 +141,15 @@ export function treeSchemasRefuseOutputUnknownKeys(
   ];
 
   for (const written of compiler.writtenUnknownKeys) {
-    const nearest = holders
-      .filter((holder) => within(written, holder.pointer))
-      .sort((a, b) => b.pointer.length - a.pointer.length)[0];
+    const own = directionsAt(holders, written);
+    const directions =
+      own.length > 0
+        ? own
+        : (compiler.unknownKeysUses.get(written) ?? []).flatMap((use) =>
+            directionsAt(holders, use),
+          );
 
-    if (nearest === undefined || nearest.directions.length === 0) continue;
-
-    if (nearest.directions.includes("input")) continue;
+    if (directions.length === 0 || directions.includes("input")) continue;
     reporter.error({
       rule: "unknown-keys",
       pointer: written,

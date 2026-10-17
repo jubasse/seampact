@@ -1,5 +1,4 @@
 import type { IrWriter } from "@seampact/spec/ir";
-import { pipelineCopy } from "../../../pipeline/seam.js";
 import {
   type TreeSchemasRaw,
   type TreeSchemasRawObject,
@@ -23,6 +22,8 @@ export interface TreeSchemasDerivedHost {
   restriction(written: TreeSchemasRaw | undefined, pointer: string): IrWriter.FieldRestriction;
   /** A copy of the examples written on `value`, each queued to be parsed against `use`; undefined when none. */
   examples(value: TreeSchemasRaw, pointer: string, use: IrWriter.TypeUse): unknown[] | undefined;
+  /** A copy of the default written on `value`, queued to be parsed against `use`; undefined when none. */
+  defaultValue(value: TreeSchemasRaw, pointer: string, use: IrWriter.TypeUse): unknown;
 }
 
 type DerivedKind = "pick" | "omit";
@@ -167,8 +168,6 @@ function overlayProperty(
 
   if (typeof overlay.deprecated === "boolean") property.deprecated = overlay.deprecated;
 
-  if (Object.hasOwn(overlay, "default")) property.default = pipelineCopy(overlay.default);
-
   if (Object.hasOwn(overlay, "restrictedTo"))
     property.restrictedTo = host.restriction(overlay.restrictedTo, pointer);
   property.docs = { ...property.docs, ...treeSchemasDocs(overlay) };
@@ -178,6 +177,9 @@ function overlayProperty(
   const examples = host.examples(overlay, pointer, use);
 
   if (examples !== undefined) property.examples = examples;
+  const defaulted = host.defaultValue(overlay, pointer, use);
+
+  if (defaulted !== undefined) property.default = defaulted;
 
   return checkRequiredOverlay(property, overlay, pointer, host.reporter);
 }

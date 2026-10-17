@@ -9,13 +9,14 @@ import {
   derivationRoleOf,
   derivationRoles,
 } from "../../../derivations/index.js";
+import type { TreeSchemasCodeParamsDeclarations } from "./code-params.js";
 import { treeSchemasDerivedProperty } from "./property.js";
-import { type TreeSchemasRawObject, treeSchemasMember, treeSchemasPointer } from "./raw.js";
+import { treeSchemasPointer } from "./raw.js";
 
 // The core schemas of ADR 0004 section 13: the params schema of each default code that carries data, the schema of
 // one schema issue and the empty body schema, seeded from the role data with origin `core` and no `derivedFrom`.
-// Their ids are reserved. A layer that declares a default code with `params` takes the code's params id, and the
-// core schema is not seeded; the issue schema stays seeded until a layer declares or hoists its id,
+// Their ids are reserved. A layer that declares a default code with `params`, in the catalogue or on a tree node,
+// takes the code's params id at its first declaration, and the core schema is not seeded; the issue schema stays seeded until a layer declares or hoists its id,
 // which it may once the `api.schema_invalid` params are replaced.
 
 /** A reserved schema id: the core schema seeded under it, or the layer params that take it. */
@@ -74,11 +75,8 @@ function coreObject(
   };
 }
 
-const declaresParams = (merged: TreeSchemasRawObject, code: string): boolean =>
-  treeSchemasMember(treeSchemasMember(merged.errors, code), "params") !== undefined;
-
 function paramsReservation(
-  merged: TreeSchemasRawObject,
+  codeParams: TreeSchemasCodeParamsDeclarations,
   role: DerivationRole,
 ): TreeSchemasReservation {
   const code = role.defaultCode;
@@ -87,11 +85,13 @@ function paramsReservation(
 
   if (id === undefined) throw new Error(`the default code ${code} names no params schema`);
 
-  const pointer = treeSchemasPointer("/errors", code, "params");
   const purpose = `the params of the default code '${code}'`;
+  const declared = codeParams.get(code)?.[0];
 
-  if (declaresParams(merged, code))
-    return { id, name, purpose, pointer, seed: undefined, yields: false };
+  if (declared !== undefined)
+    return { id, name, purpose, pointer: declared.pointer, seed: undefined, yields: false };
+
+  const pointer = treeSchemasPointer("/errors", code, "params");
 
   // ADR 0006 section 6: a datum the bound code need not always receive is an optional param.
   const properties = role.data.map((datum) =>
@@ -142,13 +142,13 @@ function emptyBodyReservation(): TreeSchemasReservation {
 
 /** The reserved schema ids of an api, in the order of `derivationCoreSchemaIds`, each with its core schema. */
 export function treeSchemasCoreReservations(
-  merged: TreeSchemasRawObject,
+  codeParams: TreeSchemasCodeParamsDeclarations,
 ): TreeSchemasReservation[] {
   const params = derivationRoles
     .filter((role) => role.data.length > 0)
-    .map((role) => paramsReservation(merged, role));
+    .map((role) => paramsReservation(codeParams, role));
   const code = schemaInvalidCode();
-  const issue = issueReservation(code, declaresParams(merged, code));
+  const issue = issueReservation(code, codeParams.has(code));
 
   return [...params, issue, emptyBodyReservation()];
 }
