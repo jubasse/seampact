@@ -289,6 +289,7 @@ UpdateTask:
 - On input, a restricted field sent without the right answers 403 from the `forbidden` role with the field pointer, or is stripped (SCN-066, CHK-092).
 - A sort key inherits its field's restriction (ADR 0002 section 10).
 - The IR materialises, per operation, every field right with its schema, pointer, right, params, subject and direction, so targets never walk schemas to find them (ADR 0004).
+- A restricted field reachable below a recursive reference (a `Comment` whose `replies` hold `Comment`) is a compile error naming the schema: its pointers would have no end, so the IR could not list its field rights.
 
 ### 7. Enums at a use
 

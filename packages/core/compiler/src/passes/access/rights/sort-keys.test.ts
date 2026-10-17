@@ -26,6 +26,7 @@ schemas:
       name: { type: string }
       cost: { type: integer, restrictedTo: items.cost }
       grade: { type: integer, restrictedTo: { right: items.grade, params: { level: high } } }
+      margin: { type: integer, restrictedTo: items.margin }
 pagings:
   offset:
     request:
@@ -39,6 +40,10 @@ rights:
   items.grade: { params: { level: { type: string } } }
   items.read: {}
   items.audit: {}
+  items.margin: { subject: { resource: Item, id: ItemId } }
+  shop.staff: { subject: { scope: shop } }
+scopes:
+  shop: { id: { type: string, format: uuid } }
 surfaces:
   app:
     prefix: /v{version}
@@ -80,11 +85,11 @@ describe("sort-key rights", () => {
     ).toEqual([
       ["title", undefined, undefined],
       [
-        "cost",
-        "notes.seeCost",
+        "rating",
+        "notes.read",
         {
           derivation: "sortKey.restricted",
-          from: [{ layer: "api", pointer: "/schemas/Note/properties/cost/restrictedTo" }],
+          from: [{ layer: "api", pointer: "/schemas/Note/properties/rating/restrictedTo" }],
         },
       ],
       [
@@ -135,6 +140,27 @@ describe("sort-key rights", () => {
     ]);
     expect(listOf(draft)?.paging?.sortKeys.map(({ right }) => right)).toEqual([
       undefined,
+      undefined,
+      undefined,
+    ]);
+  });
+});
+
+describe("sort-key subjects", () => {
+  test("a key whose resource or scope right has no subject on the list route is an error naming the key, the right and the route", () => {
+    const { draft, diagnostics } = run(
+      "            sortable: [margin, { key: name, right: shop.staff }]\n",
+      ["margin", "name"],
+    );
+
+    expect(located(diagnostics)).toEqual([
+      ["sort-key-right", `${SORTABLE}/0`],
+      ["sort-key-right", `${SORTABLE}/1`],
+    ]);
+    expect(diagnostics[0]?.message).toBe(
+      "sort key 'margin' of route 'listItems' has right 'items.margin', whose subject the route does not resolve",
+    );
+    expect(listOf(draft)?.paging?.sortKeys.map(({ right }) => right)).toEqual([
       undefined,
       undefined,
     ]);

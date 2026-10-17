@@ -36,6 +36,27 @@
             }
           ]
         }
+      },
+      {
+        "schema": "Note",
+        "pointer": "/rating",
+        "right": "notes.read",
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "workspace"
+          }
+        },
+        "direction": "output",
+        "derivedFrom": {
+          "derivation": "fieldRight.restricted",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/schemas/Note/properties/rating/restrictedTo"
+            }
+          ]
+        }
       }
     ],
     "filteredBy": "notes.read",
@@ -48,18 +69,18 @@
         }
       },
       {
-        "key": "cost",
+        "key": "rating",
         "origin": {
           "layer": "api",
           "pointer": "/surfaces/app/routes/workspaces/member/routes/notes/ops/list/sortable/1"
         },
-        "right": "notes.seeCost",
+        "right": "notes.read",
         "derivedFrom": {
           "derivation": "sortKey.restricted",
           "from": [
             {
               "layer": "api",
-              "pointer": "/schemas/Note/properties/cost/restrictedTo"
+              "pointer": "/schemas/Note/properties/rating/restrictedTo"
             }
           ]
         }
@@ -161,6 +182,27 @@
             }
           ]
         }
+      },
+      {
+        "schema": "Note",
+        "pointer": "/rating",
+        "right": "notes.read",
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "workspace"
+          }
+        },
+        "direction": "output",
+        "derivedFrom": {
+          "derivation": "fieldRight.restricted",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/schemas/Note/properties/rating/restrictedTo"
+            }
+          ]
+        }
       }
     ]
   },
@@ -222,6 +264,27 @@
             }
           ]
         }
+      },
+      {
+        "schema": "Feed",
+        "pointer": "/pinned/*/rating",
+        "right": "notes.read",
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "workspace"
+          }
+        },
+        "direction": "output",
+        "derivedFrom": {
+          "derivation": "fieldRight.restricted",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/schemas/Note/properties/rating/restrictedTo"
+            }
+          ]
+        }
       }
     ]
   },
@@ -262,6 +325,27 @@
             }
           ]
         }
+      },
+      {
+        "schema": "NotesByLabel",
+        "pointer": "/*/rating",
+        "right": "notes.read",
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "workspace"
+          }
+        },
+        "direction": "output",
+        "derivedFrom": {
+          "derivation": "fieldRight.restricted",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/schemas/Note/properties/rating/restrictedTo"
+            }
+          ]
+        }
       }
     ]
   },
@@ -299,6 +383,27 @@
             {
               "layer": "api",
               "pointer": "/schemas/Note/properties/memo/restrictedTo"
+            }
+          ]
+        }
+      },
+      {
+        "schema": "Note",
+        "pointer": "/rating",
+        "right": "notes.read",
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "workspace"
+          }
+        },
+        "direction": "output",
+        "derivedFrom": {
+          "derivation": "fieldRight.restricted",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/schemas/Note/properties/rating/restrictedTo"
             }
           ]
         }

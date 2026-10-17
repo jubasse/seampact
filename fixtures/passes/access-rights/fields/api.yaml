@@ -1,7 +1,8 @@
 # Field and sort-key rights (FR-23, A21, ADR 0003 section 6, SCN-065 to SCN-068): restricted fields reached from
 # inputs and outputs through arrays, a map and a union, one entry per pointer and direction; subjects from the
 # route's scope, its default member id on input, the holder's id property on output, none for a right without
-# subject; input policies from the field or the conventions; sort keys inheriting or stating their right;
+# subject; input policies from the field or the conventions; sort keys inheriting or stating a right whose subject
+# the list resolves;
 # `filteredBy`.
 api: { name: notes, version: 1 }
 
@@ -28,6 +29,7 @@ schemas:
       title: { type: string }
       cost: { type: integer, restrictedTo: notes.seeCost }
       memo: { type: string, restrictedTo: { right: notes.annotate, input: strip } }
+      rating: { type: integer, restrictedTo: notes.read }
   CreateNote:
     type: object
     required: [title]
@@ -102,7 +104,7 @@ surfaces:
               ops:
                 list:
                   paging: cursor
-                  sortable: [title, cost, { key: memo, right: notes.annotate }]
+                  sortable: [title, rating, { key: memo, right: notes.annotate }]
                   filteredBy: notes.read
                 create: { input: CreateNote }
                 update: { input: UpdateNote }

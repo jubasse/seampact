@@ -217,5 +217,5 @@ export const accessRightsFieldsPaging = (draft: DraftIR): void =>
   accessRightsListPaging(draft, {
     operation: "listNotes",
     sortable: "/surfaces/app/routes/workspaces/member/routes/notes/ops/list/sortable",
-    keys: ["title", "cost", "memo"],
+    keys: ["title", "rating", "memo"],
   });

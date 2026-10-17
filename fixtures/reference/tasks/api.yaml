@@ -42,7 +42,7 @@ surfaces:
               ops:
                 list:
                   paging: { cursor: { maxLimit: 50 } }
-                  sortable: [createdAt, effort]
+                  sortable: [createdAt]
                   filteredBy: tasks.read
                 get: {}
                 create:

@@ -10,12 +10,14 @@ import type { AccessRightsCatalogues } from "./catalogues.js";
 import {
   type AccessRightsRestrictionChecks,
   accessRightsCheckRestriction,
+  accessRightsIdSchemaOf,
   accessRightsRestrictionOrigin,
 } from "./field-rights.js";
 import { accessRightsString } from "./read.js";
 import type { AccessRightsReporter } from "./report.js";
 import type { AccessRightsRoute } from "./routes.js";
 import type { AccessRightsContext } from "./schema-use.js";
+import { accessRightsDefaultMemberId } from "./subjects.js";
 
 // The rights of a list's sort keys (FR-23, SCN-067, ADR 0002 section 10): a key written `{ key, right }` has that
 // right; a key whose item field is restricted inherits the field's right, with `derivedFrom: sortKey.restricted`,
@@ -23,8 +25,8 @@ import type { AccessRightsContext } from "./schema-use.js";
 // restriction with params is refused rather than checked without them. A relay route copies its keys without their
 // rights (ADR 0002 section 7).
 //
-// Not checked here: the subject of a resource right on a sort key (ADR 0003 section 6), which the reference
-// `listTasks` key `effort` would fail.
+// The key's subject must be found on the route (ADR 0003 section 6): the resolved scope of a scope right, the
+// route's default subject (its nearest member id) for a resource right.
 
 /** The right and its derivation for each sort key of the route, by index; empty for a route without keys. */
 export type AccessRightsSortKeyRights = ReadonlyMap<
@@ -34,6 +36,7 @@ export type AccessRightsSortKeyRights = ReadonlyMap<
 
 export interface AccessRightsSortKeysInput {
   readonly route: AccessRightsRoute;
+  readonly scopes: readonly IrWriter.OperationScope[];
   readonly schemas: PassReadonly<DraftIR["schemas"]>;
 }
 
@@ -44,7 +47,7 @@ export function accessRightsSortKeyRights(
   reporter: AccessRightsReporter,
   catalogues: AccessRightsCatalogues,
   checks: AccessRightsRestrictionChecks,
-  { route, schemas }: AccessRightsSortKeysInput,
+  { route, scopes, schemas }: AccessRightsSortKeysInput,
 ): AccessRightsSortKeyRights {
   const rights = new Map<number, { right: string; derivedFrom?: IrWriter.DerivedFrom }>();
   const { operation } = route;
@@ -52,6 +55,15 @@ export function accessRightsSortKeyRights(
   if (route.node.kind === "relay" || operation.paging === undefined) return rights;
 
   const item = itemSchemaOf(route, schemas);
+
+  const subjectFound = (key: PassReadonly<IrWriter.SortKey>, right: string): boolean =>
+    keySubjectFound(context, reporter, catalogues, {
+      route,
+      scopes,
+      key: key.key,
+      pointer: key.origin?.pointer ?? route.node.pointer,
+      right,
+    });
 
   for (const [index, sortKey] of operation.paging.sortKeys.entries()) {
     const restriction = item?.properties.find(
@@ -62,7 +74,8 @@ export function accessRightsSortKeyRights(
     if (written === "refused") continue;
 
     if (restriction === undefined) {
-      if (written !== undefined) rights.set(index, { right: written.right });
+      if (written !== undefined && subjectFound(sortKey, written.right))
+        rights.set(index, { right: written.right });
       continue;
     }
 
@@ -91,7 +104,7 @@ export function accessRightsSortKeyRights(
       continue;
     }
 
-    rights.set(index, inherited);
+    if (subjectFound(sortKey, inherited.right)) rights.set(index, inherited);
   }
 
   return rights;
@@ -179,4 +192,57 @@ function inheritedRight(
     right: checked.right.id,
     derivedFrom: { derivation: "sortKey.restricted", from: [pipelineCopy(origin)] },
   };
+}
+
+interface KeySubjectUse {
+  readonly route: AccessRightsRoute;
+  readonly scopes: readonly IrWriter.OperationScope[];
+  readonly key: string;
+  readonly pointer: string;
+  readonly right: string;
+}
+
+function keySubjectFound(
+  context: AccessRightsContext,
+  reporter: AccessRightsReporter,
+  catalogues: AccessRightsCatalogues,
+  { route, scopes, key, pointer, right: rightId }: KeySubjectUse,
+): boolean {
+  const right = catalogues.rights.get(rightId);
+
+  if (right === undefined)
+    throw new Error(`sort key '${key}' has right '${rightId}', which is not declared`);
+
+  switch (right.subject.kind) {
+    case "none":
+      return true;
+    case "scope": {
+      const scope = right.subject.scope;
+
+      // The right's scope is refused: its declaration has the error, so a use adds none.
+      if (!catalogues.scopes.has(scope) || scopes.some((resolved) => resolved.scope === scope))
+        return true;
+
+      break;
+    }
+
+    case "resource":
+      if (
+        accessRightsDefaultMemberId(
+          context,
+          route.node,
+          accessRightsIdSchemaOf(catalogues, right, right.subject),
+        ).kind === "found"
+      )
+        return true;
+  }
+
+  reporter.error({
+    rule: "sort-key-right",
+    message: `sort key '${key}' of route '${route.id}' has right '${right.id}', whose subject the route does not resolve`,
+    fix: "remove the key from 'sortable', or restrict its field to a right whose subject the route resolves",
+    pointer,
+  });
+
+  return false;
 }

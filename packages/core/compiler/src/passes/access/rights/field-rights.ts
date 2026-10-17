@@ -24,9 +24,8 @@ import {
 // input, the route's default subject (the nearest member id), and on output the holder's property whose schema is
 // the right's id schema. A relay route has none (ADR 0002 section 7).
 //
-// Two cases are refused where ADR 0003 section 6 leaves them open, fail closed: an output subject that cannot be
-// found (the IR has no way to say "always absent" yet), and a restricted field below a recursive reference (its
-// pointers have no end).
+// A restricted field below a recursive reference is refused (ADR 0003 section 6). An output subject that cannot be
+// found is refused too, fail closed, until the IR can say "always absent" on a field right.
 
 type DraftSchemas = PassReadonly<DraftIR["schemas"]>;
 type DraftObjectSchema = Extract<DraftSchemas[string], { kind: "object" }>;
@@ -375,7 +374,8 @@ const restrictedHere = (field: RestrictedField) => [
   },
 ];
 
-function idSchemaOf(
+/** The schema a resource right's subject must have: its id schema, with the schema it names. */
+export function accessRightsIdSchemaOf(
   catalogues: AccessRightsCatalogues,
   right: IrWriter.Right,
   subject: IrWriter.ResourceSubject,
@@ -426,7 +426,7 @@ function inputSubject(
   const defaulted = accessRightsDefaultMemberId(
     context,
     route.node,
-    idSchemaOf(catalogues, right, right.subject),
+    accessRightsIdSchemaOf(catalogues, right, right.subject),
   );
 
   if (defaulted.kind === "found") return { subject: { source: defaulted.source } };
@@ -507,7 +507,7 @@ function outputSubject(
       break;
   }
 
-  const expected = idSchemaOf(catalogues, right, right.subject);
+  const expected = accessRightsIdSchemaOf(catalogues, right, right.subject);
   const holders = field.holder.properties.filter((property) =>
     accessRightsSameSchema(accessRightsPropertySchema(context, property), expected),
   );

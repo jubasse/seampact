@@ -104,6 +104,7 @@ function accessRightsRun(draft: DraftIR, context: AccessRightsContext): void {
     filteredBy: accessRightsFilteredBy(reporter, catalogues, route),
     sortKeys: accessRightsSortKeyRights(context, reporter, catalogues, restrictions, {
       route,
+      scopes,
       schemas: draft.schemas,
     }),
   }));

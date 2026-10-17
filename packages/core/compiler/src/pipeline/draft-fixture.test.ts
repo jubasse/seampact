@@ -437,7 +437,6 @@ describe("draft fixtures", () => {
     }
 
     expect(checked).toContain("createTask CreateTask/effort");
-    expect(checked).toContain("listTasks sort effort");
   });
 
   // ADR 0002 section 6: tree.schemas adds the version property that tree.nodes' concurrency names.
