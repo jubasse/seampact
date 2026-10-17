@@ -6,6 +6,7 @@ import type { TreeSchemaService } from "../../../pipeline/seam.js";
 import type { RawApi } from "../../../raw-tree.js";
 import { treeNodesFieldWire } from "./field-wire.js";
 import {
+  TREE_NODES_CURSOR_PAGING,
   TREE_NODES_FIXTURES,
   treeNodesApiOf,
   treeNodesDraftWith,
@@ -341,6 +342,10 @@ test("bodies beyond JSON: a derived form field's wire is asked at its position i
     layer: "api",
     pointer: "/surfaces/app/routes/tasks/concurrency/version",
   };
+  expectedVersion.derivedFrom = {
+    derivation: "concurrency.version",
+    from: [expectedVersion.origin],
+  };
 
   const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
     treeSchemas,
@@ -399,6 +404,7 @@ surfaces:
 // The rules of bodies and operation names, each diagnostic located in the locations table, with a sentence and a fix.
 const NAMING_REFUSED = `
 api: { name: a, version: 1, kind: product }
+${TREE_NODES_CURSOR_PAGING}
 schemas:
   TaskId: { type: string }
 surfaces:

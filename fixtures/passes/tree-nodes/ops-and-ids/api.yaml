@@ -29,7 +29,7 @@ surfaces:
         singular: member
         item: Member
         ops:
-          list: {}
+          list: { paging: none }
           get: {}
           update: { input: UpdateMember }
           delete: { method: post, operationId: removeMember }

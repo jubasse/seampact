@@ -97,6 +97,21 @@ export function treeNodesInput(
   return fields === undefined ? input : { ...input, fields };
 }
 
+/**
+ * The ids input of a batch op that writes no input (`batch.read`, ADR 0006 section 5): the schema tree.schemas
+ * hoists for it, asked at the op entry, located there.
+ */
+export function treeNodesBatchInput(
+  node: TreeNode,
+  context: TreeNodesContext,
+): DraftOperationInput | undefined {
+  const schema = context.treeSchemas.typeUse(node.pointer, "input");
+
+  if (schema === undefined) return undefined;
+
+  return { media: JSON_MEDIA, schema: pipelineCopy(schema), origin: pipelineCopy(node.origin) };
+}
+
 function mediaOf(node: TreeNode): Media {
   const written = Object.hasOwn(node.settings, "inputMedia") ? node.settings.inputMedia : undefined;
 

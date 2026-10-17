@@ -2,6 +2,7 @@ import type { IrWriter, Origin } from "@seampact/spec/ir";
 import { splitName } from "@seampact/spec/naming";
 import { type DraftIR, pipelineCopy } from "../../../pipeline/seam.js";
 import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
+import { treeNodesOwnExtensions } from "./lifecycle.js";
 import {
   TREE_NODES_MATURITIES,
   type TreeNodesContext,
@@ -81,7 +82,7 @@ export function treeNodesApi(draft: DraftIR, context: TreeNodesContext): TreeNod
       surfaces.map(({ id }) => id),
     ),
     docs: treeNodesDocs(written),
-    extensions: {},
+    extensions: treeNodesOwnExtensions(written),
     origin: pipelineCopy(origin),
   };
 

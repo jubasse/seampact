@@ -4,6 +4,7 @@ import { diagnosticLocationKey } from "../../../diagnostics/print.js";
 import type { DraftOperation } from "../../../pipeline/seam.js";
 import { treeSchemasRunApi } from "../schemas/test-support.js";
 import {
+  TREE_NODES_CURSOR_PAGING,
   TREE_NODES_FIXTURES,
   treeNodesApiOf,
   treeNodesDraftWith,
@@ -30,6 +31,10 @@ const wire = (kind: IrWriter.QueryWireKind): IrWriter.QueryWire => ({
   brackets: false,
 });
 const at = (pointer: string): IrWriter.Origin => ({ layer: "api", pointer });
+// A response that travels in a format records it (`response.format`).
+const viaFormat = (format: IrWriter.Origin) => ({
+  derivedFrom: { derivation: "response.format", from: [format] },
+});
 
 const operation = (operations: readonly DraftOperation[], id: string): DraftOperation => {
   const found = operations.find((candidate) => candidate.id === id);
@@ -211,6 +216,7 @@ const ROUTES = "/surfaces/app/routes";
 test("declared responses: shapes, statuses sorted, headers and the format's media", () => {
   const workspace = treeNodesLoadInline(`
 api: { name: a, version: 1, kind: product }
+${TREE_NODES_CURSOR_PAGING}
 schemas:
   TaskId: { type: string }
   Task: { type: object, properties: { taskId: TaskId } }
@@ -250,7 +256,15 @@ surfaces:
   });
 
   const json = "application/json";
-  const item = { media: json, body: ref("Task"), headers: [], origin: at(`${TASKS}/item`) };
+  const bare = viaFormat({ layer: "core", pointer: "/formats/bare" });
+  const envelope = viaFormat(at("/formats/envelope"));
+  const item = {
+    media: json,
+    body: ref("Task"),
+    headers: [],
+    origin: at(`${TASKS}/item`),
+    ...bare,
+  };
 
   expect(diagnostics).toEqual([]);
   expect(draft.operations.map(({ id, responses, format }) => ({ id, responses, format }))).toEqual([
@@ -258,7 +272,9 @@ surfaces:
     { id: "getTask", responses: [{ status: 200, shape: "item", ...item }], format: "bare" },
     {
       id: "deleteTask",
-      responses: [{ status: 204, shape: "empty", headers: [], origin: at(`${TASKS}/ops/delete`) }],
+      responses: [
+        { status: 204, shape: "empty", headers: [], origin: at(`${TASKS}/ops/delete`), ...bare },
+      ],
       format: "bare",
     },
     {
@@ -271,6 +287,7 @@ surfaces:
           shape: "item",
           headers: [],
           origin: at(`${ROUTES}/export/responses/200`),
+          ...envelope,
         },
         {
           status: 202,
@@ -284,6 +301,7 @@ surfaces:
             },
           ],
           origin: at(`${ROUTES}/export/responses/202`),
+          ...envelope,
         },
       ],
       format: "envelope",
@@ -311,6 +329,7 @@ surfaces:
           body: ref("Task"),
           headers: [],
           origin: at(`${ROUTES}/feed/item`),
+          ...bare,
         },
       ],
       format: "bare",
@@ -678,6 +697,7 @@ surfaces:
 test("an op's own item is its response body, without the owner's", () => {
   const workspace = treeNodesLoadInline(`
 api: { name: a, version: 1, kind: product }
+${TREE_NODES_CURSOR_PAGING}
 schemas:
   Note: { type: object, properties: { text: { type: string } } }
 surfaces:
@@ -703,6 +723,7 @@ surfaces:
       shape: "page",
       headers: [],
       origin: at(`${notes}/ops/list/item`),
+      ...viaFormat({ layer: "core", pointer: "/formats/bare" }),
     },
   ]);
 });
@@ -1000,6 +1021,7 @@ surfaces:
 test("a collection id naming a non-object schema is refused once, without a route clash", () => {
   const workspace = treeNodesLoadInline(`
 api: { name: a, version: 1, kind: product }
+${TREE_NODES_CURSOR_PAGING}
 schemas:
   Missing: { type: string }
   Task: { type: object, properties: { taskId: { type: string } } }
