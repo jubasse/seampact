@@ -12,7 +12,7 @@ import {
   treeNodesStubService,
 } from "./test-support.js";
 
-// The wire formats and paging styles the operations use (ADR 0002 sections 13 and 14, ADR 0004 section 8), their
+// Every declared wire format and paging style (ADR 0002 sections 13 and 14, ADR 0004 section 8), their
 // templates read against the slot catalogue and checked against each operation's payload.
 
 const ROUTES = "/surfaces/app/routes";
@@ -38,7 +38,7 @@ function run(apiYaml: string, uses: Record<string, IrWriter.TypeUse>) {
   });
 }
 
-test("formats and paging styles: bare from the core where undeclared, declared formats read, unused ones absent", () => {
+test("formats and paging styles: bare from the core where undeclared, every declared format and style compiled, used or not", () => {
   const { draft, diagnostics } = run(
     `
 api: { name: a, version: 1, kind: product }
@@ -83,7 +83,7 @@ surfaces:
   );
 
   expect(diagnostics).toEqual([]);
-  expect(Object.keys(draft.formats)).toEqual(["bare", "envelope"]);
+  expect(Object.keys(draft.formats)).toEqual(["bare", "envelope", "spare"]);
   expect(draft.formats.bare?.origin).toEqual({ layer: "core", pointer: "/formats/bare" });
   expect(draft.formats.envelope).toEqual({
     id: "envelope",
@@ -136,7 +136,7 @@ surfaces:
     // A format without error takes the bare one.
     error: draft.formats.bare?.error,
   });
-  expect(Object.keys(draft.pagings)).toEqual(["cursor"]);
+  expect(Object.keys(draft.pagings)).toEqual(["cursor", "unused"]);
   expect(draft.pagings.cursor).toEqual({
     id: "cursor",
     origin: { layer: "api", pointer: "/pagings/cursor" },
@@ -259,7 +259,10 @@ ${routes}
 test("tree.nodes diagnostics are located: formats and paging styles", () => {
   const workspace = treeNodesLoadDirectory(`${TREE_NODES_FIXTURES}formats-refused/`);
   const raw = treeNodesApiOf(workspace);
-  const uses: Record<string, IrWriter.TypeUse> = { [`${ROUTES}/text/output`]: text };
+  const uses: Record<string, IrWriter.TypeUse> = {
+    [`${ROUTES}/text/output`]: text,
+    [`${ROUTES}/am/output`]: { kind: "array", items: text },
+  };
 
   for (const route of [
     "slotted",
@@ -270,6 +273,7 @@ test("tree.nodes diagnostics are located: formats and paging styles", () => {
     "merged",
     "malformed",
     "leaky",
+    "im",
   ])
     uses[`${ROUTES}/${route}/output`] = ref("Note");
 
@@ -282,6 +286,8 @@ test("tree.nodes diagnostics are located: formats and paging styles", () => {
     "linked",
     "metaed",
     "clashing",
+    "lm",
+    "idless",
   ])
     uses[`${ROUTES}/${route}/item`] = ref("Note");
 
@@ -309,23 +315,40 @@ test("tree.nodes diagnostics are located: formats and paging styles", () => {
     ["template-syntax", "/formats/malformed/success/table/body/$merge"],
     ["template-syntax", "/formats/malformed/success/list/body/$bad.key"],
     ["template-slot", "/formats/leaky/error/body/data"],
-    ["format-id", `${ROUTES}/ided`, "/formats/ided"],
-    ["format-merge", `${ROUTES}/merged`, "/formats/merged"],
-    ["format-merge", `${ROUTES}/text`, "/formats/merged"],
+    ["template-merge", "/formats/statusMerge/success/item/body/$merge"],
+    ["template-each", "/formats/eachMeta/success/item/body/$each"],
+    ["template-name", "/formats/payloadKey/success/item/body/$payload"],
+    // A format no route uses is compiled too.
+    ["template-slot", "/formats/unusedBad/success/item/body"],
     ["paging-reserved", "/pagings/none"],
-    ["template-slot", "/pagings/headed/response/headers/X-Code"],
-    ["paging-position", "/pagings/bodiless"],
-    ["paging-request", "/pagings/keyed/request/sort"],
-    ["paging-request", "/pagings/directed/request/sort"],
-    ["paging-position", "/pagings/half/request"],
     ["paging-position", "/pagings/twice/request"],
     ["paging-request", "/pagings/nameless/request/cursor"],
     ["paging-request", "/pagings/split/request/sort"],
     ["paging-items", "/pagings/itemless/response/body"],
     ["paging-role", "/pagings/misfit/response"],
     ["paging-link", "/pagings/linked/response/links/next"],
+    ["paging-request", "/pagings/keyed/request/sort"],
+    ["paging-request", "/pagings/directed/request/sort"],
+    ["paging-position", "/pagings/half/request"],
+    ["template-slot", "/pagings/headed/response/headers/X-Code"],
+    ["paging-position", "/pagings/bodiless"],
+    ["paging-request", "/pagings/dup/request/limit"],
+    ["paging-role", "/pagings/sinceprev/response"],
+    // A style no route uses is compiled too.
+    ["paging-position", "/pagings/unusedBadStyle/request"],
     ["paging-meta", "/pagings/metaed/response/meta"],
-    ["paging-meta", "/pagings/clashing/response/meta/servedAt", "/formats/stamped/meta/servedAt"],
+    [
+      "paging-meta-clash",
+      "/pagings/clashing/response/meta/servedAt",
+      "/formats/stamped/meta/servedAt",
+    ],
+    ["format-id", `${ROUTES}/ided`, "/formats/ided"],
+    ["format-merge", `${ROUTES}/merged`, "/formats/merged"],
+    ["format-merge", `${ROUTES}/text`, "/formats/merged"],
+    ["format-merge", `${ROUTES}/lm`, "/formats/listMerge"],
+    ["format-merge", `${ROUTES}/am`, "/formats/arrMerge"],
+    ["format-each", `${ROUTES}/im`, "/formats/itemMap"],
+    ["format-id", `${ROUTES}/idless`, "/pagings/idless"],
   ]);
 
   for (const diagnostic of diagnostics) {
@@ -438,4 +461,152 @@ surfaces:
   ).toThrow(
     "tree.schemas answers no type for the meta schema at /formats/house/meta/region/schema",
   );
+});
+
+const located = (diagnostics: readonly { rule: string; origin: { pointer: string } }[]) =>
+  diagnostics.map(({ rule, origin }) => [rule.replace("seampact/tree/", ""), origin.pointer]);
+
+test("formats and paging styles: a sort role without style sends signed, and a header role is read", () => {
+  const { draft, diagnostics } = run(
+    `
+api: { name: a, version: 1, kind: product }
+pagings:
+  headed:
+    request: { cursor: { header: X-Cursor }, limit: { query: limit }, sort: { query: sort } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      health: { method: get, output: Note }
+`,
+    { [`${ROUTES}/health/output`]: ref("Note") },
+  );
+
+  expect(diagnostics).toEqual([]);
+  expect(draft.pagings.headed?.request).toEqual([
+    { role: "cursor", in: "header", name: "X-Cursor" },
+    { role: "limit", in: "query", name: "limit" },
+    { role: "sort", in: "query", name: "sort", style: "signed" },
+  ]);
+});
+
+test("formats and paging styles: two request roles on one header or one direction parameter are refused", () => {
+  const { draft, diagnostics } = run(
+    `
+api: { name: a, version: 1, kind: product }
+pagings:
+  headers:
+    request: { cursor: { header: X-Page }, limit: { header: x-page } }
+  directed:
+    request: { page: { query: page }, sort: { query: sort, style: split, direction: page } }
+  apart:
+    request: { cursor: { header: x }, limit: { query: x } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      health: { method: get, output: Note }
+`,
+    { [`${ROUTES}/health/output`]: ref("Note") },
+  );
+
+  expect(located(diagnostics)).toEqual([
+    ["paging-request", "/pagings/headers/request/limit"],
+    ["paging-request", "/pagings/directed/request/sort"],
+  ]);
+  expect(Object.keys(draft.pagings)).toEqual(["apart"]);
+});
+
+test("formats and paging styles: an error with headers but no body writes no $code", () => {
+  const { diagnostics } = run(
+    `
+api: { name: a, version: 1, kind: product }
+formats:
+  headless:
+    error: { headers: { X-Error: '\${code}' } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      health: { method: get, output: Note }
+`,
+    { [`${ROUTES}/health/output`]: ref("Note") },
+  );
+
+  expect(located(diagnostics)).toEqual([["format-error-code", "/formats/headless/error"]]);
+});
+
+test("formats and paging styles: a merge inside $as is checked against the record, without its id member", () => {
+  const { diagnostics } = run(
+    `
+api: { name: a, version: 1, kind: product }
+conventions:
+  paging: { default: cursor, maxLimit: 50 }
+formats:
+  spread:
+    success: { page: { body: { data: { $each: $items, $as: { noteId: 1, text: 2, $merge: $itemFields } } } } }
+pagings:
+  cursor:
+    request: { cursor: { query: cursor } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      notes:
+        kind: collection
+        format: spread
+        id: { noteId: { type: string } }
+        item: Note
+        ops: [list]
+`,
+    { [`${ROUTES}/notes/id/noteId`]: text, [`${ROUTES}/notes/item`]: ref("Note") },
+  );
+
+  expect(diagnostics.map(({ rule, message }) => [rule, message])).toEqual([
+    [
+      "seampact/tree/format-merge",
+      "The template of the format spread writes the member 'text', which the merged $itemFields of listNotes defines too.",
+    ],
+  ]);
+});
+
+test("formats and paging styles: $self on a collection item reads its id, and a fault two responses share is reported once", () => {
+  const { diagnostics } = run(
+    `
+api: { name: a, version: 1, kind: product }
+formats:
+  selfed:
+    success: { item: { body: { href: $self, data: $payload } } }
+  ided:
+    success: { item: { body: { id: $id } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      health: { method: get, output: Note, format: selfed }
+      twice:
+        method: get
+        format: ided
+        responses: { 200: { body: Note }, 201: { body: Note } }
+      notes:
+        kind: collection
+        format: selfed
+        id: { noteId: { type: string } }
+        idProperty: missing
+        item: Note
+        ops: [get]
+`,
+    {
+      [`${ROUTES}/health/output`]: ref("Note"),
+      [`${ROUTES}/twice/responses/200/body`]: ref("Note"),
+      [`${ROUTES}/twice/responses/201/body`]: ref("Note"),
+      [`${ROUTES}/notes/id/noteId`]: text,
+      [`${ROUTES}/notes/item`]: ref("Note"),
+    },
+  );
+
+  expect(located(diagnostics).filter(([rule]) => rule === "format-id")).toEqual([
+    ["format-id", `${ROUTES}/twice`],
+    ["format-id", `${ROUTES}/notes/ops/0`],
+  ]);
 });

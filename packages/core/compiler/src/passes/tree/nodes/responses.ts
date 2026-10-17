@@ -8,6 +8,11 @@ import {
   treeNodesFieldTravels,
 } from "./fields.js";
 import {
+  TREE_NODES_BARE_FORMAT,
+  TREE_NODES_BARE_ORIGIN,
+  TREE_NODES_DEFAULT_MEDIA,
+} from "./formats.js";
+import {
   TREE_NODES_BATCH_OP,
   TREE_NODES_DELETE_OP,
   TREE_NODES_LIST_OP,
@@ -31,7 +36,6 @@ import {
 const DEFAULT_STATUS = 200;
 const NO_CONTENT = 204;
 const REDIRECT_STATUSES: readonly number[] = [301, 302, 303, 307, 308];
-const DEFAULT_MEDIA = "application/json";
 
 /** `paging: none`: a list served whole. */
 export const TREE_NODES_PAGING_NONE = "none";
@@ -45,10 +49,6 @@ const ITEM_OPS: readonly Op[] = ["get", "create", "update"];
 const BYPASSING_SHAPES: readonly IrWriter.ResponseShape[] = ["binary", "redirect"];
 const FORMAT_DERIVATION: IrWriter.DerivationId = "response.format";
 const BATCH_DERIVATION: IrWriter.DerivationId = "batch.read";
-
-// ADR 0004 section 6: the core `bare` format, where no layer declares one.
-const CORE_FORMAT = "bare";
-const CORE_FORMAT_ORIGIN: Origin = { layer: "core", pointer: "/formats/bare" };
 
 const RESPONSES_INSTEAD_OF: readonly string[] = ["output", "item"];
 
@@ -71,7 +71,7 @@ function mediaOf(site: TreeNodesSite, format: string): string {
   const declared = treeNodesMember(site.context.raw.merged.formats, format);
   const media = treeNodesMember(declared, "media");
 
-  return typeof media === "string" ? media : DEFAULT_MEDIA;
+  return typeof media === "string" ? media : TREE_NODES_DEFAULT_MEDIA;
 }
 
 /**
@@ -120,7 +120,7 @@ function formatOriginOf(site: TreeNodesSite, format: string): Origin | undefined
 
   if (declared !== undefined) return declared;
 
-  if (format === CORE_FORMAT) return CORE_FORMAT_ORIGIN;
+  if (format === TREE_NODES_BARE_FORMAT) return pipelineCopy(TREE_NODES_BARE_ORIGIN);
 
   const named =
     site.context.inherited(site.node, "format")?.entry.origin ??

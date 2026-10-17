@@ -1,10 +1,12 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { pipelineCopy } from "../../../pipeline/seam.js";
-import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
+import { quote } from "../../../validate/diagnostics.js";
+import { type TreeNodesRule, treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
 import {
   type TreeNodesContext,
   type TreeNodesJson,
   treeNodesIsObject,
+  treeNodesOriginAt,
   treeNodesPointer,
 } from "./raw.js";
 
@@ -60,6 +62,63 @@ const SLOTS_BY_PLACE: Readonly<Record<TreeNodesTemplatePlace, readonly string[]>
 
 // Inside `$as`, the element of the array slot and what is read from it.
 const EACH_SLOTS: readonly string[] = ["item", "itemId", "itemFields", "itemSelf"];
+
+/**
+ * What a slot holds, which sets where it may stand: `$merge` takes an object, `$each` an array, and a `$` key a
+ * name. `payload` holds the operation's payload and `item` an element of it, checked against each operation.
+ */
+type SlotKind = "object" | "array" | "name" | "flag" | "payload";
+
+const SLOT_KINDS: Readonly<Record<string, SlotKind>> = {
+  payload: "payload",
+  item: "payload",
+  meta: "object",
+  params: "object",
+  fields: "object",
+  itemFields: "object",
+  items: "array",
+  more: "flag",
+  complete: "flag",
+};
+
+// Every other slot holds a text or a number, which may name a member.
+const slotKind = (slot: string): SlotKind =>
+  Object.hasOwn(SLOT_KINDS, slot) ? (SLOT_KINDS[slot] ?? "name") : "name";
+
+/** Where a slot stands in a template: spread by `$merge`, mapped by `$each`, or naming a member. */
+type SlotStand = "merge" | "each" | "name";
+
+interface StandRule {
+  readonly rule: TreeNodesRule;
+  readonly kinds: readonly SlotKind[];
+  readonly verb: string;
+  readonly need: string;
+  readonly fix: string;
+}
+
+const STAND_RULES: Readonly<Record<SlotStand, StandRule>> = {
+  merge: {
+    rule: "template-merge",
+    kinds: ["object", "payload"],
+    verb: "merges",
+    need: "object",
+    fix: "Merge an object slot ($payload, $fields, $meta, $params, $item, $itemFields), or write the slot as a member.",
+  },
+  each: {
+    rule: "template-each",
+    kinds: ["array", "payload"],
+    verb: "maps with $each",
+    need: "array",
+    fix: "Map an array slot ($items, $payload, $item), or write the slot as a member.",
+  },
+  name: {
+    rule: "template-name",
+    kinds: ["name"],
+    verb: "names a member with",
+    need: "text or number",
+    fix: "Name the member with a text or number slot ($collection, $resource, $id), or write $$ for a literal $.",
+  },
+};
 
 const MERGE_KEY = "$merge";
 const EACH_KEY = "$each";
@@ -215,7 +274,11 @@ function textParts(
     const slot = TEXT_SLOT.exec(rest);
 
     if (slot === null)
-      return refuseSyntax(reading, pointer, `the text '${value}' writes a $ that starts no slot`);
+      return refuseSyntax(
+        reading,
+        pointer,
+        `the text ${quote(value)} writes a $ that starts no slot`,
+      );
 
     const [written, name = "", path = ""] = slot;
 
@@ -247,7 +310,7 @@ function objectTemplate(
     const memberPointer = treeNodesPointer(pointer, key);
 
     if (key === MERGE_KEY) {
-      merge = slotName(reading, member, memberPointer, MERGE_KEY);
+      merge = slotName(reading, member, memberPointer, "merge");
       continue;
     }
 
@@ -275,10 +338,12 @@ function memberName(
     return refuseSyntax(
       reading,
       pointer,
-      `the member name ${key} is no slot (write $$ for a literal $)`,
+      `the member name ${quote(key)} is no slot (write $$ for a literal $)`,
     );
 
-  return checkSlot(reading, slot, pointer) ? { kind: "slot", slot } : undefined;
+  return checkSlot(reading, slot, pointer) && checkStand(reading, slot, pointer, "name")
+    ? { kind: "slot", slot }
+    : undefined;
 }
 
 function eachTemplate(
@@ -295,7 +360,7 @@ function eachTemplate(
       `an array template is { ${EACH_KEY}, ${AS_KEY} } and nothing else`,
     );
 
-  const of = slotName(reading, value[EACH_KEY], treeNodesPointer(pointer, EACH_KEY), EACH_KEY);
+  const of = slotName(reading, value[EACH_KEY], treeNodesPointer(pointer, EACH_KEY), "each");
   const inner: Reading = { site: reading.site, inEach: true, faults: 0 };
   const as = templateOf(inner, value[AS_KEY] ?? null, treeNodesPointer(pointer, AS_KEY));
 
@@ -304,12 +369,14 @@ function eachTemplate(
   return of === undefined || as === undefined ? undefined : { kind: "each", of, as };
 }
 
+const STAND_KEYS: Readonly<Record<"merge" | "each", string>> = { merge: MERGE_KEY, each: EACH_KEY };
+
 // `$merge` and `$each` take a whole slot without a member path.
 function slotName(
   reading: Reading,
   value: TreeNodesJson | undefined,
   pointer: string,
-  key: string,
+  stand: "merge" | "each",
 ): string | undefined {
   const slot = typeof value === "string" ? NAME_SLOT.exec(value)?.[1] : undefined;
 
@@ -317,10 +384,33 @@ function slotName(
     return refuseSyntax(
       reading,
       pointer,
-      `${key} takes one slot ($payload), without a member path`,
+      `${STAND_KEYS[stand]} takes one slot ($payload), without a member path`,
     );
 
-  return checkSlot(reading, slot, pointer) ? slot : undefined;
+  return checkSlot(reading, slot, pointer) && checkStand(reading, slot, pointer, stand)
+    ? slot
+    : undefined;
+}
+
+// ADR 0002 section 13: a slot stands where its kind fits; `$payload` and `$item` are checked per operation.
+function checkStand(reading: Reading, slot: string, pointer: string, stand: SlotStand): boolean {
+  const { rule, kinds, verb, need, fix } = STAND_RULES[stand];
+
+  if (kinds.includes(slotKind(slot))) return true;
+
+  const { site } = reading;
+
+  reading.faults += 1;
+  site.context.report(
+    treeNodesError({
+      rule,
+      origin: treeNodesNodeOrigin(treeNodesOriginAt(site.context, pointer)),
+      message: `The template of ${site.owner} ${verb} $${slot}, which holds no ${need}.`,
+      fix,
+    }),
+  );
+
+  return false;
 }
 
 function checkSlot(reading: Reading, slot: string, pointer: string): boolean {
@@ -333,7 +423,7 @@ function checkSlot(reading: Reading, slot: string, pointer: string): boolean {
   site.context.report(
     treeNodesError({
       rule: "template-slot",
-      origin: treeNodesNodeOrigin(originOf(site.context, pointer)),
+      origin: treeNodesNodeOrigin(treeNodesOriginAt(site.context, pointer)),
       message: `The template of ${site.owner} writes the slot $${slot}, which ${placeName(site.place)} does not fill.`,
       fix: `Use a slot of ${placeName(site.place)} (ADR 0002 sections 13 and 14), or write $$${slot} for the literal text.`,
     }),
@@ -349,7 +439,7 @@ function refuseSyntax(reading: Reading, pointer: string, why: string): undefined
   site.context.report(
     treeNodesError({
       rule: "template-syntax",
-      origin: treeNodesNodeOrigin(originOf(site.context, pointer)),
+      origin: treeNodesNodeOrigin(treeNodesOriginAt(site.context, pointer)),
       message: `The template of ${site.owner} is not valid: ${why}.`,
       fix: `Write $name for a slot, \${name} inside a longer text, $$ for a literal $, and { $each: $slot, $as: <template> } for an array.`,
     }),
@@ -369,18 +459,3 @@ const PLACE_NAMES: Readonly<Record<TreeNodesTemplatePlace, string>> = {
 };
 
 const placeName = (place: TreeNodesTemplatePlace): string => PLACE_NAMES[place];
-
-// A template's pointer, else the nearest pointer above it that the raw tree locates.
-function originOf(context: TreeNodesContext, pointer: string): IrWriter.Origin {
-  for (
-    let current = pointer;
-    current !== "";
-    current = current.slice(0, current.lastIndexOf("/"))
-  ) {
-    const origin = context.origin(current);
-
-    if (origin !== undefined) return origin;
-  }
-
-  throw new Error(`the raw tree locates nothing at or above ${pointer}`);
-}

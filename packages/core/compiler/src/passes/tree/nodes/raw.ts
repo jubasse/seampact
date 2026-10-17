@@ -64,13 +64,22 @@ export function treeNodesText(node: TreeNode, key: string): string | undefined {
 /** The JSON Pointer of `segments` below `base`, each segment escaped (the seam's shared helper). */
 export const treeNodesPointer = pipelinePointerBelow;
 
-/** The origin of a raw pointer the merged tree is known to hold; a missing one is an internal fault. */
+/**
+ * The origin of a raw pointer, else of the nearest pointer above it the raw tree locates (a member left out is
+ * located at its owner); nothing located up to the root is an internal fault.
+ */
 export function treeNodesOriginAt(context: TreeNodesContext, pointer: string): Origin {
-  const origin = context.origin(pointer);
+  for (
+    let current = pointer;
+    current !== "";
+    current = current.slice(0, current.lastIndexOf("/"))
+  ) {
+    const origin = context.origin(current);
 
-  if (origin === undefined) throw new Error(`the raw tree has no origin for ${pointer}`);
+    if (origin !== undefined) return origin;
+  }
 
-  return origin;
+  throw new Error(`the raw tree locates nothing at or above ${pointer}`);
 }
 
 /** A schema of the draft's catalogue, read by its id. */

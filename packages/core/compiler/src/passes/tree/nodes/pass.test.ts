@@ -77,10 +77,9 @@ const API_MEMBERS = [
   "services",
 ] as const;
 
-// Api-wide members written later: the format a relay route copies, and a style no operation of the api pages with
-// (the fixture lists the style conventions.paging.default names; tree.nodes writes the styles lists use).
+// Api-wide members written later: the format a relay route copies.
 const LATER_API: Readonly<Record<string, readonly string[]>> = {
-  tasksService: ["formats", "pagings"],
+  tasksService: ["formats"],
 };
 
 const isObject = (value: JsonValue | undefined): value is JsonObject =>

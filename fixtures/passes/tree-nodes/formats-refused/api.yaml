@@ -5,7 +5,10 @@
 # kind, a link that is no URL role, meta under a page without $meta, and a meta member the format names too; an
 # array template with another key, a merge with a member path, a member name that is no slot; a keyed sort without
 # {key}, a direction without split, and after without before; a slot an error body or a style's header does not
-# fill, and a style with no request roles.
+# fill, and a style with no request roles; a merge of a list payload or of an array item, a merge of a scalar
+# slot, $each over an object slot, a member key that names no text, $each over an object payload, a slot no shape
+# fills in a format no route uses, two request roles on one parameter, a previous link on a since style, an item id
+# slot in a style body on an item without its id, and two positions in a style no route uses.
 api: { name: formats, version: 1, kind: product }
 
 conventions:
@@ -37,6 +40,20 @@ formats:
   stamped:
     success: { page: { body: { data: $items, meta: $meta } } }
     meta: { servedAt: { fill: now } }
+  listMerge:
+    success: { list: { body: { $merge: $payload } } }
+  arrMerge:
+    success: { item: { body: { $merge: $payload, total: 1 } } }
+  statusMerge:
+    success: { item: { body: { $merge: $status } } }
+  eachMeta:
+    success: { item: { body: { $each: $meta, $as: 1 } } }
+  payloadKey:
+    success: { item: { body: { $payload: 1 } } }
+  itemMap:
+    success: { item: { body: { $each: $payload, $as: $item } } }
+  unusedBad:
+    success: { item: { body: $nope } }
 
 pagings:
   none:
@@ -74,6 +91,16 @@ pagings:
   clashing:
     request: { cursor: { query: cursor } }
     response: { meta: { servedAt: $total } }
+  dup:
+    request: { cursor: { query: x }, limit: { query: x } }
+  sinceprev:
+    request: { since: { query: since } }
+    response: { links: { prev: $previous } }
+  idless:
+    request: { cursor: { query: cursor } }
+    response: { body: { $each: $items, $as: { id: $itemId } } }
+  unusedBadStyle:
+    request: { cursor: { query: cursor }, page: { query: page } }
 
 surfaces:
   app:
@@ -101,3 +128,7 @@ surfaces:
       linked: { method: get, item: Note, paging: linked }
       metaed: { method: get, item: Note, paging: metaed }
       clashing: { method: get, item: Note, paging: clashing, format: stamped }
+      lm: { method: get, item: Note, paging: none, format: listMerge }
+      am: { method: get, output: { type: array, items: { type: string } }, format: arrMerge }
+      im: { method: get, output: Note, format: itemMap }
+      idless: { method: get, item: Note, paging: idless }

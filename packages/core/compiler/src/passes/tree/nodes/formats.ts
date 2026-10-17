@@ -1,14 +1,20 @@
 import type { IrWriter, Origin } from "@seampact/spec/ir";
 import { type DraftIR, type DraftOperation, pipelineCopy } from "../../../pipeline/seam.js";
-import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
+import { quote } from "../../../validate/diagnostics.js";
+import {
+  type TreeNodesReportOnce,
+  treeNodesError,
+  treeNodesNodeOrigin,
+  treeNodesReportOnce,
+} from "./diagnostics.js";
 import {
   type TreeNodesContext,
   type TreeNodesJson,
   treeNodesIsObject,
   treeNodesMember,
-  treeNodesObjectOf,
   treeNodesOriginAt,
   treeNodesPointer,
+  treeNodesSchema,
 } from "./raw.js";
 import {
   type TreeNodesTemplatePlace,
@@ -17,13 +23,20 @@ import {
   treeNodesTemplateUses,
 } from "./templates.js";
 
-// The wire formats the operations use (ADR 0002 section 13, ADR 0004 section 8): each declared one read from
-// `formats`, and the core `bare` (bare payload, RFC 9457 errors) where no layer declares `bare`. A format without
-// `error` takes the bare one. Each format's shapes are then checked against the payload of every operation using it.
+// The wire formats (ADR 0002 section 13, ADR 0004 section 8): every one declared in `formats`, used or not, and the
+// core `bare` (bare payload, RFC 9457 errors) where no layer declares `bare`. A format without `error` takes the
+// bare one. The templates each response writes are then checked against the operation's payload.
 
-const BARE = "bare";
-const BARE_ORIGIN: Origin = { layer: "core", pointer: "/formats/bare" };
-const DEFAULT_MEDIA = "application/json";
+/** The format every api has: the core one, unless a layer declares its own `bare`. */
+export const TREE_NODES_BARE_FORMAT = "bare";
+/** The origin of the core `bare` format (ADR 0004 section 6). */
+export const TREE_NODES_BARE_ORIGIN: Origin = { layer: "core", pointer: "/formats/bare" };
+/** The success media of a format that writes none, and of the core `bare`. */
+export const TREE_NODES_DEFAULT_MEDIA = "application/json";
+
+const BARE = TREE_NODES_BARE_FORMAT;
+const BARE_ORIGIN = TREE_NODES_BARE_ORIGIN;
+const DEFAULT_MEDIA = TREE_NODES_DEFAULT_MEDIA;
 const BARE_ERROR_MEDIA = "application/problem+json";
 const NULL_ABSENT: IrWriter.Absent = "null";
 const DEFAULT_ABSENT: IrWriter.Absent = "omit";
@@ -48,10 +61,11 @@ const META_TYPES: Readonly<Record<string, IrWriter.TypeUse>> = {
 const HANDLER_FILL = "handler";
 const PRINCIPAL_PREFIX = "principal.";
 
-// The slots that read the item's id property (ADR 0002 section 13).
+// The slots that read the item's id property (ADR 0002 section 13); `$self` too on a collection's item.
 const ID_SLOTS: readonly string[] = ["id", "fields", "itemId", "itemFields", "itemSelf"];
-// The slots a merge spreads the payload's members from.
-const PAYLOAD_SLOTS: readonly string[] = ["payload", "fields"];
+const SELF_SLOT = "self";
+// The slots that hold the record without its id member.
+const IDLESS_SLOTS: readonly string[] = ["fields", "itemFields"];
 
 const slot = (name: string): IrWriter.Template => ({ kind: "slot", slot: name, path: [] });
 
@@ -80,25 +94,23 @@ const BARE_ERROR: IrWriter.ErrorShape = {
   headers: [],
 };
 
-/** Writes `formats`: every format an operation uses, `bare` from the core where no layer declares it. */
+/** Writes `formats`: every declared format, used or not, and `bare`, from the core where no layer declares it. */
 export function treeNodesFormats(draft: DraftIR, context: TreeNodesContext): void {
-  const used = new Set(draft.operations.flatMap((operation) => operation.format ?? []));
-
   // A declared `bare` is read first, since a format without `error` takes its error.
   const bare = formatOf(context, BARE, BARE_ERROR);
   const bareError = bare?.error;
 
-  if (bare !== undefined && used.has(BARE)) draft.formats[BARE] = bare;
+  if (bare !== undefined) draft.formats[BARE] = bare;
 
-  for (const id of used) {
+  const declared = context.raw.merged.formats;
+
+  for (const id of treeNodesIsObject(declared) ? Object.keys(declared) : []) {
     if (id === BARE) continue;
 
     const format = formatOf(context, id, bareError);
 
     if (format !== undefined) draft.formats[id] = format;
   }
-
-  for (const operation of draft.operations) checkPayloads(draft, context, operation);
 }
 
 const declaredFormat = (context: TreeNodesContext, id: string): TreeNodesJson | undefined =>
@@ -164,15 +176,15 @@ export function treeNodesNamedTemplates(
   context: TreeNodesContext,
   owner: string,
   place: TreeNodesTemplatePlace,
-  headers: TreeNodesJson | undefined,
+  namedTemplates: TreeNodesJson | undefined,
   pointer: string,
 ): IrWriter.HeaderTemplate[] | undefined {
-  if (!treeNodesIsObject(headers)) return [];
+  if (!treeNodesIsObject(namedTemplates)) return [];
 
   const templates: IrWriter.HeaderTemplate[] = [];
   let refused = false;
 
-  for (const [name, written] of Object.entries(headers)) {
+  for (const [name, written] of Object.entries(namedTemplates)) {
     const value = treeNodesTemplate(
       { context, place, owner },
       written,
@@ -289,8 +301,8 @@ class FormatReader {
       treeNodesError({
         rule: "format-meta",
         origin: treeNodesNodeOrigin(treeNodesOriginAt(this.context, pointer)),
-        message: `The meta field ${name} of ${this.owner} is filled by ${fill}, which gives it no type.`,
-        fix: `Write the schema of ${name} beside its fill.`,
+        message: `The meta field ${quote(name)} of ${this.owner} is filled by ${quote(fill)}, which gives it no type.`,
+        fix: `Write the schema of ${quote(name)} beside its fill.`,
       }),
     );
 
@@ -358,133 +370,285 @@ function metaFill(fill: string): IrWriter.MetaFill {
   return known;
 }
 
-// ADR 0002 section 13: a slot reading the id needs that property on the item, and a merged payload must be an
-// object whose members the template does not write again.
-function checkPayloads(draft: DraftIR, context: TreeNodesContext, operation: DraftOperation): void {
-  const id = operation.format;
-  const format =
-    id !== undefined && Object.hasOwn(draft.formats, id) ? draft.formats[id] : undefined;
+// ADR 0002 section 13: a slot reading the id needs that property on the item, a merged slot must hold an object
+// whose members the template does not write again, and a mapped slot an array. A response is checked against the
+// templates it really writes: a page against its style's body, else the format's page.
 
-  if (format === undefined) return;
+/** The format or paging style a template belongs to, as messages name it. */
+interface TemplateOwner {
+  readonly name: string;
+  readonly origin: Origin;
+}
 
-  for (const response of operation.responses ?? []) {
-    if (response.body === undefined || !isSuccessShape(response.shape)) continue;
+interface WrittenTemplate {
+  readonly template: IrWriter.Template;
+  readonly owner: TemplateOwner;
+}
 
-    const shape = format.success[response.shape];
-    const templates = [shape.body, ...shape.headers.map((header) => header.value)];
-    const item = treeNodesObjectOf(draft, itemUse(response.body));
+/** What a slot holds for one response: an object, an id-keyed table, an array, or another value. */
+type SlotValue =
+  | { readonly kind: "object"; readonly schema: IrWriter.ObjectSchema }
+  | { readonly kind: "table" }
+  | { readonly kind: "array"; readonly items: IrWriter.TypeUse }
+  | { readonly kind: "other" };
 
-    checkIdSlots(context, operation, format, templates, item);
+interface PayloadCheck {
+  readonly draft: DraftIR;
+  readonly once: TreeNodesReportOnce;
+  readonly operation: DraftOperation;
+  readonly shape: ShapeName;
+  readonly payload: SlotValue;
+  /** The use of one record: the item, or an element of the list or page. */
+  readonly record: IrWriter.TypeUse;
+}
 
-    if (response.shape === "item") checkMerges(context, operation, format, shape.body, item);
+/** Checks each success response of each operation against the templates its format and paging style write. */
+export function treeNodesCheckPayloads(draft: DraftIR, context: TreeNodesContext): void {
+  const once = treeNodesReportOnce((diagnostic) => context.report(diagnostic));
+
+  for (const operation of draft.operations) {
+    const format =
+      operation.format === undefined ? undefined : ownOf(draft.formats, operation.format);
+
+    if (format === undefined) continue;
+
+    for (const response of operation.responses ?? []) {
+      if (response.body === undefined || !isSuccessShape(response.shape)) continue;
+
+      const check: PayloadCheck = {
+        draft,
+        once,
+        operation,
+        shape: response.shape,
+        payload: payloadOf(draft, response.shape, response.body),
+        record: recordOf(response.shape, response.body),
+      };
+
+      for (const written of writtenTemplates(draft, operation, format, response.shape)) {
+        checkIdSlots(check, written);
+        checkSlotValues(check, written, written.template, undefined);
+      }
+    }
   }
 }
+
+const ownOf = <Value>(catalogue: Readonly<Record<string, Value>>, id: string): Value | undefined =>
+  Object.hasOwn(catalogue, id) ? catalogue[id] : undefined;
 
 const isSuccessShape = (shape: IrWriter.ResponseShape): shape is ShapeName =>
   SHAPES.some((name) => name === shape);
 
-const itemUse = (body: IrWriter.TypeUse): IrWriter.TypeUse =>
-  body.kind === "array" ? body.items : body;
+function slotValueOfUse(draft: DraftIR, use: IrWriter.TypeUse): SlotValue {
+  if (use.kind === "array") return { kind: "array", items: use.items };
 
-function checkIdSlots(
-  context: TreeNodesContext,
+  const schema = use.kind === "ref" ? treeNodesSchema(draft, use.schema) : undefined;
+
+  if (schema?.kind === "object") return { kind: "object", schema };
+
+  return schema?.kind === "map" ? { kind: "table" } : { kind: "other" };
+}
+
+// `$payload` is the item, the id-keyed table, or the records of a list or page.
+function payloadOf(draft: DraftIR, shape: ShapeName, body: IrWriter.TypeUse): SlotValue {
+  if (shape === "item") return slotValueOfUse(draft, body);
+
+  if (shape === "table") return { kind: "table" };
+
+  return { kind: "array", items: recordOf(shape, body) };
+}
+
+const recordOf = (shape: ShapeName, body: IrWriter.TypeUse): IrWriter.TypeUse =>
+  (shape === "list" || shape === "page") && body.kind === "array" ? body.items : body;
+
+function writtenTemplates(
+  draft: DraftIR,
   operation: DraftOperation,
   format: IrWriter.WireFormat,
-  templates: readonly IrWriter.Template[],
-  item: IrWriter.ObjectSchema | undefined,
-): void {
-  const used = templates
-    .flatMap(treeNodesTemplateSlots)
-    .find(({ slot }) => ID_SLOTS.includes(slot));
+  shape: ShapeName,
+): WrittenTemplate[] {
+  const formatOwner: TemplateOwner = { name: `the format ${format.id}`, origin: format.origin };
+  const { body, headers } = format.success[shape];
+  const formatHeaders = headers.map(({ value }) => ({ template: value, owner: formatOwner }));
+  const styleId = operation.paging?.style;
+  const style =
+    shape === "page" && styleId !== undefined ? ownOf(draft.pagings, styleId) : undefined;
+
+  if (style === undefined) return [{ template: body, owner: formatOwner }, ...formatHeaders];
+
+  const styleOwner: TemplateOwner = { name: `the paging style ${style.id}`, origin: style.origin };
+  const { response } = style;
+
+  return [
+    response.body === undefined
+      ? { template: body, owner: formatOwner }
+      : { template: response.body, owner: styleOwner },
+    ...formatHeaders,
+    ...[...response.meta, ...response.headers].map(({ value }) => ({
+      template: value,
+      owner: styleOwner,
+    })),
+  ];
+}
+
+function checkIdSlots(check: PayloadCheck, written: WrittenTemplate): void {
+  const { draft, operation, shape, record } = check;
+  const idSlots =
+    shape === "item" && isCollectionItem(operation) ? [...ID_SLOTS, SELF_SLOT] : ID_SLOTS;
+  const used = treeNodesTemplateSlots(written.template).find(({ slot }) => idSlots.includes(slot));
 
   if (used === undefined) return;
 
   const property = operation.resource?.idProperty ?? operation.resource?.idParam;
+  const item = slotValueOfUse(draft, record);
 
-  if (property !== undefined && item?.properties.some(({ name }) => name === property)) return;
+  if (property !== undefined && item.kind === "object" && hasProperty(item.schema, property))
+    return;
 
-  reportPayload(context, operation, format, {
+  reportPayload(check, written.owner, {
     rule: "format-id",
-    message: `The format ${format.id} writes $${used.slot}, but the item of ${operation.id} has no id property${property === undefined ? "" : ` ${property}`}.`,
-    fix: `Declare ${property ?? "the id property"} on the item (or set idProperty), or use a format that reads no id.`,
+    message: `The template of ${written.owner.name} writes $${used.slot}, but the item of ${operation.id} has no id property${property === undefined ? "" : ` ${quote(property)}`}.`,
+    fix: `Declare ${property === undefined ? "the id property" : quote(property)} on the item (or set idProperty), or use a format that reads no id.`,
   });
 }
 
-function checkMerges(
-  context: TreeNodesContext,
-  operation: DraftOperation,
-  format: IrWriter.WireFormat,
-  body: IrWriter.Template,
-  item: IrWriter.ObjectSchema | undefined,
+// `$self` is a collection item's member URL, built from its id; elsewhere it is the request URL.
+const isCollectionItem = (operation: DraftOperation): boolean =>
+  operation.resource?.idProperty !== undefined || operation.resource?.idParam !== undefined;
+
+const hasProperty = (schema: IrWriter.ObjectSchema, name: string): boolean =>
+  schema.properties.some((property) => property.name === name);
+
+// Walks a template with the element `$item` holds inside `$as`.
+function checkSlotValues(
+  check: PayloadCheck,
+  written: WrittenTemplate,
+  template: IrWriter.Template,
+  element: SlotValue | undefined,
 ): void {
-  for (const merging of mergingObjects(body)) {
-    if (item === undefined) {
-      reportPayload(context, operation, format, {
-        rule: "format-merge",
-        message: `The format ${format.id} merges $${merging.merge}, but the payload of ${operation.id} is no object.`,
-        fix: `Answer an object from ${operation.id}, or use a format that wraps the payload.`,
-      });
-      continue;
-    }
-
-    const written = merging.members.flatMap((member) =>
-      member.name.kind === "text" ? [member.name.text] : [],
-    );
-    const twice = item.properties.find(({ name }) => written.includes(name));
-
-    if (twice !== undefined)
-      reportPayload(context, operation, format, {
-        rule: "format-merge",
-        message: `The format ${format.id} writes the member ${twice.name}, which the merged payload of ${operation.id} defines too.`,
-        fix: `Rename the property ${twice.name} of ${item.id}, or the format's member.`,
-      });
-  }
-}
-
-type MergingObject = IrWriter.ObjectTemplate & { readonly merge: string };
-
-function mergingObjects(template: IrWriter.Template): MergingObject[] {
   switch (template.kind) {
     case "object":
-      return objectMerges(template);
+      if (template.merge !== undefined)
+        checkMerge(check, written, template, template.merge, element);
+
+      for (const member of template.members) checkSlotValues(check, written, member.value, element);
+
+      return;
     case "array":
-      return template.items.flatMap(mergingObjects);
+      for (const item of template.items) checkSlotValues(check, written, item, element);
+
+      return;
     case "each":
-      return mergingObjects(template.as);
+      checkSlotValues(check, written, template.as, eachElement(check, written, template, element));
+
+      return;
     default:
-      return [];
+      return;
   }
 }
 
-function objectMerges(template: IrWriter.ObjectTemplate): MergingObject[] {
-  const inner = template.members.flatMap((member) => mergingObjects(member.value));
-  const { merge } = template;
+// The value a slot holds for this response; undefined for an object slot the payload does not set (`$meta`).
+function slotValue(
+  check: PayloadCheck,
+  slot: string,
+  element: SlotValue | undefined,
+): SlotValue | undefined {
+  switch (slot) {
+    case "payload":
+      return check.payload;
+    case "items":
+      return { kind: "array", items: check.record };
+    case "fields":
+      return slotValueOfUse(check.draft, check.record);
+    case "item":
+    case "itemFields":
+      return element;
+    default:
+      return undefined;
+  }
+}
 
-  return merge !== undefined && PAYLOAD_SLOTS.includes(merge)
-    ? [{ ...template, merge }, ...inner]
-    : inner;
+function eachElement(
+  check: PayloadCheck,
+  written: WrittenTemplate,
+  template: IrWriter.EachTemplate,
+  element: SlotValue | undefined,
+): SlotValue | undefined {
+  const mapped = slotValue(check, template.of, element);
+
+  if (mapped === undefined) return undefined;
+
+  if (mapped.kind === "array") return slotValueOfUse(check.draft, mapped.items);
+
+  reportPayload(check, written.owner, {
+    rule: "format-each",
+    message: `The template of ${written.owner.name} maps $${template.of} with $each, but it holds no array for ${check.operation.id}.`,
+    fix: `Write $${template.of} as a member, or use a format whose ${check.shape} shape maps no $${template.of}.`,
+  });
+
+  return undefined;
+}
+
+// A table's id-keyed payload is an object whose members are ids, so no member clash is checked.
+function checkMerge(
+  check: PayloadCheck,
+  written: WrittenTemplate,
+  template: IrWriter.ObjectTemplate,
+  merge: string,
+  element: SlotValue | undefined,
+): void {
+  const merged = slotValue(check, merge, element);
+  const { operation } = check;
+  const owner = written.owner;
+
+  if (merged === undefined || merged.kind === "table") return;
+
+  if (merged.kind !== "object") {
+    reportPayload(check, owner, {
+      rule: "format-merge",
+      message: `The template of ${owner.name} merges $${merge}, but it holds ${merged.kind === "array" ? "an array" : "no object"} for ${operation.id}.`,
+      fix: `Answer an object from ${operation.id}, map an array with { $each: $${merge}, $as: <template> }, or use a format that wraps the payload.`,
+    });
+
+    return;
+  }
+
+  const idProperty = IDLESS_SLOTS.includes(merge)
+    ? (operation.resource?.idProperty ?? operation.resource?.idParam)
+    : undefined;
+  const memberNames = template.members.flatMap((member) =>
+    member.name.kind === "text" ? [member.name.text] : [],
+  );
+  const twice = merged.schema.properties.find(
+    ({ name }) => name !== idProperty && memberNames.includes(name),
+  );
+
+  if (twice !== undefined)
+    reportPayload(check, owner, {
+      rule: "format-merge",
+      message: `The template of ${owner.name} writes the member ${quote(twice.name)}, which the merged $${merge} of ${operation.id} defines too.`,
+      fix: `Rename the property ${quote(twice.name)} of ${merged.schema.id}, or the template's member.`,
+    });
 }
 
 interface PayloadFault {
-  readonly rule: "format-id" | "format-merge";
+  readonly rule: "format-id" | "format-merge" | "format-each";
   readonly message: string;
   readonly fix: string;
 }
 
-function reportPayload(
-  context: TreeNodesContext,
-  operation: DraftOperation,
-  format: IrWriter.WireFormat,
-  fault: PayloadFault,
-): void {
-  context.report(
+// Two success responses of one operation may share a fault: it is reported once.
+function reportPayload(check: PayloadCheck, owner: TemplateOwner, fault: PayloadFault): void {
+  const { operation } = check;
+
+  check.once(
+    JSON.stringify([fault.rule, operation.id, fault.message]),
     treeNodesError({
       ...fault,
       origin: treeNodesNodeOrigin(originOfOperation(operation)),
       related:
-        format.origin.layer === "core"
+        owner.origin.layer === "core"
           ? []
-          : [{ origin: treeNodesNodeOrigin(format.origin), message: `the format ${format.id}` }],
+          : [{ origin: treeNodesNodeOrigin(owner.origin), message: owner.name }],
     }),
   );
 }

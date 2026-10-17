@@ -1,14 +1,14 @@
 import type { PassPart } from "../../../pipeline/seam.js";
 import { treeNodesApi } from "./api.js";
 import { treeNodesCheckIdProperties } from "./collections.js";
-import { treeNodesFormats } from "./formats.js";
+import { treeNodesCheckPayloads, treeNodesFormats } from "./formats.js";
 import { treeNodesCheckBodyLimits } from "./limits.js";
 import { treeNodesOperations } from "./operations.js";
 import { treeNodesPagings } from "./pagings.js";
 import { treeNodesApiSettings } from "./settings.js";
 
-// The tree.nodes half (ADR 0006 sections 2 and 3): the api, its conventions, lint, packs and services, the wire
-// formats and paging styles the operations use, and the operations of the api tree, with the members the field
+// The tree.nodes half (ADR 0006 sections 2 and 3): the api, its conventions, lint, packs and services, every
+// declared wire format and paging style, and the operations of the api tree, with the members the field
 // ownership table gives tree.nodes. It reads `schemas` for the fields of a form or multipart input or of a named
 // fields map, and for item, union and payload checks.
 //
@@ -76,5 +76,6 @@ export const treeNodesPass: PassPart<"tree.nodes"> = {
     treeNodesCheckIdProperties(draft, context);
     treeNodesFormats(draft, context);
     treeNodesPagings(draft, context);
+    treeNodesCheckPayloads(draft, context);
   },
 };

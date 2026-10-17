@@ -60,8 +60,12 @@ export type TreeNodesRule =
   | "format-error-code"
   | "format-id"
   | "format-merge"
+  | "format-each"
   | "template-slot"
   | "template-syntax"
+  | "template-merge"
+  | "template-each"
+  | "template-name"
   | "paging-reserved"
   | "paging-position"
   | "paging-request"
@@ -69,6 +73,7 @@ export type TreeNodesRule =
   | "paging-role"
   | "paging-link"
   | "paging-meta"
+  | "paging-meta-clash"
   | "example-target"
   | "example-value";
 

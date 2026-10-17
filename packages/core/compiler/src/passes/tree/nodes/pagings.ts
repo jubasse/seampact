@@ -1,6 +1,7 @@
 import type { IrWriter, Origin } from "@seampact/spec/ir";
 import type { RelatedLocation } from "../../../diagnostics/diagnostic.js";
 import { type DraftIR, pipelineCopy } from "../../../pipeline/seam.js";
+import { quote } from "../../../validate/diagnostics.js";
 import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
 import { treeNodesAbsent, treeNodesNamedTemplates } from "./formats.js";
 import {
@@ -20,9 +21,9 @@ import {
   treeNodesTemplateUses,
 } from "./templates.js";
 
-// The paging styles the lists use (ADR 0002 section 14, ADR 0004 section 8): each read from `pagings` with its
-// position kind, request roles, response templates and the handler result its roles ask for. Each style is then
-// checked against the format of every list using it.
+// The paging styles (ADR 0002 section 14, ADR 0004 section 8): every one declared in `pagings`, used or not, read
+// with its position kind, request roles, response templates and the handler result its roles ask for. Each style is
+// then checked against the format of every list using it.
 
 const POSITION_ROLES: readonly IrWriter.PagingPosition[] = ["cursor", "page", "offset", "since"];
 const REQUEST_ROLES: readonly IrWriter.PagingRole[] = [
@@ -37,6 +38,8 @@ const REQUEST_ROLES: readonly IrWriter.PagingRole[] = [
 ];
 const PLACEMENTS: readonly IrWriter.PagingParamPlacement[] = ["query", "header"];
 const SORT_STYLES: readonly IrWriter.PagingParamStyle[] = ["signed", "pair", "keyed", "split"];
+// A sort role without `style` sends `sort=-createdAt,title`.
+const DEFAULT_SORT_STYLE: IrWriter.PagingParamStyle = "signed";
 const URL_ROLES: readonly IrWriter.UrlRole[] = ["self", "first", "previous", "next", "last"];
 const HANDLER_RESULT: readonly IrWriter.HandlerResultMember[] = [
   "nextCursor",
@@ -53,7 +56,8 @@ const SPLIT_STYLE: IrWriter.PagingParamStyle = "split";
 const KEYED_STYLE: IrWriter.PagingParamStyle = "keyed";
 const KEY_PLACEHOLDER = "{key}";
 
-// The kinds each response role belongs to; a role left out belongs to every kind.
+// The kinds each response role belongs to; a role left out belongs to every kind. A since kind has no previous
+// token, so it builds no `previous` URL.
 const ROLE_KINDS: Readonly<Record<string, readonly IrWriter.PagingPosition[]>> = {
   nextCursor: ["cursor"],
   previousCursor: ["cursor"],
@@ -63,6 +67,7 @@ const ROLE_KINDS: Readonly<Record<string, readonly IrWriter.PagingPosition[]>> =
   to: ["page", "offset"],
   total: ["cursor", "page", "offset"],
   totalPages: ["page", "offset"],
+  previous: ["cursor", "page", "offset"],
   last: ["page", "offset"],
   nextSince: ["since"],
   complete: ["since"],
@@ -81,13 +86,14 @@ const URL_ROLE_RESULTS: Readonly<
   offset: {},
 };
 
-/** Writes `pagings`: every style a list operation pages with. */
+/** Writes `pagings`: every declared style, used or not, but the reserved `none`. */
 export function treeNodesPagings(draft: DraftIR, context: TreeNodesContext): void {
   refuseReservedStyle(context);
 
-  const used = new Set(draft.operations.flatMap((operation) => operation.paging?.style ?? []));
+  const declared = context.raw.merged.pagings;
+  const ids = treeNodesIsObject(declared) ? Object.keys(declared) : [];
 
-  for (const id of used) {
+  for (const id of ids.filter((name) => name !== TREE_NODES_PAGING_NONE)) {
     const style = styleOf(context, id);
 
     if (style !== undefined) draft.pagings[id] = style;
@@ -188,16 +194,37 @@ class StyleReader {
     if (!treeNodesIsObject(written)) return [];
 
     const roles: IrWriter.PagingRequestRole[] = [];
+    const sent = new Set<string>();
     let refused = false;
 
     for (const [name, place] of Object.entries(written)) {
       const role = this.requestRole(name, place);
 
-      if (role === undefined) refused = true;
+      if (role === undefined || !this.checkSentOnce(role, sent)) refused = true;
       else roles.push(role);
     }
 
     return refused ? undefined : roles;
+  }
+
+  // ADR 0002 section 14: two request roles naming one parameter or header could not be told apart.
+  checkSentOnce(role: IrWriter.PagingRequestRole, sent: Set<string>): boolean {
+    const names = [role.name, ...(role.direction === undefined ? [] : [role.direction])];
+    const twice = names.find((name) => sent.has(sentKey(role.in, name)));
+
+    for (const name of names) sent.add(sentKey(role.in, name));
+
+    if (twice === undefined) return true;
+
+    const placement = role.in === "header" ? "header" : "query parameter";
+
+    this.refuseRequest(
+      treeNodesPointer(this.pointer, "request", role.role),
+      `its ${role.role} role sends the ${placement} ${quote(twice)}, which another role sends too`,
+      `Give each request role its own ${placement}.`,
+    );
+
+    return false;
   }
 
   requestRole(name: string, place: TreeNodesJson): IrWriter.PagingRequestRole | undefined {
@@ -230,7 +257,7 @@ class StyleReader {
       in: placement,
       name: parameter,
       ...(role === "page" ? { base: typeof base === "number" ? base : DEFAULT_PAGE_BASE } : {}),
-      ...(style === undefined ? {} : { style }),
+      ...(role === "sort" ? { style: style ?? DEFAULT_SORT_STYLE } : {}),
       ...(typeof direction === "string" ? { direction } : {}),
     };
   }
@@ -275,7 +302,7 @@ class StyleReader {
 
     this.report(
       "paging-position",
-      this.writtenOrStyle(treeNodesPointer(this.pointer, "request")),
+      treeNodesPointer(this.pointer, "request"),
       `The paging style ${this.id} writes no single position role.`,
       "Write exactly one of cursor, page, offset and since, or the pair after and before.",
     );
@@ -347,7 +374,7 @@ class StyleReader {
       this.report(
         "paging-link",
         treeNodesPointer(pointer, rel),
-        `The link ${rel} of the paging style ${this.id} is no URL role.`,
+        `The link ${quote(rel)} of the paging style ${this.id} is no URL role.`,
         `Write one of ${URL_ROLES.map((candidate) => `$${candidate}`).join(", ")}.`,
       );
     }
@@ -386,11 +413,6 @@ class StyleReader {
       );
 
     return outside.length === 0;
-  }
-
-  // A member the style leaves out is located at the style.
-  writtenOrStyle(pointer: string): string {
-    return this.context.origin(pointer) === undefined ? this.pointer : pointer;
   }
 
   site(place: TreeNodesTemplateSite["place"]): TreeNodesTemplateSite {
@@ -438,7 +460,7 @@ function sortFault(
 
   if (style === KEYED_STYLE && !parameter.includes(KEY_PLACEHOLDER))
     return {
-      why: `its keyed sort parameter ${parameter} holds no ${KEY_PLACEHOLDER}`,
+      why: `its keyed sort parameter ${quote(parameter)} holds no ${KEY_PLACEHOLDER}`,
       fix: `Write ${KEY_PLACEHOLDER} in the parameter name, as order[${KEY_PLACEHOLDER}].`,
     };
 
@@ -499,16 +521,16 @@ function checkMeta(
 
     context.report(
       treeNodesError({
-        rule: "paging-meta",
+        rule: "paging-meta-clash",
         origin: treeNodesNodeOrigin(
           treeNodesOriginAt(context, treeNodesPointer(metaPointer, member.name)),
         ),
-        message: `The meta member ${member.name} is named by both the paging style ${style.id} and the format ${format.id}.`,
-        fix: `Rename ${member.name} in the style's meta or in the format's meta.`,
+        message: `The meta member ${quote(member.name)} is named by both the paging style ${style.id} and the format ${format.id}.`,
+        fix: `Rename ${quote(member.name)} in the style's meta or in the format's meta.`,
         related: formatRelated(
           format,
           formatMember,
-          `the meta field ${member.name} of ${format.id}`,
+          `the meta field ${quote(member.name)} of ${format.id}`,
         ),
       }),
     );
@@ -524,3 +546,7 @@ function formatRelated(
 
   return [{ origin: treeNodesNodeOrigin(origin), message }];
 }
+
+// Header names are case-insensitive (RFC 9110 section 5.1); query parameter names are not.
+const sentKey = (placement: IrWriter.PagingParamPlacement, name: string): string =>
+  JSON.stringify([placement, placement === "header" ? name.toLowerCase() : name]);
