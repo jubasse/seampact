@@ -148,7 +148,7 @@ test("declared params: path, query reaching safe routes, headers, each name once
     },
     {
       rule: "seampact/tree/path-param",
-      origin: at(`${PROJECTS}/routes/misplaced`),
+      origin: at(`${PROJECTS}/routes/misplaced/path`),
       message:
         "The path /v1/orgs/{orgId}/projects/{projectId}/x/{missing} of misplacedProjects holds {missing}, which no pathParams or id declares.",
     },
@@ -672,6 +672,151 @@ surfaces:
       shape: "page",
       headers: [],
       origin: at(`${notes}/ops/list/item`),
+    },
+  ]);
+});
+
+test("paths: placeholders reported where written, once, and a placeholder only once per path", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+schemas:
+  Key: { type: string }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      orgs:
+        kind: single
+        path: 'orgs/{orgId}'
+        routes:
+          show: { method: get }
+          audit: { method: get }
+          pair: { method: get, path: 'pair/{key}/{key}', pathParams: { key: Key } }
+`);
+  const orgs = `${ROUTES}/orgs`;
+  const treeSchemas = treeNodesStubService({
+    typeUses: { [`${orgs}/routes/pair/pathParams/key`]: text },
+  });
+  const { diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas });
+
+  expect(diagnostics.map(({ rule, origin, message }) => ({ rule, origin, message }))).toEqual([
+    {
+      rule: "seampact/tree/path-param",
+      origin: at(`${orgs}/path`),
+      message:
+        "The path /v1/orgs/{orgId}/show of showOrgs holds {orgId}, which no pathParams or id declares.",
+    },
+    {
+      rule: "seampact/tree/path-param",
+      origin: at(`${orgs}/routes/pair/path`),
+      message:
+        "The path /v1/orgs/{orgId}/pair/{key}/{key} of pairOrgs holds {key} twice, so one parameter would fill two segments.",
+    },
+  ]);
+});
+
+test("paths: a written path is relative segments, reported once where written", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+conventions:
+  ops: { batch: { path: 'lookup?all' } }
+schemas:
+  Id: { type: string }
+  Task: { type: object, properties: { taskId: Id } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: Id }
+        item: Task
+        ops: { get: { path: '../peek' }, batch: {} }
+      rooted: { method: get, path: /rooted }
+      gaps: { method: get, path: 'a//b' }
+      escaped: { method: get, path: '%2e%2e' }
+      fine: { method: get, path: 'a/b' }
+`);
+  const { diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas: treeNodesStubService({}),
+  });
+
+  expect(diagnostics.map(({ rule, origin, message }) => ({ rule, origin, message }))).toEqual([
+    {
+      rule: "seampact/tree/path-segment",
+      origin: at("/conventions/ops/batch/path"),
+      message:
+        "The path lookup?all written for getTasksBatch holds ?, # or %; a path is relative segments.",
+    },
+    {
+      rule: "seampact/tree/path-segment",
+      origin: at(`${TASKS}/ops/get/path`),
+      message:
+        "The path ../peek written for getTask holds a . or .. segment; a path is relative segments.",
+    },
+    {
+      rule: "seampact/tree/path-segment",
+      origin: at(`${ROUTES}/rooted/path`),
+      message: "The path /rooted written for rooted starts with /; a path is relative segments.",
+    },
+    {
+      rule: "seampact/tree/path-segment",
+      origin: at(`${ROUTES}/gaps/path`),
+      message:
+        "The path a//b written for gaps holds an empty segment; a path is relative segments.",
+    },
+    {
+      rule: "seampact/tree/path-segment",
+      origin: at(`${ROUTES}/escaped/path`),
+      message: "The path %2e%2e written for escaped holds ?, # or %; a path is relative segments.",
+    },
+  ]);
+});
+
+test("declared params: a query field named like a path parameter, and one with no query encoding", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+schemas:
+  Id: { type: string }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      show:
+        method: get
+        path: 'items/{itemId}'
+        pathParams: { itemId: Id }
+        query: { itemId?: { type: string }, tags?: { type: array, items: { type: string } } }
+`);
+  const show = `${ROUTES}/show`;
+  const treeSchemas = treeNodesStubService({
+    typeUses: {
+      [`${show}/pathParams/itemId`]: text,
+      [`${show}/query/itemId?`]: text,
+      [`${show}/query/tags?`]: { kind: "array", items: text },
+    },
+    queryWires: { [`${show}/query/itemId?`]: wire("text") },
+  });
+  const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas,
+  });
+
+  expect(draft.operations[0]?.params?.query.map(({ name }) => name)).toEqual(["itemId"]);
+  expect(
+    diagnostics.map(({ rule, origin, message, related }) => ({ rule, origin, message, related })),
+  ).toEqual([
+    {
+      rule: "seampact/tree/param-unique",
+      origin: at(`${show}/query/itemId?`),
+      message:
+        "The query field itemId of show has the name of its path parameter, which frameworks merging both read as one value.",
+      related: [{ origin: at(`${show}/pathParams/itemId`), message: "the path parameter" }],
+    },
+    {
+      rule: "seampact/tree/query-field",
+      origin: at(`${show}/query/tags?`),
+      message: "The query field tags of show has no query encoding.",
+      related: [],
     },
   ]);
 });

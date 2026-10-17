@@ -27,7 +27,7 @@ import {
   treeNodesSingularOwner,
 } from "./names.js";
 import { treeNodesParams, treeNodesUnknownQuery } from "./params.js";
-import { treeNodesPath } from "./paths.js";
+import { treeNodesCheckPathParts, treeNodesPath } from "./paths.js";
 import { treeNodesSetting } from "./raw.js";
 import { treeNodesFormat, treeNodesResponses } from "./responses.js";
 
@@ -105,6 +105,7 @@ function operationOf(
     reportNoInput(site, op);
 
   const path = treeNodesPath(node, prefixes, context);
+  if (path !== undefined) treeNodesCheckPathParts(site, path);
   const params = treeNodesParams(site, path, safe, input?.schema);
   // A relay route's format and responses are copied from the operation it relays.
   const format = node.kind === "relay" ? undefined : treeNodesFormat(site);

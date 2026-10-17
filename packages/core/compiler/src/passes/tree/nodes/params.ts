@@ -1,4 +1,5 @@
 import type { IrWriter, Origin } from "@seampact/spec/ir";
+import type { DiagnosticOrigin } from "../../../diagnostics/diagnostic.js";
 import { pipelineCopy, type TreeNode } from "../../../pipeline/seam.js";
 import { treeNodesError, treeNodesLocate, treeNodesNodeOrigin } from "./diagnostics.js";
 import {
@@ -45,13 +46,12 @@ export function treeNodesParams(
   );
   checkTagHeaderNotDeclared(site, header, input);
 
+  const queryFields = inheritedFields(site, "query", (at) => at === site.node || safe);
+  checkQueryNotNamedLikePath(site, pathFields.fields, queryFields);
+
   return {
     path: paramsOf(site, pathFields.fields, "path"),
-    query: paramsOf(
-      site,
-      inheritedFields(site, "query", (at) => at === site.node || safe),
-      "query",
-    ),
+    query: paramsOf(site, queryFields, "query"),
     header,
   };
 }
@@ -130,17 +130,69 @@ function paramsOf(
     seen.set(key, field);
 
     if (field.type === undefined || !treeNodesFieldTravels(site, field, PLACE[list])) continue;
-    const wire =
-      list === "query" ? site.context.treeSchemas.queryWire(field.wirePointer) : undefined;
-    params.push({
-      name: field.name,
-      type: field.type,
-      required: field.required,
-      ...(wire === undefined ? {} : { wire }),
-      origin: pipelineCopy(field.origin),
-    });
+    const param = paramOf(site, field, field.type, list);
+    if (param !== undefined) params.push(param);
   }
   return params;
+}
+
+// A query field carries its query wire; one the service answers no wire for has no query encoding.
+function paramOf(
+  site: TreeNodesSite,
+  field: TreeNodesField,
+  type: IrWriter.TypeUse,
+  list: ParamList,
+): IrWriter.Param | undefined {
+  const param: IrWriter.Param = {
+    name: field.name,
+    type: pipelineCopy(type),
+    required: field.required,
+    origin: pipelineCopy(field.origin),
+  };
+  if (list !== "query") return param;
+
+  const wire = site.context.treeSchemas.queryWire(field.wirePointer);
+  if (wire !== undefined) return { ...param, wire: pipelineCopy(wire) };
+
+  const origin = treeNodesLocate(field.origin, treeNodesNodeOrigin(site.node.origin));
+  site.once(
+    `query-field:${origin.layer}#${origin.pointer}:${field.name}`,
+    treeNodesError({
+      rule: "query-field",
+      origin,
+      message: `The query field ${field.name} of ${site.operationId} has no query encoding.`,
+      fix: "Give the field a number, boolean, text, enum or list of them, or an object of them.",
+    }),
+  );
+  return undefined;
+}
+
+// Merged-bag frameworks read a path parameter and a query key of one name as one value, so a query field takes no
+// path parameter's name (LD-59). Body and form fields may.
+function checkQueryNotNamedLikePath(
+  site: TreeNodesSite,
+  pathFields: readonly TreeNodesField[],
+  queryFields: readonly TreeNodesField[],
+): void {
+  const fallback = treeNodesNodeOrigin(site.node.origin);
+  for (const query of queryFields) {
+    const path = pathFields.find(({ name }) => name === query.name);
+    if (path === undefined) continue;
+
+    const origin = treeNodesLocate(query.origin, fallback);
+    site.once(
+      `param-unique:${origin.layer}#${origin.pointer}:${query.name}:path`,
+      treeNodesError({
+        rule: "param-unique",
+        origin,
+        message: `The query field ${query.name} of ${site.operationId} has the name of its path parameter, which frameworks merging both read as one value.`,
+        fix: "Rename one of the two.",
+        related: [
+          { origin: treeNodesLocate(path.origin, fallback), message: "the path parameter" },
+        ],
+      }),
+    );
+  }
 }
 
 function reportTwice(
@@ -165,27 +217,26 @@ function reportTwice(
   );
 }
 
-// Every placeholder of the path names a path parameter, and every path parameter has its placeholder.
+// Every placeholder of the path names a path parameter, once, and every path parameter has its placeholder. A
+// placeholder is reported where its path part is written, so a parent's path is reported once, not per route.
 function checkPlaceholders(
   site: TreeNodesSite,
-  { full: path, prefix }: TreeNodesPath,
+  path: TreeNodesPath,
   pathFields: { fields: readonly TreeNodesField[]; complete: boolean },
 ): void {
-  const belowPrefix = path.slice(prefix.length);
-  const placeholders = [...belowPrefix.matchAll(PLACEHOLDER)].map((match) => match[1] ?? "");
   const declared = pathFields.fields.map(({ name }) => name);
   const nodeOrigin = treeNodesNodeOrigin(site.node.origin);
+  const placeholders: string[] = [];
 
-  if (pathFields.complete)
-    for (const placeholder of placeholders.filter((name) => !declared.includes(name)))
-      site.context.report(
-        treeNodesError({
-          rule: "path-param",
-          origin: nodeOrigin,
-          message: `The path ${path} of ${site.operationId} holds {${placeholder}}, which no pathParams or id declares.`,
-          fix: `Declare ${placeholder} in pathParams.`,
-        }),
-      );
+  for (const part of path.parts)
+    for (const placeholder of placeholdersOf(part.text)) {
+      const origin = treeNodesLocate(part.origin, nodeOrigin);
+      const repeated = placeholders.includes(placeholder);
+      placeholders.push(placeholder);
+      if (repeated) reportRepeatedPlaceholder(site, path.full, placeholder, origin);
+      else if (pathFields.complete && !declared.includes(placeholder))
+        reportUndeclaredPlaceholder(site, path.full, placeholder, origin);
+    }
 
   for (const field of pathFields.fields.filter(({ name }) => !placeholders.includes(name))) {
     const origin = treeNodesLocate(field.origin, nodeOrigin);
@@ -194,11 +245,48 @@ function checkPlaceholders(
       treeNodesError({
         rule: "path-param",
         origin,
-        message: `The path parameter ${field.name} of ${site.operationId} is not in its path ${path}.`,
+        message: `The path parameter ${field.name} of ${site.operationId} is not in its path ${path.full}.`,
         fix: `Write {${field.name}} in the path, or remove the parameter.`,
       }),
     );
   }
+}
+
+const placeholdersOf = (text: string): string[] =>
+  [...text.matchAll(PLACEHOLDER)].map((match) => match[1] ?? "");
+
+function reportUndeclaredPlaceholder(
+  site: TreeNodesSite,
+  path: string,
+  placeholder: string,
+  origin: DiagnosticOrigin,
+): void {
+  site.once(
+    `path-param:${origin.layer}#${origin.pointer}:{${placeholder}}`,
+    treeNodesError({
+      rule: "path-param",
+      origin,
+      message: `The path ${path} of ${site.operationId} holds {${placeholder}}, which no pathParams or id declares.`,
+      fix: `Declare ${placeholder} in pathParams.`,
+    }),
+  );
+}
+
+function reportRepeatedPlaceholder(
+  site: TreeNodesSite,
+  path: string,
+  placeholder: string,
+  origin: DiagnosticOrigin,
+): void {
+  site.once(
+    `path-param:${origin.layer}#${origin.pointer}:{${placeholder}}`,
+    treeNodesError({
+      rule: "path-param",
+      origin,
+      message: `The path ${path} of ${site.operationId} holds {${placeholder}} twice, so one parameter would fill two segments.`,
+      fix: "Rename one of the two placeholders and declare it.",
+    }),
+  );
 }
 
 // A header-tagged input adds its tag header itself (ADR 0003 section 4), so the route declares it no second time.
@@ -211,10 +299,12 @@ function checkTagHeaderNotDeclared(
   const declared = headers.find(({ name }) => name.toLowerCase() === tagHeader);
   if (declared?.origin === undefined) return;
 
-  site.context.report(
+  const origin = treeNodesLocate(declared.origin, treeNodesNodeOrigin(site.node.origin));
+  site.once(
+    `header-union:${origin.layer}#${origin.pointer}:${site.node.pointer}`,
     treeNodesError({
       rule: "header-union",
-      origin: treeNodesLocate(declared.origin, treeNodesNodeOrigin(site.node.origin)),
+      origin,
       message: `The request header ${declared.name} of ${site.operationId} is the tag of its input union, which adds it.`,
       fix: "Remove the header; the union's discriminator adds it.",
     }),

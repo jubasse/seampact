@@ -6,7 +6,7 @@ import { treeNodesIsObject, treeNodesMember, treeNodesPointer } from "./raw.js";
 
 // The api member (ADR 0002 sections 5 and 6, ADR 0004 section 2): the api file's settings, its surfaces with their
 // resolved prefixes, and the path version. A prefix holds `{version}`, or gets `/v{version}` in front of it, unless
-// its path version is `none`, when it is used as written; a literal version segment is refused either way, since
+// its path version is `none`, when it is used as written; under `prefix` a literal version segment is refused, since
 // the version is held once, on the api.
 
 type TreeNodesContext = PassContextOf<"tree.nodes">;
@@ -16,6 +16,7 @@ type Json = Parameters<typeof treeNodesMember>[0];
 const VERSION_PLACEHOLDER = "{version}";
 const DEFAULT_VERSIONED_PREFIX = "/v{version}";
 const LITERAL_VERSION_SEGMENT = /^v[0-9]+$/;
+const PLACEHOLDER = /\{[^{}]+\}/g;
 
 const API_KINDS: readonly IrWriter.ApiKind[] = ["product", "service"];
 const DEFAULT_API_KIND: IrWriter.ApiKind = "product";
@@ -201,18 +202,21 @@ interface PrefixSite {
   readonly prefixOrigin: Origin;
 }
 
-// A literal version segment, and `{version}` under `pathVersion: none`, are refused (FR-2, SCN-032).
+// `{version}` under `pathVersion: none`, and a literal version segment under `prefix`, are refused (FR-2, SCN-032).
+// Under `none` the prefix is used exactly as written, so a third party's `/v1` stays.
 function checkPrefix(site: PrefixSite, context: TreeNodesContext): void {
   const origin = treeNodesNodeOrigin(site.prefixOrigin);
-  if (site.mode === "none" && site.writtenPrefix.includes(VERSION_PLACEHOLDER)) {
-    context.report(
-      treeNodesError({
-        rule: "path-version",
-        origin,
-        message: `The prefix ${site.writtenPrefix} of the surface ${site.id} holds {version}, but its pathVersion is none.`,
-        fix: "Remove {version} from the prefix, or set pathVersion: prefix.",
-      }),
-    );
+  checkPrefixPlaceholders(site, context, origin);
+  if (site.mode === "none") {
+    if (site.writtenPrefix.includes(VERSION_PLACEHOLDER))
+      context.report(
+        treeNodesError({
+          rule: "path-version",
+          origin,
+          message: `The prefix ${site.writtenPrefix} of the surface ${site.id} holds {version}, but its pathVersion is none.`,
+          fix: "Remove {version} from the prefix, or set pathVersion: prefix.",
+        }),
+      );
     return;
   }
 
@@ -231,12 +235,29 @@ function checkPrefix(site: PrefixSite, context: TreeNodesContext): void {
       rule: "path-version",
       origin,
       message: `The prefix ${site.writtenPrefix} of the surface ${site.id} holds the literal version segment ${literal}${mismatch}; the version is held once, on the api.`,
-      fix:
-        site.mode === "prefix"
-          ? `Write {version} instead of ${literal}.`
-          : `Remove ${literal} from the prefix, or set pathVersion: prefix and write {version}.`,
+      fix: `Write {version} instead of ${literal}.`,
     }),
   );
+}
+
+// A prefix's only placeholder is `{version}`: no parameter fills any other, so it would reach the client as written.
+function checkPrefixPlaceholders(
+  site: PrefixSite,
+  context: TreeNodesContext,
+  origin: ReturnType<typeof treeNodesNodeOrigin>,
+): void {
+  const others = [...site.writtenPrefix.matchAll(PLACEHOLDER)]
+    .map((match) => match[0])
+    .filter((placeholder) => placeholder !== VERSION_PLACEHOLDER);
+  for (const placeholder of new Set(others))
+    context.report(
+      treeNodesError({
+        rule: "path-param",
+        origin,
+        message: `The prefix ${site.writtenPrefix} of the surface ${site.id} holds ${placeholder}, which no parameter fills; a prefix holds only {version}.`,
+        fix: `Remove ${placeholder} from the prefix, or move it into a node's path and declare it in pathParams.`,
+      }),
+    );
 }
 
 function resolvePrefix(
@@ -244,10 +265,10 @@ function resolvePrefix(
   mode: IrWriter.PathVersionMode,
   version: IrWriter.ApiVersion,
 ): string {
-  if (mode === "none") return trimTrailingSlash(writtenPrefix);
+  if (mode === "none") return leadingSlash(trimTrailingSlash(writtenPrefix));
 
   const template = writtenPrefix.includes(VERSION_PLACEHOLDER)
-    ? writtenPrefix
+    ? leadingSlash(writtenPrefix)
     : `${DEFAULT_VERSIONED_PREFIX}${leadingSlash(writtenPrefix)}`;
   const versionText = version.kind === "path" ? String(version.number) : version.label;
   return trimTrailingSlash(template.replaceAll(VERSION_PLACEHOLDER, versionText));

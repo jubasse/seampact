@@ -23,7 +23,7 @@ interface PathVersionCase {
 }
 
 // ADR 0002 section 6: a prefix holds {version} or gets /v{version} in front of it; `pathVersion: none` (in the
-// conventions or on the surface) uses it as written; a literal version segment is refused.
+// conventions or on the surface) uses it as written; else a literal version segment is refused.
 const PATH_VERSION_CASES: readonly PathVersionCase[] = [
   {
     name: "a prefix with {version}",
@@ -62,6 +62,26 @@ const PATH_VERSION_CASES: readonly PathVersionCase[] = [
     version: "1",
     prefix: "/v2/app",
     expected: { prefix: "/v1/v2/app", path: "/v1/v2/app/audit-log", rules: ["path-version"] },
+  },
+  {
+    name: "a literal version segment under pathVersion none, used as written",
+    version: "2",
+    prefix: "/stripe/v1",
+    pathVersion: "none",
+    expected: { prefix: "/stripe/v1", path: "/stripe/v1/audit-log", rules: [] },
+  },
+  {
+    name: "a prefix without a leading slash",
+    version: "1",
+    prefix: "stripe",
+    pathVersion: "none",
+    expected: { prefix: "/stripe", path: "/stripe/audit-log", rules: [] },
+  },
+  {
+    name: "a placeholder other than {version} in a prefix",
+    version: "1",
+    prefix: "/v{version}/{tenant}",
+    expected: { prefix: "/v1/{tenant}", path: "/v1/{tenant}/audit-log", rules: ["path-param"] },
   },
   {
     name: "{version} under pathVersion none",
