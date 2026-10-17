@@ -13,6 +13,7 @@ import {
 } from "../../../pipeline/seam.js";
 import type { RawApi, RawWorkspace } from "../../../raw-tree.js";
 import { validateWorkspace } from "../../../validate/index.js";
+import { treeNodesRun, treeNodesStubService } from "../../tree/nodes/test-support.js";
 import { accessIdentityPass } from "./pass.js";
 
 // Test support of the access.identity half, outside every barrel: the half run guarded (ADR 0006 section 2) on a
@@ -73,17 +74,17 @@ export function accessIdentityFixtureJson(name: string, file: string): unknown {
   return JSON.parse(readFileSync(`${ACCESS_IDENTITY_FIXTURES}${name}/${file}`, "utf8"));
 }
 
-/** A schema service answering the rows' positions (a copy each time) and nothing else. */
+/** A schema service answering the rows' positions and the query wires by field pointer (a copy each time). */
 export function accessIdentityTableService(
   rows: readonly AccessIdentitySchemaUseRow[],
+  queryWires: Readonly<Record<string, IrWriter.QueryWire>> = {},
 ): TreeSchemaService {
   return {
+    ...treeNodesStubService({ queryWires }),
     typeUse: (pointer, direction) => {
       const found = rows.find((row) => row.pointer === pointer && row.direction === direction);
       return found === undefined ? undefined : structuredClone(found.use);
     },
-    queryWire: () => undefined,
-    checkExample: () => [],
   };
 }
 
@@ -151,6 +152,24 @@ export function accessIdentityRun(
   return { draft, diagnostics };
 }
 
+/**
+ * Runs tree.nodes guarded, then `prepare` (which stands in for the members a later lane of tree.nodes writes, such
+ * as params), then the half guarded, all on `draft` with the same schema service.
+ */
+export function accessIdentityRoutesRun(
+  contract: AccessIdentityContract,
+  draft: DraftIR,
+  treeSchemas: TreeSchemaService,
+  prepare: (draft: DraftIR) => void = () => {},
+): AccessIdentityRun {
+  const tree = treeNodesRun(contract.raw, contract.workspace, { treeSchemas, draft });
+  if (tree.diagnostics.length > 0)
+    throw new Error(`tree.nodes refused the test contract: ${JSON.stringify(tree.diagnostics)}`);
+
+  prepare(draft);
+  return accessIdentityRun(contract, draft, treeSchemas);
+}
+
 const STRING_USE: IrWriter.TypeUse = { kind: "scalar", type: "string", refinements: {} };
 
 const stringFields = (...names: string[]): Record<string, IrWriter.TypeUse> =>
@@ -205,3 +224,51 @@ export function accessIdentityCataloguesExpected(catalogue: string): unknown {
     throw new Error(`catalogues.json has no ${catalogue}`);
   return Reflect.get(expected, catalogue);
 }
+
+/** The schemas of the `routes` fixture, as tree.schemas writes them. */
+const ACCESS_IDENTITY_ROUTES_SCHEMAS: readonly IrWriter.ObjectSchema[] = [
+  accessIdentityObjectSchema("ViewerPrincipal", stringFields("userId", "workspaceId")),
+  accessIdentityObjectSchema("DevicePrincipal", stringFields("deviceId", "workspaceId")),
+  accessIdentityObjectSchema("PartnerPrincipal", stringFields("partnerId")),
+  accessIdentityObjectSchema("WebhookCaller", stringFields("account")),
+  accessIdentityObjectSchema("Note", stringFields("workspaceId")),
+  accessIdentityObjectSchema("Event", stringFields("type")),
+  accessIdentityObjectSchema("SlashCommand", stringFields("command")),
+];
+
+const inputRow = (pointer: string, schema: string): AccessIdentitySchemaUseRow => ({
+  pointer,
+  direction: "input",
+  use: { kind: "ref", schema },
+});
+
+/** The schema uses of the `routes` fixture: each principal and each declared input. */
+const ACCESS_IDENTITY_ROUTES_USES: readonly AccessIdentitySchemaUseRow[] = [
+  principalRow("/identities/viewer_or_device/principal/variants/viewer", "ViewerPrincipal"),
+  principalRow("/identities/viewer_or_device/principal/variants/device", "DevicePrincipal"),
+  principalRow("/identities/partner/principal", "PartnerPrincipal"),
+  ...["stripe", "clerk", "slack"].map((id) =>
+    principalRow(`/identities/${id}/principal`, "WebhookCaller"),
+  ),
+  inputRow("/surfaces/app/routes/notes/input", "Note"),
+  inputRow("/surfaces/hooks/routes/stripe/input", "Event"),
+  inputRow("/surfaces/hooks/routes/clerk/input", "Event"),
+  inputRow("/surfaces/hooks/routes/slack/input", "SlashCommand"),
+];
+
+const TEXT_FIELD_WIRE: IrWriter.QueryWire = {
+  kind: "text",
+  style: "form",
+  explode: true,
+  brackets: false,
+};
+
+/** tree.nodes, then the half, run on the `routes` fixture. */
+export const accessIdentityRoutesFixtureRun = (): AccessIdentityRun =>
+  accessIdentityRoutesRun(
+    accessIdentityFixture("routes", "routes"),
+    accessIdentityDraft(ACCESS_IDENTITY_ROUTES_SCHEMAS),
+    accessIdentityTableService(ACCESS_IDENTITY_ROUTES_USES, {
+      "/schemas/SlashCommand/properties/command": TEXT_FIELD_WIRE,
+    }),
+  );

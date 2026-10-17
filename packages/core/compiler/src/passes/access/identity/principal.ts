@@ -6,13 +6,13 @@ import {
   accessIdentityMember,
   accessIdentityPointer,
 } from "./read.js";
-import type { AccessIdentityReporter } from "./report.js";
+import type { AccessIdentityProblem, AccessIdentityReporter } from "./report.js";
 import { accessIdentitySchemaUse } from "./schema-use.js";
 
 // The principal of an identity (ADR 0002 section 9): one schema, or one per credential variant, each a named
 // schema (ADR 0004: a SchemaRef) whose use the schema service answers (an inline object is hoisted by tree.schemas),
 // and the lookup of a principal field, which every variant must hold. A map or union principal is refused only
-// where a field is read off it (LD-49), so here only by that lookup.
+// where a field is read off it (a header use's `from`, a route's `principal.requires`, a binding), by that lookup.
 
 type Context = PassContextOf<"access.identity">;
 
@@ -107,25 +107,62 @@ function variantsPrincipal(
   return { status: "resolved", principal: { kind: "variants", variants: resolved } };
 }
 
-// Whether the object schema `id` holds the dotted field path, each step but the last a named object schema.
-function schemaHasField(schemas: Schemas, id: string, segments: readonly string[]): boolean {
+/** Where a dotted field lookup ends: held, missing, or at a step that is no object schema (a map or a union). */
+export type AccessIdentityFieldLookup =
+  | { status: "held" }
+  | { status: "missing" }
+  | { status: "notObject"; schema: string; kind: string };
+
+/** Whether the schema `id` holds the dotted field path, each step but the last a named object schema. */
+export function accessIdentitySchemaField(
+  schemas: Schemas,
+  id: string,
+  segments: readonly string[],
+): AccessIdentityFieldLookup {
   const [first, ...rest] = segments;
   const schema = schemaOf(schemas, id);
-  if (first === undefined || schema.kind !== "object") return false;
+  if (schema.kind !== "object") return { status: "notObject", schema: id, kind: schema.kind };
+  if (first === undefined) return { status: "missing" };
 
   const property = schema.properties.find((candidate) => candidate.name === first);
-  if (property === undefined) return false;
-  if (rest.length === 0) return true;
-  return property.type.kind === "ref" && schemaHasField(schemas, property.type.schema, rest);
+  if (property === undefined) return { status: "missing" };
+  if (rest.length === 0) return { status: "held" };
+  if (property.type.kind !== "ref") return { status: "missing" };
+  return accessIdentitySchemaField(schemas, property.type.schema, rest);
 }
 
-/** Whether every schema of the principal holds the dotted field (`profile.id`). */
-export function accessIdentityPrincipalHasField(
+/** Where the lookup of a dotted principal field (`profile.id`) ends, in the first variant that does not hold it. */
+export function accessIdentityPrincipalField(
   schemas: Schemas,
   principal: IrWriter.KnownPrincipal,
   field: string,
-): boolean {
+): AccessIdentityFieldLookup {
   const segments = field.split(".");
-  if (principal.kind === "schema") return schemaHasField(schemas, principal.schema, segments);
-  return Object.values(principal.variants).every((id) => schemaHasField(schemas, id, segments));
+  if (principal.kind === "schema")
+    return accessIdentitySchemaField(schemas, principal.schema, segments);
+
+  for (const id of Object.values(principal.variants)) {
+    const lookup = accessIdentitySchemaField(schemas, id, segments);
+    if (lookup.status !== "held") return lookup;
+  }
+  return { status: "held" };
+}
+
+/** What a reader of a principal field is told when the principal does not hold it. */
+export function accessIdentityPrincipalFieldRefusal(
+  reader: string,
+  field: string,
+  principal: IrWriter.KnownPrincipal,
+  lookup: Exclude<AccessIdentityFieldLookup, { status: "held" }>,
+): Pick<AccessIdentityProblem, "message" | "fix"> {
+  if (lookup.status === "notObject")
+    return {
+      message: `${reader} principal field '${field}', but the principal schema '${lookup.schema}' is a ${lookup.kind}, not an object schema`,
+      fix: "Name an object schema as the principal, or as each variant, whose properties are the fields read.",
+    };
+
+  return {
+    message: `${reader} principal field '${field}', which its principal does not hold${principal.kind === "variants" ? " in every variant" : ""}`,
+    fix: "Name a field of the principal schema, or add it to the schema.",
+  };
 }

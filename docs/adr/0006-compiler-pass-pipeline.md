@@ -158,7 +158,7 @@ Every derived element carries `derivedFrom: { derivation, from }` with a derivat
 | `identity.deadline` | a `deadline` identity header | `deadlineHeader`, 504 | `deadlineExceeded` |
 | `identity.versionToken` | a `versionToken` identity header | the response header on every success, the optional request header on writes, the declared stale code | declared |
 | `signed.identity` | a signed identity | `input.rawBody`, no CSRF, no idempotency key, 401 (with `verify: application`, for a missing signature header and for the hook's refusal) | `unauthenticated` |
-| `identity.unknownKeys` | a signed identity with `unknownKeys` | `unknownKeys` (`ignore` or `keep`) on the input of each of its routes | none |
+| `identity.unknownKeys` | a signed identity with `unknownKeys` | `unknownKeys` (`ignore` or `keep`) on each `ref` input of its routes | none |
 | `input.unknownKeys` | `conventions.input.unknownKeys` other than `refuse` | `unknownKeys` on every body input use that sets none | none |
 | `union.headerTag` | a route whose input is a header-tagged union (ADR 0003 section 3) | the required tag header parameter, its values the union's tags; 400 on a missing or unknown tag | `schemaInvalid` |
 | `cache.headers` | `cache` on a GET | `Cache-Control` per caller kind from the family's directives (shared-cache directives on public values only), `Vary` (the credential headers of the identity's schemes, then `cache.vary`) | none |

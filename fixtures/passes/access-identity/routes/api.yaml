@@ -1,0 +1,97 @@
+# The per-operation members of access.identity: a viewer_or_device app with public, optional and CSRF-derived
+# routes, a partner read-only surface on a query API key, and webhooks under signed identities: a template
+# signature (Stripe), an application-verified one keeping unknown keys (Clerk) and a Slack-style form webhook.
+api: { name: routes, version: 1 }
+
+schemes:
+  sessionCookie: { kind: cookie, name: __Host-session, csrf: csrfToken }
+  csrfToken: { kind: header, name: X-Csrf-Token }
+  bearer: { kind: bearer }
+  deviceToken: { kind: header, name: X-Device-Token }
+  mapsKey: { kind: query, name: key }
+  stripeSignature:
+    kind: signature
+    name: Stripe-Signature
+    format: 't={ts},v1={sig}'
+    algorithm: hmac-sha256
+    payload: '{ts}.{rawBody}'
+    encoding: hex
+    tolerance: 5m
+    key: { value: stripe }
+  clerkWebhook:
+    kind: signature
+    verify: application
+    name: svix-signature
+    headers: [svix-id, svix-timestamp]
+  slackSignature:
+    kind: signature
+    verify: application
+    name: X-Slack-Signature
+    headers: [X-Slack-Request-Timestamp]
+
+identities:
+  viewer_or_device:
+    schemes: { read: [sessionCookie, bearer], write: [sessionCookie, bearer], optionalRead: [deviceToken] }
+    principal:
+      variants: { viewer: ViewerPrincipal, device: DevicePrincipal }
+  partner:
+    schemes: { read: [mapsKey], write: [] }
+    principal: PartnerPrincipal
+  stripe:
+    kind: signed
+    scheme: stripeSignature
+    principal: WebhookCaller
+  clerk:
+    kind: signed
+    scheme: clerkWebhook
+    principal: WebhookCaller
+    unknownKeys: { keep: "Clerk adds event fields the handler forwards." }
+  slack:
+    kind: signed
+    scheme: slackSignature
+    principal: WebhookCaller
+
+schemas:
+  ViewerPrincipal:
+    type: object
+    required: [userId, workspaceId]
+    properties: { userId: { type: string }, workspaceId: { type: string } }
+  DevicePrincipal:
+    type: object
+    required: [deviceId, workspaceId]
+    properties: { deviceId: { type: string }, workspaceId: { type: string } }
+  PartnerPrincipal: { type: object, required: [partnerId], properties: { partnerId: { type: string } } }
+  WebhookCaller: { type: object, required: [account], properties: { account: { type: string } } }
+  Note: { type: object, required: [workspaceId], properties: { workspaceId: { type: string } } }
+  Event: { type: object, required: [type], properties: { type: { type: string } } }
+  SlashCommand: { type: object, required: [command], properties: { command: { type: string } } }
+
+surfaces:
+  app:
+    identity: viewer_or_device
+    routes:
+      health:
+        method: get
+        access: { public: "Probes call it before any user exists." }
+        output: Event
+      feed:
+        method: get
+        access: { optionalAuth: "Anonymous readers see the public notes." }
+        output: Note
+      notes:
+        method: post
+        input: Note
+        principal: { requires: [workspaceId] }
+        bindings: { body.workspaceId: principal.workspaceId }
+      logout:
+        method: post
+        csrf: { exempt: "Logging out with a forged request only signs the caller out." }
+  partner:
+    identity: partner
+    routes:
+      tiles: { method: get, output: Event }
+  hooks:
+    routes:
+      stripe: { method: post, identity: stripe, input: Event }
+      clerk: { method: post, identity: clerk, input: Event }
+      slack: { method: post, identity: slack, inputMedia: form, input: SlashCommand }
