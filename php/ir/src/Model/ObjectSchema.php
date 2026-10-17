@@ -1,6 +1,6 @@
 <?php
 
-// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 2. Do not edit.
+// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 3. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 
 declare(strict_types=1);
@@ -24,6 +24,7 @@ final readonly class ObjectSchema extends Schema
      * @param \stdClass $extensions
      * @param Origin $origin
      * @param string|null $typeName
+     * @param bool|null $deprecated The schema is deprecated (ADR 0003 section 1); absent means false.
      */
     public function __construct(
         public array $properties,
@@ -35,6 +36,7 @@ final readonly class ObjectSchema extends Schema
         \stdClass $extensions,
         public Origin $origin,
         public ?string $typeName = null,
+        public ?bool $deprecated = null,
     ) {
         $this->kind = 'object';
         $this->extensions = IrHydration::copyObject($extensions);
@@ -60,6 +62,7 @@ final readonly class ObjectSchema extends Schema
             extensions: IrHydration::copyObject(IrHydration::object(IrHydration::required($members, 'extensions', 'ObjectSchema'), 'ObjectSchema.extensions')),
             origin: Origin::fromJson(IrHydration::required($members, 'origin', 'ObjectSchema')),
             typeName: IrHydration::optional($members, 'typeName', static fn (mixed $item): string => IrHydration::string($item, 'ObjectSchema.typeName')),
+            deprecated: IrHydration::optional($members, 'deprecated', static fn (mixed $item): bool => IrHydration::boolean($item, 'ObjectSchema.deprecated')),
         );
     }
 
@@ -78,6 +81,9 @@ final readonly class ObjectSchema extends Schema
         $json->{'docs'} = $this->docs->toJson();
         $json->{'extensions'} = IrHydration::copy($this->extensions);
         $json->{'origin'} = $this->origin->toJson();
+        if ($this->deprecated !== null) {
+            $json->{'deprecated'} = $this->deprecated;
+        }
         return $json;
     }
 

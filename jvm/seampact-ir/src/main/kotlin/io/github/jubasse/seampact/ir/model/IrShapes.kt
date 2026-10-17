@@ -1,4 +1,4 @@
-// Generated from scripts/ir-models/kotlin.ts by scripts/ir-models for IR revision 2. Do not edit.
+// Generated from scripts/ir-models/kotlin.ts by scripts/ir-models for IR revision 3. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 
 package io.github.jubasse.seampact.ir.model
@@ -192,7 +192,7 @@ private fun operationShapes(): Map<String, IrShape> = buildMap {
     put("RefusedCredential", IrShape.OpenEnum(setOf("anonymous", "reject"), true))
     put("Requirement", IrShape.Union("kind", true, mapOf("right" to "RightRequirement", "rule" to "RuleRequirement")))
     put("RequirementSubject", IrShape.Struct(mapOf("source" to IrShape.Named("ValueSource"))))
-    put("Response", IrShape.Struct(mapOf("body" to IrShape.Named("TypeUse"), "shape" to IrShape.Named("ResponseShape"), "headers" to IrShape.Items(IrShape.Named("ResponseHeader")), "origin" to IrShape.Named("Origin"), "derivedFrom" to IrShape.Named("DerivedFrom"))))
+    put("Response", IrShape.Struct(mapOf("body" to IrShape.Named("TypeUse"), "shape" to IrShape.Named("ResponseShape"), "headers" to IrShape.Items(IrShape.Named("ResponseHeader")), "origin" to IrShape.Named("Origin"), "derivedFrom" to IrShape.Named("DerivedFrom"), "docs" to IrShape.Named("Docs"))))
     put("ResponseHeader", IrShape.Struct(mapOf("type" to IrShape.Named("TypeUse"), "origin" to IrShape.Named("Origin"), "derivedFrom" to IrShape.Named("DerivedFrom"))))
     put("ResponseShape", IrShape.OpenEnum(setOf("item", "table", "list", "page", "empty", "binary", "redirect"), false))
     put("RightRequirement", IrShape.Struct(mapOf("right" to IrShape.Named("RightId"), "subject" to IrShape.Named("RequirementSubject"), "origin" to IrShape.Named("Origin"), "derivedFrom" to IrShape.Named("DerivedFrom"))))
@@ -202,31 +202,31 @@ private fun operationShapes(): Map<String, IrShape> = buildMap {
 }
 
 private fun schemasShapes(): Map<String, IrShape> = buildMap {
-    put("ArrayTypeUse", IrShape.Struct(mapOf("items" to IrShape.Named("TypeUse"))))
+    put("ArrayTypeUse", IrShape.Struct(mapOf("items" to IrShape.Named("TypeUse"), "docs" to IrShape.Named("Docs"))))
     put("BodyUnionTag", IrShape.Struct(mapOf()))
     put("EnumNarrowing", IrShape.Struct(mapOf("reason" to IrShape.Named("Reason"))))
-    put("EnumTypeUse", IrShape.Struct(mapOf("enum" to IrShape.Named("EnumId"), "narrowedTo" to IrShape.Named("EnumNarrowing"))))
+    put("EnumTypeUse", IrShape.Struct(mapOf("enum" to IrShape.Named("EnumId"), "narrowedTo" to IrShape.Named("EnumNarrowing"), "docs" to IrShape.Named("Docs"))))
     put("FieldRestriction", IrShape.Struct(mapOf("right" to IrShape.Named("RightId"), "inputPolicy" to IrShape.Named("InputPolicy"), "origin" to IrShape.Named("Origin"))))
-    put("FileTypeUse", IrShape.Struct(mapOf()))
+    put("FileTypeUse", IrShape.Struct(mapOf("docs" to IrShape.Named("Docs"))))
     put("HeaderUnionTag", IrShape.Struct(mapOf()))
     put("InputPolicy", IrShape.OpenEnum(setOf("reject", "strip"), true))
     put("JsonContent", IrShape.Struct(mapOf("media" to IrShape.Named("JsonMediaType"), "schema" to IrShape.Named("TypeUse"))))
     put("JsonMediaType", IrShape.OpenEnum(setOf("application/json"), false))
     put("MapSchema", IrShape.Struct(mapOf("keys" to IrShape.Named("TypeUse"), "values" to IrShape.Named("TypeUse"), "id" to IrShape.Named("SchemaId"), "name" to IrShape.Named("Name"), "directions" to IrShape.Items(IrShape.Named("Direction")), "docs" to IrShape.Named("Docs"), "extensions" to IrShape.Named("Extensions"), "origin" to IrShape.Named("Origin"))))
     put("ObjectSchema", IrShape.Struct(mapOf("properties" to IrShape.Items(IrShape.Named("Property")), "id" to IrShape.Named("SchemaId"), "name" to IrShape.Named("Name"), "directions" to IrShape.Items(IrShape.Named("Direction")), "docs" to IrShape.Named("Docs"), "extensions" to IrShape.Named("Extensions"), "origin" to IrShape.Named("Origin"))))
-    put("OpaqueTypeUse", IrShape.Struct(mapOf("reason" to IrShape.Named("Reason"), "origin" to IrShape.Named("Origin"))))
+    put("OpaqueTypeUse", IrShape.Struct(mapOf("reason" to IrShape.Named("Reason"), "origin" to IrShape.Named("Origin"), "docs" to IrShape.Named("Docs"))))
     put("Pattern", IrShape.Struct(mapOf()))
     put("Property", IrShape.Struct(mapOf("type" to IrShape.Named("TypeUse"), "restrictedTo" to IrShape.Named("FieldRestriction"), "codeName" to IrShape.Named("Name"), "docs" to IrShape.Named("Docs"), "extensions" to IrShape.Named("Extensions"), "origin" to IrShape.Named("Origin"), "derivedFrom" to IrShape.Named("DerivedFrom"))))
-    put("RefTypeUse", IrShape.Struct(mapOf("schema" to IrShape.Named("SchemaId"), "unknownKeys" to IrShape.Named("UnknownKeys"))))
+    put("RefTypeUse", IrShape.Struct(mapOf("schema" to IrShape.Named("SchemaId"), "unknownKeys" to IrShape.Named("UnknownKeys"), "docs" to IrShape.Named("Docs"))))
     put("Refinements", IrShape.Struct(mapOf("pattern" to IrShape.Named("Pattern"), "minimum" to IrShape.Named("DecimalLiteral"), "maximum" to IrShape.Named("DecimalLiteral"), "exclusiveMinimum" to IrShape.Named("DecimalLiteral"), "exclusiveMaximum" to IrShape.Named("DecimalLiteral"), "multipleOf" to IrShape.Named("DecimalLiteral"))))
     put("Scalar", IrShape.Struct(mapOf("id" to IrShape.Named("ScalarId"), "name" to IrShape.Named("Name"), "type" to IrShape.Named("ScalarTypeUse"), "directions" to IrShape.Items(IrShape.Named("Direction")), "docs" to IrShape.Named("Docs"), "origin" to IrShape.Named("Origin"))))
     put("ScalarType", IrShape.OpenEnum(setOf("string", "integer", "number", "boolean"), false))
-    put("ScalarTypeUse", IrShape.Struct(mapOf("type" to IrShape.Named("ScalarType"), "scalar" to IrShape.Named("ScalarId"), "refinements" to IrShape.Named("Refinements"), "content" to IrShape.Named("JsonContent"))))
+    put("ScalarTypeUse", IrShape.Struct(mapOf("type" to IrShape.Named("ScalarType"), "scalar" to IrShape.Named("ScalarId"), "refinements" to IrShape.Named("Refinements"), "content" to IrShape.Named("JsonContent"), "docs" to IrShape.Named("Docs"))))
     put("Schema", IrShape.Union("kind", false, mapOf("object" to "ObjectSchema", "map" to "MapSchema", "union" to "UnionSchema")))
     put("TypeUse", IrShape.Union("kind", false, mapOf("ref" to "RefTypeUse", "opaque" to "OpaqueTypeUse", "file" to "FileTypeUse", "enum" to "EnumTypeUse", "scalar" to "ScalarTypeUse", "array" to "ArrayTypeUse")))
     put("UnionSchema", IrShape.Struct(mapOf("tag" to IrShape.Named("UnionTag"), "variants" to IrShape.Items(IrShape.Named("UnionVariant")), "id" to IrShape.Named("SchemaId"), "name" to IrShape.Named("Name"), "directions" to IrShape.Items(IrShape.Named("Direction")), "docs" to IrShape.Named("Docs"), "extensions" to IrShape.Named("Extensions"), "origin" to IrShape.Named("Origin"))))
     put("UnionTag", IrShape.Union("in", false, mapOf("body" to "BodyUnionTag", "header" to "HeaderUnionTag")))
-    put("UnionVariant", IrShape.Struct(mapOf("schema" to IrShape.Named("SchemaId"))))
+    put("UnionVariant", IrShape.Struct(mapOf("schema" to IrShape.Named("SchemaId"), "docs" to IrShape.Named("Docs"))))
     put("UnknownKeys", IrShape.Struct(mapOf("policy" to IrShape.Named("UnknownKeysPolicy"), "reason" to IrShape.Named("Reason"), "origin" to IrShape.Named("Origin"), "derivedFrom" to IrShape.Named("DerivedFrom"))))
     put("UnknownKeysPolicy", IrShape.OpenEnum(setOf("refuse", "ignore", "keep"), true))
 }

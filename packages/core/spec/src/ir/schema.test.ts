@@ -275,6 +275,21 @@ describe("IR schema files", () => {
     }
   });
 
+  test("every integer is bounded to the safe range", () => {
+    // I-JSON (RFC 7493): every reader holds an IR integer exactly, a JavaScript number included.
+    const integers: string[] = [];
+
+    for (const document of IR_SCHEMA_DOCUMENTS)
+      walkSchema(document, (node, pointer) => {
+        if (node.type !== "integer") return;
+        integers.push(pointer);
+        expect(node.minimum, pointer).toBeGreaterThanOrEqual(-Number.MAX_SAFE_INTEGER);
+        expect(node.maximum, pointer).toBeLessThanOrEqual(Number.MAX_SAFE_INTEGER);
+      });
+
+    expect(integers.length).toBeGreaterThan(20);
+  });
+
   test("catalogues are maps keyed by id and declarations are referenced by id", () => {
     const contract = def("ContractIR").properties as Record<string, SchemaNode>;
     // ADR 0004 section 2: every `Record<Id, Decl>` of the top level.

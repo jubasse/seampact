@@ -196,6 +196,50 @@ test("an unknown signature key kind makes the IR invalid for every reader", () =
   });
 });
 
+test("an integer past the safe range is a problem in both forms", () => {
+  const largest = mutateAt(
+    sample("every-member.ir.json"),
+    "/schemas/Task/properties/6/type",
+    (use) => {
+      use.maxSizeBytes = Number.MAX_SAFE_INTEGER;
+    },
+  );
+  const past = mutateAt(
+    sample("every-member.ir.json"),
+    "/schemas/Task/properties/6/type",
+    (use) => {
+      use.maxSizeBytes = 2 ** 53;
+    },
+  );
+  const problem = {
+    pointer: "/schemas/Task/properties/6/type/maxSizeBytes",
+    keyword: "maximum",
+  };
+
+  expect(validateIr(largest, "strict")).toEqual(VALID_REPORT);
+  expect(validateIr(past, "open")).toMatchObject({ valid: false, problems: [problem] });
+  expect(validateIr(past, "strict")).toMatchObject({ valid: false, problems: [problem] });
+});
+
+// One use of each type-use kind in the sample, and a response body: docs and examples are valid on each.
+test.each([
+  ["ref", "/schemas/Task/properties/0/type"],
+  ["opaque", "/schemas/Task/properties/5/type"],
+  ["file", "/schemas/Task/properties/6/type"],
+  ["enum", "/schemas/Task/properties/7/type"],
+  ["array", "/schemas/Task/properties/8/type"],
+  ["scalar", "/schemas/Task/properties/8/type/items"],
+  ["ref", "/operations/2/responses/0/body"],
+])("a %s use at %s holds docs and examples", (kind, pointer) => {
+  const ir = mutateAt(sample("every-member.ir.json"), pointer, (use) => {
+    expect(use.kind).toBe(kind);
+    use.docs = { description: "Annotated." };
+    use.examples = [{}];
+  });
+
+  expect(validateIr(ir, "strict")).toEqual(VALID_REPORT);
+});
+
 test("a mapping error the walk did not list fails closed", () => {
   // An unknown tag only the validator saw: whether its union is must-act is unknown, so it counts as must-act.
   const error = {

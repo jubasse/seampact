@@ -21,7 +21,7 @@ Rights, rules, scopes and identities are declared with the grammar of ADR 0002 a
 Every server target generates exactly three hook interfaces (FR-25), unless the app turns `accessHooks` off for native access (below). Each is typed from the contract: the generated request types name the identity, right, rule or scope and carry its declared params, principal and error codes.
 
 **Authenticate**, one per identity. It receives:
-- the identity name and the credentials found in the locations the identity's schemes declare for this request (read or write schemes), including the CSRF companion value on a write through a cookie scheme that declares `csrf` (opt-in, [A34](../decisions.md#a34));
+- the identity name and the credentials found in the locations the identity's schemes declare for this request (read or write schemes), including the CSRF companion value on a write through a cookie scheme that declares `csrf` (opt-in, [A34](../decisions.md#a34)); on a write that accepts a cookie and a bearer scheme, the derived `csrf` check applies to the requests authenticated by the cookie only;
 - for a signed identity, the raw body and the parsed signature fields (ADR 0013), or, for a scheme with `verify: application`, the raw body, the signature header and the scheme's declared headers, unparsed (ADR 0002 section 9, [A40](../decisions.md#a40));
 - a read-only view of the request (method, path, headers, client address) and the operation reference;
 - the operation's extension metadata (A20).
@@ -124,7 +124,7 @@ The order is fixed in every target and stops at the first failure (FR-5):
 5. Requirements in declared order. A body proof is read from the parsed body and checked against its own field schema in this step. A registered record loader runs here, before the decide call that receives the record; a record it does not find answers the `notFound` role at this step, before any 403 (as Laravel's route-model binding and API Platform's providers do).
 6. Input validation (400), reporting every issue of path, query, headers and body at once.
 7. Restricted input fields (403 with the field pointer, or stripped, per A21) and restricted sort keys (403).
-8. Principal bindings (403).
+8. Principal bindings (403). A binding whose principal side or input side is absent or null is a mismatch, never a match.
 9. The handler.
 10. The response: an undeclared status answers 500; restricted output fields are projected out; undeclared fields are stripped; sensitive values are redacted from logs; the success or error format, cache, identity and deprecation headers are written. No framework-generated validator or 304 reaches a contract route: a target turns off its framework's automatic ETags there (Express sends weak ETags and 304s by default), and only `cache.etag` produces them.
 

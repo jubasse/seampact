@@ -5,12 +5,13 @@ type Schema =                                // a tagged union on 'kind'
   | { kind: 'object'; properties: Property[] }
   | { kind: 'map'; keys?: TypeUse; values: TypeUse }
   | { kind: 'union'; tag: { in: 'body'; property: string } | { in: 'header'; name: string };   // header: a route's whole input only
-      variants: { tag: string; schema: SchemaId }[] }
-  ;                                          // each with id, name, typeName?, directions, examples, docs, extensions, origin
+      variants: { tag: string; schema: SchemaId; docs?: Docs }[] }
+  ;                                          // each with id, name, typeName?, directions, examples, docs, extensions, origin, deprecated?
 interface Property {
   name: string; type: TypeUse; optional: boolean; nullable: boolean;
   sensitive: boolean; restrictedTo?: FieldRestriction; default?: unknown; deprecated: boolean;
   codeName?: Name;                           // identifier override; the wire name stays 'name'
+  examples?: unknown[];
   docs; extensions; origin;
 }
 type TypeUse =                               // what a property, item, body or parameter is
@@ -23,6 +24,7 @@ type TypeUse =                               // what a property, item, body or p
   | { kind: 'scalar'; type: 'string' | 'integer' | 'number' | 'boolean'; format?: string; refinements: Refinements;
       content?: { media: 'application/json'; schema: TypeUse } }   // a form or multipart text field holding JSON
   | { kind: 'array'; items: TypeUse; minItems?: number; maxItems?: number };
+                                             // each use also with docs?: Docs and examples?: unknown[]
 ```
 
 - Objects, maps and unions are always named schemas, hoisted to `schemas` with the deterministic name of ADR 0007; scalars, enum uses and arrays stay inline in their use. Generated code therefore never holds an anonymous structural type (FR-3).
@@ -31,3 +33,4 @@ type TypeUse =                               // what a property, item, body or p
 - A pattern refinement holds the normalised form of ADR 0003 section 9, never the written text alone.
 - `directions` lists `input` and `output` as the schema is used; targets generate per-direction validators from it (ADR 0003 section 4).
 - `nullable` and `optional` are two members (FR-3, SCN-005).
+- Written annotations are kept, never dropped (irRevision 3): a schema's `deprecated` (absent means false), a property's `examples`, a union variant's `docs` (written beside its schema reference), and the `docs` and `examples` written at the position of a type use, held by that use, optional on every kind. The compiler writes them where the grammar allows them today: the items of an array use, the keys or values of a map schema, the schema of a JSON content. A property and a named format hold their own, and an inline object, map or union keeps them on its hoisted schema; a later position the grammar allows is an additive change.

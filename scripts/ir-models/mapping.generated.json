@@ -1,5 +1,5 @@
 {
-  "irRevision": 2,
+  "irRevision": 3,
   "definitions": {
     "Absent": {
       "construct": "openEnum",

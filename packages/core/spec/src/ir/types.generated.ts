@@ -583,6 +583,8 @@ export interface ObjectSchema {
   docs: Docs;
   extensions: Extensions;
   origin: Origin;
+  /** The schema is deprecated (ADR 0003 section 1); absent means false. */
+  deprecated?: boolean;
 }
 
 export interface MapSchema {
@@ -597,6 +599,8 @@ export interface MapSchema {
   docs: Docs;
   extensions: Extensions;
   origin: Origin;
+  /** The schema is deprecated (ADR 0003 section 1); absent means false. */
+  deprecated?: boolean;
 }
 
 export interface UnionSchema {
@@ -611,6 +615,8 @@ export interface UnionSchema {
   docs: Docs;
   extensions: Extensions;
   origin: Origin;
+  /** The schema is deprecated (ADR 0003 section 1); absent means false. */
+  deprecated?: boolean;
 }
 
 /** Where a union's tag is read; 'header' only for a route's whole input. */
@@ -632,6 +638,8 @@ export interface HeaderUnionTag {
 export interface UnionVariant {
   tag: string;
   schema: SchemaId;
+  /** The docs written on the variant itself, beside its schema reference. */
+  docs?: Docs;
 }
 
 /** An object property; the wire name stays 'name' (ADR 0004 section 5). */
@@ -649,6 +657,8 @@ export interface Property {
   extensions: Extensions;
   origin: Origin;
   derivedFrom?: DerivedFrom;
+  /** The examples written on the property, each parsed against its type (ADR 0003 section 11). */
+  examples?: unknown[];
 }
 
 /** What the boundary does with a restricted input field sent without the right (A21). Must act: an unknown value makes the IR invalid for every reader. */
@@ -691,6 +701,10 @@ export interface RefTypeUse {
   unknownKeys?: UnknownKeys;
   /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
   nullable?: boolean;
+  /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
+  docs?: Docs;
+  /** The examples written at the position of this use, placed as its docs are. */
+  examples?: unknown[];
 }
 
 /** Any JSON value, unchecked (ADR 0003 section 2). */
@@ -698,6 +712,10 @@ export interface OpaqueTypeUse {
   kind: "opaque";
   reason: Reason;
   origin: Origin;
+  /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
+  docs?: Docs;
+  /** The examples written at the position of this use, placed as its docs are. */
+  examples?: unknown[];
 }
 
 /** A multipart field or a download (A39). */
@@ -707,6 +725,10 @@ export interface FileTypeUse {
   maxSizeBytes?: number;
   /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
   nullable?: boolean;
+  /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
+  docs?: Docs;
+  /** The examples written at the position of this use, placed as its docs are. */
+  examples?: unknown[];
 }
 
 export interface EnumNarrowing {
@@ -720,6 +742,10 @@ export interface EnumTypeUse {
   narrowedTo?: EnumNarrowing;
   /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
   nullable?: boolean;
+  /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
+  docs?: Docs;
+  /** The examples written at the position of this use, placed as its docs are. */
+  examples?: unknown[];
 }
 
 /** The media type of a JSON text field. */
@@ -746,6 +772,10 @@ export interface ScalarTypeUse {
   content?: JsonContent;
   /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
   nullable?: boolean;
+  /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
+  docs?: Docs;
+  /** The examples written at the position of this use, placed as its docs are. */
+  examples?: unknown[];
 }
 
 export interface ArrayTypeUse {
@@ -755,6 +785,10 @@ export interface ArrayTypeUse {
   maxItems?: number;
   /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
   nullable?: boolean;
+  /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
+  docs?: Docs;
+  /** The examples written at the position of this use, placed as its docs are. */
+  examples?: unknown[];
 }
 
 /** A pattern refinement: the written text and its normalised form (ADR 0003 section 9). */
@@ -1013,6 +1047,8 @@ export interface Response {
   headers: ResponseHeader[];
   origin?: Origin;
   derivedFrom?: DerivedFrom;
+  /** The docs written on the response. */
+  docs?: Docs;
 }
 
 /** A code the operation can answer, declared or derived. */

@@ -1,6 +1,6 @@
 <?php
 
-// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 2. Do not edit.
+// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 3. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 
 declare(strict_types=1);
@@ -27,7 +27,7 @@ final class IrShapes
             'ApiVersion' => IrShape::union('kind', false, ['path' => 'PathApiVersion', 'label' => 'LabelApiVersion']),
             'ApplicationSignature' => IrShape::struct(['key' => IrShape::named('SchemeKey')]),
             'ArrayTemplate' => IrShape::struct(['items' => IrShape::items(IrShape::named('Template'))]),
-            'ArrayTypeUse' => IrShape::struct(['items' => IrShape::named('TypeUse')]),
+            'ArrayTypeUse' => IrShape::struct(['items' => IrShape::named('TypeUse'), 'docs' => IrShape::named('Docs')]),
             'BasicScheme' => IrShape::struct(['id' => IrShape::named('SchemeId'), 'origin' => IrShape::named('Origin')]),
             'BearerFacts' => IrShape::struct(['oauth2' => IrShape::named('OAuth2')]),
             'BearerScheme' => IrShape::struct(['id' => IrShape::named('SchemeId'), 'bearer' => IrShape::named('BearerFacts'), 'origin' => IrShape::named('Origin')]),
@@ -62,7 +62,7 @@ final class IrShapes
             'Enum' => IrShape::struct(['id' => IrShape::named('EnumId'), 'name' => IrShape::named('Name'), 'codeNames' => IrShape::values(IrShape::named('Name')), 'source' => IrShape::named('EnumSource'), 'localReason' => IrShape::named('Reason'), 'directions' => IrShape::items(IrShape::named('Direction')), 'docs' => IrShape::named('Docs'), 'origin' => IrShape::named('Origin')]),
             'EnumNarrowing' => IrShape::struct(['reason' => IrShape::named('Reason')]),
             'EnumSource' => IrShape::union('kind', false, ['vocabulary' => 'VocabularyEnumSource', 'enum' => 'CatalogueEnumSource']),
-            'EnumTypeUse' => IrShape::struct(['enum' => IrShape::named('EnumId'), 'narrowedTo' => IrShape::named('EnumNarrowing')]),
+            'EnumTypeUse' => IrShape::struct(['enum' => IrShape::named('EnumId'), 'narrowedTo' => IrShape::named('EnumNarrowing'), 'docs' => IrShape::named('Docs')]),
             'ErrorDecl' => IrShape::struct(['code' => IrShape::named('ErrorCode'), 'nature' => IrShape::named('NatureBase'), 'natureName' => IrShape::named('NatureId'), 'http' => IrShape::named('ErrorHttp'), 'params' => IrShape::named('SchemaRef'), 'docs' => IrShape::named('Docs'), 'origin' => IrShape::named('Origin'), 'default' => IrShape::named('ErrorRole')]),
             'ErrorHttp' => IrShape::struct([]),
             'ErrorRole' => IrShape::openEnum(['schemaInvalid', 'payloadTooLarge', 'unsupportedMediaType', 'unauthenticated', 'csrfInvalid', 'idempotencyKeyReused', 'idempotencyInProgress', 'stateConflict', 'preconditionFailed', 'preconditionRequired', 'notFound', 'forbidden', 'sortKeyForbidden', 'rateLimited', 'deadlineExceeded', 'gone', 'upstreamUnavailable', 'serviceUnavailable', 'upstreamTimeout', 'undeclaredStatus'], false),
@@ -76,7 +76,7 @@ final class IrShapes
             'FieldRightSubject' => IrShape::struct(['source' => IrShape::named('ValueSource')]),
             'FieldWire' => IrShape::struct(['kind' => IrShape::named('FieldWireKind'), 'style' => IrShape::named('QueryStyle')]),
             'FieldWireKind' => IrShape::openEnum(['number', 'boolean', 'list', 'text', 'object', 'file', 'json'], false),
-            'FileTypeUse' => IrShape::struct([]),
+            'FileTypeUse' => IrShape::struct(['docs' => IrShape::named('Docs')]),
             'HandlerResultMember' => IrShape::openEnum(['nextCursor', 'previousCursor', 'total', 'more', 'nextSince', 'complete'], false),
             'HeaderDecl' => IrShape::struct(['id' => IrShape::named('HeaderId'), 'semantic' => IrShape::named('HeaderSemantic'), 'in' => IrShape::named('HeaderSide'), 'schema' => IrShape::named('TypeUse'), 'origin' => IrShape::named('Origin')]),
             'HeaderScheme' => IrShape::struct(['id' => IrShape::named('SchemeId'), 'origin' => IrShape::named('Origin')]),
@@ -125,7 +125,7 @@ final class IrShapes
             'ObjectTemplate' => IrShape::struct(['members' => IrShape::items(IrShape::named('ObjectTemplateMember')), 'merge' => IrShape::named('Slot')]),
             'ObjectTemplateMember' => IrShape::struct(['name' => IrShape::named('MemberName'), 'value' => IrShape::named('Template')]),
             'OpShorthand' => IrShape::openEnum(['list', 'get', 'create', 'update', 'delete', 'batch'], false),
-            'OpaqueTypeUse' => IrShape::struct(['reason' => IrShape::named('Reason'), 'origin' => IrShape::named('Origin')]),
+            'OpaqueTypeUse' => IrShape::struct(['reason' => IrShape::named('Reason'), 'origin' => IrShape::named('Origin'), 'docs' => IrShape::named('Docs')]),
             'Operation' => IrShape::struct(['kind' => IrShape::named('DeclarationKind'), 'id' => IrShape::named('OperationId'), 'name' => IrShape::named('Name'), 'surface' => IrShape::named('SurfaceId'), 'op' => IrShape::named('OpShorthand'), 'resource' => IrShape::named('OperationResource'), 'features' => IrShape::items(IrShape::named('Feature')), 'method' => IrShape::named('HttpMethod'), 'params' => IrShape::named('Params'), 'unknownQuery' => IrShape::named('UnknownQuery'), 'access' => IrShape::named('Access'), 'callerKinds' => IrShape::items(IrShape::named('CallerKind')), 'principalRequires' => IrShape::items(IrShape::named('PrincipalRequirement')), 'scopes' => IrShape::items(IrShape::named('OperationScope')), 'requires' => IrShape::items(IrShape::named('Requirement')), 'bindings' => IrShape::items(IrShape::named('Binding')), 'input' => IrShape::named('OperationInput'), 'responses' => IrShape::items(IrShape::named('Response')), 'errors' => IrShape::items(IrShape::named('OperationError')), 'fieldRights' => IrShape::items(IrShape::named('FieldRight')), 'idempotency' => IrShape::named('Idempotency'), 'concurrency' => IrShape::named('Concurrency'), 'owner' => IrShape::named('Owner'), 'cache' => IrShape::named('Cache'), 'paging' => IrShape::named('Paging'), 'filteredBy' => IrShape::named('RightId'), 'degradable' => IrShape::named('Degradable'), 'deprecated' => IrShape::named('Deprecation'), 'relays' => IrShape::named('OperationRef'), 'upstream' => IrShape::items(IrShape::named('ServiceId')), 'maturity' => IrShape::named('OperationMaturity'), 'csrf' => IrShape::named('Csrf'), 'format' => IrShape::named('FormatId'), 'examples' => IrShape::values(IrShape::named('OperationExample')), 'docs' => IrShape::named('Docs'), 'extensions' => IrShape::named('Extensions'), 'origin' => IrShape::named('Origin')]),
             'OperationError' => IrShape::struct(['code' => IrShape::named('ErrorCode'), 'derivedFrom' => IrShape::named('DerivedFrom'), 'origin' => IrShape::named('Origin')]),
             'OperationExample' => IrShape::struct(['error' => IrShape::named('ErrorCode')]),
@@ -167,14 +167,14 @@ final class IrShapes
             'QueryStyle' => IrShape::openEnum(['form', 'deepObject'], false),
             'QueryWire' => IrShape::struct(['kind' => IrShape::named('QueryWireKind'), 'style' => IrShape::named('QueryStyle')]),
             'QueryWireKind' => IrShape::openEnum(['number', 'boolean', 'list', 'text', 'object'], false),
-            'RefTypeUse' => IrShape::struct(['schema' => IrShape::named('SchemaId'), 'unknownKeys' => IrShape::named('UnknownKeys')]),
+            'RefTypeUse' => IrShape::struct(['schema' => IrShape::named('SchemaId'), 'unknownKeys' => IrShape::named('UnknownKeys'), 'docs' => IrShape::named('Docs')]),
             'Refinements' => IrShape::struct(['pattern' => IrShape::named('Pattern'), 'minimum' => IrShape::named('DecimalLiteral'), 'maximum' => IrShape::named('DecimalLiteral'), 'exclusiveMinimum' => IrShape::named('DecimalLiteral'), 'exclusiveMaximum' => IrShape::named('DecimalLiteral'), 'multipleOf' => IrShape::named('DecimalLiteral')]),
             'RefuseUnknownQuery' => IrShape::struct([]),
             'RefusedCredential' => IrShape::openEnum(['anonymous', 'reject'], true),
             'Requirement' => IrShape::union('kind', true, ['right' => 'RightRequirement', 'rule' => 'RuleRequirement']),
             'RequirementSubject' => IrShape::struct(['source' => IrShape::named('ValueSource')]),
             'ResourceSubject' => IrShape::struct(['type' => IrShape::named('Name'), 'idSchema' => IrShape::named('TypeUse')]),
-            'Response' => IrShape::struct(['body' => IrShape::named('TypeUse'), 'shape' => IrShape::named('ResponseShape'), 'headers' => IrShape::items(IrShape::named('ResponseHeader')), 'origin' => IrShape::named('Origin'), 'derivedFrom' => IrShape::named('DerivedFrom')]),
+            'Response' => IrShape::struct(['body' => IrShape::named('TypeUse'), 'shape' => IrShape::named('ResponseShape'), 'headers' => IrShape::items(IrShape::named('ResponseHeader')), 'origin' => IrShape::named('Origin'), 'derivedFrom' => IrShape::named('DerivedFrom'), 'docs' => IrShape::named('Docs')]),
             'ResponseHeader' => IrShape::struct(['type' => IrShape::named('TypeUse'), 'origin' => IrShape::named('Origin'), 'derivedFrom' => IrShape::named('DerivedFrom')]),
             'ResponseShape' => IrShape::openEnum(['item', 'table', 'list', 'page', 'empty', 'binary', 'redirect'], false),
             'Right' => IrShape::struct(['id' => IrShape::named('RightId'), 'params' => IrShape::named('SchemaRef'), 'subject' => IrShape::named('RightSubject'), 'guest' => IrShape::named('Reason'), 'errors' => IrShape::items(IrShape::named('ErrorCode')), 'docs' => IrShape::named('Docs'), 'extensions' => IrShape::named('Extensions'), 'origin' => IrShape::named('Origin'), 'derivedFrom' => IrShape::named('DerivedFrom'), 'codeName' => IrShape::named('Name')]),
@@ -185,7 +185,7 @@ final class IrShapes
             'RuleRequirement' => IrShape::struct(['rule' => IrShape::named('RuleId'), 'bucket' => IrShape::named('BucketId'), 'origin' => IrShape::named('Origin'), 'derivedFrom' => IrShape::named('DerivedFrom')]),
             'Scalar' => IrShape::struct(['id' => IrShape::named('ScalarId'), 'name' => IrShape::named('Name'), 'type' => IrShape::named('ScalarTypeUse'), 'directions' => IrShape::items(IrShape::named('Direction')), 'docs' => IrShape::named('Docs'), 'origin' => IrShape::named('Origin')]),
             'ScalarType' => IrShape::openEnum(['string', 'integer', 'number', 'boolean'], false),
-            'ScalarTypeUse' => IrShape::struct(['type' => IrShape::named('ScalarType'), 'scalar' => IrShape::named('ScalarId'), 'refinements' => IrShape::named('Refinements'), 'content' => IrShape::named('JsonContent')]),
+            'ScalarTypeUse' => IrShape::struct(['type' => IrShape::named('ScalarType'), 'scalar' => IrShape::named('ScalarId'), 'refinements' => IrShape::named('Refinements'), 'content' => IrShape::named('JsonContent'), 'docs' => IrShape::named('Docs')]),
             'Schema' => IrShape::union('kind', false, ['object' => 'ObjectSchema', 'map' => 'MapSchema', 'union' => 'UnionSchema']),
             'SchemaPrincipal' => IrShape::struct(['schema' => IrShape::named('SchemaRef')]),
             'SchemaRef' => IrShape::named('SchemaId'),
@@ -215,7 +215,7 @@ final class IrShapes
             'TypeUse' => IrShape::union('kind', false, ['ref' => 'RefTypeUse', 'opaque' => 'OpaqueTypeUse', 'file' => 'FileTypeUse', 'enum' => 'EnumTypeUse', 'scalar' => 'ScalarTypeUse', 'array' => 'ArrayTypeUse']),
             'UnionSchema' => IrShape::struct(['tag' => IrShape::named('UnionTag'), 'variants' => IrShape::items(IrShape::named('UnionVariant')), 'id' => IrShape::named('SchemaId'), 'name' => IrShape::named('Name'), 'directions' => IrShape::items(IrShape::named('Direction')), 'docs' => IrShape::named('Docs'), 'extensions' => IrShape::named('Extensions'), 'origin' => IrShape::named('Origin')]),
             'UnionTag' => IrShape::union('in', false, ['body' => 'BodyUnionTag', 'header' => 'HeaderUnionTag']),
-            'UnionVariant' => IrShape::struct(['schema' => IrShape::named('SchemaId')]),
+            'UnionVariant' => IrShape::struct(['schema' => IrShape::named('SchemaId'), 'docs' => IrShape::named('Docs')]),
             'UnknownKeys' => IrShape::struct(['policy' => IrShape::named('UnknownKeysPolicy'), 'reason' => IrShape::named('Reason'), 'origin' => IrShape::named('Origin'), 'derivedFrom' => IrShape::named('DerivedFrom')]),
             'UnknownKeysPolicy' => IrShape::openEnum(['refuse', 'ignore', 'keep'], true),
             'UnknownQuery' => IrShape::union('policy', true, ['refuse' => 'RefuseUnknownQuery', 'ignore' => 'IgnoreUnknownQuery']),

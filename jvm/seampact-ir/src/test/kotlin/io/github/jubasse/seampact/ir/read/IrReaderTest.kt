@@ -178,17 +178,35 @@ class IrReaderTest {
 
     @Test
     fun refusesOtherRevision() {
-        val otherRevision = JsonPrimitive(IrModelVersion.IR_REVISION + 6)
-        val document = replaceAt(example("minimal.ir.json"), "irRevision", value = otherRevision)
+        val revision = IrModelVersion.IR_REVISION.toString()
+        val otherRevision = (IrModelVersion.IR_REVISION + 6).toString()
+        val document = replaceAt(example("minimal.ir.json"), "irRevision", value = JsonPrimitive(otherRevision.toLong()))
 
         val refusal = refusals(document).single()
 
         assertEquals(IrRefusalCode.REVISION_MISMATCH, refusal.code)
         assertEquals("/irRevision", refusal.member)
-        assertEquals("8", refusal.value)
-        assertEquals(listOf("2"), refusal.expected)
+        assertEquals(otherRevision, refusal.value)
+        assertEquals(listOf(revision), refusal.expected)
         assertTrue("io.github.jubasse:seampact-ir" in refusal.message, refusal.message)
-        assertTrue("(2)" in refusal.message && "irRevision 8" in refusal.message, refusal.message)
+        assertTrue("($revision)" in refusal.message && "irRevision $otherRevision" in refusal.message, refusal.message)
+    }
+
+    @Test
+    fun readsVersionLiteralsAsJavaScriptDoes() {
+        // Read as the rounded double, as the TypeScript and PHP readers read them: no length cap either.
+        val text = exampleText("minimal.ir.json")
+            .replace("\"irVersion\": 1,", "\"irVersion\": 1.${"0".repeat(70)},")
+            .replace("\"irRevision\": ${IrModelVersion.IR_REVISION},", "\"irRevision\": ${IrModelVersion.IR_REVISION}.0000000000000000001,")
+
+        assertEquals(IrModelVersion.IR_REVISION, IrReader.read(text, support).irRevision)
+        // Text the JVM reads as a number but JSON does not is no revision, as in TypeScript and PHP.
+        for (notJson in listOf("${IrModelVersion.IR_REVISION}d", "0x1.8p1")) {
+            val revisionText = exampleText("minimal.ir.json")
+                .replace("\"irRevision\": ${IrModelVersion.IR_REVISION},", "\"irRevision\": $notJson,")
+
+            assertEquals(IrRefusalCode.REVISION_MISMATCH, refusals(revisionText).single().code, notJson)
+        }
     }
 
     @Test

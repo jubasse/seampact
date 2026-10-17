@@ -139,4 +139,51 @@ class ModelRoundTripTest {
         assertFailsWith<SerializationException> { IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": 404.5}""") }
         assertFailsWith<SerializationException> { IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": "404"}""") }
     }
+
+    @Test
+    fun integersStayInTheSafeRange() {
+        val largest = IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": 9007199254740991}""")
+        val smallest = IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": -9007199254740991}""")
+
+        assertEquals(9_007_199_254_740_991L, largest.status)
+        assertEquals(-9_007_199_254_740_991L, smallest.status)
+        // Rounded as JavaScript and PHP round them, so the three readers accept the same literals.
+        for ((literal, read) in listOf(
+            "3.0000000000000000001" to 3L,
+            "9007199254740990.6" to 9_007_199_254_740_991L,
+            "1.${"0".repeat(70)}" to 1L,
+            "1e2" to 100L,
+        )) {
+            assertEquals(read, IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": $literal}""").status, literal)
+        }
+        // Text the JVM reads as a number but JSON does not: TypeScript and PHP refuse it, so Kotlin does too.
+        for (notJson in listOf("3d", "3f", "0x1.8p1", "+3", "03", "3.")) {
+            val error = assertFailsWith<SerializationException>(notJson) {
+                IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": $notJson}""")
+            }
+
+            assertEquals("expected an integer, got $notJson", error.message)
+        }
+        val longLiteral = "1" + "0".repeat(2_000_000)
+        val longError = assertFailsWith<SerializationException> {
+            IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": $longLiteral}""")
+        }
+
+        // It rounds to infinity, no integer, and the message shows only its first 64 characters.
+        assertEquals("expected an integer, got ${longLiteral.take(64)}...", longError.message)
+        for (fraction in listOf("404.5", "-0.5")) {
+            val error = assertFailsWith<SerializationException>(fraction) {
+                IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": $fraction}""")
+            }
+
+            assertEquals("expected an integer, got $fraction", error.message)
+        }
+        for (outside in listOf("9007199254740992", "-9007199254740992", "9007199254740992.0", "9223372036854775807")) {
+            val error = assertFailsWith<SerializationException>(outside) {
+                IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": $outside}""")
+            }
+
+            assertEquals("expected an integer from -(2^53 - 1) to 2^53 - 1, got $outside", error.message)
+        }
+    }
 }

@@ -1,4 +1,4 @@
-// Generated from packages/core/spec/schemas/ir/schemas.schema.json by scripts/ir-models for IR revision 2. Do not edit.
+// Generated from packages/core/spec/schemas/ir/schemas.schema.json by scripts/ir-models for IR revision 3. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 @file:OptIn(ExperimentalSerializationApi::class)
 @file:UseSerializers(IrIntegerSerializer::class)
@@ -23,6 +23,10 @@ public data class ArrayTypeUse(
     public val maxItems: Long? = null,
     /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
     public val nullable: Boolean? = null,
+    /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
+    public val docs: Docs? = null,
+    /** The examples written at the position of this use, placed as its docs are. */
+    public val examples: List<JsonElement>? = null,
 ) : TypeUse {
     init {
         require(kind == "array") { "ArrayTypeUse: kind is \"array\", got \"" + kind + "\"" }
@@ -55,6 +59,10 @@ public data class EnumTypeUse(
     public val narrowedTo: EnumNarrowing? = null,
     /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
     public val nullable: Boolean? = null,
+    /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
+    public val docs: Docs? = null,
+    /** The examples written at the position of this use, placed as its docs are. */
+    public val examples: List<JsonElement>? = null,
 ) : TypeUse {
     init {
         require(kind == "enum") { "EnumTypeUse: kind is \"enum\", got \"" + kind + "\"" }
@@ -78,6 +86,10 @@ public data class FileTypeUse(
     public val maxSizeBytes: Long? = null,
     /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
     public val nullable: Boolean? = null,
+    /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
+    public val docs: Docs? = null,
+    /** The examples written at the position of this use, placed as its docs are. */
+    public val examples: List<JsonElement>? = null,
 ) : TypeUse {
     init {
         require(kind == "file") { "FileTypeUse: kind is \"file\", got \"" + kind + "\"" }
@@ -170,6 +182,8 @@ public data class MapSchema(
     public val docs: Docs,
     public val extensions: Extensions,
     public val origin: Origin,
+    /** The schema is deprecated (ADR 0003 section 1); absent means false. */
+    public val deprecated: Boolean? = null,
 ) : Schema {
     init {
         require(kind == "map") { "MapSchema: kind is \"map\", got \"" + kind + "\"" }
@@ -188,6 +202,8 @@ public data class ObjectSchema(
     public val docs: Docs,
     public val extensions: Extensions,
     public val origin: Origin,
+    /** The schema is deprecated (ADR 0003 section 1); absent means false. */
+    public val deprecated: Boolean? = null,
 ) : Schema {
     init {
         require(kind == "object") { "ObjectSchema: kind is \"object\", got \"" + kind + "\"" }
@@ -200,6 +216,10 @@ public data class OpaqueTypeUse(
     @EncodeDefault public override val kind: String = "opaque",
     public val reason: Reason,
     public val origin: Origin,
+    /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
+    public val docs: Docs? = null,
+    /** The examples written at the position of this use, placed as its docs are. */
+    public val examples: List<JsonElement>? = null,
 ) : TypeUse {
     init {
         require(kind == "opaque") { "OpaqueTypeUse: kind is \"opaque\", got \"" + kind + "\"" }
@@ -229,6 +249,8 @@ public data class Property(
     public val extensions: Extensions,
     public val origin: Origin,
     public val derivedFrom: DerivedFrom? = null,
+    /** The examples written on the property, each parsed against its type (ADR 0003 section 11). */
+    public val examples: List<JsonElement>? = null,
 )
 
 @Serializable
@@ -238,6 +260,10 @@ public data class RefTypeUse(
     public val unknownKeys: UnknownKeys? = null,
     /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
     public val nullable: Boolean? = null,
+    /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
+    public val docs: Docs? = null,
+    /** The examples written at the position of this use, placed as its docs are. */
+    public val examples: List<JsonElement>? = null,
 ) : TypeUse {
     init {
         require(kind == "ref") { "RefTypeUse: kind is \"ref\", got \"" + kind + "\"" }
@@ -314,6 +340,10 @@ public data class ScalarTypeUse(
     public val content: JsonContent? = null,
     /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
     public val nullable: Boolean? = null,
+    /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
+    public val docs: Docs? = null,
+    /** The examples written at the position of this use, placed as its docs are. */
+    public val examples: List<JsonElement>? = null,
 ) : TypeUse {
     init {
         require(kind == "scalar") { "ScalarTypeUse: kind is \"scalar\", got \"" + kind + "\"" }
@@ -405,6 +435,8 @@ public data class UnionSchema(
     public val docs: Docs,
     public val extensions: Extensions,
     public val origin: Origin,
+    /** The schema is deprecated (ADR 0003 section 1); absent means false. */
+    public val deprecated: Boolean? = null,
 ) : Schema {
     init {
         require(kind == "union") { "UnionSchema: kind is \"union\", got \"" + kind + "\"" }
@@ -446,6 +478,8 @@ internal object UnionTagSerializer : IrUnionSerializer<UnionTag>("UnionTag", "in
 public data class UnionVariant(
     public val tag: String,
     public val schema: SchemaId,
+    /** The docs written on the variant itself, beside its schema reference. */
+    public val docs: Docs? = null,
 )
 
 /** Unknown keys of an input use (ADR 0003 section 4). */

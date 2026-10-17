@@ -1,6 +1,6 @@
 <?php
 
-// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 2. Do not edit.
+// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 3. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 
 declare(strict_types=1);
@@ -26,6 +26,7 @@ final readonly class Property
      * @param IrOpaque|null $default
      * @param Name|null $codeName
      * @param DerivedFrom|null $derivedFrom
+     * @param list<mixed>|null $examples The examples written on the property, each parsed against its type (ADR 0003 section 11).
      */
     public function __construct(
         public string $name,
@@ -41,6 +42,7 @@ final readonly class Property
         public ?IrOpaque $default = null,
         public ?Name $codeName = null,
         public ?DerivedFrom $derivedFrom = null,
+        public ?array $examples = null,
     ) {
         $this->extensions = IrHydration::copyObject($extensions);
     }
@@ -68,6 +70,7 @@ final readonly class Property
             default: IrHydration::optionalOpaque($members, 'default'),
             codeName: IrHydration::optional($members, 'codeName', static fn (mixed $item): Name => Name::fromJson($item)),
             derivedFrom: IrHydration::optional($members, 'derivedFrom', static fn (mixed $item): DerivedFrom => DerivedFrom::fromJson($item)),
+            examples: IrHydration::optional($members, 'examples', static fn (mixed $item): array => IrHydration::listOf($item, 'Property.examples', static fn (mixed $item): mixed => IrHydration::copy($item))),
         );
     }
 
@@ -94,6 +97,9 @@ final readonly class Property
         $json->{'origin'} = $this->origin->toJson();
         if ($this->derivedFrom !== null) {
             $json->{'derivedFrom'} = $this->derivedFrom->toJson();
+        }
+        if ($this->examples !== null) {
+            $json->{'examples'} = IrHydration::encodeList($this->examples, static fn (mixed $item): mixed => IrHydration::copy($item));
         }
         return $json;
     }

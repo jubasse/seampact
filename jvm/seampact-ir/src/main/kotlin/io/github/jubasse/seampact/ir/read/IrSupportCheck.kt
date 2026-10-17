@@ -1,6 +1,7 @@
 package io.github.jubasse.seampact.ir.read
 
-import io.github.jubasse.seampact.ir.model.IR_NUMBER_LITERAL_MAX_LENGTH
+import io.github.jubasse.seampact.ir.model.IR_SHOWN_LITERAL_MAX_LENGTH
+import io.github.jubasse.seampact.ir.model.irNumberOf
 import java.math.BigDecimal
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -29,7 +30,7 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
     val version = document["irVersion"]
     val versionNumber = numberOf(version)
     val versionIsSupported =
-        versionNumber != null && support.irVersions.any { BigDecimal(it).compareTo(versionNumber) == 0 }
+        versionNumber != null && support.irVersions.any { it.toDouble() == versionNumber }
     if (!versionIsSupported) {
         val expected = support.irVersions.map { it.toString() }
         return listOf(
@@ -53,7 +54,7 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
     }
 
     val revision = document["irRevision"]
-    if (numberOf(revision)?.compareTo(BigDecimal(support.irRevision)) != 0) {
+    if (numberOf(revision) != support.irRevision.toDouble()) {
         refuse(IrRefusal(
             IrRefusalCode.REVISION_MISMATCH,
             "/irRevision",
@@ -136,13 +137,18 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
 private fun isStringIn(value: JsonElement?, known: List<String>): Boolean =
     value is JsonPrimitive && value.isString && value.content in known
 
-// A literal longer than IR_NUMBER_LITERAL_MAX_LENGTH is never read as a number. This fails closed where
-// TypeScript reads `1.000...0` written with 72 chars as 1; the native readers refuse it on purpose.
-private fun numberOf(value: JsonElement?): BigDecimal? =
+// A JSON number literal read as the correctly rounded double, as JavaScript and PHP read it, so the three
+// readers accept the same versions and revisions (`3.0000000000000000001` is 3, `3d` is not a number).
+private fun numberOf(value: JsonElement?): Double? =
     (value as? JsonPrimitive)
-        ?.takeIf { !it.isString && it.content.length <= IR_NUMBER_LITERAL_MAX_LENGTH }
+        ?.takeIf { !it.isString }
         ?.content
-        ?.toBigDecimalOrNull()
+        ?.let(::irNumberOf)
+
+// A longer number literal is shown as written, never parsed for display.
+
+private fun shownNumberOf(value: JsonPrimitive): BigDecimal? =
+    value.content.takeIf { !value.isString && it.length <= IR_SHOWN_LITERAL_MAX_LENGTH }?.toBigDecimalOrNull()
 
 private fun jsonType(value: JsonElement?): String = when (value) {
     null -> MISSING
@@ -161,7 +167,7 @@ private fun jsonType(value: JsonElement?): String = when (value) {
 // rendering a container would copy any amount of untrusted input into every refusal.
 private fun shown(value: JsonElement?): String {
     if (value !is JsonPrimitive) return jsonType(value)
-    val number = numberOf(value)
+    val number = shownNumberOf(value)
     return when {
         value.isString -> value.content
         number != null && hasShortPlainForm(number) -> number.stripTrailingZeros().toPlainString()

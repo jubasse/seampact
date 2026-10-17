@@ -9,7 +9,7 @@
       "type": "object",
       "required": ["irRevision", "locations"],
       "properties": {
-        "irRevision": { "type": "integer", "minimum": 1 },
+        "irRevision": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
         "locations": {
           "type": "object",
           "description": "Keyed by '<layer>#<pointer>', the serialised form of an Origin; a 'core' origin has no entry (ADR 0004 section 11).",
@@ -31,10 +31,10 @@
           "pattern": "^([^/\\\\:.][^/\\\\:]*|\\.[^/\\\\:.][^/\\\\:]*|\\.\\.[^/\\\\:]+)(/([^/\\\\:.][^/\\\\:]*|\\.[^/\\\\:.][^/\\\\:]*|\\.\\.[^/\\\\:]+))*$",
           "description": "Relative to the workspace root, with forward slashes: never absolute, no '.' or '..' segment, no backslash or ':'."
         },
-        "line": { "type": "integer", "minimum": 1 },
-        "column": { "type": "integer", "minimum": 1 },
-        "endLine": { "type": "integer", "minimum": 1 },
-        "endColumn": { "type": "integer", "minimum": 1 }
+        "line": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "column": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "endLine": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "endColumn": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 }
       }
     }
   }

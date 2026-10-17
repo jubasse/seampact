@@ -1,4 +1,4 @@
-// Generated from packages/core/spec/schemas/ir/operation.schema.json by scripts/ir-models for IR revision 2. Do not edit.
+// Generated from packages/core/spec/schemas/ir/operation.schema.json by scripts/ir-models for IR revision 3. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 @file:OptIn(ExperimentalSerializationApi::class)
 @file:UseSerializers(IrIntegerSerializer::class)
@@ -967,6 +967,8 @@ public data class Response(
     public val headers: List<ResponseHeader>,
     public val origin: Origin? = null,
     public val derivedFrom: DerivedFrom? = null,
+    /** The docs written on the response. */
+    public val docs: Docs? = null,
 )
 
 @Serializable

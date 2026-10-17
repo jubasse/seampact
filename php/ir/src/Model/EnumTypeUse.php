@@ -1,6 +1,6 @@
 <?php
 
-// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 2. Do not edit.
+// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 3. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 
 declare(strict_types=1);
@@ -16,11 +16,15 @@ final readonly class EnumTypeUse extends TypeUse
      * @param string $enum
      * @param EnumNarrowing|null $narrowedTo
      * @param bool|null $nullable The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable).
+     * @param Docs|null $docs The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own.
+     * @param list<mixed>|null $examples The examples written at the position of this use, placed as its docs are.
      */
     public function __construct(
         public string $enum,
         public ?EnumNarrowing $narrowedTo = null,
         public ?bool $nullable = null,
+        public ?Docs $docs = null,
+        public ?array $examples = null,
     ) {
         $this->kind = 'enum';
     }
@@ -34,6 +38,8 @@ final readonly class EnumTypeUse extends TypeUse
             enum: IrHydration::string(IrHydration::required($members, 'enum', 'EnumTypeUse'), 'EnumTypeUse.enum'),
             narrowedTo: IrHydration::optional($members, 'narrowedTo', static fn (mixed $item): EnumNarrowing => EnumNarrowing::fromJson($item)),
             nullable: IrHydration::optional($members, 'nullable', static fn (mixed $item): bool => IrHydration::boolean($item, 'EnumTypeUse.nullable')),
+            docs: IrHydration::optional($members, 'docs', static fn (mixed $item): Docs => Docs::fromJson($item)),
+            examples: IrHydration::optional($members, 'examples', static fn (mixed $item): array => IrHydration::listOf($item, 'EnumTypeUse.examples', static fn (mixed $item): mixed => IrHydration::copy($item))),
         );
     }
 
@@ -47,6 +53,12 @@ final readonly class EnumTypeUse extends TypeUse
         }
         if ($this->nullable !== null) {
             $json->{'nullable'} = $this->nullable;
+        }
+        if ($this->docs !== null) {
+            $json->{'docs'} = $this->docs->toJson();
+        }
+        if ($this->examples !== null) {
+            $json->{'examples'} = IrHydration::encodeList($this->examples, static fn (mixed $item): mixed => IrHydration::copy($item));
         }
         return $json;
     }

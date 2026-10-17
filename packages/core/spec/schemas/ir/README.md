@@ -67,7 +67,7 @@ A hand-written partition of a deciding member's values (`ValueSource.in`, `Field
 - A catalogue is a map keyed by id: `additionalProperties` with the value definition and `propertyNames` with the id, whose pattern is the grammar of ADR 0002 section 4 (such an id never reads as `__proto__`). A right (`RightId`) and a principal variant (`VariantId`) take any name, `__proto__` included. A declaration is referenced by id, never nested.
 - A schema with no shape keyword (`{}`, optionally with a description) is an opaque value: any JSON value, kept raw.
 - An optional member is one outside `required`.
-- A numeric refinement (`minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`) is a decimal literal string (`"9223372036854775807"`, `"0.01"`), compared numerically, so no digit is lost in any language. Every other IR number is an integer.
+- A numeric refinement (`minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`) is a decimal literal string (`"9223372036854775807"`, `"0.01"`), compared numerically, so no digit is lost in any language. Every other IR number member is an integer from -(2^53 - 1) to 2^53 - 1, the safe range of I-JSON (RFC 7493): each integer definition states a `minimum` and a `maximum` within that range, and every reader, a JavaScript one included, holds it exactly. Values held as opaque JSON (`examples`, `default`, extension values) are not IR integer members and are not bounded.
 - `nullable` is a member of `Property` and, for every other position (array items, map values, parameters, headers, bodies), an optional member of every type use but the opaque one (an opaque value already admits `null`).
 
 ## Invariants the schema cannot state
@@ -105,4 +105,4 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 
 ## Changing the IR
 
-From M1, every change is its own PR raising `IR_REVISION`, with a changeset written from `CHANGE-TEMPLATE.md` (ADR 0005 section 1). Regenerate the TypeScript types with `UPDATE_IR_TYPES=1 pnpm vitest run packages/core/spec/src/ir/types.test.ts`.
+From M1, every change is its own PR raising `IR_REVISION`, with a changeset written from `CHANGE-TEMPLATE.md` (ADR 0005 section 1). Regenerate the TypeScript types with `UPDATE_IR_TYPES=1 pnpm vitest run packages/core/spec/src/ir/types.test.ts` and the Kotlin and PHP models with `node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write`.
