@@ -34,7 +34,7 @@ describe("core declarations and reserved ids", () => {
     expect(seeded.map((schema) => schema.id)).toEqual([...derivationCoreSchemaIds]);
     for (const schema of seeded) {
       const role = schema.name.role === "params" ? "params" : "schema";
-      expect([role, schema.name.role]).toEqual([role, role]);
+      expect(["params", "schema"]).toContain(schema.name.role);
       expect(canonicalId({ segments: schema.name.segments, role })).toBe(schema.id);
       expect(schema).not.toHaveProperty("derivedFrom");
     }
@@ -127,7 +127,18 @@ describe("core declarations and reserved ids", () => {
     );
   });
 
-  test("the issue schema yields only when the schema_invalid params are replaced", () => {
+  test("the issue schema stays seeded after the schema_invalid params are replaced, until a layer takes its id", () => {
+    const reused = treeSchemasRunApi(`errors:
+  api.schema_invalid: { status: 400, params: { issues: { type: array, items: ApiSchemaInvalidIssue } } }
+`);
+    expect(reused.diagnostics).toEqual([]);
+    expect(reused.draft.schemas.ApiSchemaInvalidIssue?.origin.layer).toBe("core");
+    expect(reused.draft.schemas.ApiSchemaInvalidParams?.origin).toEqual(
+      api("/errors/api.schema_invalid/params"),
+    );
+  });
+
+  test("the issue schema may be taken by a layer once the schema_invalid params are replaced", () => {
     const rateLimited =
       "errors:\n  api.rate_limited: { status: 429, params: { after: { type: string } } }\n";
     expect(coreIds(rateLimited)).toContain("ApiSchemaInvalidIssue");
@@ -191,22 +202,69 @@ schemas:
       "rights:\n  api.rate_limited: { params: { a: { type: string } } }\n",
       "/rights/api.rate_limited/params",
       "rename the schema, or the right, rule or error",
+      [],
     ],
     [
       "errors:\n  api.forbidden: { status: 403, params: { a: { type: string } } }\nrules:\n  apiForbidden: { params: { a: { type: string } } }\n",
       "/rules/apiForbidden/params",
       "rename the schema, or the right, rule or error",
+      [
+        {
+          message: "the params of 'ApiForbiddenParams' take the id here",
+          origin: api("/errors/api.forbidden/params"),
+        },
+      ],
     ],
     [
       "schemas:\n  Api: { type: object, properties: { emptyBody: { type: object, properties: { a: { type: string } } } } }\n",
       "/schemas/Api/properties/emptyBody",
       "rename the schema or the property",
+      [],
     ],
-  ])("a hoist landing on a reserved id is refused (%#)", (catalogues, pointer, fix) => {
+  ])("a hoist landing on a reserved id is refused (%#)", (catalogues, pointer, fix, related) => {
     const run = treeSchemasRunApi(catalogues);
     expect(run.diagnostics.map((d) => [d.rule, d.origin, d.fix, d.related])).toEqual([
-      ["seampact/tree/schema-reserved", api(pointer), fix, []],
+      ["seampact/tree/schema-reserved", api(pointer), fix, related],
     ]);
     expect(run.located).toBe(true);
+  });
+
+  test.each([
+    ["ApiEmptyBody then APIEmptyBody", ["ApiEmptyBody", "APIEmptyBody"]],
+    ["APIEmptyBody then ApiEmptyBody", ["APIEmptyBody", "ApiEmptyBody"]],
+  ])("both spellings of a reserved identifier are refused: %s", (_label, ids) => {
+    const run = treeSchemasRunApi(
+      `schemas:\n${ids.map((id) => `  ${id}: { type: object, properties: { a: { type: string } } }\n`).join("")}`,
+    );
+    expect(run.diagnostics.map((d) => [d.rule, d.origin])).toEqual(
+      ids.map((id) => ["seampact/tree/schema-reserved", api(`/schemas/${id}`)]),
+    );
+    expect(Object.values(run.draft.schemas).map((schema) => schema.origin.layer)).not.toContain(
+      "api",
+    );
+  });
+
+  test("a hoist refused on an id the layer params took names those params", () => {
+    const run = treeSchemasRunApi(`errors:
+  api.forbidden: { status: 403, params: { a: { type: string } } }
+rights:
+  api.forbidden: { params: { a: { type: string } } }
+`);
+    expect(run.diagnostics.map((d) => [d.rule, d.origin, d.related.map((r) => r.origin)])).toEqual([
+      [
+        "seampact/tree/schema-reserved",
+        api("/rights/api.forbidden/params"),
+        [api("/errors/api.forbidden/params")],
+      ],
+    ]);
+  });
+
+  test("a use of a refused reserved declaration is not resolved to the core schema", () => {
+    const run = treeSchemasRunApi(`schemas:
+  ApiEmptyBody: { type: object, properties: { a: { type: string } } }
+  Holder: { type: object, properties: { x: ApiEmptyBody } }
+`);
+    expect(treeSchemasRules(run)).toEqual(["schema-reserved"]);
+    expect(run.draft.schemas.Holder).toBeUndefined();
   });
 });

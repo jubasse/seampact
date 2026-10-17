@@ -14,7 +14,8 @@ import { type TreeSchemasRawObject, treeSchemasMember, treeSchemasPointer } from
 // The core schemas of ADR 0004 section 13: the params schema of each default code that carries data, the schema of
 // one schema issue and the empty body schema, seeded from the role data with origin `core` and no `derivedFrom`.
 // Their ids are reserved. A layer that declares a default code with `params` takes the code's params id, and the
-// core schema is not seeded; the issue schema yields only when the `api.schema_invalid` params are replaced.
+// core schema is not seeded; the issue schema stays seeded until a layer declares or hoists its id,
+// which it may once the `api.schema_invalid` params are replaced.
 
 /** A reserved schema id: the core schema seeded under it, or the layer params that take it. */
 export interface TreeSchemasReservation {
@@ -26,6 +27,8 @@ export interface TreeSchemasReservation {
   pointer: string;
   /** The core schema; undefined when a layer's params take the id. */
   seed: IrWriter.ObjectSchema | undefined;
+  /** True when a layer declaration or hoist may take the id, replacing the seed. */
+  yields: boolean;
 }
 
 // The code whose `issues` items are the issue schema.
@@ -92,7 +95,8 @@ function paramsReservation(
 
   const pointer = treeSchemasPointer("/errors", code, "params");
   const purpose = `the params of the default code '${code}'`;
-  if (declaresParams(merged, code)) return { id, name, purpose, pointer, seed: undefined };
+  if (declaresParams(merged, code))
+    return { id, name, purpose, pointer, seed: undefined, yields: false };
 
   // ADR 0006 section 6: a datum the bound code need not always receive is an optional param.
   const properties = role.data.map((datum) =>
@@ -104,10 +108,10 @@ function paramsReservation(
     ),
   );
   const seed = coreObject(id, name, "output", pointer, properties);
-  return { id, name, purpose, pointer, seed };
+  return { id, name, purpose, pointer, seed, yields: false };
 }
 
-function issueReservation(code: string): TreeSchemasReservation {
+function issueReservation(code: string, yields: boolean): TreeSchemasReservation {
   const id = DERIVATION_ISSUE_SCHEMA_ID;
   const name: Name = { segments: splitName(id), role: "schema" };
   const pointer = treeSchemasPointer("/errors", code, "params", "issues", "items");
@@ -120,7 +124,7 @@ function issueReservation(code: string): TreeSchemasReservation {
     ),
   );
   const seed = coreObject(id, name, "output", pointer, properties);
-  return { id, name, purpose: `one issue of the default code '${code}'`, pointer, seed };
+  return { id, name, purpose: `one issue of the default code '${code}'`, pointer, seed, yields };
 }
 
 function emptyBodyReservation(): TreeSchemasReservation {
@@ -128,7 +132,14 @@ function emptyBodyReservation(): TreeSchemasReservation {
   const name: Name = { segments: splitName(id), role: "schema" };
   const pointer = treeSchemasPointer("/schemas", id);
   const seed = coreObject(id, name, "input", pointer, []);
-  return { id, name, purpose: "the empty body of a proof-only input", pointer, seed };
+  return {
+    id,
+    name,
+    purpose: "the empty body of a proof-only input",
+    pointer,
+    seed,
+    yields: false,
+  };
 }
 
 /** The reserved schema ids of an api, in the order of `derivationCoreSchemaIds`, each with its core schema. */
@@ -139,6 +150,6 @@ export function treeSchemasCoreReservations(
     .filter((role) => role.data.length > 0)
     .map((role) => paramsReservation(merged, role));
   const code = schemaInvalidCode();
-  const issue = declaresParams(merged, code) ? [] : [issueReservation(code)];
-  return [...params, ...issue, emptyBodyReservation()];
+  const issue = issueReservation(code, declaresParams(merged, code));
+  return [...params, issue, emptyBodyReservation()];
 }

@@ -71,7 +71,7 @@ type NamedKind = "object" | "map" | "union";
 interface DeclaredTarget {
   id: string;
   kind: NamedKind | undefined;
-  value: TreeSchemasRaw;
+  value: TreeSchemasRaw | undefined;
   /** An alias on the way to the target is nullable; the target's own `nullable` is read where it compiles. */
   nullable: boolean;
 }
@@ -266,6 +266,9 @@ export class TreeSchemasCompiler {
    * Both are checked: `AB` declared gives the words `ab`, the hoisted `A.b` gives `a b`, and both have the id `AB`.
    */
   private readonly claims = new Map<string, Claim>();
+  /** Every declared schema with its keys, since `claims` keeps only the first holder of a key. */
+  private readonly declaredClaims: { claim: Claim; keys: string[] }[] = [];
+  private readonly refusedReserved = new Set<string>();
   private readonly derived = new Set<string>();
   private readonly bodyTags: {
     pointer: string;
@@ -282,7 +285,9 @@ export class TreeSchemasCompiler {
     this.scalars = new TreeSchemasScalars(treeSchemasMember(merged, "scalars"), reporter);
     for (const [id] of treeSchemasEntries(this.catalogue)) {
       const claim = { id, pointer: treeSchemasPointer("/schemas", id) };
-      for (const key of claimKeys(id, { segments: splitName(id), role: "schema" })) {
+      const keys = claimKeys(id, { segments: splitName(id), role: "schema" });
+      this.declaredClaims.push({ claim, keys });
+      for (const key of keys) {
         if (!this.claims.has(key)) this.claims.set(key, claim);
       }
     }
@@ -295,20 +300,28 @@ export class TreeSchemasCompiler {
    */
   reserve(reservations: readonly TreeSchemasReservation[]): void {
     for (const reservation of reservations) {
-      const claim: Claim = { id: reservation.id, pointer: reservation.pointer, reservation };
-      for (const key of claimKeys(reservation.id, reservation.name)) {
-        const declared = this.claims.get(key);
-        if (declared !== undefined && !this.declared.has(declared.id))
+      const keys = claimKeys(reservation.id, reservation.name);
+      this.seedReservation(reservation);
+      if (reservation.yields) continue;
+
+      for (const { claim: declared, keys: declaredKeys } of this.declaredClaims) {
+        if (this.declared.has(declared.id)) continue;
+        if (declaredKeys.some((key) => keys.includes(key)))
           this.refuseDeclaredReserved(declared, reservation);
-        this.claims.set(key, claim);
       }
-      if (reservation.seed !== undefined)
-        this.schemas.set(reservation.id, structuredClone(reservation.seed));
+      const claim: Claim = { id: reservation.id, pointer: reservation.pointer, reservation };
+      for (const key of keys) this.claims.set(key, claim);
     }
+  }
+
+  // A yielding reservation is only seeded: a declaration or hoist under its id replaces the seed.
+  private seedReservation(reservation: TreeSchemasReservation): void {
+    if (reservation.seed !== undefined) this.schemas.set(reservation.id, reservation.seed);
   }
 
   private refuseDeclaredReserved(declared: Claim, reservation: TreeSchemasReservation): void {
     this.declared.set(declared.id, undefined);
+    this.refusedReserved.add(declared.id);
     this.reporter.error({
       rule: "schema-reserved",
       pointer: declared.pointer,
@@ -368,7 +381,9 @@ export class TreeSchemasCompiler {
     this.checkBodyTags();
     this.checkRequiredCycles();
     this.checkNames(
-      treeSchemasEntries(this.catalogue).map(([id]) => id),
+      treeSchemasEntries(this.catalogue)
+        .map(([id]) => id)
+        .filter((id) => !this.refusedReserved.has(id)),
       "/schemas",
       "schemas",
     );
@@ -546,6 +561,8 @@ export class TreeSchemasCompiler {
       });
       return undefined;
     }
+    // The refusal is already reported; a use would resolve to the core schema, not the author's.
+    if (this.refusedReserved.has(target.id)) return undefined;
     const compiled =
       target.kind === undefined
         ? this.compileDeclared(target.id)
@@ -565,7 +582,7 @@ export class TreeSchemasCompiler {
   // whether an alias on the way is nullable (`MaybeFoo: { $ref: Foo, nullable: true }`).
   private declaredTarget(name: string, seen: Set<string>): DeclaredTarget | undefined {
     const value = treeSchemasMember(this.catalogue, name);
-    if (value === undefined) return undefined;
+    if (value === undefined) return this.seededCoreTarget(name);
     const alias = typeof value === "string" ? value : treeSchemasMember(value, "$ref");
     if (typeof alias === "string" && !seen.has(name)) {
       seen.add(name);
@@ -582,6 +599,12 @@ export class TreeSchemasCompiler {
           ? shape
           : undefined;
     return { id: name, kind, value, nullable: false };
+  }
+
+  // A core schema no layer took is still named by uses: the replaced params may reference the issue schema.
+  private seededCoreTarget(name: string): DeclaredTarget | undefined {
+    if (this.schemas.get(name)?.origin.layer !== "core") return undefined;
+    return { id: name, kind: "object", value: undefined, nullable: false };
   }
 
   private compileDeclared(id: string): TreeSchemasCompiled | undefined {
@@ -615,7 +638,7 @@ export class TreeSchemasCompiler {
     return { kind: "ref", schema: id, ...(nullable ? { nullable } : {}) };
   }
 
-  private isHeaderTagged(value: TreeSchemasRaw): boolean {
+  private isHeaderTagged(value: TreeSchemasRaw | undefined): boolean {
     return treeSchemasIsObject(treeSchemasMember(value, "discriminator"));
   }
 
@@ -674,11 +697,20 @@ export class TreeSchemasCompiler {
       return true;
     }
     if (other.reservation !== undefined) {
+      const layerParams = other.reservation.seed === undefined;
       this.reporter.error({
         rule: "schema-reserved",
         pointer,
         message: reservedMessage("the name", id, other.reservation),
         fix: COLLISION_FIX[name.role] ?? OPERATION_COLLISION_FIX,
+        related: layerParams
+          ? [
+              {
+                pointer: other.reservation.pointer,
+                message: `the params of '${other.reservation.id}' take the id here`,
+              },
+            ]
+          : [],
       });
       return false;
     }
