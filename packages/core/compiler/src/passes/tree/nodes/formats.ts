@@ -7,6 +7,7 @@ import {
   treeNodesIsObject,
   treeNodesMember,
   treeNodesObjectOf,
+  treeNodesOriginAt,
   treeNodesPointer,
 } from "./raw.js";
 import {
@@ -158,8 +159,8 @@ export const treeNodesAbsent = (written: TreeNodesJson | undefined): IrWriter.Ab
 const textOf = (value: TreeNodesJson | undefined): string | undefined =>
   typeof value === "string" ? value : undefined;
 
-/** The header templates of a `headers` mapping, each named as written; undefined when one is refused. */
-export function treeNodesHeaderTemplates(
+/** The templates of a mapping (`headers`, a style's `meta`), each named as written; undefined when one is refused. */
+export function treeNodesNamedTemplates(
   context: TreeNodesContext,
   owner: string,
   place: TreeNodesTemplatePlace,
@@ -225,7 +226,7 @@ class FormatReader {
       writtenBody === undefined
         ? slot(DEFAULT_BODY_SLOT[name])
         : treeNodesTemplate(this.site(name), writtenBody, `${pointer}/body`);
-    const headers = treeNodesHeaderTemplates(
+    const headers = treeNodesNamedTemplates(
       this.context,
       this.owner,
       name,
@@ -265,10 +266,10 @@ class FormatReader {
     if (type === undefined) return this.refuseUntypedMeta(name, fill, pointer);
 
     if (!fill.startsWith(PRINCIPAL_PREFIX))
-      return { type, fill: fill === HANDLER_FILL ? "handler" : metaFill(fill) };
+      return { type: pipelineCopy(type), fill: fill === HANDLER_FILL ? "handler" : metaFill(fill) };
 
     return {
-      type,
+      type: pipelineCopy(type),
       fill: "source",
       source: { in: "principal", name: fill.slice(PRINCIPAL_PREFIX.length) },
     };
@@ -287,7 +288,7 @@ class FormatReader {
     this.context.report(
       treeNodesError({
         rule: "format-meta",
-        origin: treeNodesNodeOrigin(this.originAt(pointer)),
+        origin: treeNodesNodeOrigin(treeNodesOriginAt(this.context, pointer)),
         message: `The meta field ${name} of ${this.owner} is filled by ${fill}, which gives it no type.`,
         fix: `Write the schema of ${name} beside its fill.`,
       }),
@@ -310,7 +311,7 @@ class FormatReader {
       writtenBody === undefined
         ? undefined
         : treeNodesTemplate(this.site("error"), writtenBody, `${pointer}/body`);
-    const headers = treeNodesHeaderTemplates(
+    const headers = treeNodesNamedTemplates(
       this.context,
       this.owner,
       "error",
@@ -332,7 +333,7 @@ class FormatReader {
     this.context.report(
       treeNodesError({
         rule: "format-error-code",
-        origin: treeNodesNodeOrigin(this.originAt(pointer)),
+        origin: treeNodesNodeOrigin(treeNodesOriginAt(this.context, pointer)),
         message: `The error body of ${this.owner} writes no $code, so a client cannot tell the error.`,
         fix: `Write $code in the error body, as a member or inside a text ('https://errors.example.com/\${code}').`,
       }),
@@ -343,14 +344,6 @@ class FormatReader {
 
   site(place: TreeNodesTemplatePlace) {
     return { context: this.context, place, owner: this.owner };
-  }
-
-  originAt(pointer: string): Origin {
-    const origin = this.context.origin(pointer);
-
-    if (origin === undefined) throw new Error(`the raw tree has no origin for ${pointer}`);
-
-    return origin;
   }
 }
 

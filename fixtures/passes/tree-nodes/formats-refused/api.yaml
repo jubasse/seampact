@@ -4,7 +4,8 @@
 # positions, a role with no parameter, a split sort without direction, a body without $items, a role outside its
 # kind, a link that is no URL role, meta under a page without $meta, and a meta member the format names too; an
 # array template with another key, a merge with a member path, a member name that is no slot; a keyed sort without
-# {key}, a direction without split, and after without before.
+# {key}, a direction without split, and after without before; a slot an error body or a style's header does not
+# fill, and a style with no request roles.
 api: { name: formats, version: 1, kind: product }
 
 conventions:
@@ -31,6 +32,8 @@ formats:
       item: { body: { $each: $payload, $as: $item, extra: 1 } }
       table: { body: { $merge: $payload.id } }
       list: { body: { $bad.key: 1 } }
+  leaky:
+    error: { body: { code: $code, data: $payload } }
   stamped:
     success: { page: { body: { data: $items, meta: $meta } } }
     meta: { servedAt: { fill: now } }
@@ -63,6 +66,11 @@ pagings:
     request: { cursor: { query: cursor }, sort: { query: sort, direction: dir } }
   half:
     request: { after: { query: after } }
+  headed:
+    request: { cursor: { query: cursor } }
+    response: { headers: { X-Code: $code } }
+  bodiless:
+    response: { body: $items }
   clashing:
     request: { cursor: { query: cursor } }
     response: { meta: { servedAt: $total } }
@@ -79,6 +87,9 @@ surfaces:
       merged: { method: get, output: Note, format: merged }
       text: { method: get, output: { type: string }, format: merged }
       malformed: { method: get, output: Note, format: malformed }
+      leaky: { method: get, output: Note, format: leaky }
+      headed: { method: get, item: Note, paging: headed }
+      bodiless: { method: get, item: Note, paging: bodiless }
       keyed: { method: get, item: Note, paging: keyed }
       directed: { method: get, item: Note, paging: directed }
       half: { method: get, item: Note, paging: half }

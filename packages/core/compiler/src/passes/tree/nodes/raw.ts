@@ -64,6 +64,15 @@ export function treeNodesText(node: TreeNode, key: string): string | undefined {
 /** The JSON Pointer of `segments` below `base`, each segment escaped (the seam's shared helper). */
 export const treeNodesPointer = pipelinePointerBelow;
 
+/** The origin of a raw pointer the merged tree is known to hold; a missing one is an internal fault. */
+export function treeNodesOriginAt(context: TreeNodesContext, pointer: string): Origin {
+  const origin = context.origin(pointer);
+
+  if (origin === undefined) throw new Error(`the raw tree has no origin for ${pointer}`);
+
+  return origin;
+}
+
 /** A schema of the draft's catalogue, read by its id. */
 export function treeNodesSchema(draft: DraftIR, id: string): IrWriter.Schema | undefined {
   return Object.hasOwn(draft.schemas, id) ? draft.schemas[id] : undefined;

@@ -48,3 +48,18 @@ proofs:
     fixtures: []
     tests:
       - 'core: packages/core/compiler/src/passes/tree/nodes/shapes.test.ts#lifecycle members: deprecated, upstream, stated maturity, internal, tags, docs and extensions'
+  - id: CHK-105
+    fixtures: [fixtures/reference]
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/formats.test.ts#formats and paging styles: bare from the core where undeclared, declared formats read, unused ones absent'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/formats.test.ts#formats and paging styles: a declared bare replaces the core one, its error kept by the formats without one'
+  - id: CHK-126
+    fixtures: [fixtures/passes/tree-nodes/formats-refused]
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/formats.test.ts#tree.nodes diagnostics are located: formats and paging styles'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/formats.test.ts#formats and paging styles: name slots, sequences, escaped keys, typed meta fields and error headers'
+  - id: CHK-128
+    fixtures: [fixtures/passes/tree-nodes/formats-refused]
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/formats.test.ts#formats and paging styles: the handler result follows the roles each style writes'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/formats.test.ts#tree.nodes diagnostics are located: formats and paging styles'

@@ -261,7 +261,16 @@ test("tree.nodes diagnostics are located: formats and paging styles", () => {
   const raw = treeNodesApiOf(workspace);
   const uses: Record<string, IrWriter.TypeUse> = { [`${ROUTES}/text/output`]: text };
 
-  for (const route of ["slotted", "broken", "untyped", "codeless", "ided", "merged", "malformed"])
+  for (const route of [
+    "slotted",
+    "broken",
+    "untyped",
+    "codeless",
+    "ided",
+    "merged",
+    "malformed",
+    "leaky",
+  ])
     uses[`${ROUTES}/${route}/output`] = ref("Note");
 
   for (const route of [
@@ -299,10 +308,13 @@ test("tree.nodes diagnostics are located: formats and paging styles", () => {
     ["template-syntax", "/formats/malformed/success/item/body"],
     ["template-syntax", "/formats/malformed/success/table/body/$merge"],
     ["template-syntax", "/formats/malformed/success/list/body/$bad.key"],
+    ["template-slot", "/formats/leaky/error/body/data"],
     ["format-id", `${ROUTES}/ided`, "/formats/ided"],
     ["format-merge", `${ROUTES}/merged`, "/formats/merged"],
     ["format-merge", `${ROUTES}/text`, "/formats/merged"],
     ["paging-reserved", "/pagings/none"],
+    ["template-slot", "/pagings/headed/response/headers/X-Code"],
+    ["paging-position", "/pagings/bodiless"],
     ["paging-request", "/pagings/keyed/request/sort"],
     ["paging-request", "/pagings/directed/request/sort"],
     ["paging-position", "/pagings/half/request"],

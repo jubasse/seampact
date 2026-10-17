@@ -2,12 +2,13 @@ import type { IrWriter, Origin } from "@seampact/spec/ir";
 import type { RelatedLocation } from "../../../diagnostics/diagnostic.js";
 import { type DraftIR, pipelineCopy } from "../../../pipeline/seam.js";
 import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
-import { treeNodesAbsent, treeNodesHeaderTemplates } from "./formats.js";
+import { treeNodesAbsent, treeNodesNamedTemplates } from "./formats.js";
 import {
   type TreeNodesContext,
   type TreeNodesJson,
   treeNodesIsObject,
   treeNodesMember,
+  treeNodesOriginAt,
   treeNodesPointer,
 } from "./raw.js";
 import { TREE_NODES_PAGING_NONE } from "./responses.js";
@@ -274,7 +275,7 @@ class StyleReader {
 
     this.report(
       "paging-position",
-      treeNodesPointer(this.pointer, "request"),
+      this.writtenOrStyle(treeNodesPointer(this.pointer, "request")),
       `The paging style ${this.id} writes no single position role.`,
       "Write exactly one of cursor, page, offset and since, or the pair after and before.",
     );
@@ -290,7 +291,7 @@ class StyleReader {
         ? undefined
         : treeNodesTemplate(this.site("pagingBody"), writtenBody, `${pointer}/body`);
     const meta = this.meta(treeNodesMember(written, "meta"), `${pointer}/meta`);
-    const headers = treeNodesHeaderTemplates(
+    const headers = treeNodesNamedTemplates(
       this.context,
       this.owner,
       "pagingMember",
@@ -316,7 +317,7 @@ class StyleReader {
   }
 
   meta(written: TreeNodesJson | undefined, pointer: string): IrWriter.NamedTemplate[] | undefined {
-    const templates = treeNodesHeaderTemplates(
+    const templates = treeNodesNamedTemplates(
       this.context,
       this.owner,
       "pagingMember",
@@ -387,6 +388,11 @@ class StyleReader {
     return outside.length === 0;
   }
 
+  // A member the style leaves out is located at the style.
+  writtenOrStyle(pointer: string): string {
+    return this.context.origin(pointer) === undefined ? this.pointer : pointer;
+  }
+
   site(place: TreeNodesTemplateSite["place"]): TreeNodesTemplateSite {
     return { context: this.context, place, owner: this.owner };
   }
@@ -400,7 +406,7 @@ class StyleReader {
     this.context.report(
       treeNodesError({
         rule,
-        origin: treeNodesNodeOrigin(originAt(this.context, pointer)),
+        origin: treeNodesNodeOrigin(treeNodesOriginAt(this.context, pointer)),
         message,
         fix,
       }),
@@ -439,14 +445,6 @@ function sortFault(
   return undefined;
 }
 
-function originAt(context: TreeNodesContext, pointer: string): Origin {
-  const origin = context.origin(pointer);
-
-  if (origin === undefined) throw new Error(`the raw tree has no origin for ${pointer}`);
-
-  return origin;
-}
-
 // ADR 0002 section 14: a style adding `meta` needs a format page that writes `$meta`, and the style and the format
 // name no meta member twice. Each pair of a style and a format is checked once.
 function checkFormats(draft: DraftIR, context: TreeNodesContext): void {
@@ -482,7 +480,7 @@ function checkMeta(
     context.report(
       treeNodesError({
         rule: "paging-meta",
-        origin: treeNodesNodeOrigin(originAt(context, metaPointer)),
+        origin: treeNodesNodeOrigin(treeNodesOriginAt(context, metaPointer)),
         message: `The paging style ${style.id} adds meta members, but the page of the format ${format.id} writes no $meta.`,
         fix: `Write response.body on ${style.id}, or use a format whose page writes $meta.`,
         related,
@@ -502,7 +500,9 @@ function checkMeta(
     context.report(
       treeNodesError({
         rule: "paging-meta",
-        origin: treeNodesNodeOrigin(originAt(context, treeNodesPointer(metaPointer, member.name))),
+        origin: treeNodesNodeOrigin(
+          treeNodesOriginAt(context, treeNodesPointer(metaPointer, member.name)),
+        ),
         message: `The meta member ${member.name} is named by both the paging style ${style.id} and the format ${format.id}.`,
         fix: `Rename ${member.name} in the style's meta or in the format's meta.`,
         related: formatRelated(
