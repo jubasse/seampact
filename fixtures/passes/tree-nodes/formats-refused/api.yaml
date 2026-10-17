@@ -129,6 +129,6 @@ surfaces:
       metaed: { method: get, item: Note, paging: metaed }
       clashing: { method: get, item: Note, paging: clashing, format: stamped }
       lm: { method: get, item: Note, paging: none, format: listMerge }
-      am: { method: get, output: { type: array, items: { type: string } }, format: arrMerge }
+      am: { method: get, output: { type: array, items: Note }, format: arrMerge }
       im: { method: get, output: Note, format: itemMap }
       idless: { method: get, item: Note, paging: idless }

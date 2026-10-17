@@ -261,7 +261,7 @@ test("tree.nodes diagnostics are located: formats and paging styles", () => {
   const raw = treeNodesApiOf(workspace);
   const uses: Record<string, IrWriter.TypeUse> = {
     [`${ROUTES}/text/output`]: text,
-    [`${ROUTES}/am/output`]: { kind: "array", items: text },
+    [`${ROUTES}/am/output`]: { kind: "array", items: ref("Note") },
   };
 
   for (const route of [
