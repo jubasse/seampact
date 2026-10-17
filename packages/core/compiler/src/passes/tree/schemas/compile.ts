@@ -78,12 +78,19 @@ interface DeclaredTarget {
   keysFrom: string | undefined;
 }
 
-/** An example written in the run, parsed against its use once every schema and enum is compiled. */
+/** What a written value is: an entry of `examples` or a `default`; both are parsed like an example. */
+export type TreeSchemasWrittenValue = "example" | "default";
+
+/**
+ * A value written in the run, an example or a default, parsed against its use once every schema and enum is
+ * compiled (ADR 0003 sections 10 and 11).
+ */
 export interface TreeSchemasExampleCheck {
-  /** The pointer of the written `examples` list. */
+  /** The pointer of the written value. */
   pointer: string;
-  values: readonly unknown[];
+  value: unknown;
   use: IrWriter.TypeUse;
+  written: TreeSchemasWrittenValue;
 }
 
 const SHAPE_TEXT: Readonly<Record<Shape, string>> = {
@@ -604,13 +611,35 @@ export class TreeSchemasCompiler {
     const examples = treeSchemasMember(value, "examples");
 
     if (!Array.isArray(examples)) return undefined;
-    this.exampleChecks.push({
-      pointer: treeSchemasPointer(pointer, "examples"),
-      values: pipelineCopy(examples),
-      use: structuredClone(use),
-    });
+
+    for (const [index, example] of examples.entries())
+      this.exampleChecks.push({
+        pointer: treeSchemasPointer(pointer, "examples", String(index)),
+        value: pipelineCopy(example),
+        use: structuredClone(use),
+        written: "example",
+      });
 
     return pipelineCopy(examples);
+  }
+
+  // A copy of the written default, queued to be parsed against `use` like an example (ADR 0003 section 10).
+  private writtenDefault(
+    value: TreeSchemasRaw | undefined,
+    pointer: string,
+    use: IrWriter.TypeUse,
+  ): unknown {
+    const written = treeSchemasMember(value, "default");
+
+    if (written === undefined) return undefined;
+    this.exampleChecks.push({
+      pointer: treeSchemasPointer(pointer, "default"),
+      value: pipelineCopy(written),
+      use: structuredClone(use),
+      written: "default",
+    });
+
+    return pipelineCopy(written);
   }
 
   private compileShape(
@@ -1083,6 +1112,7 @@ export class TreeSchemasCompiler {
         return restriction;
       },
       examples: (value, pointer, use) => this.writtenExamples(value, pointer, use),
+      defaultValue: (value, pointer, use) => this.writtenDefault(value, pointer, use),
     };
   }
 
@@ -1213,6 +1243,7 @@ export class TreeSchemasCompiler {
     const writesSchema = fieldShape !== undefined && SCHEMA_WRITING_SHAPES.has(fieldShape);
     // An inline object, map or union keeps its examples on its hoisted schema.
     const examples = writesSchema ? undefined : this.writtenExamples(field, pointer, compiled.use);
+    const defaulted = this.writtenDefault(field, pointer, compiled.use);
 
     return {
       name: wire,
@@ -1221,7 +1252,7 @@ export class TreeSchemasCompiler {
       nullable,
       sensitive: treeSchemasMember(field, "sensitive") === true || compiled.sensitive,
       ...(restrictedTo === undefined ? {} : { restrictedTo }),
-      ...(defaultValue === undefined ? {} : { default: pipelineCopy(defaultValue) }),
+      ...(defaulted === undefined ? {} : { default: defaulted }),
       deprecated: treeSchemasMember(field, "deprecated") === true,
       ...(codeName === undefined ? {} : { codeName }),
       ...(examples === undefined ? {} : { examples }),

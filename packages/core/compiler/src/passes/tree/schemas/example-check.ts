@@ -1,7 +1,7 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import type { TreeSchemaExampleIssue } from "../../../pipeline/seam.js";
 import { quote } from "../../../validate/diagnostics.js";
-import type { TreeSchemasExampleCheck } from "./compile.js";
+import type { TreeSchemasExampleCheck, TreeSchemasWrittenValue } from "./compile.js";
 import {
   type TreeSchemasDecimal,
   treeSchemasCompareDecimals,
@@ -458,29 +458,30 @@ function boundOf(literal: string | undefined): TreeSchemasDecimal | undefined {
   return literal === undefined ? undefined : treeSchemasDecimalOf(literal);
 }
 
+const WRITTEN_FIX: Readonly<Record<TreeSchemasWrittenValue, string>> = {
+  example: "correct the example, or the schema it is parsed against",
+  default: "correct the default, or the schema it is parsed against",
+};
+
 /**
- * Parses every example the run wrote against its use: each issue fails compilation at its pointer inside the
- * value, or at the deepest node of it the tree holds (a missing property is reported at its object).
+ * Parses every example and default the run wrote against its use: each issue fails compilation at its pointer
+ * inside the value, or at the deepest node of it the tree holds (a missing property is reported at its object).
  */
 export function treeSchemasCheckWrittenExamples(
   checks: readonly TreeSchemasExampleCheck[],
   checker: TreeSchemasExampleChecker,
   reporter: TreeSchemasReporter,
 ): void {
-  for (const { pointer, values, use } of checks) {
-    for (const [index, value] of values.entries()) {
-      const at = treeSchemasPointer(pointer, String(index));
+  for (const { pointer, value, use, written } of checks) {
+    for (const issue of checker.check(value, use)) {
+      const inside = `${pointer}${issue.pointer}`;
 
-      for (const issue of checker.check(value, use)) {
-        const inside = `${at}${issue.pointer}`;
-
-        reporter.error({
-          rule: "example-value",
-          pointer: reporter.resolves(inside) ? inside : at,
-          message: `the example does not fit its schema at ${quote(issue.pointer)}: ${issue.message}`,
-          fix: "correct the example, or the schema it is parsed against",
-        });
-      }
+      reporter.error({
+        rule: `${written}-value`,
+        pointer: reporter.resolves(inside) ? inside : pointer,
+        message: `the ${written} does not fit its schema at ${quote(issue.pointer)}: ${issue.message}`,
+        fix: WRITTEN_FIX[written],
+      });
     }
   }
 }

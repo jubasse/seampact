@@ -231,3 +231,28 @@ describe("text examples parsed by the wire form", () => {
     expect(text("x", ref("Task"))).toEqual(["a ref use has no text form"]);
   });
 });
+
+describe("defaults parsed like an example", () => {
+  test("a default that fits is kept, one that does not is refused at its pointer", () => {
+    const run = treeSchemasRunApi(`schemas:
+  Settings:
+    type: object
+    properties:
+      size: { type: integer, minimum: 1, default: 10 }
+      note: { type: string, nullable: true, default: null }
+      limits: { type: array, items: { type: integer }, default: [1, "two"] }
+      level: { type: integer, default: low }
+  Small: { pick: { from: Settings, fields: [size] }, properties: { size: { default: 0 } } }
+`);
+
+    expect(located(run)).toEqual([
+      ["default-value", "/schemas/Settings/properties/limits/default/1"],
+      ["default-value", "/schemas/Settings/properties/level/default"],
+      ["default-value", "/schemas/Small/properties/size/default"],
+    ]);
+    expect(run.diagnostics[1]?.message).toBe(
+      "the default does not fit its schema at '': 'low' is not a number",
+    );
+    expect(run.located).toBe(true);
+  });
+});

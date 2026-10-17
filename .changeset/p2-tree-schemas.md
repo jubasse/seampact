@@ -29,3 +29,5 @@ The tree pass keeps a schema's deprecation and the docs and examples of properti
 The tree pass refuses a map as a query field or header rule proof.
 
 The tree pass hoists the params of an error code once, wherever the code is declared.
+
+The tree pass parses every property default against its schema like an example.
