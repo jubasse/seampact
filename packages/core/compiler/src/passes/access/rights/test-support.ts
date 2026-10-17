@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import type { IrWriter } from "@seampact/spec/ir";
 import type { Diagnostic } from "../../../diagnostics/diagnostic.js";
 import { loadFsReader, loadWorkspace } from "../../../load/index.js";
 import { loadMemoryReader } from "../../../load/reader.js";
@@ -67,6 +68,14 @@ export function accessRightsApiOf(workspace: RawWorkspace, name?: string): RawAp
   return api;
 }
 
+// tree.schemas answers no query wire yet; every query field of these contracts is a plain text value.
+const TEXT_QUERY_WIRE: IrWriter.QueryWire = {
+  kind: "text",
+  style: "form",
+  explode: true,
+  brackets: false,
+};
+
 /**
  * tree.schemas' service with the fixture's example check: params holding `DRAFT_FIXTURE_INVALID_EXAMPLE` do not
  * fit, until tree.schemas checks examples itself.
@@ -74,7 +83,7 @@ export function accessRightsApiOf(workspace: RawWorkspace, name?: string): RawAp
 export function accessRightsMarkerService(service: TreeSchemaService): TreeSchemaService {
   return {
     typeUse: (pointer, direction) => service.typeUse(pointer, direction),
-    queryWire: (pointer) => service.queryWire(pointer),
+    queryWire: (pointer) => service.queryWire(pointer) ?? TEXT_QUERY_WIRE,
     checkExample: (value) =>
       JSON.stringify(value).includes(DRAFT_FIXTURE_INVALID_EXAMPLE)
         ? [{ pointer: "", message: "the example holds the fixture's invalid marker" }]

@@ -46,7 +46,7 @@ surfaces:
     identity: user
     routes:
       health: { method: get }
-      brands: { kind: collection, ops: [list] }
+      brands: { kind: collection, item: Item, ops: [list] }
       shops:
         kind: collection
         id: { shopId: ShopId }
