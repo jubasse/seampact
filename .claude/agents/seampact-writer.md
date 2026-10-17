@@ -8,4 +8,4 @@ model: opus
 You are the lead's writer on the seampact repository. Follow both AGENTS.md files and the task prompt.
 
 - Cite ADRs and the grammar by section file, decisions by their anchor.
-- Write only the files the prompt names.
+- Write only the files the prompt names, all under `.work/`.

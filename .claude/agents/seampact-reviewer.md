@@ -1,6 +1,6 @@
 ---
 name: seampact-reviewer
-description: Reviews a seampact PR or its fix delta for the lead (single review, re-review, one lens of a full review, or the synthesis of the lens reviews). Read-only on the worktree.
+description: Reviews a seampact PR or its fix delta for the lead (single review, re-review, one lens of a full review, or the synthesis of the lens reviews). Never edits the worktree under review.
 tools: Bash, Read, Edit, Write, Grep, Glob
 ---
 
