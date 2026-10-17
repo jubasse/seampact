@@ -4,8 +4,9 @@ import { IR_REVISION, IR_SCHEMA_DOCUMENTS, IR_VERSION, type SchemaNode } from "@
 import { emitKotlin, KOTLIN_CLAIMED_NAMES, KOTLIN_MODEL_DIRECTORY } from "./kotlin.ts";
 import { buildNeutralModel, compareNames, type Definition } from "./model.ts";
 import { type DefinitionNames, definitionNames } from "./names.ts";
+import { emitPhp, PHP_CLAIMED_NAMES, PHP_MODEL_DIRECTORY } from "./php.ts";
 
-// Generates every file of the native IR models (ADR 0010) from the IR JSON Schema: the Kotlin model and the
+// Generates every file of the native IR models (ADR 0010) from the IR JSON Schema: the Kotlin and PHP models and the
 // mapping table of every definition to its type in each model language.
 
 export const WRITE_COMMAND =
@@ -14,7 +15,7 @@ export const WRITE_COMMAND =
 export const MAPPING_TABLE_FILE = "scripts/ir-models/mapping.generated.json";
 
 /** The directories the generator owns whole: a file there that it does not write is stale. */
-const GENERATED_DIRECTORIES = [KOTLIN_MODEL_DIRECTORY];
+const GENERATED_DIRECTORIES = [KOTLIN_MODEL_DIRECTORY, PHP_MODEL_DIRECTORY];
 
 export type MappingEntry = {
   construct: Definition["kind"];
@@ -28,7 +29,7 @@ export function generateIrModels(
   documents: readonly SchemaNode[] = IR_SCHEMA_DOCUMENTS,
 ): Map<string, string> {
   const model = buildNeutralModel(documents);
-  const names = definitionNames(model, { kotlin: KOTLIN_CLAIMED_NAMES, php: [] });
+  const names = definitionNames(model, { kotlin: KOTLIN_CLAIMED_NAMES, php: PHP_CLAIMED_NAMES });
 
   const files = emitKotlin({
     model,
@@ -37,6 +38,14 @@ export function generateIrModels(
     irRevision: IR_REVISION,
     regenerateCommand: WRITE_COMMAND,
   });
+  const phpFiles = emitPhp({
+    model,
+    names,
+    irVersion: IR_VERSION,
+    irRevision: IR_REVISION,
+    regenerateCommand: WRITE_COMMAND,
+  });
+  for (const [path, content] of phpFiles) files.set(path, content);
   files.set(MAPPING_TABLE_FILE, mappingTableJson(model.definitions, names));
   return files;
 }

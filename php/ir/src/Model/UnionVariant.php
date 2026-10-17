@@ -1,0 +1,39 @@
+<?php
+
+// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 2. Do not edit.
+// Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
+
+declare(strict_types=1);
+
+namespace Seampact\Ir\Model;
+
+final readonly class UnionVariant
+{
+    /**
+     * @param string $tag
+     * @param string $schema
+     */
+    public function __construct(
+        public string $tag,
+        public string $schema,
+    ) {
+    }
+
+    public static function fromJson(mixed $value): self
+    {
+        $members = IrHydration::object($value, 'UnionVariant');
+
+        return new self(
+            tag: IrHydration::string(IrHydration::required($members, 'tag', 'UnionVariant'), 'UnionVariant.tag'),
+            schema: IrHydration::string(IrHydration::required($members, 'schema', 'UnionVariant'), 'UnionVariant.schema'),
+        );
+    }
+
+    public function toJson(): \stdClass
+    {
+        $json = new \stdClass();
+        $json->{'tag'} = $this->tag;
+        $json->{'schema'} = $this->schema;
+        return $json;
+    }
+}

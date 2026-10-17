@@ -1,9 +1,9 @@
 name: Native IR models
 
 # The native IR models generated from the IR JSON Schema (ADR 0010): the regenerate-and-diff check, then the
-# Kotlin model's tests on Java 21 and 25 (A13), with bytecode for Java 21. On a pull request they run only when
-# the change touches the models, their sources, the toolchain pins or this workflow; `native-ir` is the one check
-# to require.
+# Kotlin model's tests on Java 21 and 25 (A13), with bytecode for Java 21, and the PHP model's tests and static
+# analysis on PHP 8.2 and the latest PHP. On a pull request they run only when the change touches the models,
+# their sources, the toolchain pins or this workflow; `native-ir` is the one check to require.
 
 on:
   push:
@@ -101,10 +101,38 @@ jobs:
         working-directory: jvm
         run: ./gradlew check -PtestJdk=${{ matrix.test-jdk }}
 
+  php:
+    needs: changes
+    if: needs.changes.outputs.native-ir == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        php-version: ["8.2", "latest"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ matrix.php-version }}
+          tools: composer:2.10.2
+          coverage: none
+      - name: Install the PHP dev tools from the lock file
+        working-directory: php/ir
+        run: composer install --no-interaction --no-progress --no-plugins --no-scripts
+      - name: Test the PHP model and reader on PHP ${{ matrix.php-version }}
+        working-directory: php/ir
+        run: vendor/bin/phpunit
+      - name: Analyse the PHP model and reader
+        working-directory: php/ir
+        run: vendor/bin/phpstan analyse --no-progress
+
   # The required check: a skipped job (no change to watch) counts as passed, a failed or cancelled one does not.
   native-ir:
     # Every job this check stands for is listed here, or its failure would not reach the required check.
-    needs: [changes, regenerate, kotlin]
+    needs: [changes, regenerate, kotlin, php]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
