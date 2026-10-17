@@ -1,10 +1,10 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { PACKAGES_DIR, packageDirectories } from "../workspace/index.ts";
 
 export const CARTOGRAPHY_FILE = "docs/agents/cartography.md";
 export const WRITE_COMMAND = "node scripts/cartography/cli.ts --write";
 
-const PACKAGES_DIR = "packages";
 const SOURCE_DIR = "src";
 const INDEX_FILE = "index.ts";
 const README_FILE = "README.md";
@@ -20,31 +20,31 @@ export interface CompilerStage {
 
 /** The compiler stages in pipeline order (ADR 0006 section 1). */
 export const COMPILER_STAGES: CompilerStage[] = [
-  { name: "load", directories: ["packages/compiler/src/load"] },
-  { name: "validate", directories: ["packages/compiler/src/validate"] },
+  { name: "load", directories: ["packages/core/compiler/src/load"] },
+  { name: "validate", directories: ["packages/core/compiler/src/validate"] },
   {
     name: "tree",
     directories: [
-      "packages/compiler/src/passes/tree/nodes",
-      "packages/compiler/src/passes/tree/schemas",
+      "packages/core/compiler/src/passes/tree/nodes",
+      "packages/core/compiler/src/passes/tree/schemas",
     ],
   },
   {
     name: "access",
     directories: [
-      "packages/compiler/src/passes/access/identity",
-      "packages/compiler/src/passes/access/rights",
+      "packages/core/compiler/src/passes/access/identity",
+      "packages/core/compiler/src/passes/access/rights",
     ],
   },
   {
     name: "derive",
     directories: [
-      "packages/compiler/src/passes/derive/wire",
-      "packages/compiler/src/passes/derive/errors",
+      "packages/core/compiler/src/passes/derive/wire",
+      "packages/core/compiler/src/passes/derive/errors",
     ],
   },
-  { name: "link", directories: ["packages/compiler/src/passes/link"] },
-  { name: "finalize", directories: ["packages/compiler/src/finalize"] },
+  { name: "link", directories: ["packages/core/compiler/src/passes/link"] },
+  { name: "finalize", directories: ["packages/core/compiler/src/finalize"] },
 ];
 
 interface PackageEntry {
@@ -99,10 +99,8 @@ function readPackages(root: string, problems: string[]): PackageEntry[] {
   }
 
   const entries: PackageEntry[] = [];
-  for (const directoryName of sortedSubdirectories(packagesRoot)) {
-    const directory = `${PACKAGES_DIR}/${directoryName}`;
+  for (const directory of packageDirectories(root)) {
     const manifestPath = join(root, directory, "package.json");
-    if (!existsSync(manifestPath)) continue;
 
     const entry = readPackage(root, directory, manifestPath, problems);
     if (entry !== undefined) entries.push(entry);

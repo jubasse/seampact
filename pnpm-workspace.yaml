@@ -1,5 +1,5 @@
 packages:
-  - packages/*
+  - packages/*/*
 
 # simple-git-hooks installs the hooks through the root `prepare` script; its own postinstall is not needed.
 allowBuilds:

@@ -73,7 +73,7 @@ private fun <T> onSmallStack(block: () -> T): T {
 // `checkIrSupport`, and a valid document reads and writes back unchanged up to the unknown members it drops.
 class IrReaderTest {
     private val examples: Path =
-        Path.of(System.getProperty("seampact.repositoryRoot"), "packages/spec/schemas/ir/examples")
+        Path.of(System.getProperty("seampact.repositoryRoot"), "packages/core/spec/schemas/ir/examples")
 
     private val support = IrSupport.ofModel(kinds = listOf("httpOperation"))
 

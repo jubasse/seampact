@@ -3,20 +3,20 @@ lane: p1-ir-schema
 proofs:
   - id: CHK-078
     fixtures:
-      - packages/spec/schemas/ir/examples/minimal.ir.json
-      - packages/spec/schemas/ir/examples/every-member.ir.json
-      - packages/spec/schemas/ir/examples/unknown-member.ir.json
-      - packages/spec/schemas/ir/examples/unknown-enum-value.ir.json
-      - packages/spec/schemas/ir/examples/unknown-kind.ir.json
-      - packages/spec/schemas/ir/examples/unknown-kind-and-feature.ir.json
-      - packages/spec/schemas/ir/examples/unknown-must-act.ir.json
+      - packages/core/spec/schemas/ir/examples/minimal.ir.json
+      - packages/core/spec/schemas/ir/examples/every-member.ir.json
+      - packages/core/spec/schemas/ir/examples/unknown-member.ir.json
+      - packages/core/spec/schemas/ir/examples/unknown-enum-value.ir.json
+      - packages/core/spec/schemas/ir/examples/unknown-kind.ir.json
+      - packages/core/spec/schemas/ir/examples/unknown-kind-and-feature.ir.json
+      - packages/core/spec/schemas/ir/examples/unknown-must-act.ir.json
     tests:
-      - 'core: packages/spec/src/ir/open-strict.test.ts#unknown members accepted'
-      - 'core: packages/spec/src/ir/open-strict.test.ts#unknown open-enum values accepted, unless must-act'
-      - 'core: packages/spec/src/ir/open-strict.test.ts#unknown kinds named, accepted open unless must-act, refused strict'
-      - 'core: packages/spec/src/ir/open-strict.test.ts#fixed unknown cases'
-      - 'core: packages/spec/src/ir/schema.test.ts#no closed enum'
-      - 'core: packages/spec/src/ir/schema.test.ts#extension slots'
-      - 'core: packages/spec/src/ir/schema.test.ts#must-act marks the security-boundary unions and enums'
-      - 'core: packages/spec/src/ir/support.test.ts#checkIrSupport names the mismatch'
-      - 'core: packages/spec/src/ir/support.test.ts#names an unknown operation kind with the operation (SCN-092)'
+      - 'core: packages/core/spec/src/ir/open-strict.test.ts#unknown members accepted'
+      - 'core: packages/core/spec/src/ir/open-strict.test.ts#unknown open-enum values accepted, unless must-act'
+      - 'core: packages/core/spec/src/ir/open-strict.test.ts#unknown kinds named, accepted open unless must-act, refused strict'
+      - 'core: packages/core/spec/src/ir/open-strict.test.ts#fixed unknown cases'
+      - 'core: packages/core/spec/src/ir/schema.test.ts#no closed enum'
+      - 'core: packages/core/spec/src/ir/schema.test.ts#extension slots'
+      - 'core: packages/core/spec/src/ir/schema.test.ts#must-act marks the security-boundary unions and enums'
+      - 'core: packages/core/spec/src/ir/support.test.ts#checkIrSupport names the mismatch'
+      - 'core: packages/core/spec/src/ir/support.test.ts#names an unknown operation kind with the operation (SCN-092)'

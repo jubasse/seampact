@@ -148,7 +148,7 @@ describe("cartography", () => {
 
   it("--check fails on a stale map and names the fix, --write makes it current", () => {
     const root = repositoryWith({
-      "packages/compiler/package.json": manifest("@x/compiler", "Compiler.", "core"),
+      "packages/core/compiler/package.json": manifest("@x/compiler", "Compiler.", "core"),
       ...Object.fromEntries(
         COMPILER_STAGES.flatMap((stage) => stage.directories).map((directory) => [
           `${directory}/index.ts`,
@@ -164,7 +164,7 @@ describe("cartography", () => {
     expect(runCli(root, "--write").status).toBe(0);
     expect(runCli(root, "--check")).toEqual({ status: 0, stderr: "cartography: ok\n" });
 
-    writeFileSync(join(root, "packages/compiler/src/load/index.ts"), "// The load stage.\n");
+    writeFileSync(join(root, "packages/core/compiler/src/load/index.ts"), "// The load stage.\n");
     const stale = runCli(root, "--check");
     expect(stale.status).toBe(1);
     expect(stale.stderr).toContain(`${CARTOGRAPHY_FILE} is stale; run \`${WRITE_COMMAND}\``);

@@ -7,6 +7,7 @@
 // the convention is decided.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, posix } from "node:path";
+import { packageDirectories } from "../workspace/index.ts";
 
 export interface Violation {
   /** Repository-relative path of the manifest or file at fault. */
@@ -75,13 +76,12 @@ function walk(root: string, rel: string, match: (name: string) => boolean): stri
 
 function loadNpm(root: string, out: Violation[]): Npm[] {
   const pkgs: Npm[] = [];
-  for (const d of listDirs(root, "packages")) {
-    const file = `packages/${d}/package.json`;
-    if (!existsSync(join(root, file))) continue;
+  for (const dir of packageDirectories(root)) {
+    const file = `${dir}/package.json`;
     const json = readJson(root, file, out, "roles");
     if (!json) continue;
     const role = checkRole(file, json, out);
-    pkgs.push({ file, dir: `packages/${d}`, name: String(json.name ?? ""), role, json });
+    pkgs.push({ file, dir, name: String(json.name ?? ""), role, json });
   }
   return pkgs;
 }
