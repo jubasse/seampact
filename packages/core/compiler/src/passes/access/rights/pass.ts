@@ -193,7 +193,11 @@ const inputAfterProofs = (
 
 // A created input is written in one assignment; a declared one gains its proofs only.
 function writeProofs(operation: DraftIR["operations"][number], proofs: AccessRightsProofs): void {
-  for (const header of proofs.headers) operation.params?.header.push(header);
+  if (proofs.headers.length > 0) {
+    if (operation.params === undefined)
+      throw new Error(`tree.nodes wrote no params on operation ${operation.id}`);
+    operation.params.header.push(...proofs.headers);
+  }
 
   if (proofs.createdInput !== undefined) {
     operation.input = proofs.createdInput;

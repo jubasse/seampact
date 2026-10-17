@@ -48,3 +48,21 @@ proofs:
       - fixtures/draft/reference/tasksService.access-delta.json
     tests:
       - 'core: packages/core/compiler/src/passes/access/rights/field-rights.test.ts#relay routes carry no field rights'
+  - id: CHK-015
+    fixtures:
+      - fixtures/passes/access-rights/proofs/api.yaml
+      - fixtures/passes/access-rights/refused/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/rights/bucket-keys.test.ts#buckets and throttle'
+      - 'core: packages/core/compiler/src/passes/access/rights/diagnostics.test.ts#access.rights diagnostics are located'
+  - id: CHK-016
+    fixtures:
+      - fixtures/passes/access-rights/proofs/api.yaml
+      - fixtures/passes/access-rights/proofs/operations.json
+      - fixtures/passes/access-rights/proofs-refused/api.yaml
+      - fixtures/draft/reference/tasks.access-delta.json
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/rights/proofs.test.ts#body proofs'
+      - 'core: packages/core/compiler/src/passes/access/rights/proofs.test.ts#header proofs'
+      - 'core: packages/core/compiler/src/passes/access/rights/proofs.test.ts#proof-only input'
+      - 'core: packages/core/compiler/src/passes/access/rights/reference.test.ts#access halves on the reference contract'

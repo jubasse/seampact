@@ -164,16 +164,19 @@ describe("body proofs", () => {
     expect(located(diagnostics)).toEqual([["proof-name", "/surfaces/app/routes/ping/requires/1"]]);
   });
 
-  test("a file proof is refused at its schema", () => {
+  test("a file or opaque proof is refused at its schema", () => {
     const withFileProof = contract(`      ping: { method: post, responses: { 204: {} } }`).replace(
       "rules:\n",
-      "rules:\n  upload: { proof: { in: body, name: scan, schema: { file: { media: [image/png], maxSize: 1MiB } } } }\n",
+      "rules:\n  upload: { proof: { in: body, name: scan, schema: { file: { media: [image/png], maxSize: 1MiB } } } }\n  blob: { proof: { in: header, name: X-Blob, schema: { opaque: Any value. } } }\n",
     );
     const { diagnostics } = accessRightsRunContract(
       accessRightsLoadFiles({ "api.yaml": withFileProof }),
     );
 
-    expect(located(diagnostics)).toEqual([["proof-schema", "/rules/upload/proof/schema"]]);
+    expect(located(diagnostics)).toEqual([
+      ["proof-schema", "/rules/upload/proof/schema"],
+      ["proof-schema", "/rules/blob/proof/schema"],
+    ]);
   });
 });
 
@@ -247,7 +250,7 @@ describe("signed proof-only input copies the identity policy", () => {
 
 describe("signed route without input", () => {
   test("(e) a signed identity's route left without input is refused, naming the route, the identity and the fix", () => {
-    const { diagnostics } = accessRightsRunContract(
+    const { draft, diagnostics } = accessRightsRunContract(
       accessRightsLoadFiles({
         "api.yaml": `api: { name: hooks, version: 1 }
 schemes:
@@ -256,11 +259,14 @@ identities:
   hook: { kind: signed, scheme: sig, principal: Caller }
 schemas:
   Caller: { type: object, required: [account], properties: { account: { type: string } } }
+rules:
+  recentAuth: { proof: { in: body, name: token, schema: { type: string } } }
 surfaces:
   hooks:
     identity: hook
     routes:
       ping: { method: post, responses: { 204: {} } }
+      pong: { method: post, requires: [{ rule: recentAuth }], responses: { 204: {} } }
 `,
       }),
     );
@@ -281,5 +287,11 @@ surfaces:
         pointer: "/surfaces/hooks/routes/ping",
       },
     ]);
+
+    // A body proof gives the other route an input; its identity has no policy to copy.
+    const pong = operationOf(draft, "pong").input;
+
+    expect(pong?.rawBody).toBe(true);
+    expect(pong?.schema).toEqual({ kind: "ref", schema: "ApiEmptyBody" });
   });
 });

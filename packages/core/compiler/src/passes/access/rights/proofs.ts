@@ -294,8 +294,8 @@ function createdInput(
   };
 }
 
-// The identity's policy, copied with its derivation as access.identity writes it on a declared input (M-1 of
-// ADR 0004 section 13), so every `ref` input of a signed route carries it.
+// The identity's policy, copied with its derivation as access.identity writes it on a declared input (ADR 0004
+// section 13), so every `ref` input of a signed route carries it.
 function identityUnknownKeys(
   identity: PassReadonly<IrWriter.SignedIdentity>,
 ): IrWriter.UnknownKeys | undefined {
