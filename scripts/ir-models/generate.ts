@@ -122,7 +122,13 @@ function mappingTableJson(
   return `${biomeStableJson(document, "")}\n`;
 }
 
-type JsonValue = string | number | boolean | null | JsonValue[] | { [member: string]: JsonValue };
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [member: string]: JsonValue };
 
 const JSON_INDENT = "  ";
 

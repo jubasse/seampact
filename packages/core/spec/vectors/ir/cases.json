@@ -1,0 +1,1154 @@
+{
+  "irRevision": 3,
+  "supports": {
+    "http": {
+      "irVersions": [1],
+      "irRevision": 3,
+      "kinds": ["httpOperation"],
+      "features": []
+    },
+    "http-and-channel": {
+      "irVersions": [1],
+      "irRevision": 3,
+      "kinds": ["httpOperation", "channel"],
+      "features": ["streaming"]
+    }
+  },
+  "cases": [
+    {
+      "id": "catalogue/error-numeric-key",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/errors/1042",
+          "value": {
+            "code": "1042",
+            "family": "api",
+            "nature": "failed",
+            "http": {
+              "status": 500
+            },
+            "docs": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/errors/1042"
+            },
+            "default": "undeclaredStatus"
+          }
+        }
+      ],
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "catalogue/right-numeric-key",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/rights/1042",
+          "value": {
+            "id": "1042",
+            "subject": {
+              "kind": "none"
+            },
+            "guest": "Anyone may read.",
+            "errors": [],
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/rights/1042"
+            }
+          }
+        }
+      ],
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "catalogue/right-proto-key",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/rights/__proto__",
+          "value": {
+            "id": "__proto__",
+            "subject": {
+              "kind": "none"
+            },
+            "guest": "Anyone may read.",
+            "errors": [],
+            "docs": {},
+            "extensions": {},
+            "origin": {
+              "layer": "api",
+              "pointer": "/rights/__proto__"
+            }
+          }
+        }
+      ],
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "example/every-member",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "example/minimal",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "example/unknown-enum-value",
+      "example": "unknown-enum-value.ir.json",
+      "support": "http",
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "example/unknown-kind",
+      "example": "unknown-kind.ir.json",
+      "support": "http",
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "example/unknown-kind-and-feature",
+      "example": "unknown-kind-and-feature.ir.json",
+      "support": "http",
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.feature.unsupported",
+            "member": "/features/0"
+          },
+          {
+            "code": "ir.kind.unsupported",
+            "member": "/kinds/1"
+          },
+          {
+            "code": "ir.feature.unsupported",
+            "member": "/operations/0/features/0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "example/unknown-kind-and-feature-declared",
+      "example": "unknown-kind-and-feature.ir.json",
+      "support": "http-and-channel",
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "example/unknown-member",
+      "example": "unknown-member.ir.json",
+      "support": "http",
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "example/unknown-must-act",
+      "example": "unknown-must-act.ir.json",
+      "support": "http",
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/schemes/client/kind"
+          }
+        ]
+      }
+    },
+    {
+      "id": "features/declared-unknown",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/features",
+          "value": ["streaming"]
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.feature.unsupported",
+            "member": "/features/0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "features/missing",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/features",
+          "remove": true
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.support.malformed",
+            "member": "/features"
+          }
+        ]
+      }
+    },
+    {
+      "id": "kinds/declared-unknown",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/kinds",
+          "value": ["httpOperation", "channel"]
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.kind.unsupported",
+            "member": "/kinds/1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "kinds/not-an-array",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/kinds",
+          "value": "httpOperation"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.support.malformed",
+            "member": "/kinds"
+          }
+        ]
+      }
+    },
+    {
+      "id": "literal/revision-bare-decimal-point",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": "3."
+        }
+      ],
+      "verdict": {
+        "outcome": "malformed"
+      }
+    },
+    {
+      "id": "literal/revision-beyond-safe-range",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": "9007199254740993"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.revision.mismatch",
+            "member": "/irRevision"
+          }
+        ]
+      }
+    },
+    {
+      "id": "literal/revision-exponent-shifted",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": "30e-1"
+        }
+      ],
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "literal/revision-exponent-zero",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": "3e0"
+        }
+      ],
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "literal/revision-fraction",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": "3.5"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.revision.mismatch",
+            "member": "/irRevision"
+          }
+        ]
+      }
+    },
+    {
+      "id": "literal/revision-fraction-rounds-down",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": "3.0000000000000000001"
+        }
+      ],
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "literal/revision-hex-float",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": "0x1.8p1"
+        }
+      ],
+      "verdict": {
+        "outcome": "malformed"
+      }
+    },
+    {
+      "id": "literal/revision-huge-exponent",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": "1e2147483647"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.revision.mismatch",
+            "member": "/irRevision"
+          }
+        ]
+      }
+    },
+    {
+      "id": "literal/revision-hundred-digits",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": "1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.revision.mismatch",
+            "member": "/irRevision"
+          }
+        ]
+      }
+    },
+    {
+      "id": "literal/revision-infinity",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": "Infinity"
+        }
+      ],
+      "verdict": {
+        "outcome": "malformed"
+      }
+    },
+    {
+      "id": "literal/revision-java-double-suffix",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": "3d"
+        }
+      ],
+      "verdict": {
+        "outcome": "malformed"
+      }
+    },
+    {
+      "id": "literal/revision-java-float-suffix",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": "3f"
+        }
+      ],
+      "verdict": {
+        "outcome": "malformed"
+      }
+    },
+    {
+      "id": "literal/revision-leading-zero",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": "03"
+        }
+      ],
+      "verdict": {
+        "outcome": "malformed"
+      }
+    },
+    {
+      "id": "literal/revision-nan",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": "NaN"
+        }
+      ],
+      "verdict": {
+        "outcome": "malformed"
+      }
+    },
+    {
+      "id": "literal/revision-no-integer-digits",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": ".5e1"
+        }
+      ],
+      "verdict": {
+        "outcome": "malformed"
+      }
+    },
+    {
+      "id": "literal/revision-plus-sign",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": "+3"
+        }
+      ],
+      "verdict": {
+        "outcome": "malformed"
+      }
+    },
+    {
+      "id": "literal/revision-trailing-zero",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irRevision",
+          "text": "3.0"
+        }
+      ],
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "literal/status-beyond-safe-range",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/operations/0/responses/0/status",
+          "text": "9007199254740993"
+        }
+      ],
+      "verdict": {
+        "outcome": "malformed"
+      }
+    },
+    {
+      "id": "literal/status-exponent",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/operations/0/responses/0/status",
+          "text": "2.04e2"
+        }
+      ],
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "literal/status-fraction",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/operations/0/responses/0/status",
+          "text": "204.5"
+        }
+      ],
+      "verdict": {
+        "outcome": "malformed"
+      }
+    },
+    {
+      "id": "literal/status-fraction-rounds-down",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/operations/0/responses/0/status",
+          "text": "204.0000000000000000001"
+        }
+      ],
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "literal/status-hundred-digits",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/operations/0/responses/0/status",
+          "text": "1000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+        }
+      ],
+      "verdict": {
+        "outcome": "malformed"
+      }
+    },
+    {
+      "id": "literal/status-one-e-16",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/operations/0/responses/0/status",
+          "text": "1e16"
+        }
+      ],
+      "verdict": {
+        "outcome": "malformed"
+      }
+    },
+    {
+      "id": "literal/status-trailing-zero",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/operations/0/responses/0/status",
+          "text": "204.0"
+        }
+      ],
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "literal/version-exponent-zero",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irVersion",
+          "text": "1e0"
+        }
+      ],
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "literal/version-huge-exponent",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irVersion",
+          "text": "1e2147483647"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.version.unsupported",
+            "member": "/irVersion"
+          }
+        ]
+      }
+    },
+    {
+      "id": "literal/version-trailing-zero",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irVersion",
+          "text": "1.0"
+        }
+      ],
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "literal/version-two-point-zero",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/irVersion",
+          "text": "2.0"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.version.unsupported",
+            "member": "/irVersion"
+          }
+        ]
+      }
+    },
+    {
+      "id": "must-act/Access",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/operations/0/access/kind",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/operations/0/access/kind"
+          }
+        ]
+      }
+    },
+    {
+      "id": "must-act/Csrf",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/operations/0/csrf/kind",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/operations/0/csrf/kind"
+          }
+        ]
+      }
+    },
+    {
+      "id": "must-act/Idempotency",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/operations/0/idempotency/kind",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/operations/0/idempotency/kind"
+          }
+        ]
+      }
+    },
+    {
+      "id": "must-act/Identity",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/identities/user/kind",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/identities/user/kind"
+          }
+        ]
+      }
+    },
+    {
+      "id": "must-act/InputPolicy",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/schemas/Task/properties/1/restrictedTo/inputPolicy",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/schemas/Task/properties/1/restrictedTo/inputPolicy"
+          }
+        ]
+      }
+    },
+    {
+      "id": "must-act/KeysPolicy",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/identities/stripe/unknownKeys/policy",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/identities/stripe/unknownKeys/policy"
+          }
+        ]
+      }
+    },
+    {
+      "id": "must-act/RefusedCredential",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/operations/0/access/onRefused",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/operations/0/access/onRefused"
+          }
+        ]
+      }
+    },
+    {
+      "id": "must-act/Requirement",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/operations/2/requires/0/kind",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/operations/2/requires/0/kind"
+          }
+        ]
+      }
+    },
+    {
+      "id": "must-act/RightSubject",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/rights/tasks.read/subject/kind",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/rights/tasks.read/subject/kind"
+          }
+        ]
+      }
+    },
+    {
+      "id": "must-act/Scheme",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/schemes/sessionCookie/kind",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/schemes/sessionCookie/kind"
+          }
+        ]
+      }
+    },
+    {
+      "id": "must-act/SchemeKey",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/schemes/stripeSignature/signature/key/kind",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/schemes/stripeSignature/signature/key/kind"
+          }
+        ]
+      }
+    },
+    {
+      "id": "must-act/SignatureVerify",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/schemes/stripeSignature/signature/verify",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/schemes/stripeSignature/signature/verify"
+          }
+        ]
+      }
+    },
+    {
+      "id": "must-act/UnknownKeysPolicy",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/schemas/Task/properties/9/type/unknownKeys/policy",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/schemas/Task/properties/9/type/unknownKeys/policy"
+          }
+        ]
+      }
+    },
+    {
+      "id": "must-act/UnknownQuery",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/operations/0/unknownQuery/policy",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/operations/0/unknownQuery/policy"
+          }
+        ]
+      }
+    },
+    {
+      "id": "operation/feature-unknown",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/operations/0/features",
+          "value": ["streaming"]
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.feature.unsupported",
+            "member": "/operations/0/features/0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "operation/kind-unknown",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/operations/0/kind",
+          "value": "channel"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.kind.unsupported",
+            "member": "/operations/0/kind"
+          }
+        ]
+      }
+    },
+    {
+      "id": "revision/next",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/irRevision",
+          "value": 4
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.revision.mismatch",
+            "member": "/irRevision"
+          }
+        ]
+      }
+    },
+    {
+      "id": "revision/null",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/irRevision",
+          "value": null
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.revision.mismatch",
+            "member": "/irRevision"
+          }
+        ]
+      }
+    },
+    {
+      "id": "standalone-tag/missing",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/scalars/money/type/kind",
+          "remove": true
+        }
+      ],
+      "verdict": {
+        "outcome": "malformed"
+      }
+    },
+    {
+      "id": "standalone-tag/other-variant",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/scalars/money/type/kind",
+          "value": "array"
+        }
+      ],
+      "verdict": {
+        "outcome": "malformed"
+      }
+    },
+    {
+      "id": "standalone-tag/unknown",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/scalars/money/type/kind",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "malformed"
+      }
+    },
+    {
+      "id": "version/null",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/irVersion",
+          "value": null
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.version.unsupported",
+            "member": "/irVersion"
+          }
+        ]
+      }
+    },
+    {
+      "id": "version/string",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/irVersion",
+          "value": "1"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.version.unsupported",
+            "member": "/irVersion"
+          }
+        ]
+      }
+    },
+    {
+      "id": "version/two",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/irVersion",
+          "value": 2
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.version.unsupported",
+            "member": "/irVersion"
+          }
+        ]
+      }
+    }
+  ]
+}
