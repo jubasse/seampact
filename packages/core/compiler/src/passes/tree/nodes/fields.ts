@@ -1,5 +1,5 @@
 import type { IrWriter, Origin } from "@seampact/spec/ir";
-import type { DraftIR, PassContextOf, TreeNode } from "../../../pipeline/seam.js";
+import type { DraftIR, TreeNode } from "../../../pipeline/seam.js";
 import {
   type TreeNodesReportOnce,
   treeNodesError,
@@ -7,6 +7,8 @@ import {
   treeNodesNodeOrigin,
 } from "./diagnostics.js";
 import {
+  type TreeNodesContext,
+  type TreeNodesJson,
   treeNodesIsObject,
   type treeNodesMember,
   treeNodesObjectOf,
@@ -17,10 +19,6 @@ import {
 // schema, a field being required unless its name ends with `?`; a string instead names an object schema whose
 // properties are the fields. Also the check every parameter and header shares: no opaque value or file (ADR 0003
 // section 2).
-
-export type TreeNodesContext = PassContextOf<"tree.nodes">;
-
-type Json = Parameters<typeof treeNodesMember>[0];
 
 /** One operation being written, with what its parts read and report through. */
 export interface TreeNodesSite {
@@ -53,7 +51,7 @@ const OPTIONAL_SUFFIX = "?";
 /** The fields of the map written at `pointer`, each schema compiled in `direction`. */
 export function treeNodesFields(
   site: TreeNodesSite,
-  written: Json | undefined,
+  written: TreeNodesJson | undefined,
   pointer: string,
   direction: IrWriter.Direction,
 ): TreeNodesFields {

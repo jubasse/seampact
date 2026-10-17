@@ -9,14 +9,17 @@ import {
   treeNodesFieldTravels,
 } from "./fields.js";
 import type { TreeNodesPath } from "./paths.js";
-import { treeNodesMember, treeNodesSetting, treeNodesTagHeader } from "./raw.js";
+import {
+  type TreeNodesJson,
+  treeNodesMember,
+  treeNodesSetting,
+  treeNodesTagHeader,
+} from "./raw.js";
 
 // The parameters a route declares (ADR 0002 sections 6 to 8): path parameters from the member ids and `pathParams`
 // along its path, query fields and request headers inherited down the tree (`query` reaching safe routes only),
 // each name once per list; and the policy for undeclared query keys (`unknownQuery`, else
 // `conventions.query.unknownKeys`). Derived parameters are added by later halves.
-
-type Json = Parameters<typeof treeNodesMember>[0];
 
 type ParamList = "path" | "query" | "header";
 
@@ -320,7 +323,10 @@ export function treeNodesUnknownQuery(site: TreeNodesSite): IrWriter.UnknownQuer
   return policyOf(reading?.value, reading?.origin);
 }
 
-function policyOf(value: Json | undefined, origin: Origin | undefined): IrWriter.UnknownQuery {
+function policyOf(
+  value: TreeNodesJson | undefined,
+  origin: Origin | undefined,
+): IrWriter.UnknownQuery {
   if (value === REFUSE) return { policy: "refuse" };
 
   const reason = treeNodesMember(value, "ignore");

@@ -1,10 +1,42 @@
-import type { IrWriter } from "@seampact/spec/ir";
-import type { DraftIR, PassReadonly, TreeNode } from "../../../pipeline/seam.js";
+import type { IrWriter, Origin } from "@seampact/spec/ir";
+import type {
+  ConventionPath,
+  ConventionReading,
+  DraftIR,
+  PassContextOf,
+  PassReadonly,
+  TreeNode,
+} from "../../../pipeline/seam.js";
 import type { JsonObject, JsonValue } from "../../../raw-tree.js";
 
-// Reading the merged raw tree and the draft's schemas: the small helpers every part of tree.nodes shares.
+// Reading the merged raw tree, the conventions and the draft's schemas: the small helpers every part of tree.nodes
+// shares.
 
-type Json = PassReadonly<JsonValue>;
+/** The context tree.nodes runs in. */
+export type TreeNodesContext = PassContextOf<"tree.nodes">;
+
+/** A value of the merged raw tree. */
+export type TreeNodesJson = PassReadonly<JsonValue>;
+
+type Json = TreeNodesJson;
+
+/** The maturity levels, least first (ADR 0002 section 5). */
+export const TREE_NODES_MATURITIES: readonly IrWriter.Maturity[] = [
+  "experimental",
+  "provisional",
+  "stable",
+];
+
+/** A convention as written at its own leaf, with its origin; undefined for a core default or one read elsewhere. */
+export function treeNodesWrittenConvention(
+  context: TreeNodesContext,
+  path: ConventionPath,
+): (ConventionReading & { readonly origin: Origin }) | undefined {
+  const reading = context.conventions.get(path);
+  const pointer = treeNodesPointer("/conventions", ...path.split("."));
+  if (reading?.origin === undefined || reading.origin.pointer !== pointer) return undefined;
+  return { value: reading.value, origin: reading.origin };
+}
 
 export const treeNodesIsObject = (value: Json | undefined): value is PassReadonly<JsonObject> =>
   typeof value === "object" && value !== null && !Array.isArray(value);

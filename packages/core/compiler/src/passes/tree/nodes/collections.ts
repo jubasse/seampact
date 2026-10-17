@@ -1,8 +1,13 @@
 import { type DraftIR, pipelineTreeNodes, type TreeNode } from "../../../pipeline/seam.js";
 import { type TreeNodesReportOnce, treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
-import type { TreeNodesContext } from "./fields.js";
 import { treeNodesIdParam } from "./names.js";
-import { treeNodesObjectOf, treeNodesPointer, treeNodesSetting, treeNodesText } from "./raw.js";
+import {
+  type TreeNodesContext,
+  treeNodesObjectOf,
+  treeNodesPointer,
+  treeNodesSetting,
+  treeNodesText,
+} from "./raw.js";
 
 // The checks of a collection (ADR 0002 section 6): its member scope needs `id`, the member path parameter, and the
 // item property holding the member id (`idProperty`, else the id parameter's name) is a property of its item.

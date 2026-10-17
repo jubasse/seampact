@@ -14,7 +14,7 @@ import {
   treeNodesNodeOrigin,
   treeNodesReportOnce,
 } from "./diagnostics.js";
-import type { TreeNodesContext, TreeNodesSite } from "./fields.js";
+import type { TreeNodesSite } from "./fields.js";
 import { treeNodesInput } from "./input.js";
 import {
   type TreeNodesOperationName,
@@ -28,7 +28,7 @@ import {
 } from "./names.js";
 import { treeNodesParams, treeNodesUnknownQuery } from "./params.js";
 import { treeNodesCheckPathParts, treeNodesPath } from "./paths.js";
-import { treeNodesSetting } from "./raw.js";
+import { type TreeNodesContext, treeNodesSetting } from "./raw.js";
 import { treeNodesFormat, treeNodesResponses } from "./responses.js";
 
 // The operations of the api (ADR 0002 sections 6 and 7): one per route, relay route and `ops` entry, in tree order,

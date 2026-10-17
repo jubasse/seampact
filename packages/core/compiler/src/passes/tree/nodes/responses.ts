@@ -8,7 +8,7 @@ import {
   treeNodesFieldTravels,
 } from "./fields.js";
 import { treeNodesOpOwner, treeNodesOpShorthand } from "./names.js";
-import { treeNodesIsObject, treeNodesMember, treeNodesSetting } from "./raw.js";
+import { type TreeNodesJson, treeNodesIsObject, treeNodesMember, treeNodesSetting } from "./raw.js";
 
 // The success and redirect responses a route declares (ADR 0002 sections 6, 7 and 10), sorted by status: its
 // `responses`, else its `output` (the op's status, or 200), else its `item` (a list), else the op's default from the
@@ -23,8 +23,6 @@ const DEFAULT_MEDIA = "application/json";
 const PAGING_NONE = "none";
 
 type Op = IrWriter.OpShorthand;
-
-type Json = Parameters<typeof treeNodesMember>[0];
 
 // The ops whose default response is the owner's `item`.
 const ITEM_OPS: readonly Op[] = ["get", "create", "update"];
@@ -226,7 +224,7 @@ function writtenResponse(
 // A written annotation the IR has no member for is refused, never dropped (LD-54).
 function refuseUnheldAnnotations(
   site: TreeNodesSite,
-  entry: Json | undefined,
+  entry: TreeNodesJson | undefined,
   pointer: string,
   status: number,
 ): void {
@@ -248,7 +246,7 @@ function refuseUnheldAnnotations(
 // Each header name once, in any case (RFC 9110 section 5.1).
 function responseHeaders(
   site: TreeNodesSite,
-  written: Json | undefined,
+  written: TreeNodesJson | undefined,
   pointer: string,
 ): IrWriter.ResponseHeader[] {
   const headers: IrWriter.ResponseHeader[] = [];

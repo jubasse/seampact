@@ -6,8 +6,14 @@ import {
   type ResolvedConventions,
   type TreeNode,
 } from "../../../pipeline/seam.js";
-import type { JsonValue, RawApi } from "../../../raw-tree.js";
-import { treeNodesIsObject, treeNodesMember, treeNodesSetting, treeNodesText } from "./raw.js";
+import type { RawApi } from "../../../raw-tree.js";
+import {
+  type TreeNodesJson,
+  treeNodesIsObject,
+  treeNodesMember,
+  treeNodesSetting,
+  treeNodesText,
+} from "./raw.js";
 
 // Operation ids and names (ADR 0002 section 6, ADR 0007 sections 2 and 3). An operation's words are a verb (the op,
 // or the route name) and a noun (the plural, the singular, a single's name, or none under a surface root);
@@ -39,7 +45,7 @@ export const treeNodesIsOperation = (node: TreeNode): boolean =>
   node.kind === "route" || node.kind === "relay" || node.kind === "op";
 
 /** The declared schemas of the merged raw tree (`raw.merged.schemas`), which a fields map may name. */
-export type TreeNodesRawSchemas = PassReadonly<JsonValue> | undefined;
+export type TreeNodesRawSchemas = TreeNodesJson | undefined;
 
 /**
  * The id parameter of a collection: the one key of its `id` fields map, or the one property of the schema it names
@@ -208,7 +214,8 @@ function named(node: TreeNode, id: string, segments: string[]): TreeNodesOperati
  * the route, the relay route, or the `ops` entry (`.../tasks/ops/get` in a mapping, `.../tasks/ops/1` in a list).
  * Pure: it reads the raw tree and the conventions only, so tree.schemas names inline route schemas with it before
  * tree.nodes runs (ADR 0007 section 3). An operation whose collection gives no singular for its name, or that sits
- * in the member scope of a collection without `id`, is left out; tree.nodes reports it. The ids are not yet checked unique: tree.nodes reports a clash, after tree.schemas.
+ * in the member scope of a collection without `id`, is left out; tree.nodes reports it. The ids are not yet checked
+ * unique: tree.nodes reports a clash, after tree.schemas.
  */
 export function treeNodesOperationNames(
   raw: PassReadonly<RawApi>,

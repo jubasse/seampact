@@ -1,17 +1,20 @@
 import type { IrWriter, Origin } from "@seampact/spec/ir";
 import { splitName } from "@seampact/spec/naming";
-import { type DraftIR, type PassContextOf, pipelineCopy } from "../../../pipeline/seam.js";
+import { type DraftIR, pipelineCopy } from "../../../pipeline/seam.js";
 import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
-import { treeNodesIsObject, treeNodesMember, treeNodesPointer } from "./raw.js";
+import {
+  TREE_NODES_MATURITIES,
+  type TreeNodesContext,
+  type TreeNodesJson,
+  treeNodesIsObject,
+  treeNodesMember,
+  treeNodesPointer,
+} from "./raw.js";
 
 // The api member (ADR 0002 sections 5 and 6, ADR 0004 section 2): the api file's settings, its surfaces with their
 // resolved prefixes, and the path version. A prefix holds `{version}`, or gets `/v{version}` in front of it, unless
 // its path version is `none`, when it is used as written; under `prefix` a literal version segment is refused, since
 // the version is held once, on the api.
-
-type TreeNodesContext = PassContextOf<"tree.nodes">;
-
-type Json = Parameters<typeof treeNodesMember>[0];
 
 const VERSION_PLACEHOLDER = "{version}";
 const DEFAULT_VERSIONED_PREFIX = "/v{version}";
@@ -20,8 +23,7 @@ const PLACEHOLDER = /\{[^{}]+\}/g;
 
 const API_KINDS: readonly IrWriter.ApiKind[] = ["product", "service"];
 const DEFAULT_API_KIND: IrWriter.ApiKind = "product";
-const MATURITIES: readonly IrWriter.Maturity[] = ["experimental", "provisional", "stable"];
-// The grammar gives `api.maturity` no default; an api that states none promises the least (see the report).
+// The grammar gives `api.maturity` no default and the IR needs one: an api that states none promises the least.
 const DEFAULT_MATURITY: IrWriter.Maturity = "experimental";
 const COMPAT_POLICIES: readonly IrWriter.CompatPolicy[] = ["additive-only", "none"];
 const DEFAULT_COMPAT: IrWriter.CompatPolicy = "none";
@@ -33,10 +35,12 @@ const API_ROLES: readonly IrWriter.ApiRole[] = ["gateway"];
 // Names of the api and its surfaces take the role the after-tree fixture writes.
 const NAME_ROLE = "schema";
 
-const oneOf = <T extends string>(value: Json | undefined, allowed: readonly T[]): T | undefined =>
-  allowed.find((candidate) => candidate === value);
+const oneOf = <T extends string>(
+  value: TreeNodesJson | undefined,
+  allowed: readonly T[],
+): T | undefined => allowed.find((candidate) => candidate === value);
 
-const textOf = (value: Json | undefined): string | undefined =>
+const textOf = (value: TreeNodesJson | undefined): string | undefined =>
   typeof value === "string" ? value : undefined;
 
 /** The resolved prefix of each surface, by surface name. */
@@ -63,7 +67,8 @@ export function treeNodesApi(draft: DraftIR, context: TreeNodesContext): TreeNod
     kind: oneOf(treeNodesMember(written, "kind"), API_KINDS) ?? DEFAULT_API_KIND,
     pathVersion: pathVersionOf(context, versionOrigin),
     ...(role === undefined ? {} : { role }),
-    maturity: oneOf(treeNodesMember(written, "maturity"), MATURITIES) ?? DEFAULT_MATURITY,
+    maturity:
+      oneOf(treeNodesMember(written, "maturity"), TREE_NODES_MATURITIES) ?? DEFAULT_MATURITY,
     ...(caller === undefined ? {} : { caller }),
     compat: {
       policy:
@@ -90,7 +95,7 @@ function requiredOrigin(context: TreeNodesContext, pointer: string): Origin {
 }
 
 // An integer version is the path version; a string one a label, allowed only with every surface unversioned.
-function versionOf(written: Json | undefined): IrWriter.ApiVersion {
+function versionOf(written: TreeNodesJson | undefined): IrWriter.ApiVersion {
   if (typeof written === "number") return { kind: "path", number: written };
   if (typeof written === "string") return { kind: "label", label: written };
   throw new Error("the api file has no version, which the grammar requires");
@@ -107,7 +112,7 @@ function pathVersionOf(context: TreeNodesContext, versionOrigin: Origin): IrWrit
 }
 
 /** The `summary` and `description` written on a mapping. */
-export function treeNodesDocs(written: Json | undefined): IrWriter.Docs {
+export function treeNodesDocs(written: TreeNodesJson | undefined): IrWriter.Docs {
   const summary = textOf(treeNodesMember(written, "summary"));
   const description = textOf(treeNodesMember(written, "description"));
   return {
@@ -116,14 +121,14 @@ export function treeNodesDocs(written: Json | undefined): IrWriter.Docs {
   };
 }
 
-function callerOf(written: Json | undefined): IrWriter.ApiCaller | undefined {
+function callerOf(written: TreeNodesJson | undefined): IrWriter.ApiCaller | undefined {
   const identity = textOf(treeNodesMember(written, "identity"));
   const right = textOf(treeNodesMember(written, "right"));
   return identity === undefined || right === undefined ? undefined : { identity, right };
 }
 
 function documentsOf(
-  written: Json | undefined,
+  written: TreeNodesJson | undefined,
   surfaceIds: readonly string[],
 ): Record<string, IrWriter.ApiDocument> {
   const documents: Record<string, IrWriter.ApiDocument> = {};

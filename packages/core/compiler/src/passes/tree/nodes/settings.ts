@@ -1,22 +1,24 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import {
   type DraftIR,
-  type PassContextOf,
   pipelineConventionLeaves,
   pipelineCopy,
   pipelineTreeNodes,
 } from "../../../pipeline/seam.js";
-import { treeNodesIsObject, treeNodesMember, treeNodesPointer } from "./raw.js";
+import {
+  TREE_NODES_MATURITIES,
+  type TreeNodesContext,
+  type TreeNodesJson,
+  treeNodesIsObject,
+  treeNodesMember,
+  treeNodesPointer,
+  treeNodesWrittenConvention,
+} from "./raw.js";
 
 // The api-wide members of tree.nodes (ADR 0004 section 2): the written conventions with their origins, lint
 // severities and allows, the packs applied, and the services catalogue.
 
-type TreeNodesContext = PassContextOf<"tree.nodes">;
-
-type Json = Parameters<typeof treeNodesMember>[0];
-
 const LINT_SEVERITIES: readonly IrWriter.LintSeverity[] = ["disabled", "warning", "error"];
-const MATURITIES: readonly IrWriter.Maturity[] = ["experimental", "provisional", "stable"];
 
 const PACK_LAYER_PREFIX = "pack:";
 
@@ -45,9 +47,8 @@ export function treeNodesApiSettings(draft: DraftIR, context: TreeNodesContext):
 // (`batch.bodyLimit` from `bodyLimit`), is no written value at that leaf.
 function writeConventions(draft: DraftIR, context: TreeNodesContext): void {
   for (const path of pipelineConventionLeaves) {
-    const reading = context.conventions.get(path);
-    const pointer = treeNodesPointer("/conventions", ...path.split("."));
-    if (reading?.origin === undefined || reading.origin.pointer !== pointer) continue;
+    const reading = treeNodesWrittenConvention(context, path);
+    if (reading === undefined) continue;
     draft.conventions[path] = {
       value: pipelineCopy(reading.value),
       origin: pipelineCopy(reading.origin),
@@ -107,13 +108,13 @@ function lintAllows(context: TreeNodesContext): IrWriter.LintAllow[] {
   return allows;
 }
 
-type AddAllows = (owner: Json | undefined, pointer: string, onNode: boolean) => void;
+type AddAllows = (owner: TreeNodesJson | undefined, pointer: string, onNode: boolean) => void;
 
 // The schema positions of a node (ADR 0002 sections 4 and 7): an inline schema there holds its own allows.
 const ROUTE_SCHEMA_POSITIONS = ["input", "output", "item"] as const;
 const ROUTE_FIELDS_MAPS = ["id", "pathParams", "query", "headers"] as const;
 
-function addRoutePositionAllows(settings: Json, pointer: string, add: AddAllows): void {
+function addRoutePositionAllows(settings: TreeNodesJson, pointer: string, add: AddAllows): void {
   for (const position of ROUTE_SCHEMA_POSITIONS)
     addInlineSchemaAllows(treeNodesMember(settings, position), `${pointer}/${position}`, add);
   for (const map of ROUTE_FIELDS_MAPS)
@@ -129,20 +130,28 @@ function addRoutePositionAllows(settings: Json, pointer: string, add: AddAllows)
 }
 
 // A schema name holds no allow of its own; its declaration does.
-function addInlineSchemaAllows(schema: Json | undefined, pointer: string, add: AddAllows): void {
+function addInlineSchemaAllows(
+  schema: TreeNodesJson | undefined,
+  pointer: string,
+  add: AddAllows,
+): void {
   if (!treeNodesIsObject(schema)) return;
   add(schema, pointer, false);
   addNestedAllows(schema, pointer, add);
 }
 
-function addFieldsMapAllows(fields: Json | undefined, pointer: string, add: AddAllows): void {
+function addFieldsMapAllows(
+  fields: TreeNodesJson | undefined,
+  pointer: string,
+  add: AddAllows,
+): void {
   if (!treeNodesIsObject(fields)) return;
   for (const [name, field] of Object.entries(fields))
     addInlineSchemaAllows(field, treeNodesPointer(pointer, name), add);
 }
 
 // The allows below a schema: on each property, list item, variant and member, at any depth (ADR 0003).
-function addNestedAllows(schema: Json | undefined, pointer: string, add: AddAllows): void {
+function addNestedAllows(schema: TreeNodesJson | undefined, pointer: string, add: AddAllows): void {
   for (const member of NESTED_SCHEMA_MAPS) {
     const entries = treeNodesMember(schema, member);
     if (!treeNodesIsObject(entries)) continue;
@@ -185,10 +194,12 @@ function writeServices(draft: DraftIR, context: TreeNodesContext): void {
   const written = treeNodesMember(context.raw.merged, "services");
   if (!treeNodesIsObject(written)) return;
 
-  // A service that states no maturity is as mature as the api it serves (see the report).
+  // A service that states no maturity is as mature as the api it serves: the grammar states none for it.
   const apiMaturity = draft.api?.maturity;
   for (const [id, service] of Object.entries(written)) {
-    const stated = MATURITIES.find((level) => level === treeNodesMember(service, "maturity"));
+    const stated = TREE_NODES_MATURITIES.find(
+      (level) => level === treeNodesMember(service, "maturity"),
+    );
     const maturity = stated ?? apiMaturity;
     const origin = context.origin(treeNodesPointer("/services", id));
     if (maturity === undefined || origin === undefined)

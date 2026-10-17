@@ -3,9 +3,9 @@ import { operationId, splitName } from "@seampact/spec/naming";
 import type { ResolvedConventions, TreeNode } from "../../../pipeline/seam.js";
 import type { TreeNodesSurfacePrefixes } from "./api.js";
 import { treeNodesError, treeNodesLocate, treeNodesNodeOrigin } from "./diagnostics.js";
-import type { TreeNodesContext, TreeNodesSite } from "./fields.js";
+import type { TreeNodesSite } from "./fields.js";
 import { treeNodesIdParam, treeNodesOpShorthand } from "./names.js";
-import { treeNodesText } from "./raw.js";
+import { type TreeNodesContext, treeNodesText } from "./raw.js";
 
 // Operation paths (ADR 0002 section 6): the surface's resolved prefix, then one segment per node down to the route.
 // A node's segment is its name in `conventions.pathCase`, or its `path` (relative, possibly empty or several
