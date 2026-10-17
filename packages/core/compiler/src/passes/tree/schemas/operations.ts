@@ -188,6 +188,8 @@ export function treeSchemasCompileVersionProperties(
 ): void {
   const routesBySchema = new Map<string, BodyRoute[]>();
 
+  for (const node of nodes) checkVersionField(compiler, node);
+
   for (const node of nodes) {
     if (node.kind === "relay" || !names.has(node.pointer)) continue;
     const pointer = treeSchemasPointer(node.pointer, "input");
@@ -246,6 +248,20 @@ function addVersionProperty(
     return;
   }
 
+  const sharedAt = useOutsideInputs(compiler, schema, routes);
+
+  if (sharedAt !== undefined) {
+    reporter.error({
+      rule: "concurrency-version",
+      pointer: versioned.pointer,
+      message: `the input schema '${schema}' is used outside the inputs of its versioned routes, which would all take '${version.property}'`,
+      fix: "declare a schema for the input of the versioned routes alone",
+      related: [{ pointer: sharedAt, message: `'${schema}' is used here too` }],
+    });
+
+    return;
+  }
+
   const properties = compiler.objectProperties({ kind: "ref", schema });
 
   if (properties === undefined)
@@ -283,20 +299,71 @@ function addVersionProperty(
   );
 }
 
-// The version is typed like the item property it is compared with.
-function fieldType(compiler: TreeSchemasCompiler, version: Version): IrWriter.TypeUse | undefined {
-  const item = compiler.uses.get(treeSchemasPointer(version.owner.pointer, "item"));
-  const field = compiler
-    .objectProperties(item)
-    ?.find((candidate) => candidate.name === version.field);
+// Where a schema is used besides the inputs of the given routes: another schema position, or a schema
+// that refers to it. Undefined when those inputs are its only uses.
+function useOutsideInputs(
+  compiler: TreeSchemasCompiler,
+  schema: string,
+  routes: readonly BodyRoute[],
+): string | undefined {
+  const own = new Set([treeSchemasPointer("/schemas", schema), ...routes.map((route) => route.pointer)]);
 
-  if (field !== undefined) return pipelineCopy(field.type);
-  compiler.reporter.error({
-    rule: "concurrency-field",
-    pointer: treeSchemasPointer(version.owner.pointer, "concurrency", "field"),
-    message: `the item has no property '${version.field}' to compare the version with`,
-    fix: "name a property of the item schema in 'field'",
-  });
+  for (const [pointer, use] of compiler.uses) {
+    if (!own.has(pointer) && refersToSchema(use, schema)) return pointer;
+  }
+
+  for (const [id, written] of compiler.schemas) {
+    if (refersToSchema(written, schema))
+      return compiler.writtenAt.get(id) ?? treeSchemasPointer("/schemas", id);
+  }
 
   return undefined;
+}
+
+// A ref type use and a union variant both name their schema in a `schema` member.
+function refersToSchema(value: unknown, schema: string): boolean {
+  if (Array.isArray(value)) return value.some((entry) => refersToSchema(entry, schema));
+
+  if (typeof value !== "object" || value === null) return false;
+
+  if ("schema" in value && value.schema === schema) return true;
+
+  return Object.values(value).some((entry) => refersToSchema(entry, schema));
+}
+
+// Grammar section 6: the item of a `concurrency` owner has the property `field`, whatever the version source.
+function checkVersionField(compiler: TreeSchemasCompiler, owner: TreeNode): void {
+  const concurrency = owner.settings.concurrency;
+
+  if (!treeSchemasIsObject(concurrency) || typeof concurrency.field !== "string") return;
+  const field = concurrency.field;
+  const itemPointer = treeSchemasPointer(owner.pointer, "item");
+
+  // A written item that did not compile is reported where it is written.
+  if (Object.hasOwn(owner.settings, "item") && !compiler.uses.has(itemPointer)) return;
+
+  if (itemProperty(compiler, owner, field) !== undefined) return;
+  compiler.reporter.error({
+    rule: "concurrency-field",
+    pointer: treeSchemasPointer(owner.pointer, "concurrency", "field"),
+    message: `the item has no property '${field}' to compare the version with`,
+    fix: "name a property of the item schema in 'field'",
+  });
+}
+
+function itemProperty(
+  compiler: TreeSchemasCompiler,
+  owner: TreeNode,
+  field: string,
+): IrWriter.Property | undefined {
+  const item = compiler.uses.get(treeSchemasPointer(owner.pointer, "item"));
+
+  return compiler.objectProperties(item)?.find((candidate) => candidate.name === field);
+}
+
+// The version is typed like the item property it is compared with; a missing one is reported per owner.
+function fieldType(compiler: TreeSchemasCompiler, version: Version): IrWriter.TypeUse | undefined {
+  const field = itemProperty(compiler, version.owner, version.field);
+
+  return field === undefined ? undefined : pipelineCopy(field.type);
 }

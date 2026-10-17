@@ -267,7 +267,7 @@ function codeNamesOf(
     const name = codeName?.name;
     const at = codeName?.pointer ?? valuesPointer;
     const result = segmentsOf(value, "enumValue", {
-      codeName: typeof name === "string" ? name : undefined,
+      ...(typeof name === "string" ? { codeName: name } : {}),
       position: index + 1,
     });
 
@@ -280,6 +280,7 @@ function codeNamesOf(
       });
       continue;
     }
+
     const { segments } = result;
 
     if (typeof name === "string") codeNames[value] = { segments, role: "enumMember" };

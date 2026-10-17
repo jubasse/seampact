@@ -230,4 +230,64 @@ ${routes}`);
     expect(located(opaque)).toEqual([["concurrency-version", `${TASKS}/ops/update/input`]]);
     expect(located(missing)).toEqual([["concurrency-field", `${TASKS}/concurrency/field`]]);
   });
+
+  test("an input schema used by an output or by another schema is refused and left unchanged", () => {
+    const item = versioned(`        ops: { update: { input: Task } }
+`);
+
+    expect(located(item)).toEqual([["concurrency-version", `${TASKS}/ops/update/input`]]);
+    expect(item.diagnostics[0]?.related?.[0]?.origin.pointer).toBe(`${TASKS}/item`);
+    expect(propertiesOf(item, "Task").map((p) => p.name)).toEqual(["taskId", "version"]);
+
+    const nested = versioned(`        ops:
+          update: { input: UpdateTask }
+          get: { output: { type: object, properties: { draft: UpdateTask } } }
+`);
+
+    expect(located(nested)).toEqual([["concurrency-version", `${TASKS}/ops/update/input`]]);
+    expect(nested.diagnostics[0]?.related?.[0]?.origin.pointer).toBe(`${TASKS}/ops/get/output`);
+    expect(propertiesOf(nested, "UpdateTask").map((p) => p.name)).toEqual(["title"]);
+  });
+
+  test("a missing field is refused once per owner, whatever the version source", () => {
+    const owner = (version: string, ops: string) =>
+      treeSchemasRunApi(`${ITEM}  OtherUpdate: { type: object, properties: { note: { type: string } } }
+surfaces:
+  app:
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: TaskId }
+        item: Task
+        concurrency: { version: ${version}, field: nope }
+        ops: ${ops}
+`);
+    const missing = [["concurrency-field", `${TASKS}/concurrency/field`]];
+
+    expect(located(owner("query.expectedVersion", "{ delete: {} }"))).toEqual(missing);
+    expect(located(owner("header.If-Match", "{ delete: {} }"))).toEqual(missing);
+    expect(located(owner("body.expectedVersion", "{ delete: {} }"))).toEqual(missing);
+    expect(
+      located(
+        owner(
+          "body.expectedVersion",
+          "{ update: { input: UpdateTask }, delete: { input: OtherUpdate } }",
+        ),
+      ),
+    ).toEqual(missing);
+
+    const unknownItem = treeSchemasRunApi(`${ITEM}surfaces:
+  app:
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: TaskId }
+        item: Missing
+        concurrency: { version: query.expectedVersion, field: nope }
+        ops: { delete: {} }
+`);
+
+    expect(located(unknownItem).map(([rule]) => rule)).not.toContain("concurrency-field");
+    expect(unknownItem.diagnostics).not.toEqual([]);
+  });
 });
