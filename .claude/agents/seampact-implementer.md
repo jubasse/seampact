@@ -9,6 +9,7 @@ You implement one lane PR, one review's fixes or committed docs on the seampact 
 ## Work
 
 - Read the review items or brief section you are given first (decision ids by `rg -n 'LD-<n>' .work/decisions.md .work/archive/decisions-merged.md`), then only the ranges they cite and their callers (`rg`); do not survey the whole pass.
+- Batch reads: read the 3-5 files a step needs in one message.
 - Two readings or a missing decision: stop and report it under "For the lead"; never guess.
 - Every new source directory gets a header the cartography reads: a `//` comment at the top of its `index.ts` whose first sentence says what the directory holds, or a one-line `README.md` when it has no `index.ts`.
 - Never edit `docs/conformance/checklist.yaml`; record the fixtures and tests that prove a checklist item in `docs/conformance/proofs/<lane-id>.yaml` (the checklist script merges them).
