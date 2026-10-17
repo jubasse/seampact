@@ -1,8 +1,8 @@
-import type { IrWriter } from "@seampact/spec/ir";
+import type { IrWriter, Origin } from "@seampact/spec/ir";
 import { type DraftConcurrency, pipelineCopy, type TreeNode } from "../../../pipeline/seam.js";
 import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
 import type { TreeNodesSite } from "./fields.js";
-import { treeNodesOpOwner, treeNodesOpShorthand } from "./names.js";
+import { TREE_NODES_DELETE_OP, treeNodesOpOwner, treeNodesOpShorthand } from "./names.js";
 import { treeNodesMember, treeNodesObjectOf, treeNodesSetting, treeNodesText } from "./raw.js";
 
 // Write semantics (ADR 0002 section 6, FR-2): `owner: caller` on a collection or single, and the version a write
@@ -15,11 +15,15 @@ const INHERIT = "inherit";
 
 // The ops that inherit the resource's concurrency.
 const VERSIONED_OPS: readonly IrWriter.OpShorthand[] = ["update", "delete"];
-const DELETE_OP: IrWriter.OpShorthand = "delete";
 
 const VERSION_SOURCE = /^(body|query|header)\.(.+)$/;
 
 type VersionPlace = "body" | "query" | "header";
+
+interface VersionSource {
+  readonly in: VersionPlace;
+  readonly name: string;
+}
 
 /** The collection or single an operation writes: the owner of its op, else its nearest one. */
 function resourceNodeOf(node: TreeNode): TreeNode | undefined {
@@ -47,17 +51,19 @@ export function treeNodesOwner(site: TreeNodesSite): IrWriter.Owner | undefined 
 
 /**
  * The version an operation compares: its resource's `concurrency`, for an `update` or `delete` op, and for a member
- * route with `concurrency: inherit`. A delete without input reads a body source from the query (A33).
+ * route with `concurrency: inherit`. A delete without input reads a body source from the query (A33). The
+ * resource's declaration itself is checked once, whichever of its operations take the version.
  */
 export function treeNodesConcurrency(
   site: TreeNodesSite,
   input: IrWriter.TypeUse | undefined,
-  queryNames: readonly string[],
-  headerNames: readonly string[],
+  params: IrWriter.Params,
 ): DraftConcurrency | undefined {
   const node = site.node;
   const op = treeNodesOpShorthand(node);
   const optsIn = treeNodesSetting(node, "concurrency") === INHERIT;
+
+  checkDeclaration(site, resourceNodeOf(node));
 
   if (op !== undefined && !VERSIONED_OPS.includes(op)) return undefined;
 
@@ -86,11 +92,10 @@ export function treeNodesConcurrency(
       `the concurrency of ${resource.pointer} has no version and field the grammar admits`,
     );
 
-  checkOwnerAlone(site, resource);
-  checkItemField(site, resource, field);
-  checkNotRestated(site, resource, source, { input, queryNames, headerNames });
+  checkNotRestated(site, source, input, params);
 
-  const readsBodyWithoutOne = source.in === "body" && op === DELETE_OP && input === undefined;
+  const readsBodyWithoutOne =
+    source.in === "body" && op === TREE_NODES_DELETE_OP && input === undefined;
   const version: IrWriter.ValueSource = readsBodyWithoutOne
     ? { in: "query", name: source.name }
     : { in: source.in, name: source.name };
@@ -98,9 +103,19 @@ export function treeNodesConcurrency(
   return { version, field };
 }
 
-function parseSource(
-  written: unknown,
-): { readonly in: VersionPlace; readonly name: string } | undefined {
+// ADR 0002 section 6: a caller-owned record has no version, and `field` names an item property.
+function checkDeclaration(site: TreeNodesSite, resource: TreeNode | undefined): void {
+  if (resource === undefined) return;
+
+  const field = treeNodesMember(treeNodesSetting(resource, "concurrency"), "field");
+
+  if (typeof field !== "string") return;
+
+  checkOwnerAlone(site, resource);
+  checkItemField(site, resource, field);
+}
+
+function parseSource(written: unknown): VersionSource | undefined {
   const match = typeof written === "string" ? VERSION_SOURCE.exec(written) : null;
   const place = match?.[1];
   const name = match?.[2];
@@ -133,7 +148,6 @@ function reportNothingToInherit(site: TreeNodesSite, why: string): void {
   );
 }
 
-// ADR 0002 section 6: a caller-owned record has no version and no 409.
 function checkOwnerAlone(site: TreeNodesSite, resource: TreeNode): void {
   if (treeNodesText(resource, "owner") !== OWNER_CALLER) return;
 
@@ -172,53 +186,59 @@ function checkItemField(site: TreeNodesSite, resource: TreeNode, field: string):
   );
 }
 
-interface RestatedPlaces {
-  readonly input: IrWriter.TypeUse | undefined;
-  readonly queryNames: readonly string[];
-  readonly headerNames: readonly string[];
-}
-
-// ADR 0002 section 6: the compiler adds the version parameter, so an input or a parameter declaring it is an error.
-// A derived body property (tree.schemas adds it) carries `derivedFrom`; a declared one does not.
+// ADR 0002 section 6: the compiler adds the version parameter, so an input or a parameter declaring it is an error,
+// located at the field that declares it. A derived body property (tree.schemas adds it) carries `derivedFrom`; a
+// declared one does not.
 function checkNotRestated(
   site: TreeNodesSite,
-  resource: TreeNode,
-  source: { readonly in: VersionPlace; readonly name: string },
-  places: RestatedPlaces,
+  source: VersionSource,
+  input: IrWriter.TypeUse | undefined,
+  params: IrWriter.Params,
 ): void {
-  if (!isRestated(site, source, places)) return;
+  const restated = restatingOrigin(site, source, input, params);
 
-  const pointer = `${resource.pointer}/concurrency/version`;
+  if (restated === undefined) return;
 
-  site.context.report(
+  // A shared input schema restates the version for each of its operations at one pointer: reported once.
+  site.once(
+    `concurrency-input:${restated.layer}#${restated.pointer}`,
     treeNodesError({
       rule: "concurrency-input",
-      origin: treeNodesNodeOrigin(site.context.origin(pointer) ?? resource.origin),
+      origin: treeNodesNodeOrigin(restated),
       message: `The operation ${site.operationId} declares ${source.in}.${source.name}, the version its concurrency adds.`,
       fix: `Remove ${source.name} from the operation; concurrency adds it.`,
     }),
   );
 }
 
-function isRestated(
+function restatingOrigin(
   site: TreeNodesSite,
-  source: { readonly in: VersionPlace; readonly name: string },
-  places: RestatedPlaces,
-): boolean {
-  if (source.in === "query") return places.queryNames.includes(source.name);
+  source: VersionSource,
+  input: IrWriter.TypeUse | undefined,
+  params: IrWriter.Params,
+): Origin | undefined {
+  if (source.in === "query")
+    return originOf(
+      site,
+      params.query.find((param) => param.name === source.name),
+    );
 
   if (source.in === "header") {
     const name = source.name.toLowerCase();
 
-    return places.headerNames.some((header) => header.toLowerCase() === name);
+    return originOf(
+      site,
+      params.header.find((param) => param.name.toLowerCase() === name),
+    );
   }
 
   const [first] = source.name.split(".");
-  const schema = treeNodesObjectOf(site.draft, places.input);
+  const schema = treeNodesObjectOf(site.draft, input);
 
-  return (
-    schema?.properties.some(
-      (property) => property.name === first && property.derivedFrom === undefined,
-    ) ?? false
-  );
+  return schema?.properties.find(
+    (property) => property.name === first && property.derivedFrom === undefined,
+  )?.origin;
 }
+
+const originOf = (site: TreeNodesSite, param: IrWriter.Param | undefined): Origin | undefined =>
+  param === undefined ? undefined : (param.origin ?? site.node.origin);

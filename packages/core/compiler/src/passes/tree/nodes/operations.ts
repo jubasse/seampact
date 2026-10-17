@@ -30,6 +30,7 @@ import {
   treeNodesUpstream,
 } from "./lifecycle.js";
 import {
+  TREE_NODES_BATCH_OP,
   type TreeNodesOperationName,
   type TreeNodesRawSchemas,
   treeNodesIdlessCollection,
@@ -43,7 +44,7 @@ import { treeNodesPaging } from "./paging.js";
 import { treeNodesParams, treeNodesUnknownQuery } from "./params.js";
 import { treeNodesCheckPathParts, treeNodesPath } from "./paths.js";
 import { type TreeNodesContext, treeNodesSetting } from "./raw.js";
-import { treeNodesFormat, treeNodesIsList, treeNodesResponses } from "./responses.js";
+import { treeNodesFormat, treeNodesResponses } from "./responses.js";
 import { treeNodesConcurrency, treeNodesOwner } from "./writes.js";
 
 // The operations of the api (ADR 0002 sections 6 and 7): one per route, relay route and `ops` entry, in tree order,
@@ -54,8 +55,7 @@ const OPERATION_KIND = "httpOperation";
 
 const HTTP_METHODS: readonly IrWriter.HttpMethod[] = ["get", "post", "put", "patch", "delete"];
 
-// ADR 0002 section 6: a batch is a safe read sent as POST.
-const SAFE_OP: IrWriter.OpShorthand = "batch";
+// ADR 0002 section 6: a get is safe, and so is a batch, a read sent as POST.
 const SAFE_METHOD: IrWriter.HttpMethod = "get";
 
 // ADR 0002 section 6: the item schema holds fields a client never sends, so these ops have no default input.
@@ -191,9 +191,9 @@ function operationOf(
   const op = treeNodesOpShorthand(node);
   const resource = resourceOf(node, context.raw.merged.schemas);
   const method = methodOf(node, op, site);
-  const safe = method === SAFE_METHOD || op === SAFE_OP;
+  const safe = method === SAFE_METHOD || op === TREE_NODES_BATCH_OP;
   const input =
-    op === SAFE_OP && treeNodesSetting(node, "input") === undefined
+    op === TREE_NODES_BATCH_OP && treeNodesSetting(node, "input") === undefined
       ? treeNodesBatchInput(node, context)
       : treeNodesInput(node, name.id, draft, context);
 
@@ -223,7 +223,7 @@ function operationOf(
     ...(input === undefined ? {} : { input }),
     // A relay route's shape (format, responses, write semantics, paging) is copied from the operation it relays.
     ...(node.kind === "relay" ? { responses: [] } : shapeOf(site, input?.schema, params)),
-    ...lifecycleOf(site, op === SAFE_OP),
+    ...lifecycleOf(site),
     origin: pipelineCopy(node.origin),
   };
 }
@@ -236,13 +236,9 @@ function shapeOf(
 ): DraftOperation {
   const format = treeNodesFormat(site);
   const responses = treeNodesResponses(site, format);
-  const queryNames = params.query.map((param) => param.name);
-  const headerNames = params.header.map((param) => param.name);
-  const isList = treeNodesIsList(site.node);
-  const item = isList ? responses.find((response) => response.body !== undefined)?.body : undefined;
   const owner = treeNodesOwner(site);
-  const concurrency = treeNodesConcurrency(site, input, queryNames, headerNames);
-  const paging = treeNodesPaging(site, isList, item, queryNames);
+  const concurrency = treeNodesConcurrency(site, input, params);
+  const paging = treeNodesPaging(site, responses, params.query);
   const degradable = treeNodesDegradable(site, format, responses);
 
   return {
@@ -257,8 +253,8 @@ function shapeOf(
 }
 
 // The lifecycle members (ADR 0002 section 10), docs and extensions, on every operation, a relay route's too.
-function lifecycleOf(site: TreeNodesSite, isBatch: boolean): DraftOperation {
-  const budgetMs = treeNodesBudgetMs(site, isBatch);
+function lifecycleOf(site: TreeNodesSite): DraftOperation {
+  const budgetMs = treeNodesBudgetMs(site);
   const deprecated = treeNodesDeprecated(site);
   const maturity = treeNodesStatedMaturity(site);
 

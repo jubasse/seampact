@@ -35,14 +35,9 @@ export function treeNodesExamples(
     const pointer = treeNodesPointer(`${site.node.pointer}/examples`, name);
 
     examples[name] = example;
-    checkExample(
-      site,
-      { name, pointer, example, value: treeNodesMember(entry, "value") },
-      {
-        input,
-        responses,
-      },
-    );
+    const value = treeNodesMember(entry, "value");
+
+    checkExample(site, { name, pointer, example, value }, { input, responses });
   }
 
   return examples;
@@ -97,14 +92,21 @@ function checkExample(site: TreeNodesSite, written: WrittenExample, targets: Exa
   }
 
   const response = targets.responses.find((candidate) => candidate.status === example.status);
+  const status = String(example.status);
 
-  if (response?.body === undefined) {
+  if (response === undefined) {
     reportTarget(
       site,
       name,
       pointer,
-      `targets the status ${String(example.status)}, which answers no body`,
+      `targets the status ${status}, which the route does not declare`,
     );
+
+    return;
+  }
+
+  if (response.body === undefined) {
+    reportTarget(site, name, pointer, `targets the status ${status}, which answers no body`);
 
     return;
   }

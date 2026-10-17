@@ -6,6 +6,7 @@ import {
   TREE_NODES_FIXTURES,
   treeNodesApiOf,
   treeNodesDraftWith,
+  treeNodesHeaderUnion,
   treeNodesLoadDirectory,
   treeNodesLoadInline,
   treeNodesObjectSchema,
@@ -554,9 +555,9 @@ test("tree.nodes diagnostics are located: shapes", () => {
     diagnostics.map(({ rule, origin }) => [rule.replace("seampact/tree/", ""), origin.pointer]),
   ).toEqual([
     ["owner-concurrency", `${ROUTES}/drafts/concurrency`],
-    ["concurrency-input", `${ROUTES}/drafts/concurrency/version`],
-    ["paging-token", `${ROUTES}/notes/ops/list/paging`],
+    ["concurrency-input", "/schemas/NewNote/properties/expectedVersion"],
     ["concurrency-field", `${ROUTES}/notes/concurrency/field`],
+    ["paging-token", `${ROUTES}/notes/ops/list/paging`],
     ["sort-key", `${ROUTES}/tags/ops/list/sortable/0`],
     ["paging-list", `${ROUTES}/tags/ops/get/paging`],
     ["concurrency-inherit", `${ROUTES}/tags/member/routes/flag/concurrency`],
@@ -564,7 +565,7 @@ test("tree.nodes diagnostics are located: shapes", () => {
     ["paging-style", `${ROUTES}/unpaged`],
     ["paging-limit", `${ROUTES}/limited/paging`],
     ["paging-sort", `${ROUTES}/searched/sortable`],
-    ["paging-param", `${ROUTES}/queried`],
+    ["paging-param", `${ROUTES}/queried/query/cursor?`],
     ["degradable-path", `${ROUTES}/partial/degradable/0`],
     ["degradable-path", `${ROUTES}/partial/degradable/1`],
     ["degradable-header", `${ROUTES}/partial/degradable`],
@@ -667,9 +668,9 @@ surfaces:
   ).toEqual([
     ["paging-unknown", "/conventions/paging/default"],
     ["concurrency-inherit", `${ROUTES}/tasks/collection/routes/sweep/concurrency`],
-    ["concurrency-input", `${ROUTES}/tasks/concurrency/version`],
+    ["concurrency-input", `${ROUTES}/tasks/ops/delete/query/version?`],
     ["example-value", `${ROUTES}/files/ops/batch/examples/listed/value`],
-    ["concurrency-input", `${ROUTES}/files/concurrency/version`],
+    ["concurrency-input", `${ROUTES}/files/ops/update/headers/if-match`],
     ["example-target", `${ROUTES}/files/ops/update/examples/none`],
     ["paging-limit", `${ROUTES}/cursors/paging`],
     ["paging-sort", `${ROUTES}/pages/sortable`],
@@ -679,4 +680,178 @@ surfaces:
   expect(run.diagnostics.map(({ message }) => message)).toContain(
     "The list cursors pages with cursor, but its limit role needs a maxLimit.",
   );
+});
+
+test("paging limits: a default from one place is lowered to a maxLimit from the other", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+${CURSOR}
+conventions:
+  paging: { default: cursor, maxLimit: 100, defaultLimit: 50 }
+schemas:
+  Note: { type: object, properties: { title: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      lowered: { method: get, item: Note, paging: { cursor: { maxLimit: 20 } } }
+      raised: { method: get, item: Note, paging: { cursor: { defaultLimit: 150 } } }
+`);
+  const routes = ["lowered", "raised"];
+  const treeSchemas = treeNodesStubService({
+    typeUses: Object.fromEntries(routes.map((route) => [`${ROUTES}/${route}/item`, ref("Note")])),
+  });
+  const draft = treeNodesDraftWith(objectSchema("Note", { title: text }));
+  const run = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas, draft });
+  const paging = (id: string) => operation(run.draft.operations, id).paging;
+
+  expect(run.diagnostics).toEqual([]);
+  expect(paging("lowered")).toMatchObject({ maxLimit: 20, defaultLimit: 20 });
+  expect(paging("raised")).toMatchObject({ maxLimit: 100, defaultLimit: 100 });
+});
+
+test("paging limits: a pair written in one place is refused there, a convention fault once", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+${CURSOR}
+conventions:
+  paging: { default: cursor, maxLimit: 10, defaultLimit: 50 }
+schemas:
+  Note: { type: object, properties: { title: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      first: { method: get, item: Note }
+      second: { method: get, item: Note }
+      own: { method: get, item: Note, paging: { cursor: { maxLimit: 5, defaultLimit: 8 } } }
+`);
+  const routes = ["first", "second", "own"];
+  const treeSchemas = treeNodesStubService({
+    typeUses: Object.fromEntries(routes.map((route) => [`${ROUTES}/${route}/item`, ref("Note")])),
+  });
+  const draft = treeNodesDraftWith(objectSchema("Note", { title: text }));
+  const run = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas, draft });
+
+  expect(
+    run.diagnostics.map(({ rule, origin, related }) => [
+      rule,
+      origin.pointer,
+      related.map((entry) => entry.origin.pointer),
+    ]),
+  ).toEqual([
+    [
+      "seampact/tree/paging-limit",
+      "/conventions/paging/defaultLimit",
+      ["/conventions/paging/maxLimit"],
+    ],
+    ["seampact/tree/paging-limit", `${ROUTES}/own/paging`, []],
+  ]);
+  expect(run.diagnostics[1]?.message).toBe(
+    "The list own pages with cursor, but its defaultLimit 8 is above its maxLimit 5.",
+  );
+});
+
+test("paging limits: a limit the convention's style lacks is reported once, at conventions.paging", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+${CURSOR}
+conventions:
+  paging: { default: cursor }
+schemas:
+  Note: { type: object, properties: { title: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      first: { method: get, item: Note }
+      second: { method: get, item: Note }
+`);
+  const routes = ["first", "second"];
+  const treeSchemas = treeNodesStubService({
+    typeUses: Object.fromEntries(routes.map((route) => [`${ROUTES}/${route}/item`, ref("Note")])),
+  });
+  const draft = treeNodesDraftWith(objectSchema("Note", { title: text }));
+  const run = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas, draft });
+
+  expect(run.diagnostics.map(({ rule, origin }) => [rule, origin.pointer])).toEqual([
+    ["seampact/tree/paging-limit", "/conventions/paging/default"],
+  ]);
+});
+
+test("write semantics: a caller-owned resource's concurrency is checked whatever its ops", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+schemas:
+  Id: { type: string }
+  Note: { type: object, properties: { noteId: Id } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: Id }
+        item: Note
+        owner: caller
+        concurrency: { version: header.If-Match, field: nope }
+        ops: { get: {} }
+`);
+  const treeSchemas = treeNodesStubService({
+    typeUses: { [`${ROUTES}/notes/id/noteId`]: text, [`${ROUTES}/notes/item`]: ref("Note") },
+  });
+  const draft = treeNodesDraftWith(objectSchema("Note", { noteId: text }));
+  const run = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas, draft });
+
+  expect(run.diagnostics.map(({ rule, origin }) => [rule, origin.pointer])).toEqual([
+    ["seampact/tree/owner-concurrency", `${ROUTES}/notes/concurrency`],
+    ["seampact/tree/concurrency-field", `${ROUTES}/notes/concurrency/field`],
+  ]);
+});
+
+test("degradable: a path is kept unchecked when the success body is unknown or a union", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+conventions:
+  degradedHeader: X-Degraded
+schemas:
+  Profile: { type: object, properties: { stats: { type: object } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      unanswered: { method: get, output: Profile, degradable: [stats] }
+      either: { method: get, output: Profile, degradable: [stats] }
+`);
+  const treeSchemas = treeNodesStubService({
+    typeUses: { [`${ROUTES}/either/output`]: ref("Shape") },
+  });
+  const draft = treeNodesDraftWith(treeNodesHeaderUnion("Shape", "X-Kind"));
+  const run = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas, draft });
+
+  expect(run.diagnostics).toEqual([]);
+  expect(operation(run.draft.operations, "either").degradable?.paths).toEqual(["stats"]);
+});
+
+test("route examples: a status the route does not declare is named so", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      ping: { method: get, output: { type: string }, examples: { made: { status: 201, value: x } } }
+`);
+  const treeSchemas = treeNodesStubService({ typeUses: { [`${ROUTES}/ping/output`]: text } });
+  const run = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas });
+
+  expect(
+    run.diagnostics.map(({ rule, origin, message }) => [rule, origin.pointer, message]),
+  ).toEqual([
+    [
+      "seampact/tree/example-target",
+      `${ROUTES}/ping/examples/made`,
+      "The example made of ping targets the status 201, which the route does not declare.",
+    ],
+  ]);
 });

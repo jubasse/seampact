@@ -2,7 +2,13 @@ import type { IrWriter } from "@seampact/spec/ir";
 import { pipelineCopy } from "../../../pipeline/seam.js";
 import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
 import type { TreeNodesSite } from "./fields.js";
-import { treeNodesIsObject, treeNodesMember, treeNodesObjectOf, treeNodesSetting } from "./raw.js";
+import {
+  treeNodesIsObject,
+  treeNodesMember,
+  treeNodesObjectOf,
+  treeNodesSchema,
+  treeNodesSetting,
+} from "./raw.js";
 
 // `degradable` (ADR 0002 section 10, SCN-085): paths of optional properties of the success data, each a dotted
 // path through object properties. A degraded response says which parts it left out: in the format's `degraded`
@@ -59,6 +65,18 @@ function formatFillsDegraded(site: TreeNodesSite, format: string): boolean {
   );
 }
 
+// A body the schema service does not answer yet, or a union whose variants differ, has no property list to check a
+// path against: the path is kept unchecked.
+function isUnknownShape(site: TreeNodesSite, use: IrWriter.TypeUse | undefined): boolean {
+  if (use === undefined) return true;
+
+  if (use.kind !== "ref") return false;
+
+  const schema = treeNodesSchema(site.draft, use.schema);
+
+  return schema === undefined || schema.kind === "union";
+}
+
 // Each segment names a property of the object reached so far; the last one must be optional.
 function checkPath(
   site: TreeNodesSite,
@@ -70,7 +88,11 @@ function checkPath(
   let property: IrWriter.Property | undefined;
 
   for (const segment of path.split(".")) {
-    const schema = treeNodesObjectOf(site.draft, use?.kind === "array" ? use.items : use);
+    const reached = use?.kind === "array" ? use.items : use;
+
+    if (isUnknownShape(site, reached)) return;
+
+    const schema = treeNodesObjectOf(site.draft, reached);
 
     property = schema?.properties.find((candidate) => candidate.name === segment);
 

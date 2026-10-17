@@ -7,7 +7,13 @@ import {
   treeNodesFields,
   treeNodesFieldTravels,
 } from "./fields.js";
-import { treeNodesOpOwner, treeNodesOpShorthand } from "./names.js";
+import {
+  TREE_NODES_BATCH_OP,
+  TREE_NODES_DELETE_OP,
+  TREE_NODES_LIST_OP,
+  treeNodesOpOwner,
+  treeNodesOpShorthand,
+} from "./names.js";
 import {
   type TreeNodesJson,
   treeNodesIsObject,
@@ -26,15 +32,14 @@ const DEFAULT_STATUS = 200;
 const NO_CONTENT = 204;
 const REDIRECT_STATUSES: readonly number[] = [301, 302, 303, 307, 308];
 const DEFAULT_MEDIA = "application/json";
-const PAGING_NONE = "none";
+
+/** `paging: none`: a list served whole. */
+export const TREE_NODES_PAGING_NONE = "none";
 
 type Op = IrWriter.OpShorthand;
 
 // The ops whose default response is the owner's `item`.
 const ITEM_OPS: readonly Op[] = ["get", "create", "update"];
-const LIST_OP: Op = "list";
-const DELETE_OP: Op = "delete";
-const BATCH_OP: Op = "batch";
 
 // ADR 0006 section 5: a download and a redirect bypass the format.
 const BYPASSING_SHAPES: readonly IrWriter.ResponseShape[] = ["binary", "redirect"];
@@ -100,7 +105,7 @@ export function treeNodesResponses(site: TreeNodesSite, format: string): IrWrite
 export function treeNodesIsList(node: TreeNode): boolean {
   const op = treeNodesOpShorthand(node);
 
-  if (op !== undefined) return op === LIST_OP;
+  if (op !== undefined) return op === TREE_NODES_LIST_OP;
 
   return (
     treeNodesSetting(node, "responses") === undefined &&
@@ -202,12 +207,12 @@ function checkNoContentBody(site: TreeNodesSite, response: IrWriter.Response): v
 function opResponses(site: TreeNodesSite, op: Op, media: string): IrWriter.Response[] {
   const status = opStatus(site, op);
 
-  if (op === DELETE_OP) return [emptyResponse(status, site.node.origin)];
+  if (op === TREE_NODES_DELETE_OP) return [emptyResponse(status, site.node.origin)];
 
   const owner = treeNodesOpOwner(site.node);
-  const isList = op === LIST_OP;
+  const isList = op === TREE_NODES_LIST_OP;
 
-  if (owner === undefined || (!isList && op !== BATCH_OP && !ITEM_OPS.includes(op)))
+  if (owner === undefined || (!isList && op !== TREE_NODES_BATCH_OP && !ITEM_OPS.includes(op)))
     throw new Error(`the op at ${site.node.pointer} has no owner or no default response`);
 
   const itemWriter = treeNodesSetting(site.node, "item") === undefined ? owner : site.node;
@@ -218,7 +223,7 @@ function opResponses(site: TreeNodesSite, op: Op, media: string): IrWriter.Respo
     return [];
   }
 
-  if (op === BATCH_OP) return batchTable(site, itemWriter, status, media);
+  if (op === TREE_NODES_BATCH_OP) return batchTable(site, itemWriter, status, media);
 
   const shape = isList ? listShape(site.node) : "item";
 
@@ -262,11 +267,11 @@ function outputStatus(site: TreeNodesSite, op: Op | undefined): number {
   if (op === undefined) return DEFAULT_STATUS;
   const status = opStatus(site, op);
 
-  return op === DELETE_OP && status === NO_CONTENT ? DEFAULT_STATUS : status;
+  return op === TREE_NODES_DELETE_OP && status === NO_CONTENT ? DEFAULT_STATUS : status;
 }
 
 const listShape = (node: TreeNode): IrWriter.ResponseShape =>
-  treeNodesSetting(node, "paging") === PAGING_NONE ? "list" : "page";
+  treeNodesSetting(node, "paging") === TREE_NODES_PAGING_NONE ? "list" : "page";
 
 function emptyResponse(status: number, origin: Origin): IrWriter.Response {
   return { status, shape: "empty", headers: [], origin: pipelineCopy(origin) };

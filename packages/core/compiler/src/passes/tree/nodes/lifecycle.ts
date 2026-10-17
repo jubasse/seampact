@@ -7,6 +7,7 @@ import {
 } from "../../../pipeline/seam.js";
 import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
 import type { TreeNodesSite } from "./fields.js";
+import { TREE_NODES_BATCH_OP, treeNodesOpShorthand } from "./names.js";
 import {
   TREE_NODES_MATURITIES,
   type TreeNodesJson,
@@ -26,7 +27,8 @@ const BATCH_BUDGET = "batch.budget";
 const EXTENSION_KEY = /^x-([a-z][a-z0-9]*)-(.+)$/;
 
 /** `budget` in milliseconds: the nearest, else `conventions.batch.budget` for a batch. */
-export function treeNodesBudgetMs(site: TreeNodesSite, isBatch: boolean): number | undefined {
+export function treeNodesBudgetMs(site: TreeNodesSite): number | undefined {
+  const isBatch = treeNodesOpShorthand(site.node) === TREE_NODES_BATCH_OP;
   const entry = site.context.inherited(site.node, "budget")?.entry;
   const reading = isBatch ? site.context.conventions.get(BATCH_BUDGET) : undefined;
   const written = entry?.value ?? reading?.value;
@@ -221,9 +223,7 @@ export function treeNodesExtensions(node: TreeNode): IrWriter.Extensions {
 
   for (const at of chain) addExtensions(at.settings, values);
 
-  return Object.fromEntries(
-    [...values].map(([prefix, keys]) => [prefix, Object.fromEntries(keys)]),
-  );
+  return extensionsOf(values);
 }
 
 /** The extension values written on one mapping (the `api` block). */
@@ -232,10 +232,11 @@ export function treeNodesOwnExtensions(written: TreeNodesJson | undefined): IrWr
 
   addExtensions(written, values);
 
-  return Object.fromEntries(
-    [...values].map(([prefix, keys]) => [prefix, Object.fromEntries(keys)]),
-  );
+  return extensionsOf(values);
 }
+
+const extensionsOf = (values: Map<string, Map<string, unknown>>): IrWriter.Extensions =>
+  Object.fromEntries([...values].map(([prefix, keys]) => [prefix, Object.fromEntries(keys)]));
 
 // tree.schemas has checked each value against its declaration (ADR 0008). The key may be `__proto__`, so the slot
 // is built with `Object.fromEntries`, which defines own members only.

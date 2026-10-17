@@ -11,13 +11,13 @@ import {
   treeNodesSetting,
   treeNodesWrittenConvention,
 } from "./raw.js";
+import { TREE_NODES_PAGING_NONE, treeNodesIsList } from "./responses.js";
 
 // The paging of a list (ADR 0002 sections 10 and 14, A31): the style the route names, `paging: none`, or
 // `conventions.paging.default`; the limits from the route, else `conventions.paging`; the sort keys of `sortable`
 // with their origins (their rights are access.rights'). A list with no style at all is a compile error naming both
 // fixes (CHK-106).
 
-const PAGING_NONE = "none";
 const DEFAULT_OVER_LIMIT: IrWriter.OverLimitPolicy = "reject";
 const OVER_LIMITS: readonly IrWriter.OverLimitPolicy[] = ["reject", "clamp"];
 const TOKENS: readonly IrWriter.PagingToken[] = ["opaque", "instant"];
@@ -51,11 +51,10 @@ interface Limits {
  */
 export function treeNodesPaging(
   site: TreeNodesSite,
-  isList: boolean,
-  item: IrWriter.TypeUse | undefined,
-  queryNames: readonly string[],
+  responses: readonly IrWriter.Response[],
+  query: readonly IrWriter.Param[],
 ): IrWriter.Paging | undefined {
-  if (!isList) {
+  if (!treeNodesIsList(site.node)) {
     refuseOutsideList(site);
 
     return undefined;
@@ -65,6 +64,7 @@ export function treeNodesPaging(
 
   if (named === undefined) return undefined;
 
+  const item = responses.find((response) => response.body !== undefined)?.body;
   const sortKeys = sortKeysOf(site, item);
 
   if (named.id === undefined) {
@@ -73,14 +73,14 @@ export function treeNodesPaging(
     return { overLimit: overLimitOf(site, named), sortKeys, origin: pipelineCopy(named.origin) };
   }
 
-  const style = declaredStyle(site, named);
+  const style = declaredStyle(site, named.id, named.origin);
 
   if (style === undefined) return undefined;
 
   const roles = requestRoles(style);
 
   if (!roles.includes(SORT_ROLE)) refuseSortWithoutRole(site, sortKeys, `the style ${named.id}`);
-  refuseTakenNames(site, named.id, style, queryNames);
+  refuseTakenNames(site, named.id, style, query);
   const limits = limitsOf(site, named, roles);
 
   return limits === undefined
@@ -114,7 +114,7 @@ function namedStyle(site: TreeNodesSite): NamedStyle | undefined {
 
     if (origin === undefined) throw new Error(`the raw tree has no origin for ${pointer}`);
 
-    if (written === PAGING_NONE)
+    if (written === TREE_NODES_PAGING_NONE)
       return { id: undefined, settings: undefined, origin, onRoute: true };
 
     if (typeof written === "string")
@@ -144,18 +144,17 @@ function namedStyle(site: TreeNodesSite): NamedStyle | undefined {
   return undefined;
 }
 
-function declaredStyle(site: TreeNodesSite, named: NamedStyle): TreeNodesJson | undefined {
+function declaredStyle(site: TreeNodesSite, id: string, origin: Origin): TreeNodesJson | undefined {
   const pagings = site.context.raw.merged.pagings;
-  const id = named.id ?? "";
   const style = treeNodesIsObject(pagings) && Object.hasOwn(pagings, id) ? pagings[id] : undefined;
 
   if (style !== undefined) return style;
 
   site.once(
-    `paging-unknown:${named.origin.layer}#${named.origin.pointer}`,
+    `paging-unknown:${origin.layer}#${origin.pointer}`,
     treeNodesError({
       rule: "paging-unknown",
-      origin: treeNodesNodeOrigin(named.origin),
+      origin: treeNodesNodeOrigin(origin),
       message: `The paging style ${id} of ${site.operationId} is not declared in pagings.`,
       fix: `Declare ${id} in pagings, or name a declared style.`,
     }),
@@ -175,7 +174,7 @@ function refuseTakenNames(
   site: TreeNodesSite,
   id: string,
   style: TreeNodesJson,
-  queryNames: readonly string[],
+  query: readonly IrWriter.Param[],
 ): void {
   const request = treeNodesMember(style, "request");
 
@@ -184,14 +183,16 @@ function refuseTakenNames(
   for (const [role, place] of Object.entries(request)) {
     const name = treeNodesMember(place, "query");
 
-    if (typeof name !== "string" || !queryNames.includes(name)) continue;
+    const taken = query.find((param) => param.name === name);
+
+    if (taken === undefined) continue;
 
     site.context.report(
       treeNodesError({
         rule: "paging-param",
-        origin: treeNodesNodeOrigin(site.node.origin),
-        message: `The query field ${name} of ${site.operationId} is also the ${role} parameter of the paging style ${id}.`,
-        fix: `Rename the query field ${name}, or use another paging style.`,
+        origin: treeNodesNodeOrigin(taken.origin ?? site.node.origin),
+        message: `The query field ${taken.name} of ${site.operationId} is also the ${role} parameter of the paging style ${id}.`,
+        fix: `Rename the query field ${taken.name}, or use another paging style.`,
         related: requestRelated(site, id, role),
       }),
     );
@@ -270,39 +271,48 @@ function overLimitOf(site: TreeNodesSite, named: NamedStyle): IrWriter.OverLimit
 
 // ADR 0002 sections 13 and 14: `maxLimit` is required for a style with a `limit` role, `defaultLimit` is the
 // limit of a request that sends none (the `maxLimit` by default) and the page size of a style without `limit`.
+// Each limit comes from the route, else `conventions.paging`; a default from one place above a `maxLimit` from the
+// other is lowered to that `maxLimit`, and only a pair written in one place is refused.
 function limitsOf(
   site: TreeNodesSite,
   named: NamedStyle,
   roles: readonly string[],
 ): Limits | undefined {
-  const conventions = site.context.conventions;
-  const maxLimit =
-    numberOf(treeNodesMember(named.settings, "maxLimit")) ??
-    numberOf(conventions.get("paging.maxLimit")?.value);
-  const defaultLimit =
-    numberOf(treeNodesMember(named.settings, "defaultLimit")) ??
-    numberOf(treeNodesWrittenConvention(site.context, "paging.defaultLimit")?.value) ??
-    maxLimit;
+  const route = writtenLimits(named.settings);
+  const conventions = conventionLimits(site);
+  const maxLimit = route.maxLimit ?? conventions.maxLimit?.value;
+  const writtenDefault = route.defaultLimit ?? conventions.defaultLimit?.value;
   const token = tokenOf(site, named, roles);
 
   if (roles.includes(LIMIT_ROLE) && maxLimit === undefined)
-    return reportLimit(site, named, "its limit role needs a maxLimit", "Set maxLimit");
+    return reportMissingLimit(site, named, "its limit role needs a maxLimit", "Set maxLimit");
 
-  if (defaultLimit === undefined)
-    return reportLimit(
+  const inheritedDefault = writtenDefault ?? maxLimit;
+
+  if (inheritedDefault === undefined)
+    return reportMissingLimit(
       site,
       named,
       "a style without a limit role needs a defaultLimit",
       "Set defaultLimit",
     );
 
-  if (maxLimit !== undefined && defaultLimit > maxLimit)
-    return reportLimit(
-      site,
-      named,
-      `its defaultLimit ${defaultLimit} is above its maxLimit ${maxLimit}`,
-      "Lower defaultLimit to maxLimit or less",
-    );
+  const routeContradiction = aboveMaxLimit(route.defaultLimit, route.maxLimit);
+
+  if (routeContradiction !== undefined)
+    return reportRouteContradiction(site, named, routeContradiction);
+
+  const { defaultLimit: conventionDefault, maxLimit: conventionMax } = conventions;
+
+  if (
+    conventionDefault !== undefined &&
+    conventionMax !== undefined &&
+    aboveMaxLimit(conventionDefault.value, conventionMax.value) !== undefined
+  )
+    return reportConventionContradiction(site, conventionDefault, conventionMax);
+
+  const defaultLimit =
+    maxLimit === undefined ? inheritedDefault : Math.min(inheritedDefault, maxLimit);
 
   return {
     ...(maxLimit === undefined ? {} : { maxLimit }),
@@ -312,13 +322,123 @@ function limitsOf(
   };
 }
 
-function reportLimit(site: TreeNodesSite, named: NamedStyle, why: string, fix: string): undefined {
+interface RouteLimits {
+  readonly maxLimit?: number;
+  readonly defaultLimit?: number;
+}
+
+interface ConventionLimit {
+  readonly value: number;
+  readonly origin: Origin;
+}
+
+interface ConventionLimits {
+  readonly maxLimit?: ConventionLimit;
+  readonly defaultLimit?: ConventionLimit;
+}
+
+function writtenLimits(settings: TreeNodesJson | undefined): RouteLimits {
+  const maxLimit = numberOf(treeNodesMember(settings, "maxLimit"));
+  const defaultLimit = numberOf(treeNodesMember(settings, "defaultLimit"));
+
+  return {
+    ...(maxLimit === undefined ? {} : { maxLimit }),
+    ...(defaultLimit === undefined ? {} : { defaultLimit }),
+  };
+}
+
+// `conventions.paging.defaultLimit` reads `maxLimit` when unwritten, so only a written one counts as a default.
+function conventionLimits(site: TreeNodesSite): ConventionLimits {
+  const maxLimit = conventionLimit(site.context.conventions.get("paging.maxLimit"));
+  const defaultLimit = conventionLimit(
+    treeNodesWrittenConvention(site.context, "paging.defaultLimit"),
+  );
+
+  return {
+    ...(maxLimit === undefined ? {} : { maxLimit }),
+    ...(defaultLimit === undefined ? {} : { defaultLimit }),
+  };
+}
+
+function conventionLimit(
+  reading: { readonly value: unknown; readonly origin?: Origin | undefined } | undefined,
+): ConventionLimit | undefined {
+  const value = numberOf(reading?.value);
+
+  return value === undefined || reading?.origin === undefined
+    ? undefined
+    : { value, origin: reading.origin };
+}
+
+interface LimitPair {
+  readonly defaultLimit: number;
+  readonly maxLimit: number;
+}
+
+function aboveMaxLimit(
+  defaultLimit: number | undefined,
+  maxLimit: number | undefined,
+): LimitPair | undefined {
+  if (defaultLimit === undefined || maxLimit === undefined || defaultLimit <= maxLimit)
+    return undefined;
+
+  return { defaultLimit, maxLimit };
+}
+
+// A limit missing from a style the conventions name is one fault, reported once at `conventions.paging.default`.
+function reportMissingLimit(
+  site: TreeNodesSite,
+  named: NamedStyle,
+  why: string,
+  fix: string,
+): undefined {
+  const diagnostic = treeNodesError({
+    rule: "paging-limit",
+    origin: treeNodesNodeOrigin(named.origin),
+    message: named.onRoute
+      ? `The list ${site.operationId} pages with ${named.id}, but ${why}.`
+      : `The paging style ${named.id} of conventions.paging.default is used by lists, but ${why}.`,
+    fix: `${fix} on the route's paging or in conventions.paging.`,
+  });
+
+  if (named.onRoute) site.context.report(diagnostic);
+  else site.once(`paging-limit:${named.origin.layer}#${named.origin.pointer}`, diagnostic);
+
+  return undefined;
+}
+
+function reportRouteContradiction(
+  site: TreeNodesSite,
+  named: NamedStyle,
+  { defaultLimit, maxLimit }: LimitPair,
+): undefined {
   site.context.report(
     treeNodesError({
       rule: "paging-limit",
-      origin: treeNodesNodeOrigin(named.onRoute ? named.origin : site.node.origin),
-      message: `The list ${site.operationId} pages with ${named.id}, but ${why}.`,
-      fix: `${fix} on the route's paging or in conventions.paging.`,
+      origin: treeNodesNodeOrigin(named.origin),
+      message: `The list ${site.operationId} pages with ${named.id}, but its defaultLimit ${defaultLimit} is above its maxLimit ${maxLimit}.`,
+      fix: "Lower defaultLimit to maxLimit or less on the route's paging.",
+    }),
+  );
+
+  return undefined;
+}
+
+function reportConventionContradiction(
+  site: TreeNodesSite,
+  defaultLimit: ConventionLimit,
+  maxLimit: ConventionLimit,
+): undefined {
+  site.once(
+    `paging-limit:${defaultLimit.origin.layer}#${defaultLimit.origin.pointer}`,
+    treeNodesError({
+      rule: "paging-limit",
+      origin: treeNodesNodeOrigin(defaultLimit.origin),
+      message: `The conventions.paging defaultLimit ${defaultLimit.value} is above its maxLimit ${maxLimit.value}.`,
+      fix: "Lower conventions.paging.defaultLimit to its maxLimit or less.",
+      related: [
+        { origin: treeNodesNodeOrigin(maxLimit.origin), message: "conventions.paging.maxLimit" },
+      ],
     }),
   );
 
