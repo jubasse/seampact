@@ -18,7 +18,8 @@ import type { AccessIdentityReporter } from "./report.js";
 // Who may call each operation (ADR 0002 sections 5 and 9, ADR 0004 section 7): `identity` and `access` are
 // inherited separately, the nearest winning for each, and a node setting `identity` below the nearest `access`
 // makes the identity required again. Deny by default: a route that resolves to neither an identity nor a public
-// access is refused, naming both fixes (FR-4). A service api runs every route under its caller identity (FR-8).
+// access is refused, naming both fixes (FR-4). A service api runs every route under its caller identity (FR-8). An
+// operation node setting both `identity` and a public access is refused: nothing below it could use the identity.
 
 type Context = PassContextOf<"access.identity">;
 
@@ -45,15 +46,20 @@ export interface AccessIdentityScope {
 export interface AccessIdentityRoute {
   id: string;
   node: TreeNode;
-  safe: boolean;
+  /** Absent on a relay route, until tree.nodes copies its method from the operation it relays. */
+  safe?: boolean;
   operation: DraftOperation;
 }
 
 /** An operation's access, with the identity it runs under (none on a public route). */
 export interface AccessIdentityResolved {
-  access: IrWriter.KnownAccess;
+  /** Absent on a relay route, whose direction the schemes depend on. */
+  access?: IrWriter.KnownAccess;
   identity?: IrWriter.KnownIdentity;
 }
+
+/** A resolved access whose direction is known. */
+export type AccessIdentityDirected = AccessIdentityResolved & { access: IrWriter.KnownAccess };
 
 interface IdentitySource {
   name: string;
@@ -199,16 +205,55 @@ function writtenAccess(
   }
 
   const origin = pipelineCopy(entry.origin);
-  if (reason !== undefined) return { access: { kind: "public", reason, origin } };
+  if (reason !== undefined) return publicAccess(route, entry, { reason, origin, pointer }, scope);
 
-  const onRefused: IrWriter.RefusedCredential =
-    accessIdentityString(written, "onRefused") === "reject" ? "reject" : "anonymous";
+  const onRefused = refusedCredential(accessIdentityString(written, "onRefused"), pointer);
   return optionalAccess(
     route,
     { reason: optionalReason ?? "", onRefused, origin, pointer },
     source,
     scope,
   );
+}
+
+// The authoring schema writes `onRefused` as `anonymous` (the default) or `reject`.
+function refusedCredential(
+  written: string | undefined,
+  pointer: string,
+): IrWriter.RefusedCredential {
+  if (written === undefined || written === "anonymous") return "anonymous";
+  if (written === "reject") return "reject";
+  throw new Error(`the access at ${pointer} has onRefused ${JSON.stringify(written)}`);
+}
+
+interface PublicWritten {
+  reason: string;
+  origin: IrWriter.Origin;
+  pointer: string;
+}
+
+function publicAccess(
+  route: AccessIdentityRoute,
+  entry: InheritedEntry,
+  written: PublicWritten,
+  scope: AccessIdentityScope,
+): AccessIdentityResolved | undefined {
+  if (entry.node === route.node && Object.hasOwn(route.node.settings, "identity")) {
+    scope.reporter.error({
+      rule: "public-identity",
+      message: `${route.node.kind} '${route.node.name}' sets both an identity and public access, so its identity is never used`,
+      fix: "Remove 'identity' to keep the route public, or remove 'access' to require the identity.",
+      pointer: written.pointer,
+      related: [
+        { pointer: accessIdentityPointer(route.node.pointer, "identity"), message: "the identity" },
+      ],
+    });
+    return undefined;
+  }
+
+  // A public access does not depend on the direction; a relay route still leaves it out, as every member that may.
+  if (route.safe === undefined) return {};
+  return { access: { kind: "public", reason: written.reason, origin: written.origin } };
 }
 
 interface OptionalWritten {
@@ -227,10 +272,10 @@ function optionalAccess(
   if (source === undefined) {
     scope.reporter.error({
       rule: "optional-identity",
-      message: `route '${route.id}' has optional access and no identity to make optional`,
+      message: "optional access is written where no identity reaches, so there is none to make optional",
       fix: "Set 'identity: <name>' on it or an ancestor, or make the access 'public' with its reason.",
-      pointer: route.node.pointer,
-      related: [{ pointer: written.pointer, message: "the optional access" }],
+      pointer: written.pointer,
+      related: [{ pointer: route.node.pointer, message: "a route it reaches" }],
     });
     return undefined;
   }
@@ -250,7 +295,8 @@ function optionalAccess(
     return undefined;
   }
 
-  const schemes = credentialSchemes(route, identity, "optional", scope);
+  if (route.safe === undefined) return { identity };
+  const schemes = credentialSchemes(route, route.safe, identity, "optional", scope);
   if (schemes === undefined) return undefined;
   return {
     access: {
@@ -272,6 +318,7 @@ function requiredAccess(
 ): AccessIdentityResolved | undefined {
   const identity = identityOf(source, scope);
   if (identity === undefined) return undefined;
+  if (route.safe === undefined) return { identity };
 
   if (identity.kind === "signed")
     return {
@@ -284,7 +331,7 @@ function requiredAccess(
       identity,
     };
 
-  const schemes = credentialSchemes(route, identity, "required", scope);
+  const schemes = credentialSchemes(route, route.safe, identity, "required", scope);
   if (schemes === undefined) return undefined;
   return {
     access: { kind: "identity", identity: identity.id, schemes, origin: source.origin },
@@ -296,19 +343,20 @@ function requiredAccess(
 // a read scheme never widens writes. An access's scheme list is never empty.
 function credentialSchemes(
   route: AccessIdentityRoute,
+  safe: boolean,
   identity: IrWriter.CredentialIdentity,
   access: "required" | "optional",
   scope: AccessIdentityScope,
 ): string[] | undefined {
-  const list = route.safe ? "read" : "write";
-  const extra = access === "optional" && route.safe ? identity.schemes.optionalRead : [];
+  const list = safe ? "read" : "write";
+  const extra = access === "optional" && safe ? identity.schemes.optionalRead : [];
   const schemes = [...new Set([...identity.schemes[list], ...extra])].sort();
   if (schemes.length > 0) return schemes;
 
-  const direction = route.safe ? "reads" : "writes";
+  const direction = safe ? "reads" : "writes";
   scope.reporter.error({
     rule: "access-schemes",
-    message: `route '${route.id}' is a ${route.safe ? "read" : "write"} under identity '${identity.id}', which accepts no scheme on ${direction}`,
+    message: `route '${route.id}' is a ${safe ? "read" : "write"} under identity '${identity.id}', which accepts no scheme on ${direction}`,
     fix: `List a scheme in the identity's 'schemes.${list}', or put the route under an identity that accepts ${direction}.`,
     pointer: route.node.pointer,
     related: [

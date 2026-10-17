@@ -110,6 +110,8 @@ interface Compiled {
   draft: DraftIR;
   rules: string[];
   messages: string[];
+  /** Each diagnostic's rule and the raw pointer it is located at. */
+  pairs: [string, string][];
   operation(id: string): DraftOperation;
 }
 
@@ -139,6 +141,7 @@ function compile(
     draft,
     rules: diagnostics.map((diagnostic) => diagnostic.rule),
     messages: diagnostics.map((diagnostic) => diagnostic.message),
+    pairs: diagnostics.map((diagnostic) => [diagnostic.rule, diagnostic.origin.pointer]),
     operation: (id) => {
       const found = draft.operations.find((operation) => operation.id === id);
       if (found === undefined) throw new Error(`no operation ${id}`);
@@ -260,6 +263,21 @@ describe("reasons on access exceptions", () => {
     });
   });
 
+  test("an operation setting both an identity and public access is refused", () => {
+    const compiled = compile(`  app:
+    routes:
+      health:
+        method: get
+        identity: viewer
+        access: { public: "Probes." }
+        output: Event
+`);
+    expect(compiled.pairs).toEqual([
+      ["seampact/access/public-identity", "/surfaces/app/routes/health/access"],
+    ]);
+    expect(compiled.operation("health").access).toBeUndefined();
+  });
+
   test("an identity set below a public access makes the identity required again", () => {
     const compiled = compile(`  app:
     access: { public: "The whole surface is open." }
@@ -322,27 +340,35 @@ describe("optional access and onRefused", () => {
     expect(compiled.operation("like").access).toMatchObject({ schemes: ["bearer", "session"] });
   });
 
-  test("onRefused defaults to anonymous and keeps reject as written", () => {
-    const compiled = compile(OPTIONAL);
+  test("onRefused defaults to anonymous and keeps anonymous or reject as written", () => {
+    const compiled = compile(`${OPTIONAL}      lenient:
+        method: get
+        access: { optionalAuth: "A bad credential reads as anonymous.", onRefused: anonymous }
+        output: Event
+`);
+    expect(compiled.rules).toEqual([]);
     expect(compiled.operation("feed").access).toMatchObject({ onRefused: "anonymous" });
     expect(compiled.operation("strict").access).toMatchObject({ onRefused: "reject" });
+    expect(compiled.operation("lenient").access).toMatchObject({ onRefused: "anonymous" });
   });
 
-  test("optional access without an identity, or under a signed one, is refused", () => {
+  test("optional access without an identity, or under a signed one, is refused once each", () => {
     const compiled = compile(`  app:
     access: { optionalAuth: "No identity to relax." }
     routes:
       feed: { method: get, output: Event }
+      more: { method: get, output: Event }
   hooks:
     identity: stripe
     access: { optionalAuth: "A webhook is never anonymous." }
     routes:
       payments: { method: post, input: Event }
 `);
-    expect(compiled.rules).toEqual([
-      "seampact/access/optional-identity",
-      "seampact/access/signed-access",
+    expect(compiled.pairs).toEqual([
+      ["seampact/access/optional-identity", "/surfaces/app/access"],
+      ["seampact/access/signed-access", "/surfaces/hooks/access"],
     ]);
+    expect(compiled.messages[0]).not.toContain("route '");
   });
 });
 
@@ -393,14 +419,48 @@ describe("csrf derived on cookie writes", () => {
       expect(compiled.operation(id).csrf).toBeUndefined();
   });
 
-  test("cookie write schemes naming different csrf headers are refused", () => {
+  test("cookie write schemes naming different csrf headers are refused once, at the identity", () => {
     const compiled = compile(`  app:
-      identity: twoCookies
-      routes:
-        save: { method: post, input: Event }
-  `);
-    expect(compiled.rules).toEqual(["seampact/access/csrf-header"]);
+    identity: twoCookies
+    routes:
+      save: { method: post, input: Event }
+      remove: { method: delete }
+`);
+    expect(compiled.pairs).toEqual([
+      ["seampact/access/csrf-header", "/identities/twoCookies/schemes/write"],
+    ]);
+    expect(compiled.messages[0]).not.toContain("'save'");
     expect(compiled.operation("save").csrf).toBeUndefined();
+    expect(compiled.operation("remove").csrf).toBeUndefined();
+  });
+
+  test("an inherited exemption is written only where a csrf would be derived", () => {
+    const compiled = compile(`  app:
+    identity: viewer
+    csrf: { exempt: "Called by a trusted origin only." }
+    routes:
+      save: { method: post, input: Event }
+      read: { method: get, output: Event }
+      open: { method: post, access: { public: "Anyone may post." }, input: Event }
+  legacy:
+    identity: plain
+    csrf: { exempt: "No csrf cookie here." }
+    routes:
+      save2: { method: post, input: Event }
+  hooks:
+    identity: stripe
+    csrf: { exempt: "Signed anyway." }
+    routes:
+      payments: { method: post, input: Event }
+`);
+    expect(compiled.rules).toEqual([]);
+    expect(compiled.operation("save").csrf).toEqual({
+      kind: "exempt",
+      reason: "Called by a trusted origin only.",
+      origin: { layer: "api", pointer: "/surfaces/app/csrf" },
+    });
+    for (const id of ["read", "open", "save2", "payments"])
+      expect(compiled.operation(id).csrf).toBeUndefined();
   });
 });
 
@@ -659,7 +719,23 @@ describe("principal requires and bindings", () => {
         principal: { requires: [userId] }
         output: Event
 `);
-    expect(compiled.rules).toEqual(["seampact/access/principal-field"]);
+    expect(compiled.pairs).toEqual([
+      ["seampact/access/principal-field", "/surfaces/app/routes/health/principal/requires/0"],
+    ]);
+  });
+
+  test("a requirement reaching several public routes is refused once", () => {
+    const compiled = compile(`  app:
+    access: { public: "An open surface." }
+    principal: { requires: [userId] }
+    routes:
+      one: { method: get, output: Event }
+      two: { method: get, output: Event }
+`);
+    expect(compiled.pairs).toEqual([
+      ["seampact/access/principal-field", "/surfaces/app/principal/requires/0"],
+    ]);
+    expect(compiled.messages[0]).not.toContain("'one'");
   });
 });
 
@@ -705,6 +781,49 @@ describe("service api identity", () => {
       "seampact/access/service-access",
     ]);
     expect(compiled.operation("other").access).toBeUndefined();
+  });
+});
+
+describe("relay routes", () => {
+  test("a relay route gets no direction-dependent member, and still its input facts", () => {
+    const compiled = compile(
+      `  internal:
+    routes:
+      save: { method: post, input: Event }
+      getTask: { relays: tasks.getTask }
+`,
+      { "/surfaces/internal/routes/save/input": ref("Event") },
+      (draft) => {
+        const save = draft.operations.find((operation) => operation.id === "save");
+        const relay = draft.operations.find((operation) => operation.id === "getTask");
+        if (save?.input === undefined || relay === undefined) throw new Error("no save or relay");
+        relay.input = structuredClone(save.input);
+      },
+      SERVICE_API,
+    );
+    expect(compiled.rules).toEqual([]);
+    const relay = compiled.operation("getTask");
+    expect(relay).not.toHaveProperty("access");
+    expect(relay).not.toHaveProperty("callerKinds");
+    expect(relay).not.toHaveProperty("csrf");
+    expect(relay.principalRequires).toEqual([]);
+    expect(relay.input).toMatchObject({ rawBody: false });
+  });
+
+  test("an operation without safe that is not a relay route is an internal error", () => {
+    expect(() =>
+      compile(
+        `  app:
+    identity: viewer
+    routes:
+      ping: { method: get, output: Event }
+`,
+        {},
+        (draft) => {
+          for (const operation of draft.operations) delete operation.safe;
+        },
+      ),
+    ).toThrow("operation 'ping' at /surfaces/app/routes/ping has no safe");
   });
 });
 

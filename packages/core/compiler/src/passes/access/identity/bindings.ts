@@ -30,7 +30,8 @@ export function accessIdentityPrincipalRequires(
       throw new Error(`a principal requirement set at ${entry.node.pointer} is not a field name`);
     const field = entry.value;
     const pointer = requirementPointer(entry, field);
-    if (principalHolds(route, resolved, field, pointer, "'principal.requires' names", scope))
+    const reader: Reader = { subject: "'principal.requires'", verb: "names" };
+    if (principalHolds(route, resolved, field, pointer, reader, scope))
       requirements.push({ field, origin: pipelineCopy(entry.origin) });
   }
 
@@ -63,7 +64,7 @@ export function accessIdentityBindings(
 
     const from = accessIdentityValueSource(key);
     const to = accessIdentityValueSource(entry.value);
-    const reader = `binding '${key}' reads`;
+    const reader: Reader = { subject: `binding '${key}'`, verb: "reads" };
     const sourceFound = bindingSourceFound(route, key, from, pointer, scope);
     const targetHeld = principalHolds(route, resolved, to.name ?? "", pointer, reader, scope);
     if (sourceFound && targetHeld) bindings.push({ from, to, origin: pipelineCopy(entry.origin) });
@@ -92,21 +93,29 @@ function requirementPointer(entry: InheritedEntry, field: string): string {
   return accessIdentityPointer(entry.node.pointer, "principal", "requires", `${index}`);
 }
 
+// Who reads a principal field, for the messages: `'principal.requires' names`, `binding '<key>' reads`.
+interface Reader {
+  subject: string;
+  verb: "names" | "reads";
+}
+
+// The messages name the identity, never the route, so a setting reaching many routes is reported once.
 function principalHolds(
   route: AccessIdentityRoute,
   resolved: AccessIdentityResolved,
   field: string,
   pointer: string,
-  reader: string,
+  reader: Reader,
   scope: AccessIdentityScope,
 ): boolean {
   const identity = resolved.identity;
   if (identity === undefined) {
     scope.reporter.error({
       rule: "principal-field",
-      message: `${reader} principal field '${field}' on public route '${route.id}', which has no principal`,
+      message: `${reader.subject} ${reader.verb} principal field '${field}' on a public route, which has no principal`,
       fix: "Remove it from the public route, or give the route an identity.",
       pointer,
+      related: [{ pointer: route.node.pointer, message: "a public route it reaches" }],
     });
     return false;
   }
@@ -114,8 +123,7 @@ function principalHolds(
   const lookup = accessIdentityPrincipalField(scope.schemas, identity.principal, field);
   if (lookup.status === "held") return true;
 
-  // The message names the identity, not the route, so a setting reaching many routes is reported once.
-  const subject = `${reader.replace(/ (names|reads)$/, "")} under identity '${identity.id}' ${reader.endsWith("names") ? "names" : "reads"}`;
+  const subject = `${reader.subject} under identity '${identity.id}' ${reader.verb}`;
   scope.reporter.error({
     rule: "principal-field",
     ...accessIdentityPrincipalFieldRefusal(subject, field, identity.principal, lookup),

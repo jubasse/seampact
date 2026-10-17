@@ -30,7 +30,8 @@ export type AccessIdentityRule =
   | "service-identity"
   | "service-access"
   | "binding-source"
-  | "binding-conflict";
+  | "binding-conflict"
+  | "public-identity";
 
 export interface AccessIdentityRelated {
   /** A pointer of the merged raw tree. */

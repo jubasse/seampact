@@ -86,9 +86,10 @@ export function accessIdentityCheckQuerySchemes(
   resolved: AccessIdentityResolved,
   scope: AccessIdentityScope,
 ): void {
-  if (resolved.access.kind === "public") return;
+  const access = resolved.access;
+  if (access === undefined || access.kind === "public") return;
 
-  for (const id of resolved.access.schemes) {
+  for (const id of access.schemes) {
     const scheme = scope.built.schemes.get(id);
     if (
       scheme?.kind !== "query" ||
