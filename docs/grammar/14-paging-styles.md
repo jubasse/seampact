@@ -23,7 +23,7 @@ pagings:
 
 | Key | Meaning |
 |---|---|
-| `request` | request roles, each `{ query: <name> }` or `{ header: <name> }`; `page` also takes `base` (`1` by default, or `0`), `sort` takes `style` and, for `style: split`, `direction` |
+| `request` | request roles, each `{ query: <name> }` or `{ header: <name> }`; `page` also takes `base` (`1` by default, or `0`), `sort` takes `style` (`signed` by default) and, for `style: split`, `direction` |
 | `response.meta` | members added to the format's page: each maps a member name to a template over the response roles, and joins the `$meta` slot of the format's `success.page` |
 | `response.body` | instead of `meta`: the whole page body, replacing the format's `success.page` body; a template whose slots are the response roles and `$meta`, with `$items` exactly once |
 | `response.headers` | response headers, each a template (`X-Total-Count: $total`) |
@@ -68,10 +68,10 @@ Response roles, each a slot of the body, a header or a link:
 | `from`, `to` | the one-based positions of the first and last record of the page | boundary | page, offset |
 | `total` | the number of records of the whole list | handler | cursor, page, offset |
 | `totalPages` | `total` divided by `limit`, rounded up | boundary | page, offset |
-| `self`, `first`, `previous`, `next`, `last` | page URLs: the request URL with its position replaced | boundary | `last` page and offset only |
+| `self`, `first`, `previous`, `next`, `last` | page URLs: the request URL with its position replaced | boundary | `previous` all but since, which has no previous token; `last` page and offset only |
 | `nextSince`, `complete` | the token for the next call, and whether every change up to it is included | handler | since |
 
-The handler result is typed from the roles the style uses: the items, plus `nextCursor`, `previousCursor`, `more`, `nextSince` and `complete` when used, and `total` when the style uses `total`, `totalPages` or `last`, whether or not a template writes `$total` (a `lastPage` member without the total is that case). A page or offset style that needs no total also asks the handler for `more`, which drives `next`. A role used outside its kinds, a sort key on a style without a `sort` role, and a request name already used by the route's `query` are compile errors naming the style. The route sets the limits (`maxLimit`, `defaultLimit`, `overLimit`), or they come from `conventions.paging`, each one on its own: a `conventions.paging.defaultLimit` above the route's `maxLimit` is lowered to it, while a route's `defaultLimit` above the `maxLimit` it gets, or a `conventions.paging.defaultLimit` above `conventions.paging.maxLimit`, is a compile error.
+The handler result is typed from the roles the style uses: the items, plus `nextCursor`, `previousCursor`, `more`, `nextSince` and `complete` when used, and `total` when the style uses `total`, `totalPages` or `last`, whether or not a template writes `$total` (a `lastPage` member without the total is that case). A page or offset style that needs no total also asks the handler for `more`, which drives `next`. A cursor style's `next` and `previous` URLs need `nextCursor` and `previousCursor`, and a since style's `next` needs `nextSince`, written or not. A role used outside its kinds, a sort key on a style without a `sort` role, and a request name already used by the route's `query` are compile errors naming the style. Two request roles of a style naming one parameter (a sort role's `direction` parameter included) or one header, headers compared without regard to case, are a compile error naming the style. The route sets the limits (`maxLimit`, `defaultLimit`, `overLimit`), or they come from `conventions.paging`, each one on its own: a `conventions.paging.defaultLimit` above the route's `maxLimit` is lowered to it, while a route's `defaultLimit` above the `maxLimit` it gets, or a `conventions.paging.defaultLimit` above `conventions.paging.maxLimit`, is a compile error.
 
 Two third-party styles show the roles at work, Stripe's list object and GitHub's pages:
 

@@ -80,7 +80,7 @@ formats:
 | `media` | the media type of success bodies; `application/json` by default |
 | `absent` | what a slot with no value writes: `omit` (default) or `null` |
 | `success.item`, `success.table`, `success.list`, `success.page` | one per response shape: `{ body, headers }`. `body` is a template, `$payload` by default (`$items` for `page`); `headers` maps a header name to a template. `item` is one record or any non-list body, `table` the id-keyed object of a `batch` read, `list` an unpaged list, `page` a paged list, whose paging style adds members to it or replaces its body (section 14) |
-| `meta` | the meta fields, each `{ fill, schema }`: `fill` is `now`, `traceId`, `degraded`, a `principal.<field>` source, or `handler` (which then needs `schema`) |
+| `meta` | the meta fields, each `{ fill, schema }`: `fill` is `now`, `traceId`, `degraded`, a `principal.<field>` source, or `handler`; `handler` and `principal.<field>` then need `schema` |
 | `error` | `{ media, body, headers }`; `media` defaults to the format's. A format without `error` uses the `bare` error. The body must write `$code`, as a member or inside a text template (`'https://errors.acme.com/${code}'`), so a client can tell the code; a format whose error writes no `$code` is a compile error naming the format |
 
 A shape left out uses its default (`body: $payload`, or `$items` for a page, and no headers), so `bare` writes only its error.
@@ -102,7 +102,7 @@ A template describes a JSON value the boundary writes. The same language serves 
 | a sequence | an array of templates |
 | any other scalar | a literal |
 
-A member whose value is a slot with no value is omitted, or written `null` when `absent: null`; an object whose members are all omitted is omitted in turn, so `next: { href: $next }` disappears on the last page. `$merge` takes an object-typed slot only, and a payload that is not an object fails to compile under a format that merges it.
+A member whose value is a slot with no value is omitted, or written `null` when `absent: null`; an object whose members are all omitted is omitted in turn, so `next: { href: $next }` disappears on the last page. `$merge` takes an object-typed slot only, and a payload that is not an object fails to compile under a format that merges it; `$each` takes an array-typed slot only. A table's id-keyed payload is an object; its members are ids, so no member clash is checked. Any other `$` in a string is a compile error; write `$$` for a literal `$`. A key that starts with `$` is a name slot or `$$…`; any other is a compile error. `$collection` is the only name slot; every other slot, text or number included (`$status`, `$id`, a URL or a cursor), names no member.
 
 The slots are a closed set:
 
