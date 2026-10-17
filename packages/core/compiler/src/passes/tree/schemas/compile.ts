@@ -9,6 +9,8 @@ import {
 } from "@seampact/spec/naming";
 import { pipelineCopy, pipelineParseSize } from "../../../pipeline/seam.js";
 import type { TreeSchemasReservation } from "./core.js";
+import { type TreeSchemasDerivedHost, treeSchemasDerivedProperties } from "./derived.js";
+import { treeSchemasEnumValues, treeSchemasReportEnumWithoutValues } from "./enums.js";
 import {
   type TreeSchemasRaw,
   type TreeSchemasRawObject,
@@ -22,10 +24,8 @@ import { TreeSchemasScalars, treeSchemasDocs } from "./scalars.js";
 
 // The schema compiler of tree.schemas (ADR 0003, ADR 0004 section 5): every written schema becomes a type use;
 // objects, maps and unions are named schemas, an inline one hoisted under the name its position derives (ADR 0007
-// section 3). A declared scalar, array, enum use, opaque value or file is inlined at each use.
-//
-// Derived objects (`pick`, `omit`) are named objects whose merge is not compiled yet: a reference to one is a
-// `ref` use, and no schema is written for it.
+// section 3). A declared scalar, array, enum use, opaque value or file is inlined at each use. Derived objects
+// (`pick`, `omit`) and `allOf` are merged into plain objects.
 
 /** Where a schema sits, which decides the marks it may carry and the unions it may be. */
 export type TreeSchemasPlace =
@@ -132,8 +132,7 @@ const SHAPE_KEYWORDS: Readonly<Record<Shape, readonly string[]>> = {
   ],
 };
 
-// The shapes written as a schema of their own, which holds their examples and docs; a derived object's schema is
-// written by a later step.
+// The shapes written as a schema of their own, which holds their examples and docs.
 const SCHEMA_WRITING_SHAPES: ReadonlySet<Shape> = new Set([
   "object",
   "map",
@@ -186,18 +185,6 @@ export function treeSchemasShapeOf(value: TreeSchemasRawObject): Shape | undefin
   if (typeof value.type === "string" && SCALAR_TYPES.has(value.type)) return "scalar";
 
   return has(value, "format") ? "scalar" : undefined;
-}
-
-/** Whether compiling `value` hoists an inline object, map or union. */
-export function treeSchemasNeedsHoist(value: TreeSchemasRaw | undefined): boolean {
-  if (!treeSchemasIsObject(value)) return false;
-  const shape = treeSchemasShapeOf(value);
-
-  if (shape === "array") return treeSchemasNeedsHoist(value.items);
-
-  if (shape === "scalar") return treeSchemasNeedsHoist(value.contentSchema);
-
-  return shape === "object" || shape === "map" || shape === "union" || shape === "allOf";
 }
 
 // The words a child name starts with: the parent's segments, then its role's default suffix words (`RolesParams`
@@ -273,6 +260,10 @@ export class TreeSchemasCompiler {
   readonly schemas = new Map<string, IrWriter.Schema>();
   /** The type use at each schema position the half answers for. */
   readonly uses = new Map<string, IrWriter.TypeUse>();
+  /** The pointer each schema this run wrote is written at: its declaration, or the position it is hoisted from. */
+  readonly writtenAt = new Map<string, string>();
+  /** The positions whose use a query wire is answered for, besides object properties: query fields, rule proofs. */
+  readonly queryPositions = new Set<string>();
   readonly scalars: TreeSchemasScalars;
 
   private readonly catalogue: TreeSchemasRaw | undefined;
@@ -286,7 +277,6 @@ export class TreeSchemasCompiler {
   /** Every declared schema with its keys, since `claims` keeps only the first holder of a key. */
   private readonly declaredClaims: { claim: Claim; keys: string[] }[] = [];
   private readonly refusedReserved = new Set<string>();
-  private readonly derived = new Set<string>();
   private readonly bodyTags: {
     pointer: string;
     property: string;
@@ -295,7 +285,7 @@ export class TreeSchemasCompiler {
 
   constructor(
     merged: TreeSchemasRawObject,
-    private readonly reporter: TreeSchemasReporter,
+    readonly reporter: TreeSchemasReporter,
   ) {
     this.catalogue = treeSchemasMember(merged, "schemas");
     this.enums = treeSchemasMember(merged, "enums");
@@ -413,6 +403,23 @@ export class TreeSchemasCompiler {
     if (compiled !== undefined) this.uses.set(pointer, compiled.use);
   }
 
+  /**
+   * Writes an object schema this half derives, with no written shape, under `name` at `pointer` (its origin), and
+   * records its use there.
+   */
+  derivedObject(properties: IrWriter.Property[], pointer: string, name: Name): void {
+    const compiled = this.objectSchema(properties, undefined, { pointer, name, place: "position" });
+
+    if (compiled !== undefined) this.uses.set(pointer, compiled.use);
+  }
+
+  /** The properties of the object schema a `ref` use names, the written schema's own list; else undefined. */
+  objectProperties(use: IrWriter.TypeUse | undefined): IrWriter.Property[] | undefined {
+    const schema = use?.kind === "ref" ? this.schemas.get(use.schema) : undefined;
+
+    return schema?.kind === "object" ? schema.properties : undefined;
+  }
+
   /** The checks that need every schema: union tags, required cycles and declared names (ADR 0007 section 2). */
   finish(): void {
     this.checkBodyTags();
@@ -428,6 +435,11 @@ export class TreeSchemasCompiler {
       this.scalars.all().map((scalar) => scalar.id),
       "/scalars",
       "named formats",
+    );
+    this.checkNames(
+      treeSchemasEntries(this.enums).map(([id]) => id),
+      "/enums",
+      "enums",
     );
   }
 
@@ -482,9 +494,7 @@ export class TreeSchemasCompiler {
       case "reference":
         return this.reference(guaranteedString(value.$ref, "$ref", pointer), position);
       case "derived":
-        return this.claimed(position, "object")
-          ? plain(this.referenceUse(this.idOf(position)))
-          : undefined;
+        return this.derived(value, position);
       case "opaque": {
         const reason = guaranteedString(value.opaque, "opaque", pointer);
 
@@ -687,12 +697,7 @@ export class TreeSchemasCompiler {
     const state = this.declared.get(id);
 
     if (state === "compiling") {
-      this.reporter.error({
-        rule: "schema-cycle",
-        pointer,
-        message: `the schema '${id}' reaches itself through schemas that are not objects, maps or unions`,
-        fix: "break the cycle with a named object, or remove the self-reference",
-      });
+      this.reportCycle(id, pointer);
       this.declared.set(id, undefined);
 
       return undefined;
@@ -710,6 +715,23 @@ export class TreeSchemasCompiler {
     this.declared.set(id, compiled);
 
     return compiled;
+  }
+
+  // A derived object compiles its source first, so a chain of `pick` and `omit` sources can reach itself too.
+  private reportCycle(id: string, pointer: string): void {
+    const value = treeSchemasMember(this.catalogue, id);
+    const derived = treeSchemasIsObject(value) && treeSchemasShapeOf(value) === "derived";
+
+    this.reporter.error({
+      rule: "schema-cycle",
+      pointer,
+      message: derived
+        ? `the derived object '${id}' reaches itself through the sources of its 'pick' or 'omit' chain`
+        : `the schema '${id}' reaches itself through schemas that are not objects, maps or unions`,
+      fix: derived
+        ? "derive the chain from a schema that is not derived from it"
+        : "break the cycle with a named object, or remove the self-reference",
+    });
   }
 
   private referenceUse(id: string): IrWriter.TypeUse {
@@ -740,8 +762,6 @@ export class TreeSchemasCompiler {
 
     if (schema !== undefined) return schema.kind;
 
-    if (this.derived.has(id)) return "object";
-
     return this.declaredTarget(id, new Set())?.kind;
   }
 
@@ -771,12 +791,7 @@ export class TreeSchemasCompiler {
 
     const id = this.idOf(position);
 
-    if (position.id === undefined && !this.claimHoisted(id, position.name, position.pointer))
-      return false;
-
-    if (kind === "object" && !this.schemas.has(id)) this.derived.add(id);
-
-    return true;
+    return position.id !== undefined || this.claimHoisted(id, position.name, position.pointer);
   }
 
   private claimHoisted(id: string, name: Name, pointer: string): boolean {
@@ -836,12 +851,11 @@ export class TreeSchemasCompiler {
   ): TreeSchemasCompiled | undefined {
     if (!this.claimed(position, body.kind)) return undefined;
     const id = this.idOf(position);
-
-    this.derived.delete(id);
     const name = irName(position.name as Name);
     const typeName = treeSchemasMember(value, "typeName");
     const examples = treeSchemasMember(value, "examples");
 
+    this.writtenAt.set(id, position.pointer);
     this.schemas.set(id, {
       ...body,
       id,
@@ -879,6 +893,30 @@ export class TreeSchemasCompiler {
     }
 
     return this.hoist({ kind: "object", properties }, value, position);
+  }
+
+  private get derivedHost(): TreeSchemasDerivedHost {
+    return {
+      reporter: this.reporter,
+      sourceProperties: (name, pointer) => this.declaredProperties(name, pointer, "derived"),
+      restriction: (written, pointer) => {
+        const restriction = this.restriction(written, pointer);
+
+        if (restriction === undefined)
+          throw new Error(`tree.schemas found no restrictedTo at ${pointer}`);
+
+        return restriction;
+      },
+    };
+  }
+
+  private derived(
+    value: TreeSchemasRawObject,
+    position: TreeSchemasPosition,
+  ): TreeSchemasCompiled | undefined {
+    const properties = treeSchemasDerivedProperties(value, position.pointer, this.derivedHost);
+
+    return properties === undefined ? undefined : this.objectSchema(properties, value, position);
   }
 
   private object(
@@ -1225,12 +1263,12 @@ export class TreeSchemasCompiler {
       typeof written === "string"
         ? written
         : guaranteedString(treeSchemasMember(written, "narrow"), "narrow", pointer);
-    const found = this.enumValues(name, []);
+    const found = treeSchemasEnumValues(this.enums, name);
 
     if (found === undefined || "cycle" in found) {
       const at = typeof written === "string" ? pointer : treeSchemasPointer(pointer, "narrow");
 
-      this.reportEnumWithoutValues(name, found?.cycle, at);
+      treeSchemasReportEnumWithoutValues(this.reporter, name, found, at);
 
       return undefined;
     }
@@ -1266,46 +1304,6 @@ export class TreeSchemasCompiler {
         values: values.filter((value) => subset.includes(value)),
         ...(typeof reason === "string" ? { reason } : {}),
       },
-    });
-  }
-
-  // The values of an enum, followed through `source.enum` (`path` holds the enums already followed).
-  private enumValues(
-    name: string,
-    path: readonly string[],
-  ): { values: string[] } | { cycle: string[] } | undefined {
-    if (path.includes(name)) return { cycle: [...path.slice(path.indexOf(name)), name] };
-    const declared = treeSchemasMember(this.enums, name);
-    const values = treeSchemasMember(declared, "values");
-
-    if (Array.isArray(values))
-      return { values: values.filter((value) => typeof value === "string") };
-    const source = treeSchemasMember(treeSchemasMember(declared, "source"), "enum");
-
-    return typeof source === "string" ? this.enumValues(source, [...path, name]) : undefined;
-  }
-
-  private reportEnumWithoutValues(
-    name: string,
-    cycle: string[] | undefined,
-    pointer: string,
-  ): void {
-    if (cycle === undefined) {
-      this.reporter.error({
-        rule: "enum-unknown",
-        pointer,
-        message: `no enum '${name}' with values is declared`,
-        fix: "declare it under 'enums', or fix the name",
-      });
-
-      return;
-    }
-
-    this.reporter.error({
-      rule: "enum-cycle",
-      pointer,
-      message: `the enum '${name}' takes its values from a cycle of sources: ${cycle.join(" -> ")}`,
-      fix: "give one enum of the cycle its own 'values'",
     });
   }
 
@@ -1397,11 +1395,6 @@ export class TreeSchemasCompiler {
   ): TreeSchemasCompiled | undefined {
     const merged = this.mergedProperties(value, position.pointer, wordsOf(position.name));
 
-    if (merged === "derived")
-      return this.claimed(position, "object")
-        ? { use: this.referenceUse(this.idOf(position)), sensitive: false, headerUnion: false }
-        : undefined;
-
     return merged === undefined ? undefined : this.objectSchema(merged, value, position);
   }
 
@@ -1409,20 +1402,19 @@ export class TreeSchemasCompiler {
     value: TreeSchemasRawObject,
     pointer: string,
     words: string[] | undefined,
-  ): IrWriter.Property[] | "derived" | undefined {
+  ): IrWriter.Property[] | undefined {
     const merged = new Map<string, { property: IrWriter.Property; pointer: string }>();
     let failed = false;
-    let derived = false;
     const members = Array.isArray(value.allOf) ? value.allOf : [];
 
     for (const [index, member] of members.entries()) {
       const at = treeSchemasPointer(pointer, "allOf", String(index));
       const properties = this.memberProperties(member, at, words);
 
-      failed ||= properties === undefined;
-      derived ||= properties === "derived";
-
-      if (properties === undefined || properties === "derived") continue;
+      if (properties === undefined) {
+        failed = true;
+        continue;
+      }
 
       for (const property of properties) {
         const before = merged.get(property.name);
@@ -1446,16 +1438,14 @@ export class TreeSchemasCompiler {
       }
     }
 
-    if (failed) return undefined;
-
-    return derived ? "derived" : [...merged.values()].map((entry) => entry.property);
+    return failed ? undefined : [...merged.values()].map((entry) => entry.property);
   }
 
   private memberProperties(
     member: TreeSchemasRaw,
     pointer: string,
     words: string[] | undefined,
-  ): IrWriter.Property[] | "derived" | undefined {
+  ): IrWriter.Property[] | undefined {
     // A member's own annotations have no place: the merged object holds the `allOf` schema's.
     if (
       treeSchemasIsObject(member) &&
@@ -1464,7 +1454,7 @@ export class TreeSchemasCompiler {
       return undefined;
     const name = typeof member === "string" ? member : treeSchemasMember(member, "$ref");
 
-    if (typeof name === "string") return this.declaredProperties(name, pointer);
+    if (typeof name === "string") return this.declaredProperties(name, pointer, "allOf");
     const shape = treeSchemasIsObject(member) ? treeSchemasShapeOf(member) : undefined;
 
     if (treeSchemasIsObject(member) && shape === "object") {
@@ -1476,7 +1466,10 @@ export class TreeSchemasCompiler {
     if (treeSchemasIsObject(member) && shape === "allOf")
       return this.mergedProperties(member, pointer, words);
 
-    if (shape === "derived") return "derived";
+    if (treeSchemasIsObject(member) && shape === "derived")
+      return this.checkKeywords(member, shape, pointer)
+        ? treeSchemasDerivedProperties(member, pointer, this.derivedHost)
+        : undefined;
 
     return this.notAnObjectMember(pointer);
   }
@@ -1484,7 +1477,8 @@ export class TreeSchemasCompiler {
   private declaredProperties(
     name: string,
     pointer: string,
-  ): IrWriter.Property[] | "derived" | undefined {
+    holder: "allOf" | "derived",
+  ): IrWriter.Property[] | undefined {
     const target = this.declaredTarget(name, new Set());
 
     if (target === undefined) {
@@ -1498,14 +1492,30 @@ export class TreeSchemasCompiler {
       return undefined;
     }
 
-    if (target.kind !== "object") return this.notAnObjectMember(pointer);
+    if (target.kind !== "object")
+      return holder === "allOf"
+        ? this.notAnObjectMember(pointer)
+        : this.notADerivedSource(name, pointer);
 
-    if (this.compileDeclared(target.id) === undefined) return undefined;
+    if (
+      this.schemas.get(target.id)?.origin.layer !== "core" &&
+      this.compileDeclared(target.id) === undefined
+    )
+      return undefined;
     const schema = this.schemas.get(target.id);
 
-    if (schema === undefined) return "derived";
+    return schema?.kind === "object" ? structuredClone(schema.properties) : undefined;
+  }
 
-    return schema.kind === "object" ? structuredClone(schema.properties) : undefined;
+  private notADerivedSource(name: string, pointer: string): undefined {
+    this.reporter.error({
+      rule: "derived-source",
+      pointer,
+      message: `the source '${name}' of a derived object is not an object schema`,
+      fix: "derive from an object schema: a plain one, an 'allOf' or another derived object",
+    });
+
+    return undefined;
   }
 
   private notAnObjectMember(pointer: string): undefined {

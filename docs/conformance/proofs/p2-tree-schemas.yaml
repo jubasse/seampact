@@ -1,0 +1,16 @@
+# docs/conformance/proofs/p2-tree-schemas.yaml
+lane: p2-tree-schemas
+proofs:
+  - id: CHK-118
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/derived.test.ts#a derived object compiles to the object its kept properties write out'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/derived.test.ts#omit keeps the source order, required replaces, an overlay replaces what it sets'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/derived.test.ts#a field the source lacks, a bad overlay or source is refused at its pointer'
+  - id: CHK-048
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/enums.test.ts#an enum keeps its values in written order, its source or local reason, code names and fallback'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/enums.test.ts#a narrowing keeps the enum''s order and its reason'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/enums.test.ts#bad values, sources, reasons, fallbacks, code names and narrowings are refused'
+  - id: CHK-160
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/query-wire.test.ts#each kind under the default conventions, at query fields and form field positions'

@@ -1,10 +1,8 @@
-import { splitName, segmentsOf } from "@seampact/spec/naming";
+import type { IrWriter } from "@seampact/spec/ir";
+import { deriveName, type Name, segmentsOf, splitName, suffixWords } from "@seampact/spec/naming";
 import type { TreeNode } from "../../../pipeline/seam.js";
-import {
-  type TreeSchemasCompiler,
-  type TreeSchemasPlace,
-  treeSchemasNeedsHoist,
-} from "./compile.js";
+import type { TreeNodesOperationName } from "../nodes/index.js";
+import type { TreeSchemasCompiler, TreeSchemasPlace } from "./compile.js";
 import {
   type TreeSchemasRaw,
   type TreeSchemasRawObject,
@@ -95,73 +93,127 @@ export function treeSchemasCompileDeclarations(
 
     paramsAt(compiler, rule, at, splitName(id));
     const proof = treeSchemasMember(rule, "proof");
+    const proofPointer = treeSchemasPointer(at, "proof", "schema");
 
-    positionAt(
-      compiler,
-      treeSchemasMember(proof, "schema"),
-      treeSchemasPointer(at, "proof", "schema"),
-    );
+    positionAt(compiler, treeSchemasMember(proof, "schema"), proofPointer);
+    compiler.queryPositions.add(proofPointer);
   }
 
   for (const [code, error] of treeSchemasEntries(merged.errors))
     paramsAt(compiler, error, treeSchemasPointer("/errors", code), splitName(code));
 }
 
-// A route position whose schema needs a hoist is named from its operation, which a later step of this half
-// compiles; until then the service answers undefined there.
-const routePositionAt = (
-  compiler: TreeSchemasCompiler,
-  value: TreeSchemasRaw | undefined,
-  pointer: string,
-  place: TreeSchemasPlace = "position",
-): void => {
-  if (!treeSchemasNeedsHoist(value)) positionAt(compiler, value, pointer, place);
-};
+// The name an inline schema at a route position is hoisted under: the operation's segments and the position's
+// role (ADR 0007 section 3); a position outside an operation derives none.
+type RouteRole = "input" | "output" | "query" | "headers" | "path";
 
+const routeName = (operation: IrWriter.Name | undefined, role: RouteRole): Name | undefined =>
+  operation === undefined ? undefined : deriveName(operation.segments, role);
+
+const responseName = (operation: IrWriter.Name | undefined, status: string): Name | undefined =>
+  operation === undefined ? undefined : deriveName(operation.segments, "response", Number(status));
+
+// A fields map entry: an inline schema there is named as a property of the map's derived name.
 const routeFieldsAt = (
   compiler: TreeSchemasCompiler,
   fields: TreeSchemasRaw | undefined,
   pointer: string,
+  owner: Name | undefined,
 ): void => {
   if (typeof fields === "string") {
-    routePositionAt(compiler, fields, pointer);
+    positionAt(compiler, fields, pointer);
 
     return;
   }
 
-  for (const [name, schema] of treeSchemasEntries(fields))
-    routePositionAt(compiler, schema, treeSchemasPointer(pointer, name));
+  const words = owner === undefined ? undefined : [...owner.segments, ...suffixWords(owner)];
+
+  for (const [key, schema] of treeSchemasEntries(fields)) {
+    const wire = key.endsWith("?") ? key.slice(0, -1) : key;
+    const own = splitName(wire);
+    const name =
+      words === undefined || own.length === 0
+        ? undefined
+        : deriveName([...words, ...own], "property");
+
+    compiler.position(schema, {
+      pointer: treeSchemasPointer(pointer, key),
+      name,
+      place: "position",
+    });
+  }
 };
 
-const FIELDS_MAPS = ["id", "pathParams", "query", "headers"] as const;
+const FIELDS_MAPS = [
+  ["id", undefined],
+  ["pathParams", "path"],
+  ["query", "query"],
+  ["headers", "headers"],
+] as const;
 
-/** Compiles the route positions of the tree (ADR 0002 sections 6 and 7); a relay route writes none. */
+const OPERATION_KINDS: ReadonlySet<TreeNode["kind"]> = new Set(["route", "op"]);
+
+/**
+ * Compiles the route positions of the tree (ADR 0002 sections 6 and 7), an inline schema hoisted under the name
+ * its operation derives. A relay route writes none; neither does an operation `names` lacks, whose naming problem
+ * tree.nodes reports.
+ */
 export function treeSchemasCompileRoutes(
   compiler: TreeSchemasCompiler,
   nodes: readonly TreeNode[],
+  names: ReadonlyMap<string, TreeNodesOperationName>,
 ): void {
   for (const node of nodes) {
-    if (node.kind === "relay") continue;
+    const operation = names.get(node.pointer)?.name;
+
+    if (node.kind === "relay" || (OPERATION_KINDS.has(node.kind) && operation === undefined))
+      continue;
     const settings = node.settings;
     const at = (...segments: string[]) => treeSchemasPointer(node.pointer, ...segments);
 
-    routePositionAt(compiler, settings.item, at("item"));
-    routePositionAt(compiler, settings.input, at("input"), "routeInput");
-    routePositionAt(compiler, settings.output, at("output"));
+    positionAt(compiler, settings.item, at("item"));
+
+    if (settings.input !== undefined)
+      compiler.position(settings.input, {
+        pointer: at("input"),
+        name: routeName(operation, "input"),
+        place: "routeInput",
+      });
+
+    if (settings.output !== undefined)
+      compiler.position(settings.output, {
+        pointer: at("output"),
+        name: routeName(operation, "output"),
+        place: "position",
+      });
 
     for (const [status, response] of treeSchemasEntries(settings.responses)) {
-      routePositionAt(
-        compiler,
-        treeSchemasMember(response, "body"),
-        at("responses", status, "body"),
-      );
+      const body = treeSchemasMember(response, "body");
+
+      if (body !== undefined)
+        compiler.position(body, {
+          pointer: at("responses", status, "body"),
+          name: responseName(operation, status),
+          place: "position",
+        });
       routeFieldsAt(
         compiler,
         treeSchemasMember(response, "headers"),
         at("responses", status, "headers"),
+        undefined,
       );
     }
 
-    for (const key of FIELDS_MAPS) routeFieldsAt(compiler, settings[key], at(key));
+    for (const [key, role] of FIELDS_MAPS)
+      routeFieldsAt(
+        compiler,
+        settings[key],
+        at(key),
+        role === undefined ? undefined : routeName(operation, role),
+      );
+
+    // A query field written as a schema name has its wire at the schema's properties.
+    for (const [key] of treeSchemasEntries(settings.query))
+      compiler.queryPositions.add(at("query", key));
   }
 }
