@@ -89,6 +89,21 @@ surfaces:
         owner: caller
         item: Task
         ops: { get: {}, update: { input: UpdateTask } }
+      settings:
+        kind: single
+        item: Task
+        concurrency: { version: body.expectedVersion, field: version }
+        routes:
+          reset: { method: post, concurrency: inherit, input: UpdateTask, output: Task }
+      drafts:
+        kind: collection
+        id: { draftId: Id }
+        idProperty: taskId
+        owner: caller
+        item: Task
+        member:
+          routes:
+            publish: { method: post, output: Task }
 `);
   const tasks = `${ROUTES}/tasks`;
   const treeSchemas = treeNodesStubService({
@@ -103,6 +118,12 @@ surfaces:
       [`${ROUTES}/files/item`]: ref("Task"),
       [`${ROUTES}/me/item`]: ref("Task"),
       [`${ROUTES}/me/ops/update/input`]: ref("UpdateTask"),
+      [`${ROUTES}/settings/item`]: ref("Task"),
+      [`${ROUTES}/settings/routes/reset/input`]: ref("UpdateTask"),
+      [`${ROUTES}/settings/routes/reset/output`]: ref("Task"),
+      [`${ROUTES}/drafts/id/draftId`]: text,
+      [`${ROUTES}/drafts/item`]: ref("Task"),
+      [`${ROUTES}/drafts/member/routes/publish/output`]: ref("Task"),
     },
   });
   const draft = treeNodesDraftWith(
@@ -138,6 +159,12 @@ surfaces:
     owner: { kind: "caller", origin: at(`${ROUTES}/me/owner`) },
   });
   expect(shapeOf("getMe").owner).toEqual({ kind: "caller", origin: at(`${ROUTES}/me/owner`) });
+  // A single's own routes take its version; a member route of a caller-owned collection is caller-owned too.
+  expect(shapeOf("resetSettings").concurrency).toEqual(body);
+  expect(shapeOf("publishDraft").owner).toEqual({
+    kind: "caller",
+    origin: at(`${ROUTES}/drafts/owner`),
+  });
 });
 
 test("paging declared: the route's style or none, else the convention's, with limits, token and sort keys", () => {
@@ -607,7 +634,7 @@ surfaces:
             examples:
               listed: { status: 200, value: [] }
       cursors: { method: get, item: Task, paging: cursor }
-      pages: { method: get, item: Task, paging: pages }
+      pages: { method: get, item: Task, paging: pages, sortable: [taskId] }
       pinged: { method: post, examples: { asked: { request: true, value: {} } } }
 `);
   const uses: Record<string, IrWriter.TypeUse> = {
@@ -645,6 +672,7 @@ surfaces:
     ["concurrency-input", `${ROUTES}/files/concurrency/version`],
     ["example-target", `${ROUTES}/files/ops/update/examples/none`],
     ["paging-limit", `${ROUTES}/cursors/paging`],
+    ["paging-sort", `${ROUTES}/pages/sortable`],
     ["paging-limit", `${ROUTES}/pages/paging`],
     ["example-target", `${ROUTES}/pinged/examples/asked`],
   ]);
