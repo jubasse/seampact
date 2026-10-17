@@ -20,31 +20,31 @@ export interface CompilerStage {
 
 /** The compiler stages in pipeline order (ADR 0006 section 1). */
 export const COMPILER_STAGES: CompilerStage[] = [
-  { name: "load", directories: ["packages/compiler/src/load"] },
-  { name: "validate", directories: ["packages/compiler/src/validate"] },
+  { name: "load", directories: ["packages/core/compiler/src/load"] },
+  { name: "validate", directories: ["packages/core/compiler/src/validate"] },
   {
     name: "tree",
     directories: [
-      "packages/compiler/src/passes/tree/nodes",
-      "packages/compiler/src/passes/tree/schemas",
+      "packages/core/compiler/src/passes/tree/nodes",
+      "packages/core/compiler/src/passes/tree/schemas",
     ],
   },
   {
     name: "access",
     directories: [
-      "packages/compiler/src/passes/access/identity",
-      "packages/compiler/src/passes/access/rights",
+      "packages/core/compiler/src/passes/access/identity",
+      "packages/core/compiler/src/passes/access/rights",
     ],
   },
   {
     name: "derive",
     directories: [
-      "packages/compiler/src/passes/derive/wire",
-      "packages/compiler/src/passes/derive/errors",
+      "packages/core/compiler/src/passes/derive/wire",
+      "packages/core/compiler/src/passes/derive/errors",
     ],
   },
-  { name: "link", directories: ["packages/compiler/src/passes/link"] },
-  { name: "finalize", directories: ["packages/compiler/src/finalize"] },
+  { name: "link", directories: ["packages/core/compiler/src/passes/link"] },
+  { name: "finalize", directories: ["packages/core/compiler/src/finalize"] },
 ];
 
 interface PackageEntry {
@@ -99,15 +99,31 @@ function readPackages(root: string, problems: string[]): PackageEntry[] {
   }
 
   const entries: PackageEntry[] = [];
-  for (const directoryName of sortedSubdirectories(packagesRoot)) {
-    const directory = `${PACKAGES_DIR}/${directoryName}`;
+  for (const directory of packageDirectories(root, packagesRoot)) {
     const manifestPath = join(root, directory, "package.json");
-    if (!existsSync(manifestPath)) continue;
 
     const entry = readPackage(root, directory, manifestPath, problems);
     if (entry !== undefined) entries.push(entry);
   }
   return entries;
+}
+
+/** Package directories: `packages/<name>`, or `packages/<group>/<name>` under a group directory. */
+function packageDirectories(root: string, packagesRoot: string): string[] {
+  const found: string[] = [];
+  for (const name of sortedSubdirectories(packagesRoot)) {
+    const directory = `${PACKAGES_DIR}/${name}`;
+    if (existsSync(join(root, directory, "package.json"))) {
+      found.push(directory);
+      continue;
+    }
+
+    for (const member of sortedSubdirectories(join(packagesRoot, name))) {
+      const memberDirectory = `${directory}/${member}`;
+      if (existsSync(join(root, memberDirectory, "package.json"))) found.push(memberDirectory);
+    }
+  }
+  return found;
 }
 
 function readPackage(

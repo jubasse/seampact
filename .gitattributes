@@ -1,8 +1,8 @@
-# Generated from the grammar modules (packages/spec/src/authoring); review the sources instead.
+# Generated from the grammar modules (packages/core/spec/src/authoring); review the sources instead.
 # The same paths are excluded from Biome's formatter (biome.json formatter.includes); schemas.test.ts
 # checks the two lists match.
-packages/spec/schemas/authoring/** linguist-generated
-packages/spec/src/authoring/grammar.snapshot.json linguist-generated
+packages/core/spec/schemas/authoring/** linguist-generated
+packages/core/spec/src/authoring/grammar.snapshot.json linguist-generated
 
 # Compared byte for byte by `node scripts/cartography/cli.ts --check`; LF on every platform.
 docs/agents/cartography.md text eol=lf

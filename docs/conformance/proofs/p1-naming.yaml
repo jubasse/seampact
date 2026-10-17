@@ -2,15 +2,15 @@ lane: p1-naming
 proofs:
   - id: CHK-173
     fixtures:
-      - packages/spec/vectors/naming/vectors.json
-      - packages/spec/vectors/naming/reserved-words.json
+      - packages/core/spec/vectors/naming/vectors.json
+      - packages/core/spec/vectors/naming/reserved-words.json
     tests:
-      - 'core: packages/spec/src/naming/naming.test.ts#vectors pass for every language'
-      - 'core: packages/spec/src/naming/naming.test.ts#vectors cover the required cases'
-      - 'core: packages/spec/src/naming/naming.test.ts#right without segments'
-      - 'core: packages/spec/src/naming/naming.test.ts#digit-led identifiers'
-      - 'core: packages/spec/src/naming/naming.test.ts#vectors file matches its schema'
-      - 'core: packages/spec/src/naming/naming.test.ts#reserved-words.json matches its schema and is sorted'
-      - 'core: packages/spec/src/naming/naming.test.ts#status is an integer, present exactly for a response'
-      - 'core: packages/spec/src/naming/naming.test.ts#fails closed on a malformed name'
-      - 'core: packages/spec/src/naming/naming.test.ts#options seam: suffixes, escape and enumCase'
+      - 'core: packages/core/spec/src/naming/naming.test.ts#vectors pass for every language'
+      - 'core: packages/core/spec/src/naming/naming.test.ts#vectors cover the required cases'
+      - 'core: packages/core/spec/src/naming/naming.test.ts#right without segments'
+      - 'core: packages/core/spec/src/naming/naming.test.ts#digit-led identifiers'
+      - 'core: packages/core/spec/src/naming/naming.test.ts#vectors file matches its schema'
+      - 'core: packages/core/spec/src/naming/naming.test.ts#reserved-words.json matches its schema and is sorted'
+      - 'core: packages/core/spec/src/naming/naming.test.ts#status is an integer, present exactly for a response'
+      - 'core: packages/core/spec/src/naming/naming.test.ts#fails closed on a malformed name'
+      - 'core: packages/core/spec/src/naming/naming.test.ts#options seam: suffixes, escape and enumCase'

@@ -73,15 +73,32 @@ function walk(root: string, rel: string, match: (name: string) => boolean): stri
   return out;
 }
 
+/** Package directories: `packages/<name>`, or `packages/<group>/<name>` under a group directory. */
+function packageDirectories(root: string): string[] {
+  const found: string[] = [];
+  for (const name of listDirs(root, "packages")) {
+    const directory = `packages/${name}`;
+    if (existsSync(join(root, directory, "package.json"))) {
+      found.push(directory);
+      continue;
+    }
+
+    for (const member of listDirs(root, directory)) {
+      const memberDirectory = `${directory}/${member}`;
+      if (existsSync(join(root, memberDirectory, "package.json"))) found.push(memberDirectory);
+    }
+  }
+  return found;
+}
+
 function loadNpm(root: string, out: Violation[]): Npm[] {
   const pkgs: Npm[] = [];
-  for (const d of listDirs(root, "packages")) {
-    const file = `packages/${d}/package.json`;
-    if (!existsSync(join(root, file))) continue;
+  for (const dir of packageDirectories(root)) {
+    const file = `${dir}/package.json`;
     const json = readJson(root, file, out, "roles");
     if (!json) continue;
     const role = checkRole(file, json, out);
-    pkgs.push({ file, dir: `packages/${d}`, name: String(json.name ?? ""), role, json });
+    pkgs.push({ file, dir, name: String(json.name ?? ""), role, json });
   }
   return pkgs;
 }

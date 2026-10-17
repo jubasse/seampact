@@ -18,7 +18,7 @@ import kotlinx.serialization.json.jsonObject
 // unknown members it drops. The reader with its version and support checks comes on top of this model.
 class ModelRoundTripTest {
     private val examples: Path =
-        Path.of(System.getProperty("seampact.repositoryRoot"), "packages/spec/schemas/ir/examples")
+        Path.of(System.getProperty("seampact.repositoryRoot"), "packages/core/spec/schemas/ir/examples")
 
     private fun example(name: String): JsonElement = IrJson.parseToJsonElement(examples.resolve(name).readText())
 

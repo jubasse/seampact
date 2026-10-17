@@ -8,8 +8,8 @@
     "lineWidth": 100,
     "includes": [
       "**",
-      "!packages/spec/schemas/authoring/**",
-      "!packages/spec/src/authoring/grammar.snapshot.json"
+      "!packages/core/spec/schemas/authoring/**",
+      "!packages/core/spec/src/authoring/grammar.snapshot.json"
     ]
   },
   "linter": { "enabled": true, "rules": { "preset": "recommended" } }

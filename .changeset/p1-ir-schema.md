@@ -11,7 +11,7 @@ Publish the IR JSON Schema (irVersion 1, irRevision 1), its generated TypeScript
 
 | Field or kind | Schema path | Change | Additive or breaking | Guarded by |
 |---|---|---|---|---|
-| every member of ADR 0004 sections 2 to 8 and 11 | `packages/spec/schemas/ir/*.schema.json` | added | additive | kind `httpOperation`; no feature |
+| every member of ADR 0004 sections 2 to 8 and 11 | `packages/core/spec/schemas/ir/*.schema.json` | added | additive | kind `httpOperation`; no feature |
 
 ### What a target must do
 

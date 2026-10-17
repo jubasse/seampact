@@ -80,7 +80,7 @@ export function emitKotlin(context: KotlinContext): Map<string, string> {
   for (const [schemaFile, definitions] of [...byFile].sort(([left], [right]) =>
     left < right ? -1 : 1,
   )) {
-    const header = headerLines(`packages/spec/schemas/ir/${schemaFile}.schema.json`, context);
+    const header = headerLines(`packages/core/spec/schemas/ir/${schemaFile}.schema.json`, context);
     const body = definitions.flatMap((definition) => emitter.definition(definition));
     files.set(
       `${KOTLIN_MODEL_DIRECTORY}/${kotlinFileName(schemaFile)}`,

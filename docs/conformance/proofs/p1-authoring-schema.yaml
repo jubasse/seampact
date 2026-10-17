@@ -3,4 +3,4 @@ lane: p1-authoring-schema
 proofs:
   - id: CHK-142
     fixtures: [fixtures/validate/reasons/accepted, fixtures/validate/reasons/refused]
-    tests: ['core: packages/compiler/src/validate/validate.test.ts#reasons only on safety exceptions']
+    tests: ['core: packages/core/compiler/src/validate/validate.test.ts#reasons only on safety exceptions']
