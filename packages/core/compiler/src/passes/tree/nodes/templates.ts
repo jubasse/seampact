@@ -65,11 +65,12 @@ const EACH_SLOTS: readonly string[] = ["item", "itemId", "itemFields", "itemSelf
 
 /**
  * What a slot holds, which sets where it may stand: `$merge` takes an object, `$each` an array, and a `$` key a
- * name. `payload` holds the operation's payload and `item` an element of it, checked against each operation.
+ * name, which only `collection` is. `payload` holds the operation's payload and `item` an element of it, checked against each operation.
  */
-type SlotKind = "object" | "array" | "name" | "flag" | "payload";
+type SlotKind = "object" | "array" | "name" | "value" | "flag" | "payload";
 
 const SLOT_KINDS: Readonly<Record<string, SlotKind>> = {
+  collection: "name",
   payload: "payload",
   item: "payload",
   meta: "object",
@@ -81,9 +82,9 @@ const SLOT_KINDS: Readonly<Record<string, SlotKind>> = {
   complete: "flag",
 };
 
-// Every other slot holds a text or a number, which may name a member.
+// Every other slot holds a text or a number value, which may not name a member: it can be missing or come from data.
 const slotKind = (slot: string): SlotKind =>
-  Object.hasOwn(SLOT_KINDS, slot) ? (SLOT_KINDS[slot] ?? "name") : "name";
+  Object.hasOwn(SLOT_KINDS, slot) ? (SLOT_KINDS[slot] ?? "value") : "value";
 
 /** Where a slot stands in a template: spread by `$merge`, mapped by `$each`, or naming a member. */
 type SlotStand = "merge" | "each" | "name";
@@ -115,8 +116,8 @@ const STAND_RULES: Readonly<Record<SlotStand, StandRule>> = {
     rule: "template-name",
     kinds: ["name"],
     verb: "names a member with",
-    need: "text or number",
-    fix: "Name the member with a text or number slot ($collection, $resource, $id), or write $$ for a literal $.",
+    need: "name",
+    fix: "Name the member with $collection, or write $$ for a literal $.",
   },
 };
 

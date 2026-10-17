@@ -102,7 +102,7 @@ A template describes a JSON value the boundary writes. The same language serves 
 | a sequence | an array of templates |
 | any other scalar | a literal |
 
-A member whose value is a slot with no value is omitted, or written `null` when `absent: null`; an object whose members are all omitted is omitted in turn, so `next: { href: $next }` disappears on the last page. `$merge` takes an object-typed slot only, and a payload that is not an object fails to compile under a format that merges it; `$each` takes an array-typed slot only. A table's id-keyed payload is an object; its members are ids, so no member clash is checked. Any other `$` in a string is a compile error; write `$$` for a literal `$`. A key that starts with `$` is a name slot or `$$…`; any other is a compile error. The name slots are the slots whose value is a text or a number (`$collection`, `$resource`, `$id`, `$status`, a URL or a cursor); an object, array or boolean slot names no member.
+A member whose value is a slot with no value is omitted, or written `null` when `absent: null`; an object whose members are all omitted is omitted in turn, so `next: { href: $next }` disappears on the last page. `$merge` takes an object-typed slot only, and a payload that is not an object fails to compile under a format that merges it; `$each` takes an array-typed slot only. A table's id-keyed payload is an object; its members are ids, so no member clash is checked. Any other `$` in a string is a compile error; write `$$` for a literal `$`. A key that starts with `$` is a name slot or `$$…`; any other is a compile error. `$collection` is the only name slot; every other slot, text or number included (`$status`, `$id`, a URL or a cursor), names no member.
 
 The slots are a closed set:
 

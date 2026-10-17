@@ -499,6 +499,8 @@ pagings:
     request: { cursor: { header: X-Page }, limit: { header: x-page } }
   directed:
     request: { page: { query: page }, sort: { query: sort, style: split, direction: page } }
+  same:
+    request: { page: { query: page }, sort: { query: s, style: split, direction: s } }
   apart:
     request: { cursor: { header: x }, limit: { query: x } }
 surfaces:
@@ -513,8 +515,35 @@ surfaces:
   expect(located(diagnostics)).toEqual([
     ["paging-request", "/pagings/headers/request/limit"],
     ["paging-request", "/pagings/directed/request/sort"],
+    ["paging-request", "/pagings/same/request/sort"],
   ]);
   expect(Object.keys(draft.pagings)).toEqual(["apart"]);
+});
+
+test("formats and paging styles: a url or a number slot may not name a member", () => {
+  const { diagnostics } = run(
+    `
+api: { name: a, version: 1, kind: product }
+pagings:
+  nk:
+    request: { cursor: { query: cursor } }
+    response: { body: { $next: $items } }
+  pb:
+    request: { page: { query: page } }
+    response: { body: { $status: $total, data: $items } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      health: { method: get, output: Note }
+`,
+    { [`${ROUTES}/health/output`]: ref("Note") },
+  );
+
+  expect(located(diagnostics)).toEqual([
+    ["template-name", "/pagings/nk/response/body/$next"],
+    ["template-name", "/pagings/pb/response/body/$status"],
+  ]);
 });
 
 test("formats and paging styles: an error with headers but no body writes no $code", () => {

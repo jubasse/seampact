@@ -34,9 +34,6 @@ export const TREE_NODES_BARE_ORIGIN: Origin = { layer: "core", pointer: "/format
 /** The success media of a format that writes none, and of the core `bare`. */
 export const TREE_NODES_DEFAULT_MEDIA = "application/json";
 
-const BARE = TREE_NODES_BARE_FORMAT;
-const BARE_ORIGIN = TREE_NODES_BARE_ORIGIN;
-const DEFAULT_MEDIA = TREE_NODES_DEFAULT_MEDIA;
 const BARE_ERROR_MEDIA = "application/problem+json";
 const NULL_ABSENT: IrWriter.Absent = "null";
 const DEFAULT_ABSENT: IrWriter.Absent = "omit";
@@ -97,15 +94,15 @@ const BARE_ERROR: IrWriter.ErrorShape = {
 /** Writes `formats`: every declared format, used or not, and `bare`, from the core where no layer declares it. */
 export function treeNodesFormats(draft: DraftIR, context: TreeNodesContext): void {
   // A declared `bare` is read first, since a format without `error` takes its error.
-  const bare = formatOf(context, BARE, BARE_ERROR);
+  const bare = formatOf(context, TREE_NODES_BARE_FORMAT, BARE_ERROR);
   const bareError = bare?.error;
 
-  if (bare !== undefined) draft.formats[BARE] = bare;
+  if (bare !== undefined) draft.formats[TREE_NODES_BARE_FORMAT] = bare;
 
   const declared = context.raw.merged.formats;
 
   for (const id of treeNodesIsObject(declared) ? Object.keys(declared) : []) {
-    if (id === BARE) continue;
+    if (id === TREE_NODES_BARE_FORMAT) continue;
 
     const format = formatOf(context, id, bareError);
 
@@ -118,9 +115,9 @@ const declaredFormat = (context: TreeNodesContext, id: string): TreeNodesJson | 
 
 function coreBare(): IrWriter.WireFormat {
   return {
-    id: BARE,
-    origin: pipelineCopy(BARE_ORIGIN),
-    media: DEFAULT_MEDIA,
+    id: TREE_NODES_BARE_FORMAT,
+    origin: pipelineCopy(TREE_NODES_BARE_ORIGIN),
+    media: TREE_NODES_DEFAULT_MEDIA,
     absent: DEFAULT_ABSENT,
     success: {
       item: { body: slot("payload"), headers: [] },
@@ -143,10 +140,11 @@ function formatOf(
   const pointer = treeNodesPointer("/formats", id);
   const origin = context.origin(pointer);
 
-  if (declared === undefined || origin === undefined) return id === BARE ? coreBare() : undefined;
+  if (declared === undefined || origin === undefined)
+    return id === TREE_NODES_BARE_FORMAT ? coreBare() : undefined;
 
   const reader = new FormatReader(context, id, pointer);
-  const media = textOf(treeNodesMember(declared, "media")) ?? DEFAULT_MEDIA;
+  const media = textOf(treeNodesMember(declared, "media")) ?? TREE_NODES_DEFAULT_MEDIA;
   const success = reader.success(treeNodesMember(declared, "success"));
   const meta = reader.meta(treeNodesMember(declared, "meta"));
   const error = reader.error(treeNodesMember(declared, "error"), media, bareError);

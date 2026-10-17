@@ -210,7 +210,9 @@ class StyleReader {
   // ADR 0002 section 14: two request roles naming one parameter or header could not be told apart.
   checkSentOnce(role: IrWriter.PagingRequestRole, sent: Set<string>): boolean {
     const names = [role.name, ...(role.direction === undefined ? [] : [role.direction])];
-    const twice = names.find((name) => sent.has(sentKey(role.in, name)));
+    const twice = names.find(
+      (name, index) => sent.has(sentKey(role.in, name)) || names.indexOf(name) < index,
+    );
 
     for (const name of names) sent.add(sentKey(role.in, name));
 
