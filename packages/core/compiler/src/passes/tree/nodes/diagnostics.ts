@@ -56,6 +56,7 @@ export function treeNodesNodeOrigin(origin: Origin): DiagnosticOrigin {
     throw new Error(
       `a tree node has a core origin (${origin.pointer}); every node is written in a layer`,
     );
+
   return pipelineCopy(origin);
 }
 
@@ -85,6 +86,7 @@ export type TreeNodesReportOnce = (key: string, diagnostic: Diagnostic) => void;
 // operation it reaches, and reported once.
 export function treeNodesReportOnce(report: (diagnostic: Diagnostic) => void): TreeNodesReportOnce {
   const reported = new Set<string>();
+
   return (key, diagnostic) => {
     if (reported.has(key)) return;
     reported.add(key);

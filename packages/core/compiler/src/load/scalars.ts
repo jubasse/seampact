@@ -19,8 +19,12 @@ export function loadScalarPitfall(
   resolved: unknown,
 ): LoadScalarPitfall | undefined {
   if (P1.test(source)) return "P1";
+
   if (P4.test(source)) return "P4";
+
   if (typeof resolved === "number") return P2_PLAIN_DECIMAL.test(source) ? undefined : "P2";
+
   if (P3_NUMBER.test(source) || P3_TIMESTAMP.test(source)) return "P3";
+
   return undefined;
 }

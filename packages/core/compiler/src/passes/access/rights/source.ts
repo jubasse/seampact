@@ -25,16 +25,20 @@ export function accessRightsValueSource(text: string): IrWriter.ValueSource | un
   if (isBareSource(text)) return { in: text };
 
   const prefix = ADDRESS_PREFIX.exec(text);
+
   if (prefix !== null) return { in: "address", prefixBits: Number(prefix[1]) };
 
   const dot = text.indexOf(".");
   const kind = dot < 0 ? text : text.slice(0, dot);
+
   if (dot < 0 || !isNamedSource(kind)) return undefined;
+
   return { in: kind, name: text.slice(dot + 1) };
 }
 
 /** The text of an IR value source, as a contract writes it. */
 export function accessRightsSourceText(source: IrWriter.ValueSource): string {
   if (source.prefixBits !== undefined) return `${source.in}/${source.prefixBits}`;
+
   return source.name === undefined ? source.in : `${source.in}.${source.name}`;
 }

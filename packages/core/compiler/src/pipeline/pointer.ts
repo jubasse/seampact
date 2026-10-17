@@ -22,7 +22,9 @@ export const pointerBelow = (base: string, ...segments: readonly (string | numbe
 
 function segmentsOf(pointer: string): string[] | undefined {
   if (pointer === "") return [];
+
   if (!pointer.startsWith("/")) return undefined;
+
   return pointer
     .slice(1)
     .split("/")
@@ -32,6 +34,7 @@ function segmentsOf(pointer: string): string[] | undefined {
 /** The value at `segments` below `value`, own members only; undefined when absent. */
 export function jsonAt(value: Json | undefined, segments: readonly string[]): Json | undefined {
   let at = value;
+
   for (const segment of segments) {
     if (isJsonList(at)) {
       at = /^(0|[1-9][0-9]*)$/.test(segment) ? at[Number(segment)] : undefined;
@@ -41,12 +44,14 @@ export function jsonAt(value: Json | undefined, segments: readonly string[]): Js
       return undefined;
     }
   }
+
   return at;
 }
 
 /** The value a pointer names in a tree, by reference (a pass copies it with `pipelineCopy` before storing it); undefined when it names nothing. */
 export function jsonAtPointer(value: Json, pointer: string): Json | undefined {
   const segments = segmentsOf(pointer);
+
   return segments === undefined ? undefined : jsonAt(value, segments);
 }
 
@@ -66,17 +71,23 @@ const originCopy = (origin: PassReadonly<Origin>, pointer = origin.pointer): Ori
 export function pipelineOrigin(raw: PassReadonly<RawApi>, pointer: string): Origin | undefined {
   if (jsonAtPointer(raw.merged, pointer) === undefined) return undefined;
   const origins = raw.leafOrigins;
+
   for (let at = pointer; ; at = at.slice(0, at.lastIndexOf("/"))) {
     if (Object.hasOwn(origins, at)) {
       const origin = origins[at] as PassReadonly<Origin>;
+
       return originCopy(origin, origin.pointer + pointer.slice(at.length));
     }
+
     if (at === "") break;
   }
+
   for (let i = raw.layers.length - 1; i >= 0; i--) {
     const layer = raw.layers[i];
+
     if (layer !== undefined && jsonAtPointer(layer.tree, pointer) !== undefined)
       return { layer: layer.layer, pointer };
   }
+
   return undefined;
 }

@@ -54,28 +54,34 @@ export function accessRightsDeriveEntries(
   packs: PassReadonly<DraftIR["packs"]>,
 ): AccessRightsDeriveEntry[] {
   const written = accessRightsMember(context.raw.merged, "derive");
+
   if (!Array.isArray(written)) return [];
 
   const entries: AccessRightsDeriveEntry[] = [];
+
   for (const [index, settings] of written.entries()) {
     if (!pipelineIsJsonObject(settings)) continue;
     const pointer = pipelinePointerBelow("/derive", index);
     const layer = context.origin(pointer)?.layer ?? "";
+
     if (!layer.startsWith(PACK_LAYER))
       throw new Error(
         `the derive entry at ${pointer} comes from layer '${layer}', which is no pack`,
       );
 
     const pack = layer.slice(PACK_LAYER.length);
+
     if (!packs.some((applied) => applied.name === pack))
       throw new Error(
         `the derive entry at ${pointer} comes from pack '${pack}', which tree.nodes did not record in packs`,
       );
 
     const entry = accessRightsString(settings, "entry");
+
     if (entry === undefined) throw new Error(`the derive entry at ${pointer} has no 'entry' name`);
     entries.push({ pointer, entry, derivation: `pack.${pack}.${entry}`, settings });
   }
+
   return entries;
 }
 
@@ -89,6 +95,7 @@ export function accessRightsSelects(
   const select = accessRightsMember(entry.settings, "select");
   const accepts = (criterion: string, value: string | undefined): boolean => {
     if (accessRightsMember(select, criterion) === undefined) return true;
+
     return value !== undefined && accessRightsStrings(select, criterion).includes(value);
   };
 
@@ -119,6 +126,7 @@ export function accessRightsExpand(
   route: AccessRightsRoute,
 ): string | undefined {
   const resource = accessRightsResourceOf(route.node)?.name;
+
   if (resource === undefined && template.text.includes(RESOURCE_SLOT)) {
     reporter.error({
       rule: "pack-template",
@@ -126,10 +134,12 @@ export function accessRightsExpand(
       fix: "narrow the entry's selector to routes of a collection or single, or drop {resource}",
       pointer: template.pointer,
     });
+
     return undefined;
   }
 
   const op = route.operation.op ?? route.node.name;
+
   // Function replacers, so a `$` in a name is never read as a replacement pattern.
   return template.text
     .replaceAll(RESOURCE_SLOT, () => resource ?? "")
@@ -157,27 +167,35 @@ export function accessRightsDeclareRight(
   const declareRight = accessRightsMember(entry.settings, "declareRight");
   const pointer = pipelinePointerBelow(entry.pointer, "declareRight");
   const text = accessRightsString(declareRight, "name");
+
   if (text === undefined) throw new Error(`the declareRight at ${pointer} has no 'name' template`);
   const id = accessRightsExpand(
     reporter,
     { text, pointer: pipelinePointerBelow(pointer, "name") },
     route,
   );
+
   if (id === undefined) return;
 
   const derived = derivedSubject(context, reporter, { ...input, declareRight, pointer });
+
   if (derived === undefined) {
     if (!catalogues.rights.has(id)) catalogues.declared.rights.add(id);
+
     return;
   }
 
   const present = catalogues.rights.get(id);
+
   if (present !== undefined) {
     checkSameSubject(reporter, { id, present, derived: derived.subject, pointer, route });
+
     if (present.derivedFrom?.derivation === entry.derivation)
       present.derivedFrom.from.push(pipelineCopy(route.node.origin));
+
     return;
   }
+
   if (catalogues.declared.rights.has(id)) return;
 
   const named = accessRightsCheckName(reporter, {
@@ -186,8 +204,10 @@ export function accessRightsDeclareRight(
     pointer,
     rightPattern: catalogues.rightPattern,
   });
+
   if (!named) {
     catalogues.declared.rights.add(id);
+
     return;
   }
 
@@ -203,6 +223,7 @@ export function accessRightsDeclareRight(
       from: [accessRightsOriginOf(context, pointer), pipelineCopy(route.node.origin)],
     },
   });
+
   if (derived.idName !== undefined) catalogues.rightIdNames.set(id, derived.idName);
 }
 
@@ -217,6 +238,7 @@ function checkSameSubject(
   },
 ): void {
   const { id, present, derived, pointer, route } = options;
+
   if (pipelineCanonical(present.subject) === pipelineCanonical(derived)) return;
 
   // A right an entry derived has no place of its own in the merged tree; a declared one does.
@@ -244,12 +266,14 @@ function derivedSubject(
 
   if (at?.scope.name === "member") {
     if (accessRightsString(subject, "member") !== "resource") return { subject: { kind: "none" } };
+
     return resourceSubject(context, reporter, { at: at.collection, schemas, pointer, route });
   }
 
   if (accessRightsString(subject, "collection") !== "innermostScope")
     return { subject: { kind: "none" } };
   const innermost = scopes[scopes.length - 1];
+
   if (innermost !== undefined) return { subject: { kind: "scope", scope: innermost.scope } };
 
   reporter.error({
@@ -258,6 +282,7 @@ function derivedSubject(
     fix: "enter a scope above the route, or narrow the entry's selector",
     pointer,
   });
+
   return undefined;
 }
 
@@ -276,6 +301,7 @@ function resourceSubject(
   const ids = Object.keys(accessRightsMember(at.settings, "id") ?? {});
   const item = accessRightsMember(at.settings, "item");
   const [idKey] = ids;
+
   if (ids.length !== 1 || idKey === undefined || item === undefined) {
     reporter.error({
       rule: "pack-right",
@@ -283,6 +309,7 @@ function resourceSubject(
       fix: "give the collection an 'item' and one 'id', or narrow the entry's selector",
       pointer,
     });
+
     return undefined;
   }
 
@@ -290,6 +317,7 @@ function resourceSubject(
   const idName = accessRightsSchemaName(
     accessRightsMember(accessRightsMember(at.settings, "id"), idKey),
   );
+
   return {
     subject: {
       kind: "resource",
@@ -308,11 +336,14 @@ function itemName(
   pointer: string,
 ): IrWriter.Name {
   const name = accessRightsSchemaName(item);
+
   if (name !== undefined) return { segments: splitName(name), role: "schema" };
 
   const use = accessRightsTypeUse(context, pointer, "output");
   const hoisted = use.kind === "ref" ? schemas[use.schema] : undefined;
+
   if (hoisted === undefined || !("name" in hoisted))
     throw new Error(`the schema service answers no named schema for the item at ${pointer}`);
+
   return pipelineCopy(hoisted.name);
 }

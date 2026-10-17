@@ -12,6 +12,7 @@ function vocabularyKeywords(): string[] {
     dirname(require.resolve("ajv/package.json")),
     "dist/refs/json-schema-2020-12/meta",
   );
+
   return readdirSync(dir)
     .filter((f) => f.endsWith(".json"))
     .flatMap((f) => Object.keys(JSON.parse(readFileSync(join(dir, f), "utf8")).properties ?? {}));
@@ -35,8 +36,10 @@ test("the schema language shows each refused keyword with its reason", () => {
       { properties: Record<string, { description?: string; not?: unknown }> }
     >
   ).plain;
+
   for (const k of REFUSED_SCHEMA_KEYWORDS) {
     const property = plain?.properties[k.keyword];
+
     expect(property?.not, k.keyword).toEqual({});
     expect(property?.description, k.keyword).toContain(k.reason);
   }

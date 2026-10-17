@@ -52,14 +52,17 @@ const portableTypeOf = (format: string): IrWriter.ScalarType | undefined =>
 function treeSchemasDecimalLiteral(value: number): string | undefined {
   if (Number.isInteger(value)) return Number.isSafeInteger(value) ? String(value) : undefined;
   const literal = withoutExponent(String(value));
+
   return significantDigits(literal) > MAX_FRACTION_DIGITS ? undefined : literal;
 }
 
 // A fraction's shortest form as plain digits: JavaScript writes one below 1e-6 with an exponent (`1e-7`).
 function withoutExponent(text: string): string {
   const exponent = /^(-?)([0-9])(?:\.([0-9]+))?e-([0-9]+)$/.exec(text);
+
   if (exponent === null) return text;
   const [, sign = "", lead = "", fraction = "", shift = "1"] = exponent;
+
   return `${sign}0.${"0".repeat(Number(shift) - 1)}${lead}${fraction}`;
 }
 
@@ -78,15 +81,18 @@ function emptyRanges(refinements: IrWriter.Refinements, type: IrWriter.ScalarTyp
     UPPER_BOUNDS.flatMap((upperKey) => {
       const lower = refinements[lowerKey];
       const upper = refinements[upperKey];
+
       if (lower === undefined || upper === undefined) return [];
       const problem = emptyBetween(
         { key: lowerKey, literal: lower },
         { key: upperKey, literal: upper },
         type,
       );
+
       return problem === undefined ? [] : [problem];
     }),
   );
+
   return [...lengths, ...bounds];
 }
 
@@ -103,11 +109,15 @@ function emptyBetween(
   const lowerText = `'${lower.key}' ${lower.literal}`;
   const upperText = `'${upper.key}' ${upper.literal}`;
   const exclusive = lower.key === "exclusiveMinimum" || upper.key === "exclusiveMaximum";
+
   if (Number(lower.literal) > Number(upper.literal)) return `${lowerText} is above ${upperText}`;
+
   if (Number(lower.literal) === Number(upper.literal) && exclusive)
     return `${lowerText} equals ${upperText}, one of them exclusive`;
+
   if (type === "integer" && lowestInteger(lower) > highestInteger(upper))
     return `no integer lies between ${lowerText} and ${upperText}`;
+
   return undefined;
 }
 
@@ -141,13 +151,17 @@ export class TreeSchemasScalars {
   use(value: TreeSchemasRawObject, pointer: string): IrWriter.ScalarTypeUse | undefined {
     const type = value.type;
     const format = typeof value.format === "string" ? value.format : undefined;
+
     if (type !== "string" && type !== "integer" && type !== "number" && type !== "boolean")
       return format === undefined ? undefined : this.namedFormatUse(format, value, pointer);
+
     if (format !== undefined && !this.checkFormatBesideType(format, type, pointer))
       return undefined;
     const refinements = this.refinements(value, pointer, { type, decimal: format === DECIMAL });
+
     if (refinements === undefined || !this.checkRanges(refinements, type, pointer))
       return undefined;
+
     return { kind: "scalar", type, ...(format === undefined ? {} : { format }), refinements };
   }
 
@@ -158,7 +172,9 @@ export class TreeSchemasScalars {
     const scalar = treeSchemasIsObject(value)
       ? this.compileDeclaration(id, value, pointer)
       : undefined;
+
     this.declarations.set(id, scalar);
+
     return scalar;
   }
 
@@ -168,6 +184,7 @@ export class TreeSchemasScalars {
     pointer: string,
   ): IrWriter.Scalar | undefined {
     const portable = portableTypeOf(id);
+
     if (portable !== undefined || id === PASSWORD) {
       this.reporter.error({
         rule: "scalar-name",
@@ -178,12 +195,16 @@ export class TreeSchemasScalars {
             ? "remove it and mark the field 'sensitive: true'"
             : `remove it and write 'type: ${portable}, format: ${id}' where it is used`,
       });
+
       return undefined;
     }
+
     const type = value.type === "integer" ? "integer" : "string";
     const refinements = this.refinements(value, pointer, { type, decimal: false });
+
     if (refinements === undefined || !this.checkRanges(refinements, type, pointer))
       return undefined;
+
     return {
       id,
       name: { segments: splitName(id), role: "schema" },
@@ -200,8 +221,10 @@ export class TreeSchemasScalars {
     pointer: string,
   ): boolean {
     const portable = portableTypeOf(format);
+
     if (portable === type) return true;
     const at = treeSchemasPointer(pointer, "format");
+
     if (portable !== undefined) {
       this.reporter.error({
         rule: "format-type",
@@ -221,6 +244,7 @@ export class TreeSchemasScalars {
     } else {
       this.unknownFormat(format, at);
     }
+
     return false;
   }
 
@@ -231,6 +255,7 @@ export class TreeSchemasScalars {
   ): IrWriter.ScalarTypeUse | undefined {
     const at = treeSchemasPointer(pointer, "format");
     const portable = portableTypeOf(format);
+
     if (portable !== undefined) {
       this.reporter.error({
         rule: "format-type",
@@ -238,16 +263,21 @@ export class TreeSchemasScalars {
         message: `the portable format '${format}' is written with its type`,
         fix: `write 'type: ${portable}, format: ${format}'`,
       });
+
       return undefined;
     }
+
     if (format === PASSWORD) return this.passwordFormat(at);
     const declared = this.declaration(format);
+
     if (declared === undefined) return this.unknownFormat(format, at);
     const own = this.refinements(value, pointer, { type: declared.type.type, decimal: false });
+
     if (own === undefined) return undefined;
     const conflicts = Object.keys(own).filter((key) =>
       Object.hasOwn(declared.type.refinements, key),
     );
+
     for (const key of conflicts) {
       this.reporter.error({
         rule: "format-refinement",
@@ -256,9 +286,12 @@ export class TreeSchemasScalars {
         fix: `remove '${key}' here, or declare another named format`,
       });
     }
+
     if (conflicts.length > 0) return undefined;
     const refinements = { ...structuredClone(declared.type.refinements), ...own };
+
     if (!this.checkRanges(refinements, declared.type.type, pointer)) return undefined;
+
     return { kind: "scalar", type: declared.type.type, scalar: format, refinements };
   }
 
@@ -268,6 +301,7 @@ export class TreeSchemasScalars {
     pointer: string,
   ): boolean {
     const empty = emptyRanges(refinements, type);
+
     for (const problem of empty) {
       this.reporter.error({
         rule: "refinement-range",
@@ -276,6 +310,7 @@ export class TreeSchemasScalars {
         fix: "lower the minimum or raise the maximum",
       });
     }
+
     return empty.length === 0;
   }
 
@@ -286,6 +321,7 @@ export class TreeSchemasScalars {
       message: "'password' is not authorable: it is what 'sensitive' emits",
       fix: "write 'type: string' and mark the field 'sensitive: true'",
     });
+
     return undefined;
   }
 
@@ -296,6 +332,7 @@ export class TreeSchemasScalars {
       message: `'${format}' is neither a portable format nor a named format of 'scalars'`,
       fix: "declare it under 'scalars', or write a portable format",
     });
+
     return undefined;
   }
 
@@ -315,42 +352,54 @@ export class TreeSchemasScalars {
         fix,
       });
     };
+
     const isString = target.type === "string";
     const isNumeric = target.type === "integer" || target.type === "number" || target.decimal;
 
     for (const key of LENGTHS) {
       const length = value[key];
+
       if (typeof length !== "number") continue;
+
       if (isString && !target.decimal) out[key] = length;
       else misplaced(key);
     }
+
     if (typeof value.pattern === "string") {
       if (!isString || target.decimal) misplaced("pattern");
       else refused = !this.pattern(value.pattern, pointer, out) || refused;
     }
+
     for (const key of [...BOUNDS, "multipleOf"] as const) {
       const bound = value[key];
+
       if (typeof bound !== "number") continue;
+
       if (!isNumeric) misplaced(key);
       else if (key === "multipleOf" && target.type === "number")
         misplaced(key, "use 'type: integer', or 'type: string, format: decimal' for an exact step");
       else refused = !this.bound(key, bound, pointer, out) || refused;
     }
+
     return refused ? undefined : out;
   }
 
   private pattern(source: string, pointer: string, out: IrWriter.Refinements): boolean {
     const normalized = treeSchemasNormalizePattern(source);
+
     if (normalized.ok) {
       out.pattern = { source, normalized: normalized.normalized };
+
       return true;
     }
+
     this.reporter.error({
       rule: "pattern",
       pointer: treeSchemasPointer(pointer, "pattern"),
       message: `the pattern is not portable: ${normalized.reason}`,
       fix: "rewrite it in the portable subset of ADR 0003 section 9",
     });
+
     return false;
   }
 
@@ -361,11 +410,15 @@ export class TreeSchemasScalars {
     out: IrWriter.Refinements,
   ): boolean {
     const literal = treeSchemasDecimalLiteral(bound);
+
     if (literal !== undefined) {
       out[key] = literal;
+
       return true;
     }
+
     const integer = Number.isInteger(bound);
+
     this.reporter.error({
       rule: "refinement-precision",
       pointer: treeSchemasPointer(pointer, key),
@@ -376,6 +429,7 @@ export class TreeSchemasScalars {
         ? "write a bound between -(2^53 - 1) and 2^53 - 1"
         : `write the bound with at most ${MAX_FRACTION_DIGITS} significant digits`,
     });
+
     return false;
   }
 }
@@ -384,6 +438,7 @@ export class TreeSchemasScalars {
 export function treeSchemasDocs(value: TreeSchemasRaw | undefined): IrWriter.Docs {
   const title = treeSchemasMember(value, "title");
   const description = treeSchemasMember(value, "description");
+
   return {
     ...(typeof title === "string" ? { summary: title } : {}),
     ...(typeof description === "string" ? { description } : {}),

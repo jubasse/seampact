@@ -31,6 +31,7 @@ export function accessIdentityPrincipalRequires(
     const field = entry.value;
     const pointer = requirementPointer(entry, field);
     const reader: Reader = { subject: "'principal.requires'", verb: "names" };
+
     if (principalHolds(route, resolved, field, pointer, reader, scope))
       requirements.push({ field, origin: pipelineCopy(entry.origin) });
   }
@@ -51,15 +52,18 @@ export function accessIdentityBindings(
   for (const entry of entries) {
     // The authoring schema keys a binding by its source and writes its target as a principal source.
     const key = entry.key;
+
     if (key === undefined || typeof entry.value !== "string")
       throw new Error(`a binding set at ${entry.node.pointer} has no source key or no target`);
 
     const pointer = accessIdentityPointer(entry.node.pointer, "bindings", key);
     const first = firstByKey.get(key);
+
     if (first !== undefined) {
       if (first.value !== entry.value) reportConflict(key, pointer, first, scope);
       continue;
     }
+
     firstByKey.set(key, entry);
 
     const from = accessIdentityValueSource(key);
@@ -67,6 +71,7 @@ export function accessIdentityBindings(
     const reader: Reader = { subject: `binding '${key}'`, verb: "reads" };
     const sourceFound = bindingSourceFound(route, key, from, pointer, scope);
     const targetHeld = principalHolds(route, resolved, to.name ?? "", pointer, reader, scope);
+
     if (sourceFound && targetHeld) bindings.push({ from, to, origin: pipelineCopy(entry.origin) });
   }
 
@@ -79,6 +84,7 @@ const sourceText = (source: IrWriter.ValueSource): string =>
 const bySource = (left: IrWriter.Binding, right: IrWriter.Binding): number => {
   const leftText = sourceText(left.from);
   const rightText = sourceText(right.from);
+
   return leftText < rightText ? -1 : leftText > rightText ? 1 : 0;
 };
 
@@ -88,8 +94,10 @@ function requirementPointer(entry: InheritedEntry, field: string): string {
   const index = (
     principal === undefined ? [] : (accessIdentityStrings(principal, "requires") ?? [])
   ).indexOf(field);
+
   if (index < 0)
     throw new Error(`the principal requirement '${field}' is not written at ${entry.node.pointer}`);
+
   return accessIdentityPointer(entry.node.pointer, "principal", "requires", `${index}`);
 }
 
@@ -109,6 +117,7 @@ function principalHolds(
   scope: AccessIdentityScope,
 ): boolean {
   const identity = resolved.identity;
+
   if (identity === undefined) {
     scope.reporter.error({
       rule: "principal-field",
@@ -117,18 +126,22 @@ function principalHolds(
       pointer,
       related: [{ pointer: route.node.pointer, message: "a public route it reaches" }],
     });
+
     return false;
   }
 
   const lookup = accessIdentityPrincipalField(scope.schemas, identity.principal, field);
+
   if (lookup.status === "held") return true;
 
   const subject = `${reader.subject} under identity '${identity.id}' ${reader.verb}`;
+
   scope.reporter.error({
     rule: "principal-field",
     ...accessIdentityPrincipalFieldRefusal(subject, field, identity.principal, lookup),
     pointer,
   });
+
   return false;
 }
 
@@ -165,18 +178,21 @@ function bindingSourceFound(
     source.in === "path" || source.in === "query"
       ? accessIdentityRouteHasParameter(route.operation, source.in, name)
       : bodyHasField(route, name, scope);
+
   if (found) return true;
 
   const where =
     source.in === "body"
       ? `no input body field '${name}'`
       : `no ${source.in === "path" ? "path placeholder" : "declared query field"} '${name}'`;
+
   scope.reporter.error({
     rule: "binding-source",
     message: `binding '${key}' reads a value route '${route.id}' does not carry: it has ${where}`,
     fix: "Bind a value the route declares (a path placeholder, a query field or a field of its object input), or move the binding to the routes that carry it.",
     pointer,
   });
+
   return false;
 }
 
@@ -186,7 +202,9 @@ function bodyHasField(
   scope: AccessIdentityScope,
 ): boolean {
   const schema = route.operation.input?.schema;
+
   if (schema?.kind !== "ref") return false;
+
   return (
     accessIdentitySchemaField(scope.schemas, schema.schema, field.split(".")).status === "held"
   );

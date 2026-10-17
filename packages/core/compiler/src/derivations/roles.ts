@@ -59,6 +59,7 @@ export const derivationIssueLocations: readonly DerivationIssueLocation[] = deri
 // normalises, so its normalised form is its written form.
 const location = (): IrWriter.ScalarTypeUse => {
   const source = `^(?:${derivationIssueLocations.join("|")})$`;
+
   return {
     kind: "scalar",
     type: "string",
@@ -150,7 +151,9 @@ export const DERIVATION_EMPTY_BODY_SCHEMA_ID: IrWriter.SchemaId = "ApiEmptyBody"
 // The ADR 0007 params name of a default code: `api.rate_limited` gives `ApiRateLimitedParams`.
 function paramsSchemaId(code: string): IrWriter.SchemaId {
   const id = canonicalId({ segments: splitName(code), role: "params" });
+
   if (id === undefined) throw new Error(`default code ${code} names no params schema`);
+
   return id;
 }
 

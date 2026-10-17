@@ -17,5 +17,6 @@ test("a relayed draft is closed, an imported IR open", () => {
       : false,
     Imported["operations"][number]["access"] extends PassReadonly<IrWriter.Access> ? false : true,
   ] = [true, true, true, true];
+
   expect(checks).toEqual([true, true, true, true]);
 });

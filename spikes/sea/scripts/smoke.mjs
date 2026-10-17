@@ -13,6 +13,7 @@ const [binary, referenceDir] = process.argv.slice(2);
 const label = process.argv.includes("--label")
   ? process.argv[process.argv.indexOf("--label") + 1]
   : binary;
+
 if (!binary || !referenceDir) {
   console.error("usage: smoke.mjs <binary> <reference-dir> [--label <name>]");
   process.exit(2);
@@ -39,6 +40,7 @@ const firstStart = process.hrtime.bigint();
 const ok = exec(okDir);
 const firstMs = Number(process.hrtime.bigint() - firstStart) / 1e6;
 const wantOut = readFileSync(join(referenceDir, "ok.stdout"));
+
 check(ok.status === 0, `ok fixture exit code ${ok.status}, stderr: ${ok.stderr?.toString()}`);
 check(
   Buffer.compare(ok.stdout, wantOut) === 0,
@@ -48,6 +50,7 @@ check(ok.stderr.length === 0, "ok fixture wrote to stderr");
 
 const bad = exec(anchorDir);
 const wantErr = readFileSync(join(referenceDir, "anchor.stderr"));
+
 check(bad.status !== 0, "anchor fixture exited 0");
 check(bad.stdout.length === 0, "anchor fixture wrote to stdout");
 check(
@@ -59,11 +62,14 @@ check(/^a\.yaml:\d+:\d+: /.test(bad.stderr.toString()), "anchor message is not l
 // Measures (recorded, not gated): size, first launch (the first run of the
 // file on this runner, includes any OS scan) and warm start (median of 7 later runs).
 const runs = [];
+
 for (let i = 0; i < 7; i++) {
   const t0 = process.hrtime.bigint();
+
   spawnSync(binary, [okDir], { env, stdio: "ignore" });
   runs.push(Number(process.hrtime.bigint() - t0) / 1e6);
 }
+
 runs.sort((a, b) => a - b);
 const row = {
   label,
@@ -73,13 +79,17 @@ const row = {
   exitCode: ok.status,
   pass: failures.length === 0,
 };
+
 console.log(JSON.stringify(row));
+
 if (process.env.GITHUB_STEP_SUMMARY) {
   appendFileSync(
     process.env.GITHUB_STEP_SUMMARY,
     `| ${label} | ${row.pass ? "pass" : "FAIL"} | ${row.sizeMB} | ${row.firstMs} | ${row.warmMs} |\n`,
   );
 }
+
 if (process.env.SMOKE_RESULT) writeFileSync(process.env.SMOKE_RESULT, `${JSON.stringify(row)}\n`);
+
 for (const f of failures) console.error(`smoke: ${f}`);
 process.exit(failures.length === 0 ? 0 : 1);

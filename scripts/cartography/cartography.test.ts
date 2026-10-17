@@ -27,11 +27,14 @@ afterEach(() => {
 /** A throwaway repository holding the given files, keyed by repository-relative path. */
 function repositoryWith(files: Record<string, string>): string {
   const root = mkdtempSync(join(tmpdir(), "cartography-"));
+
   temporaryRoots.push(root);
+
   for (const [path, content] of Object.entries(files)) {
     mkdirSync(dirname(join(root, path)), { recursive: true });
     writeFileSync(join(root, path), content);
   }
+
   return root;
 }
 
@@ -45,6 +48,7 @@ function manifest(name: string | undefined, description?: string, role?: string)
 
 function runCli(root: string, ...flags: string[]) {
   const run = spawnSync(process.execPath, [CLI, ...flags, "--root", root], { encoding: "utf8" });
+
   return { status: run.status, stderr: run.stderr };
 }
 
@@ -100,6 +104,7 @@ describe("cartography", () => {
     expect(second).toBe(first);
     expect(first.indexOf("`@x/a`")).toBeLessThan(first.indexOf("`@x/b`"));
     const order = ["src/Beta`", "src/alpha`", "src/zeta`"].map((path) => first.indexOf(path));
+
     expect(order).toEqual([...order].sort((left, right) => left - right));
     expect(first).not.toMatch(/\d{4}-\d{2}-\d{2}/);
   });
@@ -158,6 +163,7 @@ describe("cartography", () => {
     });
 
     const missing = runCli(root, "--check");
+
     expect(missing.status).toBe(1);
     expect(missing.stderr).toContain(`${CARTOGRAPHY_FILE} is missing; run \`${WRITE_COMMAND}\``);
 
@@ -166,6 +172,7 @@ describe("cartography", () => {
 
     writeFileSync(join(root, "packages/core/compiler/src/load/index.ts"), "// The load stage.\n");
     const stale = runCli(root, "--check");
+
     expect(stale.status).toBe(1);
     expect(stale.stderr).toContain(`${CARTOGRAPHY_FILE} is stale; run \`${WRITE_COMMAND}\``);
   });

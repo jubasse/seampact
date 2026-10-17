@@ -24,6 +24,7 @@ export function accessRightsString(
   key: string,
 ): string | undefined {
   const value = accessRightsMember(object, key);
+
   return typeof value === "string" ? value : undefined;
 }
 
@@ -33,7 +34,9 @@ export function accessRightsStrings(
   key: string,
 ): string[] {
   const value = accessRightsMember(object, key);
+
   if (!Array.isArray(value)) return [];
+
   return value.filter((item): item is string => typeof item === "string");
 }
 
@@ -43,11 +46,14 @@ export function accessRightsEntries(
   key: string,
 ): [string, AccessRightsRawObject][] {
   const catalogue = accessRightsMember(object, key);
+
   if (!pipelineIsJsonObject(catalogue)) return [];
 
   const entries: [string, AccessRightsRawObject][] = [];
+
   for (const [name, value] of Object.entries(catalogue))
     if (pipelineIsJsonObject(value)) entries.push([name, value]);
+
   return entries;
 }
 
@@ -58,6 +64,7 @@ export function accessRightsDocs(declaration: AccessRightsRawObject): {
 } {
   const summary = accessRightsString(declaration, "summary");
   const description = accessRightsString(declaration, "description");
+
   return {
     ...(summary === undefined ? {} : { summary }),
     ...(description === undefined ? {} : { description }),
@@ -76,17 +83,22 @@ export function accessRightsExtensions(
   declaration: AccessRightsRawObject,
 ): Record<string, Record<string, unknown>> {
   const slot = new Map<string, [string, unknown][]>();
+
   for (const [key, value] of Object.entries(declaration)) {
     const match = EXTENSION_KEY.exec(key);
+
     if (match === null) continue;
 
     const [, prefix, name] = match;
+
     if (prefix === undefined || name === undefined)
       throw new Error(`the extension key '${key}' matched without its prefix and key`);
     const keys = slot.get(prefix) ?? [];
+
     keys.push([name, pipelineCopy(value)]);
     slot.set(prefix, keys);
   }
+
   return Object.fromEntries([...slot].map(([prefix, keys]) => [prefix, Object.fromEntries(keys)]));
 }
 
@@ -96,8 +108,10 @@ export function accessRightsOriginOf(
   pointer: string,
 ): IrWriter.Origin {
   const origin = context.origin(pointer);
+
   if (origin === undefined)
     throw new Error(`access.rights read ${pointer}, which has no origin in the merged raw tree`);
+
   return pipelineCopy(origin);
 }
 
@@ -109,8 +123,10 @@ export function accessRightsSchemaName(
   value: AccessRightsRawValue | undefined,
 ): string | undefined {
   if (typeof value === "string") return value;
+
   if (!pipelineIsJsonObject(value)) return undefined;
 
   const ref = accessRightsString(value, "$ref");
+
   return ref !== undefined && Object.keys(value).length === 1 ? ref : undefined;
 }

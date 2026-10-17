@@ -65,6 +65,7 @@ export function accessRightsCatalogues(
 
   const rights = new Map<string, IrWriter.Right>();
   const rightIdNames = new Map<string, string>();
+
   for (const [id, declaration] of accessRightsEntries(merged, "rights")) {
     const right = rightOf(context, reporter, {
       id,
@@ -73,35 +74,44 @@ export function accessRightsCatalogues(
       rightPattern,
       forbiddenCode,
     });
+
     if (right === undefined) continue;
 
     rights.set(id, right);
     const idName = accessRightsSchemaName(
       accessRightsMember(accessRightsMember(declaration, "subject"), "id"),
     );
+
     if (idName !== undefined) rightIdNames.set(id, idName);
   }
 
   const rules = new Map<string, IrWriter.Rule>();
+
   for (const [id, declaration] of accessRightsEntries(merged, "rules")) {
     const rule = ruleOf(context, reporter, id, declaration);
+
     if (rule !== undefined) rules.set(id, rule);
   }
 
   const scopes = new Map<string, IrWriter.Scope>();
+
   for (const [id, declaration] of accessRightsEntries(merged, "scopes")) {
     const scope = scopeOf(context, reporter, { id, declaration, scopeNames });
+
     if (scope !== undefined) scopes.set(id, scope);
   }
 
   const buckets = new Map<string, IrWriter.Bucket>();
+
   for (const [id, declaration] of accessRightsEntries(merged, "buckets")) {
     const bucket = bucketOf(context, reporter, id, declaration);
+
     if (bucket !== undefined) buckets.set(id, bucket);
   }
 
   const namesOf = (catalogue: string) =>
     new Set(Object.keys(accessRightsMember(merged, catalogue) ?? {}));
+
   return {
     rights,
     rules,
@@ -123,10 +133,12 @@ export function accessRightsCatalogues(
 function forbiddenCodeOf(context: AccessRightsContext): string {
   const binding = context.conventions.get("errors.derived.forbidden")?.value;
   const code = typeof binding === "string" ? binding : accessRightsString(binding, "code");
+
   if (code === undefined)
     throw new Error(
       `conventions.errors.derived.forbidden binds no code: ${JSON.stringify(binding)}`,
     );
+
   return code;
 }
 
@@ -136,6 +148,7 @@ export function accessRightsRightErrors(
   forbiddenCode: string,
 ): string[] {
   if (accessRightsMember(declaration, "errors") === undefined) return [forbiddenCode];
+
   return accessRightsStrings(declaration, "errors");
 }
 
@@ -144,6 +157,7 @@ function rightPatternOf(
   reporter: AccessRightsReporter,
 ): AccessRightsCatalogues["rightPattern"] {
   const written = context.conventions.get("rights.pattern")?.value;
+
   if (typeof written !== "string") return undefined;
 
   try {
@@ -155,6 +169,7 @@ function rightPatternOf(
       fix: "write a regular expression every right name must match",
       pointer: RIGHT_PATTERN_POINTER,
     });
+
     return undefined;
   }
 }
@@ -217,13 +232,16 @@ function rightOf(
 ): IrWriter.Right | undefined {
   const pointer = pipelinePointerBelow("/rights", id);
   const codeName = accessRightsString(declaration, "codeName");
+
   if (!accessRightsCheckName(reporter, { id, codeName, pointer, rightPattern })) return undefined;
 
   const subject = rightSubjectOf(context, reporter, { id, declaration, scopeNames });
+
   if (subject === undefined) return undefined;
 
   const guest = accessRightsString(declaration, "guest");
   const hasParams = accessRightsMember(declaration, "params") !== undefined;
+
   return {
     id,
     ...(hasParams
@@ -260,10 +278,12 @@ function rightSubjectOf(
       fix: "declare the scope in 'scopes', or name a declared one",
       pointer: pipelinePointerBelow(pointer, "subject", "scope"),
     });
+
     return undefined;
   }
 
   if (resource === undefined) return { kind: "none" };
+
   return {
     kind: "resource",
     type: { segments: splitName(resource), role: "schema" },
@@ -290,10 +310,12 @@ function ruleOf(
       fix: "set the proof's 'schema' to the named schema of the value it reads",
       pointer: pipelinePointerBelow(pointer, "proof"),
     });
+
     return undefined;
   }
 
   const hasParams = accessRightsMember(declaration, "params") !== undefined;
+
   return {
     id,
     ...(hasParams
@@ -325,10 +347,12 @@ const PROOF_PLACEMENTS = ["header", "body"] as const;
 // The authoring schema allows a proof in a header or the body only.
 function proofPlacement(placement: string, pointer: string): IrWriter.ProofPlacement {
   const known = PROOF_PLACEMENTS.find((candidate) => candidate === placement);
+
   if (known === undefined)
     throw new Error(
       `the proof of the rule at ${pointer} is in '${placement}', neither header nor body`,
     );
+
   return known;
 }
 
@@ -340,6 +364,7 @@ function scopeOf(
   const { id, declaration, scopeNames } = options;
   const pointer = pipelinePointerBelow("/scopes", id);
   const within = accessRightsString(declaration, "within");
+
   if (within !== undefined && !withinChainTerminates(context, reporter, id, scopeNames))
     return undefined;
 
@@ -362,6 +387,7 @@ function withinChainTerminates(
   scopeNames: ReadonlySet<string>,
 ): boolean {
   const chain = [id];
+
   for (
     let parent = withinOf(context, id);
     parent !== undefined;
@@ -374,25 +400,31 @@ function withinChainTerminates(
         fix: "declare the parent scope, or name a declared one in 'within'",
         pointer: pipelinePointerBelow("/scopes", chain[chain.length - 1] ?? id, "within"),
       });
+
       return false;
     }
 
     if (chain.includes(parent)) {
       reportWithinCycle(reporter, chain.slice(chain.indexOf(parent)));
+
       return false;
     }
+
     chain.push(parent);
   }
+
   return true;
 }
 
 // A cycle is reported once, at its first scope by name, whatever scope's chain reached it.
 function reportWithinCycle(reporter: AccessRightsReporter, cycle: readonly string[]): void {
   const [first] = [...cycle].sort();
+
   if (first === undefined) throw new Error("access.rights found an empty 'within' cycle");
 
   const start = cycle.indexOf(first);
   const path = [...cycle.slice(start), ...cycle.slice(0, start), first];
+
   reporter.error({
     rule: "scope-within",
     message: `scope '${first}' is within itself through ${path.join(" -> ")}`,
@@ -412,8 +444,10 @@ function bucketOf(
 ): IrWriter.Bucket | undefined {
   const pointer = pipelinePointerBelow("/buckets", id);
   const key: IrWriter.ValueSource[] = [];
+
   for (const [index, text] of accessRightsStrings(declaration, "key").entries()) {
     const source = accessRightsValueSource(text);
+
     if (source === undefined)
       throw new Error(`the bucket key '${text}' at ${pointer} is outside the grammar's forms`);
 
@@ -424,16 +458,20 @@ function bucketOf(
         fix: `count a prefix of at most ${ADDRESS_BITS} bits`,
         pointer: pipelinePointerBelow(pointer, "key", index),
       });
+
       return undefined;
     }
+
     key.push(source);
   }
 
   const limit = accessRightsMember(declaration, "limit");
+
   if (limit !== undefined && typeof limit !== "number")
     throw new Error(`the limit of the bucket at ${pointer} is no number`);
   const window = accessRightsString(declaration, "window");
   const windowMs = window === undefined ? undefined : pipelineParseDuration(window);
+
   if (window !== undefined && windowMs === undefined) {
     reporter.error({
       rule: "bucket-window",
@@ -441,6 +479,7 @@ function bucketOf(
       fix: "write a shorter window",
       pointer: pipelinePointerBelow(pointer, "window"),
     });
+
     return undefined;
   }
 

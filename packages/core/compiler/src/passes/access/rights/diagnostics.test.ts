@@ -109,6 +109,7 @@ describe("access.rights diagnostics are located", () => {
       const workspace = accessRightsLoadFixture(fixture);
       const locations = accessRightsApiOf(workspace).locations;
       const { diagnostics } = accessRightsRunContract(workspace);
+
       expect(
         diagnostics.map(({ rule, origin }) => [
           rule.replace(RULE_PREFIX, ""),
@@ -123,6 +124,7 @@ describe("access.rights diagnostics are located", () => {
         expect(diagnostic.severity).toBe("error");
         expect(diagnostic.message).not.toBe("");
         expect(diagnostic.fix).not.toBe("");
+
         for (const origin of [diagnostic.origin, ...diagnostic.related.map((item) => item.origin)])
           expect(Object.hasOwn(locations, diagnosticLocationKey(origin)), origin.pointer).toBe(
             true,

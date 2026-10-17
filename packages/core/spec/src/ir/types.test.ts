@@ -17,6 +17,7 @@ for (const { mode, file } of FILES) {
   test(`types match schema (${mode})`, () => {
     const path = fileURLToPath(new URL(file, import.meta.url));
     const generated = formatTypeScript(generateIrTypes(IR_SCHEMA_DOCUMENTS, mode), path);
+
     if (process.env.UPDATE_IR_TYPES === "1") writeFileSync(path, generated);
     expect(readFileSync(path, "utf8"), "run UPDATE_IR_TYPES=1 to regenerate").toBe(generated);
   });
@@ -24,6 +25,7 @@ for (const { mode, file } of FILES) {
 
 test("the writer view has no unknown arm and no open string", () => {
   const writer = generateIrTypes(IR_SCHEMA_DOCUMENTS, "closed");
+
   expect(writer).not.toContain("UnknownVariant");
   expect(writer).not.toContain("string & {}");
 });
@@ -33,5 +35,6 @@ test("a written IR is an IR: each writer type is assignable to its open type", (
     IrWriter.ContractIR extends ContractIR ? true : false,
     IrWriter.SourceMap extends SourceMap ? true : false,
   ] = [true, true];
+
   expect(assignable).toEqual([true, true]);
 });

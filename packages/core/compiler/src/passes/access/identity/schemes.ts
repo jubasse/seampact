@@ -72,10 +72,12 @@ export function accessIdentitySchemes(
   for (const [id, raw] of accessIdentityEntries(context.raw.merged, "schemes")) {
     const pointer = accessIdentityPointer("", "schemes", id);
     const origin = context.origin(pointer);
+
     if (origin === undefined) throw new Error(`the scheme at ${pointer} has no origin`);
 
     const before = reporter.errors;
     const scheme = schemeOf({ id, pointer, raw, origin, reporter }, kinds);
+
     if (scheme !== undefined && reporter.errors === before) schemes.set(id, scheme);
   }
 
@@ -87,16 +89,20 @@ function schemeOf(
   kinds: ReadonlyMap<string, string | undefined>,
 ): IrWriter.KnownScheme | undefined {
   const { id, origin, raw } = entry;
+
   switch (accessIdentityString(raw, "kind")) {
     case "cookie":
       return cookieScheme(entry, kinds);
     case "header":
     case "query": {
       const name = requiredName(entry);
+
       if (name === undefined) return undefined;
       const kind = accessIdentityString(raw, "kind") === "header" ? "header" : "query";
+
       return { id, kind, name, origin } satisfies IrWriter.KnownScheme;
     }
+
     case "bearer":
       return bearerScheme(entry);
     case "basic":
@@ -113,6 +119,7 @@ function schemeOf(
 function requiredName(entry: SchemeEntry): string | undefined {
   const name = accessIdentityString(entry.raw, "name");
   const kind = accessIdentityString(entry.raw, "kind") ?? "scheme";
+
   if (name === undefined) {
     entry.reporter.error({
       rule: "scheme-member",
@@ -120,6 +127,7 @@ function requiredName(entry: SchemeEntry): string | undefined {
       fix: `Set 'name' to the ${kind === "signature" ? "header carrying the signature" : `${kind} name`}.`,
       pointer: entry.pointer,
     });
+
     return undefined;
   }
 
@@ -129,6 +137,7 @@ function requiredName(entry: SchemeEntry): string | undefined {
 // The name is quoted as JSON so a control character in it shows instead of breaking the diagnostic's line.
 function checkName(entry: SchemeEntry, kind: string, name: string): boolean {
   const query = kind === "query";
+
   if ((query ? QUERY_NAME : HTTP_TOKEN).test(name)) return true;
 
   entry.reporter.error({
@@ -139,6 +148,7 @@ function checkName(entry: SchemeEntry, kind: string, name: string): boolean {
       : "Write the name as an HTTP token: letters, digits and !#$%&'*+-.^_`|~, without spaces, ';' or line breaks.",
     pointer: accessIdentityPointer(entry.pointer, "name"),
   });
+
   return false;
 }
 
@@ -148,8 +158,10 @@ function cookieScheme(
 ): IrWriter.KnownScheme | undefined {
   const name = requiredName(entry);
   const csrf = accessIdentityString(entry.raw, "csrf");
+
   if (csrf !== undefined && kinds.get(csrf) !== "header") {
     const known = kinds.has(csrf);
+
     entry.reporter.error({
       rule: known ? "scheme-kind" : "scheme-reference",
       message: known
@@ -158,10 +170,12 @@ function cookieScheme(
       fix: "Name a header scheme, the header a cookie write must also present.",
       pointer: accessIdentityPointer(entry.pointer, "csrf"),
     });
+
     return undefined;
   }
 
   if (name === undefined) return undefined;
+
   return {
     id: entry.id,
     kind: "cookie",
@@ -200,6 +214,7 @@ function signatureScheme(entry: SchemeEntry): IrWriter.KnownScheme | undefined {
       : templateSignature(entry);
 
   if (name === undefined || verify === undefined) return undefined;
+
   return {
     id: entry.id,
     kind: "signature",
@@ -212,6 +227,7 @@ function signatureScheme(entry: SchemeEntry): IrWriter.KnownScheme | undefined {
 // The authoring schema refuses the template members beside `verify: application`.
 function applicationSignature(entry: SchemeEntry): IrWriter.KnownSignatureVerify | undefined {
   const key = signatureKey(entry);
+
   if (key === "refused") return undefined;
 
   return {
@@ -228,6 +244,7 @@ function templateSignature(entry: SchemeEntry): IrWriter.KnownSignatureVerify | 
   const missing = TEMPLATE_MEMBERS.filter(
     (member) => accessIdentityString(raw, member) === undefined,
   );
+
   if (missing.length > 0)
     reporter.error({
       rule: "signature-verify",
@@ -249,6 +266,7 @@ function templateSignature(entry: SchemeEntry): IrWriter.KnownSignatureVerify | 
   const algorithm = accessIdentityString(raw, "algorithm") ?? "";
   const encoding = accessIdentityString(raw, "encoding") ?? "";
   let toleranceMs: number | undefined;
+
   if (missing.length === 0) {
     checkFormat(entry, format);
     checkPayload(entry, format, payload);
@@ -258,6 +276,7 @@ function templateSignature(entry: SchemeEntry): IrWriter.KnownSignatureVerify | 
   }
 
   const key = signatureKey(entry);
+
   if (key === undefined)
     reporter.error({
       rule: "signature-key",
@@ -267,7 +286,9 @@ function templateSignature(entry: SchemeEntry): IrWriter.KnownSignatureVerify | 
     });
 
   if (reporter.errors > before || key === undefined || key === "refused") return undefined;
+
   if (!isSignatureEncoding(encoding)) return undefined;
+
   return {
     verify: "template",
     format,
@@ -283,6 +304,7 @@ function templateSignature(entry: SchemeEntry): IrWriter.KnownSignatureVerify | 
 function isPairFormat(format: string): boolean {
   const names = format.split(",").map((item) => FORMAT_PAIR.exec(item)?.[1]);
   const written = names.filter((name) => name !== undefined);
+
   return written.length === names.length && new Set(written).size === written.length;
 }
 
@@ -295,6 +317,7 @@ function checkFormat(entry: SchemeEntry, format: string): void {
     countOf(placeholders, "ts") <= 1 &&
     unknown.length === 0 &&
     (isPairFormat(format) || FORMAT_PREFIX.test(format));
+
   if (fits) return;
 
   entry.reporter.error({
@@ -309,6 +332,7 @@ function checkPayload(entry: SchemeEntry, format: string, payload: string): void
   const placeholders = placeholdersOf(payload);
   const pointer = accessIdentityPointer(entry.pointer, "payload");
   const unknown = placeholders.filter((name) => name !== "rawBody" && name !== "ts");
+
   if (
     countOf(placeholders, "rawBody") !== 1 ||
     countOf(placeholders, "ts") > 1 ||
@@ -323,6 +347,7 @@ function checkPayload(entry: SchemeEntry, format: string, payload: string): void
 
   const signsTimestamp = placeholders.includes("ts");
   const readsTimestamp = placeholdersOf(format).includes("ts");
+
   if (signsTimestamp && !readsTimestamp)
     entry.reporter.error({
       rule: "signature-template",
@@ -373,11 +398,13 @@ function tolerance(entry: SchemeEntry, format: string, payload: string): number 
       fix: "Set 'tolerance' to the largest distance accepted between the signed timestamp and now, such as '5m'.",
       pointer: entry.pointer,
     });
+
     return undefined;
   }
 
   if (written === undefined) return undefined;
   const pointer = accessIdentityPointer(entry.pointer, "tolerance");
+
   if (!usesTimestamp) {
     entry.reporter.error({
       rule: "signature-tolerance",
@@ -385,10 +412,12 @@ function tolerance(entry: SchemeEntry, format: string, payload: string): number 
       fix: "Remove 'tolerance', or add '{ts}' to the format and the payload.",
       pointer,
     });
+
     return undefined;
   }
 
   const toleranceMs = pipelineParseDuration(written);
+
   if (toleranceMs === undefined)
     entry.reporter.error({
       rule: "signature-tolerance",
@@ -396,18 +425,22 @@ function tolerance(entry: SchemeEntry, format: string, payload: string): number 
       fix: "Write a tolerance of minutes, such as '5m'.",
       pointer,
     });
+
   return toleranceMs;
 }
 
 // The scheme's key: absent, refused (an empty mapping), or its tagged form.
 function signatureKey(entry: SchemeEntry): IrWriter.KnownSchemeKey | "refused" | undefined {
   const key = accessIdentityObject(entry.raw, "key");
+
   if (key === undefined) return undefined;
 
   const value = accessIdentityString(key, "value");
+
   if (value !== undefined) return { kind: "value", value } satisfies IrWriter.KnownSchemeKey;
 
   const from = accessIdentityString(key, "from");
+
   if (from !== undefined)
     return {
       kind: "from",
@@ -420,5 +453,6 @@ function signatureKey(entry: SchemeEntry): IrWriter.KnownSchemeKey | "refused" |
     fix: "Write 'key: { value: <id> }' or 'key: { from: <path, query or header source> }'.",
     pointer: accessIdentityPointer(entry.pointer, "key"),
   });
+
   return "refused";
 }

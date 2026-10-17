@@ -14,9 +14,11 @@ function objectsOf(
   definition: string,
 ): { pointer: string; value: Record<string, unknown> }[] {
   const found: { pointer: string; value: Record<string, unknown> }[] = [];
+
   walkIrInstance(ir, (node) => {
     if (node.kind === "object" && node.definition === definition) found.push(node);
   });
+
   return found;
 }
 
@@ -28,8 +30,10 @@ function broken(
 ): { id: IrInvariantId; pointer: string }[] {
   const ir = sample("every-member.ir.json");
   const target = objectsOf(ir, definition).find(({ value }) => where(value));
+
   if (target === undefined) throw new Error(`no ${definition} in the sample`);
   change(target.value);
+
   return checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer }));
 }
 
@@ -42,6 +46,7 @@ describe("checkIrInvariants", () => {
 
   test("names each broken rule with its id and the object's pointer", () => {
     const one = (id: IrInvariantId) => [expect.objectContaining({ id })];
+
     expect(
       broken(
         "Name",
@@ -160,6 +165,7 @@ describe("checkIrInvariants", () => {
     ).toEqual(one("ir.scalar.type"));
     const use = (value: Record<string, unknown>, member: string) =>
       value[member] as Record<string, unknown>;
+
     expect(
       broken("Scope", (scope) => {
         use(scope, "idSchema").nullable = true;
@@ -207,14 +213,17 @@ describe("checkIrInvariants", () => {
     const propertyOf = (schema: SchemaNode | undefined, member: string): SchemaNode | undefined => {
       const properties = schema?.properties;
       const property = isSchemaNode(properties) ? properties[member] : undefined;
+
       return isSchemaNode(property) ? property : undefined;
     };
+
     const definitionName = (ref: unknown): string =>
       String(ref).slice(String(ref).lastIndexOf("/") + 1);
     const knownOf = (key: string): string[] => {
       const [definition = "", member = ""] = key.split(".");
       // A tagged union's known list is the tag of each variant (`TypeUse`, `Schema`).
       const variants: unknown = irDefinition(definition)?.oneOf;
+
       if (Array.isArray(variants))
         return variants
           .filter(isSchemaNode)
@@ -222,12 +231,16 @@ describe("checkIrInvariants", () => {
             String(propertyOf(irDefinition(definitionName(variant.$ref)), member)?.const),
           );
       let node = propertyOf(irDefinition(definition), member);
+
       while (typeof node?.$ref === "string") node = irDefinition(definitionName(node.$ref));
       const known = node?.[KNOWN_VALUES_KEYWORD];
+
       return Array.isArray(known) ? known.map(String) : [];
     };
+
     for (const [key, parts] of Object.entries(IR_PARTITIONS)) {
       const flat = parts.flat();
+
       expect(new Set(flat).size, `${key} parts overlap`).toBe(flat.length);
       expect([...flat].sort(), key).toEqual([...knownOf(key)].sort());
     }
@@ -237,6 +250,7 @@ describe("checkIrInvariants", () => {
     // Each object breaks its rule as read with a known value: a versionToken header has no 'name', a 'source'
     // meta member has 'source', a response name has 'status', a principal source has 'name'.
     const later = "zzLater";
+
     expect(
       broken(
         "HeaderDecl",
@@ -278,6 +292,7 @@ describe("checkIrInvariants", () => {
   test("a body proof's type use names existing entries", () => {
     const ir = sample("every-member.ir.json");
     const [proof] = objectsOf(ir, "InputProof");
+
     if (proof === undefined) throw new Error("no InputProof in the sample");
     (proof.value.schema as Record<string, unknown>).scalar = "missingId";
     expect(checkIrInvariants(ir)).toEqual([
@@ -293,25 +308,31 @@ describe("checkIrInvariants", () => {
       const [input] = objectsOf(ir, "OperationInput").filter(({ value }) =>
         Array.isArray(value.proofs),
       );
+
       if (input === undefined) throw new Error("no input with proofs in the sample");
       const proof = (input.value.proofs as Record<string, unknown>[])[0];
+
       if (proof === undefined) throw new Error("no proof in the sample");
       change(input.value, proof);
+
       return {
         at: `${input.pointer}/proofs/0`,
         found: checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer })),
       };
     };
+
     // The sample's multipart input sends its proof as a text field.
     expect(check(() => {}).found).toEqual([]);
     const missing = check((_, proof) => {
       delete proof.wire;
     });
+
     expect(missing.found).toEqual([{ id: "ir.input-proof.wire", pointer: missing.at }]);
     const json = check((input) => {
       input.media = "application/json";
       delete input.fields;
     });
+
     expect(json.found).toEqual([{ id: "ir.input-proof.wire", pointer: json.at }]);
     expect(
       check((input, proof) => {
@@ -329,11 +350,13 @@ describe("checkIrInvariants", () => {
     const wire = check((_, proof) => {
       proof.wire = { kind: "json", style: "form" };
     });
+
     expect(wire.found).toEqual([{ id: "ir.field-wire.members", pointer: `${wire.at}/wire` }]);
     // A proof is never a file, so neither is its wire form.
     const file = check((_, proof) => {
       proof.wire = { kind: "file" };
     });
+
     expect(file.found).toEqual([{ id: "ir.input-proof.wire", pointer: file.at }]);
   });
 
@@ -345,30 +368,38 @@ describe("checkIrInvariants", () => {
       const [input] = objectsOf(ir, "OperationInput").filter(({ value }) =>
         Array.isArray(value.proofs),
       );
+
       if (input === undefined) throw new Error("no input with proofs in the sample");
       change(input.value, input.value.proofs as Record<string, unknown>[]);
+
       return {
         at: (i: number) => `${input.pointer}/proofs/${i}`,
         found: checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer })),
       };
     };
+
     const rename = (name: string) =>
       check((_, proofs) => {
         if (proofs[0] !== undefined) proofs[0].name = name;
       });
     // `title` is a property of Task, the input schema.
     const property = rename("title");
+
     expect(property.found).toEqual([{ id: "ir.input-proof.name", pointer: property.at(0) }]);
     // A form field named like the proof, and like no property.
     const field = check((input, proofs) => {
       const [first] = input.fields as Record<string, unknown>[];
+
       if (first !== undefined) first.name = "scan";
+
       if (proofs[0] !== undefined) proofs[0].name = "scan";
     });
+
     expect(field.found).toEqual([{ id: "ir.input-proof.name", pointer: field.at(0) }]);
     const twice = check((_, proofs) => {
       if (proofs[0] !== undefined) proofs.push(structuredClone(proofs[0]));
     });
+
     expect(twice.found).toEqual([{ id: "ir.input-proof.name", pointer: twice.at(1) }]);
     // A name is free once the schema no longer holds it.
     expect(
@@ -376,6 +407,7 @@ describe("checkIrInvariants", () => {
         input.schema = { kind: "ref", schema: "LockedParams" };
         delete input.fields;
         input.media = "application/json";
+
         for (const proof of input.proofs as Record<string, unknown>[]) delete proof.wire;
       }).found,
     ).toEqual([]);
@@ -389,26 +421,35 @@ describe("checkIrInvariants", () => {
       const [input] = objectsOf(ir, "OperationInput").filter(({ value }) =>
         Array.isArray(value.proofs),
       );
+
       if (input === undefined) throw new Error("no input with proofs in the sample");
       input.value.media = "application/json";
       delete input.value.fields;
+
       for (const proof of input.value.proofs as Record<string, unknown>[]) delete proof.wire;
       change(input.value, ir);
+
       return {
         at: `${input.pointer}/schema`,
         found: checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer })),
       };
     };
+
     const useOf = (schema: unknown) => (input: Record<string, unknown>) => {
       input.schema = schema;
     };
+
     expect(check(useOf({ kind: "ref", schema: "Task" })).found).toEqual([]);
+
     // Labels is a map schema, Notice a union.
     for (const schema of ["Labels", "Notice"]) {
       const result = check(useOf({ kind: "ref", schema }));
+
       expect(result.found, schema).toEqual([{ id: "ir.input-proof.input", pointer: result.at }]);
     }
+
     const scalar = check(useOf({ kind: "scalar", type: "string", refinements: {} }));
+
     expect(scalar.found).toEqual([{ id: "ir.input-proof.input", pointer: scalar.at }]);
     // Without proofs any input stands; an unknown use kind is the reader's to name.
     expect(
@@ -422,12 +463,15 @@ describe("checkIrInvariants", () => {
     // `ir.ref.resolves`.
     const unknownSchemaKind = check((input, ir) => {
       const schemas = ir.schemas as Record<string, Record<string, unknown>>;
+
       if (schemas.Labels === undefined) throw new Error("no Labels schema in the sample");
       schemas.Labels.kind = "zz-later";
       input.schema = { kind: "ref", schema: "Labels" };
     });
+
     expect(unknownSchemaKind.found).toEqual([]);
     const missing = check(useOf({ kind: "ref", schema: "Missing" }));
+
     expect(missing.found.map(({ id }) => id)).toEqual(["ir.ref.resolves"]);
   });
 
@@ -440,9 +484,12 @@ describe("checkIrInvariants", () => {
     const at = "/errors/api.internal/origin";
     const check = (change: (origin: Record<string, unknown>) => void) => {
       const ir = sample("every-member.ir.json");
+
       change(origin(ir));
+
       return checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer }));
     };
+
     expect(check(() => {})).toEqual([]);
     // Below the entry is fine; a relay route's copy names its api and is read there.
     expect(
@@ -457,6 +504,7 @@ describe("checkIrInvariants", () => {
       }),
     ).toEqual([]);
     const violation = [{ id: "ir.origin.core", pointer: at }];
+
     for (const pointer of ["", "/errors", "/errors/", "/rights/tasks.read", "/surfaces/app"])
       expect(
         check((o) => {
@@ -481,19 +529,24 @@ describe("checkIrInvariants", () => {
   test("every catalogue id names an existing entry", () => {
     const ir = sample("every-member.ir.json");
     const schemes = ir.schemes as Record<string, Record<string, unknown>>;
+
     (schemes.sessionCookie as Record<string, unknown>).csrf = "missing";
     const identities = ir.identities as Record<string, Record<string, unknown>>;
+
     (identities.user as Record<string, unknown>).principal = { kind: "schema", schema: "Missing" };
     const api = ir.api as Record<string, Record<string, unknown>>;
+
     (api.documents as Record<string, Record<string, unknown>>).public = {
       surfaces: ["nowhere"],
       internal: "exclude",
     };
     // A key read with Object.hasOwn: an id spelled like a prototype member resolves to nothing.
     const rights = ir.rights as Record<string, Record<string, unknown>>;
+
     (rights["tasks.read"] as Record<string, unknown>).id = "constructor";
     // Ids are type uses: a scope id names a missing named format, a resource id a missing enum.
     const scopes = ir.scopes as Record<string, Record<string, unknown>>;
+
     ((scopes.workspace as Record<string, unknown>).idSchema as Record<string, unknown>).scalar =
       "missingId";
     (

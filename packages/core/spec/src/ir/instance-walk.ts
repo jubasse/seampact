@@ -7,9 +7,12 @@ export const MUST_ACT_KEYWORD = "x-seampact-must-act";
 
 // Every definition of the IR schema files by name (names are unique across the files).
 const DEFINITIONS = new Map<string, SchemaNode>();
+
 for (const document of IR_SCHEMA_DOCUMENTS) {
   const defs = document.$defs;
+
   if (!isSchemaNode(defs)) continue;
+
   for (const [name, def] of Object.entries(defs)) if (isSchemaNode(def)) DEFINITIONS.set(name, def);
 }
 
@@ -52,12 +55,15 @@ export type IrInstanceNode =
 function resolve(node: SchemaNode): { node: SchemaNode; definition: string | undefined } {
   let definition: string | undefined;
   let current = node;
+
   while (typeof current.$ref === "string") {
     definition = current.$ref.slice(current.$ref.lastIndexOf("/") + 1);
     const next = DEFINITIONS.get(definition);
+
     if (next === undefined) throw new Error(`no IR schema definition ${definition}`);
     current = next;
   }
+
   return { node: current, definition };
 }
 
@@ -68,6 +74,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 function variantTags(union: SchemaNode, tag: string): { tag: string; variant: SchemaNode }[] {
   return (union.oneOf as SchemaNode[]).map((variant) => {
     const properties = resolve(variant).node.properties as Record<string, SchemaNode>;
+
     return { tag: String(properties[tag]?.const), variant };
   });
 }
@@ -83,10 +90,12 @@ export function walkIrInstance(
   pointer = "",
 ): void {
   const { node, definition } = resolve(schema);
+
   if (isSchemaNode(node.discriminator) && Array.isArray(node.oneOf)) {
     if (!isRecord(value)) return;
     const tag = String(node.discriminator.propertyName);
     const variants = variantTags(node, tag);
+
     visit({
       kind: "union",
       pointer,
@@ -97,35 +106,49 @@ export function walkIrInstance(
       value,
     });
     const match = variants.find((variant) => variant.tag === value[tag]);
+
     if (match !== undefined) walkIrInstance(value, visit, match.variant, pointer);
+
     return;
   }
+
   if (isSchemaNode(node.properties)) {
     if (!isRecord(value)) return;
     visit({ kind: "object", pointer, definition, value });
     const properties = node.properties as Record<string, SchemaNode>;
+
     for (const [member, child] of Object.entries(value)) {
       const memberSchema = Object.hasOwn(properties, member) ? properties[member] : undefined;
+
       if (memberSchema !== undefined)
         walkIrInstance(child, visit, memberSchema, `${pointer}/${escapePointer(member)}`);
     }
+
     return;
   }
+
   if (isSchemaNode(node.additionalProperties)) {
     if (!isRecord(value)) return;
+
     for (const [key, child] of Object.entries(value)) {
       walkIrInstance(child, visit, node.additionalProperties, `${pointer}/${escapePointer(key)}`);
     }
+
     return;
   }
+
   if (node.type === "array" && isSchemaNode(node.items)) {
     if (!Array.isArray(value)) return;
+
     for (const [index, item] of value.entries()) {
       walkIrInstance(item, visit, node.items, `${pointer}/${index}`);
     }
+
     return;
   }
+
   const known = node[KNOWN_VALUES_KEYWORD];
+
   if (Array.isArray(known) && typeof value === "string") {
     visit({
       kind: "openEnum",
@@ -166,9 +189,11 @@ export interface IrUnknowns {
 // whether it is must-act. Ajv-free: a reader of an IR it did not validate itself calls it before acting.
 export function listIrUnknowns(ir: unknown): IrUnknowns {
   const unknowns: IrUnknowns = { kinds: [], values: [] };
+
   walkIrInstance(ir, (node) => {
     if (node.kind === "union") {
       const value = node.value[node.tag];
+
       if (typeof value === "string" && !node.known.includes(value))
         unknowns.kinds.push({ pointer: node.pointer, tag: node.tag, value, mustAct: node.mustAct });
     } else if (node.kind === "openEnum" && !node.known.includes(node.value)) {
@@ -180,5 +205,6 @@ export function listIrUnknowns(ir: unknown): IrUnknowns {
       });
     }
   });
+
   return unknowns;
 }

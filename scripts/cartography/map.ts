@@ -93,18 +93,23 @@ export function buildCartography(options: CartographyOptions): Cartography {
 
 function readPackages(root: string, problems: string[]): PackageEntry[] {
   const packagesRoot = join(root, PACKAGES_DIR);
+
   if (!existsSync(packagesRoot)) {
     problems.push(`${PACKAGES_DIR}: no packages directory`);
+
     return [];
   }
 
   const entries: PackageEntry[] = [];
+
   for (const directory of packageDirectories(root)) {
     const manifestPath = join(root, directory, "package.json");
 
     const entry = readPackage(root, directory, manifestPath, problems);
+
     if (entry !== undefined) entries.push(entry);
   }
+
   return entries;
 }
 
@@ -116,20 +121,24 @@ function readPackage(
 ): PackageEntry | undefined {
   const manifestFile = `${directory}/package.json`;
   const manifest = parseManifest(manifestPath, manifestFile, problems);
+
   if (manifest === undefined) return undefined;
 
   const name = stringField(manifest, "name");
+
   if (name === undefined) {
     problems.push(`${manifestFile}: no \`name\`; add the package name`);
   }
 
   const description = stringField(manifest, "description");
+
   if (description === undefined) {
     problems.push(`${manifestFile}: no \`description\`; add a one-line description of the package`);
   }
 
   const seampactField = isRecord(manifest) ? manifest.seampact : undefined;
   const role = stringField(seampactField, "role");
+
   if (role === undefined) {
     problems.push(`${manifestFile}: no \`seampact.role\`; add the package's role`);
   }
@@ -162,20 +171,25 @@ function readSourceDirectories(
 
   const visit = (directory: string) => {
     const absolute = join(root, directory);
+
     for (const child of sortedSubdirectories(absolute)) visit(`${directory}/${child}`);
 
     if (!holdsAFile(absolute)) return;
 
     const header = readHeader(absolute);
     const summary = header ?? (directory === sourceRoot ? packageDescription : "");
+
     if (summary === "") {
       problems.push(
         `${directory}: no header; add a one-line comment at the top of ${directory}/${INDEX_FILE}, or a ${README_FILE}`,
       );
+
       return;
     }
+
     found.push({ path: directory, summary });
   };
+
   visit(sourceRoot);
 
   return found.sort((left, right) => compareText(left.path, right.path));
@@ -186,7 +200,9 @@ function parseManifest(manifestPath: string, manifestFile: string, problems: str
     return JSON.parse(readFileSync(manifestPath, "utf8"));
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
+
     problems.push(`${manifestFile}: not valid JSON (${reason}); fix the file`);
+
     return undefined;
   }
 }
@@ -194,17 +210,21 @@ function parseManifest(manifestPath: string, manifestFile: string, problems: str
 /** The first sentence of the leading `//` comment of index.ts, else the first line of README.md. */
 function readHeader(directory: string): string | undefined {
   const indexPath = join(directory, INDEX_FILE);
+
   if (existsSync(indexPath)) {
     const comment = leadingComment(readFileSync(indexPath, "utf8"));
+
     if (comment !== "") return firstSentence(comment);
   }
 
   const readmePath = join(directory, README_FILE);
+
   if (existsSync(readmePath)) {
     const firstLine = readFileSync(readmePath, "utf8")
       .split("\n")
       .map((line) => line.replace(/^#+/, "").trim())
       .find((line) => line !== "");
+
     if (firstLine !== undefined) return firstLine;
   }
 
@@ -214,19 +234,24 @@ function readHeader(directory: string): string | undefined {
 /** The text of the `//` lines that open the file, up to the first empty comment line. */
 function leadingComment(source: string): string {
   const parts: string[] = [];
+
   for (const line of source.split("\n")) {
     const trimmed = line.trim();
+
     if (!trimmed.startsWith("//")) break;
 
     const text = trimmed.slice(2).trim();
+
     if (text === "") break;
     parts.push(text);
   }
+
   return parts.join(" ");
 }
 
 function firstSentence(text: string): string {
   const end = /\.(\s|$)/.exec(text);
+
   return end === null ? text : text.slice(0, end.index + 1);
 }
 
@@ -243,6 +268,7 @@ function renderCartography(packages: PackageEntry[], stages: CompilerStage[]): s
     "| Package | Directory | Role | Description |",
     "|---|---|---|---|",
   ];
+
   for (const entry of packages) {
     lines.push(
       `| \`${entry.name}\` | \`${entry.directory}\` | ${tableCell(entry.role)} | ${tableCell(entry.description)} |`,
@@ -251,16 +277,20 @@ function renderCartography(packages: PackageEntry[], stages: CompilerStage[]): s
 
   lines.push("", "## Compiler stages", "", "In pipeline order (ADR 0006 section 1).", "");
   lines.push("| Stage | Directories |", "|---|---|");
+
   for (const stage of stages) {
     const directories = stage.directories.map((directory) => `\`${directory}\``).join(", ");
+
     lines.push(`| ${stage.name} | ${directories} |`);
   }
 
   lines.push("", "## Source directories");
+
   for (const entry of packages) {
     if (entry.sourceDirectories.length === 0) continue;
 
     lines.push("", `### \`${entry.name}\``, "");
+
     for (const directory of entry.sourceDirectories) {
       lines.push(`- \`${directory.path}\`: ${directory.summary}`);
     }
@@ -287,6 +317,7 @@ function holdsAFile(directory: string): boolean {
 /** Code-unit order, so the map does not depend on the machine's locale. */
 function compareText(left: string, right: string): number {
   if (left === right) return 0;
+
   return left < right ? -1 : 1;
 }
 
@@ -298,5 +329,6 @@ function stringField(value: unknown, key: string): string | undefined {
   if (!isRecord(value)) return undefined;
 
   const field = value[key];
+
   return typeof field === "string" && field.trim() !== "" ? field.trim() : undefined;
 }

@@ -35,6 +35,7 @@ const paramsAt = (
   segments: readonly string[],
 ): void => {
   const params = treeSchemasMember(declaration, "params");
+
   if (params === undefined || segments.length === 0) return;
   compiler.fields(params, treeSchemasPointer(pointer, "params"), {
     segments: [...segments],
@@ -51,12 +52,14 @@ export function treeSchemasCompileDeclarations(
     const at = treeSchemasPointer("/identities", id);
     const principal = treeSchemasMember(identity, "principal");
     const variants = treeSchemasMember(principal, "variants");
+
     if (treeSchemasIsObject(variants)) {
       for (const [variant, schema] of treeSchemasEntries(variants))
         positionAt(compiler, schema, treeSchemasPointer(at, "principal", "variants", variant));
     } else {
       positionAt(compiler, principal, treeSchemasPointer(at, "principal"));
     }
+
     for (const [header, use] of treeSchemasEntries(treeSchemasMember(identity, "headers")))
       positionAt(
         compiler,
@@ -64,12 +67,14 @@ export function treeSchemasCompileDeclarations(
         treeSchemasPointer(at, "headers", header, "schema"),
       );
   }
+
   for (const [id, header] of treeSchemasEntries(merged.headers))
     positionAt(
       compiler,
       treeSchemasMember(header, "schema"),
       treeSchemasPointer("/headers", id, "schema"),
     );
+
   for (const [id, scope] of treeSchemasEntries(merged.scopes))
     positionAt(compiler, treeSchemasMember(scope, "id"), treeSchemasPointer("/scopes", id, "id"));
 
@@ -78,20 +83,26 @@ export function treeSchemasCompileDeclarations(
     const codeName = treeSchemasMember(right, "codeName");
     // A right without segments and without codeName is access.rights' error; its params are named once it has one.
     const segments = segmentsOf(id, "right", typeof codeName === "string" ? { codeName } : {});
+
     paramsAt(compiler, right, at, segments.ok ? segments.segments : []);
     const subject = treeSchemasMember(right, "subject");
+
     positionAt(compiler, treeSchemasMember(subject, "id"), treeSchemasPointer(at, "subject", "id"));
   }
+
   for (const [id, rule] of treeSchemasEntries(merged.rules)) {
     const at = treeSchemasPointer("/rules", id);
+
     paramsAt(compiler, rule, at, splitName(id));
     const proof = treeSchemasMember(rule, "proof");
+
     positionAt(
       compiler,
       treeSchemasMember(proof, "schema"),
       treeSchemasPointer(at, "proof", "schema"),
     );
   }
+
   for (const [code, error] of treeSchemasEntries(merged.errors))
     paramsAt(compiler, error, treeSchemasPointer("/errors", code), splitName(code));
 }
@@ -114,8 +125,10 @@ const routeFieldsAt = (
 ): void => {
   if (typeof fields === "string") {
     routePositionAt(compiler, fields, pointer);
+
     return;
   }
+
   for (const [name, schema] of treeSchemasEntries(fields))
     routePositionAt(compiler, schema, treeSchemasPointer(pointer, name));
 };
@@ -131,9 +144,11 @@ export function treeSchemasCompileRoutes(
     if (node.kind === "relay") continue;
     const settings = node.settings;
     const at = (...segments: string[]) => treeSchemasPointer(node.pointer, ...segments);
+
     routePositionAt(compiler, settings.item, at("item"));
     routePositionAt(compiler, settings.input, at("input"), "routeInput");
     routePositionAt(compiler, settings.output, at("output"));
+
     for (const [status, response] of treeSchemasEntries(settings.responses)) {
       routePositionAt(
         compiler,
@@ -146,6 +161,7 @@ export function treeSchemasCompileRoutes(
         at("responses", status, "headers"),
       );
     }
+
     for (const key of FIELDS_MAPS) routeFieldsAt(compiler, settings[key], at(key));
   }
 }

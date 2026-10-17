@@ -35,10 +35,12 @@ export function isKnownTarget(target: string): boolean {
 /** The concrete targets an item's `targets` list stands for, sorted and unique. */
 export function expandTargets(targets: readonly string[]): string[] {
   const out = new Set<string>();
+
   for (const target of targets) {
     if (target === "server") for (const t of SERVER_TARGETS) out.add(t);
     else if (target === "all targets") for (const t of CONCRETE_TARGETS) out.add(t);
     else out.add(target);
   }
+
   return [...out].sort();
 }

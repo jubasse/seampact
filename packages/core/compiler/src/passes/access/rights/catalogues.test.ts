@@ -83,6 +83,7 @@ surfaces:
     expect(Object.getPrototypeOf(draft.rights)).toBeNull();
     // Typed `string`, so the read goes through the catalogue's index and not Object's `toString`.
     const inheritedName: string = "toString";
+
     expect(draft.rights[inheritedName]?.docs).toEqual({ summary: "Odd but valid." });
   });
 

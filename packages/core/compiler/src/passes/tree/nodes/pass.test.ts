@@ -46,20 +46,26 @@ const isObject = (value: JsonValue | undefined): value is JsonObject =>
 
 function isJsonValue(value: unknown): value is JsonValue {
   if (value === null || ["string", "number", "boolean"].includes(typeof value)) return true;
+
   if (Array.isArray(value)) return value.every(isJsonValue);
+
   if (typeof value !== "object") return false;
+
   return Object.values(value).every(isJsonValue);
 }
 
 function treeNodesMembers(api: DraftFixtureApi): JsonObject {
   const half = draftFixtureHalves(api, "after-tree").find(({ half }) => half === "tree.nodes");
+
   if (half === undefined) throw new Error(`the ${api} fixture has no tree.nodes half`);
+
   return half.members;
 }
 
 // The fixture leaves out an empty catalogue or list; the draft holds every one.
 function expectedApiMembers(api: DraftFixtureApi): JsonObject {
   const members = treeNodesMembers(api);
+
   return {
     api: members.api ?? null,
     conventions: members.conventions ?? {},
@@ -71,8 +77,10 @@ function expectedApiMembers(api: DraftFixtureApi): JsonObject {
 
 function expectedOperations(api: DraftFixtureApi): JsonObject[] {
   const operations = treeNodesMembers(api).operations;
+
   if (!Array.isArray(operations))
     throw new Error(`the ${api} fixture has no tree.nodes operations`);
+
   return operations.filter(isObject).map((operation) => pick(api, operation));
 }
 
@@ -81,13 +89,17 @@ function pick(api: string, operation: object): JsonObject {
   const members = new Map<string, unknown>(Object.entries(operation));
   const later = LATER[`${api}:${String(members.get("id"))}`] ?? [];
   const picked: JsonObject = {};
+
   for (const member of MEMBERS) {
     const value: unknown = members.get(member);
+
     if (value === undefined || later.includes(member)) continue;
+
     if (!isJsonValue(value))
       throw new Error(`the member ${member} of an operation is no JSON value`);
     picked[member] = value;
   }
+
   return picked;
 }
 

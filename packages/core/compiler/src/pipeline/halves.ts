@@ -29,6 +29,8 @@ export type PassOf<H extends HalfName> = H extends `${infer P extends PassName}.
 /** The pass of a half, at run time. */
 export function pipelinePassOf(half: HalfName): PassName {
   const pass = half.slice(0, half.indexOf("."));
+
   if (pass === "tree" || pass === "access" || pass === "derive") return pass;
+
   throw new Error(`half ${half} names no pass`);
 }

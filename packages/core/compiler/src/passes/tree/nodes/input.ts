@@ -65,12 +65,14 @@ export function treeNodesInput(
 
   const pointer = `${node.pointer}/input`;
   const origin = context.origin(pointer);
+
   if (origin === undefined)
     throw new Error(`the raw tree has no origin for the input at ${pointer}`);
 
   // The service answers every input tree.schemas accepted, and a refused one stops the run before this half
   // (the stop rule). It answers none only while tree.schemas is the seam's stub, which knows no schema.
   const schema = context.treeSchemas.typeUse(pointer, "input");
+
   if (schema === undefined) return undefined;
 
   const media = mediaOf(node);
@@ -85,20 +87,25 @@ export function treeNodesInput(
 
   if (media === JSON_MEDIA) {
     reportNestedFiles(site, filesBelow(schema, draft, undefined), undefined);
+
     return { media, schema: pipelineCopy(schema), origin: pipelineCopy(origin) };
   }
 
   const fields = formFields(site, schema);
   const input = { media, schema: pipelineCopy(schema), origin: pipelineCopy(origin) };
+
   return fields === undefined ? input : { ...input, fields };
 }
 
 function mediaOf(node: TreeNode): Media {
   const written = Object.hasOwn(node.settings, "inputMedia") ? node.settings.inputMedia : undefined;
+
   if (written === undefined) return JSON_MEDIA;
   const media = typeof written === "string" ? MEDIA_OF_INPUT_MEDIA.get(written) : undefined;
+
   if (media === undefined)
     throw new Error(`inputMedia at ${node.pointer} is no media the grammar admits`);
+
   return media;
 }
 
@@ -108,6 +115,7 @@ const mediaWord = (media: Media): string => MEDIA_WORD.get(media) ?? media;
 // diagnostic, when the input is no object schema.
 function formFields(site: InputSite, schema: IrWriter.TypeUse): IrWriter.InputField[] | undefined {
   const declared = schema.kind === "ref" ? treeNodesSchema(site.draft, schema.schema) : undefined;
+
   if (declared?.kind !== "object") {
     site.context.report(
       treeNodesError({
@@ -117,16 +125,20 @@ function formFields(site: InputSite, schema: IrWriter.TypeUse): IrWriter.InputFi
         fix: "Declare the input as an object whose properties are the fields.",
       }),
     );
+
     return undefined;
   }
 
   const schemaPointer = inputSchemaPointer(site.node, declared.id);
   const fields: IrWriter.InputField[] = [];
+
   for (const property of declared.properties) {
     const fieldPointer = treeNodesPointer(schemaPointer, "properties", property.name);
     const wire = fieldWire(site, property, fieldPointer);
+
     if (wire !== undefined) fields.push({ name: property.name, wire });
   }
+
   return fields;
 }
 
@@ -135,6 +147,7 @@ function formFields(site: InputSite, schema: IrWriter.TypeUse): IrWriter.InputFi
 // (`expectedVersion`) or one from another layer is elsewhere.
 function inputSchemaPointer(node: TreeNode, schemaId: string): string {
   const written = Object.hasOwn(node.settings, "input") ? node.settings.input : undefined;
+
   return typeof written === "string"
     ? treeNodesPointer("/schemas", schemaId)
     : `${node.pointer}/input`;
@@ -151,7 +164,9 @@ function fieldWire(
     checkFileField(site, property, at);
   } else {
     const nestedFiles = filesBelow(property.type, site.draft, property.origin);
+
     reportNestedFiles(site, nestedFiles, property.name);
+
     if (nestedFiles.length > 0) return undefined;
   }
 
@@ -159,6 +174,7 @@ function fieldWire(
     property.type.kind === "opaque"
       ? undefined
       : treeNodesFieldWireOf(fieldPointer, property.type, site.context.treeSchemas);
+
   if (wire === undefined)
     site.context.report(
       treeNodesError({
@@ -168,6 +184,7 @@ function fieldWire(
         fix: "Give the field a number, boolean, text, list or object schema, a file in multipart, or JSON text (contentMediaType: application/json).",
       }),
     );
+
   return wire;
 }
 
@@ -182,12 +199,14 @@ function checkFileField(site: InputSite, property: IrWriter.Property, at: Diagno
         fix: "Set inputMedia: multipart, which carries files.",
       }),
     );
+
     return;
   }
 
   const file = property.type.kind === "array" ? property.type.items : property.type;
   const maxSize = file.kind === "file" ? file.maxSizeBytes : undefined;
   const limit = treeNodesBodyLimit(site.node, site.context);
+
   if (maxSize === undefined || limit === undefined || maxSize <= limit.bytes) return;
 
   site.context.report(
@@ -226,7 +245,9 @@ function filesBelow(
     if (visited.has(id)) return;
     visited.add(id);
     const schema = treeNodesSchema(draft, id);
+
     if (schema === undefined) return;
+
     if (schema.kind === "object")
       for (const property of schema.properties)
         visit(property.type, joinPath(atPath, property.name), property.origin);
@@ -237,6 +258,7 @@ function filesBelow(
   };
 
   visit(use, "", useOrigin);
+
   return found;
 }
 
@@ -255,6 +277,7 @@ function reportNestedFiles(
       field === undefined
         ? `The JSON input of ${site.operationId} holds a file${at === "" ? " as its whole body" : at}, but a file travels only in a multipart input or as a download.`
         : `The ${mediaWord(site.media)} input of ${site.operationId} holds a file${at} inside the field ${field}, but a file is a top-level field.`;
+
     site.context.report(
       treeNodesError({
         rule: "input-file",

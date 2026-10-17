@@ -153,6 +153,7 @@ surfaces:
   app: { prefix: /audit, pathVersion: none, routes: { ping: { method: get } } }
 `);
   const labelled = treeNodesRun(treeNodesApiOf(label), label, { treeSchemas });
+
   expect(labelled.draft.api?.version).toEqual({ kind: "label", label: "2024-06-20" });
   expect(labelled.draft.api?.pathVersion).toEqual({
     value: "prefix",

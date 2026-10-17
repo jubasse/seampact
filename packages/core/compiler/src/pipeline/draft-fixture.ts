@@ -72,17 +72,21 @@ export function draftFixtureHalves(
 ): DraftFixtureHalf[] {
   const path = `${FIXTURES}${api}.${file}.json`;
   const parsed: JsonValue = JSON.parse(readFileSync(path, "utf8"));
+
   if (!isJsonObject(parsed)) throw new Error(`${path}: a fixture file is an object keyed by half`);
 
   const halves: DraftFixtureHalf[] = [];
+
   for (const [name, members] of Object.entries(parsed)) {
     if (!isHalfName(name))
       throw new Error(`${path}: '${name}' is no half (${pipelineHalves.join(", ")})`);
+
     if (!isJsonObject(members)) throw new Error(`${path}: the members of ${name} are an object`);
     halves.push({ half: name, members });
   }
 
   const order = halves.map(({ half }) => pipelineHalves.indexOf(half));
+
   if (order.some((position, index) => index > 0 && position <= (order[index - 1] ?? -1)))
     throw new Error(`${path}: the halves are listed once each, in run order`);
 
@@ -94,11 +98,13 @@ let validator: DraftValidator | undefined;
 /** The draft of `api` at `stage`, checked against the derived draft form. */
 export function draftFixture(api: DraftFixtureApi, stage: DraftFixtureStage): DraftIR {
   const draft = createDraftIR();
+
   for (const file of FILES_OF_STAGE[stage])
     for (const { members } of draftFixtureHalves(api, file)) draftFixtureApply(draft, members);
 
   validator ??= createDraftValidator();
   const report = validator.validate(draft);
+
   if (!report.valid)
     throw new Error(
       `the ${stage} draft fixture of ${api} does not fit the draft form: ${JSON.stringify(report)}`,
@@ -119,6 +125,7 @@ export function draftFixtureApply(draft: object, members: JsonObject): void {
 function mergeObject(target: object, members: JsonObject, path: string): void {
   for (const [key, value] of Object.entries(members)) {
     const at = join(path, key);
+
     if (!Object.hasOwn(target, key)) {
       // Defined, not assigned: a `__proto__` key stays a member, and a refusal throws instead of doing nothing.
       Object.defineProperty(target, key, {
@@ -131,6 +138,7 @@ function mergeObject(target: object, members: JsonObject, path: string): void {
     }
 
     const present: unknown = Reflect.get(target, key);
+
     if (Array.isArray(present)) mergeList(present, value, at);
     else if (isObject(present) && isJsonObject(value)) mergeObject(present, value, at);
     else
@@ -143,6 +151,7 @@ function mergeObject(target: object, members: JsonObject, path: string): void {
 function mergeList(list: unknown[], value: JsonValue, path: string): void {
   if (Array.isArray(value)) {
     for (const item of value) list.push(item);
+
     return;
   }
 
@@ -153,6 +162,7 @@ function mergeList(list: unknown[], value: JsonValue, path: string): void {
 
   for (const [key, members] of Object.entries(value)) {
     const element = path === OPERATIONS ? operationById(list, key) : list[Number(key)];
+
     if (!isObject(element) || !isJsonObject(members))
       throw new Error(
         `draftFixtureApply: ${join(path, key)} names no element to merge an object into`,
@@ -201,13 +211,17 @@ let strictAjv: Ajv2020 | undefined;
 function strictDefinition(file: string, name: string): ValidateFunction {
   if (strictAjv === undefined) {
     strictAjv = new Ajv2020({ ...IR_AJV_OPTIONS });
+
     for (const keyword of IR_KEYWORDS) strictAjv.addKeyword(structuredClone(keyword));
+
     for (const document of strictIrSchemas()) strictAjv.addSchema(document);
   }
 
   const ref = `${new URL(file, IR_SCHEMA_ID).href}#/$defs/${name}`;
   const validate = strictAjv.getSchema(ref);
+
   if (validate === undefined) throw new Error(`the strict IR schema has no definition ${ref}`);
+
   return validate;
 }
 
@@ -223,6 +237,7 @@ export function draftFixtureSchemaTables(api: DraftFixtureApi): DraftFixtureSche
   const parsed: JsonValue = JSON.parse(readFileSync(path, "utf8"));
   const typeUseRows = isJsonObject(parsed) ? parsed.typeUses : undefined;
   const queryWireRows = isJsonObject(parsed) ? parsed.queryWires : undefined;
+
   if (!Array.isArray(typeUseRows) || !Array.isArray(queryWireRows))
     throw new Error(`${path}: the file is { typeUses: [...], queryWires: [...] }`);
 
@@ -231,20 +246,27 @@ export function draftFixtureSchemaTables(api: DraftFixtureApi): DraftFixtureSche
     const positions = Array.isArray(at)
       ? at.filter((position) => typeof position === "string")
       : [];
+
     if (typeof pointer !== "string" || !isDirection(direction))
       throw new Error(`${path}: typeUses/${index} needs a string pointer and a direction`);
+
     if (!Array.isArray(at) || positions.length === 0 || positions.length !== at.length)
       throw new Error(`${path}: typeUses/${index}/at is a non-empty list of JSON Pointers`);
+
     if (!isTypeUse(use)) throw new Error(`${path}: typeUses/${index}/use is no strict TypeUse`);
+
     return { pointer, direction, use, at: positions };
   });
 
   const queryWires = queryWireRows.map((row, index) => {
     const { pointer, wire } = isJsonObject(row) ? row : {};
+
     if (typeof pointer !== "string")
       throw new Error(`${path}: queryWires/${index} needs a pointer`);
+
     if (!isQueryWire(wire))
       throw new Error(`${path}: queryWires/${index}/wire is no strict QueryWire`);
+
     return { pointer, wire };
   });
 
@@ -258,15 +280,18 @@ export function draftFixtureSchemaTables(api: DraftFixtureApi): DraftFixtureSche
  */
 export function draftFixtureSchemaService(api: DraftFixtureApi): TreeSchemaService {
   const { typeUses, queryWires } = draftFixtureSchemaTables(api);
+
   return {
     typeUse: (pointer, direction) => {
       const found = typeUses.find(
         (entry) => entry.pointer === pointer && entry.direction === direction,
       );
+
       return found === undefined ? undefined : structuredClone(found.use);
     },
     queryWire: (pointer) => {
       const found = queryWires.find((entry) => entry.pointer === pointer);
+
       return found === undefined ? undefined : structuredClone(found.wire);
     },
     checkExample: (value) => invalidExampleMarkers(value, ""),
@@ -276,6 +301,7 @@ export function draftFixtureSchemaService(api: DraftFixtureApi): TreeSchemaServi
 function invalidExampleMarkers(value: unknown, pointer: string): TreeSchemaExampleIssue[] {
   if (value === DRAFT_FIXTURE_INVALID_EXAMPLE)
     return [{ pointer, message: "the example holds the fixture's invalid marker" }];
+
   if (!isObject(value)) return [];
 
   return Object.entries(value).flatMap(([key, member]) =>

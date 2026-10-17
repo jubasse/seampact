@@ -26,10 +26,12 @@ export type AccessIdentityPrincipalResult =
 /** The schema of a schema id in the draft; tree.schemas wrote every schema a use names. */
 function schemaOf(schemas: Schemas, id: string): PassReadonly<IrWriter.Schema> {
   const schema = Object.hasOwn(schemas, id) ? schemas[id] : undefined;
+
   if (schema === undefined)
     throw new Error(
       `the schema service answered a use of ${id}, which the draft has no schema for`,
     );
+
   return schema;
 }
 
@@ -41,6 +43,7 @@ function principalSchema(
   reporter: AccessIdentityReporter,
 ): string | "refused" {
   const use = accessIdentitySchemaUse(context, pointer, "output");
+
   if (use.kind === "ref") return use.schema;
 
   reporter.error({
@@ -49,6 +52,7 @@ function principalSchema(
     fix: "Name an object schema, or write one inline, whose properties are the principal's fields.",
     pointer,
   });
+
   return "refused";
 }
 
@@ -68,7 +72,9 @@ export function accessIdentityPrincipal(
 
   if (variants === undefined) {
     const schema = principalSchema(pointer, identityId, context, reporter);
+
     if (schema === "refused") return { status: schema };
+
     return { status: "resolved", principal: { kind: "schema", schema } };
   }
 
@@ -83,6 +89,7 @@ function variantsPrincipal(
   reporter: AccessIdentityReporter,
 ): AccessIdentityPrincipalResult {
   const names = accessIdentityIsObject(variants) ? Object.keys(variants) : [];
+
   if (names.length === 0) {
     reporter.error({
       rule: "principal",
@@ -90,20 +97,24 @@ function variantsPrincipal(
       fix: "Name one schema per credential variant, as 'variants: { <name>: <schema> }', or name one schema.",
       pointer: accessIdentityPointer(pointer, "variants"),
     });
+
     return { status: "refused" };
   }
 
   // A variant may be named `__proto__` (ADR 0004 section 13): the map has no prototype.
   const resolved: Record<string, string> = Object.create(null);
   let refused = false;
+
   for (const name of names) {
     const variantPointer = accessIdentityPointer(pointer, "variants", name);
     const schema = principalSchema(variantPointer, identityId, context, reporter);
+
     if (schema === "refused") refused = true;
     else Object.defineProperty(resolved, name, { value: schema, enumerable: true, writable: true });
   }
 
   if (refused) return { status: "refused" };
+
   return { status: "resolved", principal: { kind: "variants", variants: resolved } };
 }
 
@@ -121,13 +132,19 @@ export function accessIdentitySchemaField(
 ): AccessIdentityFieldLookup {
   const [first, ...rest] = segments;
   const schema = schemaOf(schemas, id);
+
   if (schema.kind !== "object") return { status: "notObject", schema: id, kind: schema.kind };
+
   if (first === undefined) return { status: "missing" };
 
   const property = schema.properties.find((candidate) => candidate.name === first);
+
   if (property === undefined) return { status: "missing" };
+
   if (rest.length === 0) return { status: "held" };
+
   if (property.type.kind !== "ref") return { status: "missing" };
+
   return accessIdentitySchemaField(schemas, property.type.schema, rest);
 }
 
@@ -138,13 +155,16 @@ export function accessIdentityPrincipalField(
   field: string,
 ): AccessIdentityFieldLookup {
   const segments = field.split(".");
+
   if (principal.kind === "schema")
     return accessIdentitySchemaField(schemas, principal.schema, segments);
 
   for (const id of Object.values(principal.variants)) {
     const lookup = accessIdentitySchemaField(schemas, id, segments);
+
     if (lookup.status !== "held") return lookup;
   }
+
   return { status: "held" };
 }
 

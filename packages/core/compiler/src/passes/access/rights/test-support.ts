@@ -41,7 +41,9 @@ function loaded(workspace: ReturnType<typeof loadWorkspace>, what: string): RawW
 
   const validated = validateWorkspace(workspace.workspace);
   const invalid = [...validated.workspace, ...validated.apis.flatMap((api) => api.diagnostics)];
+
   if (invalid.length > 0) throw new Error(`${what} is not valid: ${JSON.stringify(invalid)}`);
+
   return workspace.workspace;
 }
 
@@ -56,6 +58,7 @@ export function accessRightsLoadFiles(files: Record<string, string>): RawWorkspa
 /** A workspace from a directory of this lane's fixtures, its entry `api.yaml`; load diagnostics throw. */
 export function accessRightsLoadFixture(name: string): RawWorkspace {
   const directory = `${ACCESS_RIGHTS_FIXTURES}${name}/`;
+
   return loaded(loadWorkspace({ reader: loadFsReader(directory), entry: "api.yaml" }), directory);
 }
 
@@ -64,7 +67,9 @@ export function accessRightsApiOf(workspace: RawWorkspace, name?: string): RawAp
     name === undefined
       ? workspace.apis[0]
       : workspace.apis.find((candidate) => candidate.name === name);
+
   if (api === undefined) throw new Error(`the workspace has no api ${name ?? ""}`);
+
   return api;
 }
 
@@ -111,11 +116,13 @@ export function accessRightsRunOn(
     guard: true,
   });
   const guarded = pipelineGuard(draft, accessRightsPass);
+
   try {
     accessRightsPass.run(guarded.draft, Object.freeze({ ...context, treeSchemas }));
   } finally {
     guarded.dispose();
   }
+
   return { draft, diagnostics };
 }
 
@@ -134,7 +141,9 @@ export function accessRightsRunContract(workspace: RawWorkspace): AccessRightsRu
   });
   const service = treeSchemasPass.run(draft, context);
   const treeSchemas = accessRightsMarkerService(service);
+
   treeNodesPass.run(draft, Object.freeze({ ...context, treeSchemas }));
+
   if (diagnostics.length > 0)
     throw new Error(`the tree pass reports on the contract: ${JSON.stringify(diagnostics)}`);
 
@@ -159,8 +168,10 @@ export function accessRightsReferenceWorkspace(): RawWorkspace {
 /** The after-tree draft of a reference api plus the access.identity members of its access delta. */
 export function accessRightsReferenceDraft(api: DraftFixtureApi): DraftIR {
   const draft = draftFixture(api, "after-tree");
+
   for (const { half, members } of draftFixtureHalves(api, "access-delta"))
     if (half === "access.identity") draftFixtureApply(draft, members);
+
   return draft;
 }
 

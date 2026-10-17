@@ -90,24 +90,30 @@ export function treeNodesApi(draft: DraftIR, context: TreeNodesContext): TreeNod
 
 function requiredOrigin(context: TreeNodesContext, pointer: string): Origin {
   const origin = context.origin(pointer);
+
   if (origin === undefined) throw new Error(`the raw tree has no origin for ${pointer}`);
+
   return origin;
 }
 
 // An integer version is the path version; a string one a label, allowed only with every surface unversioned.
 function versionOf(written: TreeNodesJson | undefined): IrWriter.ApiVersion {
   if (typeof written === "number") return { kind: "path", number: written };
+
   if (typeof written === "string") return { kind: "label", label: written };
+
   throw new Error("the api file has no version, which the grammar requires");
 }
 
 function pathVersionOf(context: TreeNodesContext, versionOrigin: Origin): IrWriter.PathVersion {
   const reading = context.conventions.get("pathVersion");
   const value = oneOf(reading?.value, PATH_VERSION_MODES);
+
   if (value === undefined)
     throw new Error(
       `conventions.pathVersion resolves to ${String(reading?.value)}, no mode the grammar admits`,
     );
+
   return { value, origin: pipelineCopy(reading?.origin ?? versionOrigin) };
 }
 
@@ -115,6 +121,7 @@ function pathVersionOf(context: TreeNodesContext, versionOrigin: Origin): IrWrit
 export function treeNodesDocs(written: TreeNodesJson | undefined): IrWriter.Docs {
   const summary = textOf(treeNodesMember(written, "summary"));
   const description = textOf(treeNodesMember(written, "description"));
+
   return {
     ...(summary === undefined ? {} : { summary }),
     ...(description === undefined ? {} : { description }),
@@ -124,6 +131,7 @@ export function treeNodesDocs(written: TreeNodesJson | undefined): IrWriter.Docs
 function callerOf(written: TreeNodesJson | undefined): IrWriter.ApiCaller | undefined {
   const identity = textOf(treeNodesMember(written, "identity"));
   const right = textOf(treeNodesMember(written, "right"));
+
   return identity === undefined || right === undefined ? undefined : { identity, right };
 }
 
@@ -132,6 +140,7 @@ function documentsOf(
   surfaceIds: readonly string[],
 ): Record<string, IrWriter.ApiDocument> {
   const documents: Record<string, IrWriter.ApiDocument> = {};
+
   if (!treeNodesIsObject(written)) return documents;
 
   for (const [id, document] of Object.entries(written)) {
@@ -141,8 +150,10 @@ function documentsOf(
       : [...surfaceIds];
     const internal =
       oneOf(treeNodesMember(document, "internal"), INTERNAL_POLICIES) ?? DEFAULT_INTERNAL;
+
     documents[id] = { surfaces, internal };
   }
+
   return documents;
 }
 
@@ -157,6 +168,7 @@ function surfacesOf(
   versionOrigin: Origin,
 ): SurfaceEntry[] {
   const written = context.raw.merged.surfaces;
+
   if (!treeNodesIsObject(written)) return [];
 
   const conventionMode = context.conventions.get("pathVersion")?.value;
@@ -169,11 +181,14 @@ function surfacesOf(
     const mode =
       oneOf(treeNodesMember(settings, "pathVersion"), PATH_VERSION_MODES) ??
       oneOf(conventionMode, PATH_VERSION_MODES);
+
     if (mode === undefined) throw new Error(`the surface ${id} resolves no path version mode`);
 
     const writtenPrefix = textOf(treeNodesMember(settings, "prefix")) ?? "";
     const prefixOrigin = context.origin(`${pointer}/prefix`) ?? origin;
+
     checkPrefix({ id, writtenPrefix, mode, version, prefixOrigin }, context);
+
     if (mode === "prefix") versionedSurfaces.push(id);
 
     entries.push({
@@ -196,6 +211,7 @@ function surfacesOf(
         fix: "Write an integer version, or set pathVersion: none on every surface (or in conventions).",
       }),
     );
+
   return entries;
 }
 
@@ -211,7 +227,9 @@ interface PrefixSite {
 // Under `none` the prefix is used exactly as written, so a third party's `/v1` stays.
 function checkPrefix(site: PrefixSite, context: TreeNodesContext): void {
   const origin = treeNodesNodeOrigin(site.prefixOrigin);
+
   checkPrefixPlaceholders(site, context, origin);
+
   if (site.mode === "none") {
     if (site.writtenPrefix.includes(VERSION_PLACEHOLDER))
       context.report(
@@ -222,12 +240,14 @@ function checkPrefix(site: PrefixSite, context: TreeNodesContext): void {
           fix: "Remove {version} from the prefix, or set pathVersion: prefix.",
         }),
       );
+
     return;
   }
 
   const literal = site.writtenPrefix
     .split("/")
     .find((segment) => LITERAL_VERSION_SEGMENT.test(segment));
+
   if (literal === undefined) return;
 
   const number = Number(literal.slice(1));
@@ -235,6 +255,7 @@ function checkPrefix(site: PrefixSite, context: TreeNodesContext): void {
     site.version.kind === "path" && site.version.number !== number
       ? `, which differs from the api version ${site.version.number}`
       : "";
+
   context.report(
     treeNodesError({
       rule: "path-version",
@@ -254,6 +275,7 @@ function checkPrefixPlaceholders(
   const others = [...site.writtenPrefix.matchAll(PLACEHOLDER)]
     .map((match) => match[0])
     .filter((placeholder) => placeholder !== VERSION_PLACEHOLDER);
+
   for (const placeholder of new Set(others))
     context.report(
       treeNodesError({
@@ -276,6 +298,7 @@ function resolvePrefix(
     ? leadingSlash(writtenPrefix)
     : `${DEFAULT_VERSIONED_PREFIX}${leadingSlash(writtenPrefix)}`;
   const versionText = version.kind === "path" ? String(version.number) : version.label;
+
   return trimTrailingSlash(template.replaceAll(VERSION_PLACEHOLDER, versionText));
 }
 

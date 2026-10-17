@@ -35,9 +35,11 @@ function run(reader: LoadReader, entry: string, api: string): TreeSchemasRun {
     ...validated.workspace,
     ...validated.apis.flatMap((e) => e.diagnostics),
   ];
+
   if (earlier.length > 0)
     throw new Error(`the contract does not load: ${earlier.map((d) => d.message).join("; ")}`);
   const raw = loaded.workspace.apis.find((candidate) => candidate.name === api);
+
   if (raw === undefined) throw new Error(`no api ${api}`);
 
   const diagnostics: Diagnostic[] = [];
@@ -50,12 +52,14 @@ function run(reader: LoadReader, entry: string, api: string): TreeSchemasRun {
   const draft = createDraftIR();
   const guarded = pipelineGuard(draft, treeSchemasPass);
   const service = treeSchemasPass.run(guarded.draft, context);
+
   guarded.dispose();
   const located = diagnostics.every((d) =>
     [d.origin, ...d.related.map((r) => r.origin)].every((origin) =>
       Object.hasOwn(raw.locations, diagnosticLocationKey(origin)),
     ),
   );
+
   return { draft, diagnostics, service, located };
 }
 

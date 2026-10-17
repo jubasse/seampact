@@ -159,21 +159,32 @@ const has = (value: TreeSchemasRawObject, key: string): boolean => Object.hasOwn
 // A string member the authoring schema requires: validate refuses a contract without it before this half runs.
 function guaranteedString(value: TreeSchemasRaw | undefined, key: string, pointer: string): string {
   if (typeof value === "string") return value;
+
   throw new Error(`tree.schemas found no string '${key}' at ${pointer}, which validate guarantees`);
 }
 
 /** The shape a written schema mapping has, or undefined for none (ADR 0003 section 2). */
 export function treeSchemasShapeOf(value: TreeSchemasRawObject): Shape | undefined {
   if (has(value, "$ref")) return "reference";
+
   if (has(value, "pick") || has(value, "omit")) return "derived";
+
   if (has(value, "opaque")) return "opaque";
+
   if (has(value, "file")) return "file";
+
   if (has(value, "enum")) return "enum";
+
   if (has(value, "oneOf")) return "union";
+
   if (has(value, "allOf")) return "allOf";
+
   if (value.type === "object") return has(value, "additionalProperties") ? "map" : "object";
+
   if (value.type === "array") return "array";
+
   if (typeof value.type === "string" && SCALAR_TYPES.has(value.type)) return "scalar";
+
   return has(value, "format") ? "scalar" : undefined;
 }
 
@@ -181,8 +192,11 @@ export function treeSchemasShapeOf(value: TreeSchemasRawObject): Shape | undefin
 export function treeSchemasNeedsHoist(value: TreeSchemasRaw | undefined): boolean {
   if (!treeSchemasIsObject(value)) return false;
   const shape = treeSchemasShapeOf(value);
+
   if (shape === "array") return treeSchemasNeedsHoist(value.items);
+
   if (shape === "scalar") return treeSchemasNeedsHoist(value.contentSchema);
+
   return shape === "object" || shape === "map" || shape === "union" || shape === "allOf";
 }
 
@@ -233,6 +247,7 @@ const childName = (
 const sameProperty = (a: IrWriter.Property, b: IrWriter.Property): boolean => {
   const comparable = ({ origin: _origin, optional: _optional, ...rest }: IrWriter.Property) =>
     JSON.stringify(rest);
+
   return comparable(a) === comparable(b);
 };
 
@@ -246,7 +261,9 @@ const irName = ({ segments, role, status }: Name): IrWriter.Name => ({
 const withoutNullable = (use: IrWriter.TypeUse): { use: IrWriter.TypeUse; nullable: boolean } => {
   if (use.kind === "opaque" || use.nullable !== true) return { use, nullable: false };
   const copy = { ...use };
+
   delete copy.nullable;
+
   return { use: copy, nullable: true };
 };
 
@@ -283,10 +300,13 @@ export class TreeSchemasCompiler {
     this.catalogue = treeSchemasMember(merged, "schemas");
     this.enums = treeSchemasMember(merged, "enums");
     this.scalars = new TreeSchemasScalars(treeSchemasMember(merged, "scalars"), reporter);
+
     for (const [id] of treeSchemasEntries(this.catalogue)) {
       const claim = { id, pointer: treeSchemasPointer("/schemas", id) };
       const keys = claimKeys(id, { segments: splitName(id), role: "schema" });
+
       this.declaredClaims.push({ claim, keys });
+
       for (const key of keys) {
         if (!this.claims.has(key)) this.claims.set(key, claim);
       }
@@ -301,15 +321,20 @@ export class TreeSchemasCompiler {
   reserve(reservations: readonly TreeSchemasReservation[]): void {
     for (const reservation of reservations) {
       const keys = claimKeys(reservation.id, reservation.name);
+
       this.seedReservation(reservation);
+
       if (reservation.yields) continue;
 
       for (const { claim: declared, keys: declaredKeys } of this.declaredClaims) {
         if (this.declared.has(declared.id)) continue;
+
         if (declaredKeys.some((key) => keys.includes(key)))
           this.refuseDeclaredReserved(declared, reservation);
       }
+
       const claim: Claim = { id: reservation.id, pointer: reservation.pointer, reservation };
+
       for (const key of keys) this.claims.set(key, claim);
     }
   }
@@ -334,6 +359,7 @@ export class TreeSchemasCompiler {
   compileCatalogue(): void {
     for (const [id] of treeSchemasEntries(this.catalogue)) {
       const compiled = this.compileDeclared(id);
+
       if (compiled !== undefined)
         this.uses.set(treeSchemasPointer("/schemas", id), structuredClone(compiled.use));
     }
@@ -342,6 +368,7 @@ export class TreeSchemasCompiler {
   /** Compiles the schema at a position and records its use there. */
   position(value: TreeSchemasRaw, position: TreeSchemasPosition): void {
     const compiled = this.compileAt(value, position);
+
     if (compiled !== undefined) this.uses.set(position.pointer, compiled.use);
   }
 
@@ -351,9 +378,12 @@ export class TreeSchemasCompiler {
    */
   fields(value: TreeSchemasRaw, pointer: string, name: Name): void {
     const position: TreeSchemasPosition = { pointer, name, place: "position" };
+
     if (typeof value === "string") {
       const compiled = this.reference(value, position);
+
       if (compiled === undefined) return;
+
       if (compiled.use.kind !== "ref" || this.kindOf(compiled.use.schema) !== "object") {
         this.reporter.error({
           rule: "fields-schema",
@@ -361,18 +391,25 @@ export class TreeSchemasCompiler {
           message: `'${value}' is not an object schema, whose properties would be the fields`,
           fix: "name an object schema, or write a fields map",
         });
+
         return;
       }
+
       this.uses.set(pointer, compiled.use);
+
       return;
     }
+
     const entries = treeSchemasEntries(value).map(([key, field]) => {
       const optional = key.endsWith("?");
+
       return { wire: optional ? key.slice(0, -1) : key, key, field, required: !optional };
     });
     const properties = this.propertyList(entries, pointer, wordsOf(name));
+
     if (properties === undefined) return;
     const compiled = this.objectSchema(properties, undefined, position);
+
     if (compiled !== undefined) this.uses.set(pointer, compiled.use);
   }
 
@@ -400,6 +437,7 @@ export class TreeSchemasCompiler {
   ): TreeSchemasCompiled | undefined {
     if (typeof value === "string") return this.reference(value, position);
     const shape = treeSchemasIsObject(value) ? treeSchemasShapeOf(value) : undefined;
+
     if (!treeSchemasIsObject(value) || shape === undefined) {
       this.reporter.error({
         rule: "schema-shape",
@@ -407,16 +445,24 @@ export class TreeSchemasCompiler {
         message: "the schema has no shape: no type, reference, enum, oneOf, allOf, opaque or file",
         fix: "write a 'type' (with 'properties' for an object), a schema name, or '{ opaque: <reason> }'",
       });
+
       return undefined;
     }
+
     if (!this.checkKeywords(value, shape, position.pointer)) return undefined;
+
     if (!this.checkMarks(value, shape, position)) return undefined;
+
     if (!this.checkAnnotations(value, shape, position)) return undefined;
 
     const compiled = this.compileShape(value, shape, position);
+
     if (compiled === undefined) return undefined;
+
     if (value.nullable === true && compiled.use.kind !== "opaque") compiled.use.nullable = true;
+
     if (value.sensitive === true && position.place === "declared") compiled.sensitive = true;
+
     return compiled;
   }
 
@@ -431,6 +477,7 @@ export class TreeSchemasCompiler {
       headerUnion: false,
     });
     const { pointer } = position;
+
     switch (shape) {
       case "reference":
         return this.reference(guaranteedString(value.$ref, "$ref", pointer), position);
@@ -440,8 +487,10 @@ export class TreeSchemasCompiler {
           : undefined;
       case "opaque": {
         const reason = guaranteedString(value.opaque, "opaque", pointer);
+
         return plain({ kind: "opaque", reason, origin: this.reporter.origin(pointer) });
       }
+
       case "file":
         return this.file(value.file, pointer, plain);
       case "enum":
@@ -466,8 +515,10 @@ export class TreeSchemasCompiler {
     const misplaced = Object.keys(value).filter(
       (key) => !key.startsWith("x-") && !COMMON_KEYWORDS.has(key) && !allowed.includes(key),
     );
+
     if (shape === "allOf" && value.type !== undefined && value.type !== "object")
       misplaced.push("type");
+
     for (const key of misplaced) {
       this.reporter.error({
         rule: "schema-keyword",
@@ -476,6 +527,7 @@ export class TreeSchemasCompiler {
         fix: `remove '${key}'`,
       });
     }
+
     return misplaced.length === 0;
   }
 
@@ -487,23 +539,28 @@ export class TreeSchemasCompiler {
   ): boolean {
     const named = shape === "object" || shape === "map" || shape === "union" || shape === "allOf";
     const refused: { key: string; where: string }[] = [];
+
     for (const key of ["codeName", "restrictedTo", "default"]) {
       if (has(value, key) && place !== "property") refused.push({ key, where: "a property" });
     }
+
     if (
       has(value, "sensitive") &&
       place !== "property" &&
       !(place === "declared" && shape === "scalar")
     )
       refused.push({ key: "sensitive", where: "a property or a declared scalar schema" });
+
     if (has(value, "typeName") && !(place === "declared" && (named || shape === "derived")))
       refused.push({ key: "typeName", where: "a declared object, map or union schema" });
+
     if (shape === "opaque") {
       for (const key of ["sensitive", "restrictedTo", "default"]) {
         if (has(value, key) && place === "property")
           refused.push({ key, where: "a checked value: an opaque value holds no mark or default" });
       }
     }
+
     for (const { key, where } of refused) {
       this.reporter.error({
         rule: "mark-position",
@@ -512,6 +569,7 @@ export class TreeSchemasCompiler {
         fix: `remove '${key}' here`,
       });
     }
+
     return refused.length === 0;
   }
 
@@ -528,6 +586,7 @@ export class TreeSchemasCompiler {
       ...(place === "property" ? ["deprecated", "title", "description"] : []),
       ...(writesSchema ? ["examples", "title", "description"] : []),
     ]);
+
     return this.refuseAnnotations(value, `${SHAPE_TEXT[shape]} here`, pointer, held);
   }
 
@@ -538,6 +597,7 @@ export class TreeSchemasCompiler {
     held: ReadonlySet<string>,
   ): boolean {
     const refused = Object.keys(ANNOTATION_FIX).filter((key) => has(value, key) && !held.has(key));
+
     for (const key of refused) {
       this.reporter.error({
         rule: "annotation-position",
@@ -546,12 +606,14 @@ export class TreeSchemasCompiler {
         fix: `remove '${key}' here; ${ANNOTATION_FIX[key]}`,
       });
     }
+
     return refused.length === 0;
   }
 
   // A schema name: a ref to a named object, map or union, or the declared scalar, array or enum use inlined.
   private reference(name: string, position: TreeSchemasPosition): TreeSchemasCompiled | undefined {
     const target = this.declaredTarget(name, new Set());
+
     if (target === undefined) {
       this.reporter.error({
         rule: "schema-unknown",
@@ -559,8 +621,10 @@ export class TreeSchemasCompiler {
         message: `no schema '${name}' is declared`,
         fix: "declare it under 'schemas', or fix the name",
       });
+
       return undefined;
     }
+
     // The refusal is already reported; a use would resolve to the core schema, not the author's.
     if (this.refusedReserved.has(target.id)) return undefined;
     const compiled =
@@ -571,10 +635,14 @@ export class TreeSchemasCompiler {
             sensitive: false,
             headerUnion: target.kind === "union" && this.isHeaderTagged(target.value),
           };
+
     if (compiled === undefined) return undefined;
+
     if (!this.checkHeaderUnion(compiled.headerUnion, position)) return undefined;
     const use = structuredClone(compiled.use);
+
     if (target.nullable && use.kind !== "opaque") use.nullable = true;
+
     return { use, sensitive: compiled.sensitive, headerUnion: compiled.headerUnion };
   }
 
@@ -582,15 +650,20 @@ export class TreeSchemasCompiler {
   // whether an alias on the way is nullable (`MaybeFoo: { $ref: Foo, nullable: true }`).
   private declaredTarget(name: string, seen: Set<string>): DeclaredTarget | undefined {
     const value = treeSchemasMember(this.catalogue, name);
+
     if (value === undefined) return this.seededCoreTarget(name);
     const alias = typeof value === "string" ? value : treeSchemasMember(value, "$ref");
+
     if (typeof alias === "string" && !seen.has(name)) {
       seen.add(name);
       const target = this.declaredTarget(alias, seen);
+
       if (target === undefined) return { id: name, kind: undefined, value, nullable: false };
       const nullable = target.nullable || treeSchemasMember(value, "nullable") === true;
+
       return { ...target, nullable };
     }
+
     const shape = treeSchemasIsObject(value) ? treeSchemasShapeOf(value) : undefined;
     const kind: NamedKind | undefined =
       shape === "object" || shape === "allOf" || shape === "derived"
@@ -598,18 +671,21 @@ export class TreeSchemasCompiler {
         : shape === "map" || shape === "union"
           ? shape
           : undefined;
+
     return { id: name, kind, value, nullable: false };
   }
 
   // A core schema no layer took is still named by uses: the replaced params may reference the issue schema.
   private seededCoreTarget(name: string): DeclaredTarget | undefined {
     if (this.schemas.get(name)?.origin.layer !== "core") return undefined;
+
     return { id: name, kind: "object", value: undefined, nullable: false };
   }
 
   private compileDeclared(id: string): TreeSchemasCompiled | undefined {
     const pointer = treeSchemasPointer("/schemas", id);
     const state = this.declared.get(id);
+
     if (state === "compiling") {
       this.reporter.error({
         rule: "schema-cycle",
@@ -618,8 +694,10 @@ export class TreeSchemasCompiler {
         fix: "break the cycle with a named object, or remove the self-reference",
       });
       this.declared.set(id, undefined);
+
       return undefined;
     }
+
     if (this.declared.has(id)) return state;
     this.declared.set(id, "compiling");
     const name = { segments: splitName(id), role: "schema" } as const;
@@ -628,13 +706,16 @@ export class TreeSchemasCompiler {
       value === undefined
         ? undefined
         : this.compileAt(value, { pointer, name, place: "declared", id });
+
     this.declared.set(id, compiled);
+
     return compiled;
   }
 
   private referenceUse(id: string): IrWriter.TypeUse {
     const value = treeSchemasMember(this.catalogue, id);
     const nullable = treeSchemasMember(value, "nullable") === true;
+
     return { kind: "ref", schema: id, ...(nullable ? { nullable } : {}) };
   }
 
@@ -650,21 +731,27 @@ export class TreeSchemasCompiler {
       message: "a union tagged by a request header is only allowed as a route's whole input",
       fix: "tag the union by a body property, or use it as the route's 'input'",
     });
+
     return false;
   }
 
   private kindOf(id: string): NamedKind | undefined {
     const schema = this.schemas.get(id);
+
     if (schema !== undefined) return schema.kind;
+
     if (this.derived.has(id)) return "object";
+
     return this.declaredTarget(id, new Set())?.kind;
   }
 
   private idOf(position: TreeSchemasPosition): string {
     if (position.id !== undefined) return position.id;
     const id = position.name === undefined ? undefined : canonicalId(position.name);
+
     if (id === undefined)
       throw new Error(`tree.schemas derived no schema id at ${position.pointer}`);
+
     return id;
   }
 
@@ -678,12 +765,17 @@ export class TreeSchemasCompiler {
         message: `an inline ${kind} has no derived name here`,
         fix: "declare it under 'schemas' and write its name here",
       });
+
       return false;
     }
+
     const id = this.idOf(position);
+
     if (position.id === undefined && !this.claimHoisted(id, position.name, position.pointer))
       return false;
+
     if (kind === "object" && !this.schemas.has(id)) this.derived.add(id);
+
     return true;
   }
 
@@ -692,12 +784,16 @@ export class TreeSchemasCompiler {
     const other = keys
       .map((key) => this.claims.get(key))
       .find((claim) => claim !== undefined && claim.pointer !== pointer);
+
     if (other === undefined) {
       for (const key of keys) this.claims.set(key, { id, pointer });
+
       return true;
     }
+
     if (other.reservation !== undefined) {
       const layerParams = other.reservation.seed === undefined;
+
       this.reporter.error({
         rule: "schema-reserved",
         pointer,
@@ -712,8 +808,10 @@ export class TreeSchemasCompiler {
             ]
           : [],
       });
+
       return false;
     }
+
     this.reporter.error({
       rule: "name-collision",
       pointer,
@@ -724,6 +822,7 @@ export class TreeSchemasCompiler {
       fix: COLLISION_FIX[name.role] ?? OPERATION_COLLISION_FIX,
       related: [{ pointer: other.pointer, message: `'${other.id}' is named here` }],
     });
+
     return false;
   }
 
@@ -737,10 +836,12 @@ export class TreeSchemasCompiler {
   ): TreeSchemasCompiled | undefined {
     if (!this.claimed(position, body.kind)) return undefined;
     const id = this.idOf(position);
+
     this.derived.delete(id);
     const name = irName(position.name as Name);
     const typeName = treeSchemasMember(value, "typeName");
     const examples = treeSchemasMember(value, "examples");
+
     this.schemas.set(id, {
       ...body,
       id,
@@ -752,6 +853,7 @@ export class TreeSchemasCompiler {
       extensions: {},
       origin: this.reporter.origin(position.pointer),
     });
+
     return {
       use: this.referenceUse(id),
       sensitive: false,
@@ -772,8 +874,10 @@ export class TreeSchemasCompiler {
           "an object needs at least one property (only a union variant may hold its tag alone)",
         fix: "add a property, or write '{ opaque: <reason> }' for a free-form value",
       });
+
       return undefined;
     }
+
     return this.hoist({ kind: "object", properties }, value, position);
   }
 
@@ -782,6 +886,7 @@ export class TreeSchemasCompiler {
     position: TreeSchemasPosition,
   ): TreeSchemasCompiled | undefined {
     const properties = this.properties(value, position.pointer, wordsOf(position.name));
+
     return properties === undefined ? undefined : this.objectSchema(properties, value, position);
   }
 
@@ -794,6 +899,7 @@ export class TreeSchemasCompiler {
     const required = new Set(written.filter((name) => typeof name === "string"));
     const declared = treeSchemasEntries(value.properties);
     const unknown = [...required].filter((name) => !declared.some(([key]) => key === name));
+
     for (const name of unknown) {
       this.reporter.error({
         rule: "required-unknown",
@@ -802,6 +908,7 @@ export class TreeSchemasCompiler {
         fix: "declare the property, or remove it from 'required'",
       });
     }
+
     const entries = declared.map(([key, field]) => ({
       wire: key,
       key,
@@ -809,6 +916,7 @@ export class TreeSchemasCompiler {
       required: required.has(key),
     }));
     const properties = this.propertyList(entries, treeSchemasPointer(pointer, "properties"), words);
+
     return unknown.length > 0 ? undefined : properties;
   }
 
@@ -820,15 +928,19 @@ export class TreeSchemasCompiler {
     const properties: IrWriter.Property[] = [];
     const identifiers = new Map<string, string>();
     let failed = false;
+
     for (const { wire, key, field, required } of entries) {
       const at = treeSchemasPointer(pointer, key);
       const property = this.property(wire, field, at, words, required);
+
       if (property === undefined) {
         failed = true;
         continue;
       }
+
       const segments = (property.codeName?.segments ?? splitName(wire)).join(" ");
       const other = identifiers.get(segments);
+
       if (other !== undefined) {
         failed = true;
         this.reporter.error({
@@ -839,9 +951,11 @@ export class TreeSchemasCompiler {
           related: [{ pointer: treeSchemasPointer(pointer, other), message: `'${other}' is here` }],
         });
       }
+
       identifiers.set(segments, key);
       properties.push(property);
     }
+
     return failed ? undefined : properties;
   }
 
@@ -867,6 +981,7 @@ export class TreeSchemasCompiler {
           ...(defaultValue === undefined ? [] : ["a default fills an absent property"]),
         ]
       : [];
+
     for (const reason of refusedRequired) {
       this.reporter.error({
         rule: "required-property",
@@ -875,10 +990,12 @@ export class TreeSchemasCompiler {
         fix: "remove it from 'required'",
       });
     }
+
     if (compiled === undefined || codeName === false || refusedRequired.length > 0)
       return undefined;
 
     const { use, nullable } = withoutNullable(compiled.use);
+
     return {
       name: wire,
       type: use,
@@ -904,6 +1021,7 @@ export class TreeSchemasCompiler {
   ): IrWriter.Name | undefined | false {
     const written = treeSchemasMember(field, "codeName");
     const segments = typeof written === "string" ? splitName(written) : [...own];
+
     if (segments.length > 0)
       return typeof written === "string" ? { segments, role: "member" } : undefined;
     this.reporter.error({
@@ -918,6 +1036,7 @@ export class TreeSchemasCompiler {
           ? "write a codeName with letters or digits"
           : "set its 'codeName'",
     });
+
     return false;
   }
 
@@ -927,10 +1046,12 @@ export class TreeSchemasCompiler {
   ): IrWriter.FieldRestriction | undefined {
     if (written === undefined) return undefined;
     const origin = this.reporter.origin(treeSchemasPointer(pointer, "restrictedTo"));
+
     if (typeof written === "string") return { right: written, origin };
     const right = guaranteedString(treeSchemasMember(written, "right"), "right", pointer);
     const params = treeSchemasMember(written, "params");
     const input = treeSchemasMember(written, "input");
+
     return {
       right,
       ...(params === undefined ? {} : { params: pipelineCopy(params) }),
@@ -959,6 +1080,7 @@ export class TreeSchemasCompiler {
             place: "nested",
           });
     const keyUse = keys?.use;
+
     if (
       keyUse !== undefined &&
       !(keyUse.kind === "enum" || (keyUse.kind === "scalar" && keyUse.type === "string"))
@@ -969,10 +1091,13 @@ export class TreeSchemasCompiler {
         message: "the keys of a map are strings",
         fix: "write a string schema (with a format, a pattern or a length) or an enum",
       });
+
       return undefined;
     }
+
     if (values === undefined || (value.propertyNames !== undefined && keyUse === undefined))
       return undefined;
+
     return this.hoist(
       { kind: "map", ...(keyUse === undefined ? {} : { keys: keyUse }), values: values.use },
       value,
@@ -992,15 +1117,19 @@ export class TreeSchemasCompiler {
         message: "an array needs its item schema",
         fix: "add 'items'",
       });
+
       return undefined;
     }
+
     const items = this.compileAt(value.items, {
       pointer: treeSchemasPointer(position.pointer, "items"),
       name: childName(wordsOf(position.name), [], "item"),
       place: "nested",
     });
+
     if (items === undefined) return undefined;
     const { minItems, maxItems } = value;
+
     if (typeof minItems === "number" && typeof maxItems === "number" && minItems > maxItems) {
       this.reporter.error({
         rule: "refinement-range",
@@ -1008,8 +1137,10 @@ export class TreeSchemasCompiler {
         message: `no value fits the schema: 'minItems' ${minItems} is above 'maxItems' ${maxItems}`,
         fix: "lower the minimum or raise the maximum",
       });
+
       return undefined;
     }
+
     return plain({
       kind: "array",
       items: items.use,
@@ -1024,9 +1155,12 @@ export class TreeSchemasCompiler {
     plain: (use: IrWriter.TypeUse) => TreeSchemasCompiled,
   ): TreeSchemasCompiled | undefined {
     const use = this.scalars.use(value, position.pointer);
+
     if (use === undefined) return undefined;
+
     if (value.contentMediaType === undefined && value.contentSchema === undefined)
       return plain(use);
+
     if (
       value.contentMediaType !== JSON_MEDIA ||
       value.contentSchema === undefined ||
@@ -1039,13 +1173,16 @@ export class TreeSchemasCompiler {
           "a JSON text field is a string with both 'contentMediaType: application/json' and 'contentSchema'",
         fix: "write 'type: string' with both keywords",
       });
+
       return undefined;
     }
+
     const content = this.compileAt(value.contentSchema, {
       pointer: treeSchemasPointer(position.pointer, "contentSchema"),
       name: undefined,
       place: "nested",
     });
+
     return content === undefined
       ? undefined
       : plain({ ...use, content: { media: JSON_MEDIA, schema: content.use } });
@@ -1059,6 +1196,7 @@ export class TreeSchemasCompiler {
     const media = treeSchemasMember(written, "media");
     const maxSize = treeSchemasMember(written, "maxSize");
     const maxSizeBytes = typeof maxSize === "string" ? pipelineParseSize(maxSize) : undefined;
+
     if (maxSize !== undefined && maxSizeBytes === undefined) {
       this.reporter.error({
         rule: "schema-shape",
@@ -1066,8 +1204,10 @@ export class TreeSchemasCompiler {
         message: `'${String(maxSize)}' is no size this compiler can hold`,
         fix: "write a size such as 20MiB",
       });
+
       return undefined;
     }
+
     return plain({
       kind: "file",
       media: Array.isArray(media) ? media.filter((type) => typeof type === "string") : [],
@@ -1086,12 +1226,17 @@ export class TreeSchemasCompiler {
         ? written
         : guaranteedString(treeSchemasMember(written, "narrow"), "narrow", pointer);
     const found = this.enumValues(name, []);
+
     if (found === undefined || "cycle" in found) {
       const at = typeof written === "string" ? pointer : treeSchemasPointer(pointer, "narrow");
+
       this.reportEnumWithoutValues(name, found?.cycle, at);
+
       return undefined;
     }
+
     const { values } = found;
+
     if (typeof written === "string") return plain({ kind: "enum", enum: name });
 
     const to = treeSchemasMember(written, "to");
@@ -1100,6 +1245,7 @@ export class TreeSchemasCompiler {
       new Set(subset).size === subset.length &&
       subset.every((value) => values.includes(value)) &&
       subset.length < values.length;
+
     if (!strict) {
       this.reporter.error({
         rule: "enum-narrowing",
@@ -1107,9 +1253,12 @@ export class TreeSchemasCompiler {
         message: `a narrowing of '${name}' lists some of its values, each once, and not all of them`,
         fix: `keep a strict subset of [${values.join(", ")}]`,
       });
+
       return undefined;
     }
+
     const reason = treeSchemasMember(written, "reason");
+
     return plain({
       kind: "enum",
       enum: name,
@@ -1128,9 +1277,11 @@ export class TreeSchemasCompiler {
     if (path.includes(name)) return { cycle: [...path.slice(path.indexOf(name)), name] };
     const declared = treeSchemasMember(this.enums, name);
     const values = treeSchemasMember(declared, "values");
+
     if (Array.isArray(values))
       return { values: values.filter((value) => typeof value === "string") };
     const source = treeSchemasMember(treeSchemasMember(declared, "source"), "enum");
+
     return typeof source === "string" ? this.enumValues(source, [...path, name]) : undefined;
   }
 
@@ -1146,8 +1297,10 @@ export class TreeSchemasCompiler {
         message: `no enum '${name}' with values is declared`,
         fix: "declare it under 'enums', or fix the name",
       });
+
       return;
     }
+
     this.reporter.error({
       rule: "enum-cycle",
       pointer,
@@ -1162,12 +1315,15 @@ export class TreeSchemasCompiler {
   ): TreeSchemasCompiled | undefined {
     const { pointer } = position;
     const tag = this.unionTag(value.discriminator, pointer);
+
     if (tag === undefined) return undefined;
+
     if (!this.checkHeaderUnion(tag.in === "header", position)) return undefined;
 
     const words = wordsOf(position.name);
     const variants: IrWriter.UnionVariant[] = [];
     let failed = false;
+
     for (const [written, variant] of treeSchemasEntries(value.oneOf)) {
       const at = treeSchemasPointer(pointer, "oneOf", written);
       const compiled = this.compileAt(variant, {
@@ -1176,13 +1332,17 @@ export class TreeSchemasCompiler {
         place: "variant",
       });
       const use = compiled?.use;
+
       if (use?.kind === "ref" && use.nullable !== true && this.kindOf(use.schema) === "object") {
         variants.push({ tag: written, schema: use.schema });
         continue;
       }
+
       failed = true;
+
       if (compiled === undefined) continue;
       const nullable = use?.kind === "ref" && use.nullable === true;
+
       this.reporter.error({
         rule: "union-variant",
         pointer: at,
@@ -1194,6 +1354,7 @@ export class TreeSchemasCompiler {
           : "make the variant an object, or name an object schema",
       });
     }
+
     if (variants.length === 0 && !failed) {
       this.reporter.error({
         rule: "union-variant",
@@ -1202,9 +1363,12 @@ export class TreeSchemasCompiler {
         fix: "map each tag value to its variant schema",
       });
     }
+
     if (failed || variants.length === 0) return undefined;
     variants.sort((a, b) => (a.tag < b.tag ? -1 : a.tag > b.tag ? 1 : 0));
+
     if (tag.in === "body") this.bodyTags.push({ pointer, property: tag.property, variants });
+
     return this.hoist({ kind: "union", tag, variants }, value, position);
   }
 
@@ -1214,6 +1378,7 @@ export class TreeSchemasCompiler {
   ): IrWriter.UnionTag | undefined {
     if (typeof written === "string") return { in: "body", property: written };
     const header = HEADER_SOURCE.exec(String(treeSchemasMember(written, "from") ?? ""));
+
     if (header?.[1] !== undefined) return { in: "header", name: header[1] };
     this.reporter.error({
       rule: "union-discriminator",
@@ -1221,6 +1386,7 @@ export class TreeSchemasCompiler {
       message: "a union needs a discriminator: its tag property, or '{ from: header.<Name> }'",
       fix: "add 'discriminator: <tag property>'",
     });
+
     return undefined;
   }
 
@@ -1230,10 +1396,12 @@ export class TreeSchemasCompiler {
     position: TreeSchemasPosition,
   ): TreeSchemasCompiled | undefined {
     const merged = this.mergedProperties(value, position.pointer, wordsOf(position.name));
+
     if (merged === "derived")
       return this.claimed(position, "object")
         ? { use: this.referenceUse(this.idOf(position)), sensitive: false, headerUnion: false }
         : undefined;
+
     return merged === undefined ? undefined : this.objectSchema(merged, value, position);
   }
 
@@ -1246,14 +1414,19 @@ export class TreeSchemasCompiler {
     let failed = false;
     let derived = false;
     const members = Array.isArray(value.allOf) ? value.allOf : [];
+
     for (const [index, member] of members.entries()) {
       const at = treeSchemasPointer(pointer, "allOf", String(index));
       const properties = this.memberProperties(member, at, words);
+
       failed ||= properties === undefined;
       derived ||= properties === "derived";
+
       if (properties === undefined || properties === "derived") continue;
+
       for (const property of properties) {
         const before = merged.get(property.name);
+
         if (before === undefined) {
           merged.set(property.name, { property, pointer: at });
         } else if (sameProperty(before.property, property)) {
@@ -1272,7 +1445,9 @@ export class TreeSchemasCompiler {
         }
       }
     }
+
     if (failed) return undefined;
+
     return derived ? "derived" : [...merged.values()].map((entry) => entry.property);
   }
 
@@ -1288,16 +1463,21 @@ export class TreeSchemasCompiler {
     )
       return undefined;
     const name = typeof member === "string" ? member : treeSchemasMember(member, "$ref");
+
     if (typeof name === "string") return this.declaredProperties(name, pointer);
     const shape = treeSchemasIsObject(member) ? treeSchemasShapeOf(member) : undefined;
+
     if (treeSchemasIsObject(member) && shape === "object") {
       return this.checkKeywords(member, shape, pointer)
         ? this.properties(member, pointer, words)
         : undefined;
     }
+
     if (treeSchemasIsObject(member) && shape === "allOf")
       return this.mergedProperties(member, pointer, words);
+
     if (shape === "derived") return "derived";
+
     return this.notAnObjectMember(pointer);
   }
 
@@ -1306,6 +1486,7 @@ export class TreeSchemasCompiler {
     pointer: string,
   ): IrWriter.Property[] | "derived" | undefined {
     const target = this.declaredTarget(name, new Set());
+
     if (target === undefined) {
       this.reporter.error({
         rule: "schema-unknown",
@@ -1313,12 +1494,17 @@ export class TreeSchemasCompiler {
         message: `no schema '${name}' is declared`,
         fix: "declare it under 'schemas', or fix the name",
       });
+
       return undefined;
     }
+
     if (target.kind !== "object") return this.notAnObjectMember(pointer);
+
     if (this.compileDeclared(target.id) === undefined) return undefined;
     const schema = this.schemas.get(target.id);
+
     if (schema === undefined) return "derived";
+
     return schema.kind === "object" ? structuredClone(schema.properties) : undefined;
   }
 
@@ -1329,6 +1515,7 @@ export class TreeSchemasCompiler {
       message: "a member of 'allOf' is not an object schema",
       fix: "merge object schemas only",
     });
+
     return undefined;
   }
 
@@ -1337,6 +1524,7 @@ export class TreeSchemasCompiler {
     for (const { pointer, property, variants } of this.bodyTags) {
       for (const variant of variants) {
         const schema = this.schemas.get(variant.schema);
+
         if (schema?.kind !== "object" || !schema.properties.some((p) => p.name === property))
           continue;
         this.reporter.error({
@@ -1355,7 +1543,9 @@ export class TreeSchemasCompiler {
     const path: string[] = [];
     const next = (id: string): string[] => {
       const schema = this.schemas.get(id);
+
       if (schema?.kind !== "object") return [];
+
       return schema.properties.flatMap((p) =>
         !p.optional &&
         !p.nullable &&
@@ -1365,11 +1555,14 @@ export class TreeSchemasCompiler {
           : [],
       );
     };
+
     const visit = (id: string): void => {
       const open = path.indexOf(id);
+
       if (open >= 0) {
         const cycle = [...path.slice(open), id];
         const first = this.schemas.get(id);
+
         if (first !== undefined)
           this.reporter.error({
             rule: "schema-cycle",
@@ -1377,27 +1570,34 @@ export class TreeSchemasCompiler {
             message: `the schemas ${cycle.join(" -> ")} hold each other through required, non-nullable properties, so no finite value fits`,
             fix: "make one of those properties optional or nullable",
           });
+
         return;
       }
+
       if (done.has(id)) return;
       path.push(id);
+
       for (const target of next(id)) visit(target);
       path.pop();
       done.add(id);
     };
+
     for (const id of this.schemas.keys()) visit(id);
   }
 
   // ADR 0007 section 2: two names of one catalogue with equal segments collide in every language.
   private checkNames(ids: readonly string[], catalogue: string, what: string): void {
     const seen = new Map<string, string>();
+
     for (const id of ids) {
       const segments = splitName(id).join(" ");
       const other = seen.get(segments);
+
       if (other === undefined) {
         seen.set(segments, id);
         continue;
       }
+
       this.reporter.error({
         rule: "name-collision",
         pointer: treeSchemasPointer(catalogue, id),

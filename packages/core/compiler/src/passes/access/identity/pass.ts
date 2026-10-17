@@ -52,7 +52,9 @@ function accessIdentityPassRun(draft: DraftIR, context: PassContextOf<"access.id
   );
 
   for (const [id, scheme] of schemes) draft.schemes[id] = scheme;
+
   for (const [id, header] of headers) draft.headers[id] = header.declaration;
+
   for (const [id, identity] of identities) draft.identities[id] = identity;
 
   accessIdentityOperations(draft, context, { schemes, identities }, reporter);

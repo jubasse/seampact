@@ -39,8 +39,10 @@ const UNHELD_RESPONSE_ANNOTATIONS: readonly string[] = ["description"];
 export function treeNodesFormat(site: TreeNodesSite): string {
   const nearest = site.context.inherited(site.node, "format")?.entry.value;
   const format = nearest ?? site.context.conventions.get("format")?.value;
+
   if (typeof format !== "string")
     throw new Error(`the operation ${site.operationId} resolves no format`);
+
   return format;
 }
 
@@ -48,6 +50,7 @@ export function treeNodesFormat(site: TreeNodesSite): string {
 function mediaOf(site: TreeNodesSite, format: string): string {
   const declared = treeNodesMember(site.context.raw.merged.formats, format);
   const media = treeNodesMember(declared, "media");
+
   return typeof media === "string" ? media : DEFAULT_MEDIA;
 }
 
@@ -58,7 +61,9 @@ export function treeNodesResponses(site: TreeNodesSite, format: string): IrWrite
   const op = treeNodesOpShorthand(node);
 
   const responses = declaredResponses(site, op, media);
+
   for (const response of responses) checkNoContentBody(site, response);
+
   return responses;
 }
 
@@ -69,8 +74,10 @@ function declaredResponses(
 ): IrWriter.Response[] {
   const node = site.node;
   const written = treeNodesSetting(node, "responses");
+
   if (treeNodesIsObject(written)) {
     checkResponsesAlone(site);
+
     return Object.keys(written)
       .flatMap((status) => writtenResponse(site, status, media) ?? [])
       .sort((a, b) => a.status - b.status);
@@ -78,10 +85,12 @@ function declaredResponses(
 
   if (treeNodesSetting(node, "output") !== undefined)
     return bodyResponse(site, node, "output", outputStatus(site, op), "item", media);
+
   if (op === undefined && treeNodesSetting(node, "item") !== undefined)
     return bodyResponse(site, node, "item", DEFAULT_STATUS, listShape(node), media);
 
   if (op === undefined) return [emptyResponse(NO_CONTENT, node.origin)];
+
   return opResponses(site, op, media);
 }
 
@@ -90,8 +99,10 @@ function checkResponsesAlone(site: TreeNodesSite): void {
   const beside = RESPONSES_INSTEAD_OF.filter(
     (member) => treeNodesSetting(site.node, member) !== undefined,
   );
+
   for (const member of beside) {
     const pointer = `${site.node.pointer}/${member}`;
+
     site.context.report(
       treeNodesError({
         rule: "responses-output",
@@ -122,26 +133,34 @@ function opResponses(site: TreeNodesSite, op: Op, media: string): IrWriter.Respo
   if (op === BATCH_OP) return [];
 
   const status = opStatus(site, op);
+
   if (op === DELETE_OP) return [emptyResponse(status, site.node.origin)];
 
   const owner = treeNodesOpOwner(site.node);
   const isList = op === LIST_OP;
+
   if (owner === undefined || (!isList && !ITEM_OPS.includes(op)))
     throw new Error(`the op at ${site.node.pointer} has no owner or no default response`);
 
   const itemWriter = treeNodesSetting(site.node, "item") === undefined ? owner : site.node;
+
   if (treeNodesSetting(itemWriter, "item") === undefined) {
     reportNoItem(site, owner, op);
+
     return [];
   }
+
   const shape = isList ? listShape(site.node) : "item";
+
   return bodyResponse(site, itemWriter, "item", status, shape, media);
 }
 
 function opStatus(site: TreeNodesSite, op: Op): number {
   const status = site.context.conventions.get(`ops.${op}.status`)?.value;
+
   if (typeof status !== "number")
     throw new Error(`conventions.ops.${op}.status resolves to no status`);
+
   return status;
 }
 
@@ -149,6 +168,7 @@ function opStatus(site: TreeNodesSite, op: Op): number {
 function outputStatus(site: TreeNodesSite, op: Op | undefined): number {
   if (op === undefined) return DEFAULT_STATUS;
   const status = opStatus(site, op);
+
   return op === DELETE_OP && status === NO_CONTENT ? DEFAULT_STATUS : status;
 }
 
@@ -171,6 +191,7 @@ function bodyResponse(
   const pointer = `${owner.pointer}/${member}`;
   const origin = site.context.origin(pointer) ?? owner.origin;
   const body = site.context.treeSchemas.typeUse(pointer, "output");
+
   if (body === undefined) return [];
 
   return [
@@ -196,21 +217,27 @@ function writtenResponse(
   const entry = treeNodesMember(treeNodesSetting(site.node, "responses"), statusKey);
   const origin = site.context.origin(pointer) ?? site.node.origin;
   const status = Number(statusKey);
+
   refuseUnheldAnnotations(site, entry, pointer, status);
   const headers = responseHeaders(site, treeNodesMember(entry, "headers"), `${pointer}/headers`);
 
   const writtenBody = treeNodesMember(entry, "body");
+
   if (REDIRECT_STATUSES.includes(status)) {
     if (writtenBody !== undefined) reportRedirectBody(site, status, `${pointer}/body`);
+
     return { status, shape: "redirect", headers, origin: pipelineCopy(origin) };
   }
+
   if (writtenBody === undefined)
     return { status, shape: "empty", headers, origin: pipelineCopy(origin) };
 
   const body = site.context.treeSchemas.typeUse(`${pointer}/body`, "output");
+
   if (body === undefined) return undefined;
 
   const isFile = body.kind === "file";
+
   return {
     status,
     ...(isFile ? {} : { media }),
@@ -232,6 +259,7 @@ function refuseUnheldAnnotations(
     (annotation) => treeNodesMember(entry, annotation) !== undefined,
   )) {
     const at = `${pointer}/${key}`;
+
     site.context.report(
       treeNodesError({
         rule: "annotation-position",
@@ -251,13 +279,16 @@ function responseHeaders(
 ): IrWriter.ResponseHeader[] {
   const headers: IrWriter.ResponseHeader[] = [];
   const seen = new Map<string, TreeNodesField>();
+
   for (const field of treeNodesFields(site, written, pointer, "output").fields) {
     const name = field.name.toLowerCase();
     const first = seen.get(name);
+
     if (first !== undefined) {
       reportHeaderTwice(site, field, first);
       continue;
     }
+
     seen.set(name, field);
 
     if (field.type === undefined || !treeNodesFieldTravels(site, field, "response header"))
@@ -269,6 +300,7 @@ function responseHeaders(
       origin: pipelineCopy(field.origin),
     });
   }
+
   return headers;
 }
 
@@ -279,6 +311,7 @@ function reportHeaderTwice(
 ): void {
   const fallback = treeNodesNodeOrigin(site.node.origin);
   const origin = treeNodesLocate(field.origin, fallback);
+
   site.once(
     `param-unique:${origin.layer}#${origin.pointer}:${field.name}`,
     treeNodesError({

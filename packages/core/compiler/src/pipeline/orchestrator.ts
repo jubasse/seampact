@@ -89,6 +89,7 @@ export function compileWorkspace(options: PipelineOptions): PipelineResult {
   const workspace = loaded.workspace;
   const workspaceDiagnostics = [...loaded.diagnostics];
   const sortedWorkspace = () => diagnosticSort(workspaceDiagnostics, workspace.locations);
+
   if (hasError(loaded.diagnostics))
     return {
       files: loaded.files,
@@ -102,9 +103,12 @@ export function compileWorkspace(options: PipelineOptions): PipelineResult {
   );
   const runOf = (api: string): ApiRun => {
     const run = runs.get(api);
+
     if (run === undefined) throw new Error(`no workspace api named ${api}`);
+
     return run;
   };
+
   const finish = (): PipelineResult => ({
     files: loaded.files,
     diagnostics: sortedWorkspace(),
@@ -120,18 +124,23 @@ export function compileWorkspace(options: PipelineOptions): PipelineResult {
     guard ? pipelineView(value, source) : value;
 
   const validated = validateWorkspace(workspace);
+
   workspaceDiagnostics.push(...validated.workspace);
+
   for (const entry of validated.apis) runOf(entry.api).diagnostics.push(...entry.diagnostics);
+
   if (validated.workspace.length > 0 || validated.apis.some((e) => e.diagnostics.length > 0))
     return finish();
 
   const relay = parts.relayOrder(viewed(workspace, "workspace"));
+
   if (
     relay.order.length !== runs.size ||
     new Set(relay.order).size !== runs.size ||
     relay.order.some((api) => !runs.has(api))
   )
     throw new Error("the relay order must list every workspace api once, and no other name");
+
   for (const entry of relay.diagnostics) runOf(entry.api).diagnostics.push(...entry.diagnostics);
 
   const drafts = new Map<string, DraftIR>();
@@ -140,10 +149,13 @@ export function compileWorkspace(options: PipelineOptions): PipelineResult {
   const relaysToStopped = (api: string, seen = new Set<string>()): boolean => {
     for (const target of relay.relaysTo.get(api) ?? []) {
       if (stopped.has(target)) return true;
+
       if (seen.has(target)) continue;
       seen.add(target);
+
       if (relaysToStopped(target, seen)) return true;
     }
+
     return false;
   };
 
@@ -168,37 +180,45 @@ export function compileWorkspace(options: PipelineOptions): PipelineResult {
       },
     });
     const guarded = guard ? pipelineGuard(draft, part) : undefined;
+
     try {
       body(guarded?.draft ?? draft, context);
     } finally {
       open = false;
       guarded?.dispose();
     }
+
     run.diagnostics.push(...reported);
+
     return !hasError(reported);
   };
 
   const runHalves = (run: ApiRun): DraftIR | undefined => {
     const draft = createDraftIR();
     let treeSchemas: TreeSchemaService | undefined;
+
     for (const half of pipelineHalves) {
       const passed = step(run, draft, parts.passes[half], (guarded, context) => {
         if (half === "tree.schemas") {
           treeSchemas = parts.passes[half].run(guarded, context);
+
           return;
         }
 
         if (treeSchemas === undefined) throw new Error("tree.schemas returned no schema service");
         parts.passes[half].run(guarded, Object.freeze({ ...context, treeSchemas }));
       });
+
       if (!passed) return undefined;
     }
+
     return draft;
   };
 
   for (const api of relay.order) {
     const run = runOf(api);
     const draft = hasError(run.diagnostics) || relaysToStopped(api) ? undefined : runHalves(run);
+
     if (draft === undefined) stopped.add(api);
     else drafts.set(api, draft);
   }
@@ -207,23 +227,29 @@ export function compileWorkspace(options: PipelineOptions): PipelineResult {
   const clean = () => [...runs.values()].every((run) => !hasError(run.diagnostics));
   const draftOf = (api: string): DraftIR => {
     const draft = drafts.get(api);
+
     if (draft === undefined) throw new Error(`api ${api} has no derived draft`);
+
     return draft;
   };
+
   if (clean()) {
     const apis = [...runs.keys()];
+
     link(parts.link, apis, draftOf, runOf, {
       guard,
       imports: options.imports,
       workspace: viewed(workspace, "workspace"),
     });
   }
+
   if (clean()) {
     for (const run of runs.values()) {
       const draft = draftOf(run.raw.name);
       const reported: Diagnostic[] = [];
       let open = true;
       let finalized: PipelineFinalized | undefined;
+
       try {
         finalized = parts.finalize(draft, {
           raw: viewed(run.raw, "raw"),
@@ -235,10 +261,13 @@ export function compileWorkspace(options: PipelineOptions): PipelineResult {
       } finally {
         open = false;
       }
+
       run.diagnostics.push(...reported);
+
       if (finalized !== undefined && !hasError(reported)) run.finalized = finalized;
     }
   }
+
   return finish();
 }
 
@@ -259,20 +288,25 @@ function link(
   const importedViews = new Map<string, ContractIR>();
   const guards = apis.map((api) => {
     const draft = draftOf(api);
+
     return { api, draft, guarded: options.guard ? pipelineGuard(draft, part) : undefined };
   });
   let open = true;
+
   try {
     pass.run(new Map(guards.map(({ api, draft, guarded }) => [api, guarded?.draft ?? draft])), {
       workspace: options.workspace,
       imported: (api) => {
         const ir = options.imports?.get(api);
+
         if (ir === undefined || !options.guard) return ir;
         let view = importedViews.get(api);
+
         if (view === undefined) {
           view = pipelineView(ir, "imported");
           importedViews.set(api, view);
         }
+
         return view;
       },
       report: (api, diagnostic) => {
@@ -282,6 +316,7 @@ function link(
     });
   } finally {
     open = false;
+
     for (const { guarded } of guards) guarded?.dispose();
   }
 }

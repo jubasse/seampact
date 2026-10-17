@@ -43,9 +43,12 @@ surfaces:
 
 function rawApi(): RawApi {
   const loaded = loadWorkspace({ reader: loadMemoryReader({ "a.yaml": API }), entry: "a.yaml" });
+
   expect(loaded.diagnostics).toEqual([]);
   const api = loaded.workspace.apis[0];
+
   if (api === undefined) throw new Error("no api");
+
   return api;
 }
 
@@ -54,9 +57,12 @@ const nodes = pipelineTreeNodes(raw);
 const inherited = pipelineInherited(raw);
 const at = (pointer: string): TreeNode => {
   const node = nodes.find((n) => n.pointer === pointer);
+
   if (node === undefined) throw new Error(`no node at ${pointer}`);
+
   return node;
 };
+
 const TASKS = "/surfaces/app/routes/tasks";
 const LABELS = "/surfaces/app/routes/labels";
 const get = at(`${TASKS}/ops/get`);
@@ -124,6 +130,7 @@ test("inherited merge shapes", () => {
 
   // ordered: every entry from the root down, each with its origin; a map entry carries its key.
   const requires = inherited(assign, "requires");
+
   expect(requires?.shape).toBe("ordered");
   expect(requires?.entries.map((e) => e.value)).toEqual(["r1", "r2", "r3"]);
   expect(pointers(requires?.entries ?? [])).toEqual([
@@ -138,6 +145,7 @@ test("inherited merge shapes", () => {
 
   // union: an equal entry set again is dropped, the first setter's origin kept.
   const tags = inherited(get, "tags");
+
   expect(tags?.shape).toBe("union");
   expect(tags?.entries.map((e) => e.value)).toEqual(["app", "tasks", "read"]);
   expect(pointers(tags?.entries ?? [])).toEqual([
@@ -150,6 +158,7 @@ test("inherited merge shapes", () => {
   // derive.errors applies `reach: resource` to each (the root's stops at its own resource, the nested one's
   // reaches `get`).
   const errors = inherited(get, "errors");
+
   expect(errors?.shape).toBe("union");
   expect(errors?.entries.map((e) => [e.key, e.value, e.node.name, e.origin.pointer])).toEqual([
     ["app.gone", { reach: "resource" }, "app", "/surfaces/app/errors/app.gone"],
@@ -159,6 +168,7 @@ test("inherited merge shapes", () => {
 
   // per key: the nearest node wins for each key.
   const roles = inherited(assign, "errorRoles");
+
   expect(roles?.shape).toBe("perKey");
   expect([...(roles?.entries ?? [])].map(([key, e]) => [key, e.value, e.origin.pointer])).toEqual([
     ["notFound", "a.noTask", `${TASKS}/member/errorRoles/notFound`],
@@ -187,8 +197,10 @@ test("a union entry's identity ignores key order", () => {
   };
   const handMade: RawApi = { ...raw, merged, leafOrigins: {} };
   const ping = pipelineTreeNodes(handMade).find((n) => n.name === "ping");
+
   if (ping === undefined) throw new Error("no ping");
   const tags = pipelineInherited(handMade)(ping, "tags");
+
   expect(tags?.entries.map((e) => [e.value, e.node.name])).toEqual([
     [{ a: 1, b: [{ c: 1, d: 2 }] }, "app"],
     ["app", "app"],

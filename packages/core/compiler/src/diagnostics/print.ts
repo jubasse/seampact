@@ -23,6 +23,7 @@ const UNKNOWN: PrintedLocation = { file: "(unknown location)", line: 0, column: 
 /** `locations` is the table the origin belongs to: an api's, or the workspace's for load diagnostics. */
 export function diagnosticLocation(origin: Origin, locations: Locations): PrintedLocation {
   const key = diagnosticLocationKey(origin);
+
   return Object.hasOwn(locations, key) ? (locations[key] as PrintedLocation) : UNKNOWN;
 }
 
@@ -36,6 +37,7 @@ export function diagnosticSort(
   locations: Locations,
 ): Diagnostic[] {
   const keyed = diagnostics.map((d) => ({ d, at: diagnosticLocation(d.origin, locations) }));
+
   keyed.sort(
     (x, y) =>
       compare(x.at.file, y.at.file) ||
@@ -44,6 +46,7 @@ export function diagnosticSort(
       compare(x.d.rule, y.d.rule) ||
       compare(x.d.message, y.d.message),
   );
+
   return keyed.map((k) => k.d);
 }
 
@@ -63,12 +66,14 @@ export function diagnosticInert(text: string): string {
   return text.replace(ACTIVE, (ch) => {
     const code = ch.codePointAt(0) as number;
     const hex = code.toString(16).toUpperCase();
+
     return code > 0xffff ? `\\u{${hex}}` : `\\u${hex.padStart(4, "0")}`;
   });
 }
 
 function sentence(text: string): string {
   const t = diagnosticInert(text.replace(/\s+/g, " ").trim());
+
   return /[.!?]$/.test(t) ? t : `${t}.`;
 }
 
@@ -80,8 +85,10 @@ function sentence(text: string): string {
  */
 export function printDiagnostics(diagnostics: readonly Diagnostic[], locations: Locations): string {
   const lines: string[] = [];
+
   for (const d of diagnosticSort(diagnostics, locations)) {
     const at = diagnosticLocation(d.origin, locations);
+
     lines.push(
       `${diagnosticInert(at.file)}:${at.line}:${at.column}: ${d.severity} ${d.rule}: ${sentence(d.message)} Fix: ${sentence(d.fix)}`,
     );
@@ -94,11 +101,13 @@ export function printDiagnostics(diagnostics: readonly Diagnostic[], locations: 
           compare(x.at.column, y.at.column) ||
           compare(x.r.message, y.r.message),
       );
+
     for (const { r, at: rat } of related) {
       lines.push(
         `  ${diagnosticInert(rat.file)}:${rat.line}:${rat.column}: ${sentence(r.message)}`,
       );
     }
   }
+
   return lines.join("\n");
 }

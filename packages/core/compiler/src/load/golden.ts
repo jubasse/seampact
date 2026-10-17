@@ -15,18 +15,22 @@ export function loadFixture(dir: string, entry?: string): LoadResult {
   const root = join(FIXTURES, dir);
   const chosen =
     entry ?? (existsSync(join(root, "workspace.yaml")) ? "workspace.yaml" : "api.yaml");
+
   return loadWorkspace({ reader: loadFsReader(root), entry: chosen });
 }
 
 export function expectGolden(dir: string, result: LoadResult): string {
   const printed = printDiagnostics(result.diagnostics, result.workspace.locations);
   const file = join(FIXTURES, dir, "expected.txt");
+
   if (process.env.UPDATE_GOLDEN === "1") writeFileSync(file, `${printed}\n`);
   expect(readFileSync(file, "utf8")).toBe(`${printed}\n`);
+
   return printed;
 }
 
 export function must<T>(value: T | undefined): T {
   if (value === undefined) throw new Error("expected a value");
+
   return value;
 }

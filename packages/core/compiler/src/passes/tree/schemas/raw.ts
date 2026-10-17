@@ -52,7 +52,9 @@ export class TreeSchemasReporter {
   /** The origin of a node the half read; a pointer naming nothing is a bug of the half. */
   origin(pointer: string): IrWriter.Origin {
     const origin = this.context.origin(pointer);
+
     if (origin === undefined) throw new Error(`tree.schemas read no node at ${pointer}`);
+
     return origin;
   }
 
@@ -73,7 +75,9 @@ export class TreeSchemasReporter {
   private located(pointer: string): DiagnosticOrigin {
     const origin = this.origin(pointer);
     const layer = origin.layer;
+
     if (layer === "core") throw new Error(`tree.schemas located a diagnostic at core ${pointer}`);
+
     return { ...origin, layer };
   }
 }

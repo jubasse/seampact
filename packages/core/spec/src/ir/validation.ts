@@ -54,10 +54,12 @@ export function strictIrSchemas(
 ): SchemaNode[] {
   return documents.map((document) => {
     const copy = structuredClone(document) as Record<string, unknown>;
+
     walkSchema(copy, (node) => {
       if (isSchemaNode(node.properties))
         (node as Record<string, unknown>).additionalProperties = false;
     });
+
     return copy;
   });
 }
@@ -113,8 +115,10 @@ export function classifyIrErrors(
     unknownMembers: [],
     problems: [],
   };
+
   for (const error of errors ?? []) {
     const { tag, tagValue, additionalProperty } = error.params;
+
     if (isMappingError(error)) {
       if (!report.unknownKinds.some((kind) => kind.pointer === error.instancePath))
         report.unknownKinds.push({
@@ -134,11 +138,14 @@ export function classifyIrErrors(
       });
     }
   }
+
   const unknown = [...report.unknownKinds, ...report.unknownValues];
+
   report.valid =
     report.problems.length === 0 &&
     report.unknownMembers.length === 0 &&
     (form === "strict" ? unknown.length === 0 : unknown.every((item) => !item.mustAct));
+
   return report;
 }
 
@@ -165,23 +172,31 @@ export interface IrValidator {
 // `IR_AJV_OPTIONS`. A reader of a third-party bundle caps the input size before validating (README.md).
 export function createIrValidator(Ajv: IrAjvConstructor, form: IrSchemaForm): IrValidator {
   const ajv = new Ajv({ ...IR_AJV_OPTIONS });
+
   for (const keyword of IR_KEYWORDS) ajv.addKeyword(structuredClone(keyword));
   const documents = form === "open" ? IR_SCHEMA_DOCUMENTS : strictIrSchemas();
+
   for (const document of documents) ajv.addSchema(structuredClone(document));
   const compiled = (id: string): IrAjvValidateFunction => {
     const validate = ajv.getSchema(id);
+
     if (validate === undefined) throw new Error(`no schema ${id}`);
+
     return validate;
   };
+
   const ir = compiled(IR_SCHEMA_ID);
   const sourceMap = compiled(SOURCE_MAP_SCHEMA_ID);
+
   return {
     validate(value) {
       ir(value);
+
       return classifyIrErrors(ir.errors, form, listIrUnknowns(value));
     },
     validateSourceMap(value) {
       sourceMap(value);
+
       return classifyIrErrors(sourceMap.errors, form);
     },
   };

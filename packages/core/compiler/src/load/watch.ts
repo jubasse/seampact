@@ -35,10 +35,12 @@ function watchable(file: string): boolean {
   if (isAbsolutePath(file) || file.includes("\\")) return false;
   let rest = loadNormalizePath(file);
   let above = false;
+
   while (rest === ".." || rest.startsWith("../")) {
     rest = rest === ".." ? "" : rest.slice(3);
     above = true;
   }
+
   return !above || rest.startsWith("node_modules/");
 }
 
@@ -52,6 +54,7 @@ export function loadWatchFiles(files: Iterable<string>, options: LoadWatchOption
     if (timer !== undefined) clearTimeout(timer);
     timer = setTimeout(() => {
       timer = undefined;
+
       if (!closed) options.onChange();
     }, debounce);
   };
@@ -63,14 +66,17 @@ export function loadWatchFiles(files: Iterable<string>, options: LoadWatchOption
 
   const start = (list: Iterable<string>) => {
     const byDir = new Map<string, Set<string>>();
+
     for (const file of list) {
       if (!watchable(file)) continue;
       const abs = path.resolve(options.root, file);
       const dir = path.dirname(abs);
       const names = byDir.get(dir) ?? new Set<string>();
+
       names.add(path.basename(abs).toLowerCase());
       byDir.set(dir, names);
     }
+
     for (const [dir, names] of [...byDir].sort(([a], [b]) => (a < b ? -1 : 1))) {
       try {
         const w = fs.watch(dir, { persistent: false }, (_event, filename) => {
@@ -82,6 +88,7 @@ export function loadWatchFiles(files: Iterable<string>, options: LoadWatchOption
             fire();
           }
         });
+
         w.on("error", () => {});
         watchers.push(w);
       } catch {
@@ -91,6 +98,7 @@ export function loadWatchFiles(files: Iterable<string>, options: LoadWatchOption
   };
 
   start(files);
+
   return {
     update(next) {
       if (closed) return;
@@ -99,6 +107,7 @@ export function loadWatchFiles(files: Iterable<string>, options: LoadWatchOption
     },
     close() {
       closed = true;
+
       if (timer !== undefined) clearTimeout(timer);
       stop();
     },

@@ -178,11 +178,15 @@ export type DraftField = DraftOwnedField | DraftContainerField;
 /** The segments of a normalised path: `operations[].requires` is `operations`, `[]`, `requires`. */
 export function draftFieldSegments(field: string): string[] {
   const segments: string[] = [];
+
   for (const part of field.split(".")) {
     const name = part.endsWith("[]") ? part.slice(0, -2) : part;
+
     if (name !== "") segments.push(name);
+
     if (part.endsWith("[]")) segments.push("[]");
   }
+
   return segments;
 }
 
@@ -203,8 +207,10 @@ export function draftElementOwner(
     typeof derivedFrom === "object" && derivedFrom !== null
       ? Reflect.get(derivedFrom, "derivation")
       : undefined;
+
   if (typeof derivation !== "string") return { owner: undefined };
   const derivationRow = derivationRowOf(derivation);
+
   return {
     owner: derivationRow?.wire ?? undefined,
     derivation,
@@ -215,6 +221,7 @@ export function draftElementOwner(
 /** The owner of a row, in words, for diagnostics and error messages. */
 export function draftOwnerText(row: OwnershipRow | undefined): string {
   if (row === undefined) return "no owner";
+
   switch (row.mode) {
     case "owned":
       return row.owner;

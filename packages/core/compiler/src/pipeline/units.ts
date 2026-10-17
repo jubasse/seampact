@@ -22,22 +22,29 @@ export function pipelineUnitPattern(kind: UnitKind): string {
     typeof defs === "object" && defs !== null ? Reflect.get(defs, kind) : undefined;
   const pattern: unknown =
     typeof def === "object" && def !== null ? Reflect.get(def, "pattern") : undefined;
+
   if (typeof pattern !== "string") throw new Error(`the authoring grammar has no ${kind} pattern`);
+
   return pattern;
 }
 
 function parse(kind: UnitKind, text: string): number | undefined {
   let pattern = patterns.get(kind);
+
   if (pattern === undefined) {
     pattern = new RegExp(pipelineUnitPattern(kind));
     patterns.set(kind, pattern);
   }
+
   const match = pattern.test(text) ? /^([0-9]+)(.+)$/.exec(text) : null;
+
   if (match === null) return undefined;
   const units: Readonly<Record<string, number>> = pipelineUnits[kind];
   const unit = match[2] ?? "";
+
   if (!Object.hasOwn(units, unit)) throw new Error(`the ${kind} unit ${unit} has no reading`);
   const value = Number(match[1]) * (units[unit] as number);
+
   return Number.isSafeInteger(value) ? value : undefined;
 }
 

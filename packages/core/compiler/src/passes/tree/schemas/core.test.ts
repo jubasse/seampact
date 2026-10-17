@@ -29,11 +29,15 @@ const coreIds = (catalogues: string) =>
 describe("core declarations and reserved ids", () => {
   test("every core schema is seeded with its core origin, its ids those of the role data", () => {
     const run = treeSchemasRunApi(ONE_SCHEMA);
+
     expect(run.diagnostics).toEqual([]);
     const seeded = Object.values(run.draft.schemas).filter((s) => s.origin.layer === "core");
+
     expect(seeded.map((schema) => schema.id)).toEqual([...derivationCoreSchemaIds]);
+
     for (const schema of seeded) {
       const role = schema.name.role === "params" ? "params" : "schema";
+
       expect(["params", "schema"]).toContain(schema.name.role);
       expect(canonicalId({ segments: schema.name.segments, role })).toBe(schema.id);
       expect(schema).not.toHaveProperty("derivedFrom");
@@ -43,6 +47,7 @@ describe("core declarations and reserved ids", () => {
   test("each core schema has the params, issue members and directions of ADR 0006 section 6", () => {
     const { schemas } = treeSchemasRunApi(ONE_SCHEMA).draft;
     const issue = "/errors/api.schema_invalid/params/issues/items";
+
     expect(schemas.ApiSchemaInvalidParams).toEqual({
       kind: "object",
       id: "ApiSchemaInvalidParams",
@@ -106,9 +111,11 @@ describe("core declarations and reserved ids", () => {
 
   test("the seeded data is a copy: changing one run's schema leaves the next run's", () => {
     const first = treeSchemasRunApi(ONE_SCHEMA).draft.schemas.ApiRateLimitedParams;
+
     if (first?.kind === "object" && first.properties[0] !== undefined)
       first.properties[0].type = { kind: "scalar", type: "boolean", refinements: {} };
     const next = treeSchemasRunApi(ONE_SCHEMA).draft.schemas.ApiRateLimitedParams;
+
     expect(next?.kind === "object" ? next.properties[0]?.type : undefined).toEqual(count);
   });
 
@@ -117,6 +124,7 @@ describe("core declarations and reserved ids", () => {
   api.forbidden: { status: 403, params: { pointer: { type: string }, field: { type: string } } }
   api.sort_key_forbidden: { status: 403, title: Sort key refused }
 `);
+
     expect(run.diagnostics).toEqual([]);
     expect(run.draft.schemas.ApiForbiddenParams).toMatchObject({
       origin: api("/errors/api.forbidden/params"),
@@ -131,6 +139,7 @@ describe("core declarations and reserved ids", () => {
     const reused = treeSchemasRunApi(`errors:
   api.schema_invalid: { status: 400, params: { issues: { type: array, items: ApiSchemaInvalidIssue } } }
 `);
+
     expect(reused.diagnostics).toEqual([]);
     expect(reused.draft.schemas.ApiSchemaInvalidIssue?.origin.layer).toBe("core");
     expect(reused.draft.schemas.ApiSchemaInvalidParams?.origin).toEqual(
@@ -141,6 +150,7 @@ describe("core declarations and reserved ids", () => {
   test("the issue schema may be taken by a layer once the schema_invalid params are replaced", () => {
     const rateLimited =
       "errors:\n  api.rate_limited: { status: 429, params: { after: { type: string } } }\n";
+
     expect(coreIds(rateLimited)).toContain("ApiSchemaInvalidIssue");
 
     const replaced = treeSchemasRunApi(`errors:
@@ -148,6 +158,7 @@ describe("core declarations and reserved ids", () => {
 schemas:
   ApiSchemaInvalidIssue: { type: object, properties: { message: { type: string } } }
 `);
+
     expect(replaced.diagnostics).toEqual([]);
     expect(replaced.draft.schemas.ApiSchemaInvalidIssue?.origin).toEqual(
       api("/schemas/ApiSchemaInvalidIssue"),
@@ -165,6 +176,7 @@ schemas:
     const run = treeSchemasRunApi(
       `schemas:\n  ${id}: { type: object, properties: { a: { type: string } } }\n`,
     );
+
     expect(run.diagnostics.map((d) => [d.rule, d.origin, d.message, d.fix])).toEqual([
       [
         "seampact/tree/schema-reserved",
@@ -181,6 +193,7 @@ schemas:
     const run = treeSchemasRunApi(
       "schemas:\n  APIEmptyBody: { type: object, properties: { a: { type: string } } }\n",
     );
+
     expect(treeSchemasRules(run)).toEqual(["schema-reserved"]);
     expect(run.diagnostics[0]?.message).toBe(
       "the schema 'APIEmptyBody' gives the same identifier as 'ApiEmptyBody', reserved for the empty body of a proof-only input",
@@ -194,6 +207,7 @@ schemas:
 schemas:
   ApiForbiddenParams: { type: object, properties: { pointer: { type: string } } }
 `);
+
     expect(treeSchemasRules(run)).toEqual(["schema-reserved"]);
   });
 
@@ -223,6 +237,7 @@ schemas:
     ],
   ])("a hoist landing on a reserved id is refused (%#)", (catalogues, pointer, fix, related) => {
     const run = treeSchemasRunApi(catalogues);
+
     expect(run.diagnostics.map((d) => [d.rule, d.origin, d.fix, d.related])).toEqual([
       ["seampact/tree/schema-reserved", api(pointer), fix, related],
     ]);
@@ -236,6 +251,7 @@ schemas:
     const run = treeSchemasRunApi(
       `schemas:\n${ids.map((id) => `  ${id}: { type: object, properties: { a: { type: string } } }\n`).join("")}`,
     );
+
     expect(run.diagnostics.map((d) => [d.rule, d.origin])).toEqual(
       ids.map((id) => ["seampact/tree/schema-reserved", api(`/schemas/${id}`)]),
     );
@@ -250,6 +266,7 @@ schemas:
 rights:
   api.forbidden: { params: { a: { type: string } } }
 `);
+
     expect(run.diagnostics.map((d) => [d.rule, d.origin, d.related.map((r) => r.origin)])).toEqual([
       [
         "seampact/tree/schema-reserved",
@@ -264,6 +281,7 @@ rights:
   ApiEmptyBody: { type: object, properties: { a: { type: string } } }
   Holder: { type: object, properties: { x: ApiEmptyBody } }
 `);
+
     expect(treeSchemasRules(run)).toEqual(["schema-reserved"]);
     expect(run.draft.schemas.Holder).toBeUndefined();
   });

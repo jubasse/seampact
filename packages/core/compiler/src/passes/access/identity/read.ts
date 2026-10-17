@@ -26,6 +26,7 @@ export function accessIdentityString(
   key: string,
 ): string | undefined {
   const value = accessIdentityMember(object, key);
+
   return typeof value === "string" ? value : undefined;
 }
 
@@ -35,6 +36,7 @@ export function accessIdentityBoolean(
   key: string,
 ): boolean | undefined {
   const value = accessIdentityMember(object, key);
+
   return typeof value === "boolean" ? value : undefined;
 }
 
@@ -44,7 +46,9 @@ export function accessIdentityStrings(
   key: string,
 ): string[] | undefined {
   const value = accessIdentityMember(object, key);
+
   if (!Array.isArray(value)) return undefined;
+
   return value.filter((item): item is string => typeof item === "string");
 }
 
@@ -54,6 +58,7 @@ export function accessIdentityObject(
   key: string,
 ): AccessIdentityRawObject | undefined {
   const value = accessIdentityMember(object, key);
+
   return accessIdentityIsObject(value) ? value : undefined;
 }
 
@@ -63,11 +68,14 @@ export function accessIdentityEntries(
   key: string,
 ): [string, AccessIdentityRawObject][] {
   const catalogue = accessIdentityObject(object, key);
+
   if (catalogue === undefined) return [];
 
   const entries: [string, AccessIdentityRawObject][] = [];
+
   for (const [name, value] of Object.entries(catalogue))
     if (accessIdentityIsObject(value)) entries.push([name, value]);
+
   return entries;
 }
 

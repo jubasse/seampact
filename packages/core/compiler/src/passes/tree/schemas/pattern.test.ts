@@ -19,6 +19,7 @@ describe("portable patterns", () => {
     ["\\{\\}\\]", "\\{\\}\\]"],
   ])("%s normalises to %s", (source, normalized) => {
     const result = treeSchemasNormalizePattern(source);
+
     if (normalized === null) expect(result.ok).toBe(false);
     else expect(result).toEqual({ ok: true, normalized });
   });
@@ -45,13 +46,17 @@ describe("portable patterns", () => {
     ["a)", "not expected"],
   ])("%s is refused (%s)", (source, reason) => {
     const result = treeSchemasNormalizePattern(source);
+
     expect(result.ok).toBe(false);
+
     if (!result.ok) expect(result.reason).toContain(reason);
   });
 
   test("deeply nested groups are refused, not left to overflow the stack", () => {
     const result = treeSchemasNormalizePattern(`${"(".repeat(5000)}a${")".repeat(5000)}`);
+
     expect(result.ok).toBe(false);
+
     if (!result.ok) expect(result.reason).toContain("nested");
   });
 });

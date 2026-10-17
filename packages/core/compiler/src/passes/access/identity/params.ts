@@ -21,6 +21,7 @@ export function accessIdentityRouteHasParameter(
   name: string,
 ): boolean {
   const params = operation.params;
+
   if (params === undefined) return false;
 
   switch (location) {
@@ -40,10 +41,12 @@ export function accessIdentityCheckQuerySchemes(
   scope: AccessIdentityScope,
 ): void {
   const access = resolved.access;
+
   if (access === undefined || access.kind === "public") return;
 
   for (const id of access.schemes) {
     const scheme = scope.built.schemes.get(id);
+
     if (
       scheme?.kind !== "query" ||
       !accessIdentityRouteHasParameter(route.operation, "query", scheme.name)

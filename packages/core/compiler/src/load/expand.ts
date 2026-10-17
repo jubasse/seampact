@@ -98,7 +98,9 @@ const NULL_SPELLINGS = new Set(["", "~", "Null", "NULL"]);
 
 export function keyString(node: Node | null | undefined): string | undefined {
   if (!isScalar(node)) return undefined;
+
   if (node.type === Scalar.PLAIN) return node.source ?? String(node.value);
+
   return String(node.value);
 }
 
@@ -112,34 +114,45 @@ const mapIndexes = new WeakMap<YAMLMap, Map<string, Pair>>();
 
 export function mapIndex(map: YAMLMap): Map<string, Pair> {
   let index = mapIndexes.get(map);
+
   if (!index) {
     index = new Map();
+
     for (const pair of map.items as Pair[]) {
       const k = keyString(pair.key as Node);
+
       if (k !== undefined && !index.has(k)) index.set(k, pair);
     }
+
     mapIndexes.set(map, index);
   }
+
   return index;
 }
 
 export function navigate(file: ParsedFile, fragment: string | undefined): Node | undefined {
   if (!file.root) return undefined;
+
   if (fragment === undefined || fragment === "") return file.root;
   const segs = pointerSegments(fragment);
+
   if (!segs) return undefined;
   let node: Node | undefined = file.root;
+
   for (const seg of segs) {
     if (isMap(node)) {
       const hit = mapIndex(node).get(seg)?.value as Node | null | undefined;
+
       node = hit ?? undefined;
     } else if (isSeq(node)) {
       const item: unknown = node.items[Number(seg)];
+
       node = (item as Node | undefined) ?? undefined;
     } else {
       return undefined;
     }
   }
+
   return node;
 }
 
@@ -171,8 +184,10 @@ export class Expander {
       pendingRefs: [],
       sources: new Map(),
     };
+
     if (!file.root) return build;
     build.locs.set("", nodeSite(file, file.root));
+
     if (!isMap(file.root)) {
       this.rep.report({
         rule: "file-not-mapping",
@@ -180,8 +195,10 @@ export class Expander {
         fix: "write the file as a mapping of keys",
         at: nodeSite(file, file.root),
       });
+
       return build;
     }
+
     const scope: Scope = {
       file,
       data: false,
@@ -197,7 +214,9 @@ export class Expander {
       depth: 0,
     };
     const value = this.node(build, file.root, "", scope);
+
     if (value !== null && typeof value === "object" && !Array.isArray(value)) build.tree = value;
+
     return build;
   }
 
@@ -225,16 +244,22 @@ export class Expander {
         }
       }
     };
+
     enqueueAll();
     const declared = (): JsonObject => {
       const existing = build.tree.schemas;
+
       if (existing !== undefined && typeof existing === "object" && !Array.isArray(existing)) {
         return existing as JsonObject;
       }
+
       const fresh = jsonObject();
+
       setKey(build.tree, "schemas", fresh);
+
       return fresh;
     };
+
     while (next < queue.length) {
       if (this.budget.exhausted) return;
       const ref = queue[next++] as FileRef;
@@ -248,9 +273,11 @@ export class Expander {
             source: build.sources.get(pointer),
           }
         : visible(ref.name);
+
       // The same element, already declared here or by a layer this one builds on (by an include
       // or another `$ref`): the `$ref` points at it.
       if (other?.source === ref.id) continue;
+
       if (other) {
         this.rep.report({
           rule: "declaration-twice",
@@ -261,6 +288,7 @@ export class Expander {
         });
         continue;
       }
+
       const before = build.uses.length;
       const scope: Scope = {
         file: ref.file,
@@ -277,16 +305,20 @@ export class Expander {
         depth: 2,
       };
       const value = this.node(build, ref.pair.value, pointer, scope);
+
       setKey(declared(), ref.name, value);
       build.locs.set(pointer, elementSite);
       build.sources.set(pointer, ref.id);
       // What the element references in its own file comes along with it.
       const fileRoot = ref.file.root;
+
       for (const use of build.uses.slice(before)) {
         if (!isMap(fileRoot) || use.at.file !== ref.file.path) continue;
         const pair = mapIndex(fileRoot).get(use.name);
+
         if (pair) {
           const nid = `${this.store.realOf(ref.file.path)}#/${pointerEscape(use.name)}`;
+
           if (!queued.has(nid)) {
             queued.add(nid);
             queue.push({
@@ -299,6 +331,7 @@ export class Expander {
           }
         }
       }
+
       enqueueAll();
     }
   }
@@ -309,10 +342,13 @@ export class Expander {
    */
   private admit(file: ParsedFile, node: Node | null, depth: number, pointer: string): boolean {
     if (!this.budget.charge(loadWorkOf(pointer), () => nodeSite(file, node))) return false;
+
     if (depth > LOAD_MAX_DEPTH) {
       this.store.reportTooDeep(nodeSite(file, node));
+
       return false;
     }
+
     return true;
   }
 
@@ -323,15 +359,20 @@ export class Expander {
     scope: Scope,
   ): JsonValue {
     if (node === null || node === undefined || isAlias(node)) return null;
+
     if (!this.admit(scope.file, node, scope.depth, pointer)) return null;
+
     if (isScalar(node)) return this.scalar(node, scope);
+
     if (isSeq(node)) {
       const out: JsonValue[] = [];
+
       node.items.forEach((item, i) => {
         const child = `${pointer}/${i}`;
         const itemNode = item as Node | null;
         // An item is a position like a key's value: an item of a data list (`examples`) is data.
         const pos = scope.data ? undefined : stepPosition(scope.pos, String(i), true);
+
         out.push(
           this.node(build, itemNode, child, {
             ...scope,
@@ -343,15 +384,20 @@ export class Expander {
         );
         build.locs.set(child, nodeSite(scope.file, itemNode));
       });
+
       return out;
     }
+
     if (isMap(node)) return this.map(build, node, pointer, scope);
+
     return null;
   }
 
   private scalar(node: Scalar, scope: Scope): JsonValue {
     const source = node.source ?? "";
+
     if (!scope.data && !node.tag) this.checkType(node, scope);
+
     if (scope.data && node.type === Scalar.PLAIN && !node.tag && NULL_SPELLINGS.has(source)) {
       this.rep.report({
         rule: "data-null",
@@ -360,10 +406,13 @@ export class Expander {
         at: nodeSite(scope.file, node),
       });
     }
+
     const value = node.value as JsonValue;
+
     if (typeof value === "string") {
       if (!this.budget.chargeText(value.length, () => nodeSite(scope.file, node))) return null;
     }
+
     return value;
   }
 
@@ -373,11 +422,15 @@ export class Expander {
    */
   private checkType(node: Scalar, scope: Scope): void {
     const type = scalarType(node.value);
+
     if (type === undefined || !scope.pos) return;
+
     if (!refusesScalar(scope.pos, type)) {
       this.checkQuotedInteger(node, scope.file, scope.pos);
+
       return;
     }
+
     // A plain scalar P1 to P4 refuse is reported once, by them: their fix (quote it) is the one.
     if (node.type === Scalar.PLAIN && loadScalarPitfall(node.source ?? "", node.value)) return;
     const expected = expectedTypes(scope.pos) ?? [];
@@ -390,6 +443,7 @@ export class Expander {
         ? "a null (no value, '~' or null)"
         : `'${shown}' is ${type === "integer" ? "an integer" : `a ${type}`}`;
     const quotable = expected.includes("a string") && type !== "null";
+
     this.rep.report({
       rule: "scalar-type",
       message: `${got} where the schema expects ${wants} (P6)`,
@@ -404,11 +458,15 @@ export class Expander {
    */
   private checkQuotedInteger(node: Scalar, file: ParsedFile, pos: Position): void {
     if (node.type === Scalar.PLAIN || typeof node.value !== "string") return;
+
     if (!pos.types?.has("string") || !pos.types.has("integer")) return;
+
     if (!/^-?(0|[1-9][0-9]*)$/.test(node.value)) return;
     const n = Number(node.value);
+
     if (!Number.isSafeInteger(n) || !admitsInteger(pos, n)) return;
     const wants = (expectedTypes(pos) ?? []).join(" or ");
+
     this.rep.report({
       rule: "scalar-type",
       message: `'${JSON.stringify(node.value)}' is a quoted whole number where the schema expects ${wants}, and reads as the integer (P6)`,
@@ -424,8 +482,10 @@ export class Expander {
     scope: Scope,
   ): JsonValue {
     const fileKey = mapIndex(node).get("$file");
+
     if (fileKey) {
       if (node.items.length === 1) return this.fileDirective(build, fileKey, pointer, scope);
+
       if (!scope.data) {
         this.rep.report({
           rule: "directive-siblings",
@@ -433,11 +493,15 @@ export class Expander {
           fix: "keep $file alone in its mapping",
           at: pairSite(scope.file, fileKey.key as Node, fileKey.value as Node | null),
         });
+
         return null;
       }
     }
+
     const out = jsonObject();
+
     this.items(build, node, pointer, scope, out, { sites: new Map(), order: [] });
+
     return out;
   }
 
@@ -458,20 +522,24 @@ export class Expander {
       has: (key) => index.has(key),
       scalar: (key) => {
         const value = index.get(key)?.value;
+
         return isScalar(value) ? value.value : NOT_SCALAR;
       },
       open: scope.stack.length > 1 || index.has("$include"),
     };
     const here = scope.data ? undefined : refinePosition(scope.pos, view);
+
     for (const pair of map.items) {
       // Every pair counts, `$include` ones too: a chain of includes builds nothing else.
       if (!this.admit(file, pair.key as Node, scope.depth, pointer)) return;
       const keyNode = pair.key as Node;
       const valueNode = pair.value as Node | null;
       const key = keyString(keyNode);
+
       if (key !== undefined && !this.budget.chargeText(key.length, () => nodeSite(file, keyNode))) {
         return;
       }
+
       if (key === undefined) {
         this.rep.report({
           rule: "key-not-scalar",
@@ -481,13 +549,16 @@ export class Expander {
         });
         continue;
       }
+
       if (isReservedKey(key)) {
         this.reserved(file, keyNode, key);
         continue;
       }
+
       if (key === "$include" && !scope.data) {
         // P7 holds for the directive too; `seen` cannot tell, as the included keys join it.
         const site = nodeSite(file, keyNode);
+
         if (includeSite) {
           this.rep.report({
             rule: "duplicate-key",
@@ -498,12 +569,15 @@ export class Expander {
           });
           continue;
         }
+
         includeSite = site;
         this.include(build, pair, pointer, scope, out, seen);
         continue;
       }
+
       const keySite = nodeSite(file, keyNode);
       const first = seen.sites.get(key);
+
       if (first) {
         this.rep.report({
           rule: "duplicate-key",
@@ -514,6 +588,7 @@ export class Expander {
         });
         continue;
       }
+
       seen.sites.set(key, keySite);
       seen.order.push(key);
       const child = `${pointer}/${pointerEscape(key)}`;
@@ -525,9 +600,11 @@ export class Expander {
         parentKey: key,
         depth: scope.depth + 1,
       });
+
       if (key === "$ref" && !scope.data && typeof value === "string") {
         value = this.ref(build, value, valueNode, child, scope);
       }
+
       setKey(out, key, value);
       build.locs.set(child, pairSite(file, keyNode, valueNode));
     }
@@ -544,6 +621,7 @@ export class Expander {
     const { file } = scope;
     const valueNode = pair.value as Node | null;
     const site = pairSite(file, pair.key as Node, valueNode);
+
     if (scope.parentKey === "routes") {
       this.rep.report({
         rule: "include-under-routes",
@@ -551,28 +629,40 @@ export class Expander {
         fix: "include the content inside a route, or write the route inline",
         at: site,
       });
+
       return;
     }
+
     const items = (isSeq(valueNode) ? valueNode.items : [valueNode]) as (Node | null)[];
+
     for (const item of items) {
       // Each target is charged before anything is resolved, an empty file or a bad item too.
       const raw = isScalar(item) && typeof item.value === "string" ? item.value : undefined;
+
       if (!this.budget.charge(loadWorkOf(raw ?? ""), () => nodeSite(file, item))) return;
+
       if (raw === undefined) {
         this.shape(file, item, "$include");
         continue;
       }
+
       const target = { raw, node: item as Node };
       const at = nodeSite(file, target.node);
+
       if (scope.stack.length >= LOAD_MAX_DEPTH) {
         this.store.reportTooDeep(at);
+
         return;
       }
+
       const resolved = this.store.resolve(file, target.raw, at, "include");
+
       if (!resolved) continue;
       const pf = this.store.parse(resolved.path, file.boundary);
+
       if (!pf?.root) continue;
       const mapNode = navigate(pf, resolved.fragment);
+
       if (mapNode === undefined) {
         this.rep.report({
           rule: "include-fragment",
@@ -582,6 +672,7 @@ export class Expander {
         });
         continue;
       }
+
       if (!isMap(mapNode)) {
         this.rep.report({
           rule: "include-shape",
@@ -591,13 +682,16 @@ export class Expander {
         });
         continue;
       }
+
       // Keyed on the real path: a directory link back into the tree is the same file.
       const key = `${resolved.real}#${resolved.fragment ?? ""}`;
       const shown = shownTarget(resolved.path, resolved.fragment);
       const at0 = scope.stack.findIndex((s) => s.key === key);
+
       if (at0 >= 0) {
         const cycle = scope.stack.slice(at0);
         const names = [...cycle.map((s) => s.shown), shown];
+
         this.rep.report({
           rule: "include-cycle",
           message: `$include cycle (P8): ${names.join(" -> ")}`,
@@ -610,6 +704,7 @@ export class Expander {
         });
         continue;
       }
+
       const start = seen.order.length;
       const inner: Scope = {
         file: pf,
@@ -619,12 +714,16 @@ export class Expander {
         stack: [...scope.stack, { key, shown, at }],
         depth: scope.depth,
       };
+
       this.items(build, mapNode, pointer, inner, out, seen);
+
       if (pointer === "/schemas") {
         // A nested include recorded its own keys first; those of this file are the rest.
         const prefix = `${resolved.real}#${resolved.fragment ?? ""}`;
+
         for (const k of seen.order.slice(start)) {
           const declaredAt = `/schemas/${pointerEscape(k)}`;
+
           if (!build.sources.has(declaredAt)) {
             build.sources.set(declaredAt, `${prefix}/${pointerEscape(k)}`);
           }
@@ -660,6 +759,7 @@ export class Expander {
     const { file } = scope;
     const valueNode = pair.value as Node | null;
     const at = pairSite(file, pair.key as Node, valueNode);
+
     if (!isScalar(valueNode) || typeof valueNode.value !== "string") {
       this.rep.report({
         rule: "directive-value",
@@ -667,25 +767,37 @@ export class Expander {
         fix: "write $file: ./docs/text.md",
         at,
       });
+
       return null;
     }
+
     const valueSite = nodeSite(file, valueNode);
+
     // Each site is charged before anything is resolved, and what it reads is charged per use.
     if (!this.budget.charge(loadWorkOf(valueNode.value), valueSite)) return null;
+
     if (scope.stack.length >= LOAD_MAX_DEPTH) {
       this.store.reportTooDeep(valueSite);
+
       return null;
     }
+
     const resolved = this.store.resolve(file, valueNode.value, valueSite, "file");
+
     if (!resolved) return null;
     const ext = resolved.path.slice(resolved.path.lastIndexOf(".") + 1).toLowerCase();
+
     if (ext === "md" || ext === "txt") {
       const text = this.store.rawText(resolved.path);
+
       if (text === undefined || !this.budget.chargeText(text.length, valueSite)) return null;
+
       return text;
     }
+
     if (ext === "json") {
       const json = this.jsonFile(resolved.path, resolved.real, valueSite);
+
       if (!json.ok) {
         this.rep.report({
           rule: "file-invalid",
@@ -693,32 +805,44 @@ export class Expander {
           fix: "fix the JSON, or use a .yaml file",
           at: valueSite,
         });
+
         return null;
       }
+
       if (scope.depth + json.depth > LOAD_MAX_DEPTH) {
         this.store.reportTooDeep(valueSite);
+
         return null;
       }
+
       if (!this.budget.charge(json.nodes, valueSite)) return null;
+
       if (!this.budget.chargeText(json.text, valueSite)) return null;
+
       // Each use is its own copy: a layer tree never shares a node between two positions.
       return cloneJson(json.value);
     }
+
     if (ext === "yaml" || ext === "yml") {
       const pf = this.store.parse(resolved.path, file.boundary);
+
       if (!pf?.root) return null;
       const key = `${resolved.real}#`;
       const at0 = scope.stack.findIndex((s) => s.key === key);
+
       if (at0 >= 0) {
         const names = [...scope.stack.slice(at0).map((s) => s.shown), resolved.path];
+
         this.rep.report({
           rule: "include-cycle",
           message: `$file cycle (P8): ${names.join(" -> ")}`,
           fix: "break the cycle by removing one $file or $include of it",
           at: nodeSite(file, valueNode),
         });
+
         return null;
       }
+
       return this.node(build, pf.root, pointer, {
         file: pf,
         data: true,
@@ -728,12 +852,14 @@ export class Expander {
         depth: scope.depth,
       });
     }
+
     this.rep.report({
       rule: "file-extension",
       message: `$file reads .md, .txt, .json and .yaml files, not '${resolved.path}'`,
       fix: "use one of those extensions",
       at: nodeSite(file, valueNode),
     });
+
     return null;
   }
 
@@ -744,18 +870,23 @@ export class Expander {
    */
   private jsonFile(path: string, real: string, at: SiteLocation): JsonFile {
     const hit = this.jsonFiles.get(real);
+
     if (hit) return hit;
     let parsed: JsonValue;
     let result: JsonFile;
+
     try {
       parsed = JSON.parse(this.store.rawText(path) ?? "") as JsonValue;
       const cost = { nodes: 0, text: 0, depth: 0 };
       const value = this.jsonSafe(parsed, path, at, 0, cost);
+
       result = { ok: true, value, ...cost };
     } catch (e) {
       result = { ok: false, error: (e as Error).message };
     }
+
     this.jsonFiles.set(real, result);
+
     return result;
   }
 
@@ -767,13 +898,19 @@ export class Expander {
     cost: { nodes: number; text: number; depth: number },
   ): JsonValue {
     cost.nodes++;
+
     if (depth > cost.depth) cost.depth = depth;
+
     if (depth > LOAD_MAX_DEPTH) return null; // refused per use, by depth
+
     if (typeof value === "string") cost.text += value.length;
+
     if (Array.isArray(value)) return value.map((v) => this.jsonSafe(v, path, at, depth + 1, cost));
     const obj = asObject(value);
+
     if (!obj) return value;
     const out = jsonObject();
+
     for (const [k, v] of Object.entries(obj)) {
       if (isReservedKey(k)) {
         this.rep.report({
@@ -784,9 +921,11 @@ export class Expander {
         });
         continue;
       }
+
       cost.text += k.length;
       setKey(out, k, this.jsonSafe(v, path, at, depth + 1, cost));
     }
+
     return out;
   }
 
@@ -799,6 +938,7 @@ export class Expander {
   ): string {
     const { file } = scope;
     const at = nodeSite(file, valueNode);
+
     if (value.startsWith("#")) {
       this.rep.report({
         rule: "ref-pointer",
@@ -806,17 +946,25 @@ export class Expander {
         fix: "write the name: $ref: Task",
         at,
       });
+
       return value;
     }
+
     const isPath = value.includes("/") || value.includes("\\") || /^[A-Za-z]:/.test(value);
+
     if (!isPath) {
       build.uses.push({ name: value, at, pointer });
+
       return value;
     }
+
     const resolved = this.store.resolve(file, value, at, "ref");
+
     if (!resolved) return value;
     const pf = this.store.parse(resolved.path, file.boundary);
+
     if (!pf?.root) return value;
+
     if (!isMap(pf.root)) {
       this.rep.report({
         rule: "ref-file-shape",
@@ -824,11 +972,15 @@ export class Expander {
         fix: "write the file as Name: { ...schema }",
         at,
       });
+
       return value;
     }
+
     let name: string | undefined;
+
     if (resolved.fragment !== undefined && resolved.fragment !== "") {
       const segs = pointerSegments(resolved.fragment);
+
       if (segs?.length !== 1) {
         this.rep.report({
           rule: "ref-fragment",
@@ -836,8 +988,10 @@ export class Expander {
           fix: "point at one element, as in $ref: ./schemas/task.yaml#/Task",
           at,
         });
+
         return value;
       }
+
       name = segs[0];
     } else if (pf.root.items.length === 1) {
       name = keyString(pf.root.items[0]?.key as Node);
@@ -848,13 +1002,18 @@ export class Expander {
         fix: "add the element's name: $ref: ./schemas/task.yaml#/Task",
         at,
       });
+
       return value;
     }
+
     if (name !== undefined && isReservedKey(name)) {
       this.reserved(file, valueNode, name);
+
       return value;
     }
+
     const element = name === undefined ? undefined : mapIndex(pf.root).get(name);
+
     if (name === undefined || !element) {
       this.rep.report({
         rule: "ref-fragment",
@@ -862,9 +1021,12 @@ export class Expander {
         fix: "point at an element the file declares",
         at,
       });
+
       return value;
     }
+
     const id = `${resolved.real}#/${pointerEscape(name)}`;
+
     if (!build.refs.has(id)) {
       const ref: FileRef = {
         id,
@@ -873,9 +1035,11 @@ export class Expander {
         pair: { key: element.key as Node, value: element.value as Node | null },
         at,
       };
+
       build.refs.set(id, ref);
       build.pendingRefs.push(ref);
     }
+
     return name;
   }
 }

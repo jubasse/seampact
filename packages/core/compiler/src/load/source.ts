@@ -40,12 +40,15 @@ const WHAT: Record<FileKind, string> = {
 export function siteOf(file: string, lc: LineCounter, start: number, end: number): SiteLocation {
   const a = lc.linePos(start);
   const b = lc.linePos(Math.max(start, end));
+
   return { file, line: a.line, column: a.col, endLine: b.line, endColumn: b.col };
 }
 
 export function nodeSite(file: ParsedFile, node: Node | null | undefined): SiteLocation {
   const range = node?.range;
+
   if (!range) return siteOf(file.path, file.lc, 0, 0);
+
   return siteOf(file.path, file.lc, range[0], range[1]);
 }
 
@@ -53,6 +56,7 @@ export function nodeSite(file: ParsedFile, node: Node | null | undefined): SiteL
 export function pairSite(file: ParsedFile, key: Node | null, value: Node | null): SiteLocation {
   const start = key?.range?.[0] ?? value?.range?.[0] ?? 0;
   const end = value?.range?.[1] ?? key?.range?.[1] ?? start;
+
   return siteOf(file.path, file.lc, start, end);
 }
 
@@ -61,6 +65,7 @@ export const BOM = "﻿";
 /** Determinism (ADR 0002 byte-identity): LF line endings, no byte order mark. */
 export function normalizeText(text: string): string {
   const noBom = text.startsWith(BOM) ? text.slice(1) : text;
+
   return noBom.replace(/\r\n?/g, "\n");
 }
 
@@ -81,15 +86,18 @@ export interface ResolvedFile {
 function memoReader(reader: LoadReader): LoadReader {
   const lists = new Map<string, string[] | undefined>();
   const reals = new Map<string, string | undefined>();
+
   return {
     ascent: reader.ascent,
     readText: (file, maxBytes) => reader.readText(file, maxBytes),
     listDir(dir) {
       if (!lists.has(dir)) lists.set(dir, reader.listDir(dir));
+
       return lists.get(dir);
     },
     realPath(file) {
       if (!reals.has(file)) reals.set(file, reader.realPath(file));
+
       return reals.get(file);
     },
   };
@@ -120,8 +128,10 @@ export class FileStore {
   /** Reads the real path `checkFile` accepted, not the lexical one (narrows a swap in between). */
   rawText(file: string): string | undefined {
     this.touched.add(file);
+
     if (!this.texts.has(file)) {
       const got = this.reader.readText(this.reals.get(file) ?? file, LOAD_MAX_FILE_BYTES);
+
       if (got && "tooLarge" in got) {
         this.reporter.report({
           rule: "file-too-large",
@@ -130,8 +140,10 @@ export class FileStore {
           at: { file, line: 1, column: 1, endLine: 1, endColumn: 1 },
         });
       }
+
       this.texts.set(file, got && "text" in got ? normalizeText(got.text) : null);
     }
+
     return this.texts.get(file) ?? undefined;
   }
 
@@ -151,9 +163,11 @@ export class FileStore {
     // included from many sites would repeat them.
     const cacheKey = `${from.boundary}\0${from.path}\0${raw}`;
     const hit = this.resolved.get(cacheKey);
+
     if (hit) return hit;
     const what = WHAT[kind];
     const r = resolveAuthoredPath(from.path, raw, from.boundary);
+
     if (typeof r === "string") {
       const problems = {
         empty: [`${what} names no file`, "write a path such as ./file.yaml"],
@@ -171,13 +185,19 @@ export class FileStore {
         ],
       } as const;
       const [message, fix] = problems[r];
+
       this.reporter.report({ rule: `path-${r}`, message, fix, at });
+
       return undefined;
     }
+
     const real = this.checkFile(r.path, from.boundary, at, what, raw);
+
     if (typeof real !== "string") return undefined;
     const ok = { ...r, real };
+
     this.resolved.set(cacheKey, ok);
+
     return ok;
   }
 
@@ -202,6 +222,7 @@ export class FileStore {
     const realBoundary = boundary === "." ? "." : this.reader.realPath(boundary);
     const missing = () => {
       this.touched.add(file);
+
       if (probe) return null;
       this.reporter.report({
         rule: "file-missing",
@@ -209,8 +230,10 @@ export class FileStore {
         fix: "create the file, or fix the path",
         at,
       });
+
       return undefined;
     };
+
     const escaped = () => {
       this.reporter.report({
         rule: "path-escape",
@@ -218,16 +241,23 @@ export class FileStore {
         fix: "replace the link with a copy of the file, or move the target inside the workspace",
         at,
       });
+
       return undefined;
     };
+
     if (realBoundary === undefined) return missing();
     const inside = (p: string) => {
       const real = this.reader.realPath(p);
+
       return real === undefined || isInside(realBoundary, real);
     };
+
     const c = checkCase(this.reader, file, boundary, inside);
+
     if (c.kind === "escape") return escaped();
+
     if (c.kind === "missing") return missing();
+
     if (c.kind === "case") {
       this.touched.add(file);
       this.reporter.report({
@@ -236,27 +266,37 @@ export class FileStore {
         fix: `write the path as '${c.actual}'; compilation must not depend on the file system's case rules`,
         at,
       });
+
       return undefined;
     }
+
     const real = this.reader.realPath(file);
+
     if (real === undefined) return missing();
+
     if (!isInside(realBoundary, real)) return escaped();
     this.touched.add(file);
     this.reals.set(file, real);
+
     return real;
   }
 
   /** Parses a file once; pitfalls P1 to P5 and P9 and syntax errors are reported on first parse. */
   parse(file: string, boundary: string): ParsedFile | undefined {
     const key = `${boundary}|${file}`;
+
     if (this.parsed.has(key)) return this.parsed.get(key) ?? undefined;
     const text = this.rawText(file);
+
     if (text === undefined) {
       this.parsed.set(key, null);
+
       return undefined;
     }
+
     const lc = new LineCounter();
     let doc: Document.Parsed;
+
     try {
       doc = parseDocument(text, {
         schema: "core",
@@ -274,19 +314,25 @@ export class FileStore {
         at: { file, line: 1, column: 1, endLine: 1, endColumn: 1 },
       });
       this.parsed.set(key, null);
+
       return undefined;
     }
+
     const pf: ParsedFile = { path: file, boundary, lc, doc, root: doc.contents };
+
     this.parsed.set(key, pf);
     this.checkDocument(pf);
+
     return pf;
   }
 
   private checkDocument(pf: ParsedFile): void {
     const { doc, lc, path } = pf;
+
     for (const err of doc.errors) {
       const pos = err.pos ?? [0, 0];
       const site = siteOf(path, lc, pos[0], pos[1]);
+
       if (err.code === "MULTIPLE_DOCS") {
         this.reporter.report({
           rule: "yaml-document",
@@ -303,16 +349,21 @@ export class FileStore {
         });
       }
     }
+
     if (doc.errors.some((e) => e.code !== "MULTIPLE_DOCS")) pf.root = null;
+
     if (pf.root) this.walk(pf, pf.root, false, 0);
   }
 
   private walk(pf: ParsedFile, node: Node, isKey: boolean, depth: number): void {
     const at = nodeSite(pf, node);
+
     if (depth > LOAD_MAX_DEPTH) {
       this.reportTooDeep(at);
+
       return;
     }
+
     if (isAlias(node)) {
       this.reporter.report({
         rule: "yaml-anchor",
@@ -320,8 +371,10 @@ export class FileStore {
         fix: "use $ref to share a declaration, or extends to share a base",
         at,
       });
+
       return;
     }
+
     if ((isScalar(node) || isMap(node) || isSeq(node)) && node.anchor !== undefined) {
       this.reporter.report({
         rule: "yaml-anchor",
@@ -330,6 +383,7 @@ export class FileStore {
         at,
       });
     }
+
     if ((isScalar(node) || isMap(node) || isSeq(node)) && node.tag !== undefined) {
       this.reporter.report({
         rule: "yaml-tag",
@@ -340,9 +394,11 @@ export class FileStore {
     } else if (isScalar(node) && node.type === Scalar.PLAIN) {
       this.checkPlain(node, isKey, at);
     }
+
     if (isMap(node)) {
       for (const pair of node.items) {
         if (isNode(pair.key)) this.walk(pf, pair.key, true, depth + 1);
+
         if (isNode(pair.value)) this.walk(pf, pair.value, false, depth + 1);
       }
     } else if (isSeq(node)) {
@@ -366,7 +422,9 @@ export class FileStore {
 
   private checkPlain(node: Scalar, isKey: boolean, at: SiteLocation): void {
     const source = node.source ?? "";
+
     if (source === "") return;
+
     if (isKey && source === "<<") {
       this.reporter.report({
         rule: "yaml-anchor",
@@ -374,11 +432,15 @@ export class FileStore {
         fix: "use $ref to share a declaration, or extends to share a base",
         at,
       });
+
       return;
     }
+
     const pitfall = loadScalarPitfall(source, node.value);
+
     if (pitfall === undefined) return;
     const shown = source.length > 40 ? `${source.slice(0, 37)}...` : source;
+
     switch (pitfall) {
       case "P1":
         this.reporter.report({

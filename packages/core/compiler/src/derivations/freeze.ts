@@ -10,6 +10,7 @@ export function derivationFreeze<T>(value: T): PassReadonly<T> {
     for (const item of Object.values(value)) derivationFreeze(item);
     Object.freeze(value);
   }
+
   return value as PassReadonly<T>;
 }
 

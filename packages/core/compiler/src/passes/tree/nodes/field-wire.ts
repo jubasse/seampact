@@ -13,7 +13,9 @@ export function treeNodesIsFileField(use: IrWriter.TypeUse): boolean {
 /** The wire of a field without asking the schema service: a file or a JSON text field; undefined otherwise. */
 function plainWire(use: IrWriter.TypeUse): IrWriter.FieldWire | undefined {
   if (treeNodesIsFileField(use)) return { kind: "file" };
+
   if (use.kind === "scalar" && use.content !== undefined) return { kind: "json" };
+
   return undefined;
 }
 
@@ -27,10 +29,13 @@ export function treeNodesFieldWireOf(
   treeSchemas: TreeSchemaService,
 ): IrWriter.FieldWire | undefined {
   const plain = plainWire(use);
+
   if (plain !== undefined) return plain;
 
   const wire = treeSchemas.queryWire(schemaPointer);
+
   if (wire === undefined) return undefined;
+
   return { kind: wire.kind, style: wire.style, explode: wire.explode, brackets: wire.brackets };
 }
 
@@ -49,10 +54,12 @@ export function treeNodesFieldWire(
   treeSchemas: TreeSchemaService,
 ): IrWriter.FieldWire {
   const wire = treeNodesFieldWireOf(schemaPointer, use, treeSchemas);
+
   if (wire === undefined)
     throw new Error(
       `the schema service answers no query wire for the field at ${schemaPointer}; tree.schemas answers one for ` +
         "every form field and rule proof schema it accepts",
     );
+
   return wire;
 }

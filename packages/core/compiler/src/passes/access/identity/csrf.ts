@@ -20,7 +20,9 @@ export function accessIdentityCsrf(
   scope: AccessIdentityScope,
 ): IrWriter.KnownCsrf | undefined {
   const { access, identity } = resolved;
+
   if (route.safe !== false || access.kind === "public" || identity === undefined) return undefined;
+
   if (identity.kind === "signed") return undefined;
 
   const cookies = access.schemes
@@ -28,17 +30,21 @@ export function accessIdentityCsrf(
     .filter(
       (scheme): scheme is CookieScheme => scheme?.kind === "cookie" && scheme.csrf !== undefined,
     );
+
   if (cookies.length === 0) return undefined;
 
   const exempt = scope.context.inherited(route.node, "csrf")?.entry;
+
   if (exempt === undefined) return derivedCsrf(cookies, identity, scope);
 
   // The authoring schema writes `csrf` as `{ exempt: <reason> }`.
   const reason = accessIdentityIsObject(exempt.value)
     ? accessIdentityString(exempt.value, "exempt")
     : undefined;
+
   if (reason === undefined)
     throw new Error(`the csrf set at ${exempt.node.pointer} has no exempt reason`);
+
   return { kind: "exempt", reason, origin: pipelineCopy(exempt.origin) };
 }
 
@@ -50,10 +56,12 @@ function derivedCsrf(
   // A csrf header scheme left out of the catalogue for an error of its own is already reported.
   const headers = cookies.map((cookie) => {
     const header = scope.built.schemes.get(cookie.csrf ?? "");
+
     return header?.kind === "header" ? header.name : undefined;
   });
   const names = [...new Set(headers)];
   const [name] = names;
+
   if (name === undefined || names.includes(undefined)) return undefined;
 
   // The fault is the identity's, so it is located at its write list and reported once for all its routes.
@@ -64,6 +72,7 @@ function derivedCsrf(
       fix: "Name one csrf header scheme on every cookie scheme an identity accepts on writes.",
       pointer: accessIdentityPointer("", "identities", identity.id, "schemes", "write"),
     });
+
     return undefined;
   }
 

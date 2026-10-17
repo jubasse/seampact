@@ -15,9 +15,11 @@ function spy(reader: LoadReader) {
     realPath: (f) => reader.realPath(f),
     readText: (f, max) => {
       reads.push(f);
+
       return reader.readText(f, max);
     },
   };
+
   return { reader: wrapped, reads };
 }
 
@@ -44,6 +46,7 @@ test("path escapes refused", () => {
     loadMemoryReader(files, { links: { "link.yaml": "../outside.yaml" } }),
   );
   const r = loadWorkspace({ reader, entry: "api.yaml" });
+
   expect(ruleOf(r)).toEqual([
     "path-escape",
     "path-absolute",
@@ -54,6 +57,7 @@ test("path escapes refused", () => {
     "path-absolute",
   ]);
   const printed = printDiagnostics(r.diagnostics, r.workspace.locations);
+
   expect(printed).toContain("differs in case from the file on disk, 'sub/x.yaml'");
   expect(printed).toContain("through a symbolic link");
   // Nothing outside the root, and no file of the refused paths, was ever read.
@@ -65,6 +69,7 @@ test("path escapes refused", () => {
 test("path escapes refused on disk: ../ and a symlink out of the root", () => {
   const base = mkdtempSync(join(tmpdir(), "seampact-loader-"));
   const root = join(base, "ws");
+
   mkdirSync(root);
   writeFileSync(join(base, "secret.yaml"), "stolen: 1\n");
   symlinkSync(join(base, "secret.yaml"), join(root, "link.yaml"));
@@ -74,6 +79,7 @@ test("path escapes refused on disk: ../ and a symlink out of the root", () => {
     "api: { name: t }\na: { $include: ../secret.yaml }\nb: { $include: ./link.yaml }\nc: { $include: ./dirlink/secret.yaml }\n",
   );
   const r = loadWorkspace({ reader: loadFsReader(root), entry: "api.yaml" });
+
   expect(ruleOf(r)).toEqual(["path-escape", "path-escape", "path-escape"]);
   expect(JSON.stringify(r.workspace)).not.toContain("stolen");
   expect(printDiagnostics(r.diagnostics, r.workspace.locations)).not.toContain(base);
@@ -81,6 +87,7 @@ test("path escapes refused on disk: ../ and a symlink out of the root", () => {
 
 test("an entry file outside the root is refused", () => {
   const r = loadWorkspace({ reader: loadMemoryReader({}), entry: "../api.yaml" });
+
   expect(ruleOf(r)).toEqual(["path-escape"]);
 });
 
@@ -102,8 +109,10 @@ function packFiles(extra: Record<string, string> = {}, pkg = {}) {
 test("pack resolution", () => {
   // From the workspace root's own node_modules, the entry named by seampact.pack.
   const ok = loadWorkspace({ reader: loadMemoryReader(packFiles()), entry: "api.yaml" });
+
   expect(ok.diagnostics).toEqual([]);
   const api = must(ok.workspace.apis[0]);
+
   expect(api.layers.map((l) => [l.layer, l.file])).toEqual([
     ["pack:@acme/pack-a", "node_modules/@acme/pack-a/lib/pack.yaml"],
     ["api", "api.yaml"],
@@ -119,6 +128,7 @@ test("pack resolution", () => {
     Object.entries(above).map(([k, v]) => [k.startsWith("node_modules") ? `../${k}` : k, v]),
   );
   const up = loadWorkspace({ reader: loadMemoryReader(lifted), entry: "api.yaml" });
+
   expect(up.diagnostics).toEqual([]);
   expect(up.workspace.apis[0]?.layers[0]?.file).toBe("../node_modules/@acme/pack-a/lib/pack.yaml");
 
@@ -127,6 +137,7 @@ test("pack resolution", () => {
     reader: loadMemoryReader({ "api.yaml": packFiles()["api.yaml"] }),
     entry: "api.yaml",
   });
+
   expect(ruleOf(none)).toEqual(["pack-not-found"]);
 
   // A manifest version that differs from package.json.
@@ -134,6 +145,7 @@ test("pack resolution", () => {
     reader: loadMemoryReader(packFiles({}, { version: "1.3.0" })),
     entry: "api.yaml",
   });
+
   expect(ruleOf(bad)).toEqual(["pack-version-mismatch"]);
   expect(bad.diagnostics[0]?.message).toContain("1.2.0");
   expect(bad.diagnostics[0]?.message).toContain("1.3.0");
@@ -143,6 +155,7 @@ test("pack resolution", () => {
     reader: loadMemoryReader(packFiles({}, { seampact: { role: "core" } })),
     entry: "api.yaml",
   });
+
   expect(ruleOf(notPack)).toEqual(["pack-package"]);
 });
 
@@ -160,6 +173,7 @@ test("pack resolution through a symlinked package keeps the pack inside its pack
     }),
     entry: "api.yaml",
   });
+
   expect(r.diagnostics).toEqual([]);
 });
 
@@ -172,6 +186,7 @@ test("a pack holding anything but pack keys is refused (SCN-047)", () => {
     }),
     entry: "api.yaml",
   });
+
   expect(ruleOf(r)).toEqual(["pack-not-data", "pack-not-data"]);
   expect(printDiagnostics(r.diagnostics, r.workspace.locations)).toContain(
     "p.yaml:2:1: error seampact/load/pack-not-data: the pack file 'p.yaml' holds 'surfaces'",
@@ -188,6 +203,7 @@ test("a pack's relative paths stay inside its package", () => {
     ),
     entry: "api.yaml",
   });
+
   expect(ruleOf(r)).toEqual(["path-escape"]);
 });
 
@@ -200,6 +216,7 @@ test("a pack manifest is required, and a pack name is unique", () => {
     }),
     entry: "api.yaml",
   });
+
   expect(ruleOf(r)).toEqual(["pack-name-clash"]);
   const none = loadWorkspace({
     reader: loadMemoryReader({
@@ -208,5 +225,6 @@ test("a pack manifest is required, and a pack name is unique", () => {
     }),
     entry: "api.yaml",
   });
+
   expect(ruleOf(none)).toEqual(["pack-manifest"]);
 });

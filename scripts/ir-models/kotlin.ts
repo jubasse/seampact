@@ -68,21 +68,26 @@ export interface KotlinContext {
 export function emitKotlin(context: KotlinContext): Map<string, string> {
   const typeNames = new Map(context.names.map((entry) => [entry.definition, entry.names.kotlin]));
   const emitter = new KotlinEmitter(typeNames);
+
   assertTopLevelNamesDistinct(context.model, typeNames);
 
   const byFile = new Map<string, Definition[]>();
+
   for (const definition of context.model.definitions) {
     const list = byFile.get(definition.file) ?? [];
+
     list.push(definition);
     byFile.set(definition.file, list);
   }
 
   const files = new Map<string, string>();
+
   for (const [schemaFile, definitions] of [...byFile].sort(([left], [right]) =>
     left < right ? -1 : 1,
   )) {
     const header = headerLines(`packages/core/spec/schemas/ir/${schemaFile}.schema.json`, context);
     const body = definitions.flatMap((definition) => emitter.definition(definition));
+
     files.set(
       `${KOTLIN_MODEL_DIRECTORY}/${kotlinFileName(schemaFile)}`,
       fileText(header, MODEL_FILE_ANNOTATIONS, MODEL_IMPORTS, body),
@@ -90,6 +95,7 @@ export function emitKotlin(context: KotlinContext): Map<string, string> {
   }
 
   const supportHeader = headerLines("scripts/ir-models/kotlin.ts", context);
+
   files.set(
     `${KOTLIN_MODEL_DIRECTORY}/IrSerialization.kt`,
     fileText(supportHeader, SUPPORT_FILE_ANNOTATIONS, SUPPORT_IMPORTS, supportLines(context)),
@@ -98,6 +104,7 @@ export function emitKotlin(context: KotlinContext): Map<string, string> {
     `${KOTLIN_MODEL_DIRECTORY}/IrShapes.kt`,
     fileText(supportHeader, [], [], shapesLines(byFile)),
   );
+
   return files;
 }
 
@@ -127,7 +134,9 @@ function fileText(
     ...(imports.length === 0 ? [] : [...imports.map((name) => `import ${name}`), ""]),
     ...body,
   ];
+
   while (lines.at(-1) === "") lines.pop();
+
   return `${lines.join("\n")}\n`;
 }
 
@@ -316,6 +325,7 @@ function shapesLines(byFile: Map<string, Definition[]>): string[] {
     `internal val ${SHAPES_TABLE}: Map<String, IrShape> = ${files.map(([schemaFile]) => `${functionName(schemaFile)}()`).join(" + ")}`,
     "",
   ];
+
   for (const [schemaFile, definitions] of files) {
     lines.push(
       `private fun ${functionName(schemaFile)}(): Map<String, IrShape> = buildMap {`,
@@ -324,11 +334,13 @@ function shapesLines(byFile: Map<string, Definition[]>): string[] {
       "",
     );
   }
+
   return lines;
 }
 
 function shapeEntry(definition: Definition): string[] {
   const shape = shapeOfDefinition(definition);
+
   return shape === undefined
     ? []
     : [`${INDENT}put(${kotlinString(definition.name)}, ${kotlinShape(shape)})`];
@@ -342,14 +354,18 @@ function kotlinShape(shape: Shape): string {
       const members = shape.members.map(
         (member) => `${kotlinString(member.name)} to ${kotlinShape(member.shape)}`,
       );
+
       return `IrShape.Struct(mapOf(${members.join(", ")}))`;
     }
+
     case "union": {
       const variants = shape.variants.map(
         (variant) => `${kotlinString(variant.tagValue)} to ${kotlinString(variant.definition)}`,
       );
+
       return `IrShape.Union(${kotlinString(shape.tag)}, ${shape.mustAct}, mapOf(${variants.join(", ")}))`;
     }
+
     case "openEnum":
       return `IrShape.OpenEnum(setOf(${shape.known.map(kotlinString).join(", ")}), ${shape.mustAct})`;
     case "items":
@@ -365,6 +381,7 @@ function assertTopLevelNamesDistinct(model: NeutralModel, typeNames: Map<string,
   );
   const claim = (name: string, owner: string): void => {
     const previous = owners.get(name);
+
     if (previous !== undefined)
       throw new NameCollisionError(`${owner}: its Kotlin name ${name} collides with ${previous}`);
     owners.set(name, owner);
@@ -372,7 +389,9 @@ function assertTopLevelNamesDistinct(model: NeutralModel, typeNames: Map<string,
 
   for (const definition of model.definitions) {
     const name = kotlinTypeName(typeNames, definition.name);
+
     claim(name, definition.name);
+
     if (definition.kind === "union" || definition.kind === "openEnum")
       claim(`${name}${SERIALIZER_SUFFIX}`, `${definition.name}'s serializer`);
   }
@@ -380,7 +399,9 @@ function assertTopLevelNamesDistinct(model: NeutralModel, typeNames: Map<string,
 
 function kotlinTypeName(typeNames: Map<string, string>, definition: string): string {
   const name = typeNames.get(definition);
+
   if (name === undefined) throw new Error(`${definition}: no Kotlin name was computed for it`);
+
   return name;
 }
 
@@ -397,6 +418,7 @@ function kdoc(description: string | undefined, indent: string): string[] {
   if (description === undefined) return [];
   // Kotlin block comments nest, so both delimiters are neutralised.
   const text = description.replaceAll("*/", "*&#47;").replaceAll("/*", "&#47;*");
+
   return [`${indent}/** ${text} */`];
 }
 
@@ -404,6 +426,7 @@ function definitionDoc(definition: Definition): string | undefined {
   if (!definition.mustAct) return definition.description;
   const unknown = definition.kind === "union" ? "an unknown tag" : "an unknown value";
   const rule = `Must act: ${unknown} makes the IR invalid for every reader.`;
+
   return definition.description === undefined ? rule : `${definition.description} ${rule}`;
 }
 
@@ -470,6 +493,7 @@ class KotlinEmitter {
     const supertype =
       definition.variantOf === undefined ? "" : ` : ${this.typeName(definition.variantOf.union)}`;
     const tag = definition.variantOf;
+
     if (tag === undefined)
       return [
         ...kdoc(definitionDoc(definition), ""),
@@ -482,6 +506,7 @@ class KotlinEmitter {
 
     // The tag is fixed: a variant decoded on its own (`Scalar.type`) or built by hand cannot carry another one.
     const property = propertyName(tag.member);
+
     return [
       ...kdoc(definitionDoc(definition), ""),
       "@Serializable",
@@ -502,6 +527,7 @@ class KotlinEmitter {
     const doc = kdoc(member.description, INDENT);
 
     const tag = definition.variantOf;
+
     if (tag !== undefined && tag.member === member.name) {
       return [
         ...doc,
@@ -510,13 +536,16 @@ class KotlinEmitter {
     }
 
     const type = this.type(member.type);
+
     if (member.required) return [...doc, `${INDENT}${serialName}public val ${property}: ${type},`];
+
     if (member.type.kind === "opaque") {
       return [
         ...doc,
         `${INDENT}${serialName}@Serializable(with = IrOptionalOpaqueSerializer::class) public val ${property}: JsonElement? = null,`,
       ];
     }
+
     return [...doc, `${INDENT}${serialName}public val ${property}: ${type}? = null,`];
   }
 
@@ -530,10 +559,12 @@ class KotlinEmitter {
 
     const decodeCases = definition.variants.map((variant) => {
       const variantName = this.typeName(variant.definition);
+
       return `${INDENT}${INDENT}${kotlinString(variant.tagValue)} -> json.decodeFromJsonElement(${variantName}.serializer(), element)`;
     });
     const encodeCases = definition.variants.map((variant) => {
       const variantName = this.typeName(variant.definition);
+
       return `${INDENT}${INDENT}is ${variantName} -> json.encodeToJsonElement(${variantName}.serializer(), value)`;
     });
 
@@ -620,22 +651,28 @@ function kotlinString(value: string): string {
 /** The constant of each known value: the ADR 0007 enum member identifier (`application/json` gives `APPLICATION_JSON`). */
 function enumConstants(definition: OpenEnumDefinition): { constant: string; value: string }[] {
   const seen = new Map<string, string>();
+
   return definition.known.map((value) => {
     const segments = splitName(value);
+
     if (segments.length === 0)
       throw new NameCollisionError(
         `${definition.name}: the known value ${JSON.stringify(value)} has no name segment`,
       );
     const constant = identifier({ segments, role: "enumMember" }, "kotlin");
+
     if (constant === undefined)
       throw new Error(`${definition.name}: Kotlin has no enum member identifier`);
     const previous = seen.get(constant);
+
     if (previous !== undefined) {
       throw new NameCollisionError(
         `${definition.name}: the known values ${JSON.stringify(previous)} and ${JSON.stringify(value)} both give the Kotlin constant ${constant}`,
       );
     }
+
     seen.set(constant, value);
+
     return { constant, value };
   });
 }

@@ -54,21 +54,28 @@ export function generateIrTypes(
         ]),
   ];
   const unions: string[] = [];
+
   for (const document of documents) {
     const defs = document.$defs;
+
     if (!isSchemaNode(defs)) continue;
+
     for (const [name, def] of Object.entries(defs)) {
       if (!isSchemaNode(def)) throw new Error(`${name}: not a schema`);
+
       if (names.has(name)) throw new Error(`${name}: defined twice across the IR schema files`);
       names.add(name);
       out.push(...docComment(description(def), ""));
+
       if (isSchemaNode(def.discriminator)) {
         if (!Array.isArray(def.oneOf)) throw new Error(`${name}: discriminator without oneOf`);
         const tag = String(def.discriminator.propertyName);
         const variants = def.oneOf.map((variant) => typeOf(variant as SchemaNode, name, closed));
+
         out.push(`export type Known${name} = ${variants.join(" | ")};`, "");
         out.push(...docComment(description(def), ""));
         const unknownArm = closed ? "" : ` | UnknownVariant<"${tag}">`;
+
         out.push(`export type ${name} = Known${name}${unknownArm};`, "");
         unions.push(`  ${name}: { union: ${name}; known: Known${name} };`);
       } else if (isSchemaNode(def.properties)) {
@@ -78,6 +85,7 @@ export function generateIrTypes(
       }
     }
   }
+
   if (closed) return out.join("\n");
   out.push(
     "/** Every tagged union of the IR, for `isKnownVariant`. */",
@@ -86,6 +94,7 @@ export function generateIrTypes(
     "}",
     "",
   );
+
   return out.join("\n");
 }
 
@@ -96,6 +105,7 @@ function description(def: SchemaNode): string | undefined {
     return typeof def.description === "string" ? def.description : undefined;
   const unknown = isSchemaNode(def.discriminator) ? "an unknown tag" : "an unknown value";
   const rule = `Must act: ${unknown} makes the IR invalid for every reader.`;
+
   return typeof def.description === "string" ? `${def.description} ${rule}` : rule;
 }
 
@@ -107,12 +117,16 @@ function objectType(node: SchemaNode, at: string, closed: boolean): string {
   const properties = node.properties as Record<string, SchemaNode>;
   const required = new Set(Array.isArray(node.required) ? node.required : []);
   const lines = ["{"];
+
   for (const [member, schema] of Object.entries(properties)) {
     lines.push(...docComment(description(schema), "  "));
     const optional = required.has(member) ? "" : "?";
+
     lines.push(`  ${member}${optional}: ${typeOf(schema, `${at}.${member}`, closed)};`);
   }
+
   lines.push("}");
+
   return lines.join("\n");
 }
 
@@ -123,8 +137,10 @@ const LITERAL_ALTERNATION = /^\^\(([a-z]+(?::\[\^#\]\+)?(?:\|[a-z]+(?::\[\^#\]\+
 
 function typeOf(node: SchemaNode, at: string, closed: boolean): string {
   if (typeof node.$ref === "string") return refName(node.$ref);
+
   if (Array.isArray(node.oneOf))
     throw new Error(`${at}: a tagged union is a definition of its own`);
+
   switch (node.type) {
     case "string":
       return stringType(node, closed);
@@ -136,16 +152,21 @@ function typeOf(node: SchemaNode, at: string, closed: boolean): string {
     case "array": {
       if (!isSchemaNode(node.items)) throw new Error(`${at}: array without items`);
       const items = typeOf(node.items, `${at}[]`, closed);
+
       return /[|&]/.test(items) ? `(${items})[]` : `${items}[]`;
     }
+
     case "object": {
       if (isSchemaNode(node.properties)) return objectType(node, at, closed);
+
       if (!isSchemaNode(node.additionalProperties))
         throw new Error(`${at}: object without a shape`);
       const keys = isSchemaNode(node.propertyNames) && typeof node.propertyNames.$ref === "string";
       const key = keys ? refName((node.propertyNames as SchemaNode).$ref as string) : "string";
+
       return `Record<${key}, ${typeOf(node.additionalProperties, `${at}{}`, closed)}>`;
     }
+
     case undefined:
       return "unknown";
     default:
@@ -156,13 +177,17 @@ function typeOf(node: SchemaNode, at: string, closed: boolean): string {
 function stringType(node: SchemaNode, closed: boolean): string {
   if (typeof node.const === "string") return JSON.stringify(node.const);
   const known = node[KNOWN_VALUES_KEYWORD];
+
   if (Array.isArray(known)) {
     if (known.length === 0) throw new Error("an open enum lists no known value");
     const literals = known.map((v) => JSON.stringify(v));
+
     return (closed ? literals : [...literals, "(string & {})"]).join(" | ");
   }
+
   if (typeof node.pattern === "string") {
     const match = LITERAL_ALTERNATION.exec(node.pattern);
+
     if (match?.[1] !== undefined) {
       return match[1]
         .split("|")
@@ -174,5 +199,6 @@ function stringType(node: SchemaNode, closed: boolean): string {
         .join(" | ");
     }
   }
+
   return "string";
 }

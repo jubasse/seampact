@@ -3,13 +3,16 @@ import { expectGolden, loadFixture, must } from "./golden.js";
 
 const golden = (dir: string, rules: string[]) => {
   const result = loadFixture(dir);
+
   expectGolden(dir, result);
   expect(result.diagnostics.map((d) => d.rule.replace("seampact/load/", ""))).toEqual(rules);
+
   return result;
 };
 
 test("fixture: extends conflict names both locations", () => {
   const r = golden("composition/extends-conflict", ["declaration-twice"]);
+
   expect(r.diagnostics[0]?.related).toHaveLength(1);
 });
 
@@ -45,10 +48,12 @@ test("fixture: a layer sees only itself and what it builds on", () => {
 test("fixture: inline and included routes give the same raw tree", () => {
   const inline = loadFixture("byte-identity/inline");
   const included = loadFixture("byte-identity/included");
+
   expect(inline.diagnostics).toEqual([]);
   expect(included.diagnostics).toEqual([]);
   const a = inline.workspace.apis[0];
   const b = included.workspace.apis[0];
+
   expect(JSON.stringify(b?.merged)).toBe(JSON.stringify(a?.merged));
   expect(JSON.stringify(b?.leafOrigins)).toBe(JSON.stringify(a?.leafOrigins));
   expect(b?.locations["api#/surfaces/app/routes/tasks/routes/search/method"]?.file).toBe(
@@ -62,6 +67,7 @@ test("fixture: a query field named default is not a data position", () => {
     surfaces: { app: { routes: { tasks: Record<string, unknown> } } };
   };
   const list = merged.surfaces.app.routes.tasks;
+
   expect(list.query).toEqual({ default: { type: "string", maxLength: 20 } });
   expect(list.examples).toEqual({
     raw: { status: 200, value: { $include: "./never-read.yaml" } },

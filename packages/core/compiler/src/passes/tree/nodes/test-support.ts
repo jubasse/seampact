@@ -27,8 +27,10 @@ export const REFERENCE_CONTRACT = `${FIXTURES}reference/`;
 /** A workspace loaded from a directory, its entry `api.yaml` unless named; load diagnostics throw. */
 export function treeNodesLoadDirectory(directory: string, entry = "api.yaml"): RawWorkspace {
   const loaded = loadWorkspace({ reader: loadFsReader(directory), entry });
+
   if (loaded.diagnostics.length > 0)
     throw new Error(`${directory}${entry} does not load: ${JSON.stringify(loaded.diagnostics)}`);
+
   return loaded.workspace;
 }
 
@@ -40,8 +42,10 @@ export function treeNodesLoadInline(apiYaml: string): RawWorkspace {
 /** A one-api workspace from inline files, its entry `api.yaml` (packs beside it); load diagnostics throw. */
 export function treeNodesLoadFiles(files: Readonly<Record<string, string>>): RawWorkspace {
   const loaded = loadWorkspace({ reader: loadMemoryReader({ ...files }), entry: "api.yaml" });
+
   if (loaded.diagnostics.length > 0)
     throw new Error(`the inline api does not load: ${JSON.stringify(loaded.diagnostics)}`);
+
   return loaded.workspace;
 }
 
@@ -93,7 +97,9 @@ export function treeNodesHeaderUnion(id: string, header: string): IrWriter.Union
 /** A new draft holding `schemas`, as tree.schemas would leave it. */
 export function treeNodesDraftWith(...schemas: IrWriter.Schema[]): DraftIR {
   const draft = createDraftIR();
+
   for (const schema of schemas) draft.schemas[schema.id] = schema;
+
   return draft;
 }
 
@@ -102,7 +108,9 @@ export function treeNodesApiOf(workspace: RawWorkspace, name?: string): RawApi {
     name === undefined
       ? workspace.apis[0]
       : workspace.apis.find((candidate) => candidate.name === name);
+
   if (api === undefined) throw new Error(`the workspace has no api ${name ?? ""}`);
+
   return api;
 }
 
@@ -116,6 +124,7 @@ export interface TreeNodesStubRows {
 export function treeNodesStubService(rows: TreeNodesStubRows): TreeSchemaService {
   const typeUses = rows.typeUses ?? {};
   const queryWires = rows.queryWires ?? {};
+
   return {
     typeUse: (pointer) =>
       Object.hasOwn(typeUses, pointer) ? structuredClone(typeUses[pointer]) : undefined,
@@ -151,6 +160,7 @@ export function treeNodesRun(
     guard: true,
   });
   const guarded = pipelineGuard(draft, treeNodesPass);
+
   try {
     treeNodesPass.run(
       guarded.draft,
@@ -159,5 +169,6 @@ export function treeNodesRun(
   } finally {
     guarded.dispose();
   }
+
   return { draft, diagnostics };
 }

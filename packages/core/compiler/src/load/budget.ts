@@ -28,7 +28,9 @@ export class LoadBudget {
   charge(units: number, at: SiteLocation | (() => SiteLocation)): boolean {
     if (this.spent) return false;
     this.work += units;
+
     if (this.work <= LOAD_MAX_WORK) return true;
+
     return this.exhaust(
       `the contract takes more than ${LOAD_MAX_WORK} units of work to load (nodes built for each use of a file, $include targets, nodes merged into each api); the load stops here`,
       "look for a file included many times over, through includes of includes, or a large file shared by many apis",
@@ -40,7 +42,9 @@ export class LoadBudget {
   chargeText(chars: number, at: SiteLocation | (() => SiteLocation)): boolean {
     if (this.spent) return false;
     this.text += chars;
+
     if (this.text <= LOAD_MAX_TEXT) return true;
+
     return this.exhaust(
       `the contract holds more than ${LOAD_MAX_TEXT} characters of text, counted for each use of a file and each api it reaches; the load stops here`,
       "look for a large text or data file read by many $file or $include sites, or shared by many apis",
@@ -56,6 +60,7 @@ export class LoadBudget {
       fix,
       at: typeof at === "function" ? at() : at,
     });
+
     return false;
   }
 }

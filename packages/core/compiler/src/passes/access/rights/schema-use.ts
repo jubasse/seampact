@@ -14,10 +14,12 @@ export function accessRightsTypeUse(
   direction: IrWriter.Direction,
 ): IrWriter.TypeUse {
   const use = context.treeSchemas.typeUse(pointer, direction);
+
   if (use === undefined)
     throw new Error(
       `the schema service answers no ${direction} type use for the schema written at ${pointer}`,
     );
+
   return pipelineCopy(use);
 }
 
@@ -27,9 +29,11 @@ export function accessRightsParamsRef(
   pointer: string,
 ): IrWriter.SchemaRef {
   const use = accessRightsTypeUse(context, pointer, "input");
+
   if (use.kind !== "ref")
     throw new Error(
       `the schema service answers a ${use.kind} use for the params at ${pointer}; params are a named object schema`,
     );
+
   return use.schema;
 }

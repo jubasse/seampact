@@ -25,7 +25,9 @@ const VALID = readdirSync(EXAMPLES).filter(
 
 const nodesOf = (value: unknown): InstanceNode[] => {
   const nodes: InstanceNode[] = [];
+
   walkInstance(value, (node) => nodes.push(node));
+
   return nodes;
 };
 
@@ -49,11 +51,14 @@ describe.each(VALID)("%s", (name) => {
 
   test("unknown members accepted", () => {
     const objects = nodesOf(value).filter((node) => node.kind === "object");
+
     expect(objects.length).toBeGreaterThan(0);
+
     for (const { pointer } of objects) {
       const mutated = mutateAt(value, pointer, (node) => {
         node[UNKNOWN_MEMBER] = { nested: [1, "two", null] };
       });
+
       expect(validateIr(mutated, "open"), pointer).toMatchObject({ valid: true, unknownKinds: [] });
     }
   });
@@ -63,6 +68,7 @@ describe.each(VALID)("%s", (name) => {
       const mutated = mutateAt(value, pointer, (node) => {
         node[UNKNOWN_MEMBER] = true;
       });
+
       expect(validateIr(mutated, "strict"), pointer).toEqual({
         ...VALID_REPORT,
         valid: false,
@@ -78,6 +84,7 @@ describe.each(VALID)("%s", (name) => {
       const named = [
         { pointer: node.pointer, value: UNKNOWN_VALUE, known: node.known, mustAct: node.mustAct },
       ];
+
       expect(validateIr(mutated, "open"), node.pointer).toEqual({
         ...VALID_REPORT,
         valid: !node.mustAct,
@@ -97,6 +104,7 @@ describe.each(VALID)("%s", (name) => {
       const named = [
         { pointer: node.pointer, tag: node.tag, value: UNKNOWN_VALUE, mustAct: node.mustAct },
       ];
+
       expect(validateIr(mutated, "open"), node.pointer).toEqual({
         ...VALID_REPORT,
         valid: !node.mustAct,
@@ -113,12 +121,15 @@ describe.each(VALID)("%s", (name) => {
 test("the samples reach every definition of the schema", () => {
   // Every object definition, union and open enum is exercised by the property tests above.
   const reached = new Set<string>();
+
   for (const name of VALID) {
     for (const node of nodesOf(sample(name))) {
       if (node.kind !== "openEnum" && node.definition !== undefined) reached.add(node.definition);
     }
   }
+
   const shapes = new Set<string>();
+
   for (const document of IR_SCHEMA_DOCUMENTS) {
     for (const [name, def] of Object.entries(
       document.$defs as Record<string, Record<string, unknown>>,
@@ -126,8 +137,10 @@ test("the samples reach every definition of the schema", () => {
       if (isSchemaNode(def.properties) || isSchemaNode(def.discriminator)) shapes.add(name);
     }
   }
+
   // The side table has its own sample and test below.
   const missing = [...shapes].filter((name) => !reached.has(name) && !name.startsWith("Source"));
+
   expect(missing).toEqual([]);
   expect(definitionNames().length).toBeGreaterThan(shapes.size);
 });
@@ -169,6 +182,7 @@ test("an unknown signature key kind makes the IR invalid for every reader", () =
       key.kind = "vault";
     },
   );
+
   expect(validateIr(ir, "open")).toMatchObject({
     valid: false,
     unknownKinds: [
@@ -189,6 +203,7 @@ test("a mapping error the walk did not list fails closed", () => {
     keyword: "discriminator",
     params: { error: "mapping", tag: "kind", tagValue: "mtls" },
   };
+
   expect(classifyIrErrors([error], "open")).toEqual({
     ...VALID_REPORT,
     valid: false,
@@ -203,6 +218,7 @@ test("the validator's options are load-bearing: allErrors false hides a problem 
     lint.allows = "none";
   });
   const problem = [{ pointer: "/lint/allows", keyword: "type", message: "must be array" }];
+
   expect(validateIr(ir, "open")).toMatchObject({ valid: false, problems: problem });
   class FirstErrorOnly extends Ajv2020 {
     constructor(options: Options) {
@@ -210,6 +226,7 @@ test("the validator's options are load-bearing: allErrors false hides a problem 
     }
   }
   const firstErrorOnly = createIrValidator(FirstErrorOnly, "open").validate(ir);
+
   expect(firstErrorOnly).toMatchObject({ valid: true, problems: [] });
 });
 
@@ -226,6 +243,7 @@ type Widened<T> = T extends string
 
 test("minimal sample", () => {
   const ir: Widened<ContractIR> = minimal;
+
   expect(validateIr(ir, "open").valid).toBe(true);
   expect(validateIr(ir, "strict").valid).toBe(true);
 });
@@ -233,15 +251,18 @@ test("minimal sample", () => {
 test("source map sample", () => {
   const map = sample("minimal.source-map.json") as Record<string, unknown>;
   const valid = VALID_REPORT;
+
   expect(validateSourceMap(map, "open")).toEqual(valid);
   expect(validateSourceMap(map, "strict")).toEqual(valid);
   const extended = { ...map, sources: [] };
+
   expect(validateSourceMap(extended, "open")).toEqual(valid);
   expect(validateSourceMap(extended, "strict").unknownMembers).toEqual(["/sources"]);
   const badKey = {
     ...map,
     locations: { "/no-layer": { file: "a", line: 1, column: 1, endLine: 1, endColumn: 1 } },
   };
+
   expect(validateSourceMap(badKey, "open").valid).toBe(false);
   // A core declaration has no file: its origin has no side-table entry (ADR 0004 section 11).
   const coreKey = {
@@ -250,5 +271,6 @@ test("source map sample", () => {
       "core#/errors/api.internal": { file: "a", line: 1, column: 1, endLine: 1, endColumn: 1 },
     },
   };
+
   expect(validateSourceMap(coreKey, "open").valid).toBe(false);
 });

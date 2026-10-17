@@ -41,13 +41,17 @@ function draft(): DraftIR {
     paging: { overLimit: "reject", sortKeys: [{ key: "title", origin }], origin },
     origin,
   };
+
   result.operations.push(operation);
+
   return result;
 }
 
 const operationOf = (value: DraftIR): DraftOperation => {
   const operation = value.operations[0];
+
   if (operation === undefined) throw new Error("no operation");
+
   return operation;
 };
 
@@ -56,8 +60,10 @@ function refused(run: () => void): DraftAccessError {
     run();
   } catch (error) {
     if (error instanceof DraftAccessError) return error;
+
     throw error;
   }
+
   throw new Error("expected a DraftAccessError");
 }
 
@@ -71,6 +77,7 @@ describe("guard refuses undeclared access", () => {
   test("an undeclared read names the half, the path and the owner", () => {
     const guarded = pipelineGuard(draft(), part("access.rights", ["operations[].requires"], []));
     const error = refused(() => operationOf(guarded).cache);
+
     expect(error).toMatchObject({
       half: "access.rights",
       access: "read",
@@ -87,6 +94,7 @@ describe("guard refuses undeclared access", () => {
       part("access.identity", [], ["operations[].input.rawBody"]),
     );
     const input = operationOf(guarded).input;
+
     expect(input?.rawBody).toBeUndefined();
     expect(refused(() => input?.media).field).toBe("operations[].input.media");
     expect(refused(() => guarded.schemas).owner).toBe("tree.schemas");
@@ -94,8 +102,10 @@ describe("guard refuses undeclared access", () => {
 
   test("a read of a catalogue entry and Object.hasOwn go through the catalogue's field", () => {
     const value = draft();
+
     value.schemas.Task = task();
     const guarded = pipelineGuard(value, part("tree.nodes", ["schemas"], []));
+
     expect(Object.hasOwn(guarded.schemas, "Task")).toBe(true);
     expect(guarded.schemas.Task?.kind).toBe("object");
     expect(refused(() => Object.hasOwn(guarded.rights, "x")).field).toBe("rights");
@@ -106,6 +116,7 @@ describe("guard refuses undeclared access", () => {
     const outside = refused(() => {
       operationOf(guarded).callerKinds = ["anonymous"];
     });
+
     expect(outside).toMatchObject({ access: "write", owner: "access.identity" });
     expect(outside.message).toContain("outside its writes");
 
@@ -113,6 +124,7 @@ describe("guard refuses undeclared access", () => {
     const owned = refused(() => {
       operationOf(tree).errors = [];
     });
+
     expect(owned).toMatchObject({
       half: "tree.nodes",
       path: "operations[0].errors",
@@ -124,6 +136,7 @@ describe("guard refuses undeclared access", () => {
     const value = draft();
     const wire = pipelineGuard(value, part("derive.wire", [], ["operations[].params.header"]));
     const header = operationOf(wire).params?.header;
+
     header?.push({
       name: "Idempotency-Key",
       type: text,
@@ -139,26 +152,32 @@ describe("guard refuses undeclared access", () => {
         derivedFrom: derivedFrom("relay.route"),
       }),
     );
+
     expect(relay.message).toContain("owned by tree.nodes (derivation relay.route)");
     const unknown = refused(() =>
       header?.push({ name: "Y", type: text, required: true, derivedFrom: derivedFrom("no.such") }),
     );
+
     expect(unknown.message).toContain("has no owner");
 
     const query = pipelineGuard(value, part("derive.wire", [], ["operations[].params.query"]));
     const declared = operationOf(query).params?.query[0];
+
     expect(refused(() => Object.assign(declared ?? {}, { required: true })).message).toContain(
       "owned by tree.nodes (declared)",
     );
     const own = operationOf(wire).params?.header[0];
+
     if (own?.derivedFrom === undefined) throw new Error("no derived header");
     const derivation = own.derivedFrom;
+
     expect(
       refused(() => Object.assign(derivation, { derivation: "relay.route" })).message,
     ).toContain("after the write is owned by tree.nodes");
     // Removing another half's elements writes them.
     expect(() => {
       const list = operationOf(query).params?.query;
+
       if (list) list.length = 0;
     }).toThrow(DraftAccessError);
   });
@@ -176,9 +195,11 @@ describe("guard refuses undeclared access", () => {
       required: true,
       derivedFrom: derivedFrom("rule.proof"),
     };
+
     params?.header.push(proof);
     expect(operationOf(value).params?.header).toHaveLength(1);
     const misplaced = refused(() => params?.query.push({ ...proof, name: "proof" }));
+
     expect(misplaced.message).toContain(
       "derivation rule.proof adds no element here (derived by tree.nodes, derive.wire)",
     );
@@ -191,6 +212,7 @@ describe("guard refuses undeclared access", () => {
       part("derive.wire", ["operations[].input.schema"], ["operations[].input.schema.unknownKeys"]),
     );
     const schema = operationOf(wire).input?.schema;
+
     if (schema?.kind !== "ref") throw new Error("no ref input");
     schema.unknownKeys = {
       policy: "ignore",
@@ -203,6 +225,7 @@ describe("guard refuses undeclared access", () => {
     const reason = refused(() => {
       if (schema.unknownKeys) schema.unknownKeys.reason = "Other.";
     });
+
     expect(reason.field).toBe("operations[].input.schema.unknownKeys");
 
     const errors = pipelineGuard(
@@ -210,6 +233,7 @@ describe("guard refuses undeclared access", () => {
       part("derive.errors", [], ["operations[].input.schema.unknownKeys"]),
     );
     const other = operationOf(errors).input?.schema;
+
     expect(
       refused(() => Object.assign(other ?? {}, { unknownKeys: { policy: "keep" } })).message,
     ).toContain("tree.nodes, access.identity, access.rights, derive.wire");
@@ -220,11 +244,15 @@ describe("guard refuses undeclared access", () => {
   test("a whole input is written where absent: declared by tree.nodes, or proof-only by access.rights", () => {
     const bare = (): DraftIR => {
       const value = draft();
+
       delete operationOf(value).input;
+
       return value;
     };
+
     const declared = bare();
     const tree = pipelineGuard(declared, part("tree.nodes", [], ["operations[]"]));
+
     operationOf(tree).input = {
       media: "application/json",
       schema: {
@@ -245,6 +273,7 @@ describe("guard refuses undeclared access", () => {
       "operations[].input.proofs",
     ];
     const rights = pipelineGuard(proofOnly, part("access.rights", ["operations[].input"], writes));
+
     operationOf(rights).input = {
       media: "application/json",
       schema: { kind: "ref", schema: "ApiEmptyBody" },
@@ -266,6 +295,7 @@ describe("guard refuses undeclared access", () => {
       signed,
       part("access.rights", ["operations[].input"], writes),
     );
+
     operationOf(signedRights).input = {
       media: "application/json",
       schema: { kind: "ref", schema: "ApiEmptyBody", unknownKeys: identityUnknownKeys },
@@ -282,6 +312,7 @@ describe("guard refuses undeclared access", () => {
     // A present default stays one write: changing a member inside it writes over it.
     const over = pipelineGuard(draft(), part("access.rights", ["operations[].input"], writes));
     const schema = operationOf(over).input?.schema;
+
     if (schema?.kind !== "ref") throw new Error("no ref input");
     expect(refused(() => Object.assign(schema, { schema: "Other" })).message).toContain(
       "only where absent",
@@ -292,9 +323,11 @@ describe("guard refuses undeclared access", () => {
     const value = draft();
     const tree = pipelineGuard(value, part("tree.nodes", [], ["operations[]"]));
     const fresh: DraftOperation = { kind: "httpOperation", id: "getTask", method: "get", origin };
+
     tree.operations.push(fresh);
     expect(value.operations[1]).toBe(fresh);
     const withErrors = refused(() => tree.operations.push({ ...fresh, id: "x", errors: [] }));
+
     expect(withErrors).toMatchObject({ path: "operations[2].errors", owner: "derive.errors" });
 
     const identity = pipelineGuard(
@@ -302,9 +335,11 @@ describe("guard refuses undeclared access", () => {
       part("access.identity", ["operations[].input"], ["operations[].input.rawBody"]),
     );
     const operation = operationOf(identity);
+
     if (operation.input === undefined) throw new Error("no input");
     operation.input = { ...operation.input, rawBody: true };
     const written = operationOf(value).input;
+
     expect(written?.rawBody).toBe(true);
     // The draft never holds a guard: the copied schema is the original object.
     expect(written?.schema).toEqual({ kind: "ref", schema: "NewTask" });
@@ -321,6 +356,7 @@ describe("guard refuses undeclared access", () => {
     );
     const keys = operationOf(rights).paging?.sortKeys;
     const key = keys?.[0];
+
     if (key === undefined) throw new Error("no sort key");
     key.right = "tasks.read";
     expect(operationOf(value).paging?.sortKeys[0]?.right).toBe("tasks.read");
@@ -335,6 +371,7 @@ describe("guard refuses undeclared access", () => {
       value,
       part("derive.wire", [], ["operations[].responses[].headers"]),
     );
+
     operationOf(wire).responses?.[0]?.headers.push({
       name: "ETag",
       type: text,
@@ -347,7 +384,9 @@ describe("guard refuses undeclared access", () => {
     const replaced = refused(() => {
       if (responses) responses[0] = { status: 201, shape: "item", headers: [], origin };
     });
+
     expect(replaced.field).toBe("operations[].responses[].headers");
+
     // Its own members stay the declared response's owner's to write.
     if (responses?.[0]) responses[0].status = 200;
     expect(operationOf(value).responses?.[0]?.status).toBe(200);
@@ -356,11 +395,13 @@ describe("guard refuses undeclared access", () => {
   test("an operation's features are finalize's, computed from the members present", () => {
     const guarded = pipelineGuard(draft(), part("derive.wire", [], ["operations[].features"]));
     const error = refused(() => Object.assign(operationOf(guarded), { features: [] }));
+
     expect(error).toMatchObject({ field: "operations[].features", owner: "finalize" });
   });
 
   test("the link pass is read-only by guard", () => {
     const guarded = pipelineGuard(draft(), part("link", ["operations[]"], []));
+
     expect(JSON.parse(JSON.stringify(guarded.operations))[0].id).toBe("createTask");
     expect(refused(() => Object.assign(operationOf(guarded), { id: "x" })).message).toContain(
       "outside its writes",
@@ -371,6 +412,7 @@ describe("guard refuses undeclared access", () => {
     const guard = revocableGuard(draft(), part("tree.nodes", ["operations[]"], []));
     const operation = operationOf(guard.draft);
     const operations = guard.draft.operations;
+
     expect(operation.id).toBe("createTask");
     guard.dispose();
     expect(() => operation.id).toThrow(TypeError);
@@ -387,6 +429,7 @@ describe("guard refuses writes around its checks", () => {
     const guarded = pipelineGuard(value, part("tree.nodes", [], ["operations[].docs"]));
     const operation = operationOf(guarded);
     const key = Symbol("note");
+
     expect(refused(() => Reflect.set(operation, key, 1)).message).toContain("symbol");
     expect(refused(() => Object.defineProperty(operation, key, { value: 1 })).access).toBe("write");
     expect(refused(() => Reflect.deleteProperty(operation, key)).access).toBe("write");
@@ -399,6 +442,7 @@ describe("guard refuses writes around its checks", () => {
     const accessor = refused(() =>
       Object.defineProperty(operationOf(guarded), "cache", { get: () => undefined }),
     );
+
     expect(accessor.message).toContain("accessor");
     expect(Object.hasOwn(operationOf(value), "cache")).toBe(false);
   });
@@ -406,6 +450,7 @@ describe("guard refuses writes around its checks", () => {
   test("changing a prototype or preventing extensions through a guard is refused", () => {
     const value = draft();
     const guarded = pipelineGuard(value, part("tree.nodes", [], ["operations[]"]));
+
     expect(refused(() => Object.setPrototypeOf(operationOf(guarded), null)).access).toBe("write");
     expect(refused(() => Object.preventExtensions(guarded.operations)).access).toBe("write");
     expect(refused(() => Object.freeze(operationOf(guarded))).access).toBe("write");
@@ -417,6 +462,7 @@ describe("guard refuses writes around its checks", () => {
     const value = draft();
     const wire = pipelineGuard(value, part("derive.wire", [], ["operations[].params.query"]));
     const list = operationOf(wire).params?.query;
+
     if (list === undefined) throw new Error("no query list");
     expect(refused(() => Reflect.set(list, "length", "0")).message).toContain(
       "owned by tree.nodes (declared)",
@@ -430,10 +476,12 @@ describe("guard refuses writes around its checks", () => {
 
   test("a prototype key reads only as an own member", () => {
     const value = draft();
+
     operationOf(value).docs = {};
     const guarded = pipelineGuard(value, part("tree.nodes", [], ["operations[]"]));
     const operation = operationOf(guarded);
     const docs = operation.docs ?? {};
+
     expect(refused(() => Reflect.get(docs, "__proto__")).message).toContain("prototype");
     expect(refused(() => Reflect.get(operation, "constructor")).path).toBe(
       "operations[0].constructor",
@@ -443,6 +491,7 @@ describe("guard refuses writes around its checks", () => {
     expect(guarded.operations.map((entry) => entry.id)).toEqual(["createTask"]);
 
     const rights = draft();
+
     rights.rights[PROTO] = {
       id: "__proto__",
       subject: { kind: "none" },
@@ -452,27 +501,34 @@ describe("guard refuses writes around its checks", () => {
       origin,
     };
     const reader = pipelineGuard(rights, part("access.rights", [], ["rights"]));
+
     expect(reader.rights[PROTO]?.id).toBe("__proto__");
     expect(Object.hasOwn(reader.rights, "__proto__")).toBe(true);
   });
 
   test("writing a prototype key adds an own member and never changes the prototype", () => {
     const value = draft();
+
     operationOf(value).docs = {};
     const guarded = pipelineGuard(value, part("tree.nodes", [], ["operations[]"]));
+
     Reflect.set(operationOf(guarded).docs ?? {}, "__proto__", { polluted: true });
     const docs = operationOf(value).docs ?? {};
+
     expect(Object.getPrototypeOf(docs)).toBe(Object.prototype);
     expect(Object.hasOwn(docs, "__proto__")).toBe(true);
   });
 
   test("an unwrapped copy keeps its prototype and its `__proto__` member", () => {
     const value = draft();
+
     value.schemas.Task = task();
     const guarded = pipelineGuard(value, part("tree.schemas", [], ["schemas"]));
     const entry = guarded.schemas.Task;
+
     if (entry === undefined) throw new Error("no schema");
     const replacement: Record<string, IrWriter.Schema> = Object.create(null);
+
     replacement[PROTO] = entry;
     replacement.Task = entry;
     guarded.schemas = replacement;
@@ -485,6 +541,7 @@ describe("guard refuses writes around its checks", () => {
   test("a catalogue assigned whole has no prototype, and is never removed", () => {
     const value = draft();
     const guarded = pipelineGuard(value, part("tree.schemas", [], ["schemas"]));
+
     expect(refused(() => Object.assign(guarded, { schemas: { Task: task() } })).message).toContain(
       "Object.create(null)",
     );
@@ -495,9 +552,11 @@ describe("guard refuses writes around its checks", () => {
   test("a frozen property reads as its own value, as a proxy must", () => {
     const value = draft();
     const input = operationOf(value).input;
+
     if (input === undefined) throw new Error("no input");
     Object.freeze(input);
     const guarded = pipelineGuard(value, part("access.identity", ["operations[].input"], []));
+
     expect(operationOf(guarded).input?.schema).toBe(input.schema);
   });
 });

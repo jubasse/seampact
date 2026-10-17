@@ -11,8 +11,10 @@ import {
 const schemaOf = (run: TreeSchemasRun, id: string) => run.draft.schemas[id];
 const propertyOf = (run: TreeSchemasRun, id: string, name: string) => {
   const schema = schemaOf(run, id);
+
   return schema?.kind === "object" ? schema.properties.find((p) => p.name === name) : undefined;
 };
+
 const typeOf = (run: TreeSchemasRun, id: string, name: string) => propertyOf(run, id, name)?.type;
 const schemas = (yaml: string) => treeSchemasRunApi(`schemas:\n${yaml}`);
 const at = (pointer: string) => ({ layer: "api", pointer });
@@ -30,13 +32,16 @@ const ROUTE_HOISTS = new Set(["AssignTaskInput"]);
 
 function withoutLaterMembers(schema: IrWriter.Schema): object {
   const { directions: _directions, ...rest } = schema;
+
   if (rest.kind !== "object") return rest;
+
   return { ...rest, properties: rest.properties.filter((p) => p.derivedFrom === undefined) };
 }
 
 describe("tree.schemas matches the after-tree fixture", () => {
   test.each(["tasks", "tasksService"] as const)("%s: schemas and scalars", (api) => {
     const run = treeSchemasRunReference(api);
+
     expect(run.diagnostics).toEqual([]);
     const expected = Object.values(draftFixture(api, "after-tree").schemas).filter(
       (schema) => !NOT_YET.has(schema.id),
@@ -45,6 +50,7 @@ describe("tree.schemas matches the after-tree fixture", () => {
     const written = Object.values(run.draft.schemas).filter(
       (schema) => schema.id !== "ApiSchemaInvalidIssue" || expected.some((e) => e.id === schema.id),
     );
+
     expect(written.map(withoutLaterMembers)).toEqual(
       expect.arrayContaining(expected.map(withoutLaterMembers)),
     );
@@ -56,8 +62,10 @@ describe("tree.schemas matches the after-tree fixture", () => {
     "%s: the service answers the fixture's uses",
     (api) => {
       const run = treeSchemasRunReference(api);
+
       for (const row of draftFixtureSchemaTables(api).typeUses) {
         const answer = run.service.typeUse(row.pointer, row.direction);
+
         if (row.use.kind === "ref" && ROUTE_HOISTS.has(row.use.schema))
           expect(answer).toBeUndefined();
         else expect([row.pointer, answer]).toEqual([row.pointer, row.use]);
@@ -162,6 +170,7 @@ test("an enum use whose source enums form a cycle names the cycle", () => {
 schemas:
   S: { type: object, properties: { a: { enum: A } } }
 `);
+
   expect(treeSchemasRules(run)).toEqual(["enum-cycle"]);
   expect(run.diagnostics[0]?.message).toContain("A -> B -> A");
 });
@@ -239,8 +248,10 @@ describe("optional and nullable", () => {
     expect(run.diagnostics).toEqual([]);
     const flags = (name: string) => {
       const p = propertyOf(run, "Article", name);
+
       return [p?.optional, p?.nullable];
     };
+
     expect(flags("title")).toEqual([false, false]);
     expect(flags("summary")).toEqual([false, true]);
     expect(flags("publishOn")).toEqual([true, true]);
@@ -276,7 +287,9 @@ describe("optional and nullable", () => {
       id: MaybeId
       list: { type: array, items: MaybeFoo }
 `);
+
     expect(aliases.diagnostics).toEqual([]);
+
     for (const name of ["foo", "deep", "labels", "id"])
       expect([name, propertyOf(aliases, "Holder", name)?.nullable]).toEqual([name, true]);
     expect(typeOf(aliases, "Holder", "foo")).toEqual({ kind: "ref", schema: "Foo" });
@@ -292,6 +305,7 @@ describe("optional and nullable", () => {
   MaybeFoo: { $ref: Foo, nullable: true }
   U: { discriminator: k, oneOf: { a: MaybeFoo } }
 `);
+
     expect(treeSchemasRules(run)).toEqual(["union-variant"]);
     expect(run.diagnostics[0]?.message).toContain("nullable");
   });
@@ -370,6 +384,7 @@ describe("annotations the contract model cannot hold are refused, not dropped", 
       b: { type: object, deprecated: true, description: B., examples: [{ c: x }], properties: { c: { type: string } } }
       d: { type: string, deprecated: true, title: D }
 `);
+
     expect(run.diagnostics).toEqual([]);
     expect(schemaOf(run, "A")?.examples).toEqual([{ b: { c: "x" } }]);
     expect(schemaOf(run, "AB")).toMatchObject({
@@ -417,6 +432,7 @@ describe("annotations the contract model cannot hold are refused, not dropped", 
     ],
   ])("%s is refused, naming '%s'", (yaml, member) => {
     const run = schemas(`  ${yaml}`);
+
     expect(treeSchemasRules(run)).toEqual(["annotation-position"]);
     expect(run.diagnostics[0]?.message).toContain(`'${member}'`);
     expect(run.diagnostics[0]?.origin.pointer).toMatch(new RegExp(`/${member}$`));
@@ -432,6 +448,7 @@ surfaces:
         method: post
         output: { type: array, items: Item, description: The items. }
 `);
+
     expect(treeSchemasRules(run)).toEqual(["annotation-position"]);
     expect(run.diagnostics[0]?.origin.pointer).toBe(
       "/surfaces/app/routes/inline/output/description",
@@ -521,6 +538,7 @@ schemas:
     ["password", "scalar-name"],
   ])("a scalar named %s is refused, the fix naming the portable spelling", (name, rule) => {
     const result = treeSchemasRunApi(`scalars:\n  ${name}: { type: string }`);
+
     expect(treeSchemasRules(result)).toEqual([rule]);
     expect(result.diagnostics[0]?.fix).toContain(
       name === "uuid" ? "type: string, format: uuid" : "sensitive",
@@ -529,18 +547,23 @@ schemas:
 
   test("bounds that leave room for one value are kept; a named format's merged bounds are checked", () => {
     const fits = schemas("  A: { type: integer, minimum: 1, maximum: 1 }");
+
     expect(fits.diagnostics).toEqual([]);
     const oneInteger = schemas("  A: { type: integer, exclusiveMinimum: 1, exclusiveMaximum: 3 }");
+
     expect(oneInteger.diagnostics).toEqual([]);
     const fraction = schemas("  A: { type: number, exclusiveMinimum: 1, exclusiveMaximum: 2 }");
+
     expect(fraction.diagnostics).toEqual([]);
     const noInteger = schemas("  A: { type: integer, exclusiveMinimum: 1, exclusiveMaximum: 2 }");
+
     expect(noInteger.diagnostics[0]?.message).toContain(
       "no integer lies between 'exclusiveMinimum' 1 and 'exclusiveMaximum' 2",
     );
     const merged = treeSchemasRunApi(
       "scalars:\n  code: { type: string, minLength: 5 }\nschemas:\n  A: { format: code, maxLength: 2 }",
     );
+
     expect(treeSchemasRules(merged)).toEqual(["refinement-range"]);
     expect(merged.diagnostics[0]?.message).toContain("'minLength' 5 is above 'maxLength' 2");
   });
@@ -549,6 +572,7 @@ schemas:
     const result = treeSchemasRunApi(
       "scalars:\n  money: { type: string }\nschemas:\n  A: { type: string, format: money }",
     );
+
     expect(result.diagnostics.map((d) => [d.rule, d.fix])).toEqual([
       ["seampact/tree/format-type", "remove 'type' and write 'format: money' alone"],
     ]);
@@ -578,6 +602,7 @@ errors:
         .filter((schema) => schema.origin.layer !== "core")
         .map((schema) => [schema.id, schema.name]),
     );
+
     expect(names).toEqual({
       OrderAddress: { segments: ["order", "address"], role: "property" },
       OrderLinesItem: { segments: ["order", "lines"], role: "item" },
@@ -623,6 +648,7 @@ errors:
     ],
   ])("%s is refused (%s)", (yaml, rule) => {
     const result = treeSchemasRunApi(yaml);
+
     expect(treeSchemasRules(result)).toContain(rule);
   });
 
@@ -631,6 +657,7 @@ errors:
   Order: { type: object, properties: { address: { type: object, properties: { city: { type: string } } } } }
   ORDERAddress: { type: object, properties: { street: { type: string } } }
 `);
+
     expect(result.diagnostics.map((d) => [d.rule, d.fix, d.related[0]?.message])).toEqual([
       [
         "seampact/tree/name-collision",
@@ -648,6 +675,7 @@ errors:
       b: { type: object, properties: { c: { type: object, properties: { x: { type: string } } } } }
       bC: { type: object, properties: { z: { type: string } } }
 `);
+
     expect(treeSchemasRules(result)).toEqual(["name-collision"]);
   });
 });
@@ -676,6 +704,7 @@ surfaces:
   test("a declaration or reference route position answers its use; an inline route object waits", () => {
     expect(run.diagnostics).toEqual([]);
     const uuid = { kind: "scalar", type: "string", format: "uuid", refinements: {} };
+
     expect(run.service.typeUse("/schemas/Item", "output")).toEqual({ kind: "ref", schema: "Item" });
     expect(run.service.typeUse("/schemas/Id", "input")).toEqual(uuid);
     expect(run.service.typeUse(`${items}/id/itemId`, "input")).toEqual(uuid);
@@ -697,6 +726,7 @@ surfaces:
 
   test("each answer is a new copy, and the service survives the run's draft", () => {
     const first = run.service.typeUse(`${items}/item`, "output");
+
     if (first?.kind === "ref") first.schema = "Changed";
     expect(run.service.typeUse(`${items}/item`, "output")).toEqual({ kind: "ref", schema: "Item" });
     expect(run.service.queryWire(`${items}/item`)).toBeUndefined();
@@ -712,6 +742,7 @@ schemas:
   B: { type: object, properties: { x: { type: string }, X: { type: string } } }
   U: { discriminator: k, oneOf: { a: B, b: { type: string } } }
 `);
+
     expect(new Set(treeSchemasRules(run))).toEqual(
       new Set([
         "scalar-name",
@@ -723,13 +754,16 @@ schemas:
       ]),
     );
     expect(run.located).toBe(true);
+
     for (const d of run.diagnostics) {
       expect(d.rule).toMatch(/^seampact\/tree\/[a-z-]+$/);
       expect(d.severity).toBe("error");
       expect(d.message.length).toBeGreaterThan(0);
       expect(d.fix.length).toBeGreaterThan(0);
     }
+
     const collision = run.diagnostics.find((d) => d.rule === "seampact/tree/name-collision");
+
     expect(collision?.related).toEqual([
       { origin: at("/schemas/B/properties/x"), message: "'x' is here" },
     ]);

@@ -9,7 +9,9 @@ const SEAM_WORD = /pipeline|draft|derivation/i;
 
 test("every value the seam exports carries a seam word", () => {
   const names = [...Object.keys(pipeline), ...Object.keys(derivations)];
+
   expect(names.length).toBeGreaterThan(0);
+
   for (const name of names)
     expect(name === "compileWorkspace" || SEAM_WORD.test(name), name).toBe(true);
 });

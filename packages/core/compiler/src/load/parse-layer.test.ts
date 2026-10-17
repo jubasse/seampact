@@ -6,6 +6,7 @@ import { loadMemoryReader } from "./reader.js";
 // parsed, not the layer that named it.
 function layers(files: Record<string, string>, entry = "workspace.yaml") {
   const r = loadWorkspace({ reader: loadMemoryReader(files), entry });
+
   return r.diagnostics.map((d) => [d.rule.replace("seampact/load/", ""), d.origin.layer]);
 }
 

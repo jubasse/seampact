@@ -31,6 +31,7 @@ export function pipelineContext(options: PipelineContextOptions): PassContext {
   const raw: PassReadonly<RawApi> = guard ? pipelineView(options.raw, "raw") : options.raw;
   const relayedViews = new Map<string, DraftIR>();
   const importedViews = new Map<string, ContractIR>();
+
   return Object.freeze({
     raw,
     workspace: guard ? pipelineView(options.workspace, "workspace") : options.workspace,
@@ -51,11 +52,14 @@ function viewOf<T>(
   kind: "relayed" | "imported",
 ): T | undefined {
   const value = source?.get(api);
+
   if (value === undefined || !guard) return value;
   let view = views.get(api);
+
   if (view === undefined) {
     view = pipelineView(value, kind);
     views.set(api, view);
   }
+
   return view;
 }

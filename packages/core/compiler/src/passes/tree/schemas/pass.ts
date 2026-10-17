@@ -18,9 +18,11 @@ import { TreeSchemasReporter } from "./raw.js";
 /** The schema service over the type uses the run compiled: each answer a new copy, the run's state unreachable. */
 export function treeSchemasService(uses: ReadonlyMap<string, IrWriter.TypeUse>): TreeSchemaService {
   const answers = new Map(uses);
+
   return {
     typeUse: (pointer) => {
       const use = answers.get(pointer);
+
       return use === undefined ? undefined : structuredClone(use);
     },
     queryWire: () => undefined,
@@ -35,6 +37,7 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
   writes: ["schemas", "scalars", "enums", "extensionKeys"],
   run: (draft, context) => {
     const compiler = new TreeSchemasCompiler(context.raw.merged, new TreeSchemasReporter(context));
+
     compiler.reserve(treeSchemasCoreReservations(context.raw.merged));
     compiler.compileCatalogue();
     treeSchemasCompileDeclarations(compiler, context.raw.merged);
@@ -42,7 +45,9 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
     compiler.finish();
 
     for (const scalar of compiler.scalars.all()) draft.scalars[scalar.id] = structuredClone(scalar);
+
     for (const [id, schema] of compiler.schemas) draft.schemas[id] = structuredClone(schema);
+
     return treeSchemasService(compiler.uses);
   },
 };

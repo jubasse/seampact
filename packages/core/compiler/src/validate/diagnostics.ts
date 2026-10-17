@@ -92,6 +92,7 @@ function isHolder(marker: Marker): marker is HolderMarker {
 
 function holderForm(marker: HolderMarker, key: string): string {
   const { fallback, form } = HOLDER_FORMS[marker];
+
   return form(/^[A-Za-z]+$/.test(key) ? key : fallback);
 }
 
@@ -135,10 +136,12 @@ export function quote(value: unknown): string {
   const safe = kept
     .map((c) => {
       const code = c.codePointAt(0) ?? 0;
+
       return unsafe(code) ? `\\u${code.toString(16).toUpperCase().padStart(4, "0")}` : c;
     })
     .join("");
   const shown = chars.length > QUOTE_LIMIT ? `${safe}…` : safe;
+
   return typeof value === "string" ? `'${shown}'` : shown;
 }
 
@@ -154,6 +157,7 @@ function escapePointer(segment: string): string {
 
 function lastSegment(pointer: string): string {
   const i = pointer.lastIndexOf("/");
+
   return i < 0
     ? ""
     : pointer
@@ -166,10 +170,13 @@ function lastSegment(pointer: string): string {
 function where(pointer: string): string {
   if (pointer === "") return "the file's root";
   const segment = lastSegment(pointer);
+
   if (/^[0-9]+$/.test(segment)) {
     const parent = pointer.slice(0, pointer.lastIndexOf("/"));
+
     return `${quote(lastSegment(parent))}[${segment}]`;
   }
+
   return quote(segment);
 }
 
@@ -180,11 +187,13 @@ function subjectOf(pointer: string): string {
 
 function markerOf(e: ErrorObject): Marker | undefined {
   const t = (e.parentSchema as SchemaNode | undefined)?.title;
+
   return isMarker(t) ? t : undefined;
 }
 
 function description(e: ErrorObject): string {
   const d = (e.parentSchema as SchemaNode | undefined)?.description;
+
   return typeof d === "string" ? d.replace(/\.$/, "") : "";
 }
 
@@ -192,7 +201,9 @@ function knownKeywords(e: ErrorObject): string[] {
   const properties = (e.parentSchema as SchemaNode | undefined)?.properties as
     | Record<string, SchemaNode>
     | undefined;
+
   if (properties === undefined) return [];
+
   return Object.entries(properties)
     .filter(([k, v]) => k !== "$include" && v?.title !== MARKERS.refused)
     .map(([k]) => k)
@@ -206,6 +217,7 @@ function lowerFirst(text: string): string {
 function sentence(text: string): string {
   const t = text.trim();
   const capital = t.charAt(0).toUpperCase() + t.slice(1);
+
   return /[.!?]$/.test(capital) ? capital : `${capital}.`;
 }
 
@@ -222,20 +234,24 @@ function unknownKeyword(e: ErrorObject, context: ConvertContext): Problem {
   const rule = validateRules.unknownKeyword;
   const atPackRoot = context.isPackRoot && e.instancePath === "";
   let message = `${quote(key)} is not a keyword of ${where(e.instancePath)}.`;
+
   if (atPackRoot) {
     message = `${quote(key)} is not a key of a pack: a pack is data only, its manifest, catalogues, conventions, formats, extensions, lint and derive (ADR 0008).`;
   } else if (key.startsWith("x-")) {
     message = `${quote(key)} is not an extension key of ${where(e.instancePath)}: an extension is written x-<prefix>-<key> where its declaration's 'at' allows it.`;
   }
+
   if (atPackRoot && key === "packs") {
     return { rule, pointer, message, fix: "List the packs this pack builds on in 'pack.extends'." };
   }
+
   const known = knownKeywords(e);
   const closest = key.length <= SUGGEST_LIMIT ? closestKeyword(key, known) : undefined;
   const fix =
     closest !== undefined
       ? `Did you mean '${closest}'?`
       : `Remove ${quote(key)}${known.length > 0 && known.length <= 12 ? `; the keywords here are ${known.join(", ")}` : ""}.`;
+
   return { rule, pointer, message, fix };
 }
 
@@ -243,6 +259,7 @@ function refusedKeyword(e: ErrorObject, form: boolean): Problem {
   const keyword = lastSegment(e.instancePath);
   const entry = schemaKeyword(keyword);
   const decided = form ? entry?.refusedForm : entry;
+
   if (decided === undefined) {
     return {
       rule: validateRules.refusedKeyword,
@@ -251,6 +268,7 @@ function refusedKeyword(e: ErrorObject, form: boolean): Problem {
       fix: `Remove ${quote(keyword)}.`,
     };
   }
+
   return {
     rule: validateRules.refusedKeyword,
     pointer: e.instancePath,
@@ -289,6 +307,7 @@ function convertMarked(e: ErrorObject, marker: Marker): Problem | undefined {
   const key = lastSegment(e.instancePath);
   const pointer = e.instancePath;
   const role: Role = ROLES[marker];
+
   switch (role) {
     case "refused":
       return e.keyword === "not" ? refusedKeyword(e, false) : undefined;
@@ -296,6 +315,7 @@ function convertMarked(e: ErrorObject, marker: Marker): Problem | undefined {
       return e.keyword === "not" ? refusedKeyword(e, true) : undefined;
     case "conflict":
       if (e.keyword !== "not") return undefined;
+
       return {
         rule: validateRules.conflictingKeywords,
         pointer,
@@ -304,6 +324,7 @@ function convertMarked(e: ErrorObject, marker: Marker): Problem | undefined {
       };
     case "reserved":
       if (e.keyword !== "not") return undefined;
+
       return {
         rule: validateRules.invalidName,
         pointer,
@@ -320,6 +341,7 @@ function convertMarked(e: ErrorObject, marker: Marker): Problem | undefined {
           `Write the reason as a string: ${key}: { ${e.data}: "<reason>" }.`,
         );
       }
+
       if (e.keyword === "not") {
         return {
           rule: validateRules.invalidValue,
@@ -328,12 +350,15 @@ function convertMarked(e: ErrorObject, marker: Marker): Problem | undefined {
           fix: `Write ${key}: { ignore: "<reason>" } or ${key}: { keep: "<reason>" }.`,
         };
       }
+
       return undefined;
     case "reasonHolder":
       if (e.keyword !== "required" || !isHolder(marker)) return undefined;
+
       return reasonRequired(pointer, subjectOf(pointer), `Write ${holderForm(marker, key)}.`);
     case "nodeMarker":
       if (e.keyword !== "required") return undefined;
+
       return {
         rule: validateRules.missingKeyword,
         pointer,
@@ -342,6 +367,7 @@ function convertMarked(e: ErrorObject, marker: Marker): Problem | undefined {
       };
     case "deriveEntry":
       if (e.keyword !== "required") return undefined;
+
       return {
         rule: validateRules.missingKeyword,
         pointer,
@@ -350,6 +376,7 @@ function convertMarked(e: ErrorObject, marker: Marker): Problem | undefined {
       };
     case "choice":
       if (e.keyword !== "required") return undefined;
+
       return {
         rule: validateRules.missingKeyword,
         pointer,
@@ -358,6 +385,7 @@ function convertMarked(e: ErrorObject, marker: Marker): Problem | undefined {
       };
     case "alternatives":
       if (e.keyword !== "type") return undefined;
+
       return {
         rule: validateRules.wrongType,
         pointer,
@@ -375,7 +403,9 @@ function convertMarked(e: ErrorObject, marker: Marker): Problem | undefined {
           fix: `Write another ${marker}.`,
         };
       }
+
       if (e.keyword !== "pattern") return undefined;
+
       return {
         rule: validateRules.invalidName,
         pointer,
@@ -390,6 +420,7 @@ function invalidKey(e: ErrorObject): Problem {
   const schema = e.schema as SchemaNode;
   const what = typeof schema.description === "string" ? schema.description : "a valid key";
   const pointer = `${e.instancePath}/${escapePointer(name)}`;
+
   if (RESERVED.has(name)) {
     return {
       rule: validateRules.invalidName,
@@ -398,6 +429,7 @@ function invalidKey(e: ErrorObject): Problem {
       fix: "Rename it.",
     };
   }
+
   if (name === "$include" && markerOf(e) === "routes") {
     return {
       rule: validateRules.invalidName,
@@ -406,6 +438,7 @@ function invalidKey(e: ErrorObject): Problem {
       fix: "Write the child's name, then '$include' under it: '<name>: { $include: <path> }'.",
     };
   }
+
   return {
     rule: validateRules.invalidName,
     pointer,
@@ -425,14 +458,18 @@ function convertOne(e: ErrorObject, context: ConvertContext): Problem | undefine
     default:
       break;
   }
+
   const marker = markerOf(e);
   const marked = marker === undefined ? undefined : convertMarked(e, marker);
+
   if (marked !== undefined) return marked;
   const pointer = e.instancePath;
   const subject = subjectOf(pointer);
+
   switch (e.keyword) {
     case "required": {
       const missing = String((e.params as { missingProperty: string }).missingProperty);
+
       return {
         rule: validateRules.missingKeyword,
         pointer,
@@ -440,8 +477,10 @@ function convertOne(e: ErrorObject, context: ConvertContext): Problem | undefine
         fix: `Add '${missing}'.`,
       };
     }
+
     case "type": {
       const type = article(String((e.params as { type: string }).type));
+
       return {
         rule: validateRules.wrongType,
         pointer,
@@ -449,11 +488,13 @@ function convertOne(e: ErrorObject, context: ConvertContext): Problem | undefine
         fix: `Write ${type}.`,
       };
     }
+
     case "maxProperties": {
       // `$include` beside the keys is not counted (the schema raises the bound by one for it).
       const all = Object.keys((e.data as SchemaNode | null) ?? {});
       const keys = all.filter((k) => k !== "$include");
       const limit = Number((e.params as { limit: number }).limit) - (all.length - keys.length);
+
       return {
         rule: validateRules.conflictingKeywords,
         pointer,
@@ -461,8 +502,10 @@ function convertOne(e: ErrorObject, context: ConvertContext): Problem | undefine
         fix: `Keep ${limit === 1 ? "one of them" : `${limit} of them`}.`,
       };
     }
+
     case "const": {
       const allowed = JSON.stringify((e.params as { allowedValue: unknown }).allowedValue);
+
       return {
         rule: validateRules.invalidValue,
         pointer,
@@ -470,6 +513,7 @@ function convertOne(e: ErrorObject, context: ConvertContext): Problem | undefine
         fix: `Write ${allowed}, or remove ${subject}.`,
       };
     }
+
     case "not":
       return {
         rule: validateRules.invalidValue,
@@ -492,6 +536,7 @@ function article(type: string): string {
     boolean: "a boolean",
     null: "null",
   };
+
   return type
     .split(",")
     .map((t) => names[t] ?? t)
@@ -501,10 +546,12 @@ function article(type: string): string {
 function invalidValue(e: ErrorObject): Problem {
   const subject = subjectOf(e.instancePath);
   const pointer = e.instancePath;
+
   if (e.keyword === "enum") {
     const allowed = (e.params as { allowedValues: unknown[] }).allowedValues.map((v) =>
       JSON.stringify(v),
     );
+
     return {
       rule: validateRules.invalidValue,
       pointer,
@@ -512,10 +559,12 @@ function invalidValue(e: ErrorObject): Problem {
       fix: `Write one of ${allowed.join(", ")}.`,
     };
   }
+
   if (e.keyword === "pattern") {
     const what = lowerFirst(
       description(e) || `a value matching ${String((e.params as { pattern: string }).pattern)}`,
     );
+
     return {
       rule: validateRules.invalidValue,
       pointer,
@@ -523,6 +572,7 @@ function invalidValue(e: ErrorObject): Problem {
       fix: `Write ${what}.`,
     };
   }
+
   // Ajv's message for the remaining keywords names schema facts only (a bound, a length).
   return {
     rule: validateRules.invalidValue,
@@ -535,9 +585,11 @@ function invalidValue(e: ErrorObject): Problem {
 // Whether `pointer` is one of `keys` or lies under one, walking up its parents.
 function under(pointer: string, keys: ReadonlySet<string>): boolean {
   let p = pointer;
+
   for (;;) {
     if (keys.has(p)) return true;
     const i = p.lastIndexOf("/");
+
     if (i < 0) return false;
     p = p.slice(0, i);
   }
@@ -559,16 +611,21 @@ export function convertErrors(
           `${e.instancePath}/${escapePointer(String((e.params as { propertyName: string }).propertyName))}`,
       ),
   );
+
   for (const e of errors) {
     if (out.length >= MAX_DIAGNOSTICS) break;
+
     if (e.keyword !== "propertyNames" && badKeys.size > 0 && under(e.instancePath, badKeys)) {
       continue;
     }
+
     // The inner error of a failed `propertyNames`; the `propertyNames` error reports it.
     if ((e as { propertyName?: string }).propertyName !== undefined) continue;
     const problem = convertOne(e, context);
+
     if (problem === undefined) continue;
     const id = `${problem.rule}\u0000${problem.pointer}\u0000${problem.message}`;
+
     if (seen.has(id)) continue;
     seen.add(id);
     out.push({
@@ -580,5 +637,6 @@ export function convertErrors(
       related: [],
     });
   }
+
   return out;
 }

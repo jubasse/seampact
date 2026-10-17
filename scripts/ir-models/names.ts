@@ -33,19 +33,23 @@ export function definitionNames(
   reservedNames: Record<ModelLanguage, readonly string[]> = { kotlin: [], php: [] },
 ): DefinitionNames[] {
   const entries = model.definitions.map((definition) => namesOf(definition));
+
   for (const language of MODEL_LANGUAGES)
     assertDistinct(entries, language, reservedNames[language]);
+
   return entries;
 }
 
 function namesOf(definition: Definition): DefinitionNames {
   const names = { kotlin: definition.name, php: definition.name };
   const escapedIn: ModelLanguage[] = [];
+
   for (const language of MODEL_LANGUAGES) {
     if (!isReserved(definition.name, language, TYPE_ROLE)) continue;
     names[language] = `${definition.name}${RESERVED_ESCAPE}`;
     escapedIn.push(language);
   }
+
   return { definition: definition.name, names, escapedIn };
 }
 
@@ -59,17 +63,20 @@ function assertDistinct(
   reservedNames: readonly string[],
 ): void {
   const owners = new Map<string, string>();
+
   for (const helper of reservedNames)
     owners.set(comparable(helper, language), `the generated helper ${helper}`);
 
   for (const entry of entries) {
     const key = comparable(entry.names[language], language);
     const owner = owners.get(key);
+
     if (owner !== undefined) {
       throw new NameCollisionError(
         `${entry.definition}: its ${language} name ${entry.names[language]} collides with ${owner}; rename the definition in the IR schema`,
       );
     }
+
     owners.set(key, `the definition ${entry.definition}`);
   }
 }

@@ -48,6 +48,7 @@ export function accessIdentityOperations(
   const reporter = accessIdentityOnceReporter(catalogueReporter);
   const nodes = pipelineTreeNodes(context.raw);
   const caller = accessIdentityServiceCaller(context);
+
   if (caller !== undefined) accessIdentityServiceNodes(nodes, caller, reporter);
 
   const scope: AccessIdentityScope = {
@@ -61,21 +62,25 @@ export function accessIdentityOperations(
 
   for (const operation of draft.operations) {
     const route = routeOf(operation, nodeByOrigin);
+
     writeOperation(route, scope);
   }
 }
 
 function writeOperation(route: AccessIdentityRoute, scope: AccessIdentityScope): void {
   const resolved = accessIdentityAccess(route, scope);
+
   if (resolved === undefined) return;
 
   const operation = route.operation;
   const access = resolved.access;
+
   if (access !== undefined) {
     operation.access = access;
     operation.callerKinds = accessIdentityCallerKinds(access);
 
     const csrf = accessIdentityCsrf(route, { ...resolved, access }, scope);
+
     if (csrf !== undefined) operation.csrf = csrf;
   }
 
@@ -93,22 +98,27 @@ function writeInputFacts(
 ): void {
   const facts = accessIdentityInputFacts(operation, identity);
   const input = operation.input;
+
   if (facts === undefined || input === undefined) return;
 
   input.rawBody = facts.rawBody;
+
   if (facts.unknownKeys !== undefined && input.schema.kind === "ref")
     input.schema.unknownKeys = facts.unknownKeys;
 }
 
 function operationNodes(nodes: readonly TreeNode[]): Map<string, TreeNode> {
   const byOrigin = new Map<string, TreeNode>();
+
   for (const node of nodes) {
     if (!ACCESS_IDENTITY_OPERATION_NODE_KINDS.includes(node.kind)) continue;
 
     const key = originKey(node.origin);
+
     if (byOrigin.has(key)) throw new Error(`two operation nodes share the origin ${key}`);
     byOrigin.set(key, node);
   }
+
   return byOrigin;
 }
 
@@ -119,14 +129,17 @@ function routeOf(
   nodeByOrigin: ReadonlyMap<string, TreeNode>,
 ): AccessIdentityRoute {
   const { id, origin } = operation;
+
   if (id === undefined || origin === undefined)
     throw new Error("tree.nodes wrote an operation without its id or origin");
 
   const node = nodeByOrigin.get(originKey(origin));
+
   if (node === undefined)
     throw new Error(`operation '${id}' has no tree node at ${originKey(origin)}`);
 
   const safe = operation.safe;
+
   if (safe === undefined && node.kind !== "relay")
     throw new Error(
       `operation '${id}' at ${node.pointer} has no safe, which tree.nodes writes beside its method`,

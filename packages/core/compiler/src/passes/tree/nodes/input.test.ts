@@ -273,6 +273,7 @@ test.each<{ use: IrWriter.TypeUse; answer?: IrWriter.QueryWire; expected: IrWrit
     ...treeNodesStubService({}),
     queryWire: (pointer) => {
       asked.push(pointer);
+
       return answer;
     },
   };
@@ -334,6 +335,7 @@ test("bodies beyond JSON: a derived form field's wire is asked at its position i
     expectedVersion: integer,
   });
   const expectedVersion = schema.properties[1];
+
   if (expectedVersion === undefined) throw new Error("the schema has no expectedVersion");
   expectedVersion.origin = {
     layer: "api",
@@ -422,6 +424,7 @@ test("tree.nodes diagnostics are located: bodies and operation names", () => {
   ];
 
   const rules = new Set(runs.flatMap(({ diagnostics }) => diagnostics.map(({ rule }) => rule)));
+
   expect([...rules].sort()).toEqual(
     [
       "collection-singular",
@@ -438,6 +441,7 @@ test("tree.nodes diagnostics are located: bodies and operation names", () => {
     for (const diagnostic of diagnostics) {
       expect(diagnostic.message.endsWith(".")).toBe(true);
       expect(diagnostic.fix).not.toBe("");
+
       for (const origin of [diagnostic.origin, ...diagnostic.related.map((r) => r.origin)])
         expect(Object.hasOwn(raw.locations, diagnosticLocationKey(origin))).toBe(true);
     }

@@ -40,10 +40,12 @@ export function accessRightsOperationScopes(
   return resolved.map((use) => {
     const text = use.entry.value;
     const source = typeof text === "string" ? accessRightsValueSource(text) : undefined;
+
     if (source === undefined)
       throw new Error(
         `the scope source ${JSON.stringify(text)} at ${use.pointer} is outside the grammar's forms`,
       );
+
     return { scope: use.scope, source, origin: pipelineCopy(use.entry.origin) };
   });
 }
@@ -61,9 +63,11 @@ function usesByNode(
 
   for (const entry of context.inherited(node, "scopes")?.entries ?? []) {
     const scope = entry.key;
+
     if (scope === undefined)
       throw new Error(`a 'scopes' entry of ${entry.node.pointer} is read without its scope name`);
     const pointer = pipelinePointerBelow(entry.node.pointer, "scopes", scope);
+
     if (!catalogues.declared.scopes.has(scope)) {
       reporter.error({
         rule: "scope-unknown",
@@ -73,14 +77,17 @@ function usesByNode(
       });
       continue;
     }
+
     if (!catalogues.scopes.has(scope)) continue;
 
     if (entry.node !== current) {
       groups.push([]);
       current = entry.node;
     }
+
     groups[groups.length - 1]?.push({ scope, entry, pointer });
   }
+
   return groups;
 }
 
@@ -90,12 +97,14 @@ export function accessRightsScopeAncestors(
   scope: string,
 ): string[] {
   const ancestors: string[] = [];
+
   for (
     let parent = catalogues.scopes.get(scope)?.within;
     parent !== undefined;
     parent = catalogues.scopes.get(parent)?.within
   )
     ancestors.push(parent);
+
   return ancestors;
 }
 
@@ -110,8 +119,10 @@ function resolutionOrder(group: ScopeUse[], catalogues: AccessRightsCatalogues):
       accessRightsScopeAncestors(catalogues, use.scope).every((parent) => !names.has(parent)),
     );
     const [next] = remaining.splice(index < 0 ? 0 : index, 1);
+
     if (next !== undefined) ordered.push(next);
   }
+
   return ordered;
 }
 
@@ -124,6 +135,7 @@ function checkEnteredOnce(
   use: ScopeUse,
 ): boolean {
   const twice = resolved.find((earlier) => earlier.scope === use.scope);
+
   if (twice !== undefined) {
     reporter.error({
       rule: "scope-twice",
@@ -132,12 +144,14 @@ function checkEnteredOnce(
       pointer: use.pointer,
       related: [{ pointer: twice.pointer, message: "first entered here" }],
     });
+
     return false;
   }
 
   const child = resolved.find((earlier) =>
     accessRightsScopeAncestors(catalogues, earlier.scope).includes(use.scope),
   );
+
   if (child !== undefined) {
     reporter.error({
       rule: "scope-nesting",
@@ -146,10 +160,12 @@ function checkEnteredOnce(
       pointer: use.pointer,
       related: [{ pointer: child.pointer, message: `'${child.scope}' is entered here` }],
     });
+
     return false;
   }
 
   const parent = catalogues.scopes.get(use.scope)?.within;
+
   // A parent entered below this scope is reported at its own entry as a scope entered below its child.
   if (parent !== undefined && !enteredNames.has(parent)) {
     reporter.error({
@@ -158,6 +174,7 @@ function checkEnteredOnce(
       fix: `enter '${parent}' at this node or an ancestor`,
       pointer: use.pointer,
     });
+
     return false;
   }
 

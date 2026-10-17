@@ -13,9 +13,11 @@ export const TEST_BASE_URI = "https://seampact.invalid/authoring/";
 export function authoringAjv(): Ajv2020 {
   const ajv = new Ajv2020({ strict: true, allErrors: true, verbose: true });
   const schemas = authoringSchemas();
+
   for (const file of AUTHORING_FILES) {
     ajv.addSchema({ ...schemas[file], $id: TEST_BASE_URI + authoringSchemaFileName(file) });
   }
+
   return ajv;
 }
 

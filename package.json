@@ -8,7 +8,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit && pnpm -r --if-present run typecheck",
-    "lint": "biome lint .",
+    "lint": "biome lint . && eslint --cache --quiet .",
+    "lint:padding:fix": "eslint --cache --fix .",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "test": "vitest run",
@@ -20,10 +21,13 @@
     "@biomejs/biome": "2.5.15",
     "@changesets/cli": "3.0.3",
     "@seampact/spec": "workspace:*",
+    "@stylistic/eslint-plugin": "5.10.0",
     "@types/node": "24.19.1",
     "ajv": "8.20.0",
+    "eslint": "10.12.0",
     "simple-git-hooks": "2.14.0",
     "typescript": "6.0.3",
+    "typescript-eslint": "8.71.0",
     "vitest": "5.0.3",
     "yaml": "2.9.1"
   },

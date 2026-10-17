@@ -36,7 +36,9 @@ export function treeNodesWrittenConvention(
 ): (ConventionReading & { readonly origin: Origin }) | undefined {
   const reading = context.conventions.get(path);
   const pointer = treeNodesPointer("/conventions", ...path.split("."));
+
   if (reading?.origin === undefined || reading.origin.pointer !== pointer) return undefined;
+
   return { value: reading.value, origin: reading.origin };
 }
 
@@ -55,6 +57,7 @@ export const treeNodesSetting = (node: TreeNode, key: string): Json | undefined 
 /** A setting written on a tree node as text, else undefined. */
 export function treeNodesText(node: TreeNode, key: string): string | undefined {
   const value = treeNodesSetting(node, key);
+
   return typeof value === "string" ? value : undefined;
 }
 
@@ -72,6 +75,7 @@ export function treeNodesObjectOf(
   use: IrWriter.TypeUse | undefined,
 ): IrWriter.ObjectSchema | undefined {
   const schema = use?.kind === "ref" ? treeNodesSchema(draft, use.schema) : undefined;
+
   return schema?.kind === "object" ? schema : undefined;
 }
 
@@ -81,5 +85,6 @@ export function treeNodesTagHeader(
   use: IrWriter.TypeUse | undefined,
 ): string | undefined {
   const schema = use?.kind === "ref" ? treeNodesSchema(draft, use.schema) : undefined;
+
   return schema?.kind === "union" && schema.tag.in === "header" ? schema.tag.name : undefined;
 }

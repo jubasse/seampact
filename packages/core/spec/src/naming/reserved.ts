@@ -21,6 +21,7 @@ function isLanguage(language: unknown): language is Language {
 
 // One entry per language, read through `usedBy`; the schema pins each list's `usedBy` to its key.
 const LISTS = new Map<Language, Lists>();
+
 for (const raw of Object.values(data.lists)) {
   const lists: Lists = {
     caseInsensitive: raw.caseInsensitive,
@@ -29,12 +30,15 @@ for (const raw of Object.values(data.lists)) {
     members: new Set(raw.members),
     enumMembers: new Set(raw.enumMembers),
   };
+
   for (const language of raw.usedBy) {
     if (!isLanguage(language)) throw new Error(`reserved-words.json: unknown language ${language}`);
+
     if (LISTS.has(language)) throw new Error(`reserved-words.json: ${language} listed twice`);
     LISTS.set(language, lists);
   }
 }
+
 for (const language of LANGUAGES) {
   if (!LISTS.has(language)) throw new Error(`reserved-words.json: no list for ${language}`);
 }
@@ -56,9 +60,14 @@ export function isReserved(identifier: string, language: Language, role: Role): 
   assertRole(role);
   const list = LISTS.get(language) as Lists;
   const key = list.caseInsensitive ? identifier.toLowerCase() : identifier;
+
   if (list.keywords.has(key)) return true;
+
   if (isTypeRole(role)) return list.types.has(key);
+
   if (role === "member" || role === "operation") return list.members.has(key);
+
   if (role === "enumMember") return list.enumMembers.has(key);
+
   return false;
 }

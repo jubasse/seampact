@@ -64,17 +64,23 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
   let here: () => SiteLocation = () => siteAt(layers[layers.length - 1] as LayerBuild, "");
   const copy = (value: JsonValue): JsonValue => {
     if (!budget.charge(1, here)) return null;
+
     if (typeof value === "string" && !budget.chargeText(value.length, here)) return null;
+
     if (Array.isArray(value)) return value.map(copy);
     const obj = asObject(value);
+
     if (!obj) return value;
     const out = jsonObject();
+
     for (const [k, v] of Object.entries(obj)) {
       if (!budget.chargeText(k.length, here)) break;
       setKey(out, k, copy(v));
     }
+
     return out;
   };
+
   // The origins under a replaced value are those of its own nodes: walking the value it replaces
   // costs what writing that value cost, never a scan of every origin.
   const clear = (ptr: string, old: JsonValue | undefined) => {
@@ -82,15 +88,18 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
     winner.delete(ptr);
     unions.delete(ptr);
     const obj = asObject(old);
+
     if (obj) {
       for (const [k, v] of Object.entries(obj)) clear(`${ptr}/${pointerEscape(k)}`, v);
     } else if (Array.isArray(old)) {
       for (const [i, v] of old.entries()) clear(`${ptr}/${i}`, v);
     }
   };
+
   const record = (value: JsonValue, mptr: string, layer: ApiLayerId, lptr: string) => {
     if (!budget.charge(loadWorkOf(mptr), here)) return;
     const obj = asObject(value);
+
     if (obj && Object.keys(obj).length > 0) {
       for (const [k, v] of Object.entries(obj)) {
         record(v, `${mptr}/${pointerEscape(k)}`, layer, `${lptr}/${pointerEscape(k)}`);
@@ -99,6 +108,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
       winner.set(mptr, { layer, pointer: lptr });
     }
   };
+
   const declare = (
     b: LayerBuild,
     section: JsonObject,
@@ -109,6 +119,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
   ) => {
     const owner = owners.get(ptr);
     const source = b.sources.get(ptr);
+
     if (owner) {
       // One file element reached by two layers (through `$ref` or `$include`) is one declaration.
       if (source !== undefined && owner.source === source) return;
@@ -119,20 +130,26 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
         at: siteAt(b, ptr),
         related: [{ at: owner.at, message: "first declared here" }],
       });
+
       return;
     }
+
     owners.set(ptr, { layer: b.layer, file: b.parsed.path, at: siteAt(b, ptr), source });
     setKey(section, name, copy(value));
     winner.set(ptr, { layer: b.layer, pointer: ptr });
     record(value, ptr, b.layer, ptr);
   };
+
   const ensure = (parent: JsonObject, key: string, ptr: string): JsonObject => {
     const old = ownValue(parent, key);
     const cur = asObject(old);
+
     if (cur) return cur;
     clear(ptr, old); // a setting written where a later layer declares
     const fresh = jsonObject();
+
     setKey(parent, key, fresh);
+
     return fresh;
   };
 
@@ -147,6 +164,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
     const cur = ownValue(parent, key);
     const curObj = asObject(cur);
     const valObj = asObject(value);
+
     if (cur === undefined) {
       setKey(parent, key, copy(value));
       record(value, ptr, b.layer, lptr);
@@ -155,13 +173,17 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
       // by its own leaves.
       if (Object.keys(valObj).length === 0) {
         if (Object.keys(curObj).length === 0) winner.set(ptr, { layer: b.layer, pointer: lptr });
+
         return;
       }
+
       winner.delete(ptr);
+
       for (const [k, v] of Object.entries(valObj)) {
         if (budget.exhausted) return;
         const cptr = `${ptr}/${pointerEscape(k)}`;
         const lcptr = `${lptr}/${pointerEscape(k)}`;
+
         if (LEAF_MAPS.has(ptr)) {
           clear(cptr, ownValue(curObj, k));
           setKey(curObj, k, copy(v));
@@ -174,22 +196,30 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
       // `cur` is the merged copy, extended in place; the members seen so far are kept per union,
       // so each is serialised once per api. A list is a leaf: its one origin moves to this layer.
       let seen = unions.get(ptr);
+
       if (!seen) {
         seen = new Set();
+
         for (const x of cur) {
           const id = JSON.stringify(x);
+
           if (!budget.charge(loadWorkOf(id), here)) break;
           seen.add(id);
         }
+
         unions.set(ptr, seen);
       }
+
       for (const x of value) {
         const id = JSON.stringify(x);
+
         if (!budget.charge(loadWorkOf(id), here)) break;
+
         if (seen.has(id)) continue;
         seen.add(id);
         cur.push(copy(x));
       }
+
       winner.set(ptr, { layer: b.layer, pointer: lptr });
     } else {
       clear(ptr, cur);
@@ -201,12 +231,16 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
   for (const b of layers) {
     for (const [key, value] of Object.entries(b.tree)) {
       if (budget.exhausted) break;
+
       if (DIRECTIVES.has(key)) continue;
       const ptr = `/${pointerEscape(key)}`;
+
       here = () => siteAt(b, ptr);
       const section = asObject(value);
+
       if (DECLARATIONS.has(key) && section) {
         const target = ensure(merged, key, ptr);
+
         for (const [name, v] of Object.entries(section)) {
           if (budget.exhausted) break;
           declare(
@@ -220,12 +254,15 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
         }
       } else if (key === "extensions" && section) {
         const target = ensure(merged, key, ptr);
+
         for (const [prefix, pv] of Object.entries(section)) {
           if (budget.exhausted) break;
           const pptr = `${ptr}/${pointerEscape(prefix)}`;
           const keys = asObject(pv);
+
           if (keys) {
             const inner = ensure(target, prefix, pptr);
+
             for (const [name, v] of Object.entries(keys)) {
               if (budget.exhausted) break;
               declare(b, inner, name, v, `${pptr}/${pointerEscape(name)}`, `extension '${prefix}'`);
@@ -237,6 +274,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
       } else if (key === "derive" && Array.isArray(value)) {
         const existing = ownValue(merged, "derive");
         const target = Array.isArray(existing) ? existing : [];
+
         if (!Array.isArray(existing)) setKey(merged, "derive", target);
         value.forEach((entry, i) => {
           if (budget.exhausted) return;
@@ -244,6 +282,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
           const id = typeof name === "string" ? `/derive#${name}` : undefined;
           const owner = id ? owners.get(id) : undefined;
           const at = siteAt(b, `/derive/${i}`);
+
           if (id && owner) {
             // ADR 0002 section 2, clarified: an entry name is unique across every layer.
             const where =
@@ -252,6 +291,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
                 : b.layer.startsWith("pack:")
                   ? `declared twice in the pack '${b.layer.slice("pack:".length)}'`
                   : `declared twice in '${b.parsed.path}'`;
+
             rep.report({
               rule: "declaration-twice",
               message: `derive entry '${String(name)}' is ${where}, and an entry name is unique across every layer`,
@@ -262,10 +302,13 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
               at,
               related: [{ at: owner.at, message: "first declared here" }],
             });
+
             return;
           }
+
           if (id) owners.set(id, { layer: b.layer, file: b.parsed.path, at, source: undefined });
           const mptr = `/derive/${target.length}`;
+
           target.push(copy(entry));
           record(entry, mptr, b.layer, `/derive/${i}`);
         });
@@ -277,18 +320,23 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
 
   // Emit in the merged tree's own order, so the record never depends on how it was built.
   const leafOrigins: Record<string, Origin> = {};
+
   here = () => siteAt(layers[layers.length - 1] as LayerBuild, "");
   const walk = (value: JsonValue, ptr: string) => {
     if (!budget.charge(loadWorkOf(ptr), here)) return;
     const o = winner.get(ptr);
+
     if (o) leafOrigins[ptr] = o;
     const obj = asObject(value);
+
     if (obj) {
       for (const [k, v] of Object.entries(obj)) walk(v, `${ptr}/${pointerEscape(k)}`);
     } else if (Array.isArray(value)) {
       for (const [i, v] of value.entries()) walk(v, `${ptr}/${i}`);
     }
   };
+
   walk(merged, "");
+
   return { merged, leafOrigins };
 }

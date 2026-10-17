@@ -8,12 +8,14 @@ function run(files: Record<string, string>, entry = "api.yaml", options?: LoadMe
   const result = loadWorkspace({ reader: loadMemoryReader(files, options), entry });
   const where = (d: (typeof result.diagnostics)[number]) =>
     diagnosticLocation(d.origin, result.workspace.locations);
+
   return {
     result,
     where,
     printed: printDiagnostics(result.diagnostics, result.workspace.locations),
   };
 }
+
 const rules = (r: ReturnType<typeof run>) =>
   r.result.diagnostics.map((d) => d.rule.replace("seampact/load/", ""));
 
@@ -23,8 +25,10 @@ test("extends conflict names both locations", () => {
       "api: { name: tasks }\nextends: ./base.yaml\nerrors:\n  api.forbidden: { status: 401 }\n",
     "base.yaml": "errors:\n  api.forbidden: { status: 403 }\n",
   });
+
   expect(r.result.diagnostics).toHaveLength(1);
   const d = must(r.result.diagnostics[0]);
+
   expect(d.rule).toBe("seampact/load/declaration-twice");
   expect(r.where(d)).toMatchObject({ file: "api.yaml", line: 4, column: 3 });
   expect(d.related).toHaveLength(1);
@@ -44,6 +48,7 @@ test("extends conflict names both locations even when the two are identical", ()
       "api: { name: tasks }\nextends: ./base.yaml\nerrors:\n  api.forbidden: { status: 403 }\n",
     "base.yaml": "errors:\n  api.forbidden: { status: 403 }\n",
   });
+
   expect(rules(r)).toEqual(["declaration-twice"]);
   expect(r.printed).toContain("Fix: remove the copy.");
   expect(r.printed).toContain("  base.yaml:2:3: first declared here.");
@@ -55,8 +60,10 @@ test("a base extends nothing, an api cannot extend itself", () => {
     "base.yaml": "extends: ./other.yaml\n",
     "other.yaml": "errors: {}\n",
   });
+
   expect(rules(r)).toEqual(["base-extends"]);
   const self = run({ "api.yaml": "api: { name: tasks }\nextends: ./api.yaml\n" });
+
   expect(rules(self)).toEqual(["extends-cycle"]);
 });
 
@@ -71,8 +78,10 @@ test("layer visibility", () => {
       "schemas:\n  Uses:\n    properties:\n      a: { $ref: Shared }\n      b: { $ref: FromPack }\n      c: { $ref: OnlyApi }\n",
   };
   const r = run(files, "workspace.yaml");
+
   expect(rules(r)).toEqual(["name-not-visible"]);
   const d = must(r.result.diagnostics[0]);
+
   expect(d.message).toContain("'OnlyApi'");
   expect(d.fix).toBe("move the declaration into the shared file or the base");
   expect(r.where(d)).toMatchObject({ file: "base.yaml", line: 6 });
@@ -97,6 +106,7 @@ test("layers are applied packs first, then shared, base, api; a pack reached twi
     "base.yaml": "packs: [./packs/a.yaml]\n",
   };
   const r = run(files, "workspace.yaml");
+
   expect(r.result.diagnostics).toEqual([]);
   expect(r.result.workspace.apis[0]?.layers.map((l) => l.layer)).toEqual([
     "pack:a",
@@ -132,8 +142,10 @@ test("settings override by leaf", () => {
     ].join("\n"),
     "base.yaml": "conventions:\n  paging: { default: cursor }\n  header: { name: X }\n",
   });
+
   expect(r.result.diagnostics).toEqual([]);
   const api = must(r.result.workspace.apis[0]);
+
   expect(api.merged.conventions).toEqual({
     paging: { default: "cursor", maxLimit: 50 },
     errors: {
@@ -144,6 +156,7 @@ test("settings override by leaf", () => {
     header: { name: "X" },
   });
   const o = api.leafOrigins;
+
   expect(o["/conventions/paging/default"]).toEqual({
     layer: "base",
     pointer: "/conventions/paging/default",
@@ -167,6 +180,7 @@ test("include keeps position", () => {
   });
   const a = must(inline.result.workspace.apis[0]);
   const b = must(included.result.workspace.apis[0]);
+
   expect(JSON.stringify(b.merged)).toBe(JSON.stringify(a.merged));
   expect(Object.keys((b.merged.schemas as { Task: object }).Task)).toEqual([
     "first",
@@ -185,6 +199,7 @@ test("include merges several files in list order and takes a pointer", () => {
     "a.yaml": "A: { type: string }\n",
     "b.yaml": "Inner:\n  B: { type: string }\nOther: {}\n",
   });
+
   expect(r.result.diagnostics).toEqual([]);
   expect(Object.keys((r.result.workspace.apis[0]?.merged.schemas ?? {}) as object)).toEqual([
     "A",
@@ -198,6 +213,7 @@ test("include is refused under routes, and nowhere else", () => {
     "api.yaml": "api: { name: t }\nsurfaces:\n  app:\n    routes:\n      $include: ./r.yaml\n",
     "r.yaml": "list: {}\n",
   });
+
   expect(rules(r)).toEqual(["include-under-routes"]);
 });
 
@@ -219,10 +235,12 @@ test("in a data position only a mapping holding $file alone is processed", () =>
     "ex.json": '{"a": [1, 2]}',
     "ex.yaml": "b: 1\n",
   });
+
   expect(r.result.diagnostics).toEqual([]);
   const merged = r.result.workspace.apis[0]?.merged as {
     surfaces: { app: { routes: { r: { examples: unknown } } } };
   };
+
   expect(merged.surfaces.app.routes.r.examples).toEqual({
     one: { status: 200, value: { $include: "./nope.yaml", $ref: "X" } },
     two: { status: 200, value: { a: [1, 2] } },
@@ -237,6 +255,7 @@ test("file directives: text, missing file, yaml pitfalls", () => {
     "d.md": "\uFEFFline one\r\nline two\r\n",
     "e.yaml": "flag: yes\n",
   });
+
   expect(rules(r)).toEqual(["file-missing", "yaml-boolean"]);
   expect(r.result.workspace.apis[0]?.merged.d).toBe("line one\nline two\n");
   expect(r.printed).toContain("api.yaml:3:13: error seampact/load/file-missing");
@@ -250,15 +269,18 @@ test("a file $ref used twice yields one element, and it keeps its identity", () 
     "schemas/task.yaml":
       "Task:\n  type: object\n  properties: { owner: { $ref: Owner } }\nOwner: { type: string }\nUnused: { type: string }\n",
   });
+
   expect(r.result.diagnostics).toEqual([]);
   const m = must(r.result.workspace.apis[0]).merged as {
     schemas: object;
     surfaces: { app: Record<string, { output: object }> };
   };
+
   expect(Object.keys(m.schemas)).toEqual(["Task", "Owner"]);
   expect(m.surfaces.app.one?.output).toEqual({ $ref: "Task" });
   expect(m.surfaces.app.two?.output).toEqual({ $ref: "Task" });
   const loc = must(r.result.workspace.apis[0]).locations;
+
   expect(loc["api#/schemas/Task"]).toMatchObject({ file: "schemas/task.yaml", line: 1 });
 });
 
@@ -268,6 +290,7 @@ test("a file both included into a catalogue and reached by $ref is declared once
       "api: { name: t }\nschemas:\n  $include: ./schemas/task.yaml\nsurfaces:\n  app:\n    one: { output: { $ref: ./schemas/task.yaml#/Task } }\n",
     "schemas/task.yaml": "Task: { type: object }\n",
   });
+
   expect(r.result.diagnostics).toEqual([]);
   expect(Object.keys((r.result.workspace.apis[0]?.merged.schemas ?? {}) as object)).toEqual([
     "Task",
@@ -280,12 +303,14 @@ test("a name found both in the referenced file and in the layer is an error nami
       "api: { name: t }\nschemas:\n  Owner: { type: string }\nsurfaces:\n  app:\n    one: { output: { $ref: ./task.yaml#/Task } }\n",
     "task.yaml": "Task:\n  properties: { owner: { $ref: Owner } }\nOwner: { type: integer }\n",
   });
+
   expect(rules(r)).toEqual(["declaration-twice"]);
   expect(r.printed).toContain("also declared here");
 });
 
 test("a pointer into the merged catalogues is refused", () => {
   const r = run({ "api.yaml": "api: { name: t }\nx: { $ref: '#/schemas/Task' }\n" });
+
   expect(rules(r)).toEqual(["ref-pointer"]);
 });
 
@@ -297,6 +322,7 @@ test("workspace api names must equal api.name", () => {
     },
     "workspace.yaml",
   );
+
   expect(rules(r)).toEqual(["api-name-mismatch"]);
 });
 
@@ -307,6 +333,7 @@ test("cycle names every file", () => {
     "b.yaml": "kb:\n  $include: ./c.yaml\n",
     "c.yaml": "kc:\n  $include: ./a.yaml\n",
   });
+
   expect(rules(r)).toEqual(["include-cycle"]);
   expect(r.result.diagnostics[0]?.message).toContain("a.yaml -> b.yaml -> c.yaml -> a.yaml");
   expect(r.result.diagnostics[0]?.related.map((x) => x.message)).toEqual([
@@ -321,6 +348,7 @@ test("cycle of pack extends names every file", () => {
     "a.yaml": "pack: { name: a, version: 1.0.0, extends: [./b.yaml] }\n",
     "b.yaml": "pack: { name: b, version: 1.0.0, extends: [./a.yaml] }\n",
   });
+
   expect(rules(r)).toEqual(["pack-cycle"]);
   expect(r.result.diagnostics[0]?.message).toContain("a.yaml -> b.yaml -> a.yaml");
 });
@@ -333,8 +361,10 @@ test("derive entries are declarations and merge in layer order", () => {
     "b.yaml":
       "pack: { name: b, version: 1.0.0 }\nderive:\n  - { entry: crud }\n  - { entry: more }\n",
   });
+
   expect(rules(r)).toEqual(["declaration-twice"]);
   const api = must(r.result.workspace.apis[0]);
+
   expect((api.merged.derive as { entry: string }[]).map((e) => e.entry)).toEqual([
     "crud",
     "other",
@@ -359,6 +389,7 @@ test("deterministic across line endings", () => {
   );
   const a = run(lf).result;
   const b = run(crlf).result;
+
   expect(JSON.stringify(b.workspace)).toBe(JSON.stringify(a.workspace));
   expect(b.diagnostics).toEqual(a.diagnostics);
 });
@@ -375,6 +406,7 @@ test("apis of one workspace keep their own locations", () => {
     "workspace.yaml",
   );
   const [one, two] = r.result.workspace.apis;
+
   expect(one?.locations["base#/rights/r"]?.file).toBe("b1.yaml");
   expect(two?.locations["base#/rights/r"]?.file).toBe("b2.yaml");
 });
@@ -390,12 +422,15 @@ test("a leaf origin resolves to file:line:col through its api's table", () => {
     },
     "workspace.yaml",
   );
+
   expect(r.result.diagnostics).toEqual([]);
+
   for (const [api, file, line, column] of [
     [r.result.workspace.apis[0], "b1.yaml", 2, 13],
     [r.result.workspace.apis[1], "b2.yaml", 4, 5],
   ] as const) {
     const origin = must(api?.leafOrigins["/conventions/paging/maxLimit"]);
+
     expect(origin).toEqual({ layer: "base", pointer: "/conventions/paging/maxLimit" });
     expect(diagnosticLocation(origin, must(api).locations)).toEqual({
       file,
@@ -412,6 +447,7 @@ test("a file $ref without a pointer needs a file with exactly one element", () =
     "api.yaml": "api: { name: t }\nxx: { $ref: ./one.yaml }\nyy: { $ref: ./one.yaml }\n",
     "one.yaml": "Task: { type: object }\n",
   });
+
   expect(ok.result.diagnostics).toEqual([]);
   expect(ok.result.workspace.apis[0]?.merged).toMatchObject({
     xx: { $ref: "Task" },
@@ -422,6 +458,7 @@ test("a file $ref without a pointer needs a file with exactly one element", () =
     "api.yaml": "api: { name: t }\nx: { $ref: ./two.yaml }\n",
     "two.yaml": "A: {}\nB: {}\n",
   });
+
   expect(rules(many)).toEqual(["ref-file-shape"]);
 });
 
@@ -445,8 +482,10 @@ test("an override in one api never leaks into another api sharing the layer", ()
     },
     "workspace.yaml",
   );
+
   expect(r.result.diagnostics).toEqual([]);
   const [one, two] = r.result.workspace.apis;
+
   expect(one?.merged.conventions).toEqual({
     cache: { families: { minute: "1s" } },
     paging: { default: "offset", maxLimit: 50 },
@@ -470,8 +509,10 @@ test("a file $ref to one element from two layers declares it once", () => {
     "base.yaml": "schemas:\n  Uses:\n    properties: { a: { $ref: ./schemas/task.yaml#/Task } }\n",
     "schemas/task.yaml": "Task: { type: object }\n",
   });
+
   expect(r.result.diagnostics).toEqual([]);
   const api = must(r.result.workspace.apis[0]);
+
   expect(Object.keys(api.merged.schemas as object)).toEqual(["Uses", "Task"]);
   expect(api.leafOrigins["/schemas/Task/type"]?.layer).toBe("base");
 });
@@ -483,6 +524,7 @@ test("a file $ref into a schema file another layer includes points at the includ
     "base.yaml": "schemas:\n  $include: ./schemas/task.yaml\n",
     "schemas/task.yaml": "Task: { type: object }\n",
   });
+
   expect(seen.result.diagnostics).toEqual([]);
   // The including layer is not visible to the referring one: still one element.
   const unseen = run({
@@ -491,6 +533,7 @@ test("a file $ref into a schema file another layer includes points at the includ
     "base.yaml": "schemas:\n  Uses:\n    properties: { a: { $ref: ./schemas/task.yaml#/Task } }\n",
     "schemas/task.yaml": "Task: { type: object }\n",
   });
+
   expect(unseen.result.diagnostics).toEqual([]);
   expect(Object.keys(must(unseen.result.workspace.apis[0]).merged.schemas as object)).toEqual([
     "Uses",
@@ -507,6 +550,7 @@ test("two packs referring to one file element share it", () => {
       "pack: { name: b, version: 1.0.0 }\nschemas:\n  B: { properties: { m: { $ref: ./money.yaml } } }\n",
     "money.yaml": "Money: { type: string }\n",
   });
+
   expect(r.result.diagnostics).toEqual([]);
   expect(Object.keys(must(r.result.workspace.apis[0]).merged.schemas as object)).toEqual([
     "A",
@@ -521,6 +565,7 @@ test("an included element and a different element of the same name are two decla
       "api: { name: t }\nschemas:\n  $include: ./b.yaml#/Inner\nsurfaces:\n  app:\n    one: { output: { $ref: ./b.yaml#/B } }\n",
     "b.yaml": "Inner:\n  B: { type: string }\nB: { type: integer }\n",
   });
+
   expect(rules(r)).toEqual(["declaration-twice"]);
 });
 
@@ -530,6 +575,7 @@ test("two $include keys in one mapping are a duplicate key", () => {
     "a.yaml": "A: { type: string }\n",
     "b.yaml": "B: { type: string }\n",
   });
+
   expect(rules(r)).toEqual(["duplicate-key"]);
   expect(r.printed).toContain("api.yaml:4:3: error seampact/load/duplicate-key: key '$include'");
   expect(r.printed).toContain("  api.yaml:3:3: first defined here.");
@@ -540,6 +586,7 @@ test("a paging default and a scheme key value are settings, not data", () => {
     "api.yaml":
       "api: { name: t }\nconventions:\n  paging: { default: ~ }\nschemes:\n  s: { kind: signature, key: { value: ~ } }\nsurfaces:\n  app:\n    routes:\n      r:\n        method: get\n        examples:\n          e: { status: 200, value: ~ }\n",
   });
+
   // The settings are strings, so a null there is a type error (P6); only the example is data.
   expect(rules(r)).toEqual(["scalar-type", "scalar-type", "data-null"]);
   expect(r.printed).toContain("api.yaml:12:36:");
@@ -551,6 +598,7 @@ test("derive entries named alike in one pack say so", () => {
     "a.yaml":
       "pack: { name: a, version: 1.0.0 }\nderive:\n  - { entry: crud }\n  - { entry: crud }\n",
   });
+
   expect(rules(r)).toEqual(["declaration-twice"]);
   expect(r.result.diagnostics[0]?.message).toContain("declared twice in the pack 'a'");
   expect(r.printed).toContain("  a.yaml:3:5: first declared here.");
@@ -560,6 +608,7 @@ test("derive entries named alike in one api file name the file, not a pack", () 
   const r = run({
     "api.yaml": "api: { name: t }\nderive:\n  - { entry: crud }\n  - { entry: crud }\n",
   });
+
   expect(rules(r)).toEqual(["declaration-twice"]);
   expect(r.result.diagnostics[0]?.message).toContain("is declared twice in 'api.yaml'");
   expect(r.result.diagnostics[0]?.message).not.toContain("pack");
@@ -572,6 +621,7 @@ test("a later layer filling an empty mapping leaves no stale origin on the mappi
     "p.yaml": "pack: { name: p, version: 1.0.0 }\nconventions:\n  header: {}\n  empty: {}\n",
   });
   const o = must(r.result.workspace.apis[0]).leafOrigins;
+
   expect(o["/conventions/header"]).toBeUndefined();
   expect(o["/conventions/header/name"]?.layer).toBe("api");
   expect(o["/conventions/empty"]?.layer).toBe("api");
@@ -586,6 +636,7 @@ test("a name not visible points at its declaration even when the name needs esca
     },
     "workspace.yaml",
   );
+
   expect(rules(r)).toEqual(["name-not-visible"]);
   expect(r.printed).toContain("  api.yaml:4:3: declared here.");
 });

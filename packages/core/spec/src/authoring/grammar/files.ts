@@ -302,6 +302,7 @@ export function packFile(): JsonSchema {
 
 export function packDefs(): Record<string, JsonSchema> {
   const opNames = oneOfValues("list", "get", "create", "update", "delete", "batch");
+
   return {
     manifest: object({
       props: {

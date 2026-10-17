@@ -4,6 +4,7 @@ import { checkPackageRules, formatViolation } from "./rules.ts";
 
 const root = resolve(process.argv[2] ?? resolve(dirname(fileURLToPath(import.meta.url)), "../.."));
 const violations = checkPackageRules(root);
+
 for (const v of violations) console.error(formatViolation(v));
 console.error(
   violations.length === 0

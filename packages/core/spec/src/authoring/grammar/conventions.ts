@@ -47,6 +47,7 @@ const OP_NAMES = ["list", "get", "create", "update", "delete", "batch"];
 
 export function conventionsDefs(): Record<string, JsonSchema> {
   const positive = { type: "integer", minimum: 1 };
+
   return {
     conventions: object({
       description: "The api-wide settings, set by any layer, usually a pack (ADR 0002 section 13).",

@@ -89,6 +89,7 @@ function parts(): Record<AuthoringFile, Part> {
     },
     ...catalogueParts,
   };
+
   return all as Record<AuthoringFile, Part>;
 }
 
@@ -99,6 +100,7 @@ export function authoringSchemas(): Readonly<Record<AuthoringFile, JsonSchema>> 
   if (cache === undefined) {
     const p = parts();
     const out = {} as Record<AuthoringFile, JsonSchema>;
+
     for (const file of AUTHORING_FILES) {
       const part = p[file];
       const schema: JsonSchema = {
@@ -107,10 +109,13 @@ export function authoringSchemas(): Readonly<Record<AuthoringFile, JsonSchema>> 
         ...part.root,
         $defs: part.defs,
       };
+
       out[file] = localiseRefs(schema, file) as JsonSchema;
     }
+
     cache = out;
   }
+
   return cache;
 }
 

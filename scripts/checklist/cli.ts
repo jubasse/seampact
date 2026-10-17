@@ -23,6 +23,7 @@ function main(argv: string[]): number {
   });
   const command = positionals[0] ?? "check";
   const root = resolve(values.root ?? REPO_ROOT);
+
   if (command === "check") {
     const problems = check({
       root,
@@ -30,24 +31,34 @@ function main(argv: string[]): number {
       ...(values.consumers === undefined ? {} : { consumers: resolve(values.consumers) }),
       releaseGate: values["release-gate"] === true,
     });
+
     for (const p of problems) console.error(formatProblem(p));
     console.error(
       problems.length === 0 ? "checklist: ok" : `checklist: ${problems.length} problem(s)`,
     );
+
     return problems.length === 0 ? 0 : 1;
   }
+
   if (command === "report") {
     const problems: Problem[] = [];
     const model = loadModel(root, problems);
+
     if (problems.length > 0) {
       for (const p of problems) console.error(formatProblem(p));
+
       return 1;
     }
+
     const results = values.results === undefined ? undefined : loadResults(values.results);
+
     process.stdout.write(renderReport(model, root, results));
+
     return 0;
   }
+
   console.error(`unknown command "${command}" (check | report)`);
+
   return 2;
 }
 

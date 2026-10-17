@@ -25,11 +25,14 @@ export function accessIdentityInputFacts(
   identity: IrWriter.KnownIdentity | undefined,
 ): AccessIdentityInputFacts | undefined {
   const input = operation.input;
+
   if (input === undefined) return undefined;
+
   if (identity?.kind !== "signed") return { rawBody: false };
 
   const policy = identity.unknownKeys;
   const schema = input.schema;
+
   if (policy === undefined || schema.kind !== "ref" || schema.unknownKeys !== undefined)
     return { rawBody: true };
 
@@ -50,21 +53,26 @@ export function accessIdentityCheckSignatureKey(
   scope: AccessIdentityScope,
 ): void {
   const identity = resolved.identity;
+
   if (identity?.kind !== "signed") return;
 
   // A scheme left out of the catalogue for an error of its own is already reported.
   const scheme = scope.built.schemes.get(identity.signed);
+
   if (scheme?.kind !== "signature") return;
   const key = scheme.signature.key;
+
   if (key?.kind !== "from") return;
 
   // The authoring schema reads a key from a named path, query or header source.
   const source = key.from;
   const name = source.name;
+
   if (name === undefined || !accessIdentityIsParameterLocation(source.in))
     throw new Error(
       `signature scheme '${scheme.id}' reads its key from an unnamed or ${source.in} source`,
     );
+
   if (accessIdentityRouteHasParameter(route.operation, source.in, name)) return;
   scope.reporter.error({
     rule: "signature-key-source",

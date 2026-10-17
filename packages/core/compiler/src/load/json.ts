@@ -40,9 +40,12 @@ export function ownValue(obj: JsonObject, key: string): JsonValue | undefined {
 export function cloneJson(value: JsonValue): JsonValue {
   if (Array.isArray(value)) return value.map(cloneJson);
   const obj = asObject(value);
+
   if (!obj) return value;
   const out = jsonObject();
+
   for (const [k, v] of Object.entries(obj)) setKey(out, k, cloneJson(v));
+
   return out;
 }
 

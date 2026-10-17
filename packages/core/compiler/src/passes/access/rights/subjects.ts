@@ -71,6 +71,7 @@ export function accessRightsSubject(
   input: AccessRightsSubjectInput,
 ): AccessRightsSubjectResult {
   const { right, written } = input;
+
   switch (right.subject.kind) {
     case "none":
       if (written === undefined) return {};
@@ -80,6 +81,7 @@ export function accessRightsSubject(
         fix: "remove 'subject', or declare a subject on the right",
         pointer: written.pointer,
       });
+
       return undefined;
     case "scope":
       return scopeSubject(reporter, input, right.subject.scope);
@@ -94,6 +96,7 @@ function scopeSubject(
   scope: string,
 ): AccessRightsSubjectResult {
   if (scopeRefused) return undefined;
+
   if (!scopes.some((resolved) => resolved.scope === scope)) {
     reporter.error({
       rule: "requirement-subject",
@@ -101,11 +104,14 @@ function scopeSubject(
       fix: `enter scope '${scope}' on the route or an ancestor, or require the right elsewhere`,
       pointer: usePointer,
     });
+
     return undefined;
   }
 
   const source: IrWriter.ValueSource = { in: "scope", name: scope };
+
   if (written === undefined) return { subject: { source, defaulted: true } };
+
   if (written.text === accessRightsSourceText(source))
     return { subject: { source, defaulted: false } };
 
@@ -115,6 +121,7 @@ function scopeSubject(
     fix: `remove 'subject', or write 'scope.${scope}'`,
     pointer: written.pointer,
   });
+
   return undefined;
 }
 
@@ -133,6 +140,7 @@ function resourceSubject(
   if (written === undefined) return defaultedSubject(context, reporter, input, expected);
 
   const source = accessRightsValueSource(written.text);
+
   if (source?.in === "principal" && route.access !== "identity") {
     reporter.error({
       rule: "requirement-subject",
@@ -140,10 +148,12 @@ function resourceSubject(
       fix: "read the subject from a request value, or require the right on an identified route",
       pointer: written.pointer,
     });
+
     return undefined;
   }
 
   const found = source === undefined ? undefined : sourceSchema(context, input, source);
+
   if (source === undefined || found === undefined) {
     reporter.error({
       rule: "requirement-subject",
@@ -151,6 +161,7 @@ function resourceSubject(
       fix: "read the subject from a parameter, header, principal field or scope of the route",
       pointer: written.pointer,
     });
+
     return undefined;
   }
 
@@ -161,6 +172,7 @@ function resourceSubject(
       fix: "make the field required, or read the subject from a required one",
       pointer: written.pointer,
     });
+
     return undefined;
   }
 
@@ -171,6 +183,7 @@ function resourceSubject(
     fix: "read the subject from a source whose schema is the right's id schema",
     pointer: written.pointer,
   });
+
   return undefined;
 }
 
@@ -181,6 +194,7 @@ function defaultedSubject(
   expected: SourceSchema,
 ): AccessRightsSubjectResult {
   const defaulted = defaultMemberId(context, route.node, expected);
+
   if (defaulted.kind === "found") return { subject: { source: defaulted.source, defaulted: true } };
 
   if (defaulted.kind === "ambiguous") {
@@ -194,6 +208,7 @@ function defaultedSubject(
         message: `member id '${candidate.name}' has the right's id schema`,
       })),
     });
+
     return undefined;
   }
 
@@ -203,11 +218,13 @@ function defaultedSubject(
     fix: "write the requirement's 'subject', a source whose schema is the right's id schema",
     pointer: usePointer,
   });
+
   return undefined;
 }
 
 function sameSchema(found: SourceSchema, expected: SourceSchema): boolean {
   if (found.name !== undefined || expected.name !== undefined) return found.name === expected.name;
+
   return pipelineCanonical(found.use) === pipelineCanonical(expected.use);
 }
 
@@ -217,15 +234,20 @@ const describe = (schema: SourceSchema): string =>
 /** The member ids of the collections whose member scope holds `node`, nearest first, each in written order. */
 function memberIds(node: TreeNode): MemberId[] {
   const ids: MemberId[] = [];
+
   for (let at: TreeNode | undefined = node; at !== undefined; at = at.parent) {
     const collection = at.parent;
+
     if (at.kind !== "scope" || at.name !== "member" || collection === undefined) continue;
 
     const written = accessRightsMember(collection.settings, "id");
+
     if (!pipelineIsJsonObject(written)) continue;
+
     for (const name of Object.keys(written))
       ids.push({ name, pointer: pipelinePointerBelow(collection.pointer, "id", name), collection });
   }
+
   return ids;
 }
 
@@ -237,16 +259,21 @@ function defaultMemberId(
   expected: SourceSchema,
 ): DefaultSubject {
   const ids = memberIds(node);
+
   for (const collection of new Set(ids.map((id) => id.collection))) {
     const fitting = ids.filter(
       (id) =>
         id.collection === collection && sameSchema(positionSchema(context, id.pointer), expected),
     );
     const [only, ...others] = fitting;
+
     if (only === undefined) continue;
+
     if (others.length === 0) return { kind: "found", source: { in: "path", name: only.name } };
+
     return { kind: "ambiguous", candidates: fitting };
   }
+
   return { kind: "none" };
 }
 
@@ -254,6 +281,7 @@ function defaultMemberId(
 function positionSchema(context: AccessRightsContext, pointer: string): SourceSchema {
   const use = accessRightsTypeUse(context, pointer, "input");
   const name = accessRightsSchemaName(pipelineJsonAtPointer(context.raw.merged, pointer));
+
   return name === undefined ? { use } : { use, name };
 }
 
@@ -263,6 +291,7 @@ function sourceSchema(
   source: IrWriter.ValueSource,
 ): SourceSchema | undefined {
   const name = source.name ?? "";
+
   switch (source.in) {
     case "path":
       return pathSchema(context, input.route.node, name);
@@ -293,13 +322,16 @@ function pathSchema(
   name: string,
 ): SourceSchema | undefined {
   const memberId = memberIds(node).find((id) => id.name === name);
+
   for (let at: TreeNode | undefined = node; at !== undefined; at = at.parent) {
     if (memberId !== undefined && at === memberId.collection)
       return positionSchema(context, memberId.pointer);
     const declared = accessRightsMember(at.settings, "pathParams");
+
     if (accessRightsMember(declared, name) !== undefined)
       return positionSchema(context, pipelinePointerBelow(at.pointer, "pathParams", name));
   }
+
   return undefined;
 }
 
@@ -313,16 +345,21 @@ function fieldsSchema(
   matches: (key: string) => boolean,
 ): SourceSchema | undefined {
   const entries = context.inherited(node, setting)?.entries ?? [];
+
   for (const entry of [...entries].reverse()) {
     const key = entry.key;
+
     if (key === undefined) continue;
     const optional = key.endsWith(OPTIONAL_FIELD);
     const field = optional ? key.slice(0, -OPTIONAL_FIELD.length) : key;
+
     if (!matches(field)) continue;
 
     const schema = positionSchema(context, pipelinePointerBelow(entry.node.pointer, setting, key));
+
     return optional ? { ...schema, optional: true } : schema;
   }
+
   return undefined;
 }
 
@@ -340,8 +377,10 @@ function principalSchema(
 
   for (const field of path.split(".")) {
     const schema = schemaId === undefined ? undefined : schemas[schemaId];
+
     if (schema?.kind !== "object") return undefined;
     const property = schema.properties.find((candidate) => candidate.name === field);
+
     if (property === undefined) return undefined;
 
     optional ||= property.optional;
@@ -352,8 +391,10 @@ function principalSchema(
             pipelineJsonAtPointer(context.raw.merged, property.origin.pointer),
           );
     const use = pipelineCopy(property.type);
+
     found = name === undefined ? { use } : { use, name };
     schemaId = property.type.kind === "ref" ? property.type.schema : undefined;
   }
+
   return found !== undefined && optional ? { ...found, optional: true } : found;
 }

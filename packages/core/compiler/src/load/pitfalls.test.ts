@@ -33,7 +33,9 @@ for (const [pitfall, name, dir, rules] of CASES) {
     const result = loadFixture(`pitfalls/${dir}`);
     const printed = expectGolden(`pitfalls/${dir}`, result);
     const found = new Set(result.diagnostics.map((d) => d.rule.replace("seampact/load/", "")));
+
     expect([...found].sort()).toEqual([...rules].sort());
+
     // Each line names file, line, column, rule and fix.
     for (const line of printed.split("\n").filter((l) => !l.startsWith(" "))) {
       expect(line).toMatch(/^[^:]+:\d+:\d+: error seampact\/load\/[a-z0-9-]+: .+ Fix: .+\.$/);
@@ -82,6 +84,7 @@ test("pitfall P1 to P4 table: every listed scalar is refused", () => {
     ["=", "=", "P4"],
     ["<<", "<<", "P4"],
   ];
+
   for (const [source, resolved, rule] of refused) {
     expect(loadScalarPitfall(source, resolved), source).toBe(rule);
   }
@@ -104,6 +107,7 @@ test("pitfall P1 to P4 near misses pass", () => {
     ["1:30pm", "1:30pm"],
     ["300ms", "300ms"],
   ];
+
   for (const [source, resolved] of ok) {
     expect(loadScalarPitfall(source, resolved), source).toBeUndefined();
   }
@@ -111,9 +115,11 @@ test("pitfall P1 to P4 near misses pass", () => {
 
 test("all errors of the load stage are reported in one run, sorted", () => {
   const result = loadFixture("pitfalls/p1-yes-on-off");
+
   expect(result.diagnostics.length).toBe(7);
   const lines = result.diagnostics.map(
     (d) => diagnosticLocation(d.origin, result.workspace.locations).line,
   );
+
   expect(lines).toEqual([3, 4, 5, 6, 7, 8, 9]);
 });

@@ -17,20 +17,27 @@ export function walkSchema(
   parentKeyword?: string,
 ): void {
   visit(node, pointer, parentKeyword);
+
   for (const keyword of SCHEMA_MAPS) {
     const children = node[keyword];
+
     if (!isSchemaNode(children)) continue;
+
     for (const [name, child] of Object.entries(children)) {
       if (isSchemaNode(child))
         walkSchema(child, visit, `${pointer}/${keyword}/${escapePointer(name)}`, keyword);
     }
   }
+
   for (const keyword of SCHEMA_VALUES) {
     const child = node[keyword];
+
     if (isSchemaNode(child)) walkSchema(child, visit, `${pointer}/${keyword}`, keyword);
   }
+
   for (const keyword of SCHEMA_LISTS) {
     const children = node[keyword];
+
     if (!Array.isArray(children)) continue;
     children.forEach((child, index) => {
       if (isSchemaNode(child)) walkSchema(child, visit, `${pointer}/${keyword}/${index}`, keyword);

@@ -93,18 +93,25 @@ function buildTrie(): TrieNode {
   const root: TrieNode = { children: new Map() };
   const insert = (field: string): TrieNode => {
     let node = root;
+
     for (const segment of draftFieldSegments(field)) {
       let child = node.children.get(segment);
+
       if (child === undefined) {
         child = { children: new Map() };
         node.children.set(segment, child);
       }
+
       node = child;
     }
+
     return node;
   };
+
   for (const field of pipelineContainers) insert(field);
+
   for (const row of pipelineOwnership) insert(row.field).row = row;
+
   return root;
 }
 
@@ -137,6 +144,7 @@ function child(position: Position, target: object, key: string): Position {
   const concrete = [...position.concrete, index ? Number(key) : key];
   let row = position.row;
   let element = position.element;
+
   if (node?.row !== undefined) {
     row = { row: node.row, depth: normal.length };
     element = undefined;
@@ -148,6 +156,7 @@ function child(position: Position, target: object, key: string): Position {
   ) {
     element = { list: target, index: Number(key), depth: normal.length };
   }
+
   return { concrete, normal, node, row, element };
 }
 
@@ -156,17 +165,21 @@ const isPrefix = (prefix: readonly string[], path: readonly string[]): boolean =
 
 function concreteText(path: readonly (string | number)[]): string {
   let text = "";
+
   for (const part of path) {
     if (typeof part === "number") text += `[${part}]`;
     else text += text === "" ? part : `.${part}`;
   }
+
   return text === "" ? "(the draft)" : text;
 }
 
 function normalText(path: readonly string[]): string {
   let text = "";
+
   for (const segment of path)
     text += segment === "[]" ? "[]" : text === "" ? segment : `.${segment}`;
+
   return text === "" ? "(the draft)" : text;
 }
 
@@ -220,11 +233,15 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
   // The position of `target[key]`, checked as a read; undefined for a key that is no draft member.
   const read = (position: Position, target: object, key: string | symbol): Position | undefined => {
     if (typeof key === "symbol") return undefined;
+
     if (Array.isArray(target) && !isIndex(target, key)) return undefined;
     const next = child(position, target, key);
+
     if (PASS_THROUGH.has(key) && next.node === undefined && !Object.hasOwn(target, key))
       return undefined;
+
     if (!readable(next)) fail("read", next, "outside its reads and writes");
+
     return next;
   };
 
@@ -233,18 +250,23 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
     if (!isObject(value)) return value;
     const key = JSON.stringify(position.concrete);
     let byPath = proxies.get(value);
+
     if (byPath === undefined) {
       byPath = new Map();
       proxies.set(value, byPath);
     }
+
     let proxy = byPath.get(key);
+
     if (proxy === undefined) {
       const revocable = Proxy.revocable(value, handlerAt(position));
+
       proxy = revocable.proxy;
       revokes.push(revocable.revoke);
       byPath.set(key, proxy);
       targets.set(proxy, value);
     }
+
     return proxy;
   };
 
@@ -254,10 +276,12 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
   const unwrap = (value: unknown, at: Position): unknown => {
     if (!isObject(value)) return value;
     const target = targets.get(value);
+
     if (target !== undefined) return target;
     // A read-only view (of the raw tree, another api's draft or an import) is refused rather than copied: the
     // guard is off outside tests, so a copy made here would hide a draft that aliases what it was read from.
     const source = pipelineViewSource(value);
+
     if (source !== undefined)
       fail(
         "write",
@@ -265,18 +289,25 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
         `a read-only view of ${source} is stored as is: copy it first: pipelineCopy(value)`,
       );
     const inside = (item: unknown): unknown => unwrap(item, at);
+
     if (Array.isArray(value)) {
       const items = value.map(inside);
+
       return items.some((item, i) => item !== value[i]) ? items : value;
     }
+
     const prototype: unknown = Object.getPrototypeOf(value);
+
     if (prototype !== Object.prototype && prototype !== null) return value;
     const members = Object.entries(value);
     const plain = members.map(([, item]) => inside(item));
+
     if (plain.every((item, i) => item === members[i]?.[1])) return value;
     const copy: object = Object.create(prototype);
+
     for (const [i, [member]] of members.entries())
       Object.defineProperty(copy, member, dataMember(plain[i]));
+
     return copy;
   };
 
@@ -290,36 +321,49 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
     if (next === previous) return;
     const row = position.row?.row;
     const element = position.element;
+
     if (row?.mode === "elements" && element?.depth === position.normal.length) {
       declaredWrite(position);
       owns(position, row, previous, "before");
       owns(position, row, next, "after");
+
       // The element's own sub-rows (a response's `headers`) have their own owners.
       for (const [segment] of position.node?.children ?? []) {
         const below = child(position, isObject(next) ? next : {}, segment);
+
         checkWrite(below, member(next, segment), member(previous, segment));
       }
+
       return;
     }
+
     const hasRowsBelow = position.node !== undefined && position.node.children.size > 0;
     // A default with rows below it (`input.schema` and its `unknownKeys`), written where absent: one write of the
     // default, and only its sub-rows checked on their own. A present default is not taken here, so changing a
     // member inside it still reaches `checkRow` as a write over it.
     const atDefault =
       position.row?.row.mode === "default" && position.row.depth === position.normal.length;
+
     if (atDefault && hasRowsBelow && previous === undefined && isObject(next)) {
       checkRow(position, next, undefined);
+
       for (const [segment] of position.node?.children ?? [])
         checkWrite(child(position, next, segment), member(next, segment), undefined);
+
       return;
     }
+
     if (!hasRowsBelow || (!isObject(next) && !isObject(previous))) {
       checkRow(position, next, previous);
+
       return;
     }
+
     const holder = isObject(next) ? next : (previous as object);
+
     for (const key of memberKeys(next, previous)) {
       const below = child(position, holder, key);
+
       if (below.node === undefined && position.row === undefined)
         fail("write", below, "no row owns this member");
       checkWrite(below, member(next, key), member(previous, key));
@@ -328,21 +372,27 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
 
   const checkRow = (position: Position, next: unknown, previous: unknown): void => {
     const rowAt = position.row;
+
     if (rowAt === undefined) fail("write", position, "no row owns this member");
     declaredWrite(position);
     const row = rowAt.row;
+
     switch (row.mode) {
       case "owned":
         if (row.owner !== part.half) fail("write", position, `owned by ${row.owner}`);
+
         return;
       case "default":
         if (!row.order.some((half) => half === part.half))
           fail("write", position, `a default written by ${row.order.join(", ")} only`);
+
         if (rowAt.depth !== position.normal.length || previous !== undefined)
           fail("write", position, "a default is written only where absent, and a value is present");
+
         return;
       case "elements":
         checkElements(position, row, rowAt.depth, next, previous);
+
         return;
     }
   };
@@ -355,14 +405,17 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
   ): void => {
     if (element === undefined) return;
     const { owner, derivation } = draftElementOwner(row, element);
+
     if (derivation !== undefined && owner !== undefined && !row.derived.includes(owner))
       fail(
         "write",
         position,
         `derivation ${derivation} adds no element here (derived by ${row.derived.join(", ")})`,
       );
+
     if (owner === part.half) return;
     const by = derivation === undefined ? "declared" : `derivation ${derivation}`;
+
     fail(
       "write",
       position,
@@ -383,21 +436,28 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
       // The whole list: every element that changes is the half's, before and after.
       const before = Array.isArray(previous) ? previous : [];
       const after = Array.isArray(next) ? next : [];
+
       for (let i = 0; i < Math.max(before.length, after.length); i++) {
         if (before[i] === after[i]) continue;
         owns(position, row, before[i], "before");
         owns(position, row, after[i], "after");
       }
+
       return;
     }
+
     const element = position.element;
+
     if (element === undefined) fail("write", position, "outside any element");
     const current: unknown = element.list[element.index];
+
     owns(position, row, current, "before");
     // A write inside the element that changes its derivation changes its owner.
     const inside = position.normal.slice(element.depth);
+
     if (inside[0] !== "derivedFrom" || !isObject(current)) return;
     const derivedFrom = member(current, "derivedFrom");
+
     if (inside.length === 1) owns(position, row, { derivedFrom: next }, "after");
     else if (inside.length === 2 && inside[1] === "derivation")
       owns(
@@ -410,6 +470,7 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
 
   const write = (position: Position, target: object, key: string, value: unknown): void => {
     const next = child(position, target, key);
+
     if (next.node === undefined && position.row === undefined)
       fail("write", next, "no row owns this member");
     checkWrite(next, value, member(target, key));
@@ -425,14 +486,18 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
     if (typeof key === "symbol")
       fail("write", position, `a symbol key (${String(key)}) is no draft member`);
     const plain = unwrap(value, child(position, target, key));
+
     if (Array.isArray(target) && key === "length") {
       // Coerced first, as the array coerces it, so `length = "0"` is checked as the truncation it is. An invalid
       // length changes nothing: storing it throws a RangeError.
       const length = Number(plain);
+
       if (Number.isInteger(length) && length >= 0)
         checkWrite(position, target.slice(0, length), target.slice());
+
       return length;
     }
+
     if (
       position.normal.length === 0 &&
       CATALOGUES.has(key) &&
@@ -446,6 +511,7 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
           "so an entry named __proto__ stays an entry",
       );
     write(position, target, key, plain);
+
     return plain;
   };
 
@@ -460,31 +526,39 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
         fail("read", child(position, target, key), "a prototype key, not an own member");
       const next = read(position, target, key);
       const value: unknown = Reflect.get(target, key, receiver);
+
       if (next === undefined) return value;
       // A frozen property must read as its own value (a proxy invariant), so its value leaves unguarded.
       const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+
       if (descriptor?.configurable === false && descriptor.writable === false) return value;
+
       return wrap(value, next);
     },
     has(target, key) {
       read(position, target, key);
+
       return Reflect.has(target, key);
     },
     getOwnPropertyDescriptor(target, key) {
       const next = read(position, target, key);
       const descriptor = Reflect.getOwnPropertyDescriptor(target, key);
+
       if (next === undefined || descriptor === undefined || !descriptor.configurable)
         return descriptor;
+
       return "value" in descriptor
         ? { ...descriptor, value: wrap(descriptor.value, next) }
         : descriptor;
     },
     ownKeys(target) {
       if (!readable(position)) fail("read", position, "outside its reads and writes");
+
       return Reflect.ownKeys(target);
     },
     set(target, key, value) {
       const plain = assign(position, target, key, value);
+
       // A new member is defined, so no setter up the prototype chain runs (`__proto__` included).
       return Object.hasOwn(target, key)
         ? Reflect.set(target, key, plain)
@@ -492,6 +566,7 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
     },
     deleteProperty(target, key) {
       assign(position, target, key, undefined);
+
       return Reflect.deleteProperty(target, key);
     },
     defineProperty(target, key, descriptor) {
@@ -499,6 +574,7 @@ export function pipelineGuard<D extends DraftIR>(draft: D, part: GuardedPart): D
       if ("get" in descriptor || "set" in descriptor)
         fail("write", position, `an accessor for ${String(key)} is no draft member`);
       const plain = assign(position, target, key, descriptor.value);
+
       return Reflect.defineProperty(target, key, { ...descriptor, value: plain });
     },
     setPrototypeOf() {
@@ -527,10 +603,13 @@ const member = (value: unknown, key: string): unknown =>
 // The members of either value; for lists, every index of either.
 function memberKeys(next: unknown, previous: unknown): string[] {
   const keys = new Set<string>();
+
   for (const value of [next, previous]) {
     if (!isObject(value)) continue;
+
     if (Array.isArray(value)) for (let i = 0; i < value.length; i++) keys.add(String(i));
     else for (const key of Object.keys(value)) keys.add(key);
   }
+
   return [...keys];
 }

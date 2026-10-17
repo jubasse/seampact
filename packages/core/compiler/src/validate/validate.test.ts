@@ -20,6 +20,7 @@ const FIXTURES = join(ROOT, "fixtures");
 
 function read(path: string): { text: string; tree: JsonObject } {
   const text = readFileSync(path, "utf8");
+
   return { text, tree: parse(text) as JsonObject };
 }
 
@@ -27,14 +28,18 @@ function read(path: string): { text: string; tree: JsonObject } {
 function layerOf(tree: JsonObject): { kind: ValidateDocumentKind; layer: FileLayerId } {
   if ("api" in tree) return { kind: "api", layer: "api" };
   const pack = tree.pack as JsonObject | undefined;
+
   if (pack !== undefined) return { kind: "pack", layer: `pack:${String(pack.name)}` };
+
   return { kind: "base", layer: "shared" };
 }
 
 // `# expect: <rule> <pointer>` on a fixture's first line.
 function expectation(text: string): { rule: string; pointer: string } {
   const m = /^# expect: (\S+) (\S*)/.exec(text);
+
   if (m === null) throw new Error("fixture without '# expect:'");
+
   return { rule: m[1] ?? "", pointer: m[2] ?? "" };
 }
 
@@ -42,6 +47,7 @@ function files(dir: string): string[] {
   return readdirSync(dir)
     .flatMap((name) => {
       const path = join(dir, name);
+
       return statSync(path).isDirectory() ? files(path) : [path];
     })
     .sort();
@@ -50,6 +56,7 @@ function files(dir: string): string[] {
 function check(path: string) {
   const { text, tree } = read(path);
   const { kind, layer } = layerOf(tree);
+
   return { text, tree, layer, diagnostics: validateDocument(kind, tree, layer) };
 }
 
@@ -61,6 +68,7 @@ const api = (route: JsonObject): JsonObject => ({
 describe("unknown keyword refused", () => {
   test("a misspelt route key names the closest keyword", () => {
     const [d, ...rest] = validateDocument("api", api({ method: "get", ouput: "Health" }), "api");
+
     expect(rest).toEqual([]);
     expect(d).toEqual({
       severity: "error",
@@ -107,6 +115,7 @@ describe("unknown keyword refused", () => {
     const t = tree as unknown as JsonObject;
     const doc =
       "api" in t ? validateDocument("api", t, "api") : validateDocument("base", t, "shared");
+
     expect(doc).toHaveLength(1);
     expect(doc[0]?.rule).toBe(validateRules.unknownKeyword);
     expect(doc[0]?.origin.pointer).toBe(pointer);
@@ -115,12 +124,14 @@ describe("unknown keyword refused", () => {
 
   test("a key far from every keyword lists the keywords instead", () => {
     const [d] = validateDocument("node", { method: "get", zzzzzz: 1 }, "api");
+
     expect(d?.rule).toBe(validateRules.unknownKeyword);
     expect(d?.fix).toMatch(/^Remove 'zzzzzz'/);
   });
 
   test("a misspelt key in a fragment kind", () => {
     const [d] = validateDocument("conventions", { paging: { maxLimt: 50 } }, "shared");
+
     expect(d?.origin.pointer).toBe("/paging/maxLimt");
     expect(d?.fix).toBe("Did you mean 'maxLimit'?");
   });
@@ -131,13 +142,16 @@ describe("refused keyword names its reason", () => {
 
   test("one fixture per refused keyword of ADR 0003", () => {
     const names = readdirSync(dir).map((f) => f.replace(/\.yaml$/, ""));
+
     expect(names.sort()).toEqual(REFUSED_SCHEMA_KEYWORDS.map((k) => k.keyword).sort());
   });
 
   test.each(REFUSED_SCHEMA_KEYWORDS.map((k) => [k.keyword, k] as const))("%s", (keyword, entry) => {
     const { diagnostics } = check(join(dir, `${keyword}.yaml`));
+
     expect(diagnostics).toHaveLength(1);
     const [d] = diagnostics;
+
     expect(d?.rule).toBe(validateRules.refusedKeyword);
     expect(d?.origin.pointer).toBe(`/schemas/Task/${keyword}`);
     expect(d?.message).toContain(entry.reason);
@@ -155,6 +169,7 @@ describe("refused keyword names its reason", () => {
     ["an inline enum", { enum: ["open", "done"] }, "enum"],
   ] as const)("a refused form: %s", (_, schema, keyword) => {
     const [d, ...rest] = validateDocument("schema", schema as unknown as JsonObject, "shared");
+
     expect(rest).toEqual([]);
     expect(d?.rule).toBe(validateRules.refusedKeyword);
     expect(d?.origin.pointer).toBe(`/${keyword}`);
@@ -170,6 +185,7 @@ describe("refused keyword names its reason", () => {
       output: "Task",
     });
     const [d] = validateDocument("api", tree, "api");
+
     expect(d?.rule).toBe(validateRules.refusedKeyword);
     expect(d?.origin.pointer).toBe("/surfaces/app/routes/health/input/properties/tags/uniqueItems");
   });
@@ -202,6 +218,7 @@ describe("reasons only on safety exceptions", () => {
   test.each(refused.map((f) => [relative(FIXTURES, f), f]))("refuses %s", (_, path) => {
     const { text, diagnostics } = check(path);
     const { rule, pointer } = expectation(text);
+
     expect(diagnostics.map((d) => [d.rule, d.origin.pointer])).toEqual([[rule, pointer]]);
   });
 });
@@ -212,12 +229,14 @@ describe("pack schema refuses code and unknown keys", () => {
   test.each(packs.map((f) => [relative(FIXTURES, f), f]))("%s", (_, path) => {
     const { text, layer, diagnostics } = check(path);
     const { rule, pointer } = expectation(text);
+
     expect(layer).toMatch(/^pack:/);
     expect(diagnostics.map((d) => [d.rule, d.origin.pointer])).toEqual([[rule, pointer]]);
   });
 
   test("a pack's unknown root key says a pack is data only", () => {
     const { diagnostics } = check(join(FIXTURES, "validate/pack/code.yaml"));
+
     expect(diagnostics[0]?.message).toContain("a pack is data only");
   });
 
@@ -229,6 +248,7 @@ describe("pack schema refuses code and unknown keys", () => {
       lint: { rules: { "seampact/credential-name": "disabled" } },
       derive: [{ entry: "crud", select: { op: ["get"] }, require: { right: "{resource}.{op}" } }],
     };
+
     expect(validateDocument("pack", tree, "pack:house")).toEqual([]);
   });
 });
@@ -237,13 +257,20 @@ describe("reference contract validates", () => {
   const dir = join(FIXTURES, "reference");
   const kindOf = (path: string): ValidateDocumentKind | undefined => {
     const rel = relative(dir, path);
+
     if (rel === "workspace.yaml") return "workspace";
+
     if (rel.endsWith("/api.yaml")) return "api";
+
     if (rel.endsWith("base.yaml")) return "base";
+
     if (rel.endsWith("schemas.yaml")) return "schemas";
+
     if (rel.includes("/routes/")) return "node";
+
     return undefined;
   };
+
   const yamlFiles = files(dir).filter((f) => f.endsWith(".yaml"));
 
   test("every file of the reference contract has a kind", () => {
@@ -253,6 +280,7 @@ describe("reference contract validates", () => {
 
   test.each(yamlFiles.map((f) => [relative(dir, f), f]))("%s", (_, path) => {
     const kind = kindOf(path) as ValidateDocumentKind;
+
     expect(validateDocument(kind, read(path).tree, kind === "api" ? "api" : "shared")).toEqual([]);
   });
 });
@@ -287,6 +315,7 @@ describe("validate stage", () => {
       })),
     );
     const { workspace: own, apis: result } = validateWorkspace(workspace);
+
     expect(own).toEqual([]);
     expect(result.map((r) => r.api)).toEqual(["a", "b"]);
     expect(result[0]?.diagnostics.map((d) => d.origin)).toEqual([
@@ -303,6 +332,7 @@ describe("validate stage", () => {
       })),
     );
     const result = validateWorkspace(workspace).apis;
+
     expect(
       result.map((r) => [r.api, r.diagnostics.map((d) => [d.origin.layer, d.origin.pointer])]),
     ).toEqual([
@@ -316,8 +346,10 @@ describe("validate stage", () => {
       pack: { name: "house", version: "1.0.0" },
       surfaces: {},
     });
+
     expect(validateLayer(pack).map((d) => d.rule)).toEqual([validateRules.unknownKeyword]);
     const base = layer("base", "tasks/base.yaml", { derive: [] });
+
     expect(validateLayer(base).map((d) => d.origin.pointer)).toEqual(["/derive"]);
   });
 
@@ -330,6 +362,7 @@ describe("validate stage", () => {
       output: { type: "object", properties: { a: { type: "string" } }, if: {} },
     });
     const diagnostics = validateDocument("api", tree, "api");
+
     expect(diagnostics.map((d) => [d.origin.pointer, d.rule])).toEqual([
       ["/surfaces/app/routes/health/access/public", validateRules.reasonRequired],
       ["/surfaces/app/routes/health/alpha", validateRules.unknownKeyword],
@@ -404,6 +437,7 @@ describe("validate stage", () => {
     const t = tree as unknown as JsonObject;
     const { kind, layer: l } = layerOf(t);
     const diagnostics = validateDocument(kind, t, l);
+
     expect(diagnostics.map((d) => [d.rule, d.origin.pointer])).toEqual([[rule, pointer]]);
     expect(diagnostics[0]?.message).not.toBe("");
     expect(diagnostics[0]?.fix).not.toBe("");
@@ -419,14 +453,17 @@ describe("reference contract is the ADR's worked example", () => {
   const start = adr.indexOf("\n## Worked example");
   const section = adr.slice(start, adr.indexOf("\n## ", start + 1));
   const blocks = new Map<string, string>();
+
   for (const m of section.matchAll(/```yaml\n([\s\S]*?)```/g)) {
     const body = m[1] ?? "";
     const path = /^# ([\w./-]+\.(?:yaml|json))(?::|$)/m.exec(body.split("\n")[0] ?? "")?.[1];
+
     if (path !== undefined) blocks.set(path, body);
   }
 
   test("every file is shown by the ADR or listed as written beyond it", () => {
     const fixtures = files(dir).map((f) => relative(dir, f));
+
     expect(fixtures.filter((f) => !blocks.has(f) && !BEYOND_THE_ADR.includes(f))).toEqual([]);
     expect([...blocks.keys()].filter((p) => !fixtures.includes(p))).toEqual([]);
     expect(BEYOND_THE_ADR.filter((p) => blocks.has(p))).toEqual([]);
@@ -521,6 +558,7 @@ describe("one diagnostic per problem", () => {
     const t = tree as unknown as JsonObject;
     const kind: ValidateDocumentKind = "workspace" in t ? "workspace" : layerOf(t).kind;
     const diagnostics = validateDocument(kind, t, layerOf(t).layer);
+
     expect(diagnostics.map((d) => [d.rule, d.origin.pointer])).toEqual([[rule, pointer]]);
   });
 });
@@ -528,23 +566,28 @@ describe("one diagnostic per problem", () => {
 describe("messages name the problem", () => {
   const one = (kind: ValidateDocumentKind, tree: unknown) => {
     const diagnostics = validateDocument(kind, tree as JsonObject, "shared");
+
     expect(diagnostics).toHaveLength(1);
+
     return diagnostics[0] as NonNullable<(typeof diagnostics)[0]>;
   };
 
   test("a value of neither accepted type", () => {
     const d = one("node", { method: "get", paging: 3 });
+
     expect(d.rule).toBe(validateRules.wrongType);
     expect(d.message).toBe("'paging' must be a string or a mapping.");
   });
 
   test("a constant", () => {
     const d = one("node", { method: "get", concurrency: "own" });
+
     expect(d.message).toBe(`'concurrency' is 'own'; its one value is "inherit".`);
   });
 
   test("two keys where one is taken", () => {
     const d = one("node", { method: "get", paging: { cursor: {}, offset: {} } });
+
     expect(d.rule).toBe(validateRules.conflictingKeywords);
     expect(d.message).toBe("'paging' takes one key, not 'cursor', 'offset'.");
   });
@@ -554,6 +597,7 @@ describe("messages name the problem", () => {
       method: "get",
       paging: { $include: "./p.yaml", cursor: {}, offset: {} },
     });
+
     expect(d.message).toBe("'paging' takes one key, not 'cursor', 'offset'.");
   });
 
@@ -562,6 +606,7 @@ describe("messages name the problem", () => {
       pack: { name: "p", version: "1.0.0" },
       derive: [{ entry: "e", select: {} }],
     });
+
     expect([d.rule, d.origin.pointer]).toEqual([validateRules.missingKeyword, "/derive/0"]);
     expect(d.fix).toBe("Add 'declareRight', 'require' or 'attachErrors'.");
   });
@@ -589,12 +634,14 @@ describe("messages name the problem", () => {
     ["csrf", "node", { method: "post", csrf: {} }, 'Write csrf: { exempt: "<reason>" }.'],
   ] as const)("a missing reason in %s", (_, kind, tree, fix) => {
     const d = one(kind, tree);
+
     expect(d.rule).toBe(validateRules.reasonRequired);
     expect(d.fix).toBe(fix);
   });
 
   test("a string where only a reasoned exception is accepted", () => {
     const d = one("identities", { hook: { kind: "signed", unknownKeys: "refuse" } });
+
     expect(d.rule).toBe(validateRules.invalidValue);
     expect(d.message).toBe("'unknownKeys' takes no string here, only a reasoned exception.");
   });
@@ -606,6 +653,7 @@ describe("messages name the problem", () => {
       ["node", { method: "get", paging: { cursor: {}, offset: {} } }],
       ["identities", { hook: { kind: "signed", unknownKeys: "refuse" } }],
     ];
+
     for (const [kind, tree] of trees) {
       for (const d of validateDocument(kind, tree as JsonObject, "shared")) {
         expect(d.message).not.toMatch(/must NOT|equal to constant|must match/);
@@ -615,6 +663,7 @@ describe("messages name the problem", () => {
 
   test("$include in routes is the one refusal of $include", () => {
     const d = one("node", { kind: "single", routes: { $include: "./r.yaml" } });
+
     expect(d.message).toContain("every child of a routes map is named in its parent");
     expect(
       validateDocument("node", { method: "get", responses: { $include: "./r.yaml" } }, "api"),
@@ -636,6 +685,7 @@ describe("authored values in diagnostics", () => {
     const [esc, rlo, ls] = [0x1b, 0x202e, 0x2028].map((c) => String.fromCharCode(c));
     const key = `a${esc}[31mred${rlo}b${ls}c\nd`;
     const [d] = validateDocument("node", { method: "get", [key]: 1 }, "api");
+
     expect(d?.message).toBe(
       "'a\\u001B[31mred\\u202Eb\\u2028c\\u000Ad' is not a keyword of the file's root.",
     );
@@ -647,6 +697,7 @@ describe("authored values in diagnostics", () => {
   test("a long value is cut, and gets no closest keyword", () => {
     const key = `ouput${"x".repeat(200)}`;
     const [d] = validateDocument("node", { method: "get", [key]: 1 }, "api");
+
     expect(d?.message.length).toBeLessThan(140);
     expect(d?.message).toContain(String.fromCharCode(0x2026));
     expect(d?.fix).toMatch(/^Remove '/);
@@ -654,11 +705,13 @@ describe("authored values in diagnostics", () => {
 
   test("a value in an enum message is quoted and escaped", () => {
     const [d] = validateDocument("node", { method: "ge\u0007t" }, "api");
+
     expect(d?.message).toBe("'method' is 'ge\\u0007t', not one of its values.");
   });
 
   test(`a file far from the grammar gives at most ${MAX_DIAGNOSTICS} diagnostics`, () => {
     const tree = Object.fromEntries(Array.from({ length: 500 }, (_, i) => [`k${i}`, i]));
+
     expect(validateDocument("node", { method: "get", ...tree }, "api")).toHaveLength(
       MAX_DIAGNOSTICS,
     );
@@ -668,9 +721,11 @@ describe("authored values in diagnostics", () => {
 // One fixture per name, each in another position: a free key, a name key, a right name in use.
 describe("reserved names refused", () => {
   const dir = join(FIXTURES, "validate/reserved");
+
   test.each(["__proto__", "constructor", "prototype"])("%s", (name) => {
     const { text, diagnostics } = check(join(dir, `${name}.yaml`));
     const { rule, pointer } = expectation(text);
+
     expect(diagnostics.map((d) => [d.rule, d.origin.pointer])).toEqual([[rule, pointer]]);
     expect(diagnostics[0]?.message).toBe(
       `'${name}' is a reserved name: it reaches the prototype of a JavaScript object, so no key or right name may be __proto__, constructor, prototype.`,
@@ -688,6 +743,7 @@ describe("reserved names refused", () => {
     ["a right", '{ "rights": { "__proto__": {} } }', "/rights/__proto__"],
   ] as const)("in %s", (_, json, pointer) => {
     const t = JSON.parse(json) as JsonObject;
+
     expect(validateDocument("base", t, "shared").map((d) => [d.rule, d.origin.pointer])).toEqual([
       [validateRules.invalidName, pointer],
     ]);
@@ -699,7 +755,9 @@ describe("reserved names refused", () => {
 describe("load then validate", () => {
   const loaded = (root: string, entry: string) => {
     const result = loadWorkspace({ reader: loadFsReader(join(FIXTURES, root)), entry });
+
     expect(result.diagnostics).toEqual([]);
+
     return result.workspace;
   };
 
@@ -718,11 +776,14 @@ describe("load then validate", () => {
   test("an access brought by $include is checked after resolution", () => {
     const path = join(FIXTURES, "validate/include/access-route.yaml");
     const { text, tree } = read(path);
+
     expect(validateDocument("api", tree, "api")).toEqual([]);
     const workspace = loaded("validate/include", "access-route.yaml");
     const [entry, ...others] = validateWorkspace(workspace).apis;
+
     expect(others).toEqual([]);
     const { rule, pointer } = expectation(text);
+
     expect(entry?.diagnostics.map((d) => [d.rule, d.origin.pointer])).toEqual([[rule, pointer]]);
     expect(workspace.apis[0]?.locations[`api#${pointer}`]).toBeDefined();
   });

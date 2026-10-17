@@ -63,7 +63,9 @@ export function pipelineTreeNodes(raw: PassReadonly<RawApi>): readonly TreeNode[
       settings: settings ?? EMPTY,
       origin: Object.freeze(origin ?? { ...fallback }),
     });
+
     nodes.push(node);
+
     return node;
   };
 
@@ -76,6 +78,7 @@ export function pipelineTreeNodes(raw: PassReadonly<RawApi>): readonly TreeNode[
       : isJsonObject(written)
         ? Object.entries(written).map(([op, value]) => [op, op, value] as const)
         : [];
+
     for (const [op, key, value] of entries) {
       if (typeof op !== "string" || (names !== undefined && !names.includes(op))) continue;
       add(
@@ -90,7 +93,9 @@ export function pipelineTreeNodes(raw: PassReadonly<RawApi>): readonly TreeNode[
 
   const routes = (parent: TreeNode): void => {
     const children = parent.settings.routes;
+
     if (!isJsonObject(children)) return;
+
     for (const [name, child] of Object.entries(children)) {
       if (isJsonObject(child))
         visit(name, pointerBelow(parent.pointer, "routes", name), parent, child);
@@ -109,6 +114,7 @@ export function pipelineTreeNodes(raw: PassReadonly<RawApi>): readonly TreeNode[
       add("route", name, pointer, parent, settings);
     } else if (settings.kind === "collection") {
       const collection = add("collection", name, pointer, parent, settings);
+
       for (const scopeName of ["collection", "member"] as const) {
         const written = settings[scopeName];
         const scope = add(
@@ -118,22 +124,26 @@ export function pipelineTreeNodes(raw: PassReadonly<RawApi>): readonly TreeNode[
           collection,
           isJsonObject(written) ? written : undefined,
         );
+
         ops(collection, scope, COLLECTION_SCOPE_OPS[scopeName]);
         routes(scope);
       }
     } else if (settings.kind === "single") {
       const single = add("single", name, pointer, parent, settings);
+
       ops(single, single, undefined);
       routes(single);
     }
   };
 
   const surfaces = raw.merged.surfaces;
+
   if (isJsonObject(surfaces)) {
     for (const [name, value] of Object.entries(surfaces)) {
       if (isJsonObject(value))
         routes(add("surface", name, pointerBelow("", "surfaces", name), undefined, value));
     }
   }
+
   return Object.freeze(nodes);
 }

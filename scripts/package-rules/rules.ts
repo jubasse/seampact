@@ -40,22 +40,27 @@ interface Npm {
 function readJson(root: string, file: string, out: Violation[], rule: string): Rec | undefined {
   try {
     const v: unknown = JSON.parse(readFileSync(join(root, file), "utf8"));
+
     if (isRec(v)) return v;
     out.push({ file, rule, message: "manifest is not a JSON object" });
   } catch (e) {
     out.push({ file, rule, message: `manifest is not valid JSON: ${(e as Error).message}` });
   }
+
   return undefined;
 }
 
 function depNames(json: Rec, set: string): string[] {
   const v = json[set];
+
   return isRec(v) ? Object.keys(v) : [];
 }
 
 function listDirs(root: string, rel: string): string[] {
   const abs = join(root, rel);
+
   if (!existsSync(abs)) return [];
+
   return readdirSync(abs)
     .filter((n) => statSync(join(abs, n)).isDirectory())
     .sort();
@@ -63,53 +68,67 @@ function listDirs(root: string, rel: string): string[] {
 
 function walk(root: string, rel: string, match: (name: string) => boolean): string[] {
   const abs = join(root, rel);
+
   if (!existsSync(abs)) return [];
   const out: string[] = [];
+
   for (const name of readdirSync(abs).sort()) {
     if (name === "node_modules" || name === "build" || name.startsWith(".")) continue;
     const child = posix.join(rel, name);
+
     if (statSync(join(root, child)).isDirectory()) out.push(...walk(root, child, match));
     else if (match(name)) out.push(child);
   }
+
   return out;
 }
 
 function loadNpm(root: string, out: Violation[]): Npm[] {
   const pkgs: Npm[] = [];
+
   for (const dir of packageDirectories(root)) {
     const file = `${dir}/package.json`;
     const json = readJson(root, file, out, "roles");
+
     if (!json) continue;
     const role = checkRole(file, json, out);
+
     pkgs.push({ file, dir, name: String(json.name ?? ""), role, json });
   }
+
   return pkgs;
 }
 
 function checkRole(file: string, json: Rec, out: Violation[]): Role | undefined {
   const seampact = json.seampact;
   const role = isRec(seampact) ? seampact.role : undefined;
+
   if (typeof role !== "string") {
     out.push({
       file,
       rule: "roles",
       message: `needs exactly one \`seampact.role\` string, one of ${ROLES.join(", ")}`,
     });
+
     return undefined;
   }
+
   if (!(ROLES as readonly string[]).includes(role)) {
     out.push({
       file,
       rule: "roles",
       message: `unknown role "${role}" (one of ${ROLES.join(", ")})`,
     });
+
     return undefined;
   }
+
   return role as Role;
 }
 
 function checkDependencies(pkgs: Npm[], out: Violation[]): void {
   const roleOf = new Map<string, Role | undefined>(pkgs.map((p) => [p.name, p.role]));
+
   for (const p of pkgs) {
     if (!p.role) continue;
     const add = (rule: string, message: string) => out.push({ file: p.file, rule, message });
@@ -141,6 +160,7 @@ function checkDependencies(pkgs: Npm[], out: Violation[]): void {
               `${p.role} package depends on ${dep}, a ${roleOf.get(dep)} (${set}); ${label}`,
             );
     };
+
     const roleIs =
       (...roles: Role[]) =>
       (dep: string) =>
@@ -152,12 +172,14 @@ function checkDependencies(pkgs: Npm[], out: Violation[]): void {
         break;
       case "target": {
         const required = [`${SCOPE}codegen-core`, `${SCOPE}spec`];
+
         for (const dep of required)
           if (!depNames(p.json, "peerDependencies").includes(dep))
             add(
               "rule 2",
               `a target has ${dep} as a peer dependency, so it binds to the CLI's copy`,
             );
+
         for (const set of RUNTIME_SETS)
           for (const dep of seen(set))
             if (!(set === "peerDependencies" && required.includes(dep)))
@@ -167,6 +189,7 @@ function checkDependencies(pkgs: Npm[], out: Violation[]): void {
               );
         break;
       }
+
       case "hooks":
         for (const set of RUNTIME_SETS)
           for (const dep of depNames(p.json, set))
@@ -181,6 +204,7 @@ function checkDependencies(pkgs: Npm[], out: Violation[]): void {
           "an adapter depends on hooks and has its library as a peer",
           roleIs("hooks"),
         );
+
         if (!depNames(p.json, "peerDependencies").some((d) => !d.startsWith(SCOPE)))
           add("rule 5", "an adapter has its library as a peer dependency, and none is listed");
         break;
@@ -195,6 +219,7 @@ function checkDependencies(pkgs: Npm[], out: Violation[]): void {
     if (p.role !== "tool")
       for (const dep of ours("devDependencies")) {
         const r = roleOf.get(dep);
+
         if (r && r !== "core" && r !== "tool")
           add(
             "dev-dependencies",
@@ -209,6 +234,7 @@ function checkPacks(root: string, pkgs: Npm[], out: Violation[]): void {
     if (p.role !== "pack") continue;
     const entry = isRec(p.json.seampact) ? p.json.seampact.pack : undefined;
     const add = (message: string) => out.push({ file: p.file, rule: "pack", message });
+
     if (typeof entry !== "string" || !/\.ya?ml$/.test(entry))
       add("a pack names its YAML entry file in `seampact.pack`");
     else if (entry.startsWith("/") || entry.split("/").includes(".."))
@@ -221,16 +247,20 @@ function checkPacks(root: string, pkgs: Npm[], out: Violation[]): void {
 function checkNpmNamespace(pkgs: Npm[], out: Violation[]): void {
   for (const p of pkgs) {
     const add = (message: string) => out.push({ file: p.file, rule: "namespaces", message });
+
     if (!/^@seampact\/[a-z0-9][a-z0-9-]*$/.test(p.name))
       add(`npm name "${p.name}" must be @seampact/<name> (A27)`);
+
     if (p.json.private !== true) add("manifest must be `private: true` until p8-release (A3, A27)");
   }
 }
 
 function checkChangesets(root: string, out: Violation[]): void {
   const file = ".changeset/config.json";
+
   if (!existsSync(join(root, file))) return;
   const json = readJson(root, file, out, "namespaces");
+
   if (json && json.access !== "restricted")
     out.push({
       file,
@@ -263,11 +293,15 @@ function checkScripts(root: string, pkgs: Npm[], out: Violation[]): void {
     ],
     ...pkgs.map((p): [string, Rec] => [p.file, p.json]),
   ];
+
   for (const [file, json] of manifests) {
     const scripts = json?.scripts;
+
     if (!isRec(scripts)) continue;
+
     for (const [name, cmd] of Object.entries(scripts)) {
       const what = typeof cmd === "string" ? publishes(cmd) : undefined;
+
       if (what)
         out.push({
           file,
@@ -280,13 +314,16 @@ function checkScripts(root: string, pkgs: Npm[], out: Violation[]): void {
 
 function checkWorkflows(root: string, out: Violation[]): void {
   const dir = ".github/workflows";
+
   for (const name of readdirSyncSafe(root, dir)) {
     if (!/\.ya?ml$/.test(name)) continue;
     const file = `${dir}/${name}`;
+
     readFileSync(join(root, file), "utf8")
       .split("\n")
       .forEach((line, i) => {
         const code = line.replace(/(^|\s)#.*$/, "");
+
         for (const [re, what] of PUBLISH)
           if (re.test(code))
             out.push({
@@ -306,10 +343,13 @@ function checkGradle(root: string, out: Violation[]): void {
   for (const file of walk(root, "jvm", (n) => n === "build.gradle" || n === "build.gradle.kts")) {
     const text = readFileSync(join(root, file), "utf8");
     const add = (message: string) => out.push({ file, rule: "namespaces", message });
+
     for (const m of text.matchAll(/^\s*group\s*=\s*["']([^"']+)["']/gm))
       if (m[1] !== GRADLE_GROUP) add(`Gradle group "${m[1]}" must be ${GRADLE_GROUP} (A27)`);
+
     for (const m of text.matchAll(/\bid\s*=\s*["']([^"']+)["']/g)) {
       const id = m[1] as string;
+
       if (id !== GRADLE_PLUGIN_ID && !id.startsWith(`${GRADLE_PLUGIN_ID}.`))
         add(`Gradle plugin id "${id}" must be ${GRADLE_PLUGIN_ID} (A27)`);
     }
@@ -319,10 +359,13 @@ function checkGradle(root: string, out: Violation[]): void {
 function checkComposer(root: string, out: Violation[]): void {
   for (const d of listDirs(root, "php")) {
     const file = `php/${d}/composer.json`;
+
     if (!existsSync(join(root, file))) continue;
     const json = readJson(root, file, out, "namespaces");
+
     if (!json) continue;
     const name = json.name;
+
     if (typeof name !== "string" || !name.startsWith(`${COMPOSER_VENDOR}/`))
       out.push({
         file,
@@ -335,6 +378,7 @@ function checkComposer(root: string, out: Violation[]): void {
 export function checkPackageRules(root: string): Violation[] {
   const out: Violation[] = [];
   const pkgs = loadNpm(root, out);
+
   checkDependencies(pkgs, out);
   checkPacks(root, pkgs, out);
   checkNpmNamespace(pkgs, out);
@@ -343,6 +387,7 @@ export function checkPackageRules(root: string): Violation[] {
   checkScripts(root, pkgs, out);
   checkGradle(root, out);
   checkComposer(root, out);
+
   return out;
 }
 

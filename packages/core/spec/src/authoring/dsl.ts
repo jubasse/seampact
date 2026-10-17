@@ -55,17 +55,21 @@ export function ref(file: AuthoringFile, def?: string): JsonSchema {
 
 export function localiseRefs(value: unknown, file: AuthoringFile): unknown {
   if (Array.isArray(value)) return value.map((v) => localiseRefs(v, file));
+
   if (value === null || typeof value !== "object") return value;
   const out: JsonSchema = {};
+
   for (const [key, v] of Object.entries(value)) {
     if (key === "$ref" && typeof v === "string" && v.startsWith(REF_PREFIX)) {
       const [target, fragment] = v.slice(REF_PREFIX.length).split("#") as [string, string];
+
       out[key] =
         target === file ? `#${fragment}` : `${target}.schema.json${fragment ? `#${fragment}` : ""}`;
     } else {
       out[key] = localiseRefs(v, file);
     }
   }
+
   return out;
 }
 
@@ -140,29 +144,39 @@ export interface ObjectSpec {
 export function object(spec: ObjectSpec): JsonSchema {
   const include = spec.include ?? true;
   const properties: JsonSchema = { ...spec.props };
+
   if (include) properties.$include = ref("common", "include");
   const out: JsonSchema = { type: "object" };
+
   if (spec.title !== undefined) out.title = spec.title;
+
   if (spec.description !== undefined) out.description = spec.description;
   out.properties = properties;
+
   if (spec.extensions) out.patternProperties = EXTENSION_PATTERNS;
   out.additionalProperties = false;
+
   if (spec.minProperties !== undefined) out.minProperties = spec.minProperties;
   const rules: JsonSchema[] = [];
+
   if (spec.required !== undefined && spec.required.length > 0) {
     if (include) {
       // A fragment holding `$include` may receive its required keys from the included file.
       // The title travels with `required`, whose failure Ajv reports against this subschema.
       const required = req(...spec.required);
+
       if (spec.title !== undefined) required.title = spec.title;
       rules.push({ if: req("$include"), else: required });
     } else {
       out.required = spec.required;
     }
   }
+
   rules.push(...(spec.rules ?? []));
+
   if (rules.length === 1) Object.assign(out, rules[0]);
   else if (rules.length > 1) out.allOf = rules;
+
   return out;
 }
 
@@ -209,11 +223,15 @@ export function map(spec: MapSpec): JsonSchema {
   const keys = spec.keys ?? FREE_KEY;
   const section = spec.keySection ?? (spec.keys === null ? A2(2) : A2(4));
   const out: JsonSchema = { type: "object" };
+
   if (spec.title !== undefined) out.title = spec.title;
+
   if (spec.description !== undefined) out.description = spec.description;
+
   if (include) out.properties = { $include: ref("common", "include") };
   out.propertyNames = keyNames(keys, spec.keyDescription, section, include);
   out.additionalProperties = spec.values;
+
   return out;
 }
 
@@ -221,8 +239,11 @@ export function map(spec: MapSpec): JsonSchema {
 // thenable to Biome's linter).
 export function when(condition: JsonSchema, then?: JsonSchema, otherwise?: JsonSchema): JsonSchema {
   const entries: [string, JsonSchema][] = [["if", condition]];
+
   if (then !== undefined) entries.push(["then", then]);
+
   if (otherwise !== undefined) entries.push(["else", otherwise]);
+
   return Object.fromEntries(entries);
 }
 
@@ -241,6 +262,7 @@ export function stringOr(
     description: `a string or ${TYPE_NAMES[other]}`,
     type: other,
   };
+
   return { ...when({ type: "string" }, stringForm, when({ type: other }, otherForm, neither)) };
 }
 
