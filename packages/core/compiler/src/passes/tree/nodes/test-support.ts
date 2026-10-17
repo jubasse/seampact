@@ -133,7 +133,10 @@ export interface TreeNodesStubRows {
   readonly queryWires?: Readonly<Record<string, IrWriter.QueryWire>>;
 }
 
-/** A schema service answering the listed pointers in either direction, and no example issue. */
+/** An example value holding this string anywhere fails `checkExample` of the stub service, at that place. */
+export const TREE_NODES_INVALID_EXAMPLE = "invalid";
+
+/** A schema service answering the listed pointers in either direction; an example fails where it holds the marker. */
 export function treeNodesStubService(rows: TreeNodesStubRows): TreeSchemaService {
   const typeUses = rows.typeUses ?? {};
   const queryWires = rows.queryWires ?? {};
@@ -143,8 +146,17 @@ export function treeNodesStubService(rows: TreeNodesStubRows): TreeSchemaService
       Object.hasOwn(typeUses, pointer) ? structuredClone(typeUses[pointer]) : undefined,
     queryWire: (pointer) =>
       Object.hasOwn(queryWires, pointer) ? structuredClone(queryWires[pointer]) : undefined,
-    checkExample: () => [],
+    checkExample: (value) =>
+      markersIn(value, "").map((pointer) => ({ pointer, message: "the value is invalid" })),
   };
+}
+
+function markersIn(value: unknown, pointer: string): string[] {
+  if (value === TREE_NODES_INVALID_EXAMPLE) return [pointer];
+
+  if (typeof value !== "object" || value === null) return [];
+
+  return Object.entries(value).flatMap(([key, member]) => markersIn(member, `${pointer}/${key}`));
 }
 
 export interface TreeNodesRunOptions {
