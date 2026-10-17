@@ -1,0 +1,190 @@
+{
+  "health": {
+    "access": {
+      "kind": "public",
+      "reason": "Probes call it before any user exists.",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/health/access"
+      }
+    },
+    "callerKinds": ["anonymous"],
+    "principalRequires": [],
+    "bindings": []
+  },
+  "feed": {
+    "access": {
+      "kind": "optional",
+      "identity": "viewer_or_device",
+      "schemes": ["bearer", "deviceToken", "sessionCookie"],
+      "reason": "Anonymous readers see the public notes.",
+      "onRefused": "anonymous",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/feed/access"
+      }
+    },
+    "callerKinds": ["anonymous", "identified"],
+    "principalRequires": [],
+    "bindings": []
+  },
+  "notes": {
+    "access": {
+      "kind": "identity",
+      "identity": "viewer_or_device",
+      "schemes": ["bearer", "sessionCookie"],
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/identity"
+      }
+    },
+    "callerKinds": ["identified"],
+    "csrf": {
+      "kind": "derived",
+      "header": "X-Csrf-Token",
+      "derivedFrom": {
+        "derivation": "csrf.cookieWrite",
+        "from": [
+          {
+            "layer": "api",
+            "pointer": "/identities/viewer_or_device"
+          },
+          {
+            "layer": "api",
+            "pointer": "/schemes/sessionCookie"
+          }
+        ]
+      }
+    },
+    "principalRequires": [
+      {
+        "field": "workspaceId",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/notes/principal/requires/0"
+        }
+      }
+    ],
+    "bindings": [
+      {
+        "from": {
+          "in": "body",
+          "name": "workspaceId"
+        },
+        "to": {
+          "in": "principal",
+          "name": "workspaceId"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/notes/bindings/body.workspaceId"
+        }
+      }
+    ],
+    "input": {
+      "rawBody": false
+    }
+  },
+  "logout": {
+    "access": {
+      "kind": "identity",
+      "identity": "viewer_or_device",
+      "schemes": ["bearer", "sessionCookie"],
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/identity"
+      }
+    },
+    "callerKinds": ["identified"],
+    "csrf": {
+      "kind": "exempt",
+      "reason": "Logging out with a forged request only signs the caller out.",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/logout/csrf"
+      }
+    },
+    "principalRequires": [],
+    "bindings": []
+  },
+  "tiles": {
+    "access": {
+      "kind": "identity",
+      "identity": "partner",
+      "schemes": ["mapsKey"],
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/partner/identity"
+      }
+    },
+    "callerKinds": ["identified"],
+    "principalRequires": [],
+    "bindings": []
+  },
+  "stripe": {
+    "access": {
+      "kind": "identity",
+      "identity": "stripe",
+      "schemes": ["stripeSignature"],
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/hooks/routes/stripe/identity"
+      }
+    },
+    "callerKinds": ["identified"],
+    "principalRequires": [],
+    "bindings": [],
+    "input": {
+      "rawBody": true
+    }
+  },
+  "clerk": {
+    "access": {
+      "kind": "identity",
+      "identity": "clerk",
+      "schemes": ["clerkWebhook"],
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/hooks/routes/clerk/identity"
+      }
+    },
+    "callerKinds": ["identified"],
+    "principalRequires": [],
+    "bindings": [],
+    "input": {
+      "rawBody": true,
+      "schema": {
+        "unknownKeys": {
+          "policy": "keep",
+          "reason": "Clerk adds event fields the handler forwards.",
+          "derivedFrom": {
+            "derivation": "identity.unknownKeys",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/identities/clerk"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "slack": {
+    "access": {
+      "kind": "identity",
+      "identity": "slack",
+      "schemes": ["slackSignature"],
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/hooks/routes/slack/identity"
+      }
+    },
+    "callerKinds": ["identified"],
+    "principalRequires": [],
+    "bindings": [],
+    "input": {
+      "rawBody": true
+    }
+  }
+}

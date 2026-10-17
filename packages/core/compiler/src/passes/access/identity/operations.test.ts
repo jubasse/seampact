@@ -1,11 +1,14 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
+import { createDraftValidator } from "../../../pipeline/draft-schema.js";
 import type { DraftIR, DraftOperation } from "../../../pipeline/seam.js";
 import {
   type AccessIdentitySchemaUseRow,
   accessIdentityDraft,
+  accessIdentityFixtureJson,
   accessIdentityInline,
   accessIdentityObjectSchema,
+  accessIdentityRoutesFixtureRun,
   accessIdentityRoutesRun,
   accessIdentityTableService,
 } from "./test-support.js";
@@ -142,6 +145,39 @@ const access = (id: string, compiled: Compiled) => {
   const { access: written, callerKinds, csrf } = compiled.operation(id);
   return { access: written, callerKinds, csrf };
 };
+
+describe("access.identity per operation on the routes fixture", () => {
+  test("every operation gets the members of operations.json and the draft fits its form", () => {
+    const { draft, diagnostics } = accessIdentityRoutesFixtureRun();
+    expect(diagnostics).toEqual([]);
+
+    const written = Object.fromEntries(
+      draft.operations.map((operation) => {
+        const { access, callerKinds, csrf, principalRequires, bindings, input } = operation;
+        const unknownKeys = input?.schema.kind === "ref" ? input.schema.unknownKeys : undefined;
+        const inputFacts =
+          input === undefined
+            ? {}
+            : {
+                input: {
+                  rawBody: input.rawBody,
+                  ...(unknownKeys === undefined ? {} : { schema: { unknownKeys } }),
+                },
+              };
+        const members = {
+          access,
+          callerKinds,
+          ...(csrf === undefined ? {} : { csrf }),
+          principalRequires,
+          bindings,
+        };
+        return [operation.id, { ...members, ...inputFacts }];
+      }),
+    );
+    expect(written).toEqual(accessIdentityFixtureJson("routes", "operations.json"));
+    expect(createDraftValidator().validate(draft)).toMatchObject({ valid: true });
+  });
+});
 
 describe("deny by default", () => {
   test("a route with neither identity nor public access is refused, naming both fixes", () => {

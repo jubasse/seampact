@@ -234,3 +234,51 @@ export function accessIdentityCataloguesExpected(catalogue: string): unknown {
     throw new Error(`catalogues.json has no ${catalogue}`);
   return Reflect.get(expected, catalogue);
 }
+
+/** The schemas of the `routes` fixture, as tree.schemas writes them. */
+const ACCESS_IDENTITY_ROUTES_SCHEMAS: readonly IrWriter.ObjectSchema[] = [
+  accessIdentityObjectSchema("ViewerPrincipal", stringFields("userId", "workspaceId")),
+  accessIdentityObjectSchema("DevicePrincipal", stringFields("deviceId", "workspaceId")),
+  accessIdentityObjectSchema("PartnerPrincipal", stringFields("partnerId")),
+  accessIdentityObjectSchema("WebhookCaller", stringFields("account")),
+  accessIdentityObjectSchema("Note", stringFields("workspaceId")),
+  accessIdentityObjectSchema("Event", stringFields("type")),
+  accessIdentityObjectSchema("SlashCommand", stringFields("command")),
+];
+
+const inputRow = (pointer: string, schema: string): AccessIdentitySchemaUseRow => ({
+  pointer,
+  direction: "input",
+  use: { kind: "ref", schema },
+});
+
+/** The schema uses of the `routes` fixture: each principal and each declared input. */
+const ACCESS_IDENTITY_ROUTES_USES: readonly AccessIdentitySchemaUseRow[] = [
+  principalRow("/identities/viewer_or_device/principal/variants/viewer", "ViewerPrincipal"),
+  principalRow("/identities/viewer_or_device/principal/variants/device", "DevicePrincipal"),
+  principalRow("/identities/partner/principal", "PartnerPrincipal"),
+  ...["stripe", "clerk", "slack"].map((id) =>
+    principalRow(`/identities/${id}/principal`, "WebhookCaller"),
+  ),
+  inputRow("/surfaces/app/routes/notes/input", "Note"),
+  inputRow("/surfaces/hooks/routes/stripe/input", "Event"),
+  inputRow("/surfaces/hooks/routes/clerk/input", "Event"),
+  inputRow("/surfaces/hooks/routes/slack/input", "SlashCommand"),
+];
+
+const TEXT_FIELD_WIRE: IrWriter.QueryWire = {
+  kind: "text",
+  style: "form",
+  explode: true,
+  brackets: false,
+};
+
+/** tree.nodes, then the half, run on the `routes` fixture. */
+export const accessIdentityRoutesFixtureRun = (): AccessIdentityRun =>
+  accessIdentityRoutesRun(
+    accessIdentityFixture("routes", "routes"),
+    accessIdentityDraft(ACCESS_IDENTITY_ROUTES_SCHEMAS),
+    accessIdentityTableService(ACCESS_IDENTITY_ROUTES_USES, {
+      "/schemas/SlashCommand/properties/command": TEXT_FIELD_WIRE,
+    }),
+  );
