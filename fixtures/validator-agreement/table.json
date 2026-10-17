@@ -1,0 +1,2145 @@
+{
+  "rows": [
+    {
+      "id": "Notice.assigned",
+      "case": "root-union-input",
+      "schema": "Notice",
+      "direction": "input",
+      "payload": {
+        "kind": "assigned",
+        "taskId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42",
+        "assignee": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "expected": "accept",
+      "rule": "adr0003/3/tagged-union"
+    },
+    {
+      "id": "Notice.done",
+      "case": "root-union-input",
+      "schema": "Notice",
+      "direction": "input",
+      "payload": {
+        "kind": "done",
+        "taskId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "expected": "accept",
+      "rule": "adr0003/3/tagged-union"
+    },
+    {
+      "id": "Notice.tag-only-variant",
+      "case": "root-union-input",
+      "schema": "Notice",
+      "direction": "input",
+      "payload": {
+        "kind": "cancelled"
+      },
+      "expected": "accept",
+      "rule": "adr0003/3/tag-only-variant"
+    },
+    {
+      "id": "Notice.unknown-tag",
+      "case": "root-union-input",
+      "schema": "Notice",
+      "direction": "input",
+      "payload": {
+        "kind": "archived"
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/unknown-tag-input"
+    },
+    {
+      "id": "Notice.missing-tag",
+      "case": "root-union-input",
+      "schema": "Notice",
+      "direction": "input",
+      "payload": {
+        "taskId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "expected": "reject",
+      "rule": "adr0003/3/tag-required"
+    },
+    {
+      "id": "Notice.tag-not-string",
+      "case": "root-union-input",
+      "schema": "Notice",
+      "direction": "input",
+      "payload": {
+        "kind": 1
+      },
+      "expected": "reject",
+      "rule": "adr0003/3/tag-required"
+    },
+    {
+      "id": "Notice.unknown-key",
+      "case": "root-union-input",
+      "schema": "Notice",
+      "direction": "input",
+      "payload": {
+        "kind": "done",
+        "taskId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42",
+        "extra": 1
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/unknown-keys-refused"
+    },
+    {
+      "id": "Notice.variant-field-missing",
+      "case": "root-union-input",
+      "schema": "Notice",
+      "direction": "input",
+      "payload": {
+        "kind": "assigned",
+        "taskId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/required-input"
+    },
+    {
+      "id": "Notice.unknown-tag-output",
+      "schema": "Notice",
+      "direction": "output",
+      "payload": {
+        "kind": "archived"
+      },
+      "expected": "accept",
+      "rule": "adr0003/4/unknown-tag-output"
+    },
+    {
+      "id": "Notice.known-output",
+      "schema": "Notice",
+      "direction": "output",
+      "payload": {
+        "kind": "done",
+        "taskId": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "expected": "accept",
+      "rule": "adr0003/3/tagged-union"
+    },
+    {
+      "id": "StrictKeys.exact",
+      "schema": "StrictKeys",
+      "direction": "input",
+      "payload": {
+        "label": "a",
+        "child": {
+          "name": "b"
+        }
+      },
+      "expected": "accept",
+      "rule": "adr0003/4/unknown-keys-refused"
+    },
+    {
+      "id": "StrictKeys.root-unknown-key",
+      "schema": "StrictKeys",
+      "direction": "input",
+      "payload": {
+        "label": "a",
+        "extra": 1
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/unknown-keys-refused"
+    },
+    {
+      "id": "StrictKeys.nested-unknown-key",
+      "schema": "StrictKeys",
+      "direction": "input",
+      "payload": {
+        "label": "a",
+        "child": {
+          "name": "b",
+          "extra": 1
+        }
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/unknown-keys-refused"
+    },
+    {
+      "id": "StrictKeys.both-unknown",
+      "schema": "StrictKeys",
+      "direction": "input",
+      "payload": {
+        "label": "a",
+        "extra": 1,
+        "child": {
+          "name": "b",
+          "extra": 1
+        }
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/unknown-keys-refused"
+    },
+    {
+      "id": "StrictKeys.wrong-type",
+      "schema": "StrictKeys",
+      "direction": "input",
+      "payload": {
+        "label": 1
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/type-checked"
+    },
+    {
+      "id": "StrictKeys.missing-required",
+      "schema": "StrictKeys",
+      "direction": "input",
+      "payload": {},
+      "expected": "reject",
+      "rule": "adr0003/4/required-input"
+    },
+    {
+      "id": "StrictKeys.null-required",
+      "schema": "StrictKeys",
+      "direction": "input",
+      "payload": {
+        "label": null
+      },
+      "expected": "reject",
+      "rule": "adr0003/5/not-nullable"
+    },
+    {
+      "id": "StrictKeys.output-unknown-key",
+      "schema": "StrictKeys",
+      "direction": "output",
+      "payload": {
+        "label": "a",
+        "extra": 1
+      },
+      "expected": "accept",
+      "rule": "adr0003/4/unknown-keys-output"
+    },
+    {
+      "id": "StrictKeys.output-missing-required",
+      "schema": "StrictKeys",
+      "direction": "output",
+      "payload": {},
+      "expected": "reject",
+      "rule": "adr0003/4/required-output"
+    },
+    {
+      "id": "SubtreeKeys.root-unknown-key",
+      "case": "per-subtree-unknown-keys",
+      "schema": "SubtreeKeys",
+      "direction": "input",
+      "payload": {
+        "label": "a",
+        "extra": 1
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/unknown-keys-subtree"
+    },
+    {
+      "id": "SubtreeKeys.inner-unknown-key",
+      "case": "per-subtree-unknown-keys",
+      "schema": "SubtreeKeys",
+      "direction": "input",
+      "payload": {
+        "label": "a",
+        "inner": {
+          "name": "b",
+          "extra": 1
+        }
+      },
+      "expected": "accept",
+      "rule": "adr0003/4/unknown-keys-subtree",
+      "received": {
+        "label": "a",
+        "inner": {
+          "name": "b"
+        }
+      }
+    },
+    {
+      "id": "SubtreeKeys.inner-wrong-type",
+      "case": "per-subtree-unknown-keys",
+      "schema": "SubtreeKeys",
+      "direction": "input",
+      "payload": {
+        "label": "a",
+        "inner": {
+          "name": 1
+        }
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/type-checked"
+    },
+    {
+      "id": "IgnoreKeys.root-unknown-key",
+      "case": "unknown-keys-ignore",
+      "schema": "IgnoreKeys",
+      "direction": "input",
+      "payload": {
+        "label": "a",
+        "extra": 1
+      },
+      "expected": "accept",
+      "rule": "adr0003/4/unknown-keys-ignore",
+      "received": {
+        "label": "a"
+      }
+    },
+    {
+      "id": "IgnoreKeys.nested-unknown-key",
+      "case": "unknown-keys-ignore",
+      "schema": "IgnoreKeys",
+      "direction": "input",
+      "payload": {
+        "label": "a",
+        "child": {
+          "name": "b",
+          "extra": 1
+        }
+      },
+      "expected": "accept",
+      "rule": "adr0003/4/unknown-keys-ignore",
+      "received": {
+        "label": "a",
+        "child": {
+          "name": "b"
+        }
+      }
+    },
+    {
+      "id": "IgnoreKeys.both-unknown",
+      "case": "unknown-keys-ignore",
+      "schema": "IgnoreKeys",
+      "direction": "input",
+      "payload": {
+        "label": "a",
+        "extra": 1,
+        "child": {
+          "name": "b",
+          "extra": 1
+        }
+      },
+      "expected": "accept",
+      "rule": "adr0003/4/unknown-keys-ignore",
+      "received": {
+        "label": "a",
+        "child": {
+          "name": "b"
+        }
+      }
+    },
+    {
+      "id": "IgnoreKeys.wrong-type-still-refused",
+      "case": "unknown-keys-ignore",
+      "schema": "IgnoreKeys",
+      "direction": "input",
+      "payload": {
+        "label": 1
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/ignore-keeps-strict-types"
+    },
+    {
+      "id": "IgnoreKeys.missing-required-still-refused",
+      "case": "unknown-keys-ignore",
+      "schema": "IgnoreKeys",
+      "direction": "input",
+      "payload": {
+        "extra": 1
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/ignore-keeps-strict-types"
+    },
+    {
+      "id": "IgnoreKeys.output-unknown-key",
+      "schema": "IgnoreKeys",
+      "direction": "output",
+      "payload": {
+        "label": "a",
+        "extra": 1
+      },
+      "expected": "accept",
+      "rule": "adr0003/4/unknown-keys-output"
+    },
+    {
+      "id": "KeepKeys.root-unknown-key",
+      "case": "unknown-keys-keep",
+      "schema": "KeepKeys",
+      "direction": "input",
+      "payload": {
+        "label": "a",
+        "extra": 1
+      },
+      "expected": "accept",
+      "rule": "adr0003/4/unknown-keys-keep",
+      "received": {
+        "label": "a",
+        "extra": 1
+      }
+    },
+    {
+      "id": "KeepKeys.nested-unknown-key",
+      "case": "unknown-keys-keep",
+      "schema": "KeepKeys",
+      "direction": "input",
+      "payload": {
+        "label": "a",
+        "child": {
+          "name": "b",
+          "extra": {
+            "x": [1]
+          }
+        }
+      },
+      "expected": "accept",
+      "rule": "adr0003/4/unknown-keys-keep",
+      "received": {
+        "label": "a",
+        "child": {
+          "name": "b",
+          "extra": {
+            "x": [1]
+          }
+        }
+      }
+    },
+    {
+      "id": "KeepKeys.both-unknown",
+      "case": "unknown-keys-keep",
+      "schema": "KeepKeys",
+      "direction": "input",
+      "payload": {
+        "label": "a",
+        "extra": 1,
+        "child": {
+          "name": "b",
+          "extra": 2
+        }
+      },
+      "expected": "accept",
+      "rule": "adr0003/4/unknown-keys-keep",
+      "received": {
+        "label": "a",
+        "extra": 1,
+        "child": {
+          "name": "b",
+          "extra": 2
+        }
+      }
+    },
+    {
+      "id": "KeepKeys.wrong-type-still-refused",
+      "case": "unknown-keys-keep",
+      "schema": "KeepKeys",
+      "direction": "input",
+      "payload": {
+        "label": 1,
+        "extra": 1
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/ignore-keeps-strict-types"
+    },
+    {
+      "id": "Profile.absent-optional",
+      "schema": "Profile",
+      "direction": "input",
+      "payload": {
+        "name": "a"
+      },
+      "expected": "accept",
+      "rule": "adr0003/5/optional"
+    },
+    {
+      "id": "Profile.present-optional",
+      "schema": "Profile",
+      "direction": "input",
+      "payload": {
+        "name": "a",
+        "nickname": "b"
+      },
+      "expected": "accept",
+      "rule": "adr0003/5/optional"
+    },
+    {
+      "id": "Profile.optional-null",
+      "case": "optional-not-nullable-null",
+      "schema": "Profile",
+      "direction": "input",
+      "payload": {
+        "name": "a",
+        "nickname": null
+      },
+      "expected": "reject",
+      "rule": "adr0003/5/optional-not-nullable"
+    },
+    {
+      "id": "Profile.required-null",
+      "schema": "Profile",
+      "direction": "input",
+      "payload": {
+        "name": null
+      },
+      "expected": "reject",
+      "rule": "adr0003/5/not-nullable"
+    },
+    {
+      "id": "Profile.empty-nickname",
+      "schema": "Profile",
+      "direction": "input",
+      "payload": {
+        "name": "a",
+        "nickname": ""
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/minLength"
+    },
+    {
+      "id": "PatchArticle.empty-object",
+      "case": "optional-nullable-empty-object",
+      "schema": "PatchArticle",
+      "direction": "input",
+      "payload": {},
+      "expected": "accept",
+      "rule": "adr0003/5/optional-nullable"
+    },
+    {
+      "id": "PatchArticle.explicit-null",
+      "case": "optional-nullable-empty-object",
+      "schema": "PatchArticle",
+      "direction": "input",
+      "payload": {
+        "publishOn": null
+      },
+      "expected": "accept",
+      "rule": "adr0003/5/optional-nullable"
+    },
+    {
+      "id": "PatchArticle.value",
+      "case": "optional-nullable-empty-object",
+      "schema": "PatchArticle",
+      "direction": "input",
+      "payload": {
+        "publishOn": "2026-01-15"
+      },
+      "expected": "accept",
+      "rule": "adr0003/5/optional-nullable"
+    },
+    {
+      "id": "PatchArticle.bad-value",
+      "case": "optional-nullable-empty-object",
+      "schema": "PatchArticle",
+      "direction": "input",
+      "payload": {
+        "publishOn": "15/01/2026"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/date"
+    },
+    {
+      "id": "PatchArticle.title-null",
+      "schema": "PatchArticle",
+      "direction": "input",
+      "payload": {
+        "title": null
+      },
+      "expected": "reject",
+      "rule": "adr0003/5/optional-not-nullable"
+    },
+    {
+      "id": "Receipt.absent",
+      "schema": "Receipt",
+      "direction": "input",
+      "payload": {},
+      "expected": "reject",
+      "rule": "adr0003/5/required-nullable"
+    },
+    {
+      "id": "Receipt.null",
+      "schema": "Receipt",
+      "direction": "input",
+      "payload": {
+        "note": null
+      },
+      "expected": "accept",
+      "rule": "adr0003/5/required-nullable"
+    },
+    {
+      "id": "Receipt.value",
+      "schema": "Receipt",
+      "direction": "input",
+      "payload": {
+        "note": "x"
+      },
+      "expected": "accept",
+      "rule": "adr0003/5/required-nullable"
+    },
+    {
+      "id": "Labelled.three-ascii",
+      "schema": "Labelled",
+      "direction": "input",
+      "payload": {
+        "label": "abc"
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/maxLength-code-points"
+    },
+    {
+      "id": "Labelled.four-ascii",
+      "schema": "Labelled",
+      "direction": "input",
+      "payload": {
+        "label": "abcd"
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/maxLength-code-points"
+    },
+    {
+      "id": "Labelled.empty",
+      "schema": "Labelled",
+      "direction": "input",
+      "payload": {
+        "label": ""
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/minLength"
+    },
+    {
+      "id": "Labelled.three-astral",
+      "schema": "Labelled",
+      "direction": "input",
+      "payload": {
+        "label": "\ud83d\ude00\ud83d\ude00\ud83d\ude00"
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/maxLength-code-points"
+    },
+    {
+      "id": "Labelled.four-astral",
+      "schema": "Labelled",
+      "direction": "input",
+      "payload": {
+        "label": "\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00"
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/maxLength-code-points"
+    },
+    {
+      "id": "Labelled.selector-counts-accept",
+      "case": "variation-selector-length",
+      "schema": "Labelled",
+      "direction": "input",
+      "payload": {
+        "label": "ab\ufe0f"
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/maxLength-code-points"
+    },
+    {
+      "id": "Labelled.selector-counts-reject",
+      "case": "variation-selector-length",
+      "schema": "Labelled",
+      "direction": "input",
+      "payload": {
+        "label": "abc\ufe0f"
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/maxLength-code-points"
+    },
+    {
+      "id": "Labelled.selectors-only-reject",
+      "case": "variation-selector-length",
+      "schema": "Labelled",
+      "direction": "input",
+      "payload": {
+        "label": "\ufe0f\ufe0f\ufe0f\ufe0f"
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/maxLength-code-points"
+    },
+    {
+      "id": "Labelled.selector-only-min-length",
+      "case": "variation-selector-length",
+      "schema": "Labelled",
+      "direction": "input",
+      "payload": {
+        "label": "\ufe0f"
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/minLength-code-points"
+    },
+    {
+      "id": "Labelled.combining-mark-counts",
+      "schema": "Labelled",
+      "direction": "input",
+      "payload": {
+        "label": "e\u0301e\u0301"
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/maxLength-code-points"
+    },
+    {
+      "id": "Tags.list",
+      "schema": "Tags",
+      "direction": "input",
+      "payload": ["a", "b"],
+      "expected": "accept",
+      "rule": "adr0003/2/array"
+    },
+    {
+      "id": "Tags.empty-list",
+      "schema": "Tags",
+      "direction": "input",
+      "payload": [],
+      "expected": "accept",
+      "rule": "adr0003/2/array"
+    },
+    {
+      "id": "Tags.object-for-list",
+      "case": "empty-object-for-list",
+      "schema": "Tags",
+      "direction": "input",
+      "payload": {},
+      "expected": "reject",
+      "rule": "adr0003/consequences/object-is-not-list"
+    },
+    {
+      "id": "Tags.object-with-keys-for-list",
+      "case": "empty-object-for-list",
+      "schema": "Tags",
+      "direction": "input",
+      "payload": {
+        "0": "a"
+      },
+      "expected": "reject",
+      "rule": "adr0003/consequences/object-is-not-list"
+    },
+    {
+      "id": "Tags.too-many",
+      "schema": "Tags",
+      "direction": "input",
+      "payload": ["a", "b", "c", "d"],
+      "expected": "reject",
+      "rule": "adr0003/1/maxItems"
+    },
+    {
+      "id": "Tags.item-wrong-type",
+      "schema": "Tags",
+      "direction": "input",
+      "payload": ["a", 1],
+      "expected": "reject",
+      "rule": "adr0003/4/type-checked"
+    },
+    {
+      "id": "Point.object",
+      "schema": "Point",
+      "direction": "input",
+      "payload": {
+        "left": 1,
+        "top": 2
+      },
+      "expected": "accept",
+      "rule": "adr0003/2/object"
+    },
+    {
+      "id": "Point.list-for-object",
+      "case": "empty-array-for-object",
+      "schema": "Point",
+      "direction": "input",
+      "payload": [],
+      "expected": "reject",
+      "rule": "adr0003/consequences/list-is-not-object"
+    },
+    {
+      "id": "Point.list-of-values-for-object",
+      "case": "empty-array-for-object",
+      "schema": "Point",
+      "direction": "input",
+      "payload": [1, 2],
+      "expected": "reject",
+      "rule": "adr0003/consequences/list-is-not-object"
+    },
+    {
+      "id": "Point.empty-object",
+      "schema": "Point",
+      "direction": "input",
+      "payload": {},
+      "expected": "reject",
+      "rule": "adr0003/4/required-input"
+    },
+    {
+      "id": "Quantity.plain",
+      "schema": "Quantity",
+      "direction": "input",
+      "payload": {
+        "count": 1
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/integer"
+    },
+    {
+      "id": "Quantity.float-spelling",
+      "case": "integer-as-float",
+      "schema": "Quantity",
+      "direction": "input",
+      "payloadText": "{\"count\":1.0}",
+      "expected": "accept",
+      "rule": "adr0003/8/integer-whole-float"
+    },
+    {
+      "id": "Quantity.exponent-spelling",
+      "case": "integer-as-float",
+      "schema": "Quantity",
+      "direction": "input",
+      "payloadText": "{\"count\":1e2}",
+      "expected": "accept",
+      "rule": "adr0003/8/integer-whole-float"
+    },
+    {
+      "id": "Quantity.fraction",
+      "case": "integer-as-float",
+      "schema": "Quantity",
+      "direction": "input",
+      "payloadText": "{\"count\":1.5}",
+      "expected": "reject",
+      "rule": "adr0003/8/integer-fraction"
+    },
+    {
+      "id": "Quantity.string",
+      "schema": "Quantity",
+      "direction": "input",
+      "payload": {
+        "count": "1"
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/type-checked"
+    },
+    {
+      "id": "Quantity.boolean",
+      "schema": "Quantity",
+      "direction": "input",
+      "payload": {
+        "count": true
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/type-checked"
+    },
+    {
+      "id": "Quantity.safe-maximum",
+      "schema": "Quantity",
+      "direction": "input",
+      "payloadText": "{\"count\":9007199254740991}",
+      "expected": "accept",
+      "rule": "adr0003/8/safe-integer"
+    },
+    {
+      "id": "Quantity.beyond-safe",
+      "schema": "Quantity",
+      "direction": "input",
+      "payloadText": "{\"count\":9007199254740992}",
+      "expected": "reject",
+      "rule": "adr0003/8/safe-integer"
+    },
+    {
+      "id": "Percent.maximum",
+      "schema": "Percent",
+      "direction": "input",
+      "payload": {
+        "value": 100
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/maximum"
+    },
+    {
+      "id": "Percent.above-maximum",
+      "schema": "Percent",
+      "direction": "input",
+      "payload": {
+        "value": 101
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/maximum"
+    },
+    {
+      "id": "Percent.below-minimum",
+      "schema": "Percent",
+      "direction": "input",
+      "payload": {
+        "value": -1
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/minimum"
+    },
+    {
+      "id": "Percent.float-at-maximum",
+      "case": "integer-as-float",
+      "schema": "Percent",
+      "direction": "input",
+      "payloadText": "{\"value\":100.0}",
+      "expected": "accept",
+      "rule": "adr0003/8/integer-whole-float"
+    },
+    {
+      "id": "Percent.float-above-maximum",
+      "schema": "Percent",
+      "direction": "input",
+      "payloadText": "{\"value\":100.5}",
+      "expected": "reject",
+      "rule": "adr0003/1/maximum"
+    },
+    {
+      "id": "Instant.zulu",
+      "schema": "Instant",
+      "direction": "input",
+      "payload": {
+        "at": "2026-01-15T09:30:00Z"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/date-time"
+    },
+    {
+      "id": "Instant.offset",
+      "schema": "Instant",
+      "direction": "input",
+      "payload": {
+        "at": "2026-01-15T09:30:00+02:00"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/date-time"
+    },
+    {
+      "id": "Instant.lowercase-letters",
+      "schema": "Instant",
+      "direction": "input",
+      "payload": {
+        "at": "2026-01-15t09:30:00z"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/date-time"
+    },
+    {
+      "id": "Instant.fraction-one-digit",
+      "schema": "Instant",
+      "direction": "input",
+      "payload": {
+        "at": "2026-01-15T09:30:00.5Z"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/date-time"
+    },
+    {
+      "id": "Instant.fraction-nine-digits",
+      "case": "nine-digit-fraction",
+      "schema": "Instant",
+      "direction": "input",
+      "payload": {
+        "at": "2026-01-15T09:30:00.123456789Z"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/date-time-nine-digits"
+    },
+    {
+      "id": "Instant.fraction-nine-digits-offset",
+      "case": "nine-digit-fraction",
+      "schema": "Instant",
+      "direction": "input",
+      "payload": {
+        "at": "2026-01-15T09:30:00.000000001-05:30"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/date-time-nine-digits"
+    },
+    {
+      "id": "Instant.fraction-ten-digits",
+      "case": "nine-digit-fraction",
+      "schema": "Instant",
+      "direction": "input",
+      "payload": {
+        "at": "2026-01-15T09:30:00.1234567891Z"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/date-time-nine-digits"
+    },
+    {
+      "id": "Instant.fraction-empty",
+      "schema": "Instant",
+      "direction": "input",
+      "payload": {
+        "at": "2026-01-15T09:30:00.Z"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/date-time"
+    },
+    {
+      "id": "Instant.no-offset",
+      "schema": "Instant",
+      "direction": "input",
+      "payload": {
+        "at": "2026-01-15T09:30:00"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/date-time-offset"
+    },
+    {
+      "id": "Instant.leap-second",
+      "schema": "Instant",
+      "direction": "input",
+      "payload": {
+        "at": "2026-12-31T23:59:60Z"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/date-time-leap-second"
+    },
+    {
+      "id": "Instant.date-only",
+      "schema": "Instant",
+      "direction": "input",
+      "payload": {
+        "at": "2026-01-15"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/date-time"
+    },
+    {
+      "id": "Instant.space-separator",
+      "schema": "Instant",
+      "direction": "input",
+      "payload": {
+        "at": "2026-01-15 09:30:00Z"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/date-time"
+    },
+    {
+      "id": "Instant.impossible-day",
+      "schema": "Instant",
+      "direction": "input",
+      "payload": {
+        "at": "2026-02-30T09:30:00Z"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/date-time"
+    },
+    {
+      "id": "Instant.hour-24",
+      "schema": "Instant",
+      "direction": "input",
+      "payload": {
+        "at": "2026-01-15T24:00:00Z"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/date-time"
+    },
+    {
+      "id": "Instant.number",
+      "schema": "Instant",
+      "direction": "input",
+      "payload": {
+        "at": "1768469400"
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/type-checked"
+    },
+    {
+      "id": "Instant.emitted-form",
+      "schema": "Instant",
+      "direction": "output",
+      "payload": {
+        "at": "2026-01-15T09:30:00Z"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/date-time"
+    },
+    {
+      "id": "Day.valid",
+      "schema": "Day",
+      "direction": "input",
+      "payload": {
+        "day": "2026-02-28"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/date"
+    },
+    {
+      "id": "Day.leap-day",
+      "schema": "Day",
+      "direction": "input",
+      "payload": {
+        "day": "2028-02-29"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/date"
+    },
+    {
+      "id": "Day.not-a-leap-day",
+      "schema": "Day",
+      "direction": "input",
+      "payload": {
+        "day": "2026-02-29"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/date"
+    },
+    {
+      "id": "Day.unpadded",
+      "schema": "Day",
+      "direction": "input",
+      "payload": {
+        "day": "2026-2-8"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/date"
+    },
+    {
+      "id": "Day.with-time",
+      "schema": "Day",
+      "direction": "input",
+      "payload": {
+        "day": "2026-02-28T00:00:00Z"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/date"
+    },
+    {
+      "id": "Envelope.object",
+      "case": "opaque-value",
+      "schema": "Envelope",
+      "direction": "input",
+      "payload": {
+        "id": "e",
+        "data": {
+          "a": [
+            1,
+            {
+              "b": null
+            }
+          ]
+        }
+      },
+      "expected": "accept",
+      "rule": "adr0003/2/opaque"
+    },
+    {
+      "id": "Envelope.string",
+      "case": "opaque-value",
+      "schema": "Envelope",
+      "direction": "input",
+      "payload": {
+        "id": "e",
+        "data": "text"
+      },
+      "expected": "accept",
+      "rule": "adr0003/2/opaque"
+    },
+    {
+      "id": "Envelope.number",
+      "case": "opaque-value",
+      "schema": "Envelope",
+      "direction": "input",
+      "payload": {
+        "id": "e",
+        "data": 1.5
+      },
+      "expected": "accept",
+      "rule": "adr0003/2/opaque"
+    },
+    {
+      "id": "Envelope.boolean",
+      "case": "opaque-value",
+      "schema": "Envelope",
+      "direction": "input",
+      "payload": {
+        "id": "e",
+        "data": false
+      },
+      "expected": "accept",
+      "rule": "adr0003/2/opaque"
+    },
+    {
+      "id": "Envelope.list",
+      "case": "opaque-value",
+      "schema": "Envelope",
+      "direction": "input",
+      "payload": {
+        "id": "e",
+        "data": [1, "a", null]
+      },
+      "expected": "accept",
+      "rule": "adr0003/2/opaque"
+    },
+    {
+      "id": "Envelope.empty-object",
+      "case": "opaque-value",
+      "schema": "Envelope",
+      "direction": "input",
+      "payload": {
+        "id": "e",
+        "data": {}
+      },
+      "expected": "accept",
+      "rule": "adr0003/2/opaque"
+    },
+    {
+      "id": "Envelope.null",
+      "case": "opaque-value",
+      "schema": "Envelope",
+      "direction": "input",
+      "payload": {
+        "id": "e",
+        "data": null
+      },
+      "expected": "reject",
+      "rule": "adr0003/2/opaque-null"
+    },
+    {
+      "id": "Envelope.absent",
+      "case": "opaque-value",
+      "schema": "Envelope",
+      "direction": "input",
+      "payload": {
+        "id": "e"
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/required-input"
+    },
+    {
+      "id": "Envelope.output-any-value",
+      "case": "opaque-value",
+      "schema": "Envelope",
+      "direction": "output",
+      "payload": {
+        "id": "e",
+        "data": [1]
+      },
+      "expected": "accept",
+      "rule": "adr0003/2/opaque"
+    },
+    {
+      "id": "OptionalEnvelope.null",
+      "case": "opaque-value",
+      "schema": "OptionalEnvelope",
+      "direction": "input",
+      "payload": {
+        "data": null
+      },
+      "expected": "accept",
+      "rule": "adr0003/2/opaque-nullable"
+    },
+    {
+      "id": "OptionalEnvelope.object",
+      "case": "opaque-value",
+      "schema": "OptionalEnvelope",
+      "direction": "input",
+      "payload": {
+        "data": {
+          "a": 1
+        }
+      },
+      "expected": "accept",
+      "rule": "adr0003/2/opaque-nullable"
+    },
+    {
+      "id": "Member.known",
+      "schema": "Member",
+      "direction": "input",
+      "payload": {
+        "role": "owner"
+      },
+      "expected": "accept",
+      "rule": "adr0003/4/enum-input"
+    },
+    {
+      "id": "Member.unknown-member",
+      "schema": "Member",
+      "direction": "input",
+      "payload": {
+        "role": "admin"
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/enum-input"
+    },
+    {
+      "id": "Member.wrong-case",
+      "schema": "Member",
+      "direction": "input",
+      "payload": {
+        "role": "Owner"
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/enum-input"
+    },
+    {
+      "id": "Member.number",
+      "schema": "Member",
+      "direction": "input",
+      "payload": {
+        "role": 1
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/type-checked"
+    },
+    {
+      "id": "Member.unknown-member-output",
+      "schema": "Member",
+      "direction": "output",
+      "payload": {
+        "role": "admin"
+      },
+      "expected": "accept",
+      "rule": "adr0003/4/enum-output"
+    },
+    {
+      "id": "Owner.narrowed-member",
+      "schema": "Owner",
+      "direction": "input",
+      "payload": {
+        "role": "owner"
+      },
+      "expected": "accept",
+      "rule": "adr0003/7/narrowing"
+    },
+    {
+      "id": "Owner.excluded-member",
+      "schema": "Owner",
+      "direction": "input",
+      "payload": {
+        "role": "viewer"
+      },
+      "expected": "reject",
+      "rule": "adr0003/7/narrowing"
+    },
+    {
+      "id": "Owner.unknown-member",
+      "schema": "Owner",
+      "direction": "input",
+      "payload": {
+        "role": "admin"
+      },
+      "expected": "reject",
+      "rule": "adr0003/7/narrowing"
+    },
+    {
+      "id": "Owner.excluded-member-output",
+      "schema": "Owner",
+      "direction": "output",
+      "payload": {
+        "role": "viewer"
+      },
+      "expected": "accept",
+      "rule": "adr0003/7/narrowing-output"
+    },
+    {
+      "id": "Formats.email-plain",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "email": "a@example.com"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/email"
+    },
+    {
+      "id": "Formats.email-single-label",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "email": "a@b"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/email"
+    },
+    {
+      "id": "Formats.email-space",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "email": "a b@example.com"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/email"
+    },
+    {
+      "id": "Formats.email-empty",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "email": ""
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/email"
+    },
+    {
+      "id": "Formats.email-non-ascii",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "email": "\u00e4@example.com"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/email"
+    },
+    {
+      "id": "Formats.email-display-name",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "email": "Ann <a@example.com>"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/email"
+    },
+    {
+      "id": "Formats.email-quoted-local",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "email": "\"a b\"@example.com"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/email"
+    },
+    {
+      "id": "Formats.email-ip-literal",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "email": "a@[127.0.0.1]"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/email"
+    },
+    {
+      "id": "Formats.email-no-at",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "email": "example.com"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/email"
+    },
+    {
+      "id": "Formats.uri-https",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "uri": "https://example.com/a?b#c"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/uri"
+    },
+    {
+      "id": "Formats.uri-mailto",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "uri": "mailto:a@example.com"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/uri"
+    },
+    {
+      "id": "Formats.uri-no-scheme",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "uri": "example.com/a"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/uri"
+    },
+    {
+      "id": "Formats.uri-relative",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "uri": "/tasks/1"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/uri"
+    },
+    {
+      "id": "Formats.uri-space",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "uri": "https://example.com/a b"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/uri"
+    },
+    {
+      "id": "Formats.uri-non-ascii",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "uri": "https://ex\u00e4mple.com"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/uri"
+    },
+    {
+      "id": "Formats.uri-empty",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "uri": ""
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/uri"
+    },
+    {
+      "id": "Formats.uri-reference-absolute",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "uriReference": "https://example.com/a"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/uri-reference"
+    },
+    {
+      "id": "Formats.uri-reference-path",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "uriReference": "/tasks/1"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/uri-reference"
+    },
+    {
+      "id": "Formats.uri-reference-dots",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "uriReference": "../a"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/uri-reference"
+    },
+    {
+      "id": "Formats.uri-reference-space",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "uriReference": "/tasks/ 1"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/uri-reference"
+    },
+    {
+      "id": "Formats.uri-reference-non-ascii",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "uriReference": "/t\u00e2ches"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/uri-reference"
+    },
+    {
+      "id": "Formats.uuid-lowercase",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "id": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/uuid"
+    },
+    {
+      "id": "Formats.uuid-uppercase",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "id": "6F1C2A4E-8B1D-4C3A-9F2E-1D5B7A9C0E42"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/uuid"
+    },
+    {
+      "id": "Formats.uuid-no-hyphens",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "id": "6f1c2a4e8b1d4c3a9f2e1d5b7a9c0e42"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/uuid"
+    },
+    {
+      "id": "Formats.uuid-non-hex",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "id": "6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e4g"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/uuid"
+    },
+    {
+      "id": "Formats.uuid-braced",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "id": "{6f1c2a4e-8b1d-4c3a-9f2e-1d5b7a9c0e42}"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/uuid"
+    },
+    {
+      "id": "Formats.int64-string",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "big": "9223372036854775807"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/int64"
+    },
+    {
+      "id": "Formats.int64-negative-minimum",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "big": "-9223372036854775808"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/int64"
+    },
+    {
+      "id": "Formats.int64-overflow",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "big": "9223372036854775808"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/int64"
+    },
+    {
+      "id": "Formats.int64-number",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "big": 1
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/int64-string-wire"
+    },
+    {
+      "id": "Formats.int64-leading-zero",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "big": "01"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/int64"
+    },
+    {
+      "id": "Formats.int64-fraction",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "big": "1.0"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/int64"
+    },
+    {
+      "id": "Formats.int64-empty",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "big": ""
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/int64"
+    },
+    {
+      "id": "Formats.decimal-plain",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "amount": "12.50"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/decimal"
+    },
+    {
+      "id": "Formats.decimal-zero",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "amount": "0"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/decimal-range"
+    },
+    {
+      "id": "Formats.decimal-negative-below-minimum",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "amount": "-0.01"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/decimal-range"
+    },
+    {
+      "id": "Formats.decimal-trailing-point",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "amount": "1."
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/decimal"
+    },
+    {
+      "id": "Formats.decimal-leading-point",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "amount": ".5"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/decimal"
+    },
+    {
+      "id": "Formats.decimal-leading-zero",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "amount": "01.5"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/decimal"
+    },
+    {
+      "id": "Formats.decimal-exponent",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "amount": "1e5"
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/decimal"
+    },
+    {
+      "id": "Formats.decimal-number",
+      "case": "format-boundaries",
+      "schema": "Formats",
+      "direction": "input",
+      "payload": {
+        "amount": 1.5
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/decimal"
+    },
+    {
+      "id": "Formats.output-email",
+      "schema": "Formats",
+      "direction": "output",
+      "payload": {
+        "email": "a@example.com"
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/email"
+    },
+    {
+      "id": "Patterns.dot-letter",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "dot": "axb"
+      },
+      "expected": "accept",
+      "rule": "adr0003/9/dot"
+    },
+    {
+      "id": "Patterns.dot-astral",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "dot": "a\ud83d\ude00b"
+      },
+      "expected": "accept",
+      "rule": "adr0003/9/dot"
+    },
+    {
+      "id": "Patterns.dot-next-line",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "dot": "a\u0085b"
+      },
+      "expected": "reject",
+      "rule": "adr0003/9/dot"
+    },
+    {
+      "id": "Patterns.dot-line-separator",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "dot": "a\u2028b"
+      },
+      "expected": "reject",
+      "rule": "adr0003/9/dot"
+    },
+    {
+      "id": "Patterns.dot-paragraph-separator",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "dot": "a\u2029b"
+      },
+      "expected": "reject",
+      "rule": "adr0003/9/dot"
+    },
+    {
+      "id": "Patterns.dot-line-feed",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "dot": "a\nb"
+      },
+      "expected": "reject",
+      "rule": "adr0003/9/dot"
+    },
+    {
+      "id": "Patterns.dot-carriage-return",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "dot": "a\rb"
+      },
+      "expected": "reject",
+      "rule": "adr0003/9/dot"
+    },
+    {
+      "id": "Patterns.space-blank",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "space": "a b"
+      },
+      "expected": "accept",
+      "rule": "adr0003/9/space"
+    },
+    {
+      "id": "Patterns.space-tab",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "space": "a\tb"
+      },
+      "expected": "accept",
+      "rule": "adr0003/9/space"
+    },
+    {
+      "id": "Patterns.space-vertical-tab",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "space": "a\u000bb"
+      },
+      "expected": "accept",
+      "rule": "adr0003/9/space"
+    },
+    {
+      "id": "Patterns.space-no-break",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "space": "a\u00a0b"
+      },
+      "expected": "reject",
+      "rule": "adr0003/9/space"
+    },
+    {
+      "id": "Patterns.space-line-separator",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "space": "a\u2028b"
+      },
+      "expected": "reject",
+      "rule": "adr0003/9/space"
+    },
+    {
+      "id": "Patterns.end-exact",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "end": "abc"
+      },
+      "expected": "accept",
+      "rule": "adr0003/9/end-anchor"
+    },
+    {
+      "id": "Patterns.end-final-newline",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "end": "abc\n"
+      },
+      "expected": "reject",
+      "rule": "adr0003/9/end-anchor"
+    },
+    {
+      "id": "Patterns.end-trailing-text",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "end": "abcd"
+      },
+      "expected": "reject",
+      "rule": "adr0003/9/end-anchor"
+    },
+    {
+      "id": "Patterns.end-leading-text",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "end": "xabc"
+      },
+      "expected": "reject",
+      "rule": "adr0003/9/start-anchor"
+    },
+    {
+      "id": "Patterns.dash-escaped",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "dash": "a-z"
+      },
+      "expected": "accept",
+      "rule": "adr0003/9/class-dash"
+    },
+    {
+      "id": "Patterns.dash-range-not-read",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "dash": "b"
+      },
+      "expected": "reject",
+      "rule": "adr0003/9/class-dash"
+    },
+    {
+      "id": "Patterns.brace-escaped",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "brace": "a{2}"
+      },
+      "expected": "accept",
+      "rule": "adr0003/9/escaped-brace"
+    },
+    {
+      "id": "Patterns.brace-not-a-quantifier",
+      "case": "portable-patterns",
+      "schema": "Patterns",
+      "direction": "input",
+      "payload": {
+        "brace": "aa"
+      },
+      "expected": "reject",
+      "rule": "adr0003/9/escaped-brace"
+    },
+    {
+      "id": "Comment.leaf",
+      "case": "recursive-schema",
+      "schema": "Comment",
+      "direction": "input",
+      "payload": {
+        "text": "a"
+      },
+      "expected": "accept",
+      "rule": "adr0003/2/recursive"
+    },
+    {
+      "id": "Comment.three-levels",
+      "case": "recursive-schema",
+      "schema": "Comment",
+      "direction": "input",
+      "payload": {
+        "text": "a",
+        "replies": [
+          {
+            "text": "b",
+            "replies": [
+              {
+                "text": "c"
+              }
+            ]
+          }
+        ]
+      },
+      "expected": "accept",
+      "rule": "adr0003/2/recursive"
+    },
+    {
+      "id": "Comment.empty-replies",
+      "case": "recursive-schema",
+      "schema": "Comment",
+      "direction": "input",
+      "payload": {
+        "text": "a",
+        "replies": []
+      },
+      "expected": "accept",
+      "rule": "adr0003/2/recursive"
+    },
+    {
+      "id": "Comment.deep-wrong-type",
+      "case": "recursive-schema",
+      "schema": "Comment",
+      "direction": "input",
+      "payload": {
+        "text": "a",
+        "replies": [
+          {
+            "text": "b",
+            "replies": [
+              {
+                "text": 1
+              }
+            ]
+          }
+        ]
+      },
+      "expected": "reject",
+      "rule": "adr0003/2/recursive"
+    },
+    {
+      "id": "Comment.deep-unknown-key",
+      "case": "recursive-schema",
+      "schema": "Comment",
+      "direction": "input",
+      "payload": {
+        "text": "a",
+        "replies": [
+          {
+            "text": "b",
+            "extra": 1
+          }
+        ]
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/unknown-keys-refused"
+    },
+    {
+      "id": "Comment.replies-object",
+      "case": "recursive-schema",
+      "schema": "Comment",
+      "direction": "input",
+      "payload": {
+        "text": "a",
+        "replies": {}
+      },
+      "expected": "reject",
+      "rule": "adr0003/consequences/object-is-not-list"
+    },
+    {
+      "id": "Counts.entries",
+      "schema": "Counts",
+      "direction": "input",
+      "payload": {
+        "abc": 1,
+        "def": 2
+      },
+      "expected": "accept",
+      "rule": "adr0003/2/map"
+    },
+    {
+      "id": "Counts.empty",
+      "schema": "Counts",
+      "direction": "input",
+      "payload": {},
+      "expected": "accept",
+      "rule": "adr0003/2/map"
+    },
+    {
+      "id": "Counts.key-outside-pattern",
+      "schema": "Counts",
+      "direction": "input",
+      "payload": {
+        "ABC": 1
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/propertyNames"
+    },
+    {
+      "id": "Counts.value-below-minimum",
+      "schema": "Counts",
+      "direction": "input",
+      "payload": {
+        "abc": -1
+      },
+      "expected": "reject",
+      "rule": "adr0003/2/map"
+    },
+    {
+      "id": "Counts.list-for-map",
+      "schema": "Counts",
+      "direction": "input",
+      "payload": [],
+      "expected": "reject",
+      "rule": "adr0003/consequences/list-is-not-object"
+    }
+  ]
+}

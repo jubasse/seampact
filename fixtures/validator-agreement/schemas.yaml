@@ -1,0 +1,150 @@
+# schemas.yaml: one schema or a small family per validator behaviour
+Notice:
+  discriminator: kind
+  oneOf:
+    assigned: NoticeAssigned
+    done: NoticeDone
+    cancelled: { type: object }
+NoticeAssigned:
+  type: object
+  required: [taskId, assignee]
+  properties: { taskId: { type: string, format: uuid }, assignee: { type: string, format: uuid } }
+NoticeDone:
+  type: object
+  required: [taskId]
+  properties: { taskId: { type: string, format: uuid } }
+StrictKeys:
+  type: object
+  required: [label]
+  properties:
+    label: { type: string }
+    child: { $ref: StrictChild }
+StrictChild:
+  type: object
+  required: [name]
+  properties: { name: { type: string } }
+SubtreeKeys:
+  type: object
+  required: [label]
+  properties:
+    label: { type: string }
+    inner:
+      $ref: SubtreeInner
+      unknownKeys: { ignore: "Only the inner object comes from a sender that adds fields." }
+SubtreeInner:
+  type: object
+  required: [name]
+  properties: { name: { type: string } }
+IgnoreKeys:
+  type: object
+  required: [label]
+  unknownKeys: { ignore: "The sender adds fields without notice." }
+  properties:
+    label: { type: string }
+    child: { $ref: IgnoreChild }
+IgnoreChild:
+  type: object
+  required: [name]
+  properties: { name: { type: string } }
+KeepKeys:
+  type: object
+  required: [label]
+  unknownKeys: { keep: "The handler stores what it does not read." }
+  properties:
+    label: { type: string }
+    child: { $ref: KeepChild }
+KeepChild:
+  type: object
+  required: [name]
+  properties: { name: { type: string } }
+Profile:
+  type: object
+  required: [name]
+  properties:
+    name: { type: string, minLength: 1 }
+    nickname: { type: string, minLength: 1 }
+PatchArticle:
+  type: object
+  properties:
+    title: { type: string, minLength: 1 }
+    publishOn: { type: string, format: date, nullable: true }
+Receipt:
+  type: object
+  required: [note]
+  properties: { note: { type: string, nullable: true } }
+Labelled:
+  type: object
+  required: [label]
+  properties: { label: { type: string, minLength: 1, maxLength: 3 } }
+Tags:
+  type: array
+  items: { type: string }
+  maxItems: 3
+Point:
+  type: object
+  required: [left, top]
+  properties: { left: { type: integer }, top: { type: integer } }
+Quantity:
+  type: object
+  required: [count]
+  properties: { count: { type: integer } }
+Percent:
+  type: object
+  required: [value]
+  properties: { value: { type: integer, minimum: 0, maximum: 100 } }
+Instant:
+  type: object
+  required: [at]
+  properties: { at: { type: string, format: date-time } }
+Day:
+  type: object
+  required: [day]
+  properties: { day: { type: string, format: date } }
+Envelope:
+  type: object
+  required: [id, data]
+  properties:
+    id: { type: string }
+    data: { opaque: "The sender's object depends on the event type." }
+OptionalEnvelope:
+  type: object
+  required: [data]
+  properties:
+    data: { opaque: "The sender's object depends on the event type.", nullable: true }
+Member:
+  type: object
+  required: [role]
+  properties: { role: { enum: Role } }
+Owner:
+  type: object
+  required: [role]
+  properties:
+    role:
+      enum: { narrow: Role, to: [owner], reason: "Only owners reach this use." }
+Formats:
+  type: object
+  properties:
+    email: { type: string, format: email }
+    uri: { type: string, format: uri }
+    uriReference: { type: string, format: uri-reference }
+    id: { type: string, format: uuid }
+    big: { type: integer, format: int64 }
+    amount: { type: string, format: decimal, minimum: 0 }
+Patterns:
+  type: object
+  properties:
+    dot: { type: string, pattern: '^a.b$' }
+    space: { type: string, pattern: '^a\sb$' }
+    end: { type: string, pattern: '^abc$' }
+    dash: { type: string, pattern: '^[a\-z]+$' }
+    brace: { type: string, pattern: '^a\{2\}$' }
+Comment:
+  type: object
+  required: [text]
+  properties:
+    text: { type: string }
+    replies: { type: array, items: Comment }
+Counts:
+  type: object
+  additionalProperties: { type: integer, minimum: 0 }
+  propertyNames: { type: string, pattern: '^[a-z]+$' }
