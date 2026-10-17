@@ -7,7 +7,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 - Read `docs/agents/cartography.md` before exploring: packages, roles, compiler stages and one line per source directory.
 - Product decisions are in `docs/decisions.md` (cited as `A<n>`), design in `docs/adr/`.
 - Read a decision by grepping its anchor (`rg -n 'id="a44"' docs/decisions.md`), then the lines after it; never read `docs/decisions.md` whole.
-- Read the grammar and the IR by section file: `docs/grammar/` (ADR 0002, one `<NN>-<slug>.md` per section NN, plus `example.md`) and `docs/ir/` (ADR 0004, same naming). The ADR keeps the summary and a "section -> file" table.
+- Read the grammar and the IR by section file: `docs/grammar/` (ADR 0002, one `<NN>-<slug>.md` per section NN, plus `example.md`) and `docs/ir/` (ADR 0004, same naming). The ADR keeps the summary and a section-to-file table.
 - Search first (`rg`), then read the needed range; never re-read a file already read in the session.
 - Run `pnpm install --frozen-lockfile` first.
 
