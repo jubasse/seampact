@@ -21,9 +21,7 @@
       "subject": {
         "kind": "resource",
         "type": {
-          "segments": [
-            "article"
-          ],
+          "segments": ["article"],
           "role": "schema"
         },
         "idSchema": {
@@ -33,10 +31,7 @@
           "refinements": {}
         }
       },
-      "errors": [
-        "api.forbidden",
-        "api.not_found"
-      ],
+      "errors": ["api.forbidden", "api.not_found"],
       "docs": {},
       "extensions": {},
       "origin": {
@@ -92,10 +87,7 @@
         "pointer": "/rights/*"
       },
       "codeName": {
-        "segments": [
-          "any",
-          "right"
-        ],
+        "segments": ["any", "right"],
         "role": "schema"
       }
     }
@@ -104,9 +96,7 @@
     "throttle": {
       "id": "throttle",
       "takesBucket": true,
-      "errors": [
-        "api.rate_limited"
-      ],
+      "errors": ["api.rate_limited"],
       "docs": {},
       "extensions": {},
       "origin": {
@@ -130,9 +120,7 @@
           }
         }
       },
-      "errors": [
-        "api.reauthentication_required"
-      ],
+      "errors": ["api.reauthentication_required"],
       "docs": {},
       "extensions": {
         "acme": {
@@ -175,9 +163,7 @@
         "format": "uuid",
         "refinements": {}
       },
-      "errors": [
-        "api.not_found"
-      ],
+      "errors": ["api.not_found"],
       "docs": {
         "summary": "An organisation the caller belongs to."
       },
@@ -201,9 +187,7 @@
         }
       },
       "within": "org",
-      "errors": [
-        "api.forbidden"
-      ],
+      "errors": ["api.forbidden"],
       "docs": {},
       "extensions": {},
       "origin": {

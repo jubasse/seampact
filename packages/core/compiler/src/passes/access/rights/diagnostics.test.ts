@@ -54,7 +54,9 @@ describe("access.rights diagnostics are located", () => {
         expect(diagnostic.message).not.toBe("");
         expect(diagnostic.fix).not.toBe("");
         for (const origin of [diagnostic.origin, ...diagnostic.related.map((item) => item.origin)])
-          expect(Object.hasOwn(locations, diagnosticLocationKey(origin)), origin.pointer).toBe(true);
+          expect(Object.hasOwn(locations, diagnosticLocationKey(origin)), origin.pointer).toBe(
+            true,
+          );
       }
     }
 

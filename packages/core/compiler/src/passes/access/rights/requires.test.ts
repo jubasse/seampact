@@ -52,7 +52,11 @@ describe("requirements in order", () => {
 
     expect(diagnostics).toEqual([]);
     expect(draft.operations[0]?.requires).toEqual([
-      { kind: "rule", rule: "audit", origin: { layer: "api", pointer: "/surfaces/app/requires/0" } },
+      {
+        kind: "rule",
+        rule: "audit",
+        origin: { layer: "api", pointer: "/surfaces/app/requires/0" },
+      },
       {
         kind: "right",
         right: "staff",
@@ -156,7 +160,10 @@ describe("guest rights on public routes", () => {
     );
     expect(diagnostics[0]?.related).toEqual([
       {
-        origin: { layer: "api", pointer: "/surfaces/app/routes/articles/member/routes/preview/access" },
+        origin: {
+          layer: "api",
+          pointer: "/surfaces/app/routes/articles/member/routes/preview/access",
+        },
         message: "the route's access is set here",
       },
     ]);

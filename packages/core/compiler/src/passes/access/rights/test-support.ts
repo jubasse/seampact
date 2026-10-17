@@ -26,7 +26,7 @@ import { accessRightsPass } from "./pass.js";
 // Test support of access.rights, outside the barrel: the reference contract with its fixture drafts, inline
 // contracts run through tree.nodes, a small schema service for them, and a guarded run of the half.
 
-const FIXTURES = fileURLToPath(new URL("../../../../../../fixtures/", import.meta.url));
+const FIXTURES = fileURLToPath(new URL("../../../../../../../fixtures/", import.meta.url));
 
 /** The directory of this lane's fixtures. */
 export const ACCESS_RIGHTS_FIXTURES = `${FIXTURES}passes/access-rights/`;

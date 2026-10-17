@@ -89,7 +89,10 @@ describe("pack-derived rights", () => {
       ["seampact/access/requirement-target", "pack:odd", "/derive/0/require/right"],
     ]);
     expect(diagnostics[2]?.related).toEqual([
-      { origin: { layer: "api", pointer: "/rights/items.get" }, message: "the right is declared here" },
+      {
+        origin: { layer: "api", pointer: "/rights/items.get" },
+        message: "the right is declared here",
+      },
     ]);
     expect(Object.keys(draft.rights)).toEqual(["items.get"]);
   });

@@ -5,9 +5,7 @@
       "subject": {
         "kind": "resource",
         "type": {
-          "segments": [
-            "task"
-          ],
+          "segments": ["task"],
           "role": "schema"
         },
         "idSchema": {
@@ -17,10 +15,7 @@
           "refinements": {}
         }
       },
-      "errors": [
-        "api.forbidden",
-        "api.not_found"
-      ],
+      "errors": ["api.forbidden", "api.not_found"],
       "docs": {},
       "extensions": {},
       "origin": {
@@ -47,9 +42,7 @@
       "subject": {
         "kind": "resource",
         "type": {
-          "segments": [
-            "channel"
-          ],
+          "segments": ["channel"],
           "role": "schema"
         },
         "idSchema": {
@@ -166,9 +159,7 @@
     "throttle": {
       "id": "throttle",
       "takesBucket": true,
-      "errors": [
-        "api.rate_limited"
-      ],
+      "errors": ["api.rate_limited"],
       "docs": {},
       "extensions": {},
       "origin": {
@@ -186,9 +177,7 @@
         "format": "uuid",
         "refinements": {}
       },
-      "errors": [
-        "api.not_found"
-      ],
+      "errors": ["api.not_found"],
       "docs": {},
       "extensions": {},
       "origin": {
