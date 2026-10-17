@@ -6,11 +6,9 @@ import {
   type TreeNodesSite,
   treeNodesFields,
   treeNodesFieldTravels,
-  treeNodesHeaderUnionError,
-  treeNodesInnermost,
 } from "./fields.js";
 import { treeNodesOpOwner, treeNodesOpShorthand } from "./names.js";
-import { treeNodesIsObject, treeNodesMember, treeNodesSetting, treeNodesTagHeader } from "./raw.js";
+import { treeNodesIsObject, treeNodesMember, treeNodesSetting } from "./raw.js";
 
 // The success and redirect responses a route declares (ADR 0002 sections 6, 7 and 10), sorted by status: its
 // `responses`, else its `output` (the op's status, or 200), else its `item` (a list), else the op's default from the
@@ -177,7 +175,6 @@ function bodyResponse(
   const body = site.context.treeSchemas.typeUse(pointer, "output");
   if (body === undefined) return [];
 
-  checkNotHeaderUnion(site, body, origin, "response body");
   return [
     {
       status,
@@ -215,7 +212,6 @@ function writtenResponse(
   const body = site.context.treeSchemas.typeUse(`${pointer}/body`, "output");
   if (body === undefined) return undefined;
 
-  checkNotHeaderUnion(site, body, origin, "response body");
   const isFile = body.kind === "file";
   return {
     status,
@@ -296,20 +292,6 @@ function reportHeaderTwice(
         { origin: treeNodesLocate(first.origin, fallback), message: "the first declaration" },
       ],
     }),
-  );
-}
-
-function checkNotHeaderUnion(
-  site: TreeNodesSite,
-  use: IrWriter.TypeUse,
-  origin: Origin,
-  position: string,
-): void {
-  if (treeNodesTagHeader(site.draft, treeNodesInnermost(use)) === undefined) return;
-  const located = treeNodesNodeOrigin(origin);
-  site.once(
-    `header-union:${located.layer}#${located.pointer}`,
-    treeNodesHeaderUnionError(site, located, position),
   );
 }
 

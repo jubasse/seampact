@@ -11,13 +11,12 @@ import {
   type treeNodesMember,
   treeNodesObjectOf,
   treeNodesPointer,
-  treeNodesTagHeader,
 } from "./raw.js";
 
 // Fields maps (ADR 0002 section 4): `id`, `pathParams`, `query`, `headers` and response `headers` map a name to a
 // schema, a field being required unless its name ends with `?`; a string instead names an object schema whose
-// properties are the fields. Also the checks every parameter and header shares: no opaque value, no header-tagged
-// union (ADR 0003 sections 2 and 4).
+// properties are the fields. Also the check every parameter and header shares: no opaque value or file (ADR 0003
+// section 2).
 
 export type TreeNodesContext = PassContextOf<"tree.nodes">;
 
@@ -122,8 +121,8 @@ const TEXTLESS_KINDS: Partial<Record<IrWriter.TypeUse["kind"], string>> = {
 
 /**
  * Whether a field may travel in a parameter or a header: an opaque value or a file, or a list of them, has no text
- * form (ADR 0003 section 2), and a header-tagged union is only a route's whole input (ADR 0003 section 4). Reports
- * the field otherwise.
+ * form (ADR 0003 section 2). Reports the field otherwise. A header-tagged union there is tree.schemas'
+ * `union-header`.
  */
 export function treeNodesFieldTravels(
   site: TreeNodesSite,
@@ -137,9 +136,9 @@ export function treeNodesFieldTravels(
   const textless = innermost === undefined ? undefined : TEXTLESS_KINDS[innermost.kind];
   if (textless !== undefined) {
     site.once(
-      `opaque-parameter:${key}`,
+      `opaque-position:${key}`,
       treeNodesError({
-        rule: "opaque-parameter",
+        rule: "opaque-position",
         origin,
         message: `The ${place} ${field.name} of ${site.operationId} is ${textless}, which has no text form.`,
         fix: "Give it a schema with a text form, or move it into the body.",
@@ -148,35 +147,14 @@ export function treeNodesFieldTravels(
     return false;
   }
 
-  if (treeNodesTagHeader(site.draft, innermost) !== undefined) {
-    site.once(
-      `header-union:${key}`,
-      treeNodesHeaderUnionError(site, origin, `${place} ${field.name}`),
-    );
-    return false;
-  }
   return true;
 }
 
-/** The innermost item of a list use: a list of unions is still a union in an item position. */
+/** The innermost item of a list use: a list of files is still a file in an item position. */
 export function treeNodesInnermost(
   use: IrWriter.TypeUse | undefined,
 ): IrWriter.TypeUse | undefined {
   let at = use;
   while (at?.kind === "array") at = at.items;
   return at;
-}
-
-/** The refusal of a header-tagged union outside a route's whole input (ADR 0003 section 4). */
-export function treeNodesHeaderUnionError(
-  site: TreeNodesSite,
-  origin: ReturnType<typeof treeNodesLocate>,
-  position: string,
-) {
-  return treeNodesError({
-    rule: "header-union",
-    origin,
-    message: `The ${position} of ${site.operationId} is a union tagged by a header, which only a route's whole input can be.`,
-    fix: "Tag the union by a body property, or make it the route's whole input.",
-  });
 }

@@ -301,9 +301,9 @@ function checkTagHeaderNotDeclared(
 
   const origin = treeNodesLocate(declared.origin, treeNodesNodeOrigin(site.node.origin));
   site.once(
-    `header-union:${origin.layer}#${origin.pointer}:${site.node.pointer}`,
+    `union-header:${origin.layer}#${origin.pointer}:${site.node.pointer}`,
     treeNodesError({
-      rule: "header-union",
+      rule: "union-header",
       origin,
       message: `The request header ${declared.name} of ${site.operationId} is the tag of its input union, which adds it.`,
       fix: "Remove the header; the union's discriminator adds it.",

@@ -2,6 +2,7 @@ import type { IrWriter } from "@seampact/spec/ir";
 import { expect, test } from "vitest";
 import { diagnosticLocationKey } from "../../../diagnostics/print.js";
 import type { DraftOperation } from "../../../pipeline/seam.js";
+import { treeSchemasRunApi } from "../schemas/test-support.js";
 import {
   TREE_NODES_FIXTURES,
   treeNodesApiOf,
@@ -391,16 +392,20 @@ surfaces:
       search: { method: get, query: { events?: { type: array, items: GithubEvent } } }
 `;
 
-test("header-tagged unions: only a route's whole input, their header not declared again", () => {
+test("header-tagged unions: tree.schemas refuses them off the whole input, tree.nodes their tag header declared again", () => {
+  // The real tree.schemas reports every route position but the whole input, so tree.nodes checks only the params.
+  const schemas = treeSchemasRunApi(GITHUB.replace(/^\napi: .*\n/, "\n"));
+  expect(schemas.diagnostics.map(({ rule, origin }) => ({ rule, origin }))).toEqual([
+    { rule: "seampact/tree/union-header", origin: at(`${ROUTES}/replay/output`) },
+    { rule: "seampact/tree/union-header", origin: at(`${ROUTES}/search/query/events?/items`) },
+  ]);
+
   const workspace = treeNodesLoadInline(GITHUB);
-  const events: IrWriter.TypeUse = { kind: "array", items: ref("GithubEvent") };
   const treeSchemas = treeNodesStubService({
     typeUses: {
       [`${ROUTES}/accepted/input`]: ref("GithubEvent"),
       [`${ROUTES}/github/input`]: ref("GithubEvent"),
       [`${ROUTES}/github/headers/x-github-event`]: text,
-      [`${ROUTES}/replay/output`]: ref("GithubEvent"),
-      [`${ROUTES}/search/query/events?`]: events,
     },
   });
   const draft = treeNodesDraftWith(treeNodesHeaderUnion("GithubEvent", "X-GitHub-Event"));
@@ -411,22 +416,10 @@ test("header-tagged unions: only a route's whole input, their header not declare
 
   expect(diagnostics.map(({ rule, origin, message }) => ({ rule, origin, message }))).toEqual([
     {
-      rule: "seampact/tree/header-union",
+      rule: "seampact/tree/union-header",
       origin: at(`${ROUTES}/github/headers/x-github-event`),
       message:
         "The request header x-github-event of github is the tag of its input union, which adds it.",
-    },
-    {
-      rule: "seampact/tree/header-union",
-      origin: at(`${ROUTES}/replay/output`),
-      message:
-        "The response body of replay is a union tagged by a header, which only a route's whole input can be.",
-    },
-    {
-      rule: "seampact/tree/header-union",
-      origin: at(`${ROUTES}/search/query/events?`),
-      message:
-        "The query field events of search is a union tagged by a header, which only a route's whole input can be.",
     },
   ]);
 });
@@ -507,7 +500,7 @@ surfaces:
       `${hook}/pathParams/raw`,
       `${hook}/query/payload`,
       `${hook}/responses/200/headers/X-Trace`,
-    ].map((pointer) => ({ rule: "seampact/tree/opaque-parameter", origin: at(pointer) })),
+    ].map((pointer) => ({ rule: "seampact/tree/opaque-position", origin: at(pointer) })),
   );
 });
 
@@ -536,15 +529,15 @@ test("tree.nodes diagnostics are located: routes", () => {
     "body-limit",
     "collection-id",
     "fields-schema",
-    "header-union",
     "id-property",
     "op-input",
     "op-item",
-    "opaque-parameter",
+    "opaque-position",
     "param-unique",
     "path-param",
     "path-version",
     "redirect-body",
+    "union-header",
   ]);
   for (const diagnostic of diagnostics) {
     expect(diagnostic.message.endsWith(".")).toBe(true);
