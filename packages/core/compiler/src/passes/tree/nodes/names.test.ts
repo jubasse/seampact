@@ -397,3 +397,56 @@ test("a collection whose operation names need a singular gives singular or id, i
     "listLogs",
   ]);
 });
+
+test("routes are unique: one operation per method and path, placeholders compared by position", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+schemas:
+  Id: { type: string }
+  Task: { type: object, properties: { taskId: Id } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: Id }
+        item: Task
+        ops: [get]
+        collection:
+          routes:
+            me: { method: get, path: me }
+            peek: { method: get, path: '{key}', pathParams: { key: Id } }
+      other: { method: post, path: tasks/me }
+`);
+  const tasks = "/surfaces/app/routes/tasks";
+  const { diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas: treeNodesStubService({
+      typeUses: {
+        [`${tasks}/id/taskId`]: { kind: "scalar", type: "string", refinements: {} },
+        [`${tasks}/collection/routes/peek/pathParams/key`]: {
+          kind: "scalar",
+          type: "string",
+          refinements: {},
+        },
+      },
+    }),
+  });
+
+  expect(
+    diagnostics.map(({ rule, origin, message, related }) => ({ rule, origin, message, related })),
+  ).toEqual([
+    {
+      rule: "seampact/tree/route-unique",
+      origin: { layer: "api", pointer: `${tasks}/ops/0` },
+      message:
+        "The operation getTask answers GET /v1/tasks/{taskId}, which a router cannot tell from GET /v1/tasks/{key} of peekTasks.",
+      related: [
+        {
+          origin: { layer: "api", pointer: `${tasks}/collection/routes/peek` },
+          message: "the operation peekTasks",
+        },
+      ],
+    },
+  ]);
+});

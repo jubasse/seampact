@@ -15,6 +15,7 @@ export type TreeNodesRule =
   | "collection-id"
   | "operation-id-unique"
   | "operation-name-unique"
+  | "route-unique"
   | "op-input"
   | "op-item"
   | "id-property"

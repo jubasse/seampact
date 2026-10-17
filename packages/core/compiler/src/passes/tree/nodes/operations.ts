@@ -49,10 +49,17 @@ const OPS_NEEDING_INPUT: readonly IrWriter.OpShorthand[] = ["create", "update"];
 const isHttpMethod = (value: unknown): value is IrWriter.HttpMethod =>
   HTTP_METHODS.some((method) => method === value);
 
-/** An operation written to the draft, with the node it came from and its name. */
+/** An operation written to the draft, with the node it came from, its name and its route when it has one. */
 interface Written {
   readonly node: TreeNode;
   readonly name: TreeNodesOperationName;
+  readonly route: Route | undefined;
+}
+
+interface Route {
+  /** The method and the path, each placeholder compared by position only. */
+  readonly key: string;
+  readonly text: string;
 }
 
 /** Writes every operation of the api to the draft, in tree order, and reports the id and name clashes. */
@@ -79,11 +86,53 @@ export function treeNodesOperations(
     }
 
     const site: TreeNodesSite = { node, operationId: name.id, draft, context, once };
-    draft.operations.push(operationOf(site, name, prefixes));
-    written.push({ node, name });
+    const operation = operationOf(site, name, prefixes);
+    draft.operations.push(operation);
+    written.push({ node, name, route: routeOf(operation) });
   }
 
   reportClashes(written, context);
+  reportRouteClashes(written, context);
+}
+
+// The method and the path, each placeholder compared by position only: `/tasks/{id}` and `/tasks/{taskId}` are one
+// route to a router, `/tasks/me` beside `/tasks/{id}` is not (LD-59). Undefined for a relay route until its path
+// is copied.
+function routeOf(operation: DraftOperation): Route | undefined {
+  if (operation.method === undefined || operation.path === undefined) return undefined;
+  const method = operation.method.toUpperCase();
+  return {
+    key: `${method} ${operation.path.replace(/\{[^{}]+\}/g, "{}")}`,
+    text: `${method} ${operation.path}`,
+  };
+}
+
+// ADR 0006 section 3: two operations of one api never share a method and a path, whatever their origin.
+function reportRouteClashes(written: readonly Written[], context: TreeNodesContext): void {
+  const byRoute = new Map<string, Written>();
+  for (const entry of written) {
+    if (entry.route === undefined) continue;
+    const first = byRoute.get(entry.route.key);
+    if (first?.route === undefined) {
+      byRoute.set(entry.route.key, entry);
+      continue;
+    }
+
+    context.report(
+      treeNodesError({
+        rule: "route-unique",
+        origin: treeNodesNodeOrigin(entry.node.origin),
+        message: `The operation ${entry.name.id} answers ${entry.route.text}, which a router cannot tell from ${first.route.text} of ${first.name.id}.`,
+        fix: "Change the path or the method of one of the two routes.",
+        related: [
+          {
+            origin: treeNodesNodeOrigin(first.node.origin),
+            message: `the operation ${first.name.id}`,
+          },
+        ],
+      }),
+    );
+  }
 }
 
 function operationOf(
