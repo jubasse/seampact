@@ -1,4 +1,3 @@
-import type { IrWriter } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { draftFixture, draftFixtureSchemaTables } from "../../../pipeline/draft-fixture.js";
 import {
