@@ -207,7 +207,7 @@ rights:
 | `codeName` | the identifier generated code uses for the right, when its name yields a poor one or none (`'*'`, ADR 0007); the name the hooks receive is unchanged |
 | `summary`, `description`, extension keys | docs and consumer metadata that reach the generated boundary (A20, SCN-064) |
 
-At the use site, a resource subject defaults to the nearest member id whose schema is the right's `id` schema (`path.taskId` for `tasks.update` under `tasks`); otherwise `subject` is required. The source's schema must equal the subject's id schema (SCN-062). A scope subject takes the route's resolved scope; a route without that scope is a compile error. Roles, permissions and custom questions are all rights (FR-22); naming conventions and derived rights come only from opt-in packs (FR-26, SCN-073).
+At the use site, a resource subject defaults to the nearest member id whose schema is the right's `id` schema (`path.taskId` for `tasks.update` under `tasks`); otherwise `subject` is required. The source's schema must equal the subject's id schema (SCN-062). Two schemas are equal when both name the same schema or both are inline with the same shape, a named schema never equals an inline one, a default is taken only when exactly one member id of the nearest collection with a fitting id fits (two or more are an error asking for `subject`), and a subject is a required value, so an optional query field or header is refused. A scope subject takes the route's resolved scope; a route without that scope is a compile error. Roles, permissions and custom questions are all rights (FR-22); naming conventions and derived rights come only from opt-in packs (FR-26, SCN-073).
 
 #### Rules
 
@@ -253,4 +253,4 @@ A scope catalogue entry declares the id schema, an optional parent scope (`withi
 scopes: { org: subdomain, project: path.projectId }
 ```
 
-`resolver` means the application implements the resolver (A23, SCN-070). Scopes resolve in nesting order: a scope entered at an ancestor before one entered below it; inside one node, a parent scope before its child, then by name. A scope entered below its own child scope is an error (FR-24, SCN-069).
+`resolver` means the application implements the resolver (A23, SCN-070). Scopes resolve in nesting order: a scope entered at an ancestor before one entered below it; inside one node, a parent scope before its child, then by name. A scope entered below its own child scope is an error (FR-24, SCN-069), and so is a scope entered where the scope it is within is not entered at that node or an ancestor.

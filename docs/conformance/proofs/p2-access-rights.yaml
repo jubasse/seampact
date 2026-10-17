@@ -1,0 +1,38 @@
+lane: p2-access-rights
+proofs:
+  - id: CHK-086
+    fixtures:
+      - fixtures/passes/access-rights/catalogues/api.yaml
+      - fixtures/passes/access-rights/catalogues/catalogues.json
+      - fixtures/passes/access-rights/catalogues-refused/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/rights/catalogues.test.ts#rights catalogue'
+      - 'core: packages/core/compiler/src/passes/access/rights/requires.test.ts#requirements in order'
+      - 'core: packages/core/compiler/src/passes/access/rights/subjects.test.ts#subjects and scopes'
+  - id: CHK-087
+    fixtures:
+      - fixtures/passes/access-rights/guest/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/rights/requires.test.ts#guest rights on public routes'
+  - id: CHK-089
+    fixtures:
+      - fixtures/passes/access-rights/catalogues/api.yaml
+      - fixtures/passes/access-rights/catalogues-refused/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/rights/catalogues.test.ts#rights catalogue'
+  - id: CHK-090
+    fixtures:
+      - fixtures/passes/access-rights/catalogues/api.yaml
+      - fixtures/passes/access-rights/catalogues/catalogues.json
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/rights/catalogues.test.ts#rights catalogue'
+  - id: CHK-017
+    fixtures:
+      - fixtures/passes/access-rights/service/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/rights/requires.test.ts#service api caller right'
+  - id: CHK-009
+    fixtures:
+      - fixtures/passes/access-rights/guest/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/rights/requires.test.ts#guest rights on public routes'

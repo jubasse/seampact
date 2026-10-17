@@ -1,0 +1,206 @@
+{
+  "rights": {
+    "tasks.update": {
+      "id": "tasks.update",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": ["task"],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": ["api.forbidden", "api.not_found"],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/tasks.update"
+      }
+    },
+    "channels.member": {
+      "id": "channels.member",
+      "subject": {
+        "kind": "scope",
+        "scope": "channel"
+      },
+      "errors": ["api.forbidden"],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/channels.member"
+      }
+    },
+    "channels.get": {
+      "id": "channels.get",
+      "subject": {
+        "kind": "resource",
+        "type": {
+          "segments": ["channel"],
+          "role": "schema"
+        },
+        "idSchema": {
+          "kind": "scalar",
+          "type": "string",
+          "format": "uuid",
+          "refinements": {}
+        }
+      },
+      "errors": ["api.forbidden"],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "pack:crud-rights",
+        "pointer": "/derive/0/declareRight"
+      },
+      "derivedFrom": {
+        "derivation": "pack.crud-rights.crud",
+        "from": [
+          {
+            "layer": "pack:crud-rights",
+            "pointer": "/derive/0/declareRight"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/ops/0"
+          }
+        ]
+      }
+    },
+    "tasks.list": {
+      "id": "tasks.list",
+      "subject": {
+        "kind": "scope",
+        "scope": "channel"
+      },
+      "errors": ["api.forbidden"],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "pack:crud-rights",
+        "pointer": "/derive/0/declareRight"
+      },
+      "derivedFrom": {
+        "derivation": "pack.crud-rights.crud",
+        "from": [
+          {
+            "layer": "pack:crud-rights",
+            "pointer": "/derive/0/declareRight"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list"
+          }
+        ]
+      }
+    },
+    "tasks.create": {
+      "id": "tasks.create",
+      "subject": {
+        "kind": "scope",
+        "scope": "channel"
+      },
+      "errors": ["api.forbidden"],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "pack:crud-rights",
+        "pointer": "/derive/0/declareRight"
+      },
+      "derivedFrom": {
+        "derivation": "pack.crud-rights.crud",
+        "from": [
+          {
+            "layer": "pack:crud-rights",
+            "pointer": "/derive/0/declareRight"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/create"
+          }
+        ]
+      }
+    },
+    "tasks.batch": {
+      "id": "tasks.batch",
+      "subject": {
+        "kind": "scope",
+        "scope": "channel"
+      },
+      "errors": ["api.forbidden"],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "pack:crud-rights",
+        "pointer": "/derive/0/declareRight"
+      },
+      "derivedFrom": {
+        "derivation": "pack.crud-rights.crud",
+        "from": [
+          {
+            "layer": "pack:crud-rights",
+            "pointer": "/derive/0/declareRight"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/batch"
+          }
+        ]
+      }
+    }
+  },
+  "rules": {
+    "throttle": {
+      "id": "throttle",
+      "takesBucket": true,
+      "errors": ["api.rate_limited"],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "pack:crud-rights",
+        "pointer": "/rules/throttle"
+      }
+    }
+  },
+  "scopes": {
+    "channel": {
+      "id": "channel",
+      "idSchema": {
+        "kind": "scalar",
+        "type": "string",
+        "format": "uuid",
+        "refinements": {}
+      },
+      "errors": ["api.not_found"],
+      "docs": {},
+      "extensions": {},
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/channel"
+      }
+    }
+  },
+  "buckets": {
+    "perUser": {
+      "id": "perUser",
+      "key": [
+        {
+          "in": "principal",
+          "name": "userId"
+        }
+      ],
+      "limit": 60,
+      "windowMs": 60000,
+      "origin": {
+        "layer": "pack:crud-rights",
+        "pointer": "/buckets/perUser"
+      }
+    }
+  }
+}

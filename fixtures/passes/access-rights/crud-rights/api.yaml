@@ -1,0 +1,71 @@
+# An api with the CRUD rights pack (ADR 0002 sections 2 and 8, SCN-073): derived rights on a member item and on the
+# innermost scope, a declared right the entry reuses, pack-derived requirements before the written ones, and a
+# derived requirement equal to a written one dropped in favour of the written one.
+api: { name: tasks, version: 1 }
+packs: [./pack.yaml]
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  user:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: UserPrincipal
+
+schemas:
+  ChannelId: { type: string, format: uuid }
+  TaskId: { type: string, format: uuid }
+  UserPrincipal:
+    type: object
+    required: [userId]
+    properties: { userId: { type: string } }
+  Channel:
+    type: object
+    required: [channelId]
+    properties: { channelId: ChannelId }
+  Task:
+    type: object
+    required: [taskId, title]
+    properties: { taskId: TaskId, title: { type: string } }
+  CreateTask:
+    type: object
+    required: [title]
+    properties: { title: { type: string } }
+
+scopes:
+  channel: { id: ChannelId, errors: [api.not_found] }
+
+rights:
+  tasks.update:
+    subject: { resource: Task, id: TaskId }
+    errors: [api.forbidden, api.not_found]
+  channels.member: { subject: { scope: channel } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      channels:
+        kind: collection
+        id: { channelId: ChannelId }
+        item: Channel
+        ops: [get]
+        member:
+          scopes: { channel: path.channelId }
+          requires: [{ right: channels.member }]
+          routes:
+            tasks:
+              kind: collection
+              id: { taskId: TaskId }
+              item: Task
+              ops:
+                list: {}
+                create:
+                  input: CreateTask
+                  requires: [{ rule: throttle, bucket: perUser }]
+                update: { input: CreateTask }
+                batch: {}
+              member:
+                routes:
+                  archive: { method: post, output: Task }

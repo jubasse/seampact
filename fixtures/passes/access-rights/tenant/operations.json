@@ -1,0 +1,340 @@
+{
+  "copyDocs": {
+    "scopes": [
+      {
+        "scope": "org",
+        "source": {
+          "in": "subdomain"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/scopes/org"
+        }
+      },
+      {
+        "scope": "project",
+        "source": {
+          "in": "path",
+          "name": "projectId"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/scopes/project"
+        }
+      },
+      {
+        "scope": "board",
+        "source": {
+          "in": "resolver"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/scopes/board"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "kind": "right",
+        "right": "orgMember",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/requires/0"
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "org"
+          },
+          "defaulted": true
+        }
+      },
+      {
+        "kind": "right",
+        "right": "projectRole",
+        "params": {
+          "role": "editor"
+        },
+        "entry": "editor",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/requires/0"
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "project"
+          },
+          "defaulted": true
+        }
+      },
+      {
+        "kind": "right",
+        "right": "docs.copy",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/routes/docs/collection/routes/copy/requires/0"
+        },
+        "subject": {
+          "source": {
+            "in": "header",
+            "name": "X-Source-Doc"
+          },
+          "defaulted": false
+        }
+      }
+    ]
+  },
+  "copyHomeDocs": {
+    "scopes": [
+      {
+        "scope": "org",
+        "source": {
+          "in": "subdomain"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/scopes/org"
+        }
+      },
+      {
+        "scope": "project",
+        "source": {
+          "in": "path",
+          "name": "projectId"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/scopes/project"
+        }
+      },
+      {
+        "scope": "board",
+        "source": {
+          "in": "resolver"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/scopes/board"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "kind": "right",
+        "right": "orgMember",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/requires/0"
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "org"
+          },
+          "defaulted": true
+        }
+      },
+      {
+        "kind": "right",
+        "right": "projectRole",
+        "params": {
+          "role": "editor"
+        },
+        "entry": "editor",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/requires/0"
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "project"
+          },
+          "defaulted": true
+        }
+      },
+      {
+        "kind": "right",
+        "right": "docs.copy",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/routes/docs/collection/routes/copyHome/requires/0"
+        },
+        "subject": {
+          "source": {
+            "in": "principal",
+            "name": "homeDoc"
+          },
+          "defaulted": false
+        }
+      }
+    ]
+  },
+  "getDoc": {
+    "scopes": [
+      {
+        "scope": "org",
+        "source": {
+          "in": "subdomain"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/scopes/org"
+        }
+      },
+      {
+        "scope": "project",
+        "source": {
+          "in": "path",
+          "name": "projectId"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/scopes/project"
+        }
+      },
+      {
+        "scope": "board",
+        "source": {
+          "in": "resolver"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/scopes/board"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "kind": "right",
+        "right": "orgMember",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/requires/0"
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "org"
+          },
+          "defaulted": true
+        }
+      },
+      {
+        "kind": "right",
+        "right": "projectRole",
+        "params": {
+          "role": "editor"
+        },
+        "entry": "editor",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/requires/0"
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "project"
+          },
+          "defaulted": true
+        }
+      }
+    ]
+  },
+  "updateDoc": {
+    "scopes": [
+      {
+        "scope": "org",
+        "source": {
+          "in": "subdomain"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/scopes/org"
+        }
+      },
+      {
+        "scope": "project",
+        "source": {
+          "in": "path",
+          "name": "projectId"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/scopes/project"
+        }
+      },
+      {
+        "scope": "board",
+        "source": {
+          "in": "resolver"
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/scopes/board"
+        }
+      }
+    ],
+    "requires": [
+      {
+        "kind": "right",
+        "right": "orgMember",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/requires/0"
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "org"
+          },
+          "defaulted": true
+        }
+      },
+      {
+        "kind": "right",
+        "right": "projectRole",
+        "params": {
+          "role": "editor"
+        },
+        "entry": "editor",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/requires/0"
+        },
+        "subject": {
+          "source": {
+            "in": "scope",
+            "name": "project"
+          },
+          "defaulted": true
+        }
+      },
+      {
+        "kind": "rule",
+        "rule": "throttle",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/routes/docs/ops/update/requires/0"
+        },
+        "bucket": "perMember"
+      },
+      {
+        "kind": "right",
+        "right": "docs.edit",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/projects/member/routes/docs/ops/update/requires/1"
+        },
+        "subject": {
+          "source": {
+            "in": "path",
+            "name": "docId"
+          },
+          "defaulted": true
+        }
+      }
+    ]
+  }
+}
