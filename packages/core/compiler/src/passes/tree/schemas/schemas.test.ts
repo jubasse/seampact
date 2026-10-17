@@ -19,17 +19,11 @@ const typeOf = (run: TreeSchemasRun, id: string, name: string) => propertyOf(run
 const schemas = (yaml: string) => treeSchemasRunApi(`schemas:\n${yaml}`);
 const at = (pointer: string) => ({ layer: "api", pointer });
 
-// What later steps of this half write: route-position hoists, the batch ids input, the concurrency version
-// property and every direction.
-const NOT_YET = new Set(["AssignTaskInput", "GetTasksBatchInput"]);
-const ROUTE_HOISTS = new Set(["AssignTaskInput"]);
-
+// Directions are written by a later step of this half.
 function withoutLaterMembers(schema: IrWriter.Schema): object {
   const { directions: _directions, ...rest } = schema;
 
-  if (rest.kind !== "object") return rest;
-
-  return { ...rest, properties: rest.properties.filter((p) => p.derivedFrom === undefined) };
+  return rest;
 }
 
 describe("tree.schemas matches the after-tree fixture", () => {
@@ -37,9 +31,7 @@ describe("tree.schemas matches the after-tree fixture", () => {
     const run = treeSchemasRunReference(api);
 
     expect(run.diagnostics).toEqual([]);
-    const expected = Object.values(draftFixture(api, "after-tree").schemas).filter(
-      (schema) => !NOT_YET.has(schema.id),
-    );
+    const expected = Object.values(draftFixture(api, "after-tree").schemas);
     // The core issue schema stays seeded when a layer replaced the schema_invalid params; finalize drops it.
     const written = Object.values(run.draft.schemas).filter(
       (schema) => schema.id !== "ApiSchemaInvalidIssue" || expected.some((e) => e.id === schema.id),
@@ -65,9 +57,7 @@ describe("tree.schemas matches the after-tree fixture", () => {
       for (const row of draftFixtureSchemaTables(api).typeUses) {
         const answer = run.service.typeUse(row.pointer, row.direction);
 
-        if (row.use.kind === "ref" && ROUTE_HOISTS.has(row.use.schema))
-          expect(answer).toBeUndefined();
-        else expect([row.pointer, answer]).toEqual([row.pointer, row.use]);
+        expect([row.pointer, answer]).toEqual([row.pointer, row.use]);
       }
     },
   );
@@ -706,7 +696,7 @@ surfaces:
   const items = "/surfaces/app/routes/items";
   const inline = "/surfaces/app/routes/inline";
 
-  test("a declaration or reference route position answers its use; an inline route object waits", () => {
+  test("a declaration or route position answers its use, an inline route object its hoisted schema", () => {
     expect(run.diagnostics).toEqual([]);
     const uuid = { kind: "scalar", type: "string", format: "uuid", refinements: {} };
 
@@ -725,7 +715,10 @@ surfaces:
       kind: "array",
       items: { kind: "ref", schema: "Item" },
     });
-    expect(run.service.typeUse(`${inline}/input`, "input")).toBeUndefined();
+    expect(run.service.typeUse(`${inline}/input`, "input")).toEqual({
+      kind: "ref",
+      schema: "InlineInput",
+    });
     expect(run.service.typeUse(`${items}/kind`, "input")).toBeUndefined();
   });
 

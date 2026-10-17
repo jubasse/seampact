@@ -187,18 +187,6 @@ export function treeSchemasShapeOf(value: TreeSchemasRawObject): Shape | undefin
   return has(value, "format") ? "scalar" : undefined;
 }
 
-/** Whether compiling `value` hoists an inline object, map or union. */
-export function treeSchemasNeedsHoist(value: TreeSchemasRaw | undefined): boolean {
-  if (!treeSchemasIsObject(value)) return false;
-  const shape = treeSchemasShapeOf(value);
-
-  if (shape === "array") return treeSchemasNeedsHoist(value.items);
-
-  if (shape === "scalar") return treeSchemasNeedsHoist(value.contentSchema);
-
-  return shape === "object" || shape === "map" || shape === "union" || shape === "allOf";
-}
-
 // The words a child name starts with: the parent's segments, then its role's default suffix words (`RolesParams`
 // gives `roles params`), so the child of a derived schema never meets the child of its declared namesake (ADR 0007,
 // amendment 2026-10-12, item 10).
@@ -293,7 +281,7 @@ export class TreeSchemasCompiler {
 
   constructor(
     merged: TreeSchemasRawObject,
-    private readonly reporter: TreeSchemasReporter,
+    readonly reporter: TreeSchemasReporter,
   ) {
     this.catalogue = treeSchemasMember(merged, "schemas");
     this.enums = treeSchemasMember(merged, "enums");
@@ -409,6 +397,23 @@ export class TreeSchemasCompiler {
     const compiled = this.objectSchema(properties, undefined, position);
 
     if (compiled !== undefined) this.uses.set(pointer, compiled.use);
+  }
+
+  /**
+   * Writes an object schema this half derives, with no written shape, under `name` at `pointer` (its origin), and
+   * records its use there.
+   */
+  derivedObject(properties: IrWriter.Property[], pointer: string, name: Name): void {
+    const compiled = this.objectSchema(properties, undefined, { pointer, name, place: "position" });
+
+    if (compiled !== undefined) this.uses.set(pointer, compiled.use);
+  }
+
+  /** The properties of the object schema a `ref` use names, the written schema's own list; else undefined. */
+  objectProperties(use: IrWriter.TypeUse | undefined): IrWriter.Property[] | undefined {
+    const schema = use?.kind === "ref" ? this.schemas.get(use.schema) : undefined;
+
+    return schema?.kind === "object" ? schema.properties : undefined;
   }
 
   /** The checks that need every schema: union tags, required cycles and declared names (ADR 0007 section 2). */

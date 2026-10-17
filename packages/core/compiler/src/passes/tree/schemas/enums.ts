@@ -278,7 +278,7 @@ function codeNamesOf(
       continue;
     }
 
-    if (typeof name === "string") codeNames[value] = { segments, role: "member" };
+    if (typeof name === "string") codeNames[value] = { segments, role: "enumMember" };
     const other = identifiers.get(segments.join(" "));
 
     if (other !== undefined)

@@ -4,9 +4,14 @@ import {
   pipelineTreeNodes,
   type TreeSchemaService,
 } from "../../../pipeline/seam.js";
+import { treeNodesOperationNames } from "../nodes/index.js";
 import { TreeSchemasCompiler } from "./compile.js";
 import { treeSchemasCoreReservations } from "./core.js";
 import { treeSchemasCompileEnums } from "./enums.js";
+import {
+  treeSchemasCompileBatchInputs,
+  treeSchemasCompileVersionProperties,
+} from "./operations.js";
 import { treeSchemasCompileDeclarations, treeSchemasCompileRoutes } from "./positions.js";
 import { TreeSchemasReporter } from "./raw.js";
 
@@ -43,7 +48,12 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
     compiler.reserve(treeSchemasCoreReservations(context.raw.merged));
     compiler.compileCatalogue();
     treeSchemasCompileDeclarations(compiler, context.raw.merged);
-    treeSchemasCompileRoutes(compiler, pipelineTreeNodes(context.raw));
+    const nodes = pipelineTreeNodes(context.raw);
+    const operationNames = treeNodesOperationNames(context.raw, context.conventions);
+
+    treeSchemasCompileRoutes(compiler, nodes, operationNames);
+    treeSchemasCompileBatchInputs(compiler, nodes, operationNames, context.conventions);
+    treeSchemasCompileVersionProperties(compiler, nodes, operationNames);
     compiler.finish();
     const enums = treeSchemasCompileEnums(context.raw.merged.enums, reporter);
 
