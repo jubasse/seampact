@@ -18,12 +18,12 @@ proofs:
       - 'core: packages/core/compiler/src/passes/tree/nodes/names.test.ts#ops expand to routes ($conventions)'
       - 'core: packages/core/compiler/src/passes/tree/nodes/names.test.ts#ops expand to routes (fixture ops-and-ids)'
   - id: CHK-057
-    fixtures: [fixtures/passes/tree-nodes/routes-refused]
+    fixtures: [fixtures/passes/tree-nodes/ops-and-ids, fixtures/passes/tree-nodes/routes-refused]
     tests:
       - 'core: packages/core/compiler/src/passes/tree/nodes/api.test.ts#path versions: $name'
       - "core: packages/core/compiler/src/passes/tree/nodes/api.test.ts#path versions: the api's path version, the version kind and the mismatch stated"
   - id: CHK-108
-    fixtures: [fixtures/passes/tree-nodes/routes-refused]
+    fixtures: [fixtures/passes/tree-nodes/ops-and-ids, fixtures/passes/tree-nodes/routes-refused]
     tests:
       - 'core: packages/core/compiler/src/passes/tree/nodes/api.test.ts#path versions: $name'
       - 'core: packages/core/compiler/src/passes/tree/nodes/api.test.ts#path versions: pathVersion none set by a pack'

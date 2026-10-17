@@ -1,8 +1,10 @@
-# One refusal of each route check of tree.nodes (ADR 0002 sections 5 to 7 and 10, ADR 0003 sections 2 and 4):
-# a label version with a versioned surface and a literal version segment, an unreadable body limit, member
-# operations without an id, ops without input or item, an item without its id property, a fields map naming no
-# object, path placeholders and parameters that do not match, a header twice, an opaque query field, a
-# header-tagged union whose header is declared again, a redirect with a body.
+# One refusal of each route check of tree.nodes (ADR 0002 sections 5 to 7 and 10, ADR 0003 sections 2 and 4,
+# ADR 0006 section 3): a label version with a versioned surface and a literal version segment, an unreadable body
+# limit, member operations without an id, ops without input or item, an item without its id property, a fields map
+# naming no object, path placeholders and parameters that do not match, a path that is not relative segments, two
+# routes on one method and path, a header twice, a query field named like a path parameter or with no query
+# encoding, opaque values and files outside the body (lists of them too), a header-tagged union whose header is
+# declared again, a redirect with a body, responses beside output, a 204 with a body, a response description.
 api: { name: refused, version: beta, kind: product }
 
 schemas:
@@ -27,6 +29,18 @@ surfaces:
       drafts: { kind: collection, id: { draftId: Id }, ops: [get] }
       upload: { method: post, bodyLimit: 99999999999999999999MiB }
       raw: { method: get, query: { payload: { opaque: "Vendor JSON." } } }
+      batch: { method: get, query: { payloads: { type: array, items: { opaque: "Vendor JSON." } } } }
+      attached: { method: get, headers: { X-File: { file: {} } } }
+      shadowed:
+        method: get
+        path: 'items/{itemId}'
+        pathParams: { itemId: Id }
+        query: { itemId?: Id, tags?: { type: array, items: Id } }
+      rooted: { method: get, path: /rooted }
+      again: { method: get, path: twice }
+      both: { method: get, output: Note, responses: { 200: { body: Note } } }
+      emptied: { method: post, responses: { 204: { body: Note } } }
+      told: { method: get, responses: { 202: { description: Accepted for later. } } }
       listed: { method: get, query: Id }
       misplaced: { method: get, path: 'x/{missing}' }
       twice: { method: get, headers: { X-A: { type: string }, x-a: { type: string } } }

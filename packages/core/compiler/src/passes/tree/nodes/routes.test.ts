@@ -37,8 +37,6 @@ const operation = (operations: readonly DraftOperation[], id: string): DraftOper
   return found;
 };
 
-const rulesOf = (diagnostics: readonly { rule: string }[]): string[] =>
-  diagnostics.map(({ rule }) => rule.replace("seampact/tree/", ""));
 
 const PROJECTS = "/surfaces/app/routes/projects";
 
@@ -516,7 +514,16 @@ test("tree.nodes diagnostics are located: routes", () => {
       [`${ROUTES}/hook/input`]: ref("GithubEvent"),
       [`${ROUTES}/hook/headers/X-GitHub-Event`]: text,
       [`${ROUTES}/moved/responses/301/body`]: ref("Note"),
+      [`${ROUTES}/batch/query/payloads`]: { kind: "array", items: opaque },
+      [`${ROUTES}/attached/headers/X-File`]: { kind: "file", media: [] },
+      [`${ROUTES}/shadowed/pathParams/itemId`]: text,
+      [`${ROUTES}/shadowed/query/itemId?`]: text,
+      [`${ROUTES}/shadowed/query/tags?`]: { kind: "array", items: text },
+      [`${ROUTES}/both/output`]: ref("Note"),
+      [`${ROUTES}/both/responses/200/body`]: ref("Note"),
+      [`${ROUTES}/emptied/responses/204/body`]: ref("Note"),
     },
+    queryWires: { [`${ROUTES}/shadowed/query/itemId?`]: wire("text") },
   });
   const draft = treeNodesDraftWith(
     treeNodesObjectSchema("Note", "/schemas/Note", { text }),
@@ -524,20 +531,32 @@ test("tree.nodes diagnostics are located: routes", () => {
   );
   const { diagnostics } = treeNodesRun(raw, workspace, { treeSchemas, draft });
 
-  expect([...new Set(rulesOf(diagnostics))].sort()).toEqual([
-    "api-version",
-    "body-limit",
-    "collection-id",
-    "fields-schema",
-    "id-property",
-    "op-input",
-    "op-item",
-    "opaque-position",
-    "param-unique",
-    "path-param",
-    "path-version",
-    "redirect-body",
-    "union-header",
+  // Every rule once at least, each at the pointer that writes the refused value.
+  expect(
+    diagnostics.map(({ rule, origin }) => [rule.replace("seampact/tree/", ""), origin.pointer]),
+  ).toEqual([
+    ["path-version", "/surfaces/app/prefix"],
+    ["api-version", "/api/version"],
+    ["body-limit", `${ROUTES}/upload/bodyLimit`],
+    ["op-input", `${ROUTES}/notes/ops/0`],
+    ["collection-id", `${ROUTES}/logs`],
+    ["op-item", `${ROUTES}/drafts/ops/0`],
+    ["opaque-position", `${ROUTES}/raw/query/payload`],
+    ["opaque-position", `${ROUTES}/batch/query/payloads`],
+    ["opaque-position", `${ROUTES}/attached/headers/X-File`],
+    ["param-unique", `${ROUTES}/shadowed/query/itemId?`],
+    ["query-field", `${ROUTES}/shadowed/query/tags?`],
+    ["path-segment", `${ROUTES}/rooted/path`],
+    ["responses-output", `${ROUTES}/both/output`],
+    ["no-content-body", `${ROUTES}/emptied/responses/204`],
+    ["annotation-position", `${ROUTES}/told/responses/202/description`],
+    ["fields-schema", `${ROUTES}/listed/query`],
+    ["path-param", `${ROUTES}/misplaced/path`],
+    ["param-unique", `${ROUTES}/twice/headers/x-a`],
+    ["union-header", `${ROUTES}/hook/headers/X-GitHub-Event`],
+    ["redirect-body", `${ROUTES}/moved/responses/301/body`],
+    ["route-unique", `${ROUTES}/twice`],
+    ["id-property", `${ROUTES}/notes/id/noteId`],
   ]);
   for (const diagnostic of diagnostics) {
     expect(diagnostic.message.endsWith(".")).toBe(true);
@@ -879,4 +898,80 @@ surfaces:
       related: [{ origin: at(`${twice}/Retry-After`), message: "the first declaration" }],
     },
   ]);
+});
+
+test("declared responses: an op's output takes its status, a delete with a body answers 200 unless its status is set", () => {
+  const contract = (conventions: string) => `
+api: { name: a, version: 1, kind: product }
+${conventions}
+schemas:
+  Id: { type: string }
+  Task: { type: object, properties: { taskId: Id } }
+  NewTask: { type: object, properties: { title: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: Id }
+        item: Task
+        ops: { create: { input: NewTask, output: Task }, delete: { output: Task } }
+        member:
+          routes:
+            archive: { method: post, responses: { 200: { body: { file: {} } } } }
+      logs:
+        kind: collection
+        member:
+          routes:
+            pin: { method: post }
+            unpin: { method: post }
+`;
+  const file: IrWriter.TypeUse = { kind: "file", media: [] };
+  const treeSchemas = treeNodesStubService({
+    typeUses: {
+      [`${TASKS}/id/taskId`]: text,
+      [`${TASKS}/item`]: ref("Task"),
+      [`${TASKS}/ops/create/input`]: ref("NewTask"),
+      [`${TASKS}/ops/create/output`]: ref("Task"),
+      [`${TASKS}/ops/delete/output`]: ref("Task"),
+      [`${TASKS}/member/routes/archive/responses/200/body`]: file,
+    },
+  });
+  const statusesOf = (conventions: string) => {
+    const workspace = treeNodesLoadInline(contract(conventions));
+    const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+      treeSchemas,
+    });
+    return {
+      operations: draft.operations.map(({ id, responses }) => ({
+        id,
+        responses: responses?.map(({ status, shape, media }) => ({ status, shape, media })),
+      })),
+      diagnostics: diagnostics.map(({ rule, origin }) => ({ rule, origin })),
+    };
+  };
+
+  const json = "application/json";
+  const archive = {
+    id: "archiveTask",
+    responses: [{ status: 200, shape: "binary", media: undefined }],
+  };
+  const idless = [{ rule: "seampact/tree/collection-id", origin: at(`${ROUTES}/logs`) }];
+  expect(statusesOf("")).toEqual({
+    operations: [
+      { id: "createTask", responses: [{ status: 201, shape: "item", media: json }] },
+      { id: "deleteTask", responses: [{ status: 200, shape: "item", media: json }] },
+      archive,
+    ],
+    diagnostics: idless,
+  });
+  expect(statusesOf("conventions: { ops: { delete: { status: 202 } } }")).toEqual({
+    operations: [
+      { id: "createTask", responses: [{ status: 201, shape: "item", media: json }] },
+      { id: "deleteTask", responses: [{ status: 202, shape: "item", media: json }] },
+      archive,
+    ],
+    diagnostics: idless,
+  });
 });
