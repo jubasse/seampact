@@ -22,6 +22,7 @@ It runs typecheck, lint, the format check and the tests, and fails on any error.
 - Dependencies are pinned to exact versions; GitHub Actions are pinned by commit SHA with the version in a comment.
 - Add a changeset (`pnpm changeset`) for a change that affects a package's version. Releases are cut from `release/<version>`.
 - Toolchain choices are recorded in `docs/adr/0001-toolchain.md`.
+- The compiler flow, the folder layout and the recipes for a compile rule, an IR member, a target and a pack are in `ARCHITECTURE.md`.
 
 ## Git flow
 
