@@ -4,7 +4,7 @@ import { expect, test } from "vitest";
 import { derivationCoreSchemaIds } from "./roles.js";
 
 const ADR = readFileSync(
-  fileURLToPath(new URL("../../../../docs/adr/0004-ir-shape.md", import.meta.url)),
+  fileURLToPath(new URL("../../../../docs/ir/13-schema-forms.md", import.meta.url)),
   "utf8",
 );
 

@@ -108,13 +108,21 @@ test("the convention paths equal the conventions schema's leaves", () => {
 
 // ADR 0002 section 13: the conventions table, a row per key with its meaning and its default.
 const ADR_0002 = readFileSync(
-  fileURLToPath(new URL("../../../../docs/adr/0002-grammar.md", import.meta.url)),
+  fileURLToPath(
+    new URL("../../../../docs/grammar/13-conventions-and-wire-formats.md", import.meta.url),
+  ),
+  "utf8",
+);
+
+// ADR 0002 section 6: the ops shorthand table.
+const ADR_0002_SECTION_6 = readFileSync(
+  fileURLToPath(new URL("../../../../docs/grammar/06-surfaces-and-the-tree.md", import.meta.url)),
   "utf8",
 );
 
 // The rows of the first table under `heading` whose header starts with `header`, as unescaped cells.
-function adrTable(heading: string, header: string): string[][] {
-  const section = ADR_0002.slice(ADR_0002.indexOf(heading));
+function adrTable(source: string, heading: string, header: string): string[][] {
+  const section = source.slice(source.indexOf(heading));
   const lines = section.split("\n");
   const start = lines.findIndex((line) => line.startsWith(header));
   const rows: string[][] = [];
@@ -131,14 +139,14 @@ function adrTable(heading: string, header: string): string[][] {
 }
 
 test("every convention default traces to the ADR 0002 section 13 table", () => {
-  const table = adrTable("### 13. Conventions and wire formats", "| Key | Meaning |").map(
+  const table = adrTable(ADR_0002, "### 13. Conventions and wire formats", "| Key | Meaning |").map(
     ([key = "", meaning = "", fallback = ""]) => ({
       key: key.replaceAll("`", ""),
       meaning,
       fallback,
     }),
   );
-  const ops = adrTable("#### The `ops` shorthand", "| Op | On |");
+  const ops = adrTable(ADR_0002_SECTION_6, "#### The `ops` shorthand", "| Op | On |");
   expect(table.length).toBeGreaterThan(20);
   const rowOf = (path: string) =>
     table

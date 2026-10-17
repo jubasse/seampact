@@ -6,6 +6,9 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 - Read `docs/agents/cartography.md` before exploring: packages, roles, compiler stages and one line per source directory.
 - Product decisions are in `docs/decisions.md` (cited as `A<n>`), design in `docs/adr/`.
+- Read a decision by grepping its anchor (`rg -n 'id="a44"' docs/decisions.md`), then the lines after it; never read `docs/decisions.md` whole.
+- Read the grammar and the IR by section file: `docs/grammar/` (ADR 0002, one `<NN>-<slug>.md` per section NN, plus `example.md`) and `docs/ir/` (ADR 0004, same naming). The ADR keeps the summary and a "section -> file" table.
+- Search first (`rg`), then read the needed range; never re-read a file already read in the session.
 - Run `pnpm install --frozen-lockfile` first.
 
 ## Git
@@ -38,9 +41,29 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 - Your report goes to `.work/<lane-id>-report.md` of the primary checkout (not your worktree), reviews to `.favir/local/review/`; both are git-ignored and never committed.
 - Keep the report current: resume state (branch, tip, done, next), then "For the lead".
 
+## Long tasks
+
+- Relay cap: past about 100 tool calls, stop at the next green commit, update the resume state in your report and hand back "continue". The lead starts a fresh agent.
+- Resume rule: on a resumed task, read the report's resume state, run `git diff --stat` against the base, and read only the files you edit.
+
+## Before hand-back
+
+Run this on your own diff, before the final gates:
+
+- No silent drop or fallback: every input is used, refused with a diagnostic, or listed as out of scope.
+- Every value a pass stores is copied (`pipelineCopy`), never kept by reference.
+- Every new branch has a test that reaches it; a bug fix has a test that failed before.
+- No copied helper: search for an existing one first, else one shared helper.
+- Rule ids, messages and fixes are consistent across code, tests and docs.
+- No committed comment, doc or test string points into `.work/` or another git-ignored path.
+- Proofs (`docs/conformance/proofs/<lane-id>.yaml`) and the changeset are updated.
+- Every new source directory has its header; the cartography map is current.
+- `git diff --stat` lists only files your task owns.
+- Fix what the list finds, then hand back; do not hand back a known failure.
+
 ## Shell output
 
-- RTK is opt-in and usually the right choice for output past about ten lines you do not filter yourself (`rtk err <cmd>`, `rtk test <cmd>`, `rtk read -m 40 <file>`). Stay raw when exactness matters. Your task prompt carries the full rules.
+- RTK is opt-in and usually the right choice for output past about ten lines you do not filter yourself (`rtk err <cmd>`, `rtk test <cmd>`, `rtk read -m 40 <file>`). Stay raw when you filter the output yourself (`| grep`, `| head`), when it is a few lines, or when exactness matters: complete searches, diffs and logs under review, JSON, env values, debugging, security. Never pipe rtk output into another tool.
 
 ## Code style
 
@@ -48,6 +71,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 - Long precise names (`pendingInvoiceTotal`, not `data`); function names make comments unnecessary.
 - Comments: short, plain, only for non-obvious logic or reasons. No emoji or symbols.
 - Match surrounding style; minimal diffs; no speculative abstraction, dead or commented-out code.
+- One concept per file: its types, interfaces, enums, classes and functions together; one shared helper, never a copy.
 - No swallowed errors (empty catch, silent fallback): say what failed and the fix.
 - No `any` or forced casts; named constants, no magic values or boolean flag params.
 - Bug fix = test failing before; test behaviour, not implementation.
