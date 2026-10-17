@@ -35,3 +35,16 @@ proofs:
     fixtures: []
     tests:
       - 'core: packages/core/compiler/src/passes/tree/nodes/routes.test.ts#unknown query keys: the nearest unknownQuery, else the convention, with its reason and origin'
+  - id: CHK-106
+    fixtures: [fixtures/passes/tree-nodes/shapes-refused]
+    tests:
+      - "core: packages/core/compiler/src/passes/tree/nodes/shapes.test.ts#paging declared: the route's style or none, else the convention's, with limits, token and sort keys"
+      - 'core: packages/core/compiler/src/passes/tree/nodes/shapes.test.ts#paging declared: a list with neither a style nor a default names both fixes'
+  - id: CHK-035
+    fixtures: []
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/shapes.test.ts#batch read: a safe POST of the hoisted ids input, answered as a table, within the batch budget'
+  - id: CHK-056
+    fixtures: []
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/nodes/shapes.test.ts#lifecycle members: deprecated, upstream, stated maturity, internal, tags, docs and extensions'

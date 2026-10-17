@@ -25,7 +25,7 @@ assign:
 | `inputMedia` | `json` (the default, `application/json`), `form` (`application/x-www-form-urlencoded`) or `multipart` (`multipart/form-data`); see "Bodies beyond JSON" below |
 | `output` | the body of the single success response, always the whole payload: its status is the op's default, or `200` |
 | `item` | instead of `output`, on a route that is a list: the schema of one record (section 10) |
-| `responses` | several responses keyed by status, instead of `output` |
+| `responses` | several responses keyed by status, instead of `output`; a route that writes none of `output`, `item` and `responses` answers `204` with no body |
 | `paging`, `sortable`, `filteredBy` | list behaviour (section 10) |
 | `degradable` | optional success-data paths that may be missing (FR-32) |
 | `relays` | `<api>.<operationId>`: marks a relay route, whose shape is derived from that public operation (below, FR-8) |
