@@ -1,0 +1,17 @@
+# docs/conformance/proofs/p2-golden.yaml
+lane: p2-golden
+proofs:
+  - id: CHK-001
+    fixtures: [fixtures/scale]
+    tests:
+      - 'core: scripts/golden/scale.test.ts#scale fixture scale fixture volumes'
+      - 'core: scripts/golden/scale.test.ts#scale fixture is valid for the validate stage'
+  - id: CHK-002
+    fixtures: [fixtures/scale]
+    tests:
+      - 'core: scripts/golden/scale.test.ts#scale fixture scale schemas and examples'
+      - 'core: scripts/golden/scale.test.ts#scale fixture reuses every enum densely'
+  - id: CHK-003
+    fixtures: [fixtures/scale]
+    tests:
+      - 'core: scripts/golden/scale.test.ts#scale fixture scale error codes'

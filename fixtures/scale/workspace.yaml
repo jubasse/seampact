@@ -1,0 +1,7 @@
+# workspace.yaml: three apis of different sizes over one shared file
+workspace:
+  apis:
+    inventory: ./inventory/api.yaml
+    billing: ./billing/api.yaml
+    notify: ./notify/api.yaml
+  shared: ./shared/base.yaml

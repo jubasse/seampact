@@ -1,0 +1,48 @@
+# notify/schemas.yaml: templates, deliveries and the dispatch command
+TemplateId: { type: string, format: uuid }
+Template:
+  type: object
+  required: [templateId, name, state, kind, detail, createdAt, version]
+  properties:
+    templateId: TemplateId
+    name: { type: string, minLength: 1, maxLength: 120 }
+    state: { enum: Currency }
+    kind: { enum: Grade }
+    detail: ChilledCount
+    extra: ChilledRate
+    createdAt: { type: string, format: date-time }
+    version: { type: integer, minimum: 1 }
+CreateTemplate:
+  pick: { from: Template, fields: [name, state, kind] }
+UpdateTemplate:
+  pick: { from: Template, fields: [name, state] }
+  required: []
+PublishTemplateInput:
+  type: object
+  required: [audience]
+  properties: { audience: { enum: Visibility } }
+DeliveryId: { type: string, format: uuid }
+Delivery:
+  type: object
+  required: [deliveryId, name, state, kind, detail, createdAt, version]
+  properties:
+    deliveryId: DeliveryId
+    name: { type: string, minLength: 1, maxLength: 100 }
+    state: { enum: Unit }
+    kind: { enum: Region }
+    detail: ChilledTally
+    extra: BulkWeight
+    createdAt: { type: string, format: date-time }
+    version: { type: integer, minimum: 1 }
+CreateDelivery:
+  pick: { from: Delivery, fields: [name, state, kind] }
+UpdateDelivery:
+  pick: { from: Delivery, fields: [name, state] }
+  required: []
+RetryDeliveryInput:
+  type: object
+  properties: { delayMs: { type: integer, minimum: 0, maximum: 3600000 } }
+DispatchInput:
+  type: object
+  required: [deliveryId]
+  properties: { deliveryId: DeliveryId }

@@ -1,0 +1,31 @@
+# shared/schemas.yaml: identifiers, principals and the account every scoped route hangs from
+AccountId: { type: string, format: uuid }
+UserId: { type: string, format: uuid }
+Account:
+  type: object
+  required: [accountId, name]
+  properties:
+    accountId: AccountId
+    name: { type: string, minLength: 1, maxLength: 100 }
+UserPrincipal:
+  type: object
+  required: [userId]
+  properties: { userId: UserId }
+ServicePrincipal:
+  type: object
+  required: [service, userId]
+  properties: { service: { enum: Surface }, userId: UserId }
+PartnerPrincipal:
+  type: object
+  required: [partnerId]
+  properties: { partnerId: { type: string, format: uuid } }
+WebhookCaller:
+  type: object
+  required: [account]
+  properties: { account: { type: string } }
+Issues:
+  type: array
+  items:
+    type: object
+    required: [pointer, rule]
+    properties: { pointer: { type: string }, rule: { type: string } }

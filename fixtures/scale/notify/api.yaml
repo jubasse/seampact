@@ -1,0 +1,95 @@
+# notify/api.yaml: written entirely by hand
+api:
+  name: notify
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: Templates and the deliveries made from them.
+  compat: { policy: additive-only }
+
+requirements:
+  writeThrottle: { rule: throttle, bucket: write }
+
+schemas:
+  $include: ./schemas.yaml
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: partner
+    routes:
+      templates:
+        kind: collection
+        id: { templateId: TemplateId }
+        item: Template
+        errors:
+          template.missing: {}
+          template.locked: {}
+          template.expired: {}
+          template.duplicated: {}
+          template.limited: {}
+          template.mismatched: {}
+          template.unavailable: {}
+          template.suspended: {}
+          template.rejected: {}
+          template.outdated: {}
+        ops:
+          list:
+            paging: { cursor: { maxLimit: 50 } }
+            sortable: [createdAt]
+          get: { cache: { freshness: minute, etag: true } }
+          create:
+            input: CreateTemplate
+            requires: [writeThrottle]
+            examples:
+              minimal: { request: true, value: { name: Welcome note, state: eur, kind: a } }
+          update: { input: UpdateTemplate }
+          delete: {}
+        member:
+          routes:
+            publish:
+              method: post
+              input: PublishTemplateInput
+              output: Template
+      deliveries:
+        kind: collection
+        id: { deliveryId: DeliveryId }
+        item: Delivery
+        errors:
+          delivery.missing: {}
+          delivery.locked: {}
+          delivery.expired: {}
+          delivery.duplicated: {}
+          delivery.limited: {}
+          delivery.mismatched: {}
+          delivery.unavailable: {}
+          delivery.suspended: {}
+          delivery.rejected: {}
+          delivery.outdated: {}
+        ops:
+          list:
+            paging: { cursor: { maxLimit: 100 } }
+            sortable: [createdAt]
+          get: {}
+          create:
+            input: CreateDelivery
+            requires: [writeThrottle]
+            examples:
+              minimal: { request: true, value: { name: Evening batch, state: piece, kind: north } }
+          update: { input: UpdateDelivery }
+          delete: {}
+        member:
+          routes:
+            retry:
+              method: post
+              input: RetryDeliveryInput
+              output: Delivery
+  internal:
+    prefix: /internal/v{version}
+    identity: service
+    routes:
+      dispatch:
+        method: post
+        input: DispatchInput
+        responses:
+          204: {}

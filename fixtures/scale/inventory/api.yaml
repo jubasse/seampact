@@ -1,0 +1,122 @@
+# inventory/api.yaml: the app surface by hand; the bulk surface and its schemas are generated
+api:
+  name: inventory
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: Warehouses, stock and shipments.
+  compat: { policy: additive-only }
+  documents:
+    public: { surfaces: [app], internal: exclude }
+    full: {}
+
+requirements:
+  accountEditor: { right: roles, params: { allowed: [owner, editor] } }
+  writeThrottle: { rule: throttle, bucket: write }
+
+schemas:
+  $include: [./schemas.yaml, ./generated/schemas.yaml]
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      accounts:
+        kind: collection
+        id: { accountId: AccountId }
+        item: Account
+        ops: [list]
+        member:
+          scopes: { account: path.accountId }
+          routes:
+            warehouses:
+              kind: collection
+              id: { warehouseId: WarehouseId }
+              item: Warehouse
+              errors:
+                stock.missing: {}
+                stock.locked: {}
+              ops:
+                list:
+                  paging: { cursor: { maxLimit: 50 } }
+                  sortable: [createdAt]
+                get: { cache: { freshness: minute, etag: true } }
+                create:
+                  input: CreateWarehouse
+                  requires: [writeThrottle, accountEditor]
+                  examples:
+                    minimal: { request: true, value: { name: Harbour depot, state: low, kind: eur } }
+                update: { input: UpdateWarehouse, requires: [accountEditor] }
+                delete: { requires: [accountEditor] }
+              collection:
+                routes:
+                  bins:
+                    kind: collection
+                    id: { binId: BinId }
+                    item: Bin
+                    errors:
+                      shelf.missing: {}
+                      shelf.locked: {}
+                    ops:
+                      list: { paging: { cursor: { maxLimit: 100 } } }
+                      get: {}
+                      create:
+                        input: CreateBin
+                        requires: [writeThrottle, accountEditor]
+                        examples:
+                          minimal: { request: true, value: { name: Aisle 4, state: private, kind: piece } }
+                      update: { input: UpdateBin, requires: [accountEditor] }
+                      delete: { requires: [accountEditor] }
+            products:
+              kind: collection
+              id: { productId: ProductId }
+              item: Product
+              ops:
+                list:
+                  paging: { cursor: { maxLimit: 50 } }
+                  sortable: [createdAt]
+                get: { cache: { freshness: hour, etag: true } }
+                create:
+                  input: CreateProduct
+                  requires: [writeThrottle, accountEditor]
+                  examples:
+                    minimal: { request: true, value: { name: Steel shelf, state: new, kind: domestic } }
+                update: { input: UpdateProduct, requires: [accountEditor] }
+                delete: { requires: [accountEditor] }
+              member:
+                routes:
+                  reserve:
+                    method: post
+                    requires: [accountEditor]
+                    input: ReserveProductInput
+                    output: Product
+                  release:
+                    method: post
+                    requires: [accountEditor]
+                    input: ReleaseProductInput
+                    output: Product
+            shipments:
+              kind: collection
+              id: { shipmentId: ShipmentId }
+              item: Shipment
+              ops:
+                list:
+                  paging: { cursor: { maxLimit: 25 } }
+                  sortable: [createdAt]
+                get: {}
+                create:
+                  input: CreateShipment
+                  requires: [writeThrottle, accountEditor]
+                  examples:
+                    minimal: { request: true, value: { name: Morning run, state: eur, kind: a } }
+                update: { input: UpdateShipment, requires: [accountEditor] }
+                delete: { requires: [accountEditor] }
+              member:
+                routes:
+                  dispatch:
+                    method: post
+                    requires: [accountEditor]
+                    input: DispatchShipmentInput
+                    output: Shipment
+  $include: ./generated/surfaces.yaml
