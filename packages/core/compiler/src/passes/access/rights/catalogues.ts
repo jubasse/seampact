@@ -314,6 +314,23 @@ function ruleOf(
     return undefined;
   }
 
+  const proofSchema =
+    placement === undefined || proofName === undefined
+      ? undefined
+      : accessRightsTypeUse(context, pipelinePointerBelow(pointer, "proof", "schema"), "input");
+
+  // A proof is a value a target reads and compares, sent as a field or a header: never a file or opaque.
+  if (proofSchema !== undefined && UNREADABLE_PROOF_KINDS.includes(proofSchema.kind)) {
+    reporter.error({
+      rule: "proof-schema",
+      message: `the proof of rule '${id}' is ${proofSchema.kind === "file" ? "a file" : "an opaque value"}, which a rule cannot read as a proof`,
+      fix: "set the proof's 'schema' to a scalar, an enum or a named schema",
+      pointer: pipelinePointerBelow(pointer, "proof", "schema"),
+    });
+
+    return undefined;
+  }
+
   const hasParams = accessRightsMember(declaration, "params") !== undefined;
 
   return {
@@ -322,18 +339,10 @@ function ruleOf(
       ? { params: accessRightsParamsRef(context, pipelinePointerBelow(pointer, "params")) }
       : {}),
     takesBucket: accessRightsMember(declaration, "bucket") === true,
-    ...(placement === undefined || proofName === undefined
+    ...(placement === undefined || proofName === undefined || proofSchema === undefined
       ? {}
       : {
-          proof: {
-            in: proofPlacement(placement, pointer),
-            name: proofName,
-            schema: accessRightsTypeUse(
-              context,
-              pipelinePointerBelow(pointer, "proof", "schema"),
-              "input",
-            ),
-          },
+          proof: { in: proofPlacement(placement, pointer), name: proofName, schema: proofSchema },
         }),
     errors: accessRightsStrings(declaration, "errors"),
     docs: accessRightsDocs(declaration),
@@ -343,6 +352,8 @@ function ruleOf(
 }
 
 const PROOF_PLACEMENTS = ["header", "body"] as const;
+
+const UNREADABLE_PROOF_KINDS: readonly IrWriter.TypeUse["kind"][] = ["file", "opaque"];
 
 // The authoring schema allows a proof in a header or the body only.
 function proofPlacement(placement: string, pointer: string): IrWriter.ProofPlacement {

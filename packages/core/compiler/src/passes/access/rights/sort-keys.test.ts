@@ -1,8 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { DraftIR } from "../../../pipeline/seam.js";
 import {
-  accessRightsFieldsPaging,
-  accessRightsListPaging,
   accessRightsLoadFiles,
   accessRightsLoadFixture,
   accessRightsRunContract,
@@ -88,10 +86,8 @@ ${list}`;
 
 const SORTABLE = "/surfaces/app/routes/items/ops/list/sortable";
 
-const run = (list: string, keys: readonly string[]) =>
-  accessRightsRunContract(accessRightsLoadFiles({ "api.yaml": contract(list) }), (draft) =>
-    accessRightsListPaging(draft, { operation: "listItems", sortable: SORTABLE, keys }),
-  );
+const run = (list: string) =>
+  accessRightsRunContract(accessRightsLoadFiles({ "api.yaml": contract(list) }));
 
 const located = (diagnostics: readonly { rule: string; origin: { pointer: string } }[]) =>
   diagnostics.map(({ rule, origin }) => [rule.replace("seampact/access/", ""), origin.pointer]);
@@ -101,10 +97,7 @@ const listOf = (draft: DraftIR) =>
 
 describe("sort-key rights", () => {
   test("a key inherits its field's right with sortKey.restricted, or states its own, on the fields fixture", () => {
-    const { draft, diagnostics } = accessRightsRunContract(
-      accessRightsLoadFixture("fields"),
-      accessRightsFieldsPaging,
-    );
+    const { draft, diagnostics } = accessRightsRunContract(accessRightsLoadFixture("fields"));
     const list = draft.operations.find((operation) => operation.id === "listNotes");
 
     expect(diagnostics).toEqual([]);
@@ -134,7 +127,6 @@ describe("sort-key rights", () => {
   test("a key of an unrestricted field states its right, with no derivation", () => {
     const { draft, diagnostics } = run(
       "            sortable: [{ key: name, right: items.audit }]\n",
-      ["name"],
     );
 
     expect(diagnostics).toEqual([]);
@@ -150,7 +142,6 @@ describe("sort-key rights", () => {
   test("a stated right that disagrees with the field's, an undeclared one, or one inherited with params, is an error", () => {
     const { draft, diagnostics } = run(
       "            sortable: [{ key: cost, right: items.audit }, { key: name, right: items.ghost }, grade]\n",
-      ["cost", "name", "grade"],
     );
 
     expect(located(diagnostics)).toEqual([
@@ -178,7 +169,6 @@ describe("sort-key subjects", () => {
   test("a key whose resource or scope right has no subject on the list route is an error naming the key, the right and the route", () => {
     const { draft, diagnostics } = run(
       "            sortable: [margin, { key: name, right: shop.staff }]\n",
-      ["margin", "name"],
     );
 
     expect(located(diagnostics)).toEqual([
@@ -267,7 +257,6 @@ describe("sort keys of other list items", () => {
   test("a written right that declares params is refused, since a sort key carries none", () => {
     const { draft, diagnostics } = run(
       "            sortable: [{ key: name, right: items.grade }]\n",
-      ["name"],
     );
 
     expect(located(diagnostics)).toEqual([["sort-key-right", `${SORTABLE}/0/right`]]);
@@ -277,14 +266,14 @@ describe("sort keys of other list items", () => {
 
 describe("filteredBy", () => {
   test("a list's filteredBy names a declared right, written as is", () => {
-    const { draft, diagnostics } = run("            filteredBy: items.read\n", []);
+    const { draft, diagnostics } = run("            filteredBy: items.read\n");
 
     expect(diagnostics).toEqual([]);
     expect(listOf(draft)?.filteredBy).toBe("items.read");
   });
 
   test("a filteredBy naming an undeclared right is an error and is not written", () => {
-    const { draft, diagnostics } = run("            filteredBy: items.ghost\n", []);
+    const { draft, diagnostics } = run("            filteredBy: items.ghost\n");
 
     expect(located(diagnostics)).toEqual([
       ["filtered-by", "/surfaces/app/routes/items/ops/list/filteredBy"],

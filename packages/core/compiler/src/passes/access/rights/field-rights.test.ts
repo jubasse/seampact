@@ -4,7 +4,6 @@ import { DRAFT_FIXTURE_INVALID_EXAMPLE } from "../../../pipeline/draft-fixture.j
 import type { DraftIR } from "../../../pipeline/seam.js";
 import {
   ACCESS_RIGHTS_FIXTURES,
-  accessRightsFieldsPaging,
   accessRightsLoadFiles,
   accessRightsLoadFixture,
   accessRightsReferenceWorkspace,
@@ -60,10 +59,7 @@ const ITEM = `  Item:
 
 describe("field rights", () => {
   test("every restricted field reached from an input or output, per pointer and direction, on the fields fixture", () => {
-    const { draft, diagnostics } = accessRightsRunContract(
-      accessRightsLoadFixture("fields"),
-      accessRightsFieldsPaging,
-    );
+    const { draft, diagnostics } = accessRightsRunContract(accessRightsLoadFixture("fields"));
     const expected = JSON.parse(
       readFileSync(`${ACCESS_RIGHTS_FIXTURES}fields/operations.json`, "utf8"),
     );

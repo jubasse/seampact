@@ -4,7 +4,6 @@ import type { DraftIR } from "../../../pipeline/seam.js";
 import type { AccessRightsRule } from "./report.js";
 import {
   accessRightsApiOf,
-  accessRightsListPaging,
   accessRightsLoadFixture,
   accessRightsRunContract,
 } from "./test-support.js";
@@ -17,17 +16,8 @@ const REFUSED_FIXTURES = [
   "guest",
   "service",
   "fields-refused",
+  "proofs-refused",
 ] as const;
-
-// What tree.nodes does not write yet, set before access.rights runs: the list paging of `fields-refused`.
-const AFTER_TREE: Partial<Record<(typeof REFUSED_FIXTURES)[number], (draft: DraftIR) => void>> = {
-  "fields-refused": (draft) =>
-    accessRightsListPaging(draft, {
-      operation: "listCrates",
-      sortable: "/surfaces/app/routes/crates/ops/list/sortable",
-      keys: ["weight"],
-    }),
-};
 
 const REFUSED: Record<(typeof REFUSED_FIXTURES)[number], [AccessRightsRule, string, string][]> = {
   "catalogues-refused": [
@@ -98,6 +88,14 @@ const REFUSED: Record<(typeof REFUSED_FIXTURES)[number], [AccessRightsRule, stri
     ["field-right-conflict", "api", "/schemas/Pickup/properties/fee/restrictedTo"],
     ["field-right-limit", "api", "/surfaces/app/routes/stack"],
   ],
+  "proofs-refused": [
+    ["proof-name", "api", "/surfaces/app/routes/rename/requires/0"],
+    ["bucket-key", "api", "/surfaces/app/routes/rename/requires/1"],
+    ["proof-name", "api", "/surfaces/app/routes/lock/requires/1"],
+    ["proof-input", "api", "/surfaces/app/routes/peek/requires/0"],
+    ["proof-input", "api", "/surfaces/app/routes/tag/requires/0"],
+    ["signed-input", "api", "/surfaces/hooks/routes/ping"],
+  ],
 };
 
 const RULES = [
@@ -105,6 +103,9 @@ const RULES = [
   "right-pattern",
   "right-subject",
   "proof-schema",
+  "proof-name",
+  "proof-input",
+  "signed-input",
   "scope-within",
   "bucket-key",
   "bucket-window",
@@ -146,7 +147,7 @@ describe("access.rights diagnostics are located", () => {
     for (const fixture of REFUSED_FIXTURES) {
       const workspace = accessRightsLoadFixture(fixture);
       const locations = accessRightsApiOf(workspace).locations;
-      const { diagnostics } = accessRightsRunContract(workspace, AFTER_TREE[fixture]);
+      const { diagnostics } = accessRightsRunContract(workspace);
 
       expect(
         diagnostics.map(({ rule, origin }) => [

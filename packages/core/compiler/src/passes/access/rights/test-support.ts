@@ -120,8 +120,8 @@ export function accessRightsRunOn(
 
 /**
  * Runs tree.schemas, tree.nodes, access.identity, then access.rights (guarded) on the first api of `workspace`. tree.nodes does not
- * write `packs` yet, so the run records the packs the api loaded, in application order. `afterTree` sets on the
- * draft what tree.nodes does not write yet (a list's `paging`), before access.rights runs.
+ * write `packs` yet, so the run records the packs the api loaded, in application order. `afterTree` changes
+ * the draft before access.rights runs.
  */
 export function accessRightsRunContract(
   workspace: RawWorkspace,
@@ -192,30 +192,32 @@ export function accessRightsRunReference(
 }
 
 /**
- * Sets the paging tree.nodes does not write yet on a list: its keys at the entries of the `sortable` list at
- * `sortable`, which reads them from the raw tree.
+ * Runs the real access.identity, then access.rights, each guarded, on the after-tree draft of a reference api, with
+ * the fixture schema service: both access halves as the orchestrator chains them.
  */
-export function accessRightsListPaging(
-  draft: DraftIR,
-  { operation, sortable, keys }: { operation: string; sortable: string; keys: readonly string[] },
-): void {
-  const list = draft.operations.find((candidate) => candidate.id === operation);
-
-  if (list === undefined) throw new Error(`the contract has no operation ${operation}`);
-  list.paging = {
-    overLimit: "reject",
-    sortKeys: keys.map((key, index) => ({
-      key,
-      origin: { layer: "api", pointer: `${sortable}/${index}` },
-    })),
-    origin: { layer: "api", pointer: sortable.replace(/\/sortable$/, "") },
-  };
-}
-
-/** The `fields` fixture's list paging. */
-export const accessRightsFieldsPaging = (draft: DraftIR): void =>
-  accessRightsListPaging(draft, {
-    operation: "listNotes",
-    sortable: "/surfaces/app/routes/workspaces/member/routes/notes/ops/list/sortable",
-    keys: ["title", "rating", "memo"],
+export function accessRightsRunReferenceHalves(
+  workspace: RawWorkspace,
+  api: DraftFixtureApi,
+): AccessRightsRun {
+  const raw = accessRightsApiOf(workspace, api);
+  const draft = draftFixture(api, "after-tree");
+  const treeSchemas = draftFixtureSchemaService(api);
+  const diagnostics: Diagnostic[] = [];
+  const context = pipelineContext({
+    raw,
+    workspace,
+    report: (diagnostic) => diagnostics.push(diagnostic),
+    guard: true,
   });
+  const guarded = pipelineGuard(draft, accessIdentityPass);
+
+  try {
+    accessIdentityPass.run(guarded.draft, Object.freeze({ ...context, treeSchemas }));
+  } finally {
+    guarded.dispose();
+  }
+
+  const rights = accessRightsRunOn(raw, workspace, draft, treeSchemas);
+
+  return { draft, diagnostics: [...diagnostics, ...rights.diagnostics] };
+}
