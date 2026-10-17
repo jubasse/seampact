@@ -390,7 +390,9 @@ class PhpEmitter {
     const body = [
       ...(variant === undefined
         ? []
-        : [`${INDENT}${INDENT}$this->${propertyName(variant.member)} = ${phpString(variant.value)};`]),
+        : [
+            `${INDENT}${INDENT}$this->${propertyName(variant.member)} = ${phpString(variant.value)};`,
+          ]),
       ...slotCopies,
     ];
     return [
