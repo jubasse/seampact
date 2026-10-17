@@ -17,7 +17,7 @@ import {
 const contract = (
   schemas: string,
   routes: string,
-  conventions = "",
+  topLevel = "",
 ): string => `api: { name: shop, version: 1 }
 schemes:
   bearer: { kind: bearer }
@@ -34,16 +34,17 @@ rights:
   items.cost: { subject: { resource: Item, id: ItemId } }
   shop.role: { params: { level: { type: string } }, subject: { scope: shop } }
   audit: {}
-${conventions}surfaces:
+  audit2: {}
+${topLevel}surfaces:
   app:
     prefix: /v{version}
     identity: clerk
     routes:
 ${routes}`;
 
-const run = (schemas: string, routes: string, conventions?: string) =>
+const run = (schemas: string, routes: string, topLevel?: string) =>
   accessRightsRunContract(
-    accessRightsLoadFiles({ "api.yaml": contract(schemas, routes, conventions) }),
+    accessRightsLoadFiles({ "api.yaml": contract(schemas, routes, topLevel) }),
   );
 
 const located = (diagnostics: readonly { rule: string; origin: { pointer: string } }[]) =>
@@ -51,6 +52,9 @@ const located = (diagnostics: readonly { rule: string; origin: { pointer: string
 
 const fieldRightsOf = (draft: DraftIR, id: string) =>
   draft.operations.find((operation) => operation.id === id)?.fieldRights;
+
+// Far above the linear walk's time, far below the exponential one's (seconds at 16 levels).
+const DIAMOND_BUDGET_MS = 3000;
 
 const ITEM = `  Item:
     type: object
@@ -275,6 +279,158 @@ describe("field rights", () => {
 
     expect(located(diagnostics)).toEqual([["field-right-recursive", "/schemas/Comment"]]);
     expect(fieldRightsOf(draft, "tree")).toEqual([]);
+  });
+});
+
+describe("restrictions a field right cannot hold", () => {
+  test("union variants restricting one pointer differently are an error at the second; identical ones give one entry", () => {
+    const { draft, diagnostics } = run(
+      `  VarA:
+    type: object
+    properties: { cost: { type: integer, restrictedTo: audit } }
+  VarB:
+    type: object
+    properties: { cost: { type: integer, restrictedTo: audit2 } }
+  VarC:
+    type: object
+    properties: { cost: { type: integer, restrictedTo: audit } }
+  Ev:
+    discriminator: kind
+    oneOf: { a: VarA, b: VarB }
+  Same:
+    discriminator: kind
+    oneOf: { a: VarA, c: VarC }`,
+      `      ev: { method: get, output: Ev }
+      same: { method: get, output: Same }
+`,
+    );
+
+    expect(located(diagnostics)).toEqual([
+      ["field-right-conflict", "/schemas/VarB/properties/cost/restrictedTo"],
+    ]);
+    expect(diagnostics[0]?.related.map(({ origin }) => origin.pointer)).toEqual([
+      "/schemas/VarA/properties/cost/restrictedTo",
+    ]);
+    expect(fieldRightsOf(draft, "ev")).toEqual([]);
+    expect(
+      fieldRightsOf(draft, "same")?.map(({ schema, pointer, right }) => [schema, pointer, right]),
+    ).toEqual([["Same", "/cost", "audit"]]);
+  });
+
+  test("a restricted field below the JSON content of a text field is an error at its restriction", () => {
+    const { draft, diagnostics } = run(
+      `  Meta:
+    type: object
+    properties: { secret: { type: string, restrictedTo: audit } }
+  Upload:
+    type: object
+    properties:
+      meta: { type: string, contentMediaType: application/json, contentSchema: Meta }`,
+      "      upload: { method: post, inputMedia: form, input: Upload }\n",
+    );
+
+    expect(located(diagnostics)).toEqual([
+      ["field-right-position", "/schemas/Meta/properties/secret/restrictedTo"],
+    ]);
+    expect(diagnostics[0]?.message).toBe(
+      "field 'Meta/secret' is restricted to right 'audit' and is reached from the JSON content of field 'Upload/meta', where the IR lists no field right",
+    );
+    expect(fieldRightsOf(draft, "upload")).toEqual([]);
+  });
+
+  test("a restricted field reached from a query parameter or an error's params is an error at its restriction", () => {
+    const { diagnostics } = run(
+      `  Filter:
+    type: object
+    properties: { secret: { type: string, restrictedTo: audit } }
+  Detail:
+    type: object
+    properties: { hidden: { type: string, restrictedTo: audit2 } }`,
+      "      search: { method: get, query: { filter: Filter } }\n",
+      "errors:\n  shop.full: { status: 409, params: { detail: Detail } }\n",
+    );
+
+    expect(located(diagnostics)).toEqual([
+      ["field-right-position", "/schemas/Detail/properties/hidden/restrictedTo"],
+      ["field-right-position", "/schemas/Filter/properties/secret/restrictedTo"],
+    ]);
+    expect(diagnostics.map(({ message }) => message.replace(/.* is reached from /, ""))).toEqual([
+      "the params of error 'shop.full', where the IR lists no field right",
+      "query parameter 'filter' of route 'search', where the IR lists no field right",
+    ]);
+  });
+
+  test("a 16-level shared-reference diamond compiles fast: unrestricted it is not walked, restricted it hits the cap", () => {
+    const diamond = (levels: number, leaf: string) =>
+      [
+        ...Array.from(
+          { length: levels },
+          (_, level) =>
+            `  L${level}:\n    type: object\n    properties: { a: L${level + 1}, b: L${level + 1} }`,
+        ),
+        `  L${levels}:\n    type: object\n    properties: { code: ${leaf} }`,
+      ].join("\n");
+    const started = performance.now();
+    const free = run(diamond(16, "{ type: string }"), "      deep: { method: get, output: L0 }\n");
+    const capped = run(
+      diamond(16, "{ type: string, restrictedTo: audit }"),
+      "      deep: { method: get, output: L0 }\n",
+    );
+
+    expect(performance.now() - started).toBeLessThan(DIAMOND_BUDGET_MS);
+    expect(free.diagnostics).toEqual([]);
+    expect(fieldRightsOf(free.draft, "deep")).toEqual([]);
+    expect(located(capped.diagnostics)).toEqual([["field-right-limit", "/surfaces/app/routes/deep"]]);
+    expect(capped.diagnostics[0]?.message).toBe(
+      "route 'deep' reaches more than 1000 restricted fields from its input and responses, more field rights than one operation may list",
+    );
+    expect(fieldRightsOf(capped.draft, "deep")).toEqual([]);
+  });
+
+  test("an optional holder property is no output subject", () => {
+    const { diagnostics } = run(
+      `  Loose:
+    type: object
+    properties: { itemId: ItemId, cost: { type: integer, restrictedTo: items.cost } }`,
+      "      loose: { method: get, output: Loose }\n",
+    );
+
+    expect(located(diagnostics)).toEqual([["field-right-subject", "/surfaces/app/routes/loose"]]);
+    expect(diagnostics[0]?.message).toBe(
+      "output field 'Loose/cost' of route 'loose' is restricted to right 'items.cost', and the subject 'itemId' of its holder 'Loose' is optional: the subject must be a required field",
+    );
+  });
+
+  test("two fields of one route whose subject fails are both reported", () => {
+    const { diagnostics } = run(
+      `  Orphan:
+    type: object
+    properties:
+      cost: { type: integer, restrictedTo: items.cost }
+      price: { type: integer, restrictedTo: items.cost }`,
+      "      orphan: { method: get, output: Orphan }\n",
+    );
+
+    expect(diagnostics.map(({ message }) => message.slice(0, 32))).toEqual([
+      "output field 'Orphan/cost' of ro",
+      "output field 'Orphan/price' of r",
+    ]);
+  });
+
+  test("an author string quoted in a message is cut", () => {
+    const longName = `audit.${"x".repeat(200)}`;
+    const { diagnostics } = run(
+      `  Tag:
+    type: object
+    properties: { label: { type: string, restrictedTo: ${longName} } }`,
+      "      tag: { method: get, output: Tag }\n",
+    );
+
+    expect(located(diagnostics)).toEqual([
+      ["field-right-target", "/schemas/Tag/properties/label/restrictedTo"],
+    ]);
+    expect(diagnostics[0]?.message).toContain("...', which the rights catalogue");
+    expect(diagnostics[0]?.message.length).toBeLessThan(200);
   });
 });
 

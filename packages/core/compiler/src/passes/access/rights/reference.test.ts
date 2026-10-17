@@ -1,9 +1,5 @@
 import { describe, expect, test } from "vitest";
-import {
-  type DraftFixtureApi,
-  draftFixtureApply,
-  draftFixtureHalves,
-} from "../../../pipeline/draft-fixture.js";
+import { type DraftFixtureApi, draftFixtureHalves } from "../../../pipeline/draft-fixture.js";
 import type { JsonObject, JsonValue } from "../../../raw-tree.js";
 import {
   accessRightsReferenceDraft,
@@ -13,24 +9,13 @@ import {
 
 // The reference contract against its access delta: the members this half writes so far, the catalogues and each
 // operation's `scopes`, `requires`, `fieldRights`, `filteredBy` and sort-key rights (the rest of the delta lands
-// with the proofs). The expected sort keys are the after-tree keys with the delta applied.
+// with the proofs). The reference restricts no sort key, so its keys stay the after-tree keys, with no right.
 
 const WRITTEN_CATALOGUES = ["rights", "rules", "scopes", "buckets"] as const;
 const WRITTEN_OPERATION_MEMBERS = ["scopes", "requires", "fieldRights", "filteredBy"] as const;
 
 const isObject = (value: JsonValue | undefined): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
-
-// The delta's `paging` members only, by operation id.
-function pagingOnly(operations: JsonValue | undefined): JsonObject {
-  if (!isObject(operations)) throw new Error("the delta's operations are keyed by id");
-
-  return Object.fromEntries(
-    Object.entries(operations).flatMap(([id, members]) =>
-      isObject(members) && members.paging !== undefined ? [[id, { paging: members.paging }]] : [],
-    ),
-  );
-}
 
 function rightsDelta(api: DraftFixtureApi): JsonObject {
   const half = draftFixtureHalves(api, "access-delta").find(
@@ -52,8 +37,6 @@ describe("access.rights matches the after-access fixture", () => {
       const delta = rightsDelta(api);
       const after = accessRightsReferenceDraft(api);
 
-      draftFixtureApply(after, { operations: { ...pagingOnly(delta.operations) } });
-
       expect(diagnostics).toEqual([]);
 
       for (const catalogue of WRITTEN_CATALOGUES)
@@ -72,6 +55,12 @@ describe("access.rights matches the after-access fixture", () => {
         for (const member of WRITTEN_OPERATION_MEMBERS)
           expect(operation[member], `${operation.id}.${member}`).toEqual(expected[member]);
 
+        expect(
+          operation.paging?.sortKeys.filter(
+            (sortKey) => sortKey.right !== undefined || sortKey.derivedFrom !== undefined,
+          ) ?? [],
+          `${operation.id} sort-key rights`,
+        ).toEqual([]);
         expect(operation.paging, `${operation.id}.paging`).toEqual(
           after.operations.find((candidate) => candidate.id === operation.id)?.paging,
         );
