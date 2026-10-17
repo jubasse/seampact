@@ -10,9 +10,11 @@ namespace Seampact\Ir\Model;
 /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
 final readonly class UnionTagUnknown extends UnionTag
 {
+    public \stdClass $raw;
+
     public function __construct(
         public string $in,
-        public \stdClass $raw,
+        \stdClass $raw,
     ) {
         if (in_array($in, ['body', 'header'], true)) {
             throw new IrModelException('UnionTagUnknown: the in is a known one');
@@ -20,6 +22,7 @@ final readonly class UnionTagUnknown extends UnionTag
         if (($raw->{'in'} ?? null) !== $in) {
             throw new IrModelException('UnionTagUnknown: raw does not carry the in');
         }
+        $this->raw = IrHydration::copyObject($raw);
     }
 
     public function tag(): string
@@ -29,6 +32,6 @@ final readonly class UnionTagUnknown extends UnionTag
 
     public function toJson(): \stdClass
     {
-        return $this->raw;
+        return IrHydration::copyObject($this->raw);
     }
 }

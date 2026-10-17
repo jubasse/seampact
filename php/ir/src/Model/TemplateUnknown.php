@@ -10,9 +10,11 @@ namespace Seampact\Ir\Model;
 /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
 final readonly class TemplateUnknown extends Template
 {
+    public \stdClass $raw;
+
     public function __construct(
         public string $kind,
-        public \stdClass $raw,
+        \stdClass $raw,
     ) {
         if (in_array($kind, ['slot', 'text', 'literal', 'object', 'array', 'each'], true)) {
             throw new IrModelException('TemplateUnknown: the kind is a known one');
@@ -20,6 +22,7 @@ final readonly class TemplateUnknown extends Template
         if (($raw->{'kind'} ?? null) !== $kind) {
             throw new IrModelException('TemplateUnknown: raw does not carry the kind');
         }
+        $this->raw = IrHydration::copyObject($raw);
     }
 
     public function tag(): string
@@ -29,6 +32,6 @@ final readonly class TemplateUnknown extends Template
 
     public function toJson(): \stdClass
     {
-        return $this->raw;
+        return IrHydration::copyObject($this->raw);
     }
 }

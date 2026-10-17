@@ -39,7 +39,7 @@ final readonly class Scope
             idSchema: TypeUse::fromJson(IrHydration::required($members, 'idSchema', 'Scope')),
             errors: IrHydration::listOf(IrHydration::required($members, 'errors', 'Scope'), 'Scope.errors', static fn (mixed $item): string => IrHydration::string($item, 'Scope.errors[]')),
             docs: Docs::fromJson(IrHydration::required($members, 'docs', 'Scope')),
-            extensions: IrHydration::object(IrHydration::required($members, 'extensions', 'Scope'), 'Scope.extensions'),
+            extensions: IrHydration::copyObject(IrHydration::object(IrHydration::required($members, 'extensions', 'Scope'), 'Scope.extensions')),
             origin: Origin::fromJson(IrHydration::required($members, 'origin', 'Scope')),
             within: IrHydration::optional($members, 'within', static fn (mixed $item): string => IrHydration::string($item, 'Scope.within')),
         );
@@ -55,7 +55,7 @@ final readonly class Scope
         }
         $json->{'errors'} = $this->errors;
         $json->{'docs'} = $this->docs->toJson();
-        $json->{'extensions'} = $this->extensions;
+        $json->{'extensions'} = IrHydration::copy($this->extensions);
         $json->{'origin'} = $this->origin->toJson();
         return $json;
     }

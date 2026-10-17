@@ -10,9 +10,11 @@ namespace Seampact\Ir\Model;
 /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
 final readonly class KeysPolicyUnknown extends KeysPolicy
 {
+    public \stdClass $raw;
+
     public function __construct(
         public string $policy,
-        public \stdClass $raw,
+        \stdClass $raw,
     ) {
         if (in_array($policy, ['ignore', 'keep'], true)) {
             throw new IrModelException('KeysPolicyUnknown: the policy is a known one');
@@ -20,6 +22,7 @@ final readonly class KeysPolicyUnknown extends KeysPolicy
         if (($raw->{'policy'} ?? null) !== $policy) {
             throw new IrModelException('KeysPolicyUnknown: raw does not carry the policy');
         }
+        $this->raw = IrHydration::copyObject($raw);
     }
 
     public function tag(): string
@@ -29,6 +32,6 @@ final readonly class KeysPolicyUnknown extends KeysPolicy
 
     public function toJson(): \stdClass
     {
-        return $this->raw;
+        return IrHydration::copyObject($this->raw);
     }
 }

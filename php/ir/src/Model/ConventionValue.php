@@ -25,7 +25,7 @@ final readonly class ConventionValue
         $members = IrHydration::object($value, 'ConventionValue');
 
         return new self(
-            value: IrHydration::required($members, 'value', 'ConventionValue'),
+            value: IrHydration::copy(IrHydration::required($members, 'value', 'ConventionValue')),
             origin: Origin::fromJson(IrHydration::required($members, 'origin', 'ConventionValue')),
         );
     }
@@ -33,7 +33,7 @@ final readonly class ConventionValue
     public function toJson(): \stdClass
     {
         $json = new \stdClass();
-        $json->{'value'} = $this->value;
+        $json->{'value'} = IrHydration::copy($this->value);
         $json->{'origin'} = $this->origin->toJson();
         return $json;
     }

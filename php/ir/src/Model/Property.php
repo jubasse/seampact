@@ -54,7 +54,7 @@ final readonly class Property
             sensitive: IrHydration::boolean(IrHydration::required($members, 'sensitive', 'Property'), 'Property.sensitive'),
             deprecated: IrHydration::boolean(IrHydration::required($members, 'deprecated', 'Property'), 'Property.deprecated'),
             docs: Docs::fromJson(IrHydration::required($members, 'docs', 'Property')),
-            extensions: IrHydration::object(IrHydration::required($members, 'extensions', 'Property'), 'Property.extensions'),
+            extensions: IrHydration::copyObject(IrHydration::object(IrHydration::required($members, 'extensions', 'Property'), 'Property.extensions')),
             origin: Origin::fromJson(IrHydration::required($members, 'origin', 'Property')),
             restrictedTo: IrHydration::optional($members, 'restrictedTo', static fn (mixed $item): FieldRestriction => FieldRestriction::fromJson($item)),
             default: IrHydration::optionalOpaque($members, 'default'),
@@ -75,14 +75,14 @@ final readonly class Property
             $json->{'restrictedTo'} = $this->restrictedTo->toJson();
         }
         if ($this->default !== null) {
-            $json->{'default'} = $this->default->value;
+            $json->{'default'} = IrHydration::copy($this->default->value);
         }
         $json->{'deprecated'} = $this->deprecated;
         if ($this->codeName !== null) {
             $json->{'codeName'} = $this->codeName->toJson();
         }
         $json->{'docs'} = $this->docs->toJson();
-        $json->{'extensions'} = $this->extensions;
+        $json->{'extensions'} = IrHydration::copy($this->extensions);
         $json->{'origin'} = $this->origin->toJson();
         if ($this->derivedFrom !== null) {
             $json->{'derivedFrom'} = $this->derivedFrom->toJson();

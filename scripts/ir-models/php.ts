@@ -249,7 +249,7 @@ class PhpEmitter {
         const definition = this.definition(type.definition);
         if (definition.kind === "alias") return this.hydrate(definition.target, value, at);
         if (definition.kind === "extensionSlot")
-          return `${HYDRATION}::object(${value}, ${phpString(at)})`;
+          return `${HYDRATION}::copyObject(${HYDRATION}::object(${value}, ${phpString(at)}))`;
         return `${this.className(definition.name)}::fromJson(${value})`;
       }
       case "string":
@@ -259,7 +259,7 @@ class PhpEmitter {
       case "boolean":
         return `${HYDRATION}::boolean(${value}, ${phpString(at)})`;
       case "opaque":
-        return value;
+        return `${HYDRATION}::copy(${value})`;
       case "array":
         return `${HYDRATION}::listOf(${value}, ${phpString(at)}, ${this.hydrator(type.items, `${at}[]`)})`;
       case "map":
@@ -277,9 +277,11 @@ class PhpEmitter {
       case "named": {
         const definition = this.definition(type.definition);
         if (definition.kind === "alias") return this.encode(definition.target, value);
-        if (definition.kind === "extensionSlot") return undefined;
+        if (definition.kind === "extensionSlot") return `${HYDRATION}::copy(${value})`;
         return `${value}->toJson()`;
       }
+      case "opaque":
+        return `${HYDRATION}::copy(${value})`;
       case "array": {
         const item = this.encode(type.items, "$item");
         if (item === undefined) return undefined;
@@ -425,7 +427,7 @@ class PhpEmitter {
       if (this.isOptionalOpaque(member)) {
         lines.push(
           `${INDENT}${INDENT}if (${property} !== null) {`,
-          `${INDENT}${INDENT}${INDENT}${key} = ${property}->value;`,
+          `${INDENT}${INDENT}${INDENT}${key} = ${HYDRATION}::copy(${property}->value);`,
           `${INDENT}${INDENT}}`,
         );
         continue;
@@ -482,9 +484,11 @@ class PhpEmitter {
       "/** A variant this IR revision does not know, kept raw; its tag is the raw object's. */",
       `final readonly class ${unknown} extends ${name}`,
       "{",
+      `${INDENT}public \\stdClass $raw;`,
+      "",
       `${INDENT}public function __construct(`,
       `${INDENT}${INDENT}public string $${tag},`,
-      `${INDENT}${INDENT}public \\stdClass $raw,`,
+      `${INDENT}${INDENT}\\stdClass $raw,`,
       `${INDENT}) {`,
       `${INDENT}${INDENT}if (in_array($${tag}, [${knownTags}], true)) {`,
       `${INDENT}${INDENT}${INDENT}throw new IrModelException(${phpString(`${definition.name}Unknown: the ${definition.tag} is a known one`)});`,
@@ -492,6 +496,7 @@ class PhpEmitter {
       `${INDENT}${INDENT}if (($raw->{${phpString(definition.tag)}} ?? null) !== $${tag}) {`,
       `${INDENT}${INDENT}${INDENT}throw new IrModelException(${phpString(`${definition.name}Unknown: raw does not carry the ${definition.tag}`)});`,
       `${INDENT}${INDENT}}`,
+      `${INDENT}${INDENT}$this->raw = ${HYDRATION}::copyObject($raw);`,
       `${INDENT}}`,
       "",
       `${INDENT}public function tag(): string`,
@@ -501,7 +506,7 @@ class PhpEmitter {
       "",
       `${INDENT}public function toJson(): \\stdClass`,
       `${INDENT}{`,
-      `${INDENT}${INDENT}return $this->raw;`,
+      `${INDENT}${INDENT}return ${HYDRATION}::copyObject($this->raw);`,
       `${INDENT}}`,
       "}",
       "",

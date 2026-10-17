@@ -10,9 +10,11 @@ namespace Seampact\Ir\Model;
 /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
 final readonly class CsrfUnknown extends Csrf
 {
+    public \stdClass $raw;
+
     public function __construct(
         public string $kind,
-        public \stdClass $raw,
+        \stdClass $raw,
     ) {
         if (in_array($kind, ['derived', 'exempt'], true)) {
             throw new IrModelException('CsrfUnknown: the kind is a known one');
@@ -20,6 +22,7 @@ final readonly class CsrfUnknown extends Csrf
         if (($raw->{'kind'} ?? null) !== $kind) {
             throw new IrModelException('CsrfUnknown: raw does not carry the kind');
         }
+        $this->raw = IrHydration::copyObject($raw);
     }
 
     public function tag(): string
@@ -29,6 +32,6 @@ final readonly class CsrfUnknown extends Csrf
 
     public function toJson(): \stdClass
     {
-        return $this->raw;
+        return IrHydration::copyObject($this->raw);
     }
 }

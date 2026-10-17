@@ -29,7 +29,7 @@ final readonly class OperationExample
         $members = IrHydration::object($value, 'OperationExample');
 
         return new self(
-            value: IrHydration::required($members, 'value', 'OperationExample'),
+            value: IrHydration::copy(IrHydration::required($members, 'value', 'OperationExample')),
             status: IrHydration::optional($members, 'status', static fn (mixed $item): int => IrHydration::integer($item, 'OperationExample.status')),
             request: IrHydration::optional($members, 'request', static fn (mixed $item): bool => IrHydration::boolean($item, 'OperationExample.request')),
             error: IrHydration::optional($members, 'error', static fn (mixed $item): string => IrHydration::string($item, 'OperationExample.error')),
@@ -48,7 +48,7 @@ final readonly class OperationExample
         if ($this->error !== null) {
             $json->{'error'} = $this->error;
         }
-        $json->{'value'} = $this->value;
+        $json->{'value'} = IrHydration::copy($this->value);
         return $json;
     }
 }

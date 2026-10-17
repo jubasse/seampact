@@ -13,7 +13,10 @@ namespace Seampact\Ir\Model;
  */
 final readonly class IrOpaque
 {
-    public function __construct(public mixed $value)
+    public mixed $value;
+
+    public function __construct(mixed $value)
     {
+        $this->value = IrHydration::copy($value);
     }
 }

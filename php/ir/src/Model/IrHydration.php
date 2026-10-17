@@ -40,6 +40,26 @@ final class IrHydration
         throw new IrModelException(sprintf('%s: expected a JSON object, got the JSON type %s', $at, self::jsonType($value)));
     }
 
+    /** A deep copy of decoded JSON, so that the model never shares a value with its caller. */
+    public static function copy(mixed $value): mixed
+    {
+        if ($value instanceof \stdClass) {
+            return self::copyObject($value);
+        }
+
+        return is_array($value) ? array_map(self::copy(...), $value) : $value;
+    }
+
+    public static function copyObject(\stdClass $value): \stdClass
+    {
+        $copy = new \stdClass();
+        foreach (get_object_vars($value) as $name => $member) {
+            $copy->{(string) $name} = self::copy($member);
+        }
+
+        return $copy;
+    }
+
     public static function string(mixed $value, string $at): string
     {
         if (is_string($value)) {
@@ -68,7 +88,7 @@ final class IrHydration
             throw new IrModelException(sprintf('%s: expected an integer, got the JSON type %s', $at, self::jsonType($value)));
         }
         if (floor($value) !== $value || abs($value) > self::MAX_EXACT_FLOAT_INTEGER) {
-            throw new IrModelException(sprintf('%s: expected an integer within 64 bits, got %s', $at, (string) $value));
+            throw new IrModelException(sprintf('%s: expected an integer within 2^53', $at));
         }
 
         return (int) $value;

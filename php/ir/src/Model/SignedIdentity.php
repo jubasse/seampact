@@ -50,7 +50,7 @@ final readonly class SignedIdentity extends Identity
             errors: IrHydration::listOf(IrHydration::required($members, 'errors', 'SignedIdentity'), 'SignedIdentity.errors', static fn (mixed $item): string => IrHydration::string($item, 'SignedIdentity.errors[]')),
             headers: IrHydration::listOf(IrHydration::required($members, 'headers', 'SignedIdentity'), 'SignedIdentity.headers', static fn (mixed $item): IdentityHeaderUse => IdentityHeaderUse::fromJson($item)),
             docs: Docs::fromJson(IrHydration::required($members, 'docs', 'SignedIdentity')),
-            extensions: IrHydration::object(IrHydration::required($members, 'extensions', 'SignedIdentity'), 'SignedIdentity.extensions'),
+            extensions: IrHydration::copyObject(IrHydration::object(IrHydration::required($members, 'extensions', 'SignedIdentity'), 'SignedIdentity.extensions')),
             origin: Origin::fromJson(IrHydration::required($members, 'origin', 'SignedIdentity')),
             unknownKeys: IrHydration::optional($members, 'unknownKeys', static fn (mixed $item): KeysPolicy => KeysPolicy::fromJson($item)),
         );
@@ -69,7 +69,7 @@ final readonly class SignedIdentity extends Identity
         $json->{'errors'} = $this->errors;
         $json->{'headers'} = IrHydration::encodeList($this->headers, static fn (IdentityHeaderUse $item): mixed => $item->toJson());
         $json->{'docs'} = $this->docs->toJson();
-        $json->{'extensions'} = $this->extensions;
+        $json->{'extensions'} = IrHydration::copy($this->extensions);
         $json->{'origin'} = $this->origin->toJson();
         return $json;
     }

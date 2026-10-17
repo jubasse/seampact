@@ -10,9 +10,11 @@ namespace Seampact\Ir\Model;
 /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
 final readonly class SignatureVerifyUnknown extends SignatureVerify
 {
+    public \stdClass $raw;
+
     public function __construct(
         public string $verify,
-        public \stdClass $raw,
+        \stdClass $raw,
     ) {
         if (in_array($verify, ['template', 'application'], true)) {
             throw new IrModelException('SignatureVerifyUnknown: the verify is a known one');
@@ -20,6 +22,7 @@ final readonly class SignatureVerifyUnknown extends SignatureVerify
         if (($raw->{'verify'} ?? null) !== $verify) {
             throw new IrModelException('SignatureVerifyUnknown: raw does not carry the verify');
         }
+        $this->raw = IrHydration::copyObject($raw);
     }
 
     public function tag(): string
@@ -29,6 +32,6 @@ final readonly class SignatureVerifyUnknown extends SignatureVerify
 
     public function toJson(): \stdClass
     {
-        return $this->raw;
+        return IrHydration::copyObject($this->raw);
     }
 }

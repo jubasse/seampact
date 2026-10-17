@@ -133,7 +133,7 @@ final readonly class Operation
             tags: IrHydration::listOf(IrHydration::required($members, 'tags', 'Operation'), 'Operation.tags', static fn (mixed $item): string => IrHydration::string($item, 'Operation.tags[]')),
             examples: IrHydration::mapOf(IrHydration::required($members, 'examples', 'Operation'), 'Operation.examples', static fn (mixed $item): OperationExample => OperationExample::fromJson($item)),
             docs: Docs::fromJson(IrHydration::required($members, 'docs', 'Operation')),
-            extensions: IrHydration::object(IrHydration::required($members, 'extensions', 'Operation'), 'Operation.extensions'),
+            extensions: IrHydration::copyObject(IrHydration::object(IrHydration::required($members, 'extensions', 'Operation'), 'Operation.extensions')),
             origin: Origin::fromJson(IrHydration::required($members, 'origin', 'Operation')),
             op: IrHydration::optional($members, 'op', static fn (mixed $item): OpShorthand => OpShorthand::fromJson($item)),
             resource: IrHydration::optional($members, 'resource', static fn (mixed $item): OperationResource => OperationResource::fromJson($item)),
@@ -227,7 +227,7 @@ final readonly class Operation
         $json->{'tags'} = $this->tags;
         $json->{'examples'} = IrHydration::encodeMap($this->examples, static fn (OperationExample $item): mixed => $item->toJson());
         $json->{'docs'} = $this->docs->toJson();
-        $json->{'extensions'} = $this->extensions;
+        $json->{'extensions'} = IrHydration::copy($this->extensions);
         $json->{'origin'} = $this->origin->toJson();
         return $json;
     }

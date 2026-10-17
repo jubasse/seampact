@@ -189,4 +189,62 @@ final class ModelRoundTripTest extends TestCase
         self::assertStringContainsString('"schemes":{"1042":', $written);
         self::assertStringContainsString('"__proto__":{', $written);
     }
+
+    public function testMutatingTheInputAfterReadingLeavesTheModelUnchanged(): void
+    {
+        $document = Documents::example('unknown-kind.ir.json');
+        $expected = Documents::canonical(ContractIR::fromJson($document)->toJson());
+        $ir = ContractIR::fromJson($document);
+
+        $input = Documents::objectAt($document, 'schemas', 'Point');
+        $input->added = true;
+        $input->shape = 'changed';
+
+        self::assertSame($expected, Documents::canonical($ir->toJson()));
+        $point = $ir->schemas['Point'];
+        self::assertInstanceOf(SchemaUnknown::class, $point);
+        self::assertObjectNotHasProperty('added', $point->raw);
+    }
+
+    public function testMutatingAToJsonResultLeavesTheModelUnchanged(): void
+    {
+        $ir = ContractIR::fromJson(Documents::example('unknown-kind.ir.json'));
+        $expected = Documents::canonical($ir->toJson());
+
+        Documents::objectAt($ir->toJson(), 'schemas', 'Point')->added = true;
+        $point = $ir->schemas['Point'];
+        self::assertInstanceOf(SchemaUnknown::class, $point);
+        $point->toJson()->added = true;
+
+        self::assertSame($expected, Documents::canonical($ir->toJson()));
+    }
+
+    public function testOpaqueAndExtensionValuesAreCopied(): void
+    {
+        $document = Documents::example('every-member.ir.json');
+        $expected = Documents::canonical(ContractIR::fromJson($document)->toJson());
+        $ir = ContractIR::fromJson($document);
+
+        $out = $ir->toJson();
+        $this->mutateEveryObject($out);
+        $this->mutateEveryObject($document);
+
+        self::assertSame($expected, Documents::canonical($ir->toJson()));
+    }
+
+    private function mutateEveryObject(mixed $value): void
+    {
+        if (is_array($value)) {
+            array_map($this->mutateEveryObject(...), $value);
+
+            return;
+        }
+        if (!$value instanceof \stdClass) {
+            return;
+        }
+        foreach (get_object_vars($value) as $member) {
+            $this->mutateEveryObject($member);
+        }
+        $value->mutated = true;
+    }
 }

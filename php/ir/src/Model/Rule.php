@@ -41,7 +41,7 @@ final readonly class Rule
             takesBucket: IrHydration::boolean(IrHydration::required($members, 'takesBucket', 'Rule'), 'Rule.takesBucket'),
             errors: IrHydration::listOf(IrHydration::required($members, 'errors', 'Rule'), 'Rule.errors', static fn (mixed $item): string => IrHydration::string($item, 'Rule.errors[]')),
             docs: Docs::fromJson(IrHydration::required($members, 'docs', 'Rule')),
-            extensions: IrHydration::object(IrHydration::required($members, 'extensions', 'Rule'), 'Rule.extensions'),
+            extensions: IrHydration::copyObject(IrHydration::object(IrHydration::required($members, 'extensions', 'Rule'), 'Rule.extensions')),
             origin: Origin::fromJson(IrHydration::required($members, 'origin', 'Rule')),
             params: IrHydration::optional($members, 'params', static fn (mixed $item): string => IrHydration::string($item, 'Rule.params')),
             proof: IrHydration::optional($members, 'proof', static fn (mixed $item): RuleProof => RuleProof::fromJson($item)),
@@ -61,7 +61,7 @@ final readonly class Rule
         }
         $json->{'errors'} = $this->errors;
         $json->{'docs'} = $this->docs->toJson();
-        $json->{'extensions'} = $this->extensions;
+        $json->{'extensions'} = IrHydration::copy($this->extensions);
         $json->{'origin'} = $this->origin->toJson();
         return $json;
     }

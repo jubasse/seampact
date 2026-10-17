@@ -59,7 +59,7 @@ final readonly class Api
             surfaces: IrHydration::mapOf(IrHydration::required($members, 'surfaces', 'Api'), 'Api.surfaces', static fn (mixed $item): Surface => Surface::fromJson($item)),
             documents: IrHydration::mapOf(IrHydration::required($members, 'documents', 'Api'), 'Api.documents', static fn (mixed $item): ApiDocument => ApiDocument::fromJson($item)),
             docs: Docs::fromJson(IrHydration::required($members, 'docs', 'Api')),
-            extensions: IrHydration::object(IrHydration::required($members, 'extensions', 'Api'), 'Api.extensions'),
+            extensions: IrHydration::copyObject(IrHydration::object(IrHydration::required($members, 'extensions', 'Api'), 'Api.extensions')),
             origin: Origin::fromJson(IrHydration::required($members, 'origin', 'Api')),
             role: IrHydration::optional($members, 'role', static fn (mixed $item): ApiRole => ApiRole::fromJson($item)),
             caller: IrHydration::optional($members, 'caller', static fn (mixed $item): ApiCaller => ApiCaller::fromJson($item)),
@@ -85,7 +85,7 @@ final readonly class Api
         $json->{'surfaces'} = IrHydration::encodeMap($this->surfaces, static fn (Surface $item): mixed => $item->toJson());
         $json->{'documents'} = IrHydration::encodeMap($this->documents, static fn (ApiDocument $item): mixed => $item->toJson());
         $json->{'docs'} = $this->docs->toJson();
-        $json->{'extensions'} = $this->extensions;
+        $json->{'extensions'} = IrHydration::copy($this->extensions);
         $json->{'origin'} = $this->origin->toJson();
         return $json;
     }

@@ -23,14 +23,14 @@ final readonly class OAuth2
         $members = IrHydration::object($value, 'OAuth2');
 
         return new self(
-            flows: IrHydration::required($members, 'flows', 'OAuth2'),
+            flows: IrHydration::copy(IrHydration::required($members, 'flows', 'OAuth2')),
         );
     }
 
     public function toJson(): \stdClass
     {
         $json = new \stdClass();
-        $json->{'flows'} = $this->flows;
+        $json->{'flows'} = IrHydration::copy($this->flows);
         return $json;
     }
 }

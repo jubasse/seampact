@@ -27,7 +27,7 @@ final readonly class LiteralTemplate extends Template
         IrHydration::tag($members, 'kind', 'literal', 'LiteralTemplate');
 
         return new self(
-            value: IrHydration::required($members, 'value', 'LiteralTemplate'),
+            value: IrHydration::copy(IrHydration::required($members, 'value', 'LiteralTemplate')),
         );
     }
 
@@ -35,7 +35,7 @@ final readonly class LiteralTemplate extends Template
     {
         $json = new \stdClass();
         $json->{'kind'} = $this->kind;
-        $json->{'value'} = $this->value;
+        $json->{'value'} = IrHydration::copy($this->value);
         return $json;
     }
 

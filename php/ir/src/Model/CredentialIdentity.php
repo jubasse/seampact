@@ -48,7 +48,7 @@ final readonly class CredentialIdentity extends Identity
             errors: IrHydration::listOf(IrHydration::required($members, 'errors', 'CredentialIdentity'), 'CredentialIdentity.errors', static fn (mixed $item): string => IrHydration::string($item, 'CredentialIdentity.errors[]')),
             headers: IrHydration::listOf(IrHydration::required($members, 'headers', 'CredentialIdentity'), 'CredentialIdentity.headers', static fn (mixed $item): IdentityHeaderUse => IdentityHeaderUse::fromJson($item)),
             docs: Docs::fromJson(IrHydration::required($members, 'docs', 'CredentialIdentity')),
-            extensions: IrHydration::object(IrHydration::required($members, 'extensions', 'CredentialIdentity'), 'CredentialIdentity.extensions'),
+            extensions: IrHydration::copyObject(IrHydration::object(IrHydration::required($members, 'extensions', 'CredentialIdentity'), 'CredentialIdentity.extensions')),
             origin: Origin::fromJson(IrHydration::required($members, 'origin', 'CredentialIdentity')),
         );
     }
@@ -63,7 +63,7 @@ final readonly class CredentialIdentity extends Identity
         $json->{'errors'} = $this->errors;
         $json->{'headers'} = IrHydration::encodeList($this->headers, static fn (IdentityHeaderUse $item): mixed => $item->toJson());
         $json->{'docs'} = $this->docs->toJson();
-        $json->{'extensions'} = $this->extensions;
+        $json->{'extensions'} = IrHydration::copy($this->extensions);
         $json->{'origin'} = $this->origin->toJson();
         return $json;
     }

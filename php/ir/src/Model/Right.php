@@ -45,7 +45,7 @@ final readonly class Right
             subject: RightSubject::fromJson(IrHydration::required($members, 'subject', 'Right')),
             errors: IrHydration::listOf(IrHydration::required($members, 'errors', 'Right'), 'Right.errors', static fn (mixed $item): string => IrHydration::string($item, 'Right.errors[]')),
             docs: Docs::fromJson(IrHydration::required($members, 'docs', 'Right')),
-            extensions: IrHydration::object(IrHydration::required($members, 'extensions', 'Right'), 'Right.extensions'),
+            extensions: IrHydration::copyObject(IrHydration::object(IrHydration::required($members, 'extensions', 'Right'), 'Right.extensions')),
             origin: Origin::fromJson(IrHydration::required($members, 'origin', 'Right')),
             params: IrHydration::optional($members, 'params', static fn (mixed $item): string => IrHydration::string($item, 'Right.params')),
             guest: IrHydration::optional($members, 'guest', static fn (mixed $item): string => IrHydration::string($item, 'Right.guest')),
@@ -67,7 +67,7 @@ final readonly class Right
         }
         $json->{'errors'} = $this->errors;
         $json->{'docs'} = $this->docs->toJson();
-        $json->{'extensions'} = $this->extensions;
+        $json->{'extensions'} = IrHydration::copy($this->extensions);
         $json->{'origin'} = $this->origin->toJson();
         if ($this->derivedFrom !== null) {
             $json->{'derivedFrom'} = $this->derivedFrom->toJson();

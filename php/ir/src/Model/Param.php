@@ -55,7 +55,7 @@ final readonly class Param
             $json->{'wire'} = $this->wire->toJson();
         }
         if ($this->default !== null) {
-            $json->{'default'} = $this->default->value;
+            $json->{'default'} = IrHydration::copy($this->default->value);
         }
         if ($this->origin !== null) {
             $json->{'origin'} = $this->origin->toJson();
