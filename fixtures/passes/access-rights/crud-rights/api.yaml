@@ -65,7 +65,7 @@ surfaces:
                   input: CreateTask
                   requires: [{ rule: throttle, bucket: perUser }]
                 update: { input: CreateTask }
-                batch: {}
+                batch: { maxIds: 100 }
               member:
                 routes:
                   archive: { method: post, output: Task }
