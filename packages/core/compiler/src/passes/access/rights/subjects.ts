@@ -34,15 +34,15 @@ export interface AccessRightsSourceSchema {
 }
 
 /** A member id of a collection whose member scope holds the route. */
-export interface AccessRightsMemberId {
+interface MemberId {
   readonly name: string;
   readonly pointer: string;
   readonly collection: TreeNode;
 }
 
-export type AccessRightsDefaultSubject =
+type DefaultSubject =
   | { readonly kind: "found"; readonly source: IrWriter.ValueSource }
-  | { readonly kind: "ambiguous"; readonly candidates: readonly AccessRightsMemberId[] }
+  | { readonly kind: "ambiguous"; readonly candidates: readonly MemberId[] }
   | { readonly kind: "none" };
 
 export interface AccessRightsSubjectInput {
@@ -179,7 +179,7 @@ function resourceSubject(
   if (accessRightsSameSchema(found, expected)) return { subject: { source, defaulted: false } };
   reporter.error({
     rule: "requirement-subject",
-    message: `the subject ${accessRightsQuoted(written.text)} of right '${right.id}' is ${accessRightsDescribeSchema(found)}, not the right's id schema ${accessRightsDescribeSchema(expected)}`,
+    message: `the subject ${accessRightsQuoted(written.text)} of right '${right.id}' is ${describe(found)}, not the right's id schema ${describe(expected)}`,
     fix: "read the subject from a source whose schema is the right's id schema",
     pointer: written.pointer,
   });
@@ -231,12 +231,12 @@ export function accessRightsSameSchema(
   return pipelineCanonical(found.use) === pipelineCanonical(expected.use);
 }
 
-export const accessRightsDescribeSchema = (schema: AccessRightsSourceSchema): string =>
+const describe = (schema: AccessRightsSourceSchema): string =>
   schema.name === undefined ? `an inline ${schema.use.kind} schema` : `'${schema.name}'`;
 
 /** The member ids of the collections whose member scope holds `node`, nearest first, each in written order. */
-function memberIds(node: TreeNode): AccessRightsMemberId[] {
-  const ids: AccessRightsMemberId[] = [];
+function memberIds(node: TreeNode): MemberId[] {
+  const ids: MemberId[] = [];
 
   for (let at: TreeNode | undefined = node; at !== undefined; at = at.parent) {
     const collection = at.parent;
@@ -260,7 +260,7 @@ export function accessRightsDefaultMemberId(
   context: AccessRightsContext,
   node: TreeNode,
   expected: AccessRightsSourceSchema,
-): AccessRightsDefaultSubject {
+): DefaultSubject {
   const ids = memberIds(node);
 
   for (const collection of new Set(ids.map((id) => id.collection))) {
