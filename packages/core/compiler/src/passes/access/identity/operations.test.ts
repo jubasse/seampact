@@ -988,6 +988,33 @@ describe("relay routes", () => {
     expect(relay.input).toMatchObject({ rawBody: false });
   });
 
+  test("a public relay route gets no access member, and no callerKinds or csrf", () => {
+    const compiled = compile(`  app:
+    access: { public: "Probes call it before any user exists." }
+    routes:
+      getTask: { relays: tasks.getTask }
+`);
+    expect(compiled.rules).toEqual([]);
+    const relay = compiled.operation("getTask");
+    expect(relay).not.toHaveProperty("access");
+    expect(relay).not.toHaveProperty("callerKinds");
+    expect(relay).not.toHaveProperty("csrf");
+  });
+
+  test("an optional relay route gets no access member, and no callerKinds or csrf", () => {
+    const compiled = compile(`  app:
+    identity: viewer
+    access: { optionalAuth: "Anonymous readers see public posts." }
+    routes:
+      getTask: { relays: tasks.getTask }
+`);
+    expect(compiled.rules).toEqual([]);
+    const relay = compiled.operation("getTask");
+    expect(relay).not.toHaveProperty("access");
+    expect(relay).not.toHaveProperty("callerKinds");
+    expect(relay).not.toHaveProperty("csrf");
+  });
+
   test("an operation without safe that is not a relay route is an internal error", () => {
     expect(() =>
       compile(
