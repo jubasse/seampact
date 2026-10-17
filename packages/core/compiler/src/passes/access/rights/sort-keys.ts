@@ -11,7 +11,7 @@ import type { AccessRightsCatalogues } from "./catalogues.js";
 import { accessRightsIdSchemaOf } from "./field-subjects.js";
 import { accessRightsString } from "./read.js";
 import { type AccessRightsReporter, accessRightsQuoted } from "./report.js";
-import type { AccessRightsObjectSchema } from "./restricted-fields.js";
+import { type AccessRightsObjectSchema, schemaOf } from "./restricted-fields.js";
 import {
   type AccessRightsRestrictionChecks,
   accessRightsCheckRestriction,
@@ -157,14 +157,13 @@ function itemObjectsOf(
 
   if (body?.kind !== "ref") return undefined;
 
-  const schemaOf = (id: string) => (Object.hasOwn(schemas, id) ? schemas[id] : undefined);
-  const item = schemaOf(body.schema);
+  const item = schemaOf(schemas, body.schema);
 
   if (item?.kind === "object") return [item];
 
   if (item?.kind !== "union") return undefined;
 
-  const variants = item.variants.map((variant) => schemaOf(variant.schema));
+  const variants = item.variants.map((variant) => schemaOf(schemas, variant.schema));
   const objects = variants.filter((variant) => variant?.kind === "object");
 
   return objects.length === variants.length ? objects : undefined;

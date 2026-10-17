@@ -103,7 +103,8 @@ function useReferences(use: DraftTypeUse): string[] {
   }
 }
 
-function schemaOf(schemas: AccessRightsDraftSchemas, id: string): AccessRightsDraftSchemas[string] {
+/** The schema of an id; tree.schemas wrote every schema a use names. */
+export function schemaOf(schemas: AccessRightsDraftSchemas, id: string): AccessRightsDraftSchemas[string] {
   const schema = Object.hasOwn(schemas, id) ? schemas[id] : undefined;
 
   if (schema === undefined)
@@ -183,10 +184,12 @@ function walkUse(walk: AccessRightsFieldWalk, at: WalkAt, use: DraftTypeUse): vo
 
       return;
     case "scalar":
-      if (use.content !== undefined)
-        accessRightsRefuseRestrictionsBelow(walk, use.content.schema, {
-          text: `the JSON content of field '${accessRightsQuoted(`${at.root}${at.prefix}`)}'`,
-        });
+      if (use.content === undefined) return;
+
+      walk.reached += 1;
+      accessRightsRefuseRestrictionsBelow(walk, use.content.schema, {
+        text: `the JSON content of field '${accessRightsQuoted(`${at.root}${at.prefix}`)}'`,
+      });
   }
 }
 

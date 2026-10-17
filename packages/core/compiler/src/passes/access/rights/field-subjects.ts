@@ -105,7 +105,7 @@ export function accessRightsInputSubject(
     rule: "field-right-subject",
     message:
       defaulted.kind === "ambiguous"
-        ? `input field '${fieldText}' of route '${route.id}' is restricted to right '${accessRightsQuoted(right.id)}', and its subject could be member id ${defaulted.candidates.map(({ name }) => `'${name}'`).join(" or ")}`
+        ? `input field '${fieldText}' of route '${route.id}' is restricted to right '${accessRightsQuoted(right.id)}', and its subject could be member id ${defaulted.candidates.map(({ name }) => `'${accessRightsQuoted(name)}'`).join(" or ")}`
         : `input field '${fieldText}' of route '${route.id}' is restricted to right '${accessRightsQuoted(right.id)}', and no member id of the route has its id schema`,
     fix: "restrict the field to a right whose subject the route resolves, or use another input schema on this route",
     pointer,
@@ -114,7 +114,7 @@ export function accessRightsInputSubject(
       ...restrictedHere(field),
       ...(defaulted.kind === "ambiguous" ? defaulted.candidates : []).map((candidate) => ({
         pointer: candidate.pointer,
-        message: `member id '${candidate.name}' has the right's id schema`,
+        message: `member id '${accessRightsQuoted(candidate.name)}' has the right's id schema`,
       })),
     ],
   });
@@ -143,7 +143,7 @@ function scopeSubject(
   reporter.error({
     rule: "field-right-subject",
     message: `field '${accessRightsFieldText(field)}' of route '${route.id}' is restricted to right '${accessRightsQuoted(right.id)}' of scope '${accessRightsQuoted(scope)}', which the route does not resolve`,
-    fix: `enter scope '${scope}' on the route or an ancestor, or restrict the field to another right`,
+    fix: `enter scope '${accessRightsQuoted(scope)}' on the route or an ancestor, or restrict the field to another right`,
     pointer,
     distinctBy: `${field.schema}${field.pointer}`,
     related: restrictedHere(field),

@@ -389,6 +389,27 @@ describe("restrictions a field right cannot hold", () => {
     expect(fieldRightsOf(capped.draft, "deep")).toEqual([]);
   });
 
+  test("a diamond ending in a JSON text field reports the cap fast", () => {
+    const levels = 16;
+    const chain = Array.from(
+      { length: levels },
+      (_, level) =>
+        `  L${level}:\n    type: object\n    properties: { a: L${level + 1}, b: L${level + 1} }`,
+    );
+    const started = performance.now();
+    const { diagnostics } = run(
+      [
+        ...chain,
+        `  L${levels}:\n    type: object\n    properties: { m: { type: string, contentMediaType: application/json, contentSchema: Meta } }`,
+        "  Meta:\n    type: object\n    properties: { secret: { type: string, restrictedTo: audit } }",
+      ].join("\n"),
+      "      deep: { method: get, output: L0 }\n",
+    );
+
+    expect(performance.now() - started).toBeLessThan(DIAMOND_BUDGET_MS);
+    expect(located(diagnostics)).toContainEqual(["field-right-limit", "/surfaces/app/routes/deep"]);
+  });
+
   test("an optional holder property is no output subject", () => {
     const { diagnostics } = run(
       `  Loose:

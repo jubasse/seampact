@@ -288,7 +288,8 @@ UpdateTask:
 - On output, a field whose right the caller lacks is absent, never null; on a public route it is always absent unless the right is guest-enabled (SCN-065, CHK-025).
 - On input, a restricted field sent without the right answers 403 from the `forbidden` role with the field pointer, or is stripped (SCN-066, CHK-092).
 - A sort key inherits its field's restriction (ADR 0002 section 10).
-- The IR materialises, per operation, every field right with its schema, pointer, right, params, subject and direction, so targets never walk schemas to find them (ADR 0004). An operation reaches at most 1000 restricted fields from its input and responses, counted per pointer and direction; more is a compile error naming the operation, since each one is an entry of its field rights.
+- The IR materialises, per operation, every field right with its schema, pointer, right, params, subject and direction, so targets never walk schemas to find them (ADR 0004). An operation reaches at most 1000 restricted fields from its input and responses, counted for each use of a restricted field (a schema held by two union variants counts twice); more is a compile error naming the operation, since each one is an entry of its field rights.
+- A restricted field reached from a query parameter, a header, the params of an error or the JSON content of a text field is a compile error (`field-right-position`), as are two different restrictions at one pointer (`field-right-conflict`) and a sort key whose list item is not an object or a union of objects, whose resource right takes its id from a property of the item, or whose right has params (`sort-key-right`); each is refused until the IR can express it.
 - A restricted field reachable below a recursive reference (a `Comment` whose `replies` hold `Comment`) is a compile error naming the schema: its pointers would have no end, so the IR could not list its field rights.
 
 ### 7. Enums at a use
