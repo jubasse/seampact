@@ -37,7 +37,6 @@ const operation = (operations: readonly DraftOperation[], id: string): DraftOper
   return found;
 };
 
-
 const PROJECTS = "/surfaces/app/routes/projects";
 
 const PARAMS = `
@@ -627,6 +626,7 @@ api: { name: a, version: 1, kind: product }
 schemas:
   TaskKey: { type: object, properties: { taskId: { type: string } } }
   Task: { type: object, properties: { taskId: { type: string } } }
+  Note: { type: object, properties: { text: { type: string } } }
 surfaces:
   app:
     prefix: /v{version}
@@ -636,18 +636,28 @@ surfaces:
         id: TaskKey
         item: Task
         ops: [get]
+      notes: { kind: collection, id: TaskKey, singular: note, item: Note, ops: [get] }
 `);
   const treeSchemas = treeNodesStubService({
-    typeUses: { [`${TASKS}/id`]: ref("TaskKey"), [`${TASKS}/item`]: ref("Task") },
+    typeUses: {
+      [`${TASKS}/id`]: ref("TaskKey"),
+      [`${TASKS}/item`]: ref("Task"),
+      [`${ROUTES}/notes/id`]: ref("TaskKey"),
+      [`${ROUTES}/notes/item`]: ref("Note"),
+    },
   });
   const draft = treeNodesDraftWith(
     treeNodesObjectSchema("TaskKey", "/schemas/TaskKey", { taskId: text }),
     treeNodesObjectSchema("Task", "/schemas/Task", { taskId: text }),
+    treeNodesObjectSchema("Note", "/schemas/Note", { text }),
   );
   const raw = treeNodesApiOf(workspace);
   const { diagnostics } = treeNodesRun(raw, workspace, { treeSchemas, draft });
 
-  expect(diagnostics).toEqual([]);
+  // The item without the id property is located at the schema name `id` writes.
+  expect(diagnostics.map(({ rule, origin }) => ({ rule, origin }))).toEqual([
+    { rule: "seampact/tree/id-property", origin: at(`${ROUTES}/notes/id`) },
+  ]);
   const get = operation(draft.operations, "getTask");
   expect(get.path).toBe("/v1/tasks/{taskId}");
   expect(get.resource).toEqual({ type: "tasks", idParam: "taskId", idProperty: "taskId" });
