@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import { parse } from "yaml";
 import type { AuthoringFile } from "./schemas.js";
@@ -25,10 +25,24 @@ const ADRS = [
   "0008-convention-packs-and-extensions.md",
 ];
 
+const GRAMMAR_ADR = "0002-grammar.md";
+const DOCS = new URL("../../../../docs/", import.meta.url);
+
+// ADR 0002 lives as one file per section in docs/grammar; name order is the ADR's order.
+function adrText(adr: string): string {
+  if (adr !== GRAMMAR_ADR) return readFileSync(new URL(`adr/${adr}`, DOCS), "utf8");
+
+  return readdirSync(new URL("grammar/", DOCS))
+    .filter((name) => name.endsWith(".md"))
+    .sort()
+    .map((name) => readFileSync(new URL(`grammar/${name}`, DOCS), "utf8"))
+    .join("\n");
+}
+
 function examples(): Example[] {
   const out: Example[] = [];
   for (const adr of ADRS) {
-    const text = readFileSync(new URL(`../../../../docs/adr/${adr}`, import.meta.url), "utf8");
+    const text = adrText(adr);
     const blocks = [...text.matchAll(/^```yaml\n([\s\S]*?)^```$/gm)];
     blocks.forEach((m, index) => {
       const body = m[1] ?? "";

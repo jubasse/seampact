@@ -1,0 +1,24 @@
+### 10. Lists, cache and lifecycle settings
+
+- A route is a list when it comes from the `list` op, or when it sets `item` instead of `output`. `output` always means the whole body; an array `output` on a GET is refused with the fix "use `item`", so an author always knows whether a route is paged.
+- `paging`: on a list. It names a paging style from the `pagings` catalogue (section 14): `paging: cursor`, or the mapping form `{ cursor: { maxLimit: 50 } }`, which also takes `defaultLimit`, `overLimit` and, for a style with a `since` role, `token: opaque` or `token: instant`. A list without `paging` uses `conventions.paging.default`. A list with neither is a compile error naming both fixes: declare a style in `pagings` and name it, or apply a format pack that provides one ([A31](../decisions.md#a31)). `paging: none` serves the whole list unpaged, through the format's `list` shape. A style with a `since` role derives 410 from the `gone` role (FR-31, SCN-012, SCN-082, SCN-083).
+- `sortable`: a list of item fields, each a name or `{ key, right }`. A key inherits its field's `restrictedTo`; an explicit right that disagrees is a compile error; sorting by a restricted key without the right derives 403 from the `sortKeyForbidden` role (FR-23, SCN-067).
+- `filteredBy: <right>`: the right the application applies to its query; it reaches OpenAPI and the handler context, and nothing enforces it (SCN-068).
+- `degradable: [viewerProgress]`: paths of optional properties of the success data; a required one is a compile error (SCN-085).
+- `cache: { freshness: minute, anonymous: public, vary: [Accept-Language], etag: true }`. `freshness` is a family from `conventions.cache.families` or `never` (no-store); `anonymous` (`public` or `private`) applies to anonymous callers only, since an identified caller always gets private, and the shared-cache directives of a family (`s-maxage`) are written for public responses only; `etag: true` generates conditional GET (FR-33, SCN-013, SCN-086). The `Vary` entries for credentials (`Cookie`, `Authorization`, an API-key header) are derived from the schemes of the route's identity; `vary` lists only the other request headers the response depends on. A response that carries a `sensitive` field is `no-store` (ADR 0003 section 6), so a `cache` with a family other than `never` on such a route is a compile error naming the field and the route, with the fix "drop `cache` or `sensitive`": the contract never says one thing while the wire does another.
+- `budget: 300ms`: the client's default timeout and the deadline sent on an identity with a `deadline` header (SCN-043, SCN-078).
+- `bodyLimit: 2MiB`: overrides `conventions.bodyLimit` (SCN-041).
+- `format: bare`: the wire format of the routes below, instead of `conventions.format`, for an endpoint whose body a third party fixes (a load balancer's health probe, a vendor's callback). It names any declared format.
+- `idempotency: { exempt: "<reason>" }`: a write without the idempotency key (SCN-042). The generated clients send the key: a client target creates a fresh key per call (a UUID v4) unless the caller passes one, and returns it with the result. A client never replays a write by itself (FR-15); a caller that retries passes the key of the first attempt, so the write runs once.
+- `internal: true`: keeps the route out of documents with `internal: exclude` (product apis only, SCN-044).
+- `upstream: [streaming, catalog]`: services from the `services` catalogue, the owning service first. The operation's maturity derives from the owning service, otherwise from `api.maturity` (FR-34).
+- `maturity: experimental`, or `maturity: { level: experimental, reason: "<reason>" }` to say why: a stated maturity on a node, which wins over the derived level; on the api, `maturity` is the default every operation derives from. A stated level equal to the derived one is reported by the lint rule `seampact/redundant-maturity`, silenced through `lint.allow` (SCN-087, SCN-018).
+- `deprecated: { sunset: '2027-06-30', successor: getTask }`: derives the deprecation, sunset and successor headers (FR-13, SCN-051); `successor` only on a route. Their names default to RFC 9745's `Deprecation`, RFC 8594's `Sunset` and a `Link` with relation `successor-version`, and `conventions.deprecation` renames them (A36).
+- `tags: [tasks]`.
+
+```yaml
+# shared/base.yaml (excerpt)
+services:
+  catalog: { maturity: stable }
+  streaming: { maturity: provisional }
+```

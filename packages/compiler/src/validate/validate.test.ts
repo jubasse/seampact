@@ -415,7 +415,7 @@ describe("reference contract is the ADR's worked example", () => {
   const dir = join(FIXTURES, "reference");
   // Files the ADR names without showing them, written for this fixture (see the lane report).
   const BEYOND_THE_ADR = ["tasks/examples/search-200.json", "tasks/schemas.yaml"];
-  const adr = readFileSync(join(ROOT, "docs/adr/0002-grammar.md"), "utf8");
+  const adr = readFileSync(join(ROOT, "docs/grammar/example.md"), "utf8");
   const start = adr.indexOf("\n## Worked example");
   const section = adr.slice(start, adr.indexOf("\n## ", start + 1));
   const blocks = new Map<string, string>();
