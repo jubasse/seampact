@@ -73,8 +73,24 @@ test.each([
     api({ $include: "./r.yaml" }),
     "propertyNames /surfaces/app/routes",
   ],
+  [
+    "a service api without a caller",
+    "api",
+    { api: { name: "billing", version: 1, kind: "service" } },
+    "required /api",
+  ],
 ] as const)("rejects %s", (_, file, doc, expected) => {
   expect(errors(file, doc)).toContain(expected);
+});
+
+test("accepts a service api with a caller or an included fragment, and a product api without one", () => {
+  const caller = { identity: "service", right: "callerService" };
+
+  expect(errors("api", { api: { name: "b", version: 1, kind: "service", caller } })).toEqual([]);
+  expect(
+    errors("api", { api: { name: "b", version: 1, kind: "service", $include: "./a.yaml" } }),
+  ).toEqual([]);
+  expect(errors("api", { api: { name: "b", version: 1, kind: "product" } })).toEqual([]);
 });
 
 test("accepts the six non-safety departures without a reason (CHK-142)", () => {

@@ -1,5 +1,6 @@
 import type { Origin } from "@seampact/spec/ir";
 import type { JsonValue, RawApi } from "../raw-tree.js";
+import { canonical } from "./canonical.js";
 import { isJsonList, isJsonObject, jsonAt, pipelineOrigin, pointerBelow } from "./pointer.js";
 import type { PassReadonly } from "./readonly.js";
 import type { TreeNode } from "./tree.js";
@@ -207,20 +208,6 @@ export function pipelineInherited(raw: PassReadonly<RawApi>): InheritedReader {
     return Object.freeze({ shape, entries: Object.freeze(union) });
   }
   return read;
-}
-
-// A value's text with every object's keys sorted, so two equal values written in another key order are one.
-function canonical(value: unknown): string {
-  const sorted = (item: unknown): unknown => {
-    if (Array.isArray(item)) return item.map(sorted);
-    if (typeof item !== "object" || item === null) return item;
-    return Object.fromEntries(
-      Object.keys(item)
-        .sort()
-        .map((key) => [key, sorted(Reflect.get(item, key))]),
-    );
-  };
-  return JSON.stringify(sorted(value));
 }
 
 // A map no caller can change: a frozen object over a private `Map`, since freezing a `Map` leaves `set` working.
