@@ -85,7 +85,7 @@ Work that needs the member (a pass that writes it, a target that reads it) start
 
 A target is a separate package the consumer installs explicitly; the CLI never depends on or bundles one (ADR 0009, Context). Steps:
 
-1. Do not start target work before the IR freeze gate of ADR 0005, section "1. Two steps" is met. Whether that gate is met today is tracked in `docs/decisions.md` and the handoff, not in these documents.
+1. Do not start target work before the IR freeze gate of ADR 0005, section "1. Two steps" is met. Whether that gate is met today is recorded in `docs/decisions.md`, not in these documents.
 2. Create the package at `packages/targets/<name>`, for example `packages/targets/codegen-zod` for `@seampact/codegen-zod`, with role `target` in its manifest (ADR 0009, sections "Repository layout" and "Package roles"). Give its `index.ts` the directory header. JVM and PHP targets use `jvm/` and `php/<name>` instead.
 3. Write the first test before the generator: the target's output for the reference contract fixture under `fixtures/reference`. The conformance and determinism rules are in ADR 0015.
 4. Write the generator against `@seampact/codegen-core` (`defineTarget`, file writer, formatting hook, provider seam, version checks; ADR 0009, section "Package list for 1.0"). Compose with other targets through the provider seam, never through package dependencies (ADR 0009, section "The provider seam"). The dependency rules are in ADR 0009, section "Dependency rules".
