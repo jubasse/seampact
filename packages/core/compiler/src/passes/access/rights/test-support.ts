@@ -192,6 +192,37 @@ export function accessRightsRunReference(
 }
 
 /**
+ * Runs the real access.identity, then access.rights, each guarded, on the after-tree draft of a reference api, with
+ * the fixture schema service: both access halves as the orchestrator chains them.
+ */
+export function accessRightsRunReferenceHalves(
+  workspace: RawWorkspace,
+  api: DraftFixtureApi,
+): AccessRightsRun {
+  const raw = accessRightsApiOf(workspace, api);
+  const draft = draftFixture(api, "after-tree");
+  const treeSchemas = draftFixtureSchemaService(api);
+  const diagnostics: Diagnostic[] = [];
+  const context = pipelineContext({
+    raw,
+    workspace,
+    report: (diagnostic) => diagnostics.push(diagnostic),
+    guard: true,
+  });
+  const guarded = pipelineGuard(draft, accessIdentityPass);
+
+  try {
+    accessIdentityPass.run(guarded.draft, Object.freeze({ ...context, treeSchemas }));
+  } finally {
+    guarded.dispose();
+  }
+
+  const rights = accessRightsRunOn(raw, workspace, draft, treeSchemas);
+
+  return { draft, diagnostics: [...diagnostics, ...rights.diagnostics] };
+}
+
+/**
  * Sets the paging tree.nodes does not write yet on a list: its keys at the entries of the `sortable` list at
  * `sortable`, which reads them from the raw tree.
  */

@@ -17,6 +17,7 @@ const REFUSED_FIXTURES = [
   "guest",
   "service",
   "fields-refused",
+  "proofs-refused",
 ] as const;
 
 // What tree.nodes does not write yet, set before access.rights runs: the list paging of `fields-refused`.
@@ -98,6 +99,14 @@ const REFUSED: Record<(typeof REFUSED_FIXTURES)[number], [AccessRightsRule, stri
     ["field-right-conflict", "api", "/schemas/Pickup/properties/fee/restrictedTo"],
     ["field-right-limit", "api", "/surfaces/app/routes/stack"],
   ],
+  "proofs-refused": [
+    ["proof-name", "api", "/surfaces/app/routes/rename/requires/0"],
+    ["bucket-key", "api", "/surfaces/app/routes/rename/requires/1"],
+    ["proof-name", "api", "/surfaces/app/routes/lock/requires/1"],
+    ["proof-input", "api", "/surfaces/app/routes/peek/requires/0"],
+    ["proof-input", "api", "/surfaces/app/routes/tag/requires/0"],
+    ["signed-input", "api", "/surfaces/hooks/routes/ping"],
+  ],
 };
 
 const RULES = [
@@ -105,6 +114,9 @@ const RULES = [
   "right-pattern",
   "right-subject",
   "proof-schema",
+  "proof-name",
+  "proof-input",
+  "signed-input",
   "scope-within",
   "bucket-key",
   "bucket-window",
