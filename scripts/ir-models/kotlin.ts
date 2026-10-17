@@ -34,6 +34,7 @@ export const KOTLIN_CLAIMED_NAMES = [
   "IrShape",
   "EncodeDefault",
   "ExperimentalSerializationApi",
+  "Required",
   "SerialName",
   "Serializable",
   "UseSerializers",
@@ -140,7 +141,7 @@ function fileText(
   return `${lines.join("\n")}\n`;
 }
 
-// `@EncodeDefault` writes a variant's fixed tag; every `Long` reads through the IR integer serializer.
+// `@EncodeDefault` writes a variant's fixed tag and `@Required` refuses a document without it; every `Long` reads through the IR integer serializer.
 const MODEL_FILE_ANNOTATIONS = [
   "@file:OptIn(ExperimentalSerializationApi::class)",
   "@file:UseSerializers(IrIntegerSerializer::class)",
@@ -151,6 +152,7 @@ const SUPPORT_FILE_ANNOTATIONS = ["@file:OptIn(ExperimentalSerializationApi::cla
 const MODEL_IMPORTS = [
   "kotlinx.serialization.EncodeDefault",
   "kotlinx.serialization.ExperimentalSerializationApi",
+  "kotlinx.serialization.Required",
   "kotlinx.serialization.SerialName",
   "kotlinx.serialization.Serializable",
   "kotlinx.serialization.UseSerializers",
@@ -201,8 +203,11 @@ internal const val IR_SHOWN_LITERAL_MAX_LENGTH = 64
 // (no \`3d\`, \`0x1.8p1\`, \`+3\`, \`03\` or \`3.\`, which the JVM's own number syntax accepts).
 private val JSON_NUMBER = Regex("-?(0|[1-9][0-9]*)(\\\\.[0-9]+)?([eE][+-]?[0-9]+)?")
 
+/** Whether [literal] is a JSON number, as JavaScript and PHP read one. */
+internal fun isJsonNumber(literal: String): Boolean = JSON_NUMBER.matches(literal)
+
 /** A JSON number literal as the correctly rounded double, as JavaScript and PHP read it; null for any other text. */
-internal fun irNumberOf(literal: String): Double? = if (JSON_NUMBER.matches(literal)) literal.toDouble() else null
+internal fun irNumberOf(literal: String): Double? = if (isJsonNumber(literal)) literal.toDouble() else null
 
 /** A number literal cut for a message to [IR_SHOWN_LITERAL_MAX_LENGTH] characters. */
 internal fun shownLiteral(literal: String): String =
@@ -548,7 +553,7 @@ class KotlinEmitter {
     if (tag !== undefined && tag.member === member.name) {
       return [
         ...doc,
-        `${INDENT}${serialName}@EncodeDefault public override val ${property}: String = ${kotlinString(tag.value)},`,
+        `${INDENT}${serialName}@Required @EncodeDefault public override val ${property}: String = ${kotlinString(tag.value)},`,
       ];
     }
 

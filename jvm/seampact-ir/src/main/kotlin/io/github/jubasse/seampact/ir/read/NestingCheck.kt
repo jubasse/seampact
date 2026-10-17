@@ -1,5 +1,6 @@
 package io.github.jubasse.seampact.ir.read
 
+import io.github.jubasse.seampact.ir.model.isJsonNumber
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
@@ -9,15 +10,30 @@ import kotlinx.serialization.json.JsonObject
 // decode that follow recurse per level, so the whole document is measured first, without recursion.
 internal const val MAX_NESTING_DEPTH = 256
 
+// The bare words of JSON; any other bare token outside strings is a number or not JSON.
+private val JSON_WORDS = setOf("true", "false", "null")
+
+// The characters that end a bare token: JSON whitespace, the structural characters and the string quote.
+private const val TOKEN_ENDS = " \t\n\r{}[]:,\""
+
+/** What one scan of a JSON text found before it is parsed: the nesting refusal, or the first token that is not JSON. */
+internal class TextScan(val nestingRefusal: IrRefusal?, val nonJsonToken: String?)
+
 /**
- * Returns the refusal of a JSON text nested past [MAX_NESTING_DEPTH], or null. One linear scan of the text,
- * before it is parsed: it counts the arrays and objects open outside strings and stops at the first one past the
- * bound. It counts every array and object as written, a duplicate key's included, so a text too deep is
- * refused even when it is also malformed or when the parser would drop the duplicate; a shallow malformed text is
- * left to the parser.
+ * One linear scan of a JSON text, before it is parsed. It counts the arrays and objects open outside strings and
+ * stops at the first one past [MAX_NESTING_DEPTH]. It counts every array and object as written, a duplicate key's
+ * included, so a text too deep is refused even when it is also malformed or when the parser would drop the
+ * duplicate. Under the bound, it also finds the first bare token that is not `true`, `false`, `null` or a JSON
+ * number: the platform parser reads such a token (`3d`, `NaN`, `foo`) as a literal, where JSON refuses it. Any
+ * other malformed text is left to the parser.
  */
-internal fun checkTextNesting(text: String): IrRefusal? =
-    TextNestingScan(text).firstPointerPastBound()?.let(::nestingRefusal)
+internal fun scanText(text: String): TextScan {
+    val scan = TextNestingScan(text)
+    val pointerPastBound = scan.firstPointerPastBound()
+    if (pointerPastBound != null) return TextScan(nestingRefusal(pointerPastBound), null)
+
+    return TextScan(null, scan.firstNonJsonToken)
+}
 
 /** The same check on a document already parsed, by an explicit stack instead of recursion. */
 internal fun checkElementNesting(document: JsonElement): IrRefusal? =
@@ -52,6 +68,9 @@ private class TextNestingScan(private val text: String) {
     // In an object, the next string is a key after `{` or `,`, and a value after `:`.
     private var expectingKey = false
 
+    var firstNonJsonToken: String? = null
+        private set
+
     fun firstPointerPastBound(): String? {
         while (position < text.length) {
             val char = text[position++]
@@ -68,6 +87,8 @@ private class TextNestingScan(private val text: String) {
                 ',' -> nextMember()
                 ':' -> expectingKey = false
                 '"' -> readString()
+                ' ', '\t', '\n', '\r' -> Unit
+                else -> readBareToken()
             }
         }
         return null
@@ -76,6 +97,16 @@ private class TextNestingScan(private val text: String) {
     private fun nextMember() {
         val container = open.lastOrNull() ?: return
         if (container.isObject) expectingKey = true else container.index += 1
+    }
+
+    // A number or a bare word, from the character just read to the next one that ends a token.
+    private fun readBareToken() {
+        val start = position - 1
+        while (position < text.length && text[position] !in TOKEN_ENDS) position++
+        expectingKey = false
+
+        val token = text.substring(start, position)
+        if (firstNonJsonToken == null && token !in JSON_WORDS && !isJsonNumber(token)) firstNonJsonToken = token
     }
 
     // Only a key is kept, decoded, for the pointer; any other string is skipped.

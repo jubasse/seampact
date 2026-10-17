@@ -4,6 +4,7 @@ import { IR_REVISION, IR_SCHEMA_DOCUMENTS, IR_VERSION, type SchemaNode } from "@
 import { emitKotlin, KOTLIN_CLAIMED_NAMES, KOTLIN_MODEL_DIRECTORY } from "./kotlin.ts";
 import { buildNeutralModel, compareNames, type Definition } from "./model.ts";
 import { type DefinitionNames, definitionNames } from "./names.ts";
+import { emitNamingLists } from "./naming.ts";
 import { emitPhp, PHP_CLAIMED_NAMES, PHP_MODEL_DIRECTORY } from "./php.ts";
 
 // Generates every file of the native IR models (ADR 0010) from the IR JSON Schema: the Kotlin and PHP models and the
@@ -47,6 +48,9 @@ export function generateIrModels(
   });
 
   for (const [path, content] of phpFiles) files.set(path, content);
+
+  for (const [path, content] of emitNamingLists(WRITE_COMMAND)) files.set(path, content);
+
   files.set(MAPPING_TABLE_FILE, mappingTableJson(model.definitions, names));
 
   return files;
@@ -122,7 +126,13 @@ function mappingTableJson(
   return `${biomeStableJson(document, "")}\n`;
 }
 
-type JsonValue = string | number | boolean | null | JsonValue[] | { [member: string]: JsonValue };
+export type JsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | JsonValue[]
+  | { [member: string]: JsonValue };
 
 const JSON_INDENT = "  ";
 

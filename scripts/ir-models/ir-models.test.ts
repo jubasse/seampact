@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { IR_REVISION, IR_SCHEMA_DOCUMENTS, type SchemaNode } from "@seampact/spec/ir";
 import { afterEach, describe, expect, it } from "vitest";
+import { generateCorpus } from "./corpus.ts";
 import {
   findOrphanFiles,
   findStaleFiles,
@@ -164,7 +165,9 @@ describe("ir-models", () => {
   });
 
   it("every JSON file it writes is Biome-stable", () => {
-    const jsonFiles = [...generateIrModels()].filter(([path]) => path.endsWith(".json"));
+    const jsonFiles = [...generateIrModels(), ...generateCorpus()].filter(([path]) =>
+      path.endsWith(".json"),
+    );
 
     expect(jsonFiles.length).toBeGreaterThan(0);
 

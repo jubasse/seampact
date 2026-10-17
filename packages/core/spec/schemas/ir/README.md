@@ -72,7 +72,7 @@ A hand-written partition of a deciding member's values (`ValueSource.in`, `Field
 
 ## Invariants the schema cannot state
 
-The ADR 0003 subset has no conditional keyword, so these cross-member rules live beside the schema, each with a stable id. `checkIrInvariants(ir)` in `@seampact/spec/ir` checks them: pure, without Ajv, run by the compiler's finalize pass (p2-finalize, the owner) after the strict form, and reused by the tests of the native readers. A rule decided by an open-enum value (`semantic`, `role`, `fill`, `in`, `kind`) applies to the values the schema lists in `x-seampact-known` only; an unknown value is the reader's to name. A new invariant is a tightening IR change and relaxing or removing one is breaking (`CHANGE-TEMPLATE.md`).
+The ADR 0003 subset has no conditional keyword, so these cross-member rules live beside the schema, each with a stable id. `checkIrInvariants(ir)` in `@seampact/spec/ir` checks them: pure, without Ajv, run by the compiler's finalize pass (p2-finalize, the owner) after the strict form. The native readers do not run them: they share the reader-check corpus `packages/core/spec/vectors/ir/` (ADR 0010). A rule decided by an open-enum value (`semantic`, `role`, `fill`, `in`, `kind`) applies to the values the schema lists in `x-seampact-known` only; an unknown value is the reader's to name. A new invariant is a tightening IR change and relaxing or removing one is breaking (`CHANGE-TEMPLATE.md`).
 
 | Id | Rule |
 |---|---|

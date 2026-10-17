@@ -146,7 +146,6 @@ private fun numberOf(value: JsonElement?): Double? =
         ?.let(::irNumberOf)
 
 // A longer number literal is shown as written, never parsed for display.
-
 private fun shownNumberOf(value: JsonPrimitive): BigDecimal? =
     value.content.takeIf { !value.isString && it.length <= IR_SHOWN_LITERAL_MAX_LENGTH }?.toBigDecimalOrNull()
 

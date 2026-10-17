@@ -7,6 +7,7 @@ package io.github.jubasse.seampact.ir.model
 
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
@@ -290,7 +291,7 @@ internal object InternalPolicySerializer : IrOpenEnumSerializer<InternalPolicy>(
 
 @Serializable
 public data class LabelApiVersion(
-    @EncodeDefault public override val kind: String = "label",
+    @Required @EncodeDefault public override val kind: String = "label",
     public val label: String,
 ) : ApiVersion {
     init {
@@ -360,7 +361,7 @@ public data class PackRef(
 
 @Serializable
 public data class PathApiVersion(
-    @EncodeDefault public override val kind: String = "path",
+    @Required @EncodeDefault public override val kind: String = "path",
     /** The number paths carry ('/v1'). */
     public val number: Long,
 ) : ApiVersion {

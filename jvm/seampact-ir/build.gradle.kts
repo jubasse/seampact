@@ -42,6 +42,9 @@ tasks.withType<JavaCompile>().configureEach {
 tasks.test {
     useJUnitPlatform()
     systemProperty("seampact.repositoryRoot", repositoryRoot.absolutePath)
+    // The tests read these shared files; declared so a change reruns them.
+    inputs.dir(repositoryRoot.resolve("packages/core/spec/vectors"))
+    inputs.dir(repositoryRoot.resolve("packages/core/spec/schemas/ir/examples"))
     if (testJdk != null) {
         javaLauncher = javaToolchains.launcherFor {
             languageVersion = JavaLanguageVersion.of(testJdk)

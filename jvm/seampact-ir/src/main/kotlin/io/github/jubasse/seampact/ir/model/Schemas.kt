@@ -7,6 +7,7 @@ package io.github.jubasse.seampact.ir.model
 
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
@@ -17,7 +18,7 @@ import kotlinx.serialization.json.JsonPrimitive
 
 @Serializable
 public data class ArrayTypeUse(
-    @EncodeDefault public override val kind: String = "array",
+    @Required @EncodeDefault public override val kind: String = "array",
     public val items: TypeUse,
     public val minItems: Long? = null,
     public val maxItems: Long? = null,
@@ -35,7 +36,7 @@ public data class ArrayTypeUse(
 
 @Serializable
 public data class BodyUnionTag(
-    @SerialName("in") @EncodeDefault public override val in_: String = "body",
+    @SerialName("in") @Required @EncodeDefault public override val in_: String = "body",
     public val property: String,
 ) : UnionTag {
     init {
@@ -54,7 +55,7 @@ public data class EnumNarrowing(
 
 @Serializable
 public data class EnumTypeUse(
-    @EncodeDefault public override val kind: String = "enum",
+    @Required @EncodeDefault public override val kind: String = "enum",
     public val enum: EnumId,
     public val narrowedTo: EnumNarrowing? = null,
     /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
@@ -81,7 +82,7 @@ public data class FieldRestriction(
 /** A multipart field or a download (A39). */
 @Serializable
 public data class FileTypeUse(
-    @EncodeDefault public override val kind: String = "file",
+    @Required @EncodeDefault public override val kind: String = "file",
     public val media: List<String>,
     public val maxSizeBytes: Long? = null,
     /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
@@ -98,7 +99,7 @@ public data class FileTypeUse(
 
 @Serializable
 public data class HeaderUnionTag(
-    @SerialName("in") @EncodeDefault public override val in_: String = "header",
+    @SerialName("in") @Required @EncodeDefault public override val in_: String = "header",
     public val name: String,
 ) : UnionTag {
     init {
@@ -171,7 +172,7 @@ internal object JsonMediaTypeSerializer : IrOpenEnumSerializer<JsonMediaType>("J
 
 @Serializable
 public data class MapSchema(
-    @EncodeDefault public override val kind: String = "map",
+    @Required @EncodeDefault public override val kind: String = "map",
     public val keys: TypeUse? = null,
     public val values: TypeUse,
     public val id: SchemaId,
@@ -192,7 +193,7 @@ public data class MapSchema(
 
 @Serializable
 public data class ObjectSchema(
-    @EncodeDefault public override val kind: String = "object",
+    @Required @EncodeDefault public override val kind: String = "object",
     public val properties: List<Property>,
     public val id: SchemaId,
     public val name: Name,
@@ -213,7 +214,7 @@ public data class ObjectSchema(
 /** Any JSON value, unchecked (ADR 0003 section 2). */
 @Serializable
 public data class OpaqueTypeUse(
-    @EncodeDefault public override val kind: String = "opaque",
+    @Required @EncodeDefault public override val kind: String = "opaque",
     public val reason: Reason,
     public val origin: Origin,
     /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
@@ -255,7 +256,7 @@ public data class Property(
 
 @Serializable
 public data class RefTypeUse(
-    @EncodeDefault public override val kind: String = "ref",
+    @Required @EncodeDefault public override val kind: String = "ref",
     public val schema: SchemaId,
     public val unknownKeys: UnknownKeys? = null,
     /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
@@ -330,7 +331,7 @@ internal object ScalarTypeSerializer : IrOpenEnumSerializer<ScalarType>("ScalarT
 /** A scalar use. A use of a named format names it in 'scalar' and holds its type and refinements inline, so a target that does not map the named format still checks it (ADR 0003 section 8). */
 @Serializable
 public data class ScalarTypeUse(
-    @EncodeDefault public override val kind: String = "scalar",
+    @Required @EncodeDefault public override val kind: String = "scalar",
     public val type: ScalarType,
     /** A portable format of ADR 0003 section 8 ('uuid', 'int64', 'decimal'...); a named format is 'scalar'. */
     public val format: String? = null,
@@ -424,7 +425,7 @@ internal object TypeUseSerializer : IrUnionSerializer<TypeUse>("TypeUse", "kind"
 
 @Serializable
 public data class UnionSchema(
-    @EncodeDefault public override val kind: String = "union",
+    @Required @EncodeDefault public override val kind: String = "union",
     public val tag: UnionTag,
     public val variants: List<UnionVariant>,
     public val id: SchemaId,

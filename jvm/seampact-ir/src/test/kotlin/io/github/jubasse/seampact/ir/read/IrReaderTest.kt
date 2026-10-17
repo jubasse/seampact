@@ -200,12 +200,12 @@ class IrReaderTest {
             .replace("\"irRevision\": ${IrModelVersion.IR_REVISION},", "\"irRevision\": ${IrModelVersion.IR_REVISION}.0000000000000000001,")
 
         assertEquals(IrModelVersion.IR_REVISION, IrReader.read(text, support).irRevision)
-        // Text the JVM reads as a number but JSON does not is no revision, as in TypeScript and PHP.
+        // Text the JVM reads as a number but JSON does not is malformed, as in TypeScript and PHP.
         for (notJson in listOf("${IrModelVersion.IR_REVISION}d", "0x1.8p1")) {
             val revisionText = exampleText("minimal.ir.json")
                 .replace("\"irRevision\": ${IrModelVersion.IR_REVISION},", "\"irRevision\": $notJson,")
 
-            assertEquals(IrRefusalCode.REVISION_MISMATCH, refusals(revisionText).single().code, notJson)
+            assertFailsWith<IrMalformedException>(notJson) { IrReader.read(revisionText, support) }
         }
     }
 
@@ -518,5 +518,17 @@ class IrReaderTest {
             value = JsonObject(mapOf("id" to JsonPrimitive("client"))),
         )
         assertFailsWith<IrMalformedException> { IrReader.read(untaggedScheme, support) }
+    }
+
+    @Test
+    fun aBareTokenThatIsNotJsonIsMalformedInAnOpaqueMember() {
+        val text = exampleText("minimal.ir.json")
+        assertTrue("\"extensions\": {}" in text)
+
+        for (token in listOf("3d", "0x1.8p1", "NaN", "Infinity", "foo", "+3", "03", "tru")) {
+            val withToken = text.replace("\"extensions\": {}", "\"extensions\": {\"acme\": {\"owner\": $token}}")
+            val malformed = assertFailsWith<IrMalformedException>(token) { IrReader.read(withToken, support) }
+            assertTrue("'$token'" in malformed.message.orEmpty(), malformed.message)
+        }
     }
 }

@@ -2,6 +2,7 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { generateCorpus } from "./corpus.ts";
 import { findOrphanFiles, findStaleFiles, generateIrModels, WRITE_COMMAND } from "./generate.ts";
 
 // Writes or checks the native IR models. Run it through the resolve hook:
@@ -49,7 +50,7 @@ function main(argv: string[]): number {
     return EXIT_USAGE;
   }
 
-  const files = generateIrModels();
+  const files = new Map([...generateIrModels(), ...generateCorpus()]);
   const orphans = findOrphanFiles(files, REPO_ROOT);
   const orphanDirectories = orphans.filter((orphan) => orphan.isDirectory);
 
