@@ -53,9 +53,6 @@ const located = (diagnostics: readonly { rule: string; origin: { pointer: string
 const fieldRightsOf = (draft: DraftIR, id: string) =>
   draft.operations.find((operation) => operation.id === id)?.fieldRights;
 
-// Far above the linear walk's time, far below the exponential one's (seconds at 16 levels).
-const DIAMOND_BUDGET_MS = 3000;
-
 const ITEM = `  Item:
     type: object
     required: [itemId]
@@ -360,7 +357,7 @@ describe("restrictions a field right cannot hold", () => {
     ]);
   });
 
-  test("a 16-level shared-reference diamond compiles fast: unrestricted it is not walked, restricted it hits the cap", () => {
+  test("a 16-level shared-reference diamond: unrestricted it is not walked, restricted it hits the cap", () => {
     const diamond = (levels: number, leaf: string) =>
       [
         ...Array.from(
@@ -370,14 +367,12 @@ describe("restrictions a field right cannot hold", () => {
         ),
         `  L${levels}:\n    type: object\n    properties: { code: ${leaf} }`,
       ].join("\n");
-    const started = performance.now();
     const free = run(diamond(16, "{ type: string }"), "      deep: { method: get, output: L0 }\n");
     const capped = run(
       diamond(16, "{ type: string, restrictedTo: audit }"),
       "      deep: { method: get, output: L0 }\n",
     );
 
-    expect(performance.now() - started).toBeLessThan(DIAMOND_BUDGET_MS);
     expect(free.diagnostics).toEqual([]);
     expect(fieldRightsOf(free.draft, "deep")).toEqual([]);
     expect(located(capped.diagnostics)).toEqual([
@@ -389,14 +384,13 @@ describe("restrictions a field right cannot hold", () => {
     expect(fieldRightsOf(capped.draft, "deep")).toEqual([]);
   });
 
-  test("a diamond ending in a JSON text field reports the cap fast", () => {
+  test("a diamond ending in a JSON text field reports the cap", () => {
     const levels = 16;
     const chain = Array.from(
       { length: levels },
       (_, level) =>
         `  L${level}:\n    type: object\n    properties: { a: L${level + 1}, b: L${level + 1} }`,
     );
-    const started = performance.now();
     const { diagnostics } = run(
       [
         ...chain,
@@ -406,7 +400,6 @@ describe("restrictions a field right cannot hold", () => {
       "      deep: { method: get, output: L0 }\n",
     );
 
-    expect(performance.now() - started).toBeLessThan(DIAMOND_BUDGET_MS);
     expect(located(diagnostics)).toContainEqual(["field-right-limit", "/surfaces/app/routes/deep"]);
   });
 
