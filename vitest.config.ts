@@ -7,5 +7,7 @@ export default defineConfig({
   test: {
     include: ["packages/*/*/src/**/*.test.ts", "scripts/**/*.test.ts"],
     testTimeout: TEST_TIMEOUT_MILLISECONDS,
+    // One process per file: the CPU-time bounds of the loader tests read process-wide CPU usage.
+    pool: "forks",
   },
 });
