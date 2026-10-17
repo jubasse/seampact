@@ -51,7 +51,7 @@ proofs:
   - id: CHK-105
     fixtures: [fixtures/reference]
     tests:
-      - 'core: packages/core/compiler/src/passes/tree/nodes/formats.test.ts#formats and paging styles: bare from the core where undeclared, declared formats read, unused ones absent'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/formats.test.ts#formats and paging styles: bare from the core where undeclared, every declared format and style compiled, used or not'
       - 'core: packages/core/compiler/src/passes/tree/nodes/formats.test.ts#formats and paging styles: a declared bare replaces the core one, its error kept by the formats without one'
   - id: CHK-126
     fixtures: [fixtures/passes/tree-nodes/formats-refused]
