@@ -333,24 +333,58 @@
         }
       },
       "additionalProperties": false,
-      "if": {
-        "properties": {
-          "$include": true
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "$include": true
+            },
+            "required": [
+              "$include"
+            ]
+          },
+          "else": {
+            "properties": {
+              "name": true,
+              "version": true
+            },
+            "required": [
+              "name",
+              "version"
+            ]
+          }
         },
-        "required": [
-          "$include"
-        ]
-      },
-      "else": {
-        "properties": {
-          "name": true,
-          "version": true
-        },
-        "required": [
-          "name",
-          "version"
-        ]
-      }
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "service"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "if": {
+              "properties": {
+                "$include": true
+              },
+              "required": [
+                "$include"
+              ]
+            },
+            "else": {
+              "properties": {
+                "caller": true
+              },
+              "required": [
+                "caller"
+              ]
+            }
+          }
+        }
+      ]
     }
   }
 }

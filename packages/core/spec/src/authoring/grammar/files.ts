@@ -230,6 +230,13 @@ export function apiDefs(): Record<string, JsonSchema> {
         description: kw(A2(5), ref("common", "description")),
       },
       required: ["name", "version"],
+      // A service api states its caller (grammar section 5); an included fragment may supply it.
+      rules: [
+        when(
+          { properties: { kind: { const: "service" } }, required: ["kind"] },
+          when(req("$include"), undefined, req("caller")),
+        ),
+      ],
     }),
   };
 }
