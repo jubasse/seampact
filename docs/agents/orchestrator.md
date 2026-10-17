@@ -7,7 +7,7 @@ For the lead session only: subagents never read this file. The lead reads it onc
 | Task | Type | Model, effort |
 |---|---|---|
 | lane PR, review fixes, committed docs | `seampact-implementer` | Opus medium (Sonnet for small or mechanical lanes) |
-| single review, re-review, lens review, synthesis | `seampact-reviewer` | first review of a compiler PR: Opus high; lens and re-review: Sonnet medium; synthesis: Opus high |
+| single review, re-review, lens review, synthesis | `seampact-reviewer` | first review of a compiler PR: Opus high; lens: Sonnet, high effort for the security lens and medium otherwise; re-review: Sonnet medium; synthesis: Opus high |
 | listed nits, rebase plus gate, regeneration | `seampact-mechanical` | Haiku (its default) |
 | one-shot repo-wide script | `seampact-refactor` | Sonnet (its default) |
 | `.work/` brief or decision synthesis | `seampact-writer` | Opus (its default), high for design |

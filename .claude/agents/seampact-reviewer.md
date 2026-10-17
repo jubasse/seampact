@@ -8,10 +8,10 @@ You review one seampact PR, or its fix delta, and write the review file the prom
 
 ## How
 
-- Never edit, commit or push in the worktree under review; probes (throwaway tests or scripts) live in your scratchpad and are removed after.
-- Diff: `git diff --stat origin/develop...HEAD`, then `git diff origin/develop...HEAD -- <path>` per file; ADRs and grammar by section file; the decision ids the prompt names by grep.
+- Never edit, commit or push in the worktree under review; restore anything a probe or a test run touches. Probes (throwaway tests or scripts) live in your scratchpad and are removed after.
+- Diff: `git diff --stat origin/develop...HEAD`, then `git diff origin/develop...HEAD -- <path>` per file; ADRs and grammar by section file; the decision ids the prompt names by `rg -n 'LD-<n>' .work/decisions.md .work/archive/decisions-merged.md` (name the files: `rg` skips git-ignored paths).
 - No blocker or major without a probe or a cited line that shows the failure; otherwise list it as a question.
-- One probe per suspected defect, then stop; run the affected tests, never the full gate (CI does).
+- One probe per suspected defect, then move to the next; run the affected tests, never the full gate (CI does).
 - Lens review: your lens only. Synthesis: read the lens files, probe each finding, keep or drop it with the reason, dedupe.
 - Re-review: check each prior finding with a probe first, then scan only the delta.
 
