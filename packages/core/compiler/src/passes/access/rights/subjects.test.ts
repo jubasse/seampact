@@ -322,4 +322,22 @@ describe("subjects and scopes", () => {
     ]);
     expect(draft.operations[0]?.scopes?.map(({ scope }) => scope)).toEqual(["project"]);
   });
+
+  test("a scope entered without the scope it is within is refused, naming the parent", () => {
+    const { diagnostics } = run(`      ping:
+        method: get
+        scopes: { project: resolver }
+      pong:
+        method: get
+        scopes: { org: subdomain, project: resolver }
+`);
+
+    expect(located(diagnostics)).toEqual([
+      ["seampact/access/scope-nesting", "/surfaces/app/routes/ping/scopes/project"],
+    ]);
+    expect(diagnostics[0]?.message).toBe(
+      "scope 'project' is within 'org', which is not entered at this node or an ancestor",
+    );
+    expect(diagnostics[0]?.fix).toBe("enter 'org' at this node or an ancestor");
+  });
 });

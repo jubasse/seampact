@@ -253,4 +253,4 @@ A scope catalogue entry declares the id schema, an optional parent scope (`withi
 scopes: { org: subdomain, project: path.projectId }
 ```
 
-`resolver` means the application implements the resolver (A23, SCN-070). Scopes resolve in nesting order: a scope entered at an ancestor before one entered below it; inside one node, a parent scope before its child, then by name. A scope entered below its own child scope is an error (FR-24, SCN-069).
+`resolver` means the application implements the resolver (A23, SCN-070). Scopes resolve in nesting order: a scope entered at an ancestor before one entered below it; inside one node, a parent scope before its child, then by name. A scope entered below its own child scope is an error (FR-24, SCN-069), and so is a scope entered where the scope it is within is not entered at that node or an ancestor.

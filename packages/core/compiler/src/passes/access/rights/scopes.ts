@@ -13,7 +13,7 @@ import { accessRightsValueSource } from "./source.js";
 
 // The scopes of an operation (FR-24, A23, ADR 0002 section 9), in resolution order: a scope entered at an ancestor
 // before one entered below it; inside one node, a parent scope before its child, then by name. A scope entered
-// twice, or below one of its own child scopes, is an error naming both places.
+// twice, or below one of its own child scopes, is an error naming both places; so is one whose parent is not entered.
 
 interface ScopeUse {
   readonly scope: string;
@@ -29,9 +29,12 @@ export function accessRightsOperationScopes(
   node: TreeNode,
 ): IrWriter.OperationScope[] {
   const resolved: ScopeUse[] = [];
-  for (const group of usesByNode(context, reporter, catalogues, node))
+  const groups = usesByNode(context, reporter, catalogues, node);
+  const enteredNames = new Set(groups.flat().map((use) => use.scope));
+
+  for (const group of groups)
     for (const use of resolutionOrder(group, catalogues)) {
-      if (checkEnteredOnce(reporter, catalogues, resolved, use)) resolved.push(use);
+      if (checkEnteredOnce(reporter, catalogues, resolved, enteredNames, use)) resolved.push(use);
     }
 
   return resolved.map((use) => {
@@ -112,11 +115,12 @@ function resolutionOrder(group: ScopeUse[], catalogues: AccessRightsCatalogues):
   return ordered;
 }
 
-// A scope entered twice, or below one of its own child scopes, is an error; true when `use` may be resolved.
+// A scope entered twice, below one of its own child scopes, or without its parent entered is an error; true when `use` may be resolved.
 function checkEnteredOnce(
   reporter: AccessRightsReporter,
   catalogues: AccessRightsCatalogues,
   resolved: readonly ScopeUse[],
+  enteredNames: ReadonlySet<string>,
   use: ScopeUse,
 ): boolean {
   const twice = resolved.find((earlier) => earlier.scope === use.scope);
@@ -144,5 +148,18 @@ function checkEnteredOnce(
     });
     return false;
   }
+
+  const parent = catalogues.scopes.get(use.scope)?.within;
+  // A parent entered below this scope is reported at its own entry as a scope entered below its child.
+  if (parent !== undefined && !enteredNames.has(parent)) {
+    reporter.error({
+      rule: "scope-nesting",
+      message: `scope '${use.scope}' is within '${parent}', which is not entered at this node or an ancestor`,
+      fix: `enter '${parent}' at this node or an ancestor`,
+      pointer: use.pointer,
+    });
+    return false;
+  }
+
   return true;
 }
