@@ -58,6 +58,11 @@ export class TreeSchemasReporter {
     return origin;
   }
 
+  /** Whether a node of the merged raw tree sits at `pointer`. */
+  resolves(pointer: string): boolean {
+    return this.context.origin(pointer) !== undefined;
+  }
+
   error(problem: TreeSchemasProblem): void {
     this.context.report({
       severity: "error",

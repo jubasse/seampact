@@ -17,3 +17,5 @@ The tree pass names each inline route schema after its operation and position.
 The tree pass derives the ids input of a `batch` op and the version property of a versioned write.
 
 The tree pass gives every query and form field its query wire.
+
+The tree pass parses every schema example against its schema, writes each schema's directions and a use's `unknownKeys`, keeps schema deprecation and the docs and examples of properties, variants and nested schemas, and refuses a map as a query or form field.

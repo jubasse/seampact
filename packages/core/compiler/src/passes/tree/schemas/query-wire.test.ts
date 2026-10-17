@@ -97,3 +97,25 @@ describe("query wire kinds", () => {
       expect([pointer, run.service.queryWire(pointer)]).toEqual([pointer, expected]);
   });
 });
+
+describe("a map-typed query field or rule proof", () => {
+  test("is refused, since no query wire encodes its keys", () => {
+    const run = treeSchemasRunApi(`rules:
+  fresh: { proof: { in: body, name: ticket, schema: Labels } }
+schemas:
+  Labels: { type: object, additionalProperties: { type: string } }
+surfaces:
+  app:
+    routes:
+      search:
+        method: get
+        query: { labels?: Labels }
+`);
+
+    expect(run.diagnostics.map((d) => [d.rule, d.origin.pointer])).toEqual([
+      ["seampact/tree/query-map", "/rules/fresh/proof/schema"],
+      ["seampact/tree/query-map", "/surfaces/app/routes/search/query/labels?"],
+    ]);
+    expect(run.service.queryWire("/rules/fresh/proof/schema")).toBeUndefined();
+  });
+});

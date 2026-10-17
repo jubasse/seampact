@@ -21,6 +21,8 @@ export interface TreeSchemasDerivedHost {
   /** A copy of the properties of the object schema `name`, or undefined once a problem is reported. */
   sourceProperties(name: string, pointer: string): IrWriter.Property[] | undefined;
   restriction(written: TreeSchemasRaw | undefined, pointer: string): IrWriter.FieldRestriction;
+  /** A copy of the examples written on `value`, each queued to be parsed against `use`; undefined when none. */
+  examples(value: TreeSchemasRaw, pointer: string, use: IrWriter.TypeUse): unknown[] | undefined;
 }
 
 type DerivedKind = "pick" | "omit";
@@ -161,17 +163,6 @@ function overlayProperty(
 ): boolean {
   if (!treeSchemasIsObject(overlay)) return true;
 
-  if (Object.hasOwn(overlay, "examples")) {
-    host.reporter.error({
-      rule: "annotation-position",
-      pointer: treeSchemasPointer(pointer, "examples"),
-      message: "'examples' on a property is not kept by the contract model",
-      fix: "remove 'examples' here; put the example on the object that holds this value",
-    });
-
-    return false;
-  }
-
   if (typeof overlay.nullable === "boolean") property.nullable = overlay.nullable;
 
   if (typeof overlay.deprecated === "boolean") property.deprecated = overlay.deprecated;
@@ -181,6 +172,12 @@ function overlayProperty(
   if (Object.hasOwn(overlay, "restrictedTo"))
     property.restrictedTo = host.restriction(overlay.restrictedTo, pointer);
   property.docs = { ...property.docs, ...treeSchemasDocs(overlay) };
+  const use = structuredClone(property.type);
+
+  if (property.nullable && use.kind !== "opaque") use.nullable = true;
+  const examples = host.examples(overlay, pointer, use);
+
+  if (examples !== undefined) property.examples = examples;
 
   return checkRequiredOverlay(property, overlay, pointer, host.reporter);
 }

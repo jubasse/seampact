@@ -14,3 +14,15 @@ proofs:
   - id: CHK-160
     tests:
       - 'core: packages/core/compiler/src/passes/tree/schemas/query-wire.test.ts#each kind under the default conventions, at query fields and form field positions'
+  - id: CHK-053
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/examples.test.ts#written examples are parsed at compile time, each issue at its pointer inside the value'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/examples.test.ts#unknown keys, missing required properties and unknown tags are refused'
+      - "core: packages/core/compiler/src/passes/tree/schemas/derived.test.ts#an overlay's examples replace the source's and are parsed against the property"
+  - id: CHK-134
+    tests:
+      - "core: packages/core/compiler/src/passes/tree/schemas/directions.test.ts#a use's unknownKeys sits on its input use, and an output answer holds none"
+      - 'core: packages/core/compiler/src/passes/tree/schemas/directions.test.ts#unknownKeys where every use is output, or on a value with no keys, is refused'
+  - id: CHK-135
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/directions.test.ts#each schema, enum and named format takes the directions of the uses that reach it'

@@ -2,7 +2,7 @@ import type { IrWriter } from "@seampact/spec/ir";
 import { deriveName, type Name, segmentsOf, splitName, suffixWords } from "@seampact/spec/naming";
 import type { TreeNode } from "../../../pipeline/seam.js";
 import type { TreeNodesOperationName } from "../nodes/index.js";
-import type { TreeSchemasCompiler, TreeSchemasPlace } from "./compile.js";
+import type { TreeSchemasCompiler } from "./compile.js";
 import {
   type TreeSchemasRaw,
   type TreeSchemasRawObject,
@@ -16,13 +16,30 @@ import {
 // catalogues (principals, header schemas, scope and subject ids, params, rule proofs) and the route positions of
 // the tree (ADR 0002 sections 6 and 7).
 
+// The directions of ADR 0003 section 4, by position kind.
+const INPUT: readonly IrWriter.Direction[] = ["input"];
+const OUTPUT: readonly IrWriter.Direction[] = ["output"];
+const BOTH: readonly IrWriter.Direction[] = ["input", "output"];
+
 const positionAt = (
   compiler: TreeSchemasCompiler,
   value: TreeSchemasRaw | undefined,
   pointer: string,
-  place: TreeSchemasPlace = "position",
+  directions: readonly IrWriter.Direction[],
 ): void => {
-  if (value !== undefined) compiler.position(value, { pointer, name: undefined, place });
+  if (value !== undefined)
+    compiler.position(value, { pointer, name: undefined, place: "position" }, directions);
+};
+
+// A header declaration's schema is used as its `in` says; a version token (no `in`) is read and answered.
+const headerDirections = (
+  declaration: TreeSchemasRaw | undefined,
+): readonly IrWriter.Direction[] => {
+  const where = treeSchemasMember(declaration, "in");
+
+  if (where === "request") return INPUT;
+
+  return where === "response" ? OUTPUT : BOTH;
 };
 
 // The params of a right, rule or error: a fields map hoisted as `<owner>Params` (ADR 0007 section 3).
@@ -31,14 +48,17 @@ const paramsAt = (
   declaration: TreeSchemasRaw,
   pointer: string,
   segments: readonly string[],
+  directions: readonly IrWriter.Direction[],
 ): void => {
   const params = treeSchemasMember(declaration, "params");
 
   if (params === undefined || segments.length === 0) return;
-  compiler.fields(params, treeSchemasPointer(pointer, "params"), {
-    segments: [...segments],
-    role: "params",
-  });
+  compiler.fields(
+    params,
+    treeSchemasPointer(pointer, "params"),
+    { segments: [...segments], role: "params" },
+    directions,
+  );
 };
 
 /** Compiles the schemas written in the catalogues besides `schemas`. */
@@ -53,9 +73,14 @@ export function treeSchemasCompileDeclarations(
 
     if (treeSchemasIsObject(variants)) {
       for (const [variant, schema] of treeSchemasEntries(variants))
-        positionAt(compiler, schema, treeSchemasPointer(at, "principal", "variants", variant));
+        positionAt(
+          compiler,
+          schema,
+          treeSchemasPointer(at, "principal", "variants", variant),
+          OUTPUT,
+        );
     } else {
-      positionAt(compiler, principal, treeSchemasPointer(at, "principal"));
+      positionAt(compiler, principal, treeSchemasPointer(at, "principal"), OUTPUT);
     }
 
     for (const [header, use] of treeSchemasEntries(treeSchemasMember(identity, "headers")))
@@ -63,6 +88,7 @@ export function treeSchemasCompileDeclarations(
         compiler,
         treeSchemasMember(use, "schema"),
         treeSchemasPointer(at, "headers", header, "schema"),
+        headerDirections(treeSchemasMember(merged.headers, header)),
       );
   }
 
@@ -71,10 +97,16 @@ export function treeSchemasCompileDeclarations(
       compiler,
       treeSchemasMember(header, "schema"),
       treeSchemasPointer("/headers", id, "schema"),
+      headerDirections(header),
     );
 
   for (const [id, scope] of treeSchemasEntries(merged.scopes))
-    positionAt(compiler, treeSchemasMember(scope, "id"), treeSchemasPointer("/scopes", id, "id"));
+    positionAt(
+      compiler,
+      treeSchemasMember(scope, "id"),
+      treeSchemasPointer("/scopes", id, "id"),
+      INPUT,
+    );
 
   for (const [id, right] of treeSchemasEntries(merged.rights)) {
     const at = treeSchemasPointer("/rights", id);
@@ -82,25 +114,41 @@ export function treeSchemasCompileDeclarations(
     // A right without segments and without codeName is access.rights' error; its params are named once it has one.
     const segments = segmentsOf(id, "right", typeof codeName === "string" ? { codeName } : {});
 
-    paramsAt(compiler, right, at, segments.ok ? segments.segments : []);
+    paramsAt(compiler, right, at, segments.ok ? segments.segments : [], INPUT);
     const subject = treeSchemasMember(right, "subject");
 
-    positionAt(compiler, treeSchemasMember(subject, "id"), treeSchemasPointer(at, "subject", "id"));
+    positionAt(
+      compiler,
+      treeSchemasMember(subject, "id"),
+      treeSchemasPointer(at, "subject", "id"),
+      INPUT,
+    );
   }
 
   for (const [id, rule] of treeSchemasEntries(merged.rules)) {
     const at = treeSchemasPointer("/rules", id);
 
-    paramsAt(compiler, rule, at, splitName(id));
+    paramsAt(compiler, rule, at, splitName(id), INPUT);
     const proof = treeSchemasMember(rule, "proof");
     const proofPointer = treeSchemasPointer(at, "proof", "schema");
 
-    positionAt(compiler, treeSchemasMember(proof, "schema"), proofPointer);
+    positionAt(compiler, treeSchemasMember(proof, "schema"), proofPointer, INPUT);
     compiler.queryPositions.add(proofPointer);
   }
 
+  // A meta field fills a success envelope, so its schema is output.
+  for (const [id, format] of treeSchemasEntries(merged.formats)) {
+    for (const [name, field] of treeSchemasEntries(treeSchemasMember(format, "meta")))
+      positionAt(
+        compiler,
+        treeSchemasMember(field, "schema"),
+        treeSchemasPointer("/formats", id, "meta", name, "schema"),
+        OUTPUT,
+      );
+  }
+
   for (const [code, error] of treeSchemasEntries(merged.errors))
-    paramsAt(compiler, error, treeSchemasPointer("/errors", code), splitName(code));
+    paramsAt(compiler, error, treeSchemasPointer("/errors", code), splitName(code), OUTPUT);
 }
 
 // The name an inline schema at a route position is hoisted under: the operation's segments and the position's
@@ -119,9 +167,10 @@ const routeFieldsAt = (
   fields: TreeSchemasRaw | undefined,
   pointer: string,
   owner: Name | undefined,
+  directions: readonly IrWriter.Direction[],
 ): void => {
   if (typeof fields === "string") {
-    positionAt(compiler, fields, pointer);
+    positionAt(compiler, fields, pointer, directions);
 
     return;
   }
@@ -136,14 +185,15 @@ const routeFieldsAt = (
         ? undefined
         : deriveName([...words, ...own], "property");
 
-    compiler.position(schema, {
-      pointer: treeSchemasPointer(pointer, key),
-      name,
-      place: "position",
-    });
+    compiler.position(
+      schema,
+      { pointer: treeSchemasPointer(pointer, key), name, place: "position" },
+      directions,
+    );
   }
 };
 
+// Every fields map of a route is read from the request.
 const FIELDS_MAPS = [
   ["id", undefined],
   ["pathParams", "path"],
@@ -171,36 +221,45 @@ export function treeSchemasCompileRoutes(
     const settings = node.settings;
     const at = (...segments: string[]) => treeSchemasPointer(node.pointer, ...segments);
 
-    positionAt(compiler, settings.item, at("item"));
+    positionAt(compiler, settings.item, at("item"), OUTPUT);
+
+    // A code declared on a node hoists its params as the catalogue's do (`<Code>Params`).
+    for (const [code, error] of treeSchemasEntries(settings.errors))
+      paramsAt(compiler, error, at("errors", code), splitName(code), OUTPUT);
 
     if (settings.input !== undefined)
-      compiler.position(settings.input, {
-        pointer: at("input"),
-        name: routeName(operation, "input"),
-        place: "routeInput",
-      });
+      compiler.position(
+        settings.input,
+        { pointer: at("input"), name: routeName(operation, "input"), place: "routeInput" },
+        INPUT,
+      );
 
     if (settings.output !== undefined)
-      compiler.position(settings.output, {
-        pointer: at("output"),
-        name: routeName(operation, "output"),
-        place: "position",
-      });
+      compiler.position(
+        settings.output,
+        { pointer: at("output"), name: routeName(operation, "output"), place: "position" },
+        OUTPUT,
+      );
 
     for (const [status, response] of treeSchemasEntries(settings.responses)) {
       const body = treeSchemasMember(response, "body");
 
       if (body !== undefined)
-        compiler.position(body, {
-          pointer: at("responses", status, "body"),
-          name: responseName(operation, status),
-          place: "position",
-        });
+        compiler.position(
+          body,
+          {
+            pointer: at("responses", status, "body"),
+            name: responseName(operation, status),
+            place: "position",
+          },
+          OUTPUT,
+        );
       routeFieldsAt(
         compiler,
         treeSchemasMember(response, "headers"),
         at("responses", status, "headers"),
         undefined,
+        OUTPUT,
       );
     }
 
@@ -210,6 +269,7 @@ export function treeSchemasCompileRoutes(
         settings[key],
         at(key),
         role === undefined ? undefined : routeName(operation, role),
+        INPUT,
       );
 
     // A query field written as a schema name has its wire at the schema's properties.
