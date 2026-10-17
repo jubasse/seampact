@@ -816,23 +816,7 @@
             }
           }
         ],
-        "filteredBy": "tasks.read",
-        "paging": {
-          "sortKeys": {
-            "1": {
-              "right": "tasks.seeEffort",
-              "derivedFrom": {
-                "derivation": "sortKey.restricted",
-                "from": [
-                  {
-                    "layer": "shared",
-                    "pointer": "/schemas/Task/properties/effort/restrictedTo"
-                  }
-                ]
-              }
-            }
-          }
-        }
+        "filteredBy": "tasks.read"
       },
       "createTask": {
         "scopes": [

@@ -26,7 +26,7 @@ import { accessRightsSourceText, accessRightsValueSource } from "./source.js";
 // so a `tasks.update` right never defaults to a channel id.
 
 /** The schema a value source reads: its type use, and the schema it names when the position names one. */
-interface SourceSchema {
+export interface AccessRightsSourceSchema {
   readonly use: IrWriter.TypeUse;
   readonly name?: string;
   /** Set on an optional query field or header, which a caller may omit. */
@@ -132,7 +132,7 @@ function resourceSubject(
   subject: IrWriter.ResourceSubject,
 ): AccessRightsSubjectResult {
   const { route, right, idName, written } = input;
-  const expected: SourceSchema = {
+  const expected: AccessRightsSourceSchema = {
     use: subject.idSchema,
     ...(idName === undefined ? {} : { name: idName }),
   };
@@ -176,7 +176,7 @@ function resourceSubject(
     return undefined;
   }
 
-  if (sameSchema(found, expected)) return { subject: { source, defaulted: false } };
+  if (accessRightsSameSchema(found, expected)) return { subject: { source, defaulted: false } };
   reporter.error({
     rule: "requirement-subject",
     message: `the subject ${accessRightsQuoted(written.text)} of right '${right.id}' is ${describe(found)}, not the right's id schema ${describe(expected)}`,
@@ -191,9 +191,9 @@ function defaultedSubject(
   context: AccessRightsContext,
   reporter: AccessRightsReporter,
   { route, right, usePointer }: AccessRightsSubjectInput,
-  expected: SourceSchema,
+  expected: AccessRightsSourceSchema,
 ): AccessRightsSubjectResult {
-  const defaulted = defaultMemberId(context, route.node, expected);
+  const defaulted = accessRightsDefaultMemberId(context, route.node, expected);
 
   if (defaulted.kind === "found") return { subject: { source: defaulted.source, defaulted: true } };
 
@@ -222,13 +222,16 @@ function defaultedSubject(
   return undefined;
 }
 
-function sameSchema(found: SourceSchema, expected: SourceSchema): boolean {
+export function accessRightsSameSchema(
+  found: AccessRightsSourceSchema,
+  expected: AccessRightsSourceSchema,
+): boolean {
   if (found.name !== undefined || expected.name !== undefined) return found.name === expected.name;
 
   return pipelineCanonical(found.use) === pipelineCanonical(expected.use);
 }
 
-const describe = (schema: SourceSchema): string =>
+const describe = (schema: AccessRightsSourceSchema): string =>
   schema.name === undefined ? `an inline ${schema.use.kind} schema` : `'${schema.name}'`;
 
 /** The member ids of the collections whose member scope holds `node`, nearest first, each in written order. */
@@ -253,17 +256,18 @@ function memberIds(node: TreeNode): MemberId[] {
 
 // The nearest collection with a member id of the expected schema decides: one such id is the default, two or more
 // are ambiguous.
-function defaultMemberId(
+export function accessRightsDefaultMemberId(
   context: AccessRightsContext,
   node: TreeNode,
-  expected: SourceSchema,
+  expected: AccessRightsSourceSchema,
 ): DefaultSubject {
   const ids = memberIds(node);
 
   for (const collection of new Set(ids.map((id) => id.collection))) {
     const fitting = ids.filter(
       (id) =>
-        id.collection === collection && sameSchema(positionSchema(context, id.pointer), expected),
+        id.collection === collection &&
+        accessRightsSameSchema(positionSchema(context, id.pointer), expected),
     );
     const [only, ...others] = fitting;
 
@@ -278,7 +282,7 @@ function defaultMemberId(
 }
 
 // The schema written at a raw position, compiled by the schema service.
-function positionSchema(context: AccessRightsContext, pointer: string): SourceSchema {
+function positionSchema(context: AccessRightsContext, pointer: string): AccessRightsSourceSchema {
   const use = accessRightsTypeUse(context, pointer, "input");
   const name = accessRightsSchemaName(pipelineJsonAtPointer(context.raw.merged, pointer));
 
@@ -289,7 +293,7 @@ function sourceSchema(
   context: AccessRightsContext,
   input: AccessRightsSubjectInput,
   source: IrWriter.ValueSource,
-): SourceSchema | undefined {
+): AccessRightsSourceSchema | undefined {
   const name = source.name ?? "";
 
   switch (source.in) {
@@ -320,7 +324,7 @@ function pathSchema(
   context: AccessRightsContext,
   node: TreeNode,
   name: string,
-): SourceSchema | undefined {
+): AccessRightsSourceSchema | undefined {
   const memberId = memberIds(node).find((id) => id.name === name);
 
   for (let at: TreeNode | undefined = node; at !== undefined; at = at.parent) {
@@ -343,7 +347,7 @@ function fieldsSchema(
   node: TreeNode,
   setting: "query" | "headers",
   matches: (key: string) => boolean,
-): SourceSchema | undefined {
+): AccessRightsSourceSchema | undefined {
   const entries = context.inherited(node, setting)?.entries ?? [];
 
   for (const entry of [...entries].reverse()) {
@@ -368,11 +372,11 @@ function principalSchema(
   context: AccessRightsContext,
   { route, schemas }: AccessRightsSubjectInput,
   path: string,
-): SourceSchema | undefined {
+): AccessRightsSourceSchema | undefined {
   if (route.identity === undefined) return undefined;
   const identity = accessRightsMember(context.raw.merged.identities, route.identity);
   let schemaId = accessRightsSchemaName(accessRightsMember(identity, "principal"));
-  let found: SourceSchema | undefined;
+  let found: AccessRightsSourceSchema | undefined;
   let optional = false;
 
   for (const field of path.split(".")) {
@@ -384,17 +388,23 @@ function principalSchema(
     if (property === undefined) return undefined;
 
     optional ||= property.optional;
-    const name =
-      property.origin.layer === "core"
-        ? undefined
-        : accessRightsSchemaName(
-            pipelineJsonAtPointer(context.raw.merged, property.origin.pointer),
-          );
-    const use = pipelineCopy(property.type);
-
-    found = name === undefined ? { use } : { use, name };
+    found = accessRightsPropertySchema(context, property);
     schemaId = property.type.kind === "ref" ? property.type.schema : undefined;
   }
 
   return found !== undefined && optional ? { ...found, optional: true } : found;
+}
+
+/** The schema of an object property: its type use, and the schema its written position names, if any. */
+export function accessRightsPropertySchema(
+  context: AccessRightsContext,
+  property: PassReadonly<IrWriter.Property>,
+): AccessRightsSourceSchema {
+  const use = pipelineCopy(property.type);
+  const name =
+    property.origin.layer === "core"
+      ? undefined
+      : accessRightsSchemaName(pipelineJsonAtPointer(context.raw.merged, property.origin.pointer));
+
+  return name === undefined ? { use } : { use, name };
 }

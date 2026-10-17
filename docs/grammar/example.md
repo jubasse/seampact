@@ -211,7 +211,7 @@ surfaces:
               ops:
                 list:
                   paging: { cursor: { maxLimit: 50 } }
-                  sortable: [createdAt, effort]
+                  sortable: [createdAt]
                   filteredBy: tasks.read
                 get: {}
                 create:
@@ -308,7 +308,7 @@ What the example shows, by route:
 
 - Errors: the base declares only `api.schema_invalid` (its `Issues` carry no `in`, so the role is bound with a params template) and `api.rate_limited` (an example, and a nature left to its status). Every other derived error answers its role's default code (A34), and `api.internal`, `api.not_found` and `api.forbidden` are default codes attached by name.
 
-- `listTasks` (`GET /v1/channels/{channelId}/tasks`): identity `user` from the surface, scope `channel` from the member path of `channels`, the base's `cursor` style (the item array as the body, the next page in a `Link` header) capped at 50, the restricted sort key `effort` (it inherits `tasks.seeEffort` from `Task.effort`), `filteredBy`. A missing channel answers the scope's `api.not_found` only: the `channel` scope reads `path.channelId`, so `member.notFound` derives no second 404 for it (ADR 0006 section 5).
+- `listTasks` (`GET /v1/channels/{channelId}/tasks`): identity `user` from the surface, scope `channel` from the member path of `channels`, the base's `cursor` style (the item array as the body, the next page in a `Link` header) capped at 50, the sort key `createdAt` (`effort` is not sortable here: its resource right `tasks.seeEffort` has no subject on a list route, ADR 0003 section 6), `filteredBy`. A missing channel answers the scope's `api.not_found` only: the `channel` scope reads `path.channelId`, so `member.notFound` derives no second 404 for it (ADR 0006 section 5).
 - `createTask`: the `writeThrottle` and `channelEditor` entries, so `throttle` then `roles` in that order, a body whose `effort` only an `owner` of the channel may send, an idempotency key from the conventions, CSRF from `sessionCookie` on a write.
 - `updateTask`: `tasks.update` with the subject defaulting to `path.taskId`, the version read from `body.expectedVersion` and compared to `Task.version`, 409 `state.conflict`.
 - `archiveTask`: a member action that opts into the version, kept out of the `public` document.

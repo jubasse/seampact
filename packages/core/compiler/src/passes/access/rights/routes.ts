@@ -2,15 +2,14 @@ import {
   type DraftIR,
   type DraftOperation,
   type PassReadonly,
-  pipelinePointerBelow,
   pipelineTreeNodes,
   type TreeNode,
 } from "../../../pipeline/seam.js";
 import { accessRightsMember, accessRightsString } from "./read.js";
 import type { AccessRightsContext } from "./schema-use.js";
 
-// The route of each draft operation: its tree node (ADR 0002 section 6) and the access facts this half reads from
-// the merged raw tree, so it never waits for access.identity's per-operation members.
+// The route of each draft operation: its tree node (ADR 0002 section 6) and the access access.identity resolved
+// for it.
 
 /** How a route is reached (ADR 0002 section 9): an identity is required, optional, or none (public). */
 export type AccessRightsAccessKind = "identity" | "optional" | "public";
@@ -65,50 +64,40 @@ export function accessRightsRoutes(
         `tree.nodes wrote an operation (${id ?? "no id"}) whose origin ${pointer ?? "(none)"} is no tree node`,
       );
 
-    return { operation, id, node, ...accessOf(context, node, api) };
+    return { operation, id, node, ...accessOf(operation, node, api) };
   });
 }
 
-const depthOf = (node: TreeNode): number => {
-  let depth = 0;
-
-  for (let at = node.parent; at !== undefined; at = at.parent) depth += 1;
-
-  return depth;
-};
-
-// `identity` and `access` are inherited separately; a node that sets `identity` without `access` makes the
-// identity required again below it, and a node setting both keeps its access (ADR 0002 section 9).
+// access.identity writes each operation's `access` (ADR 0006 section 3), except on a relay route, whose access is
+// direction-dependent: it runs under the service api's caller identity (ADR 0002 section 7).
 function accessOf(
-  context: AccessRightsContext,
+  operation: PassReadonly<DraftOperation>,
   node: TreeNode,
   api: AccessRightsApi,
 ): Pick<AccessRightsRoute, "access" | "accessPointer" | "identity"> {
-  const access = context.inherited(node, "access")?.entry;
-  const identityEntry = context.inherited(node, "identity")?.entry;
-  // A service api's routes all run under its caller identity, which no node may change (ADR 0002 section 5).
-  const identity =
-    api.caller?.identity ??
-    (typeof identityEntry?.value === "string" ? identityEntry.value : undefined);
+  const access = operation.access;
 
-  const accessApplies =
-    access !== undefined &&
-    (identityEntry === undefined || depthOf(access.node) >= depthOf(identityEntry.node));
+  if (access === undefined) {
+    if (node.kind !== "relay")
+      throw new Error(`access.identity wrote no access on operation ${operation.id ?? "(no id)"}`);
 
-  if (!accessApplies)
-    return identity === undefined ? { access: "identity" } : { access: "identity", identity };
+    return api.caller === undefined
+      ? { access: "identity" }
+      : { access: "identity", identity: api.caller.identity };
+  }
 
-  const accessPointer = pipelinePointerBelow(access.node.pointer, "access");
-
-  if (accessRightsMember(access.value, "public") !== undefined)
-    return { access: "public", accessPointer };
-
-  if (accessRightsMember(access.value, "optionalAuth") !== undefined)
-    return identity === undefined
-      ? { access: "optional", accessPointer }
-      : { access: "optional", accessPointer, identity };
-
-  return identity === undefined ? { access: "identity" } : { access: "identity", identity };
+  switch (access.kind) {
+    case "identity":
+      return { access: "identity", identity: access.identity };
+    case "optional":
+      return {
+        access: "optional",
+        accessPointer: access.origin.pointer,
+        identity: access.identity,
+      };
+    case "public":
+      return { access: "public", accessPointer: access.origin.pointer };
+  }
 }
 
 /** The nearest `scope` node at or above `node`, and the collection it belongs to. */

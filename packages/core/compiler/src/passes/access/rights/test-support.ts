@@ -21,6 +21,7 @@ import type { RawApi, RawWorkspace } from "../../../raw-tree.js";
 import { validateWorkspace } from "../../../validate/index.js";
 import { treeNodesPass } from "../../tree/nodes/index.js";
 import { treeSchemasPass } from "../../tree/schemas/index.js";
+import { accessIdentityPass } from "../identity/index.js";
 import { accessRightsPass } from "./pass.js";
 
 // Test support of access.rights, outside the barrel: the reference contract with its fixture drafts, inline
@@ -118,10 +119,14 @@ export function accessRightsRunOn(
 }
 
 /**
- * Runs tree.schemas, tree.nodes, then access.rights (guarded) on the first api of `workspace`. tree.nodes does not
- * write `packs` yet, so the run records the packs the api loaded, in application order.
+ * Runs tree.schemas, tree.nodes, access.identity, then access.rights (guarded) on the first api of `workspace`. tree.nodes does not
+ * write `packs` yet, so the run records the packs the api loaded, in application order. `afterTree` sets on the
+ * draft what tree.nodes does not write yet (a list's `paging`), before access.rights runs.
  */
-export function accessRightsRunContract(workspace: RawWorkspace): AccessRightsRun {
+export function accessRightsRunContract(
+  workspace: RawWorkspace,
+  afterTree?: (draft: DraftIR) => void,
+): AccessRightsRun {
   const raw = accessRightsApiOf(workspace);
   const draft = createDraftIR();
   const diagnostics: Diagnostic[] = [];
@@ -138,9 +143,16 @@ export function accessRightsRunContract(workspace: RawWorkspace): AccessRightsRu
   if (diagnostics.length > 0)
     throw new Error(`the tree pass reports on the contract: ${JSON.stringify(diagnostics)}`);
 
+  accessIdentityPass.run(draft, Object.freeze({ ...context, treeSchemas }));
+
+  if (diagnostics.length > 0)
+    throw new Error(`access.identity reports on the contract: ${JSON.stringify(diagnostics)}`);
+
   for (const layer of raw.layers)
     if (layer.layer.startsWith(PACK_LAYER))
       draft.packs.push({ name: layer.layer.slice(PACK_LAYER.length), version: PACK_VERSION });
+
+  afterTree?.(draft);
 
   return accessRightsRunOn(raw, workspace, draft, treeSchemas);
 }
@@ -178,3 +190,32 @@ export function accessRightsRunReference(
     draftFixtureSchemaService(api),
   );
 }
+
+/**
+ * Sets the paging tree.nodes does not write yet on a list: its keys at the entries of the `sortable` list at
+ * `sortable`, which reads them from the raw tree.
+ */
+export function accessRightsListPaging(
+  draft: DraftIR,
+  { operation, sortable, keys }: { operation: string; sortable: string; keys: readonly string[] },
+): void {
+  const list = draft.operations.find((candidate) => candidate.id === operation);
+
+  if (list === undefined) throw new Error(`the contract has no operation ${operation}`);
+  list.paging = {
+    overLimit: "reject",
+    sortKeys: keys.map((key, index) => ({
+      key,
+      origin: { layer: "api", pointer: `${sortable}/${index}` },
+    })),
+    origin: { layer: "api", pointer: sortable.replace(/\/sortable$/, "") },
+  };
+}
+
+/** The `fields` fixture's list paging. */
+export const accessRightsFieldsPaging = (draft: DraftIR): void =>
+  accessRightsListPaging(draft, {
+    operation: "listNotes",
+    sortable: "/surfaces/app/routes/workspaces/member/routes/notes/ops/list/sortable",
+    keys: ["title", "rating", "memo"],
+  });

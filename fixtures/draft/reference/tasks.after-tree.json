@@ -2181,13 +2181,6 @@
                 "layer": "api",
                 "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/sortable/0"
               }
-            },
-            {
-              "key": "effort",
-              "origin": {
-                "layer": "api",
-                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/sortable/1"
-              }
             }
           ],
           "origin": {
