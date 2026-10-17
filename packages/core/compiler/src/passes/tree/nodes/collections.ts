@@ -2,7 +2,7 @@ import { type DraftIR, pipelineTreeNodes, type TreeNode } from "../../../pipelin
 import { type TreeNodesReportOnce, treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
 import type { TreeNodesContext } from "./fields.js";
 import { treeNodesIdParam } from "./names.js";
-import { treeNodesObjectOf, treeNodesPointer, treeNodesText } from "./raw.js";
+import { treeNodesObjectOf, treeNodesPointer, treeNodesSetting, treeNodesText } from "./raw.js";
 
 // The checks of a collection (ADR 0002 section 6): its member scope needs `id`, the member path parameter, and the
 // item property holding the member id (`idProperty`, else the id parameter's name) is a property of its item.
@@ -30,17 +30,14 @@ export function treeNodesCheckIdProperties(draft: DraftIR, context: TreeNodesCon
     if (collection.kind !== "collection") continue;
 
     const written = treeNodesText(collection, "idProperty");
-    const idProperty = written ?? treeNodesIdParam(collection);
+    const idProperty = written ?? treeNodesIdParam(collection, context.raw.merged.schemas);
     if (idProperty === undefined) continue;
 
     const itemUse = context.treeSchemas.typeUse(`${collection.pointer}/item`, "output");
     const item = treeNodesObjectOf(draft, itemUse);
     if (item === undefined || item.properties.some(({ name }) => name === idProperty)) continue;
 
-    const at =
-      written === undefined
-        ? treeNodesPointer(`${collection.pointer}/id`, idProperty)
-        : `${collection.pointer}/idProperty`;
+    const at = idPropertyPointer(collection, idProperty, written);
     context.report(
       treeNodesError({
         rule: "id-property",
@@ -50,4 +47,17 @@ export function treeNodesCheckIdProperties(draft: DraftIR, context: TreeNodesCon
       }),
     );
   }
+}
+
+// `idProperty` when written, else the id parameter: its `id` entry, or the schema name `id` writes.
+function idPropertyPointer(
+  collection: TreeNode,
+  idProperty: string,
+  written: string | undefined,
+): string {
+  if (written !== undefined) return `${collection.pointer}/idProperty`;
+
+  const idPointer = `${collection.pointer}/id`;
+  if (typeof treeNodesSetting(collection, "id") === "string") return idPointer;
+  return treeNodesPointer(idPointer, idProperty);
 }

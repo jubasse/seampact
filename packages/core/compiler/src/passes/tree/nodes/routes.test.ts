@@ -556,3 +556,122 @@ test("tree.nodes diagnostics are located: routes", () => {
       expect(Object.hasOwn(raw.locations, diagnosticLocationKey(origin))).toBe(true);
   }
 });
+
+test("opaque outside parameters: no file, nor a list of opaque values or files, in a parameter or a header", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      hook:
+        method: get
+        path: 'raw/{raw}'
+        pathParams: { raw: { file: {} } }
+        query: { payloads: { type: array, items: { opaque: "Vendor JSON." } } }
+        headers: { X-Files: { type: array, items: { file: {} } } }
+        responses:
+          200: { headers: { X-Trace: { type: array, items: { opaque: "Vendor JSON." } } } }
+`);
+  const hook = `${ROUTES}/hook`;
+  const file: IrWriter.TypeUse = { kind: "file", media: [] };
+  const treeSchemas = treeNodesStubService({
+    typeUses: {
+      [`${hook}/pathParams/raw`]: file,
+      [`${hook}/query/payloads`]: { kind: "array", items: opaque },
+      [`${hook}/headers/X-Files`]: { kind: "array", items: file },
+      [`${hook}/responses/200/headers/X-Trace`]: { kind: "array", items: opaque },
+    },
+  });
+  const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas,
+  });
+
+  expect(draft.operations[0]?.params).toEqual({ path: [], query: [], header: [] });
+  expect(draft.operations[0]?.responses?.[0]?.headers).toEqual([]);
+  expect(diagnostics.map(({ origin, message }) => ({ origin, message }))).toEqual([
+    {
+      origin: at(`${hook}/headers/X-Files`),
+      message: "The request header X-Files of hook is a file, which has no text form.",
+    },
+    {
+      origin: at(`${hook}/pathParams/raw`),
+      message: "The path parameter raw of hook is a file, which has no text form.",
+    },
+    {
+      origin: at(`${hook}/query/payloads`),
+      message: "The query field payloads of hook is an opaque value, which has no text form.",
+    },
+    {
+      origin: at(`${hook}/responses/200/headers/X-Trace`),
+      message: "The response header X-Trace of hook is an opaque value, which has no text form.",
+    },
+  ]);
+});
+
+test("a collection id written as a schema name gives its one property as the member id", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+schemas:
+  TaskKey: { type: object, properties: { taskId: { type: string } } }
+  Task: { type: object, properties: { taskId: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      tasks:
+        kind: collection
+        id: TaskKey
+        item: Task
+        ops: [get]
+`);
+  const treeSchemas = treeNodesStubService({
+    typeUses: { [`${TASKS}/id`]: ref("TaskKey"), [`${TASKS}/item`]: ref("Task") },
+  });
+  const draft = treeNodesDraftWith(
+    treeNodesObjectSchema("TaskKey", "/schemas/TaskKey", { taskId: text }),
+    treeNodesObjectSchema("Task", "/schemas/Task", { taskId: text }),
+  );
+  const raw = treeNodesApiOf(workspace);
+  const { diagnostics } = treeNodesRun(raw, workspace, { treeSchemas, draft });
+
+  expect(diagnostics).toEqual([]);
+  const get = operation(draft.operations, "getTask");
+  expect(get.path).toBe("/v1/tasks/{taskId}");
+  expect(get.resource).toEqual({ type: "tasks", idParam: "taskId", idProperty: "taskId" });
+  expect(get.params?.path.map(({ name, origin }) => ({ name, origin }))).toEqual([
+    { name: "taskId", origin: at("/schemas/TaskKey/properties/taskId") },
+  ]);
+});
+
+test("an op's own item is its response body, without the owner's", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+schemas:
+  Note: { type: object, properties: { text: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      notes: { kind: collection, ops: { list: { item: Note } } }
+`);
+  const notes = `${ROUTES}/notes`;
+  const treeSchemas = treeNodesStubService({
+    typeUses: { [`${notes}/ops/list/item`]: ref("Note") },
+  });
+  const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas,
+  });
+
+  expect(diagnostics).toEqual([]);
+  expect(operation(draft.operations, "listNotes").responses).toEqual([
+    {
+      status: 200,
+      media: "application/json",
+      body: ref("Note"),
+      shape: "page",
+      headers: [],
+      origin: at(`${notes}/ops/list/item`),
+    },
+  ]);
+});

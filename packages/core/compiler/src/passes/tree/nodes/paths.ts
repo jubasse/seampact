@@ -1,7 +1,8 @@
 import { operationId, splitName } from "@seampact/spec/naming";
 import type { ResolvedConventions, TreeNode } from "../../../pipeline/seam.js";
 import type { TreeNodesSurfacePrefixes } from "./api.js";
-import { treeNodesIdParam, treeNodesOpShorthand } from "./names.js";
+import type { TreeNodesContext } from "./fields.js";
+import { type TreeNodesRawSchemas, treeNodesIdParam, treeNodesOpShorthand } from "./names.js";
 import { treeNodesText } from "./raw.js";
 
 // Operation paths (ADR 0002 section 6): the surface's resolved prefix, then one segment per node down to the route.
@@ -41,12 +42,17 @@ function opSegment(node: TreeNode, conventions: ResolvedConventions): string {
   return convention;
 }
 
-function segmentOf(node: TreeNode, pathCase: PathCase, conventions: ResolvedConventions): string {
+function segmentOf(
+  node: TreeNode,
+  pathCase: PathCase,
+  conventions: ResolvedConventions,
+  schemas: TreeNodesRawSchemas,
+): string {
   if (node.kind === "op") return opSegment(node, conventions);
   if (node.kind === "scope") {
     const idParam =
       node.name === "member" && node.parent !== undefined
-        ? treeNodesIdParam(node.parent)
+        ? treeNodesIdParam(node.parent, schemas)
         : undefined;
     return idParam === undefined ? "" : `{${idParam}}`;
   }
@@ -63,7 +69,7 @@ export interface TreeNodesPath {
 export function treeNodesPath(
   node: TreeNode,
   prefixes: TreeNodesSurfacePrefixes,
-  conventions: ResolvedConventions,
+  { conventions, raw }: TreeNodesContext,
 ): TreeNodesPath | undefined {
   if (node.kind === "relay") return undefined;
 
@@ -72,7 +78,7 @@ export function treeNodesPath(
   let surface = node;
   for (let at: TreeNode | undefined = node; at !== undefined; at = at.parent) {
     if (at.parent === undefined) surface = at;
-    else segments.unshift(segmentOf(at, pathCase, conventions));
+    else segments.unshift(segmentOf(at, pathCase, conventions, raw.merged.schemas));
   }
 
   const prefix = prefixes.get(surface.name);

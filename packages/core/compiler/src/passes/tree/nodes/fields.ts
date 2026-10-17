@@ -113,9 +113,17 @@ function namedSchemaFields(
   return { fields, complete: true };
 }
 
+// ADR 0003 section 2: an opaque value and a file never sit in a query, a path parameter or a header, nor do their
+// lists.
+const TEXTLESS_KINDS: Partial<Record<IrWriter.TypeUse["kind"], string>> = {
+  opaque: "an opaque value",
+  file: "a file",
+};
+
 /**
- * Whether a field may travel in a parameter or a header: an opaque value has no text form (ADR 0003 section 2),
- * and a header-tagged union is only a route's whole input (ADR 0003 section 4). Reports the field otherwise.
+ * Whether a field may travel in a parameter or a header: an opaque value or a file, or a list of them, has no text
+ * form (ADR 0003 section 2), and a header-tagged union is only a route's whole input (ADR 0003 section 4). Reports
+ * the field otherwise.
  */
 export function treeNodesFieldTravels(
   site: TreeNodesSite,
@@ -125,20 +133,22 @@ export function treeNodesFieldTravels(
   const origin = treeNodesLocate(field.origin, treeNodesNodeOrigin(site.node.origin));
   const key = `${origin.layer}#${origin.pointer}:${field.name}`;
 
-  if (field.type?.kind === "opaque") {
+  const innermost = treeNodesInnermost(field.type);
+  const textless = innermost === undefined ? undefined : TEXTLESS_KINDS[innermost.kind];
+  if (textless !== undefined) {
     site.once(
       `opaque-parameter:${key}`,
       treeNodesError({
         rule: "opaque-parameter",
         origin,
-        message: `The ${place} ${field.name} of ${site.operationId} is an opaque value, which has no text form.`,
+        message: `The ${place} ${field.name} of ${site.operationId} is ${textless}, which has no text form.`,
         fix: "Give it a schema with a text form, or move it into the body.",
       }),
     );
     return false;
   }
 
-  if (treeNodesTagHeader(site.draft, treeNodesInnermost(field.type)) !== undefined) {
+  if (treeNodesTagHeader(site.draft, innermost) !== undefined) {
     site.once(
       `header-union:${key}`,
       treeNodesHeaderUnionError(site, origin, `${place} ${field.name}`),

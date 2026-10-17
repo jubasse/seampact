@@ -18,6 +18,7 @@ import type { TreeNodesContext, TreeNodesSite } from "./fields.js";
 import { treeNodesInput } from "./input.js";
 import {
   type TreeNodesOperationName,
+  type TreeNodesRawSchemas,
   treeNodesIdlessCollection,
   treeNodesIdParam,
   treeNodesIsOperation,
@@ -71,7 +72,7 @@ export function treeNodesOperations(
       continue;
     }
 
-    const name = treeNodesOperationName(node, context.conventions);
+    const name = treeNodesOperationName(node, context.conventions, context.raw.merged.schemas);
     if (name === undefined) {
       reportNoSingular(node, once);
       continue;
@@ -92,7 +93,7 @@ function operationOf(
 ): DraftOperation {
   const { node, draft, context } = site;
   const op = treeNodesOpShorthand(node);
-  const resource = resourceOf(node);
+  const resource = resourceOf(node, context.raw.merged.schemas);
   const method = methodOf(node, op, site);
   const safe = method === SAFE_METHOD || op === SAFE_OP;
   const input = treeNodesInput(node, name.id, draft, context);
@@ -103,7 +104,7 @@ function operationOf(
   )
     reportNoInput(site, op);
 
-  const path = treeNodesPath(node, prefixes, context.conventions);
+  const path = treeNodesPath(node, prefixes, context);
   const params = treeNodesParams(site, path, safe, input?.schema);
   // A relay route's format and responses are copied from the operation it relays.
   const format = node.kind === "relay" ? undefined : treeNodesFormat(site);
@@ -162,7 +163,10 @@ function methodOf(
 
 // The collection or single an operation belongs to (its nearest one), with the member id parameter when the
 // operation sits on the member scope, and the item property holding the id: `idProperty`, else the id parameter.
-function resourceOf(node: TreeNode): IrWriter.OperationResource | undefined {
+function resourceOf(
+  node: TreeNode,
+  schemas: TreeNodesRawSchemas,
+): IrWriter.OperationResource | undefined {
   let onMember = false;
   for (let at = node.parent; at !== undefined; at = at.parent) {
     if (at.kind === "scope") onMember = at.name === "member";
@@ -174,7 +178,7 @@ function resourceOf(node: TreeNode): IrWriter.OperationResource | undefined {
     const type = typeof written === "string" ? written : at.name;
     if (at.kind === "single") return { type };
 
-    const idParam = treeNodesIdParam(at);
+    const idParam = treeNodesIdParam(at, schemas);
     const idPropertyWritten = Object.hasOwn(at.settings, "idProperty")
       ? at.settings.idProperty
       : undefined;

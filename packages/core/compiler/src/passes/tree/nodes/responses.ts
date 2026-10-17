@@ -68,7 +68,8 @@ export function treeNodesResponses(site: TreeNodesSite, format: string): IrWrite
   return opResponses(site, op, media);
 }
 
-// The `ops` table's default response: the owner's item for list, get, create and update, no body for delete.
+// The `ops` table's default response: the op's own `item`, else the owner's, for list, get, create and update; no
+// body for delete.
 function opResponses(site: TreeNodesSite, op: Op, media: string): IrWriter.Response[] {
   if (op === BATCH_OP) return [];
 
@@ -80,11 +81,13 @@ function opResponses(site: TreeNodesSite, op: Op, media: string): IrWriter.Respo
   if (owner === undefined || (!isList && !ITEM_OPS.includes(op)))
     throw new Error(`the op at ${site.node.pointer} has no owner or no default response`);
 
-  if (treeNodesSetting(owner, "item") === undefined) {
+  const itemWriter = treeNodesSetting(site.node, "item") === undefined ? owner : site.node;
+  if (treeNodesSetting(itemWriter, "item") === undefined) {
     reportNoItem(site, owner, op);
     return [];
   }
-  return bodyResponse(site, owner, "item", status, isList ? listShape(site.node) : "item", media);
+  const shape = isList ? listShape(site.node) : "item";
+  return bodyResponse(site, itemWriter, "item", status, shape, media);
 }
 
 function opStatus(site: TreeNodesSite, op: Op): number {
