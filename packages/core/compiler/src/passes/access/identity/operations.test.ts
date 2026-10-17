@@ -52,6 +52,22 @@ const BASE = `schemes:
     encoding: hex
     key: { from: path.workspaceId }
   slackSig: { kind: signature, verify: application, name: X-Slack-Signature, headers: [X-Slack-Request-Timestamp] }
+  hubSig:
+    kind: signature
+    name: X-Hub-Signature
+    format: 'sha256={sig}'
+    algorithm: hmac-sha256
+    payload: '{rawBody}'
+    encoding: hex
+    key: { from: header.X-Hub-Key }
+  querySig:
+    kind: signature
+    name: X-Query-Signature
+    format: 'sha256={sig}'
+    algorithm: hmac-sha256
+    payload: '{rawBody}'
+    encoding: hex
+    key: { from: query.keyId }
 identities:
   viewer:
     schemes: { read: [session, bearer], write: [session, bearer], optionalRead: [device] }
@@ -72,6 +88,14 @@ identities:
     principal: Caller
     unknownKeys: { ignore: "GitHub adds payload fields without notice." }
   slack: { kind: signed, scheme: slackSig, principal: Caller }
+  hub: { kind: signed, scheme: hubSig, principal: Caller }
+  queried: { kind: signed, scheme: querySig, principal: Caller }
+  either:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: { variants: { viewer: Viewer, device: Caller } }
+  writer:
+    schemes: { read: [], write: [bearer] }
+    principal: Viewer
 schemas:
   Viewer: { type: object, required: [userId], properties: { userId: { type: string }, workspaceId: { type: string } } }
   Caller: { type: object, required: [account], properties: { account: { type: string } } }
@@ -79,20 +103,51 @@ schemas:
   Id: { type: string }
 `;
 
+const ref = (schema: string): IrWriter.TypeUse => ({ kind: "ref", schema });
+
+const SETTINGS: IrWriter.KnownSchema = {
+  kind: "map",
+  values: STRING,
+  id: "Settings",
+  name: { segments: ["settings"], role: "schema" },
+  directions: ["output"],
+  examples: [],
+  docs: {},
+  extensions: {},
+  origin: { layer: "api", pointer: "/schemas/Settings" },
+};
+
 const SCHEMAS = [
-  accessIdentityObjectSchema("Viewer", { userId: STRING, workspaceId: STRING }),
+  accessIdentityObjectSchema("Viewer", {
+    userId: STRING,
+    workspaceId: STRING,
+    profile: ref("Profile"),
+    settings: ref("Settings"),
+  }),
+  accessIdentityObjectSchema("Profile", { team: STRING }),
+  SETTINGS,
+  accessIdentityObjectSchema("Device", { deviceId: STRING }),
   accessIdentityObjectSchema("Caller", { account: STRING }),
   accessIdentityObjectSchema("Event", { workspaceId: STRING }),
 ];
-
-const ref = (schema: string): IrWriter.TypeUse => ({ kind: "ref", schema });
 
 const PRINCIPALS: AccessIdentitySchemaUseRow[] = [
   { pointer: "/identities/viewer/principal", direction: "output", use: ref("Viewer") },
   { pointer: "/identities/plain/principal", direction: "output", use: ref("Viewer") },
   { pointer: "/identities/reader/principal", direction: "output", use: ref("Viewer") },
   { pointer: "/identities/twoCookies/principal", direction: "output", use: ref("Viewer") },
-  ...["stripe", "github", "slack"].map((id) => ({
+  { pointer: "/identities/writer/principal", direction: "output", use: ref("Viewer") },
+  {
+    pointer: "/identities/either/principal/variants/viewer",
+    direction: "output",
+    use: ref("Viewer"),
+  },
+  {
+    pointer: "/identities/either/principal/variants/device",
+    direction: "output",
+    use: ref("Device"),
+  },
+  ...["stripe", "github", "slack", "hub", "queried"].map((id) => ({
     pointer: `/identities/${id}/principal`,
     direction: "output" as const,
     use: ref("Caller"),
@@ -784,6 +839,127 @@ describe("service api identity", () => {
   });
 });
 
+describe("refusals reached from a route", () => {
+  test("a field missing from one variant of a variants principal is refused", () => {
+    const compiled = compile(
+      `  app:
+    identity: either
+    routes:
+      save:
+        path: '/w/{workspaceId}'
+        method: post
+        principal: { requires: [workspaceId] }
+        bindings: { path.workspaceId: principal.workspaceId }
+`,
+      {},
+      (draft) => withPathParam(draft, "save", "workspaceId"),
+    );
+    expect(compiled.pairs).toEqual([
+      ["seampact/access/principal-field", "/surfaces/app/routes/save/principal/requires/0"],
+      ["seampact/access/principal-field", "/surfaces/app/routes/save/bindings/path.workspaceId"],
+    ]);
+    expect(compiled.messages[0]).toContain("in every variant");
+    expect(compiled.operation("save").principalRequires).toEqual([]);
+    expect(compiled.operation("save").bindings).toEqual([]);
+  });
+
+  test("a dotted field is held through a ref and refused past a map or a missing step", () => {
+    const compiled = compile(`  app:
+    identity: viewer
+    routes:
+      held: { method: get, principal: { requires: [profile.team] }, output: Event }
+      map: { method: get, principal: { requires: [settings.theme] }, output: Event }
+      missing: { method: get, principal: { requires: [profile.nope] }, output: Event }
+`);
+    expect(compiled.pairs).toEqual([
+      ["seampact/access/principal-field", "/surfaces/app/routes/map/principal/requires/0"],
+      ["seampact/access/principal-field", "/surfaces/app/routes/missing/principal/requires/0"],
+    ]);
+    expect(compiled.messages[0]).toContain("the principal schema 'Settings' is a map");
+    expect(compiled.operation("held").principalRequires).toEqual([
+      {
+        field: "profile.team",
+        origin: { layer: "api", pointer: "/surfaces/app/routes/held/principal/requires/0" },
+      },
+    ]);
+  });
+
+  test("a body binding on an input that is not a ref is refused", () => {
+    const compiled = compile(
+      `  app:
+    identity: viewer
+    routes:
+      save:
+        method: post
+        input: Event
+        bindings: { body.workspaceId: principal.workspaceId }
+`,
+      { "/surfaces/app/routes/save/input": STRING },
+    );
+    expect(compiled.pairs).toEqual([
+      ["seampact/access/binding-source", "/surfaces/app/routes/save/bindings/body.workspaceId"],
+    ]);
+  });
+
+  test("a safe route under an identity with no read scheme is refused", () => {
+    const compiled = compile(`  app:
+    identity: writer
+    routes:
+      read: { method: get, output: Event }
+      save: { method: post, input: Event }
+`);
+    expect(compiled.pairs).toEqual([
+      ["seampact/access/access-schemes", "/surfaces/app/routes/read"],
+    ]);
+    expect(compiled.messages[0]).toContain("route 'read' is a read under identity 'writer'");
+    expect(compiled.operation("save").access).toMatchObject({ schemes: ["bearer"] });
+  });
+
+  test("a key read from a header matches without case, and from a query by name", () => {
+    const compiled = compile(
+      `  hub:
+    identity: hub
+    routes:
+      keyed: { method: post }
+      unkeyed: { method: post }
+  queried:
+    identity: queried
+    routes:
+      queryKeyed: { method: post }
+      queryUnkeyed: { method: post }
+`,
+      {},
+      (draft) => {
+        withHeaderParam(draft, "keyed", "x-hub-key");
+        withQueryParam(draft, "queryKeyed", "keyId");
+      },
+    );
+    expect(compiled.pairs).toEqual([
+      ["seampact/access/signature-key-source", "/surfaces/hub/routes/unkeyed"],
+      ["seampact/access/signature-key-source", "/surfaces/queried/routes/queryUnkeyed"],
+    ]);
+    expect(compiled.messages[0]).toContain("has no header parameter 'X-Hub-Key'");
+    expect(compiled.messages[1]).toContain("has no query parameter 'keyId'");
+  });
+
+  test("a service api whose caller identity is undeclared is refused once, at the caller", () => {
+    const compiled = compile(
+      `  internal:
+    routes:
+      ping: { method: get, output: Event }
+      pong: { method: get, output: Event }
+`,
+      {},
+      undefined,
+      "api: { name: a, version: 1, kind: service, caller: { identity: nobody, right: callerService } }",
+    );
+    expect(compiled.pairs).toEqual([
+      ["seampact/access/identity-reference", "/api/caller/identity"],
+    ]);
+    expect(compiled.operation("ping").access).toBeUndefined();
+  });
+});
+
 describe("relay routes", () => {
   test("a relay route gets no direction-dependent member, and still its input facts", () => {
     const compiled = compile(
@@ -872,6 +1048,14 @@ function withPathParam(draft: DraftIR, id: string, name: string): void {
   if (operation === undefined) throw new Error(`no operation ${id}`);
   const params = operation.params ?? { path: [], query: [], header: [] };
   params.path.push(PATH_STRING(name, `/routes/${id}`));
+  operation.params = params;
+}
+
+function withHeaderParam(draft: DraftIR, id: string, name: string): void {
+  const operation = draft.operations.find((item) => item.id === id);
+  if (operation === undefined) throw new Error(`no operation ${id}`);
+  const params = operation.params ?? { path: [], query: [], header: [] };
+  params.header.push(PATH_STRING(name, `/routes/${id}`));
   operation.params = params;
 }
 
