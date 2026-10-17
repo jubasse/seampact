@@ -10,7 +10,7 @@ import {
 import { treeNodesError, treeNodesLocate, treeNodesNodeOrigin } from "./diagnostics.js";
 import { treeNodesFieldWireOf, treeNodesIsFileField } from "./field-wire.js";
 import { treeNodesBodyLimit } from "./limits.js";
-import { type TreeNodesContext, treeNodesEscape, treeNodesSchema } from "./raw.js";
+import { type TreeNodesContext, treeNodesPointer, treeNodesSchema } from "./raw.js";
 
 // The request body a route declares (ADR 0002 section 7, "Bodies beyond JSON"): its media, its type use from the
 // schema service, its origin, and for a form or multipart body the wire of each field. Files travel only as a
@@ -124,7 +124,7 @@ function formFields(site: InputSite, schema: IrWriter.TypeUse): IrWriter.InputFi
   const schemaPointer = inputSchemaPointer(site.node, declared.id);
   const fields: IrWriter.InputField[] = [];
   for (const property of declared.properties) {
-    const fieldPointer = `${schemaPointer}/properties/${treeNodesEscape(property.name)}`;
+    const fieldPointer = treeNodesPointer(schemaPointer, "properties", property.name);
     const wire = fieldWire(site, property, fieldPointer);
     if (wire !== undefined) fields.push({ name: property.name, wire });
   }
@@ -137,7 +137,7 @@ function formFields(site: InputSite, schema: IrWriter.TypeUse): IrWriter.InputFi
 function inputSchemaPointer(node: TreeNode, schemaId: string): string {
   const written = Object.hasOwn(node.settings, "input") ? node.settings.input : undefined;
   return typeof written === "string"
-    ? `/schemas/${treeNodesEscape(schemaId)}`
+    ? treeNodesPointer("/schemas", schemaId)
     : `${node.pointer}/input`;
 }
 

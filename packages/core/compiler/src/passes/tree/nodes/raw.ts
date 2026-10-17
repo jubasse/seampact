@@ -1,13 +1,15 @@
 import type { IrWriter, Origin } from "@seampact/spec/ir";
-import type {
-  ConventionPath,
-  ConventionReading,
-  DraftIR,
-  PassContextOf,
-  PassReadonly,
-  TreeNode,
+import {
+  type ConventionPath,
+  type ConventionReading,
+  type DraftIR,
+  type PassContextOf,
+  type PassReadonly,
+  pipelineIsJsonObject,
+  pipelinePointerBelow,
+  type TreeNode,
 } from "../../../pipeline/seam.js";
-import type { JsonObject, JsonValue } from "../../../raw-tree.js";
+import type { JsonValue } from "../../../raw-tree.js";
 
 // Reading the merged raw tree, the conventions and the draft's schemas: the small helpers every part of tree.nodes
 // shares.
@@ -38,8 +40,8 @@ export function treeNodesWrittenConvention(
   return { value: reading.value, origin: reading.origin };
 }
 
-export const treeNodesIsObject = (value: Json | undefined): value is PassReadonly<JsonObject> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+/** Whether a raw value is a mapping (the seam's shared check). */
+export const treeNodesIsObject = pipelineIsJsonObject;
 
 /** A member of a raw mapping, undefined when the value is no mapping or lacks it. */
 export function treeNodesMember(value: Json | undefined, key: string): Json | undefined {
@@ -56,13 +58,8 @@ export function treeNodesText(node: TreeNode, key: string): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
-// RFC 6901: `~` and `/` inside a segment.
-export const treeNodesEscape = (segment: string): string =>
-  segment.replaceAll("~", "~0").replaceAll("/", "~1");
-
-/** The JSON Pointer of `segments` below `base`, each segment escaped. */
-export const treeNodesPointer = (base: string, ...segments: readonly string[]): string =>
-  [base, ...segments.map(treeNodesEscape)].join("/");
+/** The JSON Pointer of `segments` below `base`, each segment escaped (the seam's shared helper). */
+export const treeNodesPointer = pipelinePointerBelow;
 
 /** A schema of the draft's catalogue, read by its id. */
 export function treeNodesSchema(draft: DraftIR, id: string): IrWriter.Schema | undefined {
