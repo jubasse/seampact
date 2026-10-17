@@ -326,7 +326,8 @@ describe("stop rule", () => {
         reader: loadFsReader(REFERENCE),
         entry: "workspace.yaml",
         guard,
-        parts: { passes: { "tree.schemas": referenceTreeSchemas } },
+        // The derive halves are stubs until their lanes land, so finalize would refuse the incomplete draft.
+        parts: { passes: { "tree.schemas": referenceTreeSchemas }, finalize: () => undefined },
       });
 
       expect(result.diagnostics).toEqual([]);

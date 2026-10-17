@@ -1,0 +1,9 @@
+# docs/conformance/proofs/p2-finalize.yaml
+lane: p2-finalize
+proofs:
+  - id: CHK-103
+    tests:
+      - 'core: packages/core/compiler/src/finalize/serialize.test.ts#byte-stable serialisation the same IR built in two member orders gives the same bytes'
+      - 'core: packages/core/compiler/src/finalize/serialize.test.ts#byte-stable serialisation members sort by UTF-16 code units, integer-like names included'
+      - 'core: packages/core/compiler/src/finalize/canonical-order.test.ts#canonical order is independent of pass order every sorted array of a hand-built draft sorts the same from two orders'
+      - 'core: packages/core/compiler/src/finalize/canonical-order.test.ts#canonical order is independent of pass order tasks finalizes to the same bytes from a shuffled draft'
