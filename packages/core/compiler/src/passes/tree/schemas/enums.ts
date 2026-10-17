@@ -1,5 +1,5 @@
 import type { IrWriter } from "@seampact/spec/ir";
-import { splitName } from "@seampact/spec/naming";
+import { segmentsOf, splitName } from "@seampact/spec/naming";
 import {
   type TreeSchemasRaw,
   type TreeSchemasReporter,
@@ -213,8 +213,8 @@ function checkFallback(
   return false;
 }
 
-// ADR 0007 sections 1 and 2: a code name replaces a value's segments; a value with none needs one, and two values
-// with equal segments collide.
+// ADR 0007 sections 1 and 2: a code name replaces a value's segments, a value with none is named `value<position>`,
+// and two values with equal segments collide.
 // An enum taking another's values takes its code names too, its own winning.
 function writtenCodeNames(
   enums: TreeSchemasRaw | undefined,
@@ -262,21 +262,25 @@ function codeNamesOf(
       });
   }
 
-  for (const value of values) {
+  for (const [index, value] of values.entries()) {
     const codeName = written.get(value);
     const name = codeName?.name;
-    const segments = splitName(typeof name === "string" ? name : value);
     const at = codeName?.pointer ?? valuesPointer;
+    const result = segmentsOf(value, "enumValue", {
+      codeName: typeof name === "string" ? name : undefined,
+      position: index + 1,
+    });
 
-    if (segments.length === 0) {
+    if (!result.ok) {
       fail({
         rule: "name-segments",
         pointer: at,
-        message: `the value '${value}' yields no identifier segment`,
-        fix: `give it a code name: 'codeNames: { '${value}': <name> }'`,
+        message: `the code name of the value '${value}' yields no identifier segment`,
+        fix: "give it a code name with at least one letter or digit",
       });
       continue;
     }
+    const { segments } = result;
 
     if (typeof name === "string") codeNames[value] = { segments, role: "enumMember" };
     const other = identifiers.get(segments.join(" "));

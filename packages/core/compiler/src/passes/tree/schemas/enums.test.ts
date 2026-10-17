@@ -103,10 +103,28 @@ schemas:
       ["enum-reason", "/enums/Sourced/reason"],
       ["enum-fallback", "/enums/Fallback/fallback"],
       ["enum-code-name", "/enums/Named/codeNames/b"],
-      ["name-segments", "/enums/Named/values"],
       ["name-collision", "/enums/Same/values"],
     ]);
     expect(refused.located).toBe(true);
+  });
+
+  test("a value with no segment is named by its position, and a code name with none is refused", () => {
+    const named = treeSchemasRunApi(`enums:
+  Sign: { values: ['+', '-'] }
+`);
+
+    expect(named.diagnostics).toEqual([]);
+    expect(named.draft.enums.Sign).not.toHaveProperty("codeNames");
+
+    const refused = treeSchemasRunApi(`enums:
+  Clash: { values: ['+', value1] }
+  Blank: { values: [a], codeNames: { a: '-' } }
+`);
+
+    expect(located(refused)).toEqual([
+      ["name-collision", "/enums/Clash/values"],
+      ["name-segments", "/enums/Blank/codeNames/a"],
+    ]);
   });
 
   test("two enums whose names give one identifier collide", () => {
