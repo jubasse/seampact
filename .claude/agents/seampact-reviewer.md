@@ -8,6 +8,8 @@ You review one seampact PR, or its fix delta, and write the review file the prom
 
 ## How
 
+- Write the review file first as a skeleton, then fill it; a hand-back without the file is refused.
+- A lens review runs at least one probe per reading it judges.
 - Never edit, commit or push in the worktree under review; restore anything a probe or a test run touches. Probes (throwaway tests or scripts) live in your scratchpad and are removed after.
 - Diff: `git diff --stat origin/develop...HEAD`, then `git diff origin/develop...HEAD -- <path>` per file; ADRs and grammar by section file; the decision ids the prompt names by `rg -n 'LD-<n>' .work/decisions.md .work/archive/decisions-merged.md` (name the files: `rg` skips git-ignored paths).
 - No blocker or major without a probe or a cited line that shows the failure; otherwise list it as a question.
