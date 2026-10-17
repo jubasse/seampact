@@ -95,10 +95,15 @@ function batchIds(
   if (origin === undefined)
     throw new Error("conventions.batch.maxIds has no core default, so it is written");
 
-  return property("ids", { kind: "array", items: idType, maxItems: maxIds }, pipelineCopy(origin), {
-    derivation: "batch.read",
-    from: [reporter.origin(node.pointer)],
-  });
+  return property(
+    "ids",
+    { kind: "array", items: structuredClone(idType), maxItems: maxIds },
+    pipelineCopy(origin),
+    {
+      derivation: "batch.read",
+      from: [reporter.origin(node.pointer)],
+    },
+  );
 }
 
 // The type of a collection's one id parameter: the entry of its `id` fields map, or the one property of the

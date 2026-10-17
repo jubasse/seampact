@@ -110,6 +110,9 @@ describe("pick and omit", () => {
   StillRequired:
     pick: { from: Article, fields: [title] }
     properties: { title: { default: Untitled } }
+  Restricted:
+    pick: { from: Article, fields: [title] }
+    properties: { title: { restrictedTo: articles.seeTitle } }
   Mapped: { type: object, additionalProperties: { type: string } }
   FromMap: { pick: { from: Mapped, fields: [a] } }
   FromNothing: { omit: { from: Nothing, fields: [a] } }
@@ -123,6 +126,7 @@ describe("pick and omit", () => {
       ["required-unknown", "/schemas/NotKept/required"],
       ["annotation-position", "/schemas/Required/properties/title/examples"],
       ["required-property", "/schemas/StillRequired/properties/title"],
+      ["required-property", "/schemas/Restricted/properties/title"],
       ["derived-source", "/schemas/FromMap/pick/from"],
       ["schema-unknown", "/schemas/FromNothing/omit/from"],
       ["schema-cycle", "/schemas/CycleA"],
