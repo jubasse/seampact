@@ -43,7 +43,8 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 ## Long tasks
 
-- Relay cap: past about 100 tool calls, stop at the next green commit, update the resume state in your report and hand back "continue". The lead starts a fresh agent.
+- Call cap (set by the task prompt, measured in wave 4): light setup (report and a few files) 60; medium (review file, several passes, ADR sections) 100; heavy (cross-language parity, generators, wide spec) 140. A cap, not a target.
+- At 100 calls, relay only if about 40 calls of work remain (30 for a light setup); otherwise finish within the cap. To relay: stop at the next green commit, update the resume state (files understood, files left to edit) and hand back "continue". The lead starts a fresh agent.
 - Resume rule: on a resumed task, read the report's resume state, run `git diff --stat` against the base, and read only the files you edit.
 
 ## Before hand-back
