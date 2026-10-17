@@ -554,7 +554,8 @@ describe("signed identities", () => {
     identity: github
     routes:
       push:
-        path: /push/{workspaceId}
+        path: push/{workspaceId}
+        pathParams: { workspaceId: { type: string } }
         method: post
         input: Event
 `,
@@ -591,8 +592,8 @@ describe("signed identities", () => {
       `  hooks:
     identity: github
     routes:
-      strict: { path: '/strict/{workspaceId}', method: post, input: Event }
-      blob: { path: '/blob/{workspaceId}', method: post, input: Event }
+      strict: { path: 'strict/{workspaceId}', pathParams: { workspaceId: { type: string } }, method: post, input: Event }
+      blob: { path: 'blob/{workspaceId}', pathParams: { workspaceId: { type: string } }, method: post, input: Event }
 `,
       { "/surfaces/hooks/routes/strict/input": own, "/surfaces/hooks/routes/blob/input": opaque },
       (draft) => {
@@ -620,7 +621,7 @@ describe("signed identities", () => {
       `  hooks:
     identity: github
     routes:
-      push: { path: '/push/{workspaceId}', method: post, input: Event }
+      push: { path: 'push/{workspaceId}', pathParams: { workspaceId: { type: string } }, method: post, input: Event }
       ping: { method: post, input: Event }
 `,
       {},
@@ -692,7 +693,8 @@ describe("principal requires and bindings", () => {
     principal: { requires: [workspaceId] }
     routes:
       save:
-        path: '/w/{workspaceId}'
+        path: 'w/{workspaceId}'
+        pathParams: { workspaceId: { type: string } }
         method: post
         input: Event
         bindings: { path.workspaceId: principal.workspaceId, body.workspaceId: principal.workspaceId }
@@ -848,7 +850,8 @@ describe("refusals reached from a route", () => {
     identity: either
     routes:
       save:
-        path: '/w/{workspaceId}'
+        path: 'w/{workspaceId}'
+        pathParams: { workspaceId: { type: string } }
         method: post
         principal: { requires: [workspaceId] }
         bindings: { path.workspaceId: principal.workspaceId }
