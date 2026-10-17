@@ -188,7 +188,11 @@ const routeFieldsAt = (
 
     compiler.position(
       schema,
-      { pointer: treeSchemasPointer(pointer, key), name, place: optional ? optionalPlace : "position" },
+      {
+        pointer: treeSchemasPointer(pointer, key),
+        name,
+        place: optional ? optionalPlace : "position",
+      },
       directions,
     );
   }

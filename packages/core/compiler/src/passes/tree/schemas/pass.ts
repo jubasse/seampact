@@ -16,7 +16,7 @@ import {
   treeSchemasCompileVersionProperties,
 } from "./operations.js";
 import { treeSchemasCompileDeclarations, treeSchemasCompileRoutes } from "./positions.js";
-import { treeSchemasQueryWires } from "./query-wire.js";
+import { treeSchemasFormProofRoutes, treeSchemasQueryWires } from "./query-wire.js";
 import { TreeSchemasReporter } from "./raw.js";
 import { treeSchemasCopyRelayDeclarations } from "./relays.js";
 
@@ -124,7 +124,11 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
 
     return treeSchemasService({
       uses: compiler.uses,
-      queryWires: treeSchemasQueryWires(compiler, context.conventions),
+      queryWires: treeSchemasQueryWires(
+        compiler,
+        context.conventions,
+        treeSchemasFormProofRoutes(nodes, context.inherited),
+      ),
       schemas: compiler.schemas,
       enums,
     });
