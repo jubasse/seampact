@@ -137,15 +137,22 @@
         "refusals": [
           {
             "code": "ir.feature.unsupported",
-            "member": "/features/0"
+            "member": "/features/0",
+            "value": "streaming",
+            "expected": []
           },
           {
             "code": "ir.kind.unsupported",
-            "member": "/kinds/1"
+            "member": "/kinds/1",
+            "value": "channel",
+            "expected": ["httpOperation"]
           },
           {
             "code": "ir.feature.unsupported",
-            "member": "/operations/0/features/0"
+            "member": "/operations/0/features/0",
+            "value": "streaming",
+            "expected": [],
+            "operation": "health"
           }
         ]
       }
@@ -175,7 +182,8 @@
         "refusals": [
           {
             "code": "ir.must-act.unknown",
-            "member": "/schemes/client/kind"
+            "member": "/schemes/client/kind",
+            "value": "mtls"
           }
         ]
       }
@@ -195,7 +203,9 @@
         "refusals": [
           {
             "code": "ir.feature.unsupported",
-            "member": "/features/0"
+            "member": "/features/0",
+            "value": "streaming",
+            "expected": []
           }
         ]
       }
@@ -215,7 +225,9 @@
         "refusals": [
           {
             "code": "ir.support.malformed",
-            "member": "/features"
+            "member": "/features",
+            "value": "missing",
+            "expected": ["array"]
           }
         ]
       }
@@ -235,7 +247,9 @@
         "refusals": [
           {
             "code": "ir.kind.unsupported",
-            "member": "/kinds/1"
+            "member": "/kinds/1",
+            "value": "channel",
+            "expected": ["httpOperation"]
           }
         ]
       }
@@ -255,9 +269,209 @@
         "refusals": [
           {
             "code": "ir.support.malformed",
-            "member": "/kinds"
+            "member": "/kinds",
+            "value": "string",
+            "expected": ["array"]
           }
         ]
+      }
+    },
+    {
+      "id": "literal/extension-bare-word",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/api/extensions/acme/owner",
+          "text": "foo"
+        }
+      ],
+      "edits": [
+        {
+          "pointer": "/api/extensions/acme",
+          "value": {
+            "owner": "literal-placeholder-0"
+          }
+        }
+      ],
+      "verdict": {
+        "outcome": "not-json"
+      }
+    },
+    {
+      "id": "literal/extension-hex-float",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/api/extensions/acme/owner",
+          "text": "0x1.8p1"
+        }
+      ],
+      "edits": [
+        {
+          "pointer": "/api/extensions/acme",
+          "value": {
+            "owner": "literal-placeholder-0"
+          }
+        }
+      ],
+      "verdict": {
+        "outcome": "not-json"
+      }
+    },
+    {
+      "id": "literal/extension-infinity",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/api/extensions/acme/owner",
+          "text": "-Infinity"
+        }
+      ],
+      "edits": [
+        {
+          "pointer": "/api/extensions/acme",
+          "value": {
+            "owner": "literal-placeholder-0"
+          }
+        }
+      ],
+      "verdict": {
+        "outcome": "not-json"
+      }
+    },
+    {
+      "id": "literal/extension-java-double-suffix",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/api/extensions/acme/owner",
+          "text": "3d"
+        }
+      ],
+      "edits": [
+        {
+          "pointer": "/api/extensions/acme",
+          "value": {
+            "owner": "literal-placeholder-0"
+          }
+        }
+      ],
+      "verdict": {
+        "outcome": "not-json"
+      }
+    },
+    {
+      "id": "literal/extension-leading-zero",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/api/extensions/acme/owner",
+          "text": "03"
+        }
+      ],
+      "edits": [
+        {
+          "pointer": "/api/extensions/acme",
+          "value": {
+            "owner": "literal-placeholder-0"
+          }
+        }
+      ],
+      "verdict": {
+        "outcome": "not-json"
+      }
+    },
+    {
+      "id": "literal/extension-nan",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/api/extensions/acme/owner",
+          "text": "NaN"
+        }
+      ],
+      "edits": [
+        {
+          "pointer": "/api/extensions/acme",
+          "value": {
+            "owner": "literal-placeholder-0"
+          }
+        }
+      ],
+      "verdict": {
+        "outcome": "not-json"
+      }
+    },
+    {
+      "id": "literal/extension-number",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/api/extensions/acme/owner",
+          "text": "-0.5e-3"
+        }
+      ],
+      "edits": [
+        {
+          "pointer": "/api/extensions/acme",
+          "value": {
+            "owner": "literal-placeholder-0"
+          }
+        }
+      ],
+      "verdict": {
+        "outcome": "accept"
+      }
+    },
+    {
+      "id": "literal/extension-plus-sign",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/api/extensions/acme/owner",
+          "text": "+3"
+        }
+      ],
+      "edits": [
+        {
+          "pointer": "/api/extensions/acme",
+          "value": {
+            "owner": "literal-placeholder-0"
+          }
+        }
+      ],
+      "verdict": {
+        "outcome": "not-json"
+      }
+    },
+    {
+      "id": "literal/extension-word",
+      "example": "minimal.ir.json",
+      "support": "http",
+      "literals": [
+        {
+          "pointer": "/api/extensions/acme/owner",
+          "text": "false"
+        }
+      ],
+      "edits": [
+        {
+          "pointer": "/api/extensions/acme",
+          "value": {
+            "owner": "literal-placeholder-0"
+          }
+        }
+      ],
+      "verdict": {
+        "outcome": "accept"
       }
     },
     {
@@ -289,7 +503,8 @@
         "refusals": [
           {
             "code": "ir.revision.mismatch",
-            "member": "/irRevision"
+            "member": "/irRevision",
+            "expected": ["3"]
           }
         ]
       }
@@ -337,7 +552,8 @@
         "refusals": [
           {
             "code": "ir.revision.mismatch",
-            "member": "/irRevision"
+            "member": "/irRevision",
+            "expected": ["3"]
           }
         ]
       }
@@ -385,7 +601,8 @@
         "refusals": [
           {
             "code": "ir.revision.mismatch",
-            "member": "/irRevision"
+            "member": "/irRevision",
+            "expected": ["3"]
           }
         ]
       }
@@ -405,7 +622,8 @@
         "refusals": [
           {
             "code": "ir.revision.mismatch",
-            "member": "/irRevision"
+            "member": "/irRevision",
+            "expected": ["3"]
           }
         ]
       }
@@ -649,7 +867,8 @@
         "refusals": [
           {
             "code": "ir.version.unsupported",
-            "member": "/irVersion"
+            "member": "/irVersion",
+            "expected": ["1"]
           }
         ]
       }
@@ -683,7 +902,8 @@
         "refusals": [
           {
             "code": "ir.version.unsupported",
-            "member": "/irVersion"
+            "member": "/irVersion",
+            "expected": ["1"]
           }
         ]
       }
@@ -703,7 +923,8 @@
         "refusals": [
           {
             "code": "ir.must-act.unknown",
-            "member": "/operations/0/access/kind"
+            "member": "/operations/0/access/kind",
+            "value": "future"
           }
         ]
       }
@@ -723,7 +944,8 @@
         "refusals": [
           {
             "code": "ir.must-act.unknown",
-            "member": "/operations/0/csrf/kind"
+            "member": "/operations/0/csrf/kind",
+            "value": "future"
           }
         ]
       }
@@ -743,7 +965,8 @@
         "refusals": [
           {
             "code": "ir.must-act.unknown",
-            "member": "/operations/0/idempotency/kind"
+            "member": "/operations/0/idempotency/kind",
+            "value": "future"
           }
         ]
       }
@@ -763,7 +986,8 @@
         "refusals": [
           {
             "code": "ir.must-act.unknown",
-            "member": "/identities/user/kind"
+            "member": "/identities/user/kind",
+            "value": "future"
           }
         ]
       }
@@ -783,7 +1007,8 @@
         "refusals": [
           {
             "code": "ir.must-act.unknown",
-            "member": "/schemas/Task/properties/1/restrictedTo/inputPolicy"
+            "member": "/schemas/Task/properties/1/restrictedTo/inputPolicy",
+            "value": "future"
           }
         ]
       }
@@ -803,7 +1028,8 @@
         "refusals": [
           {
             "code": "ir.must-act.unknown",
-            "member": "/identities/stripe/unknownKeys/policy"
+            "member": "/identities/stripe/unknownKeys/policy",
+            "value": "future"
           }
         ]
       }
@@ -823,7 +1049,8 @@
         "refusals": [
           {
             "code": "ir.must-act.unknown",
-            "member": "/operations/0/access/onRefused"
+            "member": "/operations/0/access/onRefused",
+            "value": "future"
           }
         ]
       }
@@ -843,7 +1070,8 @@
         "refusals": [
           {
             "code": "ir.must-act.unknown",
-            "member": "/operations/2/requires/0/kind"
+            "member": "/operations/2/requires/0/kind",
+            "value": "future"
           }
         ]
       }
@@ -863,7 +1091,8 @@
         "refusals": [
           {
             "code": "ir.must-act.unknown",
-            "member": "/rights/tasks.read/subject/kind"
+            "member": "/rights/tasks.read/subject/kind",
+            "value": "future"
           }
         ]
       }
@@ -883,7 +1112,8 @@
         "refusals": [
           {
             "code": "ir.must-act.unknown",
-            "member": "/schemes/sessionCookie/kind"
+            "member": "/schemes/sessionCookie/kind",
+            "value": "future"
           }
         ]
       }
@@ -903,7 +1133,8 @@
         "refusals": [
           {
             "code": "ir.must-act.unknown",
-            "member": "/schemes/stripeSignature/signature/key/kind"
+            "member": "/schemes/stripeSignature/signature/key/kind",
+            "value": "future"
           }
         ]
       }
@@ -923,7 +1154,8 @@
         "refusals": [
           {
             "code": "ir.must-act.unknown",
-            "member": "/schemes/stripeSignature/signature/verify"
+            "member": "/schemes/stripeSignature/signature/verify",
+            "value": "future"
           }
         ]
       }
@@ -943,7 +1175,8 @@
         "refusals": [
           {
             "code": "ir.must-act.unknown",
-            "member": "/schemas/Task/properties/9/type/unknownKeys/policy"
+            "member": "/schemas/Task/properties/9/type/unknownKeys/policy",
+            "value": "future"
           }
         ]
       }
@@ -963,7 +1196,8 @@
         "refusals": [
           {
             "code": "ir.must-act.unknown",
-            "member": "/operations/0/unknownQuery/policy"
+            "member": "/operations/0/unknownQuery/policy",
+            "value": "future"
           }
         ]
       }
@@ -983,7 +1217,10 @@
         "refusals": [
           {
             "code": "ir.feature.unsupported",
-            "member": "/operations/0/features/0"
+            "member": "/operations/0/features/0",
+            "value": "streaming",
+            "expected": [],
+            "operation": "getTask"
           }
         ]
       }
@@ -1003,7 +1240,10 @@
         "refusals": [
           {
             "code": "ir.kind.unsupported",
-            "member": "/operations/0/kind"
+            "member": "/operations/0/kind",
+            "value": "channel",
+            "expected": ["httpOperation"],
+            "operation": "getTask"
           }
         ]
       }
@@ -1023,7 +1263,8 @@
         "refusals": [
           {
             "code": "ir.revision.mismatch",
-            "member": "/irRevision"
+            "member": "/irRevision",
+            "expected": ["3"]
           }
         ]
       }
@@ -1043,7 +1284,9 @@
         "refusals": [
           {
             "code": "ir.revision.mismatch",
-            "member": "/irRevision"
+            "member": "/irRevision",
+            "value": "null",
+            "expected": ["3"]
           }
         ]
       }
@@ -1105,7 +1348,9 @@
         "refusals": [
           {
             "code": "ir.version.unsupported",
-            "member": "/irVersion"
+            "member": "/irVersion",
+            "value": "null",
+            "expected": ["1"]
           }
         ]
       }
@@ -1125,7 +1370,9 @@
         "refusals": [
           {
             "code": "ir.version.unsupported",
-            "member": "/irVersion"
+            "member": "/irVersion",
+            "value": "1",
+            "expected": ["1"]
           }
         ]
       }
@@ -1145,7 +1392,8 @@
         "refusals": [
           {
             "code": "ir.version.unsupported",
-            "member": "/irVersion"
+            "member": "/irVersion",
+            "expected": ["1"]
           }
         ]
       }

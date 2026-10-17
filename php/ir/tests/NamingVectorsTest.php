@@ -111,6 +111,10 @@ final class NamingVectorsTest extends TestCase
         yield 'status on another role' => [static fn (): IrName => new IrName(['tasks'], NamingRole::Input, 200)];
         yield 'no segment' => [static fn (): string => Identifier::of(new IrName([], NamingRole::Schema))];
         yield 'operation id without segment' => [static fn (): string => Identifier::operationId([])];
+        yield 'operation id with an upper-case segment' => [static fn (): string => Identifier::operationId(['Get'])];
+        yield 'snake operation id with a dash' => [
+            static fn (): string => Identifier::operationId(['list', 'my-tasks'], OperationIdCase::Snake),
+        ];
     }
 
     /** @param callable(): mixed $build */

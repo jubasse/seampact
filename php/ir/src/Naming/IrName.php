@@ -22,11 +22,7 @@ final readonly class IrName
      */
     public function __construct(public array $segments, public NamingRole $role, public ?int $status = null)
     {
-        foreach ($segments as $segment) {
-            if (preg_match(self::SEGMENT, $segment) !== 1) {
-                throw new \InvalidArgumentException("a naming segment is [a-z0-9]+, got '$segment'");
-            }
-        }
+        self::assertSegments($segments);
 
         if ($role === NamingRole::Response) {
             if ($status === null || $status < self::MIN_RESPONSE_STATUS || $status > self::MAX_RESPONSE_STATUS) {
@@ -37,6 +33,19 @@ final readonly class IrName
             }
         } elseif ($status !== null) {
             throw new \InvalidArgumentException("role {$role->value} has no status, got $status");
+        }
+    }
+
+    /**
+     * @param list<string> $segments
+     * @throws \InvalidArgumentException a segment outside `[a-z0-9]+`
+     */
+    public static function assertSegments(array $segments): void
+    {
+        foreach ($segments as $segment) {
+            if (preg_match(self::SEGMENT, $segment) !== 1) {
+                throw new \InvalidArgumentException("a naming segment is [a-z0-9]+, got '$segment'");
+            }
         }
     }
 

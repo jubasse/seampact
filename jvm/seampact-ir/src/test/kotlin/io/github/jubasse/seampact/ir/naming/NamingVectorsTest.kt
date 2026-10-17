@@ -106,5 +106,7 @@ class NamingVectorsTest {
         assertFailsWith<IllegalArgumentException> { IrName(listOf("tasks"), NamingRole.INPUT, 200) }
         assertFailsWith<IllegalArgumentException> { identifier(IrName(emptyList(), NamingRole.SCHEMA), NamingLanguage.KOTLIN) }
         assertFailsWith<IllegalArgumentException> { operationId(emptyList()) }
+        assertFailsWith<IllegalArgumentException> { operationId(listOf("Get")) }
+        assertFailsWith<IllegalArgumentException> { operationId(listOf("list", "my-tasks"), OperationIdCase.SNAKE) }
     }
 }

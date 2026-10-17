@@ -5,6 +5,11 @@ private val SEGMENT = Regex("^[a-z0-9]+$")
 // The statuses of a `responses` entry: success and redirect (ADR 0007 section 1).
 private val RESPONSE_STATUSES = 200..399
 
+/** @throws IllegalArgumentException a segment outside `[a-z0-9]+` */
+internal fun requireSegments(segments: List<String>) {
+    for (segment in segments) require(SEGMENT.matches(segment)) { "a naming segment is [a-z0-9]+, got '$segment'" }
+}
+
 /**
  * A name as the IR stores it (ADR 0007 section 1): word segments and a role. A `response` name carries the
  * integer [status], and no other role does.
@@ -13,7 +18,7 @@ private val RESPONSE_STATUSES = 200..399
  */
 public data class IrName(val segments: List<String>, val role: NamingRole, val status: Int? = null) {
     init {
-        for (segment in segments) require(SEGMENT.matches(segment)) { "a naming segment is [a-z0-9]+, got '$segment'" }
+        requireSegments(segments)
 
         if (role == NamingRole.RESPONSE) {
             require(status in RESPONSE_STATUSES) {

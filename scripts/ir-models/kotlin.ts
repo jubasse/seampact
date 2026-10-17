@@ -203,8 +203,11 @@ internal const val IR_SHOWN_LITERAL_MAX_LENGTH = 64
 // (no \`3d\`, \`0x1.8p1\`, \`+3\`, \`03\` or \`3.\`, which the JVM's own number syntax accepts).
 private val JSON_NUMBER = Regex("-?(0|[1-9][0-9]*)(\\\\.[0-9]+)?([eE][+-]?[0-9]+)?")
 
+/** Whether [literal] is a JSON number, as JavaScript and PHP read one. */
+internal fun isJsonNumber(literal: String): Boolean = JSON_NUMBER.matches(literal)
+
 /** A JSON number literal as the correctly rounded double, as JavaScript and PHP read it; null for any other text. */
-internal fun irNumberOf(literal: String): Double? = if (JSON_NUMBER.matches(literal)) literal.toDouble() else null
+internal fun irNumberOf(literal: String): Double? = if (isJsonNumber(literal)) literal.toDouble() else null
 
 /** A number literal cut for a message to [IR_SHOWN_LITERAL_MAX_LENGTH] characters. */
 internal fun shownLiteral(literal: String): String =

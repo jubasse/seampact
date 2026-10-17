@@ -23,7 +23,7 @@ final class Identifier
             throw new \InvalidArgumentException("a {$name->role->value} name without segment has no identifier");
         }
 
-        $joined = self::join($words, self::isCamel($name->role));
+        $joined = self::isCamel($name->role) ? self::camelCased($words) : self::pascalCased($words);
         $digitSafe = ctype_digit($joined[0]) ? '_' . $joined : $joined;
 
         return self::isReserved($digitSafe, $name->role) ? $digitSafe . self::ESCAPE : $digitSafe;
@@ -34,7 +34,7 @@ final class Identifier
      * because the id is the same string in the IR, in OpenAPI and in `relays` (ADR 0007 section 3).
      *
      * @param list<string> $segments
-     * @throws \InvalidArgumentException no segment
+     * @throws \InvalidArgumentException no segment, or a segment outside `[a-z0-9]+`
      */
     public static function operationId(array $segments, OperationIdCase $idCase = OperationIdCase::Camel): string
     {
@@ -42,7 +42,9 @@ final class Identifier
             throw new \InvalidArgumentException('an operation id needs at least one segment');
         }
 
-        return $idCase === OperationIdCase::Snake ? implode('_', $segments) : self::join($segments, true);
+        IrName::assertSegments($segments);
+
+        return $idCase === OperationIdCase::Snake ? implode('_', $segments) : self::camelCased($segments);
     }
 
     private static function isCamel(NamingRole $role): bool
@@ -50,16 +52,16 @@ final class Identifier
         return $role === NamingRole::Operation || $role === NamingRole::Member;
     }
 
-    /** @param list<string> $words */
-    private static function join(array $words, bool $camel): string
+    /** @param non-empty-list<string> $words */
+    private static function camelCased(array $words): string
     {
-        $joined = '';
+        return $words[0] . self::pascalCased(array_slice($words, 1));
+    }
 
-        foreach ($words as $index => $word) {
-            $joined .= $camel && $index === 0 ? $word : ucfirst($word);
-        }
-
-        return $joined;
+    /** @param list<string> $words */
+    private static function pascalCased(array $words): string
+    {
+        return implode('', array_map(ucfirst(...), $words));
     }
 
     private static function isReserved(string $identifier, NamingRole $role): bool

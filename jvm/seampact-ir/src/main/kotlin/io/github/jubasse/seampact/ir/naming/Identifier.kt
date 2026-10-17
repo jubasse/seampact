@@ -36,10 +36,11 @@ public enum class OperationIdCase { CAMEL, SNAKE }
  * The string of an operation id for [segments]: pure casing, with no reserved-word escape and no digit escape,
  * because the id is the same string in the IR, in OpenAPI and in `relays` (ADR 0007 section 3).
  *
- * @throws IllegalArgumentException no segment
+ * @throws IllegalArgumentException no segment, or a segment outside `[a-z0-9]+`
  */
 public fun operationId(segments: List<String>, idCase: OperationIdCase = OperationIdCase.CAMEL): String {
     require(segments.isNotEmpty()) { "an operation id needs at least one segment" }
+    requireSegments(segments)
 
     return when (idCase) {
         OperationIdCase.SNAKE -> segments.joinToString("_")

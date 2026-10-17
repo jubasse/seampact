@@ -75,7 +75,7 @@ describe("the reader parity corpus", () => {
     expect(refusedDefinitions.sort()).toEqual(mustActDefinitionNames().sort());
   });
 
-  it("a verdict holds the outcome, the code and the member, never a message", () => {
+  it("a verdict holds the outcome and the refusal fields, never a message", () => {
     for (const { id, verdict } of committedCorpus().cases) {
       if (verdict.outcome !== "refuse") {
         expect(Object.keys(verdict), id).toEqual(["outcome"]);
@@ -84,8 +84,20 @@ describe("the reader parity corpus", () => {
 
       expect(verdict.refusals.length, id).toBeGreaterThan(0);
 
-      for (const refusal of verdict.refusals)
-        expect(Object.keys(refusal), id).toEqual(["code", "member"]);
+      for (const refusal of verdict.refusals) {
+        const keys = Object.keys(refusal);
+        const refusalKeys = ["code", "member", "value", "expected", "operation"];
+
+        expect(keys.slice(0, 2), id).toEqual(["code", "member"]);
+        expect(
+          keys.every((key) => refusalKeys.includes(key)),
+          id,
+        ).toBe(true);
+
+        // A support refusal always has an expected list; a must-act one has its string value only.
+        if (refusal.code === MUST_ACT_CODE) expect(keys, id).toEqual(["code", "member", "value"]);
+        else expect(keys, id).toContain("expected");
+      }
     }
   });
 
@@ -98,6 +110,8 @@ describe("the reader parity corpus", () => {
     expect(ids).toContain("literal/revision-fraction-rounds-down");
     expect(ids).toContain("literal/revision-java-double-suffix");
     expect(ids).toContain("literal/status-beyond-safe-range");
+    expect(ids).toContain("literal/extension-java-double-suffix");
+    expect(ids).toContain("literal/extension-nan");
     expect(ids).toContain("catalogue/right-proto-key");
     expect(ids).toContain("catalogue/error-numeric-key");
     expect(ids).toContain("standalone-tag/missing");

@@ -7,6 +7,7 @@ import {
   IR_REVISION,
   IR_VERSION,
   type IrSupport,
+  type IrSupportMismatch,
   type IrValidationReport,
   walkIrInstance,
 } from "@seampact/spec/ir";
@@ -15,8 +16,8 @@ import { biomeStableJson, type JsonValue } from "./generate.ts";
 
 // The reader parity corpus (ADR 0010): IR documents with the verdict of the TypeScript reader, which the Kotlin and
 // PHP readers must give too. A case is an example document, edits applied to it, number literals written into it
-// as text, and the support declaration it is read with. The verdict compares the outcome, the code and the member of
-// each refusal, never the message text.
+// as text, and the support declaration it is read with. The verdict compares the outcome and the code, member,
+// string value, expected list and operation of each refusal, never the message text.
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -35,16 +36,24 @@ export type CorpusLiteral = {
   text: string;
 };
 
-export type CorpusRefusal = { code: string; member: string };
+/**
+ * A refusal as the native readers must give it. A support refusal records its `expected` list, as text, and its
+ * `operation` when it has one; any refusal records its `value` when that is a string (a number's text is not
+ * compared, since the platforms render numbers apart).
+ */
+export type CorpusRefusal = {
+  code: string;
+  member: string;
+  value?: string;
+  expected?: string[];
+  operation?: string;
+};
 
 export type CorpusVerdict =
   | { outcome: "accept" }
   /** JSON the IR model refuses to decode. */
   | { outcome: "malformed" }
-  /**
-   * Text that is not JSON. A reader never accepts it: it fails as malformed, or, where the platform parser reads
-   * more than JSON (Kotlin reads `3d` as a number), as a refusal.
-   */
+  /** Text that is not JSON: every reader fails on it as malformed. */
   | { outcome: "not-json" }
   /** Sorted by member, then code. */
   | { outcome: "refuse"; refusals: CorpusRefusal[] };
@@ -99,11 +108,25 @@ function mustActRefusals(report: IrValidationReport): CorpusRefusal[] {
   return [
     ...report.unknownKinds
       .filter((unknown) => unknown.mustAct)
-      .map((unknown) => ({ code: MUST_ACT_CODE, member: `${unknown.pointer}/${unknown.tag}` })),
+      .map((unknown) => ({
+        code: MUST_ACT_CODE,
+        member: `${unknown.pointer}/${unknown.tag}`,
+        value: unknown.value,
+      })),
     ...report.unknownValues
       .filter((unknown) => unknown.mustAct)
-      .map((unknown) => ({ code: MUST_ACT_CODE, member: unknown.pointer })),
+      .map((unknown) => ({ code: MUST_ACT_CODE, member: unknown.pointer, value: unknown.value })),
   ];
+}
+
+function supportRefusalOf(mismatch: IrSupportMismatch): CorpusRefusal {
+  return {
+    code: mismatch.code,
+    member: mismatch.member,
+    ...(typeof mismatch.value === "string" ? { value: mismatch.value } : {}),
+    expected: mismatch.expected.map(String),
+    ...(mismatch.operation === undefined ? {} : { operation: mismatch.operation }),
+  };
 }
 
 /** What the TypeScript reader does with `text`: the same order of checks as the native readers. */
@@ -118,8 +141,7 @@ export function verdictOf(text: string, support: IrSupport): CorpusVerdict {
 
   const mismatches = checkIrSupport(document, support);
 
-  if (mismatches.length > 0)
-    return refusalsOf(mismatches.map(({ code, member }) => ({ code, member })));
+  if (mismatches.length > 0) return refusalsOf(mismatches.map(supportRefusalOf));
 
   const report = validator.validate(document);
   const mustAct = mustActRefusals(report);
@@ -368,6 +390,11 @@ function literalCases(): CaseInput[] {
     literalCase(`literal/revision-${name}`, MINIMAL, "/irRevision", text);
   const status = (name: string, text: string) =>
     literalCase(`literal/status-${name}`, EVERY_MEMBER, RESPONSE_STATUS, text);
+  // An opaque member, where no IR check looks at the value: only the JSON grammar refuses it.
+  const extension = (name: string, text: string): CaseInput => ({
+    ...literalCase(`literal/extension-${name}`, MINIMAL, "/api/extensions/acme/owner", text),
+    edits: [{ pointer: "/api/extensions/acme", value: { owner: "team-tasks" } }],
+  });
 
   return [
     revision("trailing-zero", `${IR_REVISION}.0`),
@@ -398,6 +425,15 @@ function literalCases(): CaseInput[] {
     status("beyond-safe-range", "9007199254740993"),
     status("one-e-16", "1e16"),
     status("hundred-digits", HUNDRED_DIGITS),
+    extension("java-double-suffix", "3d"),
+    extension("hex-float", "0x1.8p1"),
+    extension("nan", "NaN"),
+    extension("infinity", "-Infinity"),
+    extension("bare-word", "foo"),
+    extension("plus-sign", "+3"),
+    extension("leading-zero", "03"),
+    extension("number", "-0.5e-3"),
+    extension("word", "false"),
   ];
 }
 

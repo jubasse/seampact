@@ -91,17 +91,18 @@ final class ParityTest extends TestCase
         return $text;
     }
 
-    /** @return array{string, list<array{string, string}>} */
+    /** @return array{string, list<IrRefusal>} the outcome, with the refusals sorted as the corpus sorts them */
     private function verdictOf(string $text, IrSupport $support): array
     {
         try {
             IrReader::read($text, $support);
         } catch (IrRefusedException $refused) {
-            $refusals = array_map(
-                static fn (IrRefusal $refusal): array => [$refusal->code->value, $refusal->member],
-                $refused->refusals,
+            $refusals = $refused->refusals;
+            usort(
+                $refusals,
+                static fn (IrRefusal $left, IrRefusal $right): int
+                    => [$left->member, $left->code->value] <=> [$right->member, $right->code->value],
             );
-            usort($refusals, static fn (array $left, array $right): int => [$left[1], $left[0]] <=> [$right[1], $right[0]]);
 
             return [self::REFUSE, $refusals];
         } catch (IrMalformedException) {
@@ -111,13 +112,41 @@ final class ParityTest extends TestCase
         return [self::ACCEPT, []];
     }
 
-    /** @return list<array{string, string}> */
-    private function expectedRefusals(\stdClass $verdict): array
+    // Each field the corpus records; a support refusal, the one with an expected list, has its operation compared too.
+    private function refusalAgrees(\stdClass $expected, IrRefusal $actual): bool
     {
-        return array_map(
-            static fn (\stdClass $refusal): array => [Json::string($refusal, 'code'), Json::string($refusal, 'member')],
-            Json::optionalObjects($verdict, 'refusals'),
-        );
+        $expectedList = Json::has($expected, 'expected') ? Json::strings($expected, 'expected') : null;
+
+        return Json::string($expected, 'code') === $actual->code->value
+            && Json::string($expected, 'member') === $actual->member
+            && (Json::optionalString($expected, 'value') ?? $actual->value) === $actual->value
+            && ($expectedList ?? $actual->expected) === $actual->expected
+            && ($expectedList === null || Json::optionalString($expected, 'operation') === $actual->operation);
+    }
+
+    /** @param array{string, list<IrRefusal>} $actual */
+    private function agrees(\stdClass $verdict, array $actual): bool
+    {
+        $outcome = Json::string($verdict, 'outcome');
+
+        // Text that is not JSON is malformed for every reader.
+        if ($outcome === self::NOT_JSON) {
+            return $actual[0] === self::MALFORMED;
+        }
+
+        $expectedRefusals = Json::optionalObjects($verdict, 'refusals');
+
+        if ($outcome !== $actual[0] || count($expectedRefusals) !== count($actual[1])) {
+            return false;
+        }
+
+        foreach ($expectedRefusals as $index => $expected) {
+            if (!$this->refusalAgrees($expected, $actual[1][$index])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function testMatchesTypeScriptVerdicts(): void
@@ -129,13 +158,10 @@ final class ParityTest extends TestCase
 
         foreach ($cases as $case) {
             $verdict = Json::object(Json::member($case, 'verdict'));
-            $expected = [Json::string($verdict, 'outcome'), $this->expectedRefusals($verdict)];
             $actual = $this->verdictOf($this->documentTextOf($case), $this->supportNamed($corpus, Json::string($case, 'support')));
-            // Text that is not JSON is never accepted; the TypeScript reader calls it malformed, as this one does.
-            $agrees = $expected[0] === self::NOT_JSON ? $actual[0] === self::MALFORMED : $expected === $actual;
 
-            if (!$agrees) {
-                $mismatches[] = Json::string($case, 'id') . ': expected ' . json_encode($expected) . ', got ' . json_encode($actual);
+            if (!$this->agrees($verdict, $actual)) {
+                $mismatches[] = Json::string($case, 'id') . ': expected ' . json_encode($verdict) . ', got ' . json_encode($actual);
             }
         }
 
