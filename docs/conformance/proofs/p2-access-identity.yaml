@@ -1,5 +1,12 @@
 lane: p2-access-identity
 proofs:
+  - id: CHK-004
+    fixtures:
+      - fixtures/passes/access-identity/catalogues/api.yaml
+      - fixtures/passes/access-identity/routes/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/identity/identities.test.ts#identities and principal variants'
+      - 'core: packages/core/compiler/src/passes/access/identity/operations.test.ts#access.identity per operation on the routes fixture'
   - id: CHK-005
     fixtures:
       - fixtures/passes/access-identity/catalogues/api.yaml
@@ -7,8 +14,53 @@ proofs:
     tests:
       - 'core: packages/core/compiler/src/passes/access/identity/schemes.test.ts#security schemes'
       - 'core: packages/core/compiler/src/passes/access/identity/identities.test.ts#access.identity diagnostics are located'
+  - id: CHK-007
+    fixtures:
+      - fixtures/passes/access-identity/routes/api.yaml
+      - fixtures/passes/access-identity/routes/operations.json
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/identity/operations.test.ts#csrf derived on cookie writes'
+  - id: CHK-008
+    fixtures:
+      - fixtures/passes/access-identity/routes/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/identity/operations.test.ts#deny by default'
+      - 'core: packages/core/compiler/src/passes/access/identity/catalogues.test.ts#access.identity catalogues'
+  - id: CHK-009
+    fixtures:
+      - fixtures/passes/access-identity/routes/api.yaml
+      - fixtures/passes/access-identity/routes/operations.json
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/identity/operations.test.ts#reasons on access exceptions'
+  - id: CHK-017
+    fixtures:
+      - fixtures/reference/tasks-service/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/identity/operations.test.ts#service api identity'
+  - id: CHK-073
+    fixtures:
+      - fixtures/passes/access-identity/routes/api.yaml
+      - fixtures/passes/access-identity/routes/operations.json
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/identity/operations.test.ts#signed identities'
+      - 'core: packages/core/compiler/src/passes/access/identity/operations.test.ts#raw body on every declared input'
   - id: CHK-131
     fixtures:
       - fixtures/passes/access-identity/catalogues/api.yaml
+      - fixtures/passes/access-identity/routes/api.yaml
     tests:
       - 'core: packages/core/compiler/src/passes/access/identity/schemes.test.ts#an application signature takes headers and an optional key'
+      - 'core: packages/core/compiler/src/passes/access/identity/operations.test.ts#signed identities'
+  - id: CHK-132
+    fixtures:
+      - fixtures/passes/access-identity/catalogues/api.yaml
+      - fixtures/passes/access-identity/routes/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/identity/schemes.test.ts#security schemes'
+      - 'core: packages/core/compiler/src/passes/access/identity/operations.test.ts#security schemes'
+  - id: CHK-133
+    fixtures:
+      - fixtures/passes/access-identity/routes/api.yaml
+      - fixtures/passes/access-identity/routes/operations.json
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/identity/operations.test.ts#optional access and onRefused'
