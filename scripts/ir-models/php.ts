@@ -304,6 +304,11 @@ class PhpEmitter {
     return !member.required && member.type.kind === "opaque";
   }
 
+  private isExtensionSlot(member: Member): boolean {
+    if (member.type.kind !== "named") return false;
+    return this.native(member.type) === "\\stdClass";
+  }
+
   private memberNative(member: Member): string {
     if (this.isOptionalOpaque(member)) return "?IrOpaque";
     const native = this.native(member.type);
@@ -362,22 +367,41 @@ class PhpEmitter {
     });
     const parameters = members.map((member) => {
       const optional = member.required ? "" : " = null";
-      return `${INDENT}${INDENT}public ${this.memberNative(member)} $${propertyName(member.name)}${optional},`;
+      const promotion = this.isExtensionSlot(member) ? "" : "public ";
+      return `${INDENT}${INDENT}${promotion}${this.memberNative(member)} $${propertyName(member.name)}${optional},`;
     });
+    const slots = members.filter((member) => this.isExtensionSlot(member));
+    const slotProperties = slots.flatMap((member) => [
+      `${INDENT}private ${this.memberNative(member)} $${propertyName(member.name)};`,
+      "",
+    ]);
+    const slotCopies = slots.map(
+      (member) =>
+        `${INDENT}${INDENT}$this->${propertyName(member.name)} = ${HYDRATION}::copyObject($${propertyName(member.name)});`,
+    );
+    const slotGetters = slots.flatMap((member) => [
+      "",
+      `${INDENT}public function ${propertyName(member.name)}(): \\stdClass`,
+      `${INDENT}{`,
+      `${INDENT}${INDENT}return ${HYDRATION}::copyObject($this->${propertyName(member.name)});`,
+      `${INDENT}}`,
+    ]);
 
-    const body =
-      variant === undefined
+    const body = [
+      ...(variant === undefined
         ? []
-        : [
-            `${INDENT}${INDENT}$this->${propertyName(variant.member)} = ${phpString(variant.value)};`,
-          ];
+        : [`${INDENT}${INDENT}$this->${propertyName(variant.member)} = ${phpString(variant.value)};`]),
+      ...slotCopies,
+    ];
     return [
+      ...slotProperties,
       ...(docs.length === 0 ? [] : [`${INDENT}/**`, ...docs, `${INDENT} */`]),
       `${INDENT}public function __construct(`,
       ...parameters,
       `${INDENT}) {`,
       ...body,
       `${INDENT}}`,
+      ...slotGetters,
     ];
   }
 
@@ -427,7 +451,7 @@ class PhpEmitter {
       if (this.isOptionalOpaque(member)) {
         lines.push(
           `${INDENT}${INDENT}if (${property} !== null) {`,
-          `${INDENT}${INDENT}${INDENT}${key} = ${HYDRATION}::copy(${property}->value);`,
+          `${INDENT}${INDENT}${INDENT}${key} = ${HYDRATION}::copy(${property}->value());`,
           `${INDENT}${INDENT}}`,
         );
         continue;
@@ -484,7 +508,7 @@ class PhpEmitter {
       "/** A variant this IR revision does not know, kept raw; its tag is the raw object's. */",
       `final readonly class ${unknown} extends ${name}`,
       "{",
-      `${INDENT}public \\stdClass $raw;`,
+      `${INDENT}private \\stdClass $raw;`,
       "",
       `${INDENT}public function __construct(`,
       `${INDENT}${INDENT}public string $${tag},`,
@@ -502,6 +526,12 @@ class PhpEmitter {
       `${INDENT}public function tag(): string`,
       `${INDENT}{`,
       `${INDENT}${INDENT}return $this->${tag};`,
+      `${INDENT}}`,
+      "",
+      `${INDENT}/** A copy: the kept raw object cannot be changed through it. */`,
+      `${INDENT}public function raw(): \\stdClass`,
+      `${INDENT}{`,
+      `${INDENT}${INDENT}return ${HYDRATION}::copyObject($this->raw);`,
       `${INDENT}}`,
       "",
       `${INDENT}public function toJson(): \\stdClass`,

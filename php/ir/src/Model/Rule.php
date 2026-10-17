@@ -10,6 +10,8 @@ namespace Seampact\Ir\Model;
 /** A rule (ADR 0004 section 4). */
 final readonly class Rule
 {
+    private \stdClass $extensions;
+
     /**
      * @param string $id
      * @param bool $takesBucket
@@ -25,11 +27,17 @@ final readonly class Rule
         public bool $takesBucket,
         public array $errors,
         public Docs $docs,
-        public \stdClass $extensions,
+        \stdClass $extensions,
         public Origin $origin,
         public ?string $params = null,
         public ?RuleProof $proof = null,
     ) {
+        $this->extensions = IrHydration::copyObject($extensions);
+    }
+
+    public function extensions(): \stdClass
+    {
+        return IrHydration::copyObject($this->extensions);
     }
 
     public static function fromJson(mixed $value): self

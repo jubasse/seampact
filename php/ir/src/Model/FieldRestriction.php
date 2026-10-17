@@ -41,7 +41,7 @@ final readonly class FieldRestriction
         $json = new \stdClass();
         $json->{'right'} = $this->right;
         if ($this->params !== null) {
-            $json->{'params'} = IrHydration::copy($this->params->value);
+            $json->{'params'} = IrHydration::copy($this->params->value());
         }
         if ($this->inputPolicy !== null) {
             $json->{'inputPolicy'} = $this->inputPolicy->toJson();

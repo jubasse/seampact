@@ -73,7 +73,7 @@ final class ModelRoundTripTest extends TestCase
         $decodedAbsent = OperationError::fromJson(json_decode($absent, false, 512, JSON_THROW_ON_ERROR));
 
         self::assertNotNull($decodedNull->example);
-        self::assertNull($decodedNull->example->value);
+        self::assertNull($decodedNull->example->value());
         self::assertNull($decodedAbsent->example);
         self::assertSame($withNull, json_encode($decodedNull->toJson(), JSON_THROW_ON_ERROR));
         self::assertSame($absent, json_encode($decodedAbsent->toJson(), JSON_THROW_ON_ERROR));
@@ -91,7 +91,7 @@ final class ModelRoundTripTest extends TestCase
 
         self::assertInstanceOf(SchemaUnknown::class, $point);
         self::assertSame('tuple', $point->tag());
-        self::assertSame(Documents::canonical(Documents::at($document, 'schemas', 'Point')), Documents::canonical($point->raw));
+        self::assertSame(Documents::canonical(Documents::at($document, 'schemas', 'Point')), Documents::canonical($point->raw()));
     }
 
     public function testMissingTagNamesTheUnion(): void
@@ -203,7 +203,7 @@ final class ModelRoundTripTest extends TestCase
         self::assertSame($expected, Documents::canonical($ir->toJson()));
         $point = $ir->schemas['Point'];
         self::assertInstanceOf(SchemaUnknown::class, $point);
-        self::assertObjectNotHasProperty('added', $point->raw);
+        self::assertObjectNotHasProperty('added', $point->raw());
     }
 
     public function testMutatingAToJsonResultLeavesTheModelUnchanged(): void
@@ -217,6 +217,33 @@ final class ModelRoundTripTest extends TestCase
         $point->toJson()->added = true;
 
         self::assertSame($expected, Documents::canonical($ir->toJson()));
+    }
+
+    public function testKeptObjectsCannotBeChangedThroughTheModel(): void
+    {
+        $ir = ContractIR::fromJson(Documents::example('unknown-kind.ir.json'));
+        $expected = Documents::canonical($ir->toJson());
+        $point = $ir->schemas['Point'];
+        self::assertInstanceOf(SchemaUnknown::class, $point);
+
+        $point->raw()->added = true;
+        $ir->api->extensions()->added = true;
+
+        self::assertSame($expected, Documents::canonical($ir->toJson()));
+        self::assertObjectNotHasProperty('added', $point->raw());
+        self::assertObjectNotHasProperty('added', $ir->api->extensions());
+    }
+
+    public function testKeptObjectsAreNotPublicProperties(): void
+    {
+        $ir = ContractIR::fromJson(Documents::example('unknown-kind.ir.json'));
+        $point = $ir->schemas['Point'];
+        self::assertInstanceOf(SchemaUnknown::class, $point);
+
+        $this->expectException(\Error::class);
+        $this->expectExceptionMessage('private property');
+        // The access is the point of the test.
+        $point->raw->added = true; // @phpstan-ignore property.private
     }
 
     public function testOpaqueAndExtensionValuesAreCopied(): void

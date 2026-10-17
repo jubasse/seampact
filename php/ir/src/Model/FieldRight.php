@@ -55,7 +55,7 @@ final readonly class FieldRight
         $json->{'pointer'} = $this->pointer;
         $json->{'right'} = $this->right;
         if ($this->params !== null) {
-            $json->{'params'} = IrHydration::copy($this->params->value);
+            $json->{'params'} = IrHydration::copy($this->params->value());
         }
         if ($this->subject !== null) {
             $json->{'subject'} = $this->subject->toJson();

@@ -10,6 +10,8 @@ namespace Seampact\Ir\Model;
 /** An HTTP operation (ADR 0004 section 7). */
 final readonly class Operation
 {
+    private \stdClass $extensions;
+
     /**
      * @param DeclarationKind $kind
      * @param string $id
@@ -82,7 +84,7 @@ final readonly class Operation
         public array $tags,
         public array $examples,
         public Docs $docs,
-        public \stdClass $extensions,
+        \stdClass $extensions,
         public Origin $origin,
         public ?OpShorthand $op = null,
         public ?OperationResource $resource = null,
@@ -100,6 +102,12 @@ final readonly class Operation
         public ?OperationRef $relays = null,
         public ?Csrf $csrf = null,
     ) {
+        $this->extensions = IrHydration::copyObject($extensions);
+    }
+
+    public function extensions(): \stdClass
+    {
+        return IrHydration::copyObject($this->extensions);
     }
 
     public static function fromJson(mixed $value): self

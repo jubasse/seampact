@@ -10,6 +10,8 @@ namespace Seampact\Ir\Model;
 /** An object property; the wire name stays 'name' (ADR 0004 section 5). */
 final readonly class Property
 {
+    private \stdClass $extensions;
+
     /**
      * @param string $name
      * @param TypeUse $type
@@ -33,13 +35,19 @@ final readonly class Property
         public bool $sensitive,
         public bool $deprecated,
         public Docs $docs,
-        public \stdClass $extensions,
+        \stdClass $extensions,
         public Origin $origin,
         public ?FieldRestriction $restrictedTo = null,
         public ?IrOpaque $default = null,
         public ?Name $codeName = null,
         public ?DerivedFrom $derivedFrom = null,
     ) {
+        $this->extensions = IrHydration::copyObject($extensions);
+    }
+
+    public function extensions(): \stdClass
+    {
+        return IrHydration::copyObject($this->extensions);
     }
 
     public static function fromJson(mixed $value): self
@@ -75,7 +83,7 @@ final readonly class Property
             $json->{'restrictedTo'} = $this->restrictedTo->toJson();
         }
         if ($this->default !== null) {
-            $json->{'default'} = IrHydration::copy($this->default->value);
+            $json->{'default'} = IrHydration::copy($this->default->value());
         }
         $json->{'deprecated'} = $this->deprecated;
         if ($this->codeName !== null) {

@@ -12,6 +12,8 @@ final readonly class UnionSchema extends Schema
     /** The tag member 'kind': fixed to 'union'. */
     public string $kind;
 
+    private \stdClass $extensions;
+
     /**
      * @param UnionTag $tag
      * @param list<UnionVariant> $variants
@@ -32,11 +34,17 @@ final readonly class UnionSchema extends Schema
         public array $directions,
         public array $examples,
         public Docs $docs,
-        public \stdClass $extensions,
+        \stdClass $extensions,
         public Origin $origin,
         public ?string $typeName = null,
     ) {
         $this->kind = 'union';
+        $this->extensions = IrHydration::copyObject($extensions);
+    }
+
+    public function extensions(): \stdClass
+    {
+        return IrHydration::copyObject($this->extensions);
     }
 
     public static function fromJson(mixed $value): self

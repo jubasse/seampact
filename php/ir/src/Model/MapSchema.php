@@ -12,6 +12,8 @@ final readonly class MapSchema extends Schema
     /** The tag member 'kind': fixed to 'map'. */
     public string $kind;
 
+    private \stdClass $extensions;
+
     /**
      * @param TypeUse $values
      * @param string $id
@@ -31,12 +33,18 @@ final readonly class MapSchema extends Schema
         public array $directions,
         public array $examples,
         public Docs $docs,
-        public \stdClass $extensions,
+        \stdClass $extensions,
         public Origin $origin,
         public ?TypeUse $keys = null,
         public ?string $typeName = null,
     ) {
         $this->kind = 'map';
+        $this->extensions = IrHydration::copyObject($extensions);
+    }
+
+    public function extensions(): \stdClass
+    {
+        return IrHydration::copyObject($this->extensions);
     }
 
     public static function fromJson(mixed $value): self

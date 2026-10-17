@@ -10,6 +10,8 @@ namespace Seampact\Ir\Model;
 /** A scope (ADR 0004 section 4). */
 final readonly class Scope
 {
+    private \stdClass $extensions;
+
     /**
      * @param string $id
      * @param TypeUse $idSchema
@@ -24,10 +26,16 @@ final readonly class Scope
         public TypeUse $idSchema,
         public array $errors,
         public Docs $docs,
-        public \stdClass $extensions,
+        \stdClass $extensions,
         public Origin $origin,
         public ?string $within = null,
     ) {
+        $this->extensions = IrHydration::copyObject($extensions);
+    }
+
+    public function extensions(): \stdClass
+    {
+        return IrHydration::copyObject($this->extensions);
     }
 
     public static function fromJson(mixed $value): self

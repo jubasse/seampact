@@ -73,7 +73,7 @@ final readonly class ErrorDecl
             $json->{'params'} = $this->params;
         }
         if ($this->example !== null) {
-            $json->{'example'} = IrHydration::copy($this->example->value);
+            $json->{'example'} = IrHydration::copy($this->example->value());
         }
         if ($this->title !== null) {
             $json->{'title'} = $this->title;

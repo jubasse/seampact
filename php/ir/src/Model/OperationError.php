@@ -41,7 +41,7 @@ final readonly class OperationError
         $json = new \stdClass();
         $json->{'code'} = $this->code;
         if ($this->example !== null) {
-            $json->{'example'} = IrHydration::copy($this->example->value);
+            $json->{'example'} = IrHydration::copy($this->example->value());
         }
         if ($this->derivedFrom !== null) {
             $json->{'derivedFrom'} = $this->derivedFrom->toJson();

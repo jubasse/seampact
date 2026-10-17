@@ -454,6 +454,29 @@ final class IrReaderTest extends TestCase
         self::assertSame("/\u{FFFD}x" . str_repeat('/0', 255), $lone[0]->member);
     }
 
+    public function testNestingPastTheBoundIsRefusedAfterALongString(): void
+    {
+        $deep = Deep::arrays(256);
+        $text = '{"s":"' . str_repeat('[', 5_000_000) . '","x":' . $deep->text . '}';
+
+        $refusals = $this->refusals($text);
+
+        self::assertSame('/x' . str_repeat('/0', 255), $refusals[0]->member);
+    }
+
+    public function testBracketsInEscapedStringsAreNotCountedButNestingAfterThemIs(): void
+    {
+        $brackets = str_repeat('[', 300);
+        $escaped = '"' . $brackets . '\\"' . $brackets . '\\\\"';
+
+        $within = $this->refusals('{"s":' . $escaped . ',"x":' . Deep::arrays(255)->text . '}');
+        self::assertSame('/irVersion', $within[0]->member);
+        self::assertCount(1, $within);
+
+        $refusals = $this->refusals('{"s":' . $escaped . ',"x":' . Deep::arrays(256)->text . '}');
+        self::assertSame('/x' . str_repeat('/0', 255), $refusals[0]->member);
+    }
+
     public function testAPointerThatIsNotUtf8IsCutAtAByte(): void
     {
         $deep = Deep::arrays(256);

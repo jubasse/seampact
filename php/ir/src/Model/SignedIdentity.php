@@ -13,6 +13,8 @@ final readonly class SignedIdentity extends Identity
     /** The tag member 'kind': fixed to 'signed'. */
     public string $kind;
 
+    private \stdClass $extensions;
+
     /**
      * @param string $id
      * @param string $signed
@@ -31,11 +33,17 @@ final readonly class SignedIdentity extends Identity
         public array $errors,
         public array $headers,
         public Docs $docs,
-        public \stdClass $extensions,
+        \stdClass $extensions,
         public Origin $origin,
         public ?KeysPolicy $unknownKeys = null,
     ) {
         $this->kind = 'signed';
+        $this->extensions = IrHydration::copyObject($extensions);
+    }
+
+    public function extensions(): \stdClass
+    {
+        return IrHydration::copyObject($this->extensions);
     }
 
     public static function fromJson(mixed $value): self

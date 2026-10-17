@@ -52,7 +52,7 @@ final readonly class RuleRequirement extends Requirement
         $json->{'kind'} = $this->kind;
         $json->{'rule'} = $this->rule;
         if ($this->params !== null) {
-            $json->{'params'} = IrHydration::copy($this->params->value);
+            $json->{'params'} = IrHydration::copy($this->params->value());
         }
         if ($this->bucket !== null) {
             $json->{'bucket'} = $this->bucket;

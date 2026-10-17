@@ -10,6 +10,8 @@ namespace Seampact\Ir\Model;
 /** A right (ADR 0004 section 4). */
 final readonly class Right
 {
+    private \stdClass $extensions;
+
     /**
      * @param string $id
      * @param RightSubject $subject
@@ -27,13 +29,19 @@ final readonly class Right
         public RightSubject $subject,
         public array $errors,
         public Docs $docs,
-        public \stdClass $extensions,
+        \stdClass $extensions,
         public Origin $origin,
         public ?string $params = null,
         public ?string $guest = null,
         public ?DerivedFrom $derivedFrom = null,
         public ?Name $codeName = null,
     ) {
+        $this->extensions = IrHydration::copyObject($extensions);
+    }
+
+    public function extensions(): \stdClass
+    {
+        return IrHydration::copyObject($this->extensions);
     }
 
     public static function fromJson(mixed $value): self

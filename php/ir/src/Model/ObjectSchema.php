@@ -12,6 +12,8 @@ final readonly class ObjectSchema extends Schema
     /** The tag member 'kind': fixed to 'object'. */
     public string $kind;
 
+    private \stdClass $extensions;
+
     /**
      * @param list<Property> $properties
      * @param string $id
@@ -30,11 +32,17 @@ final readonly class ObjectSchema extends Schema
         public array $directions,
         public array $examples,
         public Docs $docs,
-        public \stdClass $extensions,
+        \stdClass $extensions,
         public Origin $origin,
         public ?string $typeName = null,
     ) {
         $this->kind = 'object';
+        $this->extensions = IrHydration::copyObject($extensions);
+    }
+
+    public function extensions(): \stdClass
+    {
+        return IrHydration::copyObject($this->extensions);
     }
 
     public static function fromJson(mixed $value): self

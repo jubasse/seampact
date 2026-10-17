@@ -10,6 +10,8 @@ namespace Seampact\Ir\Model;
 /** The api (ADR 0004 section 2). */
 final readonly class Api
 {
+    private \stdClass $extensions;
+
     /**
      * @param string $id
      * @param Name $name
@@ -37,11 +39,17 @@ final readonly class Api
         public array $surfaces,
         public array $documents,
         public Docs $docs,
-        public \stdClass $extensions,
+        \stdClass $extensions,
         public Origin $origin,
         public ?ApiRole $role = null,
         public ?ApiCaller $caller = null,
     ) {
+        $this->extensions = IrHydration::copyObject($extensions);
+    }
+
+    public function extensions(): \stdClass
+    {
+        return IrHydration::copyObject($this->extensions);
     }
 
     public static function fromJson(mixed $value): self

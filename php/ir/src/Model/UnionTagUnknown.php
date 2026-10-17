@@ -10,7 +10,7 @@ namespace Seampact\Ir\Model;
 /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
 final readonly class UnionTagUnknown extends UnionTag
 {
-    public \stdClass $raw;
+    private \stdClass $raw;
 
     public function __construct(
         public string $in,
@@ -28,6 +28,12 @@ final readonly class UnionTagUnknown extends UnionTag
     public function tag(): string
     {
         return $this->in;
+    }
+
+    /** A copy: the kept raw object cannot be changed through it. */
+    public function raw(): \stdClass
+    {
+        return IrHydration::copyObject($this->raw);
     }
 
     public function toJson(): \stdClass

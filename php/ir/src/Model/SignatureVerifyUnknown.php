@@ -10,7 +10,7 @@ namespace Seampact\Ir\Model;
 /** A variant this IR revision does not know, kept raw; its tag is the raw object's. */
 final readonly class SignatureVerifyUnknown extends SignatureVerify
 {
-    public \stdClass $raw;
+    private \stdClass $raw;
 
     public function __construct(
         public string $verify,
@@ -28,6 +28,12 @@ final readonly class SignatureVerifyUnknown extends SignatureVerify
     public function tag(): string
     {
         return $this->verify;
+    }
+
+    /** A copy: the kept raw object cannot be changed through it. */
+    public function raw(): \stdClass
+    {
+        return IrHydration::copyObject($this->raw);
     }
 
     public function toJson(): \stdClass

@@ -13,6 +13,8 @@ final readonly class CredentialIdentity extends Identity
     /** The tag member 'kind': fixed to 'credential'. */
     public string $kind;
 
+    private \stdClass $extensions;
+
     /**
      * @param string $id
      * @param CredentialSchemes $schemes
@@ -30,10 +32,16 @@ final readonly class CredentialIdentity extends Identity
         public array $errors,
         public array $headers,
         public Docs $docs,
-        public \stdClass $extensions,
+        \stdClass $extensions,
         public Origin $origin,
     ) {
         $this->kind = 'credential';
+        $this->extensions = IrHydration::copyObject($extensions);
+    }
+
+    public function extensions(): \stdClass
+    {
+        return IrHydration::copyObject($this->extensions);
     }
 
     public static function fromJson(mixed $value): self
