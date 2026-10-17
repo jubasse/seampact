@@ -134,6 +134,8 @@ export function treeSchemasCompileDeclarations(
 
     positionAt(compiler, treeSchemasMember(proof, "schema"), proofPointer, INPUT);
     compiler.queryPositions.add(proofPointer);
+
+    if (treeSchemasMember(proof, "in") === "body") compiler.bodyProofPositions.add(proofPointer);
   }
 
   // A meta field fills a success envelope, so its schema is output.

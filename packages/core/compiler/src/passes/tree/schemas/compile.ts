@@ -274,6 +274,8 @@ export class TreeSchemasCompiler {
   readonly writtenAt = new Map<string, string>();
   /** The positions whose use a query wire is answered for, besides object properties: query fields, rule proofs. */
   readonly queryPositions = new Set<string>();
+  /** The body rule proofs among them: a JSON body holds a map, so a map there is no query wire but no fault. */
+  readonly bodyProofPositions = new Set<string>();
   /** The direction of each position use (ADR 0003 section 4); a declaration of `schemas` has none of its own. */
   readonly positionDirections = new Map<string, readonly IrWriter.Direction[]>();
   /** Every written example, checked once the catalogues are complete. */
@@ -539,7 +541,8 @@ export class TreeSchemasCompiler {
 
     if (unknownKeys === undefined) return true;
 
-    if (use.kind === "ref") {
+    // A map's keys are free (ADR 0003 section 4 names an object, a union or a reference to one).
+    if (use.kind === "ref" && this.kindOf(use.schema) !== "map") {
       use.unknownKeys = unknownKeys;
       this.writtenUnknownKeys.push(treeSchemasPointer(pointer, "unknownKeys"));
 
@@ -550,7 +553,7 @@ export class TreeSchemasCompiler {
       rule: "unknown-keys",
       pointer: treeSchemasPointer(pointer, "unknownKeys"),
       message:
-        "'unknownKeys' acts on the keys of an object, a map or a union, and this schema is none",
+        "'unknownKeys' acts on the declared keys of an object or a union, and this schema is neither",
       fix: "remove 'unknownKeys' here, or set it on the object that holds this value",
     });
 

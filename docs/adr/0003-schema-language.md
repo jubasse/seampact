@@ -207,7 +207,7 @@ GithubEvent:
 
 ### 4. Direction
 
-Every use of a schema is input or output, known from where it appears: `input` (JSON, form or multipart), `query`, `pathParams`, request `headers` and rule proofs are input; `output`, `responses`, error params and response headers are output; a principal is output of the authenticate hook. The IR records, per named schema, the directions it is used in, and the compiler propagates direction through references, so a schema used both ways is checked both ways (FR-3, CHK-047, CHK-049).
+Every use of a schema is input or output, known from where it appears: `input` (JSON, form or multipart), `query`, `pathParams`, request `headers` and rule proofs are input; `output`, `responses`, error params and response headers are output; a principal is output of the authenticate hook. A scope's `id`, a right's `subject.id` and a right's `params` are input, read from the request the check runs on; a route's `item` and a format's `meta` field schemas are output, written into the response. The IR records, per named schema, the directions it is used in, and the compiler propagates direction through references, so a schema used both ways is checked both ways (FR-3, CHK-047, CHK-049).
 
 | | Input (strict) | Output |
 |---|---|---|

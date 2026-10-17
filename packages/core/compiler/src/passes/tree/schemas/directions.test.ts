@@ -94,6 +94,19 @@ surfaces:
     ]);
     expect(refused.located).toBe(true);
   });
+
+  test("unknownKeys on a map, whose keys are free, is refused", () => {
+    const refused = treeSchemasRunApi(`schemas:
+  Labels: { type: object, additionalProperties: { type: string }, unknownKeys: refuse }
+  Tags: { type: object, additionalProperties: { type: string } }
+  Holder: { type: object, properties: { tags: { $ref: Tags, unknownKeys: refuse } } }
+`);
+
+    expect(located(refused)).toEqual([
+      ["unknown-keys", "/schemas/Labels/unknownKeys"],
+      ["unknown-keys", "/schemas/Holder/properties/tags/unknownKeys"],
+    ]);
+  });
 });
 
 describe("schema service", () => {

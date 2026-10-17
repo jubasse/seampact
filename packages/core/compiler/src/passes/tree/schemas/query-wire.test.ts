@@ -98,10 +98,11 @@ describe("query wire kinds", () => {
   });
 });
 
-describe("a map-typed query field or rule proof", () => {
-  test("is refused, since no query wire encodes its keys", () => {
+describe("a map-typed query field or header proof", () => {
+  test("is refused, since no query wire encodes its keys, and a body proof holds one", () => {
     const run = treeSchemasRunApi(`rules:
-  fresh: { proof: { in: body, name: ticket, schema: Labels } }
+  fresh: { proof: { in: header, name: X-Ticket, schema: Labels } }
+  signed: { proof: { in: body, name: ticket, schema: Labels } }
 schemas:
   Labels: { type: object, additionalProperties: { type: string } }
 surfaces:
@@ -117,5 +118,9 @@ surfaces:
       ["seampact/tree/query-map", "/surfaces/app/routes/search/query/labels?"],
     ]);
     expect(run.service.queryWire("/rules/fresh/proof/schema")).toBeUndefined();
+    expect(run.service.typeUse("/rules/signed/proof/schema", "input")).toEqual({
+      kind: "ref",
+      schema: "Labels",
+    });
   });
 });
