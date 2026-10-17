@@ -1,6 +1,7 @@
 // Regression tests for the security review of p1-loader (iteration 2): every repro of a budget
 // bypass, each failing (or overrunning its time bound) before the load budget charged it.
 import { expect, test } from "vitest";
+import { LINEAR_CPU_BUDGET_MILLISECONDS, withinCpuBudget } from "./cpu-bound.js";
 import { must } from "./golden.js";
 import { loadWorkspace } from "./index.js";
 import { type LoadReader, loadMemoryReader } from "./reader.js";
@@ -11,20 +12,12 @@ function run(files: Record<string, string>, entry = "api.yaml", reader?: LoadRea
 const rules = (r: ReturnType<typeof run>) =>
   r.diagnostics.map((d) => d.rule.replace("seampact/load/", ""));
 
-/** Runs `f` and fails when it took longer than `ms`: the bound a linear load stays well inside. */
-function timed<T>(ms: number, f: () => T): T {
-  const started = performance.now();
-  const out = f();
-  expect(performance.now() - started).toBeLessThan(ms);
-  return out;
-}
-
 const times = <T>(n: number, f: (i: number) => T): T[] => Array.from({ length: n }, (_, i) => f(i));
 
 test("D-1 a two-level $include list fan-out over an empty file ends at the expansion limit", () => {
   const n = 5_000;
   const list = (target: string) => `[${times(n, () => target).join(", ")}]`;
-  const r = timed(10_000, () =>
+  const r = withinCpuBudget(LINEAR_CPU_BUDGET_MILLISECONDS, () =>
     run({
       "api.yaml": `api: { name: t }\nx:\n  $include: ${list("./b.yaml")}\n`,
       "b.yaml": `$include: ${list("./e.yaml")}\n`,
@@ -37,7 +30,7 @@ test("D-1 a two-level $include list fan-out over an empty file ends at the expan
 
 test("D-1 many keys then many $include targets in one mapping load in linear time", () => {
   const n = 30_000;
-  const r = timed(10_000, () =>
+  const r = withinCpuBudget(LINEAR_CPU_BUDGET_MILLISECONDS, () =>
     run({
       "api.yaml": [
         "api: { name: t }",
@@ -56,7 +49,7 @@ test("D-1 many keys then many $include targets in one mapping load in linear tim
 test("D-2 many apis over one shared layer end at the expansion limit", () => {
   const apis = 1_500;
   const leaves = 8_000;
-  const r = timed(10_000, () =>
+  const r = withinCpuBudget(LINEAR_CPU_BUDGET_MILLISECONDS, () =>
     run(
       {
         "workspace.yaml": [
@@ -79,7 +72,7 @@ test("D-2 many apis over one shared layer end at the expansion limit", () => {
 test("D-2 an api overriding every leaf of a large pack merges in linear time", () => {
   const n = 30_000;
   const conventions = (v: number) => times(n, (i) => `  k${i}: ${v}`).join("\n");
-  const r = timed(10_000, () =>
+  const r = withinCpuBudget(LINEAR_CPU_BUDGET_MILLISECONDS, () =>
     run({
       "api.yaml": `api: { name: t }\npacks: [./p.yaml]\nconventions:\n${conventions(2)}\n`,
       "p.yaml": `pack: { name: p, version: 1.0.0 }\nconventions:\n${conventions(1)}\n`,
@@ -93,7 +86,7 @@ test("D-2 an api overriding every leaf of a large pack merges in linear time", (
 
 test("D-3 many $file sites of one large JSON string end at the text limit", () => {
   const sites = 100;
-  const r = timed(10_000, () =>
+  const r = withinCpuBudget(LINEAR_CPU_BUDGET_MILLISECONDS, () =>
     run({
       "api.yaml": [
         "api: { name: t }",
@@ -115,7 +108,7 @@ test("D-3 many $file sites of one large JSON string end at the text limit", () =
 
 test("budget: distinct $include fragments into one large file resolve in linear time", () => {
   const n = 50_000;
-  const r = timed(10_000, () =>
+  const r = withinCpuBudget(LINEAR_CPU_BUDGET_MILLISECONDS, () =>
     run({
       "api.yaml": `api: { name: t }\nx:\n  $include: [${times(n, (i) => `./k.yaml#/k${i}`).join(", ")}]\n`,
       "k.yaml": `${times(n, (i) => `k${i}: {}`).join("\n")}\n`,
@@ -126,7 +119,7 @@ test("budget: distinct $include fragments into one large file resolve in linear 
 
 test("budget: many distinct file $ref targets are expanded in linear time", () => {
   const n = 30_000;
-  const r = timed(10_000, () =>
+  const r = withinCpuBudget(LINEAR_CPU_BUDGET_MILLISECONDS, () =>
     run({
       "api.yaml": [
         "api: { name: t }",

@@ -13,8 +13,8 @@ import {
 import { LOAD_MAX_DEPTH, LOAD_MAX_FILE_BYTES } from "./limits.js";
 import { checkCase, isInside, resolveAuthoredPath } from "./paths.js";
 import type { LoadReader } from "./reader.js";
-import { loadScalarPitfall } from "./scalars.js";
 import type { Reporter, SiteLocation } from "./report.js";
+import { loadScalarPitfall } from "./scalars.js";
 
 export interface ParsedFile {
   path: string;

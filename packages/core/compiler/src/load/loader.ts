@@ -3,8 +3,8 @@ import type { Diagnostic } from "../diagnostics/diagnostic.js";
 import { diagnosticInert, diagnosticLocationKey, diagnosticSort } from "../diagnostics/print.js";
 import {
   type ApiLayerId,
-  type FileLayerId,
   entryLocationKey,
+  type FileLayerId,
   type JsonObject,
   type RawApi,
   type RawWorkspace,
@@ -13,10 +13,10 @@ import {
 import { LoadBudget, loadWorkOf } from "./budget.js";
 import { mergeLayers } from "./compose.js";
 import { Expander, type LayerBuild, mapIndex, navigate } from "./expand.js";
-import { entryRootPosition } from "./positions.js";
 import { asObject, isReservedKey, showValue } from "./json.js";
 import { LOAD_MAX_DEPTH } from "./limits.js";
 import { isInside, joinPath, loadNormalizePath, pointerEscape } from "./paths.js";
+import { entryRootPosition } from "./positions.js";
 import type { LoadReader } from "./reader.js";
 import { Reporter, type SiteLocation } from "./report.js";
 import { FileStore, nodeSite, type ParsedFile, type PathContext } from "./source.js";
