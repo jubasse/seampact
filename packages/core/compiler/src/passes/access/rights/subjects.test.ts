@@ -23,7 +23,7 @@ schemas:
   MemberPrincipal:
     type: object
     required: [memberId, profile]
-    properties: { memberId: { type: string }, profile: MemberProfile }
+    properties: { memberId: { type: string }, profile: MemberProfile, nick: DocId }
 scopes:
   org: { id: OrgId }
   project: { id: ProjectId, within: org }
@@ -197,6 +197,18 @@ describe("subjects and scopes", () => {
         (requirement) => requirement.kind === "right" && requirement.subject?.source,
       ),
     ).toEqual([{ in: "query", name: "mainDoc" }]);
+  });
+
+  test("an optional principal field is refused as a subject, like an optional query field", () => {
+    const { diagnostics } = run(`      ping:
+        method: post
+        requires: [{ right: docs.edit, subject: principal.nick }]
+`);
+
+    expect(located(diagnostics)).toEqual([
+      ["seampact/access/requirement-subject", "/surfaces/app/routes/ping/requires/0/subject"],
+    ]);
+    expect(diagnostics[0]?.message).toContain("the subject must be a required field");
   });
 
   test("a principal subject is refused on an optional-auth route and read through nested fields elsewhere", () => {

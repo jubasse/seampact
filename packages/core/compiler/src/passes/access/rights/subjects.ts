@@ -336,6 +336,7 @@ function principalSchema(
   const identity = accessRightsMember(context.raw.merged.identities, route.identity);
   let schemaId = accessRightsSchemaName(accessRightsMember(identity, "principal"));
   let found: SourceSchema | undefined;
+  let optional = false;
 
   for (const field of path.split(".")) {
     const schema = schemaId === undefined ? undefined : schemas[schemaId];
@@ -343,6 +344,7 @@ function principalSchema(
     const property = schema.properties.find((candidate) => candidate.name === field);
     if (property === undefined) return undefined;
 
+    optional ||= property.optional;
     const name =
       property.origin.layer === "core"
         ? undefined
@@ -353,5 +355,5 @@ function principalSchema(
     found = name === undefined ? { use } : { use, name };
     schemaId = property.type.kind === "ref" ? property.type.schema : undefined;
   }
-  return found;
+  return found !== undefined && optional ? { ...found, optional: true } : found;
 }
