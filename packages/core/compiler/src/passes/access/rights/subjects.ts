@@ -13,7 +13,7 @@ import {
   accessRightsPointer,
   accessRightsSchemaName,
 } from "./read.js";
-import type { AccessRightsReporter } from "./report.js";
+import { type AccessRightsReporter, accessRightsQuoted } from "./report.js";
 import type { AccessRightsRoute } from "./routes.js";
 import { type AccessRightsContext, accessRightsTypeUse } from "./schema-use.js";
 import { accessRightsSourceText, accessRightsValueSource } from "./source.js";
@@ -79,7 +79,7 @@ export function accessRightsSubject(
       if (written === undefined) return {};
       reporter.error({
         rule: "requirement-subject",
-        message: `right '${right.id}' has no subject, but this requirement reads one from ${written.text}`,
+        message: `right '${right.id}' has no subject, but this requirement reads one from ${accessRightsQuoted(written.text)}`,
         fix: "remove 'subject', or declare a subject on the right",
         pointer: written.pointer,
       });
@@ -114,7 +114,7 @@ function scopeSubject(
 
   reporter.error({
     rule: "requirement-subject",
-    message: `right '${right.id}' takes the route's scope '${scope}' as its subject, not ${written.text}`,
+    message: `right '${right.id}' takes the route's scope '${scope}' as its subject, not ${accessRightsQuoted(written.text)}`,
     fix: `remove 'subject', or write 'scope.${scope}'`,
     pointer: written.pointer,
   });
@@ -139,7 +139,7 @@ function resourceSubject(
   if (source?.in === "principal" && route.access !== "identity") {
     reporter.error({
       rule: "requirement-subject",
-      message: `the subject ${written.text} of right '${right.id}' reads the principal, which is null for an anonymous caller of ${route.access === "public" ? "public" : "optional-auth"} route '${route.id}'`,
+      message: `the subject ${accessRightsQuoted(written.text)} of right '${right.id}' reads the principal, which is null for an anonymous caller of ${route.access === "public" ? "public" : "optional-auth"} route '${route.id}'`,
       fix: "read the subject from a request value, or require the right on an identified route",
       pointer: written.pointer,
     });
@@ -150,7 +150,7 @@ function resourceSubject(
   if (source === undefined || found === undefined) {
     reporter.error({
       rule: "requirement-subject",
-      message: `the subject ${written.text} of right '${right.id}' names nothing route '${route.id}' reads`,
+      message: `the subject ${accessRightsQuoted(written.text)} of right '${right.id}' names nothing route '${route.id}' reads`,
       fix: "read the subject from a parameter, header, principal field or scope of the route",
       pointer: written.pointer,
     });
@@ -160,7 +160,7 @@ function resourceSubject(
   if (found.optional === true) {
     reporter.error({
       rule: "requirement-subject",
-      message: `the subject ${written.text} of right '${right.id}' is an optional field, which a caller of route '${route.id}' may omit; the subject must be a required field`,
+      message: `the subject ${accessRightsQuoted(written.text)} of right '${right.id}' is an optional field, which a caller of route '${route.id}' may omit; the subject must be a required field`,
       fix: "make the field required, or read the subject from a required one",
       pointer: written.pointer,
     });
@@ -170,7 +170,7 @@ function resourceSubject(
   if (sameSchema(found, expected)) return { subject: { source, defaulted: false } };
   reporter.error({
     rule: "requirement-subject",
-    message: `the subject ${written.text} of right '${right.id}' is ${describe(found)}, not the right's id schema ${describe(expected)}`,
+    message: `the subject ${accessRightsQuoted(written.text)} of right '${right.id}' is ${describe(found)}, not the right's id schema ${describe(expected)}`,
     fix: "read the subject from a source whose schema is the right's id schema",
     pointer: written.pointer,
   });

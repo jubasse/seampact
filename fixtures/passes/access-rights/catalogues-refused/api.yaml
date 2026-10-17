@@ -1,6 +1,7 @@
 # Access catalogue declarations access.rights refuses (ADR 0002 sections 4 and 9, ADR 0007 section 2): right
 # names outside conventions.rights.pattern or without an identifier segment, a subject scope and a parent scope
-# that are not declared, a cycle of parent scopes, a proof without a schema, a bucket prefix and window too large.
+# that are not declared, a cycle of parent scopes and a scope within it, a proof without a schema, a bucket
+# prefix and window too large.
 api: { name: shop, version: 1 }
 
 conventions:
@@ -13,6 +14,7 @@ scopes:
   team: { id: TeamId, within: org }
   left: { id: TeamId, within: right }
   right: { id: TeamId, within: left }
+  inner: { id: TeamId, within: right }
 
 rights:
   tasks.read: {}

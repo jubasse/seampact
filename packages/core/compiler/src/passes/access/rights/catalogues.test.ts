@@ -100,7 +100,6 @@ surfaces:
       ["seampact/access/proof-schema", "/rules/stepUp/proof"],
       ["seampact/access/scope-within", "/scopes/team/within"],
       ["seampact/access/scope-within", "/scopes/left/within"],
-      ["seampact/access/scope-within", "/scopes/right/within"],
       ["seampact/access/bucket-key", "/buckets/wide/key/0"],
       ["seampact/access/bucket-window", "/buckets/forever/window"],
     ]);
@@ -110,6 +109,9 @@ surfaces:
         message: "the pattern is set here",
       },
     ]);
+    expect(diagnostics[7]?.message).toBe(
+      "scope 'left' is within itself through left -> right -> left",
+    );
     expect(Object.keys(draft.rights)).toEqual(["tasks.read"]);
     expect(Object.keys(draft.scopes)).toEqual([]);
   });

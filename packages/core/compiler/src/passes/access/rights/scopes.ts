@@ -30,11 +30,11 @@ export function accessRightsOperationScopes(
     }
 
   return resolved.map((use) => {
-    const text = typeof use.entry.value === "string" ? use.entry.value : "";
-    const source = accessRightsValueSource(text);
+    const text = use.entry.value;
+    const source = typeof text === "string" ? accessRightsValueSource(text) : undefined;
     if (source === undefined)
       throw new Error(
-        `the scope source '${text}' at ${use.pointer} is outside the grammar's forms`,
+        `the scope source ${JSON.stringify(text)} at ${use.pointer} is outside the grammar's forms`,
       );
     return { scope: use.scope, source, origin: pipelineCopy(use.entry.origin) };
   });
@@ -52,7 +52,9 @@ function usesByNode(
   let current: TreeNode | undefined;
 
   for (const entry of context.inherited(node, "scopes")?.entries ?? []) {
-    const scope = entry.key ?? "";
+    const scope = entry.key;
+    if (scope === undefined)
+      throw new Error(`a 'scopes' entry of ${entry.node.pointer} is read without its scope name`);
     const pointer = accessRightsPointer(entry.node.pointer, "scopes", scope);
     if (!catalogues.declared.scopes.has(scope)) {
       reporter.error({

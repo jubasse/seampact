@@ -1,6 +1,6 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { type DraftIR, type PassReadonly, pipelineCopy } from "../../../pipeline/seam.js";
-import { type AccessRightsCatalogues, accessRightsOriginOf } from "./catalogues.js";
+import type { AccessRightsCatalogues } from "./catalogues.js";
 import { type AccessRightsDeriveEntry, accessRightsExpand, accessRightsSelects } from "./packs.js";
 import {
   type AccessRightsRawValue,
@@ -8,10 +8,11 @@ import {
   accessRightsEntries,
   accessRightsIsObject,
   accessRightsMember,
+  accessRightsOriginOf,
   accessRightsPointer,
   accessRightsString,
 } from "./read.js";
-import type { AccessRightsReporter } from "./report.js";
+import { type AccessRightsReporter, accessRightsQuoted } from "./report.js";
 import type { AccessRightsApi, AccessRightsRoute } from "./routes.js";
 import type { AccessRightsContext } from "./schema-use.js";
 import { accessRightsSubject } from "./subjects.js";
@@ -173,7 +174,7 @@ function writtenUses(
       if (!accessRightsIsObject(item)) {
         reporter.error({
           rule: "requirement-entry",
-          message: `'${written.value}' names no entry of the requirements catalogue`,
+          message: `'${accessRightsQuoted(written.value)}' names no entry of the requirements catalogue`,
           fix: "declare it under 'requirements', or write the requirement as an item ({ right } or { rule })",
           pointer: usePointer,
         });
@@ -278,13 +279,24 @@ function checkTargetAndParams(
   if (issues.length === 0) return params === undefined ? {} : { params: pipelineCopy(params) };
   reporter.error({
     rule: "requirement-params",
-    message: `the params of the requirement do not fit ${target.params}, the params of ${use.kind} '${use.target}': ${issues
-      .map((issue) => `${issue.pointer === "" ? "(params)" : issue.pointer}: ${issue.message}`)
-      .join("; ")}`,
+    message: `the params of the requirement do not fit ${target.params}, the params of ${use.kind} '${use.target}': ${listedIssues(issues)}`,
     fix: `give params that fit ${target.params}`,
     pointer: params === undefined ? use.itemPointer : paramsPointer,
   });
   return undefined;
+}
+
+// A message lists the first issues, each quoted, and counts the rest.
+const LISTED_ISSUES = 3;
+
+function listedIssues(issues: readonly { pointer: string; message: string }[]): string {
+  const listed = issues
+    .slice(0, LISTED_ISSUES)
+    .map((issue) =>
+      accessRightsQuoted(`${issue.pointer === "" ? "(params)" : issue.pointer}: ${issue.message}`),
+    );
+  const more = issues.length - listed.length;
+  return more > 0 ? `${listed.join("; ")}; and ${more} more` : listed.join("; ");
 }
 
 // A rule declared with `bucket: true` takes a declared bucket at each use; any other rule takes none.

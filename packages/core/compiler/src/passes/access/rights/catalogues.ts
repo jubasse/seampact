@@ -1,6 +1,6 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { segmentsOf, splitName } from "@seampact/spec/naming";
-import { pipelineCopy, pipelineParseDuration } from "../../../pipeline/seam.js";
+import { pipelineParseDuration } from "../../../pipeline/seam.js";
 import {
   type AccessRightsRawObject,
   type AccessRightsRawValue,
@@ -8,12 +8,13 @@ import {
   accessRightsEntries,
   accessRightsExtensions,
   accessRightsMember,
+  accessRightsOriginOf,
   accessRightsPointer,
   accessRightsSchemaName,
   accessRightsString,
   accessRightsStrings,
 } from "./read.js";
-import type { AccessRightsReporter } from "./report.js";
+import { type AccessRightsReporter, accessRightsQuoted } from "./report.js";
 import {
   type AccessRightsContext,
   accessRightsParamsRef,
@@ -304,7 +305,7 @@ function ruleOf(
       ? {}
       : {
           proof: {
-            in: placement === "header" ? "header" : "body",
+            in: proofPlacement(placement, pointer),
             name: proofName,
             schema: accessRightsTypeUse(
               context,
@@ -318,6 +319,18 @@ function ruleOf(
     extensions: accessRightsExtensions(declaration),
     origin: accessRightsOriginOf(context, pointer),
   };
+}
+
+const PROOF_PLACEMENTS = ["header", "body"] as const;
+
+// The authoring schema allows a proof in a header or the body only.
+function proofPlacement(placement: string, pointer: string): IrWriter.ProofPlacement {
+  const known = PROOF_PLACEMENTS.find((candidate) => candidate === placement);
+  if (known === undefined)
+    throw new Error(
+      `the proof of the rule at ${pointer} is in '${placement}', neither header nor body`,
+    );
+  return known;
 }
 
 function scopeOf(
@@ -349,7 +362,6 @@ function withinChainTerminates(
   id: string,
   scopeNames: ReadonlySet<string>,
 ): boolean {
-  const pointer = accessRightsPointer("/scopes", id, "within");
   const chain = [id];
   for (
     let parent = withinOf(context, id);
@@ -367,17 +379,27 @@ function withinChainTerminates(
     }
 
     if (chain.includes(parent)) {
-      reporter.error({
-        rule: "scope-within",
-        message: `scope '${id}' is within itself through ${[...chain, parent].join(" -> ")}`,
-        fix: "remove the cycle from the scopes' 'within' chain",
-        pointer,
-      });
+      reportWithinCycle(reporter, chain.slice(chain.indexOf(parent)));
       return false;
     }
     chain.push(parent);
   }
   return true;
+}
+
+// A cycle is reported once, at its first scope by name, whatever scope's chain reached it.
+function reportWithinCycle(reporter: AccessRightsReporter, cycle: readonly string[]): void {
+  const [first] = [...cycle].sort();
+  if (first === undefined) throw new Error("access.rights found an empty 'within' cycle");
+
+  const start = cycle.indexOf(first);
+  const path = [...cycle.slice(start), ...cycle.slice(0, start), first];
+  reporter.error({
+    rule: "scope-within",
+    message: `scope '${first}' is within itself through ${path.join(" -> ")}`,
+    fix: "remove the cycle from the scopes' 'within' chain",
+    pointer: accessRightsPointer("/scopes", first, "within"),
+  });
 }
 
 const withinOf = (context: AccessRightsContext, scope: string): string | undefined =>
@@ -409,12 +431,14 @@ function bucketOf(
   }
 
   const limit = accessRightsMember(declaration, "limit");
+  if (limit !== undefined && typeof limit !== "number")
+    throw new Error(`the limit of the bucket at ${pointer} is no number`);
   const window = accessRightsString(declaration, "window");
   const windowMs = window === undefined ? undefined : pipelineParseDuration(window);
   if (window !== undefined && windowMs === undefined) {
     reporter.error({
       rule: "bucket-window",
-      message: `the window '${window}' of bucket '${id}' is too long to count in milliseconds`,
+      message: `the window '${accessRightsQuoted(window)}' of bucket '${id}' is too long to count in milliseconds`,
       fix: "write a shorter window",
       pointer: accessRightsPointer(pointer, "window"),
     });
@@ -428,15 +452,4 @@ function bucketOf(
     ...(windowMs === undefined ? {} : { windowMs }),
     origin: accessRightsOriginOf(context, pointer),
   };
-}
-
-/** The origin of a node of the merged raw tree the half read, copied for the draft. */
-export function accessRightsOriginOf(
-  context: AccessRightsContext,
-  pointer: string,
-): IrWriter.Origin {
-  const origin = context.origin(pointer);
-  if (origin === undefined)
-    throw new Error(`access.rights read ${pointer}, which has no origin in the merged raw tree`);
-  return pipelineCopy(origin);
 }

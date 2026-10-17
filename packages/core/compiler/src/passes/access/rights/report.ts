@@ -49,6 +49,16 @@ export interface AccessRightsReporter {
   readonly errors: number;
 }
 
+// An author's text quoted in a message is cut to this many characters, so a message stays readable.
+const QUOTED_TEXT_LIMIT = 80;
+const CUT_MARK = "...";
+
+/** An author's text as a message quotes it, cut past `QUOTED_TEXT_LIMIT` characters. */
+export const accessRightsQuoted = (text: string): string =>
+  text.length <= QUOTED_TEXT_LIMIT
+    ? text
+    : `${text.slice(0, QUOTED_TEXT_LIMIT - CUT_MARK.length)}${CUT_MARK}`;
+
 const isDiagnosticOrigin = (origin: Origin): origin is DiagnosticOrigin => origin.layer !== "core";
 
 /**
@@ -59,11 +69,15 @@ export function accessRightsReporter(context: PassContext): AccessRightsReporter
   let errors = 0;
   const reported = new Set<string>();
 
-  // Every pointer reported is one the half read from the raw tree, so it always has an origin.
+  // Every pointer reported is one the half read from an authored layer, so it has an authored origin.
   const locate = (pointer: string): DiagnosticOrigin => {
     const origin = context.origin(pointer);
-    if (origin === undefined || !isDiagnosticOrigin(origin))
+    if (origin === undefined)
       throw new Error(`access.rights located a diagnostic at ${pointer}, which has no origin`);
+    if (!isDiagnosticOrigin(origin))
+      throw new Error(
+        `access.rights located a diagnostic at ${pointer}, whose origin is the core, not an authored layer`,
+      );
     return origin;
   };
 

@@ -4,7 +4,6 @@ import { type DraftIR, type PassReadonly, pipelineCopy } from "../../../pipeline
 import {
   type AccessRightsCatalogues,
   accessRightsCheckName,
-  accessRightsOriginOf,
   accessRightsRightErrors,
 } from "./catalogues.js";
 import {
@@ -13,12 +12,13 @@ import {
   accessRightsCanonical,
   accessRightsIsObject,
   accessRightsMember,
+  accessRightsOriginOf,
   accessRightsPointer,
   accessRightsSchemaName,
   accessRightsString,
   accessRightsStrings,
 } from "./read.js";
-import type { AccessRightsReporter } from "./report.js";
+import { type AccessRightsReporter, accessRightsQuoted } from "./report.js";
 import {
   type AccessRightsApi,
   type AccessRightsRoute,
@@ -68,7 +68,8 @@ export function accessRightsDeriveEntries(
         `the derive entry at ${pointer} comes from pack '${pack}', which tree.nodes did not record in packs`,
       );
 
-    const entry = accessRightsString(settings, "entry") ?? "";
+    const entry = accessRightsString(settings, "entry");
+    if (entry === undefined) throw new Error(`the derive entry at ${pointer} has no 'entry' name`);
     entries.push({ pointer, entry, derivation: `pack.${pack}.${entry}`, settings });
   }
   return entries;
@@ -117,7 +118,7 @@ export function accessRightsExpand(
   if (resource === undefined && template.text.includes(RESOURCE_SLOT)) {
     reporter.error({
       rule: "pack-template",
-      message: `the template '${template.text}' reads {resource}, and route '${route.id}' belongs to no collection or single`,
+      message: `the template '${accessRightsQuoted(template.text)}' reads {resource}, and route '${route.id}' belongs to no collection or single`,
       fix: "narrow the entry's selector to routes of a collection or single, or drop {resource}",
       pointer: template.pointer,
     });
@@ -125,7 +126,10 @@ export function accessRightsExpand(
   }
 
   const op = route.operation.op ?? route.node.name;
-  return template.text.replaceAll(RESOURCE_SLOT, resource ?? "").replaceAll(OP_SLOT, op);
+  // Function replacers, so a `$` in a name is never read as a replacement pattern.
+  return template.text
+    .replaceAll(RESOURCE_SLOT, () => resource ?? "")
+    .replaceAll(OP_SLOT, () => op);
 }
 
 interface DerivedRightInput {
@@ -148,7 +152,8 @@ export function accessRightsDeclareRight(
   const { entry, route } = input;
   const declareRight = accessRightsMember(entry.settings, "declareRight");
   const pointer = accessRightsPointer(entry.pointer, "declareRight");
-  const text = accessRightsString(declareRight, "name") ?? "";
+  const text = accessRightsString(declareRight, "name");
+  if (text === undefined) throw new Error(`the declareRight at ${pointer} has no 'name' template`);
   const id = accessRightsExpand(
     reporter,
     { text, pointer: accessRightsPointer(pointer, "name") },
