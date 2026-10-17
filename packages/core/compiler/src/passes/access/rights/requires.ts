@@ -1,15 +1,19 @@
 import type { IrWriter } from "@seampact/spec/ir";
-import { type DraftIR, type PassReadonly, pipelineCopy } from "../../../pipeline/seam.js";
+import {
+  type DraftIR,
+  type PassReadonly,
+  pipelineCanonical,
+  pipelineCopy,
+  pipelineIsJsonObject,
+  pipelinePointerBelow,
+} from "../../../pipeline/seam.js";
 import type { AccessRightsCatalogues } from "./catalogues.js";
 import { type AccessRightsDeriveEntry, accessRightsExpand, accessRightsSelects } from "./packs.js";
 import {
   type AccessRightsRawValue,
-  accessRightsCanonical,
   accessRightsEntries,
-  accessRightsIsObject,
   accessRightsMember,
   accessRightsOriginOf,
-  accessRightsPointer,
   accessRightsString,
 } from "./read.js";
 import { type AccessRightsReporter, accessRightsQuoted } from "./report.js";
@@ -98,7 +102,7 @@ export function accessRightsCheckRequirementEntries(
   checks: AccessRightsItemChecks,
 ): void {
   for (const [name, item] of accessRightsEntries(context.raw.merged, "requirements")) {
-    const itemPointer = accessRightsPointer("/requirements", name);
+    const itemPointer = pipelinePointerBelow("/requirements", name);
     checkItem(context, reporter, catalogues, checks, {
       ...targetOf(item, itemPointer),
       item,
@@ -119,7 +123,7 @@ function derivedUses(
     const require = accessRightsMember(entry.settings, "require");
     if (require === undefined || !accessRightsSelects(context, entry, route, api)) continue;
 
-    const pointer = accessRightsPointer(entry.pointer, "require");
+    const pointer = pipelinePointerBelow(entry.pointer, "require");
     const derivedFrom = {
       derivation: entry.derivation,
       from: [accessRightsOriginOf(context, pointer)],
@@ -147,7 +151,7 @@ function derivedTarget(
     throw new Error(`the pack require at ${pointer} names neither a right nor a rule`);
   const right = accessRightsExpand(
     reporter,
-    { text: template, pointer: accessRightsPointer(pointer, "right") },
+    { text: template, pointer: pipelinePointerBelow(pointer, "right") },
     route,
   );
   return right === undefined ? undefined : { kind: "right", target: right };
@@ -166,12 +170,12 @@ function writtenUses(
   for (const written of context.inherited(route.node, "requires")?.entries ?? []) {
     const index = indexInNode.get(written.node) ?? 0;
     indexInNode.set(written.node, index + 1);
-    const usePointer = accessRightsPointer(written.node.pointer, "requires", index);
+    const usePointer = pipelinePointerBelow(written.node.pointer, "requires", index);
     const origin = pipelineCopy(written.origin);
 
     if (typeof written.value === "string") {
       const item = accessRightsMember(requirementsCatalogue, written.value);
-      if (!accessRightsIsObject(item)) {
+      if (!pipelineIsJsonObject(item)) {
         reporter.error({
           rule: "requirement-entry",
           message: `'${accessRightsQuoted(written.value)}' names no entry of the requirements catalogue`,
@@ -180,7 +184,7 @@ function writtenUses(
         });
         continue;
       }
-      const itemPointer = accessRightsPointer("/requirements", written.value);
+      const itemPointer = pipelinePointerBelow("/requirements", written.value);
       uses.push({
         ...targetOf(item, itemPointer),
         item,
@@ -248,7 +252,7 @@ function checkTargetAndParams(
         rule: "requirement-target",
         message: `the requirement names ${use.kind} '${use.target}', which the ${use.kind}s catalogue does not declare`,
         fix: `declare the ${use.kind} in '${use.kind}s', or name a declared one`,
-        pointer: accessRightsPointer(use.itemPointer, use.kind),
+        pointer: pipelinePointerBelow(use.itemPointer, use.kind),
       });
     return undefined;
   }
@@ -260,7 +264,7 @@ function checkTargetAndParams(
     return undefined;
 
   const params = accessRightsMember(use.item, "params");
-  const paramsPointer = accessRightsPointer(use.itemPointer, "params");
+  const paramsPointer = pipelinePointerBelow(use.itemPointer, "params");
   if (target.params === undefined) {
     if (params === undefined) return {};
     reporter.error({
@@ -307,7 +311,7 @@ function checkBucket(
   rule: IrWriter.Rule | undefined,
 ): boolean {
   const bucket = accessRightsString(use.item, "bucket");
-  const pointer = accessRightsPointer(use.itemPointer, "bucket");
+  const pointer = pipelinePointerBelow(use.itemPointer, "bucket");
   if (rule?.takesBucket !== true) {
     if (bucket === undefined) return true;
     reporter.error({
@@ -381,7 +385,7 @@ function requirementOf(
     ...(subjectText === undefined
       ? {}
       : {
-          written: { text: subjectText, pointer: accessRightsPointer(use.itemPointer, "subject") },
+          written: { text: subjectText, pointer: pipelinePointerBelow(use.itemPointer, "subject") },
         }),
     usePointer: use.usePointer,
   });
@@ -424,7 +428,7 @@ function checkGuest(
 // Two requirements are the same when they name the same right or rule with equal params, bucket and subject; no
 // params and empty params are equal, as both are checked as `{}`.
 function equalityKey(requirement: IrWriter.Requirement): string {
-  return accessRightsCanonical([
+  return pipelineCanonical([
     requirement.kind,
     requirement.kind === "right" ? requirement.right : requirement.rule,
     requirement.params ?? {},

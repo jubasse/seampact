@@ -1,5 +1,5 @@
 import type { IrWriter } from "@seampact/spec/ir";
-import { type PassReadonly, pipelineCopy } from "../../../pipeline/seam.js";
+import { type PassReadonly, pipelineCopy, pipelineIsJsonObject } from "../../../pipeline/seam.js";
 import type { JsonObject, JsonValue } from "../../../raw-tree.js";
 import type { AccessRightsContext } from "./schema-use.js";
 
@@ -11,17 +11,12 @@ export type AccessRightsRawValue = PassReadonly<JsonValue>;
 
 export type AccessRightsRawObject = PassReadonly<JsonObject>;
 
-export const accessRightsIsObject = (
-  value: AccessRightsRawValue | undefined,
-): value is AccessRightsRawObject =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
 /** An own member of a raw mapping; undefined when absent or when `object` is no mapping. */
 export const accessRightsMember = (
   object: AccessRightsRawValue | undefined,
   key: string,
 ): AccessRightsRawValue | undefined =>
-  accessRightsIsObject(object) && Object.hasOwn(object, key) ? object[key] : undefined;
+  pipelineIsJsonObject(object) && Object.hasOwn(object, key) ? object[key] : undefined;
 
 /** A string member; undefined when absent or of another type. */
 export function accessRightsString(
@@ -48,43 +43,13 @@ export function accessRightsEntries(
   key: string,
 ): [string, AccessRightsRawObject][] {
   const catalogue = accessRightsMember(object, key);
-  if (!accessRightsIsObject(catalogue)) return [];
+  if (!pipelineIsJsonObject(catalogue)) return [];
 
   const entries: [string, AccessRightsRawObject][] = [];
   for (const [name, value] of Object.entries(catalogue))
-    if (accessRightsIsObject(value)) entries.push([name, value]);
+    if (pipelineIsJsonObject(value)) entries.push([name, value]);
   return entries;
 }
-
-// A list index in canonical form (RFC 6901): no sign, no leading zero, never empty.
-const CANONICAL_INDEX = /^(0|[1-9][0-9]*)$/;
-
-/** The value a JSON Pointer names below `root` (RFC 6901), own members only; undefined when absent. */
-export function accessRightsAt(
-  root: AccessRightsRawValue,
-  pointer: string,
-): AccessRightsRawValue | undefined {
-  if (pointer === "") return root;
-
-  let at: AccessRightsRawValue | undefined = root;
-  for (const segment of pointer.slice(1).split("/")) {
-    const key = segment.replaceAll("~1", "/").replaceAll("~0", "~");
-    if (Array.isArray(at)) at = CANONICAL_INDEX.test(key) ? at[Number(key)] : undefined;
-    else at = accessRightsMember(at, key);
-    if (at === undefined) return undefined;
-  }
-  return at;
-}
-
-/** The JSON Pointer below `base` through `segments` (RFC 6901). */
-export const accessRightsPointer = (
-  base: string,
-  ...segments: readonly (string | number)[]
-): string =>
-  base +
-  segments
-    .map((segment) => `/${String(segment).replaceAll("~", "~0").replaceAll("/", "~1")}`)
-    .join("");
 
 /** The `docs` of a declaration: its written `summary` and `description`. */
 export function accessRightsDocs(declaration: AccessRightsRawObject): {
@@ -144,22 +109,8 @@ export function accessRightsSchemaName(
   value: AccessRightsRawValue | undefined,
 ): string | undefined {
   if (typeof value === "string") return value;
-  if (!accessRightsIsObject(value)) return undefined;
+  if (!pipelineIsJsonObject(value)) return undefined;
 
   const ref = accessRightsString(value, "$ref");
   return ref !== undefined && Object.keys(value).length === 1 ? ref : undefined;
-}
-
-/** A value's text with every object's keys sorted, so two equal values in another key order compare equal. */
-export function accessRightsCanonical(value: unknown): string {
-  const sorted = (item: unknown): unknown => {
-    if (Array.isArray(item)) return item.map(sorted);
-    if (typeof item !== "object" || item === null) return item;
-    return Object.fromEntries(
-      Object.keys(item)
-        .sort()
-        .map((key) => [key, sorted(Reflect.get(item, key))]),
-    );
-  };
-  return JSON.stringify(sorted(value));
 }

@@ -2,17 +2,14 @@ import type { IrWriter } from "@seampact/spec/ir";
 import {
   type DraftIR,
   type PassReadonly,
+  pipelineCanonical,
   pipelineCopy,
+  pipelineIsJsonObject,
+  pipelineJsonAtPointer,
+  pipelinePointerBelow,
   type TreeNode,
 } from "../../../pipeline/seam.js";
-import {
-  accessRightsAt,
-  accessRightsCanonical,
-  accessRightsIsObject,
-  accessRightsMember,
-  accessRightsPointer,
-  accessRightsSchemaName,
-} from "./read.js";
+import { accessRightsMember, accessRightsSchemaName } from "./read.js";
 import { type AccessRightsReporter, accessRightsQuoted } from "./report.js";
 import type { AccessRightsRoute } from "./routes.js";
 import { type AccessRightsContext, accessRightsTypeUse } from "./schema-use.js";
@@ -211,7 +208,7 @@ function defaultedSubject(
 
 function sameSchema(found: SourceSchema, expected: SourceSchema): boolean {
   if (found.name !== undefined || expected.name !== undefined) return found.name === expected.name;
-  return accessRightsCanonical(found.use) === accessRightsCanonical(expected.use);
+  return pipelineCanonical(found.use) === pipelineCanonical(expected.use);
 }
 
 const describe = (schema: SourceSchema): string =>
@@ -225,9 +222,9 @@ function memberIds(node: TreeNode): MemberId[] {
     if (at.kind !== "scope" || at.name !== "member" || collection === undefined) continue;
 
     const written = accessRightsMember(collection.settings, "id");
-    if (!accessRightsIsObject(written)) continue;
+    if (!pipelineIsJsonObject(written)) continue;
     for (const name of Object.keys(written))
-      ids.push({ name, pointer: accessRightsPointer(collection.pointer, "id", name), collection });
+      ids.push({ name, pointer: pipelinePointerBelow(collection.pointer, "id", name), collection });
   }
   return ids;
 }
@@ -256,7 +253,7 @@ function defaultMemberId(
 // The schema written at a raw position, compiled by the schema service.
 function positionSchema(context: AccessRightsContext, pointer: string): SourceSchema {
   const use = accessRightsTypeUse(context, pointer, "input");
-  const name = accessRightsSchemaName(accessRightsAt(context.raw.merged, pointer));
+  const name = accessRightsSchemaName(pipelineJsonAtPointer(context.raw.merged, pointer));
   return name === undefined ? { use } : { use, name };
 }
 
@@ -280,7 +277,7 @@ function sourceSchema(
       );
     case "scope":
       return input.scopes.some((scope) => scope.scope === name)
-        ? positionSchema(context, accessRightsPointer("/scopes", name, "id"))
+        ? positionSchema(context, pipelinePointerBelow("/scopes", name, "id"))
         : undefined;
     case "principal":
       return principalSchema(context, input, name);
@@ -301,7 +298,7 @@ function pathSchema(
       return positionSchema(context, memberId.pointer);
     const declared = accessRightsMember(at.settings, "pathParams");
     if (accessRightsMember(declared, name) !== undefined)
-      return positionSchema(context, accessRightsPointer(at.pointer, "pathParams", name));
+      return positionSchema(context, pipelinePointerBelow(at.pointer, "pathParams", name));
   }
   return undefined;
 }
@@ -323,7 +320,7 @@ function fieldsSchema(
     const field = optional ? key.slice(0, -OPTIONAL_FIELD.length) : key;
     if (!matches(field)) continue;
 
-    const schema = positionSchema(context, accessRightsPointer(entry.node.pointer, setting, key));
+    const schema = positionSchema(context, pipelinePointerBelow(entry.node.pointer, setting, key));
     return optional ? { ...schema, optional: true } : schema;
   }
   return undefined;
@@ -349,7 +346,9 @@ function principalSchema(
     const name =
       property.origin.layer === "core"
         ? undefined
-        : accessRightsSchemaName(accessRightsAt(context.raw.merged, property.origin.pointer));
+        : accessRightsSchemaName(
+            pipelineJsonAtPointer(context.raw.merged, property.origin.pointer),
+          );
     const use = pipelineCopy(property.type);
     found = name === undefined ? { use } : { use, name };
     schemaId = property.type.kind === "ref" ? property.type.schema : undefined;

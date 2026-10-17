@@ -2,10 +2,11 @@ import {
   type DraftIR,
   type DraftOperation,
   type PassReadonly,
+  pipelinePointerBelow,
   pipelineTreeNodes,
   type TreeNode,
 } from "../../../pipeline/seam.js";
-import { accessRightsMember, accessRightsPointer, accessRightsString } from "./read.js";
+import { accessRightsMember, accessRightsString } from "./read.js";
 import type { AccessRightsContext } from "./schema-use.js";
 
 // The route of each draft operation: its tree node (ADR 0002 section 6) and the access facts this half reads from
@@ -92,7 +93,7 @@ function accessOf(
   if (!accessApplies)
     return identity === undefined ? { access: "identity" } : { access: "identity", identity };
 
-  const accessPointer = accessRightsPointer(access.node.pointer, "access");
+  const accessPointer = pipelinePointerBelow(access.node.pointer, "access");
   if (accessRightsMember(access.value, "public") !== undefined)
     return { access: "public", accessPointer };
   if (accessRightsMember(access.value, "optionalAuth") !== undefined)

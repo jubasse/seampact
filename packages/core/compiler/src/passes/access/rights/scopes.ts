@@ -1,7 +1,12 @@
 import type { IrWriter } from "@seampact/spec/ir";
-import { type InheritedEntry, pipelineCopy, type TreeNode } from "../../../pipeline/seam.js";
+import {
+  type InheritedEntry,
+  pipelineCopy,
+  pipelinePointerBelow,
+  type TreeNode,
+} from "../../../pipeline/seam.js";
 import type { AccessRightsCatalogues } from "./catalogues.js";
-import { accessRightsPointer } from "./read.js";
+
 import type { AccessRightsReporter } from "./report.js";
 import type { AccessRightsContext } from "./schema-use.js";
 import { accessRightsValueSource } from "./source.js";
@@ -55,7 +60,7 @@ function usesByNode(
     const scope = entry.key;
     if (scope === undefined)
       throw new Error(`a 'scopes' entry of ${entry.node.pointer} is read without its scope name`);
-    const pointer = accessRightsPointer(entry.node.pointer, "scopes", scope);
+    const pointer = pipelinePointerBelow(entry.node.pointer, "scopes", scope);
     if (!catalogues.declared.scopes.has(scope)) {
       reporter.error({
         rule: "scope-unknown",

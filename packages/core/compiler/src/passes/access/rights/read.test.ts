@@ -1,17 +1,8 @@
 import { describe, expect, test } from "vitest";
-import { accessRightsAt, accessRightsExtensions } from "./read.js";
+import { accessRightsExtensions } from "./read.js";
 import { accessRightsQuoted } from "./report.js";
 
 describe("raw tree readers", () => {
-  test("a list index is read in canonical form only", () => {
-    const root = { list: ["first", "second"] };
-
-    expect(accessRightsAt(root, "/list/1")).toBe("second");
-    expect(accessRightsAt(root, "/list/")).toBeUndefined();
-    expect(accessRightsAt(root, "/list/01")).toBeUndefined();
-    expect(accessRightsAt(root, "/list/-1")).toBeUndefined();
-  });
-
   test("an extension key named __proto__ is an own member of its slot", () => {
     const slot = accessRightsExtensions(JSON.parse('{ "x-acme-__proto__": { "polluted": true } }'));
 

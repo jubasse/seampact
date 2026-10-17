@@ -1,6 +1,6 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { segmentsOf, splitName } from "@seampact/spec/naming";
-import { pipelineParseDuration } from "../../../pipeline/seam.js";
+import { pipelineParseDuration, pipelinePointerBelow } from "../../../pipeline/seam.js";
 import {
   type AccessRightsRawObject,
   type AccessRightsRawValue,
@@ -9,7 +9,6 @@ import {
   accessRightsExtensions,
   accessRightsMember,
   accessRightsOriginOf,
-  accessRightsPointer,
   accessRightsSchemaName,
   accessRightsString,
   accessRightsStrings,
@@ -216,7 +215,7 @@ function rightOf(
   reporter: AccessRightsReporter,
   { id, declaration, scopeNames, rightPattern, forbiddenCode }: RightDeclaration,
 ): IrWriter.Right | undefined {
-  const pointer = accessRightsPointer("/rights", id);
+  const pointer = pipelinePointerBelow("/rights", id);
   const codeName = accessRightsString(declaration, "codeName");
   if (!accessRightsCheckName(reporter, { id, codeName, pointer, rightPattern })) return undefined;
 
@@ -228,7 +227,7 @@ function rightOf(
   return {
     id,
     ...(hasParams
-      ? { params: accessRightsParamsRef(context, accessRightsPointer(pointer, "params")) }
+      ? { params: accessRightsParamsRef(context, pipelinePointerBelow(pointer, "params")) }
       : {}),
     subject,
     ...(guest === undefined ? {} : { guest }),
@@ -248,7 +247,7 @@ function rightSubjectOf(
   options: { id: string; declaration: AccessRightsRawObject; scopeNames: ReadonlySet<string> },
 ): IrWriter.RightSubject | undefined {
   const { id, declaration, scopeNames } = options;
-  const pointer = accessRightsPointer("/rights", id);
+  const pointer = pipelinePointerBelow("/rights", id);
   const subject = accessRightsMember(declaration, "subject");
   const scope = accessRightsString(subject, "scope");
   const resource = accessRightsString(subject, "resource");
@@ -259,7 +258,7 @@ function rightSubjectOf(
       rule: "right-subject",
       message: `the subject of right '${id}' names scope '${scope}', which the scopes catalogue does not declare`,
       fix: "declare the scope in 'scopes', or name a declared one",
-      pointer: accessRightsPointer(pointer, "subject", "scope"),
+      pointer: pipelinePointerBelow(pointer, "subject", "scope"),
     });
     return undefined;
   }
@@ -268,7 +267,7 @@ function rightSubjectOf(
   return {
     kind: "resource",
     type: { segments: splitName(resource), role: "schema" },
-    idSchema: accessRightsTypeUse(context, accessRightsPointer(pointer, "subject", "id"), "input"),
+    idSchema: accessRightsTypeUse(context, pipelinePointerBelow(pointer, "subject", "id"), "input"),
   };
 }
 
@@ -278,7 +277,7 @@ function ruleOf(
   id: string,
   declaration: AccessRightsRawObject,
 ): IrWriter.Rule | undefined {
-  const pointer = accessRightsPointer("/rules", id);
+  const pointer = pipelinePointerBelow("/rules", id);
   const proof = accessRightsMember(declaration, "proof");
   const placement = accessRightsString(proof, "in");
   const proofName = accessRightsString(proof, "name");
@@ -289,7 +288,7 @@ function ruleOf(
       rule: "proof-schema",
       message: `the proof of rule '${id}' declares no schema`,
       fix: "set the proof's 'schema' to the named schema of the value it reads",
-      pointer: accessRightsPointer(pointer, "proof"),
+      pointer: pipelinePointerBelow(pointer, "proof"),
     });
     return undefined;
   }
@@ -298,7 +297,7 @@ function ruleOf(
   return {
     id,
     ...(hasParams
-      ? { params: accessRightsParamsRef(context, accessRightsPointer(pointer, "params")) }
+      ? { params: accessRightsParamsRef(context, pipelinePointerBelow(pointer, "params")) }
       : {}),
     takesBucket: accessRightsMember(declaration, "bucket") === true,
     ...(placement === undefined || proofName === undefined
@@ -309,7 +308,7 @@ function ruleOf(
             name: proofName,
             schema: accessRightsTypeUse(
               context,
-              accessRightsPointer(pointer, "proof", "schema"),
+              pipelinePointerBelow(pointer, "proof", "schema"),
               "input",
             ),
           },
@@ -339,14 +338,14 @@ function scopeOf(
   options: { id: string; declaration: AccessRightsRawObject; scopeNames: ReadonlySet<string> },
 ): IrWriter.Scope | undefined {
   const { id, declaration, scopeNames } = options;
-  const pointer = accessRightsPointer("/scopes", id);
+  const pointer = pipelinePointerBelow("/scopes", id);
   const within = accessRightsString(declaration, "within");
   if (within !== undefined && !withinChainTerminates(context, reporter, id, scopeNames))
     return undefined;
 
   return {
     id,
-    idSchema: accessRightsTypeUse(context, accessRightsPointer(pointer, "id"), "input"),
+    idSchema: accessRightsTypeUse(context, pipelinePointerBelow(pointer, "id"), "input"),
     ...(within === undefined ? {} : { within }),
     errors: accessRightsStrings(declaration, "errors"),
     docs: accessRightsDocs(declaration),
@@ -373,7 +372,7 @@ function withinChainTerminates(
         rule: "scope-within",
         message: `scope '${chain[chain.length - 1]}' is within '${parent}', which the scopes catalogue does not declare`,
         fix: "declare the parent scope, or name a declared one in 'within'",
-        pointer: accessRightsPointer("/scopes", chain[chain.length - 1] ?? id, "within"),
+        pointer: pipelinePointerBelow("/scopes", chain[chain.length - 1] ?? id, "within"),
       });
       return false;
     }
@@ -398,7 +397,7 @@ function reportWithinCycle(reporter: AccessRightsReporter, cycle: readonly strin
     rule: "scope-within",
     message: `scope '${first}' is within itself through ${path.join(" -> ")}`,
     fix: "remove the cycle from the scopes' 'within' chain",
-    pointer: accessRightsPointer("/scopes", first, "within"),
+    pointer: pipelinePointerBelow("/scopes", first, "within"),
   });
 }
 
@@ -411,7 +410,7 @@ function bucketOf(
   id: string,
   declaration: AccessRightsRawObject,
 ): IrWriter.Bucket | undefined {
-  const pointer = accessRightsPointer("/buckets", id);
+  const pointer = pipelinePointerBelow("/buckets", id);
   const key: IrWriter.ValueSource[] = [];
   for (const [index, text] of accessRightsStrings(declaration, "key").entries()) {
     const source = accessRightsValueSource(text);
@@ -423,7 +422,7 @@ function bucketOf(
         rule: "bucket-key",
         message: `bucket '${id}' counts ${accessRightsSourceText(source)}, a prefix longer than ${ADDRESS_BITS} bits`,
         fix: `count a prefix of at most ${ADDRESS_BITS} bits`,
-        pointer: accessRightsPointer(pointer, "key", index),
+        pointer: pipelinePointerBelow(pointer, "key", index),
       });
       return undefined;
     }
@@ -440,7 +439,7 @@ function bucketOf(
       rule: "bucket-window",
       message: `the window '${accessRightsQuoted(window)}' of bucket '${id}' is too long to count in milliseconds`,
       fix: "write a shorter window",
-      pointer: accessRightsPointer(pointer, "window"),
+      pointer: pipelinePointerBelow(pointer, "window"),
     });
     return undefined;
   }

@@ -1,6 +1,13 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { splitName } from "@seampact/spec/naming";
-import { type DraftIR, type PassReadonly, pipelineCopy } from "../../../pipeline/seam.js";
+import {
+  type DraftIR,
+  type PassReadonly,
+  pipelineCanonical,
+  pipelineCopy,
+  pipelineIsJsonObject,
+  pipelinePointerBelow,
+} from "../../../pipeline/seam.js";
 import {
   type AccessRightsCatalogues,
   accessRightsCheckName,
@@ -9,11 +16,8 @@ import {
 import {
   type AccessRightsRawObject,
   type AccessRightsRawValue,
-  accessRightsCanonical,
-  accessRightsIsObject,
   accessRightsMember,
   accessRightsOriginOf,
-  accessRightsPointer,
   accessRightsSchemaName,
   accessRightsString,
   accessRightsStrings,
@@ -54,8 +58,8 @@ export function accessRightsDeriveEntries(
 
   const entries: AccessRightsDeriveEntry[] = [];
   for (const [index, settings] of written.entries()) {
-    if (!accessRightsIsObject(settings)) continue;
-    const pointer = accessRightsPointer("/derive", index);
+    if (!pipelineIsJsonObject(settings)) continue;
+    const pointer = pipelinePointerBelow("/derive", index);
     const layer = context.origin(pointer)?.layer ?? "";
     if (!layer.startsWith(PACK_LAYER))
       throw new Error(
@@ -151,12 +155,12 @@ export function accessRightsDeclareRight(
 ): void {
   const { entry, route } = input;
   const declareRight = accessRightsMember(entry.settings, "declareRight");
-  const pointer = accessRightsPointer(entry.pointer, "declareRight");
+  const pointer = pipelinePointerBelow(entry.pointer, "declareRight");
   const text = accessRightsString(declareRight, "name");
   if (text === undefined) throw new Error(`the declareRight at ${pointer} has no 'name' template`);
   const id = accessRightsExpand(
     reporter,
-    { text, pointer: accessRightsPointer(pointer, "name") },
+    { text, pointer: pipelinePointerBelow(pointer, "name") },
     route,
   );
   if (id === undefined) return;
@@ -213,7 +217,7 @@ function checkSameSubject(
   },
 ): void {
   const { id, present, derived, pointer, route } = options;
-  if (accessRightsCanonical(present.subject) === accessRightsCanonical(derived)) return;
+  if (pipelineCanonical(present.subject) === pipelineCanonical(derived)) return;
 
   // A right an entry derived has no place of its own in the merged tree; a declared one does.
   reporter.error({
@@ -223,7 +227,7 @@ function checkSameSubject(
     pointer,
     related:
       present.derivedFrom === undefined
-        ? [{ pointer: accessRightsPointer("/rights", id), message: "the right is declared here" }]
+        ? [{ pointer: pipelinePointerBelow("/rights", id), message: "the right is declared here" }]
         : [],
   });
 }
@@ -282,14 +286,14 @@ function resourceSubject(
     return undefined;
   }
 
-  const idPointer = accessRightsPointer(at.pointer, "id", idKey);
+  const idPointer = pipelinePointerBelow(at.pointer, "id", idKey);
   const idName = accessRightsSchemaName(
     accessRightsMember(accessRightsMember(at.settings, "id"), idKey),
   );
   return {
     subject: {
       kind: "resource",
-      type: itemName(context, schemas, item, accessRightsPointer(at.pointer, "item")),
+      type: itemName(context, schemas, item, pipelinePointerBelow(at.pointer, "item")),
       idSchema: accessRightsTypeUse(context, idPointer, "input"),
     },
     ...(idName === undefined ? {} : { idName }),
