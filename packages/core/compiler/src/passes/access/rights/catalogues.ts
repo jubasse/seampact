@@ -3,6 +3,7 @@ import { segmentsOf, splitName } from "@seampact/spec/naming";
 import { pipelineCopy, pipelineParseDuration } from "../../../pipeline/seam.js";
 import {
   type AccessRightsRawObject,
+  type AccessRightsRawValue,
   accessRightsDocs,
   accessRightsEntries,
   accessRightsExtensions,
@@ -41,6 +42,8 @@ export interface AccessRightsCatalogues {
     readonly scopes: ReadonlySet<string>;
     readonly buckets: ReadonlySet<string>;
   };
+  /** The code of the `forbidden` role, which a right without written `errors` answers (ADR 0002 section 9). */
+  readonly forbiddenCode: string;
   /** `conventions.rights.pattern`, compiled, with its pointer; undefined when not written. */
   readonly rightPattern?: { readonly pattern: RegExp; readonly pointer: string };
 }
@@ -58,11 +61,18 @@ export function accessRightsCatalogues(
   const merged = context.raw.merged;
   const scopeNames = new Set(Object.keys(accessRightsMember(merged, "scopes") ?? {}));
   const rightPattern = rightPatternOf(context, reporter);
+  const forbiddenCode = forbiddenCodeOf(context);
 
   const rights = new Map<string, IrWriter.Right>();
   const rightIdNames = new Map<string, string>();
   for (const [id, declaration] of accessRightsEntries(merged, "rights")) {
-    const right = rightOf(context, reporter, { id, declaration, scopeNames, rightPattern });
+    const right = rightOf(context, reporter, {
+      id,
+      declaration,
+      scopeNames,
+      rightPattern,
+      forbiddenCode,
+    });
     if (right === undefined) continue;
 
     rights.set(id, right);
@@ -98,6 +108,7 @@ export function accessRightsCatalogues(
     scopes,
     buckets,
     rightIdNames,
+    forbiddenCode,
     declared: {
       rights: namesOf("rights"),
       rules: namesOf("rules"),
@@ -106,6 +117,26 @@ export function accessRightsCatalogues(
     },
     ...(rightPattern === undefined ? {} : { rightPattern }),
   };
+}
+
+// The role binding is a code, or `{ code, params }` (ADR 0002 section 11); the core binds every role by default.
+function forbiddenCodeOf(context: AccessRightsContext): string {
+  const binding = context.conventions.get("errors.derived.forbidden")?.value;
+  const code = typeof binding === "string" ? binding : accessRightsString(binding, "code");
+  if (code === undefined)
+    throw new Error(
+      `conventions.errors.derived.forbidden binds no code: ${JSON.stringify(binding)}`,
+    );
+  return code;
+}
+
+/** A right's `errors` as written, else the code of the `forbidden` role. */
+export function accessRightsRightErrors(
+  declaration: AccessRightsRawValue | undefined,
+  forbiddenCode: string,
+): string[] {
+  if (accessRightsMember(declaration, "errors") === undefined) return [forbiddenCode];
+  return accessRightsStrings(declaration, "errors");
 }
 
 function rightPatternOf(
@@ -176,12 +207,13 @@ interface RightDeclaration {
   declaration: AccessRightsRawObject;
   scopeNames: ReadonlySet<string>;
   rightPattern: AccessRightsCatalogues["rightPattern"];
+  forbiddenCode: string;
 }
 
 function rightOf(
   context: AccessRightsContext,
   reporter: AccessRightsReporter,
-  { id, declaration, scopeNames, rightPattern }: RightDeclaration,
+  { id, declaration, scopeNames, rightPattern, forbiddenCode }: RightDeclaration,
 ): IrWriter.Right | undefined {
   const pointer = accessRightsPointer("/rights", id);
   const codeName = accessRightsString(declaration, "codeName");
@@ -199,7 +231,7 @@ function rightOf(
       : {}),
     subject,
     ...(guest === undefined ? {} : { guest }),
-    errors: accessRightsStrings(declaration, "errors"),
+    errors: accessRightsRightErrors(declaration, forbiddenCode),
     docs: accessRightsDocs(declaration),
     extensions: accessRightsExtensions(declaration),
     origin: accessRightsOriginOf(context, pointer),

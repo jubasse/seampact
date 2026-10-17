@@ -33,6 +33,24 @@ describe("rights catalogue", () => {
   });
 
   // The loader refuses `__proto__`, `constructor` and `prototype` keys; other inherited names stay ordinary rights.
+  test("a right without written errors answers the code the api binds to the forbidden role", () => {
+    const { draft, diagnostics } = accessRightsRunContract(
+      accessRightsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }
+conventions:
+  errors: { derived: { forbidden: { code: shop.denied } } }
+rights:
+  shop.open: {}
+  shop.close: { errors: [] }
+${PING_ROUTES}`,
+      }),
+    );
+
+    expect(diagnostics).toEqual([]);
+    expect(draft.rights["shop.open"]?.errors).toEqual(["shop.denied"]);
+    expect(draft.rights["shop.close"]?.errors).toEqual([]);
+  });
+
   test("rights named like inherited members are entries, read as own members only", () => {
     const { draft, diagnostics } = accessRightsRunContract(
       accessRightsLoadFiles({

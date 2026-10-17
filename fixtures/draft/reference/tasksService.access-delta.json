@@ -212,7 +212,7 @@
           "kind": "scope",
           "scope": "channel"
         },
-        "errors": [],
+        "errors": ["api.forbidden"],
         "docs": {},
         "extensions": {},
         "origin": {
@@ -226,7 +226,7 @@
           "kind": "scope",
           "scope": "channel"
         },
-        "errors": [],
+        "errors": ["api.forbidden"],
         "docs": {},
         "extensions": {},
         "origin": {
@@ -272,7 +272,7 @@
             "refinements": {}
           }
         },
-        "errors": [],
+        "errors": ["api.forbidden"],
         "docs": {},
         "extensions": {},
         "origin": {
@@ -286,7 +286,7 @@
         "subject": {
           "kind": "none"
         },
-        "errors": [],
+        "errors": ["api.forbidden"],
         "docs": {},
         "extensions": {},
         "origin": {

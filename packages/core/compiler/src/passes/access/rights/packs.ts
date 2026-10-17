@@ -5,6 +5,7 @@ import {
   type AccessRightsCatalogues,
   accessRightsCheckName,
   accessRightsOriginOf,
+  accessRightsRightErrors,
 } from "./catalogues.js";
 import {
   type AccessRightsRawObject,
@@ -184,7 +185,7 @@ export function accessRightsDeclareRight(
   catalogues.rights.set(id, {
     id,
     subject: derived.subject,
-    errors: accessRightsStrings(declareRight, "errors"),
+    errors: accessRightsRightErrors(declareRight, catalogues.forbiddenCode),
     docs: {},
     extensions: {},
     origin: accessRightsOriginOf(context, pointer),

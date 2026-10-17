@@ -6,7 +6,7 @@
         "kind": "none"
       },
       "guest": "Published articles are readable without an account.",
-      "errors": [],
+      "errors": ["api.forbidden"],
       "docs": {
         "summary": "Read the published articles."
       },
@@ -46,7 +46,7 @@
         "kind": "scope",
         "scope": "org"
       },
-      "errors": [],
+      "errors": ["api.forbidden"],
       "docs": {},
       "extensions": {
         "acme": {
@@ -64,7 +64,7 @@
         "kind": "scope",
         "scope": "project"
       },
-      "errors": [],
+      "errors": ["api.forbidden"],
       "docs": {},
       "extensions": {},
       "origin": {
@@ -77,7 +77,7 @@
       "subject": {
         "kind": "none"
       },
-      "errors": [],
+      "errors": ["api.forbidden"],
       "docs": {
         "description": "Any right at all, for the superuser."
       },
