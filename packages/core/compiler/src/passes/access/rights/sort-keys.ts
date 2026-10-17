@@ -49,7 +49,7 @@ export function accessRightsSortKeyRights(
   const rights = new Map<number, { right: string; derivedFrom?: IrWriter.DerivedFrom }>();
   const { operation } = route;
 
-  if (operation.relays !== undefined || operation.paging === undefined) return rights;
+  if (route.node.kind === "relay" || operation.paging === undefined) return rights;
 
   const item = itemSchemaOf(route, schemas);
 

@@ -80,7 +80,7 @@ export function accessRightsFieldRights(
 ): IrWriter.FieldRight[] {
   const { operation } = input.route;
 
-  if (operation.relays !== undefined) return [];
+  if (input.route.node.kind === "relay") return [];
 
   const reached = new Map<string, { field: RestrictedField; direction: Direction }>();
   const walk = { reporter, schemas: input.schemas, checks, route: input.route };

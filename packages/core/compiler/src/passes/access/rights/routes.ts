@@ -64,7 +64,7 @@ export function accessRightsRoutes(
         `tree.nodes wrote an operation (${id ?? "no id"}) whose origin ${pointer ?? "(none)"} is no tree node`,
       );
 
-    return { operation, id, node, ...accessOf(operation, api) };
+    return { operation, id, node, ...accessOf(operation, node, api) };
   });
 }
 
@@ -72,12 +72,13 @@ export function accessRightsRoutes(
 // direction-dependent: it runs under the service api's caller identity (ADR 0002 section 7).
 function accessOf(
   operation: PassReadonly<DraftOperation>,
+  node: TreeNode,
   api: AccessRightsApi,
 ): Pick<AccessRightsRoute, "access" | "accessPointer" | "identity"> {
   const access = operation.access;
 
   if (access === undefined) {
-    if (operation.relays === undefined)
+    if (node.kind !== "relay")
       throw new Error(`access.identity wrote no access on operation ${operation.id ?? "(no id)"}`);
 
     return api.caller === undefined

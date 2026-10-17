@@ -23,7 +23,7 @@ import { type AccessRightsSortKeyRights, accessRightsSortKeyRights } from "./sor
 // The access.rights half (ADR 0006 sections 2 and 3): the `rights`, `rules`, `scopes` and `buckets` catalogues
 // and, per operation, the resolved `scopes`, the ordered `requires` (pack-derived rights and requirements
 // included), `fieldRights`, `filteredBy` and the rights of its sort keys. It reads each operation's `id`, `op`,
-// `safe`, `origin`, `relays`, input schema, responses and sort keys (tree.nodes), `packs` to name a pack
+// `safe`, `origin`, input schema, responses and sort keys (tree.nodes), `packs` to name a pack
 // derivation, and `schemas` for the principal fields a subject reads and the restricted fields.
 //
 // Import pipeline values and types from `pipeline/seam.js` only, never from `pipeline/index.js`, the orchestrator
@@ -38,7 +38,6 @@ export const accessRightsPass: PassPart<"access.rights"> = {
     "operations[].op",
     "operations[].safe",
     "operations[].origin",
-    "operations[].relays",
     "operations[].access",
     "operations[].input.schema",
     "operations[].input.origin",
