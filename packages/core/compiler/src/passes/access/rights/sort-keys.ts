@@ -118,7 +118,8 @@ function keyRight(
 
   if (written === "refused" || restriction === "refused") return undefined;
 
-  if (restriction === undefined) return written === undefined ? undefined : { right: written.right };
+  if (restriction === undefined)
+    return written === undefined ? undefined : { right: written.right };
 
   const inherited = inheritedRight(context, reporter, catalogues, checks, use, restriction);
 

@@ -73,7 +73,8 @@ export function accessRightsFieldRights(
     accessRightsRestrictedFields(walk, operation.input.schema, add("input"));
 
   for (const response of operation.responses ?? [])
-    if (response.body !== undefined) accessRightsRestrictedFields(walk, response.body, add("output"));
+    if (response.body !== undefined)
+      accessRightsRestrictedFields(walk, response.body, add("output"));
 
   if (accessRightsFieldWalkExceeded(walk)) {
     reporter.error({

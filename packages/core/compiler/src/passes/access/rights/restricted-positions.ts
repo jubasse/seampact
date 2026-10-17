@@ -27,7 +27,10 @@ const authoredPointer = (origin: PassReadonly<IrWriter.Origin> | undefined): str
   origin === undefined || origin.layer === "core" ? undefined : origin.pointer;
 
 /** Refuses a restricted field reached from the route's query parameters, request headers or response headers. */
-export function accessRightsRefuseRoutePositions(walk: PositionWalk, route: AccessRightsRoute): void {
+export function accessRightsRefuseRoutePositions(
+  walk: PositionWalk,
+  route: AccessRightsRoute,
+): void {
   const { operation } = route;
   const refuse = (positioned: Positioned, kind: string) =>
     accessRightsRefuseRestrictionsBelow(walk, positioned.type, {
@@ -47,7 +50,10 @@ const optionalPointer = (pointer: string | undefined): { pointer?: string } =>
   pointer === undefined ? {} : { pointer };
 
 /** Refuses a restricted field reached from the params of an error the contract declares, whatever route answers it. */
-export function accessRightsRefuseErrorParams(context: AccessRightsContext, walk: PositionWalk): void {
+export function accessRightsRefuseErrorParams(
+  context: AccessRightsContext,
+  walk: PositionWalk,
+): void {
   for (const [code, error] of accessRightsEntries(context.raw.merged, "errors")) {
     if (accessRightsMember(error, "params") === undefined) continue;
 

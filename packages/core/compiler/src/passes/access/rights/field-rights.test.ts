@@ -380,7 +380,9 @@ describe("restrictions a field right cannot hold", () => {
     expect(performance.now() - started).toBeLessThan(DIAMOND_BUDGET_MS);
     expect(free.diagnostics).toEqual([]);
     expect(fieldRightsOf(free.draft, "deep")).toEqual([]);
-    expect(located(capped.diagnostics)).toEqual([["field-right-limit", "/surfaces/app/routes/deep"]]);
+    expect(located(capped.diagnostics)).toEqual([
+      ["field-right-limit", "/surfaces/app/routes/deep"],
+    ]);
     expect(capped.diagnostics[0]?.message).toBe(
       "route 'deep' reaches more than 1000 restricted fields from its input and responses, more field rights than one operation may list",
     );

@@ -89,10 +89,16 @@ function accessRightsRun(draft: DraftIR, context: AccessRightsContext): void {
         });
 
   const checks = accessRightsItemChecks();
-  const restrictions = accessRightsRestrictionChecks(accessRightsRestrictionReaching(draft.schemas));
+  const restrictions = accessRightsRestrictionChecks(
+    accessRightsRestrictionReaching(draft.schemas),
+  );
 
   accessRightsCheckRequirementEntries(context, reporter, catalogues, checks);
-  accessRightsRefuseErrorParams(context, { reporter, schemas: draft.schemas, checks: restrictions });
+  accessRightsRefuseErrorParams(context, {
+    reporter,
+    schemas: draft.schemas,
+    checks: restrictions,
+  });
   const built = routes.map(({ route, scopes }) => ({
     scopes,
     requires: accessRightsRequirements(context, reporter, catalogues, checks, {

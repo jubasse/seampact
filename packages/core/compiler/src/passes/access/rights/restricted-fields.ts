@@ -1,7 +1,10 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { type DraftIR, type PassReadonly, pipelinePointerBelow } from "../../../pipeline/seam.js";
 import { type AccessRightsReporter, accessRightsQuoted } from "./report.js";
-import { type AccessRightsRestrictionChecks, accessRightsRestrictionOrigin } from "./restrictions.js";
+import {
+  type AccessRightsRestrictionChecks,
+  accessRightsRestrictionOrigin,
+} from "./restrictions.js";
 import type { AccessRightsRoute } from "./routes.js";
 
 // The walk from a body to the restricted fields it reaches (ADR 0003 section 6). A pointer is relative to the body's
@@ -14,7 +17,10 @@ import type { AccessRightsRoute } from "./routes.js";
 // through those positions.
 
 export type AccessRightsDraftSchemas = PassReadonly<DraftIR["schemas"]>;
-export type AccessRightsObjectSchema = Extract<AccessRightsDraftSchemas[string], { kind: "object" }>;
+export type AccessRightsObjectSchema = Extract<
+  AccessRightsDraftSchemas[string],
+  { kind: "object" }
+>;
 type DraftProperty = AccessRightsObjectSchema["properties"][number];
 type DraftTypeUse = PassReadonly<IrWriter.TypeUse>;
 
@@ -54,7 +60,10 @@ export function accessRightsRestrictionReaching(
     for (const target of schemaReferences(schema))
       referencedBy.set(target, [...(referencedBy.get(target) ?? []), id]);
 
-    if (schema.kind === "object" && schema.properties.some((property) => property.restrictedTo !== undefined)) {
+    if (
+      schema.kind === "object" &&
+      schema.properties.some((property) => property.restrictedTo !== undefined)
+    ) {
       reaching.add(id);
       pending.push(id);
     }

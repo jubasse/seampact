@@ -26,7 +26,9 @@ export interface AccessRightsFieldRoute {
 }
 
 /** A found subject (absent for a right without one), or undefined after an error. */
-export type AccessRightsSubjectResult = { readonly subject?: IrWriter.FieldRightSubject } | undefined;
+export type AccessRightsSubjectResult =
+  | { readonly subject?: IrWriter.FieldRightSubject }
+  | undefined;
 
 /** The field as a message names it: the body's schema and the pointer. */
 export const accessRightsFieldText = (field: AccessRightsRestrictedField): string =>
