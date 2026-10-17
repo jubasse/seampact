@@ -40,7 +40,11 @@ public object IrReader {
         return readWithinNestingBound(parse(text), support)
     }
 
-    /** @see read */
+    /**
+     * Reads a tree the caller built; the tree is trusted to hold JSON values only (a literal such as `NaN` is not checked).
+     *
+     * @see read
+     */
     public fun read(document: JsonElement, support: IrSupport): ContractIR {
         refuseIfPresent(checkElementNesting(document))
 
