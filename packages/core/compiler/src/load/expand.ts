@@ -14,9 +14,9 @@ import { pointerEscape, pointerSegments } from "./paths.js";
 import {
   admitsInteger,
   expectedTypes,
-  type Position,
   type MapView,
   NOT_SCALAR,
+  type Position,
   positionAt,
   refinePosition,
   refusesScalar,
@@ -26,7 +26,7 @@ import {
 } from "./positions.js";
 import type { Reporter, SiteLocation } from "./report.js";
 import { loadScalarPitfall } from "./scalars.js";
-import { type FileStore, nodeSite, pairSite, type ParsedFile } from "./source.js";
+import { type FileStore, nodeSite, type ParsedFile, pairSite } from "./source.js";
 
 // ADR 0002 section 2: `$include`, `$file` and the file form of `$ref`, expanded over the YAML
 // syntax tree so that every merged node keeps the position it was written at.

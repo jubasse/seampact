@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
-import { must } from "./golden.js";
 import { diagnosticLocation, printDiagnostics } from "../diagnostics/print.js";
+import { must } from "./golden.js";
 import { loadWorkspace } from "./index.js";
 import { type LoadMemoryOptions, loadMemoryReader } from "./reader.js";
 

@@ -3,6 +3,7 @@
 import * as path from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { printDiagnostics } from "../diagnostics/print.js";
+import { LINEAR_CPU_BUDGET_MILLISECONDS, withinCpuBudget } from "./cpu-bound.js";
 import { must } from "./golden.js";
 import { loadWorkspace } from "./index.js";
 import { LOAD_MAX_WORK } from "./limits.js";
@@ -285,10 +286,8 @@ test("C-6 an include fan-out stops at the expansion limit", () => {
 }, 30_000);
 
 test("C-6 an exponential include fan-out ends quickly", () => {
-  const started = Date.now();
-  const r = run(fanOut(30));
+  const r = withinCpuBudget(LINEAR_CPU_BUDGET_MILLISECONDS, () => run(fanOut(30)));
   expect(rules(r)).toEqual(["expansion-limit"]);
-  expect(Date.now() - started).toBeLessThan(10_000);
 }, 30_000);
 
 test("C-6 a cycle through a directory link is found on the real path", () => {

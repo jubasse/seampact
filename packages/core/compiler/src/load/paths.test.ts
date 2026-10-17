@@ -2,8 +2,8 @@ import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "vitest";
-import { must } from "./golden.js";
 import { printDiagnostics } from "../diagnostics/print.js";
+import { must } from "./golden.js";
 import { type LoadReader, loadFsReader, loadWorkspace } from "./index.js";
 import { loadMemoryReader } from "./reader.js";
 

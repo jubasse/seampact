@@ -2,6 +2,6 @@
 //
 // Its trust model, the guarantees it keeps and its non-goals: ADR 0006 section 1.
 
-export { loadWorkspace, type LoadOptions, type LoadResult } from "./loader.js";
+export { type LoadOptions, type LoadResult, loadWorkspace } from "./loader.js";
 export { type LoadReader, loadFsReader } from "./reader.js";
 export { type LoadWatcher, type LoadWatchOptions, loadWatchFiles } from "./watch.js";
