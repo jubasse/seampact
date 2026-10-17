@@ -53,7 +53,7 @@ const isDiagnosticOrigin = (origin: Origin): origin is DiagnosticOrigin => origi
 
 /**
  * Reports the half's errors through its context, each located at its pointer. An inherited setting is checked for
- * every route below it, so the same problem at the same place is reported once.
+ * every route below it, so a rule at one place is reported once, with the message of the first route that hit it.
  */
 export function accessRightsReporter(context: PassContext): AccessRightsReporter {
   let errors = 0;
@@ -70,7 +70,7 @@ export function accessRightsReporter(context: PassContext): AccessRightsReporter
   return {
     error(problem) {
       errors += 1;
-      const key = JSON.stringify([problem.rule, problem.pointer, problem.message]);
+      const key = JSON.stringify([problem.rule, problem.pointer]);
       if (reported.has(key)) return;
       reported.add(key);
 

@@ -55,6 +55,52 @@ surfaces:
         ops: [list, get]
 `;
 
+// A pack whose entries meet a refused name, an equal requirement from two entries, and a public route.
+const EXTRA_PACK = `pack: { name: extra, version: 1.0.0, extends: [] }
+derive:
+  - entry: colons
+    select: { op: [get] }
+    declareRight: { name: '{resource}:{op}' }
+    require: { right: '{resource}:{op}' }
+  - entry: audits
+    select: { identity: [user] }
+    require: { right: shop.audit }
+  - entry: auditsAgain
+    select: { identity: [user] }
+    require: { right: shop.audit }
+  - entry: views
+    select: { op: [get] }
+    declareRight: { name: '{resource}.view' }
+    require: { right: '{resource}.view' }
+`;
+
+const EXTRA_API = `api: { name: shop, version: 1 }
+packs: [./pack.yaml]
+conventions:
+  rights: { pattern: '^[a-z]+\\.[a-z]+$' }
+schemes:
+  bearer: { kind: bearer }
+identities:
+  user: { schemes: { read: [bearer], write: [bearer] }, principal: UserPrincipal }
+schemas:
+  UserPrincipal: { type: object, required: [userId], properties: { userId: { type: string } } }
+  ItemId: { type: string }
+  Item: { type: object, required: [itemId], properties: { itemId: ItemId } }
+rights:
+  shop.audit: {}
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      items: { kind: collection, id: { itemId: ItemId }, item: Item, ops: [list, get] }
+  open:
+    prefix: /open/v{version}
+    access: { public: The catalogue is open. }
+    routes:
+      things: { kind: collection, id: { thingId: ItemId }, item: Item, ops: [list, get] }
+`;
+
 describe("pack-derived rights", () => {
   test("rights and requirements of the CRUD rights pack, each with its derivation, before the written ones", () => {
     const { draft, diagnostics } = accessRightsRunContract(accessRightsLoadFixture("crud-rights"));
@@ -95,6 +141,21 @@ describe("pack-derived rights", () => {
       },
     ]);
     expect(Object.keys(draft.rights)).toEqual(["items.get"]);
+  });
+
+  test("a refused derived right, a derived requirement twice and a derived right on a public route", () => {
+    const { diagnostics } = accessRightsRunContract(
+      accessRightsLoadFiles({ "api.yaml": EXTRA_API, "pack.yaml": EXTRA_PACK }),
+    );
+
+    expect(diagnostics.map(({ rule, origin }) => [rule, origin.layer, origin.pointer])).toEqual([
+      ["seampact/access/right-pattern", "pack:extra", "/derive/0/declareRight"],
+      ["seampact/access/requirement-twice", "pack:extra", "/derive/2/require"],
+      ["seampact/access/guest-right", "pack:extra", "/derive/3/require"],
+    ]);
+    expect(diagnostics[2]?.fix).toBe(
+      "narrow the entry's 'select' to identified routes, or declare the right in 'rights' with a 'guest' reason",
+    );
   });
 
   test("a derive entry of a pack tree.nodes did not record is an internal error", () => {

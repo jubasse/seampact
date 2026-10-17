@@ -156,7 +156,10 @@ export function accessRightsDeclareRight(
   if (id === undefined) return;
 
   const derived = derivedSubject(context, reporter, { ...input, declareRight, pointer });
-  if (derived === undefined) return;
+  if (derived === undefined) {
+    if (!catalogues.rights.has(id)) catalogues.declared.rights.add(id);
+    return;
+  }
 
   const present = catalogues.rights.get(id);
   if (present !== undefined) {
@@ -173,7 +176,10 @@ export function accessRightsDeclareRight(
     pointer,
     rightPattern: catalogues.rightPattern,
   });
-  if (!named) return;
+  if (!named) {
+    catalogues.declared.rights.add(id);
+    return;
+  }
 
   catalogues.rights.set(id, {
     id,

@@ -7,7 +7,7 @@ import {
 } from "./test-support.js";
 
 // Rights and rules without subjects, so each test is about the requirement itself; each test adds its routes.
-const contract = (surface: string): string => `api: { name: shop, version: 1 }
+const contract = (surface: string, entries = ""): string => `api: { name: shop, version: 1 }
 schemes:
   bearer: { kind: bearer }
 identities:
@@ -20,19 +20,20 @@ rights:
 rules:
   throttle: { bucket: true }
   audit: {}
+  note: { params: { reason?: { type: string } } }
 buckets:
   perUser: { key: [principal.userId] }
 requirements:
   seniorStaff: { right: staff, params: { level: 3 } }
   writeThrottle: { rule: throttle, bucket: perUser }
-surfaces:
+${entries}surfaces:
   app:
     prefix: /v{version}
     identity: user
 ${surface}`;
 
-const run = (surface: string) =>
-  accessRightsRunContract(accessRightsLoadFiles({ "api.yaml": contract(surface) }));
+const run = (surface: string, entries?: string) =>
+  accessRightsRunContract(accessRightsLoadFiles({ "api.yaml": contract(surface, entries) }));
 
 const located = (diagnostics: readonly { rule: string; origin: { pointer: string } }[]) =>
   diagnostics.map(({ rule, origin }) => [rule, origin.pointer]);
@@ -145,6 +146,59 @@ describe("requirements in order", () => {
   });
 });
 
+describe("requirements shared by several routes", () => {
+  test("each route's requirement holds its own copy of the params", () => {
+    const { draft, diagnostics } = run(`    requires: [{ right: staff, params: { level: 2 } }]
+    routes:
+      first: { method: get }
+      second: { method: get }
+`);
+    const [first, second] = draft.operations.map((operation) => operation.requires?.[0]?.params);
+
+    expect(diagnostics).toEqual([]);
+    expect(first).toEqual({ level: 2 });
+    expect(second).toEqual(first);
+    expect(second).not.toBe(first);
+  });
+
+  test("a right without guest reason inherited by two public routes is reported once, at the item", () => {
+    const { diagnostics } = run(`    access: { public: The shop is open. }
+    requires: [{ right: shop.open }]
+    routes:
+      first: { method: get }
+      second: { method: get }
+`);
+
+    expect(located(diagnostics)).toEqual([
+      ["seampact/access/guest-right", "/surfaces/app/requires/0"],
+    ]);
+  });
+
+  test("absent params and empty params are the same requirement", () => {
+    const { diagnostics } = run(`    routes:
+      refund: { method: post, requires: [{ rule: note }, { rule: note, params: {} }] }
+`);
+
+    expect(located(diagnostics)).toEqual([
+      ["seampact/access/requirement-twice", "/surfaces/app/routes/refund/requires/1"],
+    ]);
+  });
+
+  test("an entry of the requirements catalogue is checked even when no route uses it", () => {
+    const { diagnostics } = run(
+      `    routes:
+      refund: { method: post }
+`,
+      `  broken: { right: shop.close }
+`,
+    );
+
+    expect(located(diagnostics)).toEqual([
+      ["seampact/access/requirement-target", "/requirements/broken/right"],
+    ]);
+  });
+});
+
 describe("guest rights on public routes", () => {
   test("a rule and a guest right reach anonymous callers; a right without a guest reason is an error", () => {
     const { draft, diagnostics } = accessRightsRunContract(accessRightsLoadFixture("guest"));
@@ -185,7 +239,55 @@ describe("guest rights on public routes", () => {
   });
 });
 
+// A service api whose caller right takes params; each test adds its rights and surfaces.
+const serviceContract = (
+  rest: string,
+): string => `api: { name: billing, version: 1, kind: service, caller: { identity: service, right: callerService } }
+schemes:
+  internalToken: { kind: bearer }
+identities:
+  service: { schemes: { read: [internalToken], write: [internalToken] }, principal: ServicePrincipal }
+schemas:
+  ServicePrincipal: { type: object, required: [service], properties: { service: { type: string } } }
+${rest}`;
+
+const runService = (rest: string) =>
+  accessRightsRunContract(accessRightsLoadFiles({ "api.yaml": serviceContract(rest) }));
+
 describe("service api caller right", () => {
+  test("a route whose caller right item failed is not also missing the caller right", () => {
+    const { diagnostics } = runService(`rights:
+  callerService: { params: { allowed: { type: string } } }
+surfaces:
+  internal:
+    prefix: /internal/v{version}
+    requires: [{ right: callerService, params: { allowed: ${DRAFT_FIXTURE_INVALID_EXAMPLE} } }]
+    routes:
+      first: { method: get }
+      second: { method: get }
+`);
+
+    expect(located(diagnostics)).toEqual([
+      ["seampact/access/requirement-params", "/surfaces/internal/requires/0/params"],
+    ]);
+  });
+
+  test("a refused caller right adds no caller-right error on the routes that do not require it", () => {
+    const { diagnostics } = runService(`rights:
+  callerService: { subject: { scope: nowhere } }
+surfaces:
+  internal:
+    prefix: /internal/v{version}
+    routes:
+      first: { method: get }
+      second: { method: get }
+`);
+
+    expect(located(diagnostics)).toEqual([
+      ["seampact/access/right-subject", "/rights/callerService/subject/scope"],
+    ]);
+  });
+
   test("every route of a service api requires its caller right", () => {
     const { draft, diagnostics } = accessRightsRunContract(accessRightsLoadFixture("service"));
 

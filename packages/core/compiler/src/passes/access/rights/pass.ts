@@ -8,7 +8,11 @@ import {
 } from "./packs.js";
 import { accessRightsMember } from "./read.js";
 import { accessRightsReporter } from "./report.js";
-import { accessRightsItemChecks, accessRightsRequirements } from "./requires.js";
+import {
+  accessRightsCheckRequirementEntries,
+  accessRightsItemChecks,
+  accessRightsRequirements,
+} from "./requires.js";
 import { accessRightsApi, accessRightsRoutes } from "./routes.js";
 import type { AccessRightsContext } from "./schema-use.js";
 import { accessRightsOperationScopes } from "./scopes.js";
@@ -59,22 +63,26 @@ function accessRightsRun(draft: DraftIR, context: AccessRightsContext): void {
         });
 
   const checks = accessRightsItemChecks();
-  const requirements = routes.map(({ route, scopes }) =>
-    accessRightsRequirements(context, reporter, catalogues, checks, {
+  accessRightsCheckRequirementEntries(context, reporter, catalogues, checks);
+  const built = routes.map(({ route, scopes }) => ({
+    scopes,
+    requires: accessRightsRequirements(context, reporter, catalogues, checks, {
       route,
       scopes,
       api,
       entries,
       schemas: draft.schemas,
     }),
-  );
+  }));
 
   writeCatalogues(draft, catalogues);
-  for (const [index, { scopes }] of routes.entries()) {
-    const operation = draft.operations[index];
-    if (operation === undefined) continue;
-    operation.scopes = scopes;
-    operation.requires = requirements[index] ?? [];
+  // `accessRightsRoutes` maps the draft's operations in order, so the two lists pair by index.
+  for (const [index, operation] of draft.operations.entries()) {
+    const members = built[index];
+    if (members === undefined)
+      throw new Error(`access.rights built no route for operation ${operation.id ?? index}`);
+    operation.scopes = members.scopes;
+    operation.requires = members.requires;
   }
 }
 

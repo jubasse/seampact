@@ -31,9 +31,12 @@ export interface AccessRightsCatalogues {
   readonly buckets: Map<string, IrWriter.Bucket>;
   /** The schema each resource right's id names (`TaskId`), when it names one; pack-derived rights add theirs. */
   readonly rightIdNames: Map<string, string>;
-  /** The names declared in each catalogue, refused ones included, so a use of a refused one adds no error. */
+  /**
+   * The names declared in each catalogue, refused ones included, so a use of a refused one adds no error. A
+   * pack-derived right that is refused adds its name too.
+   */
   readonly declared: {
-    readonly rights: ReadonlySet<string>;
+    readonly rights: Set<string>;
     readonly rules: ReadonlySet<string>;
     readonly scopes: ReadonlySet<string>;
     readonly buckets: ReadonlySet<string>;

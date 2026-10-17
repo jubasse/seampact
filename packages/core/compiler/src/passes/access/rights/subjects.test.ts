@@ -256,6 +256,36 @@ describe("subjects and scopes", () => {
     );
   });
 
+  test("a scope subject error inherited by two routes is reported once, at the item", () => {
+    const { diagnostics } = run(`      ping:
+        kind: single
+        requires: [{ right: projectRole }]
+        routes:
+          first: { method: get }
+          second: { method: post }
+`);
+
+    expect(located(diagnostics)).toEqual([
+      ["seampact/access/requirement-subject", "/surfaces/app/routes/ping/requires/0"],
+    ]);
+  });
+
+  test("a right on a refused scope adds no error where it is required", () => {
+    const { diagnostics } = accessRightsRunContract(
+      accessRightsLoadFiles({
+        "api.yaml": contract(`      ping:
+        method: post
+        scopes: { team: resolver }
+        requires: [{ right: teamRole }]
+`)
+          .replace("  audit: {}\n", "  audit: {}\n  teamRole: { subject: { scope: team } }\n")
+          .replace("  board:", "  team: { id: ProjectId, within: nowhere }\n  board:"),
+      }),
+    );
+
+    expect(located(diagnostics)).toEqual([["seampact/access/scope-within", "/scopes/team/within"]]);
+  });
+
   test("a scope entered twice, below its own child, or not declared is an error naming both places", () => {
     const { draft, diagnostics } = run(`      projects:
         kind: collection

@@ -5,6 +5,7 @@ import { type AccessRightsDeriveEntry, accessRightsExpand, accessRightsSelects }
 import {
   type AccessRightsRawValue,
   accessRightsCanonical,
+  accessRightsEntries,
   accessRightsIsObject,
   accessRightsMember,
   accessRightsPointer,
@@ -61,21 +62,50 @@ export function accessRightsRequirements(
   checks: AccessRightsItemChecks,
   input: AccessRightsRequiresInput,
 ): IrWriter.Requirement[] {
-  const errorsBefore = reporter.errors;
+  // A route with a failed requirement may have dropped its caller right, so it is not checked for one.
+  const errorsBeforeUses = reporter.errors;
   const uses = [...derivedUses(context, reporter, input), ...writtenUses(context, reporter, input)];
+  let routeFailed = reporter.errors !== errorsBeforeUses;
 
   const built: BuiltRequirement[] = [];
   for (const use of uses) {
     const checked = checkItem(context, reporter, catalogues, checks, use);
-    if (checked === undefined) continue;
-    const requirement = requirementOf(context, reporter, catalogues, input, use, checked.params);
-    if (requirement === undefined) continue;
+    const requirement =
+      checked === undefined
+        ? undefined
+        : requirementOf(context, reporter, catalogues, input, use, checked.params);
+    if (requirement === undefined) {
+      routeFailed = true;
+      continue;
+    }
     built.push({ use, requirement, key: equalityKey(requirement) });
   }
 
   const requirements = withoutRepeats(reporter, built);
-  if (reporter.errors === errorsBefore) checkCallerRight(reporter, input, requirements);
+  if (!routeFailed) checkCallerRight(reporter, catalogues, input, requirements);
   return requirements;
+}
+
+/**
+ * Checks every entry of the `requirements` catalogue once, used or not: its target, params and bucket. A use of an
+ * entry then finds it checked.
+ */
+export function accessRightsCheckRequirementEntries(
+  context: AccessRightsContext,
+  reporter: AccessRightsReporter,
+  catalogues: AccessRightsCatalogues,
+  checks: AccessRightsItemChecks,
+): void {
+  for (const [name, item] of accessRightsEntries(context.raw.merged, "requirements")) {
+    const itemPointer = accessRightsPointer("/requirements", name);
+    checkItem(context, reporter, catalogues, checks, {
+      ...targetOf(item, itemPointer),
+      item,
+      itemPointer,
+      usePointer: itemPointer,
+      entry: name,
+    });
+  }
 }
 
 function derivedUses(
@@ -93,28 +123,33 @@ function derivedUses(
       derivation: entry.derivation,
       from: [accessRightsOriginOf(context, pointer)],
     };
-    const rule = accessRightsString(require, "rule");
-    const template = accessRightsString(require, "right");
-    const right =
-      template === undefined
-        ? undefined
-        : accessRightsExpand(
-            reporter,
-            { text: template, pointer: accessRightsPointer(pointer, "right") },
-            route,
-          );
-    if (rule === undefined && right === undefined) continue;
+    const target = derivedTarget(reporter, require, pointer, route);
+    if (target === undefined) continue;
 
-    uses.push({
-      kind: rule === undefined ? "right" : "rule",
-      target: rule ?? right ?? "",
-      item: require,
-      itemPointer: pointer,
-      usePointer: pointer,
-      derivedFrom,
-    });
+    uses.push({ ...target, item: require, itemPointer: pointer, usePointer: pointer, derivedFrom });
   }
   return uses;
+}
+
+// A pack's `require` names a rule, or a right template expanded for the route; undefined after an error.
+function derivedTarget(
+  reporter: AccessRightsReporter,
+  require: AccessRightsRawValue,
+  pointer: string,
+  route: AccessRightsRoute,
+): Pick<RequirementUse, "kind" | "target"> | undefined {
+  const rule = accessRightsString(require, "rule");
+  if (rule !== undefined) return { kind: "rule", target: rule };
+
+  const template = accessRightsString(require, "right");
+  if (template === undefined)
+    throw new Error(`the pack require at ${pointer} names neither a right nor a rule`);
+  const right = accessRightsExpand(
+    reporter,
+    { text: template, pointer: accessRightsPointer(pointer, "right") },
+    route,
+  );
+  return right === undefined ? undefined : { kind: "right", target: right };
 }
 
 function writtenUses(
@@ -145,12 +180,19 @@ function writtenUses(
         continue;
       }
       const itemPointer = accessRightsPointer("/requirements", written.value);
-      uses.push({ ...targetOf(item), item, itemPointer, usePointer, entry: written.value, origin });
+      uses.push({
+        ...targetOf(item, itemPointer),
+        item,
+        itemPointer,
+        usePointer,
+        entry: written.value,
+        origin,
+      });
       continue;
     }
 
     uses.push({
-      ...targetOf(written.value),
+      ...targetOf(written.value, usePointer),
       item: written.value,
       itemPointer: usePointer,
       usePointer,
@@ -160,10 +202,18 @@ function writtenUses(
   return uses;
 }
 
-function targetOf(item: AccessRightsRawValue): Pick<RequirementUse, "kind" | "target"> {
+// The authoring schema requires an item to name a right or a rule.
+function targetOf(
+  item: AccessRightsRawValue,
+  pointer: string,
+): Pick<RequirementUse, "kind" | "target"> {
   const right = accessRightsString(item, "right");
   if (right !== undefined) return { kind: "right", target: right };
-  return { kind: "rule", target: accessRightsString(item, "rule") ?? "" };
+
+  const rule = accessRightsString(item, "rule");
+  if (rule === undefined)
+    throw new Error(`the requirement item at ${pointer} names neither a right nor a rule`);
+  return { kind: "rule", target: rule };
 }
 
 // The route-independent checks of an item: its target exists, its params fit, its bucket is allowed and declared.
@@ -288,7 +338,7 @@ function requirementOf(
   params: unknown,
 ): IrWriter.Requirement | undefined {
   const common = {
-    ...(params === undefined ? {} : { params }),
+    ...(params === undefined ? {} : { params: pipelineCopy(params) }),
     ...(use.entry === undefined ? {} : { entry: use.entry }),
     ...(use.origin === undefined ? {} : { origin: use.origin }),
     ...(use.derivedFrom === undefined ? {} : { derivedFrom: pipelineCopy(use.derivedFrom) }),
@@ -341,10 +391,15 @@ function checkGuest(
   use: RequirementUse,
 ): boolean {
   if (route.access === "identity" || right.guest !== undefined) return true;
+
+  // A pack derived the right or the requirement: the author changes the entry's selector or declares the right.
+  const derived = right.derivedFrom !== undefined || use.derivedFrom !== undefined;
   reporter.error({
     rule: "guest-right",
     message: `right '${right.id}' is required on ${route.access === "public" ? "public" : "optional-auth"} route '${route.id}', where an anonymous caller reaches it, and the right has no 'guest' reason`,
-    fix: "set the right's 'guest' to the reason an anonymous caller may reach it, or require it on an identified route",
+    fix: derived
+      ? "narrow the entry's 'select' to identified routes, or declare the right in 'rights' with a 'guest' reason"
+      : "set the right's 'guest' to the reason an anonymous caller may reach it, or require it on an identified route",
     pointer: use.usePointer,
     related:
       route.accessPointer === undefined
@@ -354,12 +409,13 @@ function checkGuest(
   return false;
 }
 
-// Two requirements are the same when they name the same right or rule with equal params, bucket and subject.
+// Two requirements are the same when they name the same right or rule with equal params, bucket and subject; no
+// params and empty params are equal, as both are checked as `{}`.
 function equalityKey(requirement: IrWriter.Requirement): string {
   return accessRightsCanonical([
     requirement.kind,
     requirement.kind === "right" ? requirement.right : requirement.rule,
-    requirement.params ?? null,
+    requirement.params ?? {},
     requirement.kind === "rule" ? (requirement.bucket ?? null) : null,
     requirement.kind === "right" ? (requirement.subject?.source ?? null) : null,
   ]);
@@ -400,14 +456,17 @@ function withoutRepeats(
   return kept.map(({ requirement }) => requirement);
 }
 
-// Every route of a service api requires the api's caller right (ADR 0002 section 5, FR-8).
+// Every route of a service api requires the api's caller right (ADR 0002 section 5, FR-8). A caller right whose
+// declaration is refused already has its error.
 function checkCallerRight(
   reporter: AccessRightsReporter,
+  catalogues: AccessRightsCatalogues,
   { route, api }: AccessRightsRequiresInput,
   requirements: readonly IrWriter.Requirement[],
 ): void {
   const caller = api.caller;
   if (api.kind !== "service" || caller === undefined) return;
+  if (!catalogues.rights.has(caller.right) && catalogues.declared.rights.has(caller.right)) return;
   if (
     requirements.some(
       (requirement) => requirement.kind === "right" && requirement.right === caller.right,
