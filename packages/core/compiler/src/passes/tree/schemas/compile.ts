@@ -34,6 +34,7 @@ export type TreeSchemasPlace =
   | "variant"
   | "nested"
   | "routeInput"
+  | "queryField"
   | "position";
 
 export interface TreeSchemasPosition {
@@ -120,6 +121,9 @@ const COMMON_KEYWORDS = new Set([
   "restrictedTo",
   "lint",
 ]);
+
+// A `default` fills an absent value: it sits on a property or an optional query field (ADR 0003 section 10).
+const DEFAULT_PLACES: ReadonlySet<TreeSchemasPlace> = new Set(["property", "queryField"]);
 
 const NAMED = ["typeName", "unknownKeys"];
 const SHAPE_KEYWORDS: Readonly<Record<Shape, readonly string[]>> = {
@@ -390,7 +394,10 @@ export class TreeSchemasCompiler {
   ): void {
     const compiled = this.compileAt(value, position);
 
-    if (compiled !== undefined) this.recordUse(position.pointer, compiled.use, directions);
+    if (compiled === undefined) return;
+    this.recordUse(position.pointer, compiled.use, directions);
+
+    if (position.place === "queryField") this.writtenDefault(value, position.pointer, compiled.use);
   }
 
   /** Records at `pointer` a copy of the use compiled at `from`, if any: one schema declared at both. */
@@ -714,9 +721,12 @@ export class TreeSchemasCompiler {
     const named = shape === "object" || shape === "map" || shape === "union" || shape === "allOf";
     const refused: { key: string; where: string }[] = [];
 
-    for (const key of ["codeName", "restrictedTo", "default"]) {
+    for (const key of ["codeName", "restrictedTo"]) {
       if (has(value, key) && place !== "property") refused.push({ key, where: "a property" });
     }
+
+    if (has(value, "default") && !DEFAULT_PLACES.has(place))
+      refused.push({ key: "default", where: "an optional property or an optional query field" });
 
     if (
       has(value, "sensitive") &&
@@ -730,7 +740,9 @@ export class TreeSchemasCompiler {
 
     if (shape === "opaque") {
       for (const key of ["sensitive", "restrictedTo", "default"]) {
-        if (has(value, key) && place === "property")
+        const marked = place === "property" || (key === "default" && place === "queryField");
+
+        if (has(value, key) && marked)
           refused.push({ key, where: "a checked value: an opaque value holds no mark or default" });
       }
     }

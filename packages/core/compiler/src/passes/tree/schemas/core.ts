@@ -16,8 +16,8 @@ import { treeSchemasPointer } from "./raw.js";
 // The core schemas of ADR 0004 section 13: the params schema of each default code that carries data, the schema of
 // one schema issue and the empty body schema, seeded from the role data with origin `core` and no `derivedFrom`.
 // Their ids are reserved. A layer that declares a default code with `params`, in the catalogue or on a tree node,
-// takes the code's params id at its first declaration, and the core schema is not seeded; the issue schema stays seeded until a layer declares or hoists its id,
-// which it may once the `api.schema_invalid` params are replaced.
+// takes the code's params id at its first declaration, and the core schema is not seeded; the issue schema stays
+// seeded until a layer declares or hoists its id, which it may once the `api.schema_invalid` params are replaced.
 
 /** A reserved schema id: the core schema seeded under it, or the layer params that take it. */
 export interface TreeSchemasReservation {
