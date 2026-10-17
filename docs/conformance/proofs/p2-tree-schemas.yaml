@@ -19,10 +19,14 @@ proofs:
       - 'core: packages/core/compiler/src/passes/tree/schemas/examples.test.ts#written examples are parsed at compile time, each issue at its pointer inside the value'
       - 'core: packages/core/compiler/src/passes/tree/schemas/examples.test.ts#unknown keys, missing required properties and unknown tags are refused'
       - "core: packages/core/compiler/src/passes/tree/schemas/derived.test.ts#an overlay's examples replace the source's and are parsed against the property"
+      - 'core: packages/core/compiler/src/passes/tree/schemas/examples.test.ts#a header-tagged union fits a value that fits one variant'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/examples.test.ts#every issue of a JSON text is reported at the string that holds it'
   - id: CHK-134
     tests:
       - "core: packages/core/compiler/src/passes/tree/schemas/directions.test.ts#a use's unknownKeys sits on its input use, and an output answer holds none"
       - 'core: packages/core/compiler/src/passes/tree/schemas/directions.test.ts#unknownKeys where every use is output, or on a value with no keys, is refused'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/directions.test.ts#unknownKeys on an alias declaration that only output uses reach is refused'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/directions.test.ts#unknownKeys on a map, whose keys are free, is refused'
   - id: CHK-135
     tests:
       - 'core: packages/core/compiler/src/passes/tree/schemas/directions.test.ts#each schema, enum and named format takes the directions of the uses that reach it'
