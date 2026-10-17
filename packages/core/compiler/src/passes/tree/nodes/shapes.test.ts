@@ -456,7 +456,7 @@ surfaces:
   ]);
 });
 
-test("route examples: request and success values checked against what the handler returns, errors unchecked", () => {
+test("route examples: request and success values checked against what the handler returns, table keys by the id, errors unchecked", () => {
   const workspace = treeNodesLoadInline(`
 api: { name: a, version: 1, kind: product }
 ${CURSOR}
@@ -486,7 +486,9 @@ surfaces:
               refused: { error: api.schema_invalid, value: { issues: invalid } }
           batch:
             examples:
-              table: { status: 200, value: { n1: { noteId: n1, text: invalid } } }
+              table:
+                status: 200
+                value: { n1: { noteId: n1, text: invalid }, invalid: { noteId: n2, text: Hi } }
 `);
   const notes = `${ROUTES}/notes`;
   const treeSchemas = treeNodesStubService({
@@ -502,7 +504,12 @@ surfaces:
     ["seampact/tree/example-value", `${notes}/ops/list/examples/page/value/0/text`],
     ["seampact/tree/example-value", `${notes}/ops/create/examples/minimal/value/text`],
     ["seampact/tree/example-value", `${notes}/ops/batch/examples/table/value/n1/text`],
+    ["seampact/tree/example-value", `${notes}/ops/batch/examples/table/value/invalid`],
   ]);
+  // A table key is read by the collection's id schema in its text form.
+  expect(run.diagnostics[3]?.message).toBe(
+    "The example table of getNotesBatch does not fit its schema at '': the key invalid: the value is invalid.",
+  );
   expect(run.diagnostics[0]?.message).toBe(
     "The example page of listNotes does not fit its schema at '/0/text': the value is invalid.",
   );

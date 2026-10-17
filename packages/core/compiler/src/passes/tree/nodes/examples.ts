@@ -2,8 +2,10 @@ import type { IrWriter } from "@seampact/spec/ir";
 import { pipelineCopy } from "../../../pipeline/seam.js";
 import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
 import type { TreeNodesSite } from "./fields.js";
+import { treeNodesIdParam, treeNodesOpOwner } from "./names.js";
 import {
   type TreeNodesJson,
+  treeNodesAnsweredUse,
   treeNodesIsObject,
   treeNodesMember,
   treeNodesPointer,
@@ -12,7 +14,7 @@ import {
 
 // Route examples (ADR 0002 section 12, FR-3): every written example is kept. A request example is parsed against
 // the input, a success example against what the handler returns for its status (the payload, the item array of a
-// list, the id-keyed object of a table); an error example is written unchecked, since derive.errors checks it
+// list, the id-keyed object of a table, each key read by the id schema); an error example is written unchecked, since derive.errors checks it
 // against its code's params (ADR 0006 section 3).
 
 // The shapes whose handler result is an array of the body's item.
@@ -147,8 +149,37 @@ function checkSuccess(
     return;
   }
 
-  for (const [id, record] of Object.entries(value))
-    checkValue(site, name, treeNodesPointer(pointer, id), record, body);
+  const idUse = tableIdUse(site);
+
+  for (const [id, record] of Object.entries(value)) {
+    const entryPointer = treeNodesPointer(pointer, id);
+
+    for (const issue of site.context.treeSchemas.checkTextExample(id, idUse))
+      reportIssue(site, name, entryPointer, {
+        ...issue,
+        message: `the key ${id}: ${issue.message}`,
+      });
+
+    checkValue(site, name, entryPointer, record, body);
+  }
+}
+
+// A table is keyed by the id of the batch op's collection, read in its text form.
+function tableIdUse(site: TreeNodesSite): IrWriter.TypeUse {
+  const collection = treeNodesOpOwner(site.node);
+  const idParam =
+    collection === undefined
+      ? undefined
+      : treeNodesIdParam(collection, site.context.raw.merged.schemas);
+
+  if (collection === undefined || idParam === undefined)
+    throw new Error(`the table response of ${site.node.pointer} has no collection id`);
+
+  return treeNodesAnsweredUse(
+    site.context,
+    treeNodesPointer(collection.pointer, "id", idParam),
+    "input",
+  );
 }
 
 function checkValue(
