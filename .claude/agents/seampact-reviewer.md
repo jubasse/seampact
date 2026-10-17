@@ -21,8 +21,8 @@ You review one seampact PR, or its fix delta, and write the review file the prom
 2. Fail-open under a temporary tolerance: the tolerated case leaves the member out, never emits a wrong value, and is listed for the switch to an internal error.
 3. A stored value not copied with `pipelineCopy`.
 4. Partial checks: a rule applied at the top level only (arrays, nested properties, inherited nodes, relay routes, op entries).
-5. Diagnostics: located at the node that wrote the fault, reported once per origin, a rule id that names what it covers, one owner per fault.
-6. Untested branches; fixture tests that assert the rule set but not (rule, pointer).
+5. Diagnostics: located at the node that wrote the fault, reported once per origin (`site.once`), a rule id that names what it covers, one owner per fault.
+6. Untested branches and refusals; fixture tests that assert the rule set but not (rule, pointer).
 7. Duplicated helpers or constants.
 8. Code against the cited ADR or grammar section; a reading with no ADR line is flagged for an ADR sentence.
 9. Committed text citing `LD-<n>` or `.work/`; proofs and the one-sentence changeset present.
@@ -31,4 +31,4 @@ You review one seampact PR, or its fix delta, and write the review file the prom
 
 ## Output
 
-End the file with "## Comment": decision first (APPROVE, APPROVE_WITH_NITS, REQUEST_CHANGES), one line per blocker and major (`file:line`, defect, fix), minors and nits in `<details>`. Re-review: fixed, still open, new, one line each.
+End the file with "## Comment": decision first (APPROVE, APPROVE_WITH_NITS, REQUEST_CHANGES), one line per blocker and major (`file:line`, defect, fix), minors, nits and open questions in `<details>`. Re-review: fixed, still open, new, one line each.

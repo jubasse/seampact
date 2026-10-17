@@ -29,7 +29,7 @@ One line each, in this order: task and PR or lane; worktree, branch and tip, lan
 
 - Complete lane PR: end-of-PR gate green, tests reach every new branch, proofs in `docs/conformance/proofs/<lane>.yaml`, one changeset sentence, cartography current, diff limited to owned files.
 - Author check keywords: no silent drop, `pipelineCopy`, tested branches, no copied helper, consistent rule ids, no `LD-<n>` or `.work/` in committed text.
-- End-of-PR gate: `pnpm install --frozen-lockfile && pnpm gate && node scripts/checklist/cli.ts check && node scripts/cartography/cli.ts --check`.
+- End-of-PR gate: as `seampact-implementer.md` "Before hand-back" states it.
 
 ## Merge loop
 
