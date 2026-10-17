@@ -610,3 +610,42 @@ surfaces:
     ["format-id", `${ROUTES}/notes/ops/0`],
   ]);
 });
+
+test("formats and paging styles: a table payload merges without a clash check, and $fields leaves out the id member", () => {
+  const notes = `${ROUTES}/notes`;
+  const { draft, diagnostics } = run(
+    `
+api: { name: a, version: 1, kind: product }
+conventions:
+  batch: { maxIds: 20 }
+formats:
+  keyed:
+    success:
+      item: { body: { noteId: 1, $merge: $fields } }
+      table: { body: { text: 1, $merge: $payload } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      notes:
+        kind: collection
+        format: keyed
+        id: { noteId: { type: string } }
+        item: Note
+        ops: [get, batch]
+`,
+    {
+      [`${notes}/id/noteId`]: text,
+      [`${notes}/item`]: ref("Note"),
+      [`${notes}/ops/1`]: ref("Note"),
+    },
+  );
+
+  expect(diagnostics).toEqual([]);
+  expect(
+    draft.operations
+      .flatMap((operation) => operation.responses ?? [])
+      .map(({ shape }) => shape)
+      .sort(),
+  ).toEqual(["item", "table"]);
+});
