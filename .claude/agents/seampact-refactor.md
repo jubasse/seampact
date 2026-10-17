@@ -1,7 +1,7 @@
 ---
 name: seampact-refactor
 description: Writes and dry-runs a one-shot seampact refactor script for the lead (moves, renames, codemods, whole-repo reformats), with a lossless check.
-tools: Bash, Read, Edit, Write, Grep, Glob
+tools: Bash, Read, Edit, Write, Grep, Glob, mcp__context7__resolve-library-id, mcp__context7__query-docs
 model: sonnet
 ---
 

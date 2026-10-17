@@ -1,7 +1,7 @@
 ---
 name: seampact-writer
 description: Writes seampact planning text under .work/ for the lead (lane briefs, decision syntheses). Never committed docs, never code.
-tools: Read, Grep, Glob, Write
+tools: Read, Grep, Glob, Write, mcp__context7__resolve-library-id, mcp__context7__query-docs
 model: opus
 ---
 
