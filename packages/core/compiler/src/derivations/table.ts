@@ -71,7 +71,7 @@ export const derivationTable: readonly DerivationRow[] = derivationFreeze([
   row(
     "concurrency.version",
     "update, delete or concurrency: inherit on a versioned resource",
-    "the version parameter, ETag, 409, 412, 428",
+    "the query or header version parameter (tree adds a body source's property), ETag, 409, 412, 428",
     ["stateConflict", "preconditionFailed", "preconditionRequired"],
     "derive.wire",
   ),
@@ -241,14 +241,14 @@ export const derivationTable: readonly DerivationRow[] = derivationFreeze([
   row(
     "response.download",
     "a file response body",
-    "the binary shape, Content-Type, Content-Disposition",
+    "Content-Type, Content-Disposition",
     "none",
     "derive.wire",
   ),
   row(
     "redirect.location",
     "a redirect status in responses",
-    "the redirect shape and the required Location header",
+    "the required Location header",
     "none",
     "derive.wire",
   ),

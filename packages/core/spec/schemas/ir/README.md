@@ -105,4 +105,4 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 
 ## Changing the IR
 
-From M1, every change is its own PR raising `IR_REVISION`, with a changeset written from `CHANGE-TEMPLATE.md` (ADR 0005 section 1). Regenerate the TypeScript types with `UPDATE_IR_TYPES=1 pnpm vitest run packages/core/spec/src/ir/types.test.ts`.
+From M1, every change is its own PR raising `IR_REVISION`, with a changeset written from `CHANGE-TEMPLATE.md` (ADR 0005 section 1). Regenerate the TypeScript types with `UPDATE_IR_TYPES=1 pnpm vitest run packages/core/spec/src/ir/types.test.ts` and the Kotlin and PHP models with `node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write`.
