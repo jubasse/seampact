@@ -521,4 +521,42 @@ final class IrReaderTest extends TestCase
             }
         }
     }
+
+    public function testAShortMultibyteValueIsNotCutMidCharacter(): void
+    {
+        foreach ([30, 100] as $characters) {
+            $kind = str_repeat('漢', $characters);
+            $document = Documents::replaceAt(Documents::example('minimal.ir.json'), ['kinds'], [$kind]);
+
+            $messages = array_map(static fn (IrRefusal $refusal): string => $refusal->message, $this->refusals($document));
+
+            self::assertNotSame([], $messages);
+            foreach ($messages as $message) {
+                self::assertSame(1, preg_match('//u', $message), "{$characters} characters: invalid UTF-8");
+                self::assertNotFalse(json_encode($message));
+            }
+            self::assertStringContainsString($characters === 30 ? $kind : str_repeat('漢', 80) . '...', $messages[0]);
+        }
+    }
+
+    public function testADocumentDecodedAsAssociativeArraysIsMalformedNotUnsupported(): void
+    {
+        $text = json_encode(Documents::example('minimal.ir.json'), JSON_THROW_ON_ERROR);
+
+        $this->expectException(IrMalformedException::class);
+        $this->expectExceptionMessage('stdClass');
+
+        IrReader::readDocument(json_decode($text, true), $this->support);
+    }
+
+    public function testTheTextScanStaysWithinTheBudgetOnALargeText(): void
+    {
+        $text = '{"a":["' . str_repeat('x', 14_000_000) . '"],"' . str_repeat('k', 1_000_000) . '":1}';
+
+        $started = hrtime(true);
+        self::assertNull(\Seampact\Ir\Read\NestingCheck::checkText($text));
+        $elapsed = (hrtime(true) - $started) / 1_000_000_000;
+
+        self::assertLessThan(0.5, $elapsed);
+    }
 }

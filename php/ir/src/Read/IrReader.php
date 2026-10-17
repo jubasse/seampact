@@ -45,6 +45,10 @@ final class IrReader
      */
     public static function readDocument(mixed $document, IrSupport $support): ContractIR
     {
+        if (self::isAssociativeObject($document)) {
+            throw new IrMalformedException('The IR document must be decoded with objects as stdClass: json_decode($text, false).');
+        }
+
         self::refuseIfPresent(NestingCheck::checkDocument($document));
 
         return self::readWithinNestingBound($document, $support);
@@ -65,23 +69,24 @@ final class IrReader
         }
     }
 
+    // A list root stays as it is, for parity with `read('[...]')`; only a keyed array shows the wrong decode mode.
+    private static function isAssociativeObject(mixed $document): bool
+    {
+        return is_array($document) && !array_is_list($document);
+    }
+
     private static function parse(string $text): mixed
     {
         try {
             return json_decode($text, false, self::PARSER_DEPTH, JSON_THROW_ON_ERROR);
         } catch (\JsonException $error) {
-            throw new IrMalformedException('The IR is not JSON: ' . $error->getMessage(), previous: $error);
+            throw new IrMalformedException('The IR is not JSON: ' . self::causeOf($error), previous: $error);
         }
     }
 
     private static function causeOf(\Throwable $error): string
     {
-        $message = $error->getMessage();
-        if (strlen($message) <= self::MAX_CAUSE_MESSAGE_LENGTH) {
-            return $message;
-        }
-
-        return substr($message, 0, self::MAX_CAUSE_MESSAGE_LENGTH) . '...';
+        return RefusalText::inMessage($error->getMessage(), self::MAX_CAUSE_MESSAGE_LENGTH);
     }
 
     private static function refuseIfPresent(?IrRefusal $refusal): void

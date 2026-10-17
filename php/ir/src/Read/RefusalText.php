@@ -18,14 +18,14 @@ final class RefusalText
      * An untrusted string cut for a message; the refusal's other members keep it whole. A string that is not
      * UTF-8, which only the pointer of a malformed text can be, is cut at a byte.
      */
-    public static function inMessage(string $value): string
+    public static function inMessage(string $value, int $maxLength = self::MAX_MESSAGE_VALUE_LENGTH): string
     {
-        if (strlen($value) <= self::MAX_MESSAGE_VALUE_LENGTH) {
+        if (strlen($value) <= $maxLength) {
             return $value;
         }
 
-        $matched = preg_match('/^.{' . self::MAX_MESSAGE_VALUE_LENGTH . '}/su', $value, $characters);
-        $cut = $matched === 1 ? $characters[0] : substr($value, 0, self::MAX_MESSAGE_VALUE_LENGTH);
+        $matched = preg_match('/^.{0,' . $maxLength . '}/su', $value, $characters);
+        $cut = $matched === 1 ? $characters[0] : substr($value, 0, $maxLength);
 
         return $cut === $value ? $value : $cut . '...';
     }

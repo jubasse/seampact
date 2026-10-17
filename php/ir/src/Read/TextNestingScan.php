@@ -11,6 +11,10 @@ final class TextNestingScan
     private const SIMPLE_ESCAPES = ['b' => "\x08", 'f' => "\x0C", 'n' => "\n", 'r' => "\r", 't' => "\t"];
     private const REPLACEMENT_CHARACTER = 0xFFFD;
 
+    // The bytes that change the scan outside a string, and inside one; runs of any other byte are skipped whole.
+    private const STRUCTURAL_BYTES = '{}[],:"';
+    private const STRING_BYTES = '"\\';
+
     /** @var list<OpenContainer> */
     private array $open = [];
 
@@ -29,6 +33,10 @@ final class TextNestingScan
     public function firstPointerPastBound(): ?string
     {
         while ($this->position < $this->length) {
+            $this->position += strcspn($this->text, self::STRUCTURAL_BYTES, $this->position);
+            if ($this->position >= $this->length) {
+                break;
+            }
             $char = $this->text[$this->position++];
             switch ($char) {
                 case '{':
@@ -91,15 +99,19 @@ final class TextNestingScan
 
         $key = '';
         while ($this->position < $this->length) {
+            $run = strcspn($this->text, self::STRING_BYTES, $this->position);
+            if ($isKey) {
+                $key .= substr($this->text, $this->position, $run);
+            }
+            $this->position += $run;
+            if ($this->position >= $this->length) {
+                break;
+            }
             $char = $this->text[$this->position++];
             if ($char === '"') {
                 break;
             }
-            if ($char === '\\') {
-                $key .= $this->readEscape($isKey);
-            } elseif ($isKey) {
-                $key .= $char;
-            }
+            $key .= $this->readEscape($isKey);
         }
         if ($container !== null && $isKey) {
             $container->key = $key;
