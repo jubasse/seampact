@@ -48,7 +48,9 @@ describe("the reader parity corpus", () => {
       const support = supports[testCase.support];
 
       expect(support, `${testCase.id}: support`).toBeDefined();
+
       if (support === undefined) continue;
+
       expect(verdictOf(documentTextOf(testCase), support), testCase.id).toEqual(testCase.verdict);
     }
   });
@@ -92,7 +94,7 @@ describe("the reader parity corpus", () => {
     const outcomes = new Set(cases.map((testCase) => testCase.verdict.outcome));
     const ids = cases.map((testCase) => testCase.id);
 
-    expect([...outcomes].sort()).toEqual(["accept", "malformed", "refuse"]);
+    expect([...outcomes].sort()).toEqual(["accept", "malformed", "not-json", "refuse"]);
     expect(ids).toContain("literal/revision-fraction-rounds-down");
     expect(ids).toContain("literal/revision-java-double-suffix");
     expect(ids).toContain("literal/status-beyond-safe-range");

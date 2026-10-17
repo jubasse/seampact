@@ -7,6 +7,7 @@ package io.github.jubasse.seampact.ir.model
 
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
@@ -17,7 +18,7 @@ import kotlinx.serialization.json.JsonPrimitive
 
 @Serializable
 public data class ApplicationSignature(
-    @EncodeDefault public override val verify: String = "application",
+    @Required @EncodeDefault public override val verify: String = "application",
     public val headers: List<String>,
     public val key: SchemeKey? = null,
 ) : SignatureVerify {
@@ -30,7 +31,7 @@ public data class ApplicationSignature(
 @Serializable
 public data class BasicScheme(
     public val id: SchemeId,
-    @EncodeDefault public override val kind: String = "basic",
+    @Required @EncodeDefault public override val kind: String = "basic",
     public val origin: Origin,
 ) : Scheme {
     init {
@@ -50,7 +51,7 @@ public data class BearerFacts(
 @Serializable
 public data class BearerScheme(
     public val id: SchemeId,
-    @EncodeDefault public override val kind: String = "bearer",
+    @Required @EncodeDefault public override val kind: String = "bearer",
     public val bearer: BearerFacts? = null,
     public val origin: Origin,
 ) : Scheme {
@@ -71,7 +72,7 @@ public data class Bucket(
 
 @Serializable
 public data class CatalogueEnumSource(
-    @EncodeDefault public override val kind: String = "enum",
+    @Required @EncodeDefault public override val kind: String = "enum",
     public val enum: EnumId,
 ) : EnumSource {
     init {
@@ -83,7 +84,7 @@ public data class CatalogueEnumSource(
 @Serializable
 public data class CookieScheme(
     public val id: SchemeId,
-    @EncodeDefault public override val kind: String = "cookie",
+    @Required @EncodeDefault public override val kind: String = "cookie",
     /** The cookie name. */
     public val name: String,
     public val csrf: SchemeId? = null,
@@ -98,7 +99,7 @@ public data class CookieScheme(
 @Serializable
 public data class CredentialIdentity(
     public val id: IdentityId,
-    @EncodeDefault public override val kind: String = "credential",
+    @Required @EncodeDefault public override val kind: String = "credential",
     public val schemes: CredentialSchemes,
     public val principal: Principal,
     public val errors: List<ErrorCode>,
@@ -273,7 +274,7 @@ public data class HeaderDecl(
 @Serializable
 public data class HeaderScheme(
     public val id: SchemeId,
-    @EncodeDefault public override val kind: String = "header",
+    @Required @EncodeDefault public override val kind: String = "header",
     /** The header name. */
     public val name: String,
     public val origin: Origin,
@@ -421,7 +422,7 @@ public data class IdentityHeaderUse(
 
 @Serializable
 public data class IgnoreKeysPolicy(
-    @EncodeDefault public override val policy: String = "ignore",
+    @Required @EncodeDefault public override val policy: String = "ignore",
     public val reason: Reason,
 ) : KeysPolicy {
     init {
@@ -431,7 +432,7 @@ public data class IgnoreKeysPolicy(
 
 @Serializable
 public data class KeepKeysPolicy(
-    @EncodeDefault public override val policy: String = "keep",
+    @Required @EncodeDefault public override val policy: String = "keep",
     public val reason: Reason,
 ) : KeysPolicy {
     init {
@@ -512,7 +513,7 @@ public data class NatureDecl(
 
 @Serializable
 public data class NoSubject(
-    @EncodeDefault public override val kind: String = "none",
+    @Required @EncodeDefault public override val kind: String = "none",
 ) : RightSubject {
     init {
         require(kind == "none") { "NoSubject: kind is \"none\", got \"" + kind + "\"" }
@@ -590,7 +591,7 @@ internal object ProofPlacementSerializer : IrOpenEnumSerializer<ProofPlacement>(
 @Serializable
 public data class QueryScheme(
     public val id: SchemeId,
-    @EncodeDefault public override val kind: String = "query",
+    @Required @EncodeDefault public override val kind: String = "query",
     /** The query parameter name. */
     public val name: String,
     public val origin: Origin,
@@ -602,7 +603,7 @@ public data class QueryScheme(
 
 @Serializable
 public data class ResourceSubject(
-    @EncodeDefault public override val kind: String = "resource",
+    @Required @EncodeDefault public override val kind: String = "resource",
     public val type: Name,
     public val idSchema: TypeUse,
 ) : RightSubject {
@@ -681,7 +682,7 @@ public data class RuleProof(
 
 @Serializable
 public data class SchemaPrincipal(
-    @EncodeDefault public override val kind: String = "schema",
+    @Required @EncodeDefault public override val kind: String = "schema",
     public val schema: SchemaRef,
 ) : Principal {
     init {
@@ -773,7 +774,7 @@ public data class Scope(
 
 @Serializable
 public data class ScopeSubject(
-    @EncodeDefault public override val kind: String = "scope",
+    @Required @EncodeDefault public override val kind: String = "scope",
     public val scope: ScopeId,
 ) : RightSubject {
     init {
@@ -822,7 +823,7 @@ internal object SignatureEncodingSerializer : IrOpenEnumSerializer<SignatureEnco
 @Serializable
 public data class SignatureScheme(
     public val id: SchemeId,
-    @EncodeDefault public override val kind: String = "signature",
+    @Required @EncodeDefault public override val kind: String = "signature",
     /** The signature header. */
     public val name: String? = null,
     public val signature: SignatureVerify,
@@ -868,7 +869,7 @@ internal object SignatureVerifySerializer : IrUnionSerializer<SignatureVerify>("
 @Serializable
 public data class SignedIdentity(
     public val id: IdentityId,
-    @EncodeDefault public override val kind: String = "signed",
+    @Required @EncodeDefault public override val kind: String = "signed",
     public val signed: SchemeId,
     public val principal: Principal,
     public val unknownKeys: KeysPolicy? = null,
@@ -885,7 +886,7 @@ public data class SignedIdentity(
 
 @Serializable
 public data class SourceSchemeKey(
-    @EncodeDefault public override val kind: String = "from",
+    @Required @EncodeDefault public override val kind: String = "from",
     /** Where the request carries the key id (path, query or header). */
     public val from: ValueSource,
 ) : SchemeKey {
@@ -896,7 +897,7 @@ public data class SourceSchemeKey(
 
 @Serializable
 public data class TemplateSignature(
-    @EncodeDefault public override val verify: String = "template",
+    @Required @EncodeDefault public override val verify: String = "template",
     public val format: String,
     public val algorithm: String,
     public val payload: String,
@@ -911,7 +912,7 @@ public data class TemplateSignature(
 
 @Serializable
 public data class ValueSchemeKey(
-    @EncodeDefault public override val kind: String = "value",
+    @Required @EncodeDefault public override val kind: String = "value",
     /** The key id the application looks its secret up by; never the secret. */
     public val value: String,
 ) : SchemeKey {
@@ -922,7 +923,7 @@ public data class ValueSchemeKey(
 
 @Serializable
 public data class VariantsPrincipal(
-    @EncodeDefault public override val kind: String = "variants",
+    @Required @EncodeDefault public override val kind: String = "variants",
     public val variants: Map<VariantId, SchemaRef>,
 ) : Principal {
     init {
@@ -932,7 +933,7 @@ public data class VariantsPrincipal(
 
 @Serializable
 public data class VocabularyEnumSource(
-    @EncodeDefault public override val kind: String = "vocabulary",
+    @Required @EncodeDefault public override val kind: String = "vocabulary",
     public val vocabulary: String,
 ) : EnumSource {
     init {

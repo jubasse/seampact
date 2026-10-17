@@ -7,6 +7,7 @@ package io.github.jubasse.seampact.ir.model
 
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
@@ -198,7 +199,7 @@ public data class Deprecation(
 
 @Serializable
 public data class DerivedCsrf(
-    @EncodeDefault public override val kind: String = "derived",
+    @Required @EncodeDefault public override val kind: String = "derived",
     public val header: String,
     public val derivedFrom: DerivedFrom,
 ) : Csrf {
@@ -209,7 +210,7 @@ public data class DerivedCsrf(
 
 @Serializable
 public data class DerivedIdempotency(
-    @EncodeDefault public override val kind: String = "derived",
+    @Required @EncodeDefault public override val kind: String = "derived",
     public val header: String,
     public val replayHeader: String,
     public val lifetimeMs: Long,
@@ -224,7 +225,7 @@ public data class DerivedIdempotency(
 
 @Serializable
 public data class ExemptCsrf(
-    @EncodeDefault public override val kind: String = "exempt",
+    @Required @EncodeDefault public override val kind: String = "exempt",
     public val reason: Reason,
     public val origin: Origin,
 ) : Csrf {
@@ -235,7 +236,7 @@ public data class ExemptCsrf(
 
 @Serializable
 public data class ExemptIdempotency(
-    @EncodeDefault public override val kind: String = "exempt",
+    @Required @EncodeDefault public override val kind: String = "exempt",
     public val reason: Reason,
     public val origin: Origin,
 ) : Idempotency {
@@ -407,7 +408,7 @@ internal object IdempotencyEnforcementSerializer : IrOpenEnumSerializer<Idempote
 
 @Serializable
 public data class IdentityAccess(
-    @EncodeDefault public override val kind: String = "identity",
+    @Required @EncodeDefault public override val kind: String = "identity",
     public val identity: IdentityId,
     public val schemes: List<SchemeId>,
     public val origin: Origin,
@@ -419,7 +420,7 @@ public data class IdentityAccess(
 
 @Serializable
 public data class IgnoreUnknownQuery(
-    @EncodeDefault public override val policy: String = "ignore",
+    @Required @EncodeDefault public override val policy: String = "ignore",
     public val reason: Reason,
     public val origin: Origin,
 ) : UnknownQuery {
@@ -656,7 +657,7 @@ public data class OperationScope(
 
 @Serializable
 public data class OptionalAccess(
-    @EncodeDefault public override val kind: String = "optional",
+    @Required @EncodeDefault public override val kind: String = "optional",
     public val identity: IdentityId,
     public val schemes: List<SchemeId>,
     public val reason: Reason,
@@ -798,7 +799,7 @@ public data class PrincipalRequirement(
 
 @Serializable
 public data class PublicAccess(
-    @EncodeDefault public override val kind: String = "public",
+    @Required @EncodeDefault public override val kind: String = "public",
     public val reason: Reason,
     public val origin: Origin,
 ) : Access {
@@ -883,7 +884,7 @@ internal object QueryWireKindSerializer : IrOpenEnumSerializer<QueryWireKind>("Q
 
 @Serializable
 public data class RefuseUnknownQuery(
-    @EncodeDefault public override val policy: String = "refuse",
+    @Required @EncodeDefault public override val policy: String = "refuse",
 ) : UnknownQuery {
     init {
         require(policy == "refuse") { "RefuseUnknownQuery: policy is \"refuse\", got \"" + policy + "\"" }
@@ -1022,7 +1023,7 @@ internal object ResponseShapeSerializer : IrOpenEnumSerializer<ResponseShape>("R
 
 @Serializable
 public data class RightRequirement(
-    @EncodeDefault public override val kind: String = "right",
+    @Required @EncodeDefault public override val kind: String = "right",
     public val right: RightId,
     /** Values already validated against the right's params schema. */
     @Serializable(with = IrOptionalOpaqueSerializer::class) public val params: JsonElement? = null,
@@ -1039,7 +1040,7 @@ public data class RightRequirement(
 
 @Serializable
 public data class RuleRequirement(
-    @EncodeDefault public override val kind: String = "rule",
+    @Required @EncodeDefault public override val kind: String = "rule",
     public val rule: RuleId,
     /** Values already validated against the rule's params schema. */
     @Serializable(with = IrOptionalOpaqueSerializer::class) public val params: JsonElement? = null,

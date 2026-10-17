@@ -7,6 +7,7 @@ package io.github.jubasse.seampact.ir.model
 
 import kotlinx.serialization.EncodeDefault
 import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.Required
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
@@ -45,7 +46,7 @@ internal object AbsentSerializer : IrOpenEnumSerializer<Absent>("Absent", Absent
 
 @Serializable
 public data class ArrayTemplate(
-    @EncodeDefault public override val kind: String = "array",
+    @Required @EncodeDefault public override val kind: String = "array",
     public val items: List<Template>,
 ) : Template {
     init {
@@ -55,7 +56,7 @@ public data class ArrayTemplate(
 
 @Serializable
 public data class EachTemplate(
-    @EncodeDefault public override val kind: String = "each",
+    @Required @EncodeDefault public override val kind: String = "each",
     public val of: Slot,
     @SerialName("as") public val as_: Template,
 ) : Template {
@@ -116,7 +117,7 @@ public data class HeaderTemplate(
 
 @Serializable
 public data class LiteralTemplate(
-    @EncodeDefault public override val kind: String = "literal",
+    @Required @EncodeDefault public override val kind: String = "literal",
     public val value: JsonElement,
 ) : Template {
     init {
@@ -206,7 +207,7 @@ public data class NamedTemplate(
 
 @Serializable
 public data class ObjectTemplate(
-    @EncodeDefault public override val kind: String = "object",
+    @Required @EncodeDefault public override val kind: String = "object",
     public val members: List<ObjectTemplateMember>,
     public val merge: Slot? = null,
 ) : Template {
@@ -397,7 +398,7 @@ public data class PagingStyle(
 
 @Serializable
 public data class PlainMemberName(
-    @EncodeDefault public override val kind: String = "text",
+    @Required @EncodeDefault public override val kind: String = "text",
     public val text: String,
 ) : MemberName {
     init {
@@ -407,7 +408,7 @@ public data class PlainMemberName(
 
 @Serializable
 public data class PlainTextPart(
-    @EncodeDefault public override val kind: String = "text",
+    @Required @EncodeDefault public override val kind: String = "text",
     public val text: String,
 ) : TextPart {
     init {
@@ -426,7 +427,7 @@ public typealias Slot = String
 
 @Serializable
 public data class SlotMemberName(
-    @EncodeDefault public override val kind: String = "slot",
+    @Required @EncodeDefault public override val kind: String = "slot",
     public val slot: Slot,
 ) : MemberName {
     init {
@@ -436,7 +437,7 @@ public data class SlotMemberName(
 
 @Serializable
 public data class SlotTemplate(
-    @EncodeDefault public override val kind: String = "slot",
+    @Required @EncodeDefault public override val kind: String = "slot",
     public val slot: Slot,
     public val path: List<String>,
 ) : Template {
@@ -447,7 +448,7 @@ public data class SlotTemplate(
 
 @Serializable
 public data class SlotTextPart(
-    @EncodeDefault public override val kind: String = "slot",
+    @Required @EncodeDefault public override val kind: String = "slot",
     public val slot: Slot,
     public val path: List<String>,
 ) : TextPart {
@@ -536,7 +537,7 @@ internal object TextPartSerializer : IrUnionSerializer<TextPart>("TextPart", "ki
 
 @Serializable
 public data class TextTemplate(
-    @EncodeDefault public override val kind: String = "text",
+    @Required @EncodeDefault public override val kind: String = "text",
     public val parts: List<TextPart>,
 ) : Template {
     init {

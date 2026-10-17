@@ -34,6 +34,7 @@ export const KOTLIN_CLAIMED_NAMES = [
   "IrShape",
   "EncodeDefault",
   "ExperimentalSerializationApi",
+  "Required",
   "SerialName",
   "Serializable",
   "UseSerializers",
@@ -140,7 +141,7 @@ function fileText(
   return `${lines.join("\n")}\n`;
 }
 
-// `@EncodeDefault` writes a variant's fixed tag; every `Long` reads through the IR integer serializer.
+// `@EncodeDefault` writes a variant's fixed tag and `@Required` refuses a document without it; every `Long` reads through the IR integer serializer.
 const MODEL_FILE_ANNOTATIONS = [
   "@file:OptIn(ExperimentalSerializationApi::class)",
   "@file:UseSerializers(IrIntegerSerializer::class)",
@@ -151,6 +152,7 @@ const SUPPORT_FILE_ANNOTATIONS = ["@file:OptIn(ExperimentalSerializationApi::cla
 const MODEL_IMPORTS = [
   "kotlinx.serialization.EncodeDefault",
   "kotlinx.serialization.ExperimentalSerializationApi",
+  "kotlinx.serialization.Required",
   "kotlinx.serialization.SerialName",
   "kotlinx.serialization.Serializable",
   "kotlinx.serialization.UseSerializers",
@@ -548,7 +550,7 @@ class KotlinEmitter {
     if (tag !== undefined && tag.member === member.name) {
       return [
         ...doc,
-        `${INDENT}${serialName}@EncodeDefault public override val ${property}: String = ${kotlinString(tag.value)},`,
+        `${INDENT}${serialName}@Required @EncodeDefault public override val ${property}: String = ${kotlinString(tag.value)},`,
       ];
     }
 

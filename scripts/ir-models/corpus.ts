@@ -39,8 +39,13 @@ export type CorpusRefusal = { code: string; member: string };
 
 export type CorpusVerdict =
   | { outcome: "accept" }
-  /** Not JSON, or JSON the IR model refuses to decode. */
+  /** JSON the IR model refuses to decode. */
   | { outcome: "malformed" }
+  /**
+   * Text that is not JSON. A reader never accepts it: it fails as malformed, or, where the platform parser reads
+   * more than JSON (Kotlin reads `3d` as a number), as a refusal.
+   */
+  | { outcome: "not-json" }
   /** Sorted by member, then code. */
   | { outcome: "refuse"; refusals: CorpusRefusal[] };
 
@@ -108,7 +113,7 @@ export function verdictOf(text: string, support: IrSupport): CorpusVerdict {
   try {
     document = JSON.parse(text);
   } catch {
-    return { outcome: "malformed" };
+    return { outcome: "not-json" };
   }
 
   const mismatches = checkIrSupport(document, support);
