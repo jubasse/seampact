@@ -35,6 +35,8 @@ pagings:
       sort: { query: sort, style: signed }
     response:
       body: $items
+conventions:
+  paging: { maxLimit: 50 }
 rights:
   items.cost: {}
   items.grade: { params: { level: { type: string } } }

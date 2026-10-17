@@ -1,6 +1,6 @@
 import type { DraftIR, PassPart } from "../../../pipeline/seam.js";
 import { type AccessRightsCatalogues, accessRightsCatalogues } from "./catalogues.js";
-import { accessRightsFieldRights, accessRightsRestrictionChecks } from "./field-rights.js";
+import { accessRightsFieldRights } from "./field-rights.js";
 import { accessRightsFilteredBy } from "./filtered-by.js";
 import {
   type AccessRightsDeriveEntry,
@@ -15,6 +15,9 @@ import {
   accessRightsItemChecks,
   accessRightsRequirements,
 } from "./requires.js";
+import { accessRightsRestrictionReaching } from "./restricted-fields.js";
+import { accessRightsRefuseErrorParams } from "./restricted-positions.js";
+import { accessRightsRestrictionChecks } from "./restrictions.js";
 import { accessRightsApi, accessRightsRoutes } from "./routes.js";
 import type { AccessRightsContext } from "./schema-use.js";
 import { accessRightsOperationScopes } from "./scopes.js";
@@ -23,7 +26,7 @@ import { type AccessRightsSortKeyRights, accessRightsSortKeyRights } from "./sor
 // The access.rights half (ADR 0006 sections 2 and 3): the `rights`, `rules`, `scopes` and `buckets` catalogues
 // and, per operation, the resolved `scopes`, the ordered `requires` (pack-derived rights and requirements
 // included), `fieldRights`, `filteredBy` and the rights of its sort keys. It reads each operation's `id`, `op`,
-// `safe`, `origin`, input schema, responses and sort keys (tree.nodes), `packs` to name a pack
+// `safe`, `origin`, input schema, query and header params, responses and sort keys (tree.nodes), `packs` to name a pack
 // derivation, and `schemas` for the principal fields a subject reads and the restricted fields.
 //
 // Import pipeline values and types from `pipeline/seam.js` only, never from `pipeline/index.js`, the orchestrator
@@ -41,6 +44,8 @@ export const accessRightsPass: PassPart<"access.rights"> = {
     "operations[].access",
     "operations[].input.schema",
     "operations[].input.origin",
+    "operations[].params.query",
+    "operations[].params.header",
     "operations[].responses",
     "operations[].paging.sortKeys[].key",
     "operations[].paging.sortKeys[].origin",
@@ -84,9 +89,10 @@ function accessRightsRun(draft: DraftIR, context: AccessRightsContext): void {
         });
 
   const checks = accessRightsItemChecks();
-  const restrictions = accessRightsRestrictionChecks();
+  const restrictions = accessRightsRestrictionChecks(accessRightsRestrictionReaching(draft.schemas));
 
   accessRightsCheckRequirementEntries(context, reporter, catalogues, checks);
+  accessRightsRefuseErrorParams(context, { reporter, schemas: draft.schemas, checks: restrictions });
   const built = routes.map(({ route, scopes }) => ({
     scopes,
     requires: accessRightsRequirements(context, reporter, catalogues, checks, {

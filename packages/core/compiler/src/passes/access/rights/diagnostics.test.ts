@@ -88,12 +88,15 @@ const REFUSED: Record<(typeof REFUSED_FIXTURES)[number], [AccessRightsRule, stri
   guest: [["guest-right", "api", "/surfaces/app/routes/articles/member/routes/preview/requires/1"]],
   service: [["caller-right", "api", "/surfaces/maintenance/routes/reindex"]],
   "fields-refused": [
+    ["field-right-position", "api", "/schemas/Manifest/properties/secret/restrictedTo"],
     ["field-right-target", "api", "/schemas/Crate/properties/label/restrictedTo"],
     ["field-right-params", "api", "/schemas/Crate/properties/seal/restrictedTo/params"],
     ["filtered-by", "api", "/surfaces/app/routes/crates/ops/list/filteredBy"],
     ["sort-key-right", "api", "/surfaces/app/routes/crates/ops/list/sortable/0/right"],
     ["field-right-subject", "api", "/surfaces/app/routes/crates/ops/create/input"],
     ["field-right-recursive", "api", "/schemas/Pallet"],
+    ["field-right-conflict", "api", "/schemas/Pickup/properties/fee/restrictedTo"],
+    ["field-right-limit", "api", "/surfaces/app/routes/stack"],
   ],
 };
 
@@ -122,6 +125,9 @@ const RULES = [
   "field-right-params",
   "field-right-subject",
   "field-right-recursive",
+  "field-right-conflict",
+  "field-right-position",
+  "field-right-limit",
   "sort-key-right",
   "filtered-by",
 ] as const satisfies readonly AccessRightsRule[];

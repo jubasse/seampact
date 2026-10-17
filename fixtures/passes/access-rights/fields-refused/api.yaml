@@ -1,6 +1,8 @@
 # Refused field and sort-key rights (ADR 0003 section 6, ADR 0002 section 10): a restriction naming an undeclared
 # right, params that a right does not declare, a resource right in a create input, a restricted field below a
-# recursive reference, a sort key whose right disagrees with its field's, and an undeclared `filteredBy` right.
+# recursive reference, a sort key whose right disagrees with its field's, an undeclared `filteredBy` right, two
+# union variants restricting one pointer differently, a restricted field in an error's params, and a route
+# reaching more restricted fields than one operation may list.
 api: { name: depot, version: 1 }
 
 schemes:
@@ -30,6 +32,57 @@ schemas:
     properties:
       code: { type: string, restrictedTo: audit }
       stacked: { type: array, items: Pallet }
+  Delivery:
+    type: object
+    properties: { fee: { type: integer, restrictedTo: audit } }
+  Pickup:
+    type: object
+    properties: { fee: { type: integer, restrictedTo: crates.inspect } }
+  Movement:
+    discriminator: kind
+    oneOf: { delivery: Delivery, pickup: Pickup }
+  Manifest:
+    type: object
+    properties: { secret: { type: string, restrictedTo: audit } }
+  Stack0:
+    type: object
+    properties: { a: Stack1, b: Stack1 }
+  Stack1:
+    type: object
+    properties: { a: Stack2, b: Stack2 }
+  Stack2:
+    type: object
+    properties: { a: Stack3, b: Stack3 }
+  Stack3:
+    type: object
+    properties: { a: Stack4, b: Stack4 }
+  Stack4:
+    type: object
+    properties: { a: Stack5, b: Stack5 }
+  Stack5:
+    type: object
+    properties: { a: Stack6, b: Stack6 }
+  Stack6:
+    type: object
+    properties: { a: Stack7, b: Stack7 }
+  Stack7:
+    type: object
+    properties: { a: Stack8, b: Stack8 }
+  Stack8:
+    type: object
+    properties: { a: Stack9, b: Stack9 }
+  Stack9:
+    type: object
+    properties: { a: Stack10, b: Stack10 }
+  Stack10:
+    type: object
+    properties: { code: { type: string, restrictedTo: audit } }
+
+errors:
+  depot.full: { status: 409, params: { manifest: Manifest } }
+
+conventions:
+  paging: { maxLimit: 50 }
 
 pagings:
   offset:
@@ -43,6 +96,7 @@ pagings:
 rights:
   crates.weigh: { subject: { resource: Crate, id: CrateId } }
   audit: {}
+  crates.inspect: {}
 
 surfaces:
   app:
@@ -60,3 +114,5 @@ surfaces:
             filteredBy: crates.ghost
           create: { input: Crate }
       pallet: { method: get, output: Pallet }
+      movement: { method: get, output: Movement }
+      stack: { method: get, output: Stack0 }

@@ -31,6 +31,9 @@ export type AccessRightsRule =
   | "field-right-params"
   | "field-right-subject"
   | "field-right-recursive"
+  | "field-right-conflict"
+  | "field-right-position"
+  | "field-right-limit"
   | "sort-key-right"
   | "filtered-by";
 
@@ -46,6 +49,8 @@ export interface AccessRightsProblem {
   fix: string;
   /** The pointer of the merged raw tree the diagnostic is located at. */
   pointer: string;
+  /** Joins the once key, so problems of one rule at one pointer about different things are each reported. */
+  distinctBy?: string;
   related?: AccessRightsRelated[];
 }
 
@@ -93,7 +98,7 @@ export function accessRightsReporter(context: PassContext): AccessRightsReporter
   return {
     error(problem) {
       errors += 1;
-      const key = JSON.stringify([problem.rule, problem.pointer]);
+      const key = JSON.stringify([problem.rule, problem.pointer, problem.distinctBy ?? ""]);
 
       if (reported.has(key)) return;
       reported.add(key);

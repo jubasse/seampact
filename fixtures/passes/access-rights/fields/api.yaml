@@ -65,6 +65,9 @@ schemas:
       latest: Activity
       pinned: { type: array, items: Note }
 
+conventions:
+  paging: { maxLimit: 50 }
+
 pagings:
   cursor:
     request:
