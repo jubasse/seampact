@@ -298,3 +298,23 @@ surfaces:
     expect(run.located).toBe(true);
   });
 });
+
+describe("a default on a required query field", () => {
+  test("is refused at the default, since a required field is never absent", () => {
+    const run = treeSchemasRunApi(`surfaces:
+  app:
+    routes:
+      search:
+        method: get
+        query: { term: { type: string, default: all } }
+`);
+
+    expect(located(run)).toEqual([
+      ["mark-position", "/surfaces/app/routes/search/query/term/default"],
+    ]);
+    expect(run.diagnostics[0]?.message).toBe(
+      "'default' sits on an optional property or an optional query field",
+    );
+    expect(run.located).toBe(true);
+  });
+});
