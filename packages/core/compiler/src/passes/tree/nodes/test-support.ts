@@ -148,6 +148,8 @@ export function treeNodesStubService(rows: TreeNodesStubRows): TreeSchemaService
       Object.hasOwn(queryWires, pointer) ? structuredClone(queryWires[pointer]) : undefined,
     checkExample: (value) =>
       markersIn(value, "").map((pointer) => ({ pointer, message: "the value is invalid" })),
+    checkTextExample: (text) =>
+      markersIn(text, "").map((pointer) => ({ pointer, message: "the value is invalid" })),
   };
 }
 

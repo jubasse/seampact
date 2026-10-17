@@ -65,6 +65,7 @@ export function treeSchemasService(state: TreeSchemasServiceState): TreeSchemaSe
       return wire === undefined ? undefined : structuredClone(wire);
     },
     checkExample: (value, use) => checker.check(value, use),
+    checkTextExample: (text, use) => checker.checkText(text, use),
   };
 }
 

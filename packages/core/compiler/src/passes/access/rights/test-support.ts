@@ -85,6 +85,7 @@ export function accessRightsMarkerService(service: TreeSchemaService): TreeSchem
       JSON.stringify(value).includes(DRAFT_FIXTURE_INVALID_EXAMPLE)
         ? [{ pointer: "", message: "the example holds the fixture's invalid marker" }]
         : [],
+    checkTextExample: (text, use) => service.checkTextExample(text, use),
   };
 }
 

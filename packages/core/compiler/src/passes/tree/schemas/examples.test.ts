@@ -195,3 +195,39 @@ describe("examples parsed, by shape", () => {
     expect(located(refused)).toEqual([["schema-unknown", "/schemas/Broken/properties/bad"]]);
   });
 });
+
+describe("text examples parsed by the wire form", () => {
+  const run = treeSchemasRunApi(CATALOGUES);
+  const text = (value: string, use: IrWriter.TypeUse) =>
+    run.service.checkTextExample(value, use).map((issue) => issue.message);
+  const scalar = (
+    type: IrWriter.ScalarTypeUse["type"],
+    refinements: IrWriter.Refinements = {},
+    format?: IrWriter.ScalarTypeUse["format"],
+  ): IrWriter.TypeUse => ({
+    kind: "scalar",
+    type,
+    refinements,
+    ...(format === undefined ? {} : { format }),
+  });
+
+  test("a number, boolean, int64, string or enum text stands for its value", () => {
+    expect(text("12", scalar("integer", { minimum: "1" }))).toEqual([]);
+    expect(text("1.5e2", scalar("number"))).toEqual([]);
+    expect(text("true", scalar("boolean"))).toEqual([]);
+    expect(text("9223372036854775807", scalar("integer", {}, "int64"))).toEqual([]);
+    expect(text("abc", scalar("string", { maxLength: 3 }))).toEqual([]);
+    expect(text("open", { kind: "enum", enum: "State" })).toEqual([]);
+  });
+
+  test("a text that its wire form does not read, or whose value does not fit, is refused", () => {
+    expect(text("twelve", scalar("integer"))).toEqual(["'twelve' is not a number"]);
+    expect(text("1.5", scalar("integer"))).toEqual(["1.5 is not an integer in the safe range"]);
+    expect(text("0", scalar("integer", { minimum: "1" }))).toEqual(["0 is not at least 1"]);
+    expect(text("yes", scalar("boolean"))).toEqual(["'yes' is not 'true' or 'false'"]);
+    expect(text("closed", { kind: "enum", enum: "State" })).toEqual([
+      "'closed' is not a value of State",
+    ]);
+    expect(text("x", ref("Task"))).toEqual(["a ref use has no text form"]);
+  });
+});

@@ -64,6 +64,7 @@ const NO_SCHEMAS: TreeSchemaService = {
   typeUse: () => undefined,
   queryWire: () => undefined,
   checkExample: () => [],
+  checkTextExample: () => [],
 };
 
 // Fake halves that log `<api>:<half>` and run `acts[half]`; each declares nothing but `writes[half]`.

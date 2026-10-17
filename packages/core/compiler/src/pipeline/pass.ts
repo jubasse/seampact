@@ -5,8 +5,8 @@ import type { ResolvedConventions } from "./conventions.js";
 import type { DraftIR } from "./draft.js";
 import type { HalfName, PassOf } from "./halves.js";
 import type { InheritedReader } from "./inherited.js";
-import type { PassReadonly } from "./readonly.js";
 import type { DraftField } from "./ownership.js";
+import type { PassReadonly } from "./readonly.js";
 
 // The pass interface of ADR 0006 section 2, with the halves made explicit: each pass is two halves, each half a
 // `PassPart` that declares the draft fields it reads and writes. The guard (`guard.ts`) holds a half to its
@@ -59,6 +59,13 @@ export interface TreeSchemaService {
   queryWire(pointer: string): IrWriter.QueryWire | undefined;
   /** Checks an example value against a use (FR-3); an empty list means the example fits. */
   checkExample(value: unknown, use: IrWriter.TypeUse): readonly TreeSchemaExampleIssue[];
+  /**
+   * Checks an example written as text against a use, the text read by the use's wire form: a table example's key
+   * by the id schema, a path or query example by its param's schema. A string, `int64`, decimal or enum text is
+   * the value as written, a number or boolean text its JSON text; a use that is neither a scalar nor an enum has
+   * no text form and answers one issue.
+   */
+  checkTextExample(text: string, use: IrWriter.TypeUse): readonly TreeSchemaExampleIssue[];
 }
 
 /**

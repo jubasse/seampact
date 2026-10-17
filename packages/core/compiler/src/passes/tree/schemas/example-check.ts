@@ -21,6 +21,9 @@ const DATE_TIME =
   /^([0-9]{4}-[0-9]{2}-[0-9]{2})[Tt]([0-9]{2}):([0-9]{2}):([0-9]{2})(?:\.[0-9]{1,9})?(?:[Zz]|[+-]([0-9]{2}):([0-9]{2}))$/;
 const INT64 = /^-?(0|[1-9][0-9]*)$/;
 const DECIMAL = /^-?(0|[1-9][0-9]*)(\.[0-9]+)?$/;
+// A JSON number, the text form of a number on the wire.
+const NUMBER_TEXT = /^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$/;
+const BOOLEAN_TEXT: Readonly<Record<string, boolean>> = { true: true, false: false };
 const INT64_MIN = -(2n ** 63n);
 const INT64_MAX = 2n ** 63n - 1n;
 const HOURS = 24;
@@ -32,6 +35,9 @@ const BOUND_CHECKS = [
   ["maximum", (order: number) => order <= 0, "at most"],
   ["exclusiveMaximum", (order: number) => order < 0, "below"],
 ] as const;
+
+// A text read by its wire form: the value it stands for, or why it stands for none.
+type TextReading = { value: unknown } | { problem: string };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -87,6 +93,36 @@ export class TreeSchemasExampleChecker {
     this.use(value, use, "", issues);
 
     return issues;
+  }
+
+  /**
+   * The issues of a text, a path segment, a query value or a key, read by the use's wire form: a string, an
+   * `int64`, a decimal or an enum value as written, a number or a boolean as its JSON text. Only a scalar or an
+   * enum use has a text form.
+   */
+  checkText(text: string, use: IrWriter.TypeUse): TreeSchemaExampleIssue[] {
+    const read = this.textValue(text, use);
+
+    return "problem" in read
+      ? [{ pointer: "", message: read.problem }]
+      : this.check(read.value, use);
+  }
+
+  private textValue(text: string, use: IrWriter.TypeUse): TextReading {
+    if (use.kind === "enum") return { value: text };
+
+    if (use.kind !== "scalar") return { problem: `a ${use.kind} use has no text form` };
+
+    if (use.type === "string" || use.format === "int64") return { value: text };
+
+    if (use.type === "boolean")
+      return Object.hasOwn(BOOLEAN_TEXT, text)
+        ? { value: BOOLEAN_TEXT[text] }
+        : { problem: `${quote(text)} is not 'true' or 'false'` };
+
+    return NUMBER_TEXT.test(text)
+      ? { value: Number(text) }
+      : { problem: `${quote(text)} is not a number` };
   }
 
   private use(

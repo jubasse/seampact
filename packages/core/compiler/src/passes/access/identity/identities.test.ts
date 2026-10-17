@@ -358,6 +358,7 @@ enums:
       typeUse: () => shared,
       queryWire: () => undefined,
       checkExample: () => [],
+      checkTextExample: () => [],
     };
     const { draft } = accessIdentityRun(contract, accessIdentityDraft(), sharedService);
 
