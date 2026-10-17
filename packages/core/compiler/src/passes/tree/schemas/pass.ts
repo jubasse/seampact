@@ -18,6 +18,7 @@ import {
 import { treeSchemasCompileDeclarations, treeSchemasCompileRoutes } from "./positions.js";
 import { treeSchemasQueryWires } from "./query-wire.js";
 import { TreeSchemasReporter } from "./raw.js";
+import { treeSchemasCopyRelayDeclarations } from "./relays.js";
 
 // The tree.schemas half (ADR 0006 sections 2 and 3): it seeds the core schemas, compiles every schema and enum of
 // the api into `schemas`, `scalars` and `enums`, and returns the schema service every later half receives.
@@ -91,9 +92,20 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
     treeSchemasCompileBatchInputs(compiler, nodes, operationNames, context.conventions);
     treeSchemasCompileVersionProperties(compiler, nodes, operationNames);
     compiler.finish();
-    const enums = treeSchemasCompileEnums(context.raw.merged.enums, reporter);
+    const declaredEnums = treeSchemasCompileEnums(context.raw.merged.enums, reporter);
+    const relays = treeSchemasCopyRelayDeclarations(
+      compiler,
+      declaredEnums,
+      nodes,
+      context,
+      reporter,
+    );
 
-    treeSchemasWriteDirections(compiler, enums);
+    for (const schema of relays.schemas) compiler.schemas.set(schema.id, schema);
+    const enums = [...declaredEnums, ...relays.enums];
+    const scalars = [...compiler.scalars.all(), ...relays.scalars];
+
+    treeSchemasWriteDirections(compiler, enums, relays);
     treeSchemasRefuseOutputUnknownKeys(compiler, reporter);
     treeSchemasCheckWrittenExamples(
       compiler.exampleChecks,
@@ -104,7 +116,7 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
       reporter,
     );
 
-    for (const scalar of compiler.scalars.all()) draft.scalars[scalar.id] = structuredClone(scalar);
+    for (const scalar of scalars) draft.scalars[scalar.id] = structuredClone(scalar);
 
     for (const [id, schema] of compiler.schemas) draft.schemas[id] = structuredClone(schema);
 
