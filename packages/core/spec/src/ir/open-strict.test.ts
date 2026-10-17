@@ -221,6 +221,18 @@ test("an integer past the safe range is a problem in both forms", () => {
   expect(validateIr(past, "strict")).toMatchObject({ valid: false, problems: [problem] });
 });
 
+test("a type use of any kind holds docs and examples at any position", () => {
+  const annotated = { docs: { description: "Annotated." }, examples: [{}] };
+  const ir = mutateAt(sample("every-member.ir.json"), "/schemas/Task/properties/6", (property) => {
+    Object.assign(property.type as Record<string, unknown>, annotated);
+  });
+  const bodies = mutateAt(ir, "/operations/2/responses/0", (response) => {
+    Object.assign(response.body as Record<string, unknown>, annotated);
+  });
+
+  expect(validateIr(bodies, "strict")).toEqual(VALID_REPORT);
+});
+
 test("a mapping error the walk did not list fails closed", () => {
   // An unknown tag only the validator saw: whether its union is must-act is unknown, so it counts as must-act.
   const error = {

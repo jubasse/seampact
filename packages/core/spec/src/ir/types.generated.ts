@@ -701,9 +701,9 @@ export interface RefTypeUse {
   unknownKeys?: UnknownKeys;
   /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
   nullable?: boolean;
-  /** The docs written on a nested position: the items of an array use, the keys or values of a map schema, the schema of a JSON content. Any other type use leaves them out, since its holder keeps them, and an inline object, map or union keeps them on its hoisted schema (invariant ir.type-use.annotations). */
+  /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
   docs?: Docs;
-  /** The examples written on a nested position, placed as docs are (invariant ir.type-use.annotations). */
+  /** The examples written at the position of this use, placed as its docs are. */
   examples?: unknown[];
 }
 
@@ -712,9 +712,9 @@ export interface OpaqueTypeUse {
   kind: "opaque";
   reason: Reason;
   origin: Origin;
-  /** The docs written on a nested position: the items of an array use, the keys or values of a map schema, the schema of a JSON content. Any other type use leaves them out, since its holder keeps them, and an inline object, map or union keeps them on its hoisted schema (invariant ir.type-use.annotations). */
+  /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
   docs?: Docs;
-  /** The examples written on a nested position, placed as docs are (invariant ir.type-use.annotations). */
+  /** The examples written at the position of this use, placed as its docs are. */
   examples?: unknown[];
 }
 
@@ -725,9 +725,9 @@ export interface FileTypeUse {
   maxSizeBytes?: number;
   /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
   nullable?: boolean;
-  /** The docs written on a nested position: the items of an array use, the keys or values of a map schema, the schema of a JSON content. Any other type use leaves them out, since its holder keeps them, and an inline object, map or union keeps them on its hoisted schema (invariant ir.type-use.annotations). */
+  /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
   docs?: Docs;
-  /** The examples written on a nested position, placed as docs are (invariant ir.type-use.annotations). */
+  /** The examples written at the position of this use, placed as its docs are. */
   examples?: unknown[];
 }
 
@@ -742,9 +742,9 @@ export interface EnumTypeUse {
   narrowedTo?: EnumNarrowing;
   /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
   nullable?: boolean;
-  /** The docs written on a nested position: the items of an array use, the keys or values of a map schema, the schema of a JSON content. Any other type use leaves them out, since its holder keeps them, and an inline object, map or union keeps them on its hoisted schema (invariant ir.type-use.annotations). */
+  /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
   docs?: Docs;
-  /** The examples written on a nested position, placed as docs are (invariant ir.type-use.annotations). */
+  /** The examples written at the position of this use, placed as its docs are. */
   examples?: unknown[];
 }
 
@@ -772,9 +772,9 @@ export interface ScalarTypeUse {
   content?: JsonContent;
   /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
   nullable?: boolean;
-  /** The docs written on a nested position: the items of an array use, the keys or values of a map schema, the schema of a JSON content. Any other type use leaves them out, since its holder keeps them, and an inline object, map or union keeps them on its hoisted schema (invariant ir.type-use.annotations). */
+  /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
   docs?: Docs;
-  /** The examples written on a nested position, placed as docs are (invariant ir.type-use.annotations). */
+  /** The examples written at the position of this use, placed as its docs are. */
   examples?: unknown[];
 }
 
@@ -785,9 +785,9 @@ export interface ArrayTypeUse {
   maxItems?: number;
   /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
   nullable?: boolean;
-  /** The docs written on a nested position: the items of an array use, the keys or values of a map schema, the schema of a JSON content. Any other type use leaves them out, since its holder keeps them, and an inline object, map or union keeps them on its hoisted schema (invariant ir.type-use.annotations). */
+  /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
   docs?: Docs;
-  /** The examples written on a nested position, placed as docs are (invariant ir.type-use.annotations). */
+  /** The examples written at the position of this use, placed as its docs are. */
   examples?: unknown[];
 }
 

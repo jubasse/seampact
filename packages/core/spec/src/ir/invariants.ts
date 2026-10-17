@@ -20,7 +20,6 @@ export type IrInvariantId =
   | "ir.csrf.cookie"
   | "ir.field-wire.members"
   | "ir.property.nullable"
-  | "ir.type-use.annotations"
   | "ir.scalar.type"
   | "ir.id.scalar"
   | "ir.ref.resolves"
@@ -67,15 +66,6 @@ const FIELD_MEDIA = ["application/x-www-form-urlencoded", "multipart/form-data"]
 const DOCUMENT_MEDIA = ["application/json"];
 // The catalogues of the declarations the compiler supplies (origin layer `core`, ADR 0004 sections 6 and 13).
 const CORE_CATALOGUES = ["formats", "errors", "schemas"];
-// The variants of a type use, read from the schema, and the nested positions whose use keeps the docs and examples
-// written there: every other holder of a type use keeps its own.
-const TYPE_USE_VARIANTS = unionVariantNames("TypeUse");
-const NESTED_USE_MEMBERS: Readonly<Record<string, readonly string[]>> = {
-  ArrayTypeUse: ["items"],
-  MapSchema: ["keys", "values"],
-  JsonContent: ["schema"],
-};
-const USE_ANNOTATIONS = ["docs", "examples"];
 
 export const IR_PARTITIONS = {
   "ValueSource.in": [NAMED_SOURCES, BARE_SOURCES],
@@ -102,21 +92,6 @@ function knownValues(definition: string, member: string): readonly string[] {
 
 const isKnown = (definition: string, member: string, value: unknown): boolean =>
   typeof value === "string" && knownValues(definition, member).includes(value);
-
-// The definition names of a tagged union's variants, read from the schema files.
-function unionVariantNames(union: string): ReadonlySet<string> {
-  const variants = irDefinition(union)?.oneOf;
-
-  if (!Array.isArray(variants)) throw new Error(`${union} is not a tagged union`);
-
-  return new Set(
-    variants.map((variant: SchemaNode) => {
-      const ref = String(variant.$ref);
-
-      return ref.slice(ref.lastIndexOf("/") + 1);
-    }),
-  );
-}
 
 // The catalogues an id names, by the id definition that keys them: every map of the top level and of the api
 // whose keys are a `$ref` to an id definition (`schemes` keyed by `SchemeId`, `surfaces` by `SurfaceId`).
@@ -227,32 +202,6 @@ function checkProofWires(input: Json, pointer: string, fail: Fail): void {
   }
 }
 
-// A type use keeps the docs and examples written on it only at a nested position (array items, map keys or values,
-// a JSON content schema); elsewhere its holder keeps them.
-function checkUseAnnotations(
-  use: Json,
-  pointer: string,
-  objects: ReadonlyMap<string, string | undefined>,
-  fail: Fail,
-): void {
-  const written = USE_ANNOTATIONS.filter((member) => has(use, member));
-
-  if (written.length === 0) return;
-  const holder = objects.get(parentOf(pointer));
-  const member = unescapeSegment(pointer.slice(pointer.lastIndexOf("/") + 1));
-  const nested =
-    holder !== undefined &&
-    Object.hasOwn(NESTED_USE_MEMBERS, holder) &&
-    NESTED_USE_MEMBERS[holder]?.includes(member) === true;
-
-  if (!nested)
-    fail(
-      "ir.type-use.annotations",
-      pointer,
-      `A type use holds '${written.join("' and '")}' only as array items, map keys or values, or a JSON content schema.`,
-    );
-}
-
 // Returns every invariant violation of an IR document, empty for a sound one. Pure and Ajv-free; it expects a
 // document the open form accepts and never throws on one it refuses.
 export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
@@ -288,9 +237,6 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
   }
 
   for (const { pointer, definition, value } of nodes) {
-    if (definition !== undefined && TYPE_USE_VARIANTS.has(definition))
-      checkUseAnnotations(value, pointer, objects, fail);
-
     switch (definition) {
       case "Origin": {
         // A core origin's pointer starts with its entry of a catalogue (`/errors/api.internal`, or

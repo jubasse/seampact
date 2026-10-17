@@ -10,7 +10,7 @@ The derivation table credits tree with the `binary` and `redirect` response shap
 ## IR change
 
 - irRevision: 2 to 3
-- Classification: tightening (ADR 0005 section 4). A revision 3 reader refuses an integer outside -(2^53 - 1) to 2^53 - 1, which a revision 2 compiler could write, and the new invariant `ir.type-use.annotations` refuses docs or examples on a use outside a nested position. The new members are optional and additive: a reader that ignores them generates no weaker check.
+- Classification: tightening (ADR 0005 section 4). A revision 3 reader refuses an integer outside -(2^53 - 1) to 2^53 - 1, which a revision 2 compiler could write. The new members are optional and additive: a reader that ignores them generates no weaker check.
 
 | Field or kind | Schema path | Change | Additive, tightening or breaking | Guarded by |
 |---|---|---|---|---|
@@ -18,9 +18,8 @@ The derivation table credits tree with the `binary` and `redirect` response shap
 | `deprecated` | `schemas.schema.json#/$defs/ObjectSchema/properties/deprecated`, same on `MapSchema` and `UnionSchema` | added (optional boolean, absent means false) | additive | none |
 | `examples` | `schemas.schema.json#/$defs/Property/properties/examples` | added (optional list of values) | additive | none |
 | `docs` | `schemas.schema.json#/$defs/UnionVariant/properties/docs` | added (optional `Docs`) | additive | none |
-| `docs`, `examples` | `schemas.schema.json#/$defs/RefTypeUse/properties/docs`, same on `OpaqueTypeUse`, `FileTypeUse`, `EnumTypeUse`, `ScalarTypeUse`, `ArrayTypeUse` | added (optional), at a nested position only | additive | none |
+| `docs`, `examples` | `schemas.schema.json#/$defs/RefTypeUse/properties/docs`, same on `OpaqueTypeUse`, `FileTypeUse`, `EnumTypeUse`, `ScalarTypeUse`, `ArrayTypeUse` | added (optional) on every kind; the compiler writes them on array items, map keys and values and JSON content schemas | additive | none |
 | `docs` | `operation.schema.json#/$defs/Response/properties/docs` | added (optional `Docs`) | additive | none |
-| `ir.type-use.annotations` | `checkIrInvariants` (`README.md`) | invariant added: a use holds `docs` or `examples` only as array items, map keys or values, or a JSON content schema | tightening (the new members only) | none |
 
 ### What a target must do
 

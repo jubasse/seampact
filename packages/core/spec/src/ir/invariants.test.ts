@@ -38,36 +38,6 @@ function broken(
 }
 
 describe("checkIrInvariants", () => {
-  test("keeps a use's docs and examples at nested positions only", () => {
-    const ir = sample("every-member.ir.json");
-    const nested = objectsOf(ir, "ScalarTypeUse").filter(
-      ({ value }) => "docs" in value || "examples" in value,
-    );
-    const response = objectsOf(ir, "Response").find(({ value }) => value.body !== undefined);
-
-    // The sample holds them on array items, on map keys and values, and on a JSON content schema.
-    expect(nested.map(({ pointer }) => pointer)).toEqual([
-      "/schemas/Task/properties/8/type/items",
-      "/schemas/Labels/keys",
-      "/schemas/Labels/values",
-    ]);
-    expect(
-      objectsOf(ir, "RefTypeUse").some(
-        ({ pointer, value }) => pointer.endsWith("/content/schema") && "docs" in value,
-      ),
-    ).toBe(true);
-
-    if (response === undefined) throw new Error("no response with a body in the sample");
-    (response.value.body as Record<string, unknown>).examples = [{}];
-
-    expect(checkIrInvariants(ir)).toEqual([
-      expect.objectContaining({
-        id: "ir.type-use.annotations",
-        pointer: `${response.pointer}/body`,
-      }),
-    ]);
-  });
-
   test("accepts the valid samples", () => {
     expect(checkIrInvariants(sample("every-member.ir.json"))).toEqual([]);
     expect(checkIrInvariants(sample("minimal.ir.json"))).toEqual([]);
@@ -193,20 +163,6 @@ describe("checkIrInvariants", () => {
         (scalar.type as Record<string, unknown>).scalar = "money";
       }),
     ).toEqual(one("ir.scalar.type"));
-    expect(
-      broken(
-        "Property",
-        (property) => {
-          (property.type as Record<string, unknown>).docs = { summary: "Tags." };
-        },
-        (property) => property.name === "tags",
-      ),
-    ).toEqual([{ id: "ir.type-use.annotations", pointer: "/schemas/Task/properties/8/type" }]);
-    expect(
-      broken("Scalar", (scalar) => {
-        (scalar.type as Record<string, unknown>).examples = ["9.99"];
-      }),
-    ).toEqual(one("ir.type-use.annotations"));
     const use = (value: Record<string, unknown>, member: string) =>
       value[member] as Record<string, unknown>;
 

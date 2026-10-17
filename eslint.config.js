@@ -10,6 +10,8 @@ export default [
       "**/node_modules/**",
       "**/dist/**",
       "**/coverage/**",
+      "**/build/**",
+      "php/**/vendor/**",
       "packages/core/spec/schemas/authoring/**",
       "packages/core/spec/src/authoring/grammar.snapshot.json",
     ],
