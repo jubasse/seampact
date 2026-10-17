@@ -36,3 +36,15 @@ proofs:
       - fixtures/passes/access-rights/guest/api.yaml
     tests:
       - 'core: packages/core/compiler/src/passes/access/rights/requires.test.ts#guest rights on public routes'
+  - id: CHK-033
+    fixtures:
+      - fixtures/passes/access-rights/fields/api.yaml
+      - fixtures/passes/access-rights/fields/operations.json
+      - fixtures/passes/access-rights/fields-refused/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/rights/sort-keys.test.ts#sort-key rights'
+  - id: CHK-117
+    fixtures:
+      - fixtures/draft/reference/tasksService.access-delta.json
+    tests:
+      - 'core: packages/core/compiler/src/passes/access/rights/field-rights.test.ts#relay routes carry no field rights'
