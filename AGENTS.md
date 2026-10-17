@@ -45,7 +45,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 
 ## Shell output
 
-- Batch independent reads, searches and checks in one message, chain shell steps with `&&`, and print only what you will use.
+- Batch independent reads, searches and checks in one message (read the 3-5 files a step needs at once), chain shell steps with `&&`, and print only what you will use.
 - RTK is opt-in and usually the right choice for output past about ten lines you do not filter yourself (`rtk err <cmd>`, `rtk test <cmd>`, `rtk read -m 40 <file>`). Stay raw when you filter the output yourself (`| grep`, `| head`), when it is a few lines, or when exactness matters: complete searches, diffs and logs under review, JSON, env values, debugging, security. Never pipe rtk output into another tool.
 
 ## Code style

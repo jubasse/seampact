@@ -7,13 +7,14 @@ For the lead session only: subagents never read this file. The lead reads it onc
 | Task | Type | Model, effort |
 |---|---|---|
 | lane PR, review fixes, committed docs | `seampact-implementer` | Opus medium (Sonnet for small or mechanical lanes) |
-| single review, re-review, lens review, synthesis | `seampact-reviewer` | first review of a compiler PR: Opus high; lens: Sonnet high for all three lenses, each running at least one probe per reading it judges; re-review: Sonnet medium; synthesis: Opus high |
+| single review, re-review, lens review, synthesis | `seampact-reviewer` | first review of a compiler PR: Opus high; lens: Sonnet high for all three lenses; re-review: Sonnet medium; synthesis: Opus high |
 | listed nits, rebase plus gate, regeneration | `seampact-mechanical` | Haiku (its default) |
 | one-shot repo-wide script | `seampact-refactor` | Sonnet (its default) |
 | `.work/` brief or decision synthesis | `seampact-writer` | Opus (its default), high for design |
 
 - `general-purpose` only when a task needs a tool the types lack (WebFetch, an MCP server other than context7, the Agent tool); its prompt starts with "Read `.claude/agents/seampact-<role>.md` first"; note the case in the handoff.
-- Prefer a fresh agent over resuming one for more than a few calls; target PR size about 1,500 changed lines.
+- Prefer a fresh agent over resuming one for more than a few calls.
+- Target PR size: about 1,500 changed lines.
 - At most 4-5 agents at once; run them in the background; new or edited agent files load only after a session restart.
 
 ## Prompt
@@ -31,11 +32,13 @@ One line each, in this order: task and PR or lane; worktree, branch and tip, lan
 - Complete lane PR: end-of-PR gate green, tests reach every new branch, proofs in `docs/conformance/proofs/<lane>.yaml`, one changeset sentence, cartography current, diff limited to owned files.
 - Author check keywords: no silent drop, `pipelineCopy`, tested branches, no copied helper, consistent rule ids, no `LD-<n>` or `.work/` in committed text.
 - End-of-PR gate: as `seampact-implementer.md` "Before hand-back" states it.
+- Review: accepted only once its review file exists at the path the prompt gave.
 
 ## Merge loop
 
 - Rebase on develop, push (force with lease after a rebase, saying why), open the PR (title imperative under 70 characters, body why and behaviour, 3-6 bullets), review, post the "## Comment", wait for CI in the background (`gh pr checks <n> --watch`), squash-merge.
-- After each merge, the next branch rebases and runs `pnpm vitest run packages/core/compiler/src/passes`: a stricter pass breaks other lanes' test contracts. Message the agents still working on other branches to rebase before their hand-back.
+- After each merge, the next branch rebases and runs `pnpm vitest run packages/core/compiler/src/passes`: a stricter pass breaks other lanes' test contracts.
+- After each merge, message the agents still working on other branches to rebase before their hand-back.
 - `gh` often hits TLS timeouts: check the state before retrying.
 
 ## Paths
