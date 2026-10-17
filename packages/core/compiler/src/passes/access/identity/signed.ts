@@ -56,16 +56,17 @@ export function accessIdentityCheckSignatureKey(
   const scheme = scope.built.schemes.get(identity.signed);
   if (scheme?.kind !== "signature") return;
   const key = scheme.signature.key;
-  if (key?.kind !== "from" || !("name" in key.from)) return;
+  if (key?.kind !== "from") return;
 
-  // The authoring schema reads a key from a path, query or header source.
+  // The authoring schema reads a key from a named path, query or header source.
   const source = key.from;
-  if (!isParameterLocation(source.in))
-    throw new Error(`signature scheme '${scheme.id}' reads its key from a ${source.in} source`);
-  if (accessIdentityRouteHasParameter(route.operation, source.in, source.name)) return;
+  const name = source.name;
+  if (name === undefined || !isParameterLocation(source.in))
+    throw new Error(`signature scheme '${scheme.id}' reads its key from an unnamed or ${source.in} source`);
+  if (accessIdentityRouteHasParameter(route.operation, source.in, name)) return;
   scope.reporter.error({
     rule: "signature-key-source",
-    message: `route '${route.id}' under signed identity '${identity.id}' has no ${source.in} parameter '${source.name}', which signature scheme '${scheme.id}' reads its key id from`,
+    message: `route '${route.id}' under signed identity '${identity.id}' has no ${source.in} parameter '${name}', which signature scheme '${scheme.id}' reads its key id from`,
     fix: "Declare the parameter on the route (a path placeholder, a query field or a request header), or read the key from a source every route of the identity has.",
     pointer: route.node.pointer,
     related: [
