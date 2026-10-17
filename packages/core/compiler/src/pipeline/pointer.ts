@@ -44,7 +44,7 @@ export function jsonAt(value: Json | undefined, segments: readonly string[]): Js
   return at;
 }
 
-/** The value a pointer names in a tree; undefined when it names nothing. */
+/** The value a pointer names in a tree, by reference (a pass copies it with `pipelineCopy` before storing it); undefined when it names nothing. */
 export function jsonAtPointer(value: Json, pointer: string): Json | undefined {
   const segments = segmentsOf(pointer);
   return segments === undefined ? undefined : jsonAt(value, segments);
