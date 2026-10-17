@@ -47,11 +47,9 @@ const MEMBERS = [
   "origin",
 ] as const;
 
-// Members written later: a relay route's copied shape. The fixture leaves out purgeTask's `internal`, which the IR
-// requires and tree.nodes writes (false).
+// Members written later: a relay route's copied shape.
 const LATER: Readonly<Record<string, readonly string[]>> = {
   "tasksService:getTask": ["method", "safe", "path", "params", "responses", "format"],
-  "tasks:purgeTask": ["internal"],
 };
 
 // The fixture service has no row for the batch ids input, the schema tree.schemas hoists at the batch op entry.
