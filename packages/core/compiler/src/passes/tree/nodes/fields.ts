@@ -1,0 +1,172 @@
+import type { IrWriter, Origin } from "@seampact/spec/ir";
+import type { DraftIR, PassContextOf, TreeNode } from "../../../pipeline/seam.js";
+import {
+  type TreeNodesReportOnce,
+  treeNodesError,
+  treeNodesLocate,
+  treeNodesNodeOrigin,
+} from "./diagnostics.js";
+import {
+  treeNodesIsObject,
+  type treeNodesMember,
+  treeNodesObjectOf,
+  treeNodesPointer,
+  treeNodesTagHeader,
+} from "./raw.js";
+
+// Fields maps (ADR 0002 section 4): `id`, `pathParams`, `query`, `headers` and response `headers` map a name to a
+// schema, a field being required unless its name ends with `?`; a string instead names an object schema whose
+// properties are the fields. Also the checks every parameter and header shares: no opaque value, no header-tagged
+// union (ADR 0003 sections 2 and 4).
+
+export type TreeNodesContext = PassContextOf<"tree.nodes">;
+
+type Json = Parameters<typeof treeNodesMember>[0];
+
+/** One operation being written, with what its parts read and report through. */
+export interface TreeNodesSite {
+  readonly node: TreeNode;
+  readonly operationId: string;
+  readonly draft: DraftIR;
+  readonly context: TreeNodesContext;
+  readonly once: TreeNodesReportOnce;
+}
+
+/** One field of a fields map. */
+export interface TreeNodesField {
+  readonly name: string;
+  readonly required: boolean;
+  /** Undefined while the schema service answers nothing (the seam's stub). */
+  readonly type: IrWriter.TypeUse | undefined;
+  readonly origin: Origin;
+  /** Where the schema service answers the field's query wire. */
+  readonly wirePointer: string;
+}
+
+/** The fields of a map, and whether every name is known (a schema name the service cannot resolve is not). */
+export interface TreeNodesFields {
+  readonly fields: readonly TreeNodesField[];
+  readonly complete: boolean;
+}
+
+const OPTIONAL_SUFFIX = "?";
+
+/** The fields of the map written at `pointer`, each schema compiled in `direction`. */
+export function treeNodesFields(
+  site: TreeNodesSite,
+  written: Json | undefined,
+  pointer: string,
+  direction: IrWriter.Direction,
+): TreeNodesFields {
+  if (typeof written === "string") return namedSchemaFields(site, written, pointer, direction);
+  if (!treeNodesIsObject(written)) return { fields: [], complete: true };
+
+  const fields = Object.keys(written).map((key): TreeNodesField => {
+    const fieldPointer = treeNodesPointer(pointer, key);
+    const optional = key.endsWith(OPTIONAL_SUFFIX);
+    return {
+      name: optional ? key.slice(0, -OPTIONAL_SUFFIX.length) : key,
+      required: !optional,
+      type: site.context.treeSchemas.typeUse(fieldPointer, direction),
+      origin: site.context.origin(fieldPointer) ?? site.node.origin,
+      wirePointer: fieldPointer,
+    };
+  });
+  return { fields, complete: true };
+}
+
+// `query: TaskQuery`: the properties of the named object schema, each asked for its wire at its position there.
+function namedSchemaFields(
+  site: TreeNodesSite,
+  schemaName: string,
+  pointer: string,
+  direction: IrWriter.Direction,
+): TreeNodesFields {
+  const use = site.context.treeSchemas.typeUse(pointer, direction);
+  if (use === undefined) return { fields: [], complete: false };
+
+  const schema = treeNodesObjectOf(site.draft, use);
+  if (schema === undefined) {
+    const origin = treeNodesNodeOrigin(site.context.origin(pointer) ?? site.node.origin);
+    site.once(
+      `fields-schema:${pointer}`,
+      treeNodesError({
+        rule: "fields-schema",
+        origin,
+        message: `The fields at ${pointer} name ${schemaName}, which is not an object schema, so it has no fields.`,
+        fix: "Name an object schema, or write the fields as a map.",
+      }),
+    );
+    return { fields: [], complete: false };
+  }
+
+  const schemaPointer = treeNodesPointer("/schemas", schema.id);
+  const fields = schema.properties.map(
+    (property): TreeNodesField => ({
+      name: property.name,
+      required: !property.optional,
+      type: property.type,
+      origin: property.origin,
+      wirePointer: treeNodesPointer(schemaPointer, "properties", property.name),
+    }),
+  );
+  return { fields, complete: true };
+}
+
+/**
+ * Whether a field may travel in a parameter or a header: an opaque value has no text form (ADR 0003 section 2),
+ * and a header-tagged union is only a route's whole input (ADR 0003 section 4). Reports the field otherwise.
+ */
+export function treeNodesFieldTravels(
+  site: TreeNodesSite,
+  field: TreeNodesField,
+  place: string,
+): boolean {
+  const origin = treeNodesLocate(field.origin, treeNodesNodeOrigin(site.node.origin));
+  const key = `${origin.layer}#${origin.pointer}:${field.name}`;
+
+  if (field.type?.kind === "opaque") {
+    site.once(
+      `opaque-parameter:${key}`,
+      treeNodesError({
+        rule: "opaque-parameter",
+        origin,
+        message: `The ${place} ${field.name} of ${site.operationId} is an opaque value, which has no text form.`,
+        fix: "Give it a schema with a text form, or move it into the body.",
+      }),
+    );
+    return false;
+  }
+
+  if (treeNodesTagHeader(site.draft, treeNodesInnermost(field.type)) !== undefined) {
+    site.once(
+      `header-union:${key}`,
+      treeNodesHeaderUnionError(site, origin, `${place} ${field.name}`),
+    );
+    return false;
+  }
+  return true;
+}
+
+/** The innermost item of a list use: a list of unions is still a union in an item position. */
+export function treeNodesInnermost(
+  use: IrWriter.TypeUse | undefined,
+): IrWriter.TypeUse | undefined {
+  let at = use;
+  while (at?.kind === "array") at = at.items;
+  return at;
+}
+
+/** The refusal of a header-tagged union outside a route's whole input (ADR 0003 section 4). */
+export function treeNodesHeaderUnionError(
+  site: TreeNodesSite,
+  origin: ReturnType<typeof treeNodesLocate>,
+  position: string,
+) {
+  return treeNodesError({
+    rule: "header-union",
+    origin,
+    message: `The ${position} of ${site.operationId} is a union tagged by a header, which only a route's whole input can be.`,
+    fix: "Tag the union by a body property, or make it the route's whole input.",
+  });
+}

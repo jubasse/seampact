@@ -65,10 +65,37 @@ function singularWords(collection: TreeNode): string[] | undefined {
   return splitName(stem);
 }
 
-// The collection or single an op entry belongs to: an op's parent is its scope, or the single it is written on.
-function opOwner(op: TreeNode): TreeNode | undefined {
+const OP_SHORTHANDS: readonly IrWriter.OpShorthand[] = [
+  "list",
+  "get",
+  "create",
+  "update",
+  "delete",
+  "batch",
+];
+
+/** The shorthand of an `ops` entry; undefined for any other node. */
+export function treeNodesOpShorthand(node: TreeNode): IrWriter.OpShorthand | undefined {
+  if (node.kind !== "op") return undefined;
+  return OP_SHORTHANDS.find((op) => op === node.name);
+}
+
+/** The collection or single an op entry belongs to: an op's parent is its scope, or the single it is written on. */
+export function treeNodesOpOwner(op: TreeNode): TreeNode | undefined {
   const parent = op.parent;
   return parent?.kind === "scope" ? parent.parent : parent;
+}
+
+/**
+ * The nearest collection without `id` whose member scope holds the operation node: its member path has no id
+ * parameter (ADR 0002 section 6), so the operation is refused and left out.
+ */
+export function treeNodesIdlessCollection(node: TreeNode): TreeNode | undefined {
+  for (let at = node.parent; at !== undefined; at = at.parent) {
+    const collection = at.kind === "scope" && at.name === "member" ? at.parent : undefined;
+    if (collection !== undefined && treeNodesIdParam(collection) === undefined) return collection;
+  }
+  return undefined;
 }
 
 /**
@@ -77,7 +104,7 @@ function opOwner(op: TreeNode): TreeNode | undefined {
  */
 export function treeNodesSingularOwner(node: TreeNode): TreeNode | undefined {
   if (node.kind === "op") {
-    const owner = opOwner(node);
+    const owner = treeNodesOpOwner(node);
     return owner?.kind === "collection" && !PLURAL_OPS.includes(node.name) ? owner : undefined;
   }
 
@@ -102,7 +129,7 @@ function wordsOf(node: TreeNode): Words | undefined {
 
 // An op reading several records: the single's name, or the collection's plural (`getTasksBatch` for a batch).
 function opWords(op: TreeNode): Words {
-  const owner = opOwner(op);
+  const owner = treeNodesOpOwner(op);
   if (owner === undefined) return { verb: splitName(op.name), noun: [] };
 
   const noun = splitName(owner.name);
@@ -170,8 +197,8 @@ function named(node: TreeNode, id: string, segments: string[]): TreeNodesOperati
  * The id and the name of every operation of the api, keyed by the JSON Pointer of its node in the merged raw tree:
  * the route, the relay route, or the `ops` entry (`.../tasks/ops/get` in a mapping, `.../tasks/ops/1` in a list).
  * Pure: it reads the raw tree and the conventions only, so tree.schemas names inline route schemas with it before
- * tree.nodes runs (ADR 0007 section 3). An operation whose collection gives no singular for its name is left out;
- * tree.nodes reports it. The ids are not yet checked unique: tree.nodes reports a clash, after tree.schemas.
+ * tree.nodes runs (ADR 0007 section 3). An operation whose collection gives no singular for its name, or that sits
+ * in the member scope of a collection without `id`, is left out; tree.nodes reports it. The ids are not yet checked unique: tree.nodes reports a clash, after tree.schemas.
  */
 export function treeNodesOperationNames(
   raw: PassReadonly<RawApi>,
@@ -179,7 +206,7 @@ export function treeNodesOperationNames(
 ): ReadonlyMap<string, TreeNodesOperationName> {
   const names = new Map<string, TreeNodesOperationName>();
   for (const node of pipelineTreeNodes(raw)) {
-    if (!treeNodesIsOperation(node)) continue;
+    if (!treeNodesIsOperation(node) || treeNodesIdlessCollection(node) !== undefined) continue;
     const name = treeNodesOperationName(node, conventions);
     if (name !== undefined) names.set(node.pointer, name);
   }
