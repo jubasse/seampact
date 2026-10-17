@@ -359,6 +359,27 @@ test("bodies beyond JSON: a derived form field's wire is asked at its position i
   ]);
 });
 
+test("bodies beyond JSON: a form input written { $ref: X } has its wires asked in the schema X", () => {
+  const workspace = treeNodesLoadInline(
+    FORM_UPDATE.replace("update: { input: UpdateTask,", "update: { input: { $ref: UpdateTask },"),
+  );
+  const updateTask = "/schemas/UpdateTask";
+  const treeSchemas = treeNodesStubService({
+    typeUses: {
+      "/surfaces/app/routes/tasks/ops/update/input": { kind: "ref", schema: "UpdateTask" },
+    },
+    queryWires: { [`${updateTask}/properties/title`]: wire("text") },
+  });
+  const schema = treeNodesObjectSchema("UpdateTask", updateTask, { title: text });
+  const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas,
+    draft: treeNodesDraftWith(schema),
+  });
+
+  expect(diagnostics).toEqual([]);
+  expect(draft.operations[0]?.input?.fields).toEqual([{ name: "title", wire: fieldWire("text") }]);
+});
+
 test("bodies beyond JSON: a body limit beyond a safe integer is reported where written", () => {
   const workspace = treeNodesLoadInline(`
 api: { name: uploads, version: 1, kind: product }
