@@ -60,7 +60,7 @@ surfaces:
               id: { taskId: TaskId }
               item: Task
               ops:
-                list: {}
+                list: { paging: none }
                 create:
                   input: CreateTask
                   requires: [{ rule: throttle, bucket: perUser }]
