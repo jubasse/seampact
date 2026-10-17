@@ -70,7 +70,13 @@ export type {
   WorkspacePass,
   WorkspacePassContext,
 } from "./pass.js";
-export { pipelineOrigin } from "./pointer.js";
+export { canonical as pipelineCanonical } from "./canonical.js";
+export {
+  isJsonObject as pipelineIsJsonObject,
+  jsonAtPointer as pipelineJsonAtPointer,
+  pipelineOrigin,
+  pointerBelow as pipelinePointerBelow,
+} from "./pointer.js";
 export type { PassReadonly, PassWritable } from "./readonly.js";
 export type {
   PipelineFinalize,
