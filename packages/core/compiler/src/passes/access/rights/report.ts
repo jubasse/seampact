@@ -26,7 +26,13 @@ export type AccessRightsRule =
   | "guest-right"
   | "caller-right"
   | "pack-template"
-  | "pack-right";
+  | "pack-right"
+  | "field-right-target"
+  | "field-right-params"
+  | "field-right-subject"
+  | "field-right-recursive"
+  | "sort-key-right"
+  | "filtered-by";
 
 export interface AccessRightsRelated {
   /** A pointer of the merged raw tree. */

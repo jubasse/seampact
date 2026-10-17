@@ -1,0 +1,62 @@
+# Refused field and sort-key rights (ADR 0003 section 6, ADR 0002 section 10): a restriction naming an undeclared
+# right, params that a right does not declare, a resource right in a create input, a restricted field below a
+# recursive reference, a sort key whose right disagrees with its field's, and an undeclared `filteredBy` right.
+api: { name: depot, version: 1 }
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  clerk:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: Clerk
+
+schemas:
+  CrateId: { type: string, format: uuid }
+  Clerk:
+    type: object
+    required: [clerkId]
+    properties: { clerkId: { type: string } }
+  Crate:
+    type: object
+    required: [crateId]
+    properties:
+      crateId: CrateId
+      weight: { type: integer, restrictedTo: crates.weigh }
+      label: { type: string, restrictedTo: crates.ghost }
+      seal: { type: string, restrictedTo: { right: audit, params: { level: high } } }
+  Pallet:
+    type: object
+    properties:
+      code: { type: string, restrictedTo: audit }
+      stacked: { type: array, items: Pallet }
+
+pagings:
+  offset:
+    request:
+      offset: { query: offset }
+      limit: { query: limit }
+      sort: { query: sort, style: signed }
+    response:
+      body: $items
+
+rights:
+  crates.weigh: { subject: { resource: Crate, id: CrateId } }
+  audit: {}
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: clerk
+    routes:
+      crates:
+        kind: collection
+        id: { crateId: CrateId }
+        item: Crate
+        ops:
+          list:
+            paging: offset
+            sortable: [{ key: weight, right: audit }]
+            filteredBy: crates.ghost
+          create: { input: Crate }
+      pallet: { method: get, output: Pallet }

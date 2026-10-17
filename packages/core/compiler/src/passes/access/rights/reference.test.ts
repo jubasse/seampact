@@ -1,16 +1,36 @@
 import { describe, expect, test } from "vitest";
-import { type DraftFixtureApi, draftFixtureHalves } from "../../../pipeline/draft-fixture.js";
+import {
+  type DraftFixtureApi,
+  draftFixtureApply,
+  draftFixtureHalves,
+} from "../../../pipeline/draft-fixture.js";
 import type { JsonObject, JsonValue } from "../../../raw-tree.js";
-import { accessRightsReferenceWorkspace, accessRightsRunReference } from "./test-support.js";
+import {
+  accessRightsReferenceDraft,
+  accessRightsReferenceWorkspace,
+  accessRightsRunReference,
+} from "./test-support.js";
 
 // The reference contract against its access delta: the members this half writes so far, the catalogues and each
-// operation's `scopes` and `requires` (the rest of the delta lands with field rights and proofs).
+// operation's `scopes`, `requires`, `fieldRights`, `filteredBy` and sort-key rights (the rest of the delta lands
+// with the proofs). The expected sort keys are the after-tree keys with the delta applied.
 
 const WRITTEN_CATALOGUES = ["rights", "rules", "scopes", "buckets"] as const;
-const WRITTEN_OPERATION_MEMBERS = ["scopes", "requires"] as const;
+const WRITTEN_OPERATION_MEMBERS = ["scopes", "requires", "fieldRights", "filteredBy"] as const;
 
 const isObject = (value: JsonValue | undefined): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+// The delta's `paging` members only, by operation id.
+function pagingOnly(operations: JsonValue | undefined): JsonObject {
+  if (!isObject(operations)) throw new Error("the delta's operations are keyed by id");
+
+  return Object.fromEntries(
+    Object.entries(operations).flatMap(([id, members]) =>
+      isObject(members) && members.paging !== undefined ? [[id, { paging: members.paging }]] : [],
+    ),
+  );
+}
 
 function rightsDelta(api: DraftFixtureApi): JsonObject {
   const half = draftFixtureHalves(api, "access-delta").find(
@@ -26,10 +46,13 @@ describe("access.rights matches the after-access fixture", () => {
   const workspace = accessRightsReferenceWorkspace();
 
   test.each<DraftFixtureApi>(["tasks", "tasksService"])(
-    "%s: the catalogues and each operation's scopes and requires",
+    "%s: the catalogues and each operation's scopes, requires, field rights, filteredBy and sort keys",
     (api) => {
       const { draft, diagnostics } = accessRightsRunReference(workspace, api);
       const delta = rightsDelta(api);
+      const after = accessRightsReferenceDraft(api);
+
+      draftFixtureApply(after, { operations: { ...pagingOnly(delta.operations) } });
 
       expect(diagnostics).toEqual([]);
 
@@ -48,6 +71,10 @@ describe("access.rights matches the after-access fixture", () => {
 
         for (const member of WRITTEN_OPERATION_MEMBERS)
           expect(operation[member], `${operation.id}.${member}`).toEqual(expected[member]);
+
+        expect(operation.paging, `${operation.id}.paging`).toEqual(
+          after.operations.find((candidate) => candidate.id === operation.id)?.paging,
+        );
       }
     },
   );

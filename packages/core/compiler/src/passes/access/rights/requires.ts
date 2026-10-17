@@ -9,6 +9,7 @@ import {
 } from "../../../pipeline/seam.js";
 import type { AccessRightsCatalogues } from "./catalogues.js";
 import { type AccessRightsDeriveEntry, accessRightsExpand, accessRightsSelects } from "./packs.js";
+import { accessRightsCheckParams } from "./params.js";
 import {
   type AccessRightsRawValue,
   accessRightsEntries,
@@ -291,49 +292,16 @@ function checkTargetAndParams(
   )
     return undefined;
 
-  const params = accessRightsMember(use.item, "params");
-  const paramsPointer = pipelinePointerBelow(use.itemPointer, "params");
-
-  if (target.params === undefined) {
-    if (params === undefined) return {};
-    reporter.error({
-      rule: "requirement-params",
-      message: `${use.kind} '${use.target}' declares no params, but the requirement gives some`,
-      fix: `remove 'params', or declare params on the ${use.kind}`,
-      pointer: paramsPointer,
-    });
-
-    return undefined;
-  }
-
-  const issues = context.treeSchemas.checkExample(params ?? {}, {
-    kind: "ref",
-    schema: target.params,
-  });
-
-  if (issues.length === 0) return params === undefined ? {} : { params: pipelineCopy(params) };
-  reporter.error({
+  return accessRightsCheckParams(context, reporter, {
     rule: "requirement-params",
-    message: `the params of the requirement do not fit ${target.params}, the params of ${use.kind} '${use.target}': ${listedIssues(issues)}`,
-    fix: `give params that fit ${target.params}`,
-    pointer: params === undefined ? use.itemPointer : paramsPointer,
+    kind: use.kind,
+    name: use.target,
+    holder: "the requirement",
+    schema: target.params,
+    params: accessRightsMember(use.item, "params"),
+    paramsPointer: pipelinePointerBelow(use.itemPointer, "params"),
+    usePointer: use.itemPointer,
   });
-
-  return undefined;
-}
-
-// A message lists the first issues, each quoted, and counts the rest.
-const LISTED_ISSUES = 3;
-
-function listedIssues(issues: readonly { pointer: string; message: string }[]): string {
-  const listed = issues
-    .slice(0, LISTED_ISSUES)
-    .map((issue) =>
-      accessRightsQuoted(`${issue.pointer === "" ? "(params)" : issue.pointer}: ${issue.message}`),
-    );
-  const more = issues.length - listed.length;
-
-  return more > 0 ? `${listed.join("; ")}; and ${more} more` : listed.join("; ");
 }
 
 // A rule declared with `bucket: true` takes a declared bucket at each use; any other rule takes none.
