@@ -7,6 +7,13 @@ import {
   type TreeNode,
 } from "../../../pipeline/seam.js";
 import type { RawApi } from "../../../raw-tree.js";
+import {
+  type TreeNodesJson,
+  treeNodesIsObject,
+  treeNodesMember,
+  treeNodesSetting,
+  treeNodesText,
+} from "./raw.js";
 
 // Operation ids and names (ADR 0002 section 6, ADR 0007 sections 2 and 3). An operation's words are a verb (the op,
 // or the route name) and a noun (the plural, the singular, a single's name, or none under a surface root);
@@ -37,25 +44,33 @@ const PLURAL_OPS: readonly string[] = ["list", "batch"];
 export const treeNodesIsOperation = (node: TreeNode): boolean =>
   node.kind === "route" || node.kind === "relay" || node.kind === "op";
 
-const textSetting = (node: TreeNode, key: string): string | undefined => {
-  const value = Object.hasOwn(node.settings, key) ? node.settings[key] : undefined;
-  return typeof value === "string" ? value : undefined;
-};
+/** The declared schemas of the merged raw tree (`raw.merged.schemas`), which a fields map may name. */
+export type TreeNodesRawSchemas = TreeNodesJson | undefined;
 
-/** The id parameter of a collection: the one key of its `id` fields map. */
-export function treeNodesIdParam(collection: TreeNode): string | undefined {
-  const id = Object.hasOwn(collection.settings, "id") ? collection.settings.id : undefined;
-  if (typeof id !== "object" || id === null || Array.isArray(id)) return undefined;
-  return Object.keys(id)[0];
+/**
+ * The id parameter of a collection: the one key of its `id` fields map, or the one property of the schema it names
+ * (ADR 0002 section 4: `id: TaskKey`). Undefined when the named schema is not declared with properties.
+ */
+export function treeNodesIdParam(
+  collection: TreeNode,
+  schemas: TreeNodesRawSchemas,
+): string | undefined {
+  const id = treeNodesSetting(collection, "id");
+  const fields =
+    typeof id === "string" ? treeNodesMember(treeNodesMember(schemas, id), "properties") : id;
+  return treeNodesIsObject(fields) ? Object.keys(fields)[0] : undefined;
 }
+
+/** Whether a collection writes `id`, as a fields map or a schema name. */
+const declaresId = (collection: TreeNode): boolean => Object.hasOwn(collection.settings, "id");
 
 // The singular of a collection: `singular`, else the id parameter without its `Id` suffix, else the whole
 // parameter; undefined when it declares neither (ADR 0002 section 6 gives no third source).
-function singularWords(collection: TreeNode): string[] | undefined {
-  const singular = textSetting(collection, "singular");
+function singularWords(collection: TreeNode, schemas: TreeNodesRawSchemas): string[] | undefined {
+  const singular = treeNodesText(collection, "singular");
   if (singular !== undefined) return splitName(singular);
 
-  const idParam = treeNodesIdParam(collection);
+  const idParam = treeNodesIdParam(collection, schemas);
   if (idParam === undefined) return undefined;
 
   const stem =
@@ -65,10 +80,37 @@ function singularWords(collection: TreeNode): string[] | undefined {
   return splitName(stem);
 }
 
-// The collection or single an op entry belongs to: an op's parent is its scope, or the single it is written on.
-function opOwner(op: TreeNode): TreeNode | undefined {
+const OP_SHORTHANDS: readonly IrWriter.OpShorthand[] = [
+  "list",
+  "get",
+  "create",
+  "update",
+  "delete",
+  "batch",
+];
+
+/** The shorthand of an `ops` entry; undefined for any other node. */
+export function treeNodesOpShorthand(node: TreeNode): IrWriter.OpShorthand | undefined {
+  if (node.kind !== "op") return undefined;
+  return OP_SHORTHANDS.find((op) => op === node.name);
+}
+
+/** The collection or single an op entry belongs to: an op's parent is its scope, or the single it is written on. */
+export function treeNodesOpOwner(op: TreeNode): TreeNode | undefined {
   const parent = op.parent;
   return parent?.kind === "scope" ? parent.parent : parent;
+}
+
+/**
+ * The nearest collection without `id` whose member scope holds the operation node: its member path has no id
+ * parameter (ADR 0002 section 6), so the operation is refused and left out.
+ */
+export function treeNodesIdlessCollection(node: TreeNode): TreeNode | undefined {
+  for (let at = node.parent; at !== undefined; at = at.parent) {
+    const collection = at.kind === "scope" && at.name === "member" ? at.parent : undefined;
+    if (collection !== undefined && !declaresId(collection)) return collection;
+  }
+  return undefined;
 }
 
 /**
@@ -77,7 +119,7 @@ function opOwner(op: TreeNode): TreeNode | undefined {
  */
 export function treeNodesSingularOwner(node: TreeNode): TreeNode | undefined {
   if (node.kind === "op") {
-    const owner = opOwner(node);
+    const owner = treeNodesOpOwner(node);
     return owner?.kind === "collection" && !PLURAL_OPS.includes(node.name) ? owner : undefined;
   }
 
@@ -92,17 +134,17 @@ interface Words {
 
 // The verb and noun words of an operation node, before the order is applied; undefined when the noun is the
 // singular of a collection that gives none.
-function wordsOf(node: TreeNode): Words | undefined {
+function wordsOf(node: TreeNode, schemas: TreeNodesRawSchemas): Words | undefined {
   const singularOwner = treeNodesSingularOwner(node);
   if (singularOwner === undefined) return node.kind === "op" ? opWords(node) : routeWords(node);
 
-  const noun = singularWords(singularOwner);
+  const noun = singularWords(singularOwner, schemas);
   return noun === undefined ? undefined : { verb: splitName(node.name), noun };
 }
 
 // An op reading several records: the single's name, or the collection's plural (`getTasksBatch` for a batch).
 function opWords(op: TreeNode): Words {
-  const owner = opOwner(op);
+  const owner = treeNodesOpOwner(op);
   if (owner === undefined) return { verb: splitName(op.name), noun: [] };
 
   const noun = splitName(owner.name);
@@ -144,13 +186,14 @@ function idCase(conventions: ResolvedConventions): OperationIdCase {
 export function treeNodesOperationName(
   node: TreeNode,
   conventions: ResolvedConventions,
+  schemas: TreeNodesRawSchemas,
 ): TreeNodesOperationName | undefined {
-  const written = textSetting(node, "operationId");
+  const written = treeNodesText(node, "operationId");
   if (written !== undefined) return named(node, written, splitName(written));
 
   if (node.kind === "relay") return named(node, node.name, splitName(node.name));
 
-  const words = wordsOf(node);
+  const words = wordsOf(node, schemas);
   if (words === undefined) return undefined;
   const { verb, noun } = words;
   const segments = idOrder(conventions) === "nounVerb" ? [...noun, ...verb] : [...verb, ...noun];
@@ -170,8 +213,9 @@ function named(node: TreeNode, id: string, segments: string[]): TreeNodesOperati
  * The id and the name of every operation of the api, keyed by the JSON Pointer of its node in the merged raw tree:
  * the route, the relay route, or the `ops` entry (`.../tasks/ops/get` in a mapping, `.../tasks/ops/1` in a list).
  * Pure: it reads the raw tree and the conventions only, so tree.schemas names inline route schemas with it before
- * tree.nodes runs (ADR 0007 section 3). An operation whose collection gives no singular for its name is left out;
- * tree.nodes reports it. The ids are not yet checked unique: tree.nodes reports a clash, after tree.schemas.
+ * tree.nodes runs (ADR 0007 section 3). An operation whose collection gives no singular for its name, or that sits
+ * in the member scope of a collection without `id`, is left out; tree.nodes reports it. The ids are not yet checked
+ * unique: tree.nodes reports a clash, after tree.schemas.
  */
 export function treeNodesOperationNames(
   raw: PassReadonly<RawApi>,
@@ -179,8 +223,8 @@ export function treeNodesOperationNames(
 ): ReadonlyMap<string, TreeNodesOperationName> {
   const names = new Map<string, TreeNodesOperationName>();
   for (const node of pipelineTreeNodes(raw)) {
-    if (!treeNodesIsOperation(node)) continue;
-    const name = treeNodesOperationName(node, conventions);
+    if (!treeNodesIsOperation(node) || treeNodesIdlessCollection(node) !== undefined) continue;
+    const name = treeNodesOperationName(node, conventions, raw.merged.schemas);
     if (name !== undefined) names.set(node.pointer, name);
   }
   return names;

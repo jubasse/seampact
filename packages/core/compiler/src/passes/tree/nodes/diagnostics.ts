@@ -12,12 +12,31 @@ import { pipelineCopy } from "../../../pipeline/seam.js";
 /** The rules tree.nodes reports, without their `seampact/tree/` prefix. */
 export type TreeNodesRule =
   | "collection-singular"
+  | "collection-id"
   | "operation-id-unique"
   | "operation-name-unique"
+  | "route-unique"
+  | "op-input"
+  | "op-item"
+  | "id-property"
   | "input-file"
   | "input-file-size"
+  | "body-limit"
   | "form-input"
-  | "form-field";
+  | "form-field"
+  | "api-version"
+  | "path-version"
+  | "path-param"
+  | "path-segment"
+  | "param-unique"
+  | "query-field"
+  | "fields-schema"
+  | "opaque-position"
+  | "union-header"
+  | "redirect-body"
+  | "responses-output"
+  | "no-content-body"
+  | "annotation-position";
 
 export const treeNodesRuleId = (rule: TreeNodesRule): string => `seampact/tree/${rule}`;
 
@@ -56,5 +75,19 @@ export function treeNodesError(options: TreeNodesDiagnosticOptions): Diagnostic 
     fix: options.fix,
     origin: options.origin,
     related: [...(options.related ?? [])],
+  };
+}
+
+/** Reports a diagnostic the first time its key is seen in a run of the half, and drops it after that. */
+export type TreeNodesReportOnce = (key: string, diagnostic: Diagnostic) => void;
+
+// A setting written above several operations (an inherited `query`, a collection's `id`) is checked once per
+// operation it reaches, and reported once.
+export function treeNodesReportOnce(report: (diagnostic: Diagnostic) => void): TreeNodesReportOnce {
+  const reported = new Set<string>();
+  return (key, diagnostic) => {
+    if (reported.has(key)) return;
+    reported.add(key);
+    report(diagnostic);
   };
 }

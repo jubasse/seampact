@@ -98,7 +98,7 @@ surfaces:
     prefix: /open/v{version}
     access: { public: The catalogue is open. }
     routes:
-      things: { kind: collection, id: { thingId: ItemId }, item: Item, ops: [list, get] }
+      things: { kind: collection, id: { thingId: ItemId }, idProperty: itemId, item: Item, ops: [list, get] }
 `;
 
 describe("pack-derived rights", () => {

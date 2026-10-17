@@ -52,6 +52,7 @@ surfaces:
             promote: { method: post }
       me:
         kind: single
+        item: Member
         ops: [get]
         routes:
           avatar: { method: get }
@@ -63,67 +64,157 @@ interface Row {
   id: string;
   segments: string[];
   method: string;
+  path: string;
   safe: boolean;
   op?: string;
+  /** The status of the declared response; absent for the batch op, whose table response is derived. */
+  status?: number;
 }
 
+const MEMBERS = "/v1/members";
+const MEMBER = "/v1/members/{userId}";
+
 // In tree order: the collection scope's ops then routes, the member scope's, then the single, then the root route.
+// A route that declares no response answers 204.
 const DEFAULT_ROWS: Row[] = [
-  { id: "listMembers", segments: ["list", "members"], method: "get", safe: true, op: "list" },
+  {
+    id: "listMembers",
+    segments: ["list", "members"],
+    method: "get",
+    path: MEMBERS,
+    safe: true,
+    op: "list",
+    status: 200,
+  },
   {
     id: "getMembersBatch",
     segments: ["get", "members", "batch"],
     method: "post",
+    path: `${MEMBERS}/batch`,
     safe: true,
     op: "batch",
   },
-  { id: "searchMembers", segments: ["search", "members"], method: "post", safe: false },
-  { id: "getMember", segments: ["get", "member"], method: "get", safe: true, op: "get" },
+  {
+    id: "searchMembers",
+    segments: ["search", "members"],
+    method: "post",
+    path: `${MEMBERS}/search`,
+    safe: false,
+    status: 204,
+  },
+  {
+    id: "getMember",
+    segments: ["get", "member"],
+    method: "get",
+    path: MEMBER,
+    safe: true,
+    op: "get",
+    status: 200,
+  },
   {
     id: "updateMember",
     segments: ["update", "member"],
     method: "patch",
+    path: MEMBER,
     safe: false,
     op: "update",
+    status: 200,
   },
-  { id: "removeMember", segments: ["remove", "member"], method: "post", safe: false, op: "delete" },
-  { id: "promoteMember", segments: ["promote", "member"], method: "post", safe: false },
-  { id: "getMe", segments: ["get", "me"], method: "get", safe: true, op: "get" },
-  { id: "avatarMe", segments: ["avatar", "me"], method: "get", safe: true },
-  { id: "ping", segments: ["ping"], method: "get", safe: true },
+  {
+    id: "removeMember",
+    segments: ["remove", "member"],
+    method: "post",
+    path: MEMBER,
+    safe: false,
+    op: "delete",
+    status: 204,
+  },
+  {
+    id: "promoteMember",
+    segments: ["promote", "member"],
+    method: "post",
+    path: `${MEMBER}/promote`,
+    safe: false,
+    status: 204,
+  },
+  {
+    id: "getMe",
+    segments: ["get", "me"],
+    method: "get",
+    path: "/v1/me",
+    safe: true,
+    op: "get",
+    status: 200,
+  },
+  {
+    id: "avatarMe",
+    segments: ["avatar", "me"],
+    method: "get",
+    path: "/v1/me/avatar",
+    safe: true,
+    status: 204,
+  },
+  { id: "ping", segments: ["ping"], method: "get", path: "/v1/ping", safe: true, status: 204 },
 ];
 
-const NOUN_VERB_SNAKE_ROWS: Row[] = [
-  { id: "members_list", segments: ["members", "list"], method: "get", safe: true, op: "list" },
-  {
-    id: "members_batch_get",
-    segments: ["members", "batch", "get"],
-    method: "post",
-    safe: true,
-    op: "batch",
-  },
-  { id: "members_search", segments: ["members", "search"], method: "post", safe: false },
-  { id: "member_get", segments: ["member", "get"], method: "get", safe: true, op: "get" },
-  { id: "member_update", segments: ["member", "update"], method: "put", safe: false, op: "update" },
-  { id: "removeMember", segments: ["remove", "member"], method: "post", safe: false, op: "delete" },
-  { id: "member_promote", segments: ["member", "promote"], method: "post", safe: false },
-  { id: "me_get", segments: ["me", "get"], method: "get", safe: true, op: "get" },
-  { id: "me_avatar", segments: ["me", "avatar"], method: "get", safe: true },
-  { id: "ping", segments: ["ping"], method: "get", safe: true },
-];
+// The same tree with `conventions.ops` changing an op's path and statuses.
+const OPS_CONVENTION_ROWS: Row[] = DEFAULT_ROWS.map((row) => {
+  if (row.id === "listMembers") return { ...row, path: `${MEMBERS}/all`, status: 206 };
+  if (row.id === "getMembersBatch") return { ...row, path: `${MEMBERS}/lookup` };
+  if (row.id === "removeMember") return { ...row, status: 202 };
+  return row;
+});
+
+const NOUN_VERB_SNAKE_ROWS: Row[] = DEFAULT_ROWS.map((row, index) => {
+  const ids = [
+    "members_list",
+    "members_batch_get",
+    "members_search",
+    "member_get",
+    "member_update",
+    "removeMember",
+    "member_promote",
+    "me_get",
+    "me_avatar",
+    "ping",
+  ];
+  const segments = [
+    ["members", "list"],
+    ["members", "batch", "get"],
+    ["members", "search"],
+    ["member", "get"],
+    ["member", "update"],
+    ["remove", "member"],
+    ["member", "promote"],
+    ["me", "get"],
+    ["me", "avatar"],
+    ["ping"],
+  ];
+  const method = row.op === "update" ? "put" : row.method;
+  return { ...row, id: ids[index] ?? "", segments: segments[index] ?? [], method };
+});
 
 const treeSchemas = treeNodesStubService({
-  typeUses: { [UPDATE_MEMBER]: { kind: "ref", schema: "UpdateMember" } },
+  typeUses: {
+    [UPDATE_MEMBER]: { kind: "ref", schema: "UpdateMember" },
+    "/surfaces/app/routes/members/item": { kind: "ref", schema: "Member" },
+    "/surfaces/app/routes/me/item": { kind: "ref", schema: "Member" },
+  },
 });
 
 const rowsOf = (operations: readonly DraftOperation[]): Row[] =>
-  operations.map(({ id, name, method, safe, op }) => ({
-    id: id ?? "",
-    segments: name?.segments ?? [],
-    method: method ?? "",
-    safe: safe ?? false,
-    ...(op === undefined ? {} : { op }),
-  }));
+  operations.map(({ id, name, method, path, safe, op, responses }) => {
+    const status = responses?.[0]?.status;
+    return {
+      id: id ?? "",
+      segments: name?.segments ?? [],
+      method: method ?? "",
+      path: path ?? "",
+      safe: safe ?? false,
+      ...(op === undefined ? {} : { op }),
+      ...(status === undefined ? {} : { status }),
+    };
+  });
 
 test.each([
   { conventions: "", rows: DEFAULT_ROWS },
@@ -131,6 +222,11 @@ test.each([
     conventions:
       "conventions: { ops: { update: { method: put } }, operationIds: { order: nounVerb, case: snake } }",
     rows: NOUN_VERB_SNAKE_ROWS,
+  },
+  {
+    conventions:
+      "conventions: { ops: { list: { path: all, status: 206 }, batch: { path: lookup }, delete: { status: 202 } } }",
+    rows: OPS_CONVENTION_ROWS,
   },
 ])("ops expand to routes ($conventions)", ({ conventions, rows }) => {
   const workspace = treeNodesLoadInline(contract(conventions));
@@ -199,11 +295,12 @@ const CLASHES = `
 api: { name: a, version: 1, kind: product }
 schemas:
   TaskId: { type: string }
+  Task: { type: object, properties: { taskId: TaskId } }
 surfaces:
   app:
     prefix: /v{version}
     routes:
-      tasks: { kind: collection, id: { taskId: TaskId }, ops: [get] }
+      tasks: { kind: collection, id: { taskId: TaskId }, item: Task, ops: [get] }
       getTask: { method: get }
       archive: { method: post, operationId: get_task }
 `;
@@ -236,7 +333,8 @@ test("operation ids are unique", () => {
   ]);
 });
 
-// ADR 0002 section 6: the singular comes from `singular` or `id`, never from the plural.
+// ADR 0002 section 6: the singular comes from `singular` or `id`, never from the plural; the member scope of a
+// collection needs `id`, its path parameter.
 const SINGULARS = `
 api: { name: a, version: 1, kind: product }
 schemas:
@@ -251,7 +349,7 @@ surfaces:
         singular: event
         idProperty: eventKey
         item: Event
-        ops: [list, create]
+        ops: { list: {}, create: { input: Event } }
       logs:
         kind: collection
         item: Log
@@ -261,7 +359,7 @@ surfaces:
             tail: { method: get }
 `;
 
-test("a collection whose operation names need a singular gives singular or id", () => {
+test("a collection whose operation names need a singular gives singular or id, its member scope id", () => {
   const workspace = treeNodesLoadInline(SINGULARS);
   const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
     treeSchemas,
@@ -281,6 +379,74 @@ test("a collection whose operation names need a singular gives singular or id", 
       message:
         "The collection logs declares neither singular nor id, so the operation at /surfaces/app/routes/logs/ops/1 has no singular noun for its name.",
       fix: "Set singular on the collection (or declare its id).",
+    },
+    {
+      rule: "seampact/tree/collection-id",
+      origin: { layer: "api", pointer: "/surfaces/app/routes/logs" },
+      message:
+        "The collection logs declares no id, so the operation at /surfaces/app/routes/logs/ops/2 in its member scope has no member path.",
+      fix: "Declare id on logs: its member id path parameter and schema.",
+    },
+  ]);
+
+  const raw = treeNodesApiOf(workspace);
+  const names = treeNodesOperationNames(raw, pipelineConventions(raw));
+  expect([...names.values()].map(({ id }) => id)).toEqual([
+    "listEvents",
+    "createEvent",
+    "listLogs",
+  ]);
+});
+
+test("routes are unique: one operation per method and path, placeholders compared by position", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+schemas:
+  Id: { type: string }
+  Task: { type: object, properties: { taskId: Id } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: Id }
+        item: Task
+        ops: [get]
+        collection:
+          routes:
+            me: { method: get, path: me }
+            peek: { method: get, path: '{key}', pathParams: { key: Id } }
+      other: { method: post, path: tasks/me }
+`);
+  const tasks = "/surfaces/app/routes/tasks";
+  const { diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas: treeNodesStubService({
+      typeUses: {
+        [`${tasks}/id/taskId`]: { kind: "scalar", type: "string", refinements: {} },
+        [`${tasks}/collection/routes/peek/pathParams/key`]: {
+          kind: "scalar",
+          type: "string",
+          refinements: {},
+        },
+      },
+    }),
+  });
+
+  expect(
+    diagnostics.map(({ rule, origin, message, related }) => ({ rule, origin, message, related })),
+  ).toEqual([
+    {
+      rule: "seampact/tree/route-unique",
+      origin: { layer: "api", pointer: `${tasks}/ops/0` },
+      message:
+        "The operation getTask answers GET /v1/tasks/{taskId}, which a router cannot tell from GET /v1/tasks/{key} of peekTasks.",
+      related: [
+        {
+          origin: { layer: "api", pointer: `${tasks}/collection/routes/peek` },
+          message: "the operation peekTasks",
+        },
+      ],
     },
   ]);
 });

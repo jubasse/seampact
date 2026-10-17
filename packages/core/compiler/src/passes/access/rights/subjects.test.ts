@@ -157,6 +157,7 @@ describe("subjects and scopes", () => {
   test("two member ids of the right's id schema in the nearest collection make the default ambiguous", () => {
     const { diagnostics } = run(`      links:
         kind: collection
+        path: 'links/{toId}'
         id: { fromId: DocId, toId: DocId }
         member:
           routes:

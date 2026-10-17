@@ -2,85 +2,175 @@ import type { IrWriter } from "@seampact/spec/ir";
 import {
   type DraftIR,
   type DraftOperation,
-  type PassContextOf,
   pipelineCopy,
   pipelineTreeNodes,
   type TreeNode,
 } from "../../../pipeline/seam.js";
-import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
+import type { TreeNodesSurfacePrefixes } from "./api.js";
+import { treeNodesReportIdlessCollection } from "./collections.js";
+import {
+  type TreeNodesReportOnce,
+  treeNodesError,
+  treeNodesNodeOrigin,
+  treeNodesReportOnce,
+} from "./diagnostics.js";
+import type { TreeNodesSite } from "./fields.js";
 import { treeNodesInput } from "./input.js";
 import {
   type TreeNodesOperationName,
+  type TreeNodesRawSchemas,
+  treeNodesIdlessCollection,
   treeNodesIdParam,
   treeNodesIsOperation,
   treeNodesOperationName,
+  treeNodesOpShorthand,
   treeNodesSingularOwner,
 } from "./names.js";
+import { treeNodesParams, treeNodesUnknownQuery } from "./params.js";
+import { treeNodesCheckPathParts, treeNodesPath } from "./paths.js";
+import { type TreeNodesContext, treeNodesSetting } from "./raw.js";
+import { treeNodesFormat, treeNodesResponses } from "./responses.js";
 
 // The operations of the api (ADR 0002 sections 6 and 7): one per route, relay route and `ops` entry, in tree order,
-// each with its id, name, surface, op, resource, method, safety, declared input and origin. A relay route's method
-// and shape are copied from the public operation it relays.
-
-type TreeNodesContext = PassContextOf<"tree.nodes">;
+// each with its id, name, surface, op, resource, method, path, safety, declared parameters, input and responses,
+// format and origin. A relay route's method, path, format and shape are copied from the public operation it relays.
 
 const OPERATION_KIND = "httpOperation";
 
 const HTTP_METHODS: readonly IrWriter.HttpMethod[] = ["get", "post", "put", "patch", "delete"];
-const OP_SHORTHANDS: readonly IrWriter.OpShorthand[] = [
-  "list",
-  "get",
-  "create",
-  "update",
-  "delete",
-  "batch",
-];
 
 // ADR 0002 section 6: a batch is a safe read sent as POST.
 const SAFE_OP: IrWriter.OpShorthand = "batch";
 const SAFE_METHOD: IrWriter.HttpMethod = "get";
 
+// ADR 0002 section 6: the item schema holds fields a client never sends, so these ops have no default input.
+const OPS_NEEDING_INPUT: readonly IrWriter.OpShorthand[] = ["create", "update"];
+
 const isHttpMethod = (value: unknown): value is IrWriter.HttpMethod =>
   HTTP_METHODS.some((method) => method === value);
 
-const isOpShorthand = (value: string): value is IrWriter.OpShorthand =>
-  OP_SHORTHANDS.some((op) => op === value);
-
-/** An operation written to the draft, with the node it came from and its name. */
+/** An operation written to the draft, with the node it came from, its name and its route when it has one. */
 interface Written {
   readonly node: TreeNode;
   readonly name: TreeNodesOperationName;
+  readonly route: Route | undefined;
+}
+
+interface Route {
+  /** The method and the path, each placeholder compared by position only. */
+  readonly key: string;
+  readonly text: string;
 }
 
 /** Writes every operation of the api to the draft, in tree order, and reports the id and name clashes. */
-export function treeNodesOperations(draft: DraftIR, context: TreeNodesContext): void {
+export function treeNodesOperations(
+  draft: DraftIR,
+  context: TreeNodesContext,
+  prefixes: TreeNodesSurfacePrefixes,
+): void {
   const written: Written[] = [];
-  const collectionsWithoutSingular = new Set<string>();
+  const once = treeNodesReportOnce((diagnostic) => context.report(diagnostic));
   for (const node of pipelineTreeNodes(context.raw)) {
     if (!treeNodesIsOperation(node)) continue;
 
-    const name = treeNodesOperationName(node, context.conventions);
-    if (name === undefined) {
-      reportNoSingular(node, collectionsWithoutSingular, context);
+    const idlessCollection = treeNodesIdlessCollection(node);
+    if (idlessCollection !== undefined) {
+      treeNodesReportIdlessCollection(node, idlessCollection, once);
       continue;
     }
 
-    draft.operations.push(operationOf(node, name, draft, context));
-    written.push({ node, name });
+    const name = treeNodesOperationName(node, context.conventions, context.raw.merged.schemas);
+    if (name === undefined) {
+      reportNoSingular(node, once);
+      continue;
+    }
+
+    const site: TreeNodesSite = { node, operationId: name.id, draft, context, once };
+    const operation = operationOf(site, name, prefixes);
+    draft.operations.push(operation);
+    const route = memberIdFailed(node, context) ? undefined : routeOf(operation);
+    written.push({ node, name, route });
   }
 
   reportClashes(written, context);
+  reportRouteClashes(written, context);
+}
+
+// A member route under a collection whose `id` gives no parameter has no placeholder in its path; the `id` is
+// already refused, so comparing that path would only repeat the error as a route clash.
+function memberIdFailed(node: TreeNode, context: TreeNodesContext): boolean {
+  for (let at = node.parent; at !== undefined; at = at.parent) {
+    const collection = at.kind === "scope" && at.name === "member" ? at.parent : undefined;
+    if (collection !== undefined && Object.hasOwn(collection.settings, "id"))
+      return treeNodesIdParam(collection, context.raw.merged.schemas) === undefined;
+  }
+  return false;
+}
+
+// The method and the path, each placeholder compared by position only: `/tasks/{id}` and `/tasks/{taskId}` are one
+// route to a router, `/tasks/me` beside `/tasks/{id}` is not. Undefined for a relay route until its path
+// is copied.
+function routeOf(operation: DraftOperation): Route | undefined {
+  if (operation.method === undefined || operation.path === undefined) return undefined;
+  const method = operation.method.toUpperCase();
+  return {
+    key: `${method} ${operation.path.replace(/\{[^{}]+\}/g, "{}")}`,
+    text: `${method} ${operation.path}`,
+  };
+}
+
+// ADR 0006 section 3: two operations of one api never share a method and a path, whatever their origin.
+function reportRouteClashes(written: readonly Written[], context: TreeNodesContext): void {
+  const byRoute = new Map<string, Written>();
+  for (const entry of written) {
+    if (entry.route === undefined) continue;
+    const first = byRoute.get(entry.route.key);
+    if (first?.route === undefined) {
+      byRoute.set(entry.route.key, entry);
+      continue;
+    }
+
+    context.report(
+      treeNodesError({
+        rule: "route-unique",
+        origin: treeNodesNodeOrigin(entry.node.origin),
+        message: `The operation ${entry.name.id} answers ${entry.route.text}, which a router cannot tell from ${first.route.text} of ${first.name.id}.`,
+        fix: "Change the path or the method of one of the two routes.",
+        related: [
+          {
+            origin: treeNodesNodeOrigin(first.node.origin),
+            message: `the operation ${first.name.id}`,
+          },
+        ],
+      }),
+    );
+  }
 }
 
 function operationOf(
-  node: TreeNode,
+  site: TreeNodesSite,
   name: TreeNodesOperationName,
-  draft: DraftIR,
-  context: TreeNodesContext,
+  prefixes: TreeNodesSurfacePrefixes,
 ): DraftOperation {
-  const op = node.kind === "op" && isOpShorthand(node.name) ? node.name : undefined;
-  const resource = resourceOf(node);
-  const method = methodOf(node, op, context);
+  const { node, draft, context } = site;
+  const op = treeNodesOpShorthand(node);
+  const resource = resourceOf(node, context.raw.merged.schemas);
+  const method = methodOf(node, op, site);
+  const safe = method === SAFE_METHOD || op === SAFE_OP;
   const input = treeNodesInput(node, name.id, draft, context);
+  if (
+    op !== undefined &&
+    OPS_NEEDING_INPUT.includes(op) &&
+    treeNodesSetting(node, "input") === undefined
+  )
+    reportNoInput(site, op);
+
+  const path = treeNodesPath(node, prefixes, context);
+  if (path !== undefined) treeNodesCheckPathParts(site, path);
+  const params = treeNodesParams(site, path, safe, input?.schema);
+  // A relay route's format and responses are copied from the operation it relays.
+  const format = node.kind === "relay" ? undefined : treeNodesFormat(site);
+  const responses = format === undefined ? [] : treeNodesResponses(site, format);
 
   return {
     kind: OPERATION_KIND,
@@ -89,10 +179,26 @@ function operationOf(
     surface: surfaceOf(node),
     ...(op === undefined ? {} : { op }),
     ...(resource === undefined ? {} : { resource }),
-    ...(method === undefined ? {} : { method, safe: method === SAFE_METHOD || op === SAFE_OP }),
+    ...(method === undefined ? {} : { method, safe }),
+    ...(path === undefined ? {} : { path: path.full }),
+    params,
+    unknownQuery: treeNodesUnknownQuery(site),
     ...(input === undefined ? {} : { input }),
+    responses,
+    ...(format === undefined ? {} : { format }),
     origin: pipelineCopy(node.origin),
   };
+}
+
+function reportNoInput(site: TreeNodesSite, op: IrWriter.OpShorthand): void {
+  site.context.report(
+    treeNodesError({
+      rule: "op-input",
+      origin: treeNodesNodeOrigin(site.node.origin),
+      message: `The ${op} op ${site.operationId} has no input; the item schema holds fields a client never sends.`,
+      fix: `Declare input on the ${op} op.`,
+    }),
+  );
 }
 
 function surfaceOf(node: TreeNode): string {
@@ -105,7 +211,7 @@ function surfaceOf(node: TreeNode): string {
 function methodOf(
   node: TreeNode,
   op: IrWriter.OpShorthand | undefined,
-  context: TreeNodesContext,
+  { context }: TreeNodesSite,
 ): IrWriter.HttpMethod | undefined {
   if (node.kind === "relay") return undefined;
 
@@ -119,7 +225,10 @@ function methodOf(
 
 // The collection or single an operation belongs to (its nearest one), with the member id parameter when the
 // operation sits on the member scope, and the item property holding the id: `idProperty`, else the id parameter.
-function resourceOf(node: TreeNode): IrWriter.OperationResource | undefined {
+function resourceOf(
+  node: TreeNode,
+  schemas: TreeNodesRawSchemas,
+): IrWriter.OperationResource | undefined {
   let onMember = false;
   for (let at = node.parent; at !== undefined; at = at.parent) {
     if (at.kind === "scope") onMember = at.name === "member";
@@ -131,7 +240,7 @@ function resourceOf(node: TreeNode): IrWriter.OperationResource | undefined {
     const type = typeof written === "string" ? written : at.name;
     if (at.kind === "single") return { type };
 
-    const idParam = treeNodesIdParam(at);
+    const idParam = treeNodesIdParam(at, schemas);
     const idPropertyWritten = Object.hasOwn(at.settings, "idProperty")
       ? at.settings.idProperty
       : undefined;
@@ -147,18 +256,13 @@ function resourceOf(node: TreeNode): IrWriter.OperationResource | undefined {
 
 // ADR 0002 section 6: the singular comes from `singular` or `id` only. Reported once per collection, at its first
 // operation that needs it.
-function reportNoSingular(
-  node: TreeNode,
-  reportedCollections: Set<string>,
-  context: TreeNodesContext,
-): void {
+function reportNoSingular(node: TreeNode, once: TreeNodesReportOnce): void {
   const collection = treeNodesSingularOwner(node);
   if (collection === undefined)
     throw new Error(`the operation at ${node.pointer} has no name, yet needs no singular`);
-  if (reportedCollections.has(collection.pointer)) return;
-  reportedCollections.add(collection.pointer);
 
-  context.report(
+  once(
+    `collection-singular:${collection.pointer}`,
     treeNodesError({
       rule: "collection-singular",
       origin: treeNodesNodeOrigin(collection.origin),

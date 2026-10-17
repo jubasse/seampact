@@ -42,6 +42,7 @@ surfaces:
             promote: { method: post }
       me:
         kind: single
+        item: Member
         ops: [get]
         routes:
           avatar: { method: get }

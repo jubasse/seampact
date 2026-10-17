@@ -3,18 +3,17 @@ import type { DiagnosticOrigin } from "../../../diagnostics/diagnostic.js";
 import {
   type DraftIR,
   type DraftOperationInput,
-  type PassContextOf,
-  pipelineParseSize,
+  pipelineCopy,
   type TreeNode,
 } from "../../../pipeline/seam.js";
 import { treeNodesError, treeNodesLocate, treeNodesNodeOrigin } from "./diagnostics.js";
 import { treeNodesFieldWireOf, treeNodesIsFileField } from "./field-wire.js";
+import { treeNodesBodyLimit } from "./limits.js";
+import { type TreeNodesContext, treeNodesPointer, treeNodesSchema } from "./raw.js";
 
 // The request body a route declares (ADR 0002 section 7, "Bodies beyond JSON"): its media, its type use from the
 // schema service, its origin, and for a form or multipart body the wire of each field. Files travel only as a
 // top-level multipart field (or as a download, a response), each within the route's body limit.
-
-type TreeNodesContext = PassContextOf<"tree.nodes">;
 
 type Media = IrWriter.InputMediaType;
 
@@ -86,11 +85,12 @@ export function treeNodesInput(
 
   if (media === JSON_MEDIA) {
     reportNestedFiles(site, filesBelow(schema, draft, undefined), undefined);
-    return { media, schema, origin };
+    return { media, schema: pipelineCopy(schema), origin: pipelineCopy(origin) };
   }
 
   const fields = formFields(site, schema);
-  return fields === undefined ? { media, schema, origin } : { media, schema, origin, fields };
+  const input = { media, schema: pipelineCopy(schema), origin: pipelineCopy(origin) };
+  return fields === undefined ? input : { ...input, fields };
 }
 
 function mediaOf(node: TreeNode): Media {
@@ -107,7 +107,7 @@ const mediaWord = (media: Media): string => MEDIA_WORD.get(media) ?? media;
 // The fields of a form or multipart input: each property of its object schema, with its wire. Undefined, with a
 // diagnostic, when the input is no object schema.
 function formFields(site: InputSite, schema: IrWriter.TypeUse): IrWriter.InputField[] | undefined {
-  const declared = schema.kind === "ref" ? schemaOf(site.draft, schema.schema) : undefined;
+  const declared = schema.kind === "ref" ? treeNodesSchema(site.draft, schema.schema) : undefined;
   if (declared?.kind !== "object") {
     site.context.report(
       treeNodesError({
@@ -123,7 +123,7 @@ function formFields(site: InputSite, schema: IrWriter.TypeUse): IrWriter.InputFi
   const schemaPointer = inputSchemaPointer(site.node, declared.id);
   const fields: IrWriter.InputField[] = [];
   for (const property of declared.properties) {
-    const fieldPointer = `${schemaPointer}/properties/${escapePointerSegment(property.name)}`;
+    const fieldPointer = treeNodesPointer(schemaPointer, "properties", property.name);
     const wire = fieldWire(site, property, fieldPointer);
     if (wire !== undefined) fields.push({ name: property.name, wire });
   }
@@ -136,13 +136,9 @@ function formFields(site: InputSite, schema: IrWriter.TypeUse): IrWriter.InputFi
 function inputSchemaPointer(node: TreeNode, schemaId: string): string {
   const written = Object.hasOwn(node.settings, "input") ? node.settings.input : undefined;
   return typeof written === "string"
-    ? `/schemas/${escapePointerSegment(schemaId)}`
+    ? treeNodesPointer("/schemas", schemaId)
     : `${node.pointer}/input`;
 }
-
-// RFC 6901: `~` and `/` inside a segment.
-const escapePointerSegment = (segment: string): string =>
-  segment.replaceAll("~", "~0").replaceAll("/", "~1");
 
 function fieldWire(
   site: InputSite,
@@ -191,7 +187,7 @@ function checkFileField(site: InputSite, property: IrWriter.Property, at: Diagno
 
   const file = property.type.kind === "array" ? property.type.items : property.type;
   const maxSize = file.kind === "file" ? file.maxSizeBytes : undefined;
-  const limit = bodyLimitOf(site);
+  const limit = treeNodesBodyLimit(site.node, site.context);
   if (maxSize === undefined || limit === undefined || maxSize <= limit.bytes) return;
 
   site.context.report(
@@ -206,36 +202,6 @@ function checkFileField(site: InputSite, property: IrWriter.Property, at: Diagno
           : [{ origin: treeNodesLocate(limit.origin, site.origin), message: "the body limit" }],
     }),
   );
-}
-
-interface BodyLimit {
-  readonly bytes: number;
-  /** Undefined for the core default. */
-  readonly origin: Origin | undefined;
-}
-
-// The route's body limit: the nearest `bodyLimit` of the tree, else the convention (`batch.bodyLimit` for a batch).
-function bodyLimitOf(site: InputSite): BodyLimit | undefined {
-  const inherited = site.context.inherited(site.node, "bodyLimit");
-  if (inherited !== undefined) {
-    const { value, origin } = inherited.entry;
-    return parsedBodyLimit(value, origin, origin.pointer);
-  }
-
-  const isBatch = site.node.kind === "op" && site.node.name === "batch";
-  const convention = isBatch ? "batch.bodyLimit" : "bodyLimit";
-  const reading = site.context.conventions.get(convention);
-  if (reading === undefined) return undefined;
-  const writtenAt = reading.origin?.pointer ?? `the default conventions.${convention}`;
-  return parsedBodyLimit(reading.value, reading.origin, writtenAt);
-}
-
-// A written limit the size grammar admits but that does not parse (an overflow) would skip the maxSize check.
-function parsedBodyLimit(value: unknown, origin: Origin | undefined, writtenAt: string): BodyLimit {
-  const bytes = typeof value === "string" ? pipelineParseSize(value) : undefined;
-  if (bytes === undefined)
-    throw new Error(`the body limit at ${writtenAt} does not parse as a size: ${String(value)}`);
-  return { bytes, origin };
 }
 
 // Every file reached from `use` (a file itself included), through schemas, items, map values, union variants and
@@ -259,7 +225,7 @@ function filesBelow(
   const visitSchema = (id: string, atPath: string): void => {
     if (visited.has(id)) return;
     visited.add(id);
-    const schema = schemaOf(draft, id);
+    const schema = treeNodesSchema(draft, id);
     if (schema === undefined) return;
     if (schema.kind === "object")
       for (const property of schema.properties)
@@ -298,8 +264,4 @@ function reportNestedFiles(
       }),
     );
   }
-}
-
-function schemaOf(draft: DraftIR, id: string): IrWriter.Schema | undefined {
-  return Object.hasOwn(draft.schemas, id) ? draft.schemas[id] : undefined;
 }
