@@ -1,0 +1,87 @@
+# inventory/schemas.yaml: the schemas of the hand-written routes
+WarehouseId: { type: string, format: uuid }
+Warehouse:
+  type: object
+  required: [warehouseId, name, state, kind, detail, createdAt, version]
+  properties:
+    warehouseId: WarehouseId
+    name: { type: string, minLength: 1, maxLength: 120 }
+    state: { enum: Priority }
+    kind: { enum: Currency }
+    detail: GrossVolume
+    extra: GrossCount
+    createdAt: { type: string, format: date-time }
+    version: { type: integer, minimum: 1 }
+CreateWarehouse:
+  pick: { from: Warehouse, fields: [name, state, kind] }
+UpdateWarehouse:
+  pick: { from: Warehouse, fields: [name, state] }
+  required: []
+BinId: { type: string, format: uuid }
+Bin:
+  type: object
+  required: [binId, name, state, kind, detail, createdAt, version]
+  properties:
+    binId: BinId
+    name: { type: string, minLength: 1, maxLength: 60 }
+    state: { enum: Visibility }
+    kind: { enum: Unit }
+    detail: GrossRate
+    extra: GrossTally
+    createdAt: { type: string, format: date-time }
+    version: { type: integer, minimum: 1 }
+CreateBin:
+  pick: { from: Bin, fields: [name, state, kind] }
+UpdateBin:
+  pick: { from: Bin, fields: [name, state] }
+  required: []
+ProductId: { type: string, format: uuid }
+Product:
+  type: object
+  required: [productId, name, state, kind, detail, createdAt, version]
+  properties:
+    productId: ProductId
+    name: { type: string, minLength: 1, maxLength: 200 }
+    state: { enum: Condition }
+    kind: { enum: Origin }
+    detail: NetWeight
+    extra: NetSpan
+    createdAt: { type: string, format: date-time }
+    version: { type: integer, minimum: 1 }
+CreateProduct:
+  pick: { from: Product, fields: [name, state, kind] }
+UpdateProduct:
+  pick: { from: Product, fields: [name, state] }
+  required: []
+ReserveProductInput:
+  type: object
+  required: [quantity]
+  properties:
+    quantity: { type: integer, minimum: 1, maximum: 10000 }
+    reason: { type: string, maxLength: 200 }
+ReleaseProductInput:
+  type: object
+  required: [quantity]
+  properties: { quantity: { type: integer, minimum: 1, maximum: 10000 } }
+ShipmentId: { type: string, format: uuid }
+Shipment:
+  type: object
+  required: [shipmentId, name, state, kind, detail, createdAt, version]
+  properties:
+    shipmentId: ShipmentId
+    name: { type: string, minLength: 1, maxLength: 100 }
+    state: { enum: Currency }
+    kind: { enum: Grade }
+    detail: NetWindow
+    extra: NetLimit
+    createdAt: { type: string, format: date-time }
+    version: { type: integer, minimum: 1 }
+CreateShipment:
+  pick: { from: Shipment, fields: [name, state, kind] }
+UpdateShipment:
+  pick: { from: Shipment, fields: [name, state] }
+  required: []
+DispatchShipmentInput:
+  type: object
+  required: [carrierNote]
+  properties: { carrierNote: { type: string, minLength: 1, maxLength: 300 } }

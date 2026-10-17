@@ -1,0 +1,111 @@
+# api.yaml: the contract behind table.json; each schema is echoed by one route so it is used as input and as output
+api:
+  name: agreement
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: Payloads that every validator target must accept or refuse alike.
+
+enums:
+  Role: { values: [owner, editor, viewer], reason: "Roles are local to this contract." }
+
+schemas:
+  $include: ./schemas.yaml
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: "A fixture for validators: no caller exists." }
+    routes:
+      echoNotice:
+        method: post
+        input: Notice
+        output: Notice
+      echoStrictKeys:
+        method: post
+        input: StrictKeys
+        output: StrictKeys
+      echoSubtreeKeys:
+        method: post
+        input: SubtreeKeys
+        output: SubtreeKeys
+      echoIgnoreKeys:
+        method: post
+        input: IgnoreKeys
+        output: IgnoreKeys
+      echoKeepKeys:
+        method: post
+        input: KeepKeys
+        output: KeepKeys
+      echoProfile:
+        method: post
+        input: Profile
+        output: Profile
+      echoPatchArticle:
+        method: post
+        input: PatchArticle
+        output: PatchArticle
+      echoReceipt:
+        method: post
+        input: Receipt
+        output: Receipt
+      echoLabelled:
+        method: post
+        input: Labelled
+        output: Labelled
+      echoTags:
+        method: post
+        input: Tags
+        output: Tags
+      echoPoint:
+        method: post
+        input: Point
+        output: Point
+      echoQuantity:
+        method: post
+        input: Quantity
+        output: Quantity
+      echoPercent:
+        method: post
+        input: Percent
+        output: Percent
+      echoInstant:
+        method: post
+        input: Instant
+        output: Instant
+      echoDay:
+        method: post
+        input: Day
+        output: Day
+      echoEnvelope:
+        method: post
+        input: Envelope
+        output: Envelope
+      echoOptionalEnvelope:
+        method: post
+        input: OptionalEnvelope
+        output: OptionalEnvelope
+      echoMember:
+        method: post
+        input: Member
+        output: Member
+      echoOwner:
+        method: post
+        input: Owner
+        output: Owner
+      echoFormats:
+        method: post
+        input: Formats
+        output: Formats
+      echoPatterns:
+        method: post
+        input: Patterns
+        output: Patterns
+      echoComment:
+        method: post
+        input: Comment
+        output: Comment
+      echoCounts:
+        method: post
+        input: Counts
+        output: Counts
