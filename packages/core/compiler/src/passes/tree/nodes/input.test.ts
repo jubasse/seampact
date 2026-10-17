@@ -284,9 +284,9 @@ test.each<{ use: IrWriter.TypeUse; answer?: IrWriter.QueryWire; expected: IrWrit
 });
 
 test("field wire shared: a field the service has no wire for throws", () => {
-  expect(() => treeNodesFieldWire(FIELD, text, treeNodesStubService({}))).toThrow(
-    /no query wire for the field at \/schemas\/Form\/properties\/field/,
-  );
+  expect(() =>
+    treeNodesFieldWire(FIELD, text, treeNodesStubService({ typeUses: { [FIELD]: text } })),
+  ).toThrow(/no query wire for the field at \/schemas\/Form\/properties\/field/);
 });
 
 // A body-versioned update (ADR 0002 section 11): tree.schemas adds `expectedVersion` to the input, with the

@@ -2,6 +2,7 @@ import type { IrWriter } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { diagnosticLocationKey } from "../../../diagnostics/print.js";
 import type { TreeSchemaService } from "../../../pipeline/seam.js";
+import { treeNodesUnansweredAt } from "../../tree/nodes/test-support.js";
 import {
   type AccessIdentitySchemaUseRow,
   accessIdentityCataloguesExpected,
@@ -258,7 +259,11 @@ identities:
     );
 
     expect(() =>
-      accessIdentityRun(principal, accessIdentityDraft(), accessIdentityTableService([])),
+      accessIdentityRun(
+        principal,
+        accessIdentityDraft(),
+        treeNodesUnansweredAt(accessIdentityTableService([]), "/identities/user/principal"),
+      ),
     ).toThrow(
       "the schema service answers no output type use for the schema written at /identities/user/principal",
     );
@@ -266,7 +271,11 @@ identities:
     const header = accessIdentityInline(CATALOGUES);
 
     expect(() =>
-      accessIdentityRun(header, accessIdentityDraft(), accessIdentityTableService([])),
+      accessIdentityRun(
+        header,
+        accessIdentityDraft(),
+        treeNodesUnansweredAt(accessIdentityTableService([]), "/headers/typedSurface/schema"),
+      ),
     ).toThrow(
       "the schema service answers no input type use for the schema written at /headers/typedSurface/schema",
     );

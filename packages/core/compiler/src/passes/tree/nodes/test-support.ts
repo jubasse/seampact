@@ -136,20 +136,72 @@ export interface TreeNodesStubRows {
 /** An example value holding this string anywhere fails `checkExample` of the stub service, at that place. */
 export const TREE_NODES_INVALID_EXAMPLE = "invalid";
 
-/** A schema service answering the listed pointers in either direction; an example fails where it holds the marker. */
+/** The use the stub service answers at a pointer it does not list: every written position has a type. */
+export const TREE_NODES_UNLISTED_USE: IrWriter.TypeUse = {
+  kind: "scalar",
+  type: "string",
+  refinements: {},
+};
+
+/** The query wire of a text field, which the stub service answers where it lists neither a use nor a wire. */
+export const TREE_NODES_UNLISTED_WIRE: IrWriter.QueryWire = {
+  kind: "text",
+  style: "form",
+  explode: true,
+  brackets: false,
+};
+
+/**
+ * A schema service answering the listed pointers in either direction, and a text field at any other; an example
+ * fails where it holds the marker.
+ */
 export function treeNodesStubService(rows: TreeNodesStubRows): TreeSchemaService {
   const typeUses = rows.typeUses ?? {};
   const queryWires = rows.queryWires ?? {};
 
   return {
     typeUse: (pointer) =>
-      Object.hasOwn(typeUses, pointer) ? structuredClone(typeUses[pointer]) : undefined,
-    queryWire: (pointer) =>
-      Object.hasOwn(queryWires, pointer) ? structuredClone(queryWires[pointer]) : undefined,
+      structuredClone(
+        Object.hasOwn(typeUses, pointer) ? typeUses[pointer] : TREE_NODES_UNLISTED_USE,
+      ),
+    queryWire: (pointer) => {
+      if (Object.hasOwn(queryWires, pointer)) return structuredClone(queryWires[pointer]);
+
+      return Object.hasOwn(typeUses, pointer)
+        ? undefined
+        : structuredClone(TREE_NODES_UNLISTED_WIRE);
+    },
     checkExample: (value) =>
       markersIn(value, "").map((pointer) => ({ pointer, message: "the value is invalid" })),
     checkTextExample: (text) =>
       markersIn(text, "").map((pointer) => ({ pointer, message: "the value is invalid" })),
+  };
+}
+
+/** The service answering no type at `pointers`, as no tree.schemas does for a position it accepted. */
+export function treeNodesUnansweredAt(
+  service: TreeSchemaService,
+  ...pointers: readonly string[]
+): TreeSchemaService {
+  return {
+    ...service,
+    typeUse: (pointer, direction) =>
+      pointers.includes(pointer) ? undefined : service.typeUse(pointer, direction),
+  };
+}
+
+// The fixture service has no row for the batch ids input, the schema tree.schemas hoists at the batch op entry.
+const REFERENCE_BATCH_OP = "/surfaces/app/routes/channels/member/routes/tasks/ops/batch";
+const REFERENCE_BATCH_INPUT: IrWriter.TypeUse = { kind: "ref", schema: "GetTasksBatchInput" };
+
+/** The fixture service of the reference contract, also answering its batch ids input. */
+export function treeNodesWithBatchInput(service: TreeSchemaService): TreeSchemaService {
+  return {
+    ...service,
+    typeUse: (pointer, direction) =>
+      pointer === REFERENCE_BATCH_OP && direction === "input"
+        ? structuredClone(REFERENCE_BATCH_INPUT)
+        : service.typeUse(pointer, direction),
   };
 }
 

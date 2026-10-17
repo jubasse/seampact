@@ -573,7 +573,6 @@ test("tree.nodes diagnostics are located: routes", () => {
     ["path-segment", `${ROUTES}/rooted/path`],
     ["responses-output", `${ROUTES}/both/output`],
     ["no-content-body", `${ROUTES}/emptied/responses/204`],
-    ["annotation-position", `${ROUTES}/told/responses/202/description`],
     ["fields-schema", `${ROUTES}/listed/query`],
     ["path-param", `${ROUTES}/misplaced/path`],
     ["param-unique", `${ROUTES}/twice/headers/x-a`],
@@ -873,7 +872,7 @@ surfaces:
   ]);
 });
 
-test("declared responses: refused beside output, a 204 body, a description, a header twice; an unanswered body left out", () => {
+test("declared responses: refused beside output, a 204 body, a header twice; a description kept as docs", () => {
   const workspace = treeNodesLoadInline(`
 api: { name: a, version: 1, kind: product }
 schemas:
@@ -888,7 +887,6 @@ surfaces:
       twice:
         method: get
         responses: { 202: { headers: { Retry-After: { type: string }, retry-after: { type: string } } } }
-      pending: { method: get, responses: { 200: { body: Note }, 202: {} } }
 `);
   const twice = `${ROUTES}/twice/responses/202/headers`;
   const treeSchemas = treeNodesStubService({
@@ -907,9 +905,9 @@ surfaces:
   expect(
     operation(draft.operations, "twice").responses?.[0]?.headers.map(({ name }) => name),
   ).toEqual(["Retry-After"]);
-  expect(operation(draft.operations, "pending").responses?.map(({ status }) => status)).toEqual([
-    202,
-  ]);
+  expect(operation(draft.operations, "told").responses?.[0]?.docs).toEqual({
+    description: "Accepted for later.",
+  });
   expect(
     diagnostics.map(({ rule, origin, message, related }) => ({ rule, origin, message, related })),
   ).toEqual([
@@ -923,12 +921,6 @@ surfaces:
       rule: "seampact/tree/no-content-body",
       origin: at(`${ROUTES}/empty/responses/204`),
       message: "The 204 response of empty has a body, which a 204 No Content never carries.",
-      related: [],
-    },
-    {
-      rule: "seampact/tree/annotation-position",
-      origin: at(`${ROUTES}/told/responses/202/description`),
-      message: "The description of the 202 response of told is not kept by the contract model.",
       related: [],
     },
     {
@@ -1046,4 +1038,27 @@ surfaces:
   expect(
     diagnostics.map(({ rule, origin }) => [rule.replace("seampact/tree/", ""), origin.pointer]),
   ).toEqual([["fields-schema", `${TASKS}/id`]]);
+});
+
+test("get without a body: an input on a get is refused where it is written", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      search: { method: get, input: { type: object, properties: { q: { type: string } } } }
+      find: { method: post, input: { type: object, properties: { q: { type: string } } } }
+`);
+  const { diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas: treeNodesStubService({}),
+  });
+
+  expect(diagnostics.map(({ rule, origin, message }) => [rule, origin.pointer, message])).toEqual([
+    [
+      "seampact/tree/get-input",
+      `${ROUTES}/search/input`,
+      "The get route search declares an input, but a get request carries no body.",
+    ],
+  ]);
 });

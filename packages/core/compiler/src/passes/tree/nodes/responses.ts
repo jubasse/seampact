@@ -1,5 +1,6 @@
 import type { IrWriter, Origin } from "@seampact/spec/ir";
 import { pipelineCopy, type TreeNode } from "../../../pipeline/seam.js";
+import { treeNodesDocs } from "./api.js";
 import { treeNodesError, treeNodesLocate, treeNodesNodeOrigin } from "./diagnostics.js";
 import {
   type TreeNodesField,
@@ -21,6 +22,7 @@ import {
 } from "./names.js";
 import {
   type TreeNodesJson,
+  treeNodesAnsweredUse,
   treeNodesIsObject,
   treeNodesMember,
   treeNodesPointer,
@@ -51,9 +53,6 @@ const FORMAT_DERIVATION: IrWriter.DerivationId = "response.format";
 const BATCH_DERIVATION: IrWriter.DerivationId = "batch.read";
 
 const RESPONSES_INSTEAD_OF: readonly string[] = ["output", "item"];
-
-// The response annotations the IR cannot hold yet (`Response.docs` is asked of the lead IR PR).
-const UNHELD_RESPONSE_ANNOTATIONS: readonly string[] = ["description"];
 
 /** The wire format of an operation: the nearest `format`, else `conventions.format`. */
 export function treeNodesFormat(site: TreeNodesSite): string {
@@ -154,7 +153,7 @@ function declaredResponses(
     checkResponsesAlone(site);
 
     return Object.keys(written)
-      .flatMap((status) => writtenResponse(site, status, media) ?? [])
+      .map((status) => writtenResponse(site, status, media))
       .sort((a, b) => a.status - b.status);
   }
 
@@ -237,9 +236,7 @@ function batchTable(
   status: number,
   media: string,
 ): IrWriter.Response[] {
-  const body = site.context.treeSchemas.typeUse(`${itemWriter.pointer}/item`, "output");
-
-  if (body === undefined) return [];
+  const body = treeNodesAnsweredUse(site.context, `${itemWriter.pointer}/item`, "output");
 
   return [
     {
@@ -288,9 +285,7 @@ function bodyResponse(
 ): IrWriter.Response[] {
   const pointer = `${owner.pointer}/${member}`;
   const origin = site.context.origin(pointer) ?? owner.origin;
-  const body = site.context.treeSchemas.typeUse(pointer, "output");
-
-  if (body === undefined) return [];
+  const body = treeNodesAnsweredUse(site.context, pointer, "output");
 
   return [
     {
@@ -304,35 +299,28 @@ function bodyResponse(
   ];
 }
 
-// One entry of `responses`: its body and headers; a redirect status with no body. Undefined while the schema
-// service answers no type for a written body (the seam's stub; an internal error from PR 4).
-function writtenResponse(
-  site: TreeNodesSite,
-  statusKey: string,
-  media: string,
-): IrWriter.Response | undefined {
+// One entry of `responses`: its body, headers and docs; a redirect status with no body.
+function writtenResponse(site: TreeNodesSite, statusKey: string, media: string): IrWriter.Response {
   const pointer = `${site.node.pointer}/responses/${statusKey}`;
   const entry = treeNodesMember(treeNodesSetting(site.node, "responses"), statusKey);
   const origin = site.context.origin(pointer) ?? site.node.origin;
   const status = Number(statusKey);
 
-  refuseUnheldAnnotations(site, entry, pointer, status);
   const headers = responseHeaders(site, treeNodesMember(entry, "headers"), `${pointer}/headers`);
 
+  const docs = docsOf(entry);
   const writtenBody = treeNodesMember(entry, "body");
 
   if (REDIRECT_STATUSES.includes(status)) {
     if (writtenBody !== undefined) reportRedirectBody(site, status, `${pointer}/body`);
 
-    return { status, shape: "redirect", headers, origin: pipelineCopy(origin) };
+    return { status, shape: "redirect", headers, ...docs, origin: pipelineCopy(origin) };
   }
 
   if (writtenBody === undefined)
-    return { status, shape: "empty", headers, origin: pipelineCopy(origin) };
+    return { status, shape: "empty", headers, ...docs, origin: pipelineCopy(origin) };
 
-  const body = site.context.treeSchemas.typeUse(`${pointer}/body`, "output");
-
-  if (body === undefined) return undefined;
+  const body = treeNodesAnsweredUse(site.context, `${pointer}/body`, "output");
 
   const isFile = body.kind === "file";
 
@@ -342,31 +330,16 @@ function writtenResponse(
     body: pipelineCopy(body),
     shape: isFile ? "binary" : "item",
     headers,
+    ...docs,
     origin: pipelineCopy(origin),
   };
 }
 
-// A written annotation the IR has no member for is refused, never dropped.
-function refuseUnheldAnnotations(
-  site: TreeNodesSite,
-  entry: TreeNodesJson | undefined,
-  pointer: string,
-  status: number,
-): void {
-  for (const key of UNHELD_RESPONSE_ANNOTATIONS.filter(
-    (annotation) => treeNodesMember(entry, annotation) !== undefined,
-  )) {
-    const at = `${pointer}/${key}`;
+// The docs written on a response entry, absent when it writes none.
+function docsOf(entry: TreeNodesJson | undefined): { docs?: IrWriter.Docs } {
+  const docs = treeNodesDocs(entry);
 
-    site.context.report(
-      treeNodesError({
-        rule: "annotation-position",
-        origin: treeNodesNodeOrigin(site.context.origin(at) ?? site.node.origin),
-        message: `The ${key} of the ${status} response of ${site.operationId} is not kept by the contract model.`,
-        fix: `Remove ${key} here; describe the response in the route's description.`,
-      }),
-    );
-  }
+  return Object.keys(docs).length === 0 ? {} : { docs };
 }
 
 // Each header name once, in any case (RFC 9110 section 5.1).
@@ -389,8 +362,7 @@ function responseHeaders(
 
     seen.set(name, field);
 
-    if (field.type === undefined || !treeNodesFieldTravels(site, field, "response header"))
-      continue;
+    if (!treeNodesFieldTravels(site, field, "response header")) continue;
     headers.push({
       name: field.name,
       type: pipelineCopy(field.type),

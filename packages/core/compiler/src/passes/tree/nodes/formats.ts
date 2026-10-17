@@ -10,6 +10,7 @@ import {
 import {
   type TreeNodesContext,
   type TreeNodesJson,
+  treeNodesAnsweredUse,
   treeNodesIsObject,
   treeNodesMember,
   treeNodesOriginAt,
@@ -286,12 +287,7 @@ class FormatReader {
   }
 
   schemaType(pointer: string): IrWriter.TypeUse {
-    const type = this.context.treeSchemas.typeUse(`${pointer}/schema`, "output");
-
-    if (type === undefined)
-      throw new Error(`tree.schemas answers no type for the meta schema at ${pointer}/schema`);
-
-    return type;
+    return treeNodesAnsweredUse(this.context, `${pointer}/schema`, "output");
   }
 
   refuseUntypedMeta(name: string, fill: string, pointer: string): undefined {

@@ -2,16 +2,10 @@ import type { IrWriter } from "@seampact/spec/ir";
 import { pipelineCopy } from "../../../pipeline/seam.js";
 import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
 import type { TreeNodesSite } from "./fields.js";
-import {
-  treeNodesIsObject,
-  treeNodesMember,
-  treeNodesObjectOf,
-  treeNodesSchema,
-  treeNodesSetting,
-} from "./raw.js";
+import { treeNodesIsObject, treeNodesMember, treeNodesSchema, treeNodesSetting } from "./raw.js";
 
 // `degradable` (ADR 0002 section 10, SCN-085): paths of optional properties of the success data, each a dotted
-// path through object properties. A degraded response says which parts it left out: in the format's `degraded`
+// path through object properties, through every variant of a union. A degraded response says which parts it left out: in the format's `degraded`
 // meta field, else in `conventions.degradedHeader`, which is then required (ADR 0006 section 7).
 
 const DEGRADED_FILL = "degraded";
@@ -65,58 +59,67 @@ function formatFillsDegraded(site: TreeNodesSite, format: string): boolean {
   );
 }
 
-// A body the schema service does not answer yet has no property list to check a path against: the path is kept
-// unchecked.
-function isUnknownShape(site: TreeNodesSite, use: IrWriter.TypeUse | undefined): boolean {
-  if (use === undefined) return true;
-
-  return use.kind === "ref" && treeNodesSchema(site.draft, use.schema) === undefined;
-}
-
-// A path crosses object properties only: the variants of a union are not checked one by one.
-function unionOf(site: TreeNodesSite, use: IrWriter.TypeUse | undefined): string | undefined {
-  const schema = use?.kind === "ref" ? treeNodesSchema(site.draft, use.schema) : undefined;
-
-  return schema?.kind === "union" ? schema.id : undefined;
-}
-
-// Each segment names a property of the object reached so far; the last one must be optional.
+// The success data a path reaches into; a route with no success body has none to leave out.
 function checkPath(
   site: TreeNodesSite,
   path: string,
   pointer: string,
   body: IrWriter.TypeUse | undefined,
 ): void {
-  let use = body;
-  let property: IrWriter.Property | undefined;
+  const fault = body === undefined ? NO_PROPERTY : pathFault(site, path.split("."), body);
 
-  for (const segment of path.split(".")) {
-    const reached = use?.kind === "array" ? use.items : use;
+  if (fault !== undefined) reportPath(site, path, pointer, fault);
+}
 
-    if (isUnknownShape(site, reached)) return;
+const NO_PROPERTY = "names no property of the success data";
 
-    const union = unionOf(site, reached);
+// Each segment names a property of the object reached so far, in every variant of a union; the last one must be
+// optional. Undefined when the path fits.
+function pathFault(
+  site: TreeNodesSite,
+  segments: readonly string[],
+  use: IrWriter.TypeUse,
+): string | undefined {
+  const reached = use.kind === "array" ? use.items : use;
+  const schema = reached.kind === "ref" ? draftSchema(site, reached.schema) : undefined;
 
-    if (union !== undefined) {
-      reportPath(site, path, pointer, `crosses the union ${union}`);
+  if (schema?.kind === "union") return variantsFault(site, segments, schema);
 
-      return;
-    }
+  const [segment, ...rest] = segments;
+  const property =
+    schema?.kind === "object"
+      ? schema.properties.find((candidate) => candidate.name === segment)
+      : undefined;
 
-    const schema = treeNodesObjectOf(site.draft, reached);
+  if (property === undefined) return NO_PROPERTY;
 
-    property = schema?.properties.find((candidate) => candidate.name === segment);
+  if (rest.length > 0) return pathFault(site, rest, property.type);
 
-    if (property === undefined) {
-      reportPath(site, path, pointer, "names no property of the success data");
+  return property.optional ? undefined : "names a required property";
+}
 
-      return;
-    }
+function variantsFault(
+  site: TreeNodesSite,
+  segments: readonly string[],
+  union: IrWriter.UnionSchema,
+): string | undefined {
+  for (const variant of union.variants) {
+    const fault = pathFault(site, segments, { kind: "ref", schema: variant.schema });
 
-    use = property.type;
+    if (fault !== undefined) return `${fault} in the variant ${variant.tag} of ${union.id}`;
   }
 
-  if (property?.optional === false) reportPath(site, path, pointer, "names a required property");
+  return undefined;
+}
+
+// tree.schemas writes every schema a use it answers refers to, so a missing one is an internal error.
+function draftSchema(site: TreeNodesSite, id: string): IrWriter.Schema {
+  const schema = treeNodesSchema(site.draft, id);
+
+  if (schema === undefined)
+    throw new Error(`the draft holds no schema ${id}, which a body refers to`);
+
+  return schema;
 }
 
 function reportPath(site: TreeNodesSite, path: string, pointer: string, why: string): void {

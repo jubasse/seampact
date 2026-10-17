@@ -83,12 +83,14 @@ export function accessIdentityTableService(
   rows: readonly AccessIdentitySchemaUseRow[],
   queryWires: Readonly<Record<string, IrWriter.QueryWire>> = {},
 ): TreeSchemaService {
+  const stub = treeNodesStubService({ queryWires });
+
   return {
-    ...treeNodesStubService({ queryWires }),
+    ...stub,
     typeUse: (pointer, direction) => {
       const found = rows.find((row) => row.pointer === pointer && row.direction === direction);
 
-      return found === undefined ? undefined : structuredClone(found.use);
+      return found === undefined ? stub.typeUse(pointer, direction) : structuredClone(found.use);
     },
   };
 }

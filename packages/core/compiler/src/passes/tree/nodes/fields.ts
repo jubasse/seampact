@@ -9,6 +9,7 @@ import {
 import {
   type TreeNodesContext,
   type TreeNodesJson,
+  treeNodesAnsweredUse,
   treeNodesIsObject,
   treeNodesObjectOf,
   treeNodesPointer,
@@ -32,14 +33,13 @@ export interface TreeNodesSite {
 export interface TreeNodesField {
   readonly name: string;
   readonly required: boolean;
-  /** Undefined while the schema service answers nothing (the seam's stub). */
-  readonly type: IrWriter.TypeUse | undefined;
+  readonly type: IrWriter.TypeUse;
   readonly origin: Origin;
   /** Where the schema service answers the field's query wire. */
   readonly wirePointer: string;
 }
 
-/** The fields of a map, and whether every name is known (a schema name the service cannot resolve is not). */
+/** The fields of a map, and whether every name is known (a schema name that is no object schema is not). */
 export interface TreeNodesFields {
   readonly fields: readonly TreeNodesField[];
   readonly complete: boolean;
@@ -65,7 +65,7 @@ export function treeNodesFields(
     return {
       name: optional ? key.slice(0, -OPTIONAL_SUFFIX.length) : key,
       required: !optional,
-      type: site.context.treeSchemas.typeUse(fieldPointer, direction),
+      type: treeNodesAnsweredUse(site.context, fieldPointer, direction),
       origin: site.context.origin(fieldPointer) ?? site.node.origin,
       wirePointer: fieldPointer,
     };
@@ -81,10 +81,7 @@ function namedSchemaFields(
   pointer: string,
   direction: IrWriter.Direction,
 ): TreeNodesFields {
-  const use = site.context.treeSchemas.typeUse(pointer, direction);
-
-  if (use === undefined) return { fields: [], complete: false };
-
+  const use = treeNodesAnsweredUse(site.context, pointer, direction);
   const schema = treeNodesObjectOf(site.draft, use);
 
   if (schema === undefined) {

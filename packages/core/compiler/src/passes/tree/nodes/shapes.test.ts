@@ -12,6 +12,7 @@ import {
   treeNodesObjectSchema,
   treeNodesRun,
   treeNodesStubService,
+  treeNodesUnansweredAt,
 } from "./test-support.js";
 
 // The shape of each operation beyond its route (ADR 0002 sections 6, 10, 12 and 14): write semantics, paging,
@@ -302,8 +303,6 @@ surfaces:
   expect(getTasks.responses?.[0]?.origin).toBeUndefined();
   // A written budget wins over the batch default.
   expect(operation(run.draft.operations, "getNotesBatch").budgetMs).toBe(40);
-  // A batch with no item answered by the service answers nothing yet.
-  expect(operation(run.draft.operations, "getNotesBatch").input).toBeUndefined();
 });
 
 test("degradable and budget: optional paths, the degraded header or the format's degraded field", () => {
@@ -807,7 +806,14 @@ surfaces:
   ]);
 });
 
-test("degradable: a path is kept unchecked when the success body is unanswered, refused through a union", () => {
+// An object schema whose one property `stats` is optional or required.
+function statsHolder(id: string, optional: boolean): IrWriter.ObjectSchema {
+  const holder = treeNodesObjectSchema(id, `/schemas/${id}`, { stats: text });
+
+  return { ...holder, properties: holder.properties.map((stats) => ({ ...stats, optional })) };
+}
+
+test("degradable: a path through a union is checked in every variant, a route with no body has none", () => {
   const workspace = treeNodesLoadInline(`
 api: { name: a, version: 1, kind: product }
 conventions:
@@ -818,13 +824,27 @@ surfaces:
   app:
     prefix: /v{version}
     routes:
-      unanswered: { method: get, output: Profile, degradable: [stats] }
       either: { method: get, output: Profile, degradable: [stats] }
+      mixed: { method: get, output: Profile, degradable: [stats] }
+      bodiless: { method: get, degradable: [stats] }
 `);
   const treeSchemas = treeNodesStubService({
-    typeUses: { [`${ROUTES}/either/output`]: ref("Shape") },
+    typeUses: {
+      [`${ROUTES}/either/output`]: ref("Either"),
+      [`${ROUTES}/mixed/output`]: ref("Mixed"),
+    },
   });
-  const draft = treeNodesDraftWith(treeNodesHeaderUnion("Shape", "X-Kind"));
+  const union = (id: string, variants: readonly string[]): IrWriter.UnionSchema => ({
+    ...treeNodesHeaderUnion(id, "X-Kind"),
+    variants: variants.map((schema) => ({ tag: schema.toLowerCase(), schema })),
+  });
+  const draft = treeNodesDraftWith(
+    statsHolder("Light", true),
+    statsHolder("Heavy", true),
+    statsHolder("Fixed", false),
+    union("Either", ["Light", "Heavy"]),
+    union("Mixed", ["Light", "Fixed"]),
+  );
   const run = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas, draft });
 
   expect(
@@ -832,11 +852,16 @@ surfaces:
   ).toEqual([
     [
       "seampact/tree/degradable-path",
-      `${ROUTES}/either/degradable/0`,
-      "The degradable path stats of either crosses the union Shape; only an optional part can be left out.",
+      `${ROUTES}/mixed/degradable/0`,
+      "The degradable path stats of mixed names a required property in the variant fixed of Mixed; only an optional part can be left out.",
+    ],
+    [
+      "seampact/tree/degradable-path",
+      `${ROUTES}/bodiless/degradable/0`,
+      "The degradable path stats of bodiless names no property of the success data; only an optional part can be left out.",
     ],
   ]);
-  expect(operation(run.draft.operations, "unanswered").degradable?.paths).toEqual(["stats"]);
+  expect(operation(run.draft.operations, "either").degradable?.paths).toEqual(["stats"]);
 });
 
 test("route examples: a status the route does not declare is named so", () => {
@@ -860,4 +885,34 @@ surfaces:
       "The example made of ping targets the status 201, which the route does not declare.",
     ],
   ]);
+});
+
+// tree.schemas answers every position it accepted, and a refused one stops the run before tree.nodes.
+test.each([
+  ["an input", `${ROUTES}/post/input`, "input"],
+  ["a batch ids input", `${ROUTES}/notes/ops/1`, "input"],
+  ["an item body", `${ROUTES}/notes/item`, "output"],
+  ["a written response body", `${ROUTES}/ping/responses/200/body`, "output"],
+  ["a query field", `${ROUTES}/ping/query/q`, "input"],
+])("an unanswered position is an internal fault: %s", (_, pointer, direction) => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+conventions:
+  batch: { maxIds: 50 }
+schemas:
+  Id: { type: string }
+  Note: { type: object, properties: { noteId: Id } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      notes: { kind: collection, id: { noteId: Id }, item: Note, ops: [list, batch], paging: none }
+      ping: { method: get, query: { q: Id }, responses: { 200: { body: Note } } }
+      post: { method: post, input: Note }
+`);
+  const treeSchemas = treeNodesUnansweredAt(treeNodesStubService({}), pointer);
+
+  expect(() => treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas })).toThrow(
+    `the schema service answers no ${direction} type at ${pointer}`,
+  );
 });

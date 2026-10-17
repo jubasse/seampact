@@ -146,7 +146,7 @@ function paramsOf(
 
     seen.set(key, field);
 
-    if (field.type === undefined || !treeNodesFieldTravels(site, field, PLACE[list])) continue;
+    if (!treeNodesFieldTravels(site, field, PLACE[list])) continue;
     const param = paramOf(site, field, field.type, list);
 
     if (param !== undefined) params.push(param);

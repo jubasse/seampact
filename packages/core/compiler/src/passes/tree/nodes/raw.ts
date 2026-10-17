@@ -22,6 +22,23 @@ export type TreeNodesJson = PassReadonly<JsonValue>;
 
 type Json = TreeNodesJson;
 
+/**
+ * The use the schema service answers at `pointer`. It answers every position tree.schemas accepted, and a refused
+ * one stops the run before this half (the stop rule), so no answer is an internal error.
+ */
+export function treeNodesAnsweredUse(
+  context: Pick<TreeNodesContext, "treeSchemas">,
+  pointer: string,
+  direction: IrWriter.Direction,
+): IrWriter.TypeUse {
+  const use = context.treeSchemas.typeUse(pointer, direction);
+
+  if (use === undefined)
+    throw new Error(`the schema service answers no ${direction} type at ${pointer}`);
+
+  return use;
+}
+
 /** The maturity levels, least first (ADR 0002 section 5). */
 export const TREE_NODES_MATURITIES: readonly IrWriter.Maturity[] = [
   "experimental",
