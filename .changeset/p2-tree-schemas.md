@@ -18,4 +18,14 @@ The tree pass derives the ids input of a `batch` op and the version property of 
 
 The tree pass gives every query and form field its query wire.
 
-The tree pass parses every schema example against its schema, writes each schema's directions and a use's `unknownKeys`, keeps schema deprecation and the docs and examples of properties, variants and nested schemas, and refuses a map as a query or form field.
+The tree pass parses every schema example against its schema.
+
+The tree pass writes the directions each schema, enum and named format is used in.
+
+The tree pass moves a use's `unknownKeys` onto its input use, and refuses it on an output-only use or a map.
+
+The tree pass keeps a schema's deprecation and the docs and examples of properties, variants and nested schemas.
+
+The tree pass refuses a map as a query field or header rule proof.
+
+The tree pass hoists the params of an error code once, wherever the code is declared.

@@ -282,6 +282,8 @@ export class TreeSchemasCompiler {
   readonly exampleChecks: TreeSchemasExampleCheck[] = [];
   /** The pointer of every `unknownKeys` written on a use, checked against its directions. */
   readonly writtenUnknownKeys: string[] = [];
+  /** The pointers of the uses that carry a declaration's `unknownKeys`, by the pointer of that `unknownKeys`. */
+  readonly unknownKeysUses = new Map<string, string[]>();
   readonly scalars: TreeSchemasScalars;
 
   private readonly catalogue: TreeSchemasRaw | undefined;
@@ -784,11 +786,21 @@ export class TreeSchemasCompiler {
     if (compiled === undefined) return undefined;
 
     if (!this.checkHeaderUnion(compiled.headerUnion, position)) return undefined;
+
+    if (target.keysFrom !== undefined) this.recordUnknownKeysUse(target.keysFrom, position.pointer);
     const use = structuredClone(compiled.use);
 
     if (target.nullable && use.kind !== "opaque") use.nullable = true;
 
     return { use, sensitive: compiled.sensitive, headerUnion: compiled.headerUnion };
+  }
+
+  private recordUnknownKeysUse(declaration: string, pointer: string): void {
+    const written = treeSchemasPointer("/schemas", declaration, "unknownKeys");
+    const uses = this.unknownKeysUses.get(written) ?? [];
+
+    uses.push(pointer);
+    this.unknownKeysUses.set(written, uses);
   }
 
   // A declared name followed through plain references: its kind when it is a named object, map or union, and
@@ -1006,7 +1018,13 @@ export class TreeSchemasCompiler {
     const id = this.idOf(position);
     const name = irName(position.name as Name);
     const typeName = treeSchemasMember(value, "typeName");
-    const examples = this.writtenExamples(value, position.pointer, { kind: "ref", schema: id });
+    // A schema written `nullable` takes a null example (ADR 0003 section 1).
+    const nullable = treeSchemasMember(value, "nullable") === true;
+    const examples = this.writtenExamples(value, position.pointer, {
+      kind: "ref",
+      schema: id,
+      ...(nullable ? { nullable } : {}),
+    });
     // A property's own `deprecated` marks the property (ADR 0003 section 1).
     const deprecated =
       position.place !== "property" && treeSchemasMember(value, "deprecated") === true;
