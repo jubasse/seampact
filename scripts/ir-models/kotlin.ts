@@ -10,6 +10,7 @@ import type {
   UnionDefinition,
 } from "./model.ts";
 import { type DefinitionNames, NameCollisionError } from "./names.ts";
+import { type Shape, shapeOfDefinition } from "./shapes.ts";
 
 // The Kotlin emitter (ADR 0010): kotlinx.serialization data classes, a sealed interface per tagged union with an
 // `Unknown(tag, raw)` variant, an open enum as a sealed interface of its known values and `Unknown(value)`, and a
@@ -327,48 +328,34 @@ function shapesLines(byFile: Map<string, Definition[]>): string[] {
 }
 
 function shapeEntry(definition: Definition): string[] {
-  const shape = shapeOf(definition);
-  return shape === undefined ? [] : [`${INDENT}put(${kotlinString(definition.name)}, ${shape})`];
+  const shape = shapeOfDefinition(definition);
+  return shape === undefined
+    ? []
+    : [`${INDENT}put(${kotlinString(definition.name)}, ${kotlinShape(shape)})`];
 }
 
-function shapeOf(definition: Definition): string | undefined {
-  switch (definition.kind) {
+function kotlinShape(shape: Shape): string {
+  switch (shape.kind) {
+    case "named":
+      return `IrShape.Named(${kotlinString(shape.definition)})`;
     case "struct": {
-      const members = definition.members.flatMap((member) => {
-        const shape = shapeOfType(member.type);
-        return shape === undefined ? [] : [`${kotlinString(member.name)} to ${shape}`];
-      });
+      const members = shape.members.map(
+        (member) => `${kotlinString(member.name)} to ${kotlinShape(member.shape)}`,
+      );
       return `IrShape.Struct(mapOf(${members.join(", ")}))`;
     }
     case "union": {
-      const variants = definition.variants.map(
+      const variants = shape.variants.map(
         (variant) => `${kotlinString(variant.tagValue)} to ${kotlinString(variant.definition)}`,
       );
-      return `IrShape.Union(${kotlinString(definition.tag)}, ${definition.mustAct}, mapOf(${variants.join(", ")}))`;
+      return `IrShape.Union(${kotlinString(shape.tag)}, ${shape.mustAct}, mapOf(${variants.join(", ")}))`;
     }
     case "openEnum":
-      return `IrShape.OpenEnum(setOf(${definition.known.map(kotlinString).join(", ")}), ${definition.mustAct})`;
-    case "alias":
-      return shapeOfType(definition.target);
-    case "extensionSlot":
-      return undefined;
-  }
-}
-
-function shapeOfType(type: TypeRef): string | undefined {
-  switch (type.kind) {
-    case "named":
-      return `IrShape.Named(${kotlinString(type.definition)})`;
-    case "array": {
-      const items = shapeOfType(type.items);
-      return items === undefined ? undefined : `IrShape.Items(${items})`;
-    }
-    case "map": {
-      const values = shapeOfType(type.values);
-      return values === undefined ? undefined : `IrShape.Values(${values})`;
-    }
-    default:
-      return undefined;
+      return `IrShape.OpenEnum(setOf(${shape.known.map(kotlinString).join(", ")}), ${shape.mustAct})`;
+    case "items":
+      return `IrShape.Items(${kotlinShape(shape.of)})`;
+    case "values":
+      return `IrShape.Values(${kotlinShape(shape.of)})`;
   }
 }
 
