@@ -65,16 +65,19 @@ function formatFillsDegraded(site: TreeNodesSite, format: string): boolean {
   );
 }
 
-// A body the schema service does not answer yet, or a union whose variants differ, has no property list to check a
-// path against: the path is kept unchecked.
+// A body the schema service does not answer yet has no property list to check a path against: the path is kept
+// unchecked.
 function isUnknownShape(site: TreeNodesSite, use: IrWriter.TypeUse | undefined): boolean {
   if (use === undefined) return true;
 
-  if (use.kind !== "ref") return false;
+  return use.kind === "ref" && treeNodesSchema(site.draft, use.schema) === undefined;
+}
 
-  const schema = treeNodesSchema(site.draft, use.schema);
+// A path crosses object properties only: the variants of a union are not checked one by one.
+function unionOf(site: TreeNodesSite, use: IrWriter.TypeUse | undefined): string | undefined {
+  const schema = use?.kind === "ref" ? treeNodesSchema(site.draft, use.schema) : undefined;
 
-  return schema === undefined || schema.kind === "union";
+  return schema?.kind === "union" ? schema.id : undefined;
 }
 
 // Each segment names a property of the object reached so far; the last one must be optional.
@@ -91,6 +94,14 @@ function checkPath(
     const reached = use?.kind === "array" ? use.items : use;
 
     if (isUnknownShape(site, reached)) return;
+
+    const union = unionOf(site, reached);
+
+    if (union !== undefined) {
+      reportPath(site, path, pointer, `crosses the union ${union}`);
+
+      return;
+    }
 
     const schema = treeNodesObjectOf(site.draft, reached);
 
@@ -114,7 +125,7 @@ function reportPath(site: TreeNodesSite, path: string, pointer: string, why: str
       rule: "degradable-path",
       origin: treeNodesNodeOrigin(site.context.origin(pointer) ?? site.node.origin),
       message: `The degradable path ${path} of ${site.operationId} ${why}; only an optional part can be left out.`,
-      fix: "Name an optional property of the success data, or make the property optional.",
+      fix: "Name an optional object property of the success data, or make the property optional.",
     }),
   );
 }

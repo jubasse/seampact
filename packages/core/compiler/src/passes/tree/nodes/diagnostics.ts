@@ -39,7 +39,6 @@ export type TreeNodesRule =
   | "annotation-position"
   | "owner-concurrency"
   | "concurrency-inherit"
-  | "concurrency-field"
   | "concurrency-input"
   | "paging-list"
   | "paging-style"

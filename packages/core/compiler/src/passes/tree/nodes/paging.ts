@@ -271,8 +271,8 @@ function overLimitOf(site: TreeNodesSite, named: NamedStyle): IrWriter.OverLimit
 
 // ADR 0002 sections 13 and 14: `maxLimit` is required for a style with a `limit` role, `defaultLimit` is the
 // limit of a request that sends none (the `maxLimit` by default) and the page size of a style without `limit`.
-// Each limit comes from the route, else `conventions.paging`; a default from one place above a `maxLimit` from the
-// other is lowered to that `maxLimit`, and only a pair written in one place is refused.
+// Each limit comes from the route, else `conventions.paging`. A convention default above the route's `maxLimit` is
+// lowered to it; a route default above the effective `maxLimit`, or a convention pair at odds, is refused.
 function limitsOf(
   site: TreeNodesSite,
   named: NamedStyle,
@@ -297,7 +297,7 @@ function limitsOf(
       "Set defaultLimit",
     );
 
-  const routeContradiction = aboveMaxLimit(route.defaultLimit, route.maxLimit);
+  const routeContradiction = aboveMaxLimit(route.defaultLimit, maxLimit);
 
   if (routeContradiction !== undefined)
     return reportRouteContradiction(site, named, routeContradiction);
@@ -417,7 +417,7 @@ function reportRouteContradiction(
       rule: "paging-limit",
       origin: treeNodesNodeOrigin(named.origin),
       message: `The list ${site.operationId} pages with ${named.id}, but its defaultLimit ${defaultLimit} is above its maxLimit ${maxLimit}.`,
-      fix: "Lower defaultLimit to maxLimit or less on the route's paging.",
+      fix: "Lower defaultLimit on the route's paging to its maxLimit or less.",
     }),
   );
 

@@ -556,7 +556,6 @@ test("tree.nodes diagnostics are located: shapes", () => {
   ).toEqual([
     ["owner-concurrency", `${ROUTES}/drafts/concurrency`],
     ["concurrency-input", "/schemas/NewNote/properties/expectedVersion"],
-    ["concurrency-field", `${ROUTES}/notes/concurrency/field`],
     ["paging-token", `${ROUTES}/notes/ops/list/paging`],
     ["sort-key", `${ROUTES}/tags/ops/list/sortable/0`],
     ["paging-list", `${ROUTES}/tags/ops/get/paging`],
@@ -682,7 +681,7 @@ surfaces:
   );
 });
 
-test("paging limits: a default from one place is lowered to a maxLimit from the other", () => {
+test("paging limits: a convention default is lowered to the route's maxLimit", () => {
   const workspace = treeNodesLoadInline(`
 api: { name: a, version: 1, kind: product }
 ${CURSOR}
@@ -695,9 +694,8 @@ surfaces:
     prefix: /v{version}
     routes:
       lowered: { method: get, item: Note, paging: { cursor: { maxLimit: 20 } } }
-      raised: { method: get, item: Note, paging: { cursor: { defaultLimit: 150 } } }
 `);
-  const routes = ["lowered", "raised"];
+  const routes = ["lowered"];
   const treeSchemas = treeNodesStubService({
     typeUses: Object.fromEntries(routes.map((route) => [`${ROUTES}/${route}/item`, ref("Note")])),
   });
@@ -707,10 +705,9 @@ surfaces:
 
   expect(run.diagnostics).toEqual([]);
   expect(paging("lowered")).toMatchObject({ maxLimit: 20, defaultLimit: 20 });
-  expect(paging("raised")).toMatchObject({ maxLimit: 100, defaultLimit: 100 });
 });
 
-test("paging limits: a pair written in one place is refused there, a convention fault once", () => {
+test("paging limits: a route default above the effective maxLimit is refused there, a convention fault once", () => {
   const workspace = treeNodesLoadInline(`
 api: { name: a, version: 1, kind: product }
 ${CURSOR}
@@ -725,8 +722,9 @@ surfaces:
       first: { method: get, item: Note }
       second: { method: get, item: Note }
       own: { method: get, item: Note, paging: { cursor: { maxLimit: 5, defaultLimit: 8 } } }
+      raised: { method: get, item: Note, paging: { cursor: { defaultLimit: 15 } } }
 `);
-  const routes = ["first", "second", "own"];
+  const routes = ["first", "second", "own", "raised"];
   const treeSchemas = treeNodesStubService({
     typeUses: Object.fromEntries(routes.map((route) => [`${ROUTES}/${route}/item`, ref("Note")])),
   });
@@ -746,6 +744,7 @@ surfaces:
       ["/conventions/paging/maxLimit"],
     ],
     ["seampact/tree/paging-limit", `${ROUTES}/own/paging`, []],
+    ["seampact/tree/paging-limit", `${ROUTES}/raised/paging`, []],
   ]);
   expect(run.diagnostics[1]?.message).toBe(
     "The list own pages with cursor, but its defaultLimit 8 is above its maxLimit 5.",
@@ -779,7 +778,7 @@ surfaces:
   ]);
 });
 
-test("write semantics: a caller-owned resource's concurrency is checked whatever its ops", () => {
+test("write semantics: a caller-owned resource's concurrency is refused whatever its ops, its field left to tree.schemas", () => {
   const workspace = treeNodesLoadInline(`
 api: { name: a, version: 1, kind: product }
 schemas:
@@ -805,11 +804,10 @@ surfaces:
 
   expect(run.diagnostics.map(({ rule, origin }) => [rule, origin.pointer])).toEqual([
     ["seampact/tree/owner-concurrency", `${ROUTES}/notes/concurrency`],
-    ["seampact/tree/concurrency-field", `${ROUTES}/notes/concurrency/field`],
   ]);
 });
 
-test("degradable: a path is kept unchecked when the success body is unknown or a union", () => {
+test("degradable: a path is kept unchecked when the success body is unanswered, refused through a union", () => {
   const workspace = treeNodesLoadInline(`
 api: { name: a, version: 1, kind: product }
 conventions:
@@ -829,8 +827,16 @@ surfaces:
   const draft = treeNodesDraftWith(treeNodesHeaderUnion("Shape", "X-Kind"));
   const run = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas, draft });
 
-  expect(run.diagnostics).toEqual([]);
-  expect(operation(run.draft.operations, "either").degradable?.paths).toEqual(["stats"]);
+  expect(
+    run.diagnostics.map(({ rule, origin, message }) => [rule, origin.pointer, message]),
+  ).toEqual([
+    [
+      "seampact/tree/degradable-path",
+      `${ROUTES}/either/degradable/0`,
+      "The degradable path stats of either crosses the union Shape; only an optional part can be left out.",
+    ],
+  ]);
+  expect(operation(run.draft.operations, "unanswered").degradable?.paths).toEqual(["stats"]);
 });
 
 test("route examples: a status the route does not declare is named so", () => {

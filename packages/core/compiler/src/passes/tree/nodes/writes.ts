@@ -103,16 +103,12 @@ export function treeNodesConcurrency(
   return { version, field };
 }
 
-// ADR 0002 section 6: a caller-owned record has no version, and `field` names an item property.
+// ADR 0002 section 6: a caller-owned record has no version. That `field` names an item property is tree.schemas'
+// check, made where it adds the version.
 function checkDeclaration(site: TreeNodesSite, resource: TreeNode | undefined): void {
-  if (resource === undefined) return;
-
-  const field = treeNodesMember(treeNodesSetting(resource, "concurrency"), "field");
-
-  if (typeof field !== "string") return;
+  if (resource === undefined || treeNodesSetting(resource, "concurrency") === undefined) return;
 
   checkOwnerAlone(site, resource);
-  checkItemField(site, resource, field);
 }
 
 function parseSource(written: unknown): VersionSource | undefined {
@@ -162,26 +158,6 @@ function checkOwnerAlone(site: TreeNodesSite, resource: TreeNode): void {
       message: `${resource.name} is owned by the caller and also declares concurrency; a caller-owned record has no version.`,
       fix: "Remove concurrency, or remove owner: caller.",
       related: [{ origin: at("owner"), message: "owner: caller" }],
-    }),
-  );
-}
-
-// ADR 0002 section 6: an item schema without `field` is a compile error naming the field.
-function checkItemField(site: TreeNodesSite, resource: TreeNode, field: string): void {
-  const item = site.context.treeSchemas.typeUse(`${resource.pointer}/item`, "output");
-  const schema = treeNodesObjectOf(site.draft, item);
-
-  if (schema === undefined || schema.properties.some((property) => property.name === field)) return;
-
-  const pointer = `${resource.pointer}/concurrency/field`;
-
-  site.once(
-    `concurrency-field:${resource.pointer}`,
-    treeNodesError({
-      rule: "concurrency-field",
-      origin: treeNodesNodeOrigin(site.context.origin(pointer) ?? resource.origin),
-      message: `The concurrency of ${resource.name} compares the item property ${field}, which the item schema ${schema.id} does not declare.`,
-      fix: `Declare ${field} on ${schema.id}, or name one of its properties in concurrency.field.`,
     }),
   );
 }
