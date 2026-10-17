@@ -67,7 +67,7 @@ A hand-written partition of a deciding member's values (`ValueSource.in`, `Field
 - A catalogue is a map keyed by id: `additionalProperties` with the value definition and `propertyNames` with the id, whose pattern is the grammar of ADR 0002 section 4 (such an id never reads as `__proto__`). A right (`RightId`) and a principal variant (`VariantId`) take any name, `__proto__` included. A declaration is referenced by id, never nested.
 - A schema with no shape keyword (`{}`, optionally with a description) is an opaque value: any JSON value, kept raw.
 - An optional member is one outside `required`.
-- A numeric refinement (`minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`) is a decimal literal string (`"9223372036854775807"`, `"0.01"`), compared numerically, so no digit is lost in any language. Every other IR number is an integer.
+- A numeric refinement (`minimum`, `maximum`, `exclusiveMinimum`, `exclusiveMaximum`, `multipleOf`) is a decimal literal string (`"9223372036854775807"`, `"0.01"`), compared numerically, so no digit is lost in any language. Every other IR number is an integer from -(2^53 - 1) to 2^53 - 1, the safe range of I-JSON (RFC 7493): each integer definition states a `minimum` and a `maximum` within that range, and every reader, a JavaScript one included, holds it exactly.
 - `nullable` is a member of `Property` and, for every other position (array items, map values, parameters, headers, bodies), an optional member of every type use but the opaque one (an opaque value already admits `null`).
 
 ## Invariants the schema cannot state
@@ -85,6 +85,7 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 | `ir.csrf.cookie` | An unsafe operation whose access accepts a cookie scheme has `csrf` (derived or exempt). |
 | `ir.field-wire.members` | `FieldWire` of kind `file` or `json` has no `style`, `explode` or `brackets`; a query wire kind has all three. |
 | `ir.property.nullable` | A property's type use has no `nullable`: `Property.nullable` holds it. |
+| `ir.type-use.annotations` | A type use holds `docs` or `examples` only as the items of an array use, the keys or values of a map schema, or the schema of a JSON content; any other holder keeps its own. |
 | `ir.scalar.type` | A named format's own type names no `scalar`. |
 | `ir.id.scalar` | `Scope.idSchema` and `ResourceSubject.idSchema` are a `scalar` or `enum` type use without `nullable`; `RuleProof.schema` and `InputProof.schema` are anything but `opaque` and `file`. |
 | `ir.ref.resolves` | Every member whose schema is a `$ref` to a catalogue id definition (the key of a top-level or api map, such as `SchemeId` or `SurfaceId`) names an existing key, read with `Object.hasOwn`. |

@@ -67,6 +67,7 @@ interface Response {
   body?: TypeUse;                            // the unwrapped payload, or a file for a download
   shape: 'item' | 'table' | 'list' | 'page' | 'empty' | 'binary' | 'redirect';   // the format's shape; 'binary' and 'redirect' bypass the format
   headers: { name: string; type: TypeUse; required: boolean; semantic?: string; origin?: Origin; derivedFrom?: DerivedFrom }[];
+  docs?: Docs;                               // the docs written on the response (irRevision 3)
   origin?: Origin; derivedFrom?: DerivedFrom;
 }
 
