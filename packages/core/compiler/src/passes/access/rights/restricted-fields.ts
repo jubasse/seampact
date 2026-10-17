@@ -104,7 +104,10 @@ function useReferences(use: DraftTypeUse): string[] {
 }
 
 /** The schema of an id; tree.schemas wrote every schema a use names. */
-export function schemaOf(schemas: AccessRightsDraftSchemas, id: string): AccessRightsDraftSchemas[string] {
+export function schemaOf(
+  schemas: AccessRightsDraftSchemas,
+  id: string,
+): AccessRightsDraftSchemas[string] {
   const schema = Object.hasOwn(schemas, id) ? schemas[id] : undefined;
 
   if (schema === undefined)
