@@ -35,11 +35,25 @@ public val IrJson: Json = Json { ignoreUnknownKeys = true }
 /** The largest IR integer, 2^53 - 1: IR integers are in the safe range of I-JSON (RFC 7493). */
 internal const val IR_INTEGER_MAX: Long = 9007199254740991L
 
+/** The longest number literal a message shows; a longer one is cut, as other untrusted text is. */
+internal const val IR_SHOWN_LITERAL_MAX_LENGTH = 64
+
+// The JSON number grammar (RFC 8259 section 6): the text JavaScript and PHP read as a number, and nothing more
+// (no `3d`, `0x1.8p1`, `+3`, `03` or `3.`, which the JVM's own number syntax accepts).
+private val JSON_NUMBER = Regex("-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][+-]?[0-9]+)?")
+
+/** A JSON number literal as the correctly rounded double, as JavaScript and PHP read it; null for any other text. */
+internal fun irNumberOf(literal: String): Double? = if (JSON_NUMBER.matches(literal)) literal.toDouble() else null
+
+/** A number literal cut for a message to [IR_SHOWN_LITERAL_MAX_LENGTH] characters. */
+internal fun shownLiteral(literal: String): String =
+    if (literal.length <= IR_SHOWN_LITERAL_MAX_LENGTH) literal else literal.take(IR_SHOWN_LITERAL_MAX_LENGTH) + "..."
+
 /**
  * An IR integer as a `Long`, from -(2^53 - 1) to 2^53 - 1. A number literal is read as the correctly
  * rounded double, as JavaScript and PHP read it, so the three readers accept the same literals: `2.0` and
- * `3.0000000000000000001` read as 2 and 3. Any other value is an error naming it: a literal as written, a
- * string, array or object by its JSON type, never its content.
+ * `3.0000000000000000001` read as 2 and 3. Any other value is an error naming it: a literal as written (cut
+ * to [IR_SHOWN_LITERAL_MAX_LENGTH]), a string, array or object by its JSON type, never its content.
  */
 internal object IrIntegerSerializer : KSerializer<Long> {
     override val descriptor: SerialDescriptor =
@@ -49,12 +63,13 @@ internal object IrIntegerSerializer : KSerializer<Long> {
         val element = jsonDecoder(decoder, "an integer").decodeJsonElement()
         val literal = (element as? JsonPrimitive)?.takeIf { !it.isString }?.content
             ?: throw SerializationException("expected an integer, got the JSON type ${notALiteral(element)}")
-        val number = literal.toDoubleOrNull() ?: throw SerializationException("expected an integer, got $literal")
+        val shown = shownLiteral(literal)
+        val number = irNumberOf(literal) ?: throw SerializationException("expected an integer, got $shown")
         if (!number.isFinite() || number != floor(number)) {
-            throw SerializationException("expected an integer, got $literal")
+            throw SerializationException("expected an integer, got $shown")
         }
         if (abs(number) > IR_INTEGER_MAX.toDouble()) {
-            throw SerializationException("expected an integer from -(2^53 - 1) to 2^53 - 1, got $literal")
+            throw SerializationException("expected an integer from -(2^53 - 1) to 2^53 - 1, got $shown")
         }
 
         return number.toLong()

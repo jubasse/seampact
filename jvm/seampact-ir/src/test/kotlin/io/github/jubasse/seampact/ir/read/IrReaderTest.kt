@@ -200,6 +200,13 @@ class IrReaderTest {
             .replace("\"irRevision\": ${IrModelVersion.IR_REVISION},", "\"irRevision\": ${IrModelVersion.IR_REVISION}.0000000000000000001,")
 
         assertEquals(IrModelVersion.IR_REVISION, IrReader.read(text, support).irRevision)
+        // Text the JVM reads as a number but JSON does not is no revision, as in TypeScript and PHP.
+        for (notJson in listOf("${IrModelVersion.IR_REVISION}d", "0x1.8p1")) {
+            val revisionText = exampleText("minimal.ir.json")
+                .replace("\"irRevision\": ${IrModelVersion.IR_REVISION},", "\"irRevision\": $notJson,")
+
+            assertEquals(IrRefusalCode.REVISION_MISMATCH, refusals(revisionText).single().code, notJson)
+        }
     }
 
     @Test

@@ -1,5 +1,7 @@
 package io.github.jubasse.seampact.ir.read
 
+import io.github.jubasse.seampact.ir.model.IR_SHOWN_LITERAL_MAX_LENGTH
+import io.github.jubasse.seampact.ir.model.irNumberOf
 import java.math.BigDecimal
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -12,9 +14,6 @@ private const val MISSING = "missing"
 // A number is rendered in plain form only when its integer digits and its scale are each at most this many;
 // any other is shown as written.
 private const val MAX_PLAIN_DIGITS = 64
-
-// A longer number literal is shown as written, never parsed for display.
-private const val MAX_SHOWN_LITERAL_LENGTH = 64
 
 /** The package a refused version or revision tells the reader to update. */
 internal const val IR_PACKAGE = "io.github.jubasse:seampact-ir"
@@ -138,16 +137,18 @@ internal fun checkIrSupport(ir: JsonElement, support: IrSupport): List<IrRefusal
 private fun isStringIn(value: JsonElement?, known: List<String>): Boolean =
     value is JsonPrimitive && value.isString && value.content in known
 
-// A number literal read as the correctly rounded double, as JavaScript and PHP read it, so the three readers
-// accept the same versions and revisions (`3.0000000000000000001` is 3).
+// A JSON number literal read as the correctly rounded double, as JavaScript and PHP read it, so the three
+// readers accept the same versions and revisions (`3.0000000000000000001` is 3, `3d` is not a number).
 private fun numberOf(value: JsonElement?): Double? =
     (value as? JsonPrimitive)
         ?.takeIf { !it.isString }
         ?.content
-        ?.toDoubleOrNull()
+        ?.let(::irNumberOf)
+
+// A longer number literal is shown as written, never parsed for display.
 
 private fun shownNumberOf(value: JsonPrimitive): BigDecimal? =
-    value.content.takeIf { !value.isString && it.length <= MAX_SHOWN_LITERAL_LENGTH }?.toBigDecimalOrNull()
+    value.content.takeIf { !value.isString && it.length <= IR_SHOWN_LITERAL_MAX_LENGTH }?.toBigDecimalOrNull()
 
 private fun jsonType(value: JsonElement?): String = when (value) {
     null -> MISSING

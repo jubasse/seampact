@@ -156,6 +156,21 @@ class ModelRoundTripTest {
         )) {
             assertEquals(read, IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": $literal}""").status, literal)
         }
+        // Text the JVM reads as a number but JSON does not: TypeScript and PHP refuse it, so Kotlin does too.
+        for (notJson in listOf("3d", "3f", "0x1.8p1", "+3", "03", "3.")) {
+            val error = assertFailsWith<SerializationException>(notJson) {
+                IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": $notJson}""")
+            }
+
+            assertEquals("expected an integer, got $notJson", error.message)
+        }
+        val longLiteral = "1" + "0".repeat(2_000_000)
+        val longError = assertFailsWith<SerializationException> {
+            IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": $longLiteral}""")
+        }
+
+        // It rounds to infinity, no integer, and the message shows only its first 64 characters.
+        assertEquals("expected an integer, got ${longLiteral.take(64)}...", longError.message)
         for (fraction in listOf("404.5", "-0.5")) {
             val error = assertFailsWith<SerializationException>(fraction) {
                 IrJson.decodeFromString(ErrorHttp.serializer(), """{"status": $fraction}""")
