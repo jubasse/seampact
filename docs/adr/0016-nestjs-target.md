@@ -32,6 +32,8 @@ The developer writes the controller and implements the generated interface of ea
 
 The two per-operation decorators are named by the operation (ADR 0007 `operation` role): the composite is the operation's name, `createTask()`, and the param decorator is its `input` property, `createTask.input()`. They live in this target's module of the api, apart from the types link's module, so a declared schema of the same words (`CreateTask` in the reference contract) or the `CreateTaskInput` type never shares their scope (ADR 0007 "Amendment 2026-10-19: generated modules"). Inside this target's output, its fixed exports (below) are shadowed names of ADR 0007 section 5 for the operation decorators, so an operation named `responses` gets `responses_()`.
 
+Route order is the app's: NestJS on Express registers a controller's routes in the order its methods are declared and matches the first, so a parameter route declared before a static sibling of the same method (`GET /tasks/:taskId` before `GET /tasks/search`) shadows it, and the member operation runs its checks on the action's requests. The composite cannot reorder them; the developer declares the static route's method first.
+
 Steps 1 to 8 and 10 run the framework-neutral request checks of `@seampact/codegen-core/node-server`, copied into the generated tree with the generated header (ADR 0009 "What generated code depends on at run time"); this target writes only their NestJS placement.
 
 ### The reply path

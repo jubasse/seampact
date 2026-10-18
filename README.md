@@ -75,7 +75,7 @@ Every generator renders the default format and every format and paging style you
 | `codegen-nestjs` | per-operation decorators, guard, interceptor and input decorators around your controllers | `validators`: zod, yup or class-validator | exception filters and interceptors |
 | `codegen-fastify` | server boundary | `validators`: zod or yup, or Ajv without a link | route hooks |
 | `codegen-express` | server boundary | `validators`: zod or yup | middleware |
-| `codegen-adonis` | server boundary with VineJS validators | nothing | middleware and exception handler |
+| `codegen-adonis` | server boundary | `validators`: zod (VineJS next) | middleware and exception handler |
 | `codegen-react` | TanStack Query hooks | `client`: fetch | through the fetch client |
 | `codegen-vue` | composables | `client`: fetch | through the fetch client |
 | `codegen-angular` | injectable services over `HttpClient` | nothing | its own response readers |
@@ -134,6 +134,7 @@ The ADRs cite product decisions by id (`A<n>`); [`docs/decisions.md`](docs/decis
 | [0014](docs/adr/0014-room-for-real-time-and-rpc.md) | room for real-time and RPC |
 | [0015](docs/adr/0015-codegen-determinism-and-conformance.md) | deterministic generation and the conformance suite |
 | [0016](docs/adr/0016-nestjs-target.md) | the NestJS server target |
+| [0019](docs/adr/0019-adonis-target.md) | the AdonisJS server target |
 
 ## Contributing
 
