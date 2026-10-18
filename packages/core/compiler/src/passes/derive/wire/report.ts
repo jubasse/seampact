@@ -1,5 +1,9 @@
 import type { Origin } from "@seampact/spec/ir";
-import type { DiagnosticOrigin, RelatedLocation } from "../../../diagnostics/diagnostic.js";
+import type {
+  Diagnostic,
+  DiagnosticOrigin,
+  RelatedLocation,
+} from "../../../diagnostics/diagnostic.js";
 import type { PassContext } from "../../../pipeline/seam.js";
 
 // The diagnostics of the derive.wire half (ADR 0006 section 4): rule `seampact/derive/<rule>`, located at a pointer
@@ -15,7 +19,7 @@ export type DeriveWireRule =
   | "cache-family"
   | "cache-freshness"
   | "cache-sensitive"
-  | "wire-convention-unsupported";
+  | "bucket-limits";
 
 export interface DeriveWireRelated {
   /** A pointer of the merged raw tree. */
@@ -34,11 +38,12 @@ export interface DeriveWireProblem {
 
 export interface DeriveWireReporter {
   error(problem: DeriveWireProblem): void;
+  warning(problem: DeriveWireProblem): void;
 }
 
 const isDiagnosticOrigin = (origin: Origin): origin is DiagnosticOrigin => origin.layer !== "core";
 
-/** Reports the half's errors through its context, each located at its pointer. */
+/** Reports the half's errors and warnings through its context, each located at its pointer. */
 export function deriveWireReporter(context: PassContext): DeriveWireReporter {
   // Every pointer reported is one the half read from an authored layer, so it has an authored origin.
   const locate = (pointer: string): DiagnosticOrigin => {
@@ -55,21 +60,24 @@ export function deriveWireReporter(context: PassContext): DeriveWireReporter {
     return origin;
   };
 
-  return {
-    error(problem) {
-      const related: RelatedLocation[] = (problem.related ?? []).map((item) => ({
-        origin: locate(item.pointer),
-        message: item.message,
-      }));
+  const report = (severity: Diagnostic["severity"], problem: DeriveWireProblem): void => {
+    const related: RelatedLocation[] = (problem.related ?? []).map((item) => ({
+      origin: locate(item.pointer),
+      message: item.message,
+    }));
 
-      context.report({
-        severity: "error",
-        rule: `seampact/derive/${problem.rule}`,
-        message: problem.message,
-        fix: problem.fix,
-        origin: locate(problem.pointer),
-        related,
-      });
-    },
+    context.report({
+      severity,
+      rule: `seampact/derive/${problem.rule}`,
+      message: problem.message,
+      fix: problem.fix,
+      origin: locate(problem.pointer),
+      related,
+    });
+  };
+
+  return {
+    error: (problem) => report("error", problem),
+    warning: (problem) => report("warning", problem),
   };
 }

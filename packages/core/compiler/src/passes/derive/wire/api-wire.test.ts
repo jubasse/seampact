@@ -1,6 +1,5 @@
 import { describe, expect, test } from "vitest";
 import {
-  deriveWireLocated,
   deriveWireReferenceVariant,
   deriveWireReferenceWorkspace,
   deriveWireRunContract,
@@ -27,23 +26,13 @@ describe("derive.wire writes api.wire", () => {
     expect(run.draft.api?.wire).toEqual({ int64: "string", outputEnums: "enum", urls: "relative" });
   });
 
-  test("a wire convention other than the default is refused at its key", () => {
+  test("typed convention members: a value other than the default is written", () => {
     const variant = deriveWireReferenceVariant("shared/base.yaml", [
       [BODY_LIMIT, `${BODY_LIMIT}  int64: number\n  outputEnums: open\n  urls: absolute\n`],
     ]);
     const run = deriveWireRunContract(variant, "tasks");
 
-    expect(run.diagnostics.map(deriveWireLocated)).toEqual(
-      ["int64", "outputEnums", "urls"].map((key) => ({
-        rule: "seampact/derive/wire-convention-unsupported",
-        pointer: `/conventions/${key}`,
-        related: [],
-      })),
-    );
-    expect(run.diagnostics.map(({ message }) => message)).toEqual([
-      "The convention int64 is 'number'; the compiler writes only 'string' so far.",
-      "The convention outputEnums is 'open'; the compiler writes only 'enum' so far.",
-      "The convention urls is 'absolute'; the compiler writes only 'relative' so far.",
-    ]);
+    expect(run.diagnostics).toEqual([]);
+    expect(run.draft.api?.wire).toEqual({ int64: "number", outputEnums: "open", urls: "absolute" });
   });
 });

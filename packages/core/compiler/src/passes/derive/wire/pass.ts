@@ -2,6 +2,7 @@ import type { DraftIR, PassContextOf, PassPart } from "../../../pipeline/seam.js
 import { deriveWireApiWire } from "./api-wire.js";
 import { deriveWireBodyHeaders } from "./bodies.js";
 import { deriveWireBodyLimit } from "./body-limit.js";
+import { deriveWireBucketLimits } from "./buckets.js";
 import { deriveWireCache, deriveWireReportSettingFaults } from "./cache.js";
 import { deriveWireConcurrency } from "./concurrency.js";
 import { deriveWireCredentials } from "./credentials.js";
@@ -60,6 +61,7 @@ export const deriveWirePass: PassPart<"derive.wire"> = {
     "operations[].deprecated",
     "operations[].upstream",
     "operations[].maturity",
+    "buckets",
   ],
   writes: [
     "api.wire",
@@ -93,6 +95,7 @@ function deriveWirePassRun(draft: DraftIR, context: PassContextOf<"derive.wire">
   const exemptions: DeriveWireExemptions = { used: new Set() };
 
   deriveWireApiWire(scope);
+  deriveWireBucketLimits(scope);
 
   for (const route of deriveWireRoutes(draft, context)) {
     deriveWireBodyLimit(route, scope);

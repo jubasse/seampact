@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import type { ContractIR, IrWriter } from "@seampact/spec/ir";
+import { type ContractIR, type IrWriter, isKnownVariant } from "@seampact/spec/ir";
 import { derivationRowOf } from "../../../derivations/table.js";
 import type { Diagnostic } from "../../../diagnostics/diagnostic.js";
 import { loadFsReader, loadWorkspace } from "../../../load/index.js";
@@ -261,7 +261,12 @@ const isDeriveWireElement = (element: { derivedFrom?: IrWriter.DerivedFrom }): b
  * status), the input's body limit and derived unknown-key policy, `idempotency`, `deadlineHeader`,
  * `concurrency.derivedFrom`, `cache` and a derived `maturity`. An operation with none is left out.
  */
-export function deriveWireMembers(draft: DraftIR): Record<string, Record<string, unknown>> {
+export function deriveWireMembers(draft: {
+  readonly operations: readonly (
+    | DraftIR["operations"][number]
+    | ContractIR["operations"][number]
+  )[];
+}): Record<string, Record<string, unknown>> {
   const members: Record<string, Record<string, unknown>> = {};
 
   for (const operation of draft.operations) {
@@ -277,7 +282,11 @@ export function deriveWireMembers(draft: DraftIR): Record<string, Record<string,
       return headers.length > 0 ? [{ status: response.status, headers }] : [];
     });
     const input = operation.input;
-    const unknownKeys = input?.schema.kind === "ref" ? input.schema.unknownKeys : undefined;
+    const schema = input?.schema;
+    const unknownKeys =
+      schema !== undefined && isKnownVariant("TypeUse", schema) && schema.kind === "ref"
+        ? schema.unknownKeys
+        : undefined;
 
     if (header.length > 0 || query.length > 0)
       written.params = {
