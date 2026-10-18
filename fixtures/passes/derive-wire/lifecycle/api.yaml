@@ -157,11 +157,11 @@ surfaces:
         output: Key
       legacy:
         method: get
-        deprecated: { sunset: '2027-06-30', successor: board }
+        deprecated: { since: '2026-01-15', sunset: '2027-06-30', successor: board }
         output: Note
       retired:
         method: get
-        deprecated: { sunset: '2027-06-30' }
+        deprecated: { since: '2026-01-15', sunset: '2027-06-30' }
         output: Note
       prices:
         method: get
