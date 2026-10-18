@@ -1,15 +1,20 @@
 import type { IrWriter, Origin } from "@seampact/spec/ir";
+import type { DiagnosticOrigin } from "../../../diagnostics/diagnostic.js";
 import {
+  type DraftOperation,
   type InheritedEntry,
+  pipelineCanonical,
   pipelineCopy,
   pipelineParseDuration,
   type TreeNode,
 } from "../../../pipeline/seam.js";
+import { treeNodesIsCalendarDate } from "./calendar-date.js";
 import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
 import type { TreeNodesSite } from "./fields.js";
 import { TREE_NODES_BATCH_OP, treeNodesOpShorthand } from "./names.js";
 import {
   TREE_NODES_MATURITIES,
+  type TreeNodesContext,
   type TreeNodesJson,
   treeNodesIsObject,
   treeNodesMember,
@@ -55,21 +60,19 @@ export function treeNodesBudgetMs(site: TreeNodesSite): number | undefined {
   return undefined;
 }
 
-/** The nearest `deprecated`; its successor is checked once every operation id is known. */
+/** The nearest `deprecated` whose dates hold; its successor is checked once every operation is written. */
 export function treeNodesDeprecated(site: TreeNodesSite): IrWriter.Deprecation | undefined {
   const entry = site.context.inherited(site.node, "deprecated")?.entry;
 
   if (entry === undefined) return undefined;
 
+  const since = treeNodesMember(entry.value, "since");
   const sunset = treeNodesMember(entry.value, "sunset");
   const successor = treeNodesMember(entry.value, "successor");
   const api = site.draft.api?.id;
+  const datesHold = deprecationDatesHold(site, entry.origin, since, sunset);
 
-  if (typeof sunset !== "string") {
-    reportNoSunset(site, entry.origin);
-
-    return undefined;
-  }
+  if (!datesHold || typeof sunset !== "string") return undefined;
 
   if (api === undefined) throw new Error("write the api before its operations");
 
@@ -82,37 +85,168 @@ export function treeNodesDeprecated(site: TreeNodesSite): IrWriter.Deprecation |
   };
 }
 
-function reportNoSunset(site: TreeNodesSite, origin: Origin): void {
-  site.once(
-    `deprecated-sunset:${origin.layer}#${origin.pointer}`,
-    treeNodesError({
+// Each refusal is reported once per written `deprecated`, however many operations inherit it.
+function deprecationDatesHold(
+  site: TreeNodesSite,
+  origin: Origin,
+  since: unknown,
+  sunset: unknown,
+): boolean {
+  const sinceHolds = sinceIsDate(site, origin, since);
+  const sunsetHolds = sunsetIsDate(site, origin, sunset);
+
+  if (!sinceHolds || !sunsetHolds) return false;
+
+  if (typeof since !== "string" || typeof sunset !== "string" || since <= sunset) return true;
+
+  reportDeprecation(site, origin, {
+    rule: "deprecated-since",
+    member: "since",
+    message: `The deprecation that reaches ${site.operationId} starts on ${since}, after its sunset ${sunset}.`,
+    fix: "Write a since date on or before the sunset date.",
+  });
+
+  return false;
+}
+
+function sinceIsDate(site: TreeNodesSite, origin: Origin, since: unknown): boolean {
+  if (typeof since !== "string") {
+    reportDeprecation(site, origin, {
+      rule: "deprecated-since",
+      message: `The deprecation that reaches ${site.operationId} gives no since date.`,
+      fix: DEPRECATION_FIX,
+    });
+
+    return false;
+  }
+
+  if (treeNodesIsCalendarDate(since)) return true;
+
+  reportDeprecation(site, origin, {
+    rule: "deprecated-since",
+    member: "since",
+    message: `The since date ${since} of the deprecation that reaches ${site.operationId} is no calendar day.`,
+    fix: "Write since as a day that exists, as '2026-12-31'.",
+  });
+
+  return false;
+}
+
+function sunsetIsDate(site: TreeNodesSite, origin: Origin, sunset: unknown): boolean {
+  if (typeof sunset !== "string") {
+    reportDeprecation(site, origin, {
       rule: "deprecated-sunset",
-      origin: treeNodesNodeOrigin(origin),
       message: `The deprecation that reaches ${site.operationId} gives no sunset date.`,
-      fix: "Write deprecated: { sunset: '<date>' }.",
+      fix: DEPRECATION_FIX,
+    });
+
+    return false;
+  }
+
+  if (treeNodesIsCalendarDate(sunset)) return true;
+
+  reportDeprecation(site, origin, {
+    rule: "deprecated-sunset",
+    member: "sunset",
+    message: `The sunset date ${sunset} of the deprecation that reaches ${site.operationId} is no calendar day.`,
+    fix: "Write sunset as a day that exists, as '2027-06-30'.",
+  });
+
+  return false;
+}
+
+const DEPRECATION_FIX = "Write deprecated: { since: '<date>', sunset: '<date>' }.";
+
+interface DeprecationRefusal {
+  rule: "deprecated-since" | "deprecated-sunset";
+  /** The member the refusal points at; absent, the refusal points at `deprecated`. */
+  member?: "since" | "sunset";
+  message: string;
+  fix: string;
+}
+
+function reportDeprecation(site: TreeNodesSite, origin: Origin, refusal: DeprecationRefusal): void {
+  const pointer =
+    refusal.member === undefined ? origin.pointer : `${origin.pointer}/${refusal.member}`;
+
+  site.once(
+    `${refusal.rule}:${origin.layer}#${pointer}`,
+    treeNodesError({
+      rule: refusal.rule,
+      origin: treeNodesNodeOrigin(site.context.origin(pointer) ?? origin),
+      message: refusal.message,
+      fix: refusal.fix,
     }),
   );
 }
 
-/** A deprecated operation whose successor names no operation of the api. */
+/** A deprecated operation whose successor names no operation of the api, or one its path params cannot fill. */
 export function treeNodesCheckSuccessor(
-  site: Pick<TreeNodesSite, "context" | "operationId">,
-  deprecated: IrWriter.Deprecation,
-  operationIds: ReadonlySet<string>,
+  context: TreeNodesContext,
+  operation: DraftOperation,
+  operations: readonly DraftOperation[],
 ): void {
-  const successor = deprecated.successor?.id;
+  const { id, deprecated } = operation;
+  const successorId = deprecated?.successor?.id;
 
-  if (successor === undefined || operationIds.has(successor)) return;
+  if (id === undefined || deprecated === undefined || successorId === undefined) return;
   const pointer = `${deprecated.origin.pointer}/successor`;
+  const origin = treeNodesNodeOrigin(context.origin(pointer) ?? deprecated.origin);
+  const successor = operations.find((candidate) => candidate.id === successorId);
 
-  site.context.report(
+  if (successor !== undefined) {
+    reportSuccessorParams(context, origin, operation, successor);
+
+    return;
+  }
+
+  context.report(
     treeNodesError({
       rule: "deprecated-successor",
-      origin: treeNodesNodeOrigin(site.context.origin(pointer) ?? deprecated.origin),
-      message: `The successor ${successor} of ${site.operationId} is no operation of the api.`,
+      origin,
+      message: `The successor ${successorId} of ${id} is no operation of the api.`,
       fix: "Name the operation id of the route that replaces this one.",
     }),
   );
+}
+
+// The successor link is built from the deprecated request's path params, so each path param of the successor
+// must be one of them, of the same type use.
+function reportSuccessorParams(
+  context: TreeNodesContext,
+  origin: DiagnosticOrigin,
+  operation: DraftOperation,
+  successor: DraftOperation,
+): void {
+  const ownPathParams = operation.params?.path ?? [];
+
+  for (const param of successor.params?.path ?? []) {
+    const own = ownPathParams.find((candidate) => candidate.name === param.name);
+
+    if (own !== undefined && sameTypeUse(own.type, param.type)) continue;
+
+    const why =
+      own === undefined ? `which ${operation.id} has not` : `typed otherwise than on ${operation.id}`;
+
+    context.report(
+      treeNodesError({
+        rule: "deprecated-successor-params",
+        origin,
+        message: `The successor ${successor.id} of ${operation.id} has the path param ${param.name}, ${why}.`,
+        fix: `Name a successor whose path params are path params of ${operation.id}, of the same type.`,
+      }),
+    );
+  }
+}
+
+// Docs, examples and origin say where and how a use is written, not what it accepts.
+const UNCOMPARED_TYPE_USE_MEMBERS: ReadonlySet<string> = new Set(["docs", "examples", "origin"]);
+
+function sameTypeUse(own: IrWriter.TypeUse, successor: IrWriter.TypeUse): boolean {
+  const compared = (use: IrWriter.TypeUse) =>
+    Object.fromEntries(Object.entries(use).filter(([key]) => !UNCOMPARED_TYPE_USE_MEMBERS.has(key)));
+
+  return pipelineCanonical(compared(own)) === pipelineCanonical(compared(successor));
 }
 
 /** The nearest `upstream`, each service declared in `services`. */

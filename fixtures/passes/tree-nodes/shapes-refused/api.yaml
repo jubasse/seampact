@@ -4,7 +4,9 @@
 # named like a query field, sort keys without a sort role or naming no item property, a default limit above
 # maxLimit, a token on a style without since; degradable paths naming a required property or nothing, without a
 # degraded header; a budget too long, a deprecation without sunset or with an unknown successor, an undeclared
-# upstream service, an undeclared format, examples with no target or a value that does not fit.
+# upstream service, an undeclared format, examples with no target or a value that does not fit; a deprecation
+# starting after its sunset, dates that name no day, an inherited deprecation without since reaching two
+# operations, successors with a path param the deprecated route lacks or types otherwise.
 api: { name: shapes, version: 1, kind: product }
 
 conventions:
@@ -74,13 +76,42 @@ surfaces:
         output: Note
         degradable: [text, missing]
         budget: 99999999999999999999d
-        deprecated: { successor: gone }
+        deprecated: { since: '2026-12-31', successor: gone }
         upstream: [catalog, ledger]
       wrapped:
         method: get
         output: Note
         format: house
-        deprecated: { sunset: '2027-06-30', successor: unknownRoute }
+        deprecated: { since: '2026-12-31', sunset: '2027-06-30', successor: unknownRoute }
         examples:
           bare: { value: {} }
           wrong: { status: 200, value: { noteId: n1, text: invalid } }
+      late:
+        method: get
+        output: Note
+        deprecated: { since: '2027-07-01', sunset: '2027-06-30' }
+      unreal:
+        method: get
+        output: Note
+        deprecated: { since: '2026-02-30', sunset: '2027-06-30' }
+      leapless:
+        method: get
+        output: Note
+        deprecated: { since: '2026-01-01', sunset: '2026-02-30' }
+      legacy:
+        kind: single
+        deprecated: { sunset: '2027-06-30' }
+        routes:
+          first: { method: get, output: Note }
+          second: { method: get, output: Note }
+      keyed: { method: get, operationId: getKeyed, path: 'keyed/{key}', pathParams: { key: Id }, output: Note }
+      unkeyed:
+        method: get
+        output: Note
+        deprecated: { since: '2026-12-31', sunset: '2027-06-30', successor: getKeyed }
+      rekeyed:
+        method: get
+        path: 'rekeyed/{key}'
+        pathParams: { key: { type: integer } }
+        output: Note
+        deprecated: { since: '2026-12-31', sunset: '2027-06-30', successor: getKeyed }

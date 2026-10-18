@@ -346,7 +346,7 @@ revealStreamKey:
 legacy:
   method: get
   operationId: getTaskV1
-  deprecated: { sunset: '2027-06-30', successor: getTask }
+  deprecated: { since: '2026-12-31', sunset: '2027-06-30', successor: getTask }
   upstream: [streaming, catalog]
   maturity: { level: experimental, reason: "Kept only for old clients." }   # the reason is optional
   output: Task
@@ -430,7 +430,7 @@ Every FEAT-001 scenario that uses contract syntax, and the keywords it needs. Sc
 | SCN-047 | `packs`, pack file keys, `pack` manifest (1, 2) |
 | SCN-048 | `formats` (`success.item`, `success.table`, `meta.fill`, `error`), a `pagings` style for the list, templates, `conventions.format`, `ops.batch` (13, 14, 6) |
 | SCN-050 | `api.maturity`, `api.compat` (5) |
-| SCN-051 | `deprecated.sunset`, `deprecated.successor` (10) |
+| SCN-051 | `deprecated.since`, `deprecated.sunset`, `deprecated.successor` (10) |
 | SCN-054 | `sensitive` (ADR 0003) |
 | SCN-062 | `rights` (`params`, `subject.scope`, `subject.resource`, `subject.id`), default subject (9) |
 | SCN-063 | `rights.guest`, `access.public`, any library right name, a right's `codeName`, `conventions.rights.pattern` (9, 4, 13) |

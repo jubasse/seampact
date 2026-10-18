@@ -466,10 +466,14 @@ export function nodeDefs(): Record<string, JsonSchema> {
       ),
     },
     deprecation: object({
-      props: { sunset: kw(A2(10), ref("common", "date")) },
+      props: {
+        since: kw(A2(10), ref("common", "date"), "The day the operation is deprecated."),
+        sunset: kw(A2(10), ref("common", "date")),
+      },
     }),
     routeDeprecation: object({
       props: {
+        since: kw(A2(10), ref("common", "date"), "The day the operation is deprecated."),
         sunset: kw(A2(10), ref("common", "date")),
         successor: kw(A2(10), ref("common", "name"), "The operation id that replaces this route."),
       },
