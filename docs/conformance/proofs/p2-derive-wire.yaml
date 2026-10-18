@@ -24,6 +24,7 @@ proofs:
     tests:
       - 'core: packages/core/compiler/src/passes/derive/wire/concurrency.test.ts#version param'
       - 'core: packages/core/compiler/src/passes/derive/wire/concurrency.test.ts#if-match and etag'
+      - 'core: packages/core/compiler/src/passes/derive/wire/concurrency.test.ts#relay routes of a versioned operation'
   - id: CHK-054
     fixtures:
       - fixtures/passes/derive-wire/lifecycle/api.yaml
@@ -40,6 +41,7 @@ proofs:
       - fixtures/passes/derive-wire/lifecycle/api.yaml
     tests:
       - 'core: packages/core/compiler/src/passes/derive/wire/concurrency.test.ts#if-match and etag'
+      - 'core: packages/core/compiler/src/passes/derive/wire/concurrency.test.ts#relay routes of a versioned operation'
   - id: CHK-128
     fixtures:
       - fixtures/passes/derive-wire/lifecycle/api.yaml
