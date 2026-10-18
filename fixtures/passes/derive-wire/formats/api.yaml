@@ -1,0 +1,34 @@
+# The slot values and typed conventions of PR 3: a JSON:API-like format whose $collection, $resource and $id take
+# the collection's resourceType, the item's typeName and the idProperty, under non-default api wire conventions.
+api: { name: formats, version: 1 }
+
+conventions:
+  format: jsonApi
+  int64: number
+  outputEnums: open
+  urls: absolute
+
+formats:
+  jsonApi:
+    success:
+      item: { body: { data: { type: $resource, id: $id, attributes: $fields, links: { self: $self } } } }
+      list: { body: { type: $collection, data: $payload } }
+
+schemas:
+  Task:
+    type: object
+    typeName: TodoItem
+    properties: { id: { type: string }, title: { type: string } }
+    required: [id, title]
+
+surfaces:
+  app:
+    access: { public: "Tasks are public." }
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: { type: string } }
+        idProperty: id
+        resourceType: todo-items
+        item: Task
+        ops: { list: { paging: none }, get: {} }

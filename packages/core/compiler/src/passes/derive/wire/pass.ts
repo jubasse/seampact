@@ -1,8 +1,8 @@
 import type { DraftIR, PassContextOf, PassPart } from "../../../pipeline/seam.js";
 import { deriveWireApiWire } from "./api-wire.js";
 import { deriveWireBodyHeaders } from "./bodies.js";
-import { deriveWireBucketLimits } from "./buckets.js";
 import { deriveWireBodyLimit } from "./body-limit.js";
+import { deriveWireBucketLimits } from "./buckets.js";
 import { deriveWireCache, deriveWireReportSettingFaults } from "./cache.js";
 import { deriveWireConcurrency } from "./concurrency.js";
 import { deriveWireCredentials } from "./credentials.js";

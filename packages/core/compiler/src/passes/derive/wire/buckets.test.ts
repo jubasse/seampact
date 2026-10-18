@@ -24,7 +24,9 @@ describe("bucket limits", () => {
     expect(run.diagnostics.map(deriveWireLocated)).toEqual([
       { rule: "seampact/derive/bucket-limits", pointer: "/buckets/write", related: [] },
     ]);
-    expect(run.diagnostics.map(({ severity, message, fix }) => ({ severity, message, fix }))).toEqual([
+    expect(
+      run.diagnostics.map(({ severity, message, fix }) => ({ severity, message, fix })),
+    ).toEqual([
       {
         severity: "warning",
         message: "The bucket 'write' sets no limit and window, so the server binds them.",

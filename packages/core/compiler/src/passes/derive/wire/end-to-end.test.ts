@@ -6,11 +6,18 @@ import { finalizeIr } from "../../../finalize/finalize.js";
 import { type LoadReader, loadFsReader } from "../../../load/index.js";
 import { loadMemoryReader } from "../../../load/reader.js";
 import { compileWorkspace, type PipelineApiResult } from "../../../pipeline/orchestrator.js";
-import { deriveWireFixtureJson, deriveWireLocated, deriveWireMembers } from "./test-support.js";
+import {
+  DERIVE_WIRE_FIXTURES,
+  deriveWireFixtureJson,
+  deriveWireLocated,
+  deriveWireMembers,
+} from "./test-support.js";
 
 // A contract through every pass to the IR: derive.errors' operation members are its stand-ins until it writes them.
 
-const REFERENCE = fileURLToPath(new URL("../../../../../../../fixtures/reference/", import.meta.url));
+const REFERENCE = fileURLToPath(
+  new URL("../../../../../../../fixtures/reference/", import.meta.url),
+);
 
 function compiled(reader: LoadReader, entry: string): readonly PipelineApiResult[] {
   const result = compileWorkspace({
@@ -32,6 +39,14 @@ function compiledInline(contract: string): PipelineApiResult {
   const [api] = compiled(loadMemoryReader({ "api.yaml": contract.trimStart() }), "api.yaml");
 
   if (api === undefined) throw new Error("the inline contract has no api");
+
+  return api;
+}
+
+function compiledFixture(name: string): PipelineApiResult {
+  const [api] = compiled(loadFsReader(`${DERIVE_WIRE_FIXTURES}${name}/`), "api.yaml");
+
+  if (api === undefined) throw new Error(`the ${name} fixture has no api`);
 
   return api;
 }
@@ -85,9 +100,7 @@ describe("derive.wire matches the derive delta through the pipeline", () => {
 
 describe("typed convention members", () => {
   test("a non-default int64, outputEnums and urls reach the IR", () => {
-    const ir = irOf(
-      compiledInline(TASKS("conventions: { int64: number, outputEnums: open, urls: absolute }")),
-    );
+    const ir = irOf(compiledFixture("formats"));
 
     expect(ir.api.wire).toEqual({ int64: "number", outputEnums: "open", urls: "absolute" });
   });
@@ -100,7 +113,10 @@ describe("formats", () => {
 
     expect(Object.keys(ir.formats)).toEqual(["bare"]);
     expect(ir.operations.map(({ format }) => format)).toEqual(["bare"]);
-    expect([bare?.media, bare?.error.media]).toEqual(["application/json", "application/problem+json"]);
+    expect([bare?.media, bare?.error.media]).toEqual([
+      "application/json",
+      "application/problem+json",
+    ]);
     expect(bare?.success.item.body).toEqual({ kind: "slot", slot: "payload", path: [] });
   });
 
@@ -112,7 +128,9 @@ formats:
     error: { body: ${error} }
 `;
     const refused = compiledInline(TASKS(format("{ message: $detail }")));
-    const written = irOf(compiledInline(TASKS(format("{ type: 'https://errors.example.com/${code}' }"))));
+    const written = irOf(
+      compiledInline(TASKS(format(`{ type: 'https://errors.example.com/\${code}' }`))),
+    );
 
     expect(refused.ir).toBeUndefined();
     expect(refused.diagnostics.map(deriveWireLocated)).toEqual([
@@ -136,18 +154,7 @@ formats:
   });
 
   test("format slot values: resourceType, typeName and idProperty reach the IR", () => {
-    const contract = TASKS(`
-conventions: { format: jsonApi }
-formats:
-  jsonApi:
-    success:
-      item: { body: { data: { type: $resource, id: $id, attributes: $fields } } }
-      list: { body: { type: $collection, data: $payload } }
-`)
-      .replace("required: [id, title]", "required: [id, title]\n    typeName: TodoItem")
-      .replace("item: Task", "item: Task\n        resourceType: todo-items")
-      .replace("ops: [get]", "ops: { list: { paging: none }, get: {} }");
-    const ir = irOf(compiledInline(contract));
+    const ir = irOf(compiledFixture("formats"));
 
     expect(ir.operations.map(({ id, resource }) => [id, resource])).toEqual([
       ["getTask", { type: "todo-items", idParam: "taskId", idProperty: "id" }],

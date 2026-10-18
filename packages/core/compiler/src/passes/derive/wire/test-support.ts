@@ -262,7 +262,10 @@ const isDeriveWireElement = (element: { derivedFrom?: IrWriter.DerivedFrom }): b
  * `concurrency.derivedFrom`, `cache` and a derived `maturity`. An operation with none is left out.
  */
 export function deriveWireMembers(draft: {
-  readonly operations: readonly (DraftIR["operations"][number] | ContractIR["operations"][number])[];
+  readonly operations: readonly (
+    | DraftIR["operations"][number]
+    | ContractIR["operations"][number]
+  )[];
 }): Record<string, Record<string, unknown>> {
   const members: Record<string, Record<string, unknown>> = {};
 

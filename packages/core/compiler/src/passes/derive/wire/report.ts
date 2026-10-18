@@ -1,5 +1,9 @@
 import type { Origin } from "@seampact/spec/ir";
-import type { Diagnostic, DiagnosticOrigin, RelatedLocation } from "../../../diagnostics/diagnostic.js";
+import type {
+  Diagnostic,
+  DiagnosticOrigin,
+  RelatedLocation,
+} from "../../../diagnostics/diagnostic.js";
 import type { PassContext } from "../../../pipeline/seam.js";
 
 // The diagnostics of the derive.wire half (ADR 0006 section 4): rule `seampact/derive/<rule>`, located at a pointer

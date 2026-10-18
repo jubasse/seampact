@@ -36,6 +36,14 @@ proofs:
       - fixtures/passes/derive-wire/lifecycle/api.yaml
     tests:
       - 'core: packages/core/compiler/src/passes/derive/wire/lifecycle.test.ts#deprecation headers'
+  - id: CHK-105
+    fixtures: []
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/end-to-end.test.ts#bare by default: a contract with no format serves bare payloads and problem+json errors'
+  - id: CHK-126
+    fixtures: []
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/end-to-end.test.ts#error formats write the code: a format whose error writes no $code is refused, one in a text compiles'
   - id: CHK-127
     fixtures:
       - fixtures/passes/derive-wire/lifecycle/api.yaml
@@ -48,6 +56,17 @@ proofs:
       - fixtures/passes/derive-wire/reference/tasks.derive-wire.json
     tests:
       - 'core: packages/core/compiler/src/passes/derive/wire/paging.test.ts#paging params'
+  - id: CHK-129
+    fixtures:
+      - fixtures/passes/derive-wire/formats/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/end-to-end.test.ts#format slot values: resourceType, typeName and idProperty reach the IR'
+  - id: CHK-130
+    fixtures:
+      - fixtures/passes/derive-wire/formats/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/end-to-end.test.ts#typed convention members'
+      - 'core: packages/core/compiler/src/passes/derive/wire/api-wire.test.ts#derive.wire writes api.wire'
   - id: CHK-138
     fixtures:
       - fixtures/passes/derive-wire/lifecycle/api.yaml
