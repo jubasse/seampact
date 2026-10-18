@@ -14,11 +14,12 @@ import type { DeriveErrorsRoute } from "./triggers.js";
 // `conventions.errors.every`, and those of every node's `errors` whose attachment reaches the operation. `reach:
 // subtree` (the default, or `conventions.errors.reach`) reaches every operation below the node; `resource` stops at
 // a nested collection or single. `for: reads` reaches the safe operations, `writes` the others. An attached code keeps
-// the origin of the nearest node attaching it, and the nearest narrowed example wins.
+// the origin of the nearest node attaching it, and the nearest narrowed example wins. The codes an identity lists in `errors` attach to every route it guards
+// (grammar section 9).
 
 /** A code attached to an operation, with the derivation that attached it. */
 export interface DeriveErrorsAttachedCode {
-  readonly derivation: "node.errors" | "conventions.every";
+  readonly derivation: "node.errors" | "conventions.every" | "identity.authenticate";
   readonly code: IrWriter.ErrorCode;
   readonly from: readonly IrWriter.Origin[];
   /** The nearest node attaching the code; absent for `conventions.errors.every`. */
@@ -50,6 +51,39 @@ function forReaches(attachment: DeriveErrorsRawObject, safe: boolean): boolean {
   if (narrowed === WRITES) return !safe;
 
   return true;
+}
+
+/**
+ * The codes the identity of an operation's access lists in `errors`: attached to every route it guards, derived from
+ * `identity.authenticate`, each with the list entry as its origin.
+ */
+export function deriveErrorsIdentityAttached(
+  context: DeriveErrorsContext,
+  route: DeriveErrorsRoute,
+): DeriveErrorsAttachedCode[] {
+  const access = route.operation.access;
+
+  if (access === undefined || access.kind === "public") return [];
+
+  const identity = deriveErrorsMember(context.raw.merged.identities, access.identity);
+  const listed = deriveErrorsMember(identity, "errors");
+
+  if (!Array.isArray(listed)) return [];
+
+  const attached: DeriveErrorsAttachedCode[] = [];
+
+  listed.forEach((code, index) => {
+    if (typeof code !== "string") return;
+
+    const origin = deriveErrorsOriginOf(
+      context,
+      pipelinePointerBelow("/identities", access.identity, "errors", String(index)),
+    );
+
+    attached.push({ derivation: "identity.authenticate", code, from: [origin], origin });
+  });
+
+  return attached;
 }
 
 /** The attached codes of one operation, nearest attachment first, each code once. */

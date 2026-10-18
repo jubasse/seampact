@@ -294,6 +294,45 @@ surfaces:
   });
 });
 
+describe("attachment examples", () => {
+  test("an attachment's example is checked against the params of the code it attaches", () => {
+    const run = deriveErrorsRunContract(
+      deriveErrorsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }
+errors:
+  shop.counted: { status: 400, params: { count: { type: integer } } }
+  shop.plain: { status: 409 }
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks attachment examples only. }
+    errors:
+      shop.counted: { example: { count: 3 } }
+    routes:
+      ping:
+        method: get
+        errors:
+          shop.counted: { example: { count: three } }
+          shop.plain: { example: { reason: none } }
+`,
+      }),
+    );
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/error-example",
+        pointer: "/surfaces/app/routes/ping/errors/shop.counted/example/count",
+        related: [],
+      },
+      {
+        rule: "seampact/derive/error-example",
+        pointer: "/surfaces/app/routes/ping/errors/shop.plain/example",
+        related: [],
+      },
+    ]);
+  });
+});
+
 describe("default codes", () => {
   test("a contract with no pack registers every default code, from the core, with its role and core params", () => {
     const run = deriveErrorsRunContract(

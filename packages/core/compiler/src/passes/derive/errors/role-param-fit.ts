@@ -96,8 +96,34 @@ export function deriveErrorsObjectOfUse(
   return schema.kind === "object" ? schema : undefined;
 }
 
-/** The reason an optional member is refused into a required one; the reporter files it as a missing required value. */
-export const DERIVE_ERRORS_OMITTABLE_REASON = "it may be left out, but the param requires it";
+/**
+ * Why a rendered value may not fit a param: `omittable` when the value may be left out where the param requires it
+ * (the reporter files it as a missing required value), `misfit` for any other value outside the param's type.
+ */
+export interface DeriveErrorsMisfitReason {
+  readonly kind: "misfit" | "omittable";
+  readonly text: string;
+}
+
+const OMITTABLE_REASON: DeriveErrorsMisfitReason = {
+  kind: "omittable",
+  text: "it may be left out, but the param requires it",
+};
+
+/** A reason of kind `misfit`. */
+export const deriveErrorsMisfitReason = (text: string): DeriveErrorsMisfitReason => ({
+  kind: "misfit",
+  text,
+});
+
+const misfitOrNone = (text: string | undefined): DeriveErrorsMisfitReason | undefined =>
+  text === undefined ? undefined : deriveErrorsMisfitReason(text);
+
+// A reason about a part of the value (a member, an item) keeps that part's kind.
+const nestedReason = (
+  prefix: string,
+  reason: DeriveErrorsMisfitReason,
+): DeriveErrorsMisfitReason => ({ kind: reason.kind, text: `${prefix}${reason.text}` });
 
 export function deriveErrorsKindsOf(schemas: Schemas, typed: DeriveErrorsTyped): DeriveErrorsKinds {
   const { use } = typed;
@@ -138,7 +164,7 @@ export const deriveErrorsMisfit = (
   fit: DeriveErrorsFit,
   rendered: DeriveErrorsTyped,
   accepted: DeriveErrorsTyped,
-): string | undefined => typedMisfit(fit, rendered, accepted, new Set());
+): DeriveErrorsMisfitReason | undefined => typedMisfit(fit, rendered, accepted, new Set());
 
 // `seen` holds the pairs of object schemas under comparison, so a recursive schema ends.
 function typedMisfit(
@@ -146,12 +172,14 @@ function typedMisfit(
   rendered: DeriveErrorsTyped,
   accepted: DeriveErrorsTyped,
   seen: Set<string>,
-): string | undefined {
+): DeriveErrorsMisfitReason | undefined {
   const renderedKinds = deriveErrorsKindsOf(fit.schemas, rendered);
   const acceptedKinds = deriveErrorsKindsOf(fit.schemas, accepted);
 
   if (!deriveErrorsKindsFit(renderedKinds, acceptedKinds))
-    return `the param's type (${deriveErrorsDescribeKinds(acceptedKinds)}) does not take ${deriveErrorsDescribeKinds(renderedKinds)}`;
+    return deriveErrorsMisfitReason(
+      `the param's type (${deriveErrorsDescribeKinds(acceptedKinds)}) does not take ${deriveErrorsDescribeKinds(renderedKinds)}`,
+    );
 
   return constraintMisfit(fit, rendered.use, accepted.use, seen);
 }
@@ -162,17 +190,19 @@ function constraintMisfit(
   rendered: Use,
   accepted: Use,
   seen: Set<string>,
-): string | undefined {
+): DeriveErrorsMisfitReason | undefined {
   switch (accepted.kind) {
     case "opaque":
     case "file":
       return undefined;
     case "enum":
-      return enumMisfit(rendered, accepted);
+      return misfitOrNone(enumMisfit(rendered, accepted));
     case "scalar":
-      return rendered.kind === "scalar"
-        ? scalarMisfit(fit, rendered, accepted)
-        : `its values are not provably within the param's ${describeScalar(accepted)}`;
+      return misfitOrNone(
+        rendered.kind === "scalar"
+          ? scalarMisfit(fit, rendered, accepted)
+          : `its values are not provably within the param's ${describeScalar(accepted)}`,
+      );
     case "array":
       return rendered.kind === "array" ? arrayMisfit(fit, rendered, accepted, seen) : undefined;
     case "ref":
@@ -323,18 +353,22 @@ function arrayMisfit(
   rendered: PassReadonly<IrWriter.ArrayTypeUse>,
   accepted: PassReadonly<IrWriter.ArrayTypeUse>,
   seen: Set<string>,
-): string | undefined {
+): DeriveErrorsMisfitReason | undefined {
   if (
     accepted.minItems !== undefined &&
     (rendered.minItems === undefined || rendered.minItems < accepted.minItems)
   )
-    return `its minItems is not provably within the param's minItems ${accepted.minItems}`;
+    return deriveErrorsMisfitReason(
+      `its minItems is not provably within the param's minItems ${accepted.minItems}`,
+    );
 
   if (
     accepted.maxItems !== undefined &&
     (rendered.maxItems === undefined || rendered.maxItems > accepted.maxItems)
   )
-    return `its maxItems is not provably within the param's maxItems ${accepted.maxItems}`;
+    return deriveErrorsMisfitReason(
+      `its maxItems is not provably within the param's maxItems ${accepted.maxItems}`,
+    );
 
   const items = typedMisfit(
     fit,
@@ -343,7 +377,7 @@ function arrayMisfit(
     seen,
   );
 
-  return items === undefined ? undefined : `for an item, ${items}`;
+  return items === undefined ? undefined : nestedReason("for an item, ", items);
 }
 
 function refMisfit(
@@ -351,14 +385,16 @@ function refMisfit(
   rendered: Use,
   accepted: PassReadonly<IrWriter.RefTypeUse>,
   seen: Set<string>,
-): string | undefined {
+): DeriveErrorsMisfitReason | undefined {
   if (rendered.kind === "ref" && rendered.schema === accepted.schema) return undefined;
 
   const target = deriveErrorsObjectOfUse(fit.schemas, accepted);
   const source = deriveErrorsObjectOfUse(fit.schemas, rendered);
 
   if (target === undefined || source === undefined)
-    return `it is not provably of the param's schema ${quote(accepted.schema)}`;
+    return deriveErrorsMisfitReason(
+      `it is not provably of the param's schema ${quote(accepted.schema)}`,
+    );
 
   // A pair of schemas already under comparison fits unless another member says otherwise.
   const pair = `${source.id} ${target.id}`;
@@ -369,7 +405,8 @@ function refMisfit(
 
   const member = deriveErrorsMemberMisfits(fit, source, target, new Set(), seen)[0];
 
-  if (member !== undefined) return `for its member ${quote(member.member)}, ${member.reason}`;
+  if (member !== undefined)
+    return nestedReason(`for its member ${quote(member.member)}, `, member.reason);
 
   const unwritten = target.properties.find(
     (property) =>
@@ -379,7 +416,9 @@ function refMisfit(
 
   return unwritten === undefined
     ? undefined
-    : `it has no member ${quote(unwritten.name)}, which the param requires`;
+    : deriveErrorsMisfitReason(
+        `it has no member ${quote(unwritten.name)}, which the param requires`,
+      );
 }
 
 /** A member of a rendered object that may not validate against the param's object schema. */
@@ -387,7 +426,7 @@ export interface DeriveErrorsMemberMisfit {
   readonly member: string;
   /** Set when the param's schema has no such member. */
   readonly lacking: boolean;
-  readonly reason: string;
+  readonly reason: DeriveErrorsMisfitReason;
 }
 
 /**
@@ -412,7 +451,7 @@ export function deriveErrorsMemberMisfits(
       misfits.push({
         member: property.name,
         lacking: true,
-        reason: `${quote(target.id)} has no such member`,
+        reason: deriveErrorsMisfitReason(`${quote(target.id)} has no such member`),
       });
       continue;
     }
@@ -430,8 +469,8 @@ function memberMisfit(
   property: DeriveErrorsMember,
   accepted: DeriveErrorsMember,
   seen: Set<string>,
-): string | undefined {
-  if (property.optional && !accepted.optional) return DERIVE_ERRORS_OMITTABLE_REASON;
+): DeriveErrorsMisfitReason | undefined {
+  if (property.optional && !accepted.optional) return OMITTABLE_REASON;
 
   return typedMisfit(
     fit,

@@ -381,3 +381,59 @@ surfaces:`,
     expect(retryViolations(run.draft)).toEqual([]);
   });
 });
+
+describe("identity.versionToken", () => {
+  const versionTokenContract = (stale: string): string => `api: { name: shop, version: 1 }
+errors:
+  shop.rights_stale: { status: 409 }
+schemas:
+  Viewer: { type: object, properties: { id: { type: string }, rightsVersion: { type: string } } }
+schemes:
+  bearer: { kind: bearer }
+headers:
+  rightsVersion: { semantic: versionToken, response: X-Rights-Version, request: If-Rights-Version }
+identities:
+  viewer:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: Viewer
+    headers:
+      rightsVersion: { from: principal.rightsVersion, for: writes, stale: ${stale} }
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: viewer
+    routes:
+      ping: { method: get }
+      poke: { method: post }
+`;
+
+  test("a write answers the use's stale code from the request header, a read does not", () => {
+    const { diagnostics, draft } = deriveErrorsRunContract(
+      deriveErrorsLoadFiles({ "api.yaml": versionTokenContract("shop.rights_stale") }),
+    );
+
+    expect(diagnostics).toEqual([]);
+    expect(errorOf(draft, "poke", "shop.rights_stale").derivedFrom).toEqual({
+      derivation: "identity.versionToken",
+      from: [
+        { layer: "api", pointer: "/headers/rightsVersion" },
+        { layer: "api", pointer: "/identities/viewer/headers/rightsVersion" },
+      ],
+    });
+    expect(() => errorOf(draft, "ping", "shop.rights_stale")).toThrow();
+  });
+
+  test("a stale code nobody declares is refused at the use", () => {
+    const run = deriveErrorsRunContract(
+      deriveErrorsLoadFiles({ "api.yaml": versionTokenContract("shop.nope") }),
+    );
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/error-unknown",
+        pointer: "/identities/viewer/headers/rightsVersion/stale",
+        related: [],
+      },
+    ]);
+  });
+});

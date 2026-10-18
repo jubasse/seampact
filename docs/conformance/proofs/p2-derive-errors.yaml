@@ -55,13 +55,26 @@ proofs:
       - 'core: packages/core/compiler/src/passes/derive/errors/operations.test.ts#derived codes'
       - 'core: packages/core/compiler/src/passes/derive/errors/triggers.test.ts#derived triggers reached through the triggers contract'
       - 'core: packages/core/compiler/src/passes/derive/errors/operations.test.ts#every derived error carries derivedFrom'
+      - 'core: packages/core/compiler/src/passes/derive/errors/triggers.test.ts#identity.versionToken'
+      - 'core: packages/core/compiler/src/passes/derive/errors/relays.test.ts#relay routes copy domain codes'
+      - 'core: packages/core/compiler/src/passes/derive/errors/relays.test.ts#relay routes to an imported api'
+      - 'core: packages/core/compiler/src/passes/derive/errors/relays.test.ts#relay routes of two public apis'
+      - 'core: packages/core/compiler/src/passes/derive/errors/identity-errors.test.ts#identity errors lists'
   - id: CHK-111
     fixtures:
       - fixtures/passes/derive-errors/operations/api.yaml
     tests:
       - 'core: packages/core/compiler/src/passes/derive/errors/operations.test.ts#attached codes reach'
+      - 'core: packages/core/compiler/src/passes/derive/errors/registry.test.ts#attachment examples'
   - id: CHK-116
     fixtures:
       - fixtures/passes/derive-errors/operations/api.yaml
     tests:
       - 'core: packages/core/compiler/src/passes/derive/errors/operations.test.ts#not found'
+      - 'core: packages/core/compiler/src/passes/derive/errors/operations.test.ts#not found without operations on the collection'
+  - id: CHK-055
+    fixtures:
+      - fixtures/reference/tasks-service/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/errors/triggers.test.ts#api.gateway'
+      - 'core: packages/core/compiler/src/passes/derive/errors/operations.test.ts#gateway and service codes'

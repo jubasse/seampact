@@ -45,6 +45,7 @@ const REJECT_POLICY = "reject";
 const BOUNDARY_ENFORCEMENT = "boundary";
 const DERIVED_CSRF = "derived";
 const SIGNED_IDENTITY = "signed";
+const VERSION_TOKEN_DERIVATION = "identity.versionToken";
 
 /** The parts of the draft the triggers read besides the operation. */
 export interface DeriveErrorsTriggerSources {
@@ -283,6 +284,36 @@ function requirementOrigins(requirement: IrWriter.Requirement): readonly IrWrite
   throw new Error(`access.rights wrote a requirement with neither origin nor derivedFrom`);
 }
 
+// A versionToken use's `stale` code, where derive.wire wrote its request header: on the writes of the identity.
+function versionTokenCodes(
+  sources: DeriveErrorsTriggerSources,
+  operation: DraftOperation,
+): DeriveErrorsCodeTrigger[] {
+  const access = operation.access;
+
+  if (access === undefined || access.kind === "public") return [];
+
+  const uses = sources.draft.identities[access.identity]?.headers ?? [];
+  const codes: DeriveErrorsCodeTrigger[] = [];
+
+  for (const param of operation.params?.header ?? []) {
+    if (param.derivedFrom?.derivation !== VERSION_TOKEN_DERIVATION) continue;
+
+    const use = uses.find(
+      (candidate) => sources.draft.headers[candidate.header]?.request === param.name,
+    );
+
+    if (use?.stale !== undefined)
+      codes.push({
+        derivation: VERSION_TOKEN_DERIVATION,
+        code: use.stale,
+        from: param.derivedFrom.from,
+      });
+  }
+
+  return codes;
+}
+
 // A requirement's codes (`requirement.errors`), and a bucket rule's own `rule.bucket` row: its codes, or the
 // `rateLimited` role when the rule declares none (ADR 0006 section 6).
 function requirementTriggers(
@@ -357,5 +388,5 @@ export function deriveErrorsTriggers(
     ...apiRoles(sources, route),
   );
 
-  return { roles, codes: requirements.codes };
+  return { roles, codes: [...requirements.codes, ...versionTokenCodes(sources, operation)] };
 }

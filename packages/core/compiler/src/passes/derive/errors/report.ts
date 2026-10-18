@@ -22,7 +22,8 @@ export type DeriveErrorsRule =
   | "role-param-required"
   | "role-param-type"
   | "role-template"
-  | "retry-param";
+  | "retry-param"
+  | "relay-declaration";
 
 export interface DeriveErrorsRelated {
   /** A pointer of the merged raw tree. */

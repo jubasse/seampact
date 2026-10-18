@@ -319,7 +319,8 @@ function coreDeclarationOf(role: DerivationRole): IrWriter.ErrorDecl {
 /** The catalogues whose entries list the codes they answer (ADR 0002 section 9). */
 const LISTING_CATALOGUES = ["identities", "rights", "rules", "scopes"] as const;
 
-// Every code an identity, right, rule or scope lists in its `errors`, with its pointer.
+// Every code an identity, right, rule or scope lists in its `errors`, and each identity header use's `stale` code,
+// with its pointer.
 function listedCodes(context: DeriveErrorsContext): { code: string; pointer: string }[] {
   const listed: { code: string; pointer: string }[] = [];
 
@@ -336,6 +337,17 @@ function listedCodes(context: DeriveErrorsContext): { code: string; pointer: str
             pointer: pipelinePointerBelow(`/${catalogue}`, name, "errors", String(index)),
           });
       });
+    }
+
+  for (const [name, identity] of deriveErrorsEntries(context.raw.merged.identities))
+    for (const [header, use] of deriveErrorsEntries(deriveErrorsMember(identity, "headers"))) {
+      const stale = deriveErrorsString(use, "stale");
+
+      if (stale !== undefined)
+        listed.push({
+          code: stale,
+          pointer: pipelinePointerBelow("/identities", name, "headers", header, "stale"),
+        });
     }
 
   return listed;
@@ -356,7 +368,13 @@ function checkAttachments(
       pointer,
     });
 
-  for (const site of attachments) if (!registry.has(site.code)) unknown(site.code, site.pointer);
+  // An attachment's `{ example }` shows the params of the code it attaches.
+  for (const site of attachments) {
+    const registered = registry.get(site.code);
+
+    if (registered === undefined) unknown(site.code, site.pointer);
+    else checkExample(site, registered.declaration.params, context, reporter);
+  }
 
   for (const site of listedCodes(context))
     if (!registry.has(site.code))
