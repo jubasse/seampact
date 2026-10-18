@@ -296,7 +296,8 @@ function contractRequestOf(ctx: HttpContext, route: ContractRoute): ContractRequ
     rawQuery,
     headers: ctx.request.request.headers,
     body: decodedBody(route, raw),
-    // The received bytes as far as Adonis keeps them: the decoded string, re-encoded as UTF-8.
+    // The received bytes as far as Adonis keeps them: the decoded string, re-encoded as UTF-8. Without it the step
+    // 1 check counts zero bytes, and a body present then fails closed (`stepOneRefusal`).
     rawBody: raw === null ? NO_RAW_BODY : Buffer.from(raw, UTF8),
     ...(remoteAddress === undefined ? {} : { clientAddress: remoteAddress }),
   };
@@ -587,6 +588,7 @@ export function createAdonisBoundary<
       ...hookBootProblems(api, registration.hooks),
       ...controllerProblems(registration.controllers),
       ...bodyValidationProblems(registration),
+      ...unknownOperationProblems(registration),
       ...bodyparserProblems(api),
     ];
 
@@ -649,6 +651,21 @@ export function createAdonisBoundary<
         operation: id,
         problem: `no controller for the interface '${name}'`,
         fix: `add 'controllers.${name}: () => import(...)' with a controller that implements ${name}`,
+      }));
+  }
+
+  // An override for an operation the api does not have would be dropped silently.
+  function unknownOperationProblems(
+    registration: RouteRegistration<Hooks, Controllers, Operation>,
+  ): BootProblem[] {
+    const overrides: unknown = registration.operations;
+    const known = entries.map((entry) => entry.operation);
+
+    return (isPlainObject(overrides) ? Object.keys(overrides) : [])
+      .filter((name) => !known.includes(name))
+      .map((name) => ({
+        problem: `'operations.${name}' names no operation of the api`,
+        fix: `remove it, or name one of ${known.join(", ")}`,
       }));
   }
 

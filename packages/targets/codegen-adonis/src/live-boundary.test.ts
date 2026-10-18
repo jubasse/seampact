@@ -82,6 +82,14 @@ function problemBody(code: string, status: number): string {
   return JSON.stringify({ type: code, title: code, status, code, nature: "refused" });
 }
 
+// The route names in the order the router matches them.
+function routeNames(router: unknown): string[] {
+  const json: unknown = Reflect.apply(Reflect.get(Object(router), "toJSON"), router, []);
+  const routes: unknown[] = Object.values(Object(json)).flat();
+
+  return routes.map((route) => String(Reflect.get(Object(route), "name")));
+}
+
 function writeHeaders(): Record<string, string> {
   return { ...BEARER, "idempotency-key": randomUUID() };
 }
@@ -386,6 +394,22 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
         signed: ["tasks.payments"],
       });
       expect(generated.ROUTE_NAMES_BY_ACCESS.identity).toContain("tasks.createTask");
+    });
+
+    test("routes are added most specific first, a static segment before a param", () => {
+      const names = routeNames(server.router);
+
+      expect(names.indexOf("tasks.getTasksBatch")).toBeLessThan(names.indexOf("tasks.archiveTask"));
+      expect(names.indexOf("tasks.searchTasks")).toBeLessThan(names.indexOf("tasks.purgeTask"));
+    });
+
+    test("an override for an operation the api does not have stops the boot", () => {
+      expect(() =>
+        generated.registerRoutes(server.router, {
+          ...app.registration(),
+          operations: { createTsk: { responses: "warn" } },
+        }),
+      ).toThrow(/operations\.createTsk/);
     });
 
     test("a missing controller and a bodyparser limit below the largest route limit stop the boot", () => {
