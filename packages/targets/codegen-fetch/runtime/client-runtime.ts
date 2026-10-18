@@ -212,12 +212,26 @@ async function answerOf(
 
 function requestUrl(config: ClientConfig, plan: OperationPlan, request: RequestValues): string {
   const path = plan.path.replace(/\{([^}]+)\}/g, (_placeholder, name: string) =>
-    encodeURIComponent(String(request.path?.[name])),
+    pathSegment(name, request.path?.[name]),
   );
   const query = plan.query.flatMap((param) => queryPair(param, request.query?.[param.name]));
   const search = query.length === 0 ? "" : `?${query.join("&")}`;
 
   return `${config.baseUrl.replace(/\/+$/, "")}${path}${search}`;
+}
+
+// One escaped segment. The URL parser reads `.` and `..` (even as `%2E`) as dot segments and an empty value
+// collapses the segment, so either would reach another route: they are refused.
+function pathSegment(name: string, value: unknown): string {
+  const text = String(value);
+
+  if (text === "" || text === "." || text === "..") {
+    throw new TypeError(
+      `The path parameter '${name}' must be one non-empty segment, not '${text}': it would reach another route.`,
+    );
+  }
+
+  return encodeURIComponent(text);
 }
 
 function queryPair(param: QueryPlan, value: unknown): string[] {
@@ -237,6 +251,8 @@ function requestHeaders(
   request: RequestValues,
   timeoutMs: number | undefined,
 ): Headers {
+  refuseFilledDefaultHeaders(config, plan);
+
   const headers = new Headers(config.headers);
 
   for (const [key, wireName] of plan.headers) {
@@ -263,6 +279,20 @@ function requestHeaders(
   }
 
   return headers;
+}
+
+// Only a call's own request supplies these: a default would be shared by every call, so a repeated key or a stale deadline.
+function refuseFilledDefaultHeaders(config: ClientConfig, plan: OperationPlan): void {
+  const defaults = new Headers(config.headers);
+  const filled = [plan.idempotency?.header, plan.deadlineHeader];
+
+  for (const name of filled) {
+    if (name !== undefined && defaults.has(name)) {
+      throw new TypeError(
+        `'config.headers' must not carry '${name}': the client fills it on each call. Pass it in the call's request instead.`,
+      );
+    }
+  }
 }
 
 function signalMember(
@@ -315,7 +345,9 @@ function successAnswer(
 ): Answer | undefined {
   const { status, headers } = response;
   const replay =
-    plan.idempotency === undefined ? {} : { replayed: headers.has(plan.idempotency.replayHeader) };
+    plan.idempotency === undefined
+      ? {}
+      : { replayed: headers.get(plan.idempotency.replayHeader)?.trim().toLowerCase() === "true" };
 
   if (success.shape === "empty") return { ok: true, status, headers, ...replay };
 
@@ -339,6 +371,8 @@ function nextCursorOf(link: string | null, cursorParam: string): string | undefi
     const relations = RELATION_PARAMETER.exec(parameters)?.[1]?.split(/\s+/) ?? [];
 
     if (!relations.includes(NEXT_RELATION)) continue;
+
+    if (!URL.canParse(target, LINK_BASE)) return undefined;
 
     return new URL(target, LINK_BASE).searchParams.get(cursorParam) ?? undefined;
   }

@@ -1,7 +1,7 @@
-import { type ExportRef, importSpecifier, type Link, propertyKey } from "@seampact/codegen-core";
 import type { OperationTypeExports } from "@seampact/codegen-core";
-import type { ErrorStyle } from "./options.js";
+import { type ExportRef, importSpecifier, type Link, propertyKey } from "@seampact/codegen-core";
 import type { PlannedOperation } from "./operation-plan.js";
+import type { ErrorStyle } from "./options.js";
 
 export const CLIENT_MODULE = "client";
 export const RUNTIME_MODULE = "runtime";
@@ -112,7 +112,7 @@ function clientInterfaceSource(
     const result =
       errorStyle === "throw" ? success : `CallResult<${success}, ${typeOf(types.errors)}>`;
 
-    return `/** \`${operation.method.toUpperCase()} ${operation.path}\` */\n${propertyKey(methodName)}(...args: ${argumentsType(planned, typeOf(types.input))}): Promise<${result}>;`;
+    return `/** \`${escapeJsdoc(`${operation.method.toUpperCase()} ${operation.path}`)}\` */\n${propertyKey(methodName)}(...args: ${argumentsType(planned, typeOf(types.input))}): Promise<${result}>;`;
   });
   const thrown =
     errorStyle === "throw"
@@ -120,6 +120,11 @@ function clientInterfaceSource(
       : "";
 
   return `/** One method per operation.${thrown} A network failure, a timeout or an abort rejects. */\nexport interface Client {\n${members.join("\n\n")}\n}`;
+}
+
+// `*/` inside a path would end the generated comment.
+function escapeJsdoc(text: string): string {
+  return text.replaceAll("*/", "*\\/");
 }
 
 function successType(operation: ClientOperation, typeOf: (exportRef: ExportRef) => string): string {

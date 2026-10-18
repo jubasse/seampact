@@ -29,7 +29,11 @@ const DEADLINE_TOLERANCE_MS = 1000;
 type Method = (request?: unknown, options?: unknown) => Promise<Record<string, unknown>>;
 
 interface ClientModule {
-  createClient(config: { baseUrl: string; fetch?: typeof fetch }): Record<string, Method>;
+  createClient(config: {
+    baseUrl: string;
+    fetch?: typeof fetch;
+    headers?: Record<string, string>;
+  }): Record<string, Method>;
   isClientContractError?: (error: unknown) => boolean;
 }
 
@@ -58,6 +62,7 @@ let slowSearchText: string;
 let tasks: Record<string, Method>;
 let service: Record<string, Method>;
 let throwing: Record<string, Method>;
+let createResultClient: ClientModule["createClient"];
 let isClientContractError: (error: unknown) => boolean;
 let typesTarget: Target;
 
@@ -255,6 +260,7 @@ beforeAll(async () => {
     "generated/clientThrow/tasks/client.ts",
   );
 
+  createResultClient = resultModule.createClient;
   tasks = resultModule.createClient({ baseUrl: stub.baseUrl, ...config });
   service = serviceModule.createClient({ baseUrl: stub.baseUrl, ...config });
   throwing = throwModule.createClient({ baseUrl: stub.baseUrl, ...config });
@@ -403,6 +409,67 @@ describe("the generated reference client answers a stub server", () => {
     });
 
     expect(replayed).toMatchObject({ ok: true, status: 201, replayed: true, body: created.body });
+  });
+
+  test("a path parameter that is a dot segment or empty is refused", async () => {
+    const fake = createResultClient({
+      baseUrl: "http://api.test",
+      fetch: async () => new Response(null, { status: 500 }),
+    });
+    const create = call(fake, "createTask");
+
+    for (const channelId of ["..", ".", ""]) {
+      await expect(
+        create({ path: { channelId }, headers: user(), body: { title: "x" } }),
+      ).rejects.toThrow(/channelId/);
+    }
+  });
+
+  test("only a true replay header reads as replayed", async () => {
+    const fake = createResultClient({
+      baseUrl: "http://api.test",
+      fetch: async () =>
+        new Response(JSON.stringify({ taskId: "t1", title: "x" }), {
+          status: 201,
+          headers: { "content-type": "application/json", "idempotency-replayed": "false" },
+        }),
+    });
+    const created = await call(
+      fake,
+      "createTask",
+    )({ path: { channelId: "c1" }, headers: user(), body: { title: "x" } });
+
+    expect(created).toMatchObject({ ok: true, status: 201, replayed: false });
+  });
+
+  test("default headers may not carry the idempotency key", async () => {
+    const fake = createResultClient({
+      baseUrl: "http://api.test",
+      headers: { "Idempotency-Key": "fixed" },
+      fetch: async () => new Response(null, { status: 500 }),
+    });
+
+    await expect(
+      call(
+        fake,
+        "createTask",
+      )({ path: { channelId: "c1" }, headers: user(), body: { title: "x" } }),
+    ).rejects.toThrow(/idempotency-key/i);
+  });
+
+  test("a malformed Link target gives no next cursor", async () => {
+    const fake = createResultClient({
+      baseUrl: "http://api.test",
+      fetch: async () =>
+        new Response("[]", {
+          status: 200,
+          headers: { "content-type": "application/json", link: '<http://[bad>; rel="next"' },
+        }),
+    });
+    const page = await call(fake, "listTasks")({ path: { channelId: "c1" }, headers: user() });
+
+    expect(page).toMatchObject({ ok: true, status: 200, body: { items: [] } });
+    expect(page.body).not.toHaveProperty("nextCursor");
   });
 
   test("the deadline header on tasksService", async () => {
