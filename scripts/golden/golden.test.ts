@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -106,5 +107,24 @@ describe("golden checker on a toy case", () => {
 
     expect(files.size).toBe(0);
     expect(problems).toEqual(["toy/toy: the compiler produced no IR"]);
+  });
+});
+
+describe("committed golden files", () => {
+  it("scripts/golden --check finds the reference golden IR current", () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--experimental-transform-types",
+        "--import",
+        "./scripts/ir-models/register.ts",
+        "scripts/golden/cli.ts",
+        "--check",
+      ],
+      { cwd: REPO_ROOT, encoding: "utf8" },
+    );
+
+    expect(result.stderr).toMatch(/golden: \d+ files are current/);
+    expect(result.status).toBe(0);
   });
 });
