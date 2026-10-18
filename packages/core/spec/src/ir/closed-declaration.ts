@@ -10,6 +10,7 @@ export interface IrClosedDeclarations {
   Scalar: IrWriter.Scalar;
   WireFormat: IrWriter.WireFormat;
   ExtensionKeyDecl: IrWriter.ExtensionKeyDecl;
+  PagingStyle: IrWriter.PagingStyle;
   Operation: IrWriter.Operation;
   TypeUse: IrWriter.TypeUse;
 }
@@ -18,7 +19,8 @@ export type IrClosedDefinition = keyof IrClosedDeclarations;
 
 // A union tag (pointer to the tag member), an open-enum value, or a member name (`value`, at the member's
 // pointer) outside what this IR revision knows, or a tag or enum value that is missing or not a string
-// (`value` is then its kind). `value` is bounded: it is read from an untrusted document.
+// (`value` is then its kind). `value` and a member name in `pointer` are bounded: they are read from an
+// untrusted document.
 export interface IrClosedUnknown {
   pointer: string;
   value: string;
@@ -62,7 +64,7 @@ function pushUnknownMembers(
 
   for (const member of Object.keys(value))
     if (!Object.hasOwn(properties, member))
-      pushUnknown(unknowns, `${pointer}/${escapePointer(member)}`, member);
+      pushUnknown(unknowns, `${pointer}/${escapePointer(boundedUnknownValue(member))}`, member);
 }
 
 function isClosedAs<N extends IrClosedDefinition, V>(

@@ -467,7 +467,7 @@ export function nodeDefs(): Record<string, JsonSchema> {
     },
     deprecation: object({
       props: {
-        since: kw(A2(10), ref("common", "date"), "The day the operation is deprecated."),
+        since: kw(A2(10), ref("common", "date"), "The day the operations below are deprecated."),
         sunset: kw(A2(10), ref("common", "date")),
       },
     }),

@@ -21,6 +21,7 @@ const KNOWN: readonly { definition: IrClosedDefinition; member: keyof ContractIR
   { definition: "Scalar", member: "scalars", id: "money" },
   { definition: "WireFormat", member: "formats", id: "bare" },
   { definition: "ExtensionKeyDecl", member: "extensionKeys", id: "acme-owner" },
+  { definition: "PagingStyle", member: "pagings", id: "cursor" },
   { definition: "Operation", member: "operations", id: "0" },
 ];
 
@@ -153,7 +154,18 @@ test("an echoed unknown string is cut to a bound", () => {
 
 test("an echoed unknown member name is cut to a bound", () => {
   const schema = { ...ir().schemas.Task, ["m".repeat(500)]: 1 };
-  const value = checkIrClosedDeclaration("Schema", schema).unknowns?.[0]?.value;
+  const [unknown] = checkIrClosedDeclaration("Schema", schema, "/schemas/Task").unknowns ?? [];
 
-  expect(value).toBe(`${"m".repeat(64)}...`);
+  expect(unknown).toEqual({
+    pointer: `/schemas/Task/${"m".repeat(64)}...`,
+    value: `${"m".repeat(64)}...`,
+  });
+});
+
+test("an unknown member of a paging style is reported at its pointer", () => {
+  const style = { ...ir().pagings.cursor, zzLater: true };
+
+  expect(checkIrClosedDeclaration("PagingStyle", style, "/pagings/cursor")).toEqual({
+    unknowns: [{ pointer: "/pagings/cursor/zzLater", value: "zzLater" }],
+  });
 });
