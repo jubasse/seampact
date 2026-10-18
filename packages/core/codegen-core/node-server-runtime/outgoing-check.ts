@@ -132,6 +132,7 @@ export function installOutgoingCheck(
     );
 
     void settle(reply);
+
     for (const name of response.getHeaderNames()) response.removeHeader(name);
 
     originalWriteHead(reply.status, Object.fromEntries(reply.headers));

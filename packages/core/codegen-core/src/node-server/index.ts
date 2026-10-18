@@ -9,9 +9,9 @@ export { handlersSource, hookTypesSource, operationIdentifier } from "./server-t
 /** The directory, under an api's output, that holds the copied runtime. */
 export const NODE_SERVER_RUNTIME_DIRECTORY = "node-server";
 
-// The runtime lives in this package as checked sources, two directories above both `src/node-server` and
-// `dist/node-server`, so the published package ships them (`files`).
-const RUNTIME_SOURCE_URL = new URL("../../src/node-server/runtime/", import.meta.url);
+// The runtime lives in this package as sources two directories above both `src/node-server` and
+// `dist/node-server`, shipped by `files`; the targets' compile tests type-check it in a generated tree.
+const RUNTIME_SOURCE_URL = new URL("../../node-server-runtime/", import.meta.url);
 const SOURCE_SUFFIX = ".ts";
 
 /** Every runtime module, copied as is under `node-server/`. */

@@ -6,7 +6,7 @@
   "type": "module",
   "files": [
     "dist",
-    "src/node-server/runtime"
+    "node-server-runtime"
   ],
   "main": "./src/index.ts",
   "publishConfig": {
@@ -33,7 +33,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
-    "@seampact/hooks": "workspace:*",
     "prettier": "3.9.10"
   },
   "exports": {

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
-import { parseSignatureHeader } from "./runtime/signature-header.js";
+import { parseSignatureHeader } from "../../node-server-runtime/signature-header.js";
 
 interface VectorCase {
   readonly id: string;

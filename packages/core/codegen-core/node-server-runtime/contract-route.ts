@@ -26,7 +26,7 @@ export type StandardResult =
 
 export interface StandardIssue {
   readonly message: string;
-  readonly path?: readonly (PropertyKey | { readonly key: PropertyKey })[];
+  readonly path?: readonly (PropertyKey | { readonly key: PropertyKey })[] | undefined;
 }
 
 /** The output shape of a value, for stripping undeclared members: a leaf, a schema, a list or an object. */

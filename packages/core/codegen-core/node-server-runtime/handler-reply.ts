@@ -175,6 +175,7 @@ async function project(
 
       return project(state, grant, target, value, shape.schema);
     }
+
     case "array":
       return Array.isArray(value)
         ? Promise.all(value.map((item) => project(state, grant, shape.items, item)))

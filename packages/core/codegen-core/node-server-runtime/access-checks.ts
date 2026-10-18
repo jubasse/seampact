@@ -404,6 +404,7 @@ function sourceValue(
 
       return raw === undefined ? undefined : decodeURIComponent(raw);
     }
+
     case "scope":
       return grant.scopes.find((scope) => scope.scope === source.name)?.id;
     case "principal":
