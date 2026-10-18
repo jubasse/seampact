@@ -20,6 +20,7 @@ export const deriveErrorsPass: PassPart<"derive.errors"> = {
     "schemas",
     "api",
     "identities",
+    "headers",
     "rights",
     "rules",
     "scopes",
