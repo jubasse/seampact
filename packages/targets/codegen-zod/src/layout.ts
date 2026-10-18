@@ -28,6 +28,14 @@ export const SCHEMA_MODULES: Readonly<Record<SchemaDirection, string>> = {
 };
 export const OPERATION_INPUT_MODULE = "operations/input";
 export const WIRE_CHECKS_MODULE = "wire-checks";
+export const INDEX_MODULE = "index";
+
+// The two schema modules export the same `<TypeName>Schema` names, so the index groups each under its direction;
+// the operation input validators stay flat (`GetTaskInputSchema` cannot meet a direction namespace).
+export const SCHEMA_NAMESPACES: Readonly<Record<SchemaDirection, string>> = {
+  input: "inputSchemas",
+  output: "outputSchemas",
+};
 
 export const MODULE_EXTENSION = ".ts";
 

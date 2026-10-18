@@ -5,6 +5,7 @@ import type { ErrorStyle } from "./options.js";
 
 export const CLIENT_MODULE = "client";
 export const RUNTIME_MODULE = "runtime";
+export const INDEX_MODULE = "index";
 export const MODULE_EXTENSION = ".ts";
 
 const MODULE_SUFFIX = ".js";

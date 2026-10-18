@@ -17,19 +17,24 @@ const temporaryRoot = mkdtempSync(join(tmpdir(), "seampact-codegen-ts-"));
 
 afterAll(() => rmSync(temporaryRoot, { recursive: true, force: true }));
 
+// The api index re-exports every module; a name two modules share would be a type error in the index itself.
+const INDEX_PROBE = `import * as Api from "./${OUTPUT_DIRECTORY}/index.js";\nexport type UsesIndex = keyof typeof Api;`;
+
 function probeSource(exportRefs: readonly ExportRef[]): string {
   const link: Link<"types"> = {
     descriptor: { kind: "types", style: "typescript", schemas: {}, operations: {} },
     location: { kind: "relative", path: OUTPUT_DIRECTORY },
   };
 
-  return exportRefs
+  const probes = exportRefs
     .map((exportRef, index) => {
       const specifier = importSpecifier(link, exportRef, PROBE_FILE);
 
       return `import type { ${exportRef.export} as Probe${index} } from "${specifier}";\nexport type Uses${index} = Probe${index};`;
     })
     .join("\n");
+
+  return `${probes}\n${INDEX_PROBE}`;
 }
 
 test.each(GOLDEN_IRS)("the generated reference types compile: %s", async (name) => {
@@ -61,6 +66,7 @@ test.each(GOLDEN_IRS)("the generated reference types compile: %s", async (name) 
     probeSource(exportRefs),
   );
 
+  expect(outcome.files.map((file) => file.path)).toContain("index.ts");
   expect(exportRefs.length).toBeGreaterThan(0);
   expect(diagnostics).toEqual([]);
 });

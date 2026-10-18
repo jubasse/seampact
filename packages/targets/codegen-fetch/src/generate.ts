@@ -17,6 +17,7 @@ import {
   CLIENT_MODULE,
   type ClientOperation,
   clientModuleSource,
+  INDEX_MODULE,
   MODULE_EXTENSION,
   RUNTIME_MODULE,
 } from "./client-module.js";
@@ -54,6 +55,10 @@ export function generateClient(
     {
       path: `${CLIENT_MODULE}${MODULE_EXTENSION}`,
       contents: `${clientModuleSource(operations, links.types, options.errorStyle)}\n`,
+    },
+    {
+      path: `${INDEX_MODULE}${MODULE_EXTENSION}`,
+      contents: `export * from "./${CLIENT_MODULE}.js";\n`,
     },
   ];
 

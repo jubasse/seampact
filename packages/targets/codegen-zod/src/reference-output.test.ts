@@ -47,7 +47,10 @@ function probeSource(exportRefs: readonly ExportRef[]): string {
     })
     .join("\n");
 
-  return `type StandardSchema = { "~standard": { version: 1; validate: (value: unknown) => unknown } };\n${imports}`;
+  // The api index re-exports every module; its namespaces keep the two directions' same names apart.
+  const indexProbe = `import * as Api from "./${OUTPUT_DIRECTORY}/index.js";\nexport type UsesIndex = keyof typeof Api;`;
+
+  return `type StandardSchema = { "~standard": { version: 1; validate: (value: unknown) => unknown } };\n${imports}\n${indexProbe}`;
 }
 
 test.each(GOLDEN_IRS)("the generated reference validators compile: %s", async (name) => {
@@ -95,6 +98,7 @@ test.each(GOLDEN_IRS)("the generated reference validators compile: %s", async (n
     .getPreEmitDiagnostics(program)
     .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
 
+  expect(outcome.files.map((file) => file.path)).toContain("index.ts");
   expect(exportRefs.length).toBeGreaterThan(0);
   expect(diagnostics).toEqual([]);
 });

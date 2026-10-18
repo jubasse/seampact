@@ -10,9 +10,11 @@ import {
 } from "@seampact/codegen-core";
 import type { ContractIR } from "@seampact/spec/ir";
 import {
+  INDEX_MODULE,
   OPERATION_INPUT_MODULE,
   planValidatorsLayout,
   SCHEMA_MODULES,
+  SCHEMA_NAMESPACES,
   WIRE_CHECKS_MODULE,
 } from "./layout.js";
 import {
@@ -63,7 +65,29 @@ export function generateValidators(
     files.push({ path: modulePath(WIRE_CHECKS_MODULE), contents: WIRE_CHECKS_SOURCE });
   }
 
-  return { status: "generated", files };
+  return { status: "generated", files: [...files, ...indexFile(files)] };
+}
+
+// The api index: `export * as <direction>Schemas` for each schema module written, `export *` for the operation
+// input validators, so `import * as Tasks from "<out>"` reaches every name.
+function indexFile(files: readonly GeneratedFile[]): GeneratedFile[] {
+  const written = new Set(files.map((file) => file.path));
+  const specifier = (module: string) => `./${module}.js`;
+  const schemaLines = (["input", "output"] as const).flatMap((direction) =>
+    written.has(modulePath(SCHEMA_MODULES[direction]))
+      ? [
+          `export * as ${SCHEMA_NAMESPACES[direction]} from "${specifier(SCHEMA_MODULES[direction])}";`,
+        ]
+      : [],
+  );
+  const operationLines = written.has(modulePath(OPERATION_INPUT_MODULE))
+    ? [`export * from "${specifier(OPERATION_INPUT_MODULE)}";`]
+    : [];
+  const lines = [...schemaLines, ...operationLines];
+
+  if (lines.length === 0) return [];
+
+  return [{ path: modulePath(INDEX_MODULE), contents: `${lines.join("\n")}\n` }];
 }
 
 // The enum forms that change a validator: open output enums, an enum's fallback and its code names.

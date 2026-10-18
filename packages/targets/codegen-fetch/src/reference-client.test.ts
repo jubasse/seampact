@@ -137,6 +137,10 @@ import { createClient } from "./generated/client/tasks/client.js";
 import { createClient as createServiceClient } from "./generated/client/tasksService/client.js";
 import { createClient as createThrowingClient, isClientContractError } from "./generated/clientThrow/tasks/client.js";
 
+import * as TasksIndex from "./generated/client/tasks/index.js";
+
+export const indexedCreateClient: typeof createClient = TasksIndex.createClient;
+
 const client = createClient({ baseUrl: "http://localhost" });
 const serviceClient = createServiceClient({ baseUrl: "http://localhost" });
 const throwingClient = createThrowingClient({ baseUrl: "http://localhost" });
