@@ -9,6 +9,7 @@ import {
   type PassReadonly,
   pipelineIsJsonObject,
   pipelinePointerBelow,
+  pipelineRateLimitParam,
   pipelineTreeNodes,
   type TreeNode,
 } from "../../../pipeline/seam.js";
@@ -19,6 +20,7 @@ import type { DeriveErrorsContext, DeriveErrorsRegistry } from "./registry.js";
 import type { DeriveErrorsReporter } from "./report.js";
 import { deriveErrorsCheckRoleParamTypes } from "./role-param-types.js";
 import {
+  type DeriveErrorsRoleParams,
   type DeriveErrorsRoleParamsSite,
   deriveErrorsDatumAlways,
   deriveErrorsParamOfDatum,
@@ -104,13 +106,6 @@ export interface DeriveErrorsBindingCheck {
   readonly schemas: PassReadonly<Record<IrWriter.SchemaId, IrWriter.Schema>>;
 }
 
-/** The param `conventions.rateLimit` names for `rateLimited`'s delay, if any. */
-export function deriveErrorsRateLimitParam(context: DeriveErrorsContext): string | undefined {
-  const param = context.conventions.get("rateLimit.param")?.value;
-
-  return typeof param === "string" ? param : undefined;
-}
-
 /** The params site of a binding to a registered code, its problems located at `pointer`. */
 export function deriveErrorsParamsSite(
   check: DeriveErrorsBindingCheck,
@@ -122,7 +117,7 @@ export function deriveErrorsParamsSite(
   if (registered === undefined) return undefined;
 
   const { params } = registered.declaration;
-  const rateLimitParam = deriveErrorsRateLimitParam(check.context);
+  const rateLimitParam = pipelineRateLimitParam(check.context.conventions);
 
   return {
     reporter: check.reporter,
@@ -156,6 +151,34 @@ function datumReached(
   );
 }
 
+/**
+ * Whether a datum the role supplies only on some operations reaches a param of the bound code where it is required
+ * (`forbidden`'s pointer on an operation with a rejected restricted input field); reported at `pointer` otherwise.
+ */
+export function deriveErrorsCheckConditionalDatum(
+  check: DeriveErrorsBindingCheck,
+  site: DeriveErrorsRoleParamsSite,
+  params: IrWriter.Template | undefined,
+  datum: DerivationRoleDatum,
+  operation: { readonly id: string; readonly pointer: string },
+): boolean {
+  if (datumReached(site, params, datum)) return true;
+
+  const param = deriveErrorsParamOfDatum(site, datum);
+
+  check.reporter.error({
+    rule: "role-datum",
+    message: `role '${site.role.role}' requires the datum '${datum.name}' on operation '${operation.id}', which has a rejected restricted input field, but no param of ${quote(site.code)} receives it`,
+    fix: `add a param '${param}' to ${quote(site.code)}, or bind it with params: { ${param}: $${datum.name} }`,
+    pointer: site.pointer,
+    related: [
+      { pointer: operation.pointer, message: `operation '${operation.id}' is declared here` },
+    ],
+  });
+
+  return false;
+}
+
 /** Whether every datum a binding must carry reaches a param; each missing datum reported. */
 function checkRequiredData(
   check: DeriveErrorsBindingCheck,
@@ -181,11 +204,13 @@ function checkRequiredData(
   return carried;
 }
 
+// A checked binding's params: the template the operations write, or refused (each fault reported); undefined
+// when the bound code is unregistered (`role-code` reported).
 function checkBinding(
   check: DeriveErrorsBindingCheck,
   binding: DeriveErrorsBinding,
   pointer: string,
-): void {
+): DeriveErrorsRoleParams | undefined {
   const site = deriveErrorsParamsSite(check, binding, pointer);
 
   if (site === undefined) {
@@ -196,16 +221,28 @@ function checkBinding(
       pointer,
     });
 
-    return;
+    return undefined;
   }
 
   const read = deriveErrorsReadRoleParams(site);
 
-  if (read.refused || !checkRequiredData(check, site, read.params) || read.params === undefined)
-    return;
+  if (read.refused) return read;
 
-  deriveErrorsCheckRoleParamTypes(site, read.params);
+  if (!checkRequiredData(check, site, read.params)) return REFUSED;
+
+  if (read.params === undefined) return read;
+
+  return deriveErrorsCheckRoleParamTypes(site, read.params) ? read : REFUSED;
 }
+
+const REFUSED: DeriveErrorsRoleParams = { refused: true };
+
+/** The params each checked binding gives, by `deriveErrorsBindingKey`; a binding refused or unregistered is absent. */
+export type DeriveErrorsBoundParams = ReadonlyMap<string, DeriveErrorsRoleParams>;
+
+/** The key of a binding in `DeriveErrorsBoundParams`: its pointer, or its role for a default binding. */
+export const deriveErrorsBindingKey = (binding: DeriveErrorsBinding): string =>
+  binding.pointer ?? `default ${binding.role}`;
 
 // A binding the check reads, keyed so a default binding whose check a written binding repeats is checked once.
 const plainBindingKey = (role: DerivationRoleName, code: IrWriter.ErrorCode): string =>
@@ -215,9 +252,17 @@ const plainBindingKey = (role: DerivationRoleName, code: IrWriter.ErrorCode): st
  * Checks every written binding (`conventions.errors.derived` and each node's `errorRoles`), and each default binding
  * whose default code a layer or node redeclares, located at that declaration.
  */
-export function deriveErrorsCheckBindings(check: DeriveErrorsBindingCheck): void {
+export function deriveErrorsCheckBindings(
+  check: DeriveErrorsBindingCheck,
+): DeriveErrorsBoundParams {
   const { context, registry } = check;
   const written = nodeBindings(context);
+  const bound = new Map<string, DeriveErrorsRoleParams>();
+  const record = (binding: DeriveErrorsBinding, pointer: string): void => {
+    const params = checkBinding(check, binding, pointer);
+
+    if (params !== undefined) bound.set(deriveErrorsBindingKey(binding), params);
+  };
 
   // A written binding without params to the same code checks the same data and is located nearer the author.
   const writtenPlain = new Set(
@@ -233,11 +278,13 @@ export function deriveErrorsCheckBindings(check: DeriveErrorsBindingCheck): void
       binding.pointer === undefined && writtenPlain.has(plainBindingKey(role.role, binding.code));
     const pointer = binding.pointer ?? redeclared;
 
-    if (pointer !== undefined && !repeated) checkBinding(check, binding, pointer);
+    if (pointer !== undefined && !repeated) record(binding, pointer);
   }
 
   for (const binding of written)
-    if (binding.pointer !== undefined) checkBinding(check, binding, binding.pointer);
+    if (binding.pointer !== undefined) record(binding, binding.pointer);
+
+  return bound;
 }
 
 function nodeBindings(context: DeriveErrorsContext): DeriveErrorsBinding[] {

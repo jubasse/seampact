@@ -1,6 +1,7 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import {
   type PassPart,
+  pipelineRateLimitParam,
   pipelineTreeNodes,
   type TreeSchemaService,
 } from "../../../pipeline/seam.js";
@@ -83,7 +84,9 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
     const nodes = pipelineTreeNodes(context.raw);
     const codeParams = treeSchemasCodeParamsDeclarations(context.raw.merged, nodes);
 
-    compiler.reserve(treeSchemasCoreReservations(codeParams));
+    compiler.reserve(
+      treeSchemasCoreReservations(codeParams, pipelineRateLimitParam(context.conventions)),
+    );
     compiler.compileCatalogue();
     treeSchemasCompileDeclarations(compiler, context.raw.merged);
     treeSchemasCompileCodeParams(compiler, codeParams);

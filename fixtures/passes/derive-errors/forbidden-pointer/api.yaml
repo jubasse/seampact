@@ -1,0 +1,50 @@
+# The forbidden role's pointer (ADR 0006 section 6): required on an operation with a rejected restricted input field.
+# The conventions bind forbidden to a code without params; createNote rejects a restricted input field, so the binding
+# is refused there, while listNotes, which has none, needs no pointer.
+api: { name: notes, version: 1 }
+
+conventions:
+  errors:
+    derived:
+      forbidden: notes.denied
+
+errors:
+  notes.denied: { status: 403 }
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  member:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: Member
+
+rights:
+  notes.annotate: {}
+
+schemas:
+  NoteId: { type: string, format: uuid }
+  Member:
+    type: object
+    required: [memberId]
+    properties: { memberId: { type: string } }
+  Note:
+    type: object
+    required: [noteId]
+    properties: { noteId: NoteId, title: { type: string } }
+  CreateNote:
+    type: object
+    properties:
+      title: { type: string }
+      memo: { type: string, restrictedTo: notes.annotate }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: member
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: NoteId }
+        item: Note
+        ops: { list: { paging: none }, create: { input: CreateNote } }

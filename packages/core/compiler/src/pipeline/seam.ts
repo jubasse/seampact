@@ -16,6 +16,7 @@ export {
   pipelineConventionDefaults,
   pipelineConventionLeaves,
   pipelineConventions,
+  pipelineRateLimitParam,
 } from "./conventions.js";
 export type {
   DraftApi,

@@ -36,6 +36,9 @@ export interface DerivationRole {
   readonly data: readonly DerivationRoleDatum[];
 }
 
+// The largest integer a JSON number holds exactly: the bound a Retry-After header value must fit (ir.error.retry-header).
+const MAX_SAFE_INTEGER = "9007199254740991";
+
 // Each call a new object, so no two data share one.
 const text = (): IrWriter.ScalarTypeUse => ({ kind: "scalar", type: "string", refinements: {} });
 const count = (): IrWriter.ScalarTypeUse => ({
@@ -129,7 +132,7 @@ export const derivationRoles: readonly DerivationRole[] = derivationFreeze([
       name: "retryAfterMs",
       required: "conditional",
       condition: "when conventions.rateLimit names it",
-      type: count(),
+      type: { ...count(), refinements: { minimum: "0", maximum: MAX_SAFE_INTEGER } },
     },
   ]),
   role("undeclaredStatus", "api.internal", 500, "failed"),
@@ -144,6 +147,38 @@ const BY_ROLE = new Map(derivationRoles.map((entry) => [entry.role, entry]));
 /** The role of a name, with its default code. */
 export const derivationRoleOf = (name: DerivationRoleName): DerivationRole | undefined =>
   BY_ROLE.get(name);
+
+const RATE_LIMITED_ROLE: DerivationRoleName = "rateLimited";
+
+// `rateLimited`'s conditional datum, the delay, fills the param `conventions.rateLimit` names wherever it names one.
+const fillsRateLimitParam = (
+  role: DerivationRoleName,
+  datum: DerivationRoleDatum,
+  rateLimitParam: string | undefined,
+): boolean =>
+  role === RATE_LIMITED_ROLE && datum.required === "conditional" && rateLimitParam !== undefined;
+
+/** The param a datum fills by name: `rateLimited`'s delay fills the param `conventions.rateLimit` names. */
+export function derivationParamOfDatum(
+  role: DerivationRoleName,
+  datum: DerivationRoleDatum,
+  rateLimitParam: string | undefined,
+): string {
+  return rateLimitParam !== undefined && fillsRateLimitParam(role, datum, rateLimitParam)
+    ? rateLimitParam
+    : datum.name;
+}
+
+/** Whether a datum has a value wherever its role answers (ADR 0006 section 6, the Data column). */
+export function derivationDatumAlways(
+  role: DerivationRoleName,
+  datum: DerivationRoleDatum,
+  rateLimitParam: string | undefined,
+): boolean {
+  // `forbidden`'s pointer is supplied only on a rejected restricted input field, never on the other denials the role
+  // answers on the same operation.
+  return datum.required === "always" || fillsRateLimitParam(role, datum, rateLimitParam);
+}
 
 /** The schema id of a proof-only input's body: an object schema with no property (ADR 0004 section 13). */
 export const DERIVATION_EMPTY_BODY_SCHEMA_ID: IrWriter.SchemaId = "ApiEmptyBody";

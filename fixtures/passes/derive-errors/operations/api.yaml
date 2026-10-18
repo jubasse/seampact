@@ -1,0 +1,80 @@
+# Per-operation errors (ADR 0002 section 11, ADR 0006 sections 5 and 6): the grammar 11 tasks attachments (reach,
+# for, the nearest example), conventions.errors.every, a member route whose id no scope reads, a bucket rule without
+# codes answering rateLimited with the retry header, and route error examples.
+api: { name: shop, version: 1, kind: product }
+
+conventions:
+  rateLimit: { header: Retry-After, param: retryAfterMs, unit: s }
+  errors:
+    every: [shop.maintenance]
+
+errors:
+  shop.maintenance: { status: 503 }
+  state.conflict: { status: 409 }
+  api.rate_limited:
+    status: 429
+    params: { retryAfterMs: { type: integer, minimum: 0, maximum: 9007199254740991 } }
+
+rules:
+  slowDown: { bucket: true }
+
+buckets:
+  writes: { key: [address], limit: 60, window: 1m }
+
+requirements:
+  writeLimit: { rule: slowDown, bucket: writes }
+
+schemas:
+  TaskId: { type: string }
+  UserId: { type: string }
+  CommentId: { type: string }
+  Assignment:
+    type: object
+    required: [userId]
+    properties: { userId: UserId }
+  Task:
+    type: object
+    required: [taskId]
+    properties: { taskId: TaskId, title: { type: string } }
+  Comment:
+    type: object
+    required: [commentId]
+    properties: { commentId: CommentId }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The fixture checks per-operation errors only. }
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: TaskId }
+        item: Task
+        ops: { list: { paging: none }, get: {}, update: { input: Assignment, requires: [writeLimit] } }
+        errors:
+          state.conflict: {}
+          tasks.not_found: { status: 404, title: No such task. }
+          api.rate_limited: { example: { retryAfterMs: 30000 } }
+        member:
+          errorRoles:
+            notFound: tasks.not_found
+          errors:
+            tasks.locked:
+              status: 423
+              title: Another editor holds the task.
+              params: { lockedBy: UserId }
+              reach: resource
+              for: writes
+            api.rate_limited: { example: { retryAfterMs: 1000 } }
+          routes:
+            assign:
+              method: post
+              input: Assignment
+              examples:
+                locked: { error: tasks.locked, value: { lockedBy: 7 } }
+                missing: { error: tasks.gone, value: {} }
+            comments:
+              kind: collection
+              id: { commentId: CommentId }
+              item: Comment
+              ops: { list: { paging: none }, update: { input: Assignment } }
