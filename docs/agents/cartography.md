@@ -15,6 +15,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/lint` | `packages/core/lint` | core | Lint rules over the IR, and the API to write your own. |
 | `@seampact/openapi` | `packages/core/openapi` | core | Writes the OpenAPI 3.1 documents from the IR, with what OpenAPI cannot say as x-seampact-* extensions. |
 | `@seampact/spec` | `packages/core/spec` | core | The JSON Schemas of the YAML files and of the IR, with their TypeScript types, and the naming vectors. |
+| `@seampact/hooks` | `packages/runtime/hooks` | hooks | The neutral hook interfaces and idempotency store interface every generated Node server boundary types against. |
 
 ## Compiler stages
 
@@ -82,3 +83,7 @@ In pipeline order (ADR 0006 section 1).
 - `packages/core/spec/src/config`: The app config, `seampact.config.yaml` (`@seampact/spec/config`): reserved, no export yet.
 - `packages/core/spec/src/ir`: The IR (ADR 0004 and 0005): its JSON Schemas, generated types, writer view, validation and invariants.
 - `packages/core/spec/src/naming`: ADR 0007: cross-language naming.
+
+### `@seampact/hooks`
+
+- `packages/runtime/hooks/src`: The neutral hook interfaces and the idempotency store interface every generated server boundary types against, types only.
