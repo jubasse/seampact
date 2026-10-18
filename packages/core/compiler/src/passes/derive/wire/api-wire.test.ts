@@ -19,7 +19,7 @@ describe("derive.wire writes api.wire", () => {
 
   test("a written default is accepted", () => {
     const variant = deriveWireReferenceVariant("shared/base.yaml", [
-      [BODY_LIMIT, `${BODY_LIMIT}  int64: string\n  urls: relative\n`],
+      [BODY_LIMIT, `${BODY_LIMIT}  int64: string\n  outputEnums: enum\n  urls: relative\n`],
     ]);
     const run = deriveWireRunContract(variant, "tasks");
 
@@ -40,8 +40,10 @@ describe("derive.wire writes api.wire", () => {
         related: [],
       })),
     );
-    expect(run.diagnostics[0]?.message).toBe(
+    expect(run.diagnostics.map(({ message }) => message)).toEqual([
       "The convention int64 is 'number'; the compiler writes only 'string' so far.",
-    );
+      "The convention outputEnums is 'open'; the compiler writes only 'enum' so far.",
+      "The convention urls is 'absolute'; the compiler writes only 'relative' so far.",
+    ]);
   });
 });

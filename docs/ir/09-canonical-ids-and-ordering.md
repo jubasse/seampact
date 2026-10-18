@@ -24,7 +24,7 @@
 | `CredentialSchemes.read` | Sorted by id |
 | `CredentialSchemes.write` | Sorted by id |
 | `Degradable.paths` | Sorted by value |
-| `DerivedFrom.from` | Kept in two runs (ADR 0006 section 6): the trigger origins sorted by `api` (absent first), `layer` in the workspace's layer order, then `pointer`; then the binding's origins |
+| `DerivedFrom.from` | Kept in two runs (ADR 0006 section 6): the trigger origins sorted by `api` (absent first), `layer` in the workspace's layer order, then `pointer`; then the binding's origins. The pass that writes the derivation (`access.rights`, `derive.wire`, `derive.errors`) owns this order, finalize does not sort it |
 | `Enum.directions` | Sorted by value |
 | `Enum.values` | Kept: written order |
 | `EnumNarrowing.values` | Kept, in the enum's value order |

@@ -1,4 +1,5 @@
-import { pipelineCopy } from "../../../pipeline/seam.js";
+import type { IrWriter } from "@seampact/spec/ir";
+import { type ConventionReading, pipelineCopy } from "../../../pipeline/seam.js";
 import { DERIVE_WIRE_LINK, DERIVE_WIRE_STRING_USE, deriveWireAddSuccessHeader } from "./params.js";
 import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 
@@ -13,6 +14,12 @@ import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 
 const DEPRECATION = "deprecation.headers";
 
+interface DeprecationHeader {
+  readonly name: string;
+  readonly semantic: IrWriter.ResponseHeaderSemantic;
+  readonly naming: ConventionReading | undefined;
+}
+
 /** Writes the deprecation, sunset and successor `Link` response headers of a deprecated operation. */
 export function deriveWireDeprecation(route: DeriveWireRoute, scope: DeriveWireScope): void {
   const deprecated = route.operation.deprecated;
@@ -22,19 +29,17 @@ export function deriveWireDeprecation(route: DeriveWireRoute, scope: DeriveWireS
   const conventions = scope.context.conventions;
   const header = conventions.get("deprecation.header");
   const sunsetHeader = conventions.get("deprecation.sunsetHeader");
-  const headers = [
-    { name: textOf(header), semantic: "deprecation" as const, naming: header },
-    { name: textOf(sunsetHeader), semantic: "sunset" as const, naming: sunsetHeader },
-    ...(deprecated.successor === undefined
-      ? []
-      : [
-          {
-            name: DERIVE_WIRE_LINK,
-            semantic: "successorLink" as const,
-            naming: conventions.get("deprecation.successorRel"),
-          },
-        ]),
+  const headers: DeprecationHeader[] = [
+    { name: textOf(header), semantic: "deprecation", naming: header },
+    { name: textOf(sunsetHeader), semantic: "sunset", naming: sunsetHeader },
   ];
+
+  if (deprecated.successor !== undefined)
+    headers.push({
+      name: DERIVE_WIRE_LINK,
+      semantic: "successorLink",
+      naming: conventions.get("deprecation.successorRel"),
+    });
 
   for (const { name, semantic, naming } of headers)
     deriveWireAddSuccessHeader(

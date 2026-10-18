@@ -45,6 +45,7 @@ interface Api {
   maturity: Maturity;                       // 'experimental' | 'provisional' | 'stable'
   caller?: { identity: IdentityId; right: RightId };
   compat: { policy: 'additive-only' | 'none' };
+  wire: ApiWire;                            // irRevision 4: { int64, outputEnums, urls }, the defaults written too (section 13)
   surfaces: Record<SurfaceId, { name: Name; prefix: string; pathVersion: 'prefix' | 'none'; origin: Origin }>;
   documents: Record<DocumentId, { surfaces: SurfaceId[]; internal: 'include' | 'exclude' }>;
   docs: Docs;  extensions: Extensions;  origin: Origin;

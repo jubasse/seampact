@@ -1,4 +1,4 @@
-import type { ContractIR, IrWriter } from "@seampact/spec/ir";
+import { type ContractIR, IR_REVISION, type IrWriter } from "@seampact/spec/ir";
 import { expect, test } from "vitest";
 import { diagnosticLocationKey } from "../../../diagnostics/print.js";
 import { draftFixture } from "../../../pipeline/draft-fixture.js";
@@ -141,7 +141,7 @@ function importedIr(
 
   edit(ir);
   const imported: ContractIR = JSON.parse(
-    JSON.stringify({ irVersion: "1.0", irRevision: 3, kinds: [], features: [], ...ir }),
+    JSON.stringify({ irVersion: "1.0", irRevision: IR_REVISION, kinds: [], features: [], ...ir }),
   );
 
   return imported;

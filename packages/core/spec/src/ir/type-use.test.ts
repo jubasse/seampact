@@ -19,6 +19,14 @@ test("type uses differing only in docs, examples, origin or a reason, at any dep
       { kind: "ref", schema: "Task", origin: { layer: "api", pointer: "/b" } },
     ),
   ).toBe(true);
+
+  const nested = (reason: string, values: string[]) => ({
+    kind: "array",
+    items: { kind: "array", items: { kind: "enum", enum: "State", narrowedTo: { values, reason } } },
+  });
+
+  expect(isIrSameTypeUse(nested("Open.", ["open"]), nested("Still open.", ["open"]))).toBe(true);
+  expect(isIrSameTypeUse(nested("Open.", ["open"]), nested("Open.", ["closed"]))).toBe(false);
 });
 
 test("type uses differing in what they accept are not the same", () => {

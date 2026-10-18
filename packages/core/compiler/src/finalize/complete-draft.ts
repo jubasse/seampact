@@ -10,8 +10,7 @@ import { finalizeIr } from "./finalize.js";
 // draft fixture after access (`fixtures/draft/reference/`) with stand-ins for the members of the derive halves,
 // which are not in a fixture: the api's `wire` (the defaults), each operation's `errors` (none) and `maturity`, each
 // body's `bodyLimitBytes`, each concurrency's `derivedFrom`, and a core declaration for each error code the draft
-// names. Beside it, the raw tree
-// of the reference api, which finalize locates the draft's origins in.
+// names. Beside it, the raw tree of the reference api, which finalize locates the draft's origins in.
 
 const ERROR_CODE_DEFINITION = "ErrorCode";
 const STAND_IN_BODY_LIMIT_BYTES = 1_048_576;

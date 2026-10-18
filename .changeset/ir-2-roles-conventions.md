@@ -3,14 +3,12 @@
 "@seampact/compiler": patch
 ---
 
-The IR now carries what a target renders from typed members alone: error role bindings with their params, the retry header, the api wire conventions, the degraded header, the deprecation date, header semantics and successor rel, a field never sent and sort-key rights, with nine new invariants and a stated order for every array.
-
-The compiler writes the default `api.wire`, the deprecation header semantics, the successor rel and the degraded header, and refuses a non-default `int64`, `outputEnums` or `urls` convention by name until a target acts on it.
+The IR (irRevision 4) carries what a target renders from typed members alone (error role bindings, the retry header, the api wire conventions, the degraded header, deprecation dates, header semantics and the successor rel, a field never sent, sort-key rights and their subjects), which the compiler writes, refusing a non-default `int64`, `outputEnums` or `urls` convention, a successor rel outside the registered form and two deprecation headers of one name.
 
 ## IR change
 
 - irRevision: 3 to 4
-- Classification: breaking, guarded by the exact `irRevision` match (ADR 0005 sections 2 and 4). `Api.wire` and `Deprecation.since` are new required members, `ResponseHeader.semantic` changes type from a string to an open enum, and a reader that ignored the other guarded members would generate a weaker or wrong check. The new invariants and `ValueSourceIn` must-act are tightenings; `OperationError.retryHeader` is additive.
+- Classification: breaking, guarded by the exact `irRevision` match (ADR 0005 sections 2 and 4). `Api.wire` and `Deprecation.since` are new required members, `ResponseHeader.semantic` changes type from a string to an open enum, and a reader that ignored the other guarded members would generate a weaker or wrong check. The new invariants and `ValueSourceIn` must-act are tightenings; `OperationError.retryHeader` and `Degradable.header` are additive.
 
 | Field or kind | Schema path | Change | Additive, tightening or breaking | Guarded by |
 |---|---|---|---|---|
@@ -18,7 +16,7 @@ The compiler writes the default `api.wire`, the deprecation header semantics, th
 | `params`, `subject` | `operation.schema.json#/$defs/SortKey/properties/params`, `.../subject` | added (optional opaque params, optional `FieldRightSubject`) | breaking | exact `irRevision` match (before 1.0) |
 | `ValueSourceIn` | `common.schema.json#/$defs/ValueSourceIn` | must-act added | tightening | exact `irRevision` match (before 1.0) |
 | `wire` | `ir.schema.json#/$defs/Api/properties/wire` | added, required (`ApiWire`: `int64` `Int64Wire`, `outputEnums` `OutputEnumForm`, `urls` `UrlForm`, open enums) | breaking | exact `irRevision` match (before 1.0) |
-| `header` | `operation.schema.json#/$defs/Degradable/properties/header` | added (optional RFC 9110 token) | tightening | exact `irRevision` match (before 1.0) |
+| `header` | `operation.schema.json#/$defs/Degradable/properties/header` | added (optional RFC 9110 token) | additive | none |
 | `successorRel` | `operation.schema.json#/$defs/Deprecation/properties/successorRel` | added (optional registered rel name) | breaking | exact `irRevision` match (before 1.0) |
 | `semantic` | `operation.schema.json#/$defs/ResponseHeader/properties/semantic` | type changed (string to open enum `ResponseHeaderSemantic`: the four identity semantics, `deprecation`, `sunset`, `successorLink`) | breaking | exact `irRevision` match (before 1.0) |
 | `roles` | `operation.schema.json#/$defs/OperationError/properties/roles` | added (optional non-empty list of `ErrorRoleBinding`: `role`, compiled `Template` `params`) | breaking | exact `irRevision` match (before 1.0) |
