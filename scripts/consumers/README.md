@@ -1,0 +1,1 @@
+Test consumers of the packed packages: build, pack, assemble a consumer from the template and a target overlay, then install, generate, typecheck and test it (scripts/consumers). Consumer sources use `.mts` so the monorepo's own typecheck and test globs leave them to the consumer, where they are checked.

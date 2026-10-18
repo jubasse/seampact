@@ -4,6 +4,11 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "files": [
+    "dist",
+    "schemas",
+    "vectors/naming"
+  ],
   "main": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
@@ -21,6 +26,45 @@
     "./naming/vectors.schema.json": "./vectors/naming/vectors.schema.json",
     "./naming/reserved-words.json": "./vectors/naming/reserved-words.json",
     "./naming/reserved-words.schema.json": "./vectors/naming/reserved-words.schema.json"
+  },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./ir": {
+        "types": "./dist/ir/index.d.ts",
+        "default": "./dist/ir/index.js"
+      },
+      "./authoring": {
+        "types": "./dist/authoring/index.d.ts",
+        "default": "./dist/authoring/index.js"
+      },
+      "./naming": {
+        "types": "./dist/naming/index.d.ts",
+        "default": "./dist/naming/index.js"
+      },
+      "./config": {
+        "types": "./dist/config/index.d.ts",
+        "default": "./dist/config/index.js"
+      },
+      "./bundle": {
+        "types": "./dist/bundle/index.d.ts",
+        "default": "./dist/bundle/index.js"
+      },
+      "./compatibility": {
+        "types": "./dist/compatibility/index.d.ts",
+        "default": "./dist/compatibility/index.js"
+      },
+      "./schemas/*.json": "./schemas/*.json",
+      "./naming/vectors.json": "./vectors/naming/vectors.json",
+      "./naming/vectors.schema.json": "./vectors/naming/vectors.schema.json",
+      "./naming/reserved-words.json": "./vectors/naming/reserved-words.json",
+      "./naming/reserved-words.schema.json": "./vectors/naming/reserved-words.schema.json"
+    }
   },
   "seampact": {
     "role": "core"

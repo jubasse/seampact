@@ -139,6 +139,7 @@ const throwingClient = createThrowingClient({ baseUrl: "http://localhost" });
 export async function probe(): Promise<void> {
   await client.health();
   await client.getChannel({ path: { channelId: "c" } });
+  await client.listChannels();
 
   const created = await client.createTask({ path: { channelId: "c" }, body: { title: "t" } });
 

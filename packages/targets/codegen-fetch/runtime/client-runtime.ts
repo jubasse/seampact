@@ -66,12 +66,15 @@ export class ContractError<Operation extends string, Failure> extends Error {
   }
 }
 
-/** The request members after the client's own headers were made optional; each is present when declared. */
-export type ClientInput<Input, Filled extends string> = Input extends {
-  readonly headers: infer Headers extends object;
-}
-  ? Omit<Input, "headers"> & OptionalWhenEmpty<OptionalKeys<Headers, Filled>>
-  : Input;
+/**
+ * The request after the client's own headers were made optional; a path, query or headers member whose keys are
+ * all optional is optional itself. The body stays as declared.
+ */
+export type ClientInput<Input, Filled extends string> = OptionalMembers<{
+  [Member in keyof Input]: Member extends "headers"
+    ? OptionalKeys<Input[Member], Filled>
+    : Input[Member];
+}>;
 
 /** The arguments of a method: the request is optional when it has no required member. */
 export type CallArguments<Input, Options> = object extends Input
@@ -84,9 +87,16 @@ export type TimedCallArguments<Input> = [request: Input, options: TimedCallOptio
 type OptionalKeys<Members, Keys extends string> = Omit<Members, Keys> &
   Partial<Pick<Members, Keys & keyof Members>>;
 
-type OptionalWhenEmpty<Headers> = object extends Headers
-  ? { readonly headers?: Headers }
-  : { readonly headers: Headers };
+type OptionalMembers<Request> = Omit<Request, EmptyMembers<Request>> &
+  Partial<Pick<Request, EmptyMembers<Request>>>;
+
+type EmptyMembers<Request> = {
+  [Member in keyof Request]: Member extends "path" | "query" | "headers"
+    ? object extends Request[Member]
+      ? Member
+      : never
+    : never;
+}[keyof Request];
 
 /** How the generated code describes one operation to the runtime. */
 export interface OperationPlan {
