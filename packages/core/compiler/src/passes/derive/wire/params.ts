@@ -94,7 +94,7 @@ export function deriveWireAddResponseHeader(
   route: DeriveWireRoute,
   response: IrWriter.Response,
   derived: DeriveWireDerived,
-  semantic: string | undefined,
+  semantic: IrWriter.ResponseHeaderSemantic | undefined,
   scope: DeriveWireScope,
 ): void {
   if (mergedInto(response.headers, "header", derived, route, scope)) return;
