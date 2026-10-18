@@ -7,6 +7,7 @@ import {
   DERIVE_ERRORS_FIXTURES,
   type DeriveErrorsRun,
   deriveErrorsLoadFiles,
+  deriveErrorsLocated,
   deriveErrorsLoadFixture,
   deriveErrorsRunContract,
 } from "./test-support.js";
@@ -234,5 +235,26 @@ describe("the retry header", () => {
     expect(property?.type).toMatchObject({
       refinements: { minimum: "0", maximum: "9007199254740991" },
     });
+  });
+  test("a redeclared api.rate_limited whose param is unbounded is refused at the param and writes no header", () => {
+    const unbounded = CORE_RATE_LIMITED.replace(
+      "surfaces:",
+      `errors:
+  api.rate_limited:
+    status: 429
+    params: { retryAfterMs: { type: integer, minimum: 0 } }
+surfaces:`,
+    );
+    const run = deriveErrorsRunContract(deriveErrorsLoadFiles({ "api.yaml": unbounded }));
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/retry-param",
+        pointer: "/errors/api.rate_limited/params/retryAfterMs",
+        related: ["/conventions/rateLimit/param"],
+      },
+    ]);
+    expect(errorOf(run.draft, "ping", "api.rate_limited").retryHeader).toBeUndefined();
+    expect(retryViolations(run.draft)).toEqual([]);
   });
 });

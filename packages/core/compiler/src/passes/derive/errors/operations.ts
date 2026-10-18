@@ -18,6 +18,7 @@ import {
   deriveErrorsRateLimitParam,
 } from "./bindings.js";
 import { deriveErrorsOriginOf } from "./read.js";
+import { deriveErrorsCheckRetryParam } from "./retry-param.js";
 import { deriveErrorsReadRoleParams } from "./role-params.js";
 import {
   type DeriveErrorsRoute,
@@ -197,6 +198,8 @@ function bindingOrigin(
 
 function retryHeaderOf(
   sources: DeriveErrorsOperationsSources,
+  code: IrWriter.ErrorCode,
+  refusedParams: Map<string, boolean>,
   from: readonly IrWriter.Origin[],
 ): IrWriter.RetryHeader | undefined {
   const name = sources.context.conventions.get("rateLimit.header")?.value;
@@ -206,12 +209,16 @@ function retryHeaderOf(
 
   if (typeof name !== "string" || unit === undefined || param === undefined) return undefined;
 
+  // A param that cannot render as a safe integer is refused (once per code) and the code carries no header.
+  if (!deriveErrorsCheckRetryParam(sources, refusedParams, code, param)) return undefined;
+
   return { name, param, unit, derivedFrom: { derivation: BUCKET_DERIVATION, from: [...from] } };
 }
 
 function elementOf(
   sources: DeriveErrorsOperationsSources,
   error: PendingError,
+  refusedRetryParams: Map<string, boolean>,
 ): IrWriter.OperationError {
   const derivations = [...error.derivations.entries()].sort(
     ([left], [right]) => tableIndexOf(left) - tableIndexOf(right),
@@ -229,7 +236,7 @@ function elementOf(
   const status = sources.registry.get(error.code)?.declaration.http.status;
   const retryHeader =
     error.bucketFrom !== undefined && status === RATE_LIMITED_STATUS
-      ? retryHeaderOf(sources, dedupe(error.bucketFrom))
+      ? retryHeaderOf(sources, error.code, refusedRetryParams, dedupe(error.bucketFrom))
       : undefined;
   const { attached } = error;
 
@@ -342,6 +349,7 @@ export function deriveErrorsOperations(sources: DeriveErrorsOperationsSources): 
   const routes = deriveErrorsRoutes(sources);
   const idParams = memberIdParams(routes);
   const forbiddenChecked = new Set<string>();
+  const refusedRetryParams = new Map<string, boolean>();
 
   for (const route of routes) {
     const pending = collect(sources, route, idParams, forbiddenChecked);
@@ -349,7 +357,7 @@ export function deriveErrorsOperations(sources: DeriveErrorsOperationsSources): 
     // A listed or attached code nobody declares is reported by the registry (`error-unknown`); no element names it.
     const elements = [...pending.values()]
       .filter((error) => sources.registry.has(error.code))
-      .map((error) => elementOf(sources, error))
+      .map((error) => elementOf(sources, error, refusedRetryParams))
       .sort(
         (left, right) =>
           statusOf(left.code) - statusOf(right.code) || (left.code < right.code ? -1 : 1),
