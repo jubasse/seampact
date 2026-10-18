@@ -126,6 +126,21 @@ const importedIr = (draft: DraftIR): ContractIR =>
     }),
   );
 
+describe("relay routes copy contract natures", () => {
+  test("a copied nature this api declares on another base is refused, naming this api's nature", () => {
+    const { serviceRun } = relayRun("", "natures:\n  locked: { base: unavailable }\n\n");
+
+    expect(serviceRun.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/relay-declaration",
+        pointer: RELAY_POINTER,
+        related: ["/natures/locked"],
+      },
+    ]);
+    expect(errorOf(serviceRun.draft, "getTask", "tasks.locked")).toBeUndefined();
+  });
+});
+
 describe("relay routes to an imported api", () => {
   test("a code this api declares the same is copied; one it lacks is refused, not copied", () => {
     const workspace = lockedWorkspace("");
