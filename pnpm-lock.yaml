@@ -205,7 +205,11 @@ importers:
 
   packages/core/cli: {}
 
-  packages/core/codegen-core: {}
+  packages/core/codegen-core:
+    dependencies:
+      '@seampact/spec':
+        specifier: workspace:*
+        version: link:../spec
 
   packages/core/compiler:
     dependencies:
