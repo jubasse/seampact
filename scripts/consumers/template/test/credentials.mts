@@ -4,17 +4,23 @@ import { createHmac } from "node:crypto";
 /** A signed-in user: `Authorization: Bearer <userToken>`. */
 export const USER_TOKEN = "seampact-user-token";
 
-/** The user id the user token authenticates. */
-export const USER_ID = "user-1";
+/** The user id the user token authenticates; the reference declares ids as UUIDs. */
+export const USER_ID = "00000000-0000-4000-8000-000000000001";
 
 /** A user whose `throttle` decision denies with `retryAfterMs`. */
 export const THROTTLED_USER_TOKEN = "seampact-throttled-user-token";
+
+/** The user id the throttled user token authenticates. */
+export const THROTTLED_USER_ID = "00000000-0000-4000-8000-000000000002";
 
 export const THROTTLE_RETRY_AFTER_MS = 1500;
 
 /** The service identity's bearer token, a JWT the service hooks accept as is (header and claims fixed). */
 export const SERVICE_JWT =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2aWNlIjoiY2F0YWxvZyIsInVzZXJJZCI6InVzZXItMSJ9.c2VhbXBhY3QtdGVzdA";
+
+/** The service the service token stands for. */
+export const SERVICE_NAME = "catalog";
 
 /** The Stripe signature scheme's key id and its one valid secret. */
 export const STRIPE_KEY_ID = "stripe";

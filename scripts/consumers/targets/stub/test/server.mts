@@ -9,6 +9,7 @@ import { createMemoryIdempotencyStore } from "@seampact/idempotency-memory";
 import { verifyTemplateSignature } from "@seampact/signed-webhooks";
 import {
   SERVICE_JWT,
+  SERVICE_NAME,
   STRIPE_KEY_ID,
   STRIPE_SECRET,
   THROTTLE_RETRY_AFTER_MS,
@@ -72,7 +73,6 @@ const task = (taskId: string, title = "Write the slice test") => ({
 });
 
 const API_ID = "tasks";
-const SERVICE_NAME = "catalog";
 const HTTP_ERROR_FLOOR = 400;
 
 const ROUTES: readonly Route[] = [
@@ -139,7 +139,10 @@ const ROUTES: readonly Route[] = [
     pattern: /^\/v1\/channels\/([^/]+)\/tasks\/([^/]+)$/,
     access: "user",
     idempotent: true,
-    answer: (_call, [, taskId = ""]) => ({ status: 200, body: { ...task(taskId), version: 2 } }),
+    answer: (call, [, taskId = ""]) => ({
+      status: 200,
+      body: { ...task(taskId, titleOf(call.body)), version: 2 },
+    }),
   },
   {
     operation: "archiveTask",
@@ -506,6 +509,12 @@ function objectOf(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? Object.fromEntries(Object.entries(value))
     : {};
+}
+
+function titleOf(body: unknown): string | undefined {
+  const title = objectOf(body).title;
+
+  return typeof title === "string" ? title : undefined;
 }
 
 function idsOf(body: unknown): string[] {

@@ -17,6 +17,8 @@ const PROJECT = projectDirectory("live-boundary");
 const BUILD = join(PROJECT, "build");
 const APP_SOURCE = new URL("../test-app/reference-app.js", import.meta.url);
 const REPLY_TIMEOUT_MILLISECONDS = 3000;
+// Generating and compiling both apis outruns vitest's default 10 s hook limit on a loaded machine.
+const SETUP_TIMEOUT_MILLISECONDS = 60_000;
 
 const CHANNEL = "11111111-1111-4111-8111-111111111111";
 const OTHER_CHANNEL = "22222222-2222-4222-8222-222222222222";
@@ -121,7 +123,7 @@ beforeAll(async () => {
   copyFileSync(APP_SOURCE, join(BUILD, "app", "reference-app.js"));
   app = await import(pathToFileURL(join(BUILD, "app", "reference-app.js")).href);
   server = await app.startReferenceApp();
-});
+}, SETUP_TIMEOUT_MILLISECONDS);
 
 afterAll(async () => {
   await server?.close();

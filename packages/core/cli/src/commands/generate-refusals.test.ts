@@ -2,7 +2,7 @@ import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
-import { type CliIo, EXIT_REFUSED } from "../cli-io.js";
+import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS } from "../cli-io.js";
 import { runCli } from "../run-cli.js";
 
 const REFERENCE_WORKSPACE = new URL("../../../../../fixtures/reference", import.meta.url).pathname;
@@ -19,6 +19,8 @@ interface FakeTarget {
   consumes?: string[];
   provides?: string[];
   packageJson?: string;
+  // What the fake's `generate` returns as `warnings`.
+  warnings?: object[];
 }
 
 // A target package of plain CommonJS: the refusals below happen before `generate` is called.
@@ -44,7 +46,7 @@ function writeTargetPackage(appDirectory: string, target: FakeTarget): void {
     provides: ${kinds(target.provides)},
   },
   parseOptions: (raw) => ({ status: "parsed", options: raw }),
-  generate: async () => ({ status: "generated", files: [] }),
+  generate: async () => ({ status: "generated", files: [], warnings: ${JSON.stringify(target.warnings ?? [])} }),
   describe: () => ({ status: "described", descriptors: {} }),
 };\n`,
   );
@@ -140,4 +142,29 @@ test("gives a diagnostic for an ESM-only target and for a malformed package.json
   expect(appResult.exitCode).toBe(EXIT_REFUSED);
   expect(appResult.output).toContain("config.target.unresolvable");
   expect(appResult.output).toContain("package.json");
+});
+
+test("prints a target's warnings and still writes its files", async () => {
+  const app = makeApp(
+    "sources:\n  a: { path: ./a }\ntargets:\n  - { id: server, use: fake-server, api: tasks }\n",
+    [
+      {
+        name: "fake-server",
+        warnings: [
+          {
+            code: "owner.handler",
+            message: "The caller ownership is not enforced by the generated boundary.",
+            fix: "Scope the handler's reads and writes to the authenticated principal.",
+            operation: "getDraft",
+          },
+        ],
+      },
+    ],
+  );
+  const { exitCode, output } = await generateErrors(app);
+
+  expect(exitCode).toBe(EXIT_SUCCESS);
+  expect(output).toBe(
+    "warning: owner.handler: entry 'server', api 'tasks': The caller ownership is not enforced by the generated boundary. (operation 'getDraft') Fix: Scope the handler's reads and writes to the authenticated principal.\n",
+  );
 });

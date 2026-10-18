@@ -19,6 +19,10 @@ export const VENDOR_DIRECTORY = "vendor/seampact";
 
 // Config entries an overlay appends to the template config's `targets` list, as YAML list items.
 const CONFIG_ENTRIES_FILE = "seampact.config.entries.yaml";
+
+// Dependencies an overlay adds to the template manifest's `dependencies`, as a name-to-version JSON object: copying
+// an overlay package.json would replace the template's.
+const PACKAGE_ENTRIES_FILE = "package.entries.json";
 const CONFIG_FILE = "seampact.config.yaml";
 const PACKAGE_FILE = "package.json";
 const CONTRACT_DIRECTORY = "contract";
@@ -75,9 +79,11 @@ export function assembleConsumer(options: {
   cpSync(join(consumersRoot, "template"), directory, { recursive: true });
   cpSync(overlay, directory, {
     recursive: true,
-    filter: (source) => !source.endsWith(CONFIG_ENTRIES_FILE),
+    filter: (source) =>
+      !source.endsWith(CONFIG_ENTRIES_FILE) && !source.endsWith(PACKAGE_ENTRIES_FILE),
   });
   appendConfigEntries(join(overlay, CONFIG_ENTRIES_FILE), join(directory, CONFIG_FILE));
+  addPackageEntries(join(overlay, PACKAGE_ENTRIES_FILE), join(directory, PACKAGE_FILE));
   cpSync(join(options.repositoryRoot, "fixtures/reference"), join(directory, CONTRACT_DIRECTORY), {
     recursive: true,
   });
@@ -91,6 +97,32 @@ function appendConfigEntries(entriesFile: string, configFile: string): void {
   const config = readFileSync(configFile, "utf8").trimEnd();
 
   writeFileSync(configFile, `${config}\n${readFileSync(entriesFile, "utf8").trimEnd()}\n`);
+}
+
+function addPackageEntries(entriesFile: string, manifestFile: string): void {
+  if (!existsSync(entriesFile)) return;
+
+  const entries: unknown = JSON.parse(readFileSync(entriesFile, "utf8"));
+
+  if (!isVersionMap(entries)) {
+    throw new Error(
+      `consumers: ${entriesFile} must be a JSON object of package names to version strings.`,
+    );
+  }
+
+  const manifest: ConsumerManifest = JSON.parse(readFileSync(manifestFile, "utf8"));
+
+  manifest.dependencies = { ...manifest.dependencies, ...entries };
+  writeFileSync(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+function isVersionMap(value: unknown): value is Record<string, string> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every((version) => typeof version === "string")
+  );
 }
 
 // Lists every tarball as a dependency and maps every `@seampact/*` to its tarball, so the packages' own

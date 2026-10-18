@@ -3,11 +3,12 @@ import {
   type DescribeOutcome,
   type DescriptorSet,
   type GeneratedFile,
+  type GenerateWarning,
   type Target,
   writeGeneratedFiles,
 } from "@seampact/codegen-core";
 import type { TargetEntry } from "@seampact/spec/config";
-import { EXIT_REFUSED, EXIT_SUCCESS, type CliIo, printProblems } from "../cli-io.js";
+import { EXIT_REFUSED, EXIT_SUCCESS, type CliIo, printProblems, printWarnings } from "../cli-io.js";
 import { type CliProblem, entryWhere, problemFromRefusal } from "../cli-problem.js";
 import { type LoadedAppConfig, readAppConfig, resolveTarget } from "../config/index.js";
 import { resolveEntryApis, usedSources } from "./api-refs.js";
@@ -33,6 +34,7 @@ interface GeneratedOutput {
   api: string;
   root: string;
   files: readonly GeneratedFile[];
+  warnings: readonly GenerateWarning[];
 }
 
 type Step<Value> = { status: "done"; value: Value } | { status: "refused"; problems: CliProblem[] };
@@ -237,7 +239,13 @@ async function generateApi(
 
   return {
     status: "done",
-    value: { entryId: entry.id, api: plannedApi.api, root: plannedApi.root, files: outcome.files },
+    value: {
+      entryId: entry.id,
+      api: plannedApi.api,
+      root: plannedApi.root,
+      files: outcome.files,
+      warnings: outcome.warnings ?? [],
+    },
   };
 }
 
@@ -317,7 +325,7 @@ function memoizedDescribe(): Describe {
   };
 }
 
-// Writes entry by entry, each all-or-nothing, and stops at the first writer refusal.
+// Writes entry by entry, each all-or-nothing, and stops at the first writer refusal; prints each entry's warnings.
 async function writeOutputs(outputs: readonly GeneratedOutput[], io: CliIo): Promise<number> {
   for (const output of outputs) {
     const written = await writeGeneratedFiles(output.root, output.entryId, output.files);
@@ -334,6 +342,10 @@ async function writeOutputs(outputs: readonly GeneratedOutput[], io: CliIo): Pro
 
     io.stdout(
       `${where}: ${written.written.length} written, ${written.unchanged.length} unchanged, ${written.removed.length} removed (${output.root}).\n`,
+    );
+    printWarnings(
+      io,
+      output.warnings.map((warning) => problemFromRefusal(warning, where)),
     );
   }
 
