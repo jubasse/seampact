@@ -186,6 +186,7 @@ function directivesOf(
 
     return ms;
   };
+
   const maxAgeMs = durationOf("maxAge");
 
   if (maxAgeMs === undefined) {

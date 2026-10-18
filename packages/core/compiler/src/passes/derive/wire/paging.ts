@@ -102,17 +102,20 @@ function numberUse(
       return integerUse(role.base ?? DEFAULT_PAGE_BASE);
     case "offset":
       return integerUse(0);
-    case "limit": {
-      if (paging.maxLimit === undefined)
-        throw new Error(
-          `tree.nodes wrote no maxLimit on the paged list '${route.id}', whose style has a limit`,
-        );
-
-      return integerUse(1, paging.overLimit === "reject" ? paging.maxLimit : undefined);
-    }
+    case "limit":
+      return limitUse(paging, route);
     default:
       return undefined;
   }
+}
+
+function limitUse(paging: IrWriter.Paging, route: DeriveWireRoute): IrWriter.ScalarTypeUse {
+  if (paging.maxLimit === undefined)
+    throw new Error(
+      `tree.nodes wrote no maxLimit on the paged list '${route.id}', whose style has a limit`,
+    );
+
+  return integerUse(1, paging.overLimit === "reject" ? paging.maxLimit : undefined);
 }
 
 function positionUse(role: Role, paging: IrWriter.Paging): IrWriter.TypeUse {
