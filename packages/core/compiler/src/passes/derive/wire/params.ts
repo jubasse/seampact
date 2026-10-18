@@ -47,6 +47,7 @@ interface Named {
   required: boolean;
   origin?: IrWriter.Origin;
   derivedFrom?: IrWriter.DerivedFrom;
+  semantic?: IrWriter.ResponseHeaderSemantic;
 }
 
 const sameName = (place: DeriveWireParamPlace, left: string, right: string): boolean =>
@@ -66,7 +67,7 @@ export function deriveWireAddParam(
 
   const list = params[place];
 
-  if (!mergedInto(list, place, derived, route, scope))
+  if (!mergedInto(list, place, { derived, semantic: undefined }, route, scope))
     list.push({
       name: derived.name,
       type: pipelineCopy(derived.type),
@@ -97,7 +98,7 @@ export function deriveWireAddResponseHeader(
   semantic: IrWriter.ResponseHeaderSemantic | undefined,
   scope: DeriveWireScope,
 ): void {
-  if (mergedInto(response.headers, "header", derived, route, scope)) return;
+  if (mergedInto(response.headers, "header", { derived, semantic }, route, scope)) return;
 
   response.headers.push({
     name: derived.name,
@@ -123,12 +124,12 @@ export function deriveWireSuccessResponses(route: DeriveWireRoute): IrWriter.Res
   );
 }
 
-// True when the name is already in the list: merged when the same derivation wrote it with the same type and
-// requirement, else reported.
+// True when the name is already in the list: merged when the same derivation wrote it with the same semantic, type
+// and requirement, else reported.
 function mergedInto(
   list: Named[],
   place: DeriveWireParamPlace,
-  derived: DeriveWireDerived,
+  { derived, semantic }: { derived: DeriveWireDerived; semantic: Named["semantic"] },
   route: DeriveWireRoute,
   scope: DeriveWireScope,
 ): boolean {
@@ -147,6 +148,22 @@ function mergedInto(
         route,
         message: `operation '${route.id}' already has a ${place} '${existing.name}' ${describe(existing)}, so derivation ${derived.derivedFrom.derivation} cannot add its own`,
         fix: "Rename the declared parameter or header, or the name the derivation takes from its scheme, header or convention.",
+      },
+      scope,
+    );
+
+    return true;
+  }
+
+  if (existing.semantic !== semantic) {
+    reportCollision(
+      {
+        place,
+        existing,
+        derived,
+        route,
+        message: `derivation ${record.derivation} writes the ${place} '${derived.name}' of operation '${route.id}' twice, as '${existing.semantic ?? "plain"}' and as '${semantic ?? "plain"}'`,
+        fix: "Give each header the derivation writes its own name.",
       },
       scope,
     );

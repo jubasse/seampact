@@ -42,7 +42,7 @@ conventions:
 | `query` | `{ lists, objects, unknownKeys }`: how a query list and an object field travel, and whether an undeclared key is refused (section 7) | `{ lists: repeat, objects: explode, unknownKeys: refuse }` |
 | `input.unknownKeys` | `refuse`, `{ ignore: "<reason>" }` or `{ keep: "<reason>" }`: the api's policy for unknown keys of body inputs; an `unknownKeys` on a schema use wins (ADR 0003 section 4) | `refuse` |
 | `int64` | `string` or `number`: the wire form of an `int64` value (ADR 0003 section 8) | `string` |
-| `deprecation` | `{ header, sunsetHeader, successorRel }`: the names of the deprecation headers (section 10) | `Deprecation`, `Sunset`, `successor-version` |
+| `deprecation` | `{ header, sunsetHeader, successorRel }`: the names of the deprecation headers (section 10); `successorRel` is an RFC 8288 registered relation name (a lowercase letter, then lowercase letters, digits, `.` and `-`), and an extension relation URI is refused; the two header names differ | `Deprecation`, `Sunset`, `successor-version` |
 | `ops` | per op name, `{ method, path, status }`: the defaults of the `ops` table (section 6) | the table's values |
 | `operationIds` | `{ order: verbNoun \| nounVerb, case: camel \| snake }`: how operation ids are derived (section 6) | `{ order: verbNoun, case: camel }` |
 | `rateLimit` | `{ header, param, unit }`: the header written on a 429 from a bucket rule, carrying the denial's integer millisecond `param` in `unit` (`s`, rounded up, or `ms`) | unset: a 429 carries no retry header |

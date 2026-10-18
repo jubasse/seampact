@@ -261,7 +261,7 @@
             },
             "successorRel": {
               "type": "string",
-              "minLength": 1,
+              "pattern": "^[a-z][a-z0-9.-]*$",
               "$comment": "ADR 0002 section 13"
             },
             "$include": {
