@@ -226,7 +226,9 @@ function reportSuccessorParams(
     if (own !== undefined && sameTypeUse(own.type, param.type)) continue;
 
     const why =
-      own === undefined ? `which ${operation.id} has not` : `typed otherwise than on ${operation.id}`;
+      own === undefined
+        ? `which ${operation.id} has not`
+        : `typed otherwise than on ${operation.id}`;
 
     context.report(
       treeNodesError({
@@ -244,7 +246,9 @@ const UNCOMPARED_TYPE_USE_MEMBERS: ReadonlySet<string> = new Set(["docs", "examp
 
 function sameTypeUse(own: IrWriter.TypeUse, successor: IrWriter.TypeUse): boolean {
   const compared = (use: IrWriter.TypeUse) =>
-    Object.fromEntries(Object.entries(use).filter(([key]) => !UNCOMPARED_TYPE_USE_MEMBERS.has(key)));
+    Object.fromEntries(
+      Object.entries(use).filter(([key]) => !UNCOMPARED_TYPE_USE_MEMBERS.has(key)),
+    );
 
   return pipelineCanonical(compared(own)) === pipelineCanonical(compared(successor));
 }
