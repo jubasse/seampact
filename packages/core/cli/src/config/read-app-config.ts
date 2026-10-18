@@ -7,7 +7,16 @@ import {
   type TargetEntry,
 } from "@seampact/spec/config";
 import { type ErrorObject, Ajv2020 } from "ajv/dist/2020.js";
-import { type Document, isMap, isNode, isScalar, LineCounter, parseDocument, visit } from "yaml";
+import {
+  type Document,
+  isAlias,
+  isMap,
+  isNode,
+  isScalar,
+  LineCounter,
+  parseDocument,
+  visit,
+} from "yaml";
 import type { CliProblem } from "../cli-problem.js";
 import { errorCode } from "../error-code.js";
 import { findConfigWaits } from "./config-waits.js";
@@ -159,15 +168,17 @@ function reservedKeyProblems(parsed: ParsedConfig): CliProblem[] {
 
   visit(parsed.document, {
     Pair(_, pair) {
-      if (!isScalar(pair.key) || typeof pair.key.value !== "string") return;
+      const key = isAlias(pair.key) ? pair.key.resolve(parsed.document) : pair.key;
 
-      if (!RESERVED_KEYS.has(pair.key.value)) return;
+      if (!isScalar(key) || typeof key.value !== "string") return;
+
+      if (!RESERVED_KEYS.has(key.value)) return;
 
       problems.push({
         code: "config.key.reserved",
-        message: `The key '${pair.key.value}' is reserved: it would reach a JavaScript object's prototype.`,
+        message: `The key '${key.value}' is reserved: it would reach a JavaScript object's prototype.`,
         fix: "Rename or remove the key.",
-        where: `${parsed.displayName}${positionText(parsed, pair.key.range?.[0])}`,
+        where: `${parsed.displayName}${positionText(parsed, isNode(pair.key) ? pair.key.range?.[0] : undefined)}`,
       });
     },
   });

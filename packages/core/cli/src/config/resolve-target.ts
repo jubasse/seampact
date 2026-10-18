@@ -52,7 +52,7 @@ function resolveFromConfig(configFile: string, use: string, where: string): stri
       return {
         code: "config.target.missing",
         message: `The target package '${use}' is not installed in the app's project.`,
-        fix: `Install it: \`${devInstallCommand(dirname(configFile), use)}\`.`,
+        fix: installFix(configFile, use),
         where,
       };
     }
@@ -61,12 +61,31 @@ function resolveFromConfig(configFile: string, use: string, where: string): stri
       return {
         code: "config.target.unresolvable",
         message: `The package '${use}' exports no main module the CLI can resolve: ${errorMessage(error)}`,
-        fix: "Use a target package whose `exports` has a `.` entry.",
+        fix: "The CLI loads a target with the `require` conditions: use a target package whose `exports` has a `.` entry with a `require` or `default` condition.",
+        where,
+      };
+    }
+
+    if (errorCode(error) === "ERR_INVALID_PACKAGE_CONFIG") {
+      return {
+        code: "config.target.unresolvable",
+        message: `Resolving '${use}' failed on a \`package.json\` Node cannot read: ${errorMessage(error)}`,
+        fix: "Fix the `package.json` the message names (the app's or the target package's), or reinstall the package.",
         where,
       };
     }
 
     throw error;
+  }
+}
+
+function installFix(configFile: string, use: string): string {
+  try {
+    return `Install it: \`${devInstallCommand(dirname(configFile), use)}\`.`;
+  } catch (error) {
+    if (!(error instanceof SyntaxError)) throw error;
+
+    return `Install it with your package manager; a \`package.json\` above the config is not valid JSON (${error.message}).`;
   }
 }
 

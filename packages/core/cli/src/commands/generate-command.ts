@@ -21,6 +21,7 @@ import {
   pairedApi,
   pairingProblems,
   unknownLinkEntryProblems,
+  unconsumedKindProblems,
   unprovidedKindProblems,
 } from "./entry-links.js";
 import { filterOperations } from "./filter-operations.js";
@@ -92,6 +93,7 @@ async function planEntries(location: ConfigLocation, io: CliIo): Promise<Step<Pl
 
   const linkProblems = [
     ...unprovidedKindProblems(planned.value),
+    ...unconsumedKindProblems(planned.value),
     ...pairingProblems(planned.value),
   ];
 

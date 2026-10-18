@@ -58,6 +58,18 @@ export type EntryApisOutcome =
   | { status: "resolved"; apis: CompiledApi[] }
   | { status: "refused"; problems: CliProblem[] };
 
+// ADR 0011 places each api under `<out>/<api>`, so two items of one entry cannot share an api name.
+function duplicateApiProblem(entry: TargetEntry, text: string, found: CompiledApi): CliProblem {
+  const items = apiRefsOf(entry).filter((each) => parseApiRef(each).api === found.api);
+
+  return {
+    code: "config.api.duplicate",
+    message: `The entry '${entry.id}' names the api '${found.api}' more than once (${items.map((each) => `'${each}'`).join(", ")}); '${text}' is one of them.`,
+    fix: `Keep one of them, or give the sources' apis different names.`,
+    where: entryWhere(entry.id, found.api),
+  };
+}
+
 // The compiled apis an entry names: an api named alone must be the only one of that name among the sources.
 export function resolveEntryApis(
   entry: TargetEntry,
@@ -87,6 +99,8 @@ export function resolveEntryApis(
         fix: "Name an api of a source's `workspace.yaml`, as `<api>` or `<source>/<api>`.",
         where: entryWhere(entry.id, ref.api),
       });
+    } else if (apis.some((each) => each.api === found.api)) {
+      problems.push(duplicateApiProblem(entry, text, found));
     } else {
       apis.push(found);
     }

@@ -67,3 +67,16 @@ test("keeps the operations of the entry's document and operations filter", () =>
   });
   expect(ir.operations.map((operation) => operation.id)).toEqual(allIds);
 });
+
+test("refuses an include item that the document already removed", () => {
+  const ir = readTasksIr();
+
+  expect(
+    filterOperations(ir, { document: "public", operations: { include: ["archiveTask"] } }),
+  ).toMatchObject({
+    status: "refused",
+    problems: [
+      { code: "filter.include.removed", message: expect.stringContaining("'archiveTask'") },
+    ],
+  });
+});

@@ -26,6 +26,21 @@ export function filterOperations(ir: ContractIR, selection: OperationSelection):
     isInDocument(ir, selection.document, operation),
   );
   const include = selection.operations?.include ?? [];
+  const removedItems = include.filter(
+    (item) => !inDocument.some((operation) => matches(operation, item)),
+  );
+
+  if (removedItems.length > 0) {
+    return {
+      status: "refused",
+      problems: removedItems.map((item) => ({
+        code: "filter.include.removed",
+        message: `The api '${ir.api.id}' keeps no operation for the include item '${item}' once the document '${selection.document ?? "(none)"}' has run.`,
+        fix: "Remove the item from `operations.include`, or choose a document that keeps it.",
+      })),
+    };
+  }
+
   const exclude = selection.operations?.exclude ?? [];
 
   const kept = inDocument.filter(

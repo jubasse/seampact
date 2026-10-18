@@ -122,6 +122,26 @@ export function unprovidedKindProblems(planned: ReadonlyMap<string, PlannedEntry
   );
 }
 
+// A link of a kind the consumer's target does not consume: the link would order the entries and then be dropped.
+export function unconsumedKindProblems(planned: ReadonlyMap<string, PlannedEntry>): CliProblem[] {
+  return [...planned.values()].flatMap((consumer) =>
+    linksOf(consumer.entry).flatMap(([kind, providerId]) => {
+      if (Object.hasOwn(consumer.target.metadata.consumes, kind)) return [];
+
+      const consumed = Object.keys(consumer.target.metadata.consumes).join(", ") || "nothing";
+
+      return [
+        {
+          code: "link.kind.not-consumed",
+          message: `'${consumer.entry.id}' (${consumer.target.metadata.packageName}) does not consume '${kind}', linked to '${providerId}'; it consumes ${consumed}.`,
+          fix: `Remove the '${kind}' link of '${consumer.entry.id}', or use a target that consumes '${kind}'.`,
+          where: linkWhere(consumer.entry.id, providerId),
+        },
+      ];
+    }),
+  );
+}
+
 // Each api of a consumer needs the same api in each provider it links to, and the provider must keep every
 // operation the consumer keeps (a provider keeping more is fine).
 export function pairingProblems(planned: ReadonlyMap<string, PlannedEntry>): CliProblem[] {
