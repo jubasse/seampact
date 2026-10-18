@@ -1,22 +1,24 @@
 import { randomUUID } from "node:crypto";
 import { copyFileSync, mkdirSync } from "node:fs";
-import { request as httpRequest, type IncomingHttpHeaders } from "node:http";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   emitProject,
   generateReferenceProject,
+  problemBody,
   projectDirectory,
-} from "./reference-project.test-support.js";
+  type RawReply,
+  sendRawRequest,
+} from "@seampact/codegen-core/node-server/test-support";
+import { target as nestjsTarget } from "./index.js";
 
 // Boots NestJS with Express around the generated `tasks` boundary (the app in `test-app/`) and sends requests to
 // it: the wire behaviour the compile test cannot see.
 
-const PROJECT = projectDirectory("live-boundary");
+const PROJECT = projectDirectory(import.meta.url, "live-boundary");
 const BUILD = join(PROJECT, "build");
 const APP_SOURCE = new URL("../test-app/reference-app.js", import.meta.url);
-const REPLY_TIMEOUT_MILLISECONDS = 3000;
 // Generating and compiling both apis outruns vitest's default 10 s hook limit on a loaded machine.
 const SETUP_TIMEOUT_MILLISECONDS = 60_000;
 
@@ -59,63 +61,19 @@ interface ReferenceAppModule {
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
 }
 
-interface Reply {
-  readonly status: number;
-  readonly headers: IncomingHttpHeaders;
-  readonly text: string;
-}
-
 let app: ReferenceAppModule;
 let server: Awaited<ReturnType<ReferenceAppModule["startReferenceApp"]>>;
 
-// A raw request: the path goes out byte for byte, without WHATWG URL normalization.
 function send(
   method: string,
   path: string,
   options: { headers?: Record<string, string>; body?: string } = {},
-): Promise<Reply> {
-  return new Promise((resolve, reject) => {
-    const outgoing = httpRequest(
-      {
-        host: server.host,
-        port: server.port,
-        method,
-        path,
-        headers: {
-          ...(options.body === undefined ? {} : { "content-type": "application/json" }),
-          ...options.headers,
-        },
-        timeout: REPLY_TIMEOUT_MILLISECONDS,
-      },
-      (incoming) => {
-        const chunks: Buffer[] = [];
-
-        incoming.on("data", (chunk: Buffer) => chunks.push(chunk));
-        incoming.on("end", () =>
-          resolve({
-            status: incoming.statusCode ?? 0,
-            headers: incoming.headers,
-            text: Buffer.concat(chunks).toString("utf8"),
-          }),
-        );
-      },
-    );
-
-    outgoing.on("timeout", () => {
-      outgoing.destroy();
-      reject(new Error(`${method} ${path} got no reply within ${REPLY_TIMEOUT_MILLISECONDS} ms`));
-    });
-    outgoing.on("error", reject);
-    outgoing.end(options.body);
-  });
-}
-
-function problemBody(code: string, status: number): string {
-  return JSON.stringify({ type: code, title: code, status, code, nature: "refused" });
+): Promise<RawReply> {
+  return sendRawRequest(server, method, path, options);
 }
 
 beforeAll(async () => {
-  const files = await generateReferenceProject(PROJECT, { bodyValidation: true });
+  const files = await generateReferenceProject(PROJECT, nestjsTarget, { bodyValidation: true });
 
   expect(emitProject(PROJECT, files, BUILD)).toEqual([]);
 

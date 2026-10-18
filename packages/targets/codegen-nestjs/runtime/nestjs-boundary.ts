@@ -50,7 +50,6 @@ import {
   type BoundaryHooks,
   bootProblemsMessage,
   hookBootProblems,
-  reportUnexpected,
 } from "./node-server/boundary-hooks.js";
 import {
   ContractError,
@@ -78,6 +77,7 @@ import {
   parserErrorStatus,
   pathnameOf,
 } from "./node-server/express-platform.js";
+import { notFoundError, respondWithError } from "./node-server/error-reply.js";
 import { handlerReply } from "./node-server/handler-reply.js";
 import { beginIdempotency } from "./node-server/idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./node-server/input-checks.js";
@@ -114,14 +114,12 @@ const TOO_MANY_REQUESTS = 429;
 const INTERNAL_STATUS = 500;
 const FORBIDDEN_ROLE = "forbidden";
 const UNAUTHENTICATED_ROLE = "unauthenticated";
-const NOT_FOUND_ROLE = "notFound";
 const NEST_FIXES: PlatformFixes = {
   rawBody:
     "NestJS keeps it as a Buffer on req.rawBody: create the app with { rawBody: true }, or pass the generated keepRawBody as the JSON parser's verify function with rawBody off.",
   bodySize:
     "Create the app with { rawBody: true }, or pass the generated keepRawBody as the JSON parser's verify function.",
 };
-const NOT_FOUND_STATUS = 404;
 
 const ROUTE_DECORATORS = { get: Get, post: Post, put: Put, patch: Patch, delete: Delete } as const;
 const REQUEST_METHODS = {
@@ -169,37 +167,6 @@ function requireContext(): BoundaryContext {
   }
 
   return context;
-}
-
-// Reports an unexpected failure to the hook (or the log), then writes the error in the api's format.
-async function respondWithError(
-  response: ServerResponse,
-  context: BoundaryContext | undefined,
-  hooks: BoundaryHooks | undefined,
-  api: ContractApi,
-  route: ContractRoute | undefined,
-  error: ContractError,
-  request: { readonly method: string; readonly path: string },
-): Promise<void> {
-  if (error.unexpectedCause !== undefined) {
-    const where = {
-      api: api.id,
-      operation: route?.id,
-      method: request.method,
-      path: request.path,
-    };
-
-    if (hooks?.onUnexpectedError === undefined) {
-      console.error(
-        `seampact: unexpected failure on operation '${where.operation ?? "(none)"}'`,
-        error.unexpectedCause,
-      );
-    }
-
-    await reportUnexpected(hooks, error.unexpectedCause, where);
-  }
-
-  await writeContractReply(response, context, renderContractReply(api, route, error));
 }
 
 /** The NestJS boundary of one api. */
@@ -700,17 +667,6 @@ function asContractError(route: ContractRoute, error: unknown): ContractError {
           : undefined;
 
   return code === undefined ? unexpectedError(route, error) : new ContractError(code);
-}
-
-function notFoundError(route: ContractRoute | undefined): ContractError {
-  const code =
-    route === undefined
-      ? undefined
-      : (codeOfRole(route, NOT_FOUND_ROLE) ?? codeOfStatus(route, NOT_FOUND_STATUS));
-
-  return code === undefined
-    ? unexpectedError(route, new Error("the contract path has no 404 code to answer"))
-    : new ContractError(code);
 }
 
 function preRoutingError(route: ContractRoute | undefined, exception: unknown): ContractError {

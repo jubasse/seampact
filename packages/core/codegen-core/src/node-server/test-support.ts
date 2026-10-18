@@ -1,0 +1,3 @@
+// The test support the Node server targets share: the generated reference project and live requests to a test app.
+export * from "./live-request.test-support.js";
+export * from "./reference-project.test-support.js";

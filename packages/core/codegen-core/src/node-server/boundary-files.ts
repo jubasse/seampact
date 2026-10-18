@@ -1,10 +1,17 @@
 import { readFileSync } from "node:fs";
-import type { ContractIR } from "@seampact/spec/ir";
+import { type ContractIR, IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { apiIndexSource } from "../api-index.js";
+import { defineTarget } from "../define-target.js";
 import type { GenerateWarning } from "../generate-warning.js";
 import { type Refusal, withoutRepeats } from "../refusal.js";
-import type { GeneratedFile, GenerateInput, GenerateOutcome } from "../target.js";
-import type { NodeServerOptions } from "./options.js";
+import type {
+  GeneratedFile,
+  GenerateInput,
+  GenerateOutcome,
+  SourceFormat,
+  Target,
+} from "../target.js";
+import { type NodeServerOptions, parseNodeServerOptions } from "./options.js";
 import { routeTableSource } from "./route-table.js";
 import { NODE_SERVER_RUNTIME_DIRECTORY, nodeServerRuntimeFiles } from "./runtime-files.js";
 import { handlersSource, hookTypesSource } from "./server-types.js";
@@ -27,11 +34,47 @@ export interface NodeServerPlacement {
   frameworkSource(ir: ContractIR, options: NodeServerOptions, refusals: Refusal[]): string;
 }
 
+/** A Node server target package: its name and version, its Prettier and its placement. */
+export interface NodeServerTargetPackage {
+  readonly packageName: string;
+  readonly packageVersion: string;
+  readonly format: SourceFormat;
+  readonly placement: NodeServerPlacement;
+}
+
 const MODULE_EXTENSION = ".ts";
 const ROUTES_MODULE = "routes";
 const HANDLERS_MODULE = "handlers";
 const HOOKS_MODULE = "hooks";
 const INDEX_MODULE = "index";
+
+/**
+ * A Node server target, as the CLI loads it. It reads the operation types through the `types` link and the input
+ * validators through the `validators` link, and provides nothing.
+ */
+export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target {
+  return defineTarget<NodeServerOptions, BoundaryArtefact, "types" | "validators">({
+    metadata: {
+      packageName: targetPackage.packageName,
+      packageVersion: targetPackage.packageVersion,
+      irSupport: {
+        irVersions: [IR_VERSION],
+        irRevision: IR_REVISION,
+        kinds: ["httpOperation"],
+        features: [],
+      },
+      artefacts: [{ id: BOUNDARY_ARTEFACT, defaultOn: true }],
+      consumes: {
+        types: { styles: ["typescript"] },
+        validators: { styles: ["standard-schema"] },
+      },
+      provides: {},
+    },
+    format: targetPackage.format,
+    parseOptions: parseNodeServerOptions,
+    generate: (input) => nodeServerBoundaryFiles(input, targetPackage.placement),
+  });
+}
 
 // Every module of one api's boundary, or every refusal at once (A47).
 export function nodeServerBoundaryFiles(

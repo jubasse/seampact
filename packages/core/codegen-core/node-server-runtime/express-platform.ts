@@ -19,6 +19,13 @@ import {
 } from "./contract-route.js";
 
 const PAYLOAD_TOO_LARGE = 413;
+// The refusals of `body-parser` a contract route answers in the api's format, by the error's `type`.
+const BODY_PARSER_REFUSAL_TYPES: readonly string[] = [
+  "entity.parse.failed",
+  "entity.too.large",
+  "encoding.unsupported",
+  "charset.unsupported",
+];
 const DEFAULT_METHOD = "GET";
 
 /** The request as Express hands it on. */
@@ -103,6 +110,23 @@ export function parserErrorStatus(exception: unknown): number | undefined {
       : undefined;
 
   return typeof status === "number" ? status : undefined;
+}
+
+/** A `body-parser` refusal mapped to its contract role; undefined for any other error. */
+export function bodyParserRefusal(route: ContractRoute, error: unknown): ContractError | undefined {
+  const type: unknown =
+    isPlainObject(error) || error instanceof Error ? Reflect.get(error, "type") : undefined;
+  const status = parserErrorStatus(error);
+
+  if (
+    typeof type !== "string" ||
+    !BODY_PARSER_REFUSAL_TYPES.includes(type) ||
+    status === undefined
+  ) {
+    return undefined;
+  }
+
+  return bodyParserError(route, status, error);
 }
 
 /** A body parser's refusal on a contract route, as its contract role or the code of its status. */

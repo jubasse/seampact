@@ -311,7 +311,7 @@ export function decodeRequestParams(
   for (const rule of route.params.path) {
     const raw = pathParams[rule.name];
 
-    if (raw !== undefined) path[rule.name] = decodeWireString(safeDecode(raw), rule.decoding);
+    if (raw !== undefined) path[rule.name] = decodeWireString(decodePathParam(raw), rule.decoding);
   }
 
   const query: Record<string, unknown> = {};
@@ -352,11 +352,11 @@ function decodeWireString(raw: string, decoding: WireDecoding): unknown {
   }
 }
 
-function safeDecode(raw: string): string {
+/** A path param percent-decoded; a malformed escape stays raw, so the validator reports the value (step 6). */
+export function decodePathParam(raw: string): string {
   try {
     return decodeURIComponent(raw);
   } catch {
-    // A malformed escape stays raw so the validator reports the value.
     return raw;
   }
 }

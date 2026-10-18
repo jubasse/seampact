@@ -69,17 +69,20 @@ export function routeTableSource(
     warnings.push(...handlerForms(ir, operation, operationLocation(index, operation.id)));
   });
 
-  const routes = ir.operations.map((operation, index) =>
-    routeEntry(
-      ir,
-      operation,
-      operationLocation(index, operation.id),
-      validators.descriptor,
-      imports,
-      options,
-      refusals,
-    ),
-  );
+  const routes = ir.operations
+    .map((operation, index) => ({ operation, index }))
+    .sort((left, right) => compareSpecificity(left.operation.path, right.operation.path))
+    .map(({ operation, index }) =>
+      routeEntry(
+        ir,
+        operation,
+        operationLocation(index, operation.id),
+        validators.descriptor,
+        imports,
+        options,
+        refusals,
+      ),
+    );
   const shapes = outputShapes(ir, refusals);
 
   if (ir.api.wire.urls !== "relative") {
@@ -104,6 +107,29 @@ export function routeTableSource(
     `export const CONTRACT_API: ContractApi = ${sourceOf(table)};`,
     "",
   ].join("\n");
+}
+
+const PATH_PARAM_SEGMENT = /\{[^}]+\}/;
+
+// Most specific first, segment by segment: a static segment before a param, so `/tasks/search` comes before
+// `/tasks/{id}`, then the shorter path. The order every placement registers its routes in and the shared matcher
+// iterates; the sort is stable, so paths of the same form keep the contract's order.
+function compareSpecificity(leftPath: string, rightPath: string): number {
+  const leftSegments = leftPath.split("/");
+  const rightSegments = rightPath.split("/");
+
+  for (
+    let position = 0;
+    position < Math.min(leftSegments.length, rightSegments.length);
+    position++
+  ) {
+    const leftIsParam = PATH_PARAM_SEGMENT.test(leftSegments[position] ?? "");
+    const rightIsParam = PATH_PARAM_SEGMENT.test(rightSegments[position] ?? "");
+
+    if (leftIsParam !== rightIsParam) return leftIsParam ? 1 : -1;
+  }
+
+  return leftSegments.length - rightSegments.length;
 }
 
 class ModuleImports {

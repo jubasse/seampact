@@ -33,6 +33,14 @@ export function transportRefusal(
   request: ContractRequest,
   readBody: ReadBody,
 ): ContractError | undefined {
+  return mediaTypeRefusal(route, request) ?? bodySizeRefusal(route, request, readBody);
+}
+
+/** Step 1's media-type check alone, for a placement that runs it before the body is read. */
+export function mediaTypeRefusal(
+  route: ContractRoute,
+  request: ContractRequest,
+): ContractError | undefined {
   const input = route.input;
 
   if (input === undefined || !hasBody(request)) return undefined;
@@ -42,6 +50,19 @@ export function transportRefusal(
   if (contentType === undefined || !isMediaOf(contentType, input.media)) {
     return roleError(route, UNSUPPORTED_MEDIA_ROLE);
   }
+
+  return undefined;
+}
+
+/** Step 1's body-limit check alone, once the platform's parser has read the body. */
+export function bodySizeRefusal(
+  route: ContractRoute,
+  request: ContractRequest,
+  readBody: ReadBody,
+): ContractError | undefined {
+  const input = route.input;
+
+  if (input === undefined || !hasBody(request)) return undefined;
 
   const size = bodySize(request, readBody);
 

@@ -5,9 +5,17 @@ export {
   BOUNDARY_ARTEFACT,
   type BoundaryArtefact,
   type NodeServerPlacement,
+  type NodeServerTargetPackage,
   nodeServerBoundaryFiles,
+  nodeServerTarget,
 } from "./boundary-files.js";
+export { handlerMapDeclarations, largestBodyLimit } from "./handler-map-module.js";
 export { type NodeServerOptions, parseNodeServerOptions, type ResponsesMode } from "./options.js";
 export { type RouteTableOptions, routeTableSource } from "./route-table.js";
 export { NODE_SERVER_RUNTIME_DIRECTORY, nodeServerRuntimeFiles } from "./runtime-files.js";
-export { handlersSource, hookTypesSource, operationIdentifier } from "./server-types.js";
+export {
+  handlerInterfaceName,
+  handlersSource,
+  hookTypesSource,
+  operationIdentifier,
+} from "./server-types.js";

@@ -1,17 +1,16 @@
 import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { GeneratedFile, Target } from "@seampact/codegen-core";
 import type { ContractIR } from "@seampact/spec/ir";
 import ts from "typescript";
-import { target as nestjsTarget } from "./index.js";
+import type { GeneratedFile, Target } from "../target.js";
 
-// Test support: generates the reference contract's types, validators and NestJS boundary into a consumer layout
-// under the package's git-ignored `.vitest/`. The generated code resolves NestJS, rxjs and zod from this package's
-// devDependencies, and the project's `node_modules` links the workspace packages a consumer installs, which this
-// package does not depend on (ADR 0009 "Dependency rules").
+// Test support of the Node server targets: generates the reference contract's types, validators and a server
+// target's boundary into a consumer layout under the target package's git-ignored `.vitest/`. The generated code
+// resolves the framework and zod from that package's devDependencies, and the project's `node_modules` links the
+// workspace packages a consumer installs, which the target does not depend on (ADR 0009 "Dependency rules").
 
-const REPOSITORY_ROOT = new URL("../../../../", import.meta.url);
+const REPOSITORY_ROOT = new URL("../../../../../", import.meta.url);
 
 export const REFERENCE_APIS = ["tasks", "tasksService"] as const;
 
@@ -21,7 +20,7 @@ const LINKED_PACKAGES = {
   "@seampact/hooks": "packages/runtime/hooks",
 };
 
-/** The consumer's compiler options: strict, NodeNext, and NestJS's legacy decorators. */
+/** The consumer's compiler options: strict, NodeNext, and the legacy decorators NestJS needs. */
 export const REFERENCE_COMPILER_OPTIONS: ts.CompilerOptions = {
   target: ts.ScriptTarget.ES2024,
   module: ts.ModuleKind.NodeNext,
@@ -36,15 +35,16 @@ export const REFERENCE_COMPILER_OPTIONS: ts.CompilerOptions = {
   types: ["node"],
 };
 
-/** A project directory under the package's `.vitest/`. */
-export function projectDirectory(name: string): string {
-  return fileURLToPath(new URL(`../.vitest/${name}/`, import.meta.url));
+/** A project directory under the `.vitest/` of the package whose `src/` holds the test file. */
+export function projectDirectory(testFileUrl: string, name: string): string {
+  return fileURLToPath(new URL(`../.vitest/${name}/`, testFileUrl));
 }
 
 /** Writes both reference apis' generated trees into a fresh project; returns every file written. */
 export async function generateReferenceProject(
   project: string,
-  nestjsOptions: Readonly<Record<string, unknown>>,
+  serverTarget: Target,
+  serverOptions: Readonly<Record<string, unknown>>,
 ): Promise<string[]> {
   rmSync(project, { recursive: true, force: true });
   mkdirSync(project, { recursive: true });
@@ -53,7 +53,7 @@ export async function generateReferenceProject(
 
   const providers = await linkedProviders(project);
   const written = await Promise.all(
-    REFERENCE_APIS.map((api) => generateApi(project, api, providers, nestjsOptions)),
+    REFERENCE_APIS.map((api) => generateApi(project, api, providers, serverTarget, serverOptions)),
   );
 
   return written.flat();
@@ -179,7 +179,8 @@ async function generateApi(
   project: string,
   api: string,
   providers: Providers,
-  nestjsOptions: Readonly<Record<string, unknown>>,
+  serverTarget: Target,
+  serverOptions: Readonly<Record<string, unknown>>,
 ): Promise<string[]> {
   const ir = readGoldenIr(api);
   const providerRequest = { ir, options: {}, links: {} };
@@ -201,9 +202,9 @@ async function generateApi(
     ...writeFiles(
       project,
       `generated/server/${api}`,
-      await generated(nestjsTarget, {
+      await generated(serverTarget, {
         ir,
-        options: nestjsOptions,
+        options: serverOptions,
         links: linksOf(providers, ir, api),
         artefacts: new Set(["boundary"]),
       }),
