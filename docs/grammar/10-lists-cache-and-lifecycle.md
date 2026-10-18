@@ -13,7 +13,7 @@
 - `internal: true`: keeps the route out of documents with `internal: exclude` (product apis only, SCN-044); written on a service api, it is a compile error.
 - `upstream: [streaming, catalog]`: services from the `services` catalogue, the owning service first. The operation's maturity derives from the owning service, otherwise from `api.maturity` (FR-34).
 - `maturity: experimental`, or `maturity: { level: experimental, reason: "<reason>" }` to say why: a stated maturity on a node, which wins over the derived level; on the api, `maturity` is the default every operation derives from. A stated level equal to the derived one is reported by the lint rule `seampact/redundant-maturity`, silenced through `lint.allow` (SCN-087, SCN-018).
-- `deprecated: { sunset: '2027-06-30', successor: getTask }`: derives the deprecation, sunset and successor headers (FR-13, SCN-051); `successor` only on a route. Their names default to RFC 9745's `Deprecation`, RFC 8594's `Sunset` and a `Link` with relation `successor-version`, and `conventions.deprecation` renames them (A36).
+- `deprecated: { since: '2026-12-31', sunset: '2027-06-30', successor: getTask }`: derives the deprecation, sunset and successor headers (FR-13, SCN-051); `successor` only on a route. `since` (required) and `sunset` are calendar dates, `since` not after `sunset`; a successor's path params are path params of the deprecated route, of the same type. Their names default to RFC 9745's `Deprecation`, RFC 8594's `Sunset` and a `Link` with relation `successor-version`, and `conventions.deprecation` renames them (A36).
 - `tags: [tasks]`.
 
 ```yaml

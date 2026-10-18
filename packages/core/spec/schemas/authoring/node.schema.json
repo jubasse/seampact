@@ -2530,6 +2530,11 @@
     "deprecation": {
       "type": "object",
       "properties": {
+        "since": {
+          "$ref": "common.schema.json#/$defs/date",
+          "$comment": "ADR 0002 section 10",
+          "description": "The day the operation is deprecated."
+        },
         "sunset": {
           "$ref": "common.schema.json#/$defs/date",
           "$comment": "ADR 0002 section 10"
@@ -2543,6 +2548,11 @@
     "routeDeprecation": {
       "type": "object",
       "properties": {
+        "since": {
+          "$ref": "common.schema.json#/$defs/date",
+          "$comment": "ADR 0002 section 10",
+          "description": "The day the operation is deprecated."
+        },
         "sunset": {
           "$ref": "common.schema.json#/$defs/date",
           "$comment": "ADR 0002 section 10"

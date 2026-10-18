@@ -367,7 +367,7 @@ surfaces:
         tags: [orders, shop]
         internal: true
         maturity: { level: experimental, reason: "New checkout." }
-        deprecated: { sunset: '2027-06-30' }
+        deprecated: { since: '2026-12-31', sunset: '2027-06-30' }
         x-acme-tier: gold
         routes:
           list: { method: get, output: { type: string }, summary: Orders., description: All orders. }
@@ -377,7 +377,7 @@ surfaces:
             upstream: [ledger, catalog]
             maturity: stable
             internal: false
-            deprecated: { sunset: '2027-01-01', successor: listOrders }
+            deprecated: { since: '2027-01-01', sunset: '2027-01-01', successor: listOrders }
       ping: { method: get, output: { type: string } }
 `);
   const treeSchemas = treeNodesStubService({
@@ -435,6 +435,39 @@ surfaces:
     docs: {},
     extensions: { acme: { team: "shop" } },
   });
+});
+
+test("lifecycle members: a successor whose path params the deprecated route holds, of the same type, is accepted", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+schemas:
+  Key: { type: string }
+surfaces:
+  app:
+    routes:
+      keyed: { method: get, operationId: getKeyed, path: 'keyed/{key}', pathParams: { key: Key }, output: Key }
+      old:
+        method: get
+        path: 'old/{key}/{extra}'
+        pathParams: { key: Key, extra: Key }
+        output: Key
+        deprecated: { since: '2026-12-31', sunset: '2027-06-30', successor: getKeyed }
+`);
+  const documented: IrWriter.TypeUse = { ...text, docs: { summary: "The key." } };
+  const treeSchemas = treeNodesStubService({
+    typeUses: {
+      [`${ROUTES}/keyed/output`]: text,
+      [`${ROUTES}/old/output`]: text,
+      [`${ROUTES}/keyed/pathParams/key`]: documented,
+      [`${ROUTES}/old/pathParams/key`]: text,
+      [`${ROUTES}/old/pathParams/extra`]: text,
+    },
+  });
+  const run = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas });
+
+  // Docs say how a use is written, not what it accepts: they are not compared.
+  expect(run.diagnostics).toEqual([]);
+  expect(operation(run.draft.operations, "old").deprecated?.successor?.id).toBe("getKeyed");
 });
 
 test("lifecycle members: a service api writes no internal", () => {
@@ -585,7 +618,22 @@ test("tree.nodes diagnostics are located: shapes", () => {
   for (const route of ["pages", "unpaged", "limited", "searched", "queried"])
     uses[`${ROUTES}/${route}/item`] = ref("Note");
 
-  for (const route of ["partial", "wrapped"]) uses[`${ROUTES}/${route}/output`] = ref("Note");
+  for (const route of [
+    "partial",
+    "wrapped",
+    "late",
+    "unreal",
+    "leapless",
+    "legacy/routes/first",
+    "legacy/routes/second",
+    "keyed",
+    "unkeyed",
+    "rekeyed",
+  ])
+    uses[`${ROUTES}/${route}/output`] = ref("Note");
+
+  uses[`${ROUTES}/keyed/pathParams/key`] = text;
+  uses[`${ROUTES}/rekeyed/pathParams/key`] = integer;
   const treeSchemas = treeNodesStubService({
     typeUses: uses,
     queryWires: {
@@ -627,7 +675,22 @@ test("tree.nodes diagnostics are located: shapes", () => {
     ["format-unknown", `${ROUTES}/wrapped/format`],
     ["example-target", `${ROUTES}/wrapped/examples/bare`],
     ["example-value", `${ROUTES}/wrapped/examples/wrong/value/text`],
+    ["deprecated-since", `${ROUTES}/late/deprecated/since`],
+    ["deprecated-since", `${ROUTES}/unreal/deprecated/since`],
+    ["deprecated-sunset", `${ROUTES}/leapless/deprecated/sunset`],
+    // The inherited deprecation is reported once, at the node that writes it.
+    ["deprecated-since", `${ROUTES}/legacy/deprecated`],
     ["deprecated-successor", `${ROUTES}/wrapped/deprecated/successor`],
+    ["deprecated-successor-params", `${ROUTES}/unkeyed/deprecated/successor`],
+    ["deprecated-successor-params", `${ROUTES}/rekeyed/deprecated/successor`],
+  ]);
+  expect(
+    diagnostics
+      .filter(({ rule }) => rule.endsWith("/deprecated-successor-params"))
+      .map(({ message }) => message),
+  ).toEqual([
+    "The successor getKeyed of unkeyed has the path param key, which unkeyed has not.",
+    "The successor getKeyed of rekeyed has the path param key, typed otherwise than on rekeyed.",
   ]);
 
   for (const diagnostic of diagnostics) {

@@ -127,13 +127,10 @@ export function treeNodesOperations(
   return relayDeclarations;
 }
 
-// A successor names an operation of this api, known once every operation is written.
+// A successor names an operation of this api whose path params it can fill, known once every operation is written.
 function checkSuccessors(draft: DraftIR, context: TreeNodesContext): void {
-  const ids = new Set(draft.operations.flatMap((operation) => operation.id ?? []));
-
   for (const operation of draft.operations)
-    if (operation.deprecated !== undefined && operation.id !== undefined)
-      treeNodesCheckSuccessor({ context, operationId: operation.id }, operation.deprecated, ids);
+    treeNodesCheckSuccessor(context, operation, draft.operations);
 }
 
 // A member route under a collection whose `id` gives no parameter has no placeholder in its path; the `id` is
