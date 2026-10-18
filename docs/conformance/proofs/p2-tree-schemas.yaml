@@ -2,31 +2,77 @@
 lane: p2-tree-schemas
 proofs:
   - id: CHK-118
+    fixtures: [fixtures/passes/tree-schemas/catalogues]
     tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/fixtures.test.ts#tree.schemas on the lane fixtures catalogues: unions, formats, derived objects, enums, unknown keys, defaults and extensions'
       - 'core: packages/core/compiler/src/passes/tree/schemas/derived.test.ts#a derived object compiles to the object its kept properties write out'
       - 'core: packages/core/compiler/src/passes/tree/schemas/derived.test.ts#omit keeps the source order, required replaces, an overlay replaces what it sets'
       - 'core: packages/core/compiler/src/passes/tree/schemas/derived.test.ts#a field the source lacks, a bad overlay or source is refused at its pointer'
   - id: CHK-048
+    fixtures: [fixtures/passes/tree-schemas/catalogues]
     tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/fixtures.test.ts#tree.schemas on the lane fixtures catalogues: unions, formats, derived objects, enums, unknown keys, defaults and extensions'
       - 'core: packages/core/compiler/src/passes/tree/schemas/enums.test.ts#an enum keeps its values in written order, its source or local reason, code names and fallback'
       - 'core: packages/core/compiler/src/passes/tree/schemas/enums.test.ts#a narrowing keeps the enum''s order and its reason'
       - 'core: packages/core/compiler/src/passes/tree/schemas/enums.test.ts#bad values, sources, reasons, fallbacks, code names and narrowings are refused'
   - id: CHK-160
+    fixtures: [fixtures/passes/tree-schemas/catalogues, fixtures/passes/tree-schemas/refused]
     tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/fixtures.test.ts#tree.schemas on the lane fixtures catalogues: unions, formats, derived objects, enums, unknown keys, defaults and extensions'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/fixtures.test.ts#tree.schemas on the lane fixtures refused: maps without a wire, values off their schema, misplaced defaults and extensions'
       - 'core: packages/core/compiler/src/passes/tree/schemas/query-wire.test.ts#each kind under the default conventions, at query fields and form field positions'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/query-wire.test.ts#a map-typed query field or header proof is refused, since no query wire encodes its keys, and a body proof holds one'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/query-wire.test.ts#a map-typed body proof on a form or multipart route is refused, since the proof travels as a form field, and a JSON route still holds it'
   - id: CHK-053
+    fixtures: [fixtures/passes/tree-schemas/catalogues, fixtures/passes/tree-schemas/refused]
     tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/fixtures.test.ts#tree.schemas on the lane fixtures catalogues: unions, formats, derived objects, enums, unknown keys, defaults and extensions'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/fixtures.test.ts#tree.schemas on the lane fixtures refused: maps without a wire, values off their schema, misplaced defaults and extensions'
       - 'core: packages/core/compiler/src/passes/tree/schemas/examples.test.ts#written examples are parsed at compile time, each issue at its pointer inside the value'
       - 'core: packages/core/compiler/src/passes/tree/schemas/examples.test.ts#unknown keys, missing required properties and unknown tags are refused'
       - "core: packages/core/compiler/src/passes/tree/schemas/derived.test.ts#an overlay's examples replace the source's and are parsed against the property"
       - 'core: packages/core/compiler/src/passes/tree/schemas/examples.test.ts#a header-tagged union fits a value that fits one variant'
       - 'core: packages/core/compiler/src/passes/tree/schemas/examples.test.ts#every issue of a JSON text is reported at the string that holds it'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/examples.test.ts#text examples parsed by the wire form a number, boolean, int64, string or enum text stands for its value'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/examples.test.ts#text examples parsed by the wire form a text that its wire form does not read, or whose value does not fit, is refused'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/examples.test.ts#defaults parsed like an example a default that fits is kept, one that does not is refused at its pointer'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/examples.test.ts#defaults at query fields an optional query field takes a default, parsed like an example; elsewhere it is refused'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/examples.test.ts#a default on a required query field is refused at the default, since a required field is never absent'
   - id: CHK-134
+    fixtures: [fixtures/passes/tree-schemas/catalogues]
     tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/fixtures.test.ts#tree.schemas on the lane fixtures catalogues: unions, formats, derived objects, enums, unknown keys, defaults and extensions'
       - "core: packages/core/compiler/src/passes/tree/schemas/directions.test.ts#a use's unknownKeys sits on its input use, and an output answer holds none"
       - 'core: packages/core/compiler/src/passes/tree/schemas/directions.test.ts#unknownKeys where every use is output, or on a value with no keys, is refused'
       - 'core: packages/core/compiler/src/passes/tree/schemas/directions.test.ts#unknownKeys on an alias declaration that only output uses reach is refused'
       - 'core: packages/core/compiler/src/passes/tree/schemas/directions.test.ts#unknownKeys on a map, whose keys are free, is refused'
   - id: CHK-135
+    fixtures: [fixtures/passes/tree-schemas/catalogues]
     tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/fixtures.test.ts#tree.schemas on the lane fixtures catalogues: unions, formats, derived objects, enums, unknown keys, defaults and extensions'
       - 'core: packages/core/compiler/src/passes/tree/schemas/directions.test.ts#each schema, enum and named format takes the directions of the uses that reach it'
+  - id: CHK-024
+    fixtures: [fixtures/passes/tree-schemas/catalogues, fixtures/passes/tree-schemas/refused]
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/schemas.test.ts#tagged unions variants sorted by tag, inline ones hoisted, the tag kept out of them'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/fixtures.test.ts#tree.schemas on the lane fixtures catalogues: unions, formats, derived objects, enums, unknown keys, defaults and extensions'
+  - id: CHK-119
+    fixtures: [fixtures/passes/tree-schemas/catalogues]
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/schemas.test.ts#portable and named formats a named format holds its type and refinements inline and names its scalar'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/schemas.test.ts#portable and named formats a named format beside a type is refused'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/fixtures.test.ts#tree.schemas on the lane fixtures catalogues: unions, formats, derived objects, enums, unknown keys, defaults and extensions'
+  - id: CHK-051
+    fixtures: [fixtures/passes/tree-schemas/catalogues, fixtures/passes/tree-schemas/refused]
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/extensions.test.ts#extension values validated declared keys are written with their schema and places, values on schemas and properties'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/extensions.test.ts#extension values validated an undeclared key, a key off its places and a value off its schema are refused, located'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/fixtures.test.ts#tree.schemas on the lane fixtures catalogues: unions, formats, derived objects, enums, unknown keys, defaults and extensions'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/fixtures.test.ts#tree.schemas on the lane fixtures refused: maps without a wire, values off their schema, misplaced defaults and extensions'
+  - id: CHK-146
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/schemas.test.ts#hoisted names an inline schema takes the name of its position (ADR 0007 section 3)'
+      - "core: packages/core/compiler/src/passes/tree/schemas/routes.test.ts#hoisted names an inline route schema takes its operation's name and the position's role"
+      - 'core: packages/core/compiler/src/passes/tree/schemas/code-params.test.ts#error code params a default code declared with params on a tree node takes the reserved params id'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/code-params.test.ts#error code params equal params on two nodes, or on a node and in the catalogue, are hoisted once'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/code-params.test.ts#error code params different params of one code are left to the derive pass, the first declaration hoisted'

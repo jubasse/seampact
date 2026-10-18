@@ -82,6 +82,14 @@ export const treeSchemasRunReference = (api: "tasks" | "tasksService"): TreeSche
     new Map([["tasks", draftFixture("tasks", "after-tree")]]),
   );
 
+const FIXTURES = fileURLToPath(
+  new URL("../../../../../../../fixtures/passes/tree-schemas", import.meta.url),
+);
+
+/** tree.schemas on the `api.yaml` of a fixture under `fixtures/passes/tree-schemas/<name>`. */
+export const treeSchemasRunFixture = (name: string, api: string): TreeSchemasRun =>
+  run(loadFsReader(`${FIXTURES}/${name}`), "api.yaml", api);
+
 /**
  * tree.schemas on a single api file `api.yaml` named `t`, its catalogues given as YAML text; `relayed` holds the
  * drafts of the apis its relay routes name.

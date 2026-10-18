@@ -1,0 +1,60 @@
+# Schema catalogues accepted (ADR 0003): a tagged union, a named format, a derived object, an enum and its
+# narrowing, a use-level unknownKeys on an input, a defaulted optional query field, and extension values.
+api: { name: shop, version: 1, kind: product }
+
+scalars:
+  sku: { type: string, minLength: 3, pattern: '^[A-Z0-9-]+$' }
+
+enums:
+  OrderState: { values: [open, paid, shipped], reason: "Order states belong to this api." }
+  TaxBasis: { values: [inclusive, exclusive], reason: "The shop's tax rules." }
+
+extensions:
+  acme:
+    tax-basis: { at: [operation, property], schema: { enum: TaxBasis } }
+
+schemas:
+  OrderId: { type: string, format: uuid }
+  Order:
+    type: object
+    required: [orderId, state]
+    properties:
+      orderId: OrderId
+      state: { enum: OrderState }
+      sku: { format: sku, examples: [AB-12] }
+      total: { type: string, format: decimal, minimum: 0, x-acme-tax-basis: inclusive }
+      unshipped: { enum: { narrow: OrderState, to: [open, paid], reason: "Shipped orders are closed." } }
+  OpenOrder:
+    pick: { from: Order, fields: [orderId, state] }
+    properties: { state: { description: "Always open here." } }
+  Payment:
+    discriminator: method
+    oneOf:
+      card: { type: object, properties: { last4: { type: string, maxLength: 4 } } }
+      transfer: { type: object, properties: { iban: { type: string } } }
+  CreateOrder:
+    type: object
+    required: [sku]
+    properties:
+      sku: { format: sku }
+      payment: Payment
+
+surfaces:
+  app:
+    x-acme-tax-basis: exclusive
+    routes:
+      orders:
+        kind: collection
+        id: { orderId: OrderId }
+        item: Order
+        ops:
+          list:
+            query:
+              limit?: { type: integer, minimum: 1, default: 20 }
+          create:
+            input: { $ref: CreateOrder, unknownKeys: refuse }
+        member:
+          routes:
+            reopen:
+              method: post
+              output: OpenOrder
