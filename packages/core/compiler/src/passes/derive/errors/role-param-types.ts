@@ -12,8 +12,9 @@ import {
   deriveErrorsKindsFit,
   deriveErrorsKindsOf,
   deriveErrorsMemberMisfits,
-  DERIVE_ERRORS_OMITTABLE_REASON,
+  type DeriveErrorsMisfitReason,
   deriveErrorsMisfit,
+  deriveErrorsMisfitReason,
   deriveErrorsObjectOfUse,
 } from "./role-param-fit.js";
 import {
@@ -119,11 +120,16 @@ function refuse(check: TypedCheck, position: Position, message: string, fix: str
   check.site.reporter.error({ rule: "role-param-type", message, fix, pointer: position.pointer });
 }
 
-function refuseType(check: TypedCheck, position: Position, what: string, reason: string): void {
+function refuseType(
+  check: TypedCheck,
+  position: Position,
+  what: string,
+  reason: DeriveErrorsMisfitReason,
+): void {
   const { role, code } = check.site;
-  const message = `role '${role.role}' fills the param ${quote(position.param)} of ${quote(code)} with ${what}, but ${reason}`;
+  const message = `role '${role.role}' fills the param ${quote(position.param)} of ${quote(code)} with ${what}, but ${reason.text}`;
 
-  if (reason.includes(DERIVE_ERRORS_OMITTABLE_REASON)) {
+  if (reason.kind === "omittable") {
     check.faults += 1;
     check.site.reporter.error({
       rule: "role-param-required",
@@ -250,7 +256,7 @@ function checkLiteral(
       check,
       { ...position, pointer: `${position.pointer}${issue.pointer}` },
       `the literal ${JSON.stringify(value)}`,
-      `it does not fit its type: ${issue.message}`,
+      deriveErrorsMisfitReason(`it does not fit its type: ${issue.message}`),
     );
 }
 
@@ -302,7 +308,12 @@ function checkText(
     const rendered = deriveErrorsKindsOf(check.site.schemas, { ...value.typed, nullable: false });
 
     if (rendered === DERIVE_ERRORS_ANY_KIND || rendered.has("object") || rendered.has("array"))
-      refuseType(check, position, `a text holding $${part.slot}`, "it has no text form");
+      refuseType(
+        check,
+        position,
+        `a text holding $${part.slot}`,
+        deriveErrorsMisfitReason("it has no text form"),
+      );
   }
 }
 
@@ -321,7 +332,9 @@ function checkObjectValue(
       check,
       position,
       "an object",
-      `the param's type (${deriveErrorsDescribeKinds(deriveErrorsKindsOf(check.site.schemas, accepted))}) is no object schema to check its members against`,
+      deriveErrorsMisfitReason(
+        `the param's type (${deriveErrorsDescribeKinds(deriveErrorsKindsOf(check.site.schemas, accepted))}) is no object schema to check its members against`,
+      ),
     );
 
     return;
@@ -363,7 +376,9 @@ function checkArrayValue(
       check,
       position,
       what,
-      `the param's type (${deriveErrorsDescribeKinds(kinds)}) does not take an array`,
+      deriveErrorsMisfitReason(
+        `the param's type (${deriveErrorsDescribeKinds(kinds)}) does not take an array`,
+      ),
     );
 
     return;
@@ -380,7 +395,7 @@ function checkArrayValue(
       check,
       position,
       what,
-      `it may hold fewer items than the param's minItems ${use.minItems}`,
+      deriveErrorsMisfitReason(`it may hold fewer items than the param's minItems ${use.minItems}`),
     );
 
   if (use.maxItems !== undefined && (counts.max === undefined || counts.max > use.maxItems))
@@ -388,7 +403,7 @@ function checkArrayValue(
       check,
       position,
       what,
-      `it may hold more items than the param's maxItems ${use.maxItems}`,
+      deriveErrorsMisfitReason(`it may hold more items than the param's maxItems ${use.maxItems}`),
     );
 
   checkItems(check, template, use.items, position);
