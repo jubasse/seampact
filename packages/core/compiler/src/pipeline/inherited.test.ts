@@ -4,7 +4,7 @@ import { loadMemoryReader } from "../load/reader.js";
 import type { RawApi } from "../raw-tree.js";
 import { pipelineInherited } from "./inherited.js";
 import { pipelineOrigin } from "./pointer.js";
-import { type TreeNode, pipelineTreeNodes } from "./tree.js";
+import { pipelineTreeNodes, type TreeNode } from "./tree.js";
 
 const API = `
 api: { name: a, version: 1 }

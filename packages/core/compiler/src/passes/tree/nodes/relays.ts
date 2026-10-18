@@ -206,6 +206,16 @@ function pushDeclarations(
 ): void {
   const { operation, api } = source;
   const relaySite = { site, relays: target.text };
+  const style = operation.paging?.style;
+
+  // The relayed api writes every format and style its operations name, so a missing one is a broken draft.
+  if (
+    (operation.format !== undefined && source.format === undefined) ||
+    (style !== undefined && source.pagingStyle === undefined)
+  )
+    throw new Error(
+      `the relayed operation ${target.text} names a format or paging style its api does not hold`,
+    );
 
   if (operation.format !== undefined && source.format !== undefined)
     declarations.push({
@@ -214,8 +224,6 @@ function pushDeclarations(
       id: operation.format,
       value: { ...pipelineCopy(source.format), origin: relayOrigin(source.format.origin, api) },
     });
-
-  const style = operation.paging?.style;
 
   if (style !== undefined && source.pagingStyle !== undefined)
     declarations.push({
