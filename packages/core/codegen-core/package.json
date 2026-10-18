@@ -8,6 +8,9 @@
   "seampact": {
     "role": "core"
   },
+  "dependencies": {
+    "@seampact/spec": "workspace:*"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
   }

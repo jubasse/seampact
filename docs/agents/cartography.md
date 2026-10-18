@@ -38,7 +38,7 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/codegen-core`
 
-- `packages/core/codegen-core/src`: The API the code generators are written against.
+- `packages/core/codegen-core/src`: The API the code generators are written against: target definitions, link descriptors and refusals.
 
 ### `@seampact/compiler`
 
