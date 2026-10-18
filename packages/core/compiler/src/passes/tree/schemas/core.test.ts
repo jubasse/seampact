@@ -5,7 +5,11 @@ import { treeSchemasRules, treeSchemasRunApi } from "./test-support.js";
 
 const ONE_SCHEMA = "schemas:\n  A: { type: object, properties: { a: { type: string } } }\n";
 const text = { kind: "scalar", type: "string", refinements: {} };
-const count = { kind: "scalar", type: "integer", refinements: { minimum: "0" } };
+const delay = {
+  kind: "scalar",
+  type: "integer",
+  refinements: { minimum: "0", maximum: "9007199254740991" },
+};
 const core = (pointer: string) => ({ layer: "core", pointer });
 const api = (pointer: string) => ({ layer: "api", pointer });
 
@@ -93,7 +97,7 @@ describe("core declarations and reserved ids", () => {
     expect(schemas.ApiRateLimitedParams).toMatchObject({
       directions: ["output"],
       properties: [
-        coreProperty("retryAfterMs", count, true, "/errors/api.rate_limited/params/retryAfterMs"),
+        coreProperty("retryAfterMs", delay, true, "/errors/api.rate_limited/params/retryAfterMs"),
       ],
     });
     expect(schemas.ApiEmptyBody).toEqual({
@@ -116,7 +120,7 @@ describe("core declarations and reserved ids", () => {
       first.properties[0].type = { kind: "scalar", type: "boolean", refinements: {} };
     const next = treeSchemasRunApi(ONE_SCHEMA).draft.schemas.ApiRateLimitedParams;
 
-    expect(next?.kind === "object" ? next.properties[0]?.type : undefined).toEqual(count);
+    expect(next?.kind === "object" ? next.properties[0]?.type : undefined).toEqual(delay);
   });
 
   test("a default code declared with params takes the reserved id; one declared without keeps the core schema", () => {

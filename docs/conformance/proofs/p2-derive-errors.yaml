@@ -50,8 +50,10 @@ proofs:
     fixtures:
       - fixtures/passes/derive-errors/operations/api.yaml
       - fixtures/passes/derive-errors/forbidden-pointer/api.yaml
+      - fixtures/passes/derive-errors/triggers/api.yaml
     tests:
       - 'core: packages/core/compiler/src/passes/derive/errors/operations.test.ts#derived codes'
+      - 'core: packages/core/compiler/src/passes/derive/errors/triggers.test.ts#derived triggers reached through the triggers contract'
       - 'core: packages/core/compiler/src/passes/derive/errors/operations.test.ts#every derived error carries derivedFrom'
   - id: CHK-111
     fixtures:

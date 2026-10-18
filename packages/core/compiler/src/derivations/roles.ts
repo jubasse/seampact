@@ -36,6 +36,9 @@ export interface DerivationRole {
   readonly data: readonly DerivationRoleDatum[];
 }
 
+// The largest integer a JSON number holds exactly: the bound a Retry-After header value must fit (ir.error.retry-header).
+const MAX_SAFE_INTEGER = "9007199254740991";
+
 // Each call a new object, so no two data share one.
 const text = (): IrWriter.ScalarTypeUse => ({ kind: "scalar", type: "string", refinements: {} });
 const count = (): IrWriter.ScalarTypeUse => ({
@@ -129,7 +132,7 @@ export const derivationRoles: readonly DerivationRole[] = derivationFreeze([
       name: "retryAfterMs",
       required: "conditional",
       condition: "when conventions.rateLimit names it",
-      type: count(),
+      type: { ...count(), refinements: { minimum: "0", maximum: MAX_SAFE_INTEGER } },
     },
   ]),
   role("undeclaredStatus", "api.internal", 500, "failed"),

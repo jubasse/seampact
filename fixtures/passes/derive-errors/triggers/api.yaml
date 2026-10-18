@@ -1,0 +1,114 @@
+# The derived error triggers no other fixture reaches (ADR 0006 section 5): a principal requirement and a binding, a
+# restricted sort key, a changes-since paging style, an If-Match version, the required idempotency key, a required
+# deadline header, a signed identity and a header-tagged union input.
+api: { name: triggers, version: 1 }
+
+conventions:
+  paging: { maxLimit: 50 }
+  idempotency: { header: Idempotency-Key, replayHeader: Idempotency-Replayed, lifetime: 1h, methods: [post] }
+
+schemes:
+  bearer: { kind: bearer }
+  stripeSignature:
+    kind: signature
+    name: Stripe-Signature
+    format: 't={ts},v1={sig}'
+    algorithm: hmac-sha256
+    payload: '{ts}.{rawBody}'
+    encoding: hex
+    tolerance: 5m
+    key: { value: stripe }
+
+headers:
+  deadline: { name: X-Deadline, in: request, semantic: deadline }
+
+identities:
+  member:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: Member
+  robot:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: Member
+    headers:
+      deadline: { required: true }
+  stripe:
+    kind: signed
+    scheme: stripeSignature
+    principal: Member
+
+pagings:
+  cursor:
+    request:
+      cursor: { query: cursor }
+      limit: { query: limit }
+      sort: { query: sort, style: signed }
+    response:
+      body: $items
+      links: { next: $next }
+  changes:
+    request:
+      since: { query: since }
+      limit: { query: limit }
+    response:
+      body: { items: $items, next: $nextSince, complete: $complete }
+
+rights:
+  notes.annotate: {}
+
+schemas:
+  Member:
+    type: object
+    required: [memberId, workspaceId]
+    properties: { memberId: { type: string }, workspaceId: { type: string } }
+  Note:
+    type: object
+    required: [noteId, title, etag]
+    properties: { noteId: { type: string }, title: { type: string }, memo: { type: string }, etag: { type: string } }
+  EditNote: { type: object, properties: { title: { type: string } } }
+  NewNote:
+    type: object
+    required: [workspaceId]
+    properties: { workspaceId: { type: string } }
+  Event: { type: object, required: [type], properties: { type: { type: string } } }
+  PushEvent: { type: object, required: [ref], properties: { ref: { type: string } } }
+  PingEvent: { type: object, required: [zen], properties: { zen: { type: string } } }
+  GithubEvent:
+    discriminator: { from: header.X-GitHub-Event }
+    oneOf:
+      push: PushEvent
+      ping: PingEvent
+
+surfaces:
+  app:
+    identity: member
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: { type: string } }
+        item: Note
+        concurrency: { version: header.If-Match, field: etag }
+        ops:
+          list: { paging: cursor, sortable: [title, { key: memo, right: notes.annotate }] }
+          update: { input: EditNote }
+      changes:
+        kind: collection
+        id: { noteId: { type: string } }
+        item: Note
+        ops:
+          list: { paging: changes }
+      drafts:
+        method: post
+        input: NewNote
+        principal: { requires: [workspaceId] }
+        bindings: { body.workspaceId: principal.workspaceId }
+  robots:
+    identity: robot
+    routes:
+      jobs: { method: get, output: Event }
+  hooks:
+    routes:
+      stripe: { method: post, identity: stripe, input: Event }
+      github:
+        method: post
+        access: { public: "GitHub signs nothing the api checks yet." }
+        input: GithubEvent
