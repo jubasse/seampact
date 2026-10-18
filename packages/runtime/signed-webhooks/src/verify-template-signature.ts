@@ -43,6 +43,17 @@ export class UnsupportedSignatureAlgorithmError extends Error {
   }
 }
 
+/** Thrown when the lookup returns an empty secret: anyone can compute a MAC with it, so the check fails closed. */
+export class EmptySignatureSecretError extends Error {
+  readonly code = "signature.secret.empty";
+
+  constructor(readonly keyId: string) {
+    super(
+      `The secret looked up for the key '${keyId}' is empty, so any request could pass. Configure the secret (check the environment variable behind the lookup).`,
+    );
+  }
+}
+
 /**
  * Verifies a template-signed request (ADR 0013 "Where the verification happens"): rebuilds the signed payload
  * from the raw bytes, computes the MAC with each valid secret, compares it in constant time with each candidate,
@@ -66,6 +77,9 @@ export async function verifyTemplateSignature(
   const secrets = await lookupSecrets(request.keyId);
 
   if (secrets.length === 0) return failed("no-secret");
+
+  if (secrets.some((secret) => secret.length === 0))
+    throw new EmptySignatureSecretError(request.keyId);
 
   const candidates = request.candidateSignatures.flatMap((candidate) => {
     const decoded = decodeCandidate(candidate, template.encoding);

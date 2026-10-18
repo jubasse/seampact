@@ -2,9 +2,20 @@ import type { SignatureTemplate, SignedTemplateRequest } from "@seampact/hooks";
 import { describe, expect, test } from "vitest";
 import vectors from "../vectors/adr-0013.json" with { type: "json" };
 import {
+  EmptySignatureSecretError,
+  type SignatureFailure,
   UnsupportedSignatureAlgorithmError,
   verifyTemplateSignature,
 } from "./verify-template-signature.js";
+
+// Why each 401 vector fails (ADR 0013): a wrong MAC, or a timestamp outside the tolerance.
+const FAILURE_OF_VECTOR: Readonly<Record<string, SignatureFailure>> = {
+  G3: "signature-mismatch",
+  S3: "timestamp-outside-tolerance",
+  S4: "timestamp-outside-tolerance",
+  S5: "signature-mismatch",
+  S8: "signature-mismatch",
+};
 
 type SchemeName = keyof typeof vectors.schemes;
 
@@ -71,6 +82,15 @@ describe("verifies the ADR 0013 vectors", () => {
     );
 
     expect(verification.verified ? "pass" : "401").toBe(vector.expected);
+    expect(verification.failure).toBe(FAILURE_OF_VECTOR[vector.id]);
+  });
+
+  test.each([[""], [new Uint8Array()]])("an empty secret is refused by name", async (secret) => {
+    const vector = vectors.cases[0];
+    const request = signedRequest("github", vector?.header ?? "", "Hello, World!");
+    const verification = verifyTemplateSignature(request, () => [secret]);
+
+    await expect(verification).rejects.toBeInstanceOf(EmptySignatureSecretError);
   });
 
   test("an algorithm other than hmac-sha256 is refused by name", async () => {

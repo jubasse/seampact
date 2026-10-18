@@ -47,9 +47,10 @@ export function createMemoryIdempotencyStore(
   // A Map keeps insertion order, so the first completed entry found is the oldest.
   const entries = new Map<string, Entry>();
 
+  // A running entry leaves through `complete` or `abandon`, so a late `complete` never lands on another request.
   function sweepExpired(nowMs: number): void {
     for (const [key, entry] of entries) {
-      if (entry.expiresAtMs <= nowMs) entries.delete(key);
+      if (entry.response !== undefined && entry.expiresAtMs <= nowMs) entries.delete(key);
     }
   }
 
@@ -89,7 +90,7 @@ export function createMemoryIdempotencyStore(
     complete(key: string, response: StoredResponse): void {
       const entry = entries.get(key);
 
-      // A key whose lifetime ended while its request ran has nothing left to replay.
+      // The key was abandoned while its request ran: there is nothing to replay.
       if (entry === undefined) return;
 
       entry.response = copyResponse(response);
