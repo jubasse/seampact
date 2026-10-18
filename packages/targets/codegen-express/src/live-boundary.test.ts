@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { copyFileSync, mkdirSync, rmSync, symlinkSync } from "node:fs";
+import { rmSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  copyTestApp,
   emitProject,
   generateReferenceProject,
   problemBody,
@@ -83,9 +84,7 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
 
     expect(emitProject(project, files, build)).toEqual([]);
     linkExpress(project, expressPackage);
-    mkdirSync(join(build, "app"), { recursive: true });
-    copyFileSync(APP_SOURCE, join(build, "app", "reference-app.js"));
-    app = await import(pathToFileURL(join(build, "app", "reference-app.js")).href);
+    app = await import(copyTestApp(build, APP_SOURCE));
     server = await app.startReferenceApp();
   }, SETUP_TIMEOUT_MILLISECONDS);
 

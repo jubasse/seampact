@@ -11,6 +11,8 @@ export interface ParamRule {
   /** The name as the validator's input object keys it: as declared for path and query, lower case for headers. */
   readonly name: string;
   readonly decoding: WireDecoding;
+  /** On a path param with a `maxLength`: the longest percent-encoded form of a valid value. */
+  readonly encodedMaxLength?: number;
 }
 
 /** A Standard Schema v1 value, as the validators link provides it. */
@@ -241,6 +243,25 @@ export function matchContractRoute(
   for (const route of api.routes) {
     if (route.method !== lowerMethod) continue;
 
+    const pathParams = matchPath(route.path, path);
+
+    if (pathParams !== undefined) return { route, pathParams };
+  }
+
+  return undefined;
+}
+
+/** The method's route serving a path, else the first route whose template the path matches, whatever its method. */
+export function matchContractPath(
+  api: ContractApi,
+  method: string,
+  path: string,
+): { readonly route: ContractRoute; readonly pathParams: Record<string, string> } | undefined {
+  const served = matchContractRoute(api, method, path);
+
+  if (served !== undefined) return served;
+
+  for (const route of api.routes) {
     const pathParams = matchPath(route.path, path);
 
     if (pathParams !== undefined) return { route, pathParams };

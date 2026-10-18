@@ -1,7 +1,6 @@
 // The handler-map registration the Express and Fastify placements share (ADR 0017 and 0018 "Options and
 // registration"): the registration options, their boot check, the `responses` and `bodyValidation` settings of one
-// operation, and steps 6 to 10 around the bound handler method. Copied into the generated tree as is.
-import type { ServerResponse } from "node:http";
+// operation, and steps 6 to 9 around the bound handler method. Copied into the generated tree as is.
 import type { AccessGrant, CheckState } from "./access-checks.js";
 import type { BootProblem, BoundaryHooks } from "./boundary-hooks.js";
 import { type ContractReply, isPlainObject, unexpectedError } from "./contract-error.js";
@@ -9,7 +8,7 @@ import type { ContractApi, ContractRoute, ResponsesMode } from "./contract-route
 import { handlerReply } from "./handler-reply.js";
 import { beginIdempotency } from "./idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./input-checks.js";
-import { type BoundaryContext, writeContractReply } from "./outgoing-check.js";
+import type { BoundaryContext } from "./outgoing-check.js";
 
 const RESPONSES_MODES: readonly string[] = ["strict", "warn"];
 
@@ -220,14 +219,13 @@ export async function runInputSteps(
   return undefined;
 }
 
-/** Steps 9 and 10: calls the bound method on its object, so a class instance keeps its `this`, and writes the reply. */
-export async function runHandler(
+/** Step 9: calls the bound method on its object, so a class instance keeps its `this`; answers the reply to write. */
+export async function handlerResultReply(
   state: CheckState,
   context: BoundaryContext,
   handlers: unknown,
   binding: HandlerBinding,
-  response: ServerResponse,
-): Promise<void> {
+): Promise<ContractReply> {
   const owner: unknown =
     typeof handlers === "object" && handlers !== null
       ? Reflect.get(handlers, binding.handlers)
@@ -243,9 +241,8 @@ export async function runHandler(
   }
 
   const result: unknown = await Reflect.apply(method, owner, [context.input]);
-  const reply = await handlerReply(state, requireGrant(context), result);
 
-  await writeContractReply(response, context, reply);
+  return handlerReply(state, requireGrant(context), result);
 }
 
 function requireGrant(context: BoundaryContext): AccessGrant {

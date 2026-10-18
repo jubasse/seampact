@@ -237,7 +237,7 @@ function routeEntry(
       };
     }),
     params: {
-      path: operation.params.path.map((param) => paramRule(param, param.name)),
+      path: operation.params.path.map(pathParamRule),
       query: operation.params.query.map((param) => queryRule(param, location, refusals)),
       headers: operation.params.header.map((param) => paramRule(param, param.name.toLowerCase())),
     },
@@ -651,6 +651,36 @@ function valueSource(
 
 function paramRule(param: Param, name: string): SourceValue {
   return { name, decoding: scalarDecoding(param.type) };
+}
+
+// Percent-encoded, a code point takes up to 12 characters (4 UTF-8 bytes) and an ASCII character 3.
+const ENCODED_CODE_POINT_LENGTH = 12;
+const ENCODED_ASCII_LENGTH = 3;
+// A pattern made of ASCII literals and classes only: no `.`, negated class, Unicode or hex escape, or negated
+// shorthand, each of which can match a non-ASCII character.
+const NON_ASCII_PATTERN_PART = /[^\x20-\x7e]|\.|\[\^|\\[DWSpPux]/;
+
+// A path param's rule with the longest percent-encoded form of its `maxLength`, for a router that bounds the
+// encoded length (Fastify's `maxParamLength`).
+function pathParamRule(param: Param): SourceValue {
+  const type = param.type;
+  const refinements =
+    isKnownVariant("TypeUse", type) && type.kind === "scalar" ? type.refinements : undefined;
+  const maxLength = refinements?.maxLength;
+
+  if (maxLength === undefined) return paramRule(param, param.name);
+
+  const pattern = refinements?.pattern?.source;
+  const perCharacter =
+    pattern !== undefined && !NON_ASCII_PATTERN_PART.test(pattern)
+      ? ENCODED_ASCII_LENGTH
+      : ENCODED_CODE_POINT_LENGTH;
+
+  return {
+    name: param.name,
+    decoding: scalarDecoding(type),
+    encodedMaxLength: maxLength * perCharacter,
+  };
 }
 
 function scalarDecoding(type: TypeUse): string {

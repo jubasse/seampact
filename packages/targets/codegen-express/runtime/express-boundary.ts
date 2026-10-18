@@ -22,8 +22,8 @@ import { ContractError, unexpectedError } from "./node-server/contract-error.js"
 import {
   type ContractApi,
   type ContractRoute,
+  matchContractPath,
   matchContractRoute,
-  matchesContractPath,
 } from "./node-server/contract-route.js";
 import {
   frameworkRefusal,
@@ -42,10 +42,10 @@ import {
 } from "./node-server/express-platform.js";
 import {
   type HandlerBindings,
+  handlerResultReply,
   type RegistrationOptions,
   type ResponseSettings,
   registrationProblems,
-  runHandler,
   runInputSteps,
   settingsOf,
 } from "./node-server/handler-map.js";
@@ -141,7 +141,14 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
         throw unexpectedError(route, new Error(`seampact: '${route.id}' has no handler binding`));
       }
 
-      await runHandler(checkState(context, request), context, options.handlers, binding, response);
+      const reply = await handlerResultReply(
+        checkState(context, request),
+        context,
+        options.handlers,
+        binding,
+      );
+
+      await writeContractReply(response, context, reply);
 
       return "stop";
     });
@@ -387,13 +394,7 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
 
     const reported = reportedRequest(request);
 
-    if (!matchesContractPath(api, reported.path)) return false;
-
-    const route =
-      matchContractRoute(api, reported.method, reported.path)?.route ??
-      api.routes.find((candidate) =>
-        matchesContractPath({ ...api, routes: [candidate] }, reported.path),
-      );
+    const route = matchContractPath(api, reported.method, reported.path)?.route;
 
     if (route === undefined) return false;
 

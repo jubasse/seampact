@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { ContractIR } from "@seampact/spec/ir";
@@ -34,6 +34,24 @@ export const REFERENCE_COMPILER_OPTIONS: ts.CompilerOptions = {
   noEmit: true,
   types: ["node"],
 };
+
+const REFERENCE_SCENARIO = new URL("../../test-app/reference-scenario.js", import.meta.url);
+const TEST_APP_DIRECTORY = "app";
+
+/**
+ * Copies a target's test app and the shared scenario it imports into `build/app/`, next to the compiled generated
+ * tree; answers the app module's URL.
+ */
+export function copyTestApp(build: string, appSource: URL): string {
+  const directory = join(build, TEST_APP_DIRECTORY);
+  const app = join(directory, "reference-app.js");
+
+  mkdirSync(directory, { recursive: true });
+  copyFileSync(appSource, app);
+  copyFileSync(REFERENCE_SCENARIO, join(directory, "reference-scenario.js"));
+
+  return pathToFileURL(app).href;
+}
 
 /** A project directory under the `.vitest/` of the package whose `src/` holds the test file. */
 export function projectDirectory(testFileUrl: string, name: string): string {
