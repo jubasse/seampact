@@ -34,7 +34,7 @@ The tree pass parses every property default against its schema like an example.
 
 The tree pass accepts a default on an optional query field and parses it like an example.
 
-The tree pass copies the schemas, enums and named formats a relay route uses from the public api, and refuses one that differs from this api's declaration of the same name.
+The tree pass copies the schemas, enums, named formats and extension keys a relay route uses from the public api, and refuses one that differs from this api's or another relayed api's declaration of the same name.
 
 The tree pass refuses a map in a body rule proof that a form or multipart route carries.
 
