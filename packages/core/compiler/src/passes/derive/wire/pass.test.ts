@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { derivationRowOf } from "../../../derivations/table.js";
 import { type DraftFixtureApi, draftFixture } from "../../../pipeline/draft-fixture.js";
 import { DraftAccessError } from "../../../pipeline/seam.js";
+import { treeNodesRelayedTasks } from "../../tree/nodes/test-support.js";
 import { deriveWirePass } from "./pass.js";
 import {
   deriveWireDerivedHeaders,
@@ -12,6 +13,7 @@ import {
   deriveWireLocated,
   deriveWireMembers,
   deriveWireOperation,
+  deriveWireReferenceVariant,
   deriveWireReferenceWorkspace,
   deriveWireRunContract,
   deriveWireRunReference,
@@ -203,15 +205,37 @@ describe("relay routes derive their own wire", () => {
   });
 });
 
-describe("relay routes before tree.nodes copies their method", () => {
-  test("a relay route without method or access derives no key and no credential, and nothing is refused", () => {
-    const run = deriveWireRunContract(workspace, "tasksService");
-    const relay = deriveWireOperation(run, "getTask");
+describe("relay routes carry the public operation's method", () => {
+  test("a relay route derives its idempotency key and credentials like any route, and nothing is refused", () => {
+    const run = deriveWireRunContract(
+      deriveWireReferenceVariant("tasks-service/api.yaml", [
+        [
+          "      getTask: { relays: tasks.getTask }\n",
+          "      getTask: { relays: tasks.getTask }\n      assignTask: { relays: tasks.assignTask }\n",
+        ],
+      ]),
+      "tasksService",
+      treeNodesRelayedTasks(),
+    );
 
-    expect(relay.safe).toBeUndefined();
     expect(run.diagnostics).toEqual([]);
-    expect(relay.idempotency).toBeUndefined();
-    expect(deriveWireDerivedHeaders(run, "getTask")).toEqual([]);
+    expect(deriveWireOperation(run, "getTask")).toMatchObject({ method: "get", safe: true });
+    expect(deriveWireOperation(run, "getTask").idempotency).toBeUndefined();
+    expect(deriveWireDerivedHeaders(run, "getTask")).toEqual([
+      ["Authorization", true, "identity.authenticate"],
+      ["X-Deadline", true, "identity.header"],
+      ["traceparent", false, "identity.header"],
+    ]);
+    expect(deriveWireOperation(run, "assignTask")).toMatchObject({ method: "post" });
+    expect(deriveWireOperation(run, "assignTask").idempotency).toMatchObject({
+      kind: "derived",
+      header: "Idempotency-Key",
+    });
+    expect(deriveWireDerivedHeaders(run, "assignTask")).toContainEqual([
+      "Idempotency-Key",
+      true,
+      "idempotency.write",
+    ]);
   });
 });
 

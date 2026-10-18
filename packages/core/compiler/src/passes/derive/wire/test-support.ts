@@ -174,8 +174,12 @@ export function deriveWireRunOn(
   return { draft, diagnostics };
 }
 
-/** Runs the tree and access halves, then derive.wire (guarded), on the first api of `workspace`. */
-export function deriveWireRunContract(workspace: RawWorkspace, api?: string): DeriveWireRun {
+/** Runs the tree and access halves, then derive.wire (guarded), on the named or first api of `workspace`; `relayed` holds the drafts its relay routes copy from. */
+export function deriveWireRunContract(
+  workspace: RawWorkspace,
+  api?: string,
+  relayed?: ReadonlyMap<string, DraftIR>,
+): DeriveWireRun {
   const raw = apiOf(workspace, api);
   const draft = createDraftIR();
   const diagnostics: Diagnostic[] = [];
@@ -183,6 +187,7 @@ export function deriveWireRunContract(workspace: RawWorkspace, api?: string): De
     raw,
     workspace,
     report: (diagnostic) => diagnostics.push(diagnostic),
+    ...(relayed === undefined ? {} : { relayed }),
   });
   const treeSchemas = treeSchemasPass.run(draft, context);
   const later = Object.freeze({ ...context, treeSchemas });

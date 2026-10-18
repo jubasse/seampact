@@ -44,6 +44,7 @@ import { treeNodesPaging } from "./paging.js";
 import { treeNodesParams, treeNodesUnknownQuery } from "./params.js";
 import { treeNodesCheckPathParts, treeNodesPath } from "./paths.js";
 import { type TreeNodesContext, treeNodesSetting } from "./raw.js";
+import { type TreeNodesRelayDeclaration, treeNodesRelayShape } from "./relays.js";
 import { treeNodesFormat, treeNodesResponses } from "./responses.js";
 import { treeNodesConcurrency, treeNodesOwner } from "./writes.js";
 
@@ -77,13 +78,17 @@ interface Route {
   readonly text: string;
 }
 
-/** Writes every operation of the api to the draft, in tree order, and reports the id and name clashes. */
+/**
+ * Writes every operation of the api to the draft, in tree order, and reports the id and name clashes. Returns the
+ * wire formats and paging styles the relay routes copy, which join `formats` and `pagings` once those are written.
+ */
 export function treeNodesOperations(
   draft: DraftIR,
   context: TreeNodesContext,
   prefixes: TreeNodesSurfacePrefixes,
-): void {
+): TreeNodesRelayDeclaration[] {
   const written: Written[] = [];
+  const relayDeclarations: TreeNodesRelayDeclaration[] = [];
   const once = treeNodesReportOnce((diagnostic) => context.report(diagnostic));
 
   for (const node of pipelineTreeNodes(context.raw)) {
@@ -104,7 +109,10 @@ export function treeNodesOperations(
     }
 
     const site: TreeNodesSite = { node, operationId: name.id, draft, context, once };
-    const operation = operationOf(site, name, prefixes);
+    const operation =
+      node.kind === "relay"
+        ? relayOperationOf(site, name, prefixes, relayDeclarations)
+        : operationOf(site, name, prefixes);
 
     draft.operations.push(operation);
     const route = memberIdFailed(node, context) ? undefined : routeOf(operation);
@@ -115,6 +123,8 @@ export function treeNodesOperations(
   reportClashes(written, context);
   reportRouteClashes(written, context);
   checkSuccessors(draft, context);
+
+  return relayDeclarations;
 }
 
 // A successor names an operation of this api, known once every operation is written.
@@ -140,8 +150,7 @@ function memberIdFailed(node: TreeNode, context: TreeNodesContext): boolean {
 }
 
 // The method and the path, each placeholder compared by position only: `/tasks/{id}` and `/tasks/{taskId}` are one
-// route to a router, `/tasks/me` beside `/tasks/{id}` is not. Undefined for a relay route until its path
-// is copied.
+// route to a router, `/tasks/me` beside `/tasks/{id}` is not. Undefined for a relay route whose target is refused.
 function routeOf(operation: DraftOperation): Route | undefined {
   if (operation.method === undefined || operation.path === undefined) return undefined;
   const method = operation.method.toUpperCase();
@@ -208,7 +217,7 @@ function operationOf(
 
   const path = treeNodesPath(node, prefixes, context);
 
-  if (path !== undefined) treeNodesCheckPathParts(site, path);
+  treeNodesCheckPathParts(site, path);
   const params = treeNodesParams(site, path, safe, input?.schema);
 
   return {
@@ -218,14 +227,44 @@ function operationOf(
     surface: surfaceOf(node),
     ...(op === undefined ? {} : { op }),
     ...(resource === undefined ? {} : { resource }),
-    ...(method === undefined ? {} : { method, safe }),
-    ...(path === undefined ? {} : { path: path.full }),
+    method,
+    safe,
+    path: path.full,
     params,
     unknownQuery: treeNodesUnknownQuery(site),
     ...(input === undefined ? {} : { input }),
-    // A relay route's shape (format, responses, write semantics, paging) is copied from the operation it relays.
-    ...(node.kind === "relay" ? { responses: [] } : shapeOf(site, input?.schema, params)),
+    ...shapeOf(site, input?.schema, params),
     ...lifecycleOf(site),
+    origin: pipelineCopy(node.origin),
+  };
+}
+
+// A relay route's method, path, params, input and shape are copied from the operation it relays; a refused target
+// leaves it with empty params and responses (reported).
+function relayOperationOf(
+  site: TreeNodesSite,
+  name: TreeNodesOperationName,
+  prefixes: TreeNodesSurfacePrefixes,
+  relayDeclarations: TreeNodesRelayDeclaration[],
+): DraftOperation {
+  const { node } = site;
+  const surface = surfaceOf(node);
+  const prefix = prefixes.get(surface);
+
+  if (prefix === undefined) throw new Error(`the surface ${surface} has no prefix`);
+  const copied = treeNodesRelayShape(site, prefix, relayDeclarations);
+
+  return {
+    kind: OPERATION_KIND,
+    id: name.id,
+    name: pipelineCopy(name.name),
+    surface,
+    params: { path: [], query: [], header: [] },
+    responses: [],
+    ...copied,
+    unknownQuery: treeNodesUnknownQuery(site),
+    ...lifecycleOf(site),
+    examples: {},
     origin: pipelineCopy(node.origin),
   };
 }
@@ -267,7 +306,6 @@ function lifecycleOf(site: TreeNodesSite): DraftOperation {
     ...(maturity === undefined ? {} : { maturity }),
     internal: treeNodesInternal(site),
     tags: treeNodesTags(site),
-    ...(site.node.kind === "relay" ? { examples: {} } : {}),
     docs: treeNodesDocs(site.node.settings),
     extensions: treeNodesExtensions(site.node),
   };
@@ -306,14 +344,12 @@ function surfaceOf(node: TreeNode): string {
   return at.name;
 }
 
-// The method a route writes, an op's own or `conventions.ops.<op>.method`; a relay route's is copied.
+// The method a route writes, an op's own or `conventions.ops.<op>.method`.
 function methodOf(
   node: TreeNode,
   op: IrWriter.OpShorthand | undefined,
   { context }: TreeNodesSite,
-): IrWriter.HttpMethod | undefined {
-  if (node.kind === "relay") return undefined;
-
+): IrWriter.HttpMethod {
   const own = Object.hasOwn(node.settings, "method") ? node.settings.method : undefined;
   const method =
     own ?? (op === undefined ? undefined : context.conventions.get(`ops.${op}.method`)?.value);

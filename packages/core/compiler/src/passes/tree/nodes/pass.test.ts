@@ -6,17 +6,19 @@ import {
   draftFixtureHalves,
   draftFixtureSchemaService,
 } from "../../../pipeline/draft-fixture.js";
-import { createDraftIR, type DraftIR, type TreeSchemaService } from "../../../pipeline/seam.js";
+import { createDraftIR, type DraftIR } from "../../../pipeline/seam.js";
 import type { JsonObject, JsonValue } from "../../../raw-tree.js";
+import { treeSchemasRunReference } from "../schemas/test-support.js";
 import {
   REFERENCE_CONTRACT,
   treeNodesApiOf,
   treeNodesLoadDirectory,
+  treeNodesRelayedTasks,
   treeNodesRun,
+  treeNodesWithBatchInput,
 } from "./test-support.js";
 
-// The members tree.nodes writes so far; the comparison grows with each member it writes, and the whole after-tree
-// comparison lands with the relay routes.
+// Every operation member tree.nodes writes.
 const MEMBERS = [
   "kind",
   "id",
@@ -42,30 +44,12 @@ const MEMBERS = [
   "internal",
   "tags",
   "examples",
+  "relays",
   "format",
   "docs",
   "extensions",
   "origin",
 ] as const;
-
-// Members written later: a relay route's copied shape.
-const LATER: Readonly<Record<string, readonly string[]>> = {
-  "tasksService:getTask": ["method", "safe", "path", "params", "responses", "format"],
-};
-
-// The fixture service has no row for the batch ids input, the schema tree.schemas hoists at the batch op entry.
-const BATCH_OP = "/surfaces/app/routes/channels/member/routes/tasks/ops/batch";
-const BATCH_INPUT: IrWriter.TypeUse = { kind: "ref", schema: "GetTasksBatchInput" };
-
-function withBatchInput(service: TreeSchemaService): TreeSchemaService {
-  return {
-    ...service,
-    typeUse: (pointer, direction) =>
-      pointer === BATCH_OP && direction === "input"
-        ? structuredClone(BATCH_INPUT)
-        : service.typeUse(pointer, direction),
-  };
-}
 
 // The api-wide members tree.nodes writes.
 const API_MEMBERS = [
@@ -77,11 +61,6 @@ const API_MEMBERS = [
   "pagings",
   "services",
 ] as const;
-
-// Api-wide members written later: the format a relay route copies.
-const LATER_API: Readonly<Record<string, readonly string[]>> = {
-  tasksService: ["formats"],
-};
 
 const isObject = (value: JsonValue | undefined): value is JsonObject =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -125,19 +104,18 @@ function expectedOperations(api: DraftFixtureApi): JsonObject[] {
   if (!Array.isArray(operations))
     throw new Error(`the ${api} fixture has no tree.nodes operations`);
 
-  return operations.filter(isObject).map((operation) => pick(api, operation));
+  return operations.filter(isObject).map(pick);
 }
 
 // The compared members of an operation, from the fixture or the draft.
-function pick(api: string, operation: object): JsonObject {
+function pick(operation: object): JsonObject {
   const members = new Map<string, unknown>(Object.entries(operation));
-  const later = LATER[`${api}:${String(members.get("id"))}`] ?? [];
   const picked: JsonObject = {};
 
   for (const member of MEMBERS) {
     const value: unknown = members.get(member);
 
-    if (value === undefined || later.includes(member)) continue;
+    if (value === undefined) continue;
 
     if (!isJsonValue(value))
       throw new Error(`the member ${member} of an operation is no JSON value`);
@@ -162,19 +140,59 @@ test.each<DraftFixtureApi>(["tasks", "tasksService"])(
   "tree.nodes matches the after-tree fixture (%s)",
   (api) => {
     const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace, api), workspace, {
-      treeSchemas: withBatchInput(draftFixtureSchemaService(api)),
+      treeSchemas: treeNodesWithBatchInput(draftFixtureSchemaService(api)),
       draft: schemasOf(api),
+      relayed: treeNodesRelayedTasks(),
     });
 
     expect(diagnostics).toEqual([]);
-    const compared = API_MEMBERS.filter((member) => !LATER_API[api]?.includes(member));
     const expected = expectedApiMembers(api);
 
-    expect(Object.fromEntries(compared.map((member) => [member, draft[member] ?? null]))).toEqual(
-      Object.fromEntries(compared.map((member) => [member, expected[member]])),
+    expect(
+      Object.fromEntries(API_MEMBERS.map((member) => [member, draft[member] ?? null])),
+    ).toEqual(Object.fromEntries(API_MEMBERS.map((member) => [member, expected[member]])));
+    expect(draft.operations.map(pick)).toEqual(expectedOperations(api));
+  },
+);
+
+// The core issue schema stays seeded when a layer replaced the schema_invalid params; finalize drops it.
+const SEEDED_UNLESS_USED = "ApiSchemaInvalidIssue";
+
+function comparedDeclarations(
+  catalogue: Readonly<Record<string, IrWriter.Schema | IrWriter.Enum>>,
+  expected: Readonly<Record<string, unknown>>,
+): { readonly id: string }[] {
+  return Object.values(catalogue)
+    .filter(({ id }) => id !== SEEDED_UNLESS_USED || Object.hasOwn(expected, id))
+    .sort((left, right) => left.id.localeCompare(right.id));
+}
+
+test.each<DraftFixtureApi>(["tasks", "tasksService"])(
+  "tree halves on the reference contract (%s)",
+  (api) => {
+    const schemasRun = treeSchemasRunReference(api);
+
+    expect(schemasRun.diagnostics).toEqual([]);
+    const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace, api), workspace, {
+      treeSchemas: schemasRun.service,
+      draft: schemasRun.draft,
+      relayed: treeNodesRelayedTasks(),
+    });
+
+    expect(diagnostics).toEqual([]);
+    const fixture = draftFixture(api, "after-tree");
+    const expected = expectedApiMembers(api);
+
+    expect(comparedDeclarations(draft.schemas, fixture.schemas)).toEqual(
+      comparedDeclarations(fixture.schemas, fixture.schemas),
     );
-    expect(draft.operations.map((operation) => pick(api, operation))).toEqual(
-      expectedOperations(api),
+    expect(comparedDeclarations(draft.enums, fixture.enums)).toEqual(
+      comparedDeclarations(fixture.enums, fixture.enums),
     );
+    expect(draft.scalars).toEqual(fixture.scalars);
+    expect(
+      Object.fromEntries(API_MEMBERS.map((member) => [member, draft[member] ?? null])),
+    ).toEqual(Object.fromEntries(API_MEMBERS.map((member) => [member, expected[member]])));
+    expect(draft.operations.map(pick)).toEqual(expectedOperations(api));
   },
 );

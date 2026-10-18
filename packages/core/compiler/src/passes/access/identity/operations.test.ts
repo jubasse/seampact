@@ -1013,7 +1013,7 @@ describe("refusals reached from a route", () => {
 });
 
 describe("relay routes", () => {
-  test("a relay route gets no direction-dependent member, and still its input facts", () => {
+  test("a relay route gets the access of its surface, and its input facts", () => {
     const compiled = compile(
       `  internal:
     routes:
@@ -1034,14 +1034,14 @@ describe("relay routes", () => {
     expect(compiled.rules).toEqual([]);
     const relay = compiled.operation("getTask");
 
-    expect(relay).not.toHaveProperty("access");
-    expect(relay).not.toHaveProperty("callerKinds");
+    expect(relay.access).toMatchObject({ kind: "identity", identity: "viewer" });
+    expect(relay.callerKinds).toEqual(["identified"]);
     expect(relay).not.toHaveProperty("csrf");
     expect(relay.principalRequires).toEqual([]);
     expect(relay.input).toMatchObject({ rawBody: false });
   });
 
-  test("a public relay route gets no access member, and no callerKinds or csrf", () => {
+  test("a public relay route gets the public access of its surface, and no csrf", () => {
     const compiled = compile(`  app:
     access: { public: "Probes call it before any user exists." }
     routes:
@@ -1051,12 +1051,12 @@ describe("relay routes", () => {
     expect(compiled.rules).toEqual([]);
     const relay = compiled.operation("getTask");
 
-    expect(relay).not.toHaveProperty("access");
-    expect(relay).not.toHaveProperty("callerKinds");
+    expect(relay.access).toMatchObject({ kind: "public" });
+    expect(relay.callerKinds).toEqual(["anonymous"]);
     expect(relay).not.toHaveProperty("csrf");
   });
 
-  test("an optional relay route gets no access member, and no callerKinds or csrf", () => {
+  test("an optional relay route gets the optional access of its surface, and no csrf", () => {
     const compiled = compile(`  app:
     identity: viewer
     access: { optionalAuth: "Anonymous readers see public posts." }
@@ -1067,8 +1067,8 @@ describe("relay routes", () => {
     expect(compiled.rules).toEqual([]);
     const relay = compiled.operation("getTask");
 
-    expect(relay).not.toHaveProperty("access");
-    expect(relay).not.toHaveProperty("callerKinds");
+    expect(relay.access).toMatchObject({ kind: "optional", identity: "viewer" });
+    expect(relay.callerKinds).toEqual(["anonymous", "identified"]);
     expect(relay).not.toHaveProperty("csrf");
   });
 

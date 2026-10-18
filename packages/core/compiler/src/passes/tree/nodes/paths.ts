@@ -101,14 +101,12 @@ function partOf(site: PathSite, node: TreeNode): TreeNodesPathPart {
   return { text: segmentOfName(node.name, site.pathCase), origin: node.origin, written: false };
 }
 
-/** The path of an operation node; undefined for a relay route, whose path is copied. */
+/** The path of a route or an `ops` entry; a relay route's path is copied from the operation it relays. */
 export function treeNodesPath(
   node: TreeNode,
   prefixes: TreeNodesSurfacePrefixes,
   context: TreeNodesContext,
-): TreeNodesPath | undefined {
-  if (node.kind === "relay") return undefined;
-
+): TreeNodesPath {
   const site: PathSite = { context, pathCase: pathCaseOf(context.conventions) };
   const parts: TreeNodesPathPart[] = [];
   let surface = node;

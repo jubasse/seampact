@@ -13,7 +13,11 @@ import {
 } from "../../../pipeline/seam.js";
 import type { RawApi, RawWorkspace } from "../../../raw-tree.js";
 import { validateWorkspace } from "../../../validate/index.js";
-import { treeNodesRun, treeNodesStubService } from "../../tree/nodes/test-support.js";
+import {
+  treeNodesRelayedTasks,
+  treeNodesRun,
+  treeNodesStubService,
+} from "../../tree/nodes/test-support.js";
 import { accessIdentityPass } from "./pass.js";
 
 // Test support of the access.identity half, outside every barrel: the half run guarded (ADR 0006 section 2) on a
@@ -179,7 +183,11 @@ export function accessIdentityRoutesRun(
   treeSchemas: TreeSchemaService,
   prepare: (draft: DraftIR) => void = () => {},
 ): AccessIdentityRun {
-  const tree = treeNodesRun(contract.raw, contract.workspace, { treeSchemas, draft });
+  const tree = treeNodesRun(contract.raw, contract.workspace, {
+    treeSchemas,
+    draft,
+    relayed: treeNodesRelayedTasks(),
+  });
 
   if (tree.diagnostics.length > 0)
     throw new Error(`tree.nodes refused the test contract: ${JSON.stringify(tree.diagnostics)}`);
