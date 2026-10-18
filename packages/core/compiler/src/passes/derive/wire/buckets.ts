@@ -15,11 +15,12 @@ export function deriveWireBucketLimits(scope: DeriveWireScope): void {
     if (unset.length === 0) continue;
 
     const members = unset.join(" and ");
+    const pronoun = unset.length === 1 ? "it" : "them";
 
     scope.reporter.warning({
       rule: "bucket-limits",
-      message: `The bucket ${quote(bucket.id)} sets no ${members}, so the server binds ${unset.length === 1 ? "it" : "them"}.`,
-      fix: `Set ${members} on the bucket ${quote(bucket.id)}, or bind ${unset.length === 1 ? "it" : "them"} in the server.`,
+      message: `The bucket ${quote(bucket.id)} sets no ${members}, so the server binds ${pronoun}.`,
+      fix: `Set ${members} on the bucket ${quote(bucket.id)}, or bind ${pronoun} in the server.`,
       pointer: bucket.origin.pointer,
     });
   }

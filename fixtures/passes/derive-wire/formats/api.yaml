@@ -20,6 +20,10 @@ schemas:
     typeName: TodoItem
     properties: { id: { type: string }, title: { type: string } }
     required: [id, title]
+  Comment:
+    type: object
+    properties: { id: { type: string }, text: { type: string } }
+    required: [id, text]
 
 surfaces:
   app:
@@ -32,3 +36,12 @@ surfaces:
         resourceType: todo-items
         item: Task
         ops: { list: { paging: none }, get: {} }
+        member:
+          routes:
+            comments:
+              kind: collection
+              id: { commentId: { type: string } }
+              idProperty: id
+              resourceType: comments
+              item: Comment
+              ops: { list: { paging: none }, get: {} }

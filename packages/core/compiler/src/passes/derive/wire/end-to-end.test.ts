@@ -6,6 +6,7 @@ import { finalizeIr } from "../../../finalize/finalize.js";
 import { type LoadReader, loadFsReader } from "../../../load/index.js";
 import { loadMemoryReader } from "../../../load/reader.js";
 import { compileWorkspace, type PipelineApiResult } from "../../../pipeline/orchestrator.js";
+import type { DraftIR } from "../../../pipeline/seam.js";
 import {
   DERIVE_WIRE_FIXTURES,
   deriveWireFixtureJson,
@@ -19,6 +20,19 @@ const REFERENCE = fileURLToPath(
   new URL("../../../../../../../fixtures/reference/", import.meta.url),
 );
 
+// The stand-ins are derive.errors' until it writes its members; they must add none of derive.wire's.
+function standInsAddNoWireMember(draft: DraftIR, apiName: string): DraftIR {
+  const written = structuredClone(deriveWireMembers(draft));
+  const wire = structuredClone(draft.api?.wire);
+  const completed = finalizeAddStandIns(draft, apiName);
+
+  expect(deriveWireMembers(completed)).toEqual(written);
+  expect(completed.api?.wire).toEqual(wire);
+  expect(wire).toBeDefined();
+
+  return completed;
+}
+
 function compiled(reader: LoadReader, entry: string): readonly PipelineApiResult[] {
   const result = compileWorkspace({
     reader,
@@ -26,7 +40,7 @@ function compiled(reader: LoadReader, entry: string): readonly PipelineApiResult
     guard: true,
     parts: {
       finalize: (draft, context) =>
-        finalizeIr(finalizeAddStandIns(draft, context.raw.name), context),
+        finalizeIr(standInsAddNoWireMember(draft, context.raw.name), context),
     },
   });
 
@@ -106,6 +120,27 @@ describe("typed convention members", () => {
   });
 });
 
+describe("bucket limits", () => {
+  test("a bucket without limit and window is warned about and the IR is still emitted", () => {
+    const result = compileWorkspace({
+      reader: loadMemoryReader({
+        "api.yaml": TASKS("buckets: { burst: { key: [address] } }").trimStart(),
+      }),
+      entry: "api.yaml",
+      guard: true,
+      parts: {
+        finalize: (draft, context) =>
+          finalizeIr(standInsAddNoWireMember(draft, context.raw.name), context),
+      },
+    });
+
+    expect(result.apis[0]?.diagnostics.map(deriveWireLocated)).toEqual([
+      { rule: "seampact/derive/bucket-limits", pointer: "/buckets/burst", related: [] },
+    ]);
+    expect(result.apis[0]?.ir?.operations).toHaveLength(1);
+  });
+});
+
 describe("formats", () => {
   test("bare by default: a contract with no format serves bare payloads and problem+json errors", () => {
     const ir = irOf(compiledInline(TASKS("")));
@@ -157,7 +192,9 @@ formats:
     const ir = irOf(compiledFixture("formats"));
 
     expect(ir.operations.map(({ id, resource }) => [id, resource])).toEqual([
+      ["getComment", { type: "comments", idParam: "commentId", idProperty: "id" }],
       ["getTask", { type: "todo-items", idParam: "taskId", idProperty: "id" }],
+      ["listComments", { type: "comments", idProperty: "id" }],
       ["listTasks", { type: "todo-items", idProperty: "id" }],
     ]);
     expect(ir.schemas.Task).toMatchObject({ kind: "object", typeName: "TodoItem" });
