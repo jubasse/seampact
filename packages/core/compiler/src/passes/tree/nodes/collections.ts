@@ -3,6 +3,7 @@ import { type TreeNodesReportOnce, treeNodesError, treeNodesNodeOrigin } from ".
 import { treeNodesIdParam } from "./names.js";
 import {
   type TreeNodesContext,
+  treeNodesAnsweredUse,
   treeNodesObjectOf,
   treeNodesPointer,
   treeNodesSetting,
@@ -37,9 +38,9 @@ export function treeNodesCheckIdProperties(draft: DraftIR, context: TreeNodesCon
     const written = treeNodesText(collection, "idProperty");
     const idProperty = written ?? treeNodesIdParam(collection, context.raw.merged.schemas);
 
-    if (idProperty === undefined) continue;
+    if (idProperty === undefined || !Object.hasOwn(collection.settings, "item")) continue;
 
-    const itemUse = context.treeSchemas.typeUse(`${collection.pointer}/item`, "output");
+    const itemUse = treeNodesAnsweredUse(context, `${collection.pointer}/item`, "output");
     const item = treeNodesObjectOf(draft, itemUse);
 
     if (item === undefined || item.properties.some(({ name }) => name === idProperty)) continue;

@@ -10,6 +10,7 @@ import {
   treeNodesObjectSchema,
   treeNodesRun,
   treeNodesStubService,
+  treeNodesUnansweredAt,
 } from "./test-support.js";
 
 // Every declared wire format and paging style (ADR 0002 sections 13 and 14, ADR 0004 section 8), their
@@ -29,11 +30,15 @@ const member = (name: string, value: IrWriter.Template): IrWriter.ObjectTemplate
 });
 const NOTE = treeNodesObjectSchema("Note", "/schemas/Note", { noteId: text, text });
 
-function run(apiYaml: string, uses: Record<string, IrWriter.TypeUse>) {
+function run(
+  apiYaml: string,
+  uses: Record<string, IrWriter.TypeUse>,
+  ...unanswered: readonly string[]
+) {
   const workspace = treeNodesLoadInline(apiYaml);
 
   return treeNodesRun(treeNodesApiOf(workspace), workspace, {
-    treeSchemas: treeNodesStubService({ typeUses: uses }),
+    treeSchemas: treeNodesUnansweredAt(treeNodesStubService({ typeUses: uses }), ...unanswered),
     draft: treeNodesDraftWith(structuredClone(NOTE)),
   });
 }
@@ -457,10 +462,9 @@ surfaces:
       health: { method: get, output: Note, format: house }
 `,
       { [`${ROUTES}/health/output`]: ref("Note") },
+      "/formats/house/meta/region/schema",
     ),
-  ).toThrow(
-    "tree.schemas answers no type for the meta schema at /formats/house/meta/region/schema",
-  );
+  ).toThrow("the schema service answers no output type at /formats/house/meta/region/schema");
 });
 
 const located = (diagnostics: readonly { rule: string; origin: { pointer: string } }[]) =>

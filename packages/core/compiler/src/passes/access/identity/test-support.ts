@@ -78,17 +78,24 @@ export function accessIdentityFixtureJson(name: string, file: string): unknown {
   return JSON.parse(readFileSync(`${ACCESS_IDENTITY_FIXTURES}${name}/${file}`, "utf8"));
 }
 
+const TREE_POSITIONS = "/surfaces/";
+
 /** A schema service answering the rows' positions and the query wires by field pointer (a copy each time). */
 export function accessIdentityTableService(
   rows: readonly AccessIdentitySchemaUseRow[],
   queryWires: Readonly<Record<string, IrWriter.QueryWire>> = {},
 ): TreeSchemaService {
+  const stub = treeNodesStubService({ queryWires });
+
   return {
-    ...treeNodesStubService({ queryWires }),
+    ...stub,
     typeUse: (pointer, direction) => {
       const found = rows.find((row) => row.pointer === pointer && row.direction === direction);
 
-      return found === undefined ? undefined : structuredClone(found.use);
+      if (found !== undefined) return structuredClone(found.use);
+
+      // tree.nodes asks its route positions of the stub; an access.identity position answers its row only.
+      return pointer.startsWith(TREE_POSITIONS) ? stub.typeUse(pointer, direction) : undefined;
     },
   };
 }

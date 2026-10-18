@@ -21,7 +21,7 @@ assign:
 | `operationId` | replaces the derived id |
 | `query` | a fields map, or a schema name; an object-typed field and a list are encoded as `conventions.query` says, and an undeclared key is refused (FR-30) unless `unknownQuery` says otherwise (below). Written on a node, it reaches the safe routes below it only (section 8) |
 | `headers` | request headers: a fields map keyed by header name |
-| `input` | the body schema, in the media `inputMedia` names |
+| `input` | the body schema, in the media `inputMedia` names. A `get` takes no `input`, since a get request carries no body: its fields go in `query` |
 | `inputMedia` | `json` (the default, `application/json`), `form` (`application/x-www-form-urlencoded`) or `multipart` (`multipart/form-data`); see "Bodies beyond JSON" below |
 | `output` | the body of the single success response, always the whole payload: its status is the op's default, or `200` |
 | `item` | instead of `output`, on a route that is a list: the schema of one record (section 10) |

@@ -13,10 +13,12 @@ import {
   treeNodesLoadInline,
   treeNodesObjectSchema,
   treeNodesRun,
+  treeNodesStrictStubService,
   treeNodesStubService,
 } from "./test-support.js";
 
 const text: IrWriter.TypeUse = { kind: "scalar", type: "string", refinements: {} };
+const integer: IrWriter.TypeUse = { kind: "scalar", type: "integer", refinements: {} };
 const flag: IrWriter.TypeUse = { kind: "scalar", type: "boolean", refinements: {} };
 const opaque: IrWriter.TypeUse = {
   kind: "opaque",
@@ -573,7 +575,6 @@ test("tree.nodes diagnostics are located: routes", () => {
     ["path-segment", `${ROUTES}/rooted/path`],
     ["responses-output", `${ROUTES}/both/output`],
     ["no-content-body", `${ROUTES}/emptied/responses/204`],
-    ["annotation-position", `${ROUTES}/told/responses/202/description`],
     ["fields-schema", `${ROUTES}/listed/query`],
     ["path-param", `${ROUTES}/misplaced/path`],
     ["param-unique", `${ROUTES}/twice/headers/x-a`],
@@ -873,7 +874,7 @@ surfaces:
   ]);
 });
 
-test("declared responses: refused beside output, a 204 body, a description, a header twice; an unanswered body left out", () => {
+test("declared responses: refused beside output, a 204 body, a header twice; a description kept as docs", () => {
   const workspace = treeNodesLoadInline(`
 api: { name: a, version: 1, kind: product }
 schemas:
@@ -888,7 +889,6 @@ surfaces:
       twice:
         method: get
         responses: { 202: { headers: { Retry-After: { type: string }, retry-after: { type: string } } } }
-      pending: { method: get, responses: { 200: { body: Note }, 202: {} } }
 `);
   const twice = `${ROUTES}/twice/responses/202/headers`;
   const treeSchemas = treeNodesStubService({
@@ -907,9 +907,9 @@ surfaces:
   expect(
     operation(draft.operations, "twice").responses?.[0]?.headers.map(({ name }) => name),
   ).toEqual(["Retry-After"]);
-  expect(operation(draft.operations, "pending").responses?.map(({ status }) => status)).toEqual([
-    202,
-  ]);
+  expect(operation(draft.operations, "told").responses?.[0]?.docs).toEqual({
+    description: "Accepted for later.",
+  });
   expect(
     diagnostics.map(({ rule, origin, message, related }) => ({ rule, origin, message, related })),
   ).toEqual([
@@ -923,12 +923,6 @@ surfaces:
       rule: "seampact/tree/no-content-body",
       origin: at(`${ROUTES}/empty/responses/204`),
       message: "The 204 response of empty has a body, which a 204 No Content never carries.",
-      related: [],
-    },
-    {
-      rule: "seampact/tree/annotation-position",
-      origin: at(`${ROUTES}/told/responses/202/description`),
-      message: "The description of the 202 response of told is not kept by the contract model.",
       related: [],
     },
     {
@@ -982,6 +976,9 @@ surfaces:
     const workspace = treeNodesLoadInline(contract(conventions));
     const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
       treeSchemas,
+      draft: treeNodesDraftWith(
+        treeNodesObjectSchema("NewTask", "/schemas/NewTask", { title: text }),
+      ),
     });
 
     return {
@@ -1046,4 +1043,73 @@ surfaces:
   expect(
     diagnostics.map(({ rule, origin }) => [rule.replace("seampact/tree/", ""), origin.pointer]),
   ).toEqual([["fields-schema", `${TASKS}/id`]]);
+});
+
+test("get without a body: an input on a get is refused where it is written", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      search: { method: get, input: { type: object, properties: { q: { type: string } } } }
+      find: { method: post, input: { type: object, properties: { q: { type: string } } } }
+`);
+  const { diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas: treeNodesStubService({}),
+  });
+
+  expect(diagnostics.map(({ rule, origin, message }) => [rule, origin.pointer, message])).toEqual([
+    [
+      "seampact/tree/get-input",
+      `${ROUTES}/search/input`,
+      "The get route search declares an input, but a get request carries no body.",
+    ],
+  ]);
+});
+
+test("query defaults: an optional query field keeps its written default, inline or from its schema property", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+schemas:
+  Filter: { type: object, properties: { state: { type: string, default: open } }, required: [] }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      inline: { method: get, query: { "size?": { type: integer, default: 20 }, "q?": { type: string }, page: { type: integer, default: 1 } } }
+      named: { method: get, query: Filter }
+`);
+  const filter = treeNodesObjectSchema("Filter", "/schemas/Filter", { state: text });
+  const draft = treeNodesDraftWith({
+    ...filter,
+    properties: filter.properties.map((state) => ({ ...state, optional: true, default: "open" })),
+  });
+  const inline = (field: string) => `${ROUTES}/inline/query/${field}`;
+  const treeSchemas = treeNodesStrictStubService({
+    typeUses: {
+      [`${ROUTES}/named/query`]: ref("Filter"),
+      [inline("size?")]: integer,
+      [inline("q?")]: text,
+      [inline("page")]: integer,
+    },
+    queryWires: {
+      "/schemas/Filter/properties/state": wire("text"),
+      [inline("size?")]: wire("number"),
+      [inline("q?")]: wire("text"),
+      [inline("page")]: wire("number"),
+    },
+  });
+  const run = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas, draft });
+  const defaults = (id: string) =>
+    operation(run.draft.operations, id).params?.query.map((param) => [param.name, param.default]);
+
+  expect(run.diagnostics).toEqual([]);
+  // A required field writes no default: a client always sends it.
+  expect(defaults("inline")).toEqual([
+    ["size", 20],
+    ["q", undefined],
+    ["page", undefined],
+  ]);
+  expect(defaults("named")).toEqual([["state", "open"]]);
 });

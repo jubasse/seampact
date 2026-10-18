@@ -85,6 +85,7 @@ test("bodies beyond JSON: form and multipart fields with their wires", () => {
       pages: { kind: "array", items: file() },
       caption: text,
     }),
+    treeNodesObjectSchema("SlackPayload", "/schemas/SlackPayload", { text }),
   );
 
   const { diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
@@ -284,9 +285,9 @@ test.each<{ use: IrWriter.TypeUse; answer?: IrWriter.QueryWire; expected: IrWrit
 });
 
 test("field wire shared: a field the service has no wire for throws", () => {
-  expect(() => treeNodesFieldWire(FIELD, text, treeNodesStubService({}))).toThrow(
-    /no query wire for the field at \/schemas\/Form\/properties\/field/,
-  );
+  expect(() =>
+    treeNodesFieldWire(FIELD, text, treeNodesStubService({ typeUses: { [FIELD]: text } })),
+  ).toThrow(/no query wire for the field at \/schemas\/Form\/properties\/field/);
 });
 
 // A body-versioned update (ADR 0002 section 11): tree.schemas adds `expectedVersion` to the input, with the
@@ -472,4 +473,22 @@ test("tree.nodes diagnostics are located: bodies and operation names", () => {
       for (const origin of [diagnostic.origin, ...diagnostic.related.map((r) => r.origin)])
         expect(Object.hasOwn(raw.locations, diagnosticLocationKey(origin))).toBe(true);
     }
+});
+
+test("nested files: an input referring to a schema the draft does not hold is an internal fault", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      upload: { method: post, input: { title: { type: string } } }
+`);
+  const treeSchemas = treeNodesStubService({
+    typeUses: { [`${route("upload")}/input`]: { kind: "ref", schema: "Missing" } },
+  });
+
+  expect(() => treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas })).toThrow(
+    "the draft holds no schema Missing, which a use refers to",
+  );
 });

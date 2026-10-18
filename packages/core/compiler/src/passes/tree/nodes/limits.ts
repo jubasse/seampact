@@ -1,6 +1,7 @@
 import type { Origin } from "@seampact/spec/ir";
 import {
   type ConventionPath,
+  type PassContext,
   pipelineParseSize,
   pipelineTreeNodes,
   type TreeNode,
@@ -24,14 +25,17 @@ export interface TreeNodesBodyLimit {
   readonly origin: Origin | undefined;
 }
 
+/** What the body limit resolver reads of a pass context: the inherited settings and the conventions. */
+export type TreeNodesBodyLimitContext = Pick<PassContext, "inherited" | "conventions">;
+
 /**
  * The body limit of an operation node: the nearest `bodyLimit` of the tree, else the convention (`batch.bodyLimit`
  * for a batch). Undefined when a written limit does not parse: `treeNodesCheckBodyLimits` reports it, so no check
- * compares with it. A core default always parses.
+ * compares with it. A core default always parses. Shared with the halves that bound a body (derive.wire).
  */
 export function treeNodesBodyLimit(
   node: TreeNode,
-  context: TreeNodesContext,
+  context: TreeNodesBodyLimitContext,
 ): TreeNodesBodyLimit | undefined {
   const inherited = context.inherited(node, "bodyLimit");
 

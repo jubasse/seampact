@@ -5,6 +5,7 @@ import { describe, expect, test } from "vitest";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
 import { loadFsReader } from "../load/index.js";
 import { loadMemoryReader } from "../load/reader.js";
+import { treeNodesWithBatchInput } from "../passes/tree/nodes/test-support.js";
 import type { DraftIR } from "./draft.js";
 import {
   draftFixtureApply,
@@ -344,8 +345,8 @@ describe("stop rule", () => {
 });
 
 // tree.schemas as its fixture writes it for the reference contract: the after-tree schemas and enums, and the
-// schema service answering the reference contract's route positions, principals and headers. The halves after it
-// that are no longer stubs read both.
+// schema service answering the reference contract's route positions (its batch ids input too), principals and
+// headers. The halves after it that are no longer stubs read both.
 const referenceTreeSchemas: PassParts["tree.schemas"] = {
   pass: "tree",
   half: "tree.schemas",
@@ -360,7 +361,7 @@ const referenceTreeSchemas: PassParts["tree.schemas"] = {
     for (const { half, members } of draftFixtureHalves(api, "after-tree"))
       if (half === "tree.schemas") draftFixtureApply(draft, members);
 
-    return draftFixtureSchemaService(api);
+    return treeNodesWithBatchInput(draftFixtureSchemaService(api));
   },
 };
 

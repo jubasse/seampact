@@ -5,8 +5,10 @@ import {
   TREE_NODES_CURSOR_PAGING,
   TREE_NODES_FIXTURES,
   treeNodesApiOf,
+  treeNodesDraftWith,
   treeNodesLoadDirectory,
   treeNodesLoadInline,
+  treeNodesObjectSchema,
   treeNodesRun,
   treeNodesStubService,
 } from "./test-support.js";
@@ -208,6 +210,10 @@ const treeSchemas = treeNodesStubService({
   },
 });
 
+// The schema the update input refers to, which the input checks walk; a new draft each run.
+const updateMemberDraft = () =>
+  treeNodesDraftWith(treeNodesObjectSchema("UpdateMember", "/schemas/UpdateMember", {}));
+
 const rowsOf = (operations: readonly DraftOperation[]): Row[] =>
   operations.map(({ id, name, method, path, safe, op, responses }) => {
     const status = responses?.[0]?.status;
@@ -239,6 +245,7 @@ test.each([
   const workspace = treeNodesLoadInline(contract(conventions));
   const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
     treeSchemas,
+    draft: updateMemberDraft(),
   });
 
   expect(diagnostics).toEqual([]);
@@ -249,6 +256,7 @@ test("ops expand to routes (fixture ops-and-ids)", () => {
   const workspace = treeNodesLoadDirectory(`${TREE_NODES_FIXTURES}ops-and-ids/`);
   const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
     treeSchemas,
+    draft: updateMemberDraft(),
   });
 
   expect(diagnostics).toEqual([]);
@@ -371,6 +379,7 @@ test("a collection whose operation names need a singular gives singular or id, i
   const workspace = treeNodesLoadInline(SINGULARS);
   const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
     treeSchemas,
+    draft: updateMemberDraft(),
   });
 
   expect(draft.operations.map(({ id, resource }) => ({ id, resource }))).toEqual([

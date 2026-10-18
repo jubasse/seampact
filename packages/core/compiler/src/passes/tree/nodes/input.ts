@@ -11,6 +11,8 @@ import { treeNodesFieldWireOf, treeNodesIsFileField } from "./field-wire.js";
 import { treeNodesBodyLimit } from "./limits.js";
 import {
   type TreeNodesContext,
+  treeNodesAnsweredUse,
+  treeNodesDraftSchema,
   treeNodesMember,
   treeNodesPointer,
   treeNodesSchema,
@@ -58,9 +60,8 @@ interface NestedFile {
 }
 
 /**
- * The input a route or an op entry declares (`input`), or undefined when it declares none or the schema service
- * answers no use for it. The schema is the input use the service answers for the written schema; reads `schemas`
- * for the fields of a form or multipart body.
+ * The input a route or an op entry declares (`input`), or undefined when it declares none. The schema is the input
+ * use the service answers for the written schema; reads `schemas` for the fields of a form or multipart body.
  */
 export function treeNodesInput(
   node: TreeNode,
@@ -76,12 +77,7 @@ export function treeNodesInput(
   if (origin === undefined)
     throw new Error(`the raw tree has no origin for the input at ${pointer}`);
 
-  // The service answers every input tree.schemas accepted, and a refused one stops the run before this half
-  // (the stop rule). It answers none only while tree.schemas is the seam's stub, which knows no schema.
-  const schema = context.treeSchemas.typeUse(pointer, "input");
-
-  if (schema === undefined) return undefined;
-
+  const schema = treeNodesAnsweredUse(context, pointer, "input");
   const media = mediaOf(node);
   const site: InputSite = {
     node,
@@ -112,9 +108,7 @@ export function treeNodesBatchInput(
   node: TreeNode,
   context: TreeNodesContext,
 ): DraftOperationInput | undefined {
-  const schema = context.treeSchemas.typeUse(node.pointer, "input");
-
-  if (schema === undefined) return undefined;
+  const schema = treeNodesAnsweredUse(context, node.pointer, "input");
 
   return { media: JSON_MEDIA, schema: pipelineCopy(schema), origin: pipelineCopy(node.origin) };
 }
@@ -266,9 +260,7 @@ function filesBelow(
   const visitSchema = (id: string, atPath: string): void => {
     if (visited.has(id)) return;
     visited.add(id);
-    const schema = treeNodesSchema(draft, id);
-
-    if (schema === undefined) return;
+    const schema = treeNodesDraftSchema(draft, id);
 
     if (schema.kind === "object")
       for (const property of schema.properties)

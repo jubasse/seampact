@@ -146,7 +146,7 @@ function paramsOf(
 
     seen.set(key, field);
 
-    if (field.type === undefined || !treeNodesFieldTravels(site, field, PLACE[list])) continue;
+    if (!treeNodesFieldTravels(site, field, PLACE[list])) continue;
     const param = paramOf(site, field, field.type, list);
 
     if (param !== undefined) params.push(param);
@@ -155,7 +155,8 @@ function paramsOf(
   return params;
 }
 
-// A query field carries its query wire; one the service answers no wire for has no query encoding.
+// A query field carries its query wire and its default; one the service answers no wire for has no query
+// encoding.
 function paramOf(
   site: TreeNodesSite,
   field: TreeNodesField,
@@ -173,7 +174,11 @@ function paramOf(
 
   const wire = site.context.treeSchemas.queryWire(field.wirePointer);
 
-  if (wire !== undefined) return { ...param, wire: pipelineCopy(wire) };
+  // ADR 0003 section 10: a default sits on an optional query field only; tree.schemas checks its value.
+  const defaulted =
+    field.default === undefined || field.required ? {} : { default: pipelineCopy(field.default) };
+
+  if (wire !== undefined) return { ...param, wire: pipelineCopy(wire), ...defaulted };
 
   const origin = treeNodesLocate(field.origin, treeNodesNodeOrigin(site.node.origin));
 

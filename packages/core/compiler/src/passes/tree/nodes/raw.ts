@@ -22,6 +22,23 @@ export type TreeNodesJson = PassReadonly<JsonValue>;
 
 type Json = TreeNodesJson;
 
+/**
+ * The use the schema service answers at `pointer`. It answers every position tree.schemas accepted, and a refused
+ * one stops the run before this half (the stop rule), so no answer is an internal error.
+ */
+export function treeNodesAnsweredUse(
+  context: Pick<TreeNodesContext, "treeSchemas">,
+  pointer: string,
+  direction: IrWriter.Direction,
+): IrWriter.TypeUse {
+  const use = context.treeSchemas.typeUse(pointer, direction);
+
+  if (use === undefined)
+    throw new Error(`the schema service answers no ${direction} type at ${pointer}`);
+
+  return use;
+}
+
 /** The maturity levels, least first (ADR 0002 section 5). */
 export const TREE_NODES_MATURITIES: readonly IrWriter.Maturity[] = [
   "experimental",
@@ -85,6 +102,16 @@ export function treeNodesOriginAt(context: TreeNodesContext, pointer: string): O
 /** A schema of the draft's catalogue, read by its id. */
 export function treeNodesSchema(draft: DraftIR, id: string): IrWriter.Schema | undefined {
   return Object.hasOwn(draft.schemas, id) ? draft.schemas[id] : undefined;
+}
+
+// tree.schemas writes every schema a use it answers refers to, so a missing one is an internal error.
+export function treeNodesDraftSchema(draft: DraftIR, id: string): IrWriter.Schema {
+  const schema = treeNodesSchema(draft, id);
+
+  if (schema === undefined)
+    throw new Error(`the draft holds no schema ${id}, which a use refers to`);
+
+  return schema;
 }
 
 /** The object schema a use refers to, else undefined. */

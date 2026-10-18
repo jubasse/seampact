@@ -1,5 +1,5 @@
 import type { IrWriter, Origin } from "@seampact/spec/ir";
-import type { DraftIR, TreeNode } from "../../../pipeline/seam.js";
+import { type DraftIR, pipelineCopy, type TreeNode } from "../../../pipeline/seam.js";
 import {
   type TreeNodesReportOnce,
   treeNodesError,
@@ -9,7 +9,9 @@ import {
 import {
   type TreeNodesContext,
   type TreeNodesJson,
+  treeNodesAnsweredUse,
   treeNodesIsObject,
+  treeNodesMember,
   treeNodesObjectOf,
   treeNodesPointer,
 } from "./raw.js";
@@ -32,20 +34,22 @@ export interface TreeNodesSite {
 export interface TreeNodesField {
   readonly name: string;
   readonly required: boolean;
-  /** Undefined while the schema service answers nothing (the seam's stub). */
-  readonly type: IrWriter.TypeUse | undefined;
+  readonly type: IrWriter.TypeUse;
+  /** The `default` written on the field or its property (ADR 0003 section 10), absent when none is. */
+  readonly default?: unknown;
   readonly origin: Origin;
   /** Where the schema service answers the field's query wire. */
   readonly wirePointer: string;
 }
 
-/** The fields of a map, and whether every name is known (a schema name the service cannot resolve is not). */
+/** The fields of a map, and whether every name is known (a schema name that is no object schema is not). */
 export interface TreeNodesFields {
   readonly fields: readonly TreeNodesField[];
   readonly complete: boolean;
 }
 
 const OPTIONAL_SUFFIX = "?";
+const DEFAULT_KEY = "default";
 
 /** The fields of the map written at `pointer`, each schema compiled in `direction`. */
 export function treeNodesFields(
@@ -62,10 +66,13 @@ export function treeNodesFields(
     const fieldPointer = treeNodesPointer(pointer, key);
     const optional = key.endsWith(OPTIONAL_SUFFIX);
 
+    const writtenDefault = treeNodesMember(treeNodesMember(written, key), DEFAULT_KEY);
+
     return {
       name: optional ? key.slice(0, -OPTIONAL_SUFFIX.length) : key,
       required: !optional,
-      type: site.context.treeSchemas.typeUse(fieldPointer, direction),
+      type: treeNodesAnsweredUse(site.context, fieldPointer, direction),
+      ...(writtenDefault === undefined ? {} : { default: pipelineCopy(writtenDefault) }),
       origin: site.context.origin(fieldPointer) ?? site.node.origin,
       wirePointer: fieldPointer,
     };
@@ -81,10 +88,7 @@ function namedSchemaFields(
   pointer: string,
   direction: IrWriter.Direction,
 ): TreeNodesFields {
-  const use = site.context.treeSchemas.typeUse(pointer, direction);
-
-  if (use === undefined) return { fields: [], complete: false };
-
+  const use = treeNodesAnsweredUse(site.context, pointer, direction);
   const schema = treeNodesObjectOf(site.draft, use);
 
   if (schema === undefined) {
@@ -109,6 +113,7 @@ function namedSchemaFields(
       name: property.name,
       required: !property.optional,
       type: property.type,
+      ...(property.default === undefined ? {} : { default: property.default }),
       origin: property.origin,
       wirePointer: treeNodesPointer(schemaPointer, "properties", property.name),
     }),

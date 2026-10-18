@@ -204,6 +204,8 @@ function operationOf(
   )
     reportNoInput(site, op);
 
+  if (method === SAFE_METHOD && treeNodesSetting(node, "input") !== undefined) reportGetInput(site);
+
   const path = treeNodesPath(node, prefixes, context);
 
   if (path !== undefined) treeNodesCheckPathParts(site, path);
@@ -278,6 +280,20 @@ function reportNoInput(site: TreeNodesSite, op: IrWriter.OpShorthand): void {
       origin: treeNodesNodeOrigin(site.node.origin),
       message: `The ${op} op ${site.operationId} has no input; the item schema holds fields a client never sends.`,
       fix: `Declare input on the ${op} op.`,
+    }),
+  );
+}
+
+// A get carries no body (grammar section 9: a get is a route without a body).
+function reportGetInput(site: TreeNodesSite): void {
+  const pointer = `${site.node.pointer}/input`;
+
+  site.context.report(
+    treeNodesError({
+      rule: "get-input",
+      origin: treeNodesNodeOrigin(site.context.origin(pointer) ?? site.node.origin),
+      message: `The get route ${site.operationId} declares an input, but a get request carries no body.`,
+      fix: "Move the fields into query, or make the route a post.",
     }),
   );
 }
