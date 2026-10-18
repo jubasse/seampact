@@ -5,10 +5,20 @@
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
+  "bin": {
+    "seampact": "./src/bin.ts"
+  },
   "seampact": {
     "role": "core"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@seampact/codegen-core": "workspace:*",
+    "@seampact/compiler": "workspace:*",
+    "@seampact/spec": "workspace:*",
+    "ajv": "8.20.0",
+    "yaml": "2.9.1"
   }
 }

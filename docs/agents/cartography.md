@@ -35,7 +35,9 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/cli`
 
-- `packages/core/cli/src`: The seampact command: init, compile, check, lint, diff, generate, bundle and explain.
+- `packages/core/cli/src`: The seampact command line: `runCli`, its commands, and the app config reader they share.
+- `packages/core/cli/src/commands`: The commands the CLI runs today, `compile` and `generate`, and the steps between the app config and the target packages: the sources compiled, the IR filtered per entry, the link checks and the link set.
+- `packages/core/cli/src/config`: The app config as the CLI reads it: the YAML reader and its refusals, and the target packages it names, resolved from the app's own project.
 
 ### `@seampact/codegen-core`
 
@@ -80,7 +82,7 @@ In pipeline order (ADR 0006 section 1).
 - `packages/core/spec/src/authoring/grammar`: The grammar modules the authoring JSON Schemas are generated from, one per file and fragment kind (ADR 0002 and 0003).
 - `packages/core/spec/src/bundle`: Contract bundles (`@seampact/spec/bundle`): reserved, no export yet.
 - `packages/core/spec/src/compatibility`: The compatibility matrix (`@seampact/spec/compatibility`): reserved, no export yet.
-- `packages/core/spec/src/config`: The app config, `seampact.config.yaml` (`@seampact/spec/config`): reserved, no export yet.
+- `packages/core/spec/src/config`: The app config, `seampact.config.yaml` (`@seampact/spec/config`): its types and its JSON Schema.
 - `packages/core/spec/src/ir`: The IR (ADR 0004 and 0005): its JSON Schemas, generated types, writer view, validation and invariants.
 - `packages/core/spec/src/naming`: ADR 0007: cross-language naming.
 
