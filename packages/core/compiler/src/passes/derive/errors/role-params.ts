@@ -564,12 +564,11 @@ function checkItems(
   position: Position,
 ): void {
   if (template.kind === "array") {
-    template.items.forEach((item, index) =>
+    for (const [index, item] of template.items.entries())
       checkValue(check, item, items, {
         ...position,
         pointer: pipelinePointerBelow(position.pointer, String(index)),
-      }),
-    );
+      });
 
     return;
   }
