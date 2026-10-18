@@ -128,6 +128,7 @@ describe("reference slice answers", () => {
     // The declared status and, where the handler echoes its input, that member of the body.
     for (const [answer, status, echoed] of expectations) {
       expect(answer).toMatchObject({ ok: true, status });
+
       if (Object.keys(echoed).length > 0) expect(answer).toMatchObject({ body: echoed });
     }
   });

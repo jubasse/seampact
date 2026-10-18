@@ -21,6 +21,7 @@ const HOST = "127.0.0.1";
 class PreRoutingFilter extends BaseExceptionFilter {
   override catch(exception: unknown, host: ArgumentsHost): void {
     if (TasksNest.renderPreRoutingError(exception, host)) return;
+
     if (TasksServiceNest.renderPreRoutingError(exception, host)) return;
 
     super.catch(exception, host);
