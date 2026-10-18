@@ -155,29 +155,15 @@ test.each<DraftFixtureApi>(["tasks", "tasksService"])(
   },
 );
 
-// The schemas only a relay route reaches take their directions from the relayed operation, which tree.schemas
-// does not copy yet: their directions are left out of the comparison until it does.
-const RELAY_REACHED: Readonly<Record<DraftFixtureApi, readonly string[]>> = {
-  tasks: [],
-  tasksService: ["Task", "TaskState"],
-};
-
 // The core issue schema stays seeded when a layer replaced the schema_invalid params; finalize drops it.
 const SEEDED_UNLESS_USED = "ApiSchemaInvalidIssue";
 
 function comparedDeclarations(
-  api: DraftFixtureApi,
   catalogue: Readonly<Record<string, IrWriter.Schema | IrWriter.Enum>>,
   expected: Readonly<Record<string, unknown>>,
 ): { readonly id: string }[] {
   return Object.values(catalogue)
     .filter(({ id }) => id !== SEEDED_UNLESS_USED || Object.hasOwn(expected, id))
-    .map((declared) => {
-      if (!RELAY_REACHED[api].includes(declared.id)) return declared;
-      const { directions: _directions, ...rest } = declared;
-
-      return rest;
-    })
     .sort((left, right) => left.id.localeCompare(right.id));
 }
 
@@ -197,11 +183,11 @@ test.each<DraftFixtureApi>(["tasks", "tasksService"])(
     const fixture = draftFixture(api, "after-tree");
     const expected = expectedApiMembers(api);
 
-    expect(comparedDeclarations(api, draft.schemas, fixture.schemas)).toEqual(
-      comparedDeclarations(api, fixture.schemas, fixture.schemas),
+    expect(comparedDeclarations(draft.schemas, fixture.schemas)).toEqual(
+      comparedDeclarations(fixture.schemas, fixture.schemas),
     );
-    expect(comparedDeclarations(api, draft.enums, fixture.enums)).toEqual(
-      comparedDeclarations(api, fixture.enums, fixture.enums),
+    expect(comparedDeclarations(draft.enums, fixture.enums)).toEqual(
+      comparedDeclarations(fixture.enums, fixture.enums),
     );
     expect(draft.scalars).toEqual(fixture.scalars);
     expect(
