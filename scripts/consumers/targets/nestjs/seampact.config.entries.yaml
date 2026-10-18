@@ -1,0 +1,6 @@
+  - id: server
+    use: "@seampact/codegen-nestjs"
+    apis: [tasks, tasksService]
+    link:
+      types: types
+      validators: validators

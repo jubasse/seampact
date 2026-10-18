@@ -260,6 +260,7 @@ function routeEntry(
 }
 
 // Forms the boundary validates or passes on but does not enforce: the handler does (ADR 0016 "Left to the handler").
+// `filteredBy` is not one: grammar section 10 makes it the application's by design, so it is no warning.
 function handlerForms(
   ir: ContractIR,
   operation: Operation,
@@ -280,13 +281,6 @@ function handlerForms(
     member: string,
     fix: string,
   ][] = [
-    [
-      "filteredBy",
-      `The list filter right '${operation.filteredBy ?? ""}'`,
-      operation.filteredBy !== undefined,
-      "filteredBy",
-      "Apply the right to the handler's query, so the list holds only what the caller may read.",
-    ],
     [
       "concurrency",
       "The version check",

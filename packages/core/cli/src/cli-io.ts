@@ -14,3 +14,8 @@ export const EXIT_USAGE = 2;
 export function printProblems(io: CliIo, problems: readonly CliProblem[]): void {
   for (const problem of problems) io.stderr(`${formatProblem(problem)}\n`);
 }
+
+// A warning names what the generated files leave to the developer's code; the command goes on.
+export function printWarnings(io: CliIo, warnings: readonly CliProblem[]): void {
+  for (const warning of warnings) io.stderr(`warning: ${formatProblem(warning)}\n`);
+}

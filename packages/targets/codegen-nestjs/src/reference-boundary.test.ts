@@ -30,22 +30,30 @@ describe("the generated reference boundary compiles", () => {
   });
 
   test.each([
-    ["tasks", "filteredBy.handler", "listTasks"],
     ["tasks", "concurrency.handler", "updateTask"],
     ["tasks", "owner.handler", "getDraft"],
     ["tasks", "paging.sortKeys.handler", "listTasks"],
     ["tasksService", "deadline.handler", "getTask"],
     ["tasksService", "identity.headers.handler", "getTask"],
   ])("%s: %s names %s", async (api, code, operation) => {
-    const outcome = await nestjsTarget.generate({
-      ir: readGoldenIr(api),
-      options: {},
-      links: await referenceLinks(PROJECT, api),
-      artefacts: new Set(["boundary"]),
-    });
+    expect(await reportedForms(api)).toContainEqual(expect.objectContaining({ code, operation }));
+  });
 
-    expect(outcome.status === "generated" ? outcome.warnings : outcome.refusals).toContainEqual(
-      expect.objectContaining({ code, operation }),
+  test("the list filter right is the handler's by design, so it is no warning", async () => {
+    expect(await reportedForms("tasks")).not.toContainEqual(
+      expect.objectContaining({ code: "filteredBy.handler" }),
     );
   });
 });
+
+// The warnings of a generated api, or its refusals when it did not generate.
+async function reportedForms(api: string): Promise<readonly unknown[]> {
+  const outcome = await nestjsTarget.generate({
+    ir: readGoldenIr(api),
+    options: {},
+    links: await referenceLinks(PROJECT, api),
+    artefacts: new Set(["boundary"]),
+  });
+
+  return (outcome.status === "generated" ? outcome.warnings : outcome.refusals) ?? [];
+}

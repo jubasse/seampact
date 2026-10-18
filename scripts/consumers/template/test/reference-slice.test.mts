@@ -14,8 +14,13 @@ import {
 } from "./credentials.mjs";
 import { startServer } from "./server.mjs";
 
-const CHANNEL = { channelId: "channel-1" };
-const TASK = { channelId: "channel-1", taskId: "task-1" };
+// The reference declares its ids as UUIDs, so a server target refuses any other path id with a 400.
+const CHANNEL_ID = "10000000-0000-4000-8000-000000000001";
+const TASK_ID = "20000000-0000-4000-8000-000000000001";
+const DRAFT_ID = "30000000-0000-4000-8000-000000000001";
+const ASSIGNEE_ID = "00000000-0000-4000-8000-000000000003";
+const CHANNEL = { channelId: CHANNEL_ID };
+const TASK = { channelId: CHANNEL_ID, taskId: TASK_ID };
 const SERVICE_TIMEOUT_MS = 5000;
 
 let server: Awaited<ReturnType<typeof startServer>>;
@@ -43,7 +48,7 @@ describe("reference slice answers", () => {
       await tasks.getChannel({ path: CHANNEL, headers: user }),
       await tasks.listTasks({ path: CHANNEL, query: { limit: 10 }, headers: user }),
       await tasks.createTask({ path: CHANNEL, headers: user, body: { title: "Write the slice" } }),
-      await tasks.getTasksBatch({ path: CHANNEL, headers: user, body: { ids: ["task-1"] } }),
+      await tasks.getTasksBatch({ path: CHANNEL, headers: user, body: { ids: [TASK_ID] } }),
       await tasks.searchTasks({ path: CHANNEL, headers: user, body: { text: "slice" } }),
       await tasks.getTask({ path: TASK, headers: user }),
       await tasks.updateTask({
@@ -56,10 +61,10 @@ describe("reference slice answers", () => {
         headers: user,
         body: { reason: "finished", expectedVersion: 1 },
       }),
-      await tasks.assignTask({ path: TASK, headers: user, body: { userId: "user-2" } }),
+      await tasks.assignTask({ path: TASK, headers: user, body: { userId: ASSIGNEE_ID } }),
       await tasks.purgeTask({ path: TASK, headers: user, body: { reauthToken: "reauth" } }),
-      await tasks.getDraft({ path: { draftId: "draft-1" }, headers: user }),
-      await tasks.deleteDraft({ path: { draftId: "draft-1" }, headers: user }),
+      await tasks.getDraft({ path: { draftId: DRAFT_ID }, headers: user }),
+      await tasks.deleteDraft({ path: { draftId: DRAFT_ID }, headers: user }),
       await tasks.getPreferences({ headers: user }),
       await tasks.updatePreferences({ headers: user, body: { digest: true } }),
       await tasks.payments({
