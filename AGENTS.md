@@ -53,7 +53,7 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 - Reach the end-to-end slice first; do not add `docs/conformance/proofs/` entries or per-branch fixtures.
 - Unit tests for bricks that will not move (IR format, YAML reader, naming); other code is covered by the slice's end-to-end test; a bug fix still gets a test that failed before.
 - A case no consumer needs yet is refused by name with a diagnostic, never modelled.
-- One deliverable per PR (about 3,000 to 4,000 hand-written lines); at the call cap, relay on the same branch.
+- One deliverable per PR (about 3,000 to 4,000 hand-written lines); at the call cap, relay on the same branch; a seam others wait on stays small and lands first.
 
 ## Code style
 
