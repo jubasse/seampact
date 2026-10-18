@@ -78,7 +78,14 @@ export async function generateReferenceProject(
   const providers = await linkedProviders(project);
   const written = await Promise.all(
     REFERENCE_APIS.map((api) =>
-      generateApi(project, changeIr(readGoldenIr(api), api), api, providers, serverTarget, serverOptions),
+      generateApi(
+        project,
+        changeIr(readGoldenIr(api), api),
+        api,
+        providers,
+        serverTarget,
+        serverOptions,
+      ),
     ),
   );
 

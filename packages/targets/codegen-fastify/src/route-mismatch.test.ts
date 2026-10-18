@@ -30,7 +30,9 @@ const preferencesUnderDrafts: ReferenceIrChange = (ir, api) =>
     : {
         ...ir,
         operations: ir.operations.map((operation) =>
-          operation.id === "getPreferences" ? { ...operation, path: STATIC_DRAFTS_PATH } : operation,
+          operation.id === "getPreferences"
+            ? { ...operation, path: STATIC_DRAFTS_PATH }
+            : operation,
         ),
       };
 
