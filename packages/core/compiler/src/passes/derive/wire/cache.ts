@@ -5,12 +5,14 @@ import {
   pipelineIsJsonObject,
   pipelineParseDuration,
 } from "../../../pipeline/seam.js";
+import { DERIVE_WIRE_ETAG } from "./concurrency.js";
 import { deriveWireCredentialPlace, deriveWireSchemeOf } from "./credentials.js";
 import {
   DERIVE_WIRE_STRING_USE,
   type DeriveWireDerived,
   deriveWireAddParam,
-  deriveWireAddSuccessHeader,
+  deriveWireAddResponseHeader,
+  deriveWireSuccessResponses,
 } from "./params.js";
 import { type DeriveWireRoute, type DeriveWireScope, deriveWireOriginAt } from "./routes.js";
 import { type DeriveWireSensitiveField, deriveWireSensitiveField } from "./sensitive.js";
@@ -20,7 +22,8 @@ import { type DeriveWireSensitiveField, deriveWireSensitiveField } from "./sensi
 // `Cache-Control` value is written per caller kind the access admits: an anonymous caller gets the family's
 // directives as `anonymous` says (`private` by default), the shared-cache ones (`s-maxage`) on public values only,
 // and an identified caller always gets private. `Vary` lists the credential headers of the accepted schemes, then
-// `cache.vary`. `cache.etag`: the `ETag` header on every success, the optional `If-None-Match` parameter and an
+// `cache.vary`. `cache.etag`: the `ETag` header on every success (the item's version tag where `If-Match` versions
+// it), the optional `If-None-Match` parameter and an
 // empty 304 response carrying the `ETag`. `cache.sensitive`: a response carrying a sensitive field is no-store, so
 // an operation without `cache` gets `{ family: never, noStore }` located at the field, and a family other than
 // `never` there is a compile error naming the field and the route.
@@ -264,6 +267,10 @@ function varyOf(route: DeriveWireRoute, written: unknown, scope: DeriveWireScope
   return names;
 }
 
+// A response of an item versioned by `If-Match` already carries the tag `cache.etag` uses.
+const isVersionTag = (header: IrWriter.ResponseHeader): boolean =>
+  header.name === DERIVE_WIRE_ETAG && header.derivedFrom?.derivation === "concurrency.version";
+
 function writeEntityTag(
   route: DeriveWireRoute,
   origin: IrWriter.Origin,
@@ -275,9 +282,12 @@ function writeEntityTag(
     required,
     derivedFrom: { derivation: CACHE_ETAG, from: [pipelineCopy(origin)] },
   });
-  const entityTag = derived("ETag", true);
+  const entityTag = derived(DERIVE_WIRE_ETAG, true);
 
-  deriveWireAddSuccessHeader(route, entityTag, undefined, scope);
+  for (const response of deriveWireSuccessResponses(route))
+    if (!response.headers.some(isVersionTag))
+      deriveWireAddResponseHeader(route, response, entityTag, undefined, scope);
+
   deriveWireAddParam(route, "header", derived("If-None-Match", false), scope);
 
   const responses = route.operation.responses ?? [];
