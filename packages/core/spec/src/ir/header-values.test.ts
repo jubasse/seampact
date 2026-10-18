@@ -8,7 +8,8 @@ import { createAjv, mutateAt } from "./test-support.js";
 type Vector = (typeof vectors.cases)[number];
 type Fragment = Vector["fragment"];
 
-const DEPRECATED = "/operations/2/deprecated";
+const OPERATION = "/operations/2";
+const DEPRECATED = `${OPERATION}/deprecated`;
 const FRAGMENT_DEFINITIONS = {
   deprecated: "operation.schema.json#/$defs/Deprecation",
   degradable: "operation.schema.json#/$defs/Degradable",
@@ -117,9 +118,9 @@ test("header-values vectors are valid fragments, their expected texts match the 
       });
 
       expect(
-        checkIrInvariants(ir).map((violation) => violation.id),
+        checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer })),
         vector.id,
-      ).toContain(vector.refused);
+      ).toEqual([{ id: vector.refused, pointer: `${OPERATION}${vector.refusedAt}` }]);
       continue;
     }
 

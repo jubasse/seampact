@@ -29,9 +29,11 @@ test("role-params vectors are valid templates with expected params valid against
       const ir = mutateAt(everyMember, BINDING_WITH_PARAMS, (binding) => {
         binding.params = vector.template;
       });
-      const violated = checkIrInvariants(ir).map((violation) => violation.id);
+      const violated = checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer }));
 
-      expect(violated, vector.id).toContain(vector.refused);
+      expect(violated, vector.id).toEqual([
+        { id: vector.refused, pointer: `${BINDING_WITH_PARAMS}/params${vector.refusedAt}` },
+      ]);
       continue;
     }
 

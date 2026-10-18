@@ -18,8 +18,8 @@ export {
   type Name,
   ROLES,
   type Role,
-  type SuffixRole,
   type Suffixes,
+  type SuffixRole,
   suffixWords,
 } from "./roles.js";
 export { type NameSource, type SegmentsResult, segmentsOf, splitName } from "./split.js";

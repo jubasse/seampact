@@ -18,8 +18,8 @@ import {
   str,
   when,
 } from "../dsl.js";
-import { type Catalogue, catalogues } from "./catalogues.js";
 import { MARKERS } from "../markers.js";
+import { type Catalogue, catalogues } from "./catalogues.js";
 import { CONTROL, KEYS } from "./common.js";
 
 const SEMVER =

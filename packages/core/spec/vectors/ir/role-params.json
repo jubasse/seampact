@@ -832,7 +832,8 @@
           }
         ]
       },
-      "refused": "ir.error.role-params"
+      "refused": "ir.error.role-params",
+      "refusedAt": "/members/0/value/as"
     }
   ]
 }
