@@ -5,11 +5,11 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import {
-  type AdonisMajor,
   emitProject,
-  generateReferenceProject,
+  problemBody,
   projectDirectory,
-} from "./reference-project.test-support.js";
+} from "@seampact/codegen-core/node-server/test-support";
+import { type AdonisMajor, generateAdonisProject } from "./adonis-major.test-support.js";
 
 // Boots AdonisJS 7 and 6 around the generated `tasks` boundary (the app in `test-app/`) and sends requests to it:
 // the wire behaviour the compile test cannot see, the same on both majors.
@@ -78,10 +78,6 @@ interface Reply {
   readonly text: string;
 }
 
-function problemBody(code: string, status: number): string {
-  return JSON.stringify({ type: code, title: code, status, code, nature: "refused" });
-}
-
 // The route names in the order the router matches them.
 function routeNames(router: unknown): string[] {
   const json: unknown = Reflect.apply(Reflect.get(Object(router), "toJSON"), router, []);
@@ -95,7 +91,7 @@ function writeHeaders(): Record<string, string> {
 }
 
 describe.each(MAJORS)("AdonisJS %i", (major) => {
-  const project = projectDirectory(`live-boundary-${major}`);
+  const project = projectDirectory(import.meta.url, `live-boundary-${major}`);
   const build = join(project, "build");
   let app: ReferenceAppModule;
   let generated: GeneratedAdonisModule;
@@ -144,7 +140,7 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
   }
 
   beforeAll(async () => {
-    const files = await generateReferenceProject(project, major, { bodyValidation: true });
+    const files = await generateAdonisProject(project, major, { bodyValidation: true });
 
     expect(emitProject(project, files, build)).toEqual([]);
 

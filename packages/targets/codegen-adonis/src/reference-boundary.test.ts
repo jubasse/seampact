@@ -3,31 +3,31 @@ import { join } from "node:path";
 import { beforeAll, describe, expect, test } from "vitest";
 import { target as adonisTarget } from "./index.js";
 import {
-  type AdonisMajor,
-  generateReferenceProject,
   projectDirectory,
+  REFERENCE_COMPILER_OPTIONS,
   readGoldenIr,
   referenceLinks,
   typeErrorsOf,
-} from "./reference-project.test-support.js";
+} from "@seampact/codegen-core/node-server/test-support";
+import { type AdonisMajor, generateAdonisProject } from "./adonis-major.test-support.js";
 
 // Generating and type-checking both apis outruns vitest's default 5 s test limit on a loaded machine.
 const COMPILE_TIMEOUT_MILLISECONDS = 60_000;
 const MAJORS: readonly AdonisMajor[] = [7, 6];
-const INDEX_PROJECT = projectDirectory("reference-index");
+const INDEX_PROJECT = projectDirectory(import.meta.url, "reference-index");
 
 beforeAll(async () => {
-  await generateReferenceProject(INDEX_PROJECT, 7, {});
+  await generateAdonisProject(INDEX_PROJECT, 7, {});
 }, COMPILE_TIMEOUT_MILLISECONDS);
 
 describe("the generated reference boundary compiles", () => {
   test.each(MAJORS)(
     "both apis' types, validators and AdonisJS %i boundary type-check together",
     async (major) => {
-      const project = projectDirectory(`reference-boundary-${major}`);
-      const files = await generateReferenceProject(project, major, { bodyValidation: true });
+      const project = projectDirectory(import.meta.url, `reference-boundary-${major}`);
+      const files = await generateAdonisProject(project, major, { bodyValidation: true });
 
-      expect(typeErrorsOf(project, files)).toEqual([]);
+      expect(typeErrorsOf(project, files, REFERENCE_COMPILER_OPTIONS)).toEqual([]);
     },
     COMPILE_TIMEOUT_MILLISECONDS,
   );
