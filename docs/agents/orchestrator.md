@@ -30,7 +30,7 @@ One line each, in this order: task and PR or lane; worktree, branch and tip, lan
 ## Accepting a hand-back
 
 - Complete lane PR: end-of-PR gate green, tests as A47 states, one changeset sentence, cartography current, diff limited to owned files.
-- Author check keywords: no silent drop, `pipelineCopy`, tested branches, no copied helper, consistent rule ids, no `LD-<n>` or `.work/` in committed text.
+- Author check keywords: no silent drop, `pipelineCopy`, stable bricks tested (A47), no copied helper, consistent rule ids, no `LD-<n>` or `.work/` in committed text.
 - End-of-PR gate: as `seampact-implementer.md` "Before hand-back" states it.
 - Review: accepted only once its review file exists at the path the prompt gave.
 
