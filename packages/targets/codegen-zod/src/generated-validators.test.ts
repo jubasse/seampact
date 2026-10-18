@@ -130,7 +130,7 @@ describe("the custom checks of the generated validators", () => {
     const sources = ["operations/input.ts", "schemas/output.ts"].map((file) =>
       readFileSync(join(temporaryRoot, "generated", file), "utf8"),
     );
-    const refines = sources.flatMap((source) => source.match(/\.refine\([^]*?\}\)/g) ?? []);
+    const refines = sources.flatMap((source) => source.match(/\.refine\([\s\S]*?\}\)/g) ?? []);
 
     expect(refines.length).toBeGreaterThan(0);
 
