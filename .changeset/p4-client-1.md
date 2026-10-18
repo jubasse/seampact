@@ -11,7 +11,7 @@
 "@seampact/codegen-zod": patch
 ---
 
-Add `@seampact/codegen-fetch`, which generates a typed fetch client that returns each operation's success and error responses as typed results, or throws them as a typed `ContractError` with `errorStyle: throw`, and fills the idempotency key and deadline headers.
+Add `@seampact/codegen-fetch`, which generates a typed fetch client that returns each operation's success and error responses as typed results, or throws them as a typed `ClientContractError` with `errorStyle: throw`, and fills the idempotency key and deadline headers.
 
 Add `@seampact/signed-webhooks`, which verifies HMAC-signed webhooks with timestamp tolerance and secret rotation inside your authenticate hook.
 

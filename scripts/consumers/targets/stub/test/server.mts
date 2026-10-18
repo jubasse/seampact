@@ -13,6 +13,7 @@ import {
   STRIPE_SECRET,
   THROTTLE_RETRY_AFTER_MS,
   THROTTLED_USER_TOKEN,
+  USER_ID,
   USER_TOKEN,
 } from "./credentials.mjs";
 
@@ -69,6 +70,10 @@ const task = (taskId: string, title = "Write the slice test") => ({
   version: 1,
   createdAt: "2026-10-18T09:00:00.000Z",
 });
+
+const API_ID = "tasks";
+const SERVICE_NAME = "catalog";
+const HTTP_ERROR_FLOOR = 400;
 
 const ROUTES: readonly Route[] = [
   {
@@ -359,12 +364,12 @@ async function answerIdempotently(
     return;
   }
 
-  const key = digest([route.operation, String(call.headers.authorization), clientKey]);
+  const key = digest([API_ID, route.operation, route.access, principalOf(call), clientKey]);
   const begin = await store.begin({
     key,
     fingerprint: digest([call.method, call.url.pathname, call.rawBody.toString("utf8")]),
     lifetimeMs: IDEMPOTENCY_LIFETIME_MS,
-    operation: { kind: "httpOperation", api: "tasks", id: route.operation },
+    operation: { kind: "httpOperation", api: API_ID, id: route.operation },
   });
 
   switch (begin.outcome) {
@@ -379,8 +384,7 @@ async function answerIdempotently(
     case "replay":
       response.writeHead(begin.response.status, [
         ...begin.response.headers.flat(),
-        "idempotency-replayed",
-        "true",
+        ...(begin.response.status < HTTP_ERROR_FLOOR ? ["idempotency-replayed", "true"] : []),
       ]);
       response.end(begin.response.body);
 
@@ -487,6 +491,11 @@ function portOf(address: AddressInfo | string | null): number {
   }
 
   return address.port;
+}
+
+// The validated principal the accepted credential stands for (LD-162 keys on it, never on the raw credential).
+function principalOf(call: Call): string {
+  return call.headers.authorization === `Bearer ${SERVICE_JWT}` ? SERVICE_NAME : USER_ID;
 }
 
 function digest(parts: readonly string[]): string {

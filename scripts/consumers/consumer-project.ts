@@ -12,6 +12,9 @@ import { join } from "node:path";
 // The file that marks a directory as a consumer this script made, holding the monorepo commit it was built from.
 export const COMMIT_FILE = ".seampact-commit";
 
+/** A target id names one directory under `targets/`: lowercase letters, digits and dashes. */
+export const TARGET_ID = /^[a-z0-9-]+$/;
+
 export const VENDOR_DIRECTORY = "vendor/seampact";
 
 // Config entries an overlay appends to the template config's `targets` list, as YAML list items.
@@ -52,6 +55,13 @@ export function assembleConsumer(options: {
   readonly commit: string;
 }): void {
   const { consumersRoot, directory } = options;
+
+  if (!TARGET_ID.test(options.target)) {
+    throw new Error(
+      `consumers: target '${options.target}' is not a target id; it must match ${TARGET_ID.source}.`,
+    );
+  }
+
   const overlay = join(consumersRoot, "targets", options.target);
 
   if (!existsSync(overlay)) {

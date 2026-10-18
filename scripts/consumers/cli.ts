@@ -2,14 +2,15 @@ import { execFileSync } from "node:child_process";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { REPO_ROOT as REPOSITORY_ROOT } from "../golden/repo-root.ts";
 import { buildPackages, packPackages } from "./build-and-pack.ts";
 import {
   assembleConsumer,
   prepareConsumerDirectory,
+  TARGET_ID,
   useTarballs,
   VENDOR_DIRECTORY,
 } from "./consumer-project.ts";
-import { REPO_ROOT as REPOSITORY_ROOT } from "../golden/repo-root.ts";
 import { runLocalStep, runStep, StepFailure } from "./run-step.ts";
 
 // Builds and packs the seampact packages, assembles a test consumer from the template and a target overlay, and
@@ -37,6 +38,10 @@ function parseOptions(argv: string[]): RunOptions | string {
     });
 
     if (values.target === undefined) return "pass --target <id>";
+
+    if (!TARGET_ID.test(values.target)) {
+      return `--target '${values.target}' is not a target id: use lowercase letters, digits and dashes (${TARGET_ID.source}).`;
+    }
 
     return {
       target: values.target,
