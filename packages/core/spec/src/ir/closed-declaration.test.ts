@@ -83,3 +83,11 @@ test("an unknown use nested in a property is reported, every unknown at once", (
     ],
   });
 });
+
+test("a member the schema does not know is reported at its pointer", () => {
+  const schema = { ...ir().schemas.Task, "x-extra": 1 };
+
+  expect(checkIrClosedDeclaration("Schema", schema, "/schemas/Task")).toEqual({
+    unknowns: [{ pointer: "/schemas/Task/x-extra", value: "x-extra" }],
+  });
+});

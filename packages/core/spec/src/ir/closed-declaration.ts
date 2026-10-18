@@ -1,4 +1,5 @@
-import { walkIrInstance } from "./instance-walk.js";
+import { irDefinition, visitIrUnknown, walkIrInstance } from "./instance-walk.js";
+import { escapePointer } from "./schema-walk.js";
 import type * as IrWriter from "./types.writer.generated.js";
 
 // The declarations a compiler pass may copy from an IR it read in the open form into the IR it writes, by
@@ -13,7 +14,8 @@ export interface IrClosedDeclarations {
 
 export type IrClosedDefinition = keyof IrClosedDeclarations;
 
-// A union tag (pointer to the tag member) or an open-enum value outside what this IR revision knows.
+// A union tag (pointer to the tag member), an open-enum value, or a member name (`value`, at the member's
+// pointer) outside what this IR revision knows.
 export interface IrClosedUnknown {
   pointer: string;
   value: string;
@@ -22,6 +24,21 @@ export interface IrClosedUnknown {
 export type IrClosedCheck<T> =
   | { closed: T; unknowns?: undefined }
   | { closed?: undefined; unknowns: IrClosedUnknown[] };
+
+function pushUnknownMembers(
+  definition: string | undefined,
+  value: Record<string, unknown>,
+  pointer: string,
+  unknowns: IrClosedUnknown[],
+): void {
+  const properties = definition === undefined ? undefined : irDefinition(definition)?.properties;
+
+  if (typeof properties !== "object" || properties === null) return;
+
+  for (const member of Object.keys(value))
+    if (!Object.hasOwn(properties, member))
+      unknowns.push({ pointer: `${pointer}/${escapePointer(member)}`, value: member });
+}
 
 function isClosedAs<N extends IrClosedDefinition, V>(
   definition: N,
@@ -32,14 +49,13 @@ function isClosedAs<N extends IrClosedDefinition, V>(
   walkIrInstance(
     declaration,
     (node) => {
-      if (node.kind === "union") {
-        const tag = node.value[node.tag];
+      visitIrUnknown(
+        node,
+        (unknown) => unknowns.push({ pointer: `${unknown.pointer}/${unknown.tag}`, value: unknown.value }),
+        (unknown) => unknowns.push({ pointer: unknown.pointer, value: unknown.value }),
+      );
 
-        if (typeof tag === "string" && !node.known.includes(tag))
-          unknowns.push({ pointer: `${node.pointer}/${node.tag}`, value: tag });
-      } else if (node.kind === "openEnum" && !node.known.includes(node.value)) {
-        unknowns.push({ pointer: node.pointer, value: node.value });
-      }
+      if (node.kind === "object") pushUnknownMembers(node.definition, node.value, node.pointer, unknowns);
     },
     { $ref: `#/$defs/${definition}` },
     pointer,
@@ -49,9 +65,10 @@ function isClosedAs<N extends IrClosedDefinition, V>(
 }
 
 // Checks that a declaration read in the open form (an imported api's IR, already validated) holds only what
-// this IR revision knows: every union tag a known variant, every open-enum value a known value. Then it is
+// this IR revision knows: every union tag a known variant, every open-enum value a known value, every object
+// member one the schema declares (a member name is reported as the value). Then it is
 // the writer type, returned as given (the caller copies it before storing it); else every unknown, with its
-// pointer below `pointer`, for the caller to refuse by name. Members the schema does not know are not checked.
+// pointer below `pointer`, for the caller to refuse by name.
 export function checkIrClosedDeclaration<N extends IrClosedDefinition, V>(
   definition: N,
   declaration: V,

@@ -185,26 +185,35 @@ export interface IrUnknowns {
   values: IrUnknownValue[];
 }
 
+// Hands the node's unknown union tag or unknown open-enum value, if it is one, to the matching callback.
+// The one reading of "unknown" shared by `listIrUnknowns` and the closed-declaration guard.
+export function visitIrUnknown(
+  node: IrInstanceNode,
+  onKind: (unknown: IrUnknownKind) => void,
+  onValue: (unknown: IrUnknownValue) => void,
+): void {
+  if (node.kind === "union") {
+    const value = node.value[node.tag];
+
+    if (typeof value === "string" && !node.known.includes(value))
+      onKind({ pointer: node.pointer, tag: node.tag, value, mustAct: node.mustAct });
+  } else if (node.kind === "openEnum" && !node.known.includes(node.value)) {
+    onValue({ pointer: node.pointer, value: node.value, known: node.known, mustAct: node.mustAct });
+  }
+}
+
 // Lists every unknown union tag and every unknown open-enum value of an IR document, with its pointer and
 // whether it is must-act. Ajv-free: a reader of an IR it did not validate itself calls it before acting.
 export function listIrUnknowns(ir: unknown): IrUnknowns {
   const unknowns: IrUnknowns = { kinds: [], values: [] };
 
-  walkIrInstance(ir, (node) => {
-    if (node.kind === "union") {
-      const value = node.value[node.tag];
-
-      if (typeof value === "string" && !node.known.includes(value))
-        unknowns.kinds.push({ pointer: node.pointer, tag: node.tag, value, mustAct: node.mustAct });
-    } else if (node.kind === "openEnum" && !node.known.includes(node.value)) {
-      unknowns.values.push({
-        pointer: node.pointer,
-        value: node.value,
-        known: node.known,
-        mustAct: node.mustAct,
-      });
-    }
-  });
+  walkIrInstance(ir, (node) =>
+    visitIrUnknown(
+      node,
+      (unknown) => unknowns.kinds.push(unknown),
+      (unknown) => unknowns.values.push(unknown),
+    ),
+  );
 
   return unknowns;
 }
