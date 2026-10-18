@@ -137,6 +137,10 @@ The TypeScript implementation lives in `@seampact/spec/naming`, because the comp
 9. The options of section 5 are part of the TypeScript API as `identifier(name, language, { suffixes, escape, enumCase })`; the defaults are the behaviour the vectors test. `handlers` acts above the naming algorithm and is not part of it.
 10. The owner of an inline schema held by a derived schema is the derived schema's whole name: its segments followed by its default suffix words (the `scope` property of the inline params of right `roles` gives `[roles, params, scope]`, `RolesParamsScope`). Without the suffix words, the children of one operation's inline input and output would collide, and so would a child of `RolesParams` and the same child of a declared `Roles`. A target's `suffixes` option (section 5) renames the derived schema only, not the word its children carry.
 
+### Amendment 2026-10-19: generated modules
+
+Generated names are scoped by ES module namespace imports, not by a generated object or a TypeScript `namespace`. Each target writes one `index.ts` per api (`<out>/<api>/index.ts`) that re-exports that api's modules, and names are unique within one target output; two targets or two apis may export the same name. The docs and examples show namespace imports (`import * as TasksNest from '.../tasks/nestjs'`, `import type * as Tasks from '.../tasks/types'`); flat imports stay allowed ([A36](../decisions.md#a36)).
+
 ## Consequences
 
 - No target splits or re-cases a name on its own; two generators always agree on an identifier, and a rename shows in the IR diff.

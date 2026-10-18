@@ -133,6 +133,7 @@ The ADRs cite product decisions by id (`A<n>`); [`docs/decisions.md`](docs/decis
 | [0013](docs/adr/0013-signed-webhooks.md) | inbound signed webhooks |
 | [0014](docs/adr/0014-room-for-real-time-and-rpc.md) | room for real-time and RPC |
 | [0015](docs/adr/0015-codegen-determinism-and-conformance.md) | deterministic generation and the conformance suite |
+| [0016](docs/adr/0016-nestjs-target.md) | the NestJS server target |
 
 ## Contributing
 
