@@ -10,6 +10,7 @@ import {
   typeErrorsOf,
 } from "./generated-project.test-support.js";
 import { target } from "./index.js";
+import { SCHEMAS_MODULE, SCHEMAS_NAMESPACE } from "./layout.js";
 
 const GOLDEN_IRS = ["tasks", "tasksService"];
 
@@ -17,19 +18,35 @@ const temporaryRoot = mkdtempSync(join(tmpdir(), "seampact-codegen-ts-"));
 
 afterAll(() => rmSync(temporaryRoot, { recursive: true, force: true }));
 
+// Every public export is reachable through the api index: the schemas under their namespace, operations flat.
+function indexProbe(exportRefs: readonly ExportRef[]): string {
+  const uses = exportRefs.map((exportRef, index) => {
+    const path =
+      exportRef.module === SCHEMAS_MODULE
+        ? `${SCHEMAS_NAMESPACE}.${exportRef.export}`
+        : exportRef.export;
+
+    return `export type IndexUses${index} = Api.${path};`;
+  });
+
+  return [`import type * as Api from "./${OUTPUT_DIRECTORY}/index.js";`, ...uses].join("\n");
+}
+
 function probeSource(exportRefs: readonly ExportRef[]): string {
   const link: Link<"types"> = {
     descriptor: { kind: "types", style: "typescript", schemas: {}, operations: {} },
     location: { kind: "relative", path: OUTPUT_DIRECTORY },
   };
 
-  return exportRefs
+  const probes = exportRefs
     .map((exportRef, index) => {
       const specifier = importSpecifier(link, exportRef, PROBE_FILE);
 
       return `import type { ${exportRef.export} as Probe${index} } from "${specifier}";\nexport type Uses${index} = Probe${index};`;
     })
     .join("\n");
+
+  return `${probes}\n${indexProbe(exportRefs)}`;
 }
 
 test.each(GOLDEN_IRS)("the generated reference types compile: %s", async (name) => {
@@ -61,6 +78,7 @@ test.each(GOLDEN_IRS)("the generated reference types compile: %s", async (name) 
     probeSource(exportRefs),
   );
 
+  expect(outcome.files.map((file) => file.path)).toContain("index.ts");
   expect(exportRefs.length).toBeGreaterThan(0);
   expect(diagnostics).toEqual([]);
 });

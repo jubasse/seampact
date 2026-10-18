@@ -1,8 +1,10 @@
 import {
+  apiIndexSource,
   below,
   type GeneratedFile,
   type GenerateInput,
   type GenerateOutcome,
+  type IndexedModule,
   type IrLocation,
   type NoOptions,
   operationLocation,
@@ -12,12 +14,14 @@ import {
 } from "@seampact/codegen-core";
 import type { ContractIR, Operation } from "@seampact/spec/ir";
 import {
+  INDEX_MODULE,
   MODULE_EXTENSION,
   OPERATION_ERRORS_MODULE,
   OPERATION_INPUT_MODULE,
   OPERATION_OUTPUT_MODULE,
   planTypesLayout,
   SCHEMAS_MODULE,
+  SCHEMAS_NAMESPACE,
   type TypesLayout,
 } from "./layout.js";
 import { operationModuleContext } from "./module-context.js";
@@ -66,7 +70,7 @@ export function generateTypes(
 
   if (refusals.length > 0) return { status: "refused", refusals };
 
-  return { status: "generated", files };
+  return { status: "generated", files: [...files, ...indexFile(files)] };
 }
 
 function refuseApiForms(ir: ContractIR, refusals: Refusal[]): void {
@@ -91,6 +95,20 @@ function schemasFile(ir: ContractIR, layout: TypesLayout, refusals: Refusal[]): 
   if (source === "") return [];
 
   return [{ path: `${SCHEMAS_MODULE}${MODULE_EXTENSION}`, contents: `${source}\n` }];
+}
+
+// The api index: the schemas under `schemas`, the three operation modules flat, so `import type * as Tasks from
+// "<out>/index.js"` reaches every name.
+function indexFile(files: readonly GeneratedFile[]): GeneratedFile[] {
+  if (files.length === 0) return [];
+
+  const modules = files.map((file): IndexedModule => {
+    const module = file.path.slice(0, -MODULE_EXTENSION.length);
+
+    return module === SCHEMAS_MODULE ? { module, namespace: SCHEMAS_NAMESPACE } : { module };
+  });
+
+  return [{ path: `${INDEX_MODULE}${MODULE_EXTENSION}`, contents: apiIndexSource(modules) }];
 }
 
 function operationFiles(ir: ContractIR, layout: TypesLayout, refusals: Refusal[]): GeneratedFile[] {

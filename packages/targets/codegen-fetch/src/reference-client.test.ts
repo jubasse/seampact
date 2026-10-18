@@ -137,6 +137,24 @@ import { createClient } from "./generated/client/tasks/client.js";
 import { createClient as createServiceClient } from "./generated/client/tasksService/client.js";
 import { createClient as createThrowingClient, isClientContractError } from "./generated/clientThrow/tasks/client.js";
 
+import * as TasksIndex from "./generated/client/tasks/index.js";
+
+// The public runtime names are reachable through the index.
+export type IndexedNames = [
+  TasksIndex.ClientConfig,
+  TasksIndex.CallOptions,
+  TasksIndex.TimedCallOptions,
+  TasksIndex.CallResult<unknown, unknown>,
+  TasksIndex.SuccessResult<unknown, unknown>,
+  TasksIndex.ErrorResult<unknown>,
+  TasksIndex.UnexpectedResult,
+  TasksIndex.NotModifiedResult,
+  TasksIndex.ReplayFlag,
+  TasksIndex.Client,
+  InstanceType<typeof TasksIndex.ContractError>,
+];
+export const indexedCreateClient: typeof createClient = TasksIndex.createClient;
+
 const client = createClient({ baseUrl: "http://localhost" });
 const serviceClient = createServiceClient({ baseUrl: "http://localhost" });
 const throwingClient = createThrowingClient({ baseUrl: "http://localhost" });

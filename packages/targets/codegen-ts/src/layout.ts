@@ -25,6 +25,12 @@ export const OPERATION_INPUT_MODULE = "operations/input";
 export const OPERATION_OUTPUT_MODULE = "operations/output";
 export const OPERATION_ERRORS_MODULE = "operations/errors";
 
+export const INDEX_MODULE = "index";
+
+// The namespace of the schemas module in the index: a schema can share a name with an operation type (a named
+// inline input such as `AssignTaskInput`), so the schemas are grouped and the operation modules stay flat.
+export const SCHEMAS_NAMESPACE = "schemas";
+
 export const MODULE_EXTENSION = ".ts";
 
 export interface OperationTypeNames {
@@ -42,7 +48,7 @@ export interface TypesLayout {
 
 const KNOWN_DIRECTIONS: readonly string[] = ["input", "output"];
 
-// Names each schema, enum and operation type through ADR 0007, and refuses two exports of one module that would
+// Names each schema, enum and operation type through ADR 0007, and refuses two exports of one module, or of the flat operation modules, that would
 // take one name, or a schema direction this target does not know.
 export function planTypesLayout(
   ir: ContractIR,
@@ -93,6 +99,8 @@ export function planTypesLayout(
 
     operationTypeNames.set(operation.id, names);
     operationModuleNames.claim(names.input, location, refusals);
+    operationModuleNames.claim(names.output, location, refusals);
+    operationModuleNames.claim(names.errors, location, refusals);
   });
 
   if (refusals.length > 0) return { status: "refused", refusals };

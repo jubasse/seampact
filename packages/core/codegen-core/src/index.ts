@@ -1,6 +1,7 @@
 // The API the code generators are written against: target definitions, link descriptors, refusals, and the
 // steps around a target's generate (IR support and link checks, header, formatting, file writer), and the
 // helpers targets share (IR locations, located refusals, planned names, property keys).
+export { apiIndexSource, type IndexedModule } from "./api-index.js";
 export { defineTarget } from "./define-target.js";
 export type {
   Descriptor,

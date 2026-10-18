@@ -1,11 +1,17 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { type ExportRef, importSpecifier, type Link } from "@seampact/codegen-core";
+import {
+  type ExportRef,
+  importSpecifier,
+  type Link,
+  type SchemaDirection,
+} from "@seampact/codegen-core";
 import type { ContractIR } from "@seampact/spec/ir";
 import ts from "typescript";
 import { afterAll, expect, test } from "vitest";
 import { target } from "./index.js";
+import { SCHEMA_MODULES, SCHEMA_NAMESPACES } from "./layout.js";
 
 const GOLDEN_IRS = ["tasks", "tasksService"];
 const OUTPUT_DIRECTORY = "generated";
@@ -33,6 +39,10 @@ function compilerOptions(): ts.CompilerOptions {
   return { ...options, types: [], paths: { zod: [ZOD_TYPES] } };
 }
 
+function directionOfModule(module: string): SchemaDirection | undefined {
+  return (["input", "output"] as const).find((direction) => SCHEMA_MODULES[direction] === module);
+}
+
 function probeSource(exportRefs: readonly ExportRef[]): string {
   const link: Link<"validators"> = {
     descriptor: { kind: "validators", style: "standard-schema", schemas: {}, operations: {} },
@@ -47,7 +57,21 @@ function probeSource(exportRefs: readonly ExportRef[]): string {
     })
     .join("\n");
 
-  return `type StandardSchema = { "~standard": { version: 1; validate: (value: unknown) => unknown } };\n${imports}`;
+  // Every public export is reachable through the api index: schemas under their direction, operations flat.
+  const indexUses = exportRefs.map((exportRef, index) => {
+    const direction = directionOfModule(exportRef.module);
+    const path =
+      direction === undefined
+        ? exportRef.export
+        : `${SCHEMA_NAMESPACES[direction]}.${exportRef.export}`;
+
+    return `export const IndexUses${index} = Api.${path};`;
+  });
+  const indexProbe = [`import * as Api from "./${OUTPUT_DIRECTORY}/index.js";`, ...indexUses].join(
+    "\n",
+  );
+
+  return `type StandardSchema = { "~standard": { version: 1; validate: (value: unknown) => unknown } };\n${imports}\n${indexProbe}`;
 }
 
 test.each(GOLDEN_IRS)("the generated reference validators compile: %s", async (name) => {
@@ -95,6 +119,7 @@ test.each(GOLDEN_IRS)("the generated reference validators compile: %s", async (n
     .getPreEmitDiagnostics(program)
     .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"));
 
+  expect(outcome.files.map((file) => file.path)).toContain("index.ts");
   expect(exportRefs.length).toBeGreaterThan(0);
   expect(diagnostics).toEqual([]);
 });
