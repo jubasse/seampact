@@ -1,4 +1,4 @@
-import type { ParseOptionsOutcome, Refusal } from "@seampact/codegen-core";
+import { below, type ParseOptionsOutcome, type Refusal } from "@seampact/codegen-core";
 
 // How a generated method hands back a declared error or an unexpected answer: as a result the caller checks, or
 // as a thrown `ContractError` carrying it. A network failure or a timeout rejects in both.
@@ -55,7 +55,7 @@ function refuseUnknownOption(key: string): Refusal {
     code: "options.unknown",
     message: `The option '${key}' is not one this target knows; it takes 'errorStyle' only.`,
     fix: `Remove '${key}' from the target's \`options\`.`,
-    member: `/${key.replaceAll("~", "~0").replaceAll("/", "~1")}`,
+    member: below({ member: "" }, key).member,
   };
 }
 
