@@ -14,6 +14,7 @@ export {
   derivationCoreSchemaIds,
   derivationIssueLocations,
   derivationIssueMembers,
+  derivationParamsSchemaId,
   derivationRoleOf,
   derivationRoles,
 } from "./roles.js";
