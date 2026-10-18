@@ -351,7 +351,17 @@ function hasDegradedMeta(formats: Json, format: unknown): boolean | undefined {
 }
 
 const DEPRECATION_SEMANTICS = ["deprecation", "sunset", "successorLink"] as const;
+const SUCCESS_FIRST = 200;
+const SUCCESS_LAST = 299;
 
+const isSuccess = (response: unknown): boolean =>
+  isRecord(response) &&
+  typeof response.status === "number" &&
+  response.status >= SUCCESS_FIRST &&
+  response.status <= SUCCESS_LAST;
+
+// Each 2xx response of a deprecated operation carries one deprecation and one sunset header, and one successor
+// link with a successor; no other response carries any of them (a redirect or a 304 is no success).
 function checkDeprecationHeaders(
   operation: Json,
   pointer: string,
@@ -359,12 +369,10 @@ function checkDeprecationHeaders(
   apiId: unknown,
   fail: Fail,
 ): void {
-  const deprecated = operation.deprecated;
+  const deprecated = isRecord(operation.deprecated) ? operation.deprecated : undefined;
+  const successor = isRecord(deprecated?.successor) ? deprecated.successor : undefined;
 
-  if (!isRecord(deprecated)) return;
-  const successor = isRecord(deprecated.successor) ? deprecated.successor : undefined;
-
-  if (has(deprecated, "successorRel") !== (successor !== undefined))
+  if (deprecated !== undefined && has(deprecated, "successorRel") !== (successor !== undefined))
     fail(
       "ir.deprecation.headers",
       `${pointer}/deprecated`,
@@ -375,18 +383,22 @@ function checkDeprecationHeaders(
 
   for (const [i, response] of responses.entries()) {
     const headers = isRecord(response) && Array.isArray(response.headers) ? response.headers : [];
+    const signals = deprecated !== undefined && isSuccess(response);
 
     for (const semantic of DEPRECATION_SEMANTICS) {
       const count = headers.filter(
         (header) => isRecord(header) && header.semantic === semantic,
       ).length;
-      const expected = semantic === "successorLink" && successor === undefined ? 0 : 1;
+      const expected =
+        !signals || (semantic === "successorLink" && successor === undefined) ? 0 : 1;
 
       if (count !== expected)
         fail(
           "ir.deprecation.headers",
           `${pointer}/responses/${i}`,
-          `A response of a deprecated operation carries ${expected === 1 ? "one" : "no"} '${semantic}' header, not ${count}.`,
+          signals
+            ? `A 2xx response of a deprecated operation carries ${expected === 1 ? "one" : "no"} '${semantic}' header, not ${count}.`
+            : `Only a 2xx response of a deprecated operation carries a '${semantic}' header; this one carries ${count}.`,
         );
     }
   }
@@ -396,7 +408,18 @@ function checkDeprecationHeaders(
     (candidate) => isRecord(candidate) && candidate.id === successor.id,
   );
 
-  if (isRecord(target)) checkSuccessorParams(operation, target, pointer, fail);
+  // A successor in another api is checked at compile time only: the document does not hold that api.
+  if (!isRecord(target)) {
+    fail(
+      "ir.deprecation.headers",
+      `${pointer}/deprecated/successor`,
+      `The successor '${String(successor.id)}' names no operation of this api.`,
+    );
+
+    return;
+  }
+
+  checkSuccessorParams(operation, target, pointer, fail);
 }
 
 const pathParamsOf = (operation: Json): Json[] => {
@@ -525,8 +548,8 @@ function retryParamOf(declaration: Json, schemaEntries: Json, param: unknown): J
 
 // Why a retry header's param cannot render as a non-negative safe integer, or undefined.
 function retryParamProblem(property: Json | undefined): string | undefined {
-  if (property === undefined || property.optional !== false)
-    return "a required property of the code's params";
+  if (property === undefined || property.optional !== false || property.nullable !== false)
+    return "a required, non-nullable property of the code's params";
   const use = isRecord(property.type) ? property.type : {};
   const refinements = isRecord(use.refinements) ? use.refinements : {};
 

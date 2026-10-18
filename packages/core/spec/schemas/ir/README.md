@@ -97,11 +97,11 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 | `ir.sort-key.right` | A `SortKey`'s `params` and `subject` only with `right`; `subject` present if and only if the right's `subject` kind is not `none`; its source is not `in: holderField`. |
 | `ir.value.exact-number` | In `Property.default`, `Property.examples`, `Param.default` and a scalar use's `examples`, an `int64` or `decimal` use's value is a string matching its pattern (an `int64` not `-0`, within -2^63 to 2^63 - 1), and any other `integer` use's value a safe integer. |
 | `ir.degradable.header` | `Degradable.header` is present when the operation's format has no `degraded` meta member. |
-| `ir.deprecation.headers` | `Deprecation.successorRel` if and only if `successor`; each response of a deprecated operation carries one header of semantic `deprecation`, one of `sunset`, and one of `successorLink` if and only if `successor`; each path param of the successor is a path param of the deprecated operation with the same type use. |
+| `ir.deprecation.headers` | `Deprecation.successorRel` if and only if `successor`; each 2xx response of a deprecated operation carries one header of semantic `deprecation`, one of `sunset`, and one of `successorLink` if and only if `successor`, and no other response carries a header of these semantics; a successor in the same api names an operation of the document, and each of its path params is a path param of the deprecated operation with the same type use (a successor in another api is checked at compile time only). |
 | `ir.deprecation.since` | `Deprecation.since` and `sunset` are calendar dates (real days, years 0001 to 9999), `since` not after `sunset`. |
 | `ir.operation.role-once` | A role appears at most once in an operation's error role bindings, across elements and within one. |
 | `ir.error.role-params` | A role binding has `params` if and only if its code declares params, and holds no `each` inside another `each`'s `as`. |
-| `ir.error.retry-header` | A `retryHeader` sits only on a code of status 429; its `param` is a required `integer` member of the code's params with `minimum` at least 0 and `maximum` at most 9007199254740991; its `derivedFrom.derivation` is `rule.bucket`. |
+| `ir.error.retry-header` | A `retryHeader` sits only on a code of status 429; its `param` is a required, non-nullable `integer` member of the code's params with `minimum` at least 0 and `maximum` at most 9007199254740991; its `derivedFrom.derivation` is `rule.bucket`. |
 | `ir.cache.sensitive-no-store` | Planned (p2-finalize): a response that carries a sensitive field sets `Cache.noStore`. Not checked yet: it needs a walk of the response schemas. |
 
 ## Readers

@@ -1320,7 +1320,7 @@
       },
       "filteredBy": "tasks.read",
       "degradable": {
-        "paths": ["/assignee"],
+        "paths": ["assignee"],
         "header": "X-Degraded",
         "origin": { "layer": "api", "pointer": "/degradable" }
       },
@@ -1329,7 +1329,7 @@
       "deprecated": {
         "since": "2026-06-01",
         "sunset": "2027-01-31",
-        "successor": { "kind": "httpOperation", "api": "tasks", "id": "updateTaskV2" },
+        "successor": { "kind": "httpOperation", "api": "tasks", "id": "getTask" },
         "successorRel": "successor-version",
         "origin": { "layer": "api", "pointer": "/deprecated" }
       },

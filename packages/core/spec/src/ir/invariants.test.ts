@@ -827,14 +827,46 @@ describe("degradable and deprecation", () => {
     ).toEqual(at("ir.deprecation.headers", response));
   });
 
+  test("only a 2xx response of a deprecated operation carries deprecation headers", () => {
+    const redirect = (ir: Json, headers: Json[]) =>
+      list(ir, `${UPDATE}/responses`).push({ status: 302, shape: "empty", headers });
+    const deprecationHeader = (ir: Json) =>
+      structuredClone(node(ir, `${UPDATE}/responses/0/headers/1`));
+
+    expect(violationsAfter((ir) => redirect(ir, []))).toEqual([]);
+    expect(violationsAfter((ir) => redirect(ir, [deprecationHeader(ir)]))).toEqual(
+      at("ir.deprecation.headers", `${UPDATE}/responses/1`),
+    );
+    expect(
+      violationsAfter((ir) => {
+        list(ir, "/operations/0/responses/0/headers").push(deprecationHeader(ir));
+      }),
+    ).toEqual(at("ir.deprecation.headers", "/operations/0/responses/0"));
+  });
+
+  test("a successor in the same api names an operation of the document", () => {
+    expect(
+      violationsAfter((ir) => {
+        node(ir, `${DEPRECATED}/successor`).id = "nope";
+      }),
+    ).toEqual(at("ir.deprecation.headers", `${DEPRECATED}/successor`));
+    expect(
+      violationsAfter((ir) => {
+        node(ir, `${DEPRECATED}/successor`).api = "billing";
+        node(ir, `${DEPRECATED}/successor`).id = "nope";
+      }),
+    ).toEqual([]);
+  });
+
   const TASK_ID = `${UPDATE}/params/path/0`;
-  // The sample's successor, updateTaskV2, as an operation of the document with one path param.
+  // A successor updateTaskV2, an operation of the document with one path param.
   const withSuccessor = (ir: Json, param: Json) => {
     list(ir, "/operations").push({
       ...structuredClone(node(ir, "/operations/1")),
       id: "updateTaskV2",
       params: { path: [param], query: [], header: [] },
     });
+    node(ir, `${DEPRECATED}/successor`).id = "updateTaskV2";
   };
 
   const taskId = (ir: Json, change: Json = {}): Json => ({
@@ -960,10 +992,15 @@ describe("error roles and retry headers", () => {
     ).toEqual(BOTH_RETRY_HEADERS);
   });
 
-  test("a retry header naming an optional param breaks ir.error.retry-header", () => {
+  test("a retry header naming an optional or nullable param breaks ir.error.retry-header", () => {
     expect(
       retryViolations((ir) => {
         node(ir, RETRY_AFTER).optional = true;
+      }),
+    ).toEqual(BOTH_RETRY_HEADERS);
+    expect(
+      retryViolations((ir) => {
+        node(ir, RETRY_AFTER).nullable = true;
       }),
     ).toEqual(BOTH_RETRY_HEADERS);
     expect(

@@ -22,9 +22,15 @@ surfaces:
         pathParams: { id: { type: string } }
         output: Task
         deprecated: { since: '2026-06-01', sunset: '2027-01-31', successor: getTask }
+      legacyLink:
+        method: get
+        path: 'legacy/links/{id}'
+        pathParams: { id: { type: string } }
+        responses: { 302: {} }
+        deprecated: { since: '2026-06-01', sunset: '2027-01-31' }
 `;
 
-test("a compiled deprecated route and a compiled degradable route hold the IR invariants", () => {
+test("a compiled deprecated route, a deprecated redirect and a compiled degradable route hold the IR invariants", () => {
   const workspace = deriveWireLoadFiles({ "api.yaml": CONTRACT.trimStart() });
   const [rawApi] = workspace.apis;
   const run = deriveWireRunContract(workspace);
@@ -40,7 +46,7 @@ test("a compiled deprecated route and a compiled degradable route hold the IR in
   });
 
   expect(diagnostics.map((diagnostic) => diagnostic.message)).toEqual([]);
-  const [getTask, legacyTask] = finalized?.ir.operations ?? [];
+  const [getTask, legacyLink, legacyTask] = finalized?.ir.operations ?? [];
 
   expect(getTask?.degradable?.header).toBe("X-Degraded");
   expect(legacyTask?.deprecated?.successorRel).toBe("successor-version");
@@ -48,5 +54,9 @@ test("a compiled deprecated route and a compiled degradable route hold the IR in
     "deprecation",
     "sunset",
     "successorLink",
+  ]);
+  // A redirect is no success, so it carries no deprecation header.
+  expect(legacyLink?.responses.map(({ status, headers }) => [status, headers.length])).toEqual([
+    [302, 1],
   ]);
 });
