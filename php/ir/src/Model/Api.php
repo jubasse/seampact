@@ -1,6 +1,6 @@
 <?php
 
-// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 3. Do not edit.
+// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 4. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 
 declare(strict_types=1);
@@ -20,6 +20,7 @@ final readonly class Api
      * @param PathVersion $pathVersion
      * @param Maturity $maturity
      * @param Compat $compat
+     * @param ApiWire $wire
      * @param array<int|string, Surface> $surfaces
      * @param array<int|string, ApiDocument> $documents
      * @param Docs $docs
@@ -36,6 +37,7 @@ final readonly class Api
         public PathVersion $pathVersion,
         public Maturity $maturity,
         public Compat $compat,
+        public ApiWire $wire,
         public array $surfaces,
         public array $documents,
         public Docs $docs,
@@ -64,6 +66,7 @@ final readonly class Api
             pathVersion: PathVersion::fromJson(IrHydration::required($members, 'pathVersion', 'Api')),
             maturity: Maturity::fromJson(IrHydration::required($members, 'maturity', 'Api')),
             compat: Compat::fromJson(IrHydration::required($members, 'compat', 'Api')),
+            wire: ApiWire::fromJson(IrHydration::required($members, 'wire', 'Api')),
             surfaces: IrHydration::mapOf(IrHydration::required($members, 'surfaces', 'Api'), 'Api.surfaces', static fn (mixed $item): Surface => Surface::fromJson($item)),
             documents: IrHydration::mapOf(IrHydration::required($members, 'documents', 'Api'), 'Api.documents', static fn (mixed $item): ApiDocument => ApiDocument::fromJson($item)),
             docs: Docs::fromJson(IrHydration::required($members, 'docs', 'Api')),
@@ -90,6 +93,7 @@ final readonly class Api
             $json->{'caller'} = $this->caller->toJson();
         }
         $json->{'compat'} = $this->compat->toJson();
+        $json->{'wire'} = $this->wire->toJson();
         $json->{'surfaces'} = IrHydration::encodeMap($this->surfaces, static fn (Surface $item): mixed => $item->toJson());
         $json->{'documents'} = IrHydration::encodeMap($this->documents, static fn (ApiDocument $item): mixed => $item->toJson());
         $json->{'docs'} = $this->docs->toJson();

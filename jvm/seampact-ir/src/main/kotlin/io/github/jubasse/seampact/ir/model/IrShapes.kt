@@ -1,4 +1,4 @@
-// Generated from scripts/ir-models/kotlin.ts by scripts/ir-models for IR revision 3. Do not edit.
+// Generated from scripts/ir-models/kotlin.ts by scripts/ir-models for IR revision 4. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 
 package io.github.jubasse.seampact.ir.model
@@ -17,7 +17,7 @@ private fun commonShapes(): Map<String, IrShape> = buildMap {
     put("Origin", IrShape.Struct(mapOf()))
     put("SchemaRef", IrShape.Named("SchemaId"))
     put("ValueSource", IrShape.Struct(mapOf("in" to IrShape.Named("ValueSourceIn"))))
-    put("ValueSourceIn", IrShape.OpenEnum(setOf("path", "query", "header", "body", "principal", "scope", "host", "subdomain", "address", "resolver", "holderField"), false))
+    put("ValueSourceIn", IrShape.OpenEnum(setOf("path", "query", "header", "body", "principal", "scope", "host", "subdomain", "address", "resolver", "holderField"), true))
 }
 
 private fun declarationsShapes(): Map<String, IrShape> = buildMap {
@@ -111,12 +111,13 @@ private fun formatsShapes(): Map<String, IrShape> = buildMap {
 }
 
 private fun irShapes(): Map<String, IrShape> = buildMap {
-    put("Api", IrShape.Struct(mapOf("name" to IrShape.Named("Name"), "version" to IrShape.Named("ApiVersion"), "kind" to IrShape.Named("ApiKind"), "pathVersion" to IrShape.Named("PathVersion"), "role" to IrShape.Named("ApiRole"), "maturity" to IrShape.Named("Maturity"), "caller" to IrShape.Named("ApiCaller"), "compat" to IrShape.Named("Compat"), "surfaces" to IrShape.Values(IrShape.Named("Surface")), "documents" to IrShape.Values(IrShape.Named("ApiDocument")), "docs" to IrShape.Named("Docs"), "extensions" to IrShape.Named("Extensions"), "origin" to IrShape.Named("Origin"))))
+    put("Api", IrShape.Struct(mapOf("name" to IrShape.Named("Name"), "version" to IrShape.Named("ApiVersion"), "kind" to IrShape.Named("ApiKind"), "pathVersion" to IrShape.Named("PathVersion"), "role" to IrShape.Named("ApiRole"), "maturity" to IrShape.Named("Maturity"), "caller" to IrShape.Named("ApiCaller"), "compat" to IrShape.Named("Compat"), "wire" to IrShape.Named("ApiWire"), "surfaces" to IrShape.Values(IrShape.Named("Surface")), "documents" to IrShape.Values(IrShape.Named("ApiDocument")), "docs" to IrShape.Named("Docs"), "extensions" to IrShape.Named("Extensions"), "origin" to IrShape.Named("Origin"))))
     put("ApiCaller", IrShape.Struct(mapOf("identity" to IrShape.Named("IdentityId"), "right" to IrShape.Named("RightId"))))
     put("ApiDocument", IrShape.Struct(mapOf("surfaces" to IrShape.Items(IrShape.Named("SurfaceId")), "internal" to IrShape.Named("InternalPolicy"))))
     put("ApiKind", IrShape.OpenEnum(setOf("product", "service"), false))
     put("ApiRole", IrShape.OpenEnum(setOf("gateway"), false))
     put("ApiVersion", IrShape.Union("kind", false, mapOf("path" to "PathApiVersion", "label" to "LabelApiVersion")))
+    put("ApiWire", IrShape.Struct(mapOf("int64" to IrShape.Named("Int64Wire"), "outputEnums" to IrShape.Named("OutputEnumForm"), "urls" to IrShape.Named("UrlForm"))))
     put("Compat", IrShape.Struct(mapOf("policy" to IrShape.Named("CompatPolicy"))))
     put("CompatPolicy", IrShape.OpenEnum(setOf("additive-only", "none"), false))
     put("ContractIR", IrShape.Struct(mapOf("kinds" to IrShape.Items(IrShape.Named("DeclarationKind")), "features" to IrShape.Items(IrShape.Named("Feature")), "api" to IrShape.Named("Api"), "packs" to IrShape.Items(IrShape.Named("PackRef")), "conventions" to IrShape.Named("Conventions"), "formats" to IrShape.Values(IrShape.Named("WireFormat")), "pagings" to IrShape.Values(IrShape.Named("PagingStyle")), "schemas" to IrShape.Values(IrShape.Named("Schema")), "scalars" to IrShape.Values(IrShape.Named("Scalar")), "enums" to IrShape.Values(IrShape.Named("Enum")), "errors" to IrShape.Values(IrShape.Named("ErrorDecl")), "natures" to IrShape.Values(IrShape.Named("NatureDecl")), "schemes" to IrShape.Values(IrShape.Named("Scheme")), "headers" to IrShape.Values(IrShape.Named("HeaderDecl")), "identities" to IrShape.Values(IrShape.Named("Identity")), "rights" to IrShape.Values(IrShape.Named("Right")), "rules" to IrShape.Values(IrShape.Named("Rule")), "scopes" to IrShape.Values(IrShape.Named("Scope")), "buckets" to IrShape.Values(IrShape.Named("Bucket")), "services" to IrShape.Values(IrShape.Named("Service")), "extensionKeys" to IrShape.Values(IrShape.Named("ExtensionKeyDecl")), "lint" to IrShape.Named("Lint"), "operations" to IrShape.Items(IrShape.Named("Operation")))))
@@ -124,17 +125,20 @@ private fun irShapes(): Map<String, IrShape> = buildMap {
     put("Conventions", IrShape.Values(IrShape.Named("ConventionValue")))
     put("ExtensionKeyDecl", IrShape.Struct(mapOf("id" to IrShape.Named("ExtensionKeyId"), "prefix" to IrShape.Named("ExtensionPrefix"), "key" to IrShape.Named("ExtensionKey"), "schema" to IrShape.Named("TypeUse"), "places" to IrShape.Items(IrShape.Named("ExtensionPlace")), "origin" to IrShape.Named("Origin"))))
     put("ExtensionPlace", IrShape.OpenEnum(setOf("api", "operation", "schema", "property", "right", "rule", "scope"), false))
+    put("Int64Wire", IrShape.OpenEnum(setOf("string", "number"), false))
     put("InternalPolicy", IrShape.OpenEnum(setOf("include", "exclude"), false))
     put("LabelApiVersion", IrShape.Struct(mapOf()))
     put("Lint", IrShape.Struct(mapOf("rules" to IrShape.Values(IrShape.Named("LintRule")), "allows" to IrShape.Items(IrShape.Named("LintAllow")))))
     put("LintAllow", IrShape.Struct(mapOf("at" to IrShape.Named("Origin"), "reason" to IrShape.Named("Reason"))))
     put("LintRule", IrShape.Struct(mapOf("severity" to IrShape.Named("LintSeverity"), "origin" to IrShape.Named("Origin"))))
     put("LintSeverity", IrShape.OpenEnum(setOf("disabled", "warning", "error"), false))
+    put("OutputEnumForm", IrShape.OpenEnum(setOf("enum", "open"), false))
     put("PackRef", IrShape.Struct(mapOf()))
     put("PathApiVersion", IrShape.Struct(mapOf()))
     put("PathVersion", IrShape.Struct(mapOf("value" to IrShape.Named("PathVersionMode"), "origin" to IrShape.Named("Origin"))))
     put("PathVersionMode", IrShape.OpenEnum(setOf("prefix", "none"), false))
     put("Surface", IrShape.Struct(mapOf("name" to IrShape.Named("Name"), "pathVersion" to IrShape.Named("PathVersionMode"), "origin" to IrShape.Named("Origin"))))
+    put("UrlForm", IrShape.OpenEnum(setOf("relative", "absolute"), false))
 }
 
 private fun operationShapes(): Map<String, IrShape> = buildMap {
@@ -151,9 +155,11 @@ private fun operationShapes(): Map<String, IrShape> = buildMap {
     put("Deprecation", IrShape.Struct(mapOf("successor" to IrShape.Named("OperationRef"), "origin" to IrShape.Named("Origin"))))
     put("DerivedCsrf", IrShape.Struct(mapOf("derivedFrom" to IrShape.Named("DerivedFrom"))))
     put("DerivedIdempotency", IrShape.Struct(mapOf("enforce" to IrShape.Named("IdempotencyEnforcement"), "derivedFrom" to IrShape.Named("DerivedFrom"))))
+    put("ErrorRoleBinding", IrShape.Struct(mapOf("role" to IrShape.Named("ErrorRole"), "params" to IrShape.Named("Template"))))
     put("ExemptCsrf", IrShape.Struct(mapOf("reason" to IrShape.Named("Reason"), "origin" to IrShape.Named("Origin"))))
     put("ExemptIdempotency", IrShape.Struct(mapOf("reason" to IrShape.Named("Reason"), "origin" to IrShape.Named("Origin"))))
-    put("FieldRight", IrShape.Struct(mapOf("schema" to IrShape.Named("SchemaId"), "right" to IrShape.Named("RightId"), "subject" to IrShape.Named("FieldRightSubject"), "direction" to IrShape.Named("Direction"), "inputPolicy" to IrShape.Named("InputPolicy"), "derivedFrom" to IrShape.Named("DerivedFrom"))))
+    put("FieldRight", IrShape.Struct(mapOf("schema" to IrShape.Named("SchemaId"), "right" to IrShape.Named("RightId"), "subject" to IrShape.Named("FieldRightSubject"), "direction" to IrShape.Named("Direction"), "inputPolicy" to IrShape.Named("InputPolicy"), "always" to IrShape.Named("FieldRightAlways"), "derivedFrom" to IrShape.Named("DerivedFrom"))))
+    put("FieldRightAlways", IrShape.OpenEnum(setOf("absent"), true))
     put("FieldRightSubject", IrShape.Struct(mapOf("source" to IrShape.Named("ValueSource"))))
     put("FieldWire", IrShape.Struct(mapOf("kind" to IrShape.Named("FieldWireKind"), "style" to IrShape.Named("QueryStyle"))))
     put("FieldWireKind", IrShape.OpenEnum(setOf("number", "boolean", "list", "text", "object", "file", "json"), false))
@@ -168,7 +174,7 @@ private fun operationShapes(): Map<String, IrShape> = buildMap {
     put("MaturitySource", IrShape.OpenEnum(setOf("api", "upstream", "stated"), false))
     put("OpShorthand", IrShape.OpenEnum(setOf("list", "get", "create", "update", "delete", "batch"), false))
     put("Operation", IrShape.Struct(mapOf("kind" to IrShape.Named("DeclarationKind"), "id" to IrShape.Named("OperationId"), "name" to IrShape.Named("Name"), "surface" to IrShape.Named("SurfaceId"), "op" to IrShape.Named("OpShorthand"), "resource" to IrShape.Named("OperationResource"), "features" to IrShape.Items(IrShape.Named("Feature")), "method" to IrShape.Named("HttpMethod"), "params" to IrShape.Named("Params"), "unknownQuery" to IrShape.Named("UnknownQuery"), "access" to IrShape.Named("Access"), "callerKinds" to IrShape.Items(IrShape.Named("CallerKind")), "principalRequires" to IrShape.Items(IrShape.Named("PrincipalRequirement")), "scopes" to IrShape.Items(IrShape.Named("OperationScope")), "requires" to IrShape.Items(IrShape.Named("Requirement")), "bindings" to IrShape.Items(IrShape.Named("Binding")), "input" to IrShape.Named("OperationInput"), "responses" to IrShape.Items(IrShape.Named("Response")), "errors" to IrShape.Items(IrShape.Named("OperationError")), "fieldRights" to IrShape.Items(IrShape.Named("FieldRight")), "idempotency" to IrShape.Named("Idempotency"), "concurrency" to IrShape.Named("Concurrency"), "owner" to IrShape.Named("Owner"), "cache" to IrShape.Named("Cache"), "paging" to IrShape.Named("Paging"), "filteredBy" to IrShape.Named("RightId"), "degradable" to IrShape.Named("Degradable"), "deprecated" to IrShape.Named("Deprecation"), "relays" to IrShape.Named("OperationRef"), "upstream" to IrShape.Items(IrShape.Named("ServiceId")), "maturity" to IrShape.Named("OperationMaturity"), "csrf" to IrShape.Named("Csrf"), "format" to IrShape.Named("FormatId"), "examples" to IrShape.Values(IrShape.Named("OperationExample")), "docs" to IrShape.Named("Docs"), "extensions" to IrShape.Named("Extensions"), "origin" to IrShape.Named("Origin"))))
-    put("OperationError", IrShape.Struct(mapOf("code" to IrShape.Named("ErrorCode"), "derivedFrom" to IrShape.Named("DerivedFrom"), "origin" to IrShape.Named("Origin"))))
+    put("OperationError", IrShape.Struct(mapOf("code" to IrShape.Named("ErrorCode"), "roles" to IrShape.Items(IrShape.Named("ErrorRoleBinding")), "retryHeader" to IrShape.Named("RetryHeader"), "derivedFrom" to IrShape.Named("DerivedFrom"), "origin" to IrShape.Named("Origin"))))
     put("OperationExample", IrShape.Struct(mapOf("error" to IrShape.Named("ErrorCode"))))
     put("OperationInput", IrShape.Struct(mapOf("media" to IrShape.Named("InputMediaType"), "schema" to IrShape.Named("TypeUse"), "fields" to IrShape.Items(IrShape.Named("InputField")), "proofs" to IrShape.Items(IrShape.Named("InputProof")), "origin" to IrShape.Named("Origin"))))
     put("OperationMaturity", IrShape.Struct(mapOf("level" to IrShape.Named("Maturity"), "source" to IrShape.Named("MaturitySource"), "reason" to IrShape.Named("Reason"), "origin" to IrShape.Named("Origin"))))
@@ -193,11 +199,14 @@ private fun operationShapes(): Map<String, IrShape> = buildMap {
     put("Requirement", IrShape.Union("kind", true, mapOf("right" to "RightRequirement", "rule" to "RuleRequirement")))
     put("RequirementSubject", IrShape.Struct(mapOf("source" to IrShape.Named("ValueSource"))))
     put("Response", IrShape.Struct(mapOf("body" to IrShape.Named("TypeUse"), "shape" to IrShape.Named("ResponseShape"), "headers" to IrShape.Items(IrShape.Named("ResponseHeader")), "origin" to IrShape.Named("Origin"), "derivedFrom" to IrShape.Named("DerivedFrom"), "docs" to IrShape.Named("Docs"))))
-    put("ResponseHeader", IrShape.Struct(mapOf("type" to IrShape.Named("TypeUse"), "origin" to IrShape.Named("Origin"), "derivedFrom" to IrShape.Named("DerivedFrom"))))
+    put("ResponseHeader", IrShape.Struct(mapOf("type" to IrShape.Named("TypeUse"), "semantic" to IrShape.Named("ResponseHeaderSemantic"), "origin" to IrShape.Named("Origin"), "derivedFrom" to IrShape.Named("DerivedFrom"))))
+    put("ResponseHeaderSemantic", IrShape.OpenEnum(setOf("deadline", "traceContext", "actorSurface", "versionToken", "deprecation", "sunset", "successorLink"), false))
     put("ResponseShape", IrShape.OpenEnum(setOf("item", "table", "list", "page", "empty", "binary", "redirect"), false))
+    put("RetryHeader", IrShape.Struct(mapOf("unit" to IrShape.Named("RetryUnit"), "derivedFrom" to IrShape.Named("DerivedFrom"))))
+    put("RetryUnit", IrShape.OpenEnum(setOf("s", "ms"), false))
     put("RightRequirement", IrShape.Struct(mapOf("right" to IrShape.Named("RightId"), "subject" to IrShape.Named("RequirementSubject"), "origin" to IrShape.Named("Origin"), "derivedFrom" to IrShape.Named("DerivedFrom"))))
     put("RuleRequirement", IrShape.Struct(mapOf("rule" to IrShape.Named("RuleId"), "bucket" to IrShape.Named("BucketId"), "origin" to IrShape.Named("Origin"), "derivedFrom" to IrShape.Named("DerivedFrom"))))
-    put("SortKey", IrShape.Struct(mapOf("right" to IrShape.Named("RightId"), "derivedFrom" to IrShape.Named("DerivedFrom"), "origin" to IrShape.Named("Origin"))))
+    put("SortKey", IrShape.Struct(mapOf("right" to IrShape.Named("RightId"), "subject" to IrShape.Named("FieldRightSubject"), "derivedFrom" to IrShape.Named("DerivedFrom"), "origin" to IrShape.Named("Origin"))))
     put("UnknownQuery", IrShape.Union("policy", true, mapOf("refuse" to "RefuseUnknownQuery", "ignore" to "IgnoreUnknownQuery")))
 }
 

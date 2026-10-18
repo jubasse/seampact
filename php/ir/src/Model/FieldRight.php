@@ -1,6 +1,6 @@
 <?php
 
-// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 3. Do not edit.
+// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 4. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 
 declare(strict_types=1);
@@ -19,6 +19,7 @@ final readonly class FieldRight
      * @param IrOpaque|null $params
      * @param FieldRightSubject|null $subject
      * @param InputPolicy|null $inputPolicy
+     * @param FieldRightAlways|null $always
      */
     public function __construct(
         public string $schema,
@@ -29,6 +30,7 @@ final readonly class FieldRight
         public ?IrOpaque $params = null,
         public ?FieldRightSubject $subject = null,
         public ?InputPolicy $inputPolicy = null,
+        public ?FieldRightAlways $always = null,
     ) {
     }
 
@@ -45,6 +47,7 @@ final readonly class FieldRight
             params: IrHydration::optionalOpaque($members, 'params'),
             subject: IrHydration::optional($members, 'subject', static fn (mixed $item): FieldRightSubject => FieldRightSubject::fromJson($item)),
             inputPolicy: IrHydration::optional($members, 'inputPolicy', static fn (mixed $item): InputPolicy => InputPolicy::fromJson($item)),
+            always: IrHydration::optional($members, 'always', static fn (mixed $item): FieldRightAlways => FieldRightAlways::fromJson($item)),
         );
     }
 
@@ -63,6 +66,9 @@ final readonly class FieldRight
         $json->{'direction'} = $this->direction->toJson();
         if ($this->inputPolicy !== null) {
             $json->{'inputPolicy'} = $this->inputPolicy->toJson();
+        }
+        if ($this->always !== null) {
+            $json->{'always'} = $this->always->toJson();
         }
         $json->{'derivedFrom'} = $this->derivedFrom->toJson();
         return $json;

@@ -1,5 +1,5 @@
 {
-  "irRevision": 3,
+  "irRevision": 4,
   "definitions": {
     "Absent": {
       "construct": "openEnum",
@@ -40,6 +40,11 @@
       "construct": "union",
       "kotlin": "ApiVersion",
       "php": "ApiVersion"
+    },
+    "ApiWire": {
+      "construct": "struct",
+      "kotlin": "ApiWire",
+      "php": "ApiWire"
     },
     "ApplicationSignature": {
       "construct": "struct",
@@ -277,6 +282,11 @@
       "kotlin": "ErrorRole",
       "php": "ErrorRole"
     },
+    "ErrorRoleBinding": {
+      "construct": "struct",
+      "kotlin": "ErrorRoleBinding",
+      "php": "ErrorRoleBinding"
+    },
     "ErrorShape": {
       "construct": "struct",
       "kotlin": "ErrorShape",
@@ -336,6 +346,11 @@
       "construct": "struct",
       "kotlin": "FieldRight",
       "php": "FieldRight"
+    },
+    "FieldRightAlways": {
+      "construct": "openEnum",
+      "kotlin": "FieldRightAlways",
+      "php": "FieldRightAlways"
     },
     "FieldRightSubject": {
       "construct": "struct",
@@ -471,6 +486,11 @@
       "construct": "struct",
       "kotlin": "InputProof",
       "php": "InputProof"
+    },
+    "Int64Wire": {
+      "construct": "openEnum",
+      "kotlin": "Int64Wire",
+      "php": "Int64Wire"
     },
     "InternalPolicy": {
       "construct": "openEnum",
@@ -676,6 +696,11 @@
       "construct": "struct",
       "kotlin": "Origin",
       "php": "Origin"
+    },
+    "OutputEnumForm": {
+      "construct": "openEnum",
+      "kotlin": "OutputEnumForm",
+      "php": "OutputEnumForm"
     },
     "OverLimitPolicy": {
       "construct": "openEnum",
@@ -887,10 +912,25 @@
       "kotlin": "ResponseHeader",
       "php": "ResponseHeader"
     },
+    "ResponseHeaderSemantic": {
+      "construct": "openEnum",
+      "kotlin": "ResponseHeaderSemantic",
+      "php": "ResponseHeaderSemantic"
+    },
     "ResponseShape": {
       "construct": "openEnum",
       "kotlin": "ResponseShape",
       "php": "ResponseShape"
+    },
+    "RetryHeader": {
+      "construct": "struct",
+      "kotlin": "RetryHeader",
+      "php": "RetryHeader"
+    },
+    "RetryUnit": {
+      "construct": "openEnum",
+      "kotlin": "RetryUnit",
+      "php": "RetryUnit"
     },
     "Right": {
       "construct": "struct",
@@ -1146,6 +1186,11 @@
       "construct": "union",
       "kotlin": "UnknownQuery",
       "php": "UnknownQuery"
+    },
+    "UrlForm": {
+      "construct": "openEnum",
+      "kotlin": "UrlForm",
+      "php": "UrlForm"
     },
     "UrlRole": {
       "construct": "openEnum",

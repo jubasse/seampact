@@ -1,13 +1,13 @@
 <?php
 
-// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 3. Do not edit.
+// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 4. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 
 declare(strict_types=1);
 
 namespace Seampact\Ir\Model;
 
-/** Where a value is read (ADR 0002 section 4); 'resolver' only as a scope source, 'holderField' only as a field right's subject source. */
+/** Where a value is read (ADR 0002 section 4); 'resolver' only as a scope source, 'holderField' only as a field right's subject source. Must act: an unknown value makes the IR invalid for every reader. */
 final readonly class ValueSourceIn
 {
     public const Path = 'path';

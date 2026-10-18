@@ -1,15 +1,15 @@
 {
-  "irRevision": 3,
+  "irRevision": 4,
   "supports": {
     "http": {
       "irVersions": [1],
-      "irRevision": 3,
+      "irRevision": 4,
       "kinds": ["httpOperation"],
       "features": []
     },
     "http-and-channel": {
       "irVersions": [1],
-      "irRevision": 3,
+      "irRevision": 4,
       "kinds": ["httpOperation", "channel"],
       "features": ["streaming"]
     }
@@ -228,6 +228,27 @@
             "member": "/features",
             "value": "missing",
             "expected": ["array"]
+          }
+        ]
+      }
+    },
+    {
+      "id": "field-right/always-unknown",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/operations/2/fieldRights/2/always",
+          "value": "hidden"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/operations/2/fieldRights/2/always",
+            "value": "hidden"
           }
         ]
       }
@@ -481,7 +502,7 @@
       "literals": [
         {
           "pointer": "/irRevision",
-          "text": "3."
+          "text": "4."
         }
       ],
       "verdict": {
@@ -504,7 +525,7 @@
           {
             "code": "ir.revision.mismatch",
             "member": "/irRevision",
-            "expected": ["3"]
+            "expected": ["4"]
           }
         ]
       }
@@ -516,7 +537,7 @@
       "literals": [
         {
           "pointer": "/irRevision",
-          "text": "30e-1"
+          "text": "40e-1"
         }
       ],
       "verdict": {
@@ -530,7 +551,7 @@
       "literals": [
         {
           "pointer": "/irRevision",
-          "text": "3e0"
+          "text": "4e0"
         }
       ],
       "verdict": {
@@ -544,7 +565,7 @@
       "literals": [
         {
           "pointer": "/irRevision",
-          "text": "3.5"
+          "text": "4.5"
         }
       ],
       "verdict": {
@@ -553,7 +574,7 @@
           {
             "code": "ir.revision.mismatch",
             "member": "/irRevision",
-            "expected": ["3"]
+            "expected": ["4"]
           }
         ]
       }
@@ -565,7 +586,7 @@
       "literals": [
         {
           "pointer": "/irRevision",
-          "text": "3.0000000000000000001"
+          "text": "4.0000000000000000001"
         }
       ],
       "verdict": {
@@ -602,7 +623,7 @@
           {
             "code": "ir.revision.mismatch",
             "member": "/irRevision",
-            "expected": ["3"]
+            "expected": ["4"]
           }
         ]
       }
@@ -623,7 +644,7 @@
           {
             "code": "ir.revision.mismatch",
             "member": "/irRevision",
-            "expected": ["3"]
+            "expected": ["4"]
           }
         ]
       }
@@ -649,7 +670,7 @@
       "literals": [
         {
           "pointer": "/irRevision",
-          "text": "3d"
+          "text": "4d"
         }
       ],
       "verdict": {
@@ -663,7 +684,7 @@
       "literals": [
         {
           "pointer": "/irRevision",
-          "text": "3f"
+          "text": "4f"
         }
       ],
       "verdict": {
@@ -677,7 +698,7 @@
       "literals": [
         {
           "pointer": "/irRevision",
-          "text": "03"
+          "text": "04"
         }
       ],
       "verdict": {
@@ -719,7 +740,7 @@
       "literals": [
         {
           "pointer": "/irRevision",
-          "text": "+3"
+          "text": "+4"
         }
       ],
       "verdict": {
@@ -733,7 +754,7 @@
       "literals": [
         {
           "pointer": "/irRevision",
-          "text": "3.0"
+          "text": "4.0"
         }
       ],
       "verdict": {
@@ -945,6 +966,27 @@
           {
             "code": "ir.must-act.unknown",
             "member": "/operations/0/csrf/kind",
+            "value": "future"
+          }
+        ]
+      }
+    },
+    {
+      "id": "must-act/FieldRightAlways",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/operations/2/fieldRights/2/always",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/operations/2/fieldRights/2/always",
             "value": "future"
           }
         ]
@@ -1203,6 +1245,27 @@
       }
     },
     {
+      "id": "must-act/ValueSourceIn",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/formats/bare/meta/tenant/source/in",
+          "value": "future"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/formats/bare/meta/tenant/source/in",
+            "value": "future"
+          }
+        ]
+      }
+    },
+    {
       "id": "operation/feature-unknown",
       "example": "every-member.ir.json",
       "support": "http",
@@ -1255,7 +1318,7 @@
       "edits": [
         {
           "pointer": "/irRevision",
-          "value": 4
+          "value": 5
         }
       ],
       "verdict": {
@@ -1264,7 +1327,7 @@
           {
             "code": "ir.revision.mismatch",
             "member": "/irRevision",
-            "expected": ["3"]
+            "expected": ["4"]
           }
         ]
       }
@@ -1286,7 +1349,7 @@
             "code": "ir.revision.mismatch",
             "member": "/irRevision",
             "value": "null",
-            "expected": ["3"]
+            "expected": ["4"]
           }
         ]
       }
@@ -1331,6 +1394,27 @@
       ],
       "verdict": {
         "outcome": "malformed"
+      }
+    },
+    {
+      "id": "value-source/in-unknown",
+      "example": "every-member.ir.json",
+      "support": "http",
+      "edits": [
+        {
+          "pointer": "/operations/2/fieldRights/1/subject/source/in",
+          "value": "cookie"
+        }
+      ],
+      "verdict": {
+        "outcome": "refuse",
+        "refusals": [
+          {
+            "code": "ir.must-act.unknown",
+            "member": "/operations/2/fieldRights/1/subject/source/in",
+            "value": "cookie"
+          }
+        ]
       }
     },
     {

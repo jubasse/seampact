@@ -1,4 +1,4 @@
-// Generated from packages/core/spec/schemas/ir/ir.schema.json by scripts/ir-models for IR revision 3. Do not edit.
+// Generated from packages/core/spec/schemas/ir/ir.schema.json by scripts/ir-models for IR revision 4. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 @file:OptIn(ExperimentalSerializationApi::class)
 @file:UseSerializers(IrIntegerSerializer::class)
@@ -28,6 +28,7 @@ public data class Api(
     public val maturity: Maturity,
     public val caller: ApiCaller? = null,
     public val compat: Compat,
+    public val wire: ApiWire,
     public val surfaces: Map<SurfaceId, Surface>,
     public val documents: Map<DocumentId, ApiDocument>,
     public val docs: Docs,
@@ -133,6 +134,14 @@ internal object ApiVersionSerializer : IrUnionSerializer<ApiVersion>("ApiVersion
         is ApiVersion.Unknown -> value.raw
     }
 }
+
+/** The api-wide conventions a target acts on (ADR 0004 section 13). */
+@Serializable
+public data class ApiWire(
+    public val int64: Int64Wire,
+    public val outputEnums: OutputEnumForm,
+    public val urls: UrlForm,
+)
 
 @Serializable
 public data class Compat(
@@ -260,6 +269,35 @@ public sealed interface ExtensionPlace {
 
 internal object ExtensionPlaceSerializer : IrOpenEnumSerializer<ExtensionPlace>("ExtensionPlace", ExtensionPlace::of, ExtensionPlace::value)
 
+/** How an int64 value is sent: its string form, or a JSON number. */
+@Serializable(with = Int64WireSerializer::class)
+public sealed interface Int64Wire {
+    public val value: String
+
+    public data object STRING : Int64Wire { override val value: String = "string" }
+    public data object NUMBER : Int64Wire { override val value: String = "number" }
+
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : Int64Wire {
+        init {
+            require(Int64Wire.known.none { it.value == value }) { "Int64Wire.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
+
+    public companion object {
+        /** The values this IR revision knows, in the schema's order. */
+        public val known: List<Int64Wire> by lazy { listOf(STRING, NUMBER) }
+
+        public fun of(value: String): Int64Wire = when (value) {
+            "string" -> STRING
+            "number" -> NUMBER
+            else -> Unknown(value)
+        }
+    }
+}
+
+internal object Int64WireSerializer : IrOpenEnumSerializer<Int64Wire>("Int64Wire", Int64Wire::of, Int64Wire::value)
+
 /** Whether a document lists internal operations. */
 @Serializable(with = InternalPolicySerializer::class)
 public sealed interface InternalPolicy {
@@ -352,6 +390,35 @@ public sealed interface LintSeverity {
 
 internal object LintSeveritySerializer : IrOpenEnumSerializer<LintSeverity>("LintSeverity", LintSeverity::of, LintSeverity::value)
 
+/** Whether an output enum is closed, or open with a fallback a client keeps. */
+@Serializable(with = OutputEnumFormSerializer::class)
+public sealed interface OutputEnumForm {
+    public val value: String
+
+    public data object ENUM : OutputEnumForm { override val value: String = "enum" }
+    public data object OPEN : OutputEnumForm { override val value: String = "open" }
+
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : OutputEnumForm {
+        init {
+            require(OutputEnumForm.known.none { it.value == value }) { "OutputEnumForm.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
+
+    public companion object {
+        /** The values this IR revision knows, in the schema's order. */
+        public val known: List<OutputEnumForm> by lazy { listOf(ENUM, OPEN) }
+
+        public fun of(value: String): OutputEnumForm = when (value) {
+            "enum" -> ENUM
+            "open" -> OPEN
+            else -> Unknown(value)
+        }
+    }
+}
+
+internal object OutputEnumFormSerializer : IrOpenEnumSerializer<OutputEnumForm>("OutputEnumForm", OutputEnumForm::of, OutputEnumForm::value)
+
 /** A pack applied, in application order. */
 @Serializable
 public data class PackRef(
@@ -412,3 +479,32 @@ public data class Surface(
     public val pathVersion: PathVersionMode,
     public val origin: Origin,
 )
+
+/** Whether a URL a target writes is a relative reference, or absolute from one configured public origin. */
+@Serializable(with = UrlFormSerializer::class)
+public sealed interface UrlForm {
+    public val value: String
+
+    public data object RELATIVE : UrlForm { override val value: String = "relative" }
+    public data object ABSOLUTE : UrlForm { override val value: String = "absolute" }
+
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : UrlForm {
+        init {
+            require(UrlForm.known.none { it.value == value }) { "UrlForm.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
+
+    public companion object {
+        /** The values this IR revision knows, in the schema's order. */
+        public val known: List<UrlForm> by lazy { listOf(RELATIVE, ABSOLUTE) }
+
+        public fun of(value: String): UrlForm = when (value) {
+            "relative" -> RELATIVE
+            "absolute" -> ABSOLUTE
+            else -> Unknown(value)
+        }
+    }
+}
+
+internal object UrlFormSerializer : IrOpenEnumSerializer<UrlForm>("UrlForm", UrlForm::of, UrlForm::value)
