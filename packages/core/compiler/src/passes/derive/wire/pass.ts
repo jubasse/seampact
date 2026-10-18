@@ -20,7 +20,8 @@ import { deriveWireUnknownKeys, deriveWireUnknownKeysPolicy } from "./unknown-ke
 
 // The derive.wire half (ADR 0006 sections 2 and 3): the wire members the derivation table gives to `derive.wire`
 // (`derivations/table.ts`), each with its `derivedFrom`. Every route, a relay route included, derives its own
-// boundary from its own node and access: nothing is copied from the operation a relay route relays. The derived
+// boundary from its own node and access; a relay route reads from the operation it relays only the version
+// parameter and `ETag` headers, since it has no resource of its own (`concurrency.ts`). The derived
 // parameters of a route are written in the derivation table's order, then source order.
 //
 // Import pipeline values and types from `pipeline/seam.js` only, never from `pipeline/index.js`, the orchestrator

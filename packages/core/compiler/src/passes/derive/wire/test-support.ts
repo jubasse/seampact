@@ -95,6 +95,13 @@ export function deriveWireReferenceVariant(
   file: string,
   replacements: readonly (readonly [string, string])[],
 ): RawWorkspace {
+  return deriveWireReferenceVariants({ [file]: replacements });
+}
+
+/** The reference workspace with the `[from, to]` texts of each named file replaced once, as `deriveWireReferenceVariant`. */
+export function deriveWireReferenceVariants(
+  replacementsByFile: Readonly<Record<string, readonly (readonly [string, string])[]>>,
+): RawWorkspace {
   const files: Record<string, string> = {};
 
   for (const entry of readdirSync(REFERENCE_CONTRACT, { recursive: true, withFileTypes: true }))
@@ -104,20 +111,22 @@ export function deriveWireReferenceVariant(
       files[path] = readFileSync(`${REFERENCE_CONTRACT}${path}`, "utf8");
     }
 
-  let text = files[file];
+  for (const [file, replacements] of Object.entries(replacementsByFile)) {
+    let text = files[file];
 
-  if (text === undefined) throw new Error(`the reference holds no file ${file}`);
+    if (text === undefined) throw new Error(`the reference holds no file ${file}`);
 
-  for (const [from, to] of replacements) {
-    if (!text.includes(from)) throw new Error(`the reference ${file} holds no '${from}'`);
-    text = text.replace(from, to);
+    for (const [from, to] of replacements) {
+      if (!text.includes(from)) throw new Error(`the reference ${file} holds no '${from}'`);
+      text = text.replace(from, to);
+    }
+
+    files[file] = text;
   }
-
-  files[file] = text;
 
   return loaded(
     loadWorkspace({ reader: loadMemoryReader(files), entry: "workspace.yaml" }),
-    `the reference variant of ${file}`,
+    `the reference variant of ${Object.keys(replacementsByFile).join(", ")}`,
   );
 }
 
@@ -152,6 +161,7 @@ export function deriveWireRunOn(
   draft: DraftIR,
   treeSchemas: TreeSchemaService,
   part: PassPart<"derive.wire"> = deriveWirePass,
+  relayed?: ReadonlyMap<string, DraftIR>,
 ): DeriveWireRun {
   const diagnostics: Diagnostic[] = [];
   const context = Object.freeze({
@@ -160,6 +170,7 @@ export function deriveWireRunOn(
       workspace,
       report: (diagnostic) => diagnostics.push(diagnostic),
       guard: true,
+      ...(relayed === undefined ? {} : { relayed }),
     }),
     treeSchemas,
   });
@@ -199,10 +210,13 @@ export function deriveWireRunContract(
       throw new Error(`${half.half} reports on the contract: ${JSON.stringify(diagnostics)}`);
   }
 
-  return deriveWireRunOn(raw, workspace, draft, treeSchemas);
+  return deriveWireRunOn(raw, workspace, draft, treeSchemas, deriveWirePass, relayed);
 }
 
-/** Runs derive.wire, or `part` standing for it, (guarded) on the after-access fixture draft of a reference api. */
+/**
+ * Runs derive.wire, or `part` standing for it, (guarded) on the after-access fixture draft of a reference api; a
+ * relay route of tasksService reads the after-access draft of tasks.
+ */
 export function deriveWireRunReference(
   workspace: RawWorkspace,
   api: DraftFixtureApi,
@@ -214,6 +228,7 @@ export function deriveWireRunReference(
     draftFixture(api, "after-access"),
     draftFixtureSchemaService(api),
     part,
+    new Map([["tasks", draftFixture("tasks", "after-access")]]),
   );
 }
 

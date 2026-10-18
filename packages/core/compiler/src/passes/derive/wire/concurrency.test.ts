@@ -1,17 +1,22 @@
 import { describe, expect, test } from "vitest";
+import { treeNodesRelayedTasks } from "../../tree/nodes/test-support.js";
 import {
   deriveWireLoadFixture,
   deriveWireOperation,
+  deriveWireReferenceVariants,
   deriveWireResponseHeaders,
   deriveWireRunContract,
 } from "./test-support.js";
 
 const run = deriveWireRunContract(deriveWireLoadFixture("lifecycle"));
 
-const concurrencyParams = (id: string, place: "query" | "header") =>
-  (deriveWireOperation(run, id).params?.[place] ?? [])
+const concurrencyParamsOf = (derived: typeof run, id: string, place: "query" | "header") =>
+  (deriveWireOperation(derived, id).params?.[place] ?? [])
     .filter((param) => param.derivedFrom?.derivation === "concurrency.version")
     .map(({ name, type, required }) => ({ name, type, required }));
+
+const concurrencyParams = (id: string, place: "query" | "header") =>
+  concurrencyParamsOf(run, id, place);
 
 const INTEGER = { kind: "scalar", type: "integer", refinements: {} };
 
@@ -69,5 +74,71 @@ describe("if-match and etag", () => {
         (header) => header.name === "ETag",
       )?.derivedFrom?.derivation,
     ).toBe("concurrency.version");
+  });
+});
+
+describe("relay routes of a versioned operation", () => {
+  const RELAY = "      getTask: { relays: tasks.getTask }\n";
+  const WITH_UPDATE = `${RELAY}      updateTask: { relays: tasks.updateTask }\n`;
+  const BODY_VERSION = "concurrency: { version: body.expectedVersion, field: version }";
+  const TASKS_ORIGIN = {
+    api: "tasks",
+    layer: "api",
+    pointer: "/surfaces/app/routes/channels/member/routes/tasks/concurrency",
+  };
+
+  // The tasks api derived first, as the orchestrator does, then the service relaying it.
+  const relayRun = (tasksReplacements: [string, string][]) => {
+    const workspace = deriveWireReferenceVariants({
+      "tasks/api.yaml": tasksReplacements,
+      "tasks-service/api.yaml": [[RELAY, WITH_UPDATE]],
+    });
+    const tasks = deriveWireRunContract(workspace, "tasks", treeNodesRelayedTasks());
+
+    return deriveWireRunContract(workspace, "tasksService", new Map([["tasks", tasks.draft]]));
+  };
+
+  test("a relayed body version names the public resource's concurrency", () => {
+    const run = relayRun([]);
+
+    expect(run.diagnostics).toEqual([]);
+    expect(deriveWireOperation(run, "updateTask").concurrency?.derivedFrom).toEqual({
+      derivation: "concurrency.version",
+      from: [TASKS_ORIGIN],
+    });
+  });
+
+  test("a relayed If-Match version takes its header, and a relayed read of the item its ETag", () => {
+    const run = relayRun([
+      [BODY_VERSION, "concurrency: { version: header.If-Match, field: version }"],
+    ]);
+
+    expect(run.diagnostics).toEqual([]);
+    expect(concurrencyParamsOf(run, "updateTask", "header")).toEqual([
+      { name: "If-Match", type: STRING, required: true },
+    ]);
+    expect(deriveWireResponseHeaders(run, "updateTask")).toEqual({
+      200: ["Idempotency-Replayed", "ETag"],
+    });
+    expect(
+      deriveWireOperation(run, "getTask").responses?.[0]?.headers.find(
+        (header) => header.name === "ETag",
+      )?.derivedFrom,
+    ).toEqual({ derivation: "concurrency.version", from: [TASKS_ORIGIN] });
+  });
+
+  test("a relayed query version takes the public parameter's type", () => {
+    const run = relayRun([
+      [BODY_VERSION, "concurrency: { version: query.expectedVersion, field: version }"],
+    ]);
+
+    expect(run.diagnostics).toEqual([]);
+    expect(concurrencyParamsOf(run, "updateTask", "query")).toEqual([
+      {
+        name: "expectedVersion",
+        type: { ...INTEGER, refinements: { minimum: "1" } },
+        required: true,
+      },
+    ]);
   });
 });
