@@ -1,4 +1,4 @@
-import type { IrWriter } from "@seampact/spec/ir";
+import type { ContractIR, IrWriter } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import type { DraftIR } from "../../../pipeline/seam.js";
 import { type TreeSchemasRun, treeSchemasRunApi } from "./test-support.js";
@@ -225,7 +225,8 @@ describe("a declaration two relayed apis both use", () => {
 describe("written values of two copies of one name", () => {
   const ownerWith = (written: string) =>
     `schemas:\n  Box: { type: object, properties: { owner: Owner } }\n  Owner: { type: object, ${written}, properties: { name: { type: string }, origin: { type: string } } }\n`;
-  const ORIGIN_KEY = "extensions:\n  acme:\n    origin: { at: [schema], schema: { type: string } }\n";
+  const ORIGIN_KEY =
+    "extensions:\n  acme:\n    origin: { at: [schema], schema: { type: string } }\n";
   const relayPair = (pa: string, pb: string) =>
     treeSchemasRunApi(
       TWO_RELAYS,
@@ -285,5 +286,106 @@ ${RELAY_IT}`;
     expect(run.diagnostics[0]?.related.map((r) => r.origin.pointer)).toEqual([
       "/extensions/acme/owner",
     ]);
+  });
+});
+
+// The IR of the public api as an import gives it, with the members a compiled IR holds beside the draft's.
+function importedIr(
+  draft: DraftIR,
+  edit: (ir: Record<string, unknown>) => void = () => {},
+): ContractIR {
+  const ir: Record<string, unknown> = JSON.parse(JSON.stringify(draft));
+
+  edit(ir);
+  const imported: ContractIR = JSON.parse(
+    JSON.stringify({ irVersion: "1.0", irRevision: 3, kinds: [], features: [], ...ir }),
+  );
+
+  return imported;
+}
+
+const isJsonObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+// An edit of the imported IR as plain JSON: the member at the end of `path` (array indexes as text) set to `value`.
+const setAt =
+  (path: readonly string[], value: unknown) =>
+  (ir: Record<string, unknown>): void => {
+    const parent = path.slice(0, -1).reduce<unknown>((node, step) => {
+      if (!isJsonObject(node)) throw new Error(`no member ${step} in the imported IR`);
+
+      return node[step];
+    }, ir);
+    const last = path[path.length - 1];
+
+    if (!isJsonObject(parent) || last === undefined)
+      throw new Error(`no member at ${path.join("/")}`);
+    parent[last] = value;
+  };
+
+describe("relay declarations copied from an import", () => {
+  const importing = (edit?: (ir: Record<string, unknown>) => void, catalogues = RELAY) =>
+    treeSchemasRunApi(catalogues, new Map(), new Map([["pub", importedIr(publicDraft(), edit)]]));
+
+  test("join the api with the import's origin, as from a workspace api", () => {
+    const run = importing();
+
+    expect(run.diagnostics).toEqual([]);
+    expect(Object.keys(run.draft.schemas).filter((id) => id !== "Problem")).toEqual(
+      expect.arrayContaining(["Task", "Owner", "Filter"]),
+    );
+    expect(run.draft.schemas.Task?.origin).toEqual({
+      api: "pub",
+      layer: "api",
+      pointer: "/schemas/Task",
+    });
+    expect(run.draft.enums.TaskState?.directions).toEqual(["output"]);
+    expect(run.draft.scalars.taskCode?.origin.api).toBe("pub");
+  });
+
+  test("refuse a declaration holding an unknown variant, naming the import, and copy the others", () => {
+    const run = importing(
+      setAt(["schemas", "Owner", "properties", "0", "type"], { kind: "tuple" }),
+    );
+
+    expect(located(run)).toEqual([["relay-unknown", RELAYS]]);
+    expect(run.diagnostics[0]?.message).toBe(
+      "the schema 'Owner' that pub.getTask uses holds what this compiler does not know ('tuple' at /schemas/Owner/properties/0/type/kind), so it is not copied",
+    );
+    expect(run.diagnostics[0]?.fix).toBe(
+      "compile with a seampact version that reads the IR of pub, or relay another operation",
+    );
+    expect(run.draft.schemas.Owner).toBeUndefined();
+    expect(run.draft.schemas.Task).toBeDefined();
+    expect(run.located).toBe(true);
+  });
+
+  test("refuse a declaration holding an unknown member", () => {
+    const run = importing(setAt(["enums", "TaskState", "weight"], 3));
+
+    expect(located(run)).toEqual([["relay-unknown", RELAYS]]);
+    expect(run.diagnostics[0]?.message).toContain("('weight' at /enums/TaskState/weight)");
+    expect(run.draft.enums.TaskState).toBeUndefined();
+  });
+
+  test("refuse a different declaration this api names the same", () => {
+    const local = `${PUBLIC.replace("Priority: { values: [low, high]", "Priority: { values: [low, top]")}${RELAY}`;
+    const run = importing(undefined, local);
+
+    expect(located(run)).toEqual([["relay-declaration", RELAYS]]);
+    expect(run.diagnostics[0]?.message).toBe(
+      "the enum 'Priority' that pub.getTask uses differs from the one this api declares",
+    );
+  });
+
+  test("copy nothing from an operation whose response body use holds an unknown variant", () => {
+    const run = importing(
+      setAt(["operations", "0", "responses", "0", "body"], { kind: "tuple", schema: "Task" }),
+    );
+
+    // tree.nodes refuses the relay route itself, naming the unknown variant.
+    expect(run.diagnostics).toEqual([]);
+    expect(run.draft.schemas.Task).toBeUndefined();
+    expect(run.draft.schemas.Filter).toBeUndefined();
   });
 });

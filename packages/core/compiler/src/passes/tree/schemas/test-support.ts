@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import type { ContractIR } from "@seampact/spec/ir";
 import type { Diagnostic } from "../../../diagnostics/diagnostic.js";
 import { diagnosticLocationKey } from "../../../diagnostics/print.js";
 import { loadFsReader, loadWorkspace } from "../../../load/index.js";
@@ -33,6 +34,7 @@ function run(
   entry: string,
   api: string,
   relayed: ReadonlyMap<string, DraftIR> = new Map(),
+  imports: ReadonlyMap<string, ContractIR> = new Map(),
 ): TreeSchemasRun {
   const loaded = loadWorkspace({ reader, entry });
   const validated = validateWorkspace(loaded.workspace);
@@ -53,6 +55,7 @@ function run(
     raw,
     workspace: loaded.workspace,
     relayed,
+    imports,
     guard: true,
     report: (diagnostic) => diagnostics.push(diagnostic),
   });
@@ -92,17 +95,19 @@ export const treeSchemasRunFixture = (name: string, api: string): TreeSchemasRun
 
 /**
  * tree.schemas on a single api file `api.yaml` named `t`, its catalogues given as YAML text; `relayed` holds the
- * drafts of the apis its relay routes name.
+ * drafts of the workspace apis its relay routes name, `imports` the IRs of the imported ones.
  */
 export const treeSchemasRunApi = (
   catalogues: string,
   relayed: ReadonlyMap<string, DraftIR> = new Map(),
+  imports: ReadonlyMap<string, ContractIR> = new Map(),
 ): TreeSchemasRun =>
   run(
     loadMemoryReader({ "api.yaml": `api: { name: t, version: 1 }\n${catalogues}` }),
     "api.yaml",
     "t",
     relayed,
+    imports,
   );
 
 /** The rules of a run's diagnostics, without the `seampact/tree/` prefix. */
