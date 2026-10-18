@@ -36,7 +36,13 @@ import {
   VERSION_NEUTRAL,
   Version,
 } from "@nestjs/common";
-import { DiscoveryModule, DiscoveryService, HttpAdapterHost, Reflector } from "@nestjs/core";
+import {
+  BaseExceptionFilter,
+  DiscoveryModule,
+  DiscoveryService,
+  HttpAdapterHost,
+  Reflector,
+} from "@nestjs/core";
 import { from, mergeMap, type Observable, switchMap } from "rxjs";
 import { authorizeRequest, type CheckState } from "./node-server/access-checks.js";
 import {
@@ -58,6 +64,8 @@ import {
   type ContractApi,
   type ContractRequest,
   type ContractRoute,
+  isUnderPrefix,
+  looselyMatchedRoute,
   matchContractRoute,
   matchesContractPath,
   type ResponsesMode,
@@ -107,7 +115,8 @@ const INTERNAL_STATUS = 500;
 const FORBIDDEN_ROLE = "forbidden";
 const UNAUTHENTICATED_ROLE = "unauthenticated";
 const PAYLOAD_TOO_LARGE_ROLE = "payloadTooLarge";
-const URL_BASE = "http://seampact.invalid";
+const NOT_FOUND_ROLE = "notFound";
+const NOT_FOUND_STATUS = 404;
 
 const ROUTE_DECORATORS = { get: Get, post: Post, put: Put, patch: Patch, delete: Delete } as const;
 const REQUEST_METHODS = {
@@ -130,17 +139,27 @@ function isFrameworkDenial(error: unknown): boolean {
   return error instanceof UnauthorizedException || error instanceof ForbiddenException;
 }
 
+// The request target as Express routes it: raw, never normalized (no dot segment resolved, no `\\` turned into `/`).
+function requestTarget(request: PlatformRequest): { path: string; rawQuery: string } {
+  const target = request.originalUrl ?? request.url ?? "/";
+  const queryStart = target.indexOf("?");
+
+  return queryStart === -1
+    ? { path: target, rawQuery: "" }
+    : { path: target.slice(0, queryStart), rawQuery: target.slice(queryStart + 1) };
+}
+
 function pathnameOf(request: PlatformRequest): string {
-  return new URL(request.originalUrl ?? request.url ?? "/", URL_BASE).pathname;
+  return requestTarget(request).path;
 }
 
 function contractRequest(request: PlatformRequest): ContractRequest {
-  const url = new URL(request.originalUrl ?? request.url ?? "/", URL_BASE);
+  const { path, rawQuery } = requestTarget(request);
 
   return {
     method: request.method ?? "GET",
-    path: url.pathname,
-    rawQuery: url.search.slice(1),
+    path,
+    rawQuery,
     headers: request.headers,
     body: request.body,
     ...(Buffer.isBuffer(request.rawBody) ? { rawBody: request.rawBody } : {}),
@@ -180,6 +199,7 @@ function requireContext(): BoundaryContext {
 async function respondWithError(
   response: ServerResponse,
   context: BoundaryContext | undefined,
+  hooks: BoundaryHooks | undefined,
   api: ContractApi,
   error: ContractError,
   request: { readonly method: string; readonly path: string },
@@ -192,14 +212,14 @@ async function respondWithError(
       path: request.path,
     };
 
-    if (context?.hooks.onUnexpectedError === undefined) {
+    if (hooks?.onUnexpectedError === undefined) {
       console.error(
         `seampact: unexpected failure on operation '${where.operation ?? "(none)"}'`,
         error.unexpectedCause,
       );
     }
 
-    await reportUnexpected(context?.hooks, error.unexpectedCause, where);
+    await reportUnexpected(hooks, error.unexpectedCause, where);
   }
 
   await writeContractReply(response, context, renderContractReply(api, context?.route, error));
@@ -214,6 +234,8 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
   const RESPONSES_METADATA = `seampact:${api.id}:responses`;
   const BODY_BYTES = Symbol(`seampact:${api.id}:bodyBytes`);
   const reflector = new Reflector();
+  // Set when the module starts: what the exported pre-routing filter and helper reach outside a request context.
+  const platform: { adapterHost?: HttpAdapterHost; hooks?: BoundaryHooks } = {};
 
   const routeOf = (id: string): ContractRoute => {
     const route = api.routes.find((candidate) => candidate.id === id);
@@ -232,14 +254,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       const matched = matchContractRoute(api, method, path);
 
       if (matched === undefined) {
-        console.error(
-          `seampact: ${method} ${path} reached a contract route under another path; a global prefix differs from the contract's empty mount. Exclude the contract routes with setGlobalPrefix's 'exclude' option.`,
-        );
-        void writeContractReply(
-          response,
-          undefined,
-          renderContractReply(api, undefined, unexpectedError(undefined, undefined)),
-        );
+        void respondUnmatched(response, hooks, { method, path });
 
         return;
       }
@@ -267,9 +282,35 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
           return;
         }
 
-        void respondWithError(response, context, api, refusal, { method, path });
+        void respondWithError(response, context, hooks, api, refusal, { method, path });
       });
     };
+
+  // Express routes a path case-insensitively, with or without a trailing slash, and HEAD as GET; the contract serves
+  // the path as written and no HEAD, so such a request answers the path's 404. Only a path under a prefix is a setup
+  // error.
+  async function respondUnmatched(
+    response: ServerResponse,
+    hooks: BoundaryHooks,
+    request: { readonly method: string; readonly path: string },
+  ): Promise<void> {
+    if (isUnderPrefix(api, request.path)) {
+      console.error(
+        `seampact: ${request.method} ${request.path} reached a contract route under another path; a global prefix differs from the contract's empty mount. Exclude the contract routes with setGlobalPrefix's 'exclude' option.`,
+      );
+      await writeContractReply(
+        response,
+        undefined,
+        renderContractReply(api, undefined, unexpectedError(undefined, undefined)),
+      );
+
+      return;
+    }
+
+    const route = looselyMatchedRoute(api, request.path);
+
+    await respondWithError(response, undefined, hooks, api, notFoundError(route), request);
+  }
 
   @Injectable()
   class ContractGuard implements CanActivate {
@@ -376,10 +417,17 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
         ? unexpectedError(undefined, error)
         : asContractError(context.route, error);
 
-    await respondWithError(response, context, api, contractError, {
-      method: request.method ?? "GET",
-      path: pathnameOf(request),
-    });
+    await respondWithError(
+      response,
+      context,
+      context?.hooks ?? platform.hooks,
+      api,
+      contractError,
+      {
+        method: request.method ?? "GET",
+        path: pathnameOf(request),
+      },
+    );
   }
 
   function isContractRoute(execution: ExecutionContext): boolean {
@@ -428,6 +476,8 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
     }
 
     configure(consumer: MiddlewareConsumer): void {
+      platform.adapterHost = this.adapterHost;
+      platform.hooks = this.hooks;
       consumer.apply(middleware(this.hooks)).forRoutes(
         ...api.routes.map((route) => ({
           path: nestPath(route.path),
@@ -572,21 +622,45 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       matchContractRoute(api, request.method ?? "GET", path)?.route ??
       api.routes.find((candidate) => matchesContractPath({ ...api, routes: [candidate] }, path));
 
-    void writeContractReply(
+    void respondWithError(
       response,
       undefined,
-      renderContractReply(api, route, preRoutingError(route, exception)),
+      platform.hooks,
+      api,
+      preRoutingError(route, exception),
+      {
+        method: request.method ?? "GET",
+        path,
+      },
     );
 
     return true;
   }
 
+  // Hands an exception no api claims to NestJS's own filter, which answers and logs it as without this filter.
   @Catch()
   class PreRoutingFilter implements ExceptionFilter {
     catch(exception: unknown, host: ArgumentsHost): void {
       if (renderPreRoutingError(exception, host)) return;
 
-      writeNestDefaultReply(host.switchToHttp().getResponse(), exception);
+      const context = boundaryContext.getStore();
+
+      // On a contract route the outgoing check reports this exception if NestJS's reply violates the contract.
+      if (context !== undefined) context.unclaimedException = exception;
+
+      const httpAdapter = platform.adapterHost?.httpAdapter;
+
+      if (httpAdapter === undefined) {
+        console.error(
+          `seampact: the pre-routing filter of api '${api.id}' ran before its SeampactModule started; import SeampactModule.forRoot(...) in the app module.`,
+          exception,
+        );
+        writeNestDefaultReply(host.switchToHttp().getResponse(), exception);
+
+        return;
+      }
+
+      new BaseExceptionFilter(httpAdapter).catch(exception, host);
     }
   }
 
@@ -658,6 +732,17 @@ function asContractError(route: ContractRoute, error: unknown): ContractError {
   return code === undefined ? unexpectedError(route, error) : new ContractError(code);
 }
 
+function notFoundError(route: ContractRoute | undefined): ContractError {
+  const code =
+    route === undefined
+      ? undefined
+      : (codeOfRole(route, NOT_FOUND_ROLE) ?? codeOfStatus(route, NOT_FOUND_STATUS));
+
+  return code === undefined
+    ? unexpectedError(route, new Error("the contract path has no 404 code to answer"))
+    : new ContractError(code);
+}
+
 function preRoutingError(route: ContractRoute | undefined, exception: unknown): ContractError {
   const status = statusOf(exception);
 
@@ -698,15 +783,18 @@ function statusOf(exception: unknown): number | undefined {
   return typeof status === "number" ? status : undefined;
 }
 
-// NestJS's default reply for an exception no seampact api claims, as its `BaseExceptionFilter` writes it.
+// NestJS's default reply, as its `BaseExceptionFilter` writes it, when the filter has no HTTP adapter to delegate to.
 function writeNestDefaultReply(response: ServerResponse, exception: unknown): void {
-  const status = exception instanceof HttpException ? exception.getStatus() : INTERNAL_STATUS;
+  const status = statusOf(exception) ?? INTERNAL_STATUS;
   const body =
     exception instanceof HttpException
       ? isPlainObject(exception.getResponse())
         ? exception.getResponse()
         : { statusCode: status, message: exception.getResponse() }
-      : { statusCode: INTERNAL_STATUS, message: "Internal server error" };
+      : {
+          statusCode: status,
+          message: status === INTERNAL_STATUS ? "Internal server error" : String(exception),
+        };
 
   if (response.headersSent) {
     response.end();

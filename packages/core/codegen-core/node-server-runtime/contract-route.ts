@@ -240,9 +240,35 @@ export function matchesContractPath(api: ContractApi, path: string): boolean {
   return api.routes.some((route) => matchPath(route.path, path) !== undefined);
 }
 
+/**
+ * The route whose template a path matches as Express 5 routes it, case-insensitive and with an optional trailing
+ * slash, whatever the method: a request the contract does not serve as sent, answered with that route's 404.
+ */
+export function looselyMatchedRoute(api: ContractApi, path: string): ContractRoute | undefined {
+  const loosePath = path.toLowerCase().replace(/(.)\/$/, "$1");
+
+  return api.routes.find((route) => matchPath(route.path.toLowerCase(), loosePath) !== undefined);
+}
+
+/** Whether a path is a contract path under a leading prefix, as a framework's global prefix makes it. */
+export function isUnderPrefix(api: ContractApi, path: string): boolean {
+  return api.routes.some((route) =>
+    new RegExp(`^/.+${templatePattern(route.path, [])}$`).test(path),
+  );
+}
+
 function matchPath(template: string, path: string): Record<string, string> | undefined {
   const names: string[] = [];
-  const pattern = template
+  const match = new RegExp(`^${templatePattern(template, names)}$`).exec(path);
+
+  if (match === null) return undefined;
+
+  return Object.fromEntries(names.map((name, index) => [name, match[index + 1] ?? ""]));
+}
+
+// The template as a regular expression source, each param one path segment; collects the param names.
+function templatePattern(template: string, names: string[]): string {
+  return template
     .split(PATH_PARAM)
     .map((part, index) => {
       if (index % 2 === 1) {
@@ -254,11 +280,6 @@ function matchPath(template: string, path: string): Record<string, string> | und
       return part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     })
     .join("");
-  const match = new RegExp(`^${pattern}$`).exec(path);
-
-  if (match === null) return undefined;
-
-  return Object.fromEntries(names.map((name, index) => [name, match[index + 1] ?? ""]));
 }
 
 /** The path, query and header values the validator receives, decoded by their wire forms. */

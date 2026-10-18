@@ -121,7 +121,13 @@ async function authenticate(state: CheckState): Promise<Omit<AccessGrant, "scope
     isFrameworkDenial: state.isFrameworkDenial,
   });
 
-  if (isPlainObject(result) && "principal" in result && !("deny" in result)) {
+  // A missing principal authenticates no one: the answer falls to the 500 of an undeclared answer.
+  if (
+    isPlainObject(result) &&
+    !("deny" in result) &&
+    result.principal !== undefined &&
+    result.principal !== null
+  ) {
     return { identity: access.identity, principal: result.principal };
   }
 

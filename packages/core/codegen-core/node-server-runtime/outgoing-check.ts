@@ -23,6 +23,11 @@ export const MAX_CHECKED_ERROR_BODY_BYTES = 65536;
 
 const NOT_MODIFIED = 304;
 const ETAG_HEADER = "etag";
+const VARY_HEADER = "vary";
+const CONTENT_LENGTH_HEADER = "content-length";
+// Headers that describe the body: the boundary replaces them, and keeps every other header the app set.
+const BODY_HEADERS = ["content-type", CONTENT_LENGTH_HEADER, "content-encoding", ETAG_HEADER];
+const LIST_SHAPES: ReadonlySet<string> = new Set(["list", "table", "page"]);
 
 /** The state of one contract request, opened before any check runs. */
 export interface BoundaryContext {
@@ -37,6 +42,16 @@ export interface BoundaryContext {
   idempotencyKey?: string;
   grant?: AccessGrant;
   input?: unknown;
+  /** An exception no seampact filter claims, kept so a violating reply reports it to `onUnexpectedError`. */
+  unclaimedException?: unknown;
+}
+
+/** What `onUnexpectedError` receives for a reply outside the contract when no exception is known. */
+export interface ViolatingReply {
+  readonly status: number;
+  readonly headers: readonly (readonly [name: string, value: string])[];
+  readonly body: Uint8Array;
+  readonly violation: string;
 }
 
 /** The context of the contract request being served, absent outside one. */
@@ -74,19 +89,57 @@ export async function writeContractReply(
     return;
   }
 
-  for (const name of response.getHeaderNames()) response.removeHeader(name);
-
   response.statusCode = reply.status;
-
-  for (const [name, values] of groupedHeaders(reply.headers)) response.setHeader(name, values);
-
+  applyReplyHeaders(response, reply.headers);
   response.end(reply.body);
+}
+
+// Replaces the body headers and the reply's own names, merges `Vary`, and keeps what the app's middleware set
+// (CORS, security headers, a throttler's `Retry-After`).
+function applyReplyHeaders(response: ServerResponse, headers: ContractReply["headers"]): void {
+  const grouped = groupedHeaders(headers);
+
+  for (const name of [...BODY_HEADERS, ...grouped.keys()]) {
+    if (name !== VARY_HEADER) response.removeHeader(name);
+  }
+
+  for (const [name, values] of grouped) {
+    response.setHeader(
+      name,
+      name === VARY_HEADER ? mergedVary(response.getHeader(VARY_HEADER), values) : values,
+    );
+  }
+}
+
+function mergedVary(
+  current: ReturnType<ServerResponse["getHeader"]>,
+  added: readonly string[],
+): string {
+  const names: string[] = [];
+
+  for (const value of [...(Array.isArray(current) ? current : [current]), ...added]) {
+    if (value === undefined) continue;
+
+    for (const name of String(value).split(",")) {
+      const trimmed = name.trim();
+
+      if (trimmed !== "" && !names.some((known) => known.toLowerCase() === trimmed.toLowerCase())) {
+        names.push(trimmed);
+      }
+    }
+  }
+
+  return names.join(", ");
 }
 
 function groupedHeaders(headers: ContractReply["headers"]): Map<string, string[]> {
   const grouped = new Map<string, string[]>();
 
-  for (const [name, value] of headers) grouped.set(name, [...(grouped.get(name) ?? []), value]);
+  for (const [name, value] of headers) {
+    const lowerName = name.toLowerCase();
+
+    grouped.set(lowerName, [...(grouped.get(lowerName) ?? []), value]);
+  }
 
   return grouped;
 }
@@ -110,20 +163,24 @@ export function installOutgoingCheck(
   let phase: Phase = "undecided";
   let headArgs: unknown[] | undefined;
   let holdReason: "error" | "success" = "error";
+  let warned = false;
 
+  // Under `warn` the violation is logged once and the caller lets the reply go out; under `strict` it is replaced.
   const violation = (reason: string): void => {
-    const where = unexpectedContext(context, request.method, request.path);
-
     if (context.mode === "warn") {
-      console.warn(
-        `seampact: contract violation on operation '${context.route.id}': ${reason}; sent as written (responses: warn).`,
-      );
+      if (!warned) {
+        console.warn(
+          `seampact: contract violation on operation '${context.route.id}': ${reason}; sent as written (responses: warn).`,
+        );
+      }
+
+      warned = true;
 
       return;
     }
 
     phase = "replaced";
-    void reportUnexpected(context.hooks, new Error(`contract violation: ${reason}`), where);
+    void reportViolation(reason);
 
     const reply = renderContractReply(
       context.api,
@@ -132,11 +189,31 @@ export function installOutgoingCheck(
     );
 
     void settle(reply);
-
-    for (const name of response.getHeaderNames()) response.removeHeader(name);
-
-    originalWriteHead(reply.status, Object.fromEntries(reply.headers));
+    applyReplyHeaders(response, [
+      ...reply.headers,
+      [CONTENT_LENGTH_HEADER, String(reply.body.byteLength)],
+    ]);
+    originalWriteHead(reply.status);
     originalEnd(Buffer.from(reply.body));
+  };
+
+  const reportViolation = async (reason: string): Promise<void> => {
+    const where = unexpectedContext(context, request.method, request.path);
+    const reported: unknown =
+      context.unclaimedException ??
+      ({
+        ...recordedReply(response, held),
+        violation: reason,
+      } satisfies ViolatingReply);
+
+    if (context.hooks.onUnexpectedError === undefined) {
+      console.error(
+        `seampact: contract violation on operation '${context.route.id}': ${reason}; replaced by a 500 (responses: strict).`,
+        context.unclaimedException ?? "",
+      );
+    }
+
+    await reportUnexpected(context.hooks, reported, where);
   };
 
   const settle = async (reply: ContractReply): Promise<void> => {
@@ -148,6 +225,20 @@ export function installOutgoingCheck(
     await settleIdempotency(context.hooks, key, reply);
   };
 
+  // Sends the head and the chunks held so far, and lets the rest pass.
+  const release = (): void => {
+    phase = "passing";
+
+    if (headArgs !== undefined) originalWriteHead(...headArgs);
+
+    const body = Buffer.concat(held);
+
+    held.length = 0;
+    recorded.push(body);
+
+    if (body.byteLength > 0) originalWrite(body);
+  };
+
   const decide = (status: number): void => {
     if (context.boundaryWriting) {
       phase = "passing";
@@ -155,8 +246,13 @@ export function installOutgoingCheck(
       return;
     }
 
+    // Express's weak ETag, on any status the boundary did not write (ADR 0012 step 10).
+    response.removeHeader(ETAG_HEADER);
+
     if (status === NOT_MODIFIED) {
       violation("a 304 the boundary did not write");
+
+      if (phase === "undecided") phase = "passing";
 
       return;
     }
@@ -164,7 +260,6 @@ export function installOutgoingCheck(
     const success = context.route.responses.find((entry) => entry.status === status);
 
     if (success !== undefined) {
-      response.removeHeader(ETAG_HEADER);
       holdReason = "success";
       phase = context.bodyValidation && success.itemValidator !== undefined ? "holding" : "passing";
 
@@ -179,6 +274,8 @@ export function installOutgoingCheck(
     }
 
     violation(`the undeclared status ${status}`);
+
+    if (phase === "undecided") phase = "passing";
   };
 
   const flush = async (): Promise<void> => {
@@ -246,8 +343,11 @@ export function installOutgoingCheck(
         heldBytes += buffer.byteLength;
       }
 
-      if (heldBytes > MAX_CHECKED_ERROR_BODY_BYTES)
+      if (holdReason === "error" && heldBytes > MAX_CHECKED_ERROR_BODY_BYTES) {
         violation(`an error body over ${MAX_CHECKED_ERROR_BODY_BYTES} bytes`);
+
+        if (phase === "holding") release();
+      }
     }
 
     if (typeof callback === "function") callback();
@@ -327,12 +427,18 @@ async function successBodyViolation(
   status: number,
   body: Buffer,
 ): Promise<string | undefined> {
-  const validator = context.route.responses.find((entry) => entry.status === status)?.itemValidator;
+  const response = context.route.responses.find((entry) => entry.status === status);
+  const validator = response?.itemValidator;
 
-  if (validator === undefined) return undefined;
+  if (response === undefined || validator === undefined) return undefined;
 
   const parsed = parseJson(body);
-  const items = Array.isArray(parsed) ? parsed : [parsed];
+  const isList = LIST_SHAPES.has(response.shape);
+
+  if (isList && !Array.isArray(parsed))
+    return `a ${status} ${response.shape} body that is not a JSON array`;
+
+  const items = isList && Array.isArray(parsed) ? parsed : [parsed];
 
   for (const item of items) {
     const result = await validator["~standard"].validate(item);

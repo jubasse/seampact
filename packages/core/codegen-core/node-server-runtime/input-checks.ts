@@ -71,6 +71,9 @@ export async function checkRestrictedInput(
 
     if (denial === undefined) continue;
 
+    // A decider failure is a 500 reported to the hook, never a denial to strip or to render with the pointer.
+    if (denial.unexpectedCause !== undefined) throw denial;
+
     if (fieldRight.inputPolicy === "strip") {
       delete body[member];
       continue;
