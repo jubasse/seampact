@@ -42,42 +42,94 @@ afterAll(async () => {
 describe("reference slice answers", () => {
   test("every operation once with success", async () => {
     const event = { id: "evt_1", type: "invoice.paid", data: {} };
-    const answers = [
-      await tasks.health(),
-      await tasks.listChannels({ headers: user }),
-      await tasks.getChannel({ path: CHANNEL, headers: user }),
-      await tasks.listTasks({ path: CHANNEL, query: { limit: 10 }, headers: user }),
-      await tasks.createTask({ path: CHANNEL, headers: user, body: { title: "Write the slice" } }),
-      await tasks.getTasksBatch({ path: CHANNEL, headers: user, body: { ids: [TASK_ID] } }),
-      await tasks.searchTasks({ path: CHANNEL, headers: user, body: { text: "slice" } }),
-      await tasks.getTask({ path: TASK, headers: user }),
-      await tasks.updateTask({
-        path: TASK,
-        headers: user,
-        body: { title: "Done", expectedVersion: 1 },
-      }),
-      await tasks.archiveTask({
-        path: TASK,
-        headers: user,
-        body: { reason: "finished", expectedVersion: 1 },
-      }),
-      await tasks.assignTask({ path: TASK, headers: user, body: { userId: ASSIGNEE_ID } }),
-      await tasks.purgeTask({ path: TASK, headers: user, body: { reauthToken: "reauth" } }),
-      await tasks.getDraft({ path: { draftId: DRAFT_ID }, headers: user }),
-      await tasks.deleteDraft({ path: { draftId: DRAFT_ID }, headers: user }),
-      await tasks.getPreferences({ headers: user }),
-      await tasks.updatePreferences({ headers: user, body: { digest: true } }),
-      await tasks.payments({
-        headers: { "stripe-signature": stripeSignature(event) },
-        body: event,
-      }),
-      await service.getTask(
-        { path: TASK, headers: { authorization: bearer(SERVICE_JWT) } },
-        { timeoutMs: SERVICE_TIMEOUT_MS },
-      ),
-    ];
+    const expectations = [
+      [await tasks.health(), 200, {}],
+      [await tasks.listChannels({ headers: user }), 200, {}],
+      [await tasks.getChannel({ path: CHANNEL, headers: user }), 200, { channelId: CHANNEL_ID }],
+      [await tasks.listTasks({ path: CHANNEL, query: { limit: 10 }, headers: user }), 200, {}],
+      [
+        await tasks.createTask({
+          path: CHANNEL,
+          headers: user,
+          body: { title: "Write the slice" },
+        }),
+        201,
+        { title: "Write the slice" },
+      ],
+      [
+        await tasks.getTasksBatch({ path: CHANNEL, headers: user, body: { ids: [TASK_ID] } }),
+        200,
+        {},
+      ],
+      [await tasks.searchTasks({ path: CHANNEL, headers: user, body: { text: "slice" } }), 200, {}],
+      [await tasks.getTask({ path: TASK, headers: user }), 200, { taskId: TASK_ID }],
+      [
+        await tasks.updateTask({
+          path: TASK,
+          headers: user,
+          body: { title: "Done", expectedVersion: 1 },
+        }),
+        200,
+        { title: "Done" },
+      ],
+      [
+        await tasks.archiveTask({
+          path: TASK,
+          headers: user,
+          body: { reason: "finished", expectedVersion: 1 },
+        }),
+        200,
+        { taskId: TASK_ID, state: "archived" },
+      ],
+      [
+        await tasks.assignTask({ path: TASK, headers: user, body: { userId: ASSIGNEE_ID } }),
+        200,
+        { taskId: TASK_ID },
+      ],
+      [
+        await tasks.purgeTask({ path: TASK, headers: user, body: { reauthToken: "reauth" } }),
+        204,
+        {},
+      ],
+      [
+        await tasks.getDraft({ path: { draftId: DRAFT_ID }, headers: user }),
+        200,
+        { draftId: DRAFT_ID },
+      ],
+      [
+        await tasks.deleteDraft({ path: { draftId: DRAFT_ID }, headers: user }),
+        200,
+        { draftId: DRAFT_ID },
+      ],
+      [await tasks.getPreferences({ headers: user }), 200, { locale: "en" }],
+      [
+        await tasks.updatePreferences({ headers: user, body: { digest: true } }),
+        200,
+        { digest: true },
+      ],
+      [
+        await tasks.payments({
+          headers: { "stripe-signature": stripeSignature(event) },
+          body: event,
+        }),
+        204,
+        {},
+      ],
+      [
+        await service.getTask(
+          { path: TASK, headers: { authorization: bearer(SERVICE_JWT) } },
+          { timeoutMs: SERVICE_TIMEOUT_MS },
+        ),
+        200,
+        { taskId: TASK_ID },
+      ],
+    ] as const;
 
-    for (const answer of answers) expect(answer).toMatchObject({ ok: true });
+    // The declared status and, where the handler echoes its input, that member of the body.
+    for (const [answer, status, echoed] of expectations) {
+      expect(answer).toMatchObject({ ok: true, status });
+      if (Object.keys(echoed).length > 0) expect(answer).toMatchObject({ body: echoed });
+    }
   });
 
   test("401 without credentials", async () => {
@@ -119,6 +171,41 @@ describe("reference slice answers", () => {
       replayed: true,
       body: first.ok ? first.body : undefined,
     });
+  });
+
+  test("422 for an idempotency key reused with another body", async () => {
+    const headers = { ...user, "idempotency-key": crypto.randomUUID() };
+
+    await tasks.createTask({ path: CHANNEL, headers, body: { title: "First body" } });
+    const reused = await tasks.createTask({
+      path: CHANNEL,
+      headers,
+      body: { title: "Other body" },
+    });
+
+    expect(reused).toMatchObject({ ok: false, status: 422, code: "api.idempotency_key_reused" });
+  });
+
+  test("404 in the api format for a wrong method on a tasks path", async () => {
+    const answer = await fetch(`${server.baseUrl}/v1/channels/${CHANNEL_ID}/tasks/${TASK_ID}`, {
+      method: "PUT",
+      headers: user,
+    });
+
+    expect(answer.status).toBe(404);
+    expect(answer.headers.get("content-type")).toContain("application/problem+json");
+    await expect(answer.json()).resolves.toMatchObject({ code: "api.not_found" });
+  });
+
+  test("404 in the api format for a wrong method on a tasksService path", async () => {
+    const answer = await fetch(
+      `${server.baseUrl}/internal/v1/channels/${CHANNEL_ID}/tasks/${TASK_ID}`,
+      { method: "PUT", headers: { authorization: bearer(SERVICE_JWT) } },
+    );
+
+    expect(answer.status).toBe(404);
+    expect(answer.headers.get("content-type")).toContain("application/problem+json");
+    await expect(answer.json()).resolves.toMatchObject({ code: "api.not_found" });
   });
 
   test("429 with retryAfterMs", async () => {

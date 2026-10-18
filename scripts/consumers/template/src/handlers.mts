@@ -41,7 +41,7 @@ export const tasksHandlers = {
   },
 
   createTask(input: Tasks.CreateTaskInput): Tasks.CreateTaskOutput {
-    return { status: 201, body: task(NEW_TASK_ID, input.body.title) };
+    return { status: 201, body: task(crypto.randomUUID(), input.body.title) };
   },
 
   getTasksBatch(input: Tasks.GetTasksBatchInput): Tasks.GetTasksBatchOutput {

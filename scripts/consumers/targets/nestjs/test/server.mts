@@ -2,11 +2,12 @@
 // `rawBody: true` shows, on a free local port.
 import "reflect-metadata";
 import type { AddressInfo } from "node:net";
-import { NestFactory } from "@nestjs/core";
+import { type ArgumentsHost, Catch } from "@nestjs/common";
+import { BaseExceptionFilter, NestFactory } from "@nestjs/core";
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import { ConsumerModule } from "../src/consumer-module.mjs";
 import * as TasksNest from "../generated/server/tasks/index.js";
 import * as TasksServiceNest from "../generated/server/tasksService/index.js";
+import { ConsumerModule } from "../src/consumer-module.mjs";
 
 export interface RunningServer {
   readonly baseUrl: string;
@@ -14,6 +15,17 @@ export interface RunningServer {
 }
 
 const HOST = "127.0.0.1";
+
+// One global filter for the two apis: each api's helper first, then NestJS's default for the app's own routes.
+@Catch()
+class PreRoutingFilter extends BaseExceptionFilter {
+  override catch(exception: unknown, host: ArgumentsHost): void {
+    if (TasksNest.renderPreRoutingError(exception, host)) return;
+    if (TasksServiceNest.renderPreRoutingError(exception, host)) return;
+
+    super.catch(exception, host);
+  }
+}
 
 export async function startServer(): Promise<RunningServer> {
   const app = await NestFactory.create<NestExpressApplication>(ConsumerModule, {
@@ -24,7 +36,7 @@ export async function startServer(): Promise<RunningServer> {
   app.useBodyParser("json", {
     limit: Math.max(TasksNest.LARGEST_BODY_LIMIT, TasksServiceNest.LARGEST_BODY_LIMIT),
   });
-  app.useGlobalFilters(TasksNest.preRoutingFilter);
+  app.useGlobalFilters(new PreRoutingFilter(app.getHttpAdapter()));
   await app.listen(0, HOST);
 
   return {
