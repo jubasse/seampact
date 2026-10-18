@@ -25,10 +25,11 @@ interface PlannedFile {
 // Writes a target's files into its output directory (ADR 0015 "Writing files"): UTF-8 without a byte-order mark,
 // LF line endings and a final newline, only inside `outDir`, with `.seampact-manifest.json` listing each file and
 // its SHA-256. Files a previous run generated and this one does not are removed. Every check runs before the
-// first write: a file the writer did not generate, a hand-edited one or a path leaving `outDir` refuses the
+// first write: a manifest that is not a regular file or belongs to another target, a file the writer did not generate, a hand-edited one or a path leaving `outDir` refuses the
 // whole write, naming the file and the fix.
 export async function writeGeneratedFiles(
   outDir: string,
+  owner: string,
   files: readonly GeneratedFile[],
 ): Promise<WriteOutcome> {
   const checked = checkGeneratedPaths(files);
@@ -38,6 +39,10 @@ export async function writeGeneratedFiles(
   await mkdir(resolve(outDir), { recursive: true });
 
   const rootDir = await realpath(resolve(outDir));
+  const manifestRefusal = await manifestFileRefusal(rootDir);
+
+  if (manifestRefusal !== undefined) return refused([manifestRefusal]);
+
   const manifest = await readManifest(rootDir);
 
   if (manifest.status === "invalid") {
@@ -46,6 +51,16 @@ export async function writeGeneratedFiles(
         code: "writer.manifest.invalid",
         message: `The manifest ${join(rootDir, MANIFEST_FILE_NAME)} cannot be read: ${manifest.reason}.`,
         fix: "Delete the generated files of this target and its manifest, then generate again.",
+      },
+    ]);
+  }
+
+  if (manifest.owner !== undefined && manifest.owner !== owner) {
+    return refused([
+      {
+        code: "writer.manifest.other-owner",
+        message: `The output directory ${rootDir} belongs to the target '${manifest.owner}', not '${owner}'.`,
+        fix: `Give '${owner}' its own \`out\` directory, or delete ${join(rootDir, MANIFEST_FILE_NAME)} and the files of '${manifest.owner}'.`,
       },
     ]);
   }
@@ -92,13 +107,27 @@ export async function writeGeneratedFiles(
 
   const hashByPath = new Map(planned.map((file) => [file.path, file.sha256]));
 
-  await writeFile(join(rootDir, MANIFEST_FILE_NAME), serializeManifest(hashByPath), "utf8");
+  await writeFile(join(rootDir, MANIFEST_FILE_NAME), serializeManifest(owner, hashByPath), "utf8");
 
   return {
     status: "written",
     written: toWrite.map((file) => file.path),
     unchanged,
     removed: removable,
+  };
+}
+
+// The manifest is the writer's own file: a link or a directory in its place is never read or written through.
+async function manifestFileRefusal(rootDir: string): Promise<Refusal | undefined> {
+  const manifestPath = join(rootDir, MANIFEST_FILE_NAME);
+  const stats = await lstatIfPresent(manifestPath);
+
+  if (stats === undefined || stats.isFile()) return undefined;
+
+  return {
+    code: "writer.manifest.not-regular",
+    message: `The manifest ${manifestPath} is not a regular file, so the writer does not read or write it.`,
+    fix: `Delete ${manifestPath}, then generate again.`,
   };
 }
 

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, test } from "vitest";
@@ -26,7 +26,7 @@ test("the writer stays inside its directory and keeps hand-written files", async
   await writeFile(outsideFile, "outside\n");
 
   // A first run writes normalized bytes and a manifest.
-  const first = await writeGeneratedFiles(outDir, [
+  const first = await writeGeneratedFiles(outDir, "node-server", [
     { path: "routes/tasks.ts", contents: "﻿export const tasks = 1;\r\n" },
     { path: "index.ts", contents: "export {};" },
   ]);
@@ -37,15 +37,19 @@ test("the writer stays inside its directory and keeps hand-written files", async
 
   // Paths that leave the directory are refused before anything is written.
   for (const path of ["../outside.ts", "/etc/passwd", "a/../../outside.ts", "a\\..\\outside.ts"]) {
-    expect(codesOf(await writeGeneratedFiles(outDir, [{ path, contents: "x" }]))).toEqual([
-      "file.path.invalid",
-    ]);
+    expect(
+      codesOf(await writeGeneratedFiles(outDir, "node-server", [{ path, contents: "x" }])),
+    ).toEqual(["file.path.invalid"]);
   }
 
   // A symbolic link out of the directory is refused, not followed.
   await symlink(sandbox, join(outDir, "escape"));
   expect(
-    codesOf(await writeGeneratedFiles(outDir, [{ path: "escape/outside.ts", contents: "x" }])),
+    codesOf(
+      await writeGeneratedFiles(outDir, "node-server", [
+        { path: "escape/outside.ts", contents: "x" },
+      ]),
+    ),
   ).toEqual(["writer.path.outside"]);
   await rm(join(outDir, "escape"));
 
@@ -53,7 +57,7 @@ test("the writer stays inside its directory and keeps hand-written files", async
   await writeFile(join(outDir, "hand-written.ts"), "mine\n");
   await writeFile(join(outDir, "index.ts"), "export {}; // edited\n");
 
-  const refused = await writeGeneratedFiles(outDir, [
+  const refused = await writeGeneratedFiles(outDir, "node-server", [
     { path: "hand-written.ts", contents: "generated" },
     { path: "index.ts", contents: "export {};" },
   ]);
@@ -66,7 +70,7 @@ test("the writer stays inside its directory and keeps hand-written files", async
   // Once the edit is undone, a file no longer produced is removed with its empty directory; others stay.
   await writeFile(join(outDir, "index.ts"), "export {};\n");
 
-  const second = await writeGeneratedFiles(outDir, [
+  const second = await writeGeneratedFiles(outDir, "node-server", [
     { path: "index.ts", contents: "export const index = 2;" },
   ]);
 
@@ -85,6 +89,35 @@ test("the writer stays inside its directory and keeps hand-written files", async
     join(outDir, ".seampact-manifest.json"),
     JSON.stringify({ files: [{ path: "../outside.ts", sha256: "0".repeat(64) }] }),
   );
-  expect(codesOf(await writeGeneratedFiles(outDir, []))).toEqual(["writer.manifest.invalid"]);
+  expect(codesOf(await writeGeneratedFiles(outDir, "node-server", []))).toEqual([
+    "writer.manifest.invalid",
+  ]);
   expect(await readFile(outsideFile, "utf8")).toBe("outside\n");
+});
+
+test("a symbolic link in place of the manifest is refused and nothing is written", async () => {
+  const outsideFile = join(sandbox, "outside.json");
+
+  await mkdir(outDir, { recursive: true });
+  await writeFile(outsideFile, "outside\n");
+  await symlink(outsideFile, join(outDir, ".seampact-manifest.json"));
+
+  const outcome = await writeGeneratedFiles(outDir, "node-server", [
+    { path: "index.ts", contents: "export {};" },
+  ]);
+
+  expect(codesOf(outcome)).toEqual(["writer.manifest.not-regular"]);
+  expect(await readFile(outsideFile, "utf8")).toBe("outside\n");
+  expect(await readdir(outDir)).toEqual([".seampact-manifest.json"]);
+});
+
+test("a second target writing into the same directory is refused and nothing is written", async () => {
+  await writeGeneratedFiles(outDir, "node-server", [{ path: "index.ts", contents: "export {};" }]);
+
+  const outcome = await writeGeneratedFiles(outDir, "node-client", [
+    { path: "client.ts", contents: "export {};" },
+  ]);
+
+  expect(codesOf(outcome)).toEqual(["writer.manifest.other-owner"]);
+  expect((await readdir(outDir)).sort()).toEqual([".seampact-manifest.json", "index.ts"]);
 });

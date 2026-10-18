@@ -3,8 +3,8 @@ import { compareCodeUnits } from "./code-unit-order.js";
 import { readFileIfPresent } from "./file-presence.js";
 import { MANIFEST_FILE_NAME, unsafePathReason } from "./generated-paths.js";
 
-// What the writer keeps in a target's output directory (ADR 0015 "Writing files"): each file it generated and the
-// SHA-256 of its bytes, in code-unit order of path.
+// What the writer keeps in a target's output directory (ADR 0015 "Writing files"): the target that owns the
+// directory, and each file it generated with the SHA-256 of its bytes, in code-unit order of path.
 export interface ManifestEntry {
   path: string;
   sha256: string;
@@ -13,15 +13,15 @@ export interface ManifestEntry {
 const SHA256_HEX = /^[0-9a-f]{64}$/;
 
 export type ManifestRead =
-  | { status: "read"; hashByPath: ReadonlyMap<string, string> }
+  | { status: "read"; owner: string | undefined; hashByPath: ReadonlyMap<string, string> }
   | { status: "invalid"; reason: string };
 
-// Reads the manifest of `rootDir`; a missing one is an empty manifest (a first run). Every entry is checked like a
+// Reads the manifest of `rootDir`; a missing one is an empty manifest without an owner (a first run). Every entry is checked like a
 // generated path, so a tampered manifest cannot make the writer delete outside its directory.
 export async function readManifest(rootDir: string): Promise<ManifestRead> {
   const text = await readFileIfPresent(join(rootDir, MANIFEST_FILE_NAME));
 
-  if (text === undefined) return { status: "read", hashByPath: new Map() };
+  if (text === undefined) return { status: "read", owner: undefined, hashByPath: new Map() };
 
   let parsed: unknown;
 
@@ -37,12 +37,12 @@ export async function readManifest(rootDir: string): Promise<ManifestRead> {
   return entriesOf(parsed);
 }
 
-export function serializeManifest(hashByPath: ReadonlyMap<string, string>): string {
+export function serializeManifest(owner: string, hashByPath: ReadonlyMap<string, string>): string {
   const files: ManifestEntry[] = [...hashByPath]
     .map(([path, sha256]) => ({ path, sha256 }))
     .sort((left, right) => compareCodeUnits(left.path, right.path));
 
-  return `${JSON.stringify({ files }, null, 2)}\n`;
+  return `${JSON.stringify({ owner, files }, null, 2)}\n`;
 }
 
 function entriesOf(parsed: unknown): ManifestRead {
@@ -55,6 +55,10 @@ function entriesOf(parsed: unknown): ManifestRead {
     return { status: "invalid", reason: "it has no `files` array" };
   }
 
+  if (!("owner" in parsed) || typeof parsed.owner !== "string") {
+    return { status: "invalid", reason: "it has no `owner` target id" };
+  }
+
   const hashByPath = new Map<string, string>();
 
   for (const entry of parsed.files) {
@@ -65,7 +69,7 @@ function entriesOf(parsed: unknown): ManifestRead {
     hashByPath.set(entry.path, entry.sha256);
   }
 
-  return { status: "read", hashByPath };
+  return { status: "read", owner: parsed.owner, hashByPath };
 }
 
 function invalidEntryReason(entry: unknown, seen: ReadonlyMap<string, string>): string | undefined {
