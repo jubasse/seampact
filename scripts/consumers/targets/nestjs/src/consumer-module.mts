@@ -11,33 +11,12 @@ import {
   PreferencesController,
   TasksController,
 } from "./controllers.mjs";
-import {
-  allowingDeciderHook,
-  createIdempotencyStore,
-  scopeResolverHook,
-  serviceAuthenticateHook,
-  stripeAuthenticateHook,
-  throttlingDeciderHook,
-  userAuthenticateHook,
-} from "./hooks.mjs";
-
-const tasksHooks: TasksNest.SeampactHooks = {
-  authenticate: { user: userAuthenticateHook, stripe: stripeAuthenticateHook },
-  deciders: [{ names: "all", decider: throttlingDeciderHook }],
-  scopeResolvers: { channel: scopeResolverHook },
-  idempotencyStore: createIdempotencyStore(),
-};
-
-const tasksServiceHooks: TasksServiceNest.SeampactHooks = {
-  authenticate: { service: serviceAuthenticateHook },
-  deciders: [{ names: "all", decider: allowingDeciderHook }],
-  scopeResolvers: {},
-};
+import { tasksHooks, tasksServiceHooks } from "./hooks.mjs";
 
 @Module({
   imports: [
-    TasksNest.SeampactModule.forRoot(tasksHooks),
-    TasksServiceNest.SeampactModule.forRoot(tasksServiceHooks),
+    TasksNest.SeampactModule.forRoot(tasksHooks()),
+    TasksServiceNest.SeampactModule.forRoot(tasksServiceHooks()),
   ],
   controllers: [
     AppController,

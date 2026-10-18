@@ -23,6 +23,11 @@ const CONFIG_ENTRIES_FILE = "seampact.config.entries.yaml";
 // Dependencies an overlay adds to the template manifest's `dependencies`, as a name-to-version JSON object: copying
 // an overlay package.json would replace the template's.
 const PACKAGE_ENTRIES_FILE = "package.entries.json";
+
+// An overlay that runs another overlay on a different dependency set (a framework major) names it in this file,
+// one target id; the base overlay is copied first and its entries apply first.
+const OVERLAY_BASE_FILE = "overlay.base";
+const OVERLAY_FILES = [CONFIG_ENTRIES_FILE, PACKAGE_ENTRIES_FILE, OVERLAY_BASE_FILE];
 const CONFIG_FILE = "seampact.config.yaml";
 const PACKAGE_FILE = "package.json";
 const CONTRACT_DIRECTORY = "contract";
@@ -50,7 +55,8 @@ export function prepareConsumerDirectory(directory: string): void {
   mkdirSync(directory, { recursive: true });
 }
 
-// The template, the target overlay copied over it (its config entries appended), and the reference contract.
+// The template, the target overlay copied over it after its base overlay (their config and package entries
+// merged), and the reference contract.
 export function assembleConsumer(options: {
   readonly consumersRoot: string;
   readonly repositoryRoot: string;
@@ -66,28 +72,52 @@ export function assembleConsumer(options: {
     );
   }
 
-  const overlay = join(consumersRoot, "targets", options.target);
-
-  if (!existsSync(overlay)) {
-    const known = readdirSync(join(consumersRoot, "targets")).sort().join(", ");
-
-    throw new Error(
-      `consumers: no overlay for target '${options.target}'; known targets: ${known}.`,
-    );
-  }
+  const overlays = overlayChain(join(consumersRoot, "targets"), options.target);
 
   cpSync(join(consumersRoot, "template"), directory, { recursive: true });
-  cpSync(overlay, directory, {
-    recursive: true,
-    filter: (source) =>
-      !source.endsWith(CONFIG_ENTRIES_FILE) && !source.endsWith(PACKAGE_ENTRIES_FILE),
-  });
-  appendConfigEntries(join(overlay, CONFIG_ENTRIES_FILE), join(directory, CONFIG_FILE));
-  addPackageEntries(join(overlay, PACKAGE_ENTRIES_FILE), join(directory, PACKAGE_FILE));
+
+  for (const overlay of overlays) {
+    cpSync(overlay, directory, {
+      recursive: true,
+      filter: (source) => !OVERLAY_FILES.some((file) => source.endsWith(file)),
+    });
+    appendConfigEntries(join(overlay, CONFIG_ENTRIES_FILE), join(directory, CONFIG_FILE));
+    addPackageEntries(join(overlay, PACKAGE_ENTRIES_FILE), join(directory, PACKAGE_FILE));
+  }
+
   cpSync(join(options.repositoryRoot, "fixtures/reference"), join(directory, CONTRACT_DIRECTORY), {
     recursive: true,
   });
   writeFileSync(join(directory, COMMIT_FILE), `${options.commit}\n`);
+}
+
+// The target's overlay, after the overlay it names as its base, if any.
+function overlayChain(targetsRoot: string, target: string): string[] {
+  const overlay = join(targetsRoot, target);
+
+  if (!existsSync(overlay)) {
+    const known = readdirSync(targetsRoot).sort().join(", ");
+
+    throw new Error(`consumers: no overlay for target '${target}'; known targets: ${known}.`);
+  }
+
+  const baseFile = join(overlay, OVERLAY_BASE_FILE);
+
+  if (!existsSync(baseFile)) return [overlay];
+
+  const base = readFileSync(baseFile, "utf8").trim();
+
+  if (
+    !TARGET_ID.test(base) ||
+    base === target ||
+    existsSync(join(targetsRoot, base, OVERLAY_BASE_FILE))
+  ) {
+    throw new Error(
+      `consumers: ${baseFile} must name one other target overlay without a base of its own, not '${base}'.`,
+    );
+  }
+
+  return [...overlayChain(targetsRoot, base), overlay];
 }
 
 // The template config ends with its `targets` list, so the overlay's items extend it.
