@@ -4,6 +4,8 @@
 // stage module, so importing `pipeline/index.js` (which exports the orchestrator) from one would close a cycle,
 // and a value read during that cycle is still in its temporal dead zone. `seam.test.ts` keeps this file
 // free of the orchestrator, the registry and every stage.
+
+export { canonical as pipelineCanonical } from "./canonical.js";
 export type { PipelineContextOptions } from "./context.js";
 export { pipelineContext } from "./context.js";
 export type {
@@ -18,6 +20,7 @@ export {
   pipelineConventions,
 } from "./conventions.js";
 export type {
+  DraftApi,
   DraftConcurrency,
   DraftFinalizeMember,
   DraftFinalizeOperationMember,
@@ -54,23 +57,22 @@ export type {
 export {
   draftElementOwner,
   draftFieldSegments,
-  draftOwnerText,
   draftOwnershipRow,
+  draftOwnerText,
   pipelineContainers,
   pipelineOwnership,
 } from "./ownership.js";
 export type {
-  TreeSchemaExampleIssue,
   PassContext,
   PassContextOf,
   PassPart,
   PassParts,
   PassResultOf,
+  TreeSchemaExampleIssue,
   TreeSchemaService,
   WorkspacePass,
   WorkspacePassContext,
 } from "./pass.js";
-export { canonical as pipelineCanonical } from "./canonical.js";
 export {
   isJsonObject as pipelineIsJsonObject,
   jsonAtPointer as pipelineJsonAtPointer,

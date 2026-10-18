@@ -251,6 +251,7 @@
         "pathVersion",
         "maturity",
         "compat",
+        "wire",
         "surfaces",
         "documents",
         "docs",
@@ -267,6 +268,7 @@
         "maturity": { "$ref": "common.schema.json#/$defs/Maturity" },
         "caller": { "$ref": "#/$defs/ApiCaller" },
         "compat": { "$ref": "#/$defs/Compat" },
+        "wire": { "$ref": "#/$defs/ApiWire" },
         "surfaces": {
           "type": "object",
           "propertyNames": { "$ref": "common.schema.json#/$defs/SurfaceId" },
@@ -281,6 +283,31 @@
         "extensions": { "$ref": "common.schema.json#/$defs/Extensions" },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
+    },
+    "ApiWire": {
+      "type": "object",
+      "description": "The api-wide conventions a target acts on (ADR 0004 section 13).",
+      "required": ["int64", "outputEnums", "urls"],
+      "properties": {
+        "int64": { "$ref": "#/$defs/Int64Wire" },
+        "outputEnums": { "$ref": "#/$defs/OutputEnumForm" },
+        "urls": { "$ref": "#/$defs/UrlForm" }
+      }
+    },
+    "Int64Wire": {
+      "type": "string",
+      "description": "How an int64 value is sent: its string form, or a JSON number.",
+      "x-seampact-known": ["string", "number"]
+    },
+    "OutputEnumForm": {
+      "type": "string",
+      "description": "Whether an output enum is closed, or open with a fallback a client keeps.",
+      "x-seampact-known": ["enum", "open"]
+    },
+    "UrlForm": {
+      "type": "string",
+      "description": "Whether a URL a target writes is a relative reference, or absolute from one configured public origin.",
+      "x-seampact-known": ["relative", "absolute"]
     },
     "ConventionValue": {
       "type": "object",

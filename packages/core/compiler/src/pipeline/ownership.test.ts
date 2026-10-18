@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 import { IR_SCHEMA_DOCUMENTS } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { derivationTable } from "../derivations/table.js";
+import { createDraftIR, type DraftApi } from "./draft.js";
+import { pipelineGuard } from "./guard.js";
 import { type HalfName, type PassName, pipelinePassOf } from "./halves.js";
 import {
   draftFieldSegments,
@@ -174,6 +176,36 @@ describe("field ownership", () => {
     expect(unowned, "IR members with no owner").toEqual([]);
   });
 
+  test("derive.wire writes api.wire and tree.nodes may not", () => {
+    const api: DraftApi = {
+      id: "tasks",
+      name: { segments: ["tasks"], role: "schema" },
+      version: { kind: "label", label: "1" },
+      kind: "product",
+      pathVersion: { value: "none", origin: { layer: "api", pointer: "" } },
+      maturity: "stable",
+      compat: { policy: "additive-only" },
+      surfaces: {},
+      documents: {},
+      docs: {},
+      extensions: {},
+      origin: { layer: "api", pointer: "" },
+    };
+    const draft = { ...createDraftIR(), api };
+    const tree = pipelineGuard(draft, { half: "tree.nodes", reads: [], writes: ["api"] });
+    const wire = pipelineGuard(draft, { half: "derive.wire", reads: [], writes: ["api.wire"] });
+    const defaults = { int64: "string", outputEnums: "enum", urls: "relative" } as const;
+
+    expect(() => {
+      if (tree.draft.api !== undefined) tree.draft.api.wire = { ...defaults };
+    }).toThrow(/owned by derive\.wire/);
+
+    if (wire.draft.api !== undefined) wire.draft.api.wire = { ...defaults };
+    expect(draft.api.wire).toEqual(defaults);
+    tree.dispose();
+    wire.dispose();
+  });
+
   test("each half of a default with rows below it writes each of those rows", () => {
     expect(defaultHalvesMissingBelow(pipelineOwnership)).toEqual([]);
 
@@ -242,8 +274,12 @@ describe("field ownership", () => {
       access: {
         "operations[].paging.sortKeys[].derivedFrom":
           "carried with the derived right (sortKey.restricted)",
+        "operations[].paging.sortKeys[].params": "the derived right's params, written with it",
+        "operations[].paging.sortKeys[].subject": "the derived right's subject, written with it",
       },
-      derive: {},
+      derive: {
+        "api.wire": "the api-wide wire conventions a target acts on (ADR 0004 section 13)",
+      },
     };
 
     // A derived element is written by the halves the row lists in `derived`, so a pass's row in the ADR is

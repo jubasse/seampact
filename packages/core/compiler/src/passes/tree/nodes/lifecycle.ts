@@ -1,4 +1,4 @@
-import type { IrWriter, Origin } from "@seampact/spec/ir";
+import { type IrWriter, isIrCalendarDate, type Origin } from "@seampact/spec/ir";
 import type { DiagnosticOrigin } from "../../../diagnostics/diagnostic.js";
 import {
   type DraftOperation,
@@ -8,7 +8,6 @@ import {
   pipelineParseDuration,
   type TreeNode,
 } from "../../../pipeline/seam.js";
-import { treeNodesIsCalendarDate } from "./calendar-date.js";
 import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
 import type { TreeNodesSite } from "./fields.js";
 import { TREE_NODES_BATCH_OP, treeNodesOpShorthand } from "./names.js";
@@ -72,11 +71,12 @@ export function treeNodesDeprecated(site: TreeNodesSite): IrWriter.Deprecation |
   const api = site.draft.api?.id;
   const datesHold = deprecationDatesHold(site, entry.origin, since, sunset);
 
-  if (!datesHold || typeof sunset !== "string") return undefined;
+  if (!datesHold || typeof since !== "string" || typeof sunset !== "string") return undefined;
 
   if (api === undefined) throw new Error("write the api before its operations");
 
   return {
+    since,
     sunset,
     ...(typeof successor === "string"
       ? { successor: { kind: "httpOperation" as const, api, id: successor } }
@@ -120,7 +120,7 @@ function sinceIsDate(site: TreeNodesSite, origin: Origin, since: unknown): boole
     return false;
   }
 
-  if (treeNodesIsCalendarDate(since)) return true;
+  if (isIrCalendarDate(since)) return true;
 
   reportDeprecation(site, origin, {
     rule: "deprecated-since",
@@ -143,7 +143,7 @@ function sunsetIsDate(site: TreeNodesSite, origin: Origin, sunset: unknown): boo
     return false;
   }
 
-  if (treeNodesIsCalendarDate(sunset)) return true;
+  if (isIrCalendarDate(sunset)) return true;
 
   reportDeprecation(site, origin, {
     rule: "deprecated-sunset",

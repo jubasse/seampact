@@ -142,7 +142,7 @@ export interface DerivedFrom {
   from: Origin[];
 }
 
-/** Where a value is read (ADR 0002 section 4); 'resolver' only as a scope source, 'holderField' only as a field right's subject source. */
+/** Where a value is read (ADR 0002 section 4); 'resolver' only as a scope source, 'holderField' only as a field right's subject source. Must act: an unknown value makes the IR invalid for every reader. */
 export type ValueSourceIn =
   | "path"
   | "query"
@@ -1004,10 +1004,20 @@ export interface ResponseHeader {
   name: string;
   type: TypeUse;
   required: boolean;
-  semantic?: string;
+  semantic?: ResponseHeaderSemantic;
   origin?: Origin;
   derivedFrom?: DerivedFrom;
 }
+
+/** What a response header carries: an identity header's semantic (declarations HeaderSemantic) or a deprecation header (ADR 0004 section 7). */
+export type ResponseHeaderSemantic =
+  | "deadline"
+  | "traceContext"
+  | "actorSurface"
+  | "versionToken"
+  | "deprecation"
+  | "sunset"
+  | "successorLink";
 
 /** The format shape of a response; 'binary' and 'redirect' bypass the format (ADR 0004 section 8). */
 export type ResponseShape = "item" | "table" | "list" | "page" | "empty" | "binary" | "redirect";
@@ -1030,8 +1040,30 @@ export interface Response {
 export interface OperationError {
   code: ErrorCode;
   example?: unknown;
+  /** Sorted by role; absent when the code answers no role here. */
+  roles?: ErrorRoleBinding[];
+  retryHeader?: RetryHeader;
   derivedFrom?: DerivedFrom;
   origin?: Origin;
+}
+
+/** A role this code answers on the operation and the template filling its params from the role's data (ADR 0006 section 6). */
+export interface ErrorRoleBinding {
+  role: ErrorRole;
+  /** Present if and only if the code declares params (invariant ir.error.role-params). */
+  params?: Template;
+}
+
+/** The unit of a retry header; 's' rounds the millisecond delay up. */
+export type RetryUnit = "s" | "ms";
+
+/** The retry header of a 429 from a bucket rule (grammar 13, rateLimit). */
+export interface RetryHeader {
+  name: string;
+  /** The required member of the code's params holding the delay in integer milliseconds. */
+  param: string;
+  unit: RetryUnit;
+  derivedFrom: DerivedFrom;
 }
 
 export interface FieldRightSubject {
@@ -1048,8 +1080,12 @@ export interface FieldRight {
   subject?: FieldRightSubject;
   direction: Direction;
   inputPolicy?: InputPolicy;
+  always?: FieldRightAlways;
   derivedFrom: DerivedFrom;
 }
+
+/** An outcome that needs no decide call: 'absent', the field is never sent on this operation (ADR 0003 section 6). Must act: an unknown value makes the IR invalid for every reader. */
+export type FieldRightAlways = "absent";
 
 /** The idempotency key of an unsafe operation: derived settings, or an exemption with its reason. Must act: an unknown tag makes the IR invalid for every reader. */
 export type KnownIdempotency = DerivedIdempotency | ExemptIdempotency;
@@ -1126,6 +1162,10 @@ export interface Cache {
 export interface SortKey {
   key: string;
   right?: RightId;
+  /** The params of 'right', validated against the right's params schema; only with 'right' (ADR 0002 section 10). */
+  params?: unknown;
+  /** Where the right's subject is read on the request; only with 'right' (ADR 0003 section 6). */
+  subject?: FieldRightSubject;
   derivedFrom?: DerivedFrom;
   origin?: Origin;
 }
@@ -1167,12 +1207,18 @@ export interface ExemptCsrf {
 
 export interface Degradable {
   paths: string[];
+  /** The header listing degraded parts, an RFC 9110 token; required when the operation's format has no 'degraded' meta member (invariant ir.degradable.header). */
+  header?: string;
   origin: Origin;
 }
 
 export interface Deprecation {
+  /** The day the operation is deprecated, a calendar date, the Deprecation header's date (RFC 9745). */
+  since: string;
   sunset: string;
   successor?: OperationRef;
+  /** The Link rel of the successor, an RFC 8288 registered relation name; present if and only if 'successor' is (invariant ir.deprecation.headers). */
+  successorRel?: string;
   origin: Origin;
 }
 
@@ -1559,12 +1605,29 @@ export interface Api {
   maturity: Maturity;
   caller?: ApiCaller;
   compat: Compat;
+  wire: ApiWire;
   surfaces: Record<SurfaceId, Surface>;
   documents: Record<DocumentId, ApiDocument>;
   docs: Docs;
   extensions: Extensions;
   origin: Origin;
 }
+
+/** The api-wide conventions a target acts on (ADR 0004 section 13). */
+export interface ApiWire {
+  int64: Int64Wire;
+  outputEnums: OutputEnumForm;
+  urls: UrlForm;
+}
+
+/** How an int64 value is sent: its string form, or a JSON number. */
+export type Int64Wire = "string" | "number";
+
+/** Whether an output enum is closed, or open with a fallback a client keeps. */
+export type OutputEnumForm = "enum" | "open";
+
+/** Whether a URL a target writes is a relative reference, or absolute from one configured public origin. */
+export type UrlForm = "relative" | "absolute";
 
 /** A resolved convention value with the origin of the node that set it. */
 export interface ConventionValue {

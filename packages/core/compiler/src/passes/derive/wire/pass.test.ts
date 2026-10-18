@@ -53,6 +53,20 @@ describe("derive.wire matches the derive delta", () => {
   });
 });
 
+describe("derive.wire writes the api's wire conventions", () => {
+  test("the derive.wire pass writes api.wire on the draft", () => {
+    const run = deriveWireRunReference(workspace, "tasks");
+    const trimmed = {
+      ...deriveWirePass,
+      writes: deriveWirePass.writes.filter((field) => field !== "api.wire"),
+    };
+
+    expect(draftFixture("tasks", "after-access").api?.wire).toBeUndefined();
+    expect(run.draft.api?.wire).toEqual({ int64: "string", outputEnums: "enum", urls: "relative" });
+    expect(() => deriveWireRunReference(workspace, "tasks", trimmed)).toThrow(DraftAccessError);
+  });
+});
+
 describe("derive.wire elements carry derivedFrom", () => {
   // Every element this half adds follows the elements of the after-access draft.
   const addedRecords = (api: DraftFixtureApi): (IrWriter.DerivedFrom | undefined)[] => {

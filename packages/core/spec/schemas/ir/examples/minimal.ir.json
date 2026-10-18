@@ -1,6 +1,6 @@
 {
   "irVersion": 1,
-  "irRevision": 3,
+  "irRevision": 4,
   "kinds": [],
   "features": [],
   "api": {
@@ -14,6 +14,7 @@
     },
     "maturity": "stable",
     "compat": { "policy": "additive-only" },
+    "wire": { "int64": "string", "outputEnums": "enum", "urls": "relative" },
     "surfaces": {},
     "documents": {},
     "docs": {},

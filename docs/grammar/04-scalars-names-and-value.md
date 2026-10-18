@@ -1,6 +1,6 @@
 ### 4. Scalars, names and value sources
 
-- Durations: an integer followed by `ms`, `s`, `m`, `h` or `d` (`300ms`, `15m`, `24h`). Sizes: an integer followed by `B`, `KiB` or `MiB` (`1MiB`). Dates: a quoted ISO 8601 date (`'2027-06-30'`); unquoted it is a YAML 1.1 timestamp and refused.
+- Durations: an integer followed by `ms`, `s`, `m`, `h` or `d` (`300ms`, `15m`, `24h`). Sizes: an integer followed by `B`, `KiB` or `MiB` (`1MiB`). Dates: a quoted ISO 8601 date (`'2027-06-30'`); unquoted it is a YAML 1.1 timestamp and refused. A date is `YYYY-MM-DD` naming a day of the proleptic Gregorian calendar, years 0001 to 9999: `'2026-02-30'` is refused.
 - Reasons: a non-empty string. A reason is required on every safety exception, and only there (A40): `access.public`, `access.optionalAuth`, a right's `guest`, `csrf.exempt`, `idempotency.exempt`, an `unknownKeys` or `unknownQuery` that does not refuse, an opaque value, and, in the app config, a framework route outside the contract and native access (ADR 0011). A departure from a default that weakens no check (no path version, another format, an unpaged list, a stated maturity, a local enum or a narrowing) takes no reason, and may carry one as docs where the keyword offers it.
 - Name patterns, checked by the authoring schema:
 

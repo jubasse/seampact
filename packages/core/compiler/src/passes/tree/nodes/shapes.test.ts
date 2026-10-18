@@ -403,7 +403,11 @@ surfaces:
   expect(run.diagnostics).toEqual([]);
   expect(run.draft.api?.extensions).toEqual({ acme: { team: "core" } });
   expect(lifecycle("listOrders")).toEqual({
-    deprecated: { sunset: "2027-06-30", origin: at(`${orders}/deprecated`) },
+    deprecated: {
+      since: "2026-12-31",
+      sunset: "2027-06-30",
+      origin: at(`${orders}/deprecated`),
+    },
     upstream: ["catalog"],
     maturity: {
       level: "experimental",
@@ -418,6 +422,7 @@ surfaces:
   });
   expect(lifecycle("oldOrders")).toMatchObject({
     deprecated: {
+      since: "2027-01-01",
       sunset: "2027-01-01",
       successor: { kind: "httpOperation", api: "a", id: "listOrders" },
       origin: at(`${orders}/routes/old/deprecated`),

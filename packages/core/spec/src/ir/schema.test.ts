@@ -35,6 +35,8 @@ const MUST_ACT = [
   "InputPolicy",
   "Idempotency",
   "Csrf",
+  "FieldRightAlways",
+  "ValueSourceIn",
 ];
 // Map keys with no grammar in ADR 0002 section 4 (principal variant names); readers use Object.hasOwn.
 const KEYS_WITHOUT_GRAMMAR = ["VariantId"];

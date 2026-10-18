@@ -1,5 +1,6 @@
-// A calendar date (ADR 0002 section 4): `YYYY-MM-DD` naming a real day of the proleptic Gregorian calendar, years
-// 0001 to 9999. The authoring pattern admits `2026-02-30`; this check refuses it.
+// A calendar date (grammar 04 l.3, ADR 0002 section 4): `YYYY-MM-DD` naming a day of the proleptic Gregorian
+// calendar, years 0001 to 9999. The schema patterns admit `2026-02-30`; this check refuses it. The compiler refuses
+// an authored date with it, and `ir.deprecation.since` an IR date.
 
 const CALENDAR_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const MONTHS_IN_YEAR = 12;
@@ -7,7 +8,7 @@ const FEBRUARY = 2;
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 
 /** True when `text` is `YYYY-MM-DD` and names a day that exists. */
-export function treeNodesIsCalendarDate(text: string): boolean {
+export function isIrCalendarDate(text: string): boolean {
   const match = CALENDAR_DATE.exec(text);
 
   if (match === null) return false;

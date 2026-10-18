@@ -82,7 +82,7 @@ export function deriveWireAddParam(
 export function deriveWireAddSuccessHeader(
   route: DeriveWireRoute,
   derived: DeriveWireDerived,
-  semantic: string | undefined,
+  semantic: IrWriter.ResponseHeaderSemantic | undefined,
   scope: DeriveWireScope,
 ): void {
   for (const response of deriveWireSuccessResponses(route))
