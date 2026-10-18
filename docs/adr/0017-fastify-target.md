@@ -94,7 +94,7 @@ The plugin runs it when Fastify loads it, so `app.ready()` and `app.listen()` re
 - a contract operation without a bound handler: `handlers` lacks the interface's object or the object lacks the method;
 - a key of `operations` that names no operation of the api;
 - a registration `prefix` (the plugin's `fastify.prefix`, readable at load, spike), which differs from the empty `mount` the slice allows;
-- a router `maxParamLength` (`fastify.initialConfig`) below the largest `maxLength` declared on a path parameter, since Fastify would refuse a valid request with a 414; a path parameter without a `maxLength` is a warning naming it, not a failure;
+- a router `maxParamLength` (`fastify.initialConfig`) below the longest percent-encoded form of a declared path parameter (twelve characters per code point of its `maxLength`, or three per character when its pattern is ASCII), since Fastify measures the encoded length and would refuse a valid request with a 414; a path parameter without a `maxLength` is a warning naming it, not a failure;
 - a Fastify major other than 5 (`fastify.version`).
 
 ### What the generated code depends on
