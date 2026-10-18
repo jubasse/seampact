@@ -113,6 +113,24 @@ describe("core declarations and reserved ids", () => {
     });
   });
 
+  test("the rateLimited delay is the param conventions.rateLimit names, required, and optional otherwise", () => {
+    const named = treeSchemasRunApi(
+      `conventions:\n  rateLimit: { header: Retry-After, param: delayMs, unit: s }\n${ONE_SCHEMA}`,
+    );
+
+    expect(named.diagnostics).toEqual([]);
+    expect(named.draft.schemas.ApiRateLimitedParams).toMatchObject({
+      properties: [
+        coreProperty("delayMs", delay, false, "/errors/api.rate_limited/params/delayMs"),
+      ],
+    });
+    expect(treeSchemasRunApi(ONE_SCHEMA).draft.schemas.ApiRateLimitedParams).toMatchObject({
+      properties: [
+        coreProperty("retryAfterMs", delay, true, "/errors/api.rate_limited/params/retryAfterMs"),
+      ],
+    });
+  });
+
   test("the seeded data is a copy: changing one run's schema leaves the next run's", () => {
     const first = treeSchemasRunApi(ONE_SCHEMA).draft.schemas.ApiRateLimitedParams;
 

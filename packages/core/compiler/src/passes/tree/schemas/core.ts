@@ -78,6 +78,7 @@ function coreObject(
 function paramsReservation(
   codeParams: TreeSchemasCodeParamsDeclarations,
   role: DerivationRole,
+  rateLimitParam: string | undefined,
 ): TreeSchemasReservation {
   const code = role.defaultCode;
   const name: Name = { segments: splitName(code), role: "params" };
@@ -94,14 +95,18 @@ function paramsReservation(
   const pointer = treeSchemasPointer("/errors", code, "params");
 
   // ADR 0006 section 6: a datum the bound code need not always receive is an optional param.
-  const properties = role.data.map((datum) =>
-    coreProperty(
-      datum.name,
+  // `rateLimited`'s delay is the param `conventions.rateLimit` names, required while that convention is set.
+  const properties = role.data.map((datum) => {
+    const named = role.role === "rateLimited" && rateLimitParam !== undefined;
+    const name = named ? rateLimitParam : datum.name;
+
+    return coreProperty(
+      name,
       derivationCopy<IrWriter.TypeUse>(datum.type),
-      datum.required !== "always",
-      treeSchemasPointer(pointer, datum.name),
-    ),
-  );
+      named ? false : datum.required !== "always",
+      treeSchemasPointer(pointer, name),
+    );
+  });
   const seed = coreObject(id, name, "output", pointer, properties);
 
   return { id, name, purpose, pointer, seed, yields: false };
@@ -143,10 +148,11 @@ function emptyBodyReservation(): TreeSchemasReservation {
 /** The reserved schema ids of an api, in the order of `derivationCoreSchemaIds`, each with its core schema. */
 export function treeSchemasCoreReservations(
   codeParams: TreeSchemasCodeParamsDeclarations,
+  rateLimitParam: string | undefined,
 ): TreeSchemasReservation[] {
   const params = derivationRoles
     .filter((role) => role.data.length > 0)
-    .map((role) => paramsReservation(codeParams, role));
+    .map((role) => paramsReservation(codeParams, role, rateLimitParam));
   const code = schemaInvalidCode();
   const issue = issueReservation(code, codeParams.has(code));
 

@@ -10,8 +10,8 @@ import { TreeSchemasCompiler } from "./compile.js";
 import { treeSchemasCoreReservations } from "./core.js";
 import { treeSchemasRefuseOutputUnknownKeys, treeSchemasWriteDirections } from "./directions.js";
 import { treeSchemasCompileEnums } from "./enums.js";
-import { treeSchemasCheckExtensionValues, treeSchemasCompileExtensionKeys } from "./extensions.js";
 import { TreeSchemasExampleChecker, treeSchemasCheckWrittenExamples } from "./example-check.js";
+import { treeSchemasCheckExtensionValues, treeSchemasCompileExtensionKeys } from "./extensions.js";
 import {
   treeSchemasCompileBatchInputs,
   treeSchemasCompileVersionProperties,
@@ -83,7 +83,14 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
     const nodes = pipelineTreeNodes(context.raw);
     const codeParams = treeSchemasCodeParamsDeclarations(context.raw.merged, nodes);
 
-    compiler.reserve(treeSchemasCoreReservations(codeParams));
+    const rateLimitParam = context.conventions.get("rateLimit.param")?.value;
+
+    compiler.reserve(
+      treeSchemasCoreReservations(
+        codeParams,
+        typeof rateLimitParam === "string" ? rateLimitParam : undefined,
+      ),
+    );
     compiler.compileCatalogue();
     treeSchemasCompileDeclarations(compiler, context.raw.merged);
     treeSchemasCompileCodeParams(compiler, codeParams);

@@ -209,6 +209,19 @@ describe("the retry header", () => {
     expect(retryViolations(draft)).toEqual([]);
   });
 
+  test("a core api.rate_limited with conventions.rateLimit and a codeless bucket rule passes ir.error.retry-header", () => {
+    const { draft } = deriveErrorsRunContract(
+      deriveErrorsLoadFiles({ "api.yaml": CORE_RATE_LIMITED }),
+    );
+    const params = draft.schemas.ApiRateLimitedParams;
+
+    expect(errorOf(draft, "ping", "api.rate_limited").retryHeader).toMatchObject({
+      param: "retryAfterMs",
+    });
+    expect(params?.kind === "object" ? params.properties[0]?.optional : undefined).toBe(false);
+    expect(retryViolations(draft)).toEqual([]);
+  });
+
   test("the core retryAfterMs datum is bounded by the largest safe integer", () => {
     const { draft } = deriveErrorsRunContract(
       deriveErrorsLoadFiles({ "api.yaml": CORE_RATE_LIMITED }),

@@ -3,8 +3,8 @@ import { pipelineCopy, pipelinePointerBelow, type TreeNode } from "../../../pipe
 import {
   type DeriveErrorsRawObject,
   deriveErrorsEntries,
-  deriveErrorsOriginOf,
   deriveErrorsMember,
+  deriveErrorsOriginOf,
   deriveErrorsString,
 } from "./read.js";
 import type { DeriveErrorsContext } from "./registry.js";
