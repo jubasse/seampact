@@ -134,6 +134,8 @@ The ADRs cite product decisions by id (`A<n>`); [`docs/decisions.md`](docs/decis
 | [0014](docs/adr/0014-room-for-real-time-and-rpc.md) | room for real-time and RPC |
 | [0015](docs/adr/0015-codegen-determinism-and-conformance.md) | deterministic generation and the conformance suite |
 | [0016](docs/adr/0016-nestjs-target.md) | the NestJS server target |
+| [0017](docs/adr/0017-fastify-target.md) | the Fastify server target |
+| [0018](docs/adr/0018-express-target.md) | the Express server target |
 | [0019](docs/adr/0019-adonis-target.md) | the AdonisJS server target |
 
 ## Contributing
