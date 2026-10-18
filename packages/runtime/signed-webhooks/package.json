@@ -1,0 +1,33 @@
+{
+  "name": "@seampact/signed-webhooks",
+  "description": "Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook.",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      }
+    }
+  },
+  "seampact": {
+    "role": "helper"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@seampact/hooks": "workspace:*"
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "description": "The test vectors of ADR 0013 'Test vectors', G1 to G3 and S1 to S9; S10 and S11 are boundary cases (the hook is not called).",
+  "schemes": {
+    "github": {
+      "format": "sha256={sig}",
+      "algorithm": "hmac-sha256",
+      "payload": "{rawBody}",
+      "encoding": "hex"
+    },
+    "stripe": {
+      "format": "t={ts},v1={sig}",
+      "algorithm": "hmac-sha256",
+      "payload": "{ts}.{rawBody}",
+      "encoding": "hex",
+      "toleranceMs": 300000
+    },
+    "stripeBase64": {
+      "format": "t={ts},v1={sig}",
+      "algorithm": "hmac-sha256",
+      "payload": "{ts}.{rawBody}",
+      "encoding": "base64",
+      "toleranceMs": 300000
+    }
+  },
+  "cases": [
+    {
+      "id": "G1",
+      "scheme": "github",
+      "secrets": ["It's a Secret to Everybody"],
+      "body": "Hello, World!",
+      "header": "sha256=757107ea0eb2509fc211221cce984b8a37570b6d7586c22c46f4379c8b043e17",
+      "expected": "pass"
+    },
+    {
+      "id": "G2",
+      "scheme": "github",
+      "secrets": ["gh_seampact_test_secret"],
+      "body": "{\"action\":\"opened\",\"number\":42}",
+      "header": "sha256=60f99ef5bf52ed71ae5ab6f27fea3ece3d3f13c005df9f86248a9ac97890dd4f",
+      "expected": "pass"
+    },
+    {
+      "id": "G3",
+      "scheme": "github",
+      "secrets": ["gh_seampact_test_secret"],
+      "body": "{\"action\":\"opened\",\"number\":42}",
+      "header": "sha256=757107ea0eb2509fc211221cce984b8a37570b6d7586c22c46f4379c8b043e17",
+      "expected": "401"
+    },
+    {
+      "id": "S1",
+      "scheme": "stripe",
+      "secrets": ["whsec_seampact_test_secret"],
+      "nowSeconds": 1700000100,
+      "body": "{\"id\":\"evt_1\",\"type\":\"invoice.paid\"}",
+      "header": "t=1700000000,v1=fbd2303da6c6da3155ac8e7058bc71b4b632453f52358c644d19db2e0399752c",
+      "expected": "pass"
+    },
+    {
+      "id": "S2",
+      "scheme": "stripeBase64",
+      "secrets": ["whsec_seampact_test_secret"],
+      "nowSeconds": 1700000100,
+      "body": "{\"id\":\"evt_1\",\"type\":\"invoice.paid\"}",
+      "header": "t=1700000000,v1=+9IwPabG2jFVrI5wWLxxtLYyRT9SNYxkTRnbLgOZdSw=",
+      "expected": "pass"
+    },
+    {
+      "id": "S3",
+      "scheme": "stripe",
+      "secrets": ["whsec_seampact_test_secret"],
+      "nowSeconds": 1700000301,
+      "body": "{\"id\":\"evt_1\",\"type\":\"invoice.paid\"}",
+      "header": "t=1700000000,v1=fbd2303da6c6da3155ac8e7058bc71b4b632453f52358c644d19db2e0399752c",
+      "expected": "401"
+    },
+    {
+      "id": "S4",
+      "scheme": "stripe",
+      "secrets": ["whsec_seampact_test_secret"],
+      "nowSeconds": 1699999600,
+      "body": "{\"id\":\"evt_1\",\"type\":\"invoice.paid\"}",
+      "header": "t=1700000000,v1=fbd2303da6c6da3155ac8e7058bc71b4b632453f52358c644d19db2e0399752c",
+      "expected": "401"
+    },
+    {
+      "id": "S5",
+      "scheme": "stripe",
+      "secrets": ["whsec_seampact_test_secret"],
+      "nowSeconds": 1700000100,
+      "body": "{\"id\":\"evt_1\",\"type\":\"invoice.void\"}",
+      "header": "t=1700000000,v1=fbd2303da6c6da3155ac8e7058bc71b4b632453f52358c644d19db2e0399752c",
+      "expected": "401"
+    },
+    {
+      "id": "S6",
+      "scheme": "stripe",
+      "secrets": ["whsec_seampact_test_secret"],
+      "nowSeconds": 1700000100,
+      "body": "{\"id\":\"evt_1\",\"type\":\"invoice.paid\"}",
+      "header": "t=1700000000,v1=374e421c1bf3c3e16acd9d2def2110ed3abf293ac2ff4608f660008c51d4b651,v1=fbd2303da6c6da3155ac8e7058bc71b4b632453f52358c644d19db2e0399752c",
+      "expected": "pass"
+    },
+    {
+      "id": "S7",
+      "scheme": "stripe",
+      "secrets": ["whsec_seampact_old_secret"],
+      "nowSeconds": 1700000100,
+      "body": "{\"id\":\"evt_1\",\"type\":\"invoice.paid\"}",
+      "header": "t=1700000000,v1=374e421c1bf3c3e16acd9d2def2110ed3abf293ac2ff4608f660008c51d4b651,v1=fbd2303da6c6da3155ac8e7058bc71b4b632453f52358c644d19db2e0399752c",
+      "expected": "pass"
+    },
+    {
+      "id": "S8",
+      "scheme": "stripe",
+      "secrets": ["whsec_seampact_test_secret"],
+      "nowSeconds": 1700000100,
+      "body": "{\"id\":\"evt_1\",\"type\":\"invoice.paid\"}",
+      "header": "t=1700000000,v1=374e421c1bf3c3e16acd9d2def2110ed3abf293ac2ff4608f660008c51d4b651",
+      "expected": "401"
+    },
+    {
+      "id": "S9",
+      "scheme": "stripe",
+      "secrets": ["whsec_seampact_test_secret"],
+      "nowSeconds": 1700000100,
+      "body": "{\"id\":\"evt_1\",\"type\":\"invoice.paid\"}",
+      "header": "t=1700000000,v0=deadbeef,v1=fbd2303da6c6da3155ac8e7058bc71b4b632453f52358c644d19db2e0399752c",
+      "expected": "pass"
+    }
+  ]
+}
