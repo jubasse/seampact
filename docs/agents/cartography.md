@@ -56,6 +56,7 @@ In pipeline order (ADR 0006 section 1).
 - `packages/core/compiler/src/passes/tree/nodes`: The tree.nodes half (ADR 0006): the api tree, conventions, packs and every tree member but the schemas.
 - `packages/core/compiler/src/passes/tree/schemas`: The tree.schemas half (ADR 0006): schemas, scalars, enums and extension keys.
 - `packages/core/compiler/src/pipeline`: The pipeline barrel: the seam (`seam.ts`) and the orchestrator with its default parts.
+- `packages/core/compiler/src/templates`: The template reader of ADR 0002 section 13, shared by every half that reads a template: the caller gives the slots of the place and a reporter for its own rule ids.
 - `packages/core/compiler/src/validate`: The validate stage (ADR 0006 section 1): the raw tree checked against the authoring JSON Schemas.
 - `packages/core/compiler/src/workspace`: Workspace order (ADR 0006 section 1): the relay order the apis of a workspace compile in.
 
