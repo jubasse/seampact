@@ -1,0 +1,100 @@
+import { describe, expect, test } from "vitest";
+import {
+  deriveWireDerivedHeaders,
+  deriveWireFixtureVariant,
+  deriveWireLoadFixture,
+  deriveWireOperation,
+  deriveWireResponseHeaders,
+  deriveWireRunContract,
+} from "./test-support.js";
+
+const run = deriveWireRunContract(deriveWireLoadFixture("wire"));
+
+const identityParams = (id: string) =>
+  deriveWireDerivedHeaders(run, id).filter(
+    ([, , derivation]) =>
+      derivation?.startsWith("identity.") && derivation !== "identity.authenticate",
+  );
+
+describe("identity headers", () => {
+  test("a deadline request header is a parameter and names deadlineHeader on reads and writes (for: all)", () => {
+    expect(run.diagnostics).toEqual([]);
+    expect(identityParams("status")).toEqual([["X-Deadline", true, "identity.header"]]);
+    expect(deriveWireOperation(run, "status").deadlineHeader).toBe("X-Deadline");
+    expect(deriveWireOperation(run, "jobs").deadlineHeader).toBe("X-Deadline");
+  });
+
+  test("a trace header for writes reaches writes only", () => {
+    expect(identityParams("jobs")).toEqual([
+      ["X-Deadline", true, "identity.header"],
+      ["traceparent", false, "identity.header"],
+    ]);
+    expect(identityParams("status").map(([name]) => name)).not.toContain("traceparent");
+  });
+
+  test("a response-side header for reads goes on the success responses of reads only", () => {
+    expect(deriveWireResponseHeaders(run, "board")).toEqual({
+      200: ["traceresponse", "X-Rights-Version"],
+    });
+    expect(deriveWireResponseHeaders(run, "bigNotes")[200]).not.toContain("traceresponse");
+  });
+
+  test("a versionToken answers its response header on every success, its request header on writes only", () => {
+    expect(identityParams("notes")).toEqual([
+      ["If-Rights-Version", false, "identity.versionToken"],
+    ]);
+    expect(identityParams("board")).toEqual([]);
+    expect(deriveWireResponseHeaders(run, "notes")[200]).toContain("X-Rights-Version");
+
+    const header = deriveWireOperation(run, "board").responses?.[0]?.headers.find(
+      (item) => item.name === "X-Rights-Version",
+    );
+
+    expect(header).toEqual({
+      name: "X-Rights-Version",
+      type: { kind: "scalar", type: "string", refinements: {} },
+      required: true,
+      semantic: "versionToken",
+      derivedFrom: {
+        derivation: "identity.versionToken",
+        from: [
+          { layer: "api", pointer: "/identities/member/headers/rightsVersion" },
+          { layer: "api", pointer: "/headers/rightsVersion" },
+        ],
+      },
+    });
+  });
+
+  test("a versionToken request header stays on writes even with for: reads", () => {
+    const forReads = deriveWireRunContract(
+      deriveWireFixtureVariant("wire", [
+        ["{ from: principal.rightsVersion,", "{ for: reads, from: principal.rightsVersion,"],
+      ]),
+    );
+    const params = (id: string) =>
+      deriveWireDerivedHeaders(forReads, id).filter(
+        ([, , derivation]) => derivation === "identity.versionToken",
+      );
+
+    expect(forReads.diagnostics).toEqual([]);
+    expect(params("notes")).toEqual([["If-Rights-Version", false, "identity.versionToken"]]);
+    expect(params("board")).toEqual([]);
+  });
+
+  test("a required versionToken use makes its request header required", () => {
+    const required = deriveWireRunContract(
+      deriveWireFixtureVariant("wire", [
+        ["{ from: principal.rightsVersion,", "{ required: true, from: principal.rightsVersion,"],
+      ]),
+    );
+
+    expect(
+      deriveWireDerivedHeaders(required, "notes").find(([name]) => name === "If-Rights-Version"),
+    ).toEqual(["If-Rights-Version", true, "identity.versionToken"]);
+  });
+
+  test("a route without an identity gets no identity header", () => {
+    expect(identityParams("github")).toEqual([]);
+    expect(deriveWireOperation(run, "github").deadlineHeader).toBeUndefined();
+  });
+});

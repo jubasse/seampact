@@ -63,6 +63,24 @@ export function deriveWireLoadFixture(name: string): RawWorkspace {
   return loaded(loadWorkspace({ reader: loadFsReader(directory), entry: "api.yaml" }), directory);
 }
 
+/**
+ * A lane fixture's `api.yaml` with each `[from, to]` text replaced once, loaded as an inline contract: a variant
+ * of a fixture for one test. A `from` the file does not hold throws.
+ */
+export function deriveWireFixtureVariant(
+  name: string,
+  replacements: readonly (readonly [string, string])[],
+): RawWorkspace {
+  let text = readFileSync(`${DERIVE_WIRE_FIXTURES}${name}/api.yaml`, "utf8");
+
+  for (const [from, to] of replacements) {
+    if (!text.includes(from)) throw new Error(`the ${name} fixture holds no '${from}'`);
+    text = text.replace(from, to);
+  }
+
+  return deriveWireLoadFiles({ "api.yaml": text });
+}
+
 /** A JSON file of a lane fixture directory. */
 export function deriveWireFixtureJson(name: string, file: string): unknown {
   return JSON.parse(readFileSync(`${DERIVE_WIRE_FIXTURES}${name}/${file}`, "utf8"));

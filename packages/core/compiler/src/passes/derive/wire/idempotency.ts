@@ -46,15 +46,25 @@ export interface DeriveWireExemptions {
   readonly used: Set<string>;
 }
 
-/** The convention, or undefined when `conventions.idempotency` is unset or reported. */
+/** The convention as read: unset, refused (and reported), or its settings. */
+export type DeriveWireIdempotencyReading =
+  | { readonly state: "unset" }
+  | { readonly state: "refused" }
+  | { readonly state: "set"; readonly convention: DeriveWireIdempotencyConvention };
+
+const UNSET: DeriveWireIdempotencyReading = Object.freeze({ state: "unset" });
+
+const REFUSED: DeriveWireIdempotencyReading = Object.freeze({ state: "refused" });
+
+/** Reads `conventions.idempotency`, reporting one that misses a member without a default. */
 export function deriveWireIdempotencyConvention(
   scope: DeriveWireScope,
-): DeriveWireIdempotencyConvention | undefined {
+): DeriveWireIdempotencyReading {
   const conventions = scope.context.conventions;
   // `methods` defaults only within a written `idempotency`, so its reading tells whether the convention is set.
   const methods = conventions.get("idempotency.methods");
 
-  if (methods === undefined) return undefined;
+  if (methods === undefined) return UNSET;
 
   const header = conventions.get("idempotency.header");
   const replayHeader = conventions.get("idempotency.replayHeader");
@@ -70,10 +80,10 @@ export function deriveWireIdempotencyConvention(
   ) {
     reportIncomplete({ header, replayHeader, lifetime }, origin, scope);
 
-    return undefined;
+    return REFUSED;
   }
 
-  return {
+  const convention: DeriveWireIdempotencyConvention = {
     header: header.value,
     replayHeader: replayHeader.value,
     lifetimeMs,
@@ -82,16 +92,18 @@ export function deriveWireIdempotencyConvention(
     enforce: conventions.get("idempotency.enforce")?.value === "none" ? "none" : "boundary",
     origin,
   };
+
+  return { state: "set", convention };
 }
 
 /** Writes the route's idempotency member, key parameter and replay header. */
 export function deriveWireIdempotency(
   route: DeriveWireRoute,
-  convention: DeriveWireIdempotencyConvention | undefined,
+  reading: DeriveWireIdempotencyReading,
   exemptions: DeriveWireExemptions,
   scope: DeriveWireScope,
 ): void {
-  if (convention === undefined || !keyReaches(route, convention, scope)) return;
+  if (reading.state !== "set" || !keyReaches(route, reading.convention, scope)) return;
 
   const exemption = scope.context.inherited(route.node, "idempotency");
 
@@ -108,7 +120,7 @@ export function deriveWireIdempotency(
     return;
   }
 
-  writeKey(route, convention, scope);
+  writeKey(route, reading.convention, scope);
 }
 
 function writeKey(
@@ -152,18 +164,23 @@ function writeKey(
     );
 }
 
-/** Reports each written exemption no operation the key reaches inherits. */
+/**
+ * Reports each written exemption no operation the key reaches inherits. Under a refused convention no route gets a
+ * key, so its exemptions are not reported again.
+ */
 export function deriveWireCheckExemptions(
-  convention: DeriveWireIdempotencyConvention | undefined,
+  reading: DeriveWireIdempotencyReading,
   exemptions: DeriveWireExemptions,
   scope: DeriveWireScope,
 ): void {
+  if (reading.state === "refused") return;
+
   for (const written of writtenExemptions(scope)) {
     if (exemptions.used.has(written.nodePointer)) continue;
 
     scope.reporter.error({
       rule: "idempotency-exempt-unused",
-      message: `the idempotency exemption "${written.reason}" reaches no route the idempotency key reaches${convention === undefined ? ": conventions.idempotency is unset" : ""}`,
+      message: `the idempotency exemption "${written.reason}" reaches no route the idempotency key reaches${reading.state === "unset" ? ": conventions.idempotency is unset" : ""}`,
       fix: "Remove the exemption, or move it to the non-safe routes the key reaches (a method conventions.idempotency.methods lists, an identity that is not signed).",
       pointer: `${written.nodePointer}/idempotency`,
     });
