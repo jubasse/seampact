@@ -493,7 +493,7 @@ function portOf(address: AddressInfo | string | null): number {
   return address.port;
 }
 
-// The validated principal the accepted credential stands for (LD-162 keys on it, never on the raw credential).
+// The validated principal the accepted credential stands for (never the raw credential).
 function principalOf(call: Call): string {
   return call.headers.authorization === `Bearer ${SERVICE_JWT}` ? SERVICE_NAME : USER_ID;
 }
