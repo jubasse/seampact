@@ -1,4 +1,6 @@
-// The API the code generators are written against: target definitions, link descriptors and refusals.
+// The API the code generators are written against: target definitions, link descriptors, refusals, and the
+// steps around a target's generate (IR support and link checks, header, formatting, file writer).
+export { defineTarget } from "./define-target.js";
 export type {
   Descriptor,
   DescriptorByKind,
@@ -14,9 +16,11 @@ export type {
   TypesDescriptor,
   ValidatorsDescriptor,
 } from "./descriptors.js";
-export type { Link, LinkLocation, LinkNeed, LinkOffer, LinkSet, Links } from "./links.js";
+export { importSpecifier } from "./import-specifier.js";
+export type { Link, LinkLocation, LinkNeeds, LinkOffers, LinkSet, Links } from "./links.js";
 export type { Refusal, Refused } from "./refusal.js";
 export type {
+  AnyTargetMetadata,
   ArtefactDeclaration,
   DescribeOutcome,
   FormatterParser,
@@ -30,3 +34,5 @@ export type {
   TargetDefinition,
   TargetMetadata,
 } from "./target.js";
+export { refuseUnknownValue } from "./unknown-value.js";
+export { type WriteOutcome, writeGeneratedFiles } from "./writer.js";

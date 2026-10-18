@@ -26,8 +26,8 @@ const validatorsMetadata: TargetMetadata<"schemas", never, "validators"> = {
   packageVersion: "0.0.0",
   irSupport,
   artefacts: [{ id: "schemas", defaultOn: true }],
-  consumes: [],
-  provides: [{ kind: "validators", style: "standard-schema" }],
+  consumes: {},
+  provides: { validators: { style: "standard-schema" } },
 };
 
 test("a consumer's generate input carries each link kind it consumes", () => {

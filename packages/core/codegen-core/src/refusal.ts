@@ -14,3 +14,7 @@ export interface Refused {
   status: "refused";
   refusals: readonly Refusal[];
 }
+
+export function refused(refusals: readonly Refusal[]): Refused {
+  return { status: "refused", refusals };
+}
