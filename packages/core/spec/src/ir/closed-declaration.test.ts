@@ -114,7 +114,7 @@ test("an unknown TypeUse kind is reported at its tag", () => {
 });
 
 test("a missing or non-string union tag is reported, not returned closed", () => {
-  const task = ir().schemas.Task;
+  const task = present(ir().schemas.Task, "Task");
   const { kind: _removed, ...withoutKind } = task;
 
   expect(checkIrClosedDeclaration("Schema", withoutKind, "/schemas/Task")).toEqual({
