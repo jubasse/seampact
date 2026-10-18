@@ -269,6 +269,19 @@ importers:
         specifier: workspace:*
         version: link:../hooks
 
+  packages/targets/codegen-fetch:
+    dependencies:
+      prettier:
+        specifier: 3.9.10
+        version: 3.9.10
+    devDependencies:
+      '@seampact/codegen-core':
+        specifier: workspace:*
+        version: link:../../core/codegen-core
+      '@seampact/spec':
+        specifier: workspace:*
+        version: link:../../core/spec
+
   packages/targets/codegen-ts:
     dependencies:
       prettier:

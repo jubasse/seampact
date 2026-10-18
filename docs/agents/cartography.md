@@ -16,6 +16,9 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/openapi` | `packages/core/openapi` | core | Writes the OpenAPI 3.1 documents from the IR, with what OpenAPI cannot say as x-seampact-* extensions. |
 | `@seampact/spec` | `packages/core/spec` | core | The JSON Schemas of the YAML files and of the IR, with their TypeScript types, and the naming vectors. |
 | `@seampact/hooks` | `packages/runtime/hooks` | hooks | The neutral hook interfaces and idempotency store interface every generated Node server boundary types against. |
+| `@seampact/idempotency-memory` | `packages/runtime/idempotency-memory` | helper | An in-memory idempotency store for one process, for development and tests. |
+| `@seampact/signed-webhooks` | `packages/runtime/signed-webhooks` | helper | Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook. |
+| `@seampact/codegen-fetch` | `packages/targets/codegen-fetch` | target | Generates a typed fetch client with one method per operation, returning its success and error responses as typed results. |
 | `@seampact/codegen-ts` | `packages/targets/codegen-ts` | target | Generates a named TypeScript type per schema and each operation's input, output and error union. |
 | `@seampact/codegen-zod` | `packages/targets/codegen-zod` | target | Generates Standard Schema zod validators per schema and direction, and one input validator per operation. |
 
@@ -91,6 +94,18 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/hooks`
 
 - `packages/runtime/hooks/src`: The neutral hook interfaces and the idempotency store interface every generated server boundary types against, types only.
+
+### `@seampact/idempotency-memory`
+
+- `packages/runtime/idempotency-memory/src`: An in-memory idempotency store for one process, lost on restart: for development and tests.
+
+### `@seampact/signed-webhooks`
+
+- `packages/runtime/signed-webhooks/src`: The template signature verifier an authenticate hook calls for a signed identity (ADR 0013): HMAC over the raw body, timestamp tolerance and secret rotation; the application keeps its secrets.
+
+### `@seampact/codegen-fetch`
+
+- `packages/targets/codegen-fetch/src`: The fetch client target: one typed method per operation over the platform fetch, reading its request, success and error types from the `types` link.
 
 ### `@seampact/codegen-ts`
 
