@@ -649,12 +649,18 @@ function mergedRequired(
   if (template.merge === undefined) return [];
 
   const value = slotValue(check, position, template.merge, []);
-  const merged =
-    value.use?.kind === "ref" && value.always
-      ? objectSchemaOf(check.site.schemas, value.use.schema)
-      : undefined;
 
-  return (merged?.properties ?? [])
-    .filter((property) => !property.optional)
-    .map((property) => property.name);
+  if (value.use?.kind !== "ref" || !value.always) return [];
+
+  const merged = objectSchemaOf(check.site.schemas, value.use.schema);
+
+  if (merged !== undefined)
+    return merged.properties
+      .filter((property) => !property.optional)
+      .map((property) => property.name);
+
+  // The issue schema, read from the role data when tree.schemas has not seeded it (`memberOf`).
+  return value.use.schema === DERIVATION_ISSUE_SCHEMA_ID
+    ? derivationIssueMembers.map((member) => member.name)
+    : [];
 }

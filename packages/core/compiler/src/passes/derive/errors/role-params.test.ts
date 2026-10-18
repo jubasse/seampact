@@ -160,6 +160,31 @@ errors:
     ]);
   });
 
+  test("an issue item merged whole fills the required members of the param's item; a member it lacks is refused", () => {
+    const run = (as: string) =>
+      runInline(`conventions:
+  errors:
+    derived:
+      schemaInvalid: { code: shop.invalid, params: { issues: { $each: $issues, $as: ${as} } } }
+schemas:
+  Issue:
+    type: object
+    required: [pointer, rule]
+    properties: { pointer: { type: string }, rule: { type: string } }
+errors:
+  shop.invalid: { status: 400, params: { issues: { type: array, items: Issue } } }
+`);
+
+    expect(run("{ $merge: $item }").diagnostics).toEqual([]);
+    expect(located(run("{ pointer: $item.pointer, rule: $item.rule, extra: x }"))).toEqual([
+      {
+        rule: "seampact/derive/role-param-type",
+        pointer: `${DERIVED}/schemaInvalid/params/issues/$as/extra`,
+        related: [],
+      },
+    ]);
+  });
+
   test("the rate limit param filled under its own key carries the delay; another key does not", () => {
     const run = (params: string) =>
       runInline(`conventions:
