@@ -68,7 +68,7 @@ surfaces:
     expect(run.diagnostics.map((d) => d.message)).toEqual([
       "'x-acme-nope' is no declared extension key",
       "'x-acme-owner' may sit on schema, right, not on property",
-      "'x-acme-owner' may sit on schema, right, not on a schema that writes no named schema",
+      "'x-acme-owner' may sit on schema, right, and this mapping is no place an extension extends",
       "the extension does not fit its schema at '': 'b' is shorter than 2 characters",
       "the extension does not fit its schema at '': 'gross' is not a value of TaxBasis",
     ]);

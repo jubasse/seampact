@@ -5,7 +5,7 @@ const located = (run: TreeSchemasRun) =>
   run.diagnostics.map((d) => [d.rule.replace("seampact/tree/", ""), d.origin.pointer]);
 
 describe("tree.schemas on the lane fixtures", () => {
-  test("catalogues: unions, formats, derived objects, enums, unknown keys, defaults and extensions", () => {
+  test("catalogues: unions, formats, derived objects, enums, unknown keys, defaults, extensions and hoisting", () => {
     const run = treeSchemasRunFixture("catalogues", "shop");
     const orders = "/surfaces/app/routes/orders/ops";
 
@@ -26,6 +26,9 @@ describe("tree.schemas on the lane fixtures", () => {
     });
     expect(run.draft.extensionKeys["acme-tax-basis"]?.places).toEqual(["operation", "property"]);
     expect(run.service.queryWire(`${orders}/list/query/limit?`)?.kind).toBe("number");
+    expect(run.draft.schemas.ArchiveOrderOutput?.origin.pointer).toBe(
+      "/surfaces/app/routes/orders/member/routes/archive/output",
+    );
   });
 
   test("refused: maps without a wire, values off their schema, misplaced defaults and extensions", () => {

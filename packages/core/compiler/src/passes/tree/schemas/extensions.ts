@@ -1,5 +1,6 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { pipelineCopy, type TreeNode } from "../../../pipeline/seam.js";
+import { quote } from "../../../validate/diagnostics.js";
 import type { TreeSchemasCompiler } from "./compile.js";
 import {
   type TreeSchemasRawObject,
@@ -147,7 +148,7 @@ export function treeSchemasCheckExtensionValues(
         reporter.error({
           rule: "extension-unknown",
           pointer: at,
-          message: `'${key}' is no declared extension key`,
+          message: `${quote(key)} is no declared extension key`,
           fix: "declare it under 'extensions' with its schema and places, or remove it",
         });
         continue;
@@ -157,10 +158,13 @@ export function treeSchemasCheckExtensionValues(
         reporter.error({
           rule: "extension-place",
           pointer: at,
-          message: `'${key}' may sit on ${placesText(declared.places)}, not on ${place ?? "a schema that writes no named schema"}`,
+          message:
+            place === undefined
+              ? `${quote(key)} may sit on ${placesText(declared.places)}, and this mapping is no place an extension extends`
+              : `${quote(key)} may sit on ${placesText(declared.places)}, not on ${place}`,
           fix:
             place === undefined
-              ? "write it on the property or the named schema that holds this value"
+              ? "move it to a place its 'at' lists, or remove it"
               : `add '${place}' to its 'at', or move it`,
           related: [
             {

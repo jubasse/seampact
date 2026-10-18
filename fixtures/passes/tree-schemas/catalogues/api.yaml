@@ -1,5 +1,6 @@
 # Schema catalogues accepted (ADR 0003): a tagged union, a named format, a derived object, an enum and its
-# narrowing, a use-level unknownKeys on an input, a defaulted optional query field, and extension values.
+# narrowing, a use-level unknownKeys on an input, a defaulted optional query field, extension values, and an inline route
+# output hoisted under its operation's name.
 api: { name: shop, version: 1, kind: product }
 
 scalars:
@@ -58,3 +59,6 @@ surfaces:
             reopen:
               method: post
               output: OpenOrder
+            archive:
+              method: post
+              output: { type: object, properties: { archivedAt: { type: string } } }
