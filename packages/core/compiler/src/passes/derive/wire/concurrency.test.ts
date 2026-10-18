@@ -1,3 +1,4 @@
+import { type ContractIR, IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { treeNodesRelayedTasks } from "../../tree/nodes/test-support.js";
 import {
@@ -87,15 +88,27 @@ describe("relay routes of a versioned operation", () => {
     pointer: "/surfaces/app/routes/channels/member/routes/tasks/concurrency",
   };
 
-  // The tasks api derived first, as the orchestrator does, then the service relaying it.
-  const relayRun = (tasksReplacements: [string, string][]) => {
-    const workspace = deriveWireReferenceVariants({
+  const IF_MATCH_VERSION: [string, string] = [
+    BODY_VERSION,
+    "concurrency: { version: header.If-Match, field: version }",
+  ];
+
+  const relayWorkspace = (tasksReplacements: [string, string][]) =>
+    deriveWireReferenceVariants({
       "tasks/api.yaml": tasksReplacements,
       "tasks-service/api.yaml": [[RELAY, WITH_UPDATE]],
     });
-    const tasks = deriveWireRunContract(workspace, "tasks", treeNodesRelayedTasks());
 
-    return deriveWireRunContract(workspace, "tasksService", new Map([["tasks", tasks.draft]]));
+  const derivedTasks = (workspace: ReturnType<typeof relayWorkspace>) =>
+    deriveWireRunContract(workspace, "tasks", { relayed: treeNodesRelayedTasks() }).draft;
+
+  // The tasks api derived first, as the orchestrator does, then the service relaying it.
+  const relayRun = (tasksReplacements: [string, string][]) => {
+    const workspace = relayWorkspace(tasksReplacements);
+
+    return deriveWireRunContract(workspace, "tasksService", {
+      relayed: new Map([["tasks", derivedTasks(workspace)]]),
+    });
   };
 
   test("a relayed body version names the public resource's concurrency", () => {
@@ -140,5 +153,27 @@ describe("relay routes of a versioned operation", () => {
         required: true,
       },
     ]);
+  });
+
+  test("a relay of an imported api reads the version from the imported IR", () => {
+    const workspace = relayWorkspace([IF_MATCH_VERSION]);
+    const imported: ContractIR = JSON.parse(
+      JSON.stringify({
+        irVersion: IR_VERSION,
+        irRevision: IR_REVISION,
+        kinds: [],
+        features: [],
+        ...derivedTasks(workspace),
+      }),
+    );
+    const run = deriveWireRunContract(workspace, "tasksService", {
+      imports: new Map([["tasks", imported]]),
+    });
+
+    expect(run.diagnostics).toEqual([]);
+    expect(concurrencyParamsOf(run, "updateTask", "header")).toEqual([
+      { name: "If-Match", type: STRING, required: true },
+    ]);
+    expect(deriveWireResponseHeaders(run, "getTask")[200]).toContain("ETag");
   });
 });

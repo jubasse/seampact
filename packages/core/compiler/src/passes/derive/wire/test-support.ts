@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import type { IrWriter } from "@seampact/spec/ir";
+import type { ContractIR, IrWriter } from "@seampact/spec/ir";
 import { derivationRowOf } from "../../../derivations/table.js";
 import type { Diagnostic } from "../../../diagnostics/diagnostic.js";
 import { loadFsReader, loadWorkspace } from "../../../load/index.js";
@@ -154,6 +154,12 @@ export interface DeriveWireRun {
   readonly diagnostics: Diagnostic[];
 }
 
+/** What a relay route copies from: the derived drafts of workspace apis and the IRs of imports, by api name. */
+export interface DeriveWireRelaySources {
+  readonly relayed?: ReadonlyMap<string, DraftIR>;
+  readonly imports?: ReadonlyMap<string, ContractIR>;
+}
+
 /** Runs derive.wire, or `part` standing for it, on `draft` with the guard on, as the orchestrator does. */
 export function deriveWireRunOn(
   raw: RawApi,
@@ -161,7 +167,7 @@ export function deriveWireRunOn(
   draft: DraftIR,
   treeSchemas: TreeSchemaService,
   part: PassPart<"derive.wire"> = deriveWirePass,
-  relayed?: ReadonlyMap<string, DraftIR>,
+  sources: DeriveWireRelaySources = {},
 ): DeriveWireRun {
   const diagnostics: Diagnostic[] = [];
   const context = Object.freeze({
@@ -170,7 +176,7 @@ export function deriveWireRunOn(
       workspace,
       report: (diagnostic) => diagnostics.push(diagnostic),
       guard: true,
-      ...(relayed === undefined ? {} : { relayed }),
+      ...relaySourcesOf(sources),
     }),
     treeSchemas,
   });
@@ -185,11 +191,11 @@ export function deriveWireRunOn(
   return { draft, diagnostics };
 }
 
-/** Runs the tree and access halves, then derive.wire (guarded), on the named or first api of `workspace`; `relayed` holds the drafts its relay routes copy from. */
+/** Runs the tree and access halves, then derive.wire (guarded), on the named or first api of `workspace`; `sources` holds what its relay routes copy from. */
 export function deriveWireRunContract(
   workspace: RawWorkspace,
   api?: string,
-  relayed?: ReadonlyMap<string, DraftIR>,
+  sources: DeriveWireRelaySources = {},
 ): DeriveWireRun {
   const raw = apiOf(workspace, api);
   const draft = createDraftIR();
@@ -198,7 +204,7 @@ export function deriveWireRunContract(
     raw,
     workspace,
     report: (diagnostic) => diagnostics.push(diagnostic),
-    ...(relayed === undefined ? {} : { relayed }),
+    ...relaySourcesOf(sources),
   });
   const treeSchemas = treeSchemasPass.run(draft, context);
   const later = Object.freeze({ ...context, treeSchemas });
@@ -210,8 +216,13 @@ export function deriveWireRunContract(
       throw new Error(`${half.half} reports on the contract: ${JSON.stringify(diagnostics)}`);
   }
 
-  return deriveWireRunOn(raw, workspace, draft, treeSchemas, deriveWirePass, relayed);
+  return deriveWireRunOn(raw, workspace, draft, treeSchemas, deriveWirePass, sources);
 }
+
+const relaySourcesOf = ({ relayed, imports }: DeriveWireRelaySources): DeriveWireRelaySources => ({
+  ...(relayed === undefined ? {} : { relayed }),
+  ...(imports === undefined ? {} : { imports }),
+});
 
 /**
  * Runs derive.wire, or `part` standing for it, (guarded) on the after-access fixture draft of a reference api; a
@@ -228,7 +239,7 @@ export function deriveWireRunReference(
     draftFixture(api, "after-access"),
     draftFixtureSchemaService(api),
     part,
-    new Map([["tasks", draftFixture("tasks", "after-access")]]),
+    { relayed: new Map([["tasks", draftFixture("tasks", "after-access")]]) },
   );
 }
 
