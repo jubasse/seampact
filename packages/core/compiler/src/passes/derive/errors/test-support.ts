@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import type { ContractIR } from "@seampact/spec/ir";
 import type { Diagnostic } from "../../../diagnostics/diagnostic.js";
 import { loadFsReader, loadWorkspace } from "../../../load/index.js";
 import { loadMemoryReader } from "../../../load/reader.js";
@@ -100,14 +101,16 @@ function runOn(
   workspace: RawWorkspace,
   draft: DraftIR,
   treeSchemas: TreeSchemaService,
-  relayed?: ReadonlyMap<string, DraftIR>,
+  sources: Pick<DeriveErrorsRunOptions, "relayed" | "imports"> = {},
 ): DeriveErrorsRun {
+  const { relayed, imports } = sources;
   const diagnostics: Diagnostic[] = [];
   const context = Object.freeze({
     ...pipelineContext({
       raw,
       workspace,
       ...(relayed === undefined ? {} : { relayed }),
+      ...(imports === undefined ? {} : { imports }),
       report: (diagnostic) => diagnostics.push(diagnostic),
       guard: true,
     }),
@@ -128,6 +131,7 @@ function runOn(
 export interface DeriveErrorsRunOptions {
   readonly api?: string;
   readonly relayed?: ReadonlyMap<string, DraftIR>;
+  readonly imports?: ReadonlyMap<string, ContractIR>;
 }
 
 /** Runs the tree, access and derive.wire halves, then derive.errors (guarded), on an api of `workspace`. */
@@ -136,13 +140,14 @@ export function deriveErrorsRunContract(
   options: DeriveErrorsRunOptions = {},
 ): DeriveErrorsRun {
   const raw = apiOf(workspace, options.api);
-  const { relayed } = options;
+  const { relayed, imports } = options;
   const draft = createDraftIR();
   const diagnostics: Diagnostic[] = [];
   const context = pipelineContext({
     raw,
     workspace,
     ...(relayed === undefined ? {} : { relayed }),
+    ...(imports === undefined ? {} : { imports }),
     report: (diagnostic) => diagnostics.push(diagnostic),
   });
   const treeSchemas = treeSchemasPass.run(draft, context);
@@ -155,7 +160,7 @@ export function deriveErrorsRunContract(
       throw new Error(`${half.half} reports on the contract: ${JSON.stringify(diagnostics)}`);
   }
 
-  return runOn(raw, workspace, draft, treeSchemas, relayed);
+  return runOn(raw, workspace, draft, treeSchemas, options);
 }
 
 // The real schema service of an api (the fixture service answers no error params position), and the draft its run
@@ -202,7 +207,7 @@ export function deriveErrorsRunReference(
           [REFERENCE_PUBLIC_API, deriveErrorsRunReference(workspace, REFERENCE_PUBLIC_API).draft],
         ]);
 
-  return runOn(raw, workspace, draft, service, relayed);
+  return runOn(raw, workspace, draft, service, relayed === undefined ? {} : { relayed });
 }
 
 /** A diagnostic as the tests compare it: its rule and where it is located. */

@@ -1,3 +1,4 @@
+import { type ContractIR, IR_REVISION } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import type { DraftIR, DraftOperation } from "../../../pipeline/seam.js";
 import { deriveWireReferenceVariants } from "../wire/test-support.js";
@@ -110,5 +111,36 @@ describe("relay routes copy domain codes", () => {
         related: ["/errors/tasks.locked"],
       },
     ]);
+  });
+});
+
+// The public api's derived draft as an imported IR.
+const importedIr = (draft: DraftIR): ContractIR =>
+  JSON.parse(
+    JSON.stringify({
+      irVersion: "1.0",
+      irRevision: IR_REVISION,
+      kinds: [],
+      features: [],
+      ...draft,
+    }),
+  );
+
+describe("relay routes to an imported api", () => {
+  test("a code this api declares the same is copied; one it lacks is refused, not copied", () => {
+    const workspace = lockedWorkspace("");
+    const publicRun = deriveErrorsRunContract(workspace, { api: "tasks" });
+    const serviceRun = deriveErrorsRunContract(workspace, {
+      api: "tasksService",
+      imports: new Map([["tasks", importedIr(publicRun.draft)]]),
+    });
+
+    expect(serviceRun.diagnostics.map(deriveErrorsLocated)).toEqual([
+      { rule: "seampact/derive/relay-declaration", pointer: RELAY_POINTER, related: [] },
+    ]);
+    expect(errorOf(serviceRun.draft, "getTask", "api.not_found")?.derivedFrom?.derivation).toBe(
+      "relay.route",
+    );
+    expect(errorOf(serviceRun.draft, "getTask", "tasks.locked")).toBeUndefined();
   });
 });
