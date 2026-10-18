@@ -51,11 +51,13 @@ function isClosedAs<N extends IrClosedDefinition, V>(
     (node) => {
       visitIrUnknown(
         node,
-        (unknown) => unknowns.push({ pointer: `${unknown.pointer}/${unknown.tag}`, value: unknown.value }),
+        (unknown) =>
+          unknowns.push({ pointer: `${unknown.pointer}/${unknown.tag}`, value: unknown.value }),
         (unknown) => unknowns.push({ pointer: unknown.pointer, value: unknown.value }),
       );
 
-      if (node.kind === "object") pushUnknownMembers(node.definition, node.value, node.pointer, unknowns);
+      if (node.kind === "object")
+        pushUnknownMembers(node.definition, node.value, node.pointer, unknowns);
     },
     { $ref: `#/$defs/${definition}` },
     pointer,
