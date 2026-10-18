@@ -54,8 +54,6 @@ export interface DeriveErrorsRoleParamsSite {
 /** The slot an `each`'s `as` reads its item from. */
 export const DERIVE_ERRORS_ITEM_SLOT = "item";
 
-const ITEM_SLOT = DERIVE_ERRORS_ITEM_SLOT;
-
 const RATE_LIMITED_ROLE = "rateLimited";
 
 type DatumSite = Pick<DeriveErrorsRoleParamsSite, "role" | "rateLimitParam">;
@@ -84,23 +82,15 @@ export function deriveErrorsDatumAlways(site: DatumSite, datum: DerivationRoleDa
   return fillsRateLimitParam(site, datum);
 }
 
-const objectSchemaOf = (
-  schemas: Schemas,
-  id: IrWriter.SchemaId | undefined,
-): PassReadonly<IrWriter.ObjectSchema> | undefined => {
-  if (id === undefined || !Object.hasOwn(schemas, id)) return undefined;
-
-  const schema = schemas[id];
-
-  return schema?.kind === "object" ? schema : undefined;
-};
-
 /** The properties of a code's params schema, in its order; empty without params. */
 export function deriveErrorsParamProperties(
   schemas: Schemas,
   params: IrWriter.SchemaRef | undefined,
 ): readonly PassReadonly<IrWriter.Property>[] {
-  return objectSchemaOf(schemas, params)?.properties ?? [];
+  if (params === undefined) return [];
+
+  // tree.schemas compiles params to an object schema or refuses them (`fields-schema`), and no later half runs then.
+  return deriveErrorsObjectOfUse(schemas, { kind: "ref", schema: params })?.properties ?? [];
 }
 
 // A datum's slot kind sets where the reader lets it stand: `$each` takes an array, `$merge` an object.
@@ -120,7 +110,7 @@ function siteOf(site: DeriveErrorsRoleParamsSite, faults: { count: number }): Te
   }));
   const eachSlots: TemplateSlot[] = role.data.flatMap((datum) =>
     datum.type.kind === "array"
-      ? [{ name: ITEM_SLOT, kind: slotKindOf(schemas, datum.type.items) }]
+      ? [{ name: DERIVE_ERRORS_ITEM_SLOT, kind: slotKindOf(schemas, datum.type.items) }]
       : [],
   );
 
@@ -129,7 +119,7 @@ function siteOf(site: DeriveErrorsRoleParamsSite, faults: { count: number }): Te
     eachSlots,
     owner: `the binding of role '${role.role}'`,
     placeName: `the params of role '${role.role}'`,
-    exampleSlot: `$${role.data[0]?.name ?? ITEM_SLOT}`,
+    exampleSlot: `$${role.data[0]?.name ?? DERIVE_ERRORS_ITEM_SLOT}`,
     adrSections: "ADR 0006 section 6",
     report: (fault) => {
       faults.count += 1;
