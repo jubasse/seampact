@@ -1,8 +1,9 @@
 import { fileURLToPath } from "node:url";
-import type { IrWriter } from "@seampact/spec/ir";
+import type { ContractIR, IrWriter } from "@seampact/spec/ir";
 import type { Diagnostic } from "../../../diagnostics/diagnostic.js";
 import { loadFsReader, loadWorkspace } from "../../../load/index.js";
 import { loadMemoryReader } from "../../../load/reader.js";
+import { draftFixture } from "../../../pipeline/draft-fixture.js";
 import {
   createDraftIR,
   type DraftIR,
@@ -224,6 +225,11 @@ export function treeNodesWithBatchInput(service: TreeSchemaService): TreeSchemaS
   };
 }
 
+/** The derived draft a relay route to `tasks` copies from: the reference `tasks` api after its access pass. */
+export function treeNodesRelayedTasks(): ReadonlyMap<string, DraftIR> {
+  return new Map([["tasks", draftFixture("tasks", "after-access")]]);
+}
+
 function markersIn(value: unknown, pointer: string): string[] {
   if (value === TREE_NODES_INVALID_EXAMPLE) return [pointer];
 
@@ -236,6 +242,10 @@ export interface TreeNodesRunOptions {
   readonly treeSchemas: TreeSchemaService;
   /** The draft as tree.schemas left it (its `schemas`), else a new draft. */
   readonly draft?: DraftIR;
+  /** The derived drafts of the workspace apis a relay route names, by api name. */
+  readonly relayed?: ReadonlyMap<string, DraftIR>;
+  /** The IRs of the imported apis a relay route names, by api name. */
+  readonly imports?: ReadonlyMap<string, ContractIR>;
 }
 
 export interface TreeNodesRun {
@@ -254,6 +264,8 @@ export function treeNodesRun(
   const context = pipelineContext({
     raw,
     workspace,
+    ...(options.relayed === undefined ? {} : { relayed: options.relayed }),
+    ...(options.imports === undefined ? {} : { imports: options.imports }),
     report: (diagnostic) => diagnostics.push(diagnostic),
     guard: true,
   });

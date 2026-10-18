@@ -75,7 +75,11 @@ export type TreeNodesRule =
   | "paging-meta"
   | "paging-meta-clash"
   | "example-target"
-  | "example-value";
+  | "example-value"
+  | "relay-target"
+  | "relay-name"
+  | "relay-unknown"
+  | "relay-declaration";
 
 export const treeNodesRuleId = (rule: TreeNodesRule): string => `seampact/tree/${rule}`;
 

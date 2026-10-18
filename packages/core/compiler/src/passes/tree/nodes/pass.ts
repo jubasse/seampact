@@ -5,6 +5,7 @@ import { treeNodesCheckPayloads, treeNodesFormats } from "./formats.js";
 import { treeNodesCheckBodyLimits } from "./limits.js";
 import { treeNodesOperations } from "./operations.js";
 import { treeNodesPagings } from "./pagings.js";
+import { treeNodesJoinRelayDeclarations } from "./relays.js";
 import { treeNodesApiSettings } from "./settings.js";
 
 // The tree.nodes half (ADR 0006 sections 2 and 3): the api, its conventions, lint, packs and services, every
@@ -62,6 +63,7 @@ export const treeNodesPass: PassPart<"tree.nodes"> = {
     "operations[].internal",
     "operations[].tags",
     "operations[].examples",
+    "operations[].relays",
     "operations[].format",
     "operations[].docs",
     "operations[].extensions",
@@ -72,10 +74,12 @@ export const treeNodesPass: PassPart<"tree.nodes"> = {
 
     treeNodesApiSettings(draft, context);
     treeNodesCheckBodyLimits(context);
-    treeNodesOperations(draft, context, prefixes);
+    const relayDeclarations = treeNodesOperations(draft, context, prefixes);
+
     treeNodesCheckIdProperties(draft, context);
     treeNodesFormats(draft, context);
     treeNodesPagings(draft, context);
+    treeNodesJoinRelayDeclarations(draft, context, relayDeclarations);
     treeNodesCheckPayloads(draft, context);
   },
 };
