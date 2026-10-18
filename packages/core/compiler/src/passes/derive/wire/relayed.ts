@@ -1,14 +1,12 @@
 import { checkIrClosedDeclaration, type IrWriter } from "@seampact/spec/ir";
 import type { DraftOperation, PassReadonly } from "../../../pipeline/seam.js";
-import { treeNodesRelayOrigin } from "../../tree/nodes/index.js";
+import { TREE_NODES_OPERATION_KIND, treeNodesRelayOrigin } from "../../tree/nodes/index.js";
 import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 
 // The public operation a relay route relays, as its own api derived it: the derived draft of a workspace api
 // (`relayed`) or the IR of an import (`imported`). tree.nodes already found it and refused an import holding what
 // this compiler does not know, so a missing or open one is an internal error. A relay route has no resource of its
 // own, so what its version derives from (the version parameter, the `ETag` of a versioned item) is read here.
-
-const OPERATION_KIND = "httpOperation";
 
 /** The public operation of a relay route, with the api that declares it. */
 export interface DeriveWireRelayed {
@@ -27,7 +25,7 @@ export function deriveWireRelayedOf(
 
   const { api, id } = relays;
   const isRelayed = (candidate: { readonly kind?: string; readonly id?: string }) =>
-    candidate.kind === OPERATION_KIND && candidate.id === id;
+    candidate.kind === TREE_NODES_OPERATION_KIND && candidate.id === id;
   const fromDraft = scope.context.relayed(api)?.operations.find(isRelayed);
 
   if (fromDraft !== undefined) return { api, operation: fromDraft };
@@ -35,7 +33,7 @@ export function deriveWireRelayedOf(
   const imported = scope.context.imported(api);
   const index =
     imported?.operations.findIndex(
-      (candidate) => candidate.kind === OPERATION_KIND && candidate.id === id,
+      (candidate) => candidate.kind === TREE_NODES_OPERATION_KIND && candidate.id === id,
     ) ?? -1;
   const found = imported?.operations[index];
   const closed =

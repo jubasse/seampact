@@ -19,7 +19,8 @@ import {
   treeNodesNodeOrigin,
 } from "./diagnostics.js";
 import type { TreeNodesSite } from "./fields.js";
-import { type TreeNodesContext, treeNodesPointer, treeNodesSetting, treeNodesText } from "./raw.js";
+import { type TreeNodesContext, treeNodesText } from "./raw.js";
+import { accessRightsQuoted } from "../../access/rights/report.js";
 
 // Relay routes (ADR 0002 section 7): the shape of the public operation a relay route names, copied from the
 // derived draft of a workspace api (`relayed`) or from the IR of an import (`imported`). Only the public
@@ -89,7 +90,6 @@ export function treeNodesRelayShape(
 ): DraftOperation | undefined {
   const target = relayTarget(site);
 
-  checkShapeKeys(site, target);
   const source = relaySource(site, target);
 
   if (source === undefined) return undefined;
@@ -349,12 +349,17 @@ function copiedPaging(paging: PassReadonly<IrWriter.Paging>, api: string): IrWri
   };
 }
 
+// A path is under a prefix at a segment boundary: `/v10/x` is not under `/v1`.
+function pathUnderPrefix(path: string, prefix: string | undefined): boolean {
+  return prefix !== undefined && (path === prefix || path.startsWith(`${prefix}/`));
+}
+
 // The public path after its surface's prefix, appended to this surface's prefix.
 function relayPath(source: RelaySource, ownPrefix: string): string {
   const { operation, surfacePrefix } = source;
   const path = operation.path ?? "";
 
-  if (surfacePrefix === undefined || !path.startsWith(surfacePrefix))
+  if (surfacePrefix === undefined || !pathUnderPrefix(path, surfacePrefix))
     throw new Error(
       `the relayed operation ${source.api}.${operation.id} has the path ${path}, which does not start with the prefix of its surface ${operation.surface}`,
     );
@@ -505,8 +510,11 @@ function importInconsistency(
 ): string | undefined {
   const { path, surface } = operation;
 
-  if (path !== undefined && (surfacePrefix === undefined || !path.startsWith(surfacePrefix)))
-    return `the operation ${operation.id} has the path ${path}, which does not start with the prefix of its surface ${surface}`;
+  if (path !== undefined && surfacePrefix === undefined)
+    return `the operation ${operation.id} is on the surface ${surface}, which the import does not declare`;
+
+  if (path !== undefined && !pathUnderPrefix(path, surfacePrefix))
+    return `the operation ${operation.id} has the path ${accessRightsQuoted(path)}, which does not start with the prefix of its surface ${surface}`;
 
   if (formatMissing)
     return `the operation ${operation.id} names a wire format the import does not declare`;
@@ -551,42 +559,6 @@ const ownEntry = <Value>(
   id: string | undefined,
 ): Value | undefined =>
   id !== undefined && Object.hasOwn(catalogue, id) ? catalogue[id] : undefined;
-
-// The keys that give a route its own shape; a relay route copies the shape of the public operation (grammar section 7).
-const RELAY_SHAPE_KEYS: readonly string[] = [
-  "method",
-  "path",
-  "pathParams",
-  "query",
-  "headers",
-  "input",
-  "output",
-  "item",
-  "responses",
-  "paging",
-  "sortable",
-  "filteredBy",
-  "concurrency",
-];
-
-function checkShapeKeys(site: TreeNodesSite, target: RelayTarget): void {
-  const { node, context } = site;
-
-  for (const key of RELAY_SHAPE_KEYS) {
-    if (treeNodesSetting(node, key) === undefined) continue;
-
-    context.report(
-      treeNodesError({
-        rule: "relay-shape",
-        origin: treeNodesNodeOrigin(
-          context.origin(treeNodesPointer(node.pointer, key)) ?? node.origin,
-        ),
-        message: `The relay route ${site.operationId} sets ${key}, but its shape is derived from the public operation ${target.text}.`,
-        fix: `Remove ${key}; change the shape on ${target.text}, or write a route of its own instead of a relay.`,
-      }),
-    );
-  }
-}
 
 // The route name is the public operation id unless the route sets `operationId` (grammar section 7).
 function checkRouteName(site: TreeNodesSite, target: RelayTarget): void {

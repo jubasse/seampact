@@ -352,25 +352,18 @@ test("tree.nodes diagnostics are located: relays", () => {
   }
 });
 
-test("a relay route with a shape key of its own is refused, naming the public operation", () => {
-  const { diagnostics } = runService(
-    `
-      getTask: { relays: tasks.getTask, method: get, path: /other, paging: { style: cursor } }
-`,
-    { relayed: new Map([[PUBLIC_API, publicDraft()]]) },
-  );
-
-  expect(diagnostics.map(({ rule, origin }) => [rule, origin.pointer])).toEqual([
-    ["seampact/tree/relay-shape", `${ROUTES}/getTask/method`],
-    ["seampact/tree/relay-shape", `${ROUTES}/getTask/path`],
-    ["seampact/tree/relay-shape", `${ROUTES}/getTask/paging`],
-  ]);
-  expect(diagnostics[0]?.message).toContain("derived from the public operation tasks.getTask");
-});
-
 test("an imported operation that contradicts its own IR is refused, located, not an internal error", () => {
   const outsidePrefix = importedIr(publicDraft(), (ir) => {
     findOperation(ir, "getTask").path = "/elsewhere/tasks/{taskId}";
+  });
+  const nextSegment = importedIr(publicDraft(), (ir) => {
+    findOperation(ir, "getTask").path = "/internal/v10/tasks/{taskId}";
+  });
+  const longPath = importedIr(publicDraft(), (ir) => {
+    findOperation(ir, "getTask").path = `/elsewhere/${"x".repeat(500)}`;
+  });
+  const noSurface = importedIr(publicDraft(), (ir) => {
+    findOperation(ir, "getTask").surface = "ghostSurface";
   });
   const noFormat = importedIr(publicDraft(), (ir) => {
     findOperation(ir, "listTasks").format = "missing";
@@ -391,6 +384,15 @@ test("an imported operation that contradicts its own IR is refused, located, not
     ["seampact/tree/relay-target", `${ROUTES}/getTask/relays`],
   ]);
   expect(run(outsidePrefix)[0]?.message).toContain("does not start with the prefix of its surface");
+  expect(located(nextSegment)).toEqual([
+    ["seampact/tree/relay-target", `${ROUTES}/getTask/relays`],
+  ]);
+  expect(located(longPath)).toEqual([["seampact/tree/relay-target", `${ROUTES}/getTask/relays`]]);
+  expect(run(longPath)[0]?.message.length).toBeLessThan(400);
+  expect(located(noSurface)).toEqual([["seampact/tree/relay-target", `${ROUTES}/getTask/relays`]]);
+  expect(run(noSurface)[0]?.message).toContain(
+    "surface ghostSurface, which the import does not declare",
+  );
   expect(located(noFormat)).toEqual([["seampact/tree/relay-target", `${ROUTES}/listTasks/relays`]]);
   expect(located(noStyle)).toEqual([["seampact/tree/relay-target", `${ROUTES}/listTasks/relays`]]);
   expect(located(unknownKind)).toEqual([

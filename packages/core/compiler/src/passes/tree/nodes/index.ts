@@ -12,4 +12,4 @@ export {
   treeNodesOpOwner,
 } from "./names.js";
 export { treeNodesPass } from "./pass.js";
-export { treeNodesRelayOrigin } from "./relays.js";
+export { TREE_NODES_OPERATION_KIND, treeNodesRelayOrigin } from "./relays.js";
