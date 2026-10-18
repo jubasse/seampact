@@ -5,7 +5,8 @@
   "private": true,
   "type": "module",
   "files": [
-    "dist"
+    "dist",
+    "src/node-server/runtime"
   ],
   "main": "./src/index.ts",
   "publishConfig": {
@@ -15,6 +16,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./node-server": {
+        "types": "./dist/node-server/index.d.ts",
+        "default": "./dist/node-server/index.js"
       }
     }
   },
@@ -28,6 +33,11 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
+    "@seampact/hooks": "workspace:*",
     "prettier": "3.9.10"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./node-server": "./src/node-server/index.ts"
   }
 }

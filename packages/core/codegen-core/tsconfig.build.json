@@ -7,5 +7,10 @@
     "outDir": "dist"
   },
   "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "src/**/*test-support.ts", "src/**/*.type-check.ts"]
+  "exclude": [
+    "src/**/*.test.ts",
+    "src/**/*test-support.ts",
+    "src/**/*.type-check.ts",
+    "src/node-server/runtime"
+  ]
 }
