@@ -9,8 +9,8 @@ import type { ResolvedScope } from "./resolve-scope.js";
 
 /** Allow, or a denial naming one of the requirement's declared codes with that code's params. */
 export type Decision<Codes extends ErrorCodeWithParams> =
-  | { readonly allow: true }
-  | { readonly deny: Codes };
+  | { readonly allow: true; readonly deny?: never }
+  | { readonly deny: Codes; readonly allow?: never };
 
 /** What a right is about: a resource type or a scope name, the id from its declared source, and the loaded record when a loader is registered. */
 export interface SubjectRef<Type extends string = string, Id = unknown, LoadedRecord = unknown> {

@@ -41,8 +41,8 @@ export interface ResolveScopeRequest<
 
 /** The resolved scope, or one of the scope's declared membership denials. */
 export type ScopeResolution<Scope extends ResolvedScope, Denial extends ErrorCodeWithParams> =
-  | { readonly resolved: Scope }
-  | { readonly deny: Denial };
+  | { readonly resolved: Scope; readonly deny?: never }
+  | { readonly deny: Denial; readonly resolved?: never };
 
 /** One per scope kind, called outermost scope first. */
 export interface ResolveScopeHook<

@@ -80,8 +80,8 @@ export interface AuthenticateRequest<
 
 /** A principal, or a denial naming one of the identity's declared codes. */
 export type AuthenticateResult<Principal, Denial extends ErrorCodeWithParams> =
-  | { readonly principal: Principal }
-  | { readonly deny: Denial };
+  | { readonly principal: Principal; readonly deny?: never }
+  | { readonly deny: Denial; readonly principal?: never };
 
 /** One per identity; called only when a declared credential is present. */
 export interface AuthenticateHook<

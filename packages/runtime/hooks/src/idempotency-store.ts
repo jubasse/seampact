@@ -2,7 +2,11 @@ import type { Awaitable, OperationRef } from "./hook-vocabulary.js";
 
 /** What the boundary claims before it calls the handler of an idempotent operation. */
 export interface IdempotencyClaim {
-  /** A fixed-size digest the boundary derives from the operation id, the accepted credentials and the client key. */
+  /**
+   * A fixed-size digest the boundary derives from the api id, the operation id, the identity id,
+   * a digest of the validated principal (none for an anonymous caller) and the client key.
+   * It never digests the accepted credentials, so a retry after a token or session refresh stays in the same partition.
+   */
   readonly key: string;
 
   /** The boundary's digest of the request, compared on a reused key. */
