@@ -760,7 +760,7 @@ items:
     targets: [core, server]
   - id: CHK-130
     source: "A36"
-    fact: conventions.urls absolute writes absolute URL slots and Link relations from the framework's trusted-proxy view of the request; the default writes relative references.
+    fact: conventions.urls absolute writes absolute URL slots and Link relations, each starting with the one public origin configured on the target, never the request Host or forwarded headers, and a target without that origin refuses to generate or to start; the default writes relative references.
     frs: [FR-42]
     scenario: SCN-100
     targets: [core, server]
