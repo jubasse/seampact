@@ -94,12 +94,23 @@ describe("cache headers", () => {
     });
   });
 
-  test("a route without cache, or a non-GET below an inherited one, has none", () => {
+  test("a cache inherited from a collection reaches its GET routes only, and a route without one has none", () => {
+    const inherited = deriveWireRunContract(
+      deriveWireFixtureVariant("lifecycle", [
+        ["        item: Doc\n", "        item: Doc\n        cache: { freshness: minute }\n"],
+        ["get: { cache: { freshness: minute, etag: true } }", "get: {}"],
+      ]),
+    );
+
+    expect(inherited.diagnostics).toEqual([]);
+    expect(deriveWireOperation(inherited, "getDoc").cache?.origin.pointer).toBe(
+      "/surfaces/app/routes/docs/cache",
+    );
+    expect(deriveWireOperation(inherited, "updateDoc").cache).toBeUndefined();
     expect(cacheOf("plain")).toBeUndefined();
-    expect(cacheOf("updateDoc")).toBeUndefined();
   });
 
-  test("a family that is not declared, or no freshness, is refused at the cache", () => {
+  test("a family that is not declared or sets no maxAge, or no freshness, is refused at the cache", () => {
     const unknown = deriveWireRunContract(
       deriveWireFixtureVariant("lifecycle", [["freshness: minute", "freshness: hourly"]]),
     );
@@ -107,7 +118,11 @@ describe("cache headers", () => {
       deriveWireFixtureVariant("lifecycle", [["freshness: minute, etag", "etag"]]),
     );
 
-    for (const refused of [unknown, none])
+    const noMaxAge = deriveWireRunContract(
+      deriveWireFixtureVariant("lifecycle", [["minute: 60s", "minute: { noCache: true }"]]),
+    );
+
+    for (const refused of [unknown, none, noMaxAge])
       expect(refused.diagnostics.map(deriveWireLocated)).toEqual([
         {
           rule: "seampact/derive/cache-family",
