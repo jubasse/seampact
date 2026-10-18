@@ -10,6 +10,9 @@ import type { ContractIR, Operation, Response } from "@seampact/spec/ir";
 import { REFUSED_TYPE, type TypeContext, typeExpression } from "./type-expression.js";
 
 const JSON_MEDIA = "application/json";
+
+// The 304 that `cache.etag` derives is answered by the boundary, never by the handler.
+const ETAG_DERIVATION = "cache.etag";
 const NOT_GENERATED_SHAPES: readonly string[] = ["list", "binary", "redirect"];
 
 // The members a handler returns beside a page's items, by paging style `handlerResult` value (ADR 0002
@@ -26,15 +29,17 @@ const NOT_GENERATED_HANDLER_RESULTS: readonly string[] = [
 ];
 
 // The handler-side union of the operation's responses, `{ status, body }` with the unwrapped payload; the
-// boundary adds the envelope and the derived headers.
+// boundary adds the envelope and the derived headers, and answers the derived 304.
 export function operationOutputDeclaration(
   operation: Operation,
   location: IrLocation,
   context: TypeContext,
 ): string {
-  const variants = operation.responses.map((response, index) =>
-    responseVariant(response, operation, below(location, "responses", index), context),
-  );
+  const variants = operation.responses.flatMap((response, index) => {
+    if (response.derivedFrom?.derivation === ETAG_DERIVATION) return [];
+
+    return [responseVariant(response, operation, below(location, "responses", index), context)];
+  });
   const typeName = requireName(context.layout.operationTypeNames, operation.id).output;
   const union = variants.length === 0 ? "never" : variants.join(" | ");
 
@@ -48,6 +53,8 @@ function responseVariant(
   context: TypeContext,
 ): string {
   const status = `status: ${response.status};`;
+
+  refuseHandlerHeaders(response, location, context);
 
   switch (response.shape) {
     case "empty":
@@ -71,6 +78,25 @@ function responseVariant(
 
       return REFUSED_TYPE;
   }
+}
+
+// A header the route writes itself has no `derivedFrom`; the handler result has no member for it yet.
+function refuseHandlerHeaders(
+  response: Response,
+  location: IrLocation,
+  context: TypeContext,
+): void {
+  response.headers.forEach((header, index) => {
+    if (header.derivedFrom !== undefined) return;
+
+    context.refusals.push(
+      refuseNotGeneratedYet(
+        "response.header",
+        `The response header '${header.name}', written by the route,`,
+        below(location, "headers", index),
+      ),
+    );
+  });
 }
 
 function payloadVariant(
