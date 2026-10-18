@@ -1,0 +1,68 @@
+# The error registry (ADR 0002 section 11, ADR 0006 section 6, A35): codes declared by the catalogue of every layer
+# and on every kind of tree node, default codes redeclared with and without params, natures by default, by base and
+# by name, families by default and declared, and a node declaration repeated with the same definition.
+api: { name: shop, version: 1, kind: product }
+extends: ./base.yaml
+packs: [./pack.yaml]
+
+conventions:
+  errors:
+    every: [shop.failed]
+    derived:
+      notFound: TASK_NOT_FOUND
+
+errors:
+  api.rate_limited:
+    status: 429
+    params: { retryAfterMs: { type: integer, minimum: 0 }, scope: { type: string } }
+    example: { retryAfterMs: 1500, scope: user }
+  api.payload_too_large: { status: 413, title: The body is too large. }
+  shop.failed: { status: 500, title: The shop failed., description: Retry later or call support. }
+
+schemas:
+  UserId: { type: string }
+  Member:
+    type: object
+    required: [userId]
+    properties:
+      userId: UserId
+
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The fixture checks error declarations only. }
+    errors:
+      shop.maintenance: { status: 503, nature: throttled }
+      TASK_NOT_FOUND: {}
+    routes:
+      members:
+        kind: collection
+        id: { userId: UserId }
+        item: Member
+        ops: { list: { paging: none }, get: {} }
+        errors:
+          members.locked:
+            status: 423
+            params: { lockedBy: UserId }
+            example: { lockedBy: u-1 }
+            reach: resource
+            for: writes
+        collection:
+          errors:
+            members.full: { status: 409, nature: refused }
+        member:
+          errors:
+            members.full: {}
+            404-gone: {}
+      me:
+        kind: single
+        item: Member
+        ops: [get]
+        errors:
+          api.rate_limited: { example: { retryAfterMs: 30000, scope: user } }
+      ping:
+        method: get
+        errors:
+          ping.slow: { status: 504 }
+          shop.maintenance: { nature: throttled, status: 503, for: reads }
+          E1042: {}

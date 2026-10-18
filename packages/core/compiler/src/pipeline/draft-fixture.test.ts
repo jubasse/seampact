@@ -248,6 +248,19 @@ function accessCatalogueSchemaPositions(api: DraftFixtureApi): string[] {
   return positions;
 }
 
+const ERROR_POSITIONS = "/errors/";
+
+// The params of each error the raw catalogue declares with params, which derive.errors reads through the service.
+function errorParamsPositions(api: DraftFixtureApi): string[] {
+  const errors = rawApi(api).merged.errors;
+
+  if (!isRecord(errors)) return [];
+
+  return Object.entries(errors)
+    .filter(([, declaration]) => isRecord(declaration) && Object.hasOwn(declaration, "params"))
+    .map(([code]) => `${ERROR_POSITIONS}${code}/params`);
+}
+
 describe("draft fixtures", () => {
   const validator = createDraftValidator();
 
@@ -502,6 +515,14 @@ describe("draft fixtures", () => {
         expect(valueAtPointer(rawApi(api).merged, pointer), pointer).toBeDefined();
 
         for (const position of at) {
+          // derive.errors writes the error params after this stage: the use refers to the schema hoisted there.
+          if (position.startsWith(ERROR_POSITIONS)) {
+            expect(use.kind === "ref" && draft.schemas[use.schema]?.origin.pointer, position).toBe(
+              pointer,
+            );
+            continue;
+          }
+
           const written = valueAtPointer(draft, position);
 
           // A `SchemaRef` position holds the id of the schema the use refers to.
@@ -514,6 +535,7 @@ describe("draft fixtures", () => {
       const expectedPositions = [
         ...declaredRouteSchemaPositions(draftFixture(api, "after-tree")),
         ...accessCatalogueSchemaPositions(api),
+        ...errorParamsPositions(api),
       ];
 
       expect(typeUses.flatMap(({ at }) => at).sort()).toEqual(expectedPositions.sort());

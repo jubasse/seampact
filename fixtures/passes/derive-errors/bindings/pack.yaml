@@ -1,0 +1,10 @@
+# A pack of the bindings fixture: it renames the notFound role for every api that applies it.
+pack: { name: errors-pack, version: 1.0.0, extends: [] }
+
+errors:
+  pack.not_found: { status: 404 }
+
+conventions:
+  errors:
+    derived:
+      notFound: pack.not_found

@@ -1,0 +1,7 @@
+# The base of the registry fixture: codes outside the dotted form (A36) and a contract nature (A40).
+errors:
+  TASK_NOT_FOUND: { status: 404, family: tasks, title: No such task. }
+  E1042: { status: 503, summary: The index is rebuilding. }
+
+natures:
+  throttled: { base: unavailable, summary: Too many requests; retry after the stated delay. }

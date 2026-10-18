@@ -307,6 +307,24 @@
         "schema": "PaymentEvent"
       },
       "at": ["/operations/16/input/schema"]
+    },
+    {
+      "pointer": "/errors/api.schema_invalid/params",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "ApiSchemaInvalidParams"
+      },
+      "at": ["/errors/api.schema_invalid/params"]
+    },
+    {
+      "pointer": "/errors/api.rate_limited/params",
+      "direction": "output",
+      "use": {
+        "kind": "ref",
+        "schema": "ApiRateLimitedParams"
+      },
+      "at": ["/errors/api.rate_limited/params"]
     }
   ],
   "queryWires": [
