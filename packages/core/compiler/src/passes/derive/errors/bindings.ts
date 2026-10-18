@@ -125,16 +125,31 @@ function paramNames(
     : new Set();
 }
 
-// The data a binding must carry api-wide. `rateLimited`'s delay is required once `conventions.rateLimit` names its
-// param; `forbidden`'s pointer depends on each operation's restricted input fields, so it is checked per operation.
-function requiredData(context: DeriveErrorsContext, role: DerivationRole): DerivationRoleDatum[] {
-  const rateLimitNamed = context.conventions.get("rateLimit.param") !== undefined;
+/** A datum a binding must carry, and the param of the bound code that receives it. */
+interface RequiredDatum {
+  readonly datum: DerivationRoleDatum;
+  readonly param: string;
+}
 
-  return role.data.filter(
-    (datum) =>
-      datum.required === "always" ||
-      (datum.required === "conditional" && role.role === "rateLimited" && rateLimitNamed),
-  );
+// The data a binding must carry api-wide. `rateLimited`'s delay is required once `conventions.rateLimit` names its
+// param, and the bound code must carry that param; `forbidden`'s pointer depends on each operation's restricted input
+// fields, so it is checked per operation.
+function requiredData(context: DeriveErrorsContext, role: DerivationRole): RequiredDatum[] {
+  const rateLimitParam = context.conventions.get("rateLimit.param")?.value;
+  const required: RequiredDatum[] = [];
+
+  for (const datum of role.data) {
+    if (datum.required === "always") required.push({ datum, param: datum.name });
+
+    if (
+      datum.required === "conditional" &&
+      role.role === "rateLimited" &&
+      typeof rateLimitParam === "string"
+    )
+      required.push({ datum, param: rateLimitParam });
+  }
+
+  return required;
 }
 
 /** What the binding checks read and report through. */
@@ -145,6 +160,12 @@ export interface DeriveErrorsBindingCheck {
   readonly schemas: PassReadonly<Record<IrWriter.SchemaId, IrWriter.Schema>>;
 }
 
+interface FilledParams {
+  readonly templates: Map<string, DeriveErrorsRawValue>;
+  /** A role-param was reported at this binding, so its data are not reported again. */
+  refused: boolean;
+}
+
 // The params a written template fills: each top-level key that names a param of the code, with the template written
 // under it (a param name never starts with `$`). A key that names no param is refused, so no datum is carried nowhere.
 function filledParams(
@@ -152,8 +173,8 @@ function filledParams(
   binding: DeriveErrorsBinding,
   names: ReadonlySet<string>,
   pointer: string,
-): Map<string, DeriveErrorsRawValue> {
-  const filled = new Map<string, DeriveErrorsRawValue>();
+): FilledParams {
+  const filled: FilledParams = { templates: new Map(), refused: false };
   const { params } = binding;
 
   if (params === undefined) return filled;
@@ -161,6 +182,7 @@ function filledParams(
   const paramsPointer = pipelinePointerBelow(pointer, "params");
 
   if (!pipelineIsJsonObject(params)) {
+    filled.refused = true;
     check.reporter.error({
       rule: "role-param",
       message: `the params template of role '${binding.role}' is no object, so it fills no param of ${quote(binding.code)}`,
@@ -173,10 +195,11 @@ function filledParams(
 
   for (const [key, value] of Object.entries(params)) {
     if (names.has(key)) {
-      filled.set(key, value);
+      filled.templates.set(key, value);
       continue;
     }
 
+    filled.refused = true;
     check.reporter.error({
       rule: "role-param",
       message: `the params template of role '${binding.role}' writes ${quote(key)}, which is no param of ${quote(binding.code)}`,
@@ -210,18 +233,23 @@ function checkBinding(
   const names = paramNames(registered.declaration.params, schemas);
   const filled = filledParams(check, binding, names, pointer);
 
-  for (const datum of requiredData(context, roleOf(binding.role))) {
+  if (filled.refused) return;
+
+  for (const { datum, param } of requiredData(context, roleOf(binding.role))) {
     const reached =
       binding.params === undefined
-        ? names.has(datum.name)
-        : [...filled.values()].some((template) => templateReaches(template, datum.name));
+        ? names.has(param)
+        : [...filled.templates].some(
+            ([key, template]) =>
+              templateReaches(template, datum.name) && (datum.name === param || key === param),
+          );
 
     if (reached) continue;
 
     reporter.error({
       rule: "role-datum",
       message: `role '${binding.role}' requires the datum '${datum.name}', which no param of ${quote(binding.code)} receives`,
-      fix: `add a param '${datum.name}' to ${quote(binding.code)}, or bind it with params: { <param>: $${datum.name} }`,
+      fix: `add a param '${param}' to ${quote(binding.code)}, or bind it with params: { ${param}: $${datum.name} }`,
       pointer,
     });
   }

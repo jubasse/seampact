@@ -188,11 +188,6 @@ errors:
           pointer: "/conventions/errors/derived/sortKeyForbidden/params/other",
           related: [],
         },
-        {
-          rule: "seampact/derive/role-datum",
-          pointer: "/conventions/errors/derived/sortKeyForbidden",
-          related: [],
-        },
       ]);
     }
   });
@@ -208,11 +203,6 @@ errors:
       {
         rule: "seampact/derive/role-param",
         pointer: "/conventions/errors/derived/sortKeyForbidden/params/$$key",
-        related: [],
-      },
-      {
-        rule: "seampact/derive/role-datum",
-        pointer: "/conventions/errors/derived/sortKeyForbidden",
         related: [],
       },
     ]);
@@ -231,11 +221,6 @@ errors:
         pointer: "/conventions/errors/derived/sortKeyForbidden/params",
         related: [],
       },
-      {
-        rule: "seampact/derive/role-datum",
-        pointer: "/conventions/errors/derived/sortKeyForbidden",
-        related: [],
-      },
     ]);
   });
 
@@ -249,6 +234,23 @@ errors:
 
     expect(without.diagnostics).toEqual([]);
     expect(named.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/role-datum",
+        pointer: "/conventions/errors/derived/rateLimited",
+        related: [],
+      },
+    ]);
+  });
+
+  test("rateLimited requires the param conventions.rateLimit names, not a fixed name", () => {
+    const binding = "  errors: { derived: { rateLimited: shop.slow_down } }\n";
+    const run = (carried: string) =>
+      runInline(
+        `conventions:\n  rateLimit: { header: Retry-After, param: delayMs, unit: s }\n${binding}errors:\n  shop.slow_down: { status: 429, params: { ${carried}: { type: integer } } }\n`,
+      );
+
+    expect(run("delayMs").diagnostics).toEqual([]);
+    expect(run("retryAfterMs").diagnostics.map(deriveErrorsLocated)).toEqual([
       {
         rule: "seampact/derive/role-datum",
         pointer: "/conventions/errors/derived/rateLimited",
