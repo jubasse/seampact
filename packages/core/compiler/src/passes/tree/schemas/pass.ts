@@ -10,6 +10,7 @@ import { TreeSchemasCompiler } from "./compile.js";
 import { treeSchemasCoreReservations } from "./core.js";
 import { treeSchemasRefuseOutputUnknownKeys, treeSchemasWriteDirections } from "./directions.js";
 import { treeSchemasCompileEnums } from "./enums.js";
+import { treeSchemasCheckExtensionValues, treeSchemasCompileExtensionKeys } from "./extensions.js";
 import { TreeSchemasExampleChecker, treeSchemasCheckWrittenExamples } from "./example-check.js";
 import {
   treeSchemasCompileBatchInputs,
@@ -86,6 +87,7 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
     compiler.compileCatalogue();
     treeSchemasCompileDeclarations(compiler, context.raw.merged);
     treeSchemasCompileCodeParams(compiler, codeParams);
+    const extensionKeys = treeSchemasCompileExtensionKeys(compiler, context.raw.merged);
     const operationNames = treeNodesOperationNames(context.raw, context.conventions);
 
     treeSchemasCompileRoutes(compiler, nodes, operationNames);
@@ -107,6 +109,12 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
 
     treeSchemasWriteDirections(compiler, enums, relays);
     treeSchemasRefuseOutputUnknownKeys(compiler, reporter);
+    treeSchemasCheckExtensionValues(
+      compiler,
+      extensionKeys,
+      { merged: context.raw.merged, nodes },
+      reporter,
+    );
     treeSchemasCheckWrittenExamples(
       compiler.exampleChecks,
       new TreeSchemasExampleChecker(
@@ -121,6 +129,9 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
     for (const [id, schema] of compiler.schemas) draft.schemas[id] = structuredClone(schema);
 
     for (const declared of enums) draft.enums[declared.id] = structuredClone(declared);
+
+    for (const declared of extensionKeys)
+      draft.extensionKeys[declared.id] = structuredClone(declared);
 
     return treeSchemasService({
       uses: compiler.uses,

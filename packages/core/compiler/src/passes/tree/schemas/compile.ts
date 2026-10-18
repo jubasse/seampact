@@ -12,6 +12,11 @@ import type { TreeSchemasReservation } from "./core.js";
 import { type TreeSchemasDerivedHost, treeSchemasDerivedProperties } from "./derived.js";
 import { treeSchemasEnumValues, treeSchemasReportEnumWithoutValues } from "./enums.js";
 import {
+  type TreeSchemasExtensionHolder,
+  treeSchemasExtensionSlot,
+  treeSchemasHasExtensions,
+} from "./extensions.js";
+import {
   type TreeSchemasRaw,
   type TreeSchemasRawObject,
   type TreeSchemasReporter,
@@ -79,8 +84,8 @@ interface DeclaredTarget {
   keysFrom: string | undefined;
 }
 
-/** What a written value is: an entry of `examples` or a `default`; both are parsed like an example. */
-export type TreeSchemasWrittenValue = "example" | "default";
+/** What a written value is: an entry of `examples`, a `default` or an extension value; each is parsed like an example. */
+export type TreeSchemasWrittenValue = "example" | "default" | "extension";
 
 /**
  * A value written in the run, an example or a default, parsed against its use once every schema and enum is
@@ -291,6 +296,8 @@ export class TreeSchemasCompiler {
   readonly positionDirections = new Map<string, readonly IrWriter.Direction[]>();
   /** Every written example, checked once the catalogues are complete. */
   readonly exampleChecks: TreeSchemasExampleCheck[] = [];
+  /** Every schema or property mapping that writes extension values, by pointer. */
+  readonly extensionHolders = new Map<string, TreeSchemasExtensionHolder>();
   /** The pointer of every `unknownKeys` written on a use, checked against its directions. */
   readonly writtenUnknownKeys: string[] = [];
   /** The pointers of the uses that carry a declaration's `unknownKeys`, by the pointer of that `unknownKeys`. */
@@ -530,6 +537,7 @@ export class TreeSchemasCompiler {
     if (!this.checkMarks(value, shape, position)) return undefined;
 
     if (!this.checkAnnotations(value, shape, position)) return undefined;
+    this.recordExtensionHolder(value, shape, position);
 
     const compiled = this.compileShape(value, shape, position);
 
@@ -710,6 +718,20 @@ export class TreeSchemasCompiler {
     }
 
     return misplaced.length === 0;
+  }
+
+  // A property's mapping extends the property; one that writes a named schema extends it, any other nothing.
+  private recordExtensionHolder(
+    value: TreeSchemasRawObject,
+    shape: Shape,
+    { pointer, place }: TreeSchemasPosition,
+  ): void {
+    if (!treeSchemasHasExtensions(value)) return;
+    let extended: IrWriter.ExtensionPlace | undefined;
+
+    if (place === "property") extended = "property";
+    else if (SCHEMA_WRITING_SHAPES.has(shape)) extended = "schema";
+    this.extensionHolders.set(pointer, { pointer, value, place: extended });
   }
 
   // ADR 0003 sections 2, 6 and 10: where each mark may sit.
@@ -1079,7 +1101,8 @@ export class TreeSchemasCompiler {
       directions: [],
       examples: examples ?? [],
       docs: treeSchemasDocs(value),
-      extensions: {},
+      extensions:
+        value === undefined || position.place === "property" ? {} : treeSchemasExtensionSlot(value),
       origin: this.reporter.origin(position.pointer),
       ...(deprecated ? { deprecated } : {}),
     });
@@ -1269,7 +1292,7 @@ export class TreeSchemasCompiler {
       ...(codeName === undefined ? {} : { codeName }),
       ...(examples === undefined ? {} : { examples }),
       docs: treeSchemasDocs(field),
-      extensions: {},
+      extensions: treeSchemasIsObject(field) ? treeSchemasExtensionSlot(field) : {},
       origin: this.reporter.origin(pointer),
     };
   }

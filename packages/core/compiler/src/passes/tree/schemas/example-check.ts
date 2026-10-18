@@ -464,11 +464,13 @@ function boundOf(literal: string | undefined): TreeSchemasDecimal | undefined {
 const WRITTEN_RULE: Readonly<Record<TreeSchemasWrittenValue, string>> = {
   example: "example-value",
   default: "default-value",
+  extension: "extension-value",
 };
 
 const WRITTEN_FIX: Readonly<Record<TreeSchemasWrittenValue, string>> = {
   example: "correct the example, or the schema it is parsed against",
   default: "correct the default, or the schema it is parsed against",
+  extension: "correct the value, or the schema its extension key declares",
 };
 
 /**
