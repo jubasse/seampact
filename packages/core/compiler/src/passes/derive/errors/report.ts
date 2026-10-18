@@ -16,7 +16,8 @@ export type DeriveErrorsRule =
   | "error-example"
   | "nature-base"
   | "role-code"
-  | "role-datum";
+  | "role-datum"
+  | "role-param";
 
 export interface DeriveErrorsRelated {
   /** A pointer of the merged raw tree. */

@@ -155,21 +155,88 @@ errors:
     ]);
   });
 
-  test("a template reaches a datum as a slot, a member slot, a text slot or a name slot", () => {
+  test("a template reaches a datum as a slot, a member slot or a text slot filling a param", () => {
     for (const params of [
       "{ detail: $key }",
       "{ detail: [$key.text] }",
       `{ detail: 'key \${key}' }`,
-      "{ $key: yes_please }",
     ]) {
       const run = runInline(`conventions:
   errors: { derived: { sortKeyForbidden: { code: shop.sort_denied, params: ${params} } } }
 errors:
-  shop.sort_denied: { status: 403 }
+  shop.sort_denied: { status: 403, params: { detail: { type: string } } }
 `);
 
       expect(run.diagnostics).toEqual([]);
     }
+  });
+
+  test("a datum written to a key that is no param of the code is refused at the key", () => {
+    for (const declaration of [
+      "{ status: 403 }",
+      "{ status: 403, params: { detail: { type: string } } }",
+    ]) {
+      const run = runInline(`conventions:
+  errors: { derived: { sortKeyForbidden: { code: shop.sort_denied, params: { other: $key } } } }
+errors:
+  shop.sort_denied: ${declaration}
+`);
+
+      expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+        {
+          rule: "seampact/derive/role-param",
+          pointer: "/conventions/errors/derived/sortKeyForbidden/params/other",
+          related: [],
+        },
+        {
+          rule: "seampact/derive/role-datum",
+          pointer: "/conventions/errors/derived/sortKeyForbidden",
+          related: [],
+        },
+      ]);
+    }
+  });
+
+  test("a literal dollar key names no param", () => {
+    const run = runInline(`conventions:
+  errors: { derived: { sortKeyForbidden: { code: shop.sort_denied, params: { $$key: $key } } } }
+errors:
+  shop.sort_denied: { status: 403, params: { key: { type: string } } }
+`);
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/role-param",
+        pointer: "/conventions/errors/derived/sortKeyForbidden/params/$$key",
+        related: [],
+      },
+      {
+        rule: "seampact/derive/role-datum",
+        pointer: "/conventions/errors/derived/sortKeyForbidden",
+        related: [],
+      },
+    ]);
+  });
+
+  test("a params template that is no object is refused at params", () => {
+    const run = runInline(`conventions:
+  errors: { derived: { sortKeyForbidden: { code: shop.sort_denied, params: $key } } }
+errors:
+  shop.sort_denied: { status: 403, params: { key: { type: string } } }
+`);
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/role-param",
+        pointer: "/conventions/errors/derived/sortKeyForbidden/params",
+        related: [],
+      },
+      {
+        rule: "seampact/derive/role-datum",
+        pointer: "/conventions/errors/derived/sortKeyForbidden",
+        related: [],
+      },
+    ]);
   });
 
   test("rateLimited's delay is required once conventions.rateLimit names it", () => {
@@ -199,6 +266,32 @@ errors:
       {
         rule: "seampact/derive/role-datum",
         pointer: "/errors/api.sort_key_forbidden",
+        related: [],
+      },
+    ]);
+  });
+
+  test("a redeclared default code also bound on a node by name is reported once, at the node binding", () => {
+    const run = deriveErrorsRunContract(
+      deriveErrorsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }
+errors:
+  api.sort_key_forbidden: { status: 403, params: { detail: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks role bindings only. }
+    errorRoles: { sortKeyForbidden: api.sort_key_forbidden }
+    routes:
+      ping: { method: get }
+`,
+      }),
+    );
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/role-datum",
+        pointer: "/surfaces/app/errorRoles/sortKeyForbidden",
         related: [],
       },
     ]);

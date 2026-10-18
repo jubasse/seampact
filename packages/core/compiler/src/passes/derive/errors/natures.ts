@@ -1,5 +1,6 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { type PassContext, pipelinePointerBelow } from "../../../pipeline/seam.js";
+import { quote } from "../../../validate/diagnostics.js";
 import {
   deriveErrorsDocs,
   deriveErrorsEntries,
@@ -38,8 +39,8 @@ export function deriveErrorsNatures(
     if (deriveErrorsIsBaseNature(id)) {
       reporter.error({
         rule: "nature-base",
-        message: `nature '${id}' is named like a base nature; the base natures are ${ALLOWED_BASES}`,
-        fix: `rename the nature, or use the base nature '${id}' directly on the error`,
+        message: `nature ${quote(id)} is named like a base nature; the base natures are ${ALLOWED_BASES}`,
+        fix: `rename the nature, or use the base nature ${quote(id)} directly on the error`,
         pointer,
       });
       continue;

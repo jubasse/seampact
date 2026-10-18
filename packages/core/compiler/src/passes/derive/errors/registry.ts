@@ -8,6 +8,7 @@ import {
   pipelinePointerBelow,
   pipelineTreeNodes,
 } from "../../../pipeline/seam.js";
+import { quote } from "../../../validate/diagnostics.js";
 import { deriveErrorsIsBaseNature } from "./natures.js";
 import {
   type DeriveErrorsRawObject,
@@ -36,7 +37,7 @@ export interface DeriveErrorsRegistered {
 export type DeriveErrorsRegistry = ReadonlyMap<IrWriter.ErrorCode, DeriveErrorsRegistered>;
 
 /** What the registry is built from besides the raw tree. */
-export interface RegistrySources {
+export interface DeriveErrorsRegistrySources {
   readonly context: DeriveErrorsContext;
   readonly reporter: DeriveErrorsReporter;
   readonly natures: ReadonlyMap<IrWriter.NatureId, IrWriter.NatureDecl>;
@@ -126,7 +127,7 @@ function errorPattern(
   } catch (error) {
     reporter.error({
       rule: "error-pattern",
-      message: `conventions.errors.pattern '${written}' is no regular expression: ${String(error)}`,
+      message: `conventions.errors.pattern ${quote(written)} is no regular expression: ${quote(String(error))}`,
       fix: "write a regular expression every error code must match",
       pointer: ERROR_PATTERN_POINTER,
     });
@@ -144,7 +145,7 @@ function checkPattern(
 
   reporter.error({
     rule: "error-pattern",
-    message: `error code '${site.code}' does not match conventions.errors.pattern '${pattern.source}'`,
+    message: `error code ${quote(site.code)} does not match conventions.errors.pattern ${quote(pattern.source)}`,
     fix: "rename the code to match the pattern, or change the pattern",
     pointer: site.pointer,
     related: [{ pointer: ERROR_PATTERN_POINTER, message: "the pattern is set here" }],
@@ -176,7 +177,7 @@ function natureOf(
 
   reporter.error({
     rule: "error-nature",
-    message: `error '${site.code}' has nature '${written}', which is neither a base nature nor a declared nature; the allowed values are ${allowed}`,
+    message: `error ${quote(site.code)} has nature ${quote(written)}, which is neither a base nature nor a declared nature; the allowed values are ${allowed}`,
     fix: "use a base nature or declare the nature in 'natures'",
     pointer: pipelinePointerBelow(site.pointer, "nature"),
   });
@@ -221,7 +222,7 @@ function checkExample(
   if (params === undefined) {
     reporter.error({
       rule: "error-example",
-      message: `error '${site.code}' has an example but no params for it to show`,
+      message: `error ${quote(site.code)} has an example but no params for it to show`,
       fix: "declare the params, or remove the example",
       pointer,
     });
@@ -233,13 +234,13 @@ function checkExample(
   for (const issue of context.treeSchemas.checkExample(example, { kind: "ref", schema: params }))
     reporter.error({
       rule: "error-example",
-      message: `the example of error '${site.code}' does not fit its params: ${issue.message}`,
+      message: `the example of error ${quote(site.code)} does not fit its params: ${issue.message}`,
       fix: "correct the example to fit the params",
       pointer: `${pointer}${issue.pointer}`,
     });
 }
 
-function declarationOf(site: ErrorSite, sources: RegistrySources): IrWriter.ErrorDecl {
+function declarationOf(site: ErrorSite, sources: DeriveErrorsRegistrySources): IrWriter.ErrorDecl {
   const { context, reporter, natures } = sources;
   const status = deriveErrorsMember(site.value, "status");
 
@@ -294,8 +295,8 @@ function checkAttachments(
   const unknown = (code: string, pointer: string): void =>
     reporter.error({
       rule: "error-unknown",
-      message: `error code '${code}' is attached here, but no layer or node declares it and it is no default code`,
-      fix: `declare '${code}' with a status in 'errors', or attach a declared code`,
+      message: `error code ${quote(code)} is attached here, but no layer or node declares it and it is no default code`,
+      fix: `declare ${quote(code)} with a status in 'errors', or attach a declared code`,
       pointer,
     });
 
@@ -312,7 +313,7 @@ function checkAttachments(
 }
 
 /** The api's error registry, every default code included; each problem reported. */
-export function deriveErrorsRegistry(sources: RegistrySources): DeriveErrorsRegistry {
+export function deriveErrorsRegistry(sources: DeriveErrorsRegistrySources): DeriveErrorsRegistry {
   const { context, reporter } = sources;
   const registry = new Map<IrWriter.ErrorCode, DeriveErrorsRegistered>();
   const firstSites = new Map<IrWriter.ErrorCode, ErrorSite>();
@@ -336,10 +337,10 @@ export function deriveErrorsRegistry(sources: RegistrySources): DeriveErrorsRegi
 
     reporter.error({
       rule: "error-redefined",
-      message: `error code '${site.code}' is declared again with a different definition`,
+      message: `error code ${quote(site.code)} is declared again with a different definition`,
       fix: `attach the code with {} or { example } here, or give one of the two declarations another code`,
       pointer: site.pointer,
-      related: [{ pointer: first.pointer, message: `'${site.code}' is first declared here` }],
+      related: [{ pointer: first.pointer, message: `${quote(site.code)} is first declared here` }],
     });
   }
 
