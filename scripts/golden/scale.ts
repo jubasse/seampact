@@ -175,7 +175,7 @@ api.schema_invalid:
 api.rate_limited:
   status: 429
   nature: unavailable
-  params: { retryAfterMs: { type: integer, minimum: 0 } }
+  params: { retryAfterMs: { type: integer, minimum: 0, maximum: 9007199254740991 } }
   example: { retryAfterMs: 1500 }
 ${blocks.join("")}`;
 }
