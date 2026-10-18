@@ -12,7 +12,7 @@ import {
   deriveWireAddParam,
   deriveWireAddSuccessHeader,
 } from "./params.js";
-import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
+import { type DeriveWireRoute, type DeriveWireScope, deriveWireOriginAt } from "./routes.js";
 
 // The idempotency key (`idempotency.write`, A34, ADR 0002 section 13, ADR 0006 section 5). Opt-in: an unset
 // `conventions.idempotency` derives no key. The key reaches a non-safe operation whose method `methods` lists and
@@ -274,12 +274,7 @@ function stringList(reading: ConventionReading): string[] {
 // The pointer of `conventions.idempotency` as written: every member is written in one layer's mapping or another,
 // and the methods default carries no origin, so the origin is read at the object itself.
 function conventionOrigin(scope: DeriveWireScope): IrWriter.Origin {
-  const origin = scope.context.origin("/conventions/idempotency");
-
-  if (origin === undefined)
-    throw new Error("conventions.idempotency is set but has no origin in the side table");
-
-  return origin;
+  return deriveWireOriginAt(scope, "/conventions/idempotency");
 }
 
 function reportIncomplete(

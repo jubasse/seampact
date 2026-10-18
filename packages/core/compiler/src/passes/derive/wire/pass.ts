@@ -1,5 +1,8 @@
 import type { DraftIR, PassContextOf, PassPart } from "../../../pipeline/seam.js";
+import { deriveWireBodyHeaders } from "./bodies.js";
 import { deriveWireBodyLimit } from "./body-limit.js";
+import { deriveWireCache } from "./cache.js";
+import { deriveWireConcurrency } from "./concurrency.js";
 import { deriveWireCredentials } from "./credentials.js";
 import { deriveWireHeaderTag } from "./header-tag.js";
 import {
@@ -9,6 +12,8 @@ import {
   deriveWireIdempotencyConvention,
 } from "./idempotency.js";
 import { deriveWireIdentityHeaders } from "./identity-headers.js";
+import { deriveWireDeprecation, deriveWireMaturity } from "./lifecycle.js";
+import { deriveWirePaging } from "./paging.js";
 import { deriveWireReporter } from "./report.js";
 import { type DeriveWireScope, deriveWireRoutes } from "./routes.js";
 import { deriveWireUnknownKeys, deriveWireUnknownKeysPolicy } from "./unknown-keys.js";
@@ -39,6 +44,20 @@ export const deriveWirePass: PassPart<"derive.wire"> = {
     "operations[].responses",
     "operations[].input",
     "operations[].input.schema",
+    "operations[].concurrency.version",
+    "operations[].concurrency.field",
+    "pagings",
+    "operations[].paging.style",
+    "operations[].paging.maxLimit",
+    "operations[].paging.overLimit",
+    "operations[].paging.token",
+    "operations[].paging.origin",
+    "operations[].paging.sortKeys[].key",
+    "api",
+    "services",
+    "operations[].deprecated",
+    "operations[].upstream",
+    "operations[].maturity",
   ],
   writes: [
     "operations[].params.query",
@@ -48,6 +67,10 @@ export const deriveWirePass: PassPart<"derive.wire"> = {
     "operations[].input.schema.unknownKeys",
     "operations[].idempotency",
     "operations[].deadlineHeader",
+    "operations[].concurrency.derivedFrom",
+    "operations[].cache",
+    "operations[].responses",
+    "operations[].maturity",
   ],
   run: (draft, context) => {
     deriveWirePassRun(draft, context);
@@ -70,8 +93,14 @@ function deriveWirePassRun(draft: DraftIR, context: PassContextOf<"derive.wire">
     deriveWireUnknownKeys(route, unknownKeys);
     deriveWireCredentials(route, scope);
     deriveWireIdempotency(route, idempotency, exemptions, scope);
+    deriveWireConcurrency(route, scope);
     deriveWireIdentityHeaders(route, scope);
     deriveWireHeaderTag(route, scope);
+    deriveWireCache(route, scope);
+    deriveWirePaging(route, scope);
+    deriveWireDeprecation(route, scope);
+    deriveWireMaturity(route, scope);
+    deriveWireBodyHeaders(route, scope);
   }
 
   deriveWireCheckExemptions(idempotency, exemptions, scope);

@@ -29,11 +29,11 @@ export function deriveWireCredentials(route: DeriveWireRoute, scope: DeriveWireS
 
   if (access === undefined || access.kind === "public") return;
 
-  const schemes = access.schemes.map((id) => schemeOf(id, scope));
+  const schemes = access.schemes.map((id) => deriveWireSchemeOf(id, scope));
   const required = access.kind === "identity" && schemes.length === 1;
 
   for (const scheme of schemes) {
-    const place = credentialPlace(scheme);
+    const place = deriveWireCredentialPlace(scheme);
 
     if (place === undefined) continue;
 
@@ -83,7 +83,8 @@ function writeCsrfParam(
   );
 }
 
-function credentialPlace(
+/** Where a scheme's credential travels as a parameter: a header or a query value; a cookie is none. */
+export function deriveWireCredentialPlace(
   scheme: IrWriter.KnownScheme,
 ): { in: "header" | "query"; name: string } | undefined {
   switch (scheme.kind) {
@@ -106,7 +107,8 @@ function credentialPlace(
   }
 }
 
-function schemeOf(id: string, scope: DeriveWireScope): IrWriter.KnownScheme {
+/** A scheme of the draft by id; access.identity wrote every scheme an access names. */
+export function deriveWireSchemeOf(id: string, scope: DeriveWireScope): IrWriter.KnownScheme {
   const schemes = scope.draft.schemes;
   const scheme = Object.hasOwn(schemes, id) ? schemes[id] : undefined;
 

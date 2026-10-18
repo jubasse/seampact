@@ -1,4 +1,14 @@
 {
+  "health": {
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
+      }
+    }
+  },
   "listChannels": {
     "params": {
       "header": [
@@ -24,7 +34,105 @@
             ]
           }
         }
+      ],
+      "query": [
+        {
+          "name": "cursor",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "wire": {
+            "kind": "text",
+            "style": "form",
+            "explode": true,
+            "brackets": false
+          },
+          "derivedFrom": {
+            "derivation": "paging.params",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/conventions/paging/default"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/pagings/cursor"
+              }
+            ]
+          }
+        },
+        {
+          "name": "limit",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {
+              "minimum": "1",
+              "maximum": "100"
+            }
+          },
+          "required": false,
+          "wire": {
+            "kind": "number",
+            "style": "form",
+            "explode": true,
+            "brackets": false
+          },
+          "derivedFrom": {
+            "derivation": "paging.params",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/conventions/paging/default"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/pagings/cursor"
+              }
+            ]
+          }
+        }
       ]
+    },
+    "responses": [
+      {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Link",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
+      }
     }
   },
   "getChannel": {
@@ -53,6 +161,14 @@
           }
         }
       ]
+    },
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
+      }
     }
   },
   "listTasks": {
@@ -80,7 +196,136 @@
             ]
           }
         }
+      ],
+      "query": [
+        {
+          "name": "cursor",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "wire": {
+            "kind": "text",
+            "style": "form",
+            "explode": true,
+            "brackets": false
+          },
+          "derivedFrom": {
+            "derivation": "paging.params",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/pagings/cursor"
+              }
+            ]
+          }
+        },
+        {
+          "name": "limit",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": {
+              "minimum": "1",
+              "maximum": "50"
+            }
+          },
+          "required": false,
+          "wire": {
+            "kind": "number",
+            "style": "form",
+            "explode": true,
+            "brackets": false
+          },
+          "derivedFrom": {
+            "derivation": "paging.params",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/pagings/cursor"
+              }
+            ]
+          }
+        },
+        {
+          "name": "sort",
+          "type": {
+            "kind": "array",
+            "items": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            }
+          },
+          "required": false,
+          "wire": {
+            "kind": "list",
+            "style": "form",
+            "explode": false,
+            "brackets": false
+          },
+          "derivedFrom": {
+            "derivation": "paging.params",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/pagings/cursor"
+              }
+            ]
+          }
+        }
       ]
+    },
+    "responses": [
+      {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Link",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
+      }
     }
   },
   "createTask": {
@@ -192,6 +437,14 @@
           }
         ]
       }
+    },
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
+      }
     }
   },
   "getTasksBatch": {
@@ -221,7 +474,15 @@
         }
       ]
     },
-    "bodyLimitBytes": 2097152
+    "bodyLimitBytes": 2097152,
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
+      }
+    }
   },
   "searchTasks": {
     "params": {
@@ -280,6 +541,14 @@
         "layer": "api",
         "pointer": "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/idempotency"
       }
+    },
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
+      }
     }
   },
   "getTask": {
@@ -308,6 +577,14 @@
           }
         }
       ]
+    },
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
+      }
     }
   },
   "updateTask": {
@@ -418,6 +695,25 @@
             "pointer": "/conventions/idempotency"
           }
         ]
+      }
+    },
+    "concurrency": {
+      "derivedFrom": {
+        "derivation": "concurrency.version",
+        "from": [
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/concurrency"
+          }
+        ]
+      }
+    },
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
       }
     }
   },
@@ -530,6 +826,14 @@
           }
         ]
       }
+    },
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
+      }
     }
   },
   "archiveTask": {
@@ -640,6 +944,29 @@
             "pointer": "/conventions/idempotency"
           }
         ]
+      }
+    },
+    "concurrency": {
+      "derivedFrom": {
+        "derivation": "concurrency.version",
+        "from": [
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/concurrency"
+          },
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/concurrency"
+          }
+        ]
+      }
+    },
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
       }
     }
   },
@@ -752,6 +1079,14 @@
           }
         ]
       }
+    },
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
+      }
     }
   },
   "getPreferences": {
@@ -778,8 +1113,128 @@
               }
             ]
           }
+        },
+        {
+          "name": "If-None-Match",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "cache.etag",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/me/routes/preferences/ops/get/cache"
+              }
+            ]
+          }
         }
       ]
+    },
+    "responses": [
+      {
+        "status": 200,
+        "headers": [
+          {
+            "name": "ETag",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "cache.etag",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/me/routes/preferences/ops/get/cache"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "status": 304,
+        "shape": "empty",
+        "headers": [
+          {
+            "name": "ETag",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "required": true,
+            "derivedFrom": {
+              "derivation": "cache.etag",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/me/routes/preferences/ops/get/cache"
+                }
+              ]
+            }
+          }
+        ],
+        "derivedFrom": {
+          "derivation": "cache.etag",
+          "from": [
+            {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/me/routes/preferences/ops/get/cache"
+            }
+          ]
+        }
+      }
+    ],
+    "cache": {
+      "family": "minute",
+      "directives": {
+        "maxAgeMs": 60000,
+        "immutable": false,
+        "noCache": false,
+        "mustRevalidate": false
+      },
+      "anonymous": "private",
+      "vary": ["Authorization", "Cookie"],
+      "etag": true,
+      "perCallerKind": [
+        {
+          "caller": "identified",
+          "cacheControl": "private, max-age=60"
+        }
+      ],
+      "noStore": false,
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/me/routes/preferences/ops/get/cache"
+      },
+      "derivedFrom": {
+        "derivation": "cache.headers",
+        "from": [
+          {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/me/routes/preferences/ops/get/cache"
+          },
+          {
+            "layer": "shared",
+            "pointer": "/conventions/cache/families/minute"
+          }
+        ]
+      }
+    },
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
+      }
     }
   },
   "updatePreferences": {
@@ -891,6 +1346,14 @@
           }
         ]
       }
+    },
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
+      }
     }
   },
   "getDraft": {
@@ -919,6 +1382,14 @@
           }
         }
       ]
+    },
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
+      }
     }
   },
   "deleteDraft": {
@@ -1029,6 +1500,14 @@
           }
         ]
       }
+    },
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
+      }
     }
   },
   "payments": {
@@ -1058,6 +1537,14 @@
         }
       ]
     },
-    "bodyLimitBytes": 1048576
+    "bodyLimitBytes": 1048576,
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
+      }
+    }
   }
 }

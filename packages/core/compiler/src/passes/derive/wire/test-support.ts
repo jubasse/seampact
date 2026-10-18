@@ -231,9 +231,9 @@ const isDeriveWireElement = (element: { derivedFrom?: IrWriter.DerivedFrom }): b
   derivationRowOf(element.derivedFrom.derivation)?.wire === "derive.wire";
 
 /**
- * The members derive.wire wrote, by operation id: its derived parameters and response headers (by status), the
- * input's body limit and derived unknown-key policy, `idempotency` and `deadlineHeader`. An operation with none is
- * left out.
+ * The members derive.wire wrote, by operation id: its derived parameters, responses and response headers (by
+ * status), the input's body limit and derived unknown-key policy, `idempotency`, `deadlineHeader`,
+ * `concurrency.derivedFrom`, `cache` and a derived `maturity`. An operation with none is left out.
  */
 export function deriveWireMembers(draft: DraftIR): Record<string, Record<string, unknown>> {
   const members: Record<string, Record<string, unknown>> = {};
@@ -242,12 +242,14 @@ export function deriveWireMembers(draft: DraftIR): Record<string, Record<string,
     const written: Record<string, unknown> = {};
     const header = operation.params?.header.filter(isDeriveWireElement) ?? [];
     const query = operation.params?.query.filter(isDeriveWireElement) ?? [];
-    const responses = (operation.responses ?? [])
-      .map((response) => ({
-        status: response.status,
-        headers: response.headers.filter(isDeriveWireElement),
-      }))
-      .filter((response) => response.headers.length > 0);
+    // A derived response is listed whole, a declared one by its derived headers.
+    const responses = (operation.responses ?? []).flatMap((response) => {
+      if (isDeriveWireElement(response)) return [response];
+
+      const headers = response.headers.filter(isDeriveWireElement);
+
+      return headers.length > 0 ? [{ status: response.status, headers }] : [];
+    });
     const input = operation.input;
     const unknownKeys = input?.schema.kind === "ref" ? input.schema.unknownKeys : undefined;
 
@@ -267,6 +269,14 @@ export function deriveWireMembers(draft: DraftIR): Record<string, Record<string,
     if (operation.idempotency !== undefined) written.idempotency = operation.idempotency;
 
     if (operation.deadlineHeader !== undefined) written.deadlineHeader = operation.deadlineHeader;
+
+    if (operation.concurrency?.derivedFrom !== undefined)
+      written.concurrency = { derivedFrom: operation.concurrency.derivedFrom };
+
+    if (operation.cache !== undefined) written.cache = operation.cache;
+
+    if (operation.maturity !== undefined && operation.maturity.source !== "stated")
+      written.maturity = operation.maturity;
 
     if (Object.keys(written).length > 0 && operation.id !== undefined)
       members[operation.id] = written;

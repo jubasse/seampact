@@ -70,6 +70,14 @@
         }
       ]
     },
-    "deadlineHeader": "X-Deadline"
+    "deadlineHeader": "X-Deadline",
+    "maturity": {
+      "level": "provisional",
+      "source": "api",
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/maturity"
+      }
+    }
   }
 }

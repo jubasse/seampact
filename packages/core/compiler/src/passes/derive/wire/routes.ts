@@ -1,3 +1,4 @@
+import type { IrWriter } from "@seampact/spec/ir";
 import {
   type DraftIR,
   type DraftOperation,
@@ -44,4 +45,13 @@ export function deriveWireRoutes(draft: DraftIR, context: DeriveWireContext): De
 
     return { id, node, operation };
   });
+}
+
+/** The origin of a pointer of the merged raw tree the half read; one without an origin is an internal error. */
+export function deriveWireOriginAt(scope: DeriveWireScope, pointer: string): IrWriter.Origin {
+  const origin = scope.context.origin(pointer);
+
+  if (origin === undefined) throw new Error(`${pointer} has no origin in the side table`);
+
+  return origin;
 }
