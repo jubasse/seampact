@@ -37,7 +37,7 @@ function firstPropertyOf(schema: IrWriter.ObjectSchema): IrWriter.Property {
 }
 
 // A layer's `api.schema_invalid`, reached from the first operation, whose params replace the core ones and name the
-// core issue schema, as LD-60 lets them (ADR 0004 section 13, "Core declarations").
+// core issue schema, as ADR 0004 section 13 ("Core declarations") lets them.
 function withReplacedSchemaInvalidParams(draft: DraftIR, paramsReferenceIssue: boolean): DraftIR {
   const template = schemaOf(draft, "ApiForbiddenParams");
   const property = firstPropertyOf(template);

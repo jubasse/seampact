@@ -1,7 +1,7 @@
 import type { Origin } from "@seampact/spec/ir";
 import { canonicalId } from "@seampact/spec/naming";
 import type { Diagnostic, RelatedLocation } from "../diagnostics/diagnostic.js";
-import type { DraftIR, DraftOperation } from "../pipeline/seam.js";
+import { type DraftIR, type DraftOperation, pipelineCopy } from "../pipeline/seam.js";
 import { isDiagnosticOrigin } from "../workspace/order.js";
 
 // The id collision check of finalize (ADR 0004 section 9, ADR 0006 section 3): every name that becomes a key of
@@ -73,13 +73,13 @@ function collisionDiagnostic(
     );
   const related: RelatedLocation[] =
     second.origin !== undefined && isDiagnosticOrigin(second.origin)
-      ? [{ origin: second.origin, message: `${second.what} is declared here` }]
+      ? [{ origin: pipelineCopy(second.origin), message: `${second.what} is declared here` }]
       : [];
 
   return {
     severity: "error",
     rule: FINALIZE_ID_COLLISION_RULE,
-    origin: first.origin,
+    origin: pipelineCopy(first.origin),
     related,
     ...text(first, second),
   };
