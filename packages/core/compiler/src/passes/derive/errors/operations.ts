@@ -26,7 +26,7 @@ import {
 } from "./triggers.js";
 
 // Per operation `errors` (ADR 0006 sections 5 and 6, IR section 7): the attached codes and the derived ones, each code
-// once (LD-82 DE-3 as decided by the lead: one element per code, `derivedFrom` the first derivation in table order
+// once (one element per code, `derivedFrom` the first derivation in table order
 // with every trigger's origins, then the origins of the bindings that chose the code; an attached code keeps the
 // origin of the node that attached it). A role trigger answers the code its nearest binding names, written with the
 // role and the binding's params template (`roles`); a bucket rule's 429 carries the retry header of
