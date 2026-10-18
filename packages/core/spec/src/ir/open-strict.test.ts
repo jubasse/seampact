@@ -173,6 +173,39 @@ test("fixed unknown cases", () => {
   });
 });
 
+test("an unknown FieldRight.always value is refused", () => {
+  const pointer = "/operations/2/fieldRights/2/always";
+  const ir = replaceAt(sample("every-member.ir.json"), pointer, "hidden");
+
+  expect(validateIr(ir, "open")).toMatchObject({
+    valid: false,
+    unknownValues: [{ pointer, value: "hidden", known: ["absent"], mustAct: true }],
+  });
+});
+
+test("an unknown value source is refused", () => {
+  const pointer = "/operations/2/fieldRights/1/subject/source/in";
+  const ir = replaceAt(sample("every-member.ir.json"), pointer, "cookie");
+
+  expect(validateIr(ir, "open")).toMatchObject({
+    valid: false,
+    unknownValues: [{ pointer, value: "cookie", mustAct: true }],
+  });
+});
+
+test.each([
+  ["/api/wire/int64", ["string", "number"]],
+  ["/api/wire/outputEnums", ["enum", "open"]],
+  ["/api/wire/urls", ["relative", "absolute"]],
+])("an unknown api wire value is kept and named at %s", (pointer, known) => {
+  const ir = replaceAt(sample("every-member.ir.json"), pointer, UNKNOWN_VALUE);
+
+  expect(validateIr(ir, "open")).toEqual({
+    ...VALID_REPORT,
+    unknownValues: [{ pointer, value: UNKNOWN_VALUE, known, mustAct: false }],
+  });
+});
+
 test("an unknown signature key kind makes the IR invalid for every reader", () => {
   // SchemeKey sits inside the must-act SignatureVerify: a reader that cannot read the key cannot verify either.
   const ir = mutateAt(
