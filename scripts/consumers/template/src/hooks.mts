@@ -116,3 +116,22 @@ function userIdOf(principal: unknown): string | undefined {
 
   return typeof principal.userId === "string" ? principal.userId : undefined;
 }
+
+/** The `tasks` api's hooks, as every overlay registers them; the registration checks them against its hook types. */
+export function tasksHooks() {
+  return {
+    authenticate: { user: userAuthenticateHook, stripe: stripeAuthenticateHook },
+    deciders: [{ names: "all" as const, decider: throttlingDeciderHook }],
+    scopeResolvers: { channel: scopeResolverHook },
+    idempotencyStore: createIdempotencyStore(),
+  };
+}
+
+/** The `tasksService` api's hooks, as every overlay registers them. */
+export function tasksServiceHooks() {
+  return {
+    authenticate: { service: serviceAuthenticateHook },
+    deciders: [{ names: "all" as const, decider: allowingDeciderHook }],
+    scopeResolvers: {},
+  };
+}

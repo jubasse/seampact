@@ -1,7 +1,7 @@
 // The Express-platform glue shared by the targets that run on Express (NestJS on Express, Express): the request
 // target as Express routes it, the JSON parser's `verify` function that records the parsed byte count and keeps the
-// raw body of signed routes, and a body parser's error mapped to its contract role. Copied into the generated tree
-// as is.
+// raw body of signed routes, the empty body read as no body, and a body parser's error mapped to its contract role.
+// Copied into the generated tree as is.
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   ContractError,
@@ -17,9 +17,21 @@ import {
   type ContractRoute,
   matchContractRoute,
 } from "./contract-route.js";
+import type { ReportedRequest } from "./error-reply.js";
 
 const PAYLOAD_TOO_LARGE = 413;
-const DEFAULT_METHOD = "GET";
+const FIRST_CLIENT_ERROR_STATUS = 400;
+const FIRST_SERVER_ERROR_STATUS = 500;
+// The refusals of `body-parser` a contract route answers in the api's format, by the error's `type`.
+const BODY_PARSER_REFUSAL_TYPES: readonly string[] = [
+  "entity.parse.failed",
+  "entity.too.large",
+  "encoding.unsupported",
+  "charset.unsupported",
+];
+
+/** The method a request without one is reported under. */
+export const DEFAULT_METHOD = "GET";
 
 /** The request as Express hands it on. */
 export interface ExpressRequest extends IncomingMessage {
@@ -48,6 +60,11 @@ export function requestTarget(request: ExpressRequest): { path: string; rawQuery
 
 export function pathnameOf(request: ExpressRequest): string {
   return requestTarget(request).path;
+}
+
+/** The method and raw path a reply or a report names. */
+export function reportedRequest(request: ExpressRequest): ReportedRequest {
+  return { method: request.method ?? DEFAULT_METHOD, path: pathnameOf(request) };
 }
 
 /** The request as the shared checks read it. */
@@ -95,6 +112,23 @@ export function expressBodyGlue(api: ContractApi): ExpressBodyGlue {
   return { keepRawBody, recordedBodyBytes };
 }
 
+/**
+ * Zero body bytes is no body, on every Node target: clears the `{}` that `body-parser` sets for an empty or absent
+ * body, so a required body answers 400 `required`. `recordedBytes` is the count `keepRawBody` recorded, if any.
+ */
+export function clearEmptyBody(request: ExpressRequest, recordedBytes: number | undefined): void {
+  if (recordedBytes === 0 || (recordedBytes === undefined && !announcesBody(request))) {
+    request.body = undefined;
+  }
+}
+
+function announcesBody(request: IncomingMessage): boolean {
+  return (
+    request.headers["transfer-encoding"] !== undefined ||
+    Number(request.headers["content-length"] ?? 0) > 0
+  );
+}
+
 /** The HTTP status a body parser's error carries, as `body-parser` and `http-errors` set it. */
 export function parserErrorStatus(exception: unknown): number | undefined {
   const status: unknown =
@@ -103,6 +137,44 @@ export function parserErrorStatus(exception: unknown): number | undefined {
       : undefined;
 
   return typeof status === "number" ? status : undefined;
+}
+
+/** A `body-parser` refusal mapped to its contract role; undefined for any other error. */
+export function bodyParserRefusal(route: ContractRoute, error: unknown): ContractError | undefined {
+  const type: unknown =
+    isPlainObject(error) || error instanceof Error ? Reflect.get(error, "type") : undefined;
+  const status = parserErrorStatus(error);
+
+  if (
+    typeof type !== "string" ||
+    !BODY_PARSER_REFUSAL_TYPES.includes(type) ||
+    status === undefined
+  ) {
+    return undefined;
+  }
+
+  return bodyParserError(route, status, error);
+}
+
+/**
+ * Any client error of the route's own body parser (a corrupt compressed body, a length mismatch, an aborted
+ * request) mapped by its status; undefined for any other error.
+ */
+export function ownBodyParserRefusal(
+  route: ContractRoute,
+  error: unknown,
+): ContractError | undefined {
+  const status = parserErrorStatus(error);
+
+  if (
+    status === undefined ||
+    status < FIRST_CLIENT_ERROR_STATUS ||
+    status >= FIRST_SERVER_ERROR_STATUS
+  ) {
+    return undefined;
+  }
+
+  return bodyParserError(route, status, error);
 }
 
 /** A body parser's refusal on a contract route, as its contract role or the code of its status. */

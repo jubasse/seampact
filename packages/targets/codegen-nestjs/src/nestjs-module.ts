@@ -1,5 +1,9 @@
 import { ExportNames, operationLocation, type Refusal } from "@seampact/codegen-core";
-import { type NodeServerOptions, operationIdentifier } from "@seampact/codegen-core/node-server";
+import {
+  largestBodyLimit,
+  type NodeServerOptions,
+  operationIdentifier,
+} from "@seampact/codegen-core/node-server";
 import type { ContractIR } from "@seampact/spec/ir";
 
 // The `nestjs` module of one api: the boundary built from its route table, the fixed exports of ADR 0016
@@ -25,7 +29,6 @@ const FIXED_EXPORTS = [
 const LOCAL_NAMES = ["boundary", "createNestBoundary", "CONTRACT_API", "SeampactHooks"] as const;
 
 const RESERVED_SUFFIX = "_";
-const NO_BODY_LIMIT = 0;
 
 export function nestjsModuleSource(
   ir: ContractIR,
@@ -42,10 +45,6 @@ export function nestjsModuleSource(
 
     return `/** The route of '${operation.id}'; \`${name}.input()\` is its validated input. */\nexport const ${name} = boundary.operation(${JSON.stringify(operation.id)});`;
   });
-  const largestBodyLimit = Math.max(
-    NO_BODY_LIMIT,
-    ...ir.operations.map((operation) => operation.input?.bodyLimitBytes ?? NO_BODY_LIMIT),
-  );
 
   return [
     'import { createNestBoundary } from "./nestjs-boundary.js";',
@@ -72,7 +71,7 @@ export function nestjsModuleSource(
     "/** A global filter for refusals raised before routing. */",
     "export const preRoutingFilter = boundary.preRoutingFilter;",
     "/** The largest route body limit; the app's JSON parser limit must be at least this. */",
-    `export const LARGEST_BODY_LIMIT = ${largestBodyLimit};`,
+    `export const LARGEST_BODY_LIMIT = ${largestBodyLimit(ir)};`,
     "",
     decorators.join("\n\n"),
     "",

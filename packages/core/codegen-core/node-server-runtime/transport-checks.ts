@@ -9,7 +9,9 @@ import {
 import { type ContractRequest, type ContractRoute, headerValue } from "./contract-route.js";
 
 const UNSUPPORTED_MEDIA_ROLE = "unsupportedMediaType";
-const IDENTITY_ENCODING = "identity";
+
+/** The content coding of a body sent as is. */
+export const IDENTITY_ENCODING = "identity";
 const JSON_SUFFIX = "+json";
 
 /** The setup fixes a framework placement names in its logs; the shared checks know no framework. */
@@ -33,6 +35,14 @@ export function transportRefusal(
   request: ContractRequest,
   readBody: ReadBody,
 ): ContractError | undefined {
+  return mediaTypeRefusal(route, request) ?? bodySizeRefusal(route, request, readBody);
+}
+
+/** Step 1's media-type check alone, for a placement that runs it before the body is read. */
+export function mediaTypeRefusal(
+  route: ContractRoute,
+  request: ContractRequest,
+): ContractError | undefined {
   const input = route.input;
 
   if (input === undefined || !hasBody(request)) return undefined;
@@ -42,6 +52,19 @@ export function transportRefusal(
   if (contentType === undefined || !isMediaOf(contentType, input.media)) {
     return roleError(route, UNSUPPORTED_MEDIA_ROLE);
   }
+
+  return undefined;
+}
+
+/** Step 1's body-limit check alone, once the platform's parser has read the body. */
+export function bodySizeRefusal(
+  route: ContractRoute,
+  request: ContractRequest,
+  readBody: ReadBody,
+): ContractError | undefined {
+  const input = route.input;
+
+  if (input === undefined || !hasBody(request)) return undefined;
 
   const size = bodySize(request, readBody);
 

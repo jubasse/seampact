@@ -11,6 +11,8 @@ export interface ParamRule {
   /** The name as the validator's input object keys it: as declared for path and query, lower case for headers. */
   readonly name: string;
   readonly decoding: WireDecoding;
+  /** On a path param with a `maxLength`: the longest percent-encoded form of a valid value. */
+  readonly encodedMaxLength?: number;
 }
 
 /** A Standard Schema v1 value, as the validators link provides it. */
@@ -249,6 +251,25 @@ export function matchContractRoute(
   return undefined;
 }
 
+/** The method's route serving a path, else the first route whose template the path matches, whatever its method. */
+export function matchContractPath(
+  api: ContractApi,
+  method: string,
+  path: string,
+): { readonly route: ContractRoute; readonly pathParams: Record<string, string> } | undefined {
+  const served = matchContractRoute(api, method, path);
+
+  if (served !== undefined) return served;
+
+  for (const route of api.routes) {
+    const pathParams = matchPath(route.path, path);
+
+    if (pathParams !== undefined) return { route, pathParams };
+  }
+
+  return undefined;
+}
+
 /** Whether a path matches any route's template, whatever the method. */
 export function matchesContractPath(api: ContractApi, path: string): boolean {
   return api.routes.some((route) => matchPath(route.path, path) !== undefined);
@@ -311,7 +332,7 @@ export function decodeRequestParams(
   for (const rule of route.params.path) {
     const raw = pathParams[rule.name];
 
-    if (raw !== undefined) path[rule.name] = decodeWireString(safeDecode(raw), rule.decoding);
+    if (raw !== undefined) path[rule.name] = decodeWireString(decodePathParam(raw), rule.decoding);
   }
 
   const query: Record<string, unknown> = {};
@@ -352,11 +373,11 @@ function decodeWireString(raw: string, decoding: WireDecoding): unknown {
   }
 }
 
-function safeDecode(raw: string): string {
+/** A path param percent-decoded; a malformed escape stays raw, so the validator reports the value (step 6). */
+export function decodePathParam(raw: string): string {
   try {
     return decodeURIComponent(raw);
   } catch {
-    // A malformed escape stays raw so the validator reports the value.
     return raw;
   }
 }

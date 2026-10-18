@@ -1,5 +1,4 @@
 import { beforeAll, describe, expect, test } from "vitest";
-import { target as nestjsTarget } from "./index.js";
 import {
   generateReferenceProject,
   projectDirectory,
@@ -7,14 +6,15 @@ import {
   readGoldenIr,
   referenceLinks,
   typeErrorsOf,
-} from "./reference-project.test-support.js";
+} from "@seampact/codegen-core/node-server/test-support";
+import { target as nestjsTarget } from "./index.js";
 
-const PROJECT = projectDirectory("reference-boundary");
+const PROJECT = projectDirectory(import.meta.url, "reference-boundary");
 
 let files: string[] = [];
 
 beforeAll(async () => {
-  files = await generateReferenceProject(PROJECT, { bodyValidation: true });
+  files = await generateReferenceProject(PROJECT, nestjsTarget, { bodyValidation: true });
 });
 
 describe("the generated reference boundary compiles", () => {

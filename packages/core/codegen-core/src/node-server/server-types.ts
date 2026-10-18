@@ -46,8 +46,8 @@ export function operationIdentifier(operation: Operation): string {
   return typeScriptIdentifier(deriveName(operation.name.segments, "operation"));
 }
 
-// Operations of a resource share its interface; one without a resource joins its surface's.
-function endpointsName(ir: ContractIR, operation: Operation): string {
+/** The handler interface of an operation: a resource's operations share one, one without a resource joins its surface's. */
+export function handlerInterfaceName(ir: ContractIR, operation: Operation): string {
   const owner =
     operation.resource?.type ??
     ir.api.surfaces[operation.surface]?.name.segments.join(" ") ??
@@ -87,7 +87,7 @@ export function handlersSource(
       return;
     }
 
-    const group = endpointsName(ir, operation);
+    const group = handlerInterfaceName(ir, operation);
     const members = groups.get(group) ?? [];
 
     if (members.length === 0) names.claim(group, below(location, "resource"), refusals);

@@ -33,10 +33,12 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
-    "prettier": "3.9.10"
+    "prettier": "3.9.10",
+    "typescript": "6.0.3"
   },
   "exports": {
     ".": "./src/index.ts",
-    "./node-server": "./src/node-server/index.ts"
+    "./node-server": "./src/node-server/index.ts",
+    "./node-server/test-support": "./src/node-server/test-support.ts"
   }
 }

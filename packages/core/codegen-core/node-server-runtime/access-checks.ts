@@ -24,6 +24,7 @@ import {
   type ContractApi,
   type ContractRequest,
   type ContractRoute,
+  decodePathParam,
   headerValue,
   headerValues,
   type SubjectEntry,
@@ -409,7 +410,7 @@ function sourceValue(
     case "path": {
       const raw = state.pathParams[source.name];
 
-      return raw === undefined ? undefined : decodeURIComponent(raw);
+      return raw === undefined ? undefined : decodePathParam(raw);
     }
 
     case "scope":

@@ -19,6 +19,7 @@ import {
 } from "./contract-error.js";
 import type { ContractApi, ContractRoute, ResponsesMode } from "./contract-route.js";
 import { settleIdempotency } from "./idempotency.js";
+import { IDENTITY_ENCODING } from "./transport-checks.js";
 
 /** The longest error body the check holds to read its code; a longer one is a violation. */
 export const MAX_CHECKED_ERROR_BODY_BYTES = 65536;
@@ -29,7 +30,6 @@ const VARY_HEADER = "vary";
 const CONTENT_LENGTH_HEADER = "content-length";
 // Headers that describe the body: the boundary replaces them, and keeps every other header the app set.
 const BODY_HEADERS = ["content-type", CONTENT_LENGTH_HEADER, "content-encoding", ETAG_HEADER];
-const IDENTITY_ENCODING = "identity";
 const DECODERS: Readonly<
   Record<string, (body: Buffer, options: { maxOutputLength: number }) => Buffer>
 > = { gzip: gunzipSync, deflate: inflateSync, br: brotliDecompressSync };
