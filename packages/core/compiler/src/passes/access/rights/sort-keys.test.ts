@@ -1,4 +1,7 @@
 import { describe, expect, test } from "vitest";
+import type { Diagnostic } from "../../../diagnostics/diagnostic.js";
+import { finalizeAddStandIns } from "../../../finalize/complete-draft.js";
+import { finalizeIr } from "../../../finalize/finalize.js";
 import type { DraftIR } from "../../../pipeline/seam.js";
 import {
   accessRightsLoadFiles,
@@ -48,6 +51,10 @@ schemas:
       childId: ChildId
       itemId: ItemId
       margin: { type: integer, restrictedTo: items.margin }
+  Remark:
+    type: object
+    required: [remarkId, name]
+    properties: { remarkId: ChildId, name: { type: string } }
   Tally:
     type: object
     additionalProperties: { type: integer }
@@ -121,6 +128,28 @@ describe("sort-key rights", () => {
           from: [{ layer: "api", pointer: "/schemas/Note/properties/memo/restrictedTo" }],
         },
       ],
+    ]);
+  });
+
+  test("the fields fixture's keys carry the subject their right reads, and the draft finalizes (keys sorted)", () => {
+    const workspace = accessRightsLoadFixture("fields");
+    const [raw] = workspace.apis;
+    const { draft } = accessRightsRunContract(workspace);
+    const reported: Diagnostic[] = [];
+
+    if (raw === undefined) throw new Error("the fields fixture has no api");
+
+    const finalized = finalizeIr(finalizeAddStandIns(draft, raw.name), {
+      raw,
+      report: (diagnostic) => reported.push(diagnostic),
+    });
+    const list = finalized?.ir.operations.find((operation) => operation.id === "listNotes");
+
+    expect(reported).toEqual([]);
+    expect(list?.paging?.sortKeys.map(({ key, subject }) => [key, subject])).toEqual([
+      ["memo", undefined],
+      ["rating", { source: { in: "scope", name: "workspace" } }],
+      ["title", undefined],
     ]);
   });
 
@@ -252,6 +281,23 @@ describe("sort keys of other list items", () => {
     expect(diagnostics[0]?.message).toBe(
       "sort key 'margin' of route 'listChildren' has resource right 'items.margin', whose id schema is a property of the list item 'Child', so the key would be checked against the route's subject, not each item's",
     );
+  });
+
+  test("a key's resource right takes the route's member id as its subject", () => {
+    const { draft, diagnostics } = runBeside(`        member:
+          routes:
+            remarks:
+              kind: collection
+              id: { remarkId: ChildId }
+              item: Remark
+              ops: { list: { paging: offset, sortable: [{ key: name, right: items.margin }] } }
+`);
+    const list = draft.operations.find((operation) => operation.id === "listRemarks");
+
+    expect(diagnostics).toEqual([]);
+    expect(list?.paging?.sortKeys.map(({ right, subject }) => [right, subject])).toEqual([
+      ["items.margin", { source: { in: "path", name: "itemId" } }],
+    ]);
   });
 
   test("a written right that declares params is refused, since a sort key carries none", () => {
