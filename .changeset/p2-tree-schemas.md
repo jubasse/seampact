@@ -39,3 +39,5 @@ The tree pass copies the schemas, enums, named formats and extension keys a rela
 The tree pass refuses a map in a body rule proof that a form or multipart route carries.
 
 The tree pass declares extension keys and checks every written extension value against its schema and places.
+
+The tree pass copies the declarations a relay route uses from an imported api too, and refuses one holding a variant or member this compiler does not know.
