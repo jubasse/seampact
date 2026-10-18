@@ -487,6 +487,7 @@ function checkValue(check: TypedCheck, template: Template, use: Use, position: P
 
       return;
     }
+
     case "slot": {
       const value = slotValue(check, position, template.slot, template.path);
       const rendered =
@@ -504,6 +505,7 @@ function checkValue(check: TypedCheck, template: Template, use: Use, position: P
 
       return;
     }
+
     case "text":
       checkText(check, template, accepted, position);
 
