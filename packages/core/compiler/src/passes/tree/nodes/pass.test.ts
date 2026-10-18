@@ -1,3 +1,4 @@
+import type { IrWriter } from "@seampact/spec/ir";
 import { expect, test } from "vitest";
 import {
   type DraftFixtureApi,
@@ -7,6 +8,7 @@ import {
 } from "../../../pipeline/draft-fixture.js";
 import { createDraftIR, type DraftIR } from "../../../pipeline/seam.js";
 import type { JsonObject, JsonValue } from "../../../raw-tree.js";
+import { treeSchemasRunReference } from "../schemas/test-support.js";
 import {
   REFERENCE_CONTRACT,
   treeNodesApiOf,
@@ -146,6 +148,62 @@ test.each<DraftFixtureApi>(["tasks", "tasksService"])(
     expect(diagnostics).toEqual([]);
     const expected = expectedApiMembers(api);
 
+    expect(
+      Object.fromEntries(API_MEMBERS.map((member) => [member, draft[member] ?? null])),
+    ).toEqual(Object.fromEntries(API_MEMBERS.map((member) => [member, expected[member]])));
+    expect(draft.operations.map(pick)).toEqual(expectedOperations(api));
+  },
+);
+
+// The schemas only a relay route reaches take their directions from the relayed operation, which tree.schemas
+// does not copy yet: their directions are left out of the comparison until it does.
+const RELAY_REACHED: Readonly<Record<DraftFixtureApi, readonly string[]>> = {
+  tasks: [],
+  tasksService: ["Task", "TaskState"],
+};
+
+// The core issue schema stays seeded when a layer replaced the schema_invalid params; finalize drops it.
+const SEEDED_UNLESS_USED = "ApiSchemaInvalidIssue";
+
+function comparedDeclarations(
+  api: DraftFixtureApi,
+  catalogue: Readonly<Record<string, IrWriter.Schema | IrWriter.Enum>>,
+  expected: Readonly<Record<string, unknown>>,
+): { readonly id: string }[] {
+  return Object.values(catalogue)
+    .filter(({ id }) => id !== SEEDED_UNLESS_USED || Object.hasOwn(expected, id))
+    .map((declared) => {
+      if (!RELAY_REACHED[api].includes(declared.id)) return declared;
+      const { directions: _directions, ...rest } = declared;
+
+      return rest;
+    })
+    .sort((left, right) => left.id.localeCompare(right.id));
+}
+
+test.each<DraftFixtureApi>(["tasks", "tasksService"])(
+  "tree halves on the reference contract (%s)",
+  (api) => {
+    const schemasRun = treeSchemasRunReference(api);
+
+    expect(schemasRun.diagnostics).toEqual([]);
+    const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace, api), workspace, {
+      treeSchemas: schemasRun.service,
+      draft: schemasRun.draft,
+      relayed: treeNodesRelayedTasks(),
+    });
+
+    expect(diagnostics).toEqual([]);
+    const fixture = draftFixture(api, "after-tree");
+    const expected = expectedApiMembers(api);
+
+    expect(comparedDeclarations(api, draft.schemas, fixture.schemas)).toEqual(
+      comparedDeclarations(api, fixture.schemas, fixture.schemas),
+    );
+    expect(comparedDeclarations(api, draft.enums, fixture.enums)).toEqual(
+      comparedDeclarations(api, fixture.enums, fixture.enums),
+    );
+    expect(draft.scalars).toEqual(fixture.scalars);
     expect(
       Object.fromEntries(API_MEMBERS.map((member) => [member, draft[member] ?? null])),
     ).toEqual(Object.fromEntries(API_MEMBERS.map((member) => [member, expected[member]])));
