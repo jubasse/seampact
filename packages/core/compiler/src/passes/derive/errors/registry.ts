@@ -1,6 +1,9 @@
 import type { IrWriter } from "@seampact/spec/ir";
-import { canonicalId, splitName } from "@seampact/spec/naming";
-import { type DerivationRole, derivationRoles } from "../../../derivations/index.js";
+import {
+  type DerivationRole,
+  derivationParamsSchemaId,
+  derivationRoles,
+} from "../../../derivations/index.js";
 import {
   type PassContextOf,
   pipelineCanonical,
@@ -76,15 +79,6 @@ export function deriveErrorsDefaultFamily(code: string): string | undefined {
 
 const roleOfDefaultCode = (code: string): DerivationRole | undefined =>
   derivationRoles.find((role) => role.defaultCode === code);
-
-// The ADR 0007 params name of a code (`api.rate_limited` gives `ApiRateLimitedParams`), as tree.schemas seeds it.
-function coreParamsSchemaId(code: string): IrWriter.SchemaId {
-  const id = canonicalId({ segments: splitName(code), role: "params" });
-
-  if (id === undefined) throw new Error(`the default code ${code} names no params schema`);
-
-  return id;
-}
 
 function errorSites(context: DeriveErrorsContext): {
   declarations: ErrorSite[];
@@ -193,7 +187,9 @@ function paramsOf(site: ErrorSite, context: DeriveErrorsContext): IrWriter.Schem
   if (deriveErrorsMember(site.value, "params") === undefined) {
     const role = roleOfDefaultCode(site.code);
 
-    return role !== undefined && role.data.length > 0 ? coreParamsSchemaId(site.code) : undefined;
+    return role !== undefined && role.data.length > 0
+      ? derivationParamsSchemaId(site.code)
+      : undefined;
   }
 
   const use = context.treeSchemas.typeUse(pointer, "output");
@@ -278,7 +274,7 @@ function coreDeclarationOf(role: DerivationRole): IrWriter.ErrorDecl {
     ...(family === undefined ? {} : { family }),
     nature: role.nature,
     http: { status: role.status },
-    ...(role.data.length > 0 ? { params: coreParamsSchemaId(code) } : {}),
+    ...(role.data.length > 0 ? { params: derivationParamsSchemaId(code) } : {}),
     docs: {},
     origin: { layer: "core", pointer: pipelinePointerBelow("/errors", code) },
     default: role.role,

@@ -148,11 +148,11 @@ export const derivationRoleOf = (name: DerivationRoleName): DerivationRole | und
 /** The schema id of a proof-only input's body: an object schema with no property (ADR 0004 section 13). */
 export const DERIVATION_EMPTY_BODY_SCHEMA_ID: IrWriter.SchemaId = "ApiEmptyBody";
 
-// The ADR 0007 params name of a default code: `api.rate_limited` gives `ApiRateLimitedParams`.
-function paramsSchemaId(code: string): IrWriter.SchemaId {
+/** The ADR 0007 params schema id of an error code: `api.rate_limited` gives `ApiRateLimitedParams`. */
+export function derivationParamsSchemaId(code: string): IrWriter.SchemaId {
   const id = canonicalId({ segments: splitName(code), role: "params" });
 
-  if (id === undefined) throw new Error(`default code ${code} names no params schema`);
+  if (id === undefined) throw new Error(`the error code ${code} names no params schema`);
 
   return id;
 }
@@ -164,7 +164,7 @@ function paramsSchemaId(code: string): IrWriter.SchemaId {
 export const derivationCoreSchemaIds: readonly IrWriter.SchemaId[] = derivationFreeze([
   ...derivationRoles
     .filter((entry) => entry.data.length > 0)
-    .map((entry) => paramsSchemaId(entry.defaultCode)),
+    .map((entry) => derivationParamsSchemaId(entry.defaultCode)),
   DERIVATION_ISSUE_SCHEMA_ID,
   DERIVATION_EMPTY_BODY_SCHEMA_ID,
 ]);
