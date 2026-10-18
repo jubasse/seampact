@@ -152,13 +152,6 @@ export interface FieldRightEntry {
   readonly errors: readonly string[];
 }
 
-/** What the contract declares on a string the validator checks with a custom check, to name the rule it breaks. */
-export interface InputRuleHint {
-  readonly format?: string;
-  readonly minLength?: number;
-  readonly maxLength?: number;
-}
-
 export interface ResponseEntry {
   readonly status: number;
   readonly shape: "item" | "list" | "table" | "page" | "empty";
@@ -189,7 +182,6 @@ export interface ContractRoute {
   };
   readonly validator: StandardValidator;
   /** Keyed by the input pointer, `/body/title`, an array item written `*`. */
-  readonly inputRules: Readonly<Record<string, InputRuleHint>>;
   readonly idempotency?: {
     readonly header: string;
     readonly replayHeader: string;

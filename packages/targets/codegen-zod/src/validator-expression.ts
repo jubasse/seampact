@@ -272,13 +272,14 @@ function stringFormatValidator(format: string, context: ValidatorContext): strin
 
   // RFC 3339 with a time offset; a value without one is refused.
   if (format === "date-time") {
-    return `z.string().refine(${context.wireCheck(IS_DATE_TIME)}, { error: "Expected an RFC 3339 date-time with a time offset." })`;
+    return `z.string().refine(${context.wireCheck(IS_DATE_TIME)}, { error: "Expected an RFC 3339 date-time with a time offset.", params: { rule: "format" } })`;
   }
 
   return undefined;
 }
 
-// String lengths count Unicode code points (ADR 0003 section 1); zod's own `min` and `max` count UTF-16 units.
+// String lengths count Unicode code points (ADR 0003 section 1); zod's own `min` and `max` count UTF-16 units. A
+// custom check carries its contract rule name in `params.rule`, which a server boundary renders.
 function lengthChecks(
   typeUse: ScalarTypeUse,
   location: IrLocation,
@@ -305,13 +306,13 @@ function lengthChecks(
 
   if (minLength !== undefined) {
     checks.push(
-      `.refine((value) => ${counter}(value) >= ${minLength}, { error: ${JSON.stringify(`Expected at least ${characters(minLength)}.`)} })`,
+      `.refine((value) => ${counter}(value) >= ${minLength}, { error: ${JSON.stringify(`Expected at least ${characters(minLength)}.`)}, params: { rule: "minLength" } })`,
     );
   }
 
   if (maxLength !== undefined) {
     checks.push(
-      `.refine((value) => ${counter}(value) <= ${maxLength}, { error: ${JSON.stringify(`Expected at most ${characters(maxLength)}.`)} })`,
+      `.refine((value) => ${counter}(value) <= ${maxLength}, { error: ${JSON.stringify(`Expected at most ${characters(maxLength)}.`)}, params: { rule: "maxLength" } })`,
     );
   }
 

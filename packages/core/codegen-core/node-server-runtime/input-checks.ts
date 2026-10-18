@@ -8,17 +8,11 @@ import {
   roleError,
   roleParams,
 } from "./contract-error.js";
-import {
-  type ContractRoute,
-  decodeRequestParams,
-  type InputRuleHint,
-  type StandardIssue,
-} from "./contract-route.js";
+import { type ContractRoute, decodeRequestParams, type StandardIssue } from "./contract-route.js";
 
 const SCHEMA_INVALID_ROLE = "schemaInvalid";
 const FORBIDDEN_ROLE = "forbidden";
 const FALLBACK_RULE = "invalid";
-const ARRAY_ITEM = "*";
 
 // The validator input's parts, as an issue's `in` names them (ADR 0006 section 6).
 const ISSUE_PARTS: Readonly<Record<string, string>> = {
@@ -44,7 +38,7 @@ export async function validateRequestInput(state: CheckState): Promise<unknown> 
 
   if (result.issues === undefined) return withDefaultLimit(route, result.value);
 
-  const issues = inputIssues(route, candidate, result.issues);
+  const issues = inputIssues(candidate, result.issues);
 
   throw roleError(route, SCHEMA_INVALID_ROLE, { issues: issues.slice(0, MAX_RENDERED_ISSUES) });
 }
@@ -63,13 +57,7 @@ function withDefaultLimit(route: ContractRoute, input: unknown): unknown {
 }
 
 // The validator's issues named by the contract's rules (`minLength`, `required`, ...), never the validator's codes.
-function inputIssues(
-  route: ContractRoute,
-  candidate: unknown,
-  issues: readonly StandardIssue[],
-): InputIssue[] {
-  const customSeen = new Map<string, number>();
-
+function inputIssues(candidate: unknown, issues: readonly StandardIssue[]): InputIssue[] {
   return issues.flatMap((issue) => {
     const keys = (issue.path ?? []).map((segment) =>
       typeof segment === "object" ? String(segment.key) : String(segment),
@@ -84,13 +72,7 @@ function inputIssues(
       );
     }
 
-    const hint = route.inputRules[hintPointer(keys)];
-    const pointer = keys.join("/");
-    const index = customSeen.get(pointer) ?? 0;
-
-    if (code === "custom") customSeen.set(pointer, index + 1);
-
-    return [renderedIssue(keys, contractRule(issue, valueAt(candidate, keys), hint, index))];
+    return [renderedIssue(keys, contractRule(issue, valueAt(candidate, keys)))];
   });
 }
 
@@ -104,12 +86,7 @@ function renderedIssue(keys: readonly string[], rule: string): InputIssue {
   };
 }
 
-function contractRule(
-  issue: StandardIssue,
-  value: unknown,
-  hint: InputRuleHint | undefined,
-  customIndex: number,
-): string {
+function contractRule(issue: StandardIssue, value: unknown): string {
   const origin = issueMember(issue, "origin");
   const exclusive = issueMember(issue, "inclusive") === false;
 
@@ -132,10 +109,9 @@ function contractRule(
           : exclusive
             ? "exclusiveMaximum"
             : "maximum";
+    // The validators link writes a regex only for a format; a `pattern` refinement is refused there.
     case "invalid_format":
-      return issueMember(issue, "format") === "regex" && hint?.format === undefined
-        ? "pattern"
-        : "format";
+      return "format";
     case "not_multiple_of":
       return "multipleOf";
     case "invalid_value":
@@ -146,36 +122,22 @@ function contractRule(
     case "invalid_element":
       return "type";
     case "custom":
-      return customRule(value, hint, customIndex);
+      return customRule(issue);
     default:
       return FALLBACK_RULE;
   }
 }
 
-// A custom check is one the contract declares on that string: its length bounds, then its format.
-function customRule(value: unknown, hint: InputRuleHint | undefined, index: number): string {
-  if (hint === undefined) return FALLBACK_RULE;
+// The validators link names the contract rule of each custom check in its `params`.
+function customRule(issue: StandardIssue): string {
+  const params = issueMember(issue, "params");
+  const rule = isPlainObject(params) ? params.rule : undefined;
 
-  const length = typeof value === "string" ? [...value].length : undefined;
-  const failing = [
-    ...(hint.minLength !== undefined && length !== undefined && length < hint.minLength
-      ? ["minLength"]
-      : []),
-    ...(hint.maxLength !== undefined && length !== undefined && length > hint.maxLength
-      ? ["maxLength"]
-      : []),
-    ...(hint.format === undefined ? [] : ["format"]),
-  ];
-
-  return failing[index] ?? failing.at(-1) ?? FALLBACK_RULE;
+  return typeof rule === "string" ? rule : FALLBACK_RULE;
 }
 
 function issueMember(issue: StandardIssue, name: string): unknown {
   return Reflect.get(issue, name);
-}
-
-function hintPointer(keys: readonly string[]): string {
-  return keys.map((key) => `/${/^[0-9]+$/.test(key) ? ARRAY_ITEM : key}`).join("");
 }
 
 function valueAt(value: unknown, keys: readonly string[]): unknown {
