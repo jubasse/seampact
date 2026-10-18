@@ -100,12 +100,14 @@ function runOn(
   workspace: RawWorkspace,
   draft: DraftIR,
   treeSchemas: TreeSchemaService,
+  relayed?: ReadonlyMap<string, DraftIR>,
 ): DeriveErrorsRun {
   const diagnostics: Diagnostic[] = [];
   const context = Object.freeze({
     ...pipelineContext({
       raw,
       workspace,
+      ...(relayed === undefined ? {} : { relayed }),
       report: (diagnostic) => diagnostics.push(diagnostic),
       guard: true,
     }),
@@ -122,14 +124,25 @@ function runOn(
   return { draft, diagnostics, context };
 }
 
-/** Runs the tree, access and derive.wire halves, then derive.errors (guarded), on the first api of `workspace`. */
-export function deriveErrorsRunContract(workspace: RawWorkspace): DeriveErrorsRun {
-  const raw = apiOf(workspace);
+/** Which api of the workspace a run compiles (the first by default), and the derived drafts its relay routes read. */
+export interface DeriveErrorsRunOptions {
+  readonly api?: string;
+  readonly relayed?: ReadonlyMap<string, DraftIR>;
+}
+
+/** Runs the tree, access and derive.wire halves, then derive.errors (guarded), on an api of `workspace`. */
+export function deriveErrorsRunContract(
+  workspace: RawWorkspace,
+  options: DeriveErrorsRunOptions = {},
+): DeriveErrorsRun {
+  const raw = apiOf(workspace, options.api);
+  const { relayed } = options;
   const draft = createDraftIR();
   const diagnostics: Diagnostic[] = [];
   const context = pipelineContext({
     raw,
     workspace,
+    ...(relayed === undefined ? {} : { relayed }),
     report: (diagnostic) => diagnostics.push(diagnostic),
   });
   const treeSchemas = treeSchemasPass.run(draft, context);
@@ -142,7 +155,7 @@ export function deriveErrorsRunContract(workspace: RawWorkspace): DeriveErrorsRu
       throw new Error(`${half.half} reports on the contract: ${JSON.stringify(diagnostics)}`);
   }
 
-  return runOn(raw, workspace, draft, treeSchemas);
+  return runOn(raw, workspace, draft, treeSchemas, relayed);
 }
 
 // The real schema service of an api (the fixture service answers no error params position), and the draft its run
@@ -164,9 +177,12 @@ function schemaServiceOf(
   return { service, seeded };
 }
 
+const REFERENCE_PUBLIC_API = "tasks";
+
 /**
  * Runs derive.errors (guarded) on the after-access fixture draft of a reference api, given the schemas tree.schemas
- * seeds that the fixture draft lacks (the core issue item of `schemaInvalid`).
+ * seeds that the fixture draft lacks (the core issue item of `schemaInvalid`). The reference service relays the
+ * public api, so its run reads the public api's draft as derive.errors leaves it.
  */
 export function deriveErrorsRunReference(
   workspace: RawWorkspace,
@@ -179,7 +195,14 @@ export function deriveErrorsRunReference(
   for (const [id, schema] of Object.entries(seeded.schemas))
     if (!Object.hasOwn(draft.schemas, id)) draft.schemas[id] = pipelineCopy(schema);
 
-  return runOn(raw, workspace, draft, service);
+  const relayed =
+    api === REFERENCE_PUBLIC_API
+      ? undefined
+      : new Map([
+          [REFERENCE_PUBLIC_API, deriveErrorsRunReference(workspace, REFERENCE_PUBLIC_API).draft],
+        ]);
+
+  return runOn(raw, workspace, draft, service, relayed);
 }
 
 /** A diagnostic as the tests compare it: its rule and where it is located. */

@@ -20,6 +20,7 @@ import {
   deriveErrorsParamsSite,
 } from "./bindings.js";
 import { deriveErrorsOriginOf } from "./read.js";
+import { DERIVE_ERRORS_RELAY_DERIVATION, type DeriveErrorsRelayCode } from "./relays.js";
 import { deriveErrorsCheckRetryParam } from "./retry-param.js";
 import { deriveErrorsReadRoleParams } from "./role-params.js";
 import {
@@ -45,6 +46,8 @@ const RETRY_UNITS: readonly IrWriter.RetryUnit[] = ["s", "ms"];
 export interface DeriveErrorsOperationsSources extends DeriveErrorsBindingCheck {
   readonly draft: DraftIR;
   readonly bound: DeriveErrorsBoundParams;
+  /** The domain codes each relay route copies, by operation id. */
+  readonly relayCodes: ReadonlyMap<string, readonly DeriveErrorsRelayCode[]>;
 }
 
 interface PendingError {
@@ -53,13 +56,16 @@ interface PendingError {
   readonly bindingOrigins: IrWriter.Origin[];
   readonly roles: Map<DerivationRoleName, IrWriter.Template | undefined>;
   attached?: DeriveErrorsAttachedCode;
+  relayed?: DeriveErrorsRelayCode;
   bucketFrom?: IrWriter.Origin[];
 }
 
 const tableIndexOf = (derivation: string): number => TABLE_ORDER.get(derivation) ?? PACK_ROW_ORDER;
 
 /** Every operation of the draft with its tree node, matched by the origin pointer tree.nodes sets. */
-export function deriveErrorsRoutes(sources: DeriveErrorsOperationsSources): DeriveErrorsRoute[] {
+export function deriveErrorsRoutes(
+  sources: Pick<DeriveErrorsOperationsSources, "context" | "draft">,
+): DeriveErrorsRoute[] {
   const nodes = new Map(pipelineTreeNodes(sources.context.raw).map((node) => [node.pointer, node]));
 
   return sources.draft.operations.map((operation) => {
@@ -218,18 +224,20 @@ function elementOf(
     error.bucketFrom !== undefined && status === RATE_LIMITED_STATUS
       ? retryHeaderOf(sources, error.code, refusedRetryParams, dedupe(error.bucketFrom))
       : undefined;
-  const { attached } = error;
+  const { attached, relayed } = error;
+  const example = attached?.example ?? relayed?.example;
+  const origin = attached?.origin ?? relayed?.origin;
 
   return pipelineCopy({
     code: error.code,
-    ...(attached?.example === undefined ? {} : { example: attached.example }),
+    ...(example === undefined ? {} : { example }),
     ...(roles.length === 0 ? {} : { roles }),
     ...(retryHeader === undefined ? {} : { retryHeader }),
     derivedFrom: {
       derivation: first[0],
       from: [...triggerOrigins, ...dedupe(error.bindingOrigins)],
     },
-    ...(attached?.origin === undefined ? {} : { origin: attached.origin }),
+    ...(origin === undefined ? {} : { origin }),
   });
 }
 
@@ -306,6 +314,17 @@ function collect(
 
     if (trigger.derivation === BUCKET_DERIVATION)
       error.bucketFrom = [...(error.bucketFrom ?? []), ...trigger.from];
+  }
+
+  // A copied domain code keeps the roles the public operation bound it to (the declarations are the same).
+  for (const relayed of sources.relayCodes.get(route.id) ?? []) {
+    const error = pendingOf(pending, relayed.code);
+
+    addFrom(error, DERIVE_ERRORS_RELAY_DERIVATION, relayed.from);
+    error.relayed = relayed;
+
+    for (const binding of relayed.roles ?? [])
+      if (!error.roles.has(binding.role)) error.roles.set(binding.role, binding.params);
   }
 
   for (const attached of deriveErrorsAttached(sources.context, route)) {
