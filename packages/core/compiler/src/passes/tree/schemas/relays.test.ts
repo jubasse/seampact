@@ -245,6 +245,14 @@ describe("written values of two copies of one name", () => {
     expect(located(run)).toEqual([["relay-declaration", "/surfaces/internal/routes/two/relays"]]);
   });
 
+  test("differ when a restriction's params differ only in an 'origin' member", () => {
+    const withParams = (origin: string) =>
+      `schemas:\n  Box: { type: object, properties: { owner: Owner } }\n  Owner: { type: object, properties: { name: { type: string, restrictedTo: { right: notes.read, params: { origin: ${origin} } } } } }\n`;
+    const run = relayPair(withParams("north"), withParams("south"));
+
+    expect(located(run)).toEqual([["relay-declaration", "/surfaces/internal/routes/two/relays"]]);
+  });
+
   test("differ when an extension value named 'origin' differs", () => {
     const run = relayPair(
       `${ORIGIN_KEY}${ownerWith("x-acme-origin: north")}`,
@@ -365,6 +373,21 @@ describe("relay declarations copied from an import", () => {
 
     expect(located(run)).toEqual([["relay-unknown", RELAYS]]);
     expect(run.diagnostics[0]?.message).toContain("('weight' at /enums/TaskState/weight)");
+    expect(run.draft.enums.TaskState).toBeUndefined();
+  });
+
+  test("leave alone an unknown member in a declaration the relayed operation does not use", () => {
+    const run = importing(setAt(["schemas", "Gone", "weight"], 3));
+
+    expect(run.diagnostics).toEqual([]);
+    expect(run.draft.schemas.Task).toBeDefined();
+  });
+
+  test("refuse an enum holding an unknown source form", () => {
+    const run = importing(setAt(["enums", "TaskState", "source"], { kind: "registry" }));
+
+    expect(located(run)).toEqual([["relay-unknown", RELAYS]]);
+    expect(run.diagnostics[0]?.message).toContain("('registry' at /enums/TaskState/source/kind)");
     expect(run.draft.enums.TaskState).toBeUndefined();
   });
 
