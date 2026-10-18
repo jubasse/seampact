@@ -3,10 +3,10 @@ import { describe, expect, test } from "vitest";
 import { diagnosticLocationKey } from "../diagnostics/print.js";
 import {
   finalizeCompleteDraft,
+  finalizeExpectIr,
   finalizeReferenceContext,
   finalizeReferenceRaw,
 } from "./complete-draft.js";
-import { finalizeIr } from "./finalize.js";
 import { finalizeSourceMap } from "./source-map.js";
 import { finalizeAssertSourceMap } from "./validate.js";
 
@@ -43,7 +43,7 @@ describe("side table covers every origin", () => {
     "%s: one entry per file origin, none for a core one",
     (api) => {
       const raw = finalizeReferenceRaw(api);
-      const { ir, sourceMap } = finalizeIr(
+      const { ir, sourceMap } = finalizeExpectIr(
         finalizeCompleteDraft(api),
         finalizeReferenceContext(api),
       );
@@ -64,7 +64,10 @@ describe("side table covers every origin", () => {
   );
 
   test("an origin copied from another api resolves in that api's table, not here", () => {
-    const { ir } = finalizeIr(finalizeCompleteDraft("tasks"), finalizeReferenceContext("tasks"));
+    const { ir } = finalizeExpectIr(
+      finalizeCompleteDraft("tasks"),
+      finalizeReferenceContext("tasks"),
+    );
 
     firstOperation(ir).origin = { api: "tasksService", layer: "api", pointer: "/not/in/this/api" };
     const sourceMap = finalizeSourceMap(ir, finalizeReferenceRaw("tasks"));
@@ -75,7 +78,10 @@ describe("side table covers every origin", () => {
   });
 
   test("an origin in no table is an internal error naming it", () => {
-    const { ir } = finalizeIr(finalizeCompleteDraft("tasks"), finalizeReferenceContext("tasks"));
+    const { ir } = finalizeExpectIr(
+      finalizeCompleteDraft("tasks"),
+      finalizeReferenceContext("tasks"),
+    );
     const origin = { layer: "api", pointer: "/not/in/this/api" } as const;
 
     firstOperation(ir).origin = origin;
@@ -86,7 +92,10 @@ describe("side table covers every origin", () => {
   });
 
   test("an origin on the workspace layer is an internal error", () => {
-    const { ir } = finalizeIr(finalizeCompleteDraft("tasks"), finalizeReferenceContext("tasks"));
+    const { ir } = finalizeExpectIr(
+      finalizeCompleteDraft("tasks"),
+      finalizeReferenceContext("tasks"),
+    );
 
     firstOperation(ir).origin = { layer: "workspace", pointer: "" };
 

@@ -1,8 +1,10 @@
+import { fileURLToPath } from "node:url";
 import { type Origin, walkIrInstance } from "@seampact/spec/ir";
 import { loadFsReader, loadWorkspace } from "../load/index.js";
 import { type DraftFixtureApi, draftFixture } from "../pipeline/draft-fixture.js";
-import type { DraftIR, PipelineFinalizeContext } from "../pipeline/seam.js";
+import type { DraftIR, PipelineFinalizeContext, PipelineFinalized } from "../pipeline/seam.js";
 import type { RawApi } from "../raw-tree.js";
+import { finalizeIr } from "./finalize.js";
 
 // Test support, outside every barrel: a complete draft of the reference contract for finalize's tests. It is the
 // draft fixture after access (`fixtures/draft/reference/`) with stand-ins for the members of the derive halves,
@@ -66,13 +68,22 @@ export function finalizeCompleteDraft(api: DraftFixtureApi): DraftIR {
   return draft;
 }
 
-const reference = loadWorkspace({
-  reader: loadFsReader(new URL("../../../../../fixtures/reference", import.meta.url).pathname),
-  entry: "workspace.yaml",
-});
+let reference: ReturnType<typeof loadWorkspace> | undefined;
+
+// Loaded on first use, so an import of this module reads no file.
+function referenceWorkspace(): ReturnType<typeof loadWorkspace> {
+  reference ??= loadWorkspace({
+    reader: loadFsReader(
+      fileURLToPath(new URL("../../../../../fixtures/reference", import.meta.url)),
+    ),
+    entry: "workspace.yaml",
+  });
+
+  return reference;
+}
 
 export function finalizeReferenceRaw(api: DraftFixtureApi): RawApi {
-  const raw = reference.workspace.apis.find((candidate) => candidate.name === api);
+  const raw = referenceWorkspace().workspace.apis.find((candidate) => candidate.name === api);
 
   if (raw === undefined) throw new Error(`the reference contract has no api ${api}`);
 
@@ -87,4 +98,17 @@ export function finalizeReferenceContext(api: DraftFixtureApi): PipelineFinalize
       throw new Error(`finalize reported ${diagnostic.rule} on the reference draft of ${api}`);
     },
   };
+}
+
+/** Finalizes a draft that must give an IR: one finalize refuses is a test failure naming the api. */
+export function finalizeExpectIr(
+  draft: DraftIR,
+  context: PipelineFinalizeContext,
+): PipelineFinalized {
+  const finalized = finalizeIr(draft, context);
+
+  if (finalized === undefined)
+    throw new Error(`finalize refused the draft of api '${context.raw.name}'`);
+
+  return finalized;
 }
