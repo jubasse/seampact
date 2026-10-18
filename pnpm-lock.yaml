@@ -257,6 +257,18 @@ importers:
 
   packages/runtime/hooks: {}
 
+  packages/runtime/idempotency-memory:
+    dependencies:
+      '@seampact/hooks':
+        specifier: workspace:*
+        version: link:../hooks
+
+  packages/runtime/signed-webhooks:
+    dependencies:
+      '@seampact/hooks':
+        specifier: workspace:*
+        version: link:../hooks
+
   packages/targets/codegen-ts:
     dependencies:
       prettier:
