@@ -21,6 +21,7 @@ const KNOWN: readonly { definition: IrClosedDefinition; member: keyof ContractIR
   { definition: "Scalar", member: "scalars", id: "money" },
   { definition: "WireFormat", member: "formats", id: "bare" },
   { definition: "ExtensionKeyDecl", member: "extensionKeys", id: "acme-owner" },
+  { definition: "Operation", member: "operations", id: "0" },
 ];
 
 for (const { definition, member, id } of KNOWN) {
@@ -90,4 +91,69 @@ test("a member the schema does not know is reported at its pointer", () => {
   expect(checkIrClosedDeclaration("Schema", schema, "/schemas/Task")).toEqual({
     unknowns: [{ pointer: "/schemas/Task/x-extra", value: "x-extra" }],
   });
+});
+
+test("a known TypeUse passes", () => {
+  const type = { kind: "ref", schema: "Labels" };
+
+  expect(checkIrClosedDeclaration("TypeUse", type, "/type")).toEqual({ closed: type });
+});
+
+test("an unknown variant nested in an operation is reported", () => {
+  const operation = { ...ir().operations[0], unknownQuery: { policy: "ignore-all" } };
+
+  expect(checkIrClosedDeclaration("Operation", operation, "/operations/0")).toEqual({
+    unknowns: [{ pointer: "/operations/0/unknownQuery/policy", value: "ignore-all" }],
+  });
+});
+
+test("an unknown TypeUse kind is reported at its tag", () => {
+  expect(checkIrClosedDeclaration("TypeUse", { kind: "set" }, "/type")).toEqual({
+    unknowns: [{ pointer: "/type/kind", value: "set" }],
+  });
+});
+
+test("a missing or non-string union tag is reported, not returned closed", () => {
+  const task = ir().schemas.Task;
+  const { kind: _removed, ...withoutKind } = task;
+
+  expect(checkIrClosedDeclaration("Schema", withoutKind, "/schemas/Task")).toEqual({
+    unknowns: [{ pointer: "/schemas/Task/kind", value: "undefined" }],
+  });
+  expect(checkIrClosedDeclaration("Schema", { ...task, kind: 5 }, "/schemas/Task")).toEqual({
+    unknowns: [{ pointer: "/schemas/Task/kind", value: "number" }],
+  });
+});
+
+test("a non-string open-enum value is reported, not returned closed", () => {
+  const scalar = { ...ir().scalars.money, directions: ["input", 7] };
+
+  expect(checkIrClosedDeclaration("Scalar", scalar, "/scalars/money")).toEqual({
+    unknowns: [{ pointer: "/scalars/money/directions/1", value: "number" }],
+  });
+});
+
+test("a non-string open-enum value in an object position is reported by kind", () => {
+  const scalar = { ...ir().scalars.money, directions: [{ deep: "x".repeat(500) }, null] };
+
+  expect(checkIrClosedDeclaration("Scalar", scalar, "/scalars/money")).toEqual({
+    unknowns: [
+      { pointer: "/scalars/money/directions/0", value: "object" },
+      { pointer: "/scalars/money/directions/1", value: "null" },
+    ],
+  });
+});
+
+test("an echoed unknown string is cut to a bound", () => {
+  const long = "k".repeat(500);
+  const check = checkIrClosedDeclaration("TypeUse", { kind: long }, "/type");
+
+  expect(check.unknowns?.[0]?.value).toBe(`${"k".repeat(64)}...`);
+});
+
+test("an echoed unknown member name is cut to a bound", () => {
+  const schema = { ...ir().schemas.Task, ["m".repeat(500)]: 1 };
+  const value = checkIrClosedDeclaration("Schema", schema).unknowns?.[0]?.value;
+
+  expect(value).toBe(`${"m".repeat(64)}...`);
 });

@@ -46,6 +46,12 @@ export type IrInstanceNode =
       value: string;
     }
   | {
+      // A value present where the schema reads an open enum, but not a string.
+      kind: "malformedOpenEnum";
+      pointer: string;
+      value: unknown;
+    }
+  | {
       kind: "string";
       pointer: string;
       definition: string;
@@ -158,6 +164,8 @@ export function walkIrInstance(
       mustAct: node[MUST_ACT_KEYWORD] === true,
       value,
     });
+  } else if (Array.isArray(known)) {
+    visit({ kind: "malformedOpenEnum", pointer, value });
   } else if (definition !== undefined && node.type === "string" && typeof value === "string") {
     visit({ kind: "string", pointer, definition, value });
   }
