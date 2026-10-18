@@ -1,32 +1,50 @@
 import { defineTarget, type Target } from "@seampact/codegen-core";
+import {
+  BOUNDARY_ARTEFACT,
+  type BoundaryArtefact,
+  type NodeServerOptions,
+  type NodeServerPlacement,
+  nodeServerBoundaryFiles,
+  parseNodeServerOptions,
+} from "@seampact/codegen-core/node-server";
 import { IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { format } from "prettier";
 import packageJson from "../package.json" with { type: "json" };
-import { BOUNDARY_ARTEFACT, type BoundaryArtefact, generateBoundary } from "./generate.js";
-import { type NestjsOptions, parseNestjsOptions } from "./options.js";
+import { nestjsModuleSource } from "./nestjs-module.js";
+
+// The NestJS placement: a checked source of this package one directory above both `src` and `dist`, and the
+// `nestjs` module of each api.
+const NESTJS_PLACEMENT: NodeServerPlacement = {
+  runtimeModule: "nestjs-boundary",
+  runtimeSourceUrl: new URL("../runtime/nestjs-boundary.ts", import.meta.url),
+  frameworkModule: "nestjs",
+  frameworkSource: nestjsModuleSource,
+};
 
 // The NestJS target, as the CLI loads it. It reads the operation types through the `types` link and the input
 // validators through the `validators` link, and provides nothing.
-export const target: Target = defineTarget<NestjsOptions, BoundaryArtefact, "types" | "validators">(
-  {
-    metadata: {
-      packageName: packageJson.name,
-      packageVersion: packageJson.version,
-      irSupport: {
-        irVersions: [IR_VERSION],
-        irRevision: IR_REVISION,
-        kinds: ["httpOperation"],
-        features: [],
-      },
-      artefacts: [{ id: BOUNDARY_ARTEFACT, defaultOn: true }],
-      consumes: {
-        types: { styles: ["typescript"] },
-        validators: { styles: ["standard-schema"] },
-      },
-      provides: {},
+export const target: Target = defineTarget<
+  NodeServerOptions,
+  BoundaryArtefact,
+  "types" | "validators"
+>({
+  metadata: {
+    packageName: packageJson.name,
+    packageVersion: packageJson.version,
+    irSupport: {
+      irVersions: [IR_VERSION],
+      irRevision: IR_REVISION,
+      kinds: ["httpOperation"],
+      features: [],
     },
-    format,
-    parseOptions: parseNestjsOptions,
-    generate: generateBoundary,
+    artefacts: [{ id: BOUNDARY_ARTEFACT, defaultOn: true }],
+    consumes: {
+      types: { styles: ["typescript"] },
+      validators: { styles: ["standard-schema"] },
+    },
+    provides: {},
   },
-);
+  format,
+  parseOptions: parseNodeServerOptions,
+  generate: (input) => nodeServerBoundaryFiles(input, NESTJS_PLACEMENT),
+});

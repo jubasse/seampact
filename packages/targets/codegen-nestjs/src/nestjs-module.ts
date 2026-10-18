@@ -1,7 +1,6 @@
 import { ExportNames, operationLocation, type Refusal } from "@seampact/codegen-core";
-import { operationIdentifier } from "@seampact/codegen-core/node-server";
+import { type NodeServerOptions, operationIdentifier } from "@seampact/codegen-core/node-server";
 import type { ContractIR } from "@seampact/spec/ir";
-import type { NestjsOptions } from "./options.js";
 
 // The `nestjs` module of one api: the boundary built from its route table, the fixed exports of ADR 0016
 // "Registration", and the composite decorator of each operation, named by the operation.
@@ -30,7 +29,7 @@ const NO_BODY_LIMIT = 0;
 
 export function nestjsModuleSource(
   ir: ContractIR,
-  options: NestjsOptions,
+  options: NodeServerOptions,
   refusals: Refusal[],
 ): string {
   const names = new ExportNames(NESTJS_MODULE);
