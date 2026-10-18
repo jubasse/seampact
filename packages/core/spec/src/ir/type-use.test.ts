@@ -22,7 +22,10 @@ test("type uses differing only in docs, examples, origin or a reason, at any dep
 
   const nested = (reason: string, values: string[]) => ({
     kind: "array",
-    items: { kind: "array", items: { kind: "enum", enum: "State", narrowedTo: { values, reason } } },
+    items: {
+      kind: "array",
+      items: { kind: "enum", enum: "State", narrowedTo: { values, reason } },
+    },
   });
 
   expect(isIrSameTypeUse(nested("Open.", ["open"]), nested("Still open.", ["open"]))).toBe(true);
