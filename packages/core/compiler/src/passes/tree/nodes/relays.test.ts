@@ -253,10 +253,27 @@ test("relay routes copy from an imported IR the same shape, and name what it hol
     ["seampact/tree/relay-unknown", `${ROUTES}/getTask/relays`],
     ["seampact/tree/relay-unknown", `${ROUTES}/listTasks/relays`],
   ]);
-  expect(refused.diagnostics[0]?.message).toContain("kind stream at /operations/");
+  expect(refused.diagnostics[0]?.message).toMatch(
+    /stream at \/operations\/\d+\/responses\/0\/body\/kind/,
+  );
   expect(refused.diagnostics[1]?.message).toContain("truncate at /operations/");
   expect(operationOf(refused.draft, "getTask")).toMatchObject({ responses: [] });
   expect(operationOf(refused.draft, "getTask")).not.toHaveProperty("relays");
+});
+
+test("an imported operation holding a member this compiler does not know is refused once, naming it", () => {
+  const withMember = importedIr(publicDraft(), (ir) => {
+    const operations = ir.operations;
+
+    if (!Array.isArray(operations)) throw new Error("the imported IR has no operations");
+    operations.find((operation) => operation.id === "getTask").retryBudget = 3;
+  });
+  const refused = runService(ACCEPTED_ROUTES, { imports: new Map([[PUBLIC_API, withMember]]) });
+
+  expect(refused.diagnostics.map(({ rule, origin }) => [rule, origin.pointer])).toEqual([
+    ["seampact/tree/relay-unknown", `${ROUTES}/getTask/relays`],
+  ]);
+  expect(refused.diagnostics[0]?.message).toMatch(/retryBudget at \/operations\/\d+\/retryBudget/);
 });
 
 test("tree.nodes diagnostics are located: relays", () => {
