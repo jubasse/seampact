@@ -48,6 +48,12 @@ Repository conventions every agent follows. Your task prompt adds the task, the 
 - Batch independent reads, searches and checks in one message (read the 3-5 files a step needs at once), chain shell steps with `&&`, and print only what you will use.
 - RTK is opt-in and usually the right choice for output past about ten lines you do not filter yourself (`rtk err <cmd>`, `rtk test <cmd>`, `rtk read -m 40 <file>`). Stay raw when you filter the output yourself (`| grep`, `| head`), when it is a few lines, or when exactness matters: complete searches, diffs and logs under review, JSON, env values, debugging, security. Never pipe rtk output into another tool.
 
+## Development phase (A47)
+
+- Reach the end-to-end slice first; do not add `docs/conformance/proofs/` entries or per-branch fixtures.
+- Unit tests for bricks that will not move (IR format, YAML reader, naming); other code is covered by the slice's end-to-end test; a bug fix still gets a test that failed before.
+- A case no consumer needs yet is refused by name with a diagnostic, never modelled.
+
 ## Code style
 
 - Airy code, blank lines between steps; max 3-4 nesting levels: early return, else extract a function.

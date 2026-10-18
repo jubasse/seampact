@@ -146,6 +146,9 @@ The ADRs also cite six design lessons, listed under [Lessons](#lessons) below, a
 <a id="a46"></a>
 **A46.** The loader's trust model: contract files and the packs installed beside them are trusted like any dependency the user chooses to install, as an npm package, an ESLint or a Babel plugin is (a pack, unlike those, is data only). seampact is not an antivirus. The loader keeps the guarantees that are correctness or safety bugs whoever wrote the files: root containment (nothing is read outside the workspace root, or outside a pack's package directory, through links and `../` included), prototype keys refused (`__proto__`, `constructor` and `prototype` as keys and api names), a depth limit, a per-file size limit and a per-load budget of work and text, which turn a runaway include or expansion into a located error instead of a hang. Defending against an adversarial contract or pack author, and denial of service beyond those limits, are non-goals. ADR 0006 section 1 states the same model, and the loader's module comment points to it.
 
+<a id="a47"></a>
+**A47.** Development comes before proof. Until the end-to-end slice runs (the reference contract compiled, generated and served by the four Node targets, NestJS, Fastify, Express and Adonis, with the TypeScript types, zod and the fetch client, in a test consumer project), work favours reaching it. Unit tests cover the bricks that will not move (the IR format, the YAML reader, naming); other code is covered by the slice's end-to-end test. Conformance proofs and per-branch fixtures wait for a testing phase before M3, and a case no consumer needs yet is refused by name rather than modelled. The 1.0 scope (A6, A15, A17) is unchanged.
+
 ## Lessons
 
 Six design lessons, drawn from experience with an earlier contract system written in TypeScript, guide the design. The ADRs cite them as "lesson n".

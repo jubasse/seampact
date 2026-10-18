@@ -7,7 +7,7 @@ For the lead session only: subagents never read this file. The lead reads it onc
 | Task | Type | Model, effort |
 |---|---|---|
 | lane PR, review fixes, committed docs | `seampact-implementer` | Opus medium (Sonnet for small or mechanical lanes) |
-| single review, re-review, lens review, synthesis | `seampact-reviewer` | first review of a compiler PR: Opus high; lens: Sonnet high for all three lenses; re-review: Sonnet medium; synthesis: Opus high |
+| single review, lens review, synthesis | `seampact-reviewer` | one review per PR: Opus high for compiler and target code, Sonnet medium for docs; lens panel (Sonnet high) and synthesis (Opus high) only for an IR change |
 | listed nits, rebase plus gate, regeneration | `seampact-mechanical` | Haiku (its default) |
 | one-shot repo-wide script | `seampact-refactor` | Sonnet (its default) |
 | `.work/` brief or decision synthesis | `seampact-writer` | Opus (its default), high for design |
@@ -24,13 +24,13 @@ One line each, in this order: task and PR or lane; worktree, branch and tip, lan
 ## Reviews
 
 - Every PR gets a fresh-agent review comment before merge; a merge whose last review is REQUEST_CHANGES is refused.
-- Single review: one `seampact-reviewer`. Full review (first review of a security, IR or seam PR): three lens reviewers (correctness, security, cto), each given only its lens's files from `git diff --stat`, writing `pr<n>.iter<k>.<lens>.md`, then one synthesis reviewer writing `pr<n>.iter<k>.md`; the lead checks that every lens file exists before starting the synthesis.
-- REQUEST_CHANGES: settle the open readings as decisions, post the comment, then a fix agent with the finding list, then a re-review on the delta. APPROVE_WITH_NITS: mechanical applies the nits, the lead checks that diff and merges, no new round; an APPROVE_WITH_NITS whose majors fail closed may merge with those majors listed for the lane's next PR.
+- Single review: one `seampact-reviewer`, asked only for a wrong IR or generated code, a silent drop, a valid contract refused or an untested stable brick (A47). Full review (an IR change only): three lens reviewers (correctness, security, cto), each given only its lens's files from `git diff --stat`, writing `pr<n>.iter<k>.<lens>.md`, then one synthesis reviewer writing `pr<n>.iter<k>.md`; the lead checks that every lens file exists before starting the synthesis.
+- REQUEST_CHANGES: settle the open readings as decisions, post the comment, then a fix agent with the finding list; no re-review: the lead checks each fix by the test that failed before, then merges. APPROVE_WITH_NITS: mechanical applies the nits, the lead checks that diff and merges, no new round; an APPROVE_WITH_NITS whose majors fail closed may merge with those majors listed for the lane's next PR.
 
 ## Accepting a hand-back
 
-- Complete lane PR: end-of-PR gate green, tests reach every new branch, proofs in `docs/conformance/proofs/<lane>.yaml`, one changeset sentence, cartography current, diff limited to owned files.
-- Author check keywords: no silent drop, `pipelineCopy`, tested branches, no copied helper, consistent rule ids, no `LD-<n>` or `.work/` in committed text.
+- Complete lane PR: end-of-PR gate green, tests as A47 states, one changeset sentence, cartography current, diff limited to owned files.
+- Author check keywords: no silent drop, `pipelineCopy`, stable bricks tested (A47), no copied helper, consistent rule ids, no `LD-<n>` or `.work/` in committed text.
 - End-of-PR gate: as `seampact-implementer.md` "Before hand-back" states it.
 - Review: accepted only once its review file exists at the path the prompt gave.
 
