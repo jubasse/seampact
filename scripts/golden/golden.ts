@@ -17,8 +17,9 @@ export interface GoldenCase {
   entry: string;
 }
 
-// Cases are added with the golden IR they produce (PR 2).
-export const GOLDEN_CASES: GoldenCase[] = [];
+export const GOLDEN_CASES: GoldenCase[] = [
+  { name: "reference", source: "fixtures/reference", entry: "workspace.yaml" },
+];
 
 /** Directories the generators own whole: a file there that they do not write is stale. */
 export const GENERATED_DIRECTORIES = [

@@ -3,6 +3,7 @@
 # checks the two lists match.
 packages/core/spec/schemas/authoring/** linguist-generated
 packages/core/spec/src/authoring/grammar.snapshot.json linguist-generated
+fixtures/golden/** linguist-generated
 
 # Compared byte for byte by `node scripts/cartography/cli.ts --check`; LF on every platform.
 docs/agents/cartography.md text eol=lf
@@ -10,3 +11,6 @@ docs/agents/cartography.md text eol=lf
 # Written by scripts/ir-models and compared byte for byte by its --check; LF on every platform.
 jvm/seampact-ir/src/main/kotlin/io/github/jubasse/seampact/ir/model/** text eol=lf
 scripts/ir-models/mapping.generated.json text eol=lf
+
+# Compared byte for byte by `node scripts/golden/cli.ts --check`; LF on every platform.
+fixtures/golden/** text eol=lf

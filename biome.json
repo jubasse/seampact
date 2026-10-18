@@ -9,7 +9,8 @@
     "includes": [
       "**",
       "!packages/core/spec/schemas/authoring/**",
-      "!packages/core/spec/src/authoring/grammar.snapshot.json"
+      "!packages/core/spec/src/authoring/grammar.snapshot.json",
+      "!fixtures/golden/**"
     ]
   },
   "linter": { "enabled": true, "rules": { "preset": "recommended" } }
