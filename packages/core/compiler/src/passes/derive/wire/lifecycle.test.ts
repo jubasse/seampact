@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   deriveWireFixtureVariant,
   deriveWireLoadFixture,
+  deriveWireLocated,
   deriveWireOperation,
   deriveWireResponseHeaders,
   deriveWireRunContract,
@@ -24,10 +25,41 @@ describe("deprecation headers", () => {
         from: [
           { layer: "api", pointer: "/surfaces/app/routes/legacy/deprecated" },
           { layer: "api", pointer: "/conventions/deprecation/header" },
-          { layer: "api", pointer: "/conventions/deprecation/sunsetHeader" },
         ],
       },
     });
+    expect(
+      deriveWireOperation(run, "legacy").responses?.[0]?.headers.map((header) =>
+        header.derivedFrom?.from.map((origin) => origin.pointer),
+      ),
+    ).toEqual([
+      ["/surfaces/app/routes/legacy/deprecated", "/conventions/deprecation/header"],
+      ["/surfaces/app/routes/legacy/deprecated", "/conventions/deprecation/sunsetHeader"],
+      ["/surfaces/app/routes/legacy/deprecated"],
+    ]);
+  });
+
+  test("a successor Link on a page that has its own Link is refused at the deprecation", () => {
+    const paged = deriveWireRunContract(
+      deriveWireFixtureVariant("lifecycle", [
+        [
+          "deprecated: { since: '2026-01-15', sunset: '2027-06-30', successor: board }\n        output: Note",
+          "deprecated: { since: '2026-01-15', sunset: '2027-06-30', successor: board }\n        item: Note\n        paging: githubPages",
+        ],
+      ]),
+    );
+
+    expect(paged.diagnostics.map(deriveWireLocated)).toEqual([
+      {
+        rule: "seampact/derive/derived-name-collision",
+        pointer: "/surfaces/app/routes/legacy/deprecated",
+        related: [
+          "/surfaces/app/routes/legacy",
+          "/surfaces/app/routes/legacy/paging",
+          "/pagings/githubPages",
+        ],
+      },
+    ]);
   });
 
   test("no successor, no Link; a route that is not deprecated has none", () => {

@@ -1,6 +1,5 @@
-import type { IrWriter } from "@seampact/spec/ir";
 import { pipelineCopy } from "../../../pipeline/seam.js";
-import { DERIVE_WIRE_STRING_USE, deriveWireAddSuccessHeader } from "./params.js";
+import { DERIVE_WIRE_LINK, DERIVE_WIRE_STRING_USE, deriveWireAddSuccessHeader } from "./params.js";
 import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 
 // The lifecycle members derived from settings tree.nodes wrote (ADR 0002 section 10, ADR 0006 section 5).
@@ -8,11 +7,10 @@ import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 // the successor `Link` (relation `conventions.deprecation.successorRel`) when it names one; tree.nodes checked that
 // the successor is an operation of the api. `upstream.maturity`: an operation with no stated maturity takes its
 // owning service's (the first of `upstream`), else the api's, located at the api's `maturity`, or at the api
-// itself when its maturity is the default.
+// itself when its maturity is the default. Each deprecation header's `from` is the deprecation, then the
+// convention that names it, so a collision of one header is located at its own convention.
 
 const DEPRECATION = "deprecation.headers";
-
-const LINK = "Link";
 
 /** Writes the deprecation, sunset and successor `Link` response headers of a deprecated operation. */
 export function deriveWireDeprecation(route: DeriveWireRoute, scope: DeriveWireScope): void {
@@ -21,29 +19,30 @@ export function deriveWireDeprecation(route: DeriveWireRoute, scope: DeriveWireS
   if (deprecated === undefined) return;
 
   const conventions = scope.context.conventions;
-  const readings = [
-    conventions.get("deprecation.header"),
-    conventions.get("deprecation.sunsetHeader"),
-    ...(deprecated.successor === undefined ? [] : [conventions.get("deprecation.successorRel")]),
+  const header = conventions.get("deprecation.header");
+  const sunsetHeader = conventions.get("deprecation.sunsetHeader");
+  const headers = [
+    { name: textOf(header), naming: header },
+    { name: textOf(sunsetHeader), naming: sunsetHeader },
+    ...(deprecated.successor === undefined
+      ? []
+      : [{ name: DERIVE_WIRE_LINK, naming: conventions.get("deprecation.successorRel") }]),
   ];
-  const names = readings.slice(0, 2).map(textOf);
 
-  if (deprecated.successor !== undefined) names.push(LINK);
-
-  const from = [pipelineCopy(deprecated.origin)];
-
-  for (const reading of readings)
-    if (reading?.origin !== undefined && !from.some((known) => sameOrigin(known, reading.origin)))
-      from.push(pipelineCopy(reading.origin));
-
-  for (const name of names)
+  for (const { name, naming } of headers)
     deriveWireAddSuccessHeader(
       route,
       {
         name,
         type: DERIVE_WIRE_STRING_USE,
         required: true,
-        derivedFrom: { derivation: DEPRECATION, from },
+        derivedFrom: {
+          derivation: DEPRECATION,
+          from: [
+            pipelineCopy(deprecated.origin),
+            ...(naming?.origin === undefined ? [] : [pipelineCopy(naming.origin)]),
+          ],
+        },
       },
       undefined,
       scope,
@@ -84,9 +83,6 @@ export function deriveWireMaturity(route: DeriveWireRoute, scope: DeriveWireScop
 
   operation.maturity = { level: api.maturity, source: "api", origin: pipelineCopy(origin) };
 }
-
-const sameOrigin = (left: IrWriter.Origin, right: IrWriter.Origin | undefined): boolean =>
-  left.layer === right?.layer && left.pointer === right.pointer;
 
 function textOf(reading: { readonly value: unknown } | undefined): string {
   if (typeof reading?.value !== "string")

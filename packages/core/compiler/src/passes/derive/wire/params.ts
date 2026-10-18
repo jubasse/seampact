@@ -18,6 +18,9 @@ export const DERIVE_WIRE_STRING_USE: IrWriter.ScalarTypeUse = Object.freeze({
   refinements: Object.freeze({}),
 });
 
+/** The response header of web links (RFC 8288): the paging links and the deprecation successor share it. */
+export const DERIVE_WIRE_LINK = "Link";
+
 /** The query wire of a single text value: `name=value`, as a query credential travels. */
 export const DERIVE_WIRE_TEXT_QUERY_WIRE: IrWriter.QueryWire = Object.freeze({
   kind: "text",

@@ -1,6 +1,7 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { pipelineCopy } from "../../../pipeline/seam.js";
 import {
+  DERIVE_WIRE_LINK,
   DERIVE_WIRE_STRING_USE,
   type DeriveWireDerived,
   deriveWireAddParam,
@@ -20,8 +21,6 @@ import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 // may be absent at either end of the list. The page shape itself is tree.nodes'.
 
 const PAGING = "paging.params";
-
-const LINK = "Link";
 
 const KEY_PLACEHOLDER = "{key}";
 
@@ -178,7 +177,10 @@ function writeSort(route: DeriveWireRoute, role: Role, paged: Paged, scope: Deri
 
 function writePageHeaders(route: DeriveWireRoute, paged: Paged, scope: DeriveWireScope): void {
   const { headers, links } = paged.style.response;
-  const names = [...headers.map((header) => header.name), ...(links.length > 0 ? [LINK] : [])];
+  const names = [
+    ...headers.map((header) => header.name),
+    ...(links.length > 0 ? [DERIVE_WIRE_LINK] : []),
+  ];
 
   if (names.length === 0) return;
 
