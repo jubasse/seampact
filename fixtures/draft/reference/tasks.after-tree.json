@@ -1435,6 +1435,83 @@
             }
           }
         ]
+      },
+      "ApiSchemaInvalidIssue": {
+        "kind": "object",
+        "id": "ApiSchemaInvalidIssue",
+        "name": {
+          "segments": ["api", "schema", "invalid", "issue"],
+          "role": "schema"
+        },
+        "directions": ["output"],
+        "examples": [],
+        "docs": {},
+        "extensions": {},
+        "origin": {
+          "layer": "core",
+          "pointer": "/errors/api.schema_invalid/params/issues/items"
+        },
+        "properties": [
+          {
+            "name": "in",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {
+                "pattern": {
+                  "source": "^(?:path|query|header|body)$",
+                  "normalized": "^(?:path|query|header|body)$"
+                }
+              }
+            },
+            "optional": false,
+            "origin": {
+              "layer": "core",
+              "pointer": "/errors/api.schema_invalid/params/issues/items/properties/in"
+            },
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {}
+          },
+          {
+            "name": "pointer",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "optional": false,
+            "origin": {
+              "layer": "core",
+              "pointer": "/errors/api.schema_invalid/params/issues/items/properties/pointer"
+            },
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {}
+          },
+          {
+            "name": "rule",
+            "type": {
+              "kind": "scalar",
+              "type": "string",
+              "refinements": {}
+            },
+            "optional": false,
+            "origin": {
+              "layer": "core",
+              "pointer": "/errors/api.schema_invalid/params/issues/items/properties/rule"
+            },
+            "nullable": false,
+            "sensitive": false,
+            "deprecated": false,
+            "docs": {},
+            "extensions": {}
+          }
+        ]
       }
     },
     "enums": {

@@ -75,10 +75,21 @@ function checkPath(
   pointer: string,
   body: IrWriter.TypeUse | undefined,
 ): void {
-  const fault = body === undefined ? NO_PROPERTY : pathFault(site, path.split("."), body);
+  const fault = !PROPERTY_NAME_CHAIN.test(path)
+    ? NO_PROPERTY_CHAIN
+    : body === undefined
+      ? NO_PROPERTY
+      : pathFault(site, path.split("."), body);
 
   if (fault !== undefined) reportPath(site, path, pointer, fault);
 }
+
+// Dot-separated property names of letters, digits, `_` and `-`: a path is written into the degraded header, so no
+// other character, empty segment or space reaches it.
+const PROPERTY_NAME_CHAIN = /^[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)*$/;
+
+const NO_PROPERTY_CHAIN =
+  "is no chain of property names (names of letters, digits, _ and - joined by dots)";
 
 const NO_PROPERTY = "names no property of the success data";
 

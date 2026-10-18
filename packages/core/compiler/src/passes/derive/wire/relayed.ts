@@ -1,5 +1,6 @@
 import { checkIrClosedDeclaration, type IrWriter } from "@seampact/spec/ir";
-import { type DraftOperation, type PassReadonly, pipelineCopy } from "../../../pipeline/seam.js";
+import type { DraftOperation, PassReadonly } from "../../../pipeline/seam.js";
+import { treeNodesRelayOrigin } from "../../tree/nodes/index.js";
 import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 
 // The public operation a relay route relays, as its own api derived it: the derived draft of a workspace api
@@ -57,10 +58,6 @@ export function deriveWireRelayedDerivedFrom(
 ): IrWriter.DerivedFrom {
   return {
     derivation: derivedFrom.derivation,
-    from: derivedFrom.from.map((origin) =>
-      origin.layer === "core" || origin.api !== undefined
-        ? pipelineCopy(origin)
-        : { api, ...pipelineCopy(origin) },
-    ),
+    from: derivedFrom.from.map((origin) => treeNodesRelayOrigin(origin, api)),
   };
 }

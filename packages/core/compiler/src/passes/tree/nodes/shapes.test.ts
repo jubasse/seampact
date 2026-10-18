@@ -1042,3 +1042,31 @@ surfaces:
     `the schema service answers no ${direction} type at ${pointer}`,
   );
 });
+
+test("degradable: a path that is no chain of property names is refused where it is written", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+conventions:
+  degradedHeader: X-Degraded
+schemas:
+  Profile: { type: object, properties: { stats: { type: object } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      profile: { method: get, output: Profile, degradable: ["stats..views", "stats.", "stats, host", "", "stats"] }
+`);
+  const treeSchemas = treeNodesStubService({
+    typeUses: { [`${ROUTES}/profile/output`]: ref("Profile") },
+  });
+  const draft = treeNodesDraftWith(objectSchema("Profile", { stats: ref("Stats") }, ["stats"]));
+  const run = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas, draft });
+
+  expect(run.diagnostics.map(({ rule, origin }) => [rule, origin.pointer])).toEqual([
+    ["seampact/tree/degradable-path", `${ROUTES}/profile/degradable/0`],
+    ["seampact/tree/degradable-path", `${ROUTES}/profile/degradable/1`],
+    ["seampact/tree/degradable-path", `${ROUTES}/profile/degradable/2`],
+    ["seampact/tree/degradable-path", `${ROUTES}/profile/degradable/3`],
+  ]);
+  expect(run.diagnostics[0]?.message).toContain("is no chain of property names");
+});

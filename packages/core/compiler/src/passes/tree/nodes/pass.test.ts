@@ -155,18 +155,6 @@ test.each<DraftFixtureApi>(["tasks", "tasksService"])(
   },
 );
 
-// The core issue schema stays seeded when a layer replaced the schema_invalid params; finalize drops it.
-const SEEDED_UNLESS_USED = "ApiSchemaInvalidIssue";
-
-function comparedDeclarations(
-  catalogue: Readonly<Record<string, IrWriter.Schema | IrWriter.Enum>>,
-  expected: Readonly<Record<string, unknown>>,
-): { readonly id: string }[] {
-  return Object.values(catalogue)
-    .filter(({ id }) => id !== SEEDED_UNLESS_USED || Object.hasOwn(expected, id))
-    .sort((left, right) => left.id.localeCompare(right.id));
-}
-
 test.each<DraftFixtureApi>(["tasks", "tasksService"])(
   "tree halves on the reference contract (%s)",
   (api) => {
@@ -180,19 +168,6 @@ test.each<DraftFixtureApi>(["tasks", "tasksService"])(
     });
 
     expect(diagnostics).toEqual([]);
-    const fixture = draftFixture(api, "after-tree");
-    const expected = expectedApiMembers(api);
-
-    expect(comparedDeclarations(draft.schemas, fixture.schemas)).toEqual(
-      comparedDeclarations(fixture.schemas, fixture.schemas),
-    );
-    expect(comparedDeclarations(draft.enums, fixture.enums)).toEqual(
-      comparedDeclarations(fixture.enums, fixture.enums),
-    );
-    expect(draft.scalars).toEqual(fixture.scalars);
-    expect(
-      Object.fromEntries(API_MEMBERS.map((member) => [member, draft[member] ?? null])),
-    ).toEqual(Object.fromEntries(API_MEMBERS.map((member) => [member, expected[member]])));
-    expect(draft.operations.map(pick)).toEqual(expectedOperations(api));
+    expect(draft).toEqual(draftFixture(api, "after-tree"));
   },
 );

@@ -44,8 +44,7 @@ export interface AccessIdentityScope {
 export interface AccessIdentityRoute {
   id: string;
   node: TreeNode;
-  /** Absent on a relay route, until tree.nodes copies its method from the operation it relays. */
-  safe?: boolean;
+  safe: boolean;
   operation: DraftOperation;
 }
 
@@ -246,9 +245,6 @@ function publicAccess(
     return undefined;
   }
 
-  // A public access does not depend on the direction; a relay route still leaves it out, as every member that may.
-  if (route.safe === undefined) return {};
-
   return { access: { kind: "public", reason: written.reason, origin: written.origin } };
 }
 
@@ -295,7 +291,6 @@ function optionalAccess(
     return undefined;
   }
 
-  if (route.safe === undefined) return { identity };
   const schemes = credentialSchemes(route, route.safe, identity, "optional", scope);
 
   if (schemes === undefined) return undefined;
@@ -321,8 +316,6 @@ function requiredAccess(
   const identity = identityOf(source, scope);
 
   if (identity === undefined) return undefined;
-
-  if (route.safe === undefined) return { identity };
 
   if (identity.kind === "signed")
     return {

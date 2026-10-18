@@ -80,6 +80,7 @@ export type TreeNodesRule =
   | "example-value"
   | "relay-target"
   | "relay-name"
+  | "relay-shape"
   | "relay-unknown"
   | "relay-declaration";
 
