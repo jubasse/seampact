@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import { loadWorkspace } from "../../../load/index.js";
 import { loadMemoryReader } from "../../../load/reader.js";
+import { treeNodesRelayedTasks } from "../../tree/nodes/test-support.js";
 import {
   DERIVE_WIRE_FIXTURES,
   deriveWireDerivedHeaders,
@@ -170,19 +171,40 @@ describe("idempotency key", () => {
   });
 });
 
-describe("relay routes before tree.nodes copies their method", () => {
-  test("an exemption a relay route inherits is not refused as unused", () => {
-    const run = deriveWireRunContract(
-      deriveWireReferenceVariant("tasks-service/api.yaml", [
-        [
-          "    prefix: /internal/v{version}\n",
-          '    prefix: /internal/v{version}\n    idempotency: { exempt: "Relayed calls carry the public key." }\n',
-        ],
-      ]),
+describe("relay routes carry the public operation's method", () => {
+  const SURFACE = "    prefix: /internal/v{version}\n";
+  const EXEMPT = `${SURFACE}    idempotency: { exempt: "Relayed calls carry the public key." }\n`;
+  const ROUTE = "      getTask: { relays: tasks.getTask }\n";
+  const WITH_ASSIGN = `${ROUTE}      assignTask: { relays: tasks.assignTask }\n`;
+
+  const relayRun = (...replacements: [string, string][]) =>
+    deriveWireRunContract(
+      deriveWireReferenceVariant("tasks-service/api.yaml", replacements),
       "tasksService",
+      treeNodesRelayedTasks(),
     );
 
+  test("an exemption a relay route inherits and uses is not refused", () => {
+    const run = relayRun([SURFACE, EXEMPT], [ROUTE, WITH_ASSIGN]);
+
     expect(run.diagnostics).toEqual([]);
+    expect(deriveWireOperation(run, "assignTask").idempotency).toMatchObject({
+      kind: "exempt",
+      reason: "Relayed calls carry the public key.",
+      origin: { pointer: "/surfaces/internal/idempotency" },
+    });
+  });
+
+  test("an exemption no relay route uses is refused as unused", () => {
+    const run = relayRun([SURFACE, EXEMPT]);
+
+    expect(run.diagnostics.map(deriveWireLocated)).toEqual([
+      {
+        rule: "seampact/derive/idempotency-exempt-unused",
+        pointer: "/surfaces/internal/idempotency",
+        related: [],
+      },
+    ]);
     expect(deriveWireOperation(run, "getTask").idempotency).toBeUndefined();
   });
 });
