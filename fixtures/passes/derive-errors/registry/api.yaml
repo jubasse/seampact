@@ -6,6 +6,7 @@ extends: ./base.yaml
 packs: [./pack.yaml]
 
 conventions:
+  rateLimit: { header: Retry-After, param: retryAfterMs, unit: ms }
   errors:
     every: [shop.failed]
     derived:
@@ -14,7 +15,7 @@ conventions:
 errors:
   api.rate_limited:
     status: 429
-    params: { retryAfterMs: { type: integer, minimum: 0 }, scope: { type: string } }
+    params: { retryAfterMs: { type: integer, minimum: 0 }, scope?: { type: string } }
     example: { retryAfterMs: 1500, scope: user }
   api.payload_too_large: { status: 413, title: The body is too large. }
   shop.failed: { status: 500, title: The shop failed., description: Retry later or call support. }

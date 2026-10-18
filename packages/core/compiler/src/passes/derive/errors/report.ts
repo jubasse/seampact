@@ -14,10 +14,14 @@ export type DeriveErrorsRule =
   | "error-nature"
   | "error-params"
   | "error-example"
+  | "error-default"
   | "nature-base"
   | "role-code"
   | "role-datum"
-  | "role-param";
+  | "role-param"
+  | "role-param-required"
+  | "role-param-type"
+  | "role-template";
 
 export interface DeriveErrorsRelated {
   /** A pointer of the merged raw tree. */

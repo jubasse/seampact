@@ -129,6 +129,79 @@ ${PING_SURFACE}`,
   });
 });
 
+describe("redeclared default codes", () => {
+  const redeclare = (declaration: string) =>
+    deriveErrorsRunContract(
+      deriveErrorsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }
+natures:
+  throttled: { base: unavailable }
+errors:
+  ${declaration}
+${PING_SURFACE}`,
+      }),
+    );
+
+  test("a redeclared default code without nature keeps the core nature, not the one of its status", () => {
+    const run = redeclare("api.idempotency_in_progress: { status: 409, title: Still running. }");
+
+    expect(run.diagnostics).toEqual([]);
+    expect(run.draft.errors["api.idempotency_in_progress"]?.nature).toBe("unavailable");
+  });
+
+  test("a redeclared default code may name a nature on its core base", () => {
+    expect(redeclare("api.rate_limited: { status: 429, nature: throttled }").diagnostics).toEqual(
+      [],
+    );
+  });
+
+  test("a redeclared default code changing its status or its nature is refused at the member", () => {
+    const run = redeclare("api.not_found: { status: 410, nature: unavailable }");
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/error-default",
+        pointer: "/errors/api.not_found/status",
+        related: [],
+      },
+      {
+        rule: "seampact/derive/error-default",
+        pointer: "/errors/api.not_found/nature",
+        related: [],
+      },
+    ]);
+  });
+});
+
+describe("listed error codes", () => {
+  test("a code a right, a rule or a scope lists that nobody declares is refused at the list item", () => {
+    const run = deriveErrorsRunContract(
+      deriveErrorsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }
+schemas:
+  OrgId: { type: string }
+scopes:
+  org: { id: OrgId, errors: [api.not_found, shop.not_member] }
+rights:
+  orgs.manage: { subject: { scope: org }, errors: [shop.denied] }
+rules:
+  throttle: { bucket: true, errors: [api.rate_limited, shop.slow_down] }
+${PING_SURFACE}`,
+      }),
+    );
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/error-unknown",
+        pointer: "/rights/orgs.manage/errors/0",
+        related: [],
+      },
+      { rule: "seampact/derive/error-unknown", pointer: "/rules/throttle/errors/1", related: [] },
+      { rule: "seampact/derive/error-unknown", pointer: "/scopes/org/errors/1", related: [] },
+    ]);
+  });
+});
+
 describe("node error declarations", () => {
   test("a code declared on a surface, a collection, a scope or a route joins the registry with that node's origin", () => {
     const { draft } = deriveErrorsRunContract(deriveErrorsLoadFixture("registry"));
