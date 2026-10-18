@@ -38,9 +38,9 @@ await app.register(TasksFastify.plugin, { handlers: { TasksEndpoints: tasksHandl
 
 Hook calls are wrapped as ADR 0016 states. Fastify's own denial is an error whose `statusCode` is 401 or 403 (`@fastify/sensible`'s `httpErrors`, `@fastify/jwt`): thrown inside a decide hook it answers the requirement's first declared denial code, and any other failure of a hook is a 500 with `onUnexpectedError` called (ADR 0012 "Failures inside hooks").
 
-Route paths use Fastify's syntax with positional parameter names (`/tasks/:p1`) and a literal `:` doubled; the boundary never reads `request.params`. It matches the raw path and the request's own method, not the route's, against the contract templates with the shared `matchContractRoute` and decodes the path with `decodeRequestParams`. So a request that only Fastify's relaxed routing accepts answers the path's `notFound` 404 in the api's format: a path that only `ignoreTrailingSlash`, `caseSensitive: false` or `ignoreDuplicateSlashes` matches, and a `HEAD` request, which Fastify runs on the `GET` route (`exposeHeadRoutes`) while the contract serves no `HEAD`.
+Route paths use Fastify's syntax with positional parameter names (`/tasks/:p1`) and a literal `:` doubled in a static segment (`/tasks::batch`); find-my-way reads a parameter up to the next `/`, so `generate` refuses by name (`path.segment.mixed.unsupported`) a segment that mixes a placeholder with literal text, such as `{id}:archive`. The boundary never reads `request.params`. It matches the raw path and the request's own method, not the route's, against the contract templates with the shared `matchContractRoute` and decodes the path with `decodeRequestParams`. So a request that only Fastify's relaxed routing accepts answers the path's `notFound` 404 in the api's format: a path that only `ignoreTrailingSlash`, `caseSensitive: false` or `ignoreDuplicateSlashes` matches, and a `HEAD` request, which Fastify runs on the `GET` route (`exposeHeadRoutes`) while the contract serves no `HEAD`.
 
-The route table lists the operations most specific first, static segments before parameters (`/tasks/search` before `/tasks/{id}`), and the plugin registers them in that order. Fastify's router prefers a static segment whatever the order; `matchContractRoute` iterates the same table, so the boundary picks the operation Fastify routed to.
+The route table lists the operations most specific first, static segments before parameters (`/tasks/search` before `/tasks/{id}`), and the plugin registers them in that order. Fastify's router prefers a static segment whatever the order; `matchContractRoute` iterates the same table. Fastify decodes a percent-encoded static segment (`/tasks/%73earch` reaches `/tasks/search`) while the boundary matches the raw path, so when the two name different operations the boundary answers the path's `notFound` 404 before any check, and no handler runs under another operation's access and input.
 
 The plugin is generated into the target's module of the api, `fastify.ts`, re-exported by the api's `index.ts` (ADR 0007 "Amendment 2026-10-19: generated modules"). Its fixed exports are `plugin`, `renderContractError`, `renderPreRoutingError`, `isContractRoute`, `MAX_CHECKED_ERROR_BODY_BYTES` and `MAX_RENDERED_ISSUES`; no export is named by an operation, so none takes the reserved-name suffix. Next to it, the generated tree holds the shared `routes.ts`, `handlers.ts` and `hooks.ts` modules and the shared request checks under `node-server/`, copied with the generated header (ADR 0009 "What generated code depends on at run time"); this target adds one placement file that imports them.
 
@@ -94,7 +94,7 @@ The plugin runs it when Fastify loads it, so `app.ready()` and `app.listen()` re
 - a contract operation without a bound handler: `handlers` lacks the interface's object or the object lacks the method;
 - a key of `operations` that names no operation of the api;
 - a registration `prefix` (the plugin's `fastify.prefix`, readable at load, spike), which differs from the empty `mount` the slice allows;
-- a router `maxParamLength` (`fastify.initialConfig`) below the longest percent-encoded form of a declared path parameter (twelve characters per code point of its `maxLength`, or three per character when its pattern is ASCII), since Fastify measures the encoded length and would refuse a valid request with a 414; a path parameter without a `maxLength` is a warning naming it, not a failure;
+- a router `maxParamLength` (`fastify.initialConfig`) below the longest percent-encoded form of a declared path parameter (36 for a `uuid`, whose unreserved ASCII characters a client sends as is; else twelve characters per code point of its `maxLength`, or three per character when its pattern is anchored at both ends, has no top-level alternation and matches only ASCII, since a JSON Schema pattern matches anywhere in the value), since Fastify measures the encoded length and would refuse a valid request with a 414; a path parameter that is neither a `uuid` nor bounded by a `maxLength` is a warning naming it, not a failure;
 - a Fastify major other than 5 (`fastify.version`).
 
 ### What the generated code depends on
@@ -103,9 +103,7 @@ At run time: `fastify` 5 as a peer dependency, the zod link's runtime and, for t
 
 ### Refused by name or waiting
 
-`generate` refuses by name, with the case's code and its fix, everything ADR 0016 "Refused by name or waiting" lists for the slice apart from its NestJS platform and `class-validator` items, and:
-
-- `validators.ajv.unsupported`: no linked validator; the Ajv fallback of ADR 0012 "Target obligations" waits for a consumer without a validator library.
+`generate` refuses by name, with the case's code and its fix, everything ADR 0016 "Refused by name or waiting" lists for the slice apart from its NestJS platform and `class-validator` items, and a path segment that mixes a placeholder with literal text ("Placement"). The validators link is required in the slice: its absence is the shared `link.missing` refusal, and the Ajv fallback of ADR 0012 "Target obligations" waits for a consumer without a validator library.
 
 ## Spike
 
