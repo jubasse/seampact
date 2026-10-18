@@ -93,6 +93,38 @@ describe("identity headers", () => {
     ).toEqual(["If-Rights-Version", true, "identity.versionToken"]);
   });
 
+  test("two response declarations of one identity on one wire name with one shape merge into one header", () => {
+    const merged = deriveWireRunContract(
+      deriveWireFixtureVariant("wire", [
+        [
+          "  served: { name: traceresponse, in: response, semantic: traceContext }\n",
+          "  served: { name: traceresponse, in: response, semantic: traceContext }\n  echoed: { name: TraceResponse, in: response, semantic: traceContext }\n",
+        ],
+        [
+          "      served: { for: reads }\n",
+          "      served: { for: reads }\n      echoed: { for: reads }\n",
+        ],
+      ]),
+    );
+    const headers = deriveWireOperation(merged, "board").responses?.[0]?.headers ?? [];
+
+    expect(merged.diagnostics).toEqual([]);
+    expect(headers.filter((header) => header.name.toLowerCase() === "traceresponse")).toEqual([
+      expect.objectContaining({
+        name: "traceresponse",
+        derivedFrom: {
+          derivation: "identity.header",
+          from: [
+            { layer: "api", pointer: "/identities/member/headers/served" },
+            { layer: "api", pointer: "/headers/served" },
+            { layer: "api", pointer: "/identities/member/headers/echoed" },
+            { layer: "api", pointer: "/headers/echoed" },
+          ],
+        },
+      }),
+    ]);
+  });
+
   test("a route without an identity gets no identity header", () => {
     expect(identityParams("github")).toEqual([]);
     expect(deriveWireOperation(run, "github").deadlineHeader).toBeUndefined();
@@ -128,6 +160,25 @@ describe("optional access", () => {
   test("the versionToken response header is optional on optional access, required on identity access", () => {
     expect(responseHeaderOf("notes", "X-Rights-Version")?.required).toBe(false);
     expect(responseHeaderOf("board", "X-Rights-Version")?.required).toBe(true);
+  });
+
+  test("a required identity response header is optional on optional access", () => {
+    const answered = deriveWireRunContract(
+      deriveWireFixtureVariant("wire", [
+        [
+          "      trace: { for: writes }\n",
+          "      trace: { for: writes }\n      served: { for: reads, required: true }\n",
+        ],
+      ]),
+    );
+    const servedOf = (id: string) =>
+      deriveWireOperation(answered, id).responses?.[0]?.headers.find(
+        (header) => header.name === "traceresponse",
+      )?.required;
+
+    expect(answered.diagnostics).toEqual([]);
+    expect(servedOf("feed")).toBe(false);
+    expect(servedOf("status")).toBe(true);
   });
 
   test("a required identity request header is optional on optional access, the identity keeping its use", () => {

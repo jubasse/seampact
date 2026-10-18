@@ -14,8 +14,8 @@ import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 // `deadlineHeader` (`identity.deadline`). A `versionToken` use drives two headers (`identity.versionToken`): the
 // response header on every success of every route of the identity, and the request header on writes only,
 // whatever its `for` says, since the derivation rule is the specific one. Its `required` is the use's (default
-// false). On optional access an anonymous caller has no principal (ADR 0012 "Authenticate"), so the request headers
-// and the versionToken response header are optional on the wire; the identity entry keeps the use's `required`,
+// false). On optional access an anonymous caller has no principal (ADR 0012 "Authenticate"), so every request and
+// response header of the identity is optional on the wire; the identity entry keeps the use's `required`,
 // which the boundary applies to a request that carries a credential. A use's type is its own `schema`, else the
 // declaration's, else a string. versionToken uses are written after every `identity.header` element, so derived
 // elements keep the derivation table's order.
@@ -75,7 +75,7 @@ function writeHeader(
   if (side === "response") {
     deriveWireAddSuccessHeader(
       route,
-      derivedOf(name, item, use.required, HEADER),
+      derivedOf(name, item, authenticated && use.required, HEADER),
       declaration.semantic,
       scope,
     );
