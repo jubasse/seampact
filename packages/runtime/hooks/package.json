@@ -1,0 +1,14 @@
+{
+  "name": "@seampact/hooks",
+  "description": "The neutral hook interfaces and idempotency store interface every generated Node server boundary types against.",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "seampact": {
+    "role": "hooks"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}
