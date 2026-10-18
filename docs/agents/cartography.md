@@ -48,7 +48,7 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/codegen-core`
 
 - `packages/core/codegen-core/src`: The API the code generators are written against: target definitions, link descriptors, refusals, and the steps around a target's generate (IR support and link checks, header, formatting, file writer), and the helpers targets share (IR locations, located refusals, planned names, property keys).
-- `packages/core/codegen-core/src/node-server`: The shared Node server boundary every Node server target generates (ADR 0016): the framework-neutral runtime copied into the generated tree, and the emitters of the route table, handler interfaces and hook types.
+- `packages/core/codegen-core/src/node-server`: The shared Node server boundary every Node server target generates (ADR 0016): the framework-neutral runtime copied into the generated tree, the emitters of the route table, handler interfaces and hook types, the target options parser, and the assembly of one api's boundary files around a target's placement.
 
 ### `@seampact/compiler`
 

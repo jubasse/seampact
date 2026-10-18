@@ -1,7 +1,7 @@
 // The NestJS placement of the shared request checks (ADR 0016): the module middleware, the per-operation composite
 // and input decorators, the guard, the interceptor, the narrow filter, the dynamic module with its boot check, and
 // the exported helpers. Each api's generated module calls `createNestBoundary` once with its route table.
-import type { IncomingMessage, ServerResponse } from "node:http";
+import type { ServerResponse } from "node:http";
 import {
   type ArgumentsHost,
   applyDecorators,
@@ -58,7 +58,6 @@ import {
   codeOfStatus,
   isPlainObject,
   renderContractReply,
-  roleError,
   unexpectedError,
 } from "./node-server/contract-error.js";
 import {
@@ -71,6 +70,14 @@ import {
   matchesContractPath,
   type ResponsesMode,
 } from "./node-server/contract-route.js";
+import {
+  bodyParserError,
+  contractRequest,
+  type ExpressRequest,
+  expressBodyGlue,
+  parserErrorStatus,
+  pathnameOf,
+} from "./node-server/express-platform.js";
 import { handlerReply } from "./node-server/handler-reply.js";
 import { beginIdempotency } from "./node-server/idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./node-server/input-checks.js";
@@ -85,13 +92,6 @@ import { type PlatformFixes, transportRefusal } from "./node-server/transport-ch
 export interface NestBoundaryOptions {
   readonly responses: ResponsesMode;
   readonly bodyValidation: boolean;
-}
-
-/** The request as Express hands it to NestJS. */
-interface PlatformRequest extends IncomingMessage {
-  originalUrl?: string;
-  body?: unknown;
-  rawBody?: unknown;
 }
 
 interface OperationMetadata {
@@ -111,11 +111,9 @@ const OPERATION_METADATA = "seampact:operation";
 const RESPONSE_INDEX_METADATA = "seampact:responseIndex";
 const EXPRESS_PLATFORM = "express";
 const TOO_MANY_REQUESTS = 429;
-const PAYLOAD_TOO_LARGE = 413;
 const INTERNAL_STATUS = 500;
 const FORBIDDEN_ROLE = "forbidden";
 const UNAUTHENTICATED_ROLE = "unauthenticated";
-const PAYLOAD_TOO_LARGE_ROLE = "payloadTooLarge";
 const NOT_FOUND_ROLE = "notFound";
 const NEST_FIXES: PlatformFixes = {
   rawBody:
@@ -146,37 +144,7 @@ function isFrameworkDenial(error: unknown): boolean {
   return error instanceof UnauthorizedException || error instanceof ForbiddenException;
 }
 
-// The request target as Express routes it: raw, never normalized (no dot segment resolved, no `\\` turned into `/`).
-function requestTarget(request: PlatformRequest): { path: string; rawQuery: string } {
-  const target = request.originalUrl ?? request.url ?? "/";
-  const queryStart = target.indexOf("?");
-
-  return queryStart === -1
-    ? { path: target, rawQuery: "" }
-    : { path: target.slice(0, queryStart), rawQuery: target.slice(queryStart + 1) };
-}
-
-function pathnameOf(request: PlatformRequest): string {
-  return requestTarget(request).path;
-}
-
-function contractRequest(request: PlatformRequest): ContractRequest {
-  const { path, rawQuery } = requestTarget(request);
-
-  return {
-    method: request.method ?? "GET",
-    path,
-    rawQuery,
-    headers: request.headers,
-    body: request.body,
-    ...(Buffer.isBuffer(request.rawBody) ? { rawBody: request.rawBody } : {}),
-    ...(request.socket.remoteAddress === undefined
-      ? {}
-      : { clientAddress: request.socket.remoteAddress }),
-  };
-}
-
-function checkState(context: BoundaryContext, request: PlatformRequest): CheckState {
+function checkState(context: BoundaryContext, request: ExpressRequest): CheckState {
   return {
     api: context.api,
     route: context.route,
@@ -241,7 +209,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
 ) {
   const HOOKS = Symbol(`seampact:${api.id}:hooks`);
   const RESPONSES_METADATA = `seampact:${api.id}:responses`;
-  const BODY_BYTES = Symbol(`seampact:${api.id}:bodyBytes`);
+  const bodyGlue = expressBodyGlue(api);
   const reflector = new Reflector();
   // Set when the module starts: what the exported pre-routing filter and helper reach outside a request context.
   const platform: { adapterHost?: HttpAdapterHost; hooks?: BoundaryHooks } = {};
@@ -257,7 +225,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
 
   const middleware =
     (hooks: BoundaryHooks) =>
-    (request: PlatformRequest, response: ServerResponse, next: () => void): void => {
+    (request: ExpressRequest, response: ServerResponse, next: () => void): void => {
       const path = pathnameOf(request);
       const method = request.method ?? "GET";
       const matched = matchContractRoute(api, method, path);
@@ -277,12 +245,12 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
         mode: options.responses,
         boundaryWriting: false,
       };
-      const recorded: unknown = Reflect.get(request, BODY_BYTES);
+      const recorded = bodyGlue.recordedBodyBytes(request);
 
       installOutgoingCheck(response, context, { method, path });
       boundaryContext.run(context, () => {
         const refusal = transportRefusal(matched.route, contractRequest(request), {
-          ...(typeof recorded === "number" ? { recordedBytes: recorded } : {}),
+          ...(recorded === undefined ? {} : { recordedBytes: recorded }),
           fixes: NEST_FIXES,
         });
 
@@ -360,7 +328,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
   class ContractInterceptor implements NestInterceptor {
     intercept(execution: ExecutionContext, next: CallHandler): Observable<unknown> {
       const context = requireContext();
-      const request: PlatformRequest = execution.switchToHttp().getRequest();
+      const request: ExpressRequest = execution.switchToHttp().getRequest();
       const response: ServerResponse = execution.switchToHttp().getResponse();
 
       return from(beforeHandler(context, request)).pipe(
@@ -379,7 +347,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
     }
   }
 
-  async function beforeHandler(context: BoundaryContext, request: PlatformRequest) {
+  async function beforeHandler(context: BoundaryContext, request: ExpressRequest) {
     const grant = context.grant;
 
     if (grant === undefined)
@@ -402,7 +370,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
 
   async function afterHandler(
     context: BoundaryContext,
-    request: PlatformRequest,
+    request: ExpressRequest,
     response: ServerResponse,
     result: unknown,
   ): Promise<void> {
@@ -422,7 +390,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
   /** Writes a contract error, or a framework refusal mapped to its role, in the api's format. */
   async function renderContractError(host: ArgumentsHost, error: unknown): Promise<void> {
     const http = host.switchToHttp();
-    const request: PlatformRequest = http.getRequest();
+    const request: ExpressRequest = http.getRequest();
     const response: ServerResponse = http.getResponse();
     const context = boundaryContext.getStore();
     const contractError =
@@ -609,24 +577,11 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
     return problems;
   }
 
-  /** The verify function for `app.useBodyParser('json', { verify })` with `rawBody` off. */
-  function keepRawBody(request: IncomingMessage, _response: ServerResponse, bytes: Buffer): void {
-    const matched = matchContractRoute(api, request.method ?? "GET", pathnameOf(request));
-
-    if (matched === undefined) return;
-
-    Reflect.set(request, BODY_BYTES, bytes.byteLength);
-
-    if (matched.route.access.kind === "identity" && matched.route.access.signed !== undefined) {
-      Reflect.set(request, "rawBody", Buffer.from(bytes));
-    }
-  }
-
   /** Renders a refusal raised before routing on a contract path in the api's format; false when it does nothing. */
   function renderPreRoutingError(exception: unknown, host: ArgumentsHost): boolean {
     if (boundaryContext.getStore() !== undefined) return false;
 
-    const request: PlatformRequest = host.switchToHttp().getRequest();
+    const request: ExpressRequest = host.switchToHttp().getRequest();
     const response: ServerResponse = host.switchToHttp().getResponse();
     const path = pathnameOf(request);
 
@@ -685,7 +640,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
     responses: (mode: ResponsesMode) => SetMetadata(RESPONSES_METADATA, mode),
     renderContractError,
     isContractRoute,
-    keepRawBody,
+    keepRawBody: bodyGlue.keepRawBody,
     renderPreRoutingError,
     preRoutingFilter: new PreRoutingFilter(),
   };
@@ -763,35 +718,11 @@ function preRoutingError(route: ContractRoute | undefined, exception: unknown): 
 
   if (route === undefined || status === undefined) return unexpectedError(route, exception);
 
-  if (status === PAYLOAD_TOO_LARGE) {
-    const parserLimit: unknown = isPlainObject(exception) ? exception.limit : undefined;
-    const routeLimit = route.input?.limitBytes;
-
-    if (typeof parserLimit === "number" && routeLimit !== undefined && parserLimit < routeLimit) {
-      console.error(
-        `seampact: the JSON parser's limit (${parserLimit} bytes) is below the limit of '${route.id}' (${routeLimit} bytes); set the parser limit to the generated LARGEST_BODY_LIMIT.`,
-      );
-
-      return unexpectedError(route, exception);
-    }
-
-    return roleError(route, PAYLOAD_TOO_LARGE_ROLE, { limitBytes: routeLimit });
-  }
-
-  const code = codeOfStatus(route, status);
-
-  return code === undefined ? unexpectedError(route, exception) : new ContractError(code);
+  return bodyParserError(route, status, exception);
 }
 
 function statusOf(exception: unknown): number | undefined {
-  if (exception instanceof HttpException) return exception.getStatus();
-
-  const status: unknown =
-    isPlainObject(exception) || exception instanceof Error
-      ? Reflect.get(exception, "status")
-      : undefined;
-
-  return typeof status === "number" ? status : undefined;
+  return exception instanceof HttpException ? exception.getStatus() : parserErrorStatus(exception);
 }
 
 // NestJS's default reply, as its `BaseExceptionFilter` writes it, when the filter has no HTTP adapter to delegate to.

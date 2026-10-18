@@ -35,7 +35,7 @@ export {
   typeScriptIdentifier,
 } from "./planned-names.js";
 export { propertyKey } from "./property-key.js";
-export type { Refusal, Refused } from "./refusal.js";
+export { type Refusal, type Refused, withoutRepeats } from "./refusal.js";
 export type {
   AnyTargetMetadata,
   ArtefactDeclaration,

@@ -1,12 +1,14 @@
-import { below, type ParseOptionsOutcome, type Refusal } from "@seampact/codegen-core";
+import { below } from "../ir-location.js";
+import type { Refusal } from "../refusal.js";
+import type { ParseOptionsOutcome } from "../target.js";
 
-// The target options (ADR 0016 "Target options"): what a reply outside the contract does, and whether JSON success
-// replies are validated by the zod output validators.
-export const RESPONSES_MODES = ["strict", "warn"] as const;
+// The options every Node server target takes (ADR 0016 "Target options"): what a reply outside the contract does,
+// and whether JSON success replies are validated by the zod output validators.
+const RESPONSES_MODES = ["strict", "warn"] as const;
 
 export type ResponsesMode = (typeof RESPONSES_MODES)[number];
 
-export interface NestjsOptions {
+export interface NodeServerOptions {
   responses: ResponsesMode;
   bodyValidation: boolean;
 }
@@ -15,10 +17,13 @@ const RESPONSES_KEY = "responses";
 const BODY_VALIDATION_KEY = "bodyValidation";
 const KNOWN_KEYS: readonly string[] = [RESPONSES_KEY, BODY_VALIDATION_KEY];
 
-export const DEFAULT_OPTIONS: NestjsOptions = { responses: "strict", bodyValidation: false };
+const DEFAULT_NODE_SERVER_OPTIONS: NodeServerOptions = {
+  responses: "strict",
+  bodyValidation: false,
+};
 
 // Accepts `{}`, `responses: strict | warn` and `bodyValidation: true | false`; any other key or value is refused.
-export function parseNestjsOptions(raw: unknown): ParseOptionsOutcome<NestjsOptions> {
+export function parseNodeServerOptions(raw: unknown): ParseOptionsOutcome<NodeServerOptions> {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
     return {
       status: "refused",
@@ -36,8 +41,12 @@ export function parseNestjsOptions(raw: unknown): ParseOptionsOutcome<NestjsOpti
   const refusals = Object.keys(raw)
     .filter((key) => !KNOWN_KEYS.includes(key))
     .map(refuseUnknownOption);
-  const responses = optionValue(raw, RESPONSES_KEY, DEFAULT_OPTIONS.responses);
-  const bodyValidation = optionValue(raw, BODY_VALIDATION_KEY, DEFAULT_OPTIONS.bodyValidation);
+  const responses = optionValue(raw, RESPONSES_KEY, DEFAULT_NODE_SERVER_OPTIONS.responses);
+  const bodyValidation = optionValue(
+    raw,
+    BODY_VALIDATION_KEY,
+    DEFAULT_NODE_SERVER_OPTIONS.bodyValidation,
+  );
 
   if (!isResponsesMode(responses)) {
     refusals.push({

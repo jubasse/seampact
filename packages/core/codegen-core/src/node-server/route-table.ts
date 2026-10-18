@@ -34,7 +34,6 @@ const JSON_MEDIA = "application/json";
 const BOUNDARY_ENFORCEMENT = "boundary";
 const CURSOR_ROLE = "cursor";
 const LIMIT_ROLE = "limit";
-const ARRAY_ITEM = "*";
 
 // A value written into the module as source text, such as an imported validator.
 class SourceExpression {
@@ -221,7 +220,6 @@ function routeEntry(
       validatorRef === undefined
         ? null
         : imports.expression(validatorRef.module, validatorRef.export),
-    inputRules: inputRuleHints(ir, operation),
     idempotency: idempotencyEntry(operation, location, refusals),
     responses: operation.responses.map((response, index) => ({
       status: response.status,
@@ -1034,66 +1032,4 @@ function sourceOf(value: SourceValue): string {
     .map(([name, member]) => `${JSON.stringify(name)}: ${sourceOf(member)}`);
 
   return `{ ${members.join(", ")} }`;
-}
-
-// Per input pointer, the format and length bounds of a string: the rule names of the validator's custom checks.
-function inputRuleHints(ir: ContractIR, operation: Operation): SourceValue {
-  const hints: Record<string, SourceValue> = {};
-  const parts: [string, readonly Param[], (name: string) => string][] = [
-    ["path", operation.params.path, (name) => name],
-    ["query", operation.params.query, (name) => name],
-    ["headers", operation.params.header, (name) => name.toLowerCase()],
-  ];
-
-  for (const [part, params, key] of parts) {
-    for (const param of params)
-      collectHints(ir, param.type, `/${part}/${key(param.name)}`, hints, []);
-  }
-
-  if (operation.input !== undefined) collectHints(ir, operation.input.schema, "/body", hints, []);
-
-  return hints;
-}
-
-function collectHints(
-  ir: ContractIR,
-  type: TypeUse,
-  pointer: string,
-  hints: Record<string, SourceValue>,
-  visiting: readonly string[],
-): void {
-  if (!isKnownVariant("TypeUse", type)) return;
-
-  if (type.kind === "scalar") {
-    const { minLength, maxLength } = type.refinements;
-
-    if (type.format !== undefined || minLength !== undefined || maxLength !== undefined) {
-      hints[pointer] = { format: type.format, minLength, maxLength };
-    }
-
-    return;
-  }
-
-  if (type.kind === "array") {
-    collectHints(ir, type.items, `${pointer}/${ARRAY_ITEM}`, hints, visiting);
-
-    return;
-  }
-
-  if (type.kind !== "ref" || visiting.includes(type.schema)) return;
-
-  const schema = ir.schemas[type.schema];
-
-  if (schema === undefined || !isKnownVariant("Schema", schema) || schema.kind !== "object") return;
-
-  for (const property of schema.properties) {
-    collectHints(ir, property.type, `${pointer}/${escapePointer(property.name)}`, hints, [
-      ...visiting,
-      type.schema,
-    ]);
-  }
-}
-
-function escapePointer(name: string): string {
-  return name.replaceAll("~", "~0").replaceAll("/", "~1");
 }

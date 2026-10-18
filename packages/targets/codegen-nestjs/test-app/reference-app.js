@@ -267,7 +267,7 @@ export async function startReferenceApp() {
     response.setHeader("x-content-type-options", "nosniff");
     next();
   });
-  app.useBodyParser("json", { limit: TasksNest.LARGEST_BODY_LIMIT });
+  app.useBodyParser("json", { limit: TasksNest.LARGEST_BODY_LIMIT, strict: false });
   app.useGlobalFilters(TasksNest.preRoutingFilter);
   await app.listen(0, "127.0.0.1");
 

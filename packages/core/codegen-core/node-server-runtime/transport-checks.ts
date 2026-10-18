@@ -1,9 +1,13 @@
 // The contract's part of step 1 (ADR 0012): the route's own body limit and its media type, checked once the
 // platform's parser has read the body within the app-wide limit. Copied into the generated tree as is.
-import { type ContractError, roleError, unexpectedError } from "./contract-error.js";
+import {
+  type ContractError,
+  PAYLOAD_TOO_LARGE_ROLE,
+  roleError,
+  unexpectedError,
+} from "./contract-error.js";
 import { type ContractRequest, type ContractRoute, headerValue } from "./contract-route.js";
 
-const PAYLOAD_TOO_LARGE_ROLE = "payloadTooLarge";
 const UNSUPPORTED_MEDIA_ROLE = "unsupportedMediaType";
 const IDENTITY_ENCODING = "identity";
 const JSON_SUFFIX = "+json";

@@ -18,3 +18,18 @@ export interface Refused {
 export function refused(refusals: readonly Refusal[]): Refused {
   return { status: "refused", refusals };
 }
+
+// A form shared by several operations, such as an error code's params, is refused once.
+export function withoutRepeats(refusals: readonly Refusal[]): Refusal[] {
+  const seen = new Set<string>();
+
+  return refusals.filter((refusal) => {
+    const key = JSON.stringify([refusal.code, refusal.member, refusal.operation]);
+
+    if (seen.has(key)) return false;
+
+    seen.add(key);
+
+    return true;
+  });
+}

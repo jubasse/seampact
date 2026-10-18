@@ -20,14 +20,27 @@ export function entryWhere(entryId: string, api?: string): string {
   return api === undefined ? `entry '${entryId}'` : `entry '${entryId}', api '${api}'`;
 }
 
-// A target's refusal as the CLI prints it, keeping the operation and IR member it names.
+// A pointer is named when the message holds it whole, not as the start of a longer pointer or number.
+function namesPointer(message: string, pointer: string): boolean {
+  const escaped = pointer.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  return new RegExp(`${escaped}(?![/\\w])`).test(message);
+}
+
+// A target's refusal or warning as the CLI prints it, naming the operation and IR member once: an operation id the
+// message quotes, or a member pointer it holds, is not repeated.
 export function problemFromRefusal(refusal: Refusal, where: string): CliProblem {
+  const { operation, member, message } = refusal;
   const pointers = [
-    refusal.operation === undefined ? undefined : `operation '${refusal.operation}'`,
-    refusal.member === undefined ? undefined : `member '${refusal.member}'`,
+    operation === undefined || message.includes(`'${operation}'`)
+      ? undefined
+      : `operation '${operation}'`,
+    member === undefined || member === "" || namesPointer(message, member)
+      ? undefined
+      : `member '${member}'`,
   ].filter((pointer) => pointer !== undefined);
 
   const at = pointers.length === 0 ? "" : ` (${pointers.join(", ")})`;
 
-  return { code: refusal.code, message: `${refusal.message}${at}`, fix: refusal.fix, where };
+  return { code: refusal.code, message: `${message}${at}`, fix: refusal.fix, where };
 }
