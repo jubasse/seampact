@@ -44,6 +44,10 @@ export interface TemplateSite {
   readonly owner: string;
   /** The place, as messages name it: `success.item`, `an error body`. */
   readonly placeName: string;
+  /** The slot messages give as the example of a whole slot: `$payload`. */
+  readonly exampleSlot: string;
+  /** The ADR sections messages cite for the slots of the place: `ADR 0002 sections 13 and 14`. */
+  readonly adrSections: string;
   readonly report: (fault: TemplateFault) => void;
 }
 
@@ -70,6 +74,8 @@ interface StandRule {
   readonly verb: string;
   readonly need: string;
   readonly fix: (slots: string) => string;
+  /** Said after the fix when no slot of the place fits. */
+  readonly noFitHint: string;
 }
 
 const STAND_RULES: Readonly<Record<SlotStand, StandRule>> = {
@@ -79,6 +85,7 @@ const STAND_RULES: Readonly<Record<SlotStand, StandRule>> = {
     verb: "merges",
     need: "object",
     fix: (slots) => `Merge an object slot (${slots}), or write the slot as a member.`,
+    noFitHint: "",
   },
   each: {
     rule: "template-each",
@@ -86,6 +93,7 @@ const STAND_RULES: Readonly<Record<SlotStand, StandRule>> = {
     verb: "maps with $each",
     need: "array",
     fix: (slots) => `Map an array slot (${slots}), or write the slot as a member.`,
+    noFitHint: "",
   },
   name: {
     rule: "template-name",
@@ -93,6 +101,7 @@ const STAND_RULES: Readonly<Record<SlotStand, StandRule>> = {
     verb: "names a member with",
     need: "name",
     fix: (slots) => `Name the member with a name slot (${slots}), or write $$ for a literal $.`,
+    noFitHint: " Write $$ for a literal $.",
   },
 };
 
@@ -336,7 +345,7 @@ function slotName(
     return refuseSyntax(
       reading,
       pointer,
-      `${STAND_KEYS[stand]} takes one slot ($payload), without a member path`,
+      `${STAND_KEYS[stand]} takes one slot (${reading.site.exampleSlot}), without a member path`,
     );
 
   return checkSlot(reading, slot, pointer) && checkStand(reading, slot, pointer, stand)
@@ -353,13 +362,13 @@ const slotOf = (reading: Reading, name: string): TemplateSlot | undefined =>
 
 // ADR 0002 section 13: a slot stands where its kind fits; a `payload` slot is checked per operation by the caller.
 function checkStand(reading: Reading, slot: string, pointer: string, stand: SlotStand): boolean {
-  const { rule, kinds, verb, need, fix } = STAND_RULES[stand];
+  const { rule, kinds, verb, need, fix, noFitHint } = STAND_RULES[stand];
   const kind = slotOf(reading, slot)?.kind ?? "value";
 
   if (kinds.includes(kind)) return true;
 
   const { site } = reading;
-  const fitting = [...site.slots, ...site.eachSlots]
+  const fitting = readableSlots(reading)
     .filter((candidate) => kinds.includes(candidate.kind))
     .map((candidate) => `$${candidate.name}`);
 
@@ -367,11 +376,11 @@ function checkStand(reading: Reading, slot: string, pointer: string, stand: Slot
   site.report({
     rule,
     pointer,
-    message: `The template of ${site.owner} ${verb} $${slot}, which holds no ${need}.`,
+    message: `The template of ${site.owner} ${verb} ${quote(`$${slot}`)}, which holds no ${need}.`,
     fix:
       fitting.length > 0
         ? fix(fitting.join(", "))
-        : `Write $${slot} as a member: ${site.placeName} fills no slot that holds a ${need}.`,
+        : `Write ${quote(`$${slot}`)} as a member: ${site.placeName} fills no slot that holds a ${need}.${noFitHint}`,
   });
 
   return false;
@@ -386,8 +395,8 @@ function checkSlot(reading: Reading, slot: string, pointer: string): boolean {
   site.report({
     rule: "template-slot",
     pointer,
-    message: `The template of ${site.owner} writes the slot $${slot}, which ${site.placeName} does not fill.`,
-    fix: `Use a slot of ${site.placeName} (ADR 0002 sections 13 and 14), or write $$${slot} for the literal text.`,
+    message: `The template of ${site.owner} writes the slot ${quote(`$${slot}`)}, which ${site.placeName} does not fill.`,
+    fix: `Use a slot of ${site.placeName} (${site.adrSections}), or write ${quote(`$$${slot}`)} for the literal text.`,
   });
 
   return false;

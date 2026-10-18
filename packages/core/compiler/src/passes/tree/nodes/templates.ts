@@ -103,6 +103,8 @@ export function treeNodesTemplate(
     eachSlots: slotsOf(EACH_SLOTS),
     owner,
     placeName: PLACE_NAMES[place],
+    exampleSlot: "$payload",
+    adrSections: "ADR 0002 sections 13 and 14",
     report: ({ rule, pointer: at, message, fix }) =>
       context.report(
         treeNodesError({

@@ -23,6 +23,8 @@ function read(value: JsonValue, slots: readonly TemplateSlot[] = PLACE_SLOTS) {
       eachSlots: ELEMENT_SLOTS,
       owner: "the role notFound",
       placeName: "a role binding",
+      exampleSlot: "$params",
+      adrSections: "ADR 0002 section 13",
       report: (fault) => faults.push(fault),
     },
     value,
@@ -94,7 +96,7 @@ describe("templateRead", () => {
       { rule: "template-slot", pointer: "/t/b" },
     ]);
     expect(all[0]?.message).toBe(
-      "The template of the role notFound writes the slot $nature, which a role binding does not fill.",
+      "The template of the role notFound writes the slot '$nature', which a role binding does not fill.",
     );
   });
 
@@ -132,8 +134,38 @@ describe("templateRead", () => {
 
     expect(faults).toEqual([{ rule: "template-name", pointer: "/t/$code" }]);
     expect(all[0]?.fix).toBe(
-      "Write $code as a member: a role binding fills no slot that holds a name.",
+      "Write '$code' as a member: a role binding fills no slot that holds a name. Write $$ for a literal $.",
     );
     expect(read({ $name: 1 }, [{ name: "name", kind: "name" }]).faults).toEqual([]);
+  });
+
+  test("quotes and bounds a slot name written in a message", () => {
+    const long = "a".repeat(200);
+    const { all } = read({ a: `$${long}` });
+
+    expect(all[0]?.message).toContain(`'$${"a".repeat(79)}…'`);
+    expect(all[0]?.message).not.toContain(long);
+  });
+
+  test("lists the element slots as fitting only inside $as", () => {
+    const element: readonly TemplateSlot[] = [{ name: "itemFields", kind: "object" }];
+    const faults: TemplateFault[] = [];
+    const site = {
+      slots: PLACE_SLOTS,
+      eachSlots: element,
+      owner: "the role notFound",
+      placeName: "a role binding",
+      exampleSlot: "$params",
+      adrSections: "ADR 0002 section 13",
+      report: (fault: TemplateFault) => faults.push(fault),
+    };
+
+    templateRead(site, { $merge: "$code" }, "/t");
+    templateRead(site, { rows: { $each: "$list", $as: { $merge: "$code" } } }, "/t");
+
+    expect(faults.map(({ fix }) => fix)).toEqual([
+      "Merge an object slot ($params), or write the slot as a member.",
+      "Merge an object slot ($params, $itemFields), or write the slot as a member.",
+    ]);
   });
 });

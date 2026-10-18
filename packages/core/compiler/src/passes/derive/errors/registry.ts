@@ -1,6 +1,9 @@
 import type { IrWriter } from "@seampact/spec/ir";
-import { type DerivationRole, derivationRoles } from "../../../derivations/index.js";
-import { derivationParamsSchemaId } from "../../../derivations/index.js";
+import {
+  type DerivationRole,
+  derivationParamsSchemaId,
+  derivationRoles,
+} from "../../../derivations/index.js";
 import {
   type PassContextOf,
   pipelineCanonical,
