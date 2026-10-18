@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { DraftIR, DraftOperation } from "../../../pipeline/seam.js";
 import { deriveWireReferenceVariants } from "../wire/test-support.js";
 import {
+  deriveErrorsLoadThreeApis,
   deriveErrorsLocated,
   deriveErrorsReferenceWorkspace,
   deriveErrorsRunContract,
@@ -157,5 +158,76 @@ describe("relay routes to an imported api", () => {
       "relay.route",
     );
     expect(errorOf(serviceRun.draft, "getTask", "tasks.locked")).toBeUndefined();
+  });
+});
+
+const SECOND_RELAY_POINTER = "/surfaces/internal/routes/health/relays";
+
+// Two public apis declare `tasks.locked` on a node (the tasks collection, the second api's `health` route), each with
+// its own status and its own base of the nature `locked`; the service relays one route of each.
+function twoPublicRun(first: { status: number; base: string }, second: typeof first) {
+  const declare = (
+    { status, base }: typeof first,
+    anchor: string,
+    indent: string,
+  ): [string, string][] => [
+    ["\nschemas:\n", `\nnatures:\n  locked: { base: ${base} }\n\nschemas:\n`],
+    [anchor, `${anchor}${indent}errors: { tasks.locked: { status: ${status}, nature: locked } }\n`],
+  ];
+  const workspace = deriveErrorsLoadThreeApis({
+    "tasks/api.yaml": declare(first, "              item: Task\n", "              "),
+    "tasks-two/api.yaml": declare(second, "        output: Health\n", "        "),
+  });
+  const relayed = new Map(
+    ["tasks", "tasksTwo"].map((api) => {
+      const run = deriveErrorsRunContract(workspace, { api });
+
+      expect(run.diagnostics).toEqual([]);
+
+      return [api, run.draft];
+    }),
+  );
+
+  return deriveErrorsRunContract(workspace, { api: "tasksService", relayed });
+}
+
+describe("relay routes of two public apis", () => {
+  test("a code both declare the same is copied once and answered on both routes", () => {
+    const run = twoPublicRun({ status: 423, base: "refused" }, { status: 423, base: "refused" });
+
+    expect(run.diagnostics).toEqual([]);
+
+    for (const id of ["getTask", "health"])
+      expect(errorOf(run.draft, id, "tasks.locked")?.derivedFrom?.derivation).toBe("relay.route");
+  });
+
+  test("a code the second declares differently than the first copy is refused at the second route", () => {
+    const run = twoPublicRun({ status: 423, base: "refused" }, { status: 409, base: "refused" });
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/relay-declaration",
+        pointer: SECOND_RELAY_POINTER,
+        related: [RELAY_POINTER],
+      },
+    ]);
+    expect(errorOf(run.draft, "getTask", "tasks.locked")).toBeDefined();
+    expect(errorOf(run.draft, "health", "tasks.locked")).toBeUndefined();
+  });
+
+  test("a nature the second declares on another base than the first copy is refused at the second route", () => {
+    const run = twoPublicRun(
+      { status: 423, base: "refused" },
+      { status: 423, base: "unavailable" },
+    );
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/relay-declaration",
+        pointer: SECOND_RELAY_POINTER,
+        related: [RELAY_POINTER],
+      },
+    ]);
+    expect(errorOf(run.draft, "health", "tasks.locked")).toBeUndefined();
   });
 });

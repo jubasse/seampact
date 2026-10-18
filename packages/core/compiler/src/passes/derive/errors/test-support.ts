@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ContractIR } from "@seampact/spec/ir";
 import type { Diagnostic } from "../../../diagnostics/diagnostic.js";
@@ -75,6 +77,67 @@ export function deriveErrorsReferenceWorkspace(): RawWorkspace {
   return loaded(
     loadWorkspace({ reader: loadFsReader(REFERENCE_CONTRACT), entry: "workspace.yaml" }),
     REFERENCE_CONTRACT,
+  );
+}
+
+function replaceInFiles(
+  files: Record<string, string>,
+  replacementsByFile: Readonly<Record<string, readonly (readonly [string, string])[]>>,
+): void {
+  for (const [path, replacements] of Object.entries(replacementsByFile)) {
+    let text = files[path];
+
+    if (text === undefined) throw new Error(`the three-api workspace holds no file ${path}`);
+
+    for (const [from, to] of replacements) {
+      if (!text.includes(from)) throw new Error(`${path} holds no '${from}'`);
+      text = text.replace(from, to);
+    }
+
+    files[path] = text;
+  }
+}
+
+const SECOND_PUBLIC_API = "tasksTwo";
+
+/**
+ * The reference workspace with a second public api `tasksTwo` (a copy of `tasks`) that the service also relays on
+ * its route `health`; the `[from, to]` texts of each named file (the copy lives under `tasks-two/`) are replaced
+ * once, so the two public apis can declare one code or nature differently.
+ */
+export function deriveErrorsLoadThreeApis(
+  replacementsByFile: Readonly<Record<string, readonly (readonly [string, string])[]>>,
+): RawWorkspace {
+  const files: Record<string, string> = {};
+
+  for (const entry of readdirSync(REFERENCE_CONTRACT, { recursive: true, withFileTypes: true })) {
+    if (!entry.isFile()) continue;
+
+    const path = relative(REFERENCE_CONTRACT, join(entry.parentPath, entry.name));
+
+    files[path] = readFileSync(`${REFERENCE_CONTRACT}${path}`, "utf8");
+  }
+
+  for (const [path, text] of Object.entries(files))
+    if (path.startsWith("tasks/")) files[`tasks-two/${path.slice("tasks/".length)}`] = text;
+
+  replaceInFiles(files, {
+    "workspace.yaml": [
+      ["    tasksService:", `    ${SECOND_PUBLIC_API}: ./tasks-two/api.yaml\n    tasksService:`],
+    ],
+    "tasks-two/api.yaml": [["  name: tasks\n", `  name: ${SECOND_PUBLIC_API}\n`]],
+    "tasks-service/api.yaml": [
+      [
+        "      getTask: { relays: tasks.getTask }\n",
+        `      getTask: { relays: tasks.getTask }\n      health: { relays: ${SECOND_PUBLIC_API}.health }\n`,
+      ],
+    ],
+  });
+  replaceInFiles(files, replacementsByFile);
+
+  return loaded(
+    loadWorkspace({ reader: loadMemoryReader(files), entry: "workspace.yaml" }),
+    "the three-api workspace",
   );
 }
 

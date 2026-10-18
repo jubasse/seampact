@@ -1,6 +1,6 @@
 import type { IrWriter } from "@seampact/spec/ir";
-import { finalizeCompareText } from "../../../finalize/canonical-order.js";
 import { type DerivationRoleName, derivationTable } from "../../../derivations/index.js";
+import { finalizeCompareText } from "../../../finalize/canonical-order.js";
 import {
   type DraftIR,
   pipelineCopy,
@@ -9,7 +9,11 @@ import {
   type TreeNode,
 } from "../../../pipeline/seam.js";
 import { type TreeNodesRawSchemas, treeNodesIdParam } from "../../tree/nodes/index.js";
-import { type DeriveErrorsAttachedCode, deriveErrorsAttached } from "./attached.js";
+import {
+  type DeriveErrorsAttachedCode,
+  deriveErrorsAttached,
+  deriveErrorsIdentityAttached,
+} from "./attached.js";
 import {
   type DeriveErrorsBinding,
   type DeriveErrorsBindingCheck,
@@ -332,6 +336,15 @@ function collect(
 
     addFrom(error, attached.derivation, attached.from);
     error.attached = attached;
+  }
+
+  // An identity's listed code keeps its list entry as origin unless a node attached it too (the node's origin wins).
+  for (const listed of deriveErrorsIdentityAttached(sources.context, route)) {
+    const error = pendingOf(pending, listed.code);
+
+    addFrom(error, listed.derivation, listed.from);
+
+    if (error.attached?.origin === undefined) error.attached = listed;
   }
 
   return pending;

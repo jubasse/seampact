@@ -58,6 +58,8 @@ proofs:
       - 'core: packages/core/compiler/src/passes/derive/errors/triggers.test.ts#identity.versionToken'
       - 'core: packages/core/compiler/src/passes/derive/errors/relays.test.ts#relay routes copy domain codes'
       - 'core: packages/core/compiler/src/passes/derive/errors/relays.test.ts#relay routes to an imported api'
+      - 'core: packages/core/compiler/src/passes/derive/errors/relays.test.ts#relay routes of two public apis'
+      - 'core: packages/core/compiler/src/passes/derive/errors/identity-errors.test.ts#identity errors lists'
   - id: CHK-111
     fixtures:
       - fixtures/passes/derive-errors/operations/api.yaml
