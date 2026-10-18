@@ -284,7 +284,7 @@ function customCheck(predicate: string, message: string, rule: string): string {
   return `.refine(${predicate}, { error: ${JSON.stringify(message)}, params: { rule: ${JSON.stringify(rule)} } })`;
 }
 
-// String lengths count Unicode code points (ADR 0003 section 1); zod's own `min` and `max` count UTF-16 units. 
+// String lengths count Unicode code points (ADR 0003 section 1); zod's own `min` and `max` count UTF-16 units.
 function lengthChecks(
   typeUse: ScalarTypeUse,
   location: IrLocation,
