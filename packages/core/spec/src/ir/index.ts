@@ -26,6 +26,7 @@ export type {
   IrSupportMismatch,
 } from "./support.js";
 export { checkIrSupport } from "./support.js";
+export { isIrSameTypeUse } from "./type-use.js";
 export type * from "./types.generated.js";
 export type * as IrWriter from "./types.writer.generated.js";
 export { isKnownVariant } from "./unions.js";

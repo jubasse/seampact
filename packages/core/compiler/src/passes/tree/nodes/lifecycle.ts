@@ -1,13 +1,13 @@
-import { type IrWriter, isIrCalendarDate, type Origin } from "@seampact/spec/ir";
+import { type IrWriter, isIrCalendarDate, isIrSameTypeUse, type Origin } from "@seampact/spec/ir";
 import type { DiagnosticOrigin } from "../../../diagnostics/diagnostic.js";
 import {
   type DraftOperation,
   type InheritedEntry,
-  pipelineCanonical,
   pipelineCopy,
   pipelineParseDuration,
   type TreeNode,
 } from "../../../pipeline/seam.js";
+import { quote } from "../../../validate/diagnostics.js";
 import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
 import type { TreeNodesSite } from "./fields.js";
 import { TREE_NODES_BATCH_OP, treeNodesOpShorthand } from "./names.js";
@@ -102,7 +102,7 @@ function deprecationDatesHold(
   reportDeprecation(site, origin, {
     rule: "deprecated-since",
     member: "since",
-    message: `The deprecation that reaches ${site.operationId} starts on ${since}, after its sunset ${sunset}.`,
+    message: `The deprecation that reaches ${site.operationId} starts on ${quote(since)}, after its sunset ${quote(sunset)}.`,
     fix: "Write a since date on or before the sunset date.",
   });
 
@@ -125,7 +125,7 @@ function sinceIsDate(site: TreeNodesSite, origin: Origin, since: unknown): boole
   reportDeprecation(site, origin, {
     rule: "deprecated-since",
     member: "since",
-    message: `The since date ${since} of the deprecation that reaches ${site.operationId} is no calendar day.`,
+    message: `The since date ${quote(since)} of the deprecation that reaches ${site.operationId} is no calendar day.`,
     fix: "Write since as a day that exists, as '2026-12-31'.",
   });
 
@@ -148,7 +148,7 @@ function sunsetIsDate(site: TreeNodesSite, origin: Origin, sunset: unknown): boo
   reportDeprecation(site, origin, {
     rule: "deprecated-sunset",
     member: "sunset",
-    message: `The sunset date ${sunset} of the deprecation that reaches ${site.operationId} is no calendar day.`,
+    message: `The sunset date ${quote(sunset)} of the deprecation that reaches ${site.operationId} is no calendar day.`,
     fix: "Write sunset as a day that exists, as '2027-06-30'.",
   });
 
@@ -223,7 +223,7 @@ function reportSuccessorParams(
   for (const param of successor.params?.path ?? []) {
     const own = ownPathParams.find((candidate) => candidate.name === param.name);
 
-    if (own !== undefined && sameTypeUse(own.type, param.type)) continue;
+    if (own !== undefined && isIrSameTypeUse(own.type, param.type)) continue;
 
     const why =
       own === undefined
@@ -239,18 +239,6 @@ function reportSuccessorParams(
       }),
     );
   }
-}
-
-// Docs, examples and origin say where and how a use is written, not what it accepts.
-const UNCOMPARED_TYPE_USE_MEMBERS: ReadonlySet<string> = new Set(["docs", "examples", "origin"]);
-
-function sameTypeUse(own: IrWriter.TypeUse, successor: IrWriter.TypeUse): boolean {
-  const compared = (use: IrWriter.TypeUse) =>
-    Object.fromEntries(
-      Object.entries(use).filter(([key]) => !UNCOMPARED_TYPE_USE_MEMBERS.has(key)),
-    );
-
-  return pipelineCanonical(compared(own)) === pipelineCanonical(compared(successor));
 }
 
 /** The nearest `upstream`, each service declared in `services`. */
