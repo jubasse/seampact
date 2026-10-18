@@ -93,6 +93,41 @@ describe("relay routes copy domain codes", () => {
     });
   });
 
+  test("a code a node attaches and an identity also lists stays a domain code the relay route copies", () => {
+    const workspace = deriveWireReferenceVariants({
+      "shared/base.yaml": [
+        [
+          "  api.rate_limited:\n",
+          "  tasks.locked: { status: 423, nature: refused }\n  api.rate_limited:\n",
+        ],
+        [
+          "    principal: UserPrincipal\n",
+          "    principal: UserPrincipal\n    errors: [tasks.locked]\n",
+        ],
+      ],
+      "tasks/api.yaml": [
+        [
+          "              item: Task\n",
+          "              item: Task\n              errors: { tasks.locked: {} }\n",
+        ],
+      ],
+    });
+    const publicRun = deriveErrorsRunContract(workspace, { api: "tasks" });
+    const serviceRun = deriveErrorsRunContract(workspace, {
+      api: "tasksService",
+      relayed: new Map([["tasks", publicRun.draft]]),
+    });
+
+    expect(publicRun.diagnostics).toEqual([]);
+    expect(serviceRun.diagnostics).toEqual([]);
+    expect(errorOf(publicRun.draft, "getTask", "tasks.locked")?.derivedFrom?.derivation).toBe(
+      "node.errors",
+    );
+    expect(errorOf(serviceRun.draft, "getTask", "tasks.locked")?.derivedFrom?.derivation).toBe(
+      "relay.route",
+    );
+  });
+
   test("a copied code whose params schema this api lacks is refused at the relay route", () => {
     const { serviceRun } = relayRun(", params: { holder: { type: string } }");
 

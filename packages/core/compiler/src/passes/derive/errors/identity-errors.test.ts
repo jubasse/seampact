@@ -76,7 +76,7 @@ describe("identity errors lists", () => {
     expect(errorOf(draft, "poke", "shop.suspended")).toEqual({
       code: "shop.suspended",
       derivedFrom: {
-        derivation: "identity.authenticate",
+        derivation: "node.errors",
         from: [
           { layer: "api", pointer: "/identities/viewer/errors/0" },
           { layer: "api", pointer: "/surfaces/app/routes/poke" },
