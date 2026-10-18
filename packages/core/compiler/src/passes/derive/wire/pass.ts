@@ -55,7 +55,12 @@ export const deriveWirePass: PassPart<"derive.wire"> = {
 };
 
 function deriveWirePassRun(draft: DraftIR, context: PassContextOf<"derive.wire">): void {
-  const scope: DeriveWireScope = { draft, context, reporter: deriveWireReporter(context) };
+  const scope: DeriveWireScope = {
+    draft,
+    context,
+    reporter: deriveWireReporter(context),
+    reportedCollisions: new Set(),
+  };
   const unknownKeys = deriveWireUnknownKeysPolicy(scope);
   const idempotency = deriveWireIdempotencyConvention(scope);
   const exemptions: DeriveWireExemptions = { used: new Set() };

@@ -2,7 +2,7 @@ import type { IrWriter } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { derivationRowOf } from "../../../derivations/table.js";
 import { type DraftFixtureApi, draftFixture } from "../../../pipeline/draft-fixture.js";
-import { DraftAccessError, pipelineGuard } from "../../../pipeline/seam.js";
+import { DraftAccessError } from "../../../pipeline/seam.js";
 import { deriveWirePass } from "./pass.js";
 import {
   deriveWireDerivedHeaders,
@@ -32,17 +32,22 @@ describe("derive.wire matches the derive delta", () => {
     },
   );
 
-  test("a read outside the declared fields throws", () => {
-    const guarded = pipelineGuard(draftFixture("tasks", "after-access"), {
+  test("a read outside the declared reads throws", () => {
+    const trimmed = {
       ...deriveWirePass,
       reads: deriveWirePass.reads.filter((field) => field !== "identities"),
-    });
+    };
 
-    try {
-      expect(() => guarded.draft.identities).toThrow(DraftAccessError);
-    } finally {
-      guarded.dispose();
-    }
+    expect(() => deriveWireRunReference(workspace, "tasks", trimmed)).toThrow(DraftAccessError);
+  });
+
+  test("a write outside the declared writes throws", () => {
+    const trimmed = {
+      ...deriveWirePass,
+      writes: deriveWirePass.writes.filter((field) => field !== "operations[].params.header"),
+    };
+
+    expect(() => deriveWireRunReference(workspace, "tasks", trimmed)).toThrow(DraftAccessError);
   });
 });
 
@@ -82,6 +87,56 @@ describe("derive.wire elements carry derivedFrom", () => {
       }
     },
   );
+});
+
+describe("derive.wire elements of the wire fixture carry derivedFrom", () => {
+  test("every derivation of the half writes its record with its origins", () => {
+    const run = deriveWireRunContract(deriveWireLoadFixture("wire"));
+    const records = run.draft.operations.flatMap((operation) => {
+      const unknownKeys =
+        operation.input?.schema.kind === "ref" ? operation.input.schema.unknownKeys : undefined;
+
+      return [
+        ...(operation.params?.header ?? []),
+        ...(operation.params?.query ?? []),
+        ...(operation.responses ?? []).flatMap((response) => response.headers),
+        ...(unknownKeys === undefined ? [] : [unknownKeys]),
+        ...(operation.idempotency?.kind === "derived" ? [operation.idempotency] : []),
+      ].flatMap((element) => (element.derivedFrom === undefined ? [] : [element.derivedFrom]));
+    });
+
+    for (const record of records) expect(record.from.length).toBeGreaterThan(0);
+
+    expect(new Set(records.map((record) => record.derivation))).toEqual(
+      new Set([
+        "identity.authenticate",
+        "csrf.cookieWrite",
+        "idempotency.write",
+        "identity.header",
+        "identity.versionToken",
+        "union.headerTag",
+        "input.unknownKeys",
+      ]),
+    );
+  });
+});
+
+describe("derived parameter order", () => {
+  test("derived parameters follow the derivation table, then source order", () => {
+    const run = deriveWireRunContract(deriveWireLoadFixture("wire"));
+
+    expect(deriveWireDerivedHeaders(run, "jobs")).toEqual([
+      ["Authorization", false, "identity.authenticate"],
+      ["Idempotency-Key", true, "idempotency.write"],
+      ["X-Deadline", true, "identity.header"],
+      ["traceparent", false, "identity.header"],
+    ]);
+    expect(deriveWireDerivedHeaders(run, "notes")).toEqual([
+      ["X-Csrf-Token", true, "csrf.cookieWrite"],
+      ["Idempotency-Key", true, "idempotency.write"],
+      ["If-Rights-Version", false, "identity.versionToken"],
+    ]);
+  });
 });
 
 describe("unknown keys", () => {
@@ -173,9 +228,52 @@ describe("derive.wire diagnostics are located", () => {
 
     expect(run.diagnostics.map(deriveWireLocated)).toEqual([
       {
-        rule: "seampact/derive/derived-param-collision",
+        rule: "seampact/derive/derived-name-collision",
         pointer: "/surfaces/app/routes/notes",
         related: ["/surfaces/app/routes/notes/headers/Idempotency-Key", "/conventions/idempotency"],
+      },
+    ]);
+  });
+
+  test("a derivation taking another derivation's name is refused once at its origin, naming the first route", () => {
+    const run = deriveWireRunContract(
+      deriveWireFixtureVariant("wire", [["header: Idempotency-Key", "header: Authorization"]]),
+    );
+
+    // comments, comment and jobs all take Authorization from a credential before the key.
+    expect(run.diagnostics.map(deriveWireLocated)).toEqual([
+      {
+        rule: "seampact/derive/derived-name-collision",
+        pointer: "/conventions/idempotency",
+        related: ["/surfaces/mixed/routes/comments", "/surfaces/mixed/identity", "/schemes/bearer"],
+      },
+    ]);
+  });
+
+  test("two header declarations of one identity on one wire name with a different requirement are refused", () => {
+    const run = deriveWireRunContract(
+      deriveWireFixtureVariant("wire", [
+        [
+          "  trace: { name: traceparent, in: request, semantic: traceContext }\n",
+          "  trace: { name: traceparent, in: request, semantic: traceContext }\n  trace2: { name: TraceParent, in: request, semantic: traceContext }\n",
+        ],
+        [
+          "      trace: { for: writes }\n",
+          "      trace: { for: writes }\n      trace2: { for: writes, required: true }\n",
+        ],
+      ]),
+    );
+
+    expect(run.diagnostics.map(deriveWireLocated)).toEqual([
+      {
+        rule: "seampact/derive/derived-name-collision",
+        pointer: "/headers/trace2",
+        related: [
+          "/surfaces/robots/routes/jobs",
+          "/identities/robot/headers/trace",
+          "/headers/trace",
+          "/identities/robot/headers/trace2",
+        ],
       },
     ]);
   });
@@ -194,7 +292,18 @@ describe("derive.wire diagnostics are located", () => {
     ];
     const diagnostics = runs.flatMap((run) => run.diagnostics);
 
-    expect(diagnostics).toHaveLength(2);
+    expect(diagnostics.map(deriveWireLocated)).toEqual([
+      {
+        rule: "seampact/derive/idempotency-convention",
+        pointer: "/conventions/idempotency",
+        related: [],
+      },
+      {
+        rule: "seampact/derive/idempotency-exempt-unused",
+        pointer: "/surfaces/app/routes/board/idempotency",
+        related: [],
+      },
+    ]);
 
     for (const diagnostic of diagnostics) {
       expect(diagnostic.rule).toMatch(/^seampact\/derive\/[a-z-]+$/);

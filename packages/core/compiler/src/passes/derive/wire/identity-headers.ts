@@ -14,8 +14,13 @@ import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 // `deadlineHeader` (`identity.deadline`). A `versionToken` use drives two headers (`identity.versionToken`): the
 // response header on every success of every route of the identity, and the request header on writes only,
 // whatever its `for` says, since the derivation rule is the specific one. Its `required` is the use's (default
-// false). A use's type is its own `schema`, else the declaration's, else a string. versionToken uses are
-// written after every `identity.header` element, so derived elements keep the derivation table's order.
+// false). On optional access an anonymous caller has no principal (ADR 0012 "Authenticate"), so the request headers
+// and the versionToken response header are optional on the wire; the identity entry keeps the use's `required`,
+// which the boundary applies to a request that carries a credential. A use's type is its own `schema`, else the
+// declaration's, else a string. versionToken uses are written after every `identity.header` element, so derived
+// elements keep the derivation table's order.
+//
+// A relay route has no access until tree.nodes copies its method; this tolerance becomes an internal error then.
 
 const HEADER = "identity.header";
 
@@ -37,19 +42,27 @@ export function deriveWireIdentityHeaders(route: DeriveWireRoute, scope: DeriveW
   if (safe === undefined) throw new Error(`tree.nodes wrote no safe on operation '${route.id}'`);
 
   const uses = usesOf(access.identity, scope);
+  const authenticated = access.kind === "identity";
 
   for (const item of uses)
     if (item.declaration.semantic !== "versionToken" && applies(item.use.for, safe))
-      writeHeader(route, item, scope);
+      writeHeader(route, item, authenticated, scope);
 
   for (const item of uses)
-    if (item.declaration.semantic === "versionToken") writeVersionToken(route, item, safe, scope);
+    if (item.declaration.semantic === "versionToken")
+      writeVersionToken(route, item, { safe, authenticated }, scope);
 }
 
 const applies = (useFor: IrWriter.HeaderUseFor, safe: boolean): boolean =>
   useFor === "all" || (useFor === "reads") === safe;
 
-function writeHeader(route: DeriveWireRoute, item: Use, scope: DeriveWireScope): void {
+// `authenticated` is false on optional access, where a request may come without a principal.
+function writeHeader(
+  route: DeriveWireRoute,
+  item: Use,
+  authenticated: boolean,
+  scope: DeriveWireScope,
+): void {
   const { use, declaration } = item;
   const name = declaration.name;
   const side = declaration.in;
@@ -59,15 +72,23 @@ function writeHeader(route: DeriveWireRoute, item: Use, scope: DeriveWireScope):
       `access.identity wrote header '${declaration.id}' (${declaration.semantic}) without its name or side`,
     );
 
-  const derived = derivedOf(name, item, use.required, HEADER);
-
   if (side === "response") {
-    deriveWireAddSuccessHeader(route, derived, declaration.semantic, scope);
+    deriveWireAddSuccessHeader(
+      route,
+      derivedOf(name, item, use.required, HEADER),
+      declaration.semantic,
+      scope,
+    );
 
     return;
   }
 
-  deriveWireAddParam(route, "header", derived, scope);
+  deriveWireAddParam(
+    route,
+    "header",
+    derivedOf(name, item, authenticated && use.required, HEADER),
+    scope,
+  );
 
   if (declaration.semantic === "deadline") route.operation.deadlineHeader = name;
 }
@@ -75,9 +96,10 @@ function writeHeader(route: DeriveWireRoute, item: Use, scope: DeriveWireScope):
 function writeVersionToken(
   route: DeriveWireRoute,
   item: Use,
-  safe: boolean,
+  operation: { readonly safe: boolean; readonly authenticated: boolean },
   scope: DeriveWireScope,
 ): void {
+  const { safe, authenticated } = operation;
   const { use, declaration } = item;
   const { response, request } = declaration;
 
@@ -88,7 +110,7 @@ function writeVersionToken(
 
   deriveWireAddSuccessHeader(
     route,
-    derivedOf(response, item, true, VERSION_TOKEN),
+    derivedOf(response, item, authenticated, VERSION_TOKEN),
     declaration.semantic,
     scope,
   );
@@ -97,7 +119,7 @@ function writeVersionToken(
     deriveWireAddParam(
       route,
       "header",
-      derivedOf(request, item, use.required, VERSION_TOKEN),
+      derivedOf(request, item, authenticated && use.required, VERSION_TOKEN),
       scope,
     );
 }

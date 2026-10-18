@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { pipelineContext, pipelineTreeNodes } from "../../../pipeline/seam.js";
-import { treeNodesBodyLimit } from "../../tree/nodes/limits.js";
+import { treeNodesBodyLimit } from "../../tree/nodes/index.js";
 import { treeNodesStubService } from "../../tree/nodes/test-support.js";
 import {
   deriveWireLoadFixture,

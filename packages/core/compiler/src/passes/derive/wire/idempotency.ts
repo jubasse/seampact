@@ -6,6 +6,7 @@ import {
   pipelineParseDuration,
   pipelineTreeNodes,
 } from "../../../pipeline/seam.js";
+import { quote } from "../../../validate/diagnostics.js";
 import {
   DERIVE_WIRE_STRING_USE,
   deriveWireAddParam,
@@ -66,30 +67,25 @@ export function deriveWireIdempotencyConvention(
 
   if (methods === undefined) return UNSET;
 
-  const header = conventions.get("idempotency.header");
-  const replayHeader = conventions.get("idempotency.replayHeader");
-  const lifetime = conventions.get("idempotency.lifetime");
-  const lifetimeMs =
-    typeof lifetime?.value === "string" ? pipelineParseDuration(lifetime.value) : undefined;
+  const header = textOf(conventions.get("idempotency.header"), "header");
+  const replayHeader = textOf(conventions.get("idempotency.replayHeader"), "replayHeader");
+  const lifetime = textOf(conventions.get("idempotency.lifetime"), "lifetime");
+  const lifetimeMs = lifetime === undefined ? undefined : pipelineParseDuration(lifetime);
   const origin = conventionOrigin(scope);
 
-  if (
-    typeof header?.value !== "string" ||
-    typeof replayHeader?.value !== "string" ||
-    lifetimeMs === undefined
-  ) {
+  if (header === undefined || replayHeader === undefined || lifetimeMs === undefined) {
     reportIncomplete({ header, replayHeader, lifetime }, origin, scope);
 
     return REFUSED;
   }
 
   const convention: DeriveWireIdempotencyConvention = {
-    header: header.value,
-    replayHeader: replayHeader.value,
+    header,
+    replayHeader,
     lifetimeMs,
     methods: stringList(methods),
     required: conventions.get("idempotency.required")?.value !== false,
-    enforce: conventions.get("idempotency.enforce")?.value === "none" ? "none" : "boundary",
+    enforce: enforcementOf(conventions.get("idempotency.enforce")),
     origin,
   };
 
@@ -106,7 +102,8 @@ export function deriveWireIdempotency(
   const exemption = scope.context.inherited(route.node, "idempotency");
 
   // A relay route has no method until tree.nodes copies the relayed one, so whether the key reaches it is not
-  // known yet: it gets no key, and its exemption is not refused as unused.
+  // known yet: it gets no key, and its exemption is not refused as unused. Like the relay tolerance of the
+  // credentials and the identity headers, this becomes an internal error once tree.nodes copies the method.
   if (route.node.kind === "relay" && route.operation.safe === undefined) {
     if (exemption !== undefined) exemptions.used.add(exemption.entry.node.pointer);
 
@@ -188,7 +185,7 @@ export function deriveWireCheckExemptions(
 
     scope.reporter.error({
       rule: "idempotency-exempt-unused",
-      message: `the idempotency exemption "${written.reason}" reaches no route the idempotency key reaches${reading.state === "unset" ? ": conventions.idempotency is unset" : ""}`,
+      message: `the idempotency exemption ${quote(written.reason)} reaches no route the idempotency key reaches${reading.state === "unset" ? ": conventions.idempotency is unset" : ""}`,
       fix: "Remove the exemption, or move it to the non-safe routes the key reaches (a method conventions.idempotency.methods lists, an identity that is not signed).",
       pointer: `${written.nodePointer}/idempotency`,
     });
@@ -236,6 +233,33 @@ function keyReaches(
   return identity?.kind !== "signed";
 }
 
+const ENFORCEMENTS: readonly IrWriter.IdempotencyEnforcement[] = ["boundary", "none"];
+
+// `enforce` defaults to `boundary` (ADR 0002 section 13); the authoring schema refuses any other value.
+function enforcementOf(reading: ConventionReading | undefined): IrWriter.IdempotencyEnforcement {
+  const value = reading?.value ?? "boundary";
+  const enforcement = ENFORCEMENTS.find((known) => known === value);
+
+  if (enforcement === undefined)
+    throw new Error(
+      `conventions.idempotency.enforce is ${JSON.stringify(value)}, which the authoring schema refuses`,
+    );
+
+  return enforcement;
+}
+
+// A member left unset reads undefined; one that is no string the authoring schema refuses.
+function textOf(reading: ConventionReading | undefined, member: string): string | undefined {
+  if (reading === undefined) return undefined;
+
+  if (typeof reading.value !== "string")
+    throw new Error(
+      `conventions.idempotency.${member} is no string, which the authoring schema refuses`,
+    );
+
+  return reading.value;
+}
+
 function stringList(reading: ConventionReading): string[] {
   const value = reading.value;
 
@@ -259,12 +283,12 @@ function conventionOrigin(scope: DeriveWireScope): IrWriter.Origin {
 }
 
 function reportIncomplete(
-  readings: Record<"header" | "replayHeader" | "lifetime", ConventionReading | undefined>,
+  readings: Record<"header" | "replayHeader" | "lifetime", string | undefined>,
   origin: IrWriter.Origin,
   scope: DeriveWireScope,
 ): void {
   const missing = Object.entries(readings)
-    .filter(([, reading]) => reading === undefined)
+    .filter(([, text]) => text === undefined)
     .map(([key]) => key);
   const what =
     missing.length > 0

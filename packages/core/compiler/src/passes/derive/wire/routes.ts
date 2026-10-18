@@ -10,7 +10,7 @@ import type { DeriveWireReporter } from "./report.js";
 // Each operation of the draft with the tree node tree.nodes wrote it from, matched by the origin pointer, which
 // tree.nodes sets to the node's own pointer (route, relay route or `ops` entry).
 
-export type DeriveWireContext = PassContextOf<"derive.wire">;
+type DeriveWireContext = PassContextOf<"derive.wire">;
 
 /** An operation with its node and what every writer of the half reads. */
 export interface DeriveWireRoute {
@@ -24,6 +24,8 @@ export interface DeriveWireScope {
   readonly draft: DraftIR;
   readonly context: DeriveWireContext;
   readonly reporter: DeriveWireReporter;
+  /** The collisions reported once for every route they reach, by derivation, place, name and location. */
+  readonly reportedCollisions: Set<string>;
 }
 
 /** Every operation of the draft with its tree node, in draft order. */

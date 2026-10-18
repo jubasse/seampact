@@ -1,10 +1,15 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
+import { loadWorkspace } from "../../../load/index.js";
+import { loadMemoryReader } from "../../../load/reader.js";
 import {
+  DERIVE_WIRE_FIXTURES,
   deriveWireDerivedHeaders,
   deriveWireFixtureVariant,
   deriveWireLoadFixture,
   deriveWireLocated,
   deriveWireOperation,
+  deriveWireReferenceVariant,
   deriveWireResponseHeaders,
   deriveWireRunContract,
 } from "./test-support.js";
@@ -162,5 +167,49 @@ describe("idempotency key", () => {
       },
     ]);
     expect(tooLong.diagnostics[0]?.message).toContain("longer than any duration");
+  });
+});
+
+describe("relay routes before tree.nodes copies their method", () => {
+  test("an exemption a relay route inherits is not refused as unused", () => {
+    const run = deriveWireRunContract(
+      deriveWireReferenceVariant("tasks-service/api.yaml", [
+        [
+          "    prefix: /internal/v{version}\n",
+          '    prefix: /internal/v{version}\n    idempotency: { exempt: "Relayed calls carry the public key." }\n',
+        ],
+      ]),
+      "tasksService",
+    );
+
+    expect(run.diagnostics).toEqual([]);
+    expect(deriveWireOperation(run, "getTask").idempotency).toBeUndefined();
+  });
+});
+
+describe("convention values the authoring schema refuses", () => {
+  // Loaded without the validate stage, which refuses each of these values.
+  const unvalidated = (from: string, to: string) => {
+    const text = readFileSync(`${DERIVE_WIRE_FIXTURES}wire/api.yaml`, "utf8");
+
+    if (!text.includes(from)) throw new Error(`the wire fixture holds no '${from}'`);
+
+    const loaded = loadWorkspace({
+      reader: loadMemoryReader({ "api.yaml": text.replace(from, to) }),
+      entry: "api.yaml",
+    });
+
+    return () => deriveWireRunContract(loaded.workspace);
+  };
+
+  test.each([
+    [
+      "methods: [post, delete]",
+      "methods: [post, delete], enforce: sometimes",
+      /enforce is "sometimes"/,
+    ],
+    ["header: Idempotency-Key", "header: 5", /idempotency.header is no string/],
+  ])("%s as %s throws", (from, to, error) => {
+    expect(unvalidated(from, to)).toThrow(error);
   });
 });

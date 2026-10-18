@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import {
   deriveWireDerivedHeaders,
+  deriveWireFixtureVariant,
   deriveWireLoadFixture,
   deriveWireOperation,
   deriveWireRunContract,
@@ -58,6 +59,30 @@ describe("credential params", () => {
       "/surfaces/robots/identity",
       "/schemes/basicAuth",
       "/schemes/bearer",
+    ]);
+  });
+
+  test("two query schemes of one access on one parameter name share one parameter carrying both", () => {
+    const shared = deriveWireRunContract(
+      deriveWireFixtureVariant("wire", [
+        [
+          "  mapsKey: { kind: query, name: key }\n",
+          "  mapsKey: { kind: query, name: key }\n  mapsKey2: { kind: query, name: key }\n",
+        ],
+        [
+          "schemes: { read: [mapsKey], write: [] }",
+          "schemes: { read: [mapsKey, mapsKey2], write: [] }",
+        ],
+      ]),
+    );
+    const query = deriveWireOperation(shared, "tiles").params?.query ?? [];
+
+    expect(shared.diagnostics).toEqual([]);
+    expect(query.map((param) => [param.name, param.required])).toEqual([["key", false]]);
+    expect(query[0]?.derivedFrom?.from.map((origin) => origin.pointer)).toEqual([
+      "/surfaces/partner/identity",
+      "/schemes/mapsKey",
+      "/schemes/mapsKey2",
     ]);
   });
 

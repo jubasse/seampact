@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import type { IrWriter } from "@seampact/spec/ir";
 import { derivationRowOf } from "../../../derivations/table.js";
@@ -13,6 +13,7 @@ import {
 import {
   createDraftIR,
   type DraftIR,
+  type PassPart,
   pipelineContext,
   pipelineGuard,
   type TreeSchemaService,
@@ -86,6 +87,40 @@ export function deriveWireFixtureJson(name: string, file: string): unknown {
   return JSON.parse(readFileSync(`${DERIVE_WIRE_FIXTURES}${name}/${file}`, "utf8"));
 }
 
+/**
+ * The reference workspace with each `[from, to]` text of one of its files replaced once, loaded from memory: a
+ * variant of the reference for one test. A `from` the file does not hold throws.
+ */
+export function deriveWireReferenceVariant(
+  file: string,
+  replacements: readonly (readonly [string, string])[],
+): RawWorkspace {
+  const files: Record<string, string> = {};
+
+  for (const entry of readdirSync(REFERENCE_CONTRACT, { recursive: true, withFileTypes: true }))
+    if (entry.isFile()) {
+      const path = `${entry.parentPath}/${entry.name}`.slice(REFERENCE_CONTRACT.length);
+
+      files[path] = readFileSync(`${REFERENCE_CONTRACT}${path}`, "utf8");
+    }
+
+  let text = files[file];
+
+  if (text === undefined) throw new Error(`the reference holds no file ${file}`);
+
+  for (const [from, to] of replacements) {
+    if (!text.includes(from)) throw new Error(`the reference ${file} holds no '${from}'`);
+    text = text.replace(from, to);
+  }
+
+  files[file] = text;
+
+  return loaded(
+    loadWorkspace({ reader: loadMemoryReader(files), entry: "workspace.yaml" }),
+    `the reference variant of ${file}`,
+  );
+}
+
 /** The reference workspace. */
 export function deriveWireReferenceWorkspace(): RawWorkspace {
   return loaded(
@@ -110,12 +145,13 @@ export interface DeriveWireRun {
   readonly diagnostics: Diagnostic[];
 }
 
-/** Runs derive.wire on `draft` with the guard on, as the orchestrator does. */
+/** Runs derive.wire, or `part` standing for it, on `draft` with the guard on, as the orchestrator does. */
 export function deriveWireRunOn(
   raw: RawApi,
   workspace: RawWorkspace,
   draft: DraftIR,
   treeSchemas: TreeSchemaService,
+  part: PassPart<"derive.wire"> = deriveWirePass,
 ): DeriveWireRun {
   const diagnostics: Diagnostic[] = [];
   const context = Object.freeze({
@@ -127,10 +163,10 @@ export function deriveWireRunOn(
     }),
     treeSchemas,
   });
-  const guarded = pipelineGuard(draft, deriveWirePass);
+  const guarded = pipelineGuard(draft, part);
 
   try {
-    deriveWirePass.run(guarded.draft, context);
+    part.run(guarded.draft, context);
   } finally {
     guarded.dispose();
   }
@@ -161,16 +197,18 @@ export function deriveWireRunContract(workspace: RawWorkspace, api?: string): De
   return deriveWireRunOn(raw, workspace, draft, treeSchemas);
 }
 
-/** Runs derive.wire (guarded) on the after-access fixture draft of a reference api. */
+/** Runs derive.wire, or `part` standing for it, (guarded) on the after-access fixture draft of a reference api. */
 export function deriveWireRunReference(
   workspace: RawWorkspace,
   api: DraftFixtureApi,
+  part: PassPart<"derive.wire"> = deriveWirePass,
 ): DeriveWireRun {
   return deriveWireRunOn(
     apiOf(workspace, api),
     workspace,
     draftFixture(api, "after-access"),
     draftFixtureSchemaService(api),
+    part,
   );
 }
 

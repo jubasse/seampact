@@ -11,9 +11,13 @@ import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 // access; with several schemes the caller presents one of them.
 //
 // The CSRF decision is access.identity's (`Operation.csrf`); this half writes its header parameter, required only
-// when every accepted scheme is a cookie that declares CSRF. On a write that also accepts a bearer or another
-// scheme, the target checks the header only on requests the cookie authenticates (ADR 0012 "One neutral, typed
-// hook per concern"), so a bearer client never sends it.
+// on identity access when every accepted scheme is a cookie that declares CSRF. On a write that also accepts a
+// bearer or another scheme, the target checks the header only on requests the cookie authenticates (ADR 0012
+// "One neutral, typed hook per concern"), so a bearer client never sends it; on optional access an anonymous
+// caller has no session, so no token either (ADR 0012 "Authenticate").
+//
+// A relay route has no access until tree.nodes copies its method; this tolerance, like the ones of the identity
+// headers and the idempotency key, becomes an internal error once tree.nodes copies it.
 
 const AUTHORIZATION = "Authorization";
 
@@ -23,7 +27,6 @@ const AUTHENTICATE = "identity.authenticate";
 export function deriveWireCredentials(route: DeriveWireRoute, scope: DeriveWireScope): void {
   const access = route.operation.access;
 
-  // A relay route has no access until tree.nodes copies its method (access.identity leaves it out then).
   if (access === undefined || access.kind === "public") return;
 
   const schemes = access.schemes.map((id) => schemeOf(id, scope));
@@ -50,11 +53,12 @@ export function deriveWireCredentials(route: DeriveWireRoute, scope: DeriveWireS
     );
   }
 
-  writeCsrfParam(route, schemes, scope);
+  writeCsrfParam(route, access.kind, schemes, scope);
 }
 
 function writeCsrfParam(
   route: DeriveWireRoute,
+  accessKind: "identity" | "optional",
   schemes: readonly IrWriter.KnownScheme[],
   scope: DeriveWireScope,
 ): void {
@@ -72,7 +76,7 @@ function writeCsrfParam(
     {
       name: csrf.header,
       type: DERIVE_WIRE_STRING_USE,
-      required: everyCookieChecked,
+      required: accessKind === "identity" && everyCookieChecked,
       derivedFrom: csrf.derivedFrom,
     },
     scope,

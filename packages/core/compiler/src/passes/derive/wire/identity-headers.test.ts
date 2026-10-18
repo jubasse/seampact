@@ -98,3 +98,43 @@ describe("identity headers", () => {
     expect(deriveWireOperation(run, "github").deadlineHeader).toBeUndefined();
   });
 });
+
+describe("optional access", () => {
+  const optional = deriveWireRunContract(
+    deriveWireFixtureVariant("wire", [
+      [
+        "      notes:\n        input: Note\n",
+        '      notes:\n        access: { optionalAuth: "Guests leave notes too." }\n        input: Note\n',
+      ],
+    ]),
+  );
+  const derivedOf = (id: string, name: string) =>
+    deriveWireDerivedHeaders(optional, id).find(([header]) => header === name);
+  const responseHeaderOf = (id: string, name: string) =>
+    deriveWireOperation(optional, id)
+      .responses?.find((response) => response.status === 200)
+      ?.headers.find((header) => header.name === name);
+
+  test("a cookie write on optional access has an optional CSRF header and versionToken request header", () => {
+    expect(optional.diagnostics).toEqual([]);
+    expect(derivedOf("notes", "X-Csrf-Token")).toEqual(["X-Csrf-Token", false, "csrf.cookieWrite"]);
+    expect(derivedOf("notes", "If-Rights-Version")).toEqual([
+      "If-Rights-Version",
+      false,
+      "identity.versionToken",
+    ]);
+  });
+
+  test("the versionToken response header is optional on optional access, required on identity access", () => {
+    expect(responseHeaderOf("notes", "X-Rights-Version")?.required).toBe(false);
+    expect(responseHeaderOf("board", "X-Rights-Version")?.required).toBe(true);
+  });
+
+  test("a required identity request header is optional on optional access, the identity keeping its use", () => {
+    expect(derivedOf("feed", "X-Deadline")).toEqual(["X-Deadline", false, "identity.header"]);
+    expect(derivedOf("status", "X-Deadline")).toEqual(["X-Deadline", true, "identity.header"]);
+    expect(optional.draft.identities.robot?.headers).toContainEqual(
+      expect.objectContaining({ header: "deadline", required: true }),
+    );
+  });
+});
