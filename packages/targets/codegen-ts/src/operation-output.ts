@@ -1,0 +1,159 @@
+import type { ContractIR, Operation, Response } from "@seampact/spec/ir";
+import { below, type IrLocation } from "./ir-location.js";
+import { requireName } from "./layout.js";
+import { refuseInconsistentIr, refuseNotGeneratedYet, refuseUnknownValueAt } from "./refusals.js";
+import { REFUSED_TYPE, type TypeContext, typeExpression } from "./type-expression.js";
+
+const JSON_MEDIA = "application/json";
+const NOT_GENERATED_SHAPES: readonly string[] = ["list", "binary", "redirect"];
+
+// The members a handler returns beside a page's items, by paging style `handlerResult` value (ADR 0002
+// section 14); the cursor is absent at the last page.
+const HANDLER_RESULT_MEMBERS: ReadonlyMap<string, string> = new Map([
+  ["nextCursor", "nextCursor?: string;"],
+]);
+const NOT_GENERATED_HANDLER_RESULTS: readonly string[] = [
+  "previousCursor",
+  "total",
+  "more",
+  "nextSince",
+  "complete",
+];
+
+// The handler-side union of the operation's responses, `{ status, body }` with the unwrapped payload; the
+// boundary adds the envelope and the derived headers.
+export function operationOutputDeclaration(
+  operation: Operation,
+  location: IrLocation,
+  context: TypeContext,
+): string {
+  const variants = operation.responses.map((response, index) =>
+    responseVariant(response, operation, below(location, "responses", index), context),
+  );
+  const typeName = requireName(context.layout.operationTypeNames, operation.id).output;
+  const union = variants.length === 0 ? "never" : variants.join(" | ");
+
+  return `/** The union of the operation's success responses, as its handler returns them. */\nexport type ${typeName} = ${union};`;
+}
+
+function responseVariant(
+  response: Response,
+  operation: Operation,
+  location: IrLocation,
+  context: TypeContext,
+): string {
+  const status = `status: ${response.status};`;
+
+  switch (response.shape) {
+    case "empty":
+      return `{ ${status} }`;
+    case "item":
+      return payloadVariant(response, "item", operation, location, context);
+    case "table":
+      return payloadVariant(response, "table", operation, location, context);
+    case "page":
+      return payloadVariant(response, "page", operation, location, context);
+    default:
+      context.refusals.push(
+        NOT_GENERATED_SHAPES.includes(response.shape)
+          ? refuseNotGeneratedYet(
+              "response.shape",
+              `A '${response.shape}' response`,
+              below(location, "shape"),
+            )
+          : refuseUnknownValueAt(below(location, "shape"), response.shape),
+      );
+
+      return REFUSED_TYPE;
+  }
+}
+
+function payloadVariant(
+  response: Response,
+  shape: "item" | "table" | "page",
+  operation: Operation,
+  location: IrLocation,
+  context: TypeContext,
+): string {
+  const status = `status: ${response.status};`;
+
+  if (response.media !== JSON_MEDIA) {
+    context.refusals.push(
+      refuseNotGeneratedYet(
+        "response.media",
+        `A '${response.media ?? "missing"}' response body`,
+        below(location, "media"),
+      ),
+    );
+  }
+
+  if (response.body === undefined) {
+    context.refusals.push(
+      refuseInconsistentIr("response.body.missing", `A '${shape}' response has no body`, location),
+    );
+
+    return REFUSED_TYPE;
+  }
+
+  const payload = typeExpression(response.body, below(location, "body"), context);
+
+  switch (shape) {
+    case "item":
+      return `{ ${status} body: ${payload}; }`;
+    case "table":
+      return `{ ${status} body: ${payload}[]; }`;
+    case "page":
+      return `{ ${status} body: ${pageResult(payload, operation, location, context)}; }`;
+  }
+}
+
+// The page a handler returns: its items, and the members its paging style's `handlerResult` lists.
+function pageResult(
+  itemType: string,
+  operation: Operation,
+  location: IrLocation,
+  context: TypeContext,
+): string {
+  const style = pagingStyleOf(operation, context.ir);
+
+  if (style === undefined) {
+    context.refusals.push(
+      refuseInconsistentIr(
+        "response.page.style.missing",
+        "A page response has no paging style",
+        location,
+      ),
+    );
+
+    return REFUSED_TYPE;
+  }
+
+  const members = style.handlerResult.map((member, index) => {
+    const memberLocation = below({ member: "" }, "pagings", style.id, "handlerResult", index);
+    const declaration = HANDLER_RESULT_MEMBERS.get(member);
+
+    if (declaration !== undefined) return declaration;
+
+    context.refusals.push(
+      NOT_GENERATED_HANDLER_RESULTS.includes(member)
+        ? refuseNotGeneratedYet(
+            "paging.handlerResult",
+            `The handler result '${member}'`,
+            memberLocation,
+          )
+        : refuseUnknownValueAt(memberLocation, member),
+    );
+
+    return "";
+  });
+
+  return `{\nitems: ${itemType}[];\n${members.join("\n")}\n}`;
+}
+
+function pagingStyleOf(operation: Operation, ir: ContractIR) {
+  const styleId = operation.paging?.style;
+
+  if (styleId === undefined || !Object.hasOwn(ir.pagings, styleId)) return undefined;
+
+  return ir.pagings[styleId];
+}
