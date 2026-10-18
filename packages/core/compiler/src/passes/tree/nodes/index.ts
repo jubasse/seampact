@@ -8,6 +8,8 @@ export {
 } from "./limits.js";
 export {
   type TreeNodesOperationName,
+  type TreeNodesRawSchemas,
+  treeNodesIdParam,
   treeNodesOperationNames,
   treeNodesOpOwner,
 } from "./names.js";

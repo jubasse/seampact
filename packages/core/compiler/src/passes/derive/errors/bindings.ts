@@ -9,6 +9,7 @@ import {
   type PassReadonly,
   pipelineIsJsonObject,
   pipelinePointerBelow,
+  pipelineRateLimitParam,
   pipelineTreeNodes,
   type TreeNode,
 } from "../../../pipeline/seam.js";
@@ -105,13 +106,6 @@ export interface DeriveErrorsBindingCheck {
   readonly schemas: PassReadonly<Record<IrWriter.SchemaId, IrWriter.Schema>>;
 }
 
-/** The param `conventions.rateLimit` names for `rateLimited`'s delay, if any. */
-export function deriveErrorsRateLimitParam(context: DeriveErrorsContext): string | undefined {
-  const param = context.conventions.get("rateLimit.param")?.value;
-
-  return typeof param === "string" ? param : undefined;
-}
-
 /** The params site of a binding to a registered code, its problems located at `pointer`. */
 export function deriveErrorsParamsSite(
   check: DeriveErrorsBindingCheck,
@@ -123,7 +117,7 @@ export function deriveErrorsParamsSite(
   if (registered === undefined) return undefined;
 
   const { params } = registered.declaration;
-  const rateLimitParam = deriveErrorsRateLimitParam(check.context);
+  const rateLimitParam = pipelineRateLimitParam(check.context.conventions);
 
   return {
     reporter: check.reporter,

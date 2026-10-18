@@ -204,6 +204,15 @@ function rightRoles(operation: DraftOperation): DeriveErrorsRoleTrigger[] {
   return triggers;
 }
 
+// The trigger is the `deadline` identity header: the origins derive.wire wrote it from, else the operation's.
+function deadlineOrigins(route: DeriveErrorsRoute): readonly IrWriter.Origin[] {
+  const header = route.operation.params?.header?.find(
+    (param) => param.name === route.operation.deadlineHeader,
+  );
+
+  return header?.derivedFrom?.from ?? [operationOrigin(route)];
+}
+
 function wireRoles(
   sources: DeriveErrorsTriggerSources,
   route: DeriveErrorsRoute,
@@ -215,7 +224,7 @@ function wireRoles(
     triggers.push({
       derivation: "identity.deadline",
       role: "deadlineExceeded",
-      from: [operationOrigin(route)],
+      from: deadlineOrigins(route),
     });
 
   for (const param of operation.params?.header ?? [])

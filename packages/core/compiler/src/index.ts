@@ -1,6 +1,5 @@
 export * from "./bundle/index.js";
 export * from "./derivations/index.js";
-export type * from "./diagnostics/diagnostic.js";
 export * from "./diagnostics/index.js";
 export * from "./finalize/index.js";
 export * from "./load/index.js";
@@ -12,6 +11,7 @@ export * from "./passes/link/index.js";
 export * from "./passes/tree/nodes/index.js";
 export * from "./passes/tree/schemas/index.js";
 export * from "./pipeline/index.js";
-export * from "./raw-tree.js";
 export * from "./validate/index.js";
 export * from "./workspace/index.js";
+export type * from "./diagnostics/diagnostic.js";
+export * from "./raw-tree.js";

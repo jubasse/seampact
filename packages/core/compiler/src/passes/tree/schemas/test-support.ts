@@ -4,7 +4,6 @@ import type { Diagnostic } from "../../../diagnostics/diagnostic.js";
 import { diagnosticLocationKey } from "../../../diagnostics/print.js";
 import { loadFsReader, loadWorkspace } from "../../../load/index.js";
 import { type LoadReader, loadMemoryReader } from "../../../load/reader.js";
-import { draftFixture } from "../../../pipeline/draft-fixture.js";
 import {
   createDraftIR,
   type DraftIR,
@@ -12,6 +11,7 @@ import {
   pipelineGuard,
   type TreeSchemaService,
 } from "../../../pipeline/seam.js";
+import { draftFixture } from "../../../pipeline/draft-fixture.js";
 import { validateWorkspace } from "../../../validate/index.js";
 import { treeSchemasPass } from "./pass.js";
 

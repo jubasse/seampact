@@ -1,11 +1,14 @@
 import type { IrWriter } from "@seampact/spec/ir";
+import { finalizeCompareText } from "../../../finalize/canonical-order.js";
 import { type DerivationRoleName, derivationTable } from "../../../derivations/index.js";
 import {
   type DraftIR,
   pipelineCopy,
+  pipelineRateLimitParam,
   pipelineTreeNodes,
   type TreeNode,
 } from "../../../pipeline/seam.js";
+import { type TreeNodesRawSchemas, treeNodesIdParam } from "../../tree/nodes/index.js";
 import { type DeriveErrorsAttachedCode, deriveErrorsAttached } from "./attached.js";
 import {
   type DeriveErrorsBinding,
@@ -15,7 +18,6 @@ import {
   deriveErrorsBindingKey,
   deriveErrorsCheckConditionalDatum,
   deriveErrorsParamsSite,
-  deriveErrorsRateLimitParam,
 } from "./bindings.js";
 import { deriveErrorsOriginOf } from "./read.js";
 import { deriveErrorsCheckRetryParam } from "./retry-param.js";
@@ -73,30 +75,8 @@ export function deriveErrorsRoutes(sources: DeriveErrorsOperationsSources): Deri
   });
 }
 
-// The member id parameter of each collection, read from the `resource` tree.nodes wrote on its operations.
-function memberIdParams(routes: readonly DeriveErrorsRoute[]): Map<string, string> {
-  const params = new Map<string, string>();
-
-  for (const route of routes) {
-    const idParam = route.operation.resource?.idParam;
-
-    if (idParam === undefined) continue;
-
-    for (let node: TreeNode | undefined = route.node; node !== undefined; node = node.parent)
-      if (node.kind === "collection") {
-        params.set(node.pointer, idParam);
-        break;
-      }
-  }
-
-  return params;
-}
-
 // The member ids of the path of a route below one or more `member` scopes that no scope of the operation reads.
-function unreadMemberIds(
-  route: DeriveErrorsRoute,
-  idParams: ReadonlyMap<string, string>,
-): string[] {
+function unreadMemberIds(route: DeriveErrorsRoute, schemas: TreeNodesRawSchemas): string[] {
   const read = new Set(
     (route.operation.scopes ?? []).flatMap((scope) =>
       "in" in scope.source && scope.source.in === "path" && "name" in scope.source
@@ -110,7 +90,7 @@ function unreadMemberIds(
   for (let node: TreeNode | undefined = route.node; node !== undefined; node = node.parent) {
     if (node.kind !== "scope" || node.name !== "member" || node.parent === undefined) continue;
 
-    const idParam = idParams.get(node.parent.pointer);
+    const idParam = treeNodesIdParam(node.parent, schemas);
 
     if (idParam !== undefined && inPath.has(idParam) && !read.has(idParam)) unread.push(idParam);
   }
@@ -205,7 +185,7 @@ function retryHeaderOf(
   const name = sources.context.conventions.get("rateLimit.header")?.value;
   const written = sources.context.conventions.get("rateLimit.unit")?.value;
   const unit = RETRY_UNITS.find((candidate) => candidate === written);
-  const param = deriveErrorsRateLimitParam(sources.context);
+  const param = pipelineRateLimitParam(sources.context.conventions);
 
   if (typeof name !== "string" || unit === undefined || param === undefined) return undefined;
 
@@ -231,7 +211,7 @@ function elementOf(
     compareOrigins(sources),
   );
   const roles = [...error.roles.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
+    .sort(([left], [right]) => finalizeCompareText(left, right))
     .map(([role, params]) => (params === undefined ? { role } : { role, params }));
   const status = sources.registry.get(error.code)?.declaration.http.status;
   const retryHeader =
@@ -274,23 +254,25 @@ function compareOrigins(
 
   return (left, right) => {
     if ((left.api ?? "") !== (right.api ?? ""))
-      return (left.api ?? "").localeCompare(right.api ?? "");
+      return finalizeCompareText(left.api ?? "", right.api ?? "");
 
     if (layerIndex(left) !== layerIndex(right)) return layerIndex(left) - layerIndex(right);
 
-    return left.pointer < right.pointer ? -1 : left.pointer > right.pointer ? 1 : 0;
+    return finalizeCompareText(left.pointer, right.pointer);
   };
 }
 
 function collect(
   sources: DeriveErrorsOperationsSources,
   route: DeriveErrorsRoute,
-  idParams: ReadonlyMap<string, string>,
   forbiddenChecked: Set<string>,
 ): Map<IrWriter.ErrorCode, PendingError> {
   const pending = new Map<IrWriter.ErrorCode, PendingError>();
   const triggers = deriveErrorsTriggers(
-    { draft: sources.draft, unreadMemberIds: unreadMemberIds(route, idParams) },
+    {
+      draft: sources.draft,
+      unreadMemberIds: unreadMemberIds(route, sources.context.raw.merged.schemas),
+    },
     route,
   );
 
@@ -347,12 +329,11 @@ function registeredStatus(sources: DeriveErrorsOperationsSources, code: string):
 /** Writes `errors` on every operation of the draft. */
 export function deriveErrorsOperations(sources: DeriveErrorsOperationsSources): void {
   const routes = deriveErrorsRoutes(sources);
-  const idParams = memberIdParams(routes);
   const forbiddenChecked = new Set<string>();
   const refusedRetryParams = new Map<string, boolean>();
 
   for (const route of routes) {
-    const pending = collect(sources, route, idParams, forbiddenChecked);
+    const pending = collect(sources, route, forbiddenChecked);
     const statusOf = (code: string): number => registeredStatus(sources, code);
     // A listed or attached code nobody declares is reported by the registry (`error-unknown`); no element names it.
     const elements = [...pending.values()]
@@ -360,7 +341,7 @@ export function deriveErrorsOperations(sources: DeriveErrorsOperationsSources): 
       .map((error) => elementOf(sources, error, refusedRetryParams))
       .sort(
         (left, right) =>
-          statusOf(left.code) - statusOf(right.code) || (left.code < right.code ? -1 : 1),
+          statusOf(left.code) - statusOf(right.code) || finalizeCompareText(left.code, right.code),
       );
 
     route.operation.errors = elements;

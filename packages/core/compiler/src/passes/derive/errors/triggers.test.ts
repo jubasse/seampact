@@ -79,7 +79,10 @@ describe("derived triggers reached through the triggers contract", () => {
 
     expect(errorOf(draft, "jobs", "api.deadline_exceeded").derivedFrom).toEqual({
       derivation: "identity.deadline",
-      from: [{ layer: "api", pointer: "/surfaces/robots/routes/jobs" }],
+      from: [
+        { layer: "api", pointer: "/headers/deadline" },
+        { layer: "api", pointer: "/identities/robot/headers/deadline" },
+      ],
     });
     expect(() => errorOf(draft, "drafts", "api.deadline_exceeded")).toThrow();
   });
@@ -191,6 +194,126 @@ surfaces:
     routes:
       ping: { method: get, requires: [writeLimit] }
 `;
+
+const BOUNDED = "type: integer, minimum: 0, maximum: 9007199254740991";
+
+// A bucket rule whose own 429 code `shop.slow` is declared by `declaration`, a catalogue entry or a route's `errors`.
+const slowCodeContract = (declaration: { catalogue?: string; route?: string; schemas?: string }) =>
+  `api: { name: shop, version: 1 }
+conventions:
+  rateLimit: { header: Retry-After, param: retryAfterMs, unit: s }
+${declaration.catalogue === undefined ? "" : `errors:\n  shop.slow: ${declaration.catalogue}\n`}${declaration.schemas ?? ""}rules:
+  slowDown: { bucket: true, errors: [shop.slow] }
+buckets:
+  writes: { key: [address], limit: 60, window: 1m }
+requirements:
+  writeLimit: { rule: slowDown, bucket: writes }
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks the retry header only. }
+    routes:
+      ping:
+        method: get
+        requires: [writeLimit]
+${declaration.route === undefined ? "" : `        errors:\n          shop.slow: ${declaration.route}\n`}`;
+
+describe("a retry param that cannot render as a safe integer", () => {
+  const SLOW_POINTER = "/errors/shop.slow";
+  const PARAM_POINTER = `${SLOW_POINTER}/params/retryAfterMs`;
+  const refusals: readonly { name: string; contract: string; pointer: string }[] = [
+    {
+      name: "absent from the code's params",
+      contract: slowCodeContract({ catalogue: "{ status: 429 }" }),
+      pointer: SLOW_POINTER,
+    },
+    {
+      name: "optional",
+      contract: slowCodeContract({
+        catalogue: `{ status: 429, params: { retryAfterMs?: { ${BOUNDED} } } }`,
+      }),
+      pointer: SLOW_POINTER,
+    },
+    {
+      name: "nullable",
+      contract: slowCodeContract({
+        catalogue: `{ status: 429, params: { retryAfterMs: { ${BOUNDED}, nullable: true } } }`,
+      }),
+      pointer: PARAM_POINTER,
+    },
+    {
+      name: "not an integer",
+      contract: slowCodeContract({
+        catalogue: "{ status: 429, params: { retryAfterMs: { type: string } } }",
+      }),
+      pointer: PARAM_POINTER,
+    },
+    {
+      name: "an integer with a format",
+      contract: slowCodeContract({
+        catalogue: `{ status: 429, params: { retryAfterMs: { ${BOUNDED}, format: int64 } } }`,
+      }),
+      pointer: PARAM_POINTER,
+    },
+    {
+      name: "an integer with no minimum",
+      contract: slowCodeContract({
+        catalogue:
+          "{ status: 429, params: { retryAfterMs: { type: integer, maximum: 9007199254740991 } } }",
+      }),
+      pointer: PARAM_POINTER,
+    },
+    {
+      name: "an integer with a negative minimum",
+      contract: slowCodeContract({
+        catalogue: `{ status: 429, params: { retryAfterMs: { type: integer, minimum: -1, maximum: 9007199254740991 } } }`,
+      }),
+      pointer: PARAM_POINTER,
+    },
+    {
+      name: "declared by a named params schema (located at the declaration)",
+      contract: slowCodeContract({
+        catalogue: "{ status: 429, params: SlowParams }",
+        schemas: `schemas:\n  SlowParams: { type: object, required: [retryAfterMs], properties: { retryAfterMs: { type: integer, minimum: 0 } } }\n`,
+      }),
+      pointer: SLOW_POINTER,
+    },
+    {
+      name: "declared on a tree node (located at the declaration)",
+      contract: slowCodeContract({
+        route: "{ status: 429, params: { retryAfterMs: { type: integer, minimum: 0 } } }",
+      }),
+      pointer: "/surfaces/app/routes/ping/errors/shop.slow",
+    },
+  ];
+
+  test.each(refusals)(
+    "$name is refused once, located at $pointer, and writes no header",
+    (refusal) => {
+      const run = deriveErrorsRunContract(deriveErrorsLoadFiles({ "api.yaml": refusal.contract }));
+
+      expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+        {
+          rule: "seampact/derive/retry-param",
+          pointer: refusal.pointer,
+          related: ["/conventions/rateLimit/param"],
+        },
+      ]);
+      expect(errorOf(run.draft, "ping", "shop.slow").retryHeader).toBeUndefined();
+    },
+  );
+
+  test("a bucket rule whose codes hold no 429 is allowed and carries no retry header", () => {
+    const run = deriveErrorsRunContract(
+      deriveErrorsLoadFiles({
+        "api.yaml": slowCodeContract({ catalogue: "{ status: 503 }" }),
+      }),
+    );
+
+    expect(run.diagnostics).toEqual([]);
+    expect(errorOf(run.draft, "ping", "shop.slow").retryHeader).toBeUndefined();
+  });
+});
 
 describe("the retry header", () => {
   const retryViolations = (draft: DraftIR) =>

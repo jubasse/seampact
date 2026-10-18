@@ -14,6 +14,8 @@ export {
   derivationCoreSchemaIds,
   derivationIssueLocations,
   derivationIssueMembers,
+  derivationDatumAlways,
+  derivationParamOfDatum,
   derivationParamsSchemaId,
   derivationRoleOf,
   derivationRoles,

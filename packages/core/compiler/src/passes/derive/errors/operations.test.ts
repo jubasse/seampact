@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import type { DraftIR, DraftOperation } from "../../../pipeline/seam.js";
 import {
   type DeriveErrorsRun,
+  deriveErrorsLoadFiles,
   deriveErrorsLoadFixture,
   deriveErrorsLocated,
   deriveErrorsReferenceWorkspace,
@@ -33,6 +34,35 @@ function errorOf(draft: DraftIR, id: string, code: string): IrWriter.OperationEr
 
 const derivationOf = (draft: DraftIR, id: string, code: string): string | undefined =>
   errorOf(draft, id, code).derivedFrom?.derivation;
+
+// A collection that declares no `ops`: the only route below its member scope is the nested collection's.
+const OPLESS_COLLECTION = `api: { name: shop, version: 1 }
+errors:
+  tasks.not_found: { status: 404 }
+schemas:
+  TaskId: { type: string }
+  CommentId: { type: string }
+  Task: { type: object, required: [taskId], properties: { taskId: TaskId } }
+  Comment: { type: object, required: [commentId], properties: { commentId: CommentId } }
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks member.notFound only. }
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: TaskId }
+        item: Task
+        member:
+          errorRoles:
+            notFound: tasks.not_found
+          routes:
+            comments:
+              kind: collection
+              id: { commentId: CommentId }
+              item: Comment
+              ops: { list: { paging: none } }
+`;
 
 const operationsRun = (): DeriveErrorsRun =>
   deriveErrorsRunContract(deriveErrorsLoadFixture("operations"));
@@ -195,6 +225,17 @@ describe("not found", () => {
     expect(derivationOf(operationsRun().draft, "listComments", "tasks.not_found")).toBe(
       "member.notFound",
     );
+  });
+});
+
+describe("not found without operations on the collection", () => {
+  test("a collection with no ops still gives its member id to the routes below it", () => {
+    const { diagnostics, draft } = deriveErrorsRunContract(
+      deriveErrorsLoadFiles({ "api.yaml": OPLESS_COLLECTION }),
+    );
+
+    expect(diagnostics).toEqual([]);
+    expect(derivationOf(draft, "listComments", "tasks.not_found")).toBe("member.notFound");
   });
 });
 

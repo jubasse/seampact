@@ -5,6 +5,8 @@ import {
   DERIVATION_ISSUE_SCHEMA_ID,
   type DerivationRole,
   derivationCopy,
+  derivationDatumAlways,
+  derivationParamOfDatum,
   derivationIssueMembers,
   derivationRoleOf,
   derivationRoles,
@@ -97,13 +99,12 @@ function paramsReservation(
   // ADR 0006 section 6: a datum the bound code need not always receive is an optional param.
   // `rateLimited`'s delay is the param `conventions.rateLimit` names, required while that convention is set.
   const properties = role.data.map((datum) => {
-    const named = role.role === "rateLimited" && rateLimitParam !== undefined;
-    const name = named ? rateLimitParam : datum.name;
+    const name = derivationParamOfDatum(role.role, datum, rateLimitParam);
 
     return coreProperty(
       name,
       derivationCopy<IrWriter.TypeUse>(datum.type),
-      named ? false : datum.required !== "always",
+      !derivationDatumAlways(role.role, datum, rateLimitParam),
       treeSchemasPointer(pointer, name),
     );
   });

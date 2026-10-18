@@ -1,5 +1,10 @@
 import type { IrWriter } from "@seampact/spec/ir";
-import type { DerivationRole, DerivationRoleDatum } from "../../../derivations/index.js";
+import {
+  type DerivationRole,
+  type DerivationRoleDatum,
+  derivationDatumAlways,
+  derivationParamOfDatum,
+} from "../../../derivations/index.js";
 import {
   type PassReadonly,
   pipelineIsJsonObject,
@@ -58,33 +63,15 @@ export interface DeriveErrorsRoleParamsSite {
 /** The slot an `each`'s `as` reads its item from. */
 export const DERIVE_ERRORS_ITEM_SLOT = "item";
 
-const RATE_LIMITED_ROLE = "rateLimited";
-
 type DatumSite = Pick<DeriveErrorsRoleParamsSite, "role" | "rateLimitParam">;
 
-// `rateLimited`'s conditional datum, the delay, fills the param `conventions.rateLimit` names wherever it names one.
-const fillsRateLimitParam = (site: DatumSite, datum: DerivationRoleDatum): boolean =>
-  site.role.role === RATE_LIMITED_ROLE &&
-  datum.required === "conditional" &&
-  site.rateLimitParam !== undefined;
+/** The param a datum fills by name (see `derivationParamOfDatum`). */
+export const deriveErrorsParamOfDatum = (site: DatumSite, datum: DerivationRoleDatum): string =>
+  derivationParamOfDatum(site.role.role, datum, site.rateLimitParam);
 
-/** The param a datum fills by name: `rateLimited`'s delay fills the param `conventions.rateLimit` names. */
-export function deriveErrorsParamOfDatum(site: DatumSite, datum: DerivationRoleDatum): string {
-  const rateLimitParam = site.rateLimitParam;
-
-  return rateLimitParam !== undefined && fillsRateLimitParam(site, datum)
-    ? rateLimitParam
-    : datum.name;
-}
-
-/** Whether a datum has a value wherever its role answers (ADR 0006 section 6, the Data column). */
-export function deriveErrorsDatumAlways(site: DatumSite, datum: DerivationRoleDatum): boolean {
-  if (datum.required === "always") return true;
-
-  // `forbidden`'s pointer is supplied only on a rejected restricted input field, never on the other denials the role
-  // answers on the same operation.
-  return fillsRateLimitParam(site, datum);
-}
+/** Whether a datum has a value wherever its role answers (see `derivationDatumAlways`). */
+export const deriveErrorsDatumAlways = (site: DatumSite, datum: DerivationRoleDatum): boolean =>
+  derivationDatumAlways(site.role.role, datum, site.rateLimitParam);
 
 /** The properties of a code's params schema, in its order; empty without params. */
 export function deriveErrorsParamProperties(

@@ -262,3 +262,10 @@ export function pipelineConventions(raw: PassReadonly<RawApi>): ResolvedConventi
     },
   });
 }
+
+/** The param `conventions.rateLimit` names for `rateLimited`'s delay, if any. */
+export function pipelineRateLimitParam(conventions: ResolvedConventions): string | undefined {
+  const param = conventions.get("rateLimit.param")?.value;
+
+  return typeof param === "string" ? param : undefined;
+}
