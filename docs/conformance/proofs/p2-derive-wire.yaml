@@ -1,14 +1,76 @@
 lane: p2-derive-wire
 proofs:
+  - id: CHK-036
+    fixtures:
+      - fixtures/passes/derive-wire/lifecycle/api.yaml
+      - fixtures/passes/derive-wire/reference/tasks.derive-wire.json
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/cache.test.ts#cache headers'
   - id: CHK-038
     fixtures:
       - fixtures/passes/derive-wire/wire/api.yaml
       - fixtures/passes/derive-wire/reference/tasksService.derive-wire.json
     tests:
       - 'core: packages/core/compiler/src/passes/derive/wire/identity-headers.test.ts#identity headers'
+  - id: CHK-041
+    fixtures:
+      - fixtures/passes/derive-wire/lifecycle/api.yaml
+      - fixtures/passes/derive-wire/reference/tasks.derive-wire.json
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/concurrency.test.ts#version param'
+  - id: CHK-042
+    fixtures:
+      - fixtures/passes/derive-wire/lifecycle/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/concurrency.test.ts#version param'
+      - 'core: packages/core/compiler/src/passes/derive/wire/concurrency.test.ts#if-match and etag'
+      - 'core: packages/core/compiler/src/passes/derive/wire/concurrency.test.ts#relay routes of a versioned operation'
+  - id: CHK-054
+    fixtures:
+      - fixtures/passes/derive-wire/lifecycle/api.yaml
+      - fixtures/passes/derive-wire/reference/tasks.derive-wire.json
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/lifecycle.test.ts#derived maturity'
+  - id: CHK-058
+    fixtures:
+      - fixtures/passes/derive-wire/lifecycle/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/lifecycle.test.ts#deprecation headers'
+  - id: CHK-127
+    fixtures:
+      - fixtures/passes/derive-wire/lifecycle/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/concurrency.test.ts#if-match and etag'
+      - 'core: packages/core/compiler/src/passes/derive/wire/concurrency.test.ts#relay routes of a versioned operation'
+  - id: CHK-128
+    fixtures:
+      - fixtures/passes/derive-wire/lifecycle/api.yaml
+      - fixtures/passes/derive-wire/reference/tasks.derive-wire.json
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/paging.test.ts#paging params'
+  - id: CHK-138
+    fixtures:
+      - fixtures/passes/derive-wire/lifecycle/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/cache.test.ts#cache headers'
+  - id: CHK-139
+    fixtures:
+      - fixtures/passes/derive-wire/lifecycle/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/cache.test.ts#sensitive responses are no-store'
   - id: CHK-149
     fixtures:
       - fixtures/passes/derive-wire/wire/api.yaml
       - fixtures/passes/derive-wire/reference/tasks.derive-wire.json
     tests:
       - 'core: packages/core/compiler/src/passes/derive/wire/idempotency.test.ts#idempotency key'
+  - id: CHK-152
+    fixtures:
+      - fixtures/passes/derive-wire/lifecycle/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/bodies.test.ts#download headers'
+  - id: CHK-153
+    fixtures:
+      - fixtures/passes/derive-wire/lifecycle/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/bodies.test.ts#redirect location'

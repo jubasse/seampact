@@ -1,3 +1,4 @@
+import type { IrWriter } from "@seampact/spec/ir";
 import {
   type DraftIR,
   type DraftOperation,
@@ -5,7 +6,7 @@ import {
   pipelineTreeNodes,
   type TreeNode,
 } from "../../../pipeline/seam.js";
-import type { DeriveWireReporter } from "./report.js";
+import type { DeriveWireProblem, DeriveWireRelated, DeriveWireReporter } from "./report.js";
 
 // Each operation of the draft with the tree node tree.nodes wrote it from, matched by the origin pointer, which
 // tree.nodes sets to the node's own pointer (route, relay route or `ops` entry).
@@ -26,6 +27,14 @@ export interface DeriveWireScope {
   readonly reporter: DeriveWireReporter;
   /** The collisions reported once for every route they reach, by derivation, place, name and location. */
   readonly reportedCollisions: Set<string>;
+  /** The faults of an inherited setting, one per rule and authored origin, reported after the last route. */
+  readonly settingFaults: Map<string, DeriveWireSettingFault>;
+}
+
+/** A fault of an inherited setting, with every route it reaches. */
+export interface DeriveWireSettingFault {
+  readonly problem: DeriveWireProblem;
+  readonly routes: DeriveWireRelated[];
 }
 
 /** Every operation of the draft with its tree node, in draft order. */
@@ -44,4 +53,23 @@ export function deriveWireRoutes(draft: DraftIR, context: DeriveWireContext): De
 
     return { id, node, operation };
   });
+}
+
+/** The access access.identity wrote on the operation, a relay route's included; none is an internal error. */
+export function deriveWireAccessOf(route: DeriveWireRoute): IrWriter.Access {
+  const access = route.operation.access;
+
+  if (access === undefined)
+    throw new Error(`access.identity wrote no access on operation '${route.id}'`);
+
+  return access;
+}
+
+/** The origin of a pointer of the merged raw tree the half read; one without an origin is an internal error. */
+export function deriveWireOriginAt(scope: DeriveWireScope, pointer: string): IrWriter.Origin {
+  const origin = scope.context.origin(pointer);
+
+  if (origin === undefined) throw new Error(`${pointer} has no origin in the side table`);
+
+  return origin;
 }

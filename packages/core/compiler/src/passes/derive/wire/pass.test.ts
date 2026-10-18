@@ -215,7 +215,7 @@ describe("relay routes carry the public operation's method", () => {
         ],
       ]),
       "tasksService",
-      treeNodesRelayedTasks(),
+      { relayed: treeNodesRelayedTasks() },
     );
 
     expect(run.diagnostics).toEqual([]);

@@ -18,6 +18,9 @@ export const DERIVE_WIRE_STRING_USE: IrWriter.ScalarTypeUse = Object.freeze({
   refinements: Object.freeze({}),
 });
 
+/** The response header of web links (RFC 8288): the paging links and the deprecation successor share it. */
+export const DERIVE_WIRE_LINK = "Link";
+
 /** The query wire of a single text value: `name=value`, as a query credential travels. */
 export const DERIVE_WIRE_TEXT_QUERY_WIRE: IrWriter.QueryWire = Object.freeze({
   kind: "text",
@@ -34,6 +37,8 @@ export interface DeriveWireDerived {
   readonly type: IrWriter.TypeUse;
   readonly required: boolean;
   readonly derivedFrom: IrWriter.DerivedFrom;
+  /** The query wire of a query parameter; a single text value when absent. */
+  readonly wire?: IrWriter.QueryWire;
 }
 
 interface Named {
@@ -66,7 +71,9 @@ export function deriveWireAddParam(
       name: derived.name,
       type: pipelineCopy(derived.type),
       required: derived.required,
-      ...(place === "query" ? { wire: pipelineCopy(DERIVE_WIRE_TEXT_QUERY_WIRE) } : {}),
+      ...(place === "query"
+        ? { wire: pipelineCopy(derived.wire ?? DERIVE_WIRE_TEXT_QUERY_WIRE) }
+        : {}),
       derivedFrom: pipelineCopy(derived.derivedFrom),
     });
 }
@@ -78,17 +85,27 @@ export function deriveWireAddSuccessHeader(
   semantic: string | undefined,
   scope: DeriveWireScope,
 ): void {
-  for (const response of deriveWireSuccessResponses(route)) {
-    if (mergedInto(response.headers, "header", derived, route, scope)) continue;
+  for (const response of deriveWireSuccessResponses(route))
+    deriveWireAddResponseHeader(route, response, derived, semantic, scope);
+}
 
-    response.headers.push({
-      name: derived.name,
-      type: pipelineCopy(derived.type),
-      required: derived.required,
-      ...(semantic === undefined ? {} : { semantic }),
-      derivedFrom: pipelineCopy(derived.derivedFrom),
-    });
-  }
+/** Appends a derived header to one response of the operation. */
+export function deriveWireAddResponseHeader(
+  route: DeriveWireRoute,
+  response: IrWriter.Response,
+  derived: DeriveWireDerived,
+  semantic: string | undefined,
+  scope: DeriveWireScope,
+): void {
+  if (mergedInto(response.headers, "header", derived, route, scope)) return;
+
+  response.headers.push({
+    name: derived.name,
+    type: pipelineCopy(derived.type),
+    required: derived.required,
+    ...(semantic === undefined ? {} : { semantic }),
+    derivedFrom: pipelineCopy(derived.derivedFrom),
+  });
 }
 
 const SUCCESS_FIRST = 200;

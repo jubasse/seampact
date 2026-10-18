@@ -1,0 +1,185 @@
+# The derive.wire members of PR 2: concurrency by source (body, query, a DELETE's body read from the query,
+# If-Match with its ETag), cache by family, caller kind and credential, conditional GET, a sensitive response,
+# paging styles, deprecation headers, derived and stated maturity, downloads and redirects.
+api: { name: lifecycle, version: 1, maturity: provisional }
+
+conventions:
+  paging: { default: cursor, maxLimit: 100 }
+  deprecation: { header: X-Deprecated, sunsetHeader: X-Sunset }
+  cache:
+    families:
+      minute: 60s
+      shared: { maxAge: 300s, sharedMaxAge: 600s, staleWhileRevalidate: 60s, staleIfError: 1h, immutable: true, noCache: true, mustRevalidate: true }
+
+services:
+  catalog: { maturity: stable }
+  billing: { maturity: experimental }
+
+schemes:
+  bearer: { kind: bearer }
+  sessionCookie: { kind: cookie, name: __Host-session }
+  deviceToken: { kind: header, name: X-Device-Token }
+
+identities:
+  member:
+    schemes: { read: [bearer, sessionCookie, deviceToken], write: [bearer] }
+    principal: MemberPrincipal
+
+pagings:
+  cursor:
+    request:
+      cursor: { query: cursor }
+      limit: { query: limit }
+      sort: { query: sort, style: signed }
+    response:
+      body: $items
+      links: { next: $next }
+  stripeList:
+    request:
+      after: { query: starting_after }
+      before: { query: ending_before }
+      limit: { query: limit }
+    response:
+      body: { object: list, data: $items, has_more: $more }
+  githubPages:
+    request:
+      page: { query: page }
+      limit: { query: per_page }
+      sort: { query: sort, style: split, direction: direction }
+    response:
+      body: $items
+      headers: { X-Total-Count: $total }
+      links: { next: $next, prev: $previous, first: $first, last: $last }
+  offsets:
+    request:
+      offset: { query: offset }
+      limit: { header: X-Limit }
+      sort: { query: 'order[{key}]', style: keyed }
+    response:
+      body: $items
+  changes:
+    request:
+      since: { query: since }
+      limit: { query: limit }
+    response:
+      body: { items: $items, next: $nextSince, complete: $complete }
+  pairs:
+    request:
+      page: { query: page, base: 0 }
+      sort: { query: sort, style: pair }
+    response:
+      body: $items
+
+schemas:
+  MemberPrincipal: { type: object, required: [memberId], properties: { memberId: { type: string } } }
+  Note:
+    type: object
+    required: [noteId, text, revision]
+    properties: { noteId: { type: string }, text: { type: string }, revision: { type: integer } }
+  Doc:
+    type: object
+    required: [docId, title, etag]
+    properties: { docId: { type: string }, title: { type: string }, etag: { type: string } }
+  Key:
+    type: object
+    required: [keyId, secret]
+    properties: { keyId: { type: string }, secret: { type: string, sensitive: true } }
+  EditNote: { type: object, properties: { text: { type: string } } }
+  Draft:
+    type: object
+    required: [draftId, text, revision]
+    properties: { draftId: { type: string }, text: { type: string }, revision: { type: integer } }
+  EditDraft: { type: object, properties: { text: { type: string } } }
+
+surfaces:
+  app:
+    identity: member
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: { type: string } }
+        item: Note
+        concurrency: { version: query.revision, field: revision }
+        ops:
+          list: { paging: { githubPages: { maxLimit: 50 } }, sortable: [revision] }
+          get: {}
+          update: { input: EditNote }
+          delete: {}
+      docs:
+        kind: collection
+        id: { docId: { type: string } }
+        item: Doc
+        concurrency: { version: header.If-Match, field: etag }
+        ops:
+          list: { paging: { stripeList: { maxLimit: 20, overLimit: clamp } } }
+          get: { cache: { freshness: minute, etag: true } }
+          update: { input: EditNote }
+      drafts:
+        kind: collection
+        id: { draftId: { type: string } }
+        item: Draft
+        concurrency: { version: body.expectedRevision, field: revision }
+        ops:
+          list: { paging: offsets, sortable: [revision, text] }
+          update: { input: EditDraft }
+          delete: {}
+        member:
+          routes:
+            publish: { method: post, concurrency: inherit, input: EditDraft, output: Draft }
+      feed:
+        method: get
+        access: { public: "The feed is public." }
+        cache: { freshness: shared, anonymous: public, vary: [Accept-Language] }
+        item: Note
+        paging: { changes: { token: instant } }
+      board:
+        method: get
+        access: { optionalAuth: "Guests see the public board." }
+        cache: { freshness: shared, anonymous: public }
+        output: Note
+      history:
+        method: get
+        item: Note
+        paging: pairs
+        sortable: [revision]
+      plain:
+        method: get
+        item: Note
+      keys:
+        method: get
+        output: Key
+      rotateKey:
+        method: post
+        output: Key
+      neverKeys:
+        method: get
+        cache: { freshness: never }
+        output: Key
+      legacy:
+        method: get
+        deprecated: { since: '2026-01-15', sunset: '2027-06-30', successor: board }
+        output: Note
+      retired:
+        method: get
+        deprecated: { since: '2026-01-15', sunset: '2027-06-30' }
+        output: Note
+      prices:
+        method: get
+        upstream: [billing, catalog]
+        output: Note
+      beta:
+        method: get
+        upstream: [catalog]
+        maturity: { level: experimental, reason: "The board layout may change." }
+        output: Note
+      export:
+        method: get
+        output: { file: { media: [application/pdf, text/csv] } }
+      callback:
+        method: get
+        access: { public: "The provider redirects the browser here." }
+        responses: { 302: {} }
+      moved:
+        method: post
+        input: EditNote
+        responses: { 200: { body: Note }, 303: {} }

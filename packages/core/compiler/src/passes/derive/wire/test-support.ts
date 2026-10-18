@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import type { IrWriter } from "@seampact/spec/ir";
+import type { ContractIR, IrWriter } from "@seampact/spec/ir";
 import { derivationRowOf } from "../../../derivations/table.js";
 import type { Diagnostic } from "../../../diagnostics/diagnostic.js";
 import { loadFsReader, loadWorkspace } from "../../../load/index.js";
@@ -95,6 +95,13 @@ export function deriveWireReferenceVariant(
   file: string,
   replacements: readonly (readonly [string, string])[],
 ): RawWorkspace {
+  return deriveWireReferenceVariants({ [file]: replacements });
+}
+
+/** The reference workspace with the `[from, to]` texts of each named file replaced once, as `deriveWireReferenceVariant`. */
+export function deriveWireReferenceVariants(
+  replacementsByFile: Readonly<Record<string, readonly (readonly [string, string])[]>>,
+): RawWorkspace {
   const files: Record<string, string> = {};
 
   for (const entry of readdirSync(REFERENCE_CONTRACT, { recursive: true, withFileTypes: true }))
@@ -104,20 +111,22 @@ export function deriveWireReferenceVariant(
       files[path] = readFileSync(`${REFERENCE_CONTRACT}${path}`, "utf8");
     }
 
-  let text = files[file];
+  for (const [file, replacements] of Object.entries(replacementsByFile)) {
+    let text = files[file];
 
-  if (text === undefined) throw new Error(`the reference holds no file ${file}`);
+    if (text === undefined) throw new Error(`the reference holds no file ${file}`);
 
-  for (const [from, to] of replacements) {
-    if (!text.includes(from)) throw new Error(`the reference ${file} holds no '${from}'`);
-    text = text.replace(from, to);
+    for (const [from, to] of replacements) {
+      if (!text.includes(from)) throw new Error(`the reference ${file} holds no '${from}'`);
+      text = text.replace(from, to);
+    }
+
+    files[file] = text;
   }
-
-  files[file] = text;
 
   return loaded(
     loadWorkspace({ reader: loadMemoryReader(files), entry: "workspace.yaml" }),
-    `the reference variant of ${file}`,
+    `the reference variant of ${Object.keys(replacementsByFile).join(", ")}`,
   );
 }
 
@@ -145,6 +154,12 @@ export interface DeriveWireRun {
   readonly diagnostics: Diagnostic[];
 }
 
+/** What a relay route copies from: the derived drafts of workspace apis and the IRs of imports, by api name. */
+export interface DeriveWireRelaySources {
+  readonly relayed?: ReadonlyMap<string, DraftIR>;
+  readonly imports?: ReadonlyMap<string, ContractIR>;
+}
+
 /** Runs derive.wire, or `part` standing for it, on `draft` with the guard on, as the orchestrator does. */
 export function deriveWireRunOn(
   raw: RawApi,
@@ -152,6 +167,7 @@ export function deriveWireRunOn(
   draft: DraftIR,
   treeSchemas: TreeSchemaService,
   part: PassPart<"derive.wire"> = deriveWirePass,
+  sources: DeriveWireRelaySources = {},
 ): DeriveWireRun {
   const diagnostics: Diagnostic[] = [];
   const context = Object.freeze({
@@ -160,6 +176,7 @@ export function deriveWireRunOn(
       workspace,
       report: (diagnostic) => diagnostics.push(diagnostic),
       guard: true,
+      ...relaySourcesOf(sources),
     }),
     treeSchemas,
   });
@@ -174,11 +191,11 @@ export function deriveWireRunOn(
   return { draft, diagnostics };
 }
 
-/** Runs the tree and access halves, then derive.wire (guarded), on the named or first api of `workspace`; `relayed` holds the drafts its relay routes copy from. */
+/** Runs the tree and access halves, then derive.wire (guarded), on the named or first api of `workspace`; `sources` holds what its relay routes copy from. */
 export function deriveWireRunContract(
   workspace: RawWorkspace,
   api?: string,
-  relayed?: ReadonlyMap<string, DraftIR>,
+  sources: DeriveWireRelaySources = {},
 ): DeriveWireRun {
   const raw = apiOf(workspace, api);
   const draft = createDraftIR();
@@ -187,7 +204,7 @@ export function deriveWireRunContract(
     raw,
     workspace,
     report: (diagnostic) => diagnostics.push(diagnostic),
-    ...(relayed === undefined ? {} : { relayed }),
+    ...relaySourcesOf(sources),
   });
   const treeSchemas = treeSchemasPass.run(draft, context);
   const later = Object.freeze({ ...context, treeSchemas });
@@ -199,10 +216,18 @@ export function deriveWireRunContract(
       throw new Error(`${half.half} reports on the contract: ${JSON.stringify(diagnostics)}`);
   }
 
-  return deriveWireRunOn(raw, workspace, draft, treeSchemas);
+  return deriveWireRunOn(raw, workspace, draft, treeSchemas, deriveWirePass, sources);
 }
 
-/** Runs derive.wire, or `part` standing for it, (guarded) on the after-access fixture draft of a reference api. */
+const relaySourcesOf = ({ relayed, imports }: DeriveWireRelaySources): DeriveWireRelaySources => ({
+  ...(relayed === undefined ? {} : { relayed }),
+  ...(imports === undefined ? {} : { imports }),
+});
+
+/**
+ * Runs derive.wire, or `part` standing for it, (guarded) on the after-access fixture draft of a reference api; a
+ * relay route of tasksService reads the after-access draft of tasks.
+ */
 export function deriveWireRunReference(
   workspace: RawWorkspace,
   api: DraftFixtureApi,
@@ -214,6 +239,7 @@ export function deriveWireRunReference(
     draftFixture(api, "after-access"),
     draftFixtureSchemaService(api),
     part,
+    { relayed: new Map([["tasks", draftFixture("tasks", "after-access")]]) },
   );
 }
 
@@ -231,9 +257,9 @@ const isDeriveWireElement = (element: { derivedFrom?: IrWriter.DerivedFrom }): b
   derivationRowOf(element.derivedFrom.derivation)?.wire === "derive.wire";
 
 /**
- * The members derive.wire wrote, by operation id: its derived parameters and response headers (by status), the
- * input's body limit and derived unknown-key policy, `idempotency` and `deadlineHeader`. An operation with none is
- * left out.
+ * The members derive.wire wrote, by operation id: its derived parameters, responses and response headers (by
+ * status), the input's body limit and derived unknown-key policy, `idempotency`, `deadlineHeader`,
+ * `concurrency.derivedFrom`, `cache` and a derived `maturity`. An operation with none is left out.
  */
 export function deriveWireMembers(draft: DraftIR): Record<string, Record<string, unknown>> {
   const members: Record<string, Record<string, unknown>> = {};
@@ -242,12 +268,14 @@ export function deriveWireMembers(draft: DraftIR): Record<string, Record<string,
     const written: Record<string, unknown> = {};
     const header = operation.params?.header.filter(isDeriveWireElement) ?? [];
     const query = operation.params?.query.filter(isDeriveWireElement) ?? [];
-    const responses = (operation.responses ?? [])
-      .map((response) => ({
-        status: response.status,
-        headers: response.headers.filter(isDeriveWireElement),
-      }))
-      .filter((response) => response.headers.length > 0);
+    // A derived response is listed whole, a declared one by its derived headers.
+    const responses = (operation.responses ?? []).flatMap((response) => {
+      if (isDeriveWireElement(response)) return [response];
+
+      const headers = response.headers.filter(isDeriveWireElement);
+
+      return headers.length > 0 ? [{ status: response.status, headers }] : [];
+    });
     const input = operation.input;
     const unknownKeys = input?.schema.kind === "ref" ? input.schema.unknownKeys : undefined;
 
@@ -267,6 +295,14 @@ export function deriveWireMembers(draft: DraftIR): Record<string, Record<string,
     if (operation.idempotency !== undefined) written.idempotency = operation.idempotency;
 
     if (operation.deadlineHeader !== undefined) written.deadlineHeader = operation.deadlineHeader;
+
+    if (operation.concurrency?.derivedFrom !== undefined)
+      written.concurrency = { derivedFrom: operation.concurrency.derivedFrom };
+
+    if (operation.cache !== undefined) written.cache = operation.cache;
+
+    if (operation.maturity !== undefined && operation.maturity.source !== "stated")
+      written.maturity = operation.maturity;
 
     if (Object.keys(written).length > 0 && operation.id !== undefined)
       members[operation.id] = written;

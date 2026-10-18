@@ -10,7 +10,11 @@ import type { PassContext } from "../../../pipeline/seam.js";
 export type DeriveWireRule =
   | "idempotency-convention"
   | "idempotency-exempt-unused"
-  | "derived-name-collision";
+  | "derived-name-collision"
+  | "cache-method"
+  | "cache-family"
+  | "cache-freshness"
+  | "cache-sensitive";
 
 export interface DeriveWireRelated {
   /** A pointer of the merged raw tree. */

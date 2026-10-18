@@ -181,7 +181,7 @@ describe("relay routes carry the public operation's method", () => {
     deriveWireRunContract(
       deriveWireReferenceVariant("tasks-service/api.yaml", replacements),
       "tasksService",
-      treeNodesRelayedTasks(),
+      { relayed: treeNodesRelayedTasks() },
     );
 
   test("an exemption a relay route inherits and uses is not refused", () => {

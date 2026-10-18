@@ -1,7 +1,7 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { pipelineCopy } from "../../../pipeline/seam.js";
 import { DERIVE_WIRE_STRING_USE, deriveWireAddParam } from "./params.js";
-import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
+import { type DeriveWireRoute, type DeriveWireScope, deriveWireAccessOf } from "./routes.js";
 
 // The credential parameters of the accepted schemes (`identity.authenticate`) and the CSRF header parameter
 // (`csrf.cookieWrite`), ADR 0006 section 5. A credential is a parameter only where it is a header or a query
@@ -15,9 +15,6 @@ import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 // bearer or another scheme, the target checks the header only on requests the cookie authenticates (ADR 0012
 // "One neutral, typed hook per concern"), so a bearer client never sends it; on optional access an anonymous
 // caller has no session, so no token either (ADR 0012 "Authenticate").
-//
-// A relay route has no access until tree.nodes copies its method; this tolerance, like the ones of the identity
-// headers and the idempotency key, becomes an internal error once tree.nodes copies it.
 
 const AUTHORIZATION = "Authorization";
 
@@ -25,15 +22,15 @@ const AUTHENTICATE = "identity.authenticate";
 
 /** Writes the credential and CSRF parameters of the route's access. */
 export function deriveWireCredentials(route: DeriveWireRoute, scope: DeriveWireScope): void {
-  const access = route.operation.access;
+  const access = deriveWireAccessOf(route);
 
-  if (access === undefined || access.kind === "public") return;
+  if (access.kind === "public") return;
 
-  const schemes = access.schemes.map((id) => schemeOf(id, scope));
+  const schemes = access.schemes.map((id) => deriveWireSchemeOf(id, scope));
   const required = access.kind === "identity" && schemes.length === 1;
 
   for (const scheme of schemes) {
-    const place = credentialPlace(scheme);
+    const place = deriveWireCredentialPlace(scheme);
 
     if (place === undefined) continue;
 
@@ -83,7 +80,8 @@ function writeCsrfParam(
   );
 }
 
-function credentialPlace(
+/** Where a scheme's credential travels as a parameter: a header or a query value; a cookie is none. */
+export function deriveWireCredentialPlace(
   scheme: IrWriter.KnownScheme,
 ): { in: "header" | "query"; name: string } | undefined {
   switch (scheme.kind) {
@@ -106,7 +104,8 @@ function credentialPlace(
   }
 }
 
-function schemeOf(id: string, scope: DeriveWireScope): IrWriter.KnownScheme {
+/** A scheme of the draft by id; access.identity wrote every scheme an access names. */
+export function deriveWireSchemeOf(id: string, scope: DeriveWireScope): IrWriter.KnownScheme {
   const schemes = scope.draft.schemes;
   const scheme = Object.hasOwn(schemes, id) ? schemes[id] : undefined;
 
