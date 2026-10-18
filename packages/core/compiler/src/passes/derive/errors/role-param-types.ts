@@ -12,6 +12,7 @@ import {
   deriveErrorsKindsFit,
   deriveErrorsKindsOf,
   deriveErrorsMemberMisfits,
+  DERIVE_ERRORS_OMITTABLE_REASON,
   deriveErrorsMisfit,
   deriveErrorsObjectOfUse,
 } from "./role-param-fit.js";
@@ -120,11 +121,24 @@ function refuse(check: TypedCheck, position: Position, message: string, fix: str
 
 function refuseType(check: TypedCheck, position: Position, what: string, reason: string): void {
   const { role, code } = check.site;
+  const message = `role '${role.role}' fills the param ${quote(position.param)} of ${quote(code)} with ${what}, but ${reason}`;
+
+  if (reason.includes(DERIVE_ERRORS_OMITTABLE_REASON)) {
+    check.faults += 1;
+    check.site.reporter.error({
+      rule: "role-param-required",
+      message,
+      fix: `fill ${quote(position.param)} with a datum role '${role.role}' always supplies, or make it optional in ${quote(code)}`,
+      pointer: position.pointer,
+    });
+
+    return;
+  }
 
   refuse(
     check,
     position,
-    `role '${role.role}' fills the param ${quote(position.param)} of ${quote(code)} with ${what}, but ${reason}`,
+    message,
     `fill ${quote(position.param)} with a value its type provably takes, or change the param's type in ${quote(code)}`,
   );
 }

@@ -96,6 +96,9 @@ export function deriveErrorsObjectOfUse(
   return schema.kind === "object" ? schema : undefined;
 }
 
+/** The reason an optional member is refused into a required one; the reporter files it as a missing required value. */
+export const DERIVE_ERRORS_OMITTABLE_REASON = "it may be left out, but the param requires it";
+
 export function deriveErrorsKindsOf(schemas: Schemas, typed: DeriveErrorsTyped): DeriveErrorsKinds {
   const { use } = typed;
   const useNullable = "nullable" in use && use.nullable === true;
@@ -115,10 +118,8 @@ export function deriveErrorsKindsOf(schemas: Schemas, typed: DeriveErrorsTyped):
 
       return kinds.add(use.type);
     case "ref":
-      return deriveErrorsObjectOfUse(schemas, use) === undefined &&
-        deriveErrorsSchemaOf(schemas, use.schema).kind === "union"
-        ? DERIVE_ERRORS_ANY_KIND
-        : kinds.add("object");
+      // A union's variants are object schemas, so a union use takes an object, never an array or a scalar.
+      return kinds.add("object");
   }
 }
 
@@ -430,8 +431,7 @@ function memberMisfit(
   accepted: DeriveErrorsMember,
   seen: Set<string>,
 ): string | undefined {
-  if (property.optional && !accepted.optional)
-    return "it may be left out, but the param requires it";
+  if (property.optional && !accepted.optional) return DERIVE_ERRORS_OMITTABLE_REASON;
 
   return typedMisfit(
     fit,

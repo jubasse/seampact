@@ -314,6 +314,29 @@ errors:
     expect(located(run("{ type: string }", "{ at: $key }"))).toEqual(refusedAt);
   });
 
+  test("a union param takes only an object: an array literal, an array template and an each are refused", () => {
+    const run = (template: string) =>
+      runInline(`conventions:
+  errors: { derived: { schemaInvalid: { code: shop.invalid, params: { issues: $issues, notice: ${template} } } } }
+schemas:
+  Issue: { type: object, properties: { in: { type: string }, pointer: { type: string }, rule: { type: string } } }
+  Notice:
+    discriminator: kind
+    oneOf: { done: { type: object, properties: { at: { type: string } } } }
+errors:
+  shop.invalid: { status: 400, params: { issues: { type: array, items: Issue }, notice: Notice } }
+`);
+
+    for (const template of ["[a]", "[$issues]", "{ $each: $issues, $as: $item.rule }"])
+      expect(located(run(template)), template).toEqual([
+        {
+          rule: "seampact/derive/role-param-type",
+          pointer: `${DERIVED}/schemaInvalid/params/notice`,
+          related: [],
+        },
+      ]);
+  });
+
   test("the delay fills a param whose bounds it keeps within, and is refused by a narrower one", () => {
     const run = (wait: string) =>
       runInline(`conventions:
