@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
 import { EXIT_USAGE, type CliIo, printProblems } from "./cli-io.js";
 import type { CliProblem } from "./cli-problem.js";
+import { errorCode } from "./error-code.js";
 import { compileCommand, configLocation, generateCommand } from "./commands/index.js";
 
 const USAGE = `Usage: seampact <command> [options]
@@ -91,11 +92,9 @@ function parseCommandArgs(args: readonly string[], options: OptionSpec): ParsedA
 
     return { status: "parsed", values: { ...values } };
   } catch (error) {
-    if (
-      error instanceof TypeError &&
-      "code" in error &&
-      String(error.code).startsWith("ERR_PARSE_ARGS")
-    ) {
+    const code = errorCode(error);
+
+    if (error instanceof Error && typeof code === "string" && code.startsWith("ERR_PARSE_ARGS")) {
       return {
         status: "refused",
         message: error.message.endsWith(".") ? error.message : `${error.message}.`,

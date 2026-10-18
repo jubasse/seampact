@@ -279,7 +279,7 @@ function buildLinks(
 
     const location = relativeLocation(consumerApi.root, providerApi.root);
 
-    if (!addLink(links, kind, described.descriptors, location)) {
+    if (!addLink(links, kind, structuredClone(described.descriptors), location)) {
       problems.push({
         code: "link.kind.not-described",
         message: `'${providerId}' declares that it provides '${kind}', and its describe returned no '${kind}' descriptor.`,

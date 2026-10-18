@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Target } from "@seampact/codegen-core";
 import type { CliProblem } from "../cli-problem.js";
+import { errorCode } from "../error-code.js";
 import { isRecord } from "../is-record.js";
 import { devInstallCommand } from "./package-manager.js";
 
@@ -89,10 +90,6 @@ async function importTargetModule(
       },
     };
   }
-}
-
-function errorCode(error: unknown): unknown {
-  return error instanceof Error && "code" in error ? error.code : undefined;
 }
 
 function errorMessage(error: unknown): string {

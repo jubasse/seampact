@@ -9,6 +9,7 @@ import {
 import { type ErrorObject, Ajv2020 } from "ajv/dist/2020.js";
 import { type Document, isMap, isNode, isScalar, LineCounter, parseDocument, visit } from "yaml";
 import type { CliProblem } from "../cli-problem.js";
+import { errorCode } from "../error-code.js";
 import { findConfigWaits } from "./config-waits.js";
 import { formatKeyPath, type KeyPath } from "./key-path.js";
 
@@ -126,7 +127,7 @@ async function fileSize(file: string): Promise<number | undefined> {
 
     return stats.isFile() ? stats.size : undefined;
   } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") return undefined;
+    if (errorCode(error) === "ENOENT") return undefined;
 
     throw error;
   }
