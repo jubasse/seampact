@@ -112,6 +112,15 @@ The plural is the collection's name; the singular is the collection's `singular`
 
 A `batch` op is a safe read sent as POST: the IR marks it safe, so CSRF, idempotency and cache derivations treat it as a read. Its `maxIds`, body limit and budget default to `conventions.batch` (FR-32, SCN-084); a `bodyLimit` or `budget` written on the op or on a node above it wins over that default, as any inherited setting does.
 
+With `conventions.operationIds: { order: nounVerb }` the batch op's id reads `tasksBatchGet` where the default order gives `getTasksBatch`; `ops: [list, batch]` then yields `tasksList` and `tasksBatchGet`:
+
+```yaml
+# tasks/api.yaml (excerpt)
+conventions:
+  operationIds: { order: nounVerb }
+  batch: { maxIds: 200 }
+```
+
 Operation ids of other routes: a route under `member` is its name plus the singular (`assign` gives `assignTask`); under `collection`, its name plus the plural (`search` gives `searchTasks`); under a single, its name plus the single's name; under a surface root, its name. `operationId` replaces the derived id. Operation ids are unique across the api; a clash is a compile error naming both routes. Names are stored as word segments (ADR 0007). A derived id reads as a verb and a noun when the route name is a verb (`assign`, `search`, `archive`); a noun route gives an awkward one (`activity` under a workspace member gives `activityWorkspace`, a hook named `github` gives `github`), so name routes with verbs, or set `operationId`.
 
 #### Write semantics
