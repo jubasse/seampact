@@ -5,6 +5,7 @@ import type * as TasksService from "../generated/types/tasksService/index.js";
 
 const CREATED_AT = "2026-10-18T09:00:00.000Z";
 const NEW_TASK_ID = "20000000-0000-4000-8000-0000000000ff";
+const NEXT_CURSOR = "page-2";
 const GENERAL_CHANNEL_ID = "10000000-0000-4000-8000-000000000001";
 const FIRST_VERSION = 1;
 
@@ -12,8 +13,8 @@ function task(taskId: string, title = "Write the slice test"): Tasks.schemas.Tas
   return { taskId, title, state: "open", version: FIRST_VERSION, createdAt: CREATED_AT };
 }
 
-function updated(task: Tasks.schemas.Task): Tasks.schemas.Task {
-  return { ...task, version: task.version + 1 };
+function updated(current: Tasks.schemas.Task): Tasks.schemas.Task {
+  return { ...current, version: current.version + 1 };
 }
 
 /** The `tasks` api's handlers, by operation. */
@@ -35,7 +36,7 @@ export const tasksHandlers = {
 
     return {
       status: 200,
-      body: input.query.cursor === undefined ? { items, nextCursor: "page-2" } : { items },
+      body: input.query.cursor === undefined ? { items, nextCursor: NEXT_CURSOR } : { items },
     };
   },
 

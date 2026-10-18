@@ -9,6 +9,7 @@ import { createMemoryIdempotencyStore } from "@seampact/idempotency-memory";
 import { verifyTemplateSignature } from "@seampact/signed-webhooks";
 import {
   SERVICE_JWT,
+  SERVICE_NAME,
   STRIPE_KEY_ID,
   STRIPE_SECRET,
   THROTTLE_RETRY_AFTER_MS,
@@ -72,7 +73,6 @@ const task = (taskId: string, title = "Write the slice test") => ({
 });
 
 const API_ID = "tasks";
-const SERVICE_NAME = "catalog";
 const HTTP_ERROR_FLOOR = 400;
 
 const ROUTES: readonly Route[] = [
