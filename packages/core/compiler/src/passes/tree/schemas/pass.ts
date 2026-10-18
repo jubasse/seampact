@@ -138,7 +138,7 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
       queryWires: treeSchemasQueryWires(
         compiler,
         context.conventions,
-        treeSchemasFormProofRoutes(nodes, context.inherited),
+        treeSchemasFormProofRoutes(nodes, context.inherited, context.raw.merged.requirements),
       ),
       schemas: compiler.schemas,
       enums,

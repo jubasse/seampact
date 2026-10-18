@@ -1,7 +1,7 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import type { InheritedReader, ResolvedConventions, TreeNode } from "../../../pipeline/seam.js";
 import type { TreeSchemasCompiler } from "./compile.js";
-import { treeSchemasMember, treeSchemasPointer } from "./raw.js";
+import { type TreeSchemasRaw, treeSchemasMember, treeSchemasPointer } from "./raw.js";
 
 // Query wire kinds (FR-30, ADR 0002 section 7): a query field, or a form or multipart field, travels as a number,
 // a boolean, text (a string or an enum), a list of those, or an object of those. How a list and an object travel
@@ -62,11 +62,12 @@ const ROUTE_KINDS: ReadonlySet<TreeNode["kind"]> = new Set(["route", "op"]);
 /**
  * The body proofs a form or multipart input carries as a field (ADR 0002 section 9): each rule proof schema
  * pointer, with the input pointer of the first route or `ops` entry, declaring `input`, whose requirements name
- * the rule.
+ * the rule, written at the use or through a `requirements` entry (ADR 0002 section 9).
  */
 export function treeSchemasFormProofRoutes(
   nodes: readonly TreeNode[],
   inherited: InheritedReader,
+  requirements: TreeSchemasRaw | undefined,
 ): Map<string, string> {
   const routes = new Map<string, string>();
 
@@ -78,7 +79,8 @@ export function treeSchemasFormProofRoutes(
     if (typeof media !== "string" || !FIELD_MEDIA.has(media)) continue;
 
     for (const { value } of inherited(node, "requires")?.entries ?? []) {
-      const rule = treeSchemasMember(value, "rule");
+      const item = typeof value === "string" ? treeSchemasMember(requirements, value) : value;
+      const rule = treeSchemasMember(item, "rule");
 
       if (typeof rule !== "string") continue;
       const proofSchema = treeSchemasPointer("/rules", rule, "proof", "schema");
