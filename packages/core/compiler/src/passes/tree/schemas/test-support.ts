@@ -10,6 +10,7 @@ import {
   pipelineGuard,
   type TreeSchemaService,
 } from "../../../pipeline/seam.js";
+import { draftFixture } from "../../../pipeline/draft-fixture.js";
 import { validateWorkspace } from "../../../validate/index.js";
 import { treeSchemasPass } from "./pass.js";
 
@@ -27,7 +28,12 @@ const REFERENCE = fileURLToPath(
   new URL("../../../../../../../fixtures/reference", import.meta.url),
 );
 
-function run(reader: LoadReader, entry: string, api: string): TreeSchemasRun {
+function run(
+  reader: LoadReader,
+  entry: string,
+  api: string,
+  relayed: ReadonlyMap<string, DraftIR> = new Map(),
+): TreeSchemasRun {
   const loaded = loadWorkspace({ reader, entry });
   const validated = validateWorkspace(loaded.workspace);
   const earlier = [
@@ -46,6 +52,7 @@ function run(reader: LoadReader, entry: string, api: string): TreeSchemasRun {
   const context = pipelineContext({
     raw,
     workspace: loaded.workspace,
+    relayed,
     guard: true,
     report: (diagnostic) => diagnostics.push(diagnostic),
   });
@@ -63,16 +70,39 @@ function run(reader: LoadReader, entry: string, api: string): TreeSchemasRun {
   return { draft, diagnostics, service, located };
 }
 
-/** tree.schemas on the reference contract, for one of its apis. */
+/**
+ * tree.schemas on the reference contract, for one of its apis; tasksService relays from the after-tree draft of
+ * tasks.
+ */
 export const treeSchemasRunReference = (api: "tasks" | "tasksService"): TreeSchemasRun =>
-  run(loadFsReader(REFERENCE), "workspace.yaml", api);
+  run(
+    loadFsReader(REFERENCE),
+    "workspace.yaml",
+    api,
+    new Map([["tasks", draftFixture("tasks", "after-tree")]]),
+  );
 
-/** tree.schemas on a single api file `api.yaml` named `t`, its catalogues given as YAML text. */
-export const treeSchemasRunApi = (catalogues: string): TreeSchemasRun =>
+const FIXTURES = fileURLToPath(
+  new URL("../../../../../../../fixtures/passes/tree-schemas", import.meta.url),
+);
+
+/** tree.schemas on the `api.yaml` of a fixture under `fixtures/passes/tree-schemas/<name>`. */
+export const treeSchemasRunFixture = (name: string, api: string): TreeSchemasRun =>
+  run(loadFsReader(`${FIXTURES}/${name}`), "api.yaml", api);
+
+/**
+ * tree.schemas on a single api file `api.yaml` named `t`, its catalogues given as YAML text; `relayed` holds the
+ * drafts of the apis its relay routes name.
+ */
+export const treeSchemasRunApi = (
+  catalogues: string,
+  relayed: ReadonlyMap<string, DraftIR> = new Map(),
+): TreeSchemasRun =>
   run(
     loadMemoryReader({ "api.yaml": `api: { name: t, version: 1 }\n${catalogues}` }),
     "api.yaml",
     "t",
+    relayed,
   );
 
 /** The rules of a run's diagnostics, without the `seampact/tree/` prefix. */

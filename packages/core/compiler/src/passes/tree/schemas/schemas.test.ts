@@ -1,4 +1,3 @@
-import type { IrWriter } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { draftFixture, draftFixtureSchemaTables } from "../../../pipeline/draft-fixture.js";
 import {
@@ -19,20 +18,6 @@ const typeOf = (run: TreeSchemasRun, id: string, name: string) => propertyOf(run
 const schemas = (yaml: string) => treeSchemasRunApi(`schemas:\n${yaml}`);
 const at = (pointer: string) => ({ layer: "api", pointer });
 
-// The schemas only a relay route reaches, whose directions come from the relayed operation: relay-copied
-// declarations are not compiled yet, so their directions are left out of the comparison.
-const RELAY_REACHED: Readonly<Record<string, readonly string[]>> = {
-  tasks: [],
-  tasksService: ["Task", "TaskState"],
-};
-
-function withoutRelayDirections(api: string, declared: IrWriter.Schema | IrWriter.Enum): object {
-  if (!RELAY_REACHED[api]?.includes(declared.id)) return declared;
-  const { directions: _directions, ...rest } = declared;
-
-  return rest;
-}
-
 describe("tree.schemas matches the after-tree fixture", () => {
   test.each(["tasks", "tasksService"] as const)("%s: schemas, scalars and enums", (api) => {
     const run = treeSchemasRunReference(api);
@@ -44,15 +29,11 @@ describe("tree.schemas matches the after-tree fixture", () => {
       (schema) => schema.id !== "ApiSchemaInvalidIssue" || expected.some((e) => e.id === schema.id),
     );
 
-    expect(written.map((schema) => withoutRelayDirections(api, schema))).toEqual(
-      expect.arrayContaining(expected.map((schema) => withoutRelayDirections(api, schema))),
-    );
+    expect(written).toEqual(expect.arrayContaining(expected));
     expect(written.map((s) => s.id).sort()).toEqual(expected.map((s) => s.id).sort());
     expect(run.draft.scalars).toEqual({});
-    expect(Object.values(run.draft.enums).map((e) => withoutRelayDirections(api, e))).toEqual(
-      Object.values(draftFixture(api, "after-tree").enums).map((e) =>
-        withoutRelayDirections(api, e),
-      ),
+    expect(Object.values(run.draft.enums)).toEqual(
+      Object.values(draftFixture(api, "after-tree").enums),
     );
   });
 

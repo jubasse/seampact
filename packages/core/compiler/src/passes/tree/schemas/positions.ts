@@ -2,7 +2,7 @@ import type { IrWriter } from "@seampact/spec/ir";
 import { deriveName, type Name, segmentsOf, splitName, suffixWords } from "@seampact/spec/naming";
 import type { TreeNode } from "../../../pipeline/seam.js";
 import type { TreeNodesOperationName } from "../nodes/index.js";
-import type { TreeSchemasCompiler } from "./compile.js";
+import type { TreeSchemasCompiler, TreeSchemasPlace } from "./compile.js";
 import {
   type TreeSchemasRaw,
   type TreeSchemasRawObject,
@@ -167,6 +167,7 @@ const routeFieldsAt = (
   pointer: string,
   owner: Name | undefined,
   directions: readonly IrWriter.Direction[],
+  optionalPlace: TreeSchemasPlace,
 ): void => {
   if (typeof fields === "string") {
     positionAt(compiler, fields, pointer, directions);
@@ -177,7 +178,8 @@ const routeFieldsAt = (
   const words = owner === undefined ? undefined : [...owner.segments, ...suffixWords(owner)];
 
   for (const [key, schema] of treeSchemasEntries(fields)) {
-    const wire = key.endsWith("?") ? key.slice(0, -1) : key;
+    const optional = key.endsWith("?");
+    const wire = optional ? key.slice(0, -1) : key;
     const own = splitName(wire);
     const name =
       words === undefined || own.length === 0
@@ -186,18 +188,23 @@ const routeFieldsAt = (
 
     compiler.position(
       schema,
-      { pointer: treeSchemasPointer(pointer, key), name, place: "position" },
+      {
+        pointer: treeSchemasPointer(pointer, key),
+        name,
+        place: optional ? optionalPlace : "position",
+      },
       directions,
     );
   }
 };
 
-// Every fields map of a route is read from the request.
+// Every fields map of a route is read from the request; an optional query field may hold a default (ADR 0003
+// section 10).
 const FIELDS_MAPS = [
-  ["id", undefined],
-  ["pathParams", "path"],
-  ["query", "query"],
-  ["headers", "headers"],
+  ["id", undefined, "position"],
+  ["pathParams", "path", "position"],
+  ["query", "query", "queryField"],
+  ["headers", "headers", "position"],
 ] as const;
 
 const OPERATION_KINDS: ReadonlySet<TreeNode["kind"]> = new Set(["route", "op"]);
@@ -255,16 +262,18 @@ export function treeSchemasCompileRoutes(
         at("responses", status, "headers"),
         undefined,
         OUTPUT,
+        "position",
       );
     }
 
-    for (const [key, role] of FIELDS_MAPS)
+    for (const [key, role, optionalPlace] of FIELDS_MAPS)
       routeFieldsAt(
         compiler,
         settings[key],
         at(key),
         role === undefined ? undefined : routeName(operation, role),
         INPUT,
+        optionalPlace,
       );
 
     // A query field written as a schema name has its wire at the schema's properties.

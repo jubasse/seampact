@@ -1,6 +1,7 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import type { TreeSchemasCompiler } from "./compile.js";
 import type { TreeSchemasReporter } from "./raw.js";
+import type { TreeSchemasRelayCopies } from "./relays.js";
 
 // Directions (ADR 0003 section 4): each position use carries the direction of its kind, and a named schema, enum
 // or named format takes every direction it is reached in, through references, properties, items, map keys and
@@ -83,15 +84,21 @@ function reachSchema(id: string, direction: IrWriter.Direction, targets: Directi
   for (const variant of schema.variants) reachSchema(variant.schema, direction, targets);
 }
 
-/** Writes the directions of every schema, enum and named format from the position uses that reach it. */
+/**
+ * Writes the directions of every schema, enum and named format, the relay-copied ones included, from the position
+ * uses and the relay routes' copied uses that reach it.
+ */
 export function treeSchemasWriteDirections(
   compiler: TreeSchemasCompiler,
   enums: readonly IrWriter.Enum[],
+  relays: TreeSchemasRelayCopies,
 ): void {
   const targets: DirectionTargets = {
     schemas: compiler.schemas,
     enums: new Map(enums.map((declared) => [declared.id, declared])),
-    scalars: new Map(compiler.scalars.all().map((scalar) => [scalar.id, scalar])),
+    scalars: new Map(
+      [...compiler.scalars.all(), ...relays.scalars].map((scalar) => [scalar.id, scalar]),
+    ),
   };
 
   for (const [pointer, directions] of compiler.positionDirections) {
@@ -101,6 +108,8 @@ export function treeSchemasWriteDirections(
 
     for (const direction of directions) reach(use, direction, targets);
   }
+
+  for (const { use, direction } of relays.uses) reach(use, direction, targets);
 }
 
 const within = (pointer: string, holder: string): boolean =>

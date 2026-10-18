@@ -1,0 +1,37 @@
+# Schema catalogues refused (ADR 0003, ADR 0002 sections 7 and 12): a map in a query field, a header proof and a
+# multipart route's body proof; an example and a default off their schema; a default on a required query field;
+# an undeclared extension key, one off its places, and an extension value off its schema.
+api: { name: forms, version: 1, kind: product }
+
+rules:
+  fresh: { proof: { in: header, name: X-Ticket, schema: Labels } }
+  signed: { proof: { in: body, name: ticket, schema: Labels } }
+
+extensions:
+  acme:
+    owner: { at: [schema], schema: { type: string, minLength: 2 } }
+
+schemas:
+  Labels: { type: object, additionalProperties: { type: string } }
+  Upload:
+    type: object
+    x-acme-owner: b
+    properties:
+      name: { type: string, maxLength: 3, examples: [long-name] }
+      size: { type: integer, minimum: 1, default: 0 }
+      kind: { type: string, x-acme-owner: media }
+
+surfaces:
+  app:
+    routes:
+      search:
+        method: get
+        query:
+          labels?: Labels
+          term: { type: string, default: all }
+        x-acme-nope: 1
+      upload:
+        method: post
+        inputMedia: multipart
+        input: Upload
+        requires: [{ rule: signed }]

@@ -111,7 +111,7 @@ export class TreeSchemasExampleChecker {
   private textValue(text: string, use: IrWriter.TypeUse): TextReading {
     if (use.kind === "enum") return { value: text };
 
-    if (use.kind !== "scalar") return { problem: `a ${use.kind} use has no text form` };
+    if (use.kind !== "scalar") return { problem: `this ${use.kind} use has no text form` };
 
     if (use.type === "string" || use.format === "int64") return { value: text };
 
@@ -120,9 +120,12 @@ export class TreeSchemasExampleChecker {
         ? { value: BOOLEAN_TEXT[text] }
         : { problem: `${quote(text)} is not 'true' or 'false'` };
 
-    return NUMBER_TEXT.test(text)
-      ? { value: Number(text) }
-      : { problem: `${quote(text)} is not a number` };
+    if (!NUMBER_TEXT.test(text)) return { problem: `${quote(text)} is not a number` };
+    const value = Number(text);
+
+    return Number.isFinite(value)
+      ? { value }
+      : { problem: `${quote(text)} is past the range of a JSON number` };
   }
 
   private use(
@@ -458,9 +461,16 @@ function boundOf(literal: string | undefined): TreeSchemasDecimal | undefined {
   return literal === undefined ? undefined : treeSchemasDecimalOf(literal);
 }
 
+const WRITTEN_RULE: Readonly<Record<TreeSchemasWrittenValue, string>> = {
+  example: "example-value",
+  default: "default-value",
+  extension: "extension-value",
+};
+
 const WRITTEN_FIX: Readonly<Record<TreeSchemasWrittenValue, string>> = {
   example: "correct the example, or the schema it is parsed against",
   default: "correct the default, or the schema it is parsed against",
+  extension: "correct the value, or the schema its extension key declares",
 };
 
 /**
@@ -477,7 +487,7 @@ export function treeSchemasCheckWrittenExamples(
       const inside = `${pointer}${issue.pointer}`;
 
       reporter.error({
-        rule: `${written}-value`,
+        rule: WRITTEN_RULE[written],
         pointer: reporter.resolves(inside) ? inside : pointer,
         message: `the ${written} does not fit its schema at ${quote(issue.pointer)}: ${issue.message}`,
         fix: WRITTEN_FIX[written],

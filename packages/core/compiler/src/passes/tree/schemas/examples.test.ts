@@ -228,7 +228,8 @@ describe("text examples parsed by the wire form", () => {
     expect(text("closed", { kind: "enum", enum: "State" })).toEqual([
       "'closed' is not a value of State",
     ]);
-    expect(text("x", ref("Task"))).toEqual(["a ref use has no text form"]);
+    expect(text("x", ref("Task"))).toEqual(["this ref use has no text form"]);
+    expect(text("1e400", scalar("number"))).toEqual(["'1e400' is past the range of a JSON number"]);
   });
 });
 
@@ -252,6 +253,67 @@ describe("defaults parsed like an example", () => {
     ]);
     expect(run.diagnostics[1]?.message).toBe(
       "the default does not fit its schema at '': 'low' is not a number",
+    );
+    expect(run.located).toBe(true);
+  });
+});
+
+describe("defaults at query fields", () => {
+  const ROUTES = `schemas:
+  TaskId: { type: string, format: uuid }
+  Task: { type: object, required: [taskId], properties: { taskId: TaskId } }
+surfaces:
+  app:
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: TaskId }
+        item: Task
+        ops:
+          list:
+            query:
+              limit?: { type: integer, minimum: 1, default: 20 }
+              page?: { type: integer, default: first }
+              raw?: { opaque: "Free-form.", default: {} }
+              sort: { type: string, default: title }
+            headers: { X-Trace?: { type: string, default: none } }
+`;
+
+  test("an optional query field takes a default, parsed like an example; elsewhere it is refused", () => {
+    const run = treeSchemasRunApi(ROUTES);
+    const list = "/surfaces/app/routes/tasks/ops/list";
+
+    expect(located(run)).toEqual([
+      ["mark-position", `${list}/query/raw?/default`],
+      ["mark-position", `${list}/query/sort/default`],
+      ["mark-position", `${list}/headers/X-Trace?/default`],
+      ["default-value", `${list}/query/page?/default`],
+    ]);
+    expect(run.diagnostics[1]?.message).toBe(
+      "'default' sits on an optional property or an optional query field",
+    );
+    expect(run.diagnostics[3]?.message).toBe(
+      "the default does not fit its schema at '': 'first' is not a number",
+    );
+    expect(run.located).toBe(true);
+  });
+});
+
+describe("a default on a required query field", () => {
+  test("is refused at the default, since a required field is never absent", () => {
+    const run = treeSchemasRunApi(`surfaces:
+  app:
+    routes:
+      search:
+        method: get
+        query: { term: { type: string, default: all } }
+`);
+
+    expect(located(run)).toEqual([
+      ["mark-position", "/surfaces/app/routes/search/query/term/default"],
+    ]);
+    expect(run.diagnostics[0]?.message).toBe(
+      "'default' sits on an optional property or an optional query field",
     );
     expect(run.located).toBe(true);
   });

@@ -124,3 +124,45 @@ surfaces:
     });
   });
 });
+
+describe("a map-typed body proof on a form or multipart route", () => {
+  test("is refused, since the proof travels as a form field, and a JSON route still holds it", () => {
+    const run = treeSchemasRunApi(`rules:
+  signed: { proof: { in: body, name: ticket, schema: Labels } }
+  sealed: { proof: { in: body, name: seal, schema: Labels } }
+  stamped: { proof: { in: body, name: stamp, schema: Labels } }
+requirements:
+  stampedEntry: { rule: stamped }
+schemas:
+  Labels: { type: object, additionalProperties: { type: string } }
+  Upload: { type: object, properties: { name: { type: string } } }
+surfaces:
+  app:
+    routes:
+      upload:
+        method: post
+        inputMedia: multipart
+        input: Upload
+        requires: [{ rule: signed }]
+      attach:
+        method: post
+        inputMedia: form
+        input: Upload
+        requires: [stampedEntry]
+      submit:
+        method: post
+        input: Upload
+        requires: [{ rule: sealed }]
+`);
+
+    expect(run.diagnostics.map((d) => [d.rule, d.origin.pointer])).toEqual([
+      ["seampact/tree/query-map", "/rules/signed/proof/schema"],
+      ["seampact/tree/query-map", "/rules/stamped/proof/schema"],
+    ]);
+    expect(run.diagnostics.map((d) => d.related.map((r) => r.origin.pointer))).toEqual([
+      ["/surfaces/app/routes/upload/inputMedia"],
+      ["/surfaces/app/routes/attach/inputMedia"],
+    ]);
+    expect(run.located).toBe(true);
+  });
+});
