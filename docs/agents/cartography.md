@@ -46,7 +46,7 @@ In pipeline order (ADR 0006 section 1).
 - `packages/core/compiler/src/bundle`: Contract bundles in the compiler: reserved, no export yet.
 - `packages/core/compiler/src/derivations`: The derivation table and the derivation roles of ADR 0006 sections 5 and 6, held as data.
 - `packages/core/compiler/src/diagnostics`: Located diagnostics: the diagnostic type, its sort order and the printer.
-- `packages/core/compiler/src/finalize`: The finalize stage (ADR 0006 section 1): canonical ids and ordering, the id collision check, IR validation and serialisation.
+- `packages/core/compiler/src/finalize`: The finalize stage (ADR 0006 section 1): pruning, canonical ids and ordering, the id collision check, IR validation and serialisation.
 - `packages/core/compiler/src/load`: The load stage (ADR 0006 section 1): contract workspaces read into located raw trees.
 - `packages/core/compiler/src/passes/access/identity`: The access.identity half (ADR 0006): schemes, headers, identities, per-operation access, bindings and CSRF.
 - `packages/core/compiler/src/passes/access/rights`: The access.rights half (ADR 0006): rights, rules, scopes, buckets, per-operation requirements, rule proofs and bucket key checks.

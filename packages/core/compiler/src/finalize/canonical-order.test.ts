@@ -3,8 +3,11 @@ import { draftFixtureApply } from "../pipeline/draft-fixture.js";
 import { createDraftIR, type DraftIR } from "../pipeline/seam.js";
 import type { JsonValue } from "../raw-tree.js";
 import { finalizeCanonicalOrder } from "./canonical-order.js";
-import { finalizeCompleteDraft, finalizeReferenceContext } from "./complete-draft.js";
-import { finalizeIr } from "./finalize.js";
+import {
+  finalizeCompleteDraft,
+  finalizeExpectIr,
+  finalizeReferenceContext,
+} from "./complete-draft.js";
 import { finalizeSerializeIr } from "./serialize.js";
 
 type Arrange = (items: JsonValue[]) => JsonValue[];
@@ -146,8 +149,8 @@ describe("canonical order is independent of pass order", () => {
     "%s finalizes to the same bytes from a shuffled draft",
     (api) => {
       const context = finalizeReferenceContext(api);
-      const fromPasses = finalizeIr(finalizeCompleteDraft(api), context);
-      const fromShuffled = finalizeIr(shuffledReferenceDraft(api), context);
+      const fromPasses = finalizeExpectIr(finalizeCompleteDraft(api), context);
+      const fromShuffled = finalizeExpectIr(shuffledReferenceDraft(api), context);
 
       expect(fromShuffled.ir).toEqual(fromPasses.ir);
       expect(finalizeSerializeIr(fromShuffled.ir)).toBe(finalizeSerializeIr(fromPasses.ir));
@@ -188,7 +191,7 @@ describe("kept arrays keep their order", () => {
 
     operation?.requires?.reverse();
     const written = structuredClone(operation?.requires);
-    const { ir } = finalizeIr(draft, finalizeReferenceContext("tasks"));
+    const { ir } = finalizeExpectIr(draft, finalizeReferenceContext("tasks"));
     const finalized = ir.operations.find((candidate) => candidate.id === operation?.id);
 
     expect(written?.length).toBeGreaterThan(1);

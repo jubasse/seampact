@@ -25,7 +25,9 @@ interface WorkspaceRelayRoute {
   readonly origin: DiagnosticOrigin;
 }
 
-const isDiagnosticOrigin = (origin: Origin): origin is DiagnosticOrigin => origin.layer !== "core";
+/** Whether an origin can locate a diagnostic: any layer but `core`, which has no file. */
+export const isDiagnosticOrigin = (origin: Origin): origin is DiagnosticOrigin =>
+  origin.layer !== "core";
 
 // `relays: <api>.<operationId>`: the api is the text before the first dot.
 function relayTargetApi(relays: unknown): string | undefined {

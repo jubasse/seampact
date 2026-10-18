@@ -1,19 +1,33 @@
 import type { DraftIR, PipelineFinalizeContext, PipelineFinalized } from "../pipeline/seam.js";
 import { pipelineCopy } from "../pipeline/seam.js";
 import { finalizeCanonicalOrder } from "./canonical-order.js";
+import { finalizeIdCollisions } from "./collisions.js";
 import { finalizeMembers, finalizeOperationFeatures } from "./members.js";
+import { finalizePrune } from "./prune.js";
 import { finalizeSourceMap } from "./source-map.js";
 import { finalizeAssertIr, finalizeAssertSourceMap } from "./validate.js";
 
 // Finalize (ADR 0006 sections 1 and 3, ADR 0004 sections 9 to 11): from the complete draft of one api, the
-// canonical IR with its finalize members, checked against the strict IR schema and the invariants, and its side
-// table. It works on its own copy of the draft and never changes the draft, whose members may alias one object.
+// canonical IR with its finalize members, pruned to the reachable declarations, refused on an id collision and
+// checked against the strict IR schema and the invariants, and its side table. It works on its own copy of the
+// draft and never changes the draft, whose members may alias one object.
 //
 // Import pipeline values and types from `pipeline/seam.js` only, never from `pipeline/index.js`, the orchestrator
 // or the registry: the registry imports this module, so any of those would close an import cycle (`seam.ts`).
-export function finalizeIr(draft: DraftIR, context: PipelineFinalizeContext): PipelineFinalized {
+export function finalizeIr(
+  draft: DraftIR,
+  context: PipelineFinalizeContext,
+): PipelineFinalized | undefined {
   const api = context.raw.name;
   const copy = pipelineCopy(draft);
+
+  finalizePrune(copy);
+
+  const collisions = finalizeIdCollisions(copy);
+
+  for (const diagnostic of collisions) context.report(diagnostic);
+
+  if (collisions.length > 0) return undefined;
 
   finalizeCanonicalOrder(copy);
 

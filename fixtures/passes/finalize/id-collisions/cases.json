@@ -1,0 +1,228 @@
+{
+  "description": "Id collision cases of finalize (CHK-172): edits applied to the complete draft of the reference api, and the diagnostics finalize reports, each as its rule, origin and related origins.",
+  "api": "tasks",
+  "cases": [
+    {
+      "name": "an error code equal to a declared schema id",
+      "edits": [
+        {
+          "addError": "CreateTask",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/errors/api.rate_limited"
+          }
+        }
+      ],
+      "diagnostics": [
+        {
+          "rule": "seampact/finalize/id-collision",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/errors/api.rate_limited"
+          },
+          "related": [
+            {
+              "layer": "api",
+              "pointer": "/schemas/CreateTask"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "an error code equal to a hoisted schema id",
+      "edits": [
+        {
+          "addError": "AssignTaskInput",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/errors/api.rate_limited"
+          }
+        }
+      ],
+      "diagnostics": [
+        {
+          "rule": "seampact/finalize/id-collision",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/errors/api.rate_limited"
+          },
+          "related": [
+            {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/input"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "an error code equal to the strict input of a schema",
+      "edits": [
+        {
+          "addError": "Task.input",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/errors/api.rate_limited"
+          }
+        }
+      ],
+      "diagnostics": [
+        {
+          "rule": "seampact/finalize/id-collision",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/errors/api.rate_limited"
+          },
+          "related": [
+            {
+              "layer": "shared",
+              "pointer": "/schemas/Task"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "an error code equal to an enum id",
+      "edits": [
+        {
+          "addError": "TaskState",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/errors/api.rate_limited"
+          }
+        }
+      ],
+      "diagnostics": [
+        {
+          "rule": "seampact/finalize/id-collision",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/errors/api.rate_limited"
+          },
+          "related": [
+            {
+              "layer": "shared",
+              "pointer": "/enums/TaskState"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a core error code is located at the schema it equals",
+      "edits": [
+        {
+          "addError": "Health",
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/Health"
+          }
+        }
+      ],
+      "diagnostics": [
+        {
+          "rule": "seampact/finalize/id-collision",
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Health"
+          },
+          "related": []
+        }
+      ]
+    },
+    {
+      "name": "a proof input name equal to another schema id",
+      "edits": [
+        {
+          "copy": "schemas",
+          "from": "Task",
+          "id": "PurgeTaskInput"
+        }
+      ],
+      "diagnostics": [
+        {
+          "rule": "seampact/finalize/id-collision",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge"
+          },
+          "related": [
+            {
+              "layer": "shared",
+              "pointer": "/schemas/Task"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "a proof input name equal to an error code",
+      "edits": [
+        {
+          "addError": "PurgeTaskInput",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/errors/api.rate_limited"
+          }
+        }
+      ],
+      "diagnostics": [
+        {
+          "rule": "seampact/finalize/id-collision",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge"
+          },
+          "related": [
+            {
+              "layer": "shared",
+              "pointer": "/errors/api.rate_limited"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "the operation's own hoisted input is no collision",
+      "edits": [
+        {
+          "copy": "schemas",
+          "from": "CreateTask",
+          "id": "PurgeTaskInput"
+        },
+        {
+          "input": "purgeTask",
+          "schema": "PurgeTaskInput"
+        }
+      ],
+      "diagnostics": []
+    },
+    {
+      "name": "a derived schema id equal to a declared enum id",
+      "edits": [
+        {
+          "copy": "enums",
+          "from": "TaskState",
+          "id": "AssignTaskInput"
+        }
+      ],
+      "diagnostics": [
+        {
+          "rule": "seampact/finalize/id-collision",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/input"
+          },
+          "related": [
+            {
+              "layer": "shared",
+              "pointer": "/enums/TaskState"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

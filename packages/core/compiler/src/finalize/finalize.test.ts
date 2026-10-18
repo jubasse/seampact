@@ -1,7 +1,11 @@
 import { IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import type { DraftIR } from "../pipeline/seam.js";
-import { finalizeCompleteDraft, finalizeReferenceContext } from "./complete-draft.js";
+import {
+  finalizeCompleteDraft,
+  finalizeExpectIr,
+  finalizeReferenceContext,
+} from "./complete-draft.js";
 import { finalizeIr } from "./finalize.js";
 import {
   FINALIZE_FEATURE_TABLE,
@@ -31,7 +35,7 @@ function firstOperation(draft: DraftIR) {
 
 describe("finalize writes the version members", () => {
   test("the IR carries irVersion, irRevision, its kinds and no feature", () => {
-    const { ir } = finalizeIr(finalizeCompleteDraft("tasks"), context);
+    const { ir } = finalizeExpectIr(finalizeCompleteDraft("tasks"), context);
 
     expect(FINALIZE_FEATURE_TABLE).toEqual([]);
     expect(ir).toMatchObject({
@@ -81,7 +85,7 @@ describe("finalize never changes the draft", () => {
     const before = JSON.stringify(draft);
 
     deepFreeze(draft);
-    const { ir } = finalizeIr(draft, context);
+    const { ir } = finalizeExpectIr(draft, context);
 
     expect(JSON.stringify(draft)).toBe(before);
     expect(ir.operations.map((operation) => operation.id)).not.toEqual(
@@ -98,7 +102,7 @@ describe("finalize never changes the draft", () => {
       throw new Error("the reference draft has two operations");
     first.tags = tags;
     second.tags = tags;
-    const { ir } = finalizeIr(draft, context);
+    const { ir } = finalizeExpectIr(draft, context);
 
     expect(first.tags).toBe(second.tags);
     expect(tags).toEqual(["z", "a"]);
@@ -106,34 +110,50 @@ describe("finalize never changes the draft", () => {
   });
 });
 
+// Where finalize puts the first operation of a draft: its index once operations sort by id, and its id.
+function firstOperationAt(draft: DraftIR): string {
+  const { id } = firstOperation(draft);
+  const index = draft.operations
+    .map((operation) => operation.id ?? "")
+    .sort()
+    .indexOf(id ?? "");
+
+  return `'/operations/${index}' (operation '${id}')`;
+}
+
+const LONG_TEXT_LENGTH = 200;
+
 describe("finalize validates the IR", () => {
   test.each([
     {
       name: "a member the strict schema refuses",
       change: (draft: DraftIR) => Reflect.set(firstOperation(draft), "method", 42),
-      failure: "schema 'type' at '/operations/",
+      failure: (draft: DraftIR) =>
+        `schema 'type' at ${firstOperationAt(draft).replace("' (", "/method' (")}: must be string`,
     },
     {
       name: "a member the IR does not know",
       change: (draft: DraftIR) => Reflect.set(firstOperation(draft), "unknownMember", true),
-      failure: "schema 'unknown member' at '/operations/",
+      failure: (draft: DraftIR) =>
+        `schema 'unknown member' at ${firstOperationAt(draft).replace("' (", "/unknownMember' (")}`,
     },
     {
       name: "a value outside an open enum",
       change: (draft: DraftIR) =>
         Reflect.set(firstOperation(draft).maturity ?? {}, "level", "beta"),
-      failure: "schema 'unknown value' at '/operations/",
+      failure: (draft: DraftIR) =>
+        `schema 'unknown value' at ${firstOperationAt(draft).replace("' (", "/maturity/level' (")}: 'beta'`,
     },
     {
       name: "a union tag the IR does not know",
-      change: (draft: DraftIR) =>
-        Reflect.set(Object.values(draft.schemas)[0] ?? {}, "kind", "tuple"),
-      failure: "schema 'unknown kind' at '/schemas/",
+      change: (draft: DraftIR) => Reflect.set(draft.schemas.Task ?? {}, "kind", "tuple"),
+      failure: () => "schema 'unknown kind' at '/schemas/Task': 'tuple'",
     },
     {
       name: "a broken invariant",
       change: (draft: DraftIR) => firstOperation(draft).errors?.push({ code: "api.not_declared" }),
-      failure: "invariant 'ir.ref.resolves' at '/operations/",
+      failure: (draft: DraftIR) =>
+        `invariant 'ir.ref.resolves' at ${firstOperationAt(draft).replace("' (", "/errors/0/code' (")}`,
     },
   ])(
     "$name is an internal error naming the api, the rule and the pointer",
@@ -145,9 +165,30 @@ describe("finalize validates the IR", () => {
       expect(() => finalizeIr(draft, context)).toThrow(
         "finalize built an invalid IR for api 'tasks'",
       );
-      expect(() => finalizeIr(draft, context)).toThrow(failure);
+      expect(() => finalizeIr(draft, context)).toThrow(failure(draft));
     },
   );
+
+  test("a refused value is quoted and cut, so an author's long text stays short", () => {
+    const draft = finalizeCompleteDraft("tasks");
+
+    Reflect.set(firstOperation(draft).maturity ?? {}, "level", "b".repeat(LONG_TEXT_LENGTH));
+
+    expect(() => finalizeIr(draft, context)).toThrow(/: 'b{80}…'/);
+  });
+
+  test("the error lists the first ten failures and counts the others", () => {
+    const draft = finalizeCompleteDraft("tasks");
+
+    for (const operation of draft.operations) Reflect.set(operation, "method", 42);
+
+    expect(draft.operations.length).toBeGreaterThan(10);
+    expect(() => finalizeIr(draft, context)).toThrow(
+      new RegExp(
+        `(schema 'type' at [^;]+; ){9}schema 'type' at [^;]+; and ${draft.operations.length - 10} more\\.$`,
+      ),
+    );
+  });
 });
 
 describe("a tolerated absence does not reach the IR", () => {
@@ -157,7 +198,7 @@ describe("a tolerated absence does not reach the IR", () => {
     delete firstOperation(draft).access;
 
     expect(() => finalizeIr(draft, context)).toThrow(
-      /schema 'required' at '\/operations\/\d+': must have required property 'access'/,
+      /schema 'required' at '\/operations\/\d+' \(operation '[^']+'\): must have required property 'access'/,
     );
   });
 });

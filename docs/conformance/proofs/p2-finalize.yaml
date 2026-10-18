@@ -7,3 +7,11 @@ proofs:
       - 'core: packages/core/compiler/src/finalize/serialize.test.ts#byte-stable serialisation members sort by UTF-16 code units, integer-like names included'
       - 'core: packages/core/compiler/src/finalize/canonical-order.test.ts#canonical order is independent of pass order every sorted array of a hand-built draft sorts the same from two orders'
       - 'core: packages/core/compiler/src/finalize/canonical-order.test.ts#canonical order is independent of pass order tasks finalizes to the same bytes from a shuffled draft'
+  - id: CHK-172
+    fixtures: [fixtures/passes/finalize/id-collisions]
+    tests:
+      - 'core: packages/core/compiler/src/finalize/collisions.test.ts#finalize id collisions an error code equal to a declared schema id'
+      - 'core: packages/core/compiler/src/finalize/collisions.test.ts#finalize id collisions an error code equal to a hoisted schema id'
+      - 'core: packages/core/compiler/src/finalize/collisions.test.ts#finalize id collisions an error code equal to the strict input of a schema'
+      - 'core: packages/core/compiler/src/finalize/collisions.test.ts#finalize id collisions an error code equal to an enum id'
+      - 'core: packages/core/compiler/src/finalize/collisions.test.ts#finalize id collisions each names both sides, and a code collision says to rename the code'
