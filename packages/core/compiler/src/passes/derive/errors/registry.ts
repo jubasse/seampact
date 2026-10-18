@@ -356,7 +356,13 @@ function checkAttachments(
       pointer,
     });
 
-  for (const site of attachments) if (!registry.has(site.code)) unknown(site.code, site.pointer);
+  // An attachment's `{ example }` shows the params of the code it attaches.
+  for (const site of attachments) {
+    const registered = registry.get(site.code);
+
+    if (registered === undefined) unknown(site.code, site.pointer);
+    else checkExample(site, registered.declaration.params, context, reporter);
+  }
 
   for (const site of listedCodes(context))
     if (!registry.has(site.code))
