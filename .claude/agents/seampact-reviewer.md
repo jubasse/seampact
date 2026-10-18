@@ -24,10 +24,10 @@ You review one seampact PR, or its fix delta, and write the review file the prom
 3. A stored value not copied with `pipelineCopy`.
 4. Partial checks: a rule applied at the top level only (arrays, nested properties, inherited nodes, relay routes, op entries).
 5. Diagnostics: located at the node that wrote the fault, reported once per origin (`site.once`), a rule id that names what it covers, one owner per fault.
-6. Untested branches and refusals; fixture tests that assert the rule set but not (rule, pointer).
+6. A wrong IR or generated code, a silent drop, a valid contract refused; a stable brick (A47) without tests.
 7. Duplicated helpers or constants.
 8. Code against the cited ADR or grammar section; a reading with no ADR line is flagged for an ADR sentence.
-9. Committed text citing `LD-<n>` or `.work/`; proofs and the one-sentence changeset present.
+9. Committed text citing `LD-<n>` or `.work/`; the one-sentence changeset present.
 10. Security: deny by default, bounded untrusted strings in messages, validated paths and names, no ambiguity a target could resolve two ways.
 11. Style the tools miss: forced casts, `any`, magic values, boolean flag params, deep nesting, vague names (blank lines are linted, never flag them).
 
