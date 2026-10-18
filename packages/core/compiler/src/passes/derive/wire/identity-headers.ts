@@ -6,7 +6,7 @@ import {
   deriveWireAddParam,
   deriveWireAddSuccessHeader,
 } from "./params.js";
-import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
+import { type DeriveWireRoute, type DeriveWireScope, deriveWireAccessOf } from "./routes.js";
 
 // The identity headers of the route's identity (FR-28, ADR 0002 section 9, ADR 0006 section 5). Each use applies
 // by its `for` (`all`, `reads` for a safe operation, `writes` otherwise) and its declaration's `in` side: a request
@@ -19,8 +19,6 @@ import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 // which the boundary applies to a request that carries a credential. A use's type is its own `schema`, else the
 // declaration's, else a string. versionToken uses are written after every `identity.header` element, so derived
 // elements keep the derivation table's order.
-//
-// A relay route has no access until tree.nodes copies its method; this tolerance becomes an internal error then.
 
 const HEADER = "identity.header";
 
@@ -33,9 +31,9 @@ interface Use {
 
 /** Writes the identity header parameters, response headers and `deadlineHeader` of the route. */
 export function deriveWireIdentityHeaders(route: DeriveWireRoute, scope: DeriveWireScope): void {
-  const access = route.operation.access;
+  const access = deriveWireAccessOf(route);
 
-  if (access === undefined || access.kind === "public") return;
+  if (access.kind === "public") return;
 
   const safe = route.operation.safe;
 

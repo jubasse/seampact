@@ -47,6 +47,16 @@ export function deriveWireRoutes(draft: DraftIR, context: DeriveWireContext): De
   });
 }
 
+/** The access access.identity wrote on the operation, a relay route's included; none is an internal error. */
+export function deriveWireAccessOf(route: DeriveWireRoute): IrWriter.Access {
+  const access = route.operation.access;
+
+  if (access === undefined)
+    throw new Error(`access.identity wrote no access on operation '${route.id}'`);
+
+  return access;
+}
+
 /** The origin of a pointer of the merged raw tree the half read; one without an origin is an internal error. */
 export function deriveWireOriginAt(scope: DeriveWireScope, pointer: string): IrWriter.Origin {
   const origin = scope.context.origin(pointer);

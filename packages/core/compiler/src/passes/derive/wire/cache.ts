@@ -14,7 +14,12 @@ import {
   deriveWireAddResponseHeader,
   deriveWireSuccessResponses,
 } from "./params.js";
-import { type DeriveWireRoute, type DeriveWireScope, deriveWireOriginAt } from "./routes.js";
+import {
+  type DeriveWireRoute,
+  type DeriveWireScope,
+  deriveWireAccessOf,
+  deriveWireOriginAt,
+} from "./routes.js";
 import { type DeriveWireSensitiveField, deriveWireSensitiveField } from "./sensitive.js";
 
 // The cache of an operation (ADR 0002 section 10, ADR 0006 section 5). `cache.headers`: an inherited `cache` applies
@@ -230,11 +235,7 @@ function cacheControlOf(directives: Directives | undefined, shared: boolean): st
 }
 
 function callerKindsOf(route: DeriveWireRoute): CallerKind[] {
-  const access = route.operation.access;
-
-  if (access === undefined) throw new Error(`access.identity wrote no access on '${route.id}'`);
-
-  switch (access.kind) {
+  switch (deriveWireAccessOf(route).kind) {
     case "public":
       return ["anonymous"];
     case "identity":
@@ -247,13 +248,13 @@ function callerKindsOf(route: DeriveWireRoute): CallerKind[] {
 // The credential headers of the accepted schemes (a query credential varies the URL itself), then `cache.vary`,
 // each name once, compared case-insensitively.
 function varyOf(route: DeriveWireRoute, written: unknown, scope: DeriveWireScope): string[] {
-  const access = route.operation.access;
+  const access = deriveWireAccessOf(route);
   const names: string[] = [];
   const add = (name: string): void => {
     if (!names.some((known) => known.toLowerCase() === name.toLowerCase())) names.push(name);
   };
 
-  if (access !== undefined && access.kind !== "public")
+  if (access.kind !== "public")
     for (const id of access.schemes) {
       const scheme = deriveWireSchemeOf(id, scope);
       const place = deriveWireCredentialPlace(scheme);

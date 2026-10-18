@@ -12,7 +12,12 @@ import {
   deriveWireAddParam,
   deriveWireAddSuccessHeader,
 } from "./params.js";
-import { type DeriveWireRoute, type DeriveWireScope, deriveWireOriginAt } from "./routes.js";
+import {
+  type DeriveWireRoute,
+  type DeriveWireScope,
+  deriveWireAccessOf,
+  deriveWireOriginAt,
+} from "./routes.js";
 
 // The idempotency key (`idempotency.write`, A34, ADR 0002 section 13, ADR 0006 section 5). Opt-in: an unset
 // `conventions.idempotency` derives no key. The key reaches a non-safe operation whose method `methods` lists and
@@ -100,15 +105,6 @@ export function deriveWireIdempotency(
   scope: DeriveWireScope,
 ): void {
   const exemption = scope.context.inherited(route.node, "idempotency");
-
-  // A relay route has no method until tree.nodes copies the relayed one, so whether the key reaches it is not
-  // known yet: it gets no key, and its exemption is not refused as unused. Like the relay tolerance of the
-  // credentials and the identity headers, this becomes an internal error once tree.nodes copies the method.
-  if (route.node.kind === "relay" && route.operation.safe === undefined) {
-    if (exemption !== undefined) exemptions.used.add(exemption.entry.node.pointer);
-
-    return;
-  }
 
   if (reading.state !== "set" || !keyReaches(route, reading.convention, scope)) return;
 
@@ -216,14 +212,16 @@ function keyReaches(
   convention: DeriveWireIdempotencyConvention,
   scope: DeriveWireScope,
 ): boolean {
-  const { safe, method, access } = route.operation;
+  const { safe, method } = route.operation;
 
   if (safe === undefined || method === undefined)
     throw new Error(`tree.nodes wrote no method or safe on operation '${route.id}'`);
 
   if (safe || !convention.methods.includes(method)) return false;
 
-  if (access === undefined || access.kind === "public") return true;
+  const access = deriveWireAccessOf(route);
+
+  if (access.kind === "public") return true;
 
   const identities = scope.draft.identities;
   const identity = Object.hasOwn(identities, access.identity)

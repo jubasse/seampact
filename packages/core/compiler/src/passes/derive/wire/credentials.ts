@@ -1,7 +1,7 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { pipelineCopy } from "../../../pipeline/seam.js";
 import { DERIVE_WIRE_STRING_USE, deriveWireAddParam } from "./params.js";
-import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
+import { type DeriveWireRoute, type DeriveWireScope, deriveWireAccessOf } from "./routes.js";
 
 // The credential parameters of the accepted schemes (`identity.authenticate`) and the CSRF header parameter
 // (`csrf.cookieWrite`), ADR 0006 section 5. A credential is a parameter only where it is a header or a query
@@ -15,9 +15,6 @@ import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 // bearer or another scheme, the target checks the header only on requests the cookie authenticates (ADR 0012
 // "One neutral, typed hook per concern"), so a bearer client never sends it; on optional access an anonymous
 // caller has no session, so no token either (ADR 0012 "Authenticate").
-//
-// A relay route has no access until tree.nodes copies its method; this tolerance, like the ones of the identity
-// headers and the idempotency key, becomes an internal error once tree.nodes copies it.
 
 const AUTHORIZATION = "Authorization";
 
@@ -25,9 +22,9 @@ const AUTHENTICATE = "identity.authenticate";
 
 /** Writes the credential and CSRF parameters of the route's access. */
 export function deriveWireCredentials(route: DeriveWireRoute, scope: DeriveWireScope): void {
-  const access = route.operation.access;
+  const access = deriveWireAccessOf(route);
 
-  if (access === undefined || access.kind === "public") return;
+  if (access.kind === "public") return;
 
   const schemes = access.schemes.map((id) => deriveWireSchemeOf(id, scope));
   const required = access.kind === "identity" && schemes.length === 1;
