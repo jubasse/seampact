@@ -4,6 +4,8 @@ import {
   generateReferenceProject,
   projectDirectory,
   REFERENCE_COMPILER_OPTIONS,
+  readGoldenIr,
+  referenceLinks,
   typeErrorsOf,
 } from "@seampact/codegen-core/node-server/test-support";
 import { beforeAll, describe, expect, test } from "vitest";
@@ -43,5 +45,38 @@ describe("the generated reference plugin compiles", () => {
     expect(
       typeErrorsOf(PROJECT, [...files, join(PROJECT, INDEX_CHECK)], REFERENCE_COMPILER_OPTIONS),
     ).toEqual([]);
+  });
+});
+
+describe("a path the router cannot read as written is refused by name", () => {
+  test("a segment that mixes a placeholder with literal text", async () => {
+    const ir = readGoldenIr("tasks");
+    const archiveIndex = ir.operations.findIndex((operation) => operation.id === "archiveTask");
+    const mixedSegmentIr = {
+      ...ir,
+      operations: ir.operations.map((operation, index) =>
+        index === archiveIndex
+          ? { ...operation, path: "/v1/channels/{channelId}/tasks/{taskId}:archive" }
+          : operation,
+      ),
+    };
+
+    const outcome = await fastifyTarget.generate({
+      ir: mixedSegmentIr,
+      options: { bodyValidation: true },
+      links: await referenceLinks(PROJECT, "tasks"),
+      artefacts: new Set(["boundary"]),
+    });
+
+    expect(outcome).toMatchObject({
+      status: "refused",
+      refusals: [
+        {
+          code: "path.segment.mixed.unsupported",
+          member: `/operations/${archiveIndex}/path`,
+          operation: "archiveTask",
+        },
+      ],
+    });
   });
 });

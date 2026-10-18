@@ -44,7 +44,12 @@ import {
   type ReportedRequest,
   respondWithError,
 } from "./node-server/error-reply.js";
-import { bodyParserError, contractRequest, pathnameOf } from "./node-server/express-platform.js";
+import {
+  bodyParserError,
+  contractRequest,
+  pathnameOf,
+  reportedRequest,
+} from "./node-server/express-platform.js";
 import {
   type HandlerBindings,
   handlerResultReply,
@@ -63,6 +68,7 @@ import {
 } from "./node-server/outgoing-check.js";
 import {
   bodySizeRefusal,
+  IDENTITY_ENCODING,
   mediaTypeRefusal,
   type PlatformFixes,
 } from "./node-server/transport-checks.js";
@@ -84,7 +90,6 @@ const SERVER_ERROR_FLOOR = 500;
 const CONTENT_TYPE_PARSER_ERROR_PREFIX = "FST_ERR_CTP_";
 // Fastify's router writes these itself unless the app routes them through `frameworkErrors`.
 const ROUTER_ERROR_CODES: readonly string[] = ["FST_ERR_BAD_URL", "FST_ERR_MAX_PARAM_LENGTH"];
-const IDENTITY_ENCODING = "identity";
 const DECODERS: Readonly<Record<string, () => NodeJS.ReadWriteStream>> = {
   gzip: createGunzip,
   deflate: createInflate,
@@ -175,7 +180,7 @@ export function createFastifyBoundary<
     if (unbounded.length === 0) return;
 
     console.warn(
-      `seampact: the path params ${[...new Set(unbounded)].join(", ")} of api '${api.id}' declare no maxLength, so a value longer than the router's maxParamLength answers 414; route it through renderPreRoutingError in frameworkErrors to answer it in the api's format.`,
+      `seampact: the path params ${[...new Set(unbounded)].join(", ")} of api '${api.id}' declare no maxLength and are not uuids, so a value longer than the router's maxParamLength answers 414; route it through renderPreRoutingError in frameworkErrors to answer it in the api's format.`,
     );
   }
 
@@ -305,8 +310,10 @@ export function createFastifyBoundary<
     const reported = reportedRequest(request.raw);
     const matched = matchContractRoute(api, reported.method, reported.path);
 
-    // HEAD, and a path only Fastify's relaxed routing accepts: the contract does not serve them as sent.
-    if (matched === undefined) {
+    // HEAD, and a path only Fastify's relaxed routing accepts: the contract does not serve them as sent. Fastify
+    // decodes a percent-encoded static segment, so it can route to another operation than the raw path names: the
+    // path's 404 then, so no handler runs under another operation's access and input.
+    if (matched === undefined || matched.route.id !== route.id) {
       writeDetached(reply, hooks, route, notFoundError(route), reported);
 
       return;
@@ -354,7 +361,7 @@ export function createFastifyBoundary<
 
     if (decoder === undefined) {
       throw route === undefined
-        ? new Error(`seampact: the content coding '${encoding}' is not supported`)
+        ? new Error("seampact: the request's content coding is not supported")
         : roleError(route, UNSUPPORTED_MEDIA_ROLE);
     }
 
@@ -635,10 +642,6 @@ function isRouterError(error: unknown): boolean {
   return typeof code === "string" && ROUTER_ERROR_CODES.includes(code);
 }
 
-function reportedRequest(request: IncomingMessage): ReportedRequest {
-  return { method: request.method ?? "GET", path: pathnameOf(request) };
-}
-
 function charsetOf(contentType: string | undefined): string | undefined {
   const parameter = contentType
     ?.split(";")
@@ -649,7 +652,8 @@ function charsetOf(contentType: string | undefined): string | undefined {
   return parameter?.slice("charset=".length).replace(/^"|"$/g, "");
 }
 
-// Fastify's syntax with positional param names, a literal `:` doubled.
+// Fastify's syntax with positional param names, a literal `:` doubled; the generator refuses a segment that mixes a
+// placeholder with literal text, which find-my-way would read as one param.
 function fastifyPath(template: string): string {
   let position = 0;
 

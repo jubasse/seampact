@@ -35,10 +35,13 @@ import {
 } from "./node-server/error-reply.js";
 import {
   bodyParserRefusal,
+  clearEmptyBody,
   contractRequest,
+  DEFAULT_METHOD,
   type ExpressRequest,
   expressBodyGlue,
-  pathnameOf,
+  ownBodyParserRefusal,
+  reportedRequest,
 } from "./node-server/express-platform.js";
 import {
   type HandlerBindings,
@@ -67,7 +70,6 @@ const EXPRESS_FIXES: PlatformFixes = {
   bodySize:
     "Mount the router before any app-wide JSON parser, or give that parser the generated keepRawBody as its verify function.",
 };
-const DEFAULT_METHOD = "GET";
 const NO_MOUNT = "";
 
 type ContinueOrStop = "continue" | "stop";
@@ -175,8 +177,9 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
 
     const matched = matchContractRoute(api, reported.method, reported.path);
 
-    // HEAD runs through the GET route's middleware; the contract serves no HEAD.
-    if (matched === undefined) {
+    // HEAD runs through the GET route's middleware; the contract serves no HEAD. A request Express routed to
+    // another operation than the raw path names is refused too, so no handler runs under another's checks.
+    if (matched === undefined || matched.route.id !== route.id) {
       respondDetached(response, hooks, route, notFoundError(route), reported);
 
       return;
@@ -226,7 +229,17 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
 
     const parse: RequestHandler = (request, response, next) => {
       if (!request.readableEnded) {
-        parser(request, response, next);
+        parser(request, response, (error?: unknown) => {
+          if (error !== undefined) {
+            next(ownBodyParserRefusal(route, error) ?? error);
+
+            return;
+          }
+
+          // The route's own parser records every body it reads, so nothing recorded is no body.
+          clearEmptyBody(request, bodyGlue.recordedBodyBytes(request) ?? 0);
+          next();
+        });
 
         return;
       }
@@ -238,6 +251,7 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
         );
       }
 
+      clearEmptyBody(request, bodyGlue.recordedBodyBytes(request));
       next();
     };
 
@@ -436,10 +450,6 @@ function claimedError(route: ContractRoute, error: unknown): ContractError | und
   if (error instanceof ContractError) return error;
 
   return bodyParserRefusal(route, error) ?? frameworkRefusal(route, error);
-}
-
-function reportedRequest(request: ExpressRequest): ReportedRequest {
-  return { method: request.method ?? DEFAULT_METHOD, path: pathnameOf(request) };
 }
 
 function methodOf(route: ContractRoute): "get" | "post" | "put" | "patch" | "delete" {

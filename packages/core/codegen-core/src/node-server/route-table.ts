@@ -18,6 +18,7 @@ import {
   refuseUnknownValueAt,
 } from "../located-refusals.js";
 import type { Refusal } from "../refusal.js";
+import { compareRouteSpecificity } from "./route-order.js";
 
 // The route table module of one api: every operation as the node-server runtime reads it (`ContractApi`), with
 // the validators link's input validator per operation. A form the runtime does not serve is refused by name.
@@ -71,7 +72,7 @@ export function routeTableSource(
 
   const routes = ir.operations
     .map((operation, index) => ({ operation, index }))
-    .sort((left, right) => compareSpecificity(left.operation.path, right.operation.path))
+    .sort((left, right) => compareRouteSpecificity(left.operation.path, right.operation.path))
     .map(({ operation, index }) =>
       routeEntry(
         ir,
@@ -107,29 +108,6 @@ export function routeTableSource(
     `export const CONTRACT_API: ContractApi = ${sourceOf(table)};`,
     "",
   ].join("\n");
-}
-
-const PATH_PARAM_SEGMENT = /\{[^}]+\}/;
-
-// Most specific first, segment by segment: a static segment before a param, so `/tasks/search` comes before
-// `/tasks/{id}`, then the shorter path. The order every placement registers its routes in and the shared matcher
-// iterates; the sort is stable, so paths of the same form keep the contract's order.
-function compareSpecificity(leftPath: string, rightPath: string): number {
-  const leftSegments = leftPath.split("/");
-  const rightSegments = rightPath.split("/");
-
-  for (
-    let position = 0;
-    position < Math.min(leftSegments.length, rightSegments.length);
-    position++
-  ) {
-    const leftIsParam = PATH_PARAM_SEGMENT.test(leftSegments[position] ?? "");
-    const rightIsParam = PATH_PARAM_SEGMENT.test(rightSegments[position] ?? "");
-
-    if (leftIsParam !== rightIsParam) return leftIsParam ? 1 : -1;
-  }
-
-  return leftSegments.length - rightSegments.length;
 }
 
 class ModuleImports {
@@ -656,31 +634,70 @@ function paramRule(param: Param, name: string): SourceValue {
 // Percent-encoded, a code point takes up to 12 characters (4 UTF-8 bytes) and an ASCII character 3.
 const ENCODED_CODE_POINT_LENGTH = 12;
 const ENCODED_ASCII_LENGTH = 3;
-// A pattern made of ASCII literals and classes only: no `.`, negated class, Unicode or hex escape, or negated
-// shorthand, each of which can match a non-ASCII character.
+// A uuid is 36 unreserved ASCII characters, sent as is; a client that percent-encodes them is out of contract.
+const UUID_ENCODED_LENGTH = 36;
+// A pattern part that can match a non-ASCII character: a non-ASCII literal, `.`, a negated class, a Unicode or hex
+// escape, or a negated shorthand.
 const NON_ASCII_PATTERN_PART = /[^\x20-\x7e]|\.|\[\^|\\[DWSpPux]/;
 
-// A path param's rule with the longest percent-encoded form of its `maxLength`, for a router that bounds the
-// encoded length (Fastify's `maxParamLength`).
+// A path param's rule with the longest percent-encoded form of its value, for a router that bounds the encoded
+// length (Fastify's `maxParamLength`): a uuid, or a string with a `maxLength`.
 function pathParamRule(param: Param): SourceValue {
   const type = param.type;
-  const refinements =
-    isKnownVariant("TypeUse", type) && type.kind === "scalar" ? type.refinements : undefined;
-  const maxLength = refinements?.maxLength;
+  const scalar = isKnownVariant("TypeUse", type) && type.kind === "scalar" ? type : undefined;
+  const maxLength = scalar?.refinements.maxLength;
+  const encodedMaxLength =
+    scalar?.format === "uuid"
+      ? UUID_ENCODED_LENGTH
+      : maxLength === undefined
+        ? undefined
+        : maxLength * encodedCharacterLength(scalar?.refinements.pattern?.source);
 
-  if (maxLength === undefined) return paramRule(param, param.name);
+  if (encodedMaxLength === undefined) return paramRule(param, param.name);
 
-  const pattern = refinements?.pattern?.source;
-  const perCharacter =
-    pattern !== undefined && !NON_ASCII_PATTERN_PART.test(pattern)
-      ? ENCODED_ASCII_LENGTH
-      : ENCODED_CODE_POINT_LENGTH;
+  return { name: param.name, decoding: scalarDecoding(type), encodedMaxLength };
+}
 
-  return {
-    name: param.name,
-    decoding: scalarDecoding(type),
-    encodedMaxLength: maxLength * perCharacter,
-  };
+// A JSON Schema pattern matches anywhere in the value (ADR 0003 section 9), so only a pattern anchored at both ends,
+// without a top-level alternation, and made of ASCII parts bounds every character to ASCII.
+function encodedCharacterLength(pattern: string | undefined): number {
+  if (
+    pattern === undefined ||
+    !pattern.startsWith("^") ||
+    !pattern.endsWith("$") ||
+    pattern.endsWith("\\$") ||
+    hasTopLevelAlternation(pattern) ||
+    NON_ASCII_PATTERN_PART.test(pattern)
+  ) {
+    return ENCODED_CODE_POINT_LENGTH;
+  }
+
+  return ENCODED_ASCII_LENGTH;
+}
+
+function hasTopLevelAlternation(pattern: string): boolean {
+  let groupDepth = 0;
+  let inClass = false;
+
+  for (let position = 0; position < pattern.length; position++) {
+    const character = pattern[position];
+
+    if (character === "\\") {
+      position += 1;
+    } else if (inClass) {
+      inClass = character !== "]";
+    } else if (character === "[") {
+      inClass = true;
+    } else if (character === "(") {
+      groupDepth += 1;
+    } else if (character === ")") {
+      groupDepth -= 1;
+    } else if (character === "|" && groupDepth === 0) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function scalarDecoding(type: TypeUse): string {

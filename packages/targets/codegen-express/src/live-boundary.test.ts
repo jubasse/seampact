@@ -207,6 +207,29 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
     expect(app.calls.handled).toEqual([]);
   });
 
+  test("a corrupt gzip body is the client's 400, not a server failure", async () => {
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+      headers: { ...writeHeaders(), "content-encoding": "gzip" },
+      body: Buffer.from("not gzip"),
+    });
+
+    expect(reply.status).toBe(400);
+    expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+    expect(app.calls.unexpected).toEqual([]);
+    expect(app.calls.handled).toEqual([]);
+  });
+
+  test("an empty JSON body is no body, so a required body answers 400 required", async () => {
+    const reply = await send("PATCH", "/v1/me/preferences", {
+      headers: { ...writeHeaders(), "content-length": "0" },
+      body: "",
+    });
+
+    expect(reply.status).toBe(400);
+    expect(JSON.parse(reply.text).issues).toEqual([{ pointer: "", rule: "required" }]);
+    expect(app.calls.handled).toEqual([]);
+  });
+
   test("a body that is not JSON answers the 415 before it is read", async () => {
     const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
       headers: { ...writeHeaders(), "content-type": "text/plain" },

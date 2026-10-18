@@ -61,7 +61,6 @@ import {
 } from "./node-server/contract-error.js";
 import {
   type ContractApi,
-  type ContractRequest,
   type ContractRoute,
   isUnderPrefix,
   looselyMatchedRoute,
@@ -71,11 +70,14 @@ import {
 } from "./node-server/contract-route.js";
 import {
   bodyParserError,
+  clearEmptyBody,
   contractRequest,
+  DEFAULT_METHOD,
   type ExpressRequest,
   expressBodyGlue,
   parserErrorStatus,
   pathnameOf,
+  reportedRequest,
 } from "./node-server/express-platform.js";
 import { notFoundError, respondWithError } from "./node-server/error-reply.js";
 import { handlerReply } from "./node-server/handler-reply.js";
@@ -193,8 +195,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
   const middleware =
     (hooks: BoundaryHooks) =>
     (request: ExpressRequest, response: ServerResponse, next: () => void): void => {
-      const path = pathnameOf(request);
-      const method = request.method ?? "GET";
+      const { method, path } = reportedRequest(request);
       const matched = matchContractRoute(api, method, path);
 
       if (matched === undefined) {
@@ -214,6 +215,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       };
       const recorded = bodyGlue.recordedBodyBytes(request);
 
+      clearEmptyBody(request, recorded);
       installOutgoingCheck(response, context, { method, path });
       boundaryContext.run(context, () => {
         const refusal = transportRefusal(matched.route, contractRequest(request), {
@@ -268,6 +270,12 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
         OPERATION_METADATA,
         execution.getHandler(),
       );
+
+      // NestJS routed the request to another operation of this api than the raw path names: the path's 404, so no
+      // handler runs under another operation's checks.
+      if (operation?.api === api.id && operation.id !== context.route.id) {
+        throw notFoundError(context.route);
+      }
 
       if (operation?.id !== context.route.id) {
         throw unexpectedError(
@@ -372,10 +380,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       api,
       context?.route,
       contractError,
-      {
-        method: request.method ?? "GET",
-        path: pathnameOf(request),
-      },
+      reportedRequest(request),
     );
   }
 
@@ -555,7 +560,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
     if (!matchesContractPath(api, path)) return false;
 
     const route =
-      matchContractRoute(api, request.method ?? "GET", path)?.route ??
+      matchContractRoute(api, request.method ?? DEFAULT_METHOD, path)?.route ??
       api.routes.find((candidate) => matchesContractPath({ ...api, routes: [candidate] }, path));
 
     void respondWithError(
@@ -565,10 +570,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       api,
       route,
       preRoutingError(route, exception),
-      {
-        method: request.method ?? "GET",
-        path,
-      },
+      { method: request.method ?? DEFAULT_METHOD, path },
     );
 
     return true;

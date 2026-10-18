@@ -11,6 +11,7 @@ export {
 } from "./boundary-files.js";
 export { handlerMapDeclarations, largestBodyLimit } from "./handler-map-module.js";
 export { type NodeServerOptions, parseNodeServerOptions, type ResponsesMode } from "./options.js";
+export { compareRouteSpecificity } from "./route-order.js";
 export { type RouteTableOptions, routeTableSource } from "./route-table.js";
 export { NODE_SERVER_RUNTIME_DIRECTORY, nodeServerRuntimeFiles } from "./runtime-files.js";
 export {

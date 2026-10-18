@@ -290,6 +290,17 @@ describe("validation", () => {
     );
   });
 
+  test("an empty JSON body is no body, so a required body answers 400 required", async () => {
+    const reply = await send("PATCH", "/v1/me/preferences", {
+      headers: { ...writeHeaders(), "content-length": "0" },
+      body: "",
+    });
+
+    expect(reply.status).toBe(400);
+    expect(JSON.parse(reply.text).issues).toEqual([{ pointer: "", rule: "required" }]);
+    expect(app.calls.handled).toEqual([]);
+  });
+
   test("a missing member and a malformed format name required and format", async () => {
     const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks/${TASK}/assign`, {
       headers: writeHeaders(),

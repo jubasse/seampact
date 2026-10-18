@@ -58,11 +58,17 @@ export function projectDirectory(testFileUrl: string, name: string): string {
   return fileURLToPath(new URL(`../.vitest/${name}/`, testFileUrl));
 }
 
+/** A change a test makes to a reference api's IR before generating it, as a probe contract. */
+export type ReferenceIrChange = (ir: ContractIR, api: string) => ContractIR;
+
+const UNCHANGED_IR: ReferenceIrChange = (ir) => ir;
+
 /** Writes both reference apis' generated trees into a fresh project; returns every file written. */
 export async function generateReferenceProject(
   project: string,
   serverTarget: Target,
   serverOptions: Readonly<Record<string, unknown>>,
+  changeIr: ReferenceIrChange = UNCHANGED_IR,
 ): Promise<string[]> {
   rmSync(project, { recursive: true, force: true });
   mkdirSync(project, { recursive: true });
@@ -71,7 +77,9 @@ export async function generateReferenceProject(
 
   const providers = await linkedProviders(project);
   const written = await Promise.all(
-    REFERENCE_APIS.map((api) => generateApi(project, api, providers, serverTarget, serverOptions)),
+    REFERENCE_APIS.map((api) =>
+      generateApi(project, changeIr(readGoldenIr(api), api), api, providers, serverTarget, serverOptions),
+    ),
   );
 
   return written.flat();
@@ -195,12 +203,12 @@ function linksOf(
 
 async function generateApi(
   project: string,
+  ir: ContractIR,
   api: string,
   providers: Providers,
   serverTarget: Target,
   serverOptions: Readonly<Record<string, unknown>>,
 ): Promise<string[]> {
-  const ir = readGoldenIr(api);
   const providerRequest = { ir, options: {}, links: {} };
 
   return [

@@ -9,7 +9,9 @@ import {
 import { type ContractRequest, type ContractRoute, headerValue } from "./contract-route.js";
 
 const UNSUPPORTED_MEDIA_ROLE = "unsupportedMediaType";
-const IDENTITY_ENCODING = "identity";
+
+/** The content coding of a body sent as is. */
+export const IDENTITY_ENCODING = "identity";
 const JSON_SUFFIX = "+json";
 
 /** The setup fixes a framework placement names in its logs; the shared checks know no framework. */
