@@ -343,7 +343,7 @@ revealStreamKey:
   method: post
   requires: [{ rule: recentAuth, params: { intent: reveal_stream_key } }]
   output: StreamKey
-legacy:
+legacy:   # a member route of tasks, so it holds the path params of getTask
   method: get
   operationId: getTaskV1
   deprecated: { since: '2026-12-31', sunset: '2027-06-30', successor: getTask }

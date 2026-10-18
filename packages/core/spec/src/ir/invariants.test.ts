@@ -574,3 +574,484 @@ describe("checkIrInvariants", () => {
     ]);
   });
 });
+
+type Json = Record<string, unknown>;
+
+const isJson = (value: unknown): value is Json =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+// The value at a JSON Pointer of `ir`, which the test expects to be there.
+function valueAt(ir: unknown, pointer: string): unknown {
+  let value = ir;
+
+  for (const segment of pointer.slice(1).split("/")) {
+    if (Array.isArray(value)) value = value[Number(segment)];
+    else if (isJson(value)) value = value[segment];
+    else throw new Error(`nothing at ${pointer}`);
+  }
+
+  return value;
+}
+
+function node(ir: unknown, pointer: string): Json {
+  const value = valueAt(ir, pointer);
+
+  if (!isJson(value)) throw new Error(`no object at ${pointer}`);
+
+  return value;
+}
+
+function list(ir: unknown, pointer: string): unknown[] {
+  const value = valueAt(ir, pointer);
+
+  if (!Array.isArray(value)) throw new Error(`no array at ${pointer}`);
+
+  return value;
+}
+
+// The every-member sample with `change` applied to it, and the violations it then has.
+function violationsAfter(change: (ir: Json) => void): { id: IrInvariantId; pointer: string }[] {
+  const ir = sample("every-member.ir.json");
+
+  change(ir);
+
+  return checkIrInvariants(ir).map(({ id, pointer }) => ({ id, pointer }));
+}
+
+const at = (id: IrInvariantId, pointer: string) => [{ id, pointer }];
+const UPDATE = "/operations/2";
+const ALWAYS_ABSENT = `${UPDATE}/fieldRights/2`;
+const EFFORT_OUTPUT = `${UPDATE}/fieldRights/1`;
+const CREATED_KEY = `${UPDATE}/paging/sortKeys/0`;
+const EFFORT_KEY = `${UPDATE}/paging/sortKeys/1`;
+const EFFORT = "/schemas/Task/properties/1";
+const RETRY_AFTER = "/schemas/ThrottledParams/properties/0";
+const LOCKED = `${UPDATE}/errors/0`;
+const THROTTLED = `${UPDATE}/errors/1`;
+const INTERNAL = `${UPDATE}/errors/2`;
+const DEPRECATED = `${UPDATE}/deprecated`;
+const PATH_SUBJECT = { source: { in: "path", name: "taskId" } };
+
+describe("field rights and sort keys", () => {
+  test("a field right always absent is an output right without subject, policy or params", () => {
+    const changes: [string, unknown][] = [
+      ["direction", "input"],
+      ["subject", PATH_SUBJECT],
+      ["inputPolicy", "strip"],
+      ["params", {}],
+    ];
+
+    for (const [member, value] of changes)
+      expect(
+        violationsAfter((ir) => {
+          node(ir, ALWAYS_ABSENT)[member] = value;
+        }).filter(({ id }) => id === "ir.field-right.always"),
+        member,
+      ).toEqual(at("ir.field-right.always", ALWAYS_ABSENT));
+
+    // An unknown outcome is the reader's to name.
+    expect(
+      violationsAfter((ir) => {
+        Object.assign(node(ir, ALWAYS_ABSENT), { always: "masked", direction: "input" });
+      }),
+    ).toEqual([]);
+  });
+
+  test("a field right has a subject if and only if its right's subject kind is not none", () => {
+    expect(
+      violationsAfter((ir) => {
+        delete node(ir, EFFORT_OUTPUT).subject;
+      }),
+    ).toEqual(at("ir.field-right.always", EFFORT_OUTPUT));
+    expect(
+      violationsAfter((ir) => {
+        const right = node(ir, ALWAYS_ABSENT);
+
+        delete right.always;
+        right.subject = PATH_SUBJECT;
+      }),
+    ).toEqual(at("ir.field-right.always", ALWAYS_ABSENT));
+  });
+
+  test("sort key params and subject sit with a right", () => {
+    expect(
+      violationsAfter((ir) => {
+        delete node(ir, EFFORT_KEY).right;
+      }),
+    ).toEqual(at("ir.sort-key.right", EFFORT_KEY));
+  });
+
+  test("a sort key has a subject if and only if its right's subject kind is not none", () => {
+    expect(
+      violationsAfter((ir) => {
+        delete node(ir, EFFORT_KEY).subject;
+      }),
+    ).toEqual(at("ir.sort-key.right", EFFORT_KEY));
+    expect(
+      violationsAfter((ir) => {
+        node(ir, CREATED_KEY).subject = PATH_SUBJECT;
+      }),
+    ).toEqual(at("ir.sort-key.right", CREATED_KEY));
+  });
+
+  test("a sort key subject is not read from a holder field", () => {
+    expect(
+      violationsAfter((ir) => {
+        node(ir, EFFORT_KEY).subject = { source: { in: "holderField", name: "ownerId" } };
+      }),
+    ).toEqual(at("ir.sort-key.right", `${EFFORT_KEY}/subject/source`));
+  });
+});
+
+describe("exact numbers in opaque values", () => {
+  test("opaque int64 and decimal values are strings", () => {
+    expect(
+      violationsAfter((ir) => {
+        Object.assign(node(ir, EFFORT), { default: 1, examples: ["2", 3] });
+        node(ir, `${EFFORT}/type`).examples = [4];
+      }),
+    ).toEqual([
+      { id: "ir.value.exact-number", pointer: `${EFFORT}/default` },
+      { id: "ir.value.exact-number", pointer: `${EFFORT}/examples/1` },
+      { id: "ir.value.exact-number", pointer: `${EFFORT}/type/examples/0` },
+    ]);
+    expect(
+      violationsAfter((ir) => {
+        Object.assign(node(ir, EFFORT), {
+          type: { kind: "scalar", type: "string", format: "decimal", refinements: {} },
+          default: "1.50",
+          examples: [1.5, "1."],
+        });
+      }),
+    ).toEqual([
+      { id: "ir.value.exact-number", pointer: `${EFFORT}/examples/0` },
+      { id: "ir.value.exact-number", pointer: `${EFFORT}/examples/1` },
+    ]);
+  });
+
+  test("an opaque integer past the safe range breaks ir.value.exact-number", () => {
+    expect(
+      violationsAfter((ir) => {
+        Object.assign(node(ir, RETRY_AFTER), { default: 2 ** 53, examples: [2 ** 53 - 1] });
+      }),
+    ).toEqual(at("ir.value.exact-number", `${RETRY_AFTER}/default`));
+    expect(
+      violationsAfter((ir) => {
+        list(ir, `${UPDATE}/params/query`).push({
+          name: "limit",
+          type: { kind: "scalar", type: "integer", refinements: {} },
+          required: false,
+          wire: { kind: "number", style: "form", explode: true, brackets: false },
+          default: 1.5,
+          origin: { layer: "api", pointer: "/query/limit" },
+        });
+      }),
+    ).toEqual(at("ir.value.exact-number", `${UPDATE}/params/query/1/default`));
+  });
+
+  test("an int64 string out of range or -0 breaks ir.value.exact-number", () => {
+    for (const value of ["-0", "9223372036854775808", "-9223372036854775809", "01"])
+      expect(
+        violationsAfter((ir) => {
+          node(ir, EFFORT).default = value;
+        }),
+        value,
+      ).toEqual(at("ir.value.exact-number", `${EFFORT}/default`));
+
+    for (const value of ["9223372036854775807", "-9223372036854775808", "0", null])
+      expect(
+        violationsAfter((ir) => {
+          node(ir, EFFORT).default = value;
+        }),
+        String(value),
+      ).toEqual([]);
+  });
+});
+
+describe("degradable and deprecation", () => {
+  test("a degradable header is required without a degraded meta field", () => {
+    expect(
+      violationsAfter((ir) => {
+        delete node(ir, `${UPDATE}/degradable`).header;
+      }),
+    ).toEqual(at("ir.degradable.header", `${UPDATE}/degradable`));
+  });
+
+  test("a degradable header may sit beside a degraded meta field", () => {
+    const degradedMeta = (ir: Json) => {
+      node(ir, "/formats/bare/meta").degraded = {
+        type: { kind: "array", items: { kind: "scalar", type: "string", refinements: {} } },
+        fill: "degraded",
+      };
+    };
+
+    expect(violationsAfter(degradedMeta)).toEqual([]);
+    expect(
+      violationsAfter((ir) => {
+        degradedMeta(ir);
+        delete node(ir, `${UPDATE}/degradable`).header;
+      }),
+    ).toEqual([]);
+  });
+
+  test("successor rel if and only if successor", () => {
+    expect(
+      violationsAfter((ir) => {
+        delete node(ir, DEPRECATED).successorRel;
+      }),
+    ).toEqual(at("ir.deprecation.headers", DEPRECATED));
+  });
+
+  test("a deprecated operation's responses carry its deprecation headers", () => {
+    const response = `${UPDATE}/responses/0`;
+    const headers = `${response}/headers`;
+
+    expect(
+      violationsAfter((ir) => {
+        node(ir, response).headers = list(ir, headers).filter(
+          (header) => !isJson(header) || header.semantic !== "sunset",
+        );
+      }),
+    ).toEqual(at("ir.deprecation.headers", response));
+    expect(
+      violationsAfter((ir) => {
+        list(ir, headers).push(structuredClone(node(ir, `${headers}/1`)));
+      }),
+    ).toEqual(at("ir.deprecation.headers", response));
+    // Without a successor, a successor link is one header too many.
+    expect(
+      violationsAfter((ir) => {
+        delete node(ir, DEPRECATED).successor;
+        delete node(ir, DEPRECATED).successorRel;
+      }),
+    ).toEqual(at("ir.deprecation.headers", response));
+  });
+
+  test("only a 2xx response of a deprecated operation carries deprecation headers", () => {
+    const redirect = (ir: Json, headers: Json[]) =>
+      list(ir, `${UPDATE}/responses`).push({ status: 302, shape: "empty", headers });
+    const deprecationHeader = (ir: Json) =>
+      structuredClone(node(ir, `${UPDATE}/responses/0/headers/1`));
+
+    expect(violationsAfter((ir) => redirect(ir, []))).toEqual([]);
+    expect(violationsAfter((ir) => redirect(ir, [deprecationHeader(ir)]))).toEqual(
+      at("ir.deprecation.headers", `${UPDATE}/responses/1`),
+    );
+    expect(
+      violationsAfter((ir) => {
+        list(ir, "/operations/0/responses/0/headers").push(deprecationHeader(ir));
+      }),
+    ).toEqual(at("ir.deprecation.headers", "/operations/0/responses/0"));
+  });
+
+  test("a successor in the same api names an operation of the document", () => {
+    expect(
+      violationsAfter((ir) => {
+        node(ir, `${DEPRECATED}/successor`).id = "nope";
+      }),
+    ).toEqual(at("ir.deprecation.headers", `${DEPRECATED}/successor`));
+    expect(
+      violationsAfter((ir) => {
+        node(ir, `${DEPRECATED}/successor`).api = "billing";
+        node(ir, `${DEPRECATED}/successor`).id = "nope";
+      }),
+    ).toEqual([]);
+  });
+
+  const TASK_ID = `${UPDATE}/params/path/0`;
+  // A successor updateTaskV2, an operation of the document with one path param.
+  const withSuccessor = (ir: Json, param: Json) => {
+    list(ir, "/operations").push({
+      ...structuredClone(node(ir, "/operations/1")),
+      id: "updateTaskV2",
+      params: { path: [param], query: [], header: [] },
+    });
+    node(ir, `${DEPRECATED}/successor`).id = "updateTaskV2";
+  };
+
+  const taskId = (ir: Json, change: Json = {}): Json => ({
+    ...structuredClone(node(ir, TASK_ID)),
+    ...change,
+  });
+
+  test("a successor's path params are the deprecated operation's, of the same type", () => {
+    const integer = { kind: "scalar", type: "integer", refinements: {} };
+
+    expect(violationsAfter((ir) => withSuccessor(ir, taskId(ir)))).toEqual([]);
+    expect(violationsAfter((ir) => withSuccessor(ir, taskId(ir, { name: "projectId" })))).toEqual(
+      at("ir.deprecation.headers", `${DEPRECATED}/successor`),
+    );
+    expect(violationsAfter((ir) => withSuccessor(ir, taskId(ir, { type: integer })))).toEqual(
+      at("ir.deprecation.headers", `${DEPRECATED}/successor`),
+    );
+  });
+
+  test("a successor param differing only in docs or examples is the same type use", () => {
+    const annotated = (ir: Json): Json => ({
+      ...node(ir, `${TASK_ID}/type`),
+      docs: { summary: "The task." },
+      examples: ["t1"],
+    });
+
+    expect(violationsAfter((ir) => withSuccessor(ir, taskId(ir, { type: annotated(ir) })))).toEqual(
+      [],
+    );
+  });
+
+  test("a deprecation's since is not after its sunset", () => {
+    expect(
+      violationsAfter((ir) => {
+        node(ir, DEPRECATED).since = "2027-02-01";
+      }),
+    ).toEqual(at("ir.deprecation.since", DEPRECATED));
+    expect(
+      violationsAfter((ir) => {
+        node(ir, DEPRECATED).since = node(ir, DEPRECATED).sunset;
+      }),
+    ).toEqual([]);
+  });
+
+  test("a deprecation date that is no calendar day breaks ir.deprecation.since", () => {
+    expect(
+      violationsAfter((ir) => {
+        Object.assign(node(ir, DEPRECATED), { since: "2026-02-30", sunset: "2027-02-29" });
+      }),
+    ).toEqual([
+      { id: "ir.deprecation.since", pointer: `${DEPRECATED}/since` },
+      { id: "ir.deprecation.since", pointer: `${DEPRECATED}/sunset` },
+    ]);
+  });
+});
+
+describe("error roles and retry headers", () => {
+  const each = (as: Json): Json => ({ kind: "each", of: "issues", as });
+  const item = { kind: "slot", slot: "item", path: ["pointer"] };
+
+  test("a role binds one code per operation", () => {
+    expect(
+      violationsAfter((ir) => {
+        list(ir, `${INTERNAL}/roles`).push({ role: "stateConflict" });
+      }),
+    ).toEqual(at("ir.operation.role-once", `${INTERNAL}/roles/1`));
+  });
+
+  test("a role twice in one element breaks ir.operation.role-once", () => {
+    expect(
+      violationsAfter((ir) => {
+        list(ir, `${INTERNAL}/roles`).push({ role: "undeclaredStatus" });
+      }),
+    ).toEqual(at("ir.operation.role-once", `${INTERNAL}/roles/1`));
+  });
+
+  test("role params if and only if the code declares params", () => {
+    expect(
+      violationsAfter((ir) => {
+        delete node(ir, `${LOCKED}/roles/0`).params;
+        node(ir, `${INTERNAL}/roles/0`).params = { kind: "object", members: [] };
+      }),
+    ).toEqual([
+      { id: "ir.error.role-params", pointer: `${LOCKED}/roles/0` },
+      { id: "ir.error.role-params", pointer: `${INTERNAL}/roles/0` },
+    ]);
+  });
+
+  test("a nested each in role params breaks ir.error.role-params", () => {
+    expect(
+      violationsAfter((ir) => {
+        node(ir, `${LOCKED}/roles/0`).params = {
+          kind: "object",
+          members: [{ name: { kind: "text", text: "issues" }, value: each(each(item)) }],
+        };
+      }),
+    ).toEqual(at("ir.error.role-params", `${LOCKED}/roles/0/params/members/0/value/as`));
+    // Two lists side by side stay linear in the role data.
+    expect(
+      violationsAfter((ir) => {
+        node(ir, `${LOCKED}/roles/0`).params = { kind: "array", items: [each(item), each(item)] };
+      }),
+    ).toEqual([]);
+  });
+
+  const RETRY_HEADER = `${THROTTLED}/retryHeader`;
+  const BOTH_RETRY_HEADERS = [
+    { id: "ir.error.retry-header", pointer: "/operations/0/errors/0/retryHeader" },
+    { id: "ir.error.retry-header", pointer: RETRY_HEADER },
+  ];
+  const retryViolations = (change: (ir: Json) => void) =>
+    violationsAfter(change).filter(({ id }) => id === "ir.error.retry-header");
+
+  test("a retry header on a bucket 429 with a 0 to safe-maximum integer param is valid", () => {
+    expect(violationsAfter(() => {})).toEqual([]);
+  });
+
+  test("a retry header on a non-429 code breaks ir.error.retry-header", () => {
+    expect(
+      retryViolations((ir) => {
+        node(ir, "/errors/tasks.throttled/http").status = 503;
+      }),
+    ).toEqual(BOTH_RETRY_HEADERS);
+  });
+
+  test("a retry header naming an optional or nullable param breaks ir.error.retry-header", () => {
+    expect(
+      retryViolations((ir) => {
+        node(ir, RETRY_AFTER).optional = true;
+      }),
+    ).toEqual(BOTH_RETRY_HEADERS);
+    expect(
+      retryViolations((ir) => {
+        node(ir, RETRY_AFTER).nullable = true;
+      }),
+    ).toEqual(BOTH_RETRY_HEADERS);
+    expect(
+      retryViolations((ir) => {
+        node(ir, RETRY_HEADER).param = "missing";
+      }),
+    ).toEqual(at("ir.error.retry-header", RETRY_HEADER));
+  });
+
+  test("a retry header with a non-integer param breaks ir.error.retry-header", () => {
+    expect(
+      retryViolations((ir) => {
+        node(ir, RETRY_AFTER).type = {
+          kind: "scalar",
+          type: "number",
+          refinements: { minimum: "0" },
+        };
+      }),
+    ).toEqual(BOTH_RETRY_HEADERS);
+    expect(
+      retryViolations((ir) => {
+        node(ir, `${RETRY_AFTER}/type`).format = "int64";
+      }),
+    ).toEqual(BOTH_RETRY_HEADERS);
+  });
+
+  test("a retry header with a param without minimum or with a negative minimum breaks ir.error.retry-header", () => {
+    for (const minimum of [undefined, "-1"])
+      expect(
+        retryViolations((ir) => {
+          node(ir, `${RETRY_AFTER}/type/refinements`).minimum = minimum;
+        }),
+        String(minimum),
+      ).toEqual(BOTH_RETRY_HEADERS);
+  });
+
+  test("a retry header with a param without maximum or past the safe maximum breaks ir.error.retry-header", () => {
+    for (const maximum of [undefined, "9007199254740992", "1e300"])
+      expect(
+        retryViolations((ir) => {
+          node(ir, `${RETRY_AFTER}/type/refinements`).maximum = maximum;
+        }),
+        String(maximum),
+      ).toEqual(BOTH_RETRY_HEADERS);
+  });
+
+  test("a retry header derived from another derivation breaks ir.error.retry-header", () => {
+    expect(
+      retryViolations((ir) => {
+        node(ir, `${RETRY_HEADER}/derivedFrom`).derivation = "requirement.errors";
+      }),
+    ).toEqual(at("ir.error.retry-header", RETRY_HEADER));
+  });
+});

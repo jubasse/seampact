@@ -1,8 +1,9 @@
-import type {
-  DraftIR,
-  DraftOperationInput,
-  PassPart,
-  PassReadonly,
+import {
+  type DraftIR,
+  type DraftOperationInput,
+  type PassPart,
+  type PassReadonly,
+  pipelineCopy,
 } from "../../../pipeline/seam.js";
 import { accessRightsCheckBucketKeys } from "./bucket-keys.js";
 import { type AccessRightsCatalogues, accessRightsCatalogues } from "./catalogues.js";
@@ -81,6 +82,7 @@ export const accessRightsPass: PassPart<"access.rights"> = {
     "operations[].input.schema.unknownKeys",
     "operations[].input.proofs",
     "operations[].paging.sortKeys[].right",
+    "operations[].paging.sortKeys[].subject",
     "operations[].paging.sortKeys[].derivedFrom",
   ],
   run: (draft, context) => {
@@ -221,12 +223,14 @@ function writeSortKeyRights(
   operation: DraftIR["operations"][number],
   rights: AccessRightsSortKeyRights,
 ): void {
-  for (const [index, { right, derivedFrom }] of rights) {
+  for (const [index, { right, subject, derivedFrom }] of rights) {
     const sortKey = operation.paging?.sortKeys[index];
 
     if (sortKey === undefined)
       throw new Error(`access.rights found no sort key ${index} on operation ${operation.id}`);
     sortKey.right = right;
+
+    if (subject !== undefined) sortKey.subject = pipelineCopy(subject);
 
     if (derivedFrom !== undefined) sortKey.derivedFrom = derivedFrom;
   }

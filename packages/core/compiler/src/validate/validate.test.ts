@@ -398,6 +398,12 @@ describe("validate stage", () => {
       "/surfaces/app/routes/$include",
     ],
     [
+      "a successor relation that is no registered relation name",
+      { conventions: { deprecation: { successorRel: "Bad Rel" } } },
+      validateRules.invalidValue,
+      "/conventions/deprecation/successorRel",
+    ],
+    [
       "a wrong type",
       api({ method: "get", internal: "yes", output: "H" }),
       validateRules.wrongType,

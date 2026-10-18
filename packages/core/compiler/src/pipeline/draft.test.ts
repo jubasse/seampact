@@ -1,6 +1,6 @@
 import type { ContractIR, IrWriter, UnknownVariant } from "@seampact/spec/ir";
 import { expect, test } from "vitest";
-import { createDraftIR, type DraftIR, type DraftOperation } from "./draft.js";
+import { createDraftIR, type DraftApi, type DraftIR, type DraftOperation } from "./draft.js";
 
 const origin: IrWriter.Origin = { layer: "api", pointer: "/surfaces/app/routes/health" };
 
@@ -26,14 +26,18 @@ test("writer view refuses unknown variants", () => {
 });
 
 test("a complete draft, with finalize's members, is a ContractIR", () => {
-  type Complete = Omit<Required<DraftIR>, "operations"> & { operations: IrWriter.Operation[] };
+  type Complete = Omit<Required<DraftIR>, "api" | "operations"> & {
+    api: IrWriter.Api;
+    operations: IrWriter.Operation[];
+  };
   type FinalizeMembers = "irVersion" | "irRevision" | "kinds" | "features";
   const assignable: [
     Complete extends Omit<ContractIR, FinalizeMembers> ? true : false,
     IrWriter.Operation extends DraftOperation ? true : false,
-  ] = [true, true];
+    IrWriter.Api extends DraftApi ? true : false,
+  ] = [true, true, true];
 
-  expect(assignable).toEqual([true, true]);
+  expect(assignable).toEqual([true, true, true]);
 });
 
 test("a new draft holds empty catalogues without a prototype", () => {

@@ -2533,7 +2533,7 @@
         "since": {
           "$ref": "common.schema.json#/$defs/date",
           "$comment": "ADR 0002 section 10",
-          "description": "The day the operation is deprecated."
+          "description": "The day the operations below are deprecated."
         },
         "sunset": {
           "$ref": "common.schema.json#/$defs/date",

@@ -12,7 +12,7 @@ import {
 // `degradable` (ADR 0002 section 10, SCN-085): paths of optional properties of the success data, each a dotted
 // path through object properties, through every variant of a union. A degraded response says which parts it left
 // out: in the format's `degraded` meta field, else in `conventions.degradedHeader`, which is then required (ADR 0006
-// section 7).
+// section 7). The header is written whenever the convention is set, so a target fills both.
 
 const DEGRADED_FILL = "degraded";
 
@@ -40,10 +40,9 @@ export function treeNodesDegradable(
     checkPath(site, path, `${pointer}/${index}`, success?.body);
   });
 
-  if (
-    !formatFillsDegraded(site, format) &&
-    site.context.conventions.get("degradedHeader") === undefined
-  )
+  const header = site.context.conventions.get("degradedHeader")?.value;
+
+  if (!formatFillsDegraded(site, format) && typeof header !== "string")
     site.context.report(
       treeNodesError({
         rule: "degradable-header",
@@ -53,7 +52,11 @@ export function treeNodesDegradable(
       }),
     );
 
-  return { paths, origin: pipelineCopy(origin) };
+  return {
+    paths,
+    ...(typeof header === "string" ? { header } : {}),
+    origin: pipelineCopy(origin),
+  };
 }
 
 function formatFillsDegraded(site: TreeNodesSite, format: string): boolean {

@@ -1,0 +1,839 @@
+{
+  "cases": [
+    {
+      "id": "slot/with-value",
+      "rule": "A slot with a value gives that value.",
+      "role": "rateLimited",
+      "data": {
+        "retryAfterMs": 1500
+      },
+      "paramsSchema": {
+        "type": "object",
+        "properties": {
+          "retryAfterMs": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": ["retryAfterMs"],
+        "additionalProperties": false
+      },
+      "template": {
+        "kind": "object",
+        "members": [
+          {
+            "name": {
+              "kind": "text",
+              "text": "retryAfterMs"
+            },
+            "value": {
+              "kind": "slot",
+              "slot": "retryAfterMs",
+              "path": []
+            }
+          }
+        ]
+      },
+      "expected": {
+        "retryAfterMs": 1500
+      }
+    },
+    {
+      "id": "slot/without-value",
+      "rule": "A slot without a value has none, and its member is omitted whatever the format's absent.",
+      "role": "forbidden",
+      "data": {},
+      "formatAbsent": "null",
+      "paramsSchema": {
+        "type": "object",
+        "properties": {
+          "pointer": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "template": {
+        "kind": "object",
+        "members": [
+          {
+            "name": {
+              "kind": "text",
+              "text": "pointer"
+            },
+            "value": {
+              "kind": "slot",
+              "slot": "pointer",
+              "path": []
+            }
+          }
+        ]
+      },
+      "expected": {}
+    },
+    {
+      "id": "text/slot-without-value",
+      "rule": "A text template with a part without a value has none.",
+      "role": "forbidden",
+      "data": {},
+      "paramsSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "template": {
+        "kind": "object",
+        "members": [
+          {
+            "name": {
+              "kind": "text",
+              "text": "message"
+            },
+            "value": {
+              "kind": "text",
+              "parts": [
+                {
+                  "kind": "text",
+                  "text": "refused at "
+                },
+                {
+                  "kind": "slot",
+                  "slot": "pointer",
+                  "path": []
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {}
+    },
+    {
+      "id": "text/number-part",
+      "rule": "A number part of a text template is its JSON text.",
+      "role": "payloadTooLarge",
+      "data": {
+        "limitBytes": 1048576
+      },
+      "paramsSchema": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": ["message"],
+        "additionalProperties": false
+      },
+      "template": {
+        "kind": "object",
+        "members": [
+          {
+            "name": {
+              "kind": "text",
+              "text": "message"
+            },
+            "value": {
+              "kind": "text",
+              "parts": [
+                {
+                  "kind": "text",
+                  "text": "at most "
+                },
+                {
+                  "kind": "slot",
+                  "slot": "limitBytes",
+                  "path": []
+                },
+                {
+                  "kind": "text",
+                  "text": " bytes"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "message": "at most 1048576 bytes"
+      }
+    },
+    {
+      "id": "array/item-without-value",
+      "rule": "An array item without a value is dropped.",
+      "role": "forbidden",
+      "data": {},
+      "paramsSchema": {
+        "type": "object",
+        "properties": {
+          "pointers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["pointers"],
+        "additionalProperties": false
+      },
+      "template": {
+        "kind": "object",
+        "members": [
+          {
+            "name": {
+              "kind": "text",
+              "text": "pointers"
+            },
+            "value": {
+              "kind": "array",
+              "items": [
+                {
+                  "kind": "slot",
+                  "slot": "pointer",
+                  "path": []
+                },
+                {
+                  "kind": "literal",
+                  "value": "/"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "pointers": ["/"]
+      }
+    },
+    {
+      "id": "each/empty",
+      "rule": "An each over an empty array gives an empty array.",
+      "role": "schemaInvalid",
+      "data": {
+        "issues": []
+      },
+      "paramsSchema": {
+        "type": "object",
+        "properties": {
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "pointer": {
+                  "type": "string"
+                },
+                "rule": {
+                  "type": "string"
+                }
+              },
+              "required": ["pointer", "rule"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["issues"],
+        "additionalProperties": false
+      },
+      "template": {
+        "kind": "object",
+        "members": [
+          {
+            "name": {
+              "kind": "text",
+              "text": "issues"
+            },
+            "value": {
+              "kind": "each",
+              "of": "issues",
+              "as": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "pointer"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "item",
+                      "path": ["pointer"]
+                    }
+                  },
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "rule"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "item",
+                      "path": ["rule"]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "issues": []
+      }
+    },
+    {
+      "id": "each/slot-without-value",
+      "rule": "An each over a slot without a value has none.",
+      "role": "schemaInvalid",
+      "data": {},
+      "paramsSchema": {
+        "type": "object",
+        "properties": {
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "pointer": {
+                  "type": "string"
+                },
+                "rule": {
+                  "type": "string"
+                }
+              },
+              "required": ["pointer", "rule"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "template": {
+        "kind": "object",
+        "members": [
+          {
+            "name": {
+              "kind": "text",
+              "text": "issues"
+            },
+            "value": {
+              "kind": "each",
+              "of": "issues",
+              "as": {
+                "kind": "slot",
+                "slot": "item",
+                "path": ["pointer"]
+              }
+            }
+          }
+        ]
+      },
+      "expected": {}
+    },
+    {
+      "id": "each/compiled-example",
+      "rule": "The compiled grammar example: one object per issue, its members read from item.",
+      "role": "schemaInvalid",
+      "data": {
+        "issues": [
+          {
+            "in": "body",
+            "pointer": "/title",
+            "rule": "required"
+          },
+          {
+            "in": "query",
+            "pointer": "/limit",
+            "rule": "maximum"
+          }
+        ]
+      },
+      "paramsSchema": {
+        "type": "object",
+        "properties": {
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "pointer": {
+                  "type": "string"
+                },
+                "rule": {
+                  "type": "string"
+                }
+              },
+              "required": ["pointer", "rule"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["issues"],
+        "additionalProperties": false
+      },
+      "template": {
+        "kind": "object",
+        "members": [
+          {
+            "name": {
+              "kind": "text",
+              "text": "issues"
+            },
+            "value": {
+              "kind": "each",
+              "of": "issues",
+              "as": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "pointer"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "item",
+                      "path": ["pointer"]
+                    }
+                  },
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "rule"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "item",
+                      "path": ["rule"]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "issues": [
+          {
+            "pointer": "/title",
+            "rule": "required"
+          },
+          {
+            "pointer": "/limit",
+            "rule": "maximum"
+          }
+        ]
+      }
+    },
+    {
+      "id": "slot/path-without-value",
+      "rule": "A slot path reaching no member has no value.",
+      "role": "schemaInvalid",
+      "data": {
+        "issues": [
+          {
+            "in": "body",
+            "pointer": "/title",
+            "rule": "required"
+          }
+        ]
+      },
+      "paramsSchema": {
+        "type": "object",
+        "properties": {
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "pointer": {
+                  "type": "string"
+                },
+                "hint": {
+                  "type": "string"
+                }
+              },
+              "required": ["pointer"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["issues"],
+        "additionalProperties": false
+      },
+      "template": {
+        "kind": "object",
+        "members": [
+          {
+            "name": {
+              "kind": "text",
+              "text": "issues"
+            },
+            "value": {
+              "kind": "each",
+              "of": "issues",
+              "as": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "pointer"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "item",
+                      "path": ["pointer"]
+                    }
+                  },
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "hint"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "slot": "item",
+                      "path": ["hint"]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "issues": [
+          {
+            "pointer": "/title"
+          }
+        ]
+      }
+    },
+    {
+      "id": "merge/without-value",
+      "rule": "A merge of a slot without a value adds no member.",
+      "role": "forbidden",
+      "data": {},
+      "paramsSchema": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "pointer": {
+            "type": "string"
+          }
+        },
+        "required": ["reason"],
+        "additionalProperties": false
+      },
+      "template": {
+        "kind": "object",
+        "members": [
+          {
+            "name": {
+              "kind": "text",
+              "text": "reason"
+            },
+            "value": {
+              "kind": "literal",
+              "value": "restricted"
+            }
+          }
+        ],
+        "merge": "pointer"
+      },
+      "expected": {
+        "reason": "restricted"
+      }
+    },
+    {
+      "id": "merge/item",
+      "rule": "A merge of an object slot adds its members.",
+      "role": "schemaInvalid",
+      "data": {
+        "issues": [
+          {
+            "in": "body",
+            "pointer": "/title",
+            "rule": "required"
+          }
+        ]
+      },
+      "paramsSchema": {
+        "type": "object",
+        "properties": {
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "in": {
+                  "type": "string"
+                },
+                "pointer": {
+                  "type": "string"
+                },
+                "rule": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                }
+              },
+              "required": ["source"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["issues"],
+        "additionalProperties": false
+      },
+      "template": {
+        "kind": "object",
+        "members": [
+          {
+            "name": {
+              "kind": "text",
+              "text": "issues"
+            },
+            "value": {
+              "kind": "each",
+              "of": "issues",
+              "as": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "source"
+                    },
+                    "value": {
+                      "kind": "literal",
+                      "value": "request"
+                    }
+                  }
+                ],
+                "merge": "item"
+              }
+            }
+          }
+        ]
+      },
+      "expected": {
+        "issues": [
+          {
+            "source": "request",
+            "in": "body",
+            "pointer": "/title",
+            "rule": "required"
+          }
+        ]
+      }
+    },
+    {
+      "id": "object/no-member-left",
+      "rule": "An object left with no member has no value.",
+      "role": "forbidden",
+      "data": {},
+      "paramsSchema": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "object",
+            "properties": {
+              "pointer": {
+                "type": "string"
+              }
+            },
+            "required": ["pointer"]
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "template": {
+        "kind": "object",
+        "members": [
+          {
+            "name": {
+              "kind": "text",
+              "text": "detail"
+            },
+            "value": {
+              "kind": "object",
+              "members": [
+                {
+                  "name": {
+                    "kind": "text",
+                    "text": "pointer"
+                  },
+                  "value": {
+                    "kind": "slot",
+                    "slot": "pointer",
+                    "path": []
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {}
+    },
+    {
+      "id": "object/top-level-kept",
+      "rule": "The top-level params object is kept as an empty object.",
+      "role": "sortKeyForbidden",
+      "data": {},
+      "paramsSchema": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "template": {
+        "kind": "object",
+        "members": [
+          {
+            "name": {
+              "kind": "text",
+              "text": "key"
+            },
+            "value": {
+              "kind": "slot",
+              "slot": "key",
+              "path": []
+            }
+          }
+        ]
+      },
+      "expected": {}
+    },
+    {
+      "id": "by-name",
+      "rule": "A binding without an authored template is the by-name object template: one member per param with a datum of the same name, in the params schema's property order.",
+      "role": "schemaInvalid",
+      "byName": true,
+      "data": {
+        "issues": [
+          {
+            "in": "body",
+            "pointer": "/title",
+            "rule": "required"
+          }
+        ]
+      },
+      "paramsSchema": {
+        "type": "object",
+        "properties": {
+          "issues": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "limit": {
+            "type": "integer"
+          }
+        },
+        "required": ["issues"],
+        "additionalProperties": false
+      },
+      "template": {
+        "kind": "object",
+        "members": [
+          {
+            "name": {
+              "kind": "text",
+              "text": "issues"
+            },
+            "value": {
+              "kind": "slot",
+              "slot": "issues",
+              "path": []
+            }
+          }
+        ]
+      },
+      "expected": {
+        "issues": [
+          {
+            "in": "body",
+            "pointer": "/title",
+            "rule": "required"
+          }
+        ]
+      }
+    },
+    {
+      "id": "each/nested-refused",
+      "rule": "An each inside another each's as is refused.",
+      "role": "schemaInvalid",
+      "data": {
+        "issues": [
+          {
+            "in": "body",
+            "pointer": "/title",
+            "rule": "required"
+          },
+          {
+            "in": "query",
+            "pointer": "/limit",
+            "rule": "maximum"
+          }
+        ]
+      },
+      "paramsSchema": {
+        "type": "object",
+        "properties": {
+          "issues": {
+            "type": "array"
+          }
+        },
+        "required": ["issues"],
+        "additionalProperties": false
+      },
+      "template": {
+        "kind": "object",
+        "members": [
+          {
+            "name": {
+              "kind": "text",
+              "text": "issues"
+            },
+            "value": {
+              "kind": "each",
+              "of": "issues",
+              "as": {
+                "kind": "each",
+                "of": "issues",
+                "as": {
+                  "kind": "slot",
+                  "slot": "item",
+                  "path": ["pointer"]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "refused": "ir.error.role-params",
+      "refusedAt": "/members/0/value/as"
+    }
+  ]
+}

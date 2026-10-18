@@ -1,7 +1,9 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
+import everyMember from "../../schemas/ir/examples/every-member.ir.json" with { type: "json" };
 import { isSchemaNode, walkSchema } from "./schema-walk.js";
 import { IR_SCHEMA_DOCUMENTS, IR_SCHEMA_ID, type SchemaNode } from "./schemas.js";
-import { createAjv } from "./test-support.js";
+import { createAjv, mutateAt, validateIr } from "./test-support.js";
 import { KNOWN_VALUES_KEYWORD, MUST_ACT_KEYWORD, strictIrSchemas } from "./validation.js";
 
 const defs = new Map<string, SchemaNode>();
@@ -35,6 +37,8 @@ const MUST_ACT = [
   "InputPolicy",
   "Idempotency",
   "Csrf",
+  "FieldRightAlways",
+  "ValueSourceIn",
 ];
 // Map keys with no grammar in ADR 0002 section 4 (principal variant names); readers use Object.hasOwn.
 const KEYS_WITHOUT_GRAMMAR = ["VariantId"];
@@ -343,5 +347,102 @@ describe("IR schema files", () => {
     }
 
     expect(offenders).toEqual([]);
+  });
+
+  test("identity header semantics are response header semantics", () => {
+    // An identity header a response carries keeps its semantic on Response.headers.
+    const identity = def("HeaderSemantic")[KNOWN_VALUES_KEYWORD] as string[];
+    const response = def("ResponseHeaderSemantic")[KNOWN_VALUES_KEYWORD] as string[];
+
+    expect(response.slice(0, identity.length)).toEqual(identity);
+  });
+
+  test("every IR array has a stated order", () => {
+    // ADR 0004 section 9 states the order of each array by `Definition.member`; a new array fails here until stated.
+    const stated = statedArrayOrders();
+    const unstated: string[] = [];
+    const reached = new Set<string>();
+
+    for (const document of IR_SCHEMA_DOCUMENTS)
+      walkSchema(document, (node, pointer) => {
+        if (node.type !== "array") return;
+        const key = arrayKey(pointer);
+        const row = key.endsWith(".examples") ? "*.examples" : key;
+
+        if (stated.has(row)) reached.add(row);
+        else unstated.push(key);
+      });
+
+    expect(unstated).toEqual([]);
+    expect([...stated].filter((row) => !reached.has(row))).toEqual([]);
+  });
+});
+
+const ORDERING_SECTION = new URL(
+  "../../../../../docs/ir/09-canonical-ids-and-ordering.md",
+  import.meta.url,
+);
+const ORDER_ROW = /^\| `([A-Za-z*]+\.[A-Za-z]+)` \| (Kept|Sorted)\b/gmu;
+
+function statedArrayOrders(): Set<string> {
+  const text = readFileSync(ORDERING_SECTION, "utf8");
+
+  return new Set([...text.matchAll(ORDER_ROW)].map((match) => String(match[1])));
+}
+
+// `/$defs/Operation/properties/errors` is `Operation.errors`; an array below a member keeps its member's key.
+function arrayKey(pointer: string): string {
+  const [, , definition, keyword, member] = pointer.split("/");
+
+  return keyword === "properties" ? `${definition}.${member}` : String(definition);
+}
+
+describe("IR instance forms", () => {
+  const sample = (): unknown => structuredClone(everyMember);
+
+  test("an api without wire is refused", () => {
+    const ir = mutateAt(sample(), "/api", (api) => {
+      delete api.wire;
+    });
+
+    expect(validateIr(ir, "open")).toMatchObject({
+      valid: false,
+      problems: [{ pointer: "/api", keyword: "required" }],
+    });
+  });
+
+  test("a degradable header name that is no token is refused", () => {
+    const ir = mutateAt(sample(), "/operations/2/degradable", (degradable) => {
+      degradable.header = "X Degraded";
+    });
+
+    expect(validateIr(ir, "open")).toMatchObject({
+      valid: false,
+      problems: [{ pointer: "/operations/2/degradable/header", keyword: "pattern" }],
+    });
+  });
+
+  test("a successor rel outside the registered name form is refused", () => {
+    for (const rel of ["Successor", "successor version", "1successor", ""]) {
+      const ir = mutateAt(sample(), "/operations/2/deprecated", (deprecated) => {
+        deprecated.successorRel = rel;
+      });
+
+      expect(validateIr(ir, "open"), rel).toMatchObject({
+        valid: false,
+        problems: [{ pointer: "/operations/2/deprecated/successorRel", keyword: "pattern" }],
+      });
+    }
+  });
+
+  test("empty roles are refused", () => {
+    const ir = mutateAt(sample(), "/operations/2/errors/2", (error) => {
+      error.roles = [];
+    });
+
+    expect(validateIr(ir, "open")).toMatchObject({
+      valid: false,
+      problems: [{ pointer: "/operations/2/errors/2/roles", keyword: "minItems" }],
+    });
   });
 });

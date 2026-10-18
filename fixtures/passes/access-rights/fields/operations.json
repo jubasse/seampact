@@ -75,6 +75,7 @@
           "pointer": "/surfaces/app/routes/workspaces/member/routes/notes/ops/list/sortable/1"
         },
         "right": "notes.read",
+        "subject": { "source": { "in": "scope", "name": "workspace" } },
         "derivedFrom": {
           "derivation": "sortKey.restricted",
           "from": [

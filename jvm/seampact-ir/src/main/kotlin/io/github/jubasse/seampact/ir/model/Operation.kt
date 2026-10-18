@@ -1,4 +1,4 @@
-// Generated from packages/core/spec/schemas/ir/operation.schema.json by scripts/ir-models for IR revision 3. Do not edit.
+// Generated from packages/core/spec/schemas/ir/operation.schema.json by scripts/ir-models for IR revision 4. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 @file:OptIn(ExperimentalSerializationApi::class)
 @file:UseSerializers(IrIntegerSerializer::class)
@@ -187,13 +187,19 @@ internal object CsrfSerializer : IrUnionSerializer<Csrf>("Csrf", "kind") {
 @Serializable
 public data class Degradable(
     public val paths: List<String>,
+    /** The header listing degraded parts, an RFC 9110 token; required when the operation's format has no 'degraded' meta member (invariant ir.degradable.header). */
+    public val header: String? = null,
     public val origin: Origin,
 )
 
 @Serializable
 public data class Deprecation(
+    /** The day the operation is deprecated, a calendar date, the Deprecation header's date (RFC 9745). */
+    public val since: String,
     public val sunset: String,
     public val successor: OperationRef? = null,
+    /** The Link rel of the successor, an RFC 8288 registered relation name; present if and only if 'successor' is (invariant ir.deprecation.headers). */
+    public val successorRel: String? = null,
     public val origin: Origin,
 )
 
@@ -222,6 +228,14 @@ public data class DerivedIdempotency(
         require(kind == "derived") { "DerivedIdempotency: kind is \"derived\", got \"" + kind + "\"" }
     }
 }
+
+/** A role this code answers on the operation and the template filling its params from the role's data (ADR 0006 section 6). */
+@Serializable
+public data class ErrorRoleBinding(
+    public val role: ErrorRole,
+    /** Present if and only if the code declares params (invariant ir.error.role-params). */
+    public val params: Template? = null,
+)
 
 @Serializable
 public data class ExemptCsrf(
@@ -255,8 +269,36 @@ public data class FieldRight(
     public val subject: FieldRightSubject? = null,
     public val direction: Direction,
     public val inputPolicy: InputPolicy? = null,
+    public val always: FieldRightAlways? = null,
     public val derivedFrom: DerivedFrom,
 )
+
+/** An outcome that needs no decide call: 'absent', the field is never sent on this operation (ADR 0003 section 6). Must act: an unknown value makes the IR invalid for every reader. */
+@Serializable(with = FieldRightAlwaysSerializer::class)
+public sealed interface FieldRightAlways {
+    public val value: String
+
+    public data object ABSENT : FieldRightAlways { override val value: String = "absent" }
+
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : FieldRightAlways {
+        init {
+            require(FieldRightAlways.known.none { it.value == value }) { "FieldRightAlways.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
+
+    public companion object {
+        /** The values this IR revision knows, in the schema's order. */
+        public val known: List<FieldRightAlways> by lazy { listOf(ABSENT) }
+
+        public fun of(value: String): FieldRightAlways = when (value) {
+            "absent" -> ABSENT
+            else -> Unknown(value)
+        }
+    }
+}
+
+internal object FieldRightAlwaysSerializer : IrOpenEnumSerializer<FieldRightAlways>("FieldRightAlways", FieldRightAlways::of, FieldRightAlways::value)
 
 @Serializable
 public data class FieldRightSubject(
@@ -597,6 +639,9 @@ public data class Operation(
 public data class OperationError(
     public val code: ErrorCode,
     @Serializable(with = IrOptionalOpaqueSerializer::class) public val example: JsonElement? = null,
+    /** Sorted by role; absent when the code answers no role here. */
+    public val roles: List<ErrorRoleBinding>? = null,
+    public val retryHeader: RetryHeader? = null,
     public val derivedFrom: DerivedFrom? = null,
     public val origin: Origin? = null,
 )
@@ -977,10 +1022,49 @@ public data class ResponseHeader(
     public val name: String,
     public val type: TypeUse,
     public val required: Boolean,
-    public val semantic: String? = null,
+    public val semantic: ResponseHeaderSemantic? = null,
     public val origin: Origin? = null,
     public val derivedFrom: DerivedFrom? = null,
 )
+
+/** What a response header carries: an identity header's semantic (declarations HeaderSemantic) or a deprecation header (ADR 0004 section 7). */
+@Serializable(with = ResponseHeaderSemanticSerializer::class)
+public sealed interface ResponseHeaderSemantic {
+    public val value: String
+
+    public data object DEADLINE : ResponseHeaderSemantic { override val value: String = "deadline" }
+    public data object TRACE_CONTEXT : ResponseHeaderSemantic { override val value: String = "traceContext" }
+    public data object ACTOR_SURFACE : ResponseHeaderSemantic { override val value: String = "actorSurface" }
+    public data object VERSION_TOKEN : ResponseHeaderSemantic { override val value: String = "versionToken" }
+    public data object DEPRECATION : ResponseHeaderSemantic { override val value: String = "deprecation" }
+    public data object SUNSET : ResponseHeaderSemantic { override val value: String = "sunset" }
+    public data object SUCCESSOR_LINK : ResponseHeaderSemantic { override val value: String = "successorLink" }
+
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : ResponseHeaderSemantic {
+        init {
+            require(ResponseHeaderSemantic.known.none { it.value == value }) { "ResponseHeaderSemantic.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
+
+    public companion object {
+        /** The values this IR revision knows, in the schema's order. */
+        public val known: List<ResponseHeaderSemantic> by lazy { listOf(DEADLINE, TRACE_CONTEXT, ACTOR_SURFACE, VERSION_TOKEN, DEPRECATION, SUNSET, SUCCESSOR_LINK) }
+
+        public fun of(value: String): ResponseHeaderSemantic = when (value) {
+            "deadline" -> DEADLINE
+            "traceContext" -> TRACE_CONTEXT
+            "actorSurface" -> ACTOR_SURFACE
+            "versionToken" -> VERSION_TOKEN
+            "deprecation" -> DEPRECATION
+            "sunset" -> SUNSET
+            "successorLink" -> SUCCESSOR_LINK
+            else -> Unknown(value)
+        }
+    }
+}
+
+internal object ResponseHeaderSemanticSerializer : IrOpenEnumSerializer<ResponseHeaderSemantic>("ResponseHeaderSemantic", ResponseHeaderSemantic::of, ResponseHeaderSemantic::value)
 
 /** The format shape of a response; 'binary' and 'redirect' bypass the format (ADR 0004 section 8). */
 @Serializable(with = ResponseShapeSerializer::class)
@@ -1021,6 +1105,45 @@ public sealed interface ResponseShape {
 
 internal object ResponseShapeSerializer : IrOpenEnumSerializer<ResponseShape>("ResponseShape", ResponseShape::of, ResponseShape::value)
 
+/** The retry header of a 429 from a bucket rule (grammar 13, rateLimit). */
+@Serializable
+public data class RetryHeader(
+    public val name: String,
+    /** The required member of the code's params holding the delay in integer milliseconds. */
+    public val param: String,
+    public val unit: RetryUnit,
+    public val derivedFrom: DerivedFrom,
+)
+
+/** The unit of a retry header; 's' rounds the millisecond delay up. */
+@Serializable(with = RetryUnitSerializer::class)
+public sealed interface RetryUnit {
+    public val value: String
+
+    public data object S : RetryUnit { override val value: String = "s" }
+    public data object MS : RetryUnit { override val value: String = "ms" }
+
+    /** A value this IR revision does not know; a known value is always its constant. */
+    public data class Unknown(override val value: String) : RetryUnit {
+        init {
+            require(RetryUnit.known.none { it.value == value }) { "RetryUnit.Unknown: \"" + value + "\" is a known value" }
+        }
+    }
+
+    public companion object {
+        /** The values this IR revision knows, in the schema's order. */
+        public val known: List<RetryUnit> by lazy { listOf(S, MS) }
+
+        public fun of(value: String): RetryUnit = when (value) {
+            "s" -> S
+            "ms" -> MS
+            else -> Unknown(value)
+        }
+    }
+}
+
+internal object RetryUnitSerializer : IrOpenEnumSerializer<RetryUnit>("RetryUnit", RetryUnit::of, RetryUnit::value)
+
 @Serializable
 public data class RightRequirement(
     @Required @EncodeDefault public override val kind: String = "right",
@@ -1059,6 +1182,10 @@ public data class RuleRequirement(
 public data class SortKey(
     public val key: String,
     public val right: RightId? = null,
+    /** The params of 'right', validated against the right's params schema; only with 'right' (ADR 0002 section 10). */
+    @Serializable(with = IrOptionalOpaqueSerializer::class) public val params: JsonElement? = null,
+    /** Where the right's subject is read on the request; only with 'right' (ADR 0003 section 6). */
+    public val subject: FieldRightSubject? = null,
     public val derivedFrom: DerivedFrom? = null,
     public val origin: Origin? = null,
 )

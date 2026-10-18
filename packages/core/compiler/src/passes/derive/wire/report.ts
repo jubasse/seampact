@@ -14,7 +14,8 @@ export type DeriveWireRule =
   | "cache-method"
   | "cache-family"
   | "cache-freshness"
-  | "cache-sensitive";
+  | "cache-sensitive"
+  | "wire-convention-unsupported";
 
 export interface DeriveWireRelated {
   /** A pointer of the merged raw tree. */

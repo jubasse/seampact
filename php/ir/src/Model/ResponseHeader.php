@@ -1,6 +1,6 @@
 <?php
 
-// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 3. Do not edit.
+// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 4. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 
 declare(strict_types=1);
@@ -13,7 +13,7 @@ final readonly class ResponseHeader
      * @param string $name
      * @param TypeUse $type
      * @param bool $required
-     * @param string|null $semantic
+     * @param ResponseHeaderSemantic|null $semantic
      * @param Origin|null $origin
      * @param DerivedFrom|null $derivedFrom
      */
@@ -21,7 +21,7 @@ final readonly class ResponseHeader
         public string $name,
         public TypeUse $type,
         public bool $required,
-        public ?string $semantic = null,
+        public ?ResponseHeaderSemantic $semantic = null,
         public ?Origin $origin = null,
         public ?DerivedFrom $derivedFrom = null,
     ) {
@@ -35,7 +35,7 @@ final readonly class ResponseHeader
             name: IrHydration::string(IrHydration::required($members, 'name', 'ResponseHeader'), 'ResponseHeader.name'),
             type: TypeUse::fromJson(IrHydration::required($members, 'type', 'ResponseHeader')),
             required: IrHydration::boolean(IrHydration::required($members, 'required', 'ResponseHeader'), 'ResponseHeader.required'),
-            semantic: IrHydration::optional($members, 'semantic', static fn (mixed $item): string => IrHydration::string($item, 'ResponseHeader.semantic')),
+            semantic: IrHydration::optional($members, 'semantic', static fn (mixed $item): ResponseHeaderSemantic => ResponseHeaderSemantic::fromJson($item)),
             origin: IrHydration::optional($members, 'origin', static fn (mixed $item): Origin => Origin::fromJson($item)),
             derivedFrom: IrHydration::optional($members, 'derivedFrom', static fn (mixed $item): DerivedFrom => DerivedFrom::fromJson($item)),
         );
@@ -48,7 +48,7 @@ final readonly class ResponseHeader
         $json->{'type'} = $this->type->toJson();
         $json->{'required'} = $this->required;
         if ($this->semantic !== null) {
-            $json->{'semantic'} = $this->semantic;
+            $json->{'semantic'} = $this->semantic->toJson();
         }
         if ($this->origin !== null) {
             $json->{'origin'} = $this->origin->toJson();

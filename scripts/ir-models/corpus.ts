@@ -281,6 +281,18 @@ function supportCases(): CaseInput[] {
     },
     edit("operation/kind-unknown", EVERY_MEMBER, "/operations/0/kind", "channel"),
     edit("operation/feature-unknown", EVERY_MEMBER, "/operations/0/features", ["streaming"]),
+    edit(
+      "field-right/always-unknown",
+      EVERY_MEMBER,
+      "/operations/2/fieldRights/2/always",
+      "hidden",
+    ),
+    edit(
+      "value-source/in-unknown",
+      EVERY_MEMBER,
+      "/operations/2/fieldRights/1/subject/source/in",
+      "cookie",
+    ),
   ];
 }
 

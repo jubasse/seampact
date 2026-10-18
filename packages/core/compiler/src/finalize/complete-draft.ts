@@ -8,13 +8,14 @@ import { finalizeIr } from "./finalize.js";
 
 // Test support, outside every barrel: a complete draft of the reference contract for finalize's tests. It is the
 // draft fixture after access (`fixtures/draft/reference/`) with stand-ins for the members of the derive halves,
-// which are not in a fixture: each operation's `errors` (none) and `maturity`, each body's `bodyLimitBytes`, each
-// concurrency's `derivedFrom`, and a core declaration for each error code the draft names. Beside it, the raw tree
-// of the reference api, which finalize locates the draft's origins in.
+// which are not in a fixture: the api's `wire` (the defaults), each operation's `errors` (none) and `maturity`, each
+// body's `bodyLimitBytes`, each concurrency's `derivedFrom`, and a core declaration for each error code the draft
+// names. Beside it, the raw tree of the reference api, which finalize locates the draft's origins in.
 
 const ERROR_CODE_DEFINITION = "ErrorCode";
 const STAND_IN_BODY_LIMIT_BYTES = 1_048_576;
 const STAND_IN_ERROR_STATUS = 400;
+const STAND_IN_API_WIRE = { int64: "string", outputEnums: "enum", urls: "relative" } as const;
 
 // The codes the draft names: by an error code member, or by the core origin of a code's params schema.
 function namedErrorCodes(draft: DraftIR): Set<string> {
@@ -34,7 +35,12 @@ function namedErrorCodes(draft: DraftIR): Set<string> {
 }
 
 export function finalizeCompleteDraft(api: DraftFixtureApi): DraftIR {
-  const draft = draftFixture(api, "after-access");
+  return finalizeAddStandIns(draftFixture(api, "after-access"), api);
+}
+
+/** Fills the members the passes not yet written would derive, so `draft` of api `api` finalizes. */
+export function finalizeAddStandIns(draft: DraftIR, api: string): DraftIR {
+  if (draft.api !== undefined) draft.api.wire ??= { ...STAND_IN_API_WIRE };
 
   for (const operation of draft.operations) {
     const origin: Origin | undefined = operation.origin;

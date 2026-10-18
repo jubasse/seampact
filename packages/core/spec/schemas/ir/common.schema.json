@@ -233,7 +233,8 @@
         "resolver",
         "holderField"
       ],
-      "description": "Where a value is read (ADR 0002 section 4); 'resolver' only as a scope source, 'holderField' only as a field right's subject source."
+      "description": "Where a value is read (ADR 0002 section 4); 'resolver' only as a scope source, 'holderField' only as a field right's subject source.",
+      "x-seampact-must-act": true
     },
     "ValueSource": {
       "type": "object",

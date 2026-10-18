@@ -20,6 +20,7 @@ describe("deprecation headers", () => {
       name: "X-Deprecated",
       type: { kind: "scalar", type: "string", refinements: {} },
       required: true,
+      semantic: "deprecation",
       derivedFrom: {
         derivation: "deprecation.headers",
         from: [
@@ -37,6 +38,9 @@ describe("deprecation headers", () => {
       ["/surfaces/app/routes/legacy/deprecated", "/conventions/deprecation/sunsetHeader"],
       ["/surfaces/app/routes/legacy/deprecated"],
     ]);
+    expect(
+      deriveWireOperation(run, "legacy").responses?.[0]?.headers.map((header) => header.semantic),
+    ).toEqual(["deprecation", "sunset", "successorLink"]);
   });
 
   test("a successor Link on a page that has its own Link is refused at the deprecation", () => {
@@ -60,6 +64,30 @@ describe("deprecation headers", () => {
         ],
       },
     ]);
+  });
+
+  test("a sunset header named as the deprecation header is refused at the convention, never merged", () => {
+    const same = deriveWireRunContract(
+      deriveWireFixtureVariant("lifecycle", [
+        ["sunsetHeader: X-Sunset", "sunsetHeader: X-Deprecated"],
+      ]),
+    );
+
+    expect(same.diagnostics.map(deriveWireLocated)).toEqual([
+      {
+        rule: "seampact/derive/derived-name-collision",
+        pointer: "/conventions/deprecation/sunsetHeader",
+        related: [
+          "/surfaces/app/routes/legacy",
+          "/surfaces/app/routes/legacy/deprecated",
+          "/conventions/deprecation/header",
+          "/surfaces/app/routes/legacy/deprecated",
+        ],
+      },
+    ]);
+    expect(same.diagnostics[0]?.message).toBe(
+      "derivation deprecation.headers writes the header 'X-Deprecated' of operation 'legacy' twice, as 'deprecation' and as 'sunset'",
+    );
   });
 
   test("no successor, no Link; a route that is not deprecated has none", () => {

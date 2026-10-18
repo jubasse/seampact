@@ -285,10 +285,23 @@
         "name": { "type": "string" },
         "type": { "$ref": "schemas.schema.json#/$defs/TypeUse" },
         "required": { "type": "boolean" },
-        "semantic": { "type": "string" },
+        "semantic": { "$ref": "#/$defs/ResponseHeaderSemantic" },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" },
         "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
       }
+    },
+    "ResponseHeaderSemantic": {
+      "type": "string",
+      "description": "What a response header carries: an identity header's semantic (declarations HeaderSemantic) or a deprecation header (ADR 0004 section 7).",
+      "x-seampact-known": [
+        "deadline",
+        "traceContext",
+        "actorSurface",
+        "versionToken",
+        "deprecation",
+        "sunset",
+        "successorLink"
+      ]
     },
     "ResponseShape": {
       "type": "string",
@@ -320,8 +333,46 @@
       "properties": {
         "code": { "$ref": "common.schema.json#/$defs/ErrorCode" },
         "example": {},
+        "roles": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/ErrorRoleBinding" },
+          "description": "Sorted by role; absent when the code answers no role here."
+        },
+        "retryHeader": { "$ref": "#/$defs/RetryHeader" },
         "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
+      }
+    },
+    "ErrorRoleBinding": {
+      "type": "object",
+      "description": "A role this code answers on the operation and the template filling its params from the role's data (ADR 0006 section 6).",
+      "required": ["role"],
+      "properties": {
+        "role": { "$ref": "declarations.schema.json#/$defs/ErrorRole" },
+        "params": {
+          "$ref": "formats.schema.json#/$defs/Template",
+          "description": "Present if and only if the code declares params (invariant ir.error.role-params)."
+        }
+      }
+    },
+    "RetryUnit": {
+      "type": "string",
+      "description": "The unit of a retry header; 's' rounds the millisecond delay up.",
+      "x-seampact-known": ["s", "ms"]
+    },
+    "RetryHeader": {
+      "type": "object",
+      "description": "The retry header of a 429 from a bucket rule (grammar 13, rateLimit).",
+      "required": ["name", "param", "unit", "derivedFrom"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$" },
+        "param": {
+          "type": "string",
+          "description": "The required member of the code's params holding the delay in integer milliseconds."
+        },
+        "unit": { "$ref": "#/$defs/RetryUnit" },
+        "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
       }
     },
     "FieldRightSubject": {
@@ -346,8 +397,15 @@
         "subject": { "$ref": "#/$defs/FieldRightSubject" },
         "direction": { "$ref": "common.schema.json#/$defs/Direction" },
         "inputPolicy": { "$ref": "schemas.schema.json#/$defs/InputPolicy" },
+        "always": { "$ref": "#/$defs/FieldRightAlways" },
         "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
       }
+    },
+    "FieldRightAlways": {
+      "type": "string",
+      "description": "An outcome that needs no decide call: 'absent', the field is never sent on this operation (ADR 0003 section 6).",
+      "x-seampact-known": ["absent"],
+      "x-seampact-must-act": true
     },
     "Idempotency": {
       "type": "object",
@@ -467,6 +525,13 @@
       "properties": {
         "key": { "type": "string" },
         "right": { "$ref": "common.schema.json#/$defs/RightId" },
+        "params": {
+          "description": "The params of 'right', validated against the right's params schema; only with 'right' (ADR 0002 section 10)."
+        },
+        "subject": {
+          "$ref": "#/$defs/FieldRightSubject",
+          "description": "Where the right's subject is read on the request; only with 'right' (ADR 0003 section 6)."
+        },
         "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
@@ -525,15 +590,30 @@
       "required": ["paths", "origin"],
       "properties": {
         "paths": { "type": "array", "items": { "type": "string" } },
+        "header": {
+          "type": "string",
+          "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$",
+          "description": "The header listing degraded parts, an RFC 9110 token; required when the operation's format has no 'degraded' meta member (invariant ir.degradable.header)."
+        },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
     },
     "Deprecation": {
       "type": "object",
-      "required": ["sunset", "origin"],
+      "required": ["since", "sunset", "origin"],
       "properties": {
+        "since": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+          "description": "The day the operation is deprecated, a calendar date, the Deprecation header's date (RFC 9745)."
+        },
         "sunset": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
         "successor": { "$ref": "#/$defs/OperationRef" },
+        "successorRel": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9.-]*$",
+          "description": "The Link rel of the successor, an RFC 8288 registered relation name; present if and only if 'successor' is (invariant ir.deprecation.headers)."
+        },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" }
       }
     },

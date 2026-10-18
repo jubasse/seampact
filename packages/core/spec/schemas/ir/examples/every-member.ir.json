@@ -1,6 +1,6 @@
 {
   "irVersion": 1,
-  "irRevision": 3,
+  "irRevision": 4,
   "kinds": ["httpOperation"],
   "features": [],
   "api": {
@@ -16,6 +16,7 @@
     "maturity": "provisional",
     "caller": { "identity": "user", "right": "tasks.read" },
     "compat": { "policy": "additive-only" },
+    "wire": { "int64": "number", "outputEnums": "open", "urls": "absolute" },
     "surfaces": {
       "app": {
         "name": { "segments": ["app"], "role": "schema" },
@@ -174,7 +175,7 @@
             "inputPolicy": "strip",
             "origin": { "layer": "api", "pointer": "/schemas/Task/properties/effort/restrictedTo" }
           },
-          "default": 1,
+          "default": "1",
           "deprecated": true,
           "codeName": { "segments": ["effort", "points"], "role": "member" },
           "docs": { "summary": "Effort." },
@@ -424,6 +425,36 @@
       "extensions": {},
       "origin": { "layer": "api", "pointer": "/errors/tasks.locked/params" },
       "properties": []
+    },
+    "ThrottledParams": {
+      "kind": "object",
+      "id": "ThrottledParams",
+      "name": { "segments": ["throttled", "params"], "role": "schema" },
+      "directions": ["output"],
+      "examples": [],
+      "docs": {},
+      "extensions": {},
+      "origin": { "layer": "api", "pointer": "/errors/tasks.throttled/params" },
+      "properties": [
+        {
+          "name": "retryAfterMs",
+          "type": {
+            "kind": "scalar",
+            "type": "integer",
+            "refinements": { "minimum": "0", "maximum": "9007199254740991" }
+          },
+          "optional": false,
+          "nullable": false,
+          "sensitive": false,
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "origin": {
+            "layer": "api",
+            "pointer": "/errors/tasks.throttled/params/properties/retryAfterMs"
+          }
+        }
+      ]
     }
   },
   "scalars": {
@@ -498,6 +529,17 @@
       "docs": {},
       "origin": { "layer": "api", "pointer": "/errors/tasks.locked" },
       "default": "stateConflict"
+    },
+    "tasks.throttled": {
+      "code": "tasks.throttled",
+      "family": "tasks",
+      "nature": "refused",
+      "http": { "status": 429 },
+      "params": "ThrottledParams",
+      "title": "Throttled",
+      "docs": {},
+      "origin": { "layer": "api", "pointer": "/errors/tasks.throttled" },
+      "default": "rateLimited"
     }
   },
   "natures": {
@@ -801,7 +843,38 @@
       "requires": [],
       "bindings": [],
       "responses": [{ "status": 204, "shape": "empty", "headers": [] }],
-      "errors": [],
+      "errors": [
+        {
+          "code": "tasks.throttled",
+          "roles": [
+            {
+              "role": "rateLimited",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": { "kind": "text", "text": "retryAfterMs" },
+                    "value": { "kind": "slot", "slot": "retryAfterMs", "path": [] }
+                  }
+                ]
+              }
+            }
+          ],
+          "retryHeader": {
+            "name": "Retry-After",
+            "param": "retryAfterMs",
+            "unit": "ms",
+            "derivedFrom": {
+              "derivation": "rule.bucket",
+              "from": [{ "layer": "api", "pointer": "/rules/quota" }]
+            }
+          },
+          "derivedFrom": {
+            "derivation": "rule.bucket",
+            "from": [{ "layer": "api", "pointer": "/rules/quota" }]
+          }
+        }
+      ],
       "fieldRights": [],
       "upstream": [],
       "maturity": {
@@ -996,6 +1069,36 @@
                 "derivation": "cache.etag",
                 "from": [{ "layer": "api", "pointer": "/cache" }]
               }
+            },
+            {
+              "name": "Deprecation",
+              "type": { "kind": "scalar", "type": "string", "refinements": {} },
+              "required": true,
+              "semantic": "deprecation",
+              "derivedFrom": {
+                "derivation": "deprecation.headers",
+                "from": [{ "layer": "api", "pointer": "/deprecated" }]
+              }
+            },
+            {
+              "name": "Sunset",
+              "type": { "kind": "scalar", "type": "string", "refinements": {} },
+              "required": true,
+              "semantic": "sunset",
+              "derivedFrom": {
+                "derivation": "deprecation.headers",
+                "from": [{ "layer": "api", "pointer": "/deprecated" }]
+              }
+            },
+            {
+              "name": "Link",
+              "type": { "kind": "scalar", "type": "string", "refinements": {} },
+              "required": true,
+              "semantic": "successorLink",
+              "derivedFrom": {
+                "derivation": "deprecation.headers",
+                "from": [{ "layer": "api", "pointer": "/deprecated" }]
+              }
             }
           ],
           "origin": { "layer": "api", "pointer": "/responses/200" },
@@ -1013,14 +1116,46 @@
             "derivation": "requirement.errors",
             "from": [{ "layer": "api", "pointer": "/rights/tasks.update" }]
           },
-          "origin": { "layer": "api", "pointer": "/errors" }
+          "origin": { "layer": "api", "pointer": "/errors" },
+          "roles": [{ "role": "stateConflict", "params": { "kind": "object", "members": [] } }]
+        },
+        {
+          "code": "tasks.throttled",
+          "roles": [
+            {
+              "role": "rateLimited",
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": { "kind": "text", "text": "retryAfterMs" },
+                    "value": { "kind": "slot", "slot": "retryAfterMs", "path": [] }
+                  }
+                ]
+              }
+            }
+          ],
+          "retryHeader": {
+            "name": "Retry-After",
+            "param": "retryAfterMs",
+            "unit": "s",
+            "derivedFrom": {
+              "derivation": "rule.bucket",
+              "from": [{ "layer": "api", "pointer": "/rules/quota" }]
+            }
+          },
+          "derivedFrom": {
+            "derivation": "rule.bucket",
+            "from": [{ "layer": "api", "pointer": "/rules/quota" }]
+          }
         },
         {
           "code": "api.internal",
           "derivedFrom": {
             "derivation": "response.undeclared",
             "from": [{ "layer": "core", "pointer": "/errors/api.internal" }]
-          }
+          },
+          "roles": [{ "role": "undeclaredStatus" }]
         }
       ],
       "fieldRights": [
@@ -1046,6 +1181,17 @@
           "derivedFrom": {
             "derivation": "fieldRight.restricted",
             "from": [{ "layer": "api", "pointer": "/schemas/Task/properties/effort" }]
+          }
+        },
+        {
+          "schema": "Task",
+          "pointer": "/notice",
+          "right": "tasks.read",
+          "direction": "output",
+          "always": "absent",
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [{ "layer": "api", "pointer": "/schemas/Task/properties/notice" }]
           }
         }
       ],
@@ -1157,20 +1303,34 @@
               "from": [{ "layer": "api", "pointer": "/sortable" }]
             },
             "origin": { "layer": "api", "pointer": "/sortable/0" }
+          },
+          {
+            "key": "effort",
+            "right": "tasks.effort",
+            "params": { "level": 1 },
+            "subject": { "source": { "in": "path", "name": "taskId" } },
+            "derivedFrom": {
+              "derivation": "sortKey.restricted",
+              "from": [{ "layer": "api", "pointer": "/sortable" }]
+            },
+            "origin": { "layer": "api", "pointer": "/sortable/1" }
           }
         ],
         "origin": { "layer": "api", "pointer": "/paging" }
       },
       "filteredBy": "tasks.read",
       "degradable": {
-        "paths": ["/assignee"],
+        "paths": ["assignee"],
+        "header": "X-Degraded",
         "origin": { "layer": "api", "pointer": "/degradable" }
       },
       "budgetMs": 500,
       "deadlineHeader": "X-Deadline",
       "deprecated": {
+        "since": "2026-06-01",
         "sunset": "2027-01-31",
-        "successor": { "kind": "httpOperation", "api": "tasks", "id": "updateTaskV2" },
+        "successor": { "kind": "httpOperation", "api": "tasks", "id": "getTask" },
+        "successorRel": "successor-version",
         "origin": { "layer": "api", "pointer": "/deprecated" }
       },
       "relays": { "kind": "httpOperation", "api": "billing", "id": "updateTask" },

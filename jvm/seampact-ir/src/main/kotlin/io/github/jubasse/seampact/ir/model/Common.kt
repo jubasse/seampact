@@ -1,4 +1,4 @@
-// Generated from packages/core/spec/schemas/ir/common.schema.json by scripts/ir-models for IR revision 3. Do not edit.
+// Generated from packages/core/spec/schemas/ir/common.schema.json by scripts/ir-models for IR revision 4. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 @file:OptIn(ExperimentalSerializationApi::class)
 @file:UseSerializers(IrIntegerSerializer::class)
@@ -281,7 +281,7 @@ public data class ValueSource(
     public val prefixBits: Long? = null,
 )
 
-/** Where a value is read (ADR 0002 section 4); 'resolver' only as a scope source, 'holderField' only as a field right's subject source. */
+/** Where a value is read (ADR 0002 section 4); 'resolver' only as a scope source, 'holderField' only as a field right's subject source. Must act: an unknown value makes the IR invalid for every reader. */
 @Serializable(with = ValueSourceInSerializer::class)
 public sealed interface ValueSourceIn {
     public val value: String

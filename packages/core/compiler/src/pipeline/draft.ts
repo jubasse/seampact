@@ -9,7 +9,8 @@ import type { IrWriter } from "@seampact/spec/ir";
 //   not in the draft: finalize computes them from the members present in the complete draft (ADR 0005).
 // - Catalogues (every map member, `conventions` included) and `packs` and `operations` exist empty from the
 //   start, so a half adds to a container that is always there and never races another half to create it.
-// - `api` and `lint`, objects with no empty form, are optional until `tree.nodes` writes them.
+// - `api` and `lint`, objects with no empty form, are optional until `tree.nodes` writes them; `api.wire` is
+//   optional until derive.wire writes it.
 // - Every member of an operation is optional: `tree.nodes` creates an operation with its own members and each
 //   later half adds its own (field ownership, `ownership.ts`). tree.nodes creates `params` with its three lists
 //   (`path`, `query`, `header`) and `responses` on every operation, empty when nothing is declared, so a later
@@ -44,6 +45,9 @@ export type DraftOperation = { [K in OperationMember]?: IrWriter.Operation[K] } 
   concurrency?: DraftConcurrency;
 };
 
+/** The api in the draft: `wire` is written by derive.wire, after tree.nodes writes the rest. */
+export type DraftApi = Omit<IrWriter.Api, "wire"> & { wire?: IrWriter.ApiWire };
+
 /** The members finalize writes; absent from the draft. */
 export type DraftFinalizeMember = "irVersion" | "irRevision" | "kinds" | "features";
 
@@ -54,7 +58,7 @@ export type DraftIR = Omit<
   IrWriter.ContractIR,
   DraftFinalizeMember | DraftOptionalMember | "operations"
 > & {
-  api?: IrWriter.Api;
+  api?: DraftApi;
   lint?: IrWriter.Lint;
   operations: DraftOperation[];
 };

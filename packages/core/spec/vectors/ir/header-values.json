@@ -1,0 +1,1287 @@
+{
+  "cases": [
+    {
+      "id": "deprecation/year-end",
+      "header": "deprecation",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-12-31",
+          "sunset": "2026-12-31",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        }
+      },
+      "request": {},
+      "expected": "@1798675200"
+    },
+    {
+      "id": "sunset/year-end",
+      "header": "sunset",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-12-31",
+          "sunset": "2026-12-31",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        }
+      },
+      "request": {},
+      "expected": "Thu, 31 Dec 2026 00:00:00 GMT"
+    },
+    {
+      "id": "deprecation/leap-day",
+      "header": "deprecation",
+      "fragment": {
+        "deprecated": {
+          "since": "2028-02-29",
+          "sunset": "2028-02-29",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        }
+      },
+      "request": {},
+      "expected": "@1835395200"
+    },
+    {
+      "id": "sunset/leap-day",
+      "header": "sunset",
+      "fragment": {
+        "deprecated": {
+          "since": "2028-02-29",
+          "sunset": "2028-02-29",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        }
+      },
+      "request": {},
+      "expected": "Tue, 29 Feb 2028 00:00:00 GMT"
+    },
+    {
+      "id": "deprecation/no-calendar-day",
+      "header": "deprecation",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-02-30",
+          "sunset": "2026-12-31",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        }
+      },
+      "request": {},
+      "refused": "ir.deprecation.since",
+      "refusedAt": "/deprecated/since"
+    },
+    {
+      "id": "sunset/no-calendar-day",
+      "header": "sunset",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-01-31",
+          "sunset": "2026-02-30",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        }
+      },
+      "request": {},
+      "refused": "ir.deprecation.since",
+      "refusedAt": "/deprecated/sunset"
+    },
+    {
+      "id": "successorLink/relative/plain",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "relative"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "task-1"
+        },
+        "host": "attacker.example"
+      },
+      "expected": "</v2/tasks/task-1/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/relative/slash",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "relative"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "a/b"
+        },
+        "host": "attacker.example"
+      },
+      "expected": "</v2/tasks/a%2Fb/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/relative/angle",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "relative"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "a>b"
+        },
+        "host": "attacker.example"
+      },
+      "expected": "</v2/tasks/a%3Eb/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/relative/comma",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "relative"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "a,b"
+        },
+        "host": "attacker.example"
+      },
+      "expected": "</v2/tasks/a%2Cb/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/relative/semicolon",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "relative"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "a;b"
+        },
+        "host": "attacker.example"
+      },
+      "expected": "</v2/tasks/a%3Bb/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/relative/quote",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "relative"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "a\"b"
+        },
+        "host": "attacker.example"
+      },
+      "expected": "</v2/tasks/a%22b/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/relative/crlf",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "relative"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "a\r\nb"
+        },
+        "host": "attacker.example"
+      },
+      "expected": "</v2/tasks/a%0D%0Ab/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/relative/accent",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "relative"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "té"
+        },
+        "host": "attacker.example"
+      },
+      "expected": "</v2/tasks/t%C3%A9/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/relative/injection",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "relative"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "x>; rel=\"next\", <https://evil.example/"
+        },
+        "host": "attacker.example"
+      },
+      "expected": "</v2/tasks/x%3E%3B%20rel%3D%22next%22%2C%20%3Chttps%3A%2F%2Fevil.example%2F/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/relative/percent",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "relative"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "50%25"
+        },
+        "host": "attacker.example"
+      },
+      "expected": "</v2/tasks/50%2525/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/relative/astral",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "relative"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "😀"
+        },
+        "host": "attacker.example"
+      },
+      "expected": "</v2/tasks/%F0%9F%98%80/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/relative/dot",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "relative"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "."
+        },
+        "host": "attacker.example"
+      },
+      "expected": "</v2/tasks/./history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/relative/dot-dot",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "relative"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": ".."
+        },
+        "host": "attacker.example"
+      },
+      "expected": "</v2/tasks/../history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/absolute/plain",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "absolute"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "task-1"
+        },
+        "host": "attacker.example",
+        "origin": "https://api.example.com"
+      },
+      "expected": "<https://api.example.com/v2/tasks/task-1/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/absolute/slash",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "absolute"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "a/b"
+        },
+        "host": "attacker.example",
+        "origin": "https://api.example.com"
+      },
+      "expected": "<https://api.example.com/v2/tasks/a%2Fb/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/absolute/angle",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "absolute"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "a>b"
+        },
+        "host": "attacker.example",
+        "origin": "https://api.example.com"
+      },
+      "expected": "<https://api.example.com/v2/tasks/a%3Eb/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/absolute/comma",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "absolute"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "a,b"
+        },
+        "host": "attacker.example",
+        "origin": "https://api.example.com"
+      },
+      "expected": "<https://api.example.com/v2/tasks/a%2Cb/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/absolute/semicolon",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "absolute"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "a;b"
+        },
+        "host": "attacker.example",
+        "origin": "https://api.example.com"
+      },
+      "expected": "<https://api.example.com/v2/tasks/a%3Bb/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/absolute/quote",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "absolute"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "a\"b"
+        },
+        "host": "attacker.example",
+        "origin": "https://api.example.com"
+      },
+      "expected": "<https://api.example.com/v2/tasks/a%22b/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/absolute/crlf",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "absolute"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "a\r\nb"
+        },
+        "host": "attacker.example",
+        "origin": "https://api.example.com"
+      },
+      "expected": "<https://api.example.com/v2/tasks/a%0D%0Ab/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/absolute/accent",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "absolute"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "té"
+        },
+        "host": "attacker.example",
+        "origin": "https://api.example.com"
+      },
+      "expected": "<https://api.example.com/v2/tasks/t%C3%A9/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/absolute/injection",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "absolute"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "x>; rel=\"next\", <https://evil.example/"
+        },
+        "host": "attacker.example",
+        "origin": "https://api.example.com"
+      },
+      "expected": "<https://api.example.com/v2/tasks/x%3E%3B%20rel%3D%22next%22%2C%20%3Chttps%3A%2F%2Fevil.example%2F/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/absolute/percent",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "absolute"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "50%25"
+        },
+        "host": "attacker.example",
+        "origin": "https://api.example.com"
+      },
+      "expected": "<https://api.example.com/v2/tasks/50%2525/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/absolute/astral",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "absolute"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "😀"
+        },
+        "host": "attacker.example",
+        "origin": "https://api.example.com"
+      },
+      "expected": "<https://api.example.com/v2/tasks/%F0%9F%98%80/history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/absolute/dot",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "absolute"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": "."
+        },
+        "host": "attacker.example",
+        "origin": "https://api.example.com"
+      },
+      "expected": "<https://api.example.com/v2/tasks/./history>; rel=\"successor-version\""
+    },
+    {
+      "id": "successorLink/absolute/dot-dot",
+      "header": "successorLink",
+      "fragment": {
+        "deprecated": {
+          "since": "2026-06-01",
+          "sunset": "2027-01-31",
+          "successor": {
+            "kind": "httpOperation",
+            "api": "tasks",
+            "id": "getTaskV2"
+          },
+          "successorRel": "successor-version",
+          "origin": {
+            "layer": "api",
+            "pointer": "/deprecated"
+          }
+        },
+        "successorPath": "/v2/tasks/{taskId}/history",
+        "wire": {
+          "int64": "string",
+          "outputEnums": "enum",
+          "urls": "absolute"
+        }
+      },
+      "request": {
+        "pathParams": {
+          "taskId": ".."
+        },
+        "host": "attacker.example",
+        "origin": "https://api.example.com"
+      },
+      "expected": "<https://api.example.com/v2/tasks/../history>; rel=\"successor-version\""
+    },
+    {
+      "id": "degraded/none",
+      "header": "degraded",
+      "fragment": {
+        "degradable": {
+          "paths": ["assignee", "project.owner", "stats"],
+          "header": "X-Degraded",
+          "origin": {
+            "layer": "api",
+            "pointer": "/degradable"
+          }
+        }
+      },
+      "request": {
+        "degradedPaths": []
+      },
+      "expected": null
+    },
+    {
+      "id": "degraded/one",
+      "header": "degraded",
+      "fragment": {
+        "degradable": {
+          "paths": ["assignee", "project.owner", "stats"],
+          "header": "X-Degraded",
+          "origin": {
+            "layer": "api",
+            "pointer": "/degradable"
+          }
+        }
+      },
+      "request": {
+        "degradedPaths": ["stats"]
+      },
+      "expected": "stats"
+    },
+    {
+      "id": "degraded/several",
+      "header": "degraded",
+      "fragment": {
+        "degradable": {
+          "paths": ["assignee", "project.owner", "stats"],
+          "header": "X-Degraded",
+          "origin": {
+            "layer": "api",
+            "pointer": "/degradable"
+          }
+        }
+      },
+      "request": {
+        "degradedPaths": ["stats", "assignee"]
+      },
+      "expected": "assignee, stats"
+    },
+    {
+      "id": "retryAfter/ms/0",
+      "header": "retryAfter",
+      "fragment": {
+        "retryHeader": {
+          "name": "Retry-After",
+          "param": "retryAfterMs",
+          "unit": "ms",
+          "derivedFrom": {
+            "derivation": "rule.bucket",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/rules/perUser"
+              }
+            ]
+          }
+        }
+      },
+      "request": {
+        "params": {
+          "retryAfterMs": 0
+        }
+      },
+      "expected": "0"
+    },
+    {
+      "id": "retryAfter/ms/1",
+      "header": "retryAfter",
+      "fragment": {
+        "retryHeader": {
+          "name": "Retry-After",
+          "param": "retryAfterMs",
+          "unit": "ms",
+          "derivedFrom": {
+            "derivation": "rule.bucket",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/rules/perUser"
+              }
+            ]
+          }
+        }
+      },
+      "request": {
+        "params": {
+          "retryAfterMs": 1
+        }
+      },
+      "expected": "1"
+    },
+    {
+      "id": "retryAfter/ms/1000",
+      "header": "retryAfter",
+      "fragment": {
+        "retryHeader": {
+          "name": "Retry-After",
+          "param": "retryAfterMs",
+          "unit": "ms",
+          "derivedFrom": {
+            "derivation": "rule.bucket",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/rules/perUser"
+              }
+            ]
+          }
+        }
+      },
+      "request": {
+        "params": {
+          "retryAfterMs": 1000
+        }
+      },
+      "expected": "1000"
+    },
+    {
+      "id": "retryAfter/ms/1001",
+      "header": "retryAfter",
+      "fragment": {
+        "retryHeader": {
+          "name": "Retry-After",
+          "param": "retryAfterMs",
+          "unit": "ms",
+          "derivedFrom": {
+            "derivation": "rule.bucket",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/rules/perUser"
+              }
+            ]
+          }
+        }
+      },
+      "request": {
+        "params": {
+          "retryAfterMs": 1001
+        }
+      },
+      "expected": "1001"
+    },
+    {
+      "id": "retryAfter/ms/9007199254740991",
+      "header": "retryAfter",
+      "fragment": {
+        "retryHeader": {
+          "name": "Retry-After",
+          "param": "retryAfterMs",
+          "unit": "ms",
+          "derivedFrom": {
+            "derivation": "rule.bucket",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/rules/perUser"
+              }
+            ]
+          }
+        }
+      },
+      "request": {
+        "params": {
+          "retryAfterMs": 9007199254740991
+        }
+      },
+      "expected": "9007199254740991"
+    },
+    {
+      "id": "retryAfter/s/0",
+      "header": "retryAfter",
+      "fragment": {
+        "retryHeader": {
+          "name": "Retry-After",
+          "param": "retryAfterMs",
+          "unit": "s",
+          "derivedFrom": {
+            "derivation": "rule.bucket",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/rules/perUser"
+              }
+            ]
+          }
+        }
+      },
+      "request": {
+        "params": {
+          "retryAfterMs": 0
+        }
+      },
+      "expected": "0"
+    },
+    {
+      "id": "retryAfter/s/1",
+      "header": "retryAfter",
+      "fragment": {
+        "retryHeader": {
+          "name": "Retry-After",
+          "param": "retryAfterMs",
+          "unit": "s",
+          "derivedFrom": {
+            "derivation": "rule.bucket",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/rules/perUser"
+              }
+            ]
+          }
+        }
+      },
+      "request": {
+        "params": {
+          "retryAfterMs": 1
+        }
+      },
+      "expected": "1"
+    },
+    {
+      "id": "retryAfter/s/1000",
+      "header": "retryAfter",
+      "fragment": {
+        "retryHeader": {
+          "name": "Retry-After",
+          "param": "retryAfterMs",
+          "unit": "s",
+          "derivedFrom": {
+            "derivation": "rule.bucket",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/rules/perUser"
+              }
+            ]
+          }
+        }
+      },
+      "request": {
+        "params": {
+          "retryAfterMs": 1000
+        }
+      },
+      "expected": "1"
+    },
+    {
+      "id": "retryAfter/s/1001",
+      "header": "retryAfter",
+      "fragment": {
+        "retryHeader": {
+          "name": "Retry-After",
+          "param": "retryAfterMs",
+          "unit": "s",
+          "derivedFrom": {
+            "derivation": "rule.bucket",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/rules/perUser"
+              }
+            ]
+          }
+        }
+      },
+      "request": {
+        "params": {
+          "retryAfterMs": 1001
+        }
+      },
+      "expected": "2"
+    },
+    {
+      "id": "retryAfter/s/9007199254740991",
+      "header": "retryAfter",
+      "fragment": {
+        "retryHeader": {
+          "name": "Retry-After",
+          "param": "retryAfterMs",
+          "unit": "s",
+          "derivedFrom": {
+            "derivation": "rule.bucket",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/rules/perUser"
+              }
+            ]
+          }
+        }
+      },
+      "request": {
+        "params": {
+          "retryAfterMs": 9007199254740991
+        }
+      },
+      "expected": "9007199254741"
+    }
+  ]
+}

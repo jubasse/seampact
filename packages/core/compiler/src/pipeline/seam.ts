@@ -18,6 +18,7 @@ export {
   pipelineConventions,
 } from "./conventions.js";
 export type {
+  DraftApi,
   DraftConcurrency,
   DraftFinalizeMember,
   DraftFinalizeOperationMember,

@@ -51,3 +51,5 @@ export type {
   IrSupportMismatch,
 } from "./support.js";
 export { IR_REVISION, IR_VERSION } from "./version.js";
+export { isIrCalendarDate } from "./calendar-date.js";
+export { isIrSameTypeUse } from "./type-use.js";

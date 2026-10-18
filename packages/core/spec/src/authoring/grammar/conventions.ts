@@ -135,7 +135,8 @@ export function conventionsDefs(): Record<string, JsonSchema> {
             props: {
               header: kw(S, ref("common", "headerName")),
               sunsetHeader: kw(S, ref("common", "headerName")),
-              successorRel: kw(S, str({ minLength: 1 })),
+              // The IR's Deprecation.successorRel form: an RFC 8288 registered relation name.
+              successorRel: kw(S, str({ pattern: "^[a-z][a-z0-9.-]*$" })),
             },
           }),
         ),

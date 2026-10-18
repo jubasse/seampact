@@ -50,6 +50,24 @@ const inputDefaults = <M extends string>(first: HalfName, ...members: M[]) =>
     order: [first, "access.rights"] as const,
   }));
 
+// The members of the api tree.nodes writes (ADR 0004 section 2), every one but `wire`.
+const API_MEMBERS = [
+  "id",
+  "name",
+  "version",
+  "kind",
+  "pathVersion",
+  "role",
+  "maturity",
+  "caller",
+  "compat",
+  "surfaces",
+  "documents",
+  "docs",
+  "extensions",
+  "origin",
+] as const;
+
 /** The ownership table, one row per field. */
 export const pipelineOwnership = [
   // Finalize computes these from the complete draft (ADR 0004 section 2): `kinds` and `features` from the
@@ -57,7 +75,10 @@ export const pipelineOwnership = [
   ...owned("finalize", "irVersion", "irRevision", "kinds", "features", op("features")),
   // Top level.
   ...owned("tree.schemas", "schemas", "scalars", "enums", "extensionKeys"),
-  ...owned("tree.nodes", "api", "conventions", "lint", "packs", "formats", "pagings", "services"),
+  ...owned("tree.nodes", "conventions", "lint", "packs", "formats", "pagings", "services"),
+  // The api: tree.nodes writes what it declares, derive.wire its wire conventions.
+  ...owned("tree.nodes", ...API_MEMBERS.map((member) => `api.${member}` as const)),
+  ...owned("derive.wire", "api.wire"),
   ...owned("access.identity", "schemes", "headers", "identities"),
   ...owned("access.rights", "rights", "rules", "scopes", "buckets"),
   ...owned("derive.errors", "errors", "natures"),
@@ -142,6 +163,8 @@ export const pipelineOwnership = [
       "filteredBy",
       "input.proofs",
       "paging.sortKeys[].right",
+      "paging.sortKeys[].params",
+      "paging.sortKeys[].subject",
       "paging.sortKeys[].derivedFrom",
     ),
   ),
@@ -160,6 +183,7 @@ export type DraftOwnedField = (typeof pipelineOwnership)[number]["field"];
 
 /** The containers above the rows: navigable, and written only through the rows below them. */
 export const pipelineContainers = [
+  "api",
   "operations",
   "operations[]",
   "operations[].params",

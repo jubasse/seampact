@@ -3,7 +3,7 @@ import type { SchemaNode } from "./schemas.js";
 import type { IrUnionMap } from "./types.generated.js";
 
 // The tag member and known tags of a union definition, read from the schema files.
-function unionTags(union: string): { tag: string; known: readonly string[] } {
+export function irUnionTags(union: string): { tag: string; known: readonly string[] } {
   const def = irDefinition(union);
   const discriminator = def?.discriminator as SchemaNode | undefined;
 
@@ -31,7 +31,7 @@ export function isKnownVariant<N extends keyof IrUnionMap>(
   let tags = TAGS.get(union);
 
   if (tags === undefined) {
-    tags = unionTags(union);
+    tags = irUnionTags(union);
     TAGS.set(union, tags);
   }
 

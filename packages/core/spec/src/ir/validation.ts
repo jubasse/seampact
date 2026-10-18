@@ -13,8 +13,8 @@ import {
   SOURCE_MAP_SCHEMA_ID,
 } from "./schemas.js";
 
-export { KNOWN_VALUES_KEYWORD, MUST_ACT_KEYWORD };
 export type { IrUnknownKind, IrUnknownValue };
+export { KNOWN_VALUES_KEYWORD, MUST_ACT_KEYWORD };
 
 // What a JSON Schema 2020-12 validator needs to read the IR schema files, written for Ajv 8 (`ajv/dist/2020`)
 // and kept free of an Ajv import so this package has no runtime dependency: strict mode, the `discriminator`

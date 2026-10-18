@@ -2,6 +2,10 @@ import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { describe, expect, test } from "vitest";
+import reservedWords from "../../vectors/naming/reserved-words.json" with { type: "json" };
+import reservedSchema from "../../vectors/naming/reserved-words.schema.json" with { type: "json" };
+import vectors from "../../vectors/naming/vectors.json" with { type: "json" };
+import schema from "../../vectors/naming/vectors.schema.json" with { type: "json" };
 import {
   canonicalId,
   deriveName,
@@ -18,10 +22,6 @@ import {
   splitName,
   suffixWords,
 } from "./index.js";
-import reservedWords from "../../vectors/naming/reserved-words.json" with { type: "json" };
-import vectors from "../../vectors/naming/vectors.json" with { type: "json" };
-import reservedSchema from "../../vectors/naming/reserved-words.schema.json" with { type: "json" };
-import schema from "../../vectors/naming/vectors.schema.json" with { type: "json" };
 
 interface Vector {
   id: string;

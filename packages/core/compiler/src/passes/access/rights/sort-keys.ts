@@ -8,7 +8,7 @@ import {
   pipelinePointerBelow,
 } from "../../../pipeline/seam.js";
 import type { AccessRightsCatalogues } from "./catalogues.js";
-import { accessRightsIdSchemaOf } from "./field-subjects.js";
+import { type AccessRightsSubjectResult, accessRightsIdSchemaOf } from "./field-subjects.js";
 import { accessRightsString } from "./read.js";
 import { type AccessRightsReporter, accessRightsQuoted } from "./report.js";
 import { type AccessRightsObjectSchema, schemaOf } from "./restricted-fields.js";
@@ -35,15 +35,19 @@ import {
 // A sort key carries no params, so a right with params, written or inherited, is refused rather than checked
 // without them, until the IR has params on a sort key.
 //
-// The key's subject must be found on the route (ADR 0003 section 6): the resolved scope of a scope right, the
-// route's default subject (its nearest member id) for a resource right. A resource right whose id schema is a
+// The key's subject must be found on the route and is written beside its right (ADR 0003 section 6): the resolved
+// scope of a scope right, the route's default subject (its nearest member id) for a resource right. A resource right whose id schema is a
 // property of the list item is refused: the route's subject is then a parent's id, not each item's, and the
 // parent's right would release the order of items it does not cover.
 
-/** The right and its derivation for each sort key of the route, by index; empty for a route without keys. */
+/** The right, its subject and its derivation for each sort key of the route, by index; empty for a route without keys. */
 export type AccessRightsSortKeyRights = ReadonlyMap<
   number,
-  { readonly right: string; readonly derivedFrom?: IrWriter.DerivedFrom }
+  {
+    readonly right: string;
+    readonly subject?: IrWriter.FieldRightSubject;
+    readonly derivedFrom?: IrWriter.DerivedFrom;
+  }
 >;
 
 export interface AccessRightsSortKeysInput {
@@ -54,7 +58,10 @@ export interface AccessRightsSortKeysInput {
 
 const LIST_SHAPES: readonly string[] = ["page", "list"];
 
-type Rights = Map<number, { right: string; derivedFrom?: IrWriter.DerivedFrom }>;
+type Rights = Map<
+  number,
+  { right: string; subject?: IrWriter.FieldRightSubject; derivedFrom?: IrWriter.DerivedFrom }
+>;
 
 export function accessRightsSortKeyRights(
   context: AccessRightsContext,
@@ -88,8 +95,11 @@ export function accessRightsSortKeyRights(
     const use: KeyUse = { route, scopes, items, key: sortKey.key, pointer: keyPointer(sortKey) };
     const right = keyRight(context, reporter, catalogues, checks, use, sortKey);
 
-    if (right !== undefined && keySubjectFound(context, reporter, catalogues, use, right.right))
-      rights.set(index, right);
+    if (right === undefined) continue;
+
+    const found = keySubject(context, reporter, catalogues, use, right.right);
+
+    if (found !== undefined) rights.set(index, { ...right, ...found });
   }
 
   return rights;
@@ -271,13 +281,14 @@ function inheritedRight(
   };
 }
 
-function keySubjectFound(
+// The key's subject (absent for a right without one), or undefined after an error.
+function keySubject(
   context: AccessRightsContext,
   reporter: AccessRightsReporter,
   catalogues: AccessRightsCatalogues,
   { route, scopes, items, key, pointer }: KeyUse,
   rightId: string,
-): boolean {
+): AccessRightsSubjectResult {
   const right = catalogues.rights.get(rightId);
 
   if (right === undefined)
@@ -293,17 +304,19 @@ function keySubjectFound(
 
   switch (right.subject.kind) {
     case "none":
-      return true;
+      return {};
     case "scope": {
       const scope = right.subject.scope;
 
       // The right's scope is refused: its declaration has the error, so a use adds none.
-      if (!catalogues.scopes.has(scope) || scopes.some((resolved) => resolved.scope === scope))
-        return true;
+      if (!catalogues.scopes.has(scope)) return undefined;
+
+      if (scopes.some((resolved) => resolved.scope === scope))
+        return { subject: { source: { in: "scope", name: scope } } };
 
       unresolved();
 
-      return false;
+      return undefined;
     }
 
     case "resource":
@@ -311,11 +324,12 @@ function keySubjectFound(
   }
 
   const idSchema = accessRightsIdSchemaOf(catalogues, right, right.subject);
+  const defaulted = accessRightsDefaultMemberId(context, route.node, idSchema);
 
-  if (accessRightsDefaultMemberId(context, route.node, idSchema).kind !== "found") {
+  if (defaulted.kind !== "found") {
     unresolved();
 
-    return false;
+    return undefined;
   }
 
   const item = items.find((object) =>
@@ -324,7 +338,7 @@ function keySubjectFound(
     ),
   );
 
-  if (item === undefined) return true;
+  if (item === undefined) return { subject: { source: defaulted.source } };
 
   reporter.error({
     rule: "sort-key-right",
@@ -333,5 +347,5 @@ function keySubjectFound(
     pointer,
   });
 
-  return false;
+  return undefined;
 }
