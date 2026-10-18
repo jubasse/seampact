@@ -103,9 +103,17 @@ export function deriveWireIdempotency(
   exemptions: DeriveWireExemptions,
   scope: DeriveWireScope,
 ): void {
-  if (reading.state !== "set" || !keyReaches(route, reading.convention, scope)) return;
-
   const exemption = scope.context.inherited(route.node, "idempotency");
+
+  // A relay route has no method until tree.nodes copies the relayed one, so whether the key reaches it is not
+  // known yet: it gets no key, and its exemption is not refused as unused.
+  if (route.node.kind === "relay" && route.operation.safe === undefined) {
+    if (exemption !== undefined) exemptions.used.add(exemption.entry.node.pointer);
+
+    return;
+  }
+
+  if (reading.state !== "set" || !keyReaches(route, reading.convention, scope)) return;
 
   if (exemption !== undefined) {
     const { value, origin } = exemption.entry;

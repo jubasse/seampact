@@ -148,6 +148,18 @@ describe("relay routes derive their own wire", () => {
   });
 });
 
+describe("relay routes before tree.nodes copies their method", () => {
+  test("a relay route without method or access derives no key and no credential, and nothing is refused", () => {
+    const run = deriveWireRunContract(workspace, "tasksService");
+    const relay = deriveWireOperation(run, "getTask");
+
+    expect(relay.safe).toBeUndefined();
+    expect(run.diagnostics).toEqual([]);
+    expect(relay.idempotency).toBeUndefined();
+    expect(deriveWireDerivedHeaders(run, "getTask")).toEqual([]);
+  });
+});
+
 describe("derive.wire diagnostics are located", () => {
   test("a derived header colliding with a declared one is refused at the route, naming both", () => {
     const run = deriveWireRunContract(
