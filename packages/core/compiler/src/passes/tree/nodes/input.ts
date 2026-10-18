@@ -12,6 +12,7 @@ import { treeNodesBodyLimit } from "./limits.js";
 import {
   type TreeNodesContext,
   treeNodesAnsweredUse,
+  treeNodesDraftSchema,
   treeNodesMember,
   treeNodesPointer,
   treeNodesSchema,
@@ -59,8 +60,8 @@ interface NestedFile {
 }
 
 /**
- * The input a route or an op entry declares (`input`), or undefined when it declares none. The schema is the input use the service answers for the written schema; reads `schemas`
- * for the fields of a form or multipart body.
+ * The input a route or an op entry declares (`input`), or undefined when it declares none. The schema is the input
+ * use the service answers for the written schema; reads `schemas` for the fields of a form or multipart body.
  */
 export function treeNodesInput(
   node: TreeNode,
@@ -259,9 +260,7 @@ function filesBelow(
   const visitSchema = (id: string, atPath: string): void => {
     if (visited.has(id)) return;
     visited.add(id);
-    const schema = treeNodesSchema(draft, id);
-
-    if (schema === undefined) return;
+    const schema = treeNodesDraftSchema(draft, id);
 
     if (schema.kind === "object")
       for (const property of schema.properties)

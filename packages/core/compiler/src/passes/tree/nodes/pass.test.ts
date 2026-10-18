@@ -2,10 +2,11 @@ import type { IrWriter } from "@seampact/spec/ir";
 import { expect, test } from "vitest";
 import {
   type DraftFixtureApi,
+  draftFixture,
   draftFixtureHalves,
   draftFixtureSchemaService,
 } from "../../../pipeline/draft-fixture.js";
-import type { TreeSchemaService } from "../../../pipeline/seam.js";
+import { createDraftIR, type DraftIR, type TreeSchemaService } from "../../../pipeline/seam.js";
 import type { JsonObject, JsonValue } from "../../../raw-tree.js";
 import {
   REFERENCE_CONTRACT,
@@ -148,11 +149,21 @@ function pick(api: string, operation: object): JsonObject {
 
 const workspace = treeNodesLoadDirectory(REFERENCE_CONTRACT, "workspace.yaml");
 
+// The draft as tree.schemas leaves it: the fixture's schemas, which the input checks walk.
+function schemasOf(api: DraftFixtureApi): DraftIR {
+  const draft = createDraftIR();
+
+  Object.assign(draft.schemas, draftFixture(api, "after-tree").schemas);
+
+  return draft;
+}
+
 test.each<DraftFixtureApi>(["tasks", "tasksService"])(
   "tree.nodes matches the after-tree fixture (%s)",
   (api) => {
     const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace, api), workspace, {
       treeSchemas: withBatchInput(draftFixtureSchemaService(api)),
+      draft: schemasOf(api),
     });
 
     expect(diagnostics).toEqual([]);

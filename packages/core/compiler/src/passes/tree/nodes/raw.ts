@@ -104,6 +104,16 @@ export function treeNodesSchema(draft: DraftIR, id: string): IrWriter.Schema | u
   return Object.hasOwn(draft.schemas, id) ? draft.schemas[id] : undefined;
 }
 
+// tree.schemas writes every schema a use it answers refers to, so a missing one is an internal error.
+export function treeNodesDraftSchema(draft: DraftIR, id: string): IrWriter.Schema {
+  const schema = treeNodesSchema(draft, id);
+
+  if (schema === undefined)
+    throw new Error(`the draft holds no schema ${id}, which a use refers to`);
+
+  return schema;
+}
+
 /** The object schema a use refers to, else undefined. */
 export function treeNodesObjectOf(
   draft: DraftIR,

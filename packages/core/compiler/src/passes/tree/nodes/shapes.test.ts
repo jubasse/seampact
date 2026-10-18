@@ -11,6 +11,7 @@ import {
   treeNodesLoadInline,
   treeNodesObjectSchema,
   treeNodesRun,
+  treeNodesRunAfterSchemas,
   treeNodesStubService,
   treeNodesUnansweredAt,
 } from "./test-support.js";
@@ -498,7 +499,10 @@ surfaces:
       [`${notes}/ops/create/input`]: ref("Note"),
     },
   });
-  const run = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas });
+  const draft = treeNodesDraftWith(
+    treeNodesObjectSchema("Note", "/schemas/Note", { noteId: text, text }),
+  );
+  const run = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas, draft });
 
   expect(run.diagnostics.map(({ rule, origin }) => [rule, origin.pointer])).toEqual([
     ["seampact/tree/example-value", `${notes}/ops/list/examples/page/value/0/text`],
@@ -508,7 +512,7 @@ surfaces:
   ]);
   // A table key is read by the collection's id schema in its text form.
   expect(run.diagnostics[3]?.message).toBe(
-    "The example table of getNotesBatch does not fit its schema at '': the key invalid: the value is invalid.",
+    "The example table of getNotesBatch has the key 'invalid', which does not read as the id: the value is invalid.",
   );
   expect(run.diagnostics[0]?.message).toBe(
     "The example page of listNotes does not fit its schema at '/0/text': the value is invalid.",
@@ -519,6 +523,49 @@ surfaces:
     refused: { error: "api.schema_invalid", value: { issues: "invalid" } },
   });
 });
+
+// Both id forms of a collection, compiled by the real tree.schemas: a fields map and the name of an object schema.
+test.each([
+  ["a fields map", "id: { noteId: { type: integer } }"],
+  ["a schema name", "id: NoteKey"],
+])(
+  "table example keys: an id written as %s reads each key by its one property type",
+  (_form, id) => {
+    const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+${CURSOR}
+conventions:
+  batch: { maxIds: 20 }
+schemas:
+  NoteKey: { type: object, properties: { noteId: { type: integer } } }
+  Note: { type: object, properties: { noteId: { type: integer }, text: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      notes:
+        kind: collection
+        ${id}
+        item: Note
+        ops:
+          batch:
+            examples:
+              table: { status: 200, value: { "1": { noteId: 1, text: a }, "${"k".repeat(100)}": { noteId: 2, text: b } } }
+`);
+    const run = treeNodesRunAfterSchemas(workspace);
+    const notes = `${ROUTES}/notes`;
+
+    expect(run.diagnostics.map(({ rule, origin }) => [rule, origin.pointer])).toEqual([
+      ["seampact/tree/example-value", `${notes}/ops/batch/examples/table/value/${"k".repeat(100)}`],
+    ]);
+    // The quoted key is cut, since a key is free author text.
+    expect(run.diagnostics[0]?.message).toMatch(
+      new RegExp(
+        `^The example table of getNotesBatch has the key '${"k".repeat(80)}…', which does not read as the id: `,
+      ),
+    );
+  },
+);
 
 // One refusal of each shape rule, each diagnostic located in the locations table, with a sentence and a fix.
 test("tree.nodes diagnostics are located: shapes", () => {

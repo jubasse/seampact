@@ -11,6 +11,7 @@ import {
   type TreeSchemaService,
 } from "../../../pipeline/seam.js";
 import type { RawApi, RawWorkspace } from "../../../raw-tree.js";
+import { treeSchemasPass } from "../schemas/index.js";
 import { treeNodesPass } from "./pass.js";
 
 // Test support of tree.nodes, outside the barrel: loading contracts, a small schema service for inline contracts
@@ -178,6 +179,24 @@ export function treeNodesStubService(rows: TreeNodesStubRows): TreeSchemaService
   };
 }
 
+/**
+ * A schema service answering the listed pointers only: an unlisted pointer answers no type and no wire, so a test
+ * of a new service call proves the pointer it asks.
+ */
+export function treeNodesStrictStubService(rows: TreeNodesStubRows): TreeSchemaService {
+  const typeUses = rows.typeUses ?? {};
+  const queryWires = rows.queryWires ?? {};
+  const permissive = treeNodesStubService(rows);
+
+  return {
+    ...permissive,
+    typeUse: (pointer) =>
+      Object.hasOwn(typeUses, pointer) ? structuredClone(typeUses[pointer]) : undefined,
+    queryWire: (pointer) =>
+      Object.hasOwn(queryWires, pointer) ? structuredClone(queryWires[pointer]) : undefined,
+  };
+}
+
 /** The service answering no type at `pointers`, as no tree.schemas does for a position it accepted. */
 export function treeNodesUnansweredAt(
   service: TreeSchemaService,
@@ -250,4 +269,22 @@ export function treeNodesRun(
   }
 
   return { draft, diagnostics };
+}
+
+/** Runs the real tree.schemas, then tree.nodes on its draft and service; a tree.schemas diagnostic throws. */
+export function treeNodesRunAfterSchemas(workspace: RawWorkspace): TreeNodesRun {
+  const raw = treeNodesApiOf(workspace);
+  const draft = createDraftIR();
+  const schemaDiagnostics: Diagnostic[] = [];
+  const context = pipelineContext({
+    raw,
+    workspace,
+    report: (diagnostic) => schemaDiagnostics.push(diagnostic),
+  });
+  const treeSchemas = treeSchemasPass.run(draft, context);
+
+  if (schemaDiagnostics.length > 0)
+    throw new Error(`tree.schemas reports on the contract: ${JSON.stringify(schemaDiagnostics)}`);
+
+  return treeNodesRun(raw, workspace, { treeSchemas, draft });
 }

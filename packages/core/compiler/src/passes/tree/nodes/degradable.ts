@@ -2,11 +2,17 @@ import type { IrWriter } from "@seampact/spec/ir";
 import { pipelineCopy } from "../../../pipeline/seam.js";
 import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
 import type { TreeNodesSite } from "./fields.js";
-import { treeNodesIsObject, treeNodesMember, treeNodesSchema, treeNodesSetting } from "./raw.js";
+import {
+  treeNodesDraftSchema,
+  treeNodesIsObject,
+  treeNodesMember,
+  treeNodesSetting,
+} from "./raw.js";
 
 // `degradable` (ADR 0002 section 10, SCN-085): paths of optional properties of the success data, each a dotted
-// path through object properties, through every variant of a union. A degraded response says which parts it left out: in the format's `degraded`
-// meta field, else in `conventions.degradedHeader`, which is then required (ADR 0006 section 7).
+// path through object properties, through every variant of a union. A degraded response says which parts it left
+// out: in the format's `degraded` meta field, else in `conventions.degradedHeader`, which is then required (ADR 0006
+// section 7).
 
 const DEGRADED_FILL = "degraded";
 
@@ -81,7 +87,8 @@ function pathFault(
   use: IrWriter.TypeUse,
 ): string | undefined {
   const reached = use.kind === "array" ? use.items : use;
-  const schema = reached.kind === "ref" ? draftSchema(site, reached.schema) : undefined;
+  const schema =
+    reached.kind === "ref" ? treeNodesDraftSchema(site.draft, reached.schema) : undefined;
 
   if (schema?.kind === "union") return variantsFault(site, segments, schema);
 
@@ -110,16 +117,6 @@ function variantsFault(
   }
 
   return undefined;
-}
-
-// tree.schemas writes every schema a use it answers refers to, so a missing one is an internal error.
-function draftSchema(site: TreeNodesSite, id: string): IrWriter.Schema {
-  const schema = treeNodesSchema(site.draft, id);
-
-  if (schema === undefined)
-    throw new Error(`the draft holds no schema ${id}, which a body refers to`);
-
-  return schema;
 }
 
 function reportPath(site: TreeNodesSite, path: string, pointer: string, why: string): void {

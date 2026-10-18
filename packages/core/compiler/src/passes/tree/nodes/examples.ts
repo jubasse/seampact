@@ -1,11 +1,13 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { pipelineCopy } from "../../../pipeline/seam.js";
+import { quote } from "../../../validate/diagnostics.js";
 import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
 import type { TreeNodesSite } from "./fields.js";
 import { treeNodesIdParam, treeNodesOpOwner } from "./names.js";
 import {
   type TreeNodesJson,
   treeNodesAnsweredUse,
+  treeNodesDraftSchema,
   treeNodesIsObject,
   treeNodesMember,
   treeNodesPointer,
@@ -14,8 +16,8 @@ import {
 
 // Route examples (ADR 0002 section 12, FR-3): every written example is kept. A request example is parsed against
 // the input, a success example against what the handler returns for its status (the payload, the item array of a
-// list, the id-keyed object of a table, each key read by the id schema); an error example is written unchecked, since derive.errors checks it
-// against its code's params (ADR 0006 section 3).
+// list, the id-keyed object of a table, each key read by the id schema); an error example is written unchecked,
+// since derive.errors checks it against its code's params (ADR 0006 section 3).
 
 // The shapes whose handler result is an array of the body's item.
 const ARRAY_SHAPES: readonly IrWriter.ResponseShape[] = ["list", "page"];
@@ -155,16 +157,14 @@ function checkSuccess(
     const entryPointer = treeNodesPointer(pointer, id);
 
     for (const issue of site.context.treeSchemas.checkTextExample(id, idUse))
-      reportIssue(site, name, entryPointer, {
-        ...issue,
-        message: `the key ${id}: ${issue.message}`,
-      });
+      reportKeyIssue(site, { name, pointer: entryPointer, key: id }, issue.message);
 
     checkValue(site, name, entryPointer, record, body);
   }
 }
 
-// A table is keyed by the id of the batch op's collection, read in its text form.
+// A table is keyed by the id of the batch op's collection, read in its text form: the entry of an `id` fields map,
+// or the one property of the object schema `id` names (as tree.schemas reads the batch ids).
 function tableIdUse(site: TreeNodesSite): IrWriter.TypeUse {
   const collection = treeNodesOpOwner(site.node);
   const idParam =
@@ -175,11 +175,19 @@ function tableIdUse(site: TreeNodesSite): IrWriter.TypeUse {
   if (collection === undefined || idParam === undefined)
     throw new Error(`the table response of ${site.node.pointer} has no collection id`);
 
-  return treeNodesAnsweredUse(
-    site.context,
-    treeNodesPointer(collection.pointer, "id", idParam),
-    "input",
-  );
+  const idPointer = treeNodesPointer(collection.pointer, "id");
+
+  if (typeof treeNodesSetting(collection, "id") !== "string")
+    return treeNodesAnsweredUse(site.context, treeNodesPointer(idPointer, idParam), "input");
+
+  const named = treeNodesAnsweredUse(site.context, idPointer, "input");
+  const schema = named.kind === "ref" ? treeNodesDraftSchema(site.draft, named.schema) : undefined;
+  const [only, ...others] = schema?.kind === "object" ? schema.properties : [];
+
+  if (only === undefined || others.length > 0)
+    throw new Error(`the id schema of ${collection.pointer} is no object of one property`);
+
+  return pipelineCopy(only.type);
 }
 
 function checkValue(
@@ -204,12 +212,32 @@ function reportIssue(
     site.context.origin(pointer) ??
     site.node.origin;
 
+  const at = issue.pointer === "" ? "" : ` at '${issue.pointer}'`;
+
   site.context.report(
     treeNodesError({
       rule: "example-value",
       origin: treeNodesNodeOrigin(origin),
-      message: `The example ${name} of ${site.operationId} does not fit its schema at '${issue.pointer}': ${issue.message}.`,
+      message: `The example ${name} of ${site.operationId} does not fit its schema${at}: ${issue.message}.`,
       fix: "Correct the example value, or the schema it is parsed against.",
+    }),
+  );
+}
+
+/** A key of a table example: the example's name, the pointer of its entry and the key as written. */
+interface TableKey {
+  readonly name: string;
+  readonly pointer: string;
+  readonly key: string;
+}
+
+function reportKeyIssue(site: TreeNodesSite, tableKey: TableKey, why: string): void {
+  site.context.report(
+    treeNodesError({
+      rule: "example-value",
+      origin: treeNodesNodeOrigin(site.context.origin(tableKey.pointer) ?? site.node.origin),
+      message: `The example ${tableKey.name} of ${site.operationId} has the key ${quote(tableKey.key)}, which does not read as the id: ${why}.`,
+      fix: "Key each entry of the table by an id the collection's id schema reads.",
     }),
   );
 }

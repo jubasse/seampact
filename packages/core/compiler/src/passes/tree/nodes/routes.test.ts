@@ -13,10 +13,12 @@ import {
   treeNodesLoadInline,
   treeNodesObjectSchema,
   treeNodesRun,
+  treeNodesStrictStubService,
   treeNodesStubService,
 } from "./test-support.js";
 
 const text: IrWriter.TypeUse = { kind: "scalar", type: "string", refinements: {} };
+const integer: IrWriter.TypeUse = { kind: "scalar", type: "integer", refinements: {} };
 const flag: IrWriter.TypeUse = { kind: "scalar", type: "boolean", refinements: {} };
 const opaque: IrWriter.TypeUse = {
   kind: "opaque",
@@ -974,6 +976,9 @@ surfaces:
     const workspace = treeNodesLoadInline(contract(conventions));
     const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
       treeSchemas,
+      draft: treeNodesDraftWith(
+        treeNodesObjectSchema("NewTask", "/schemas/NewTask", { title: text }),
+      ),
     });
 
     return {
@@ -1072,7 +1077,7 @@ surfaces:
   app:
     prefix: /v{version}
     routes:
-      inline: { method: get, query: { "size?": { type: integer, default: 20 }, "q?": { type: string } } }
+      inline: { method: get, query: { "size?": { type: integer, default: 20 }, "q?": { type: string }, page: { type: integer, default: 1 } } }
       named: { method: get, query: Filter }
 `);
   const filter = treeNodesObjectSchema("Filter", "/schemas/Filter", { state: text });
@@ -1080,18 +1085,31 @@ surfaces:
     ...filter,
     properties: filter.properties.map((state) => ({ ...state, optional: true, default: "open" })),
   });
-  const treeSchemas = treeNodesStubService({
-    typeUses: { [`${ROUTES}/named/query`]: ref("Filter") },
-    queryWires: { "/schemas/Filter/properties/state": wire("text") },
+  const inline = (field: string) => `${ROUTES}/inline/query/${field}`;
+  const treeSchemas = treeNodesStrictStubService({
+    typeUses: {
+      [`${ROUTES}/named/query`]: ref("Filter"),
+      [inline("size?")]: integer,
+      [inline("q?")]: text,
+      [inline("page")]: integer,
+    },
+    queryWires: {
+      "/schemas/Filter/properties/state": wire("text"),
+      [inline("size?")]: wire("number"),
+      [inline("q?")]: wire("text"),
+      [inline("page")]: wire("number"),
+    },
   });
   const run = treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas, draft });
   const defaults = (id: string) =>
     operation(run.draft.operations, id).params?.query.map((param) => [param.name, param.default]);
 
   expect(run.diagnostics).toEqual([]);
+  // A required field writes no default: a client always sends it.
   expect(defaults("inline")).toEqual([
     ["size", 20],
     ["q", undefined],
+    ["page", undefined],
   ]);
   expect(defaults("named")).toEqual([["state", "open"]]);
 });
