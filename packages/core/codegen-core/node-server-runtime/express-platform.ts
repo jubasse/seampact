@@ -7,6 +7,7 @@ import {
   ContractError,
   codeOfStatus,
   isPlainObject,
+  PAYLOAD_TOO_LARGE_ROLE,
   roleError,
   unexpectedError,
 } from "./contract-error.js";
@@ -18,7 +19,6 @@ import {
 } from "./contract-route.js";
 
 const PAYLOAD_TOO_LARGE = 413;
-const PAYLOAD_TOO_LARGE_ROLE = "payloadTooLarge";
 const DEFAULT_METHOD = "GET";
 
 /** The request as Express hands it on. */
@@ -30,7 +30,7 @@ export interface ExpressRequest extends IncomingMessage {
 
 /** The body glue of one api: the parser's `verify` function and the byte count it recorded. */
 export interface ExpressBodyGlue {
-  /** The JSON parser's `verify` function, with the framework's own raw body keeping off. */
+  /** The JSON parser's `verify` function, with NestJS `rawBody` off. */
   keepRawBody(request: IncomingMessage, response: ServerResponse, bytes: Buffer): void;
   /** The parsed byte count `keepRawBody` recorded, when the parser ran with it. */
   recordedBodyBytes(request: IncomingMessage): number | undefined;

@@ -124,3 +124,16 @@ describe("query: unknown keys are refused, also on an operation without query pa
     );
   });
 });
+
+describe("the custom checks of the generated validators", () => {
+  test("every refine names its contract rule in params.rule", () => {
+    const sources = ["operations/input.ts", "schemas/output.ts"].map((file) =>
+      readFileSync(join(temporaryRoot, "generated", file), "utf8"),
+    );
+    const refines = sources.flatMap((source) => source.match(/\.refine\([^]*?\}\)/g) ?? []);
+
+    expect(refines.length).toBeGreaterThan(0);
+
+    for (const refine of refines) expect(refine).toMatch(/params: \{ rule: "\w+" \}/);
+  });
+});

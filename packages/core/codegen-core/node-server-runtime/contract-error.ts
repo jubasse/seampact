@@ -5,6 +5,9 @@ import type { ContractApi, ContractRoute, ErrorEntry, FormatTemplate } from "./c
 /** The longest issues list rendered into a `schemaInvalid` error's params. */
 export const MAX_RENDERED_ISSUES = 100;
 
+/** The role of the error a body over its limit raises. */
+export const PAYLOAD_TOO_LARGE_ROLE = "payloadTooLarge";
+
 const INTERNAL_STATUS = 500;
 const UNDECLARED_STATUS_ROLE = "undeclaredStatus";
 const FALLBACK_INTERNAL_CODE = "api.internal";

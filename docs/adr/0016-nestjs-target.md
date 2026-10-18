@@ -34,7 +34,7 @@ The two per-operation decorators are named by the operation (ADR 0007 `operation
 
 Route order is the app's: NestJS on Express registers a controller's routes in the order its methods are declared and matches the first, so a parameter route declared before a static sibling of the same method (`GET /tasks/:taskId` before `GET /tasks/search`) shadows it, and the member operation runs its checks on the action's requests. The composite cannot reorder them; the developer declares the static route's method first.
 
-Steps 1 to 8 and 10 run the framework-neutral request checks of `@seampact/codegen-core/node-server`, copied into the generated tree with the generated header (ADR 0009 "What generated code depends on at run time"); this target writes only their NestJS placement.
+Steps 1 to 8 and 10 run the request checks of `@seampact/codegen-core/node-server` (framework-neutral, plus the Express platform glue, which Fastify and Adonis trees receive unused), copied into the generated tree with the generated header (ADR 0009 "What generated code depends on at run time"); this target writes only their NestJS placement.
 
 ### The reply path
 
