@@ -41,3 +41,25 @@ proofs:
       - fixtures/passes/derive-errors/registry-refused/api.yaml
     tests:
       - 'core: packages/core/compiler/src/passes/derive/errors/natures.test.ts#natures'
+  - id: CHK-040
+    fixtures:
+      - fixtures/reference/tasks/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/errors/operations.test.ts#owner caller'
+  - id: CHK-045
+    fixtures:
+      - fixtures/passes/derive-errors/operations/api.yaml
+      - fixtures/passes/derive-errors/forbidden-pointer/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/errors/operations.test.ts#derived codes'
+      - 'core: packages/core/compiler/src/passes/derive/errors/operations.test.ts#every derived error carries derivedFrom'
+  - id: CHK-111
+    fixtures:
+      - fixtures/passes/derive-errors/operations/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/errors/operations.test.ts#attached codes reach'
+  - id: CHK-116
+    fixtures:
+      - fixtures/passes/derive-errors/operations/api.yaml
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/errors/operations.test.ts#not found'
