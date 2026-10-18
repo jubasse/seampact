@@ -17,6 +17,7 @@ import { accessIdentityPass } from "../../access/identity/index.js";
 import { accessRightsPass } from "../../access/rights/index.js";
 import { treeNodesPass } from "../../tree/nodes/index.js";
 import { treeSchemasPass } from "../../tree/schemas/index.js";
+import { deriveWirePass } from "../wire/index.js";
 import { deriveErrorsPass } from "./pass.js";
 import type { DeriveErrorsContext } from "./registry.js";
 
@@ -121,7 +122,7 @@ function runOn(
   return { draft, diagnostics, context };
 }
 
-/** Runs the tree and access halves, then derive.errors (guarded), on the first api of `workspace`. */
+/** Runs the tree, access and derive.wire halves, then derive.errors (guarded), on the first api of `workspace`. */
 export function deriveErrorsRunContract(workspace: RawWorkspace): DeriveErrorsRun {
   const raw = apiOf(workspace);
   const draft = createDraftIR();
@@ -134,7 +135,7 @@ export function deriveErrorsRunContract(workspace: RawWorkspace): DeriveErrorsRu
   const treeSchemas = treeSchemasPass.run(draft, context);
   const later = Object.freeze({ ...context, treeSchemas });
 
-  for (const half of [treeNodesPass, accessIdentityPass, accessRightsPass]) {
+  for (const half of [treeNodesPass, accessIdentityPass, accessRightsPass, deriveWirePass]) {
     half.run(draft, later);
 
     if (diagnostics.length > 0)
