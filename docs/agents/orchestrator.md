@@ -14,7 +14,7 @@ For the lead session only: subagents never read this file. The lead reads it onc
 
 - `general-purpose` only when a task needs a tool the types lack (WebFetch, an MCP server other than context7, the Agent tool); its prompt starts with "Read `.claude/agents/seampact-<role>.md` first"; note the case in the handoff.
 - Prefer a fresh agent over resuming one for more than a few calls.
-- Target PR size: about 1,500 changed lines.
+- Target PR size (A47): one deliverable, about 3,000 to 4,000 hand-written lines; seams stay small and land first. Past an agent's call cap, a fresh agent continues on the same branch from the report's resume state; the PR opens once the deliverable is done.
 - At most 4-5 agents at once; run them in the background; new or edited agent files load only after a session restart.
 
 ## Prompt
