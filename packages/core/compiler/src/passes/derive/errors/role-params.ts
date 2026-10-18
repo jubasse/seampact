@@ -15,7 +15,11 @@ import {
 import { quote } from "../../../validate/diagnostics.js";
 import type { DeriveErrorsRawValue } from "./read.js";
 import type { DeriveErrorsReporter } from "./report.js";
-import { type DeriveErrorsSchemas, deriveErrorsObjectOfUse } from "./role-param-fit.js";
+import {
+  type DeriveErrorsMember,
+  type DeriveErrorsSchemas,
+  deriveErrorsObjectOfUse,
+} from "./role-param-fit.js";
 
 // The params of a role binding (ADR 0002 section 11 "Error roles", docs/ir/07): an authored `params` template read by
 // the shared template reader with the role's data as its slots, or the by-name template when none is written. The
@@ -86,7 +90,7 @@ export function deriveErrorsDatumAlways(site: DatumSite, datum: DerivationRoleDa
 export function deriveErrorsParamProperties(
   schemas: Schemas,
   params: IrWriter.SchemaRef | undefined,
-): readonly PassReadonly<IrWriter.Property>[] {
+): readonly DeriveErrorsMember[] {
   if (params === undefined) return [];
 
   // tree.schemas compiles params to an object schema or refuses them (`fields-schema`), and no later half runs then.
@@ -209,7 +213,7 @@ function checkTopLevelKeys(site: DeriveErrorsRoleParamsSite, names: ReadonlySet<
 /** The by-name template: one member per param that has a datum of its name, in the params schema's order. */
 function byNameTemplate(
   site: DeriveErrorsRoleParamsSite,
-  properties: readonly PassReadonly<IrWriter.Property>[],
+  properties: readonly DeriveErrorsMember[],
 ): IrWriter.Template {
   const members: IrWriter.ObjectTemplateMember[] = [];
 

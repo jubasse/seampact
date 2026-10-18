@@ -4,6 +4,8 @@ import { quote } from "../../../validate/diagnostics.js";
 import {
   DERIVE_ERRORS_ANY_KIND,
   type DeriveErrorsFit,
+  type DeriveErrorsMember,
+  type DeriveErrorsObject,
   type DeriveErrorsTyped,
   type DeriveErrorsUse,
   deriveErrorsDescribeKinds,
@@ -95,7 +97,7 @@ function slotValue(
   let read = slot;
 
   for (const member of path) {
-    const property: PassReadonly<IrWriter.Property> | undefined = deriveErrorsObjectOfUse(
+    const property: DeriveErrorsMember | undefined = deriveErrorsObjectOfUse(
       site.schemas,
       use,
     )?.properties.find((candidate) => candidate.name === member);
@@ -410,7 +412,7 @@ function checkItems(
 function checkObject(
   check: TypedCheck,
   template: Template,
-  schema: PassReadonly<IrWriter.ObjectSchema>,
+  schema: DeriveErrorsObject,
   position: Position,
 ): void {
   if (template.kind !== "object") return;
@@ -474,7 +476,7 @@ function checkMerged(
   check: TypedCheck,
   position: Position,
   template: PassReadonly<IrWriter.ObjectTemplate>,
-  schema: PassReadonly<IrWriter.ObjectSchema>,
+  schema: DeriveErrorsObject,
 ): string[] {
   if (template.merge === undefined) return [];
 

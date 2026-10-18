@@ -1,4 +1,5 @@
 import type { IrWriter } from "@seampact/spec/ir";
+import { DERIVATION_ISSUE_SCHEMA_ID, derivationIssueMembers } from "../../../derivations/index.js";
 import type { PassReadonly, TreeSchemaService } from "../../../pipeline/seam.js";
 import { quote } from "../../../validate/diagnostics.js";
 
@@ -54,12 +55,41 @@ export function deriveErrorsSchemaOf(
   return schema;
 }
 
+/** A member of an object schema as the fit reads it. */
+export interface DeriveErrorsMember {
+  readonly name: string;
+  readonly type: Use;
+  readonly optional: boolean;
+  readonly nullable: boolean;
+}
+
+/** An object schema as the fit reads it: its id and members. */
+export interface DeriveErrorsObject {
+  readonly id: IrWriter.SchemaId;
+  readonly properties: readonly DeriveErrorsMember[];
+}
+
+// The issue item of `schemaInvalid` is core data tree.schemas seeds; a draft whose tree half is a fixture (the
+// orchestrator's stubs) lacks it, so it is read from the role data it is seeded from (each member required).
+const ISSUE_OBJECT: DeriveErrorsObject = {
+  id: DERIVATION_ISSUE_SCHEMA_ID,
+  properties: derivationIssueMembers.map((member) => ({
+    name: member.name,
+    type: member.type,
+    optional: false,
+    nullable: false,
+  })),
+};
+
 /** The object schema a use names, if it names one. */
 export function deriveErrorsObjectOfUse(
   schemas: Schemas,
   use: Use,
-): PassReadonly<IrWriter.ObjectSchema> | undefined {
+): DeriveErrorsObject | undefined {
   if (use.kind !== "ref") return undefined;
+
+  if (use.schema === DERIVATION_ISSUE_SCHEMA_ID && !Object.hasOwn(schemas, use.schema))
+    return ISSUE_OBJECT;
 
   const schema = deriveErrorsSchemaOf(schemas, use.schema);
 
@@ -85,7 +115,8 @@ export function deriveErrorsKindsOf(schemas: Schemas, typed: DeriveErrorsTyped):
 
       return kinds.add(use.type);
     case "ref":
-      return deriveErrorsSchemaOf(schemas, use.schema).kind === "union"
+      return deriveErrorsObjectOfUse(schemas, use) === undefined &&
+        deriveErrorsSchemaOf(schemas, use.schema).kind === "union"
         ? DERIVE_ERRORS_ANY_KIND
         : kinds.add("object");
   }
@@ -322,11 +353,10 @@ function refMisfit(
 ): string | undefined {
   if (rendered.kind === "ref" && rendered.schema === accepted.schema) return undefined;
 
-  const target = deriveErrorsSchemaOf(fit.schemas, accepted.schema);
-  const source =
-    rendered.kind === "ref" ? deriveErrorsSchemaOf(fit.schemas, rendered.schema) : undefined;
+  const target = deriveErrorsObjectOfUse(fit.schemas, accepted);
+  const source = deriveErrorsObjectOfUse(fit.schemas, rendered);
 
-  if (target.kind !== "object" || source?.kind !== "object")
+  if (target === undefined || source === undefined)
     return `it is not provably of the param's schema ${quote(accepted.schema)}`;
 
   // A pair of schemas already under comparison fits unless another member says otherwise.
@@ -365,8 +395,8 @@ export interface DeriveErrorsMemberMisfit {
  */
 export function deriveErrorsMemberMisfits(
   fit: DeriveErrorsFit,
-  source: PassReadonly<IrWriter.ObjectSchema>,
-  target: PassReadonly<IrWriter.ObjectSchema>,
+  source: DeriveErrorsObject,
+  target: DeriveErrorsObject,
   skipped: ReadonlySet<string>,
   seen: Set<string> = new Set(),
 ): DeriveErrorsMemberMisfit[] {
@@ -396,8 +426,8 @@ export function deriveErrorsMemberMisfits(
 
 function memberMisfit(
   fit: DeriveErrorsFit,
-  property: PassReadonly<IrWriter.Property>,
-  accepted: PassReadonly<IrWriter.Property>,
+  property: DeriveErrorsMember,
+  accepted: DeriveErrorsMember,
   seen: Set<string>,
 ): string | undefined {
   if (property.optional && !accepted.optional)
