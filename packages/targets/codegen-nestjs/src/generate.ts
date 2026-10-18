@@ -4,6 +4,7 @@ import {
   type GeneratedFile,
   type GenerateInput,
   type GenerateOutcome,
+  type GenerateWarning,
   type Refusal,
 } from "@seampact/codegen-core";
 import {
@@ -39,6 +40,7 @@ export function generateBoundary(
 
   const { ir, links, options } = input;
   const refusals: Refusal[] = [];
+  const warnings: GenerateWarning[] = [];
   const routes = routeTableSource(
     ir,
     links.validators,
@@ -48,6 +50,7 @@ export function generateBoundary(
       withItemValidators: options.bodyValidation,
     },
     refusals,
+    warnings,
   );
   const handlers = handlersSource(
     ir,
@@ -86,7 +89,7 @@ export function generateBoundary(
     },
   ];
 
-  return { status: "generated", files };
+  return { status: "generated", files, warnings };
 }
 
 // A form shared by several operations is refused once.

@@ -51,10 +51,7 @@ export async function generateReferenceProject(
   writeFileSync(join(project, "package.json"), '{ "type": "module" }\n');
   linkWorkspacePackages(project);
 
-  const providers = {
-    types: await linkedTarget(project, "@seampact/codegen-ts"),
-    validators: await linkedTarget(project, "@seampact/codegen-zod"),
-  };
+  const providers = await linkedProviders(project);
   const written = await Promise.all(
     REFERENCE_APIS.map((api) => generateApi(project, api, providers, nestjsOptions)),
   );
@@ -96,7 +93,7 @@ function formatted(project: string, diagnostics: readonly ts.Diagnostic[]): stri
   );
 }
 
-function readGoldenIr(api: string): ContractIR {
+export function readGoldenIr(api: string): ContractIR {
   return JSON.parse(
     readFileSync(new URL(`fixtures/golden/reference/${api}.ir.json`, REPOSITORY_ROOT), "utf8"),
   );
@@ -128,13 +125,31 @@ async function generated(
   return outcome.files;
 }
 
-async function generateApi(
+interface Providers {
+  readonly types: Target;
+  readonly validators: Target;
+}
+
+async function linkedProviders(project: string): Promise<Providers> {
+  return {
+    types: await linkedTarget(project, "@seampact/codegen-ts"),
+    validators: await linkedTarget(project, "@seampact/codegen-zod"),
+  };
+}
+
+/** The types and validators links of a reference api, as the generated project places them. */
+export async function referenceLinks(
   project: string,
   api: string,
-  providers: { readonly types: Target; readonly validators: Target },
-  nestjsOptions: Readonly<Record<string, unknown>>,
-): Promise<string[]> {
-  const ir = readGoldenIr(api);
+): Promise<Parameters<Target["generate"]>[0]["links"]> {
+  return linksOf(await linkedProviders(project), readGoldenIr(api), api);
+}
+
+function linksOf(
+  providers: Providers,
+  ir: ContractIR,
+  api: string,
+): Parameters<Target["generate"]>[0]["links"] {
   const types = providers.types.describe(ir, {});
   const validators = providers.validators.describe(ir, {});
 
@@ -148,6 +163,25 @@ async function generateApi(
   if (typesDescriptor === undefined || validatorsDescriptor === undefined)
     throw new Error("a link is missing");
 
+  return {
+    types: {
+      descriptor: typesDescriptor,
+      location: { kind: "relative", path: `../../types/${api}` },
+    },
+    validators: {
+      descriptor: validatorsDescriptor,
+      location: { kind: "relative", path: `../../validators/${api}` },
+    },
+  };
+}
+
+async function generateApi(
+  project: string,
+  api: string,
+  providers: Providers,
+  nestjsOptions: Readonly<Record<string, unknown>>,
+): Promise<string[]> {
+  const ir = readGoldenIr(api);
   const providerRequest = { ir, options: {}, links: {} };
 
   return [
@@ -170,16 +204,7 @@ async function generateApi(
       await generated(nestjsTarget, {
         ir,
         options: nestjsOptions,
-        links: {
-          types: {
-            descriptor: typesDescriptor,
-            location: { kind: "relative", path: `../../types/${api}` },
-          },
-          validators: {
-            descriptor: validatorsDescriptor,
-            location: { kind: "relative", path: `../../validators/${api}` },
-          },
-        },
+        links: linksOf(providers, ir, api),
         artefacts: new Set(["boundary"]),
       }),
     ),

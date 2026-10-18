@@ -1,6 +1,6 @@
 // The contract's part of step 1 (ADR 0012): the route's own body limit and its media type, checked once the
 // platform's parser has read the body within the app-wide limit. Copied into the generated tree as is.
-import { ContractError, codeOfRole, unexpectedError } from "./contract-error.js";
+import { type ContractError, roleError, unexpectedError } from "./contract-error.js";
 import { type ContractRequest, type ContractRoute, headerValue } from "./contract-route.js";
 
 const PAYLOAD_TOO_LARGE_ROLE = "payloadTooLarge";
@@ -89,14 +89,4 @@ function isMediaOf(contentType: string, media: string): boolean {
   const essence = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
 
   return essence === media || (media === "application/json" && essence.endsWith(JSON_SUFFIX));
-}
-
-function roleError(route: ContractRoute, role: string, params?: unknown): ContractError {
-  const code = codeOfRole(route, role);
-
-  if (code === undefined) {
-    return unexpectedError(route, new Error(`operation '${route.id}' declares no ${role} code`));
-  }
-
-  return new ContractError(code, params);
 }

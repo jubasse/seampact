@@ -276,3 +276,49 @@ describe("idempotency", () => {
     expect(app.calls.handled).toEqual(["createTask"]);
   });
 });
+
+describe("validation", () => {
+  test("schemaInvalid issues name the contract's rules, never the validator's codes", async () => {
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+      headers: writeHeaders(),
+      body: JSON.stringify({ title: "", effort: -1, extra: true }),
+    });
+
+    expect(reply.status).toBe(400);
+    expect(JSON.parse(reply.text).issues).toEqual(
+      expect.arrayContaining([
+        { pointer: "/title", rule: "minLength" },
+        { pointer: "/effort", rule: "minimum" },
+        { pointer: "/extra", rule: "unknownKeys" },
+      ]),
+    );
+  });
+
+  test("a missing member and a malformed format name required and format", async () => {
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks/${TASK}/assign`, {
+      headers: writeHeaders(),
+      body: JSON.stringify({}),
+    });
+    const malformed = await send("GET", `/v1/channels/not-a-uuid/tasks/${TASK}`, {
+      headers: BEARER,
+    });
+
+    expect(JSON.parse(reply.text).issues).toEqual([{ pointer: "/userId", rule: "required" }]);
+    expect(JSON.parse(malformed.text).issues).toEqual([{ pointer: "/channelId", rule: "format" }]);
+  });
+
+  test("a page limit the client does not send reaches the handler as the contract's default", async () => {
+    let received: unknown;
+
+    app.scenario.answers.listTasks = (input) => {
+      received = input;
+
+      return { status: 200, body: { items: [] } };
+    };
+
+    const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks`, { headers: BEARER });
+
+    expect(reply.status).toBe(200);
+    expect(received).toMatchObject({ query: { limit: 50 } });
+  });
+});

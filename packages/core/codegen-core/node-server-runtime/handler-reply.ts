@@ -19,6 +19,7 @@ import {
 const JSON_MEDIA = "application/json";
 const NOT_MODIFIED = 304;
 const WEAK_PREFIX = "W/";
+const NO_STORE = "no-store";
 
 /** The reply of a handler's result, or the contract error it names. */
 export async function handlerReply(
@@ -136,7 +137,7 @@ function appendCacheHeaders(
 
   const callerKind =
     grant.principal === null || grant.principal === undefined ? "anonymous" : "identified";
-  const cacheControl = cache.cacheControl[callerKind];
+  const cacheControl = cache.noStore ? NO_STORE : cache.cacheControl[callerKind];
 
   if (cacheControl !== undefined) headers.push(["cache-control", cacheControl]);
 

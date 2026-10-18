@@ -8,6 +8,7 @@ import {
   type WireFormat,
 } from "@seampact/spec/ir";
 import type { ValidatorsDescriptor } from "../descriptors.js";
+import { type GenerateWarning, warnLeftToHandler } from "../generate-warning.js";
 import { importSpecifier } from "../import-specifier.js";
 import { below, type IrLocation, operationLocation } from "../ir-location.js";
 import type { Link } from "../links.js";
@@ -32,6 +33,8 @@ const API_LOCATION: IrLocation = { member: "" };
 const JSON_MEDIA = "application/json";
 const BOUNDARY_ENFORCEMENT = "boundary";
 const CURSOR_ROLE = "cursor";
+const LIMIT_ROLE = "limit";
+const ARRAY_ITEM = "*";
 
 // A value written into the module as source text, such as an imported validator.
 class SourceExpression {
@@ -48,16 +51,25 @@ type SourceValue =
   | readonly SourceValue[]
   | { readonly [member: string]: SourceValue };
 
-/** The route table module source, or the refusals of every form it cannot serve. */
+/**
+ * The route table module source, or the refusals of every form it cannot serve; `warnings` gets each form the
+ * boundary leaves to the handler.
+ */
 export function routeTableSource(
   ir: ContractIR,
   validators: Link<"validators">,
   fromFile: string,
   options: RouteTableOptions,
   refusals: Refusal[],
+  warnings: GenerateWarning[],
 ): string {
   const imports = new ModuleImports(validators, fromFile);
   const format = errorFormat(ir, refusals);
+
+  ir.operations.forEach((operation, index) => {
+    warnings.push(...handlerForms(ir, operation, operationLocation(index, operation.id)));
+  });
+
   const routes = ir.operations.map((operation, index) =>
     routeEntry(
       ir,
@@ -209,6 +221,7 @@ function routeEntry(
       validatorRef === undefined
         ? null
         : imports.expression(validatorRef.module, validatorRef.export),
+    inputRules: inputRuleHints(ir, operation),
     idempotency: idempotencyEntry(operation, location, refusals),
     responses: operation.responses.map((response, index) => ({
       status: response.status,
@@ -240,9 +253,80 @@ function routeEntry(
             cacheControl: Object.fromEntries(
               operation.cache.perCallerKind.map((entry) => [entry.caller, entry.cacheControl]),
             ),
+            noStore: operation.cache.noStore,
             vary: operation.cache.vary,
           },
   };
+}
+
+// Forms the boundary validates or passes on but does not enforce: the handler does (ADR 0016 "Left to the handler").
+function handlerForms(
+  ir: ContractIR,
+  operation: Operation,
+  location: IrLocation,
+): GenerateWarning[] {
+  const access = operation.access;
+  const identityId =
+    isKnownVariant("Access", access) && access.kind !== "public" ? access.identity : undefined;
+  const identity = identityId === undefined ? undefined : ir.identities[identityId];
+  const identityHeaders =
+    identity !== undefined && isKnownVariant("Identity", identity) && "headers" in identity
+      ? identity.headers.length
+      : 0;
+  const forms: [
+    form: string,
+    description: string,
+    present: boolean,
+    member: string,
+    fix: string,
+  ][] = [
+    [
+      "filteredBy",
+      `The list filter right '${operation.filteredBy ?? ""}'`,
+      operation.filteredBy !== undefined,
+      "filteredBy",
+      "Apply the right to the handler's query, so the list holds only what the caller may read.",
+    ],
+    [
+      "concurrency",
+      "The version check",
+      operation.concurrency !== undefined,
+      "concurrency",
+      "Compare the version in the input with the stored one and answer the stateConflict code when they differ.",
+    ],
+    [
+      "owner",
+      "The caller ownership",
+      operation.owner !== undefined,
+      "owner",
+      "Scope the handler's reads and writes to the authenticated principal.",
+    ],
+    [
+      "deadline",
+      "The request deadline",
+      operation.deadlineHeader !== undefined || operation.budgetMs !== undefined,
+      operation.deadlineHeader === undefined ? "budgetMs" : "deadlineHeader",
+      "Read the deadline header the boundary validated and stop the work when it passes.",
+    ],
+    [
+      "paging.sortKeys",
+      "The sort keys",
+      (operation.paging?.sortKeys.length ?? 0) > 0,
+      "paging",
+      "Order the page by the sort key the boundary validated.",
+    ],
+    [
+      "identity.headers",
+      `The headers of the identity '${identityId ?? ""}'`,
+      identityHeaders > 0,
+      "access",
+      "Read the identity headers the boundary validated in the handler.",
+    ],
+  ];
+
+  return forms.flatMap(([form, description, present, member, fix]) =>
+    present ? [warnLeftToHandler(form, description, below(location, member), fix)] : [],
+  );
 }
 
 // Forms the reference contract does not hold, refused until a consumer needs them (A47).
@@ -663,6 +747,18 @@ function errorEntry(
   const roles =
     error.roles?.map((binding) => binding.role) ??
     (declaration.default === undefined ? [] : [declaration.default]);
+  const roleParams = Object.fromEntries(
+    (error.roles ?? []).flatMap((binding, index) =>
+      binding.params === undefined
+        ? []
+        : [
+            [
+              binding.role,
+              template(binding.params, below(location, "roles", String(index), "params"), refusals),
+            ],
+          ],
+    ),
+  );
 
   return {
     code: error.code,
@@ -670,6 +766,7 @@ function errorEntry(
     status: declaration.http.status,
     nature: declaration.nature,
     roles,
+    roleParams: Object.keys(roleParams).length === 0 ? undefined : roleParams,
     retryHeader:
       error.retryHeader === undefined
         ? undefined
@@ -712,7 +809,12 @@ function pagingEntry(
     return undefined;
   }
 
-  return { cursorParam: cursor.name, nextCursorMember: nextCursor };
+  return {
+    cursorParam: cursor.name,
+    nextCursorMember: nextCursor,
+    limitParam: style.request.find((role) => role.role === LIMIT_ROLE)?.name,
+    defaultLimit: paging.defaultLimit,
+  };
 }
 
 function errorFormat(ir: ContractIR, refusals: Refusal[]): SourceValue {
@@ -797,6 +899,16 @@ function isSlot(value: Template, slot: string): boolean {
 function template(node: Template, location: IrLocation, refusals: Refusal[]): SourceValue {
   if (isKnownVariant("Template", node)) {
     if (node.kind === "slot") return { kind: "slot", slot: node.slot, path: node.path };
+
+    if (node.kind === "literal") return { kind: "literal", value: jsonValue(node.value) ?? null };
+
+    if (node.kind === "each") {
+      return {
+        kind: "each",
+        of: node.of,
+        as: template(node.as, below(location, "as"), refusals),
+      };
+    }
 
     if (node.kind === "object") {
       return {
@@ -928,4 +1040,66 @@ function sourceOf(value: SourceValue): string {
     .map(([name, member]) => `${JSON.stringify(name)}: ${sourceOf(member)}`);
 
   return `{ ${members.join(", ")} }`;
+}
+
+// Per input pointer, the format and length bounds of a string: the rule names of the validator's custom checks.
+function inputRuleHints(ir: ContractIR, operation: Operation): SourceValue {
+  const hints: Record<string, SourceValue> = {};
+  const parts: [string, readonly Param[], (name: string) => string][] = [
+    ["path", operation.params.path, (name) => name],
+    ["query", operation.params.query, (name) => name],
+    ["headers", operation.params.header, (name) => name.toLowerCase()],
+  ];
+
+  for (const [part, params, key] of parts) {
+    for (const param of params)
+      collectHints(ir, param.type, `/${part}/${key(param.name)}`, hints, []);
+  }
+
+  if (operation.input !== undefined) collectHints(ir, operation.input.schema, "/body", hints, []);
+
+  return hints;
+}
+
+function collectHints(
+  ir: ContractIR,
+  type: TypeUse,
+  pointer: string,
+  hints: Record<string, SourceValue>,
+  visiting: readonly string[],
+): void {
+  if (!isKnownVariant("TypeUse", type)) return;
+
+  if (type.kind === "scalar") {
+    const { minLength, maxLength } = type.refinements;
+
+    if (type.format !== undefined || minLength !== undefined || maxLength !== undefined) {
+      hints[pointer] = { format: type.format, minLength, maxLength };
+    }
+
+    return;
+  }
+
+  if (type.kind === "array") {
+    collectHints(ir, type.items, `${pointer}/${ARRAY_ITEM}`, hints, visiting);
+
+    return;
+  }
+
+  if (type.kind !== "ref" || visiting.includes(type.schema)) return;
+
+  const schema = ir.schemas[type.schema];
+
+  if (schema === undefined || !isKnownVariant("Schema", schema) || schema.kind !== "object") return;
+
+  for (const property of schema.properties) {
+    collectHints(ir, property.type, `${pointer}/${escapePointer(property.name)}`, hints, [
+      ...visiting,
+      type.schema,
+    ]);
+  }
+}
+
+function escapePointer(name: string): string {
+  return name.replaceAll("~", "~0").replaceAll("/", "~1");
 }

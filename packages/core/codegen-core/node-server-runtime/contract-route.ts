@@ -43,7 +43,10 @@ export type FormatTemplate =
       readonly members: readonly { readonly name: string; readonly value: FormatTemplate }[];
     }
   | { readonly kind: "slot"; readonly slot: string; readonly path: readonly string[] }
-  | { readonly kind: "text"; readonly text: string };
+  | { readonly kind: "text"; readonly text: string }
+  | { readonly kind: "literal"; readonly value: unknown }
+  /** Each element of an array slot, rendered with `as` where the slot `item` holds it. */
+  | { readonly kind: "each"; readonly of: string; readonly as: FormatTemplate };
 
 export interface ErrorFormat {
   readonly media: string;
@@ -62,6 +65,8 @@ export interface ErrorEntry {
   readonly nature: string;
   /** The roles the code answers (`unauthenticated`, `forbidden`, `schemaInvalid`, ...). */
   readonly roles: readonly string[];
+  /** Per role, the template filling the code's params from the role's data; absent when the code has no params. */
+  readonly roleParams?: Readonly<Record<string, FormatTemplate>>;
   /** A header derived from one of the code's params, such as `Retry-After` in seconds. */
   readonly retryHeader?: {
     readonly name: string;
@@ -147,6 +152,13 @@ export interface FieldRightEntry {
   readonly errors: readonly string[];
 }
 
+/** What the contract declares on a string the validator checks with a custom check, to name the rule it breaks. */
+export interface InputRuleHint {
+  readonly format?: string;
+  readonly minLength?: number;
+  readonly maxLength?: number;
+}
+
 export interface ResponseEntry {
   readonly status: number;
   readonly shape: "item" | "list" | "table" | "page" | "empty";
@@ -176,6 +188,8 @@ export interface ContractRoute {
     readonly rawBody: boolean;
   };
   readonly validator: StandardValidator;
+  /** Keyed by the input pointer, `/body/title`, an array item written `*`. */
+  readonly inputRules: Readonly<Record<string, InputRuleHint>>;
   readonly idempotency?: {
     readonly header: string;
     readonly replayHeader: string;
@@ -183,11 +197,19 @@ export interface ContractRoute {
   };
   readonly responses: readonly ResponseEntry[];
   readonly errors: Readonly<Record<string, ErrorEntry>>;
-  readonly paging?: { readonly cursorParam: string; readonly nextCursorMember: string };
+  readonly paging?: {
+    readonly cursorParam: string;
+    readonly nextCursorMember: string;
+    /** The limit query member and the value the handler receives when the client sends none. */
+    readonly limitParam?: string;
+    readonly defaultLimit?: number;
+  };
   readonly cache?: {
     readonly etag: boolean;
     /** The `Cache-Control` value per caller kind, `identified` or `anonymous`. */
     readonly cacheControl: Readonly<Record<string, string>>;
+    /** Authoritative: the reply is never stored, `Cache-Control: no-store`, whatever the caller. */
+    readonly noStore: boolean;
     readonly vary: readonly string[];
   };
 }

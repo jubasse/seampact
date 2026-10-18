@@ -38,6 +38,29 @@ export function unexpectedError(route: ContractRoute | undefined, cause: unknown
   );
 }
 
+/**
+ * The operation's code for a role, its params rendered from the role's data by the binding's template (IR
+ * section 7); a role the operation does not bind is a 500.
+ */
+export function roleError(route: ContractRoute, role: string, data?: unknown): ContractError {
+  const entry = Object.values(route.errors).find((candidate) => candidate.roles.includes(role));
+
+  if (entry === undefined) {
+    return unexpectedError(route, new Error(`operation '${route.id}' declares no ${role} code`));
+  }
+
+  return new ContractError(entry.code, roleParams(entry, role, data));
+}
+
+/** The params a role's data gives a code: undefined when the code declares none. */
+export function roleParams(entry: ErrorEntry, role: string, data: unknown): unknown {
+  const template = entry.roleParams?.[role];
+
+  if (template === undefined) return undefined;
+
+  return renderTemplate(template, isPlainObject(data) ? data : {}) ?? {};
+}
+
 /** The code of the operation's `undeclaredStatus` role, the api-wide 500. */
 export function internalCode(route: ContractRoute | undefined): string {
   if (route === undefined) return FALLBACK_INTERNAL_CODE;
@@ -75,7 +98,7 @@ export function renderContractReply(
     status: entry.status,
     nature: entry.nature,
   };
-  const rendered = renderTemplate(api.format.body, slots);
+  const rendered = renderTemplate(api.format.body, slots) ?? {};
   const body =
     api.format.mergeParams && isPlainObject(rendered) && isPlainObject(params)
       ? { ...rendered, ...params }
@@ -111,7 +134,7 @@ function retryHeaderOf(entry: ErrorEntry, params: unknown): [string, string] | u
   return [header.name.toLowerCase(), String(headerValue)];
 }
 
-// Absent slots are omitted (the format's `absent: omit`).
+// A slot, member or item without a value is omitted, and an object left with no member has none (IR section 7).
 function renderTemplate(
   template: FormatTemplate,
   slots: Readonly<Record<string, unknown>>,
@@ -119,11 +142,23 @@ function renderTemplate(
   switch (template.kind) {
     case "text":
       return template.text;
+    case "literal":
+      return template.value;
     case "slot":
       return template.path.reduce<unknown>(
         (value, member) => (isPlainObject(value) ? value[member] : undefined),
         slots[template.slot],
       );
+    case "each": {
+      const items = slots[template.of];
+
+      if (!Array.isArray(items)) return undefined;
+
+      return items
+        .map((item) => renderTemplate(template.as, { ...slots, item }))
+        .filter((value) => value !== undefined);
+    }
+
     case "object": {
       const rendered: Record<string, unknown> = {};
 
@@ -133,7 +168,7 @@ function renderTemplate(
         if (value !== undefined) rendered[member.name] = value;
       }
 
-      return rendered;
+      return Object.keys(rendered).length > 0 ? rendered : undefined;
     }
   }
 }

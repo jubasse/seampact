@@ -4,6 +4,8 @@ import {
   generateReferenceProject,
   projectDirectory,
   REFERENCE_COMPILER_OPTIONS,
+  readGoldenIr,
+  referenceLinks,
   typeErrorsOf,
 } from "./reference-project.test-support.js";
 
@@ -25,5 +27,25 @@ describe("the generated reference boundary compiles", () => {
       status: "refused",
       refusals: [{ code: "options.unknown" }, { code: "options.responses.invalid" }],
     });
+  });
+
+  test.each([
+    ["tasks", "filteredBy.handler", "listTasks"],
+    ["tasks", "concurrency.handler", "updateTask"],
+    ["tasks", "owner.handler", "getDraft"],
+    ["tasks", "paging.sortKeys.handler", "listTasks"],
+    ["tasksService", "deadline.handler", "getTask"],
+    ["tasksService", "identity.headers.handler", "getTask"],
+  ])("%s: %s names %s", async (api, code, operation) => {
+    const outcome = await nestjsTarget.generate({
+      ir: readGoldenIr(api),
+      options: {},
+      links: await referenceLinks(PROJECT, api),
+      artefacts: new Set(["boundary"]),
+    });
+
+    expect(outcome.status === "generated" ? outcome.warnings : outcome.refusals).toContainEqual(
+      expect.objectContaining({ code, operation }),
+    );
   });
 });

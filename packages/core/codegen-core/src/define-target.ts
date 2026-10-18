@@ -71,7 +71,11 @@ export function defineTarget<
 
     if (finished.status === "refused") return finished;
 
-    return { status: "generated", files: finished.files };
+    return {
+      status: "generated",
+      files: finished.files,
+      ...(generated.warnings === undefined ? {} : { warnings: generated.warnings }),
+    };
   }
 
   function describe(ir: ContractIR, rawOptions: unknown): DescribeOutcome<DescriptorSet> {

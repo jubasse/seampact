@@ -58,6 +58,7 @@ import {
   codeOfStatus,
   isPlainObject,
   renderContractReply,
+  roleError,
   unexpectedError,
 } from "./node-server/contract-error.js";
 import {
@@ -774,11 +775,7 @@ function preRoutingError(route: ContractRoute | undefined, exception: unknown): 
       return unexpectedError(route, exception);
     }
 
-    const code = codeOfRole(route, PAYLOAD_TOO_LARGE_ROLE);
-
-    return code === undefined
-      ? unexpectedError(route, exception)
-      : new ContractError(code, { limitBytes: routeLimit });
+    return roleError(route, PAYLOAD_TOO_LARGE_ROLE, { limitBytes: routeLimit });
   }
 
   const code = codeOfStatus(route, status);
