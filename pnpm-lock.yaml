@@ -203,7 +203,23 @@ importers:
         specifier: 2.9.1
         version: 2.9.1
 
-  packages/core/cli: {}
+  packages/core/cli:
+    dependencies:
+      '@seampact/codegen-core':
+        specifier: workspace:*
+        version: link:../codegen-core
+      '@seampact/compiler':
+        specifier: workspace:*
+        version: link:../compiler
+      '@seampact/spec':
+        specifier: workspace:*
+        version: link:../spec
+      ajv:
+        specifier: 8.20.0
+        version: 8.20.0
+      yaml:
+        specifier: 2.9.1
+        version: 2.9.1
 
   packages/core/codegen-core:
     dependencies:
@@ -238,6 +254,8 @@ importers:
       ajv:
         specifier: 8.20.0
         version: 8.20.0
+
+  packages/runtime/hooks: {}
 
 packages:
 
