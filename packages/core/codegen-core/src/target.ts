@@ -1,5 +1,6 @@
 import type { ContractIR, IrSupport } from "@seampact/spec/ir";
 import type { DescriptorSet, LinkKind, ProvidedDescriptors } from "./descriptors.js";
+import type { GenerateWarning } from "./generate-warning.js";
 import type { LinkNeeds, LinkOffers, LinkSet, Links } from "./links.js";
 import type { Refused } from "./refusal.js";
 
@@ -42,7 +43,14 @@ export interface GeneratedFile {
   contents: string;
 }
 
-export type GenerateOutcome = { status: "generated"; files: readonly GeneratedFile[] } | Refused;
+// `warnings` name the forms the files leave to the developer's code (`GenerateWarning`).
+export type GenerateOutcome =
+  | {
+      status: "generated";
+      files: readonly GeneratedFile[];
+      warnings?: readonly GenerateWarning[];
+    }
+  | Refused;
 
 export type ParseOptionsOutcome<Options> = { status: "parsed"; options: Options } | Refused;
 

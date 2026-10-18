@@ -19,6 +19,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/idempotency-memory` | `packages/runtime/idempotency-memory` | helper | An in-memory idempotency store for one process, for development and tests. |
 | `@seampact/signed-webhooks` | `packages/runtime/signed-webhooks` | helper | Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook. |
 | `@seampact/codegen-fetch` | `packages/targets/codegen-fetch` | target | Generates a typed fetch client with one method per operation, returning its success and error responses as typed results. |
+| `@seampact/codegen-nestjs` | `packages/targets/codegen-nestjs` | target | Generates the NestJS boundary around your controllers: a decorator per operation, the access guard, the validation and response interceptor, an input decorator, the error filter and a boot check, validating with zod. |
 | `@seampact/codegen-ts` | `packages/targets/codegen-ts` | target | Generates a named TypeScript type per schema and each operation's input, output and error union. |
 | `@seampact/codegen-zod` | `packages/targets/codegen-zod` | target | Generates Standard Schema zod validators per schema and direction, and one input validator per operation. |
 
@@ -47,6 +48,7 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/codegen-core`
 
 - `packages/core/codegen-core/src`: The API the code generators are written against: target definitions, link descriptors, refusals, and the steps around a target's generate (IR support and link checks, header, formatting, file writer), and the helpers targets share (IR locations, located refusals, planned names, property keys).
+- `packages/core/codegen-core/src/node-server`: The shared Node server boundary every Node server target generates (ADR 0016): the framework-neutral runtime copied into the generated tree, and the emitters of the route table, handler interfaces and hook types.
 
 ### `@seampact/compiler`
 
@@ -106,6 +108,10 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/codegen-fetch`
 
 - `packages/targets/codegen-fetch/src`: The fetch client target: one typed method per operation over the platform fetch, reading its request, success and error types from the `types` link.
+
+### `@seampact/codegen-nestjs`
+
+- `packages/targets/codegen-nestjs/src`: The NestJS server target: the boundary around the app's controllers for each api, placing the shared Node request checks of codegen-core in NestJS's middleware, guard, interceptor and filter, validating with zod.
 
 ### `@seampact/codegen-ts`
 

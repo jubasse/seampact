@@ -234,6 +234,8 @@ function pathSegment(name: string, value: unknown): string {
   return encodeURIComponent(text);
 }
 
+// `encodeURIComponent` writes `+` as `%2B`: servers decode a query string as a form, where `+` is a space
+// (ADR 0002 section 7).
 function queryPair(param: QueryPlan, value: unknown): string[] {
   if (value === undefined) return [];
 
