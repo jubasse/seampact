@@ -3,6 +3,7 @@
 // routes of the app's own. Plain JavaScript, as a loosely typed app would write its hooks; copied next to the
 // compiled generated tree, so it imports the generated modules by relative path. Decorators are applied by call.
 import "reflect-metadata";
+import { gzipSync } from "node:zlib";
 import { Body, Catch, Controller, Get, Module, Post, UseFilters } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import * as TasksNest from "../generated/server/tasks/nestjs.js";
@@ -47,7 +48,8 @@ export function resetScenario() {
   calls.loggedErrors.length = 0;
 }
 
-/** Thrown by a handler to make the app's own filter write a reply, with Express's `send` or Node's `writeHead`. */
+/** Thrown by a handler to make the app's own filter write a reply, with Express's `send`, Node's `writeHead`, or a body
+ * in a content encoding (`encoding:gzip`). */
 export class AppReply extends Error {
   constructor(status, contentType, body, writer = "send") {
     super(`app reply ${status}`);
@@ -62,6 +64,19 @@ export class AppReply extends Error {
 class AppReplyFilter {
   catch(exception, host) {
     const response = host.switchToHttp().getResponse();
+
+    if (exception.writer.startsWith("encoding:")) {
+      const encoding = exception.writer.slice("encoding:".length);
+      const body = encoding === "gzip" ? gzipSync(exception.body) : Buffer.from(exception.body);
+
+      response
+        .status(exception.status)
+        .type(exception.contentType)
+        .set("content-encoding", encoding)
+        .end(body);
+
+      return;
+    }
 
     if (exception.writer === "writeHead") {
       response

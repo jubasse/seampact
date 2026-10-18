@@ -51,7 +51,7 @@ interface ReferenceAppModule {
     status: number,
     contentType: string,
     body: string,
-    writer?: "send" | "writeHead",
+    writer?: string,
   ) => Error;
   resetScenario(): void;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
@@ -184,6 +184,42 @@ describe("replies on contract routes", () => {
       expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
     },
   );
+});
+
+describe("compressed error replies", () => {
+  test("a gzip error body in the api's format is decoded, checked and passes", async () => {
+    app.scenario.answers.getTask = () => {
+      throw new app.AppReply(
+        404,
+        PROBLEM_MEDIA,
+        problemBody("api.not_found", 404),
+        "encoding:gzip",
+      );
+    };
+
+    const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, { headers: BEARER });
+
+    expect(reply.status).toBe(404);
+    expect(reply.headers["content-encoding"]).toBe("gzip");
+    expect(app.calls.unexpected).toEqual([]);
+  });
+
+  test("an error body in an encoding the check cannot read is a violation", async () => {
+    app.scenario.answers.getTask = () => {
+      throw new app.AppReply(
+        404,
+        PROBLEM_MEDIA,
+        problemBody("api.not_found", 404),
+        "encoding:x-custom",
+      );
+    };
+
+    const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, { headers: BEARER });
+
+    expect(reply.status).toBe(500);
+    expect(reply.headers["content-encoding"]).toBeUndefined();
+    expect(app.calls.unexpected).toHaveLength(1);
+  });
 });
 
 describe("the request the boundary checks is the one Express routes", () => {

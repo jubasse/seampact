@@ -2,7 +2,9 @@
 // check"): whoever writes the reply, an undeclared status, a framework ETag or 304, or an error body outside the
 // api's format or codes is a violation, handled by the `responses` mode. Copied into the generated tree as is.
 import { AsyncLocalStorage } from "node:async_hooks";
+import { constants } from "node:buffer";
 import type { ServerResponse } from "node:http";
+import { brotliDecompressSync, gunzipSync, inflateSync } from "node:zlib";
 import type { AccessGrant } from "./access-checks.js";
 import {
   type BoundaryHooks,
@@ -27,6 +29,10 @@ const VARY_HEADER = "vary";
 const CONTENT_LENGTH_HEADER = "content-length";
 // Headers that describe the body: the boundary replaces them, and keeps every other header the app set.
 const BODY_HEADERS = ["content-type", CONTENT_LENGTH_HEADER, "content-encoding", ETAG_HEADER];
+const IDENTITY_ENCODING = "identity";
+const DECODERS: Readonly<
+  Record<string, (body: Buffer, options: { maxOutputLength: number }) => Buffer>
+> = { gzip: gunzipSync, deflate: inflateSync, br: brotliDecompressSync };
 const LIST_SHAPES: ReadonlySet<string> = new Set(["list", "table", "page"]);
 
 /** The state of one contract request, opened before any check runs. */
@@ -280,10 +286,17 @@ export function installOutgoingCheck(
 
   const flush = async (): Promise<void> => {
     const body = Buffer.concat(held);
+    const decoded = decodedBody(
+      response,
+      body,
+      holdReason === "error" ? MAX_CHECKED_ERROR_BODY_BYTES : constants.MAX_LENGTH,
+    );
     const reason =
-      holdReason === "error"
-        ? errorBodyViolation(context, response, body)
-        : await successBodyViolation(context, response.statusCode, body);
+      typeof decoded === "string"
+        ? decoded
+        : holdReason === "error"
+          ? errorBodyViolation(context, response, decoded)
+          : await successBodyViolation(context, response.statusCode, decoded);
 
     if (reason !== undefined) {
       violation(reason);
@@ -446,6 +459,28 @@ function recordedReply(response: ServerResponse, chunks: readonly Buffer[]): Con
   }
 
   return { status: response.statusCode, headers, body: Buffer.concat(chunks) };
+}
+
+// The held body as the client decodes it, or the violation: a compressed body (compression middleware) is decoded
+// within the cap, and an encoding the check cannot decode is outside the contract.
+function decodedBody(response: ServerResponse, body: Buffer, maxBytes: number): Buffer | string {
+  const encoding = String(response.getHeader("content-encoding") ?? IDENTITY_ENCODING)
+    .trim()
+    .toLowerCase();
+  const decode = DECODERS[encoding];
+
+  if (encoding === IDENTITY_ENCODING) return body;
+
+  if (decode === undefined)
+    return `a body in the content encoding '${encoding}', which the check cannot read`;
+
+  try {
+    return decode(body, { maxOutputLength: maxBytes });
+  } catch (error) {
+    return error instanceof RangeError
+      ? `an error body over ${maxBytes} bytes once decoded`
+      : `a body that does not decode as '${encoding}'`;
+  }
 }
 
 function errorBodyViolation(
