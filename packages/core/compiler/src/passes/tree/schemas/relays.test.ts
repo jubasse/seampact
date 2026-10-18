@@ -222,6 +222,38 @@ describe("a declaration two relayed apis both use", () => {
   });
 });
 
+describe("written values of two copies of one name", () => {
+  const ownerWith = (written: string) =>
+    `schemas:\n  Box: { type: object, properties: { owner: Owner } }\n  Owner: { type: object, ${written}, properties: { name: { type: string }, origin: { type: string } } }\n`;
+  const ORIGIN_KEY = "extensions:\n  acme:\n    origin: { at: [schema], schema: { type: string } }\n";
+  const relayPair = (pa: string, pb: string) =>
+    treeSchemasRunApi(
+      TWO_RELAYS,
+      new Map([
+        ["pa", draftReturning(pa, "Box")],
+        ["pb", draftReturning(pb, "Box")],
+      ]),
+    );
+
+  test("differ when an example differs only in its 'origin' member", () => {
+    const run = relayPair(
+      ownerWith("examples: [{ name: a, origin: north }]"),
+      ownerWith("examples: [{ name: a, origin: south }]"),
+    );
+
+    expect(located(run)).toEqual([["relay-declaration", "/surfaces/internal/routes/two/relays"]]);
+  });
+
+  test("differ when an extension value named 'origin' differs", () => {
+    const run = relayPair(
+      `${ORIGIN_KEY}${ownerWith("x-acme-origin: north")}`,
+      `${ORIGIN_KEY}${ownerWith("x-acme-origin: south")}`,
+    );
+
+    expect(located(run)).toEqual([["relay-declaration", "/surfaces/internal/routes/two/relays"]]);
+  });
+});
+
 describe("extension values of a copied schema", () => {
   const EXTENDED = `extensions:
   acme:

@@ -102,6 +102,9 @@ function withApiOrigins(value: unknown, api: string): void {
 
 const IGNORED_MEMBERS = new Set(["directions", "origin"]);
 
+// The members holding values the contract wrote: compared whole, since an `origin` key there is data.
+const WRITTEN_VALUE_MEMBERS = new Set(["default", "examples", "extensions"]);
+
 function withoutIgnored(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(withoutIgnored);
 
@@ -110,7 +113,10 @@ function withoutIgnored(value: unknown): unknown {
   return Object.fromEntries(
     Object.entries(value)
       .filter(([key]) => !IGNORED_MEMBERS.has(key))
-      .map(([key, member]) => [key, withoutIgnored(member)]),
+      .map(([key, member]) => [
+        key,
+        WRITTEN_VALUE_MEMBERS.has(key) ? member : withoutIgnored(member),
+      ]),
   );
 }
 
