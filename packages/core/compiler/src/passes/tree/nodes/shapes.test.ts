@@ -340,8 +340,11 @@ surfaces:
   expect(run.diagnostics).toEqual([]);
   expect(profile.degradable).toEqual({
     paths: ["stats.views"],
+    header: "X-Degraded",
     origin: at(`${ROUTES}/profile/degradable`),
   });
+  // The convention is set, so the header sits beside the format's degraded field too.
+  expect(operation(run.draft.operations, "wrapped").degradable?.header).toBe("X-Degraded");
   expect(profile.budgetMs).toBe(300);
   expect(operation(run.draft.operations, "wrapped").responses?.[0]?.derivedFrom).toEqual({
     derivation: "response.format",
@@ -425,6 +428,7 @@ surfaces:
       since: "2027-01-01",
       sunset: "2027-01-01",
       successor: { kind: "httpOperation", api: "a", id: "listOrders" },
+      successorRel: "successor-version",
       origin: at(`${orders}/routes/old/deprecated`),
     },
     upstream: ["ledger", "catalog"],

@@ -8,7 +8,8 @@ import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 // the successor is an operation of the api. `upstream.maturity`: an operation with no stated maturity takes its
 // owning service's (the first of `upstream`), else the api's, located at the api's `maturity`, or at the api
 // itself when its maturity is the default. Each deprecation header's `from` is the deprecation, then the
-// convention that names it, so a collision of one header is located at its own convention.
+// convention that names it, so a collision of one header is located at its own convention; each carries its
+// semantic, which tells the renamed headers apart.
 
 const DEPRECATION = "deprecation.headers";
 
@@ -22,14 +23,20 @@ export function deriveWireDeprecation(route: DeriveWireRoute, scope: DeriveWireS
   const header = conventions.get("deprecation.header");
   const sunsetHeader = conventions.get("deprecation.sunsetHeader");
   const headers = [
-    { name: textOf(header), naming: header },
-    { name: textOf(sunsetHeader), naming: sunsetHeader },
+    { name: textOf(header), semantic: "deprecation" as const, naming: header },
+    { name: textOf(sunsetHeader), semantic: "sunset" as const, naming: sunsetHeader },
     ...(deprecated.successor === undefined
       ? []
-      : [{ name: DERIVE_WIRE_LINK, naming: conventions.get("deprecation.successorRel") }]),
+      : [
+          {
+            name: DERIVE_WIRE_LINK,
+            semantic: "successorLink" as const,
+            naming: conventions.get("deprecation.successorRel"),
+          },
+        ]),
   ];
 
-  for (const { name, naming } of headers)
+  for (const { name, semantic, naming } of headers)
     deriveWireAddSuccessHeader(
       route,
       {
@@ -44,7 +51,7 @@ export function deriveWireDeprecation(route: DeriveWireRoute, scope: DeriveWireS
           ],
         },
       },
-      undefined,
+      semantic,
       scope,
     );
 }

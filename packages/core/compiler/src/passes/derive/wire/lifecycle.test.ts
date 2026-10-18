@@ -20,6 +20,7 @@ describe("deprecation headers", () => {
       name: "X-Deprecated",
       type: { kind: "scalar", type: "string", refinements: {} },
       required: true,
+      semantic: "deprecation",
       derivedFrom: {
         derivation: "deprecation.headers",
         from: [
@@ -37,6 +38,9 @@ describe("deprecation headers", () => {
       ["/surfaces/app/routes/legacy/deprecated", "/conventions/deprecation/sunsetHeader"],
       ["/surfaces/app/routes/legacy/deprecated"],
     ]);
+    expect(
+      deriveWireOperation(run, "legacy").responses?.[0]?.headers.map((header) => header.semantic),
+    ).toEqual(["deprecation", "sunset", "successorLink"]);
   });
 
   test("a successor Link on a page that has its own Link is refused at the deprecation", () => {

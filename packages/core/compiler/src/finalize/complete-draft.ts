@@ -36,8 +36,11 @@ function namedErrorCodes(draft: DraftIR): Set<string> {
 }
 
 export function finalizeCompleteDraft(api: DraftFixtureApi): DraftIR {
-  const draft = draftFixture(api, "after-access");
+  return finalizeAddStandIns(draftFixture(api, "after-access"), api);
+}
 
+/** Fills the members the passes not yet written would derive, so `draft` of api `api` finalizes. */
+export function finalizeAddStandIns(draft: DraftIR, api: string): DraftIR {
   if (draft.api !== undefined) draft.api.wire ??= { ...STAND_IN_API_WIRE };
 
   for (const operation of draft.operations) {

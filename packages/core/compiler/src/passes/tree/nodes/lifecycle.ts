@@ -79,10 +79,23 @@ export function treeNodesDeprecated(site: TreeNodesSite): IrWriter.Deprecation |
     since,
     sunset,
     ...(typeof successor === "string"
-      ? { successor: { kind: "httpOperation" as const, api, id: successor } }
+      ? {
+          successor: { kind: "httpOperation" as const, api, id: successor },
+          successorRel: successorRelOf(site),
+        }
       : {}),
     origin: pipelineCopy(entry.origin),
   };
+}
+
+// The successor `Link` relation, `successor-version` unless `conventions.deprecation.successorRel` renames it.
+function successorRelOf(site: TreeNodesSite): string {
+  const rel = site.context.conventions.get("deprecation.successorRel")?.value;
+
+  if (typeof rel !== "string")
+    throw new Error("conventions.deprecation.successorRel has no text, which its default gives");
+
+  return rel;
 }
 
 // Each refusal is reported once per written `deprecated`, however many operations inherit it.
