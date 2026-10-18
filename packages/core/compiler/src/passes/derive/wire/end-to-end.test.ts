@@ -1,12 +1,9 @@
 import { fileURLToPath } from "node:url";
 import type { ContractIR } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
-import { finalizeAddStandIns } from "../../../finalize/complete-draft.js";
-import { finalizeIr } from "../../../finalize/finalize.js";
 import { type LoadReader, loadFsReader } from "../../../load/index.js";
 import { loadMemoryReader } from "../../../load/reader.js";
 import { compileWorkspace, type PipelineApiResult } from "../../../pipeline/orchestrator.js";
-import type { DraftIR } from "../../../pipeline/seam.js";
 import {
   DERIVE_WIRE_FIXTURES,
   deriveWireFixtureJson,
@@ -14,34 +11,17 @@ import {
   deriveWireMembers,
 } from "./test-support.js";
 
-// A contract through every pass to the IR: derive.errors' operation members are its stand-ins until it writes them.
+// A contract through every pass to the IR.
 
 const REFERENCE = fileURLToPath(
   new URL("../../../../../../../fixtures/reference/", import.meta.url),
 );
-
-// The stand-ins are derive.errors' until it writes its members; they must add none of derive.wire's.
-function standInsAddNoWireMember(draft: DraftIR, apiName: string): DraftIR {
-  const written = structuredClone(deriveWireMembers(draft));
-  const wire = structuredClone(draft.api?.wire);
-  const completed = finalizeAddStandIns(draft, apiName);
-
-  expect(deriveWireMembers(completed)).toEqual(written);
-  expect(completed.api?.wire).toEqual(wire);
-  expect(wire).toBeDefined();
-
-  return completed;
-}
 
 function compiled(reader: LoadReader, entry: string): readonly PipelineApiResult[] {
   const result = compileWorkspace({
     reader,
     entry,
     guard: true,
-    parts: {
-      finalize: (draft, context) =>
-        finalizeIr(standInsAddNoWireMember(draft, context.raw.name), context),
-    },
   });
 
   expect(result.diagnostics).toEqual([]);
@@ -128,10 +108,6 @@ describe("bucket limits", () => {
       }),
       entry: "api.yaml",
       guard: true,
-      parts: {
-        finalize: (draft, context) =>
-          finalizeIr(standInsAddNoWireMember(draft, context.raw.name), context),
-      },
     });
 
     expect(result.apis[0]?.diagnostics.map(deriveWireLocated)).toEqual([
