@@ -26,7 +26,7 @@ The annotation never validates: any string is accepted. A reader that acts on th
 
 ## Must-act unions and enums
 
-A union or an open enum marked `"x-seampact-must-act": true` guards a security boundary: who may call, which right or rule applies, how a credential or a signature is checked, what happens to a restricted field or an unknown key, idempotency and CSRF. An unknown tag or value there makes the whole IR invalid for every reader, even one that does not act on it, because a reader that skipped it would generate a weaker check without saying so (ADR 0005 section 3). `createIrValidator` reports such a document as invalid in the open form too. A new tag or value on a must-act definition always comes with a feature name (`CHANGE-TEMPLATE.md`).
+A union or an open enum marked `"x-seampact-must-act": true` guards a security boundary: who may call, which right or rule applies, how a credential or a signature is checked, what happens to a restricted field or an unknown key, idempotency and CSRF. An unknown tag or value there makes the whole IR invalid for every reader, even one that does not act on it, because a reader that skipped it would generate a weaker check without saying so (ADR 0005 section 3). `createIrValidator` reports such a document as invalid in the open form too. A new tag or value on a must-act definition always comes with a feature name (`CHANGE-TEMPLATE.md`). From irRevision 4, `FieldRightAlways` (a field never sent) and `ValueSourceIn` (where a subject, bucket key, proof or version is read) are must-act too.
 
 ## Tagged unions
 
@@ -93,6 +93,15 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 | `ir.input-proof.name` | The names of an input's `proofs` are distinct, and none is the name of a property of the input's object schema (a `ref` use) or of an entry of its `fields`. |
 | `ir.input-proof.input` | An `OperationInput` with `proofs` has a `ref` use as its `schema` (never a `scalar`, `enum`, `opaque`, `file` or `array` use), naming an `object` schema (never a `map` or `union` schema). Unknown use and schema kinds are left to the reader; a missing schema is `ir.ref.resolves`'. |
 | `ir.origin.core` | An `Origin` of layer `core` has a pointer that starts with `/formats/<id>`, `/errors/<code>` or `/schemas/<id>`; without `api`, that entry exists in the document. Only the entry is checked, not the rest of the pointer. |
+| `ir.field-right.always` | A `FieldRight` with `always` has `direction: output` and no `subject`, `inputPolicy` or `params`; without `always`, it has `subject` if and only if its right's `subject` kind is not `none`. |
+| `ir.sort-key.right` | A `SortKey`'s `params` and `subject` only with `right`; `subject` present if and only if the right's `subject` kind is not `none`; its source is not `in: holderField`. |
+| `ir.value.exact-number` | In `Property.default`, `Property.examples`, `Param.default` and a scalar use's `examples`, an `int64` or `decimal` use's value is a string matching its pattern (an `int64` not `-0`, within -2^63 to 2^63 - 1), and any other `integer` use's value a safe integer. |
+| `ir.degradable.header` | `Degradable.header` is present when the operation's format has no `degraded` meta member. |
+| `ir.deprecation.headers` | `Deprecation.successorRel` if and only if `successor`; each response of a deprecated operation carries one header of semantic `deprecation`, one of `sunset`, and one of `successorLink` if and only if `successor`; each path param of the successor is a path param of the deprecated operation with the same type use. |
+| `ir.deprecation.since` | `Deprecation.since` and `sunset` are calendar dates (real days, years 0001 to 9999), `since` not after `sunset`. |
+| `ir.operation.role-once` | A role appears at most once in an operation's error role bindings, across elements and within one. |
+| `ir.error.role-params` | A role binding has `params` if and only if its code declares params, and holds no `each` inside another `each`'s `as`. |
+| `ir.error.retry-header` | A `retryHeader` sits only on a code of status 429; its `param` is a required `integer` member of the code's params with `minimum` at least 0 and `maximum` at most 9007199254740991; its `derivedFrom.derivation` is `rule.bucket`. |
 | `ir.cache.sensitive-no-store` | Planned (p2-finalize): a response that carries a sensitive field sets `Cache.noStore`. Not checked yet: it needs a walk of the response schemas. |
 
 ## Readers

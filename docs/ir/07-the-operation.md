@@ -25,7 +25,9 @@ interface Operation {
             proofs?: { name: string; schema: TypeUse; wire?: QueryWire | { kind: 'json' }; derivedFrom }[];   // body rule proofs (section 13); wire: form and multipart only
             origin };
   responses: Response[];                     // success and derived non-error responses (304), sorted by status
-  errors: { code: ErrorCode; example?: unknown; derivedFrom?: DerivedFrom; origin?: Origin }[];   // origin: the node that attached it (A35)
+  errors: { code: ErrorCode; example?: unknown; derivedFrom?: DerivedFrom; origin?: Origin;   // origin: the node that attached it (A35)
+            roles?: { role: ErrorRole; params?: Template }[];   // irRevision 4: the roles this code answers here, sorted by role
+            retryHeader?: { name: string; param: string; unit: 's' | 'ms'; derivedFrom } }[];   // irRevision 4: a bucket rule's 429
   fieldRights: FieldRight[];                 // empty on a relay route: the public operation projects (ADR 0002 section 7)
   idempotency?: { header: string; replayHeader: string; lifetimeMs: number; required: boolean;
                   enforce: 'boundary' | 'none'; derivedFrom } | { exempt: Reason; origin };
@@ -34,9 +36,9 @@ interface Operation {
   cache?: Cache;
   paging?: Paging;
   filteredBy?: RightId;
-  degradable?: { paths: string[]; origin };
+  degradable?: { paths: string[]; header?: string; origin };   // header: irRevision 4
   budgetMs?: number;  deadlineHeader?: string;
-  deprecated?: { sunset: string; successor?: OperationRef; origin };
+  deprecated?: { since: string; sunset: string; successor?: OperationRef; successorRel?: string; origin };   // since, successorRel: irRevision 4
   relays?: OperationRef;                     // a relay route: its shape fields carry derivedFrom 'relay.route'
   upstream: ServiceId[];                     // owner first
   maturity: { level: Maturity; source: 'api' | 'upstream' | 'stated'; reason?: Reason; origin };
@@ -66,7 +68,7 @@ interface Response {
   media?: string;                            // absent for an empty body (204, 304, a redirect); a download's media list is in its file type
   body?: TypeUse;                            // the unwrapped payload, or a file for a download
   shape: 'item' | 'table' | 'list' | 'page' | 'empty' | 'binary' | 'redirect';   // the format's shape; 'binary' and 'redirect' bypass the format
-  headers: { name: string; type: TypeUse; required: boolean; semantic?: string; origin?: Origin; derivedFrom?: DerivedFrom }[];
+  headers: { name: string; type: TypeUse; required: boolean; semantic?: ResponseHeaderSemantic; origin?: Origin; derivedFrom?: DerivedFrom }[];
   docs?: Docs;                               // the docs written on the response (irRevision 3)
   origin?: Origin; derivedFrom?: DerivedFrom;
 }
@@ -75,6 +77,7 @@ interface FieldRight {                       // FR-23: materialised so targets n
   schema: SchemaId; pointer: string;         // '/effort', '/items/*/effort'
   right: RightId; params?: unknown;
   subject?: { source: ValueSource | { holderField: string } };   // derived from the right's declaration; absent for a right without subject
+  always?: 'absent';                         // irRevision 4: the field is never sent here, no decide call
   direction: 'input' | 'output'; inputPolicy?: 'reject' | 'strip'; derivedFrom: DerivedFrom;
 }
 
@@ -89,6 +92,14 @@ type ValueSource = { in: 'path' | 'query' | 'header' | 'body' | 'principal' | 's
 - Operation references carry the declaration kind (ADR 0014), so hook requests and `relays` stay valid when other kinds exist.
 - Query parameters carry their wire form: `{ name, type, required, wire: { kind: 'number' | 'boolean' | 'list' | 'text' | 'object'; style: 'form' | 'deepObject'; explode: boolean; brackets: boolean }, default?, origin }` (FR-30). That `wire` value is the `QueryWire` that form and multipart fields reuse; `brackets` marks a list sent as `name[]` (ADR 0002 section 7), which the document writes as a parameter named `name[]`.
 
+- A field right with `always: absent` (irRevision 4) is an output right whose field is never sent on this operation: it carries no `subject`, `inputPolicy` or `params`, and the target makes no decide call (ADR 0003 section 6). Without `always`, a field right carries `subject` if and only if its right's subject kind is not `none` (invariant `ir.field-right.always`).
+- A sort key's `params` and `subject` (irRevision 4) sit only with its `right`: the right's params, validated against its params schema, and where its subject is read on the request, the route's default subject, never a holder field (invariant `ir.sort-key.right`).
+- `degradable.header` (irRevision 4) names the header listing the degraded parts: required when the operation's format has no `degraded` meta member, present beside one only when `conventions.degradedHeader` is set, and then the target fills both (invariant `ir.degradable.header`). Its value is the paths of `degradable.paths` degraded in this response, as written, in `paths` order, an RFC 9110 section 5.6.1 list joined by `, `; the header is left out when no part is degraded.
+- A deprecated operation's responses each carry one header of semantic `deprecation`, one of `sunset`, and one of `successorLink` if and only if `deprecated.successor` is set, which comes with `successorRel` (invariant `ir.deprecation.headers`); each path param of the successor is a path param of the deprecated operation with the same type use. The values are computed from the date's fields, never the machine's zone: `deprecation` is `@<unix seconds of since at 00:00:00 UTC>` (RFC 9745); `sunset` is the IMF-fixdate of `sunset` at 00:00:00 GMT (RFC 8594, RFC 9110 section 5.6.7); `successorLink` is `<target>; rel="<successorRel>"` (RFC 8288), the target the successor's path with each path param the deprecated request's param of the same name, its decoded value percent-encoded as one path segment, every octet of its UTF-8 bytes outside RFC 3986 `unreserved` encoded, never the raw or decoded text, a relative reference under `api.wire.urls: relative` and absolute from the configured origin under `absolute` (section 13).
+- `deprecated.since` (irRevision 4) is the day the operation is deprecated; `since` and `sunset` are calendar dates, real days of the proleptic Gregorian calendar from 0001 to 9999, `since` not after `sunset` (invariant `ir.deprecation.since`).
+- An error element's `roles` (irRevision 4) say which roles of ADR 0006 section 6 the code answers on this operation, a role at most once across the operation's elements (invariant `ir.operation.role-once`); `ErrorDecl.default` only marks the core default. A binding's `params` is a compiled `Template` (section 8), present if and only if the code declares params, with no `each` inside another `each`'s `as` (invariant `ir.error.role-params`); a binding without an authored template holds the by-name object template: one member per param of the code that has a datum of the same name for the role, in the params schema's property order, each the slot of that datum. A target renders it with grammar 13 "Templates", the slots being the role's data plus `item` inside `each`, except: a slot without a value has none, and a member without a value is omitted whatever the format's `absent`; a text template with a part without a value has none, and a number or boolean part is its JSON text; an array item without a value is dropped; `each` over an empty array gives `[]`, over a slot without a value none; `merge` of a slot without a value adds no member; an object left with no member has no value, except the top-level params object, kept as `{}`. The rendered params validate against the code's params schema, and the format's `$params` slot holds them; a binding whose `role` is unknown is named and refused where the target acts on it.
+- An error element's `retryHeader` (irRevision 4) sits only on a code of status 429 derived from `rule.bucket`; its `param` is a required `integer` member of the code's params with `minimum` at least 0 and `maximum` at most 9007199254740991 (invariant `ir.error.retry-header`). The target writes the header on every response of that code on the operation, a handler's typed error result included, from the rendered params' `param` member: under `ms` its decimal integer, under `s` `ceil(ms / 1000)` as a decimal integer, never an exponent form.
+
 ```ts
 interface Cache {
   family: string;
@@ -102,7 +113,8 @@ interface Cache {
 interface Paging {
   style?: PagingId;                          // absent for an unpaged list ('paging: none')
   maxLimit?: number; defaultLimit?: number; overLimit: 'reject' | 'clamp'; token?: 'opaque' | 'instant';
-  sortKeys: { key: string; right?: RightId; derivedFrom?: DerivedFrom; origin?: Origin }[];
+  sortKeys: { key: string; right?: RightId; params?: unknown; subject?: FieldRightSubject;   // params, subject: irRevision 4
+              derivedFrom?: DerivedFrom; origin?: Origin }[];
   origin;
 }
 ```
