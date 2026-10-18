@@ -3,21 +3,13 @@ import type { DerivationRoleName } from "../../../derivations/index.js";
 import { pipelineTreeNodes, type TreeNode } from "../../../pipeline/seam.js";
 import { type DeriveErrorsBinding, deriveErrorsBindingAt } from "./bindings.js";
 import {
+  DERIVE_ERRORS_PING_SURFACE,
   type DeriveErrorsRun,
   deriveErrorsLoadFiles,
   deriveErrorsLoadFixture,
   deriveErrorsLocated,
   deriveErrorsRunContract,
 } from "./test-support.js";
-
-const PING_SURFACE = `
-surfaces:
-  app:
-    prefix: /v{version}
-    access: { public: The contract checks role bindings only. }
-    routes:
-      ping: { method: get }
-`;
 
 function nodeAt(run: DeriveErrorsRun, pointer: string): TreeNode {
   const node = pipelineTreeNodes(run.context.raw).find(
@@ -42,7 +34,7 @@ const bindingAt = (
 const runInline = (body: string): DeriveErrorsRun =>
   deriveErrorsRunContract(
     deriveErrorsLoadFiles({
-      "api.yaml": `api: { name: shop, version: 1 }\n${body}${PING_SURFACE}`,
+      "api.yaml": `api: { name: shop, version: 1 }\n${body}${DERIVE_ERRORS_PING_SURFACE}`,
     }),
   );
 

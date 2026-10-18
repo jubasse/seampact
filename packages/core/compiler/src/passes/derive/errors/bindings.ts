@@ -17,9 +17,9 @@ import { quote } from "../../../validate/diagnostics.js";
 import { type DeriveErrorsRawValue, deriveErrorsMember, deriveErrorsString } from "./read.js";
 import type { DeriveErrorsContext, DeriveErrorsRegistry } from "./registry.js";
 import type { DeriveErrorsReporter } from "./report.js";
+import { deriveErrorsCheckRoleParamTypes } from "./role-param-types.js";
 import {
   type DeriveErrorsRoleParamsSite,
-  deriveErrorsCheckRoleParamTypes,
   deriveErrorsDatumAlways,
   deriveErrorsParamOfDatum,
   deriveErrorsReadRoleParams,
@@ -127,6 +127,7 @@ export function deriveErrorsParamsSite(
   return {
     reporter: check.reporter,
     schemas: check.schemas,
+    examples: check.context.treeSchemas,
     role: roleOf(binding.role),
     code: binding.code,
     pointer,

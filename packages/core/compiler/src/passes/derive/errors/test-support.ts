@@ -7,6 +7,7 @@ import {
   createDraftIR,
   type DraftIR,
   pipelineContext,
+  pipelineCopy,
   pipelineGuard,
   type TreeSchemaService,
 } from "../../../pipeline/seam.js";
@@ -23,6 +24,16 @@ import type { DeriveErrorsContext } from "./registry.js";
 // reference contract from its after-access fixture draft, and a guarded run of the half.
 
 const FIXTURES = fileURLToPath(new URL("../../../../../../../fixtures/", import.meta.url));
+
+/** A surface with one public route, which inline contracts end with. */
+export const DERIVE_ERRORS_PING_SURFACE = `
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks error declarations and role bindings only. }
+    routes:
+      ping: { method: get }
+`;
 
 /** The directory of this lane's fixtures. */
 export const DERIVE_ERRORS_FIXTURES = `${FIXTURES}passes/derive-errors/`;
@@ -133,28 +144,41 @@ export function deriveErrorsRunContract(workspace: RawWorkspace): DeriveErrorsRu
   return runOn(raw, workspace, draft, treeSchemas);
 }
 
-// The real schema service of an api: the fixture service answers no error params position.
-function schemaServiceOf(raw: RawApi, workspace: RawWorkspace): TreeSchemaService {
+// The real schema service of an api (the fixture service answers no error params position), and the draft its run
+// fills, which holds the core schemas tree.schemas seeds.
+function schemaServiceOf(
+  raw: RawApi,
+  workspace: RawWorkspace,
+): { service: TreeSchemaService; seeded: DraftIR } {
   const diagnostics: Diagnostic[] = [];
+  const seeded = createDraftIR();
   const service = treeSchemasPass.run(
-    createDraftIR(),
+    seeded,
     pipelineContext({ raw, workspace, report: (diagnostic) => diagnostics.push(diagnostic) }),
   );
 
   if (diagnostics.length > 0)
     throw new Error(`tree.schemas reports on ${raw.name}: ${JSON.stringify(diagnostics)}`);
 
-  return service;
+  return { service, seeded };
 }
 
-/** Runs derive.errors (guarded) on the after-access fixture draft of a reference api. */
+/**
+ * Runs derive.errors (guarded) on the after-access fixture draft of a reference api, given the schemas tree.schemas
+ * seeds that the fixture draft lacks (the core issue item of `schemaInvalid`).
+ */
 export function deriveErrorsRunReference(
   workspace: RawWorkspace,
   api: DraftFixtureApi,
 ): DeriveErrorsRun {
   const raw = apiOf(workspace, api);
+  const { service, seeded } = schemaServiceOf(raw, workspace);
+  const draft = draftFixture(api, "after-access");
 
-  return runOn(raw, workspace, draftFixture(api, "after-access"), schemaServiceOf(raw, workspace));
+  for (const [id, schema] of Object.entries(seeded.schemas))
+    if (!Object.hasOwn(draft.schemas, id)) draft.schemas[id] = pipelineCopy(schema);
+
+  return runOn(raw, workspace, draft, service);
 }
 
 /** A diagnostic as the tests compare it: its rule and where it is located. */
