@@ -1,19 +1,27 @@
-import type { IrWriter } from "@seampact/spec/ir";
+import {
+  type ContractIR,
+  checkIrClosedDeclaration,
+  type IrClosedDeclarations,
+  type IrClosedUnknown,
+  type IrWriter,
+} from "@seampact/spec/ir";
 import {
   type DraftIR,
   type DraftOperation,
   type PassContext,
   type PassReadonly,
-  type PassWritable,
   pipelineCanonical,
   pipelineCopy,
   type TreeNode,
 } from "../../../pipeline/seam.js";
+import { quote } from "../../../validate/diagnostics.js";
 import type { TreeSchemasCompiler } from "./compile.js";
 import { type TreeSchemasReporter, treeSchemasPointer } from "./raw.js";
 
 // Relay-copied declarations (ADR 0002 section 7): the schemas, enums and named formats a relay route's copied
 // shape uses join this api, each keeping its origin in the public api with `api` naming it (ADR 0004 section 6).
+// The public api is a workspace api that ran (`relayed`) or an import (`imported`, an IR another compiler version
+// may have written): each copy holds only what this IR revision knows, else it is refused by name, not copied.
 // A name this api already declares, or another relay route copied first, must hold the same declaration; a
 // different one is refused, naming both. A copied schema keeps its extension values, so the extension keys they
 // use are copied too. The copied uses also give this api's declarations their directions: a parameter or the body
@@ -38,6 +46,24 @@ type DeclarationKind = "schema" | "enum" | "named format" | "extension key";
 
 type Declaration = IrWriter.Schema | IrWriter.Enum | IrWriter.Scalar | IrWriter.ExtensionKeyDecl;
 
+// Each catalogue a copy is read from, with the IR definition it is checked against and its kind in messages.
+const CATALOGUES = {
+  schemas: { definition: "Schema", kind: "schema" },
+  enums: { definition: "Enum", kind: "enum" },
+  scalars: { definition: "Scalar", kind: "named format" },
+  extensionKeys: { definition: "ExtensionKeyDecl", kind: "extension key" },
+} as const satisfies Record<
+  string,
+  { definition: keyof IrClosedDeclarations; kind: DeclarationKind }
+>;
+
+type CatalogueName = keyof typeof CATALOGUES;
+
+type CatalogueDefinition<N extends CatalogueName> = (typeof CATALOGUES)[N]["definition"];
+
+// The operation members a relay route's copied shape is read from.
+type RelayedOperation = Pick<DraftOperation, "params" | "input" | "responses">;
+
 /** This api's declarations a copy is compared with, by id. */
 export interface TreeSchemasLocalDeclarations {
   enums: readonly IrWriter.Enum[];
@@ -45,7 +71,7 @@ export interface TreeSchemasLocalDeclarations {
 }
 
 interface CopySite {
-  readonly relayed: PassReadonly<DraftIR>;
+  readonly source: PassReadonly<DraftIR> | PassReadonly<ContractIR>;
   readonly api: string;
   /** The pointer of the route's `relays` member, where a conflict is reported. */
   readonly pointer: string;
@@ -64,7 +90,7 @@ function relayTarget(relays: unknown): { api: string; operationId: string } | un
 }
 
 // A member the public api's tree.nodes has not written holds no use to copy.
-function operationUses(operation: DraftOperation): TreeSchemasRelayUse[] {
+function operationUses(operation: RelayedOperation): TreeSchemasRelayUse[] {
   const read = (use: IrWriter.TypeUse): TreeSchemasRelayUse => ({ use, direction: "input" });
   const written = (use: IrWriter.TypeUse): TreeSchemasRelayUse => ({ use, direction: "output" });
   const params = operation.params === undefined ? [] : Object.values(operation.params).flat();
@@ -102,6 +128,9 @@ function withApiOrigins(value: unknown, api: string): void {
 
 const IGNORED_MEMBERS = new Set(["directions", "origin"]);
 
+// The members holding values the contract wrote: compared whole, since an `origin` key there is data.
+const WRITTEN_VALUE_MEMBERS = new Set(["default", "examples", "extensions", "params"]);
+
 function withoutIgnored(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(withoutIgnored);
 
@@ -110,7 +139,10 @@ function withoutIgnored(value: unknown): unknown {
   return Object.fromEntries(
     Object.entries(value)
       .filter(([key]) => !IGNORED_MEMBERS.has(key))
-      .map(([key, member]) => [key, withoutIgnored(member)]),
+      .map(([key, member]) => [
+        key,
+        WRITTEN_VALUE_MEMBERS.has(key) ? member : withoutIgnored(member),
+      ]),
   );
 }
 
@@ -160,7 +192,7 @@ class RelayCopier {
     this.extensionKeys = new Map(local.extensionKeys.map((declared) => [declared.id, declared]));
   }
 
-  copyRoute(site: CopySite, operation: DraftOperation): void {
+  copyRoute(site: CopySite, operation: RelayedOperation): void {
     for (const relayUse of operationUses(operation)) {
       this.copies.uses.push(relayUse);
       this.reach(site, relayUse.use);
@@ -194,7 +226,7 @@ class RelayCopier {
   }
 
   private schema(site: CopySite, id: string): void {
-    const relayed = this.relayedOf(site, site.relayed.schemas, `schema:${id}`, id);
+    const relayed = this.copyOf(site, "schemas", id);
 
     if (relayed === undefined) return;
     this.join(site, "schema", relayed, this.compiler.schemas.get(id), this.copies.schemas);
@@ -218,7 +250,7 @@ class RelayCopier {
   }
 
   private enumOf(site: CopySite, id: string): void {
-    const relayed = this.relayedOf(site, site.relayed.enums, `enum:${id}`, id);
+    const relayed = this.copyOf(site, "enums", id);
 
     if (relayed === undefined) return;
     this.join(site, "enum", relayed, this.enums.get(id), this.copies.enums);
@@ -227,7 +259,7 @@ class RelayCopier {
   }
 
   private extensionKey(site: CopySite, id: string): void {
-    const relayed = this.relayedOf(site, site.relayed.extensionKeys, `extensionKey:${id}`, id);
+    const relayed = this.copyOf(site, "extensionKeys", id);
 
     if (relayed === undefined) return;
     this.join(
@@ -241,7 +273,7 @@ class RelayCopier {
   }
 
   private scalar(site: CopySite, id: string): void {
-    const relayed = this.relayedOf(site, site.relayed.scalars, `scalar:${id}`, id);
+    const relayed = this.copyOf(site, "scalars", id);
 
     if (relayed === undefined) return;
     const local = this.compiler.scalars.all().find((declared) => declared.id === id);
@@ -278,20 +310,46 @@ class RelayCopier {
     this.firstCopies.set(firstKey, { declaration: copied, site });
   }
 
-  // A writable copy of a declaration of the public api, once per name and api; undefined once seen.
-  private relayedOf<Value>(
+  // A copy of a declaration of the public api, once per name and api; undefined once seen, or when it holds what
+  // this IR revision does not know (refused).
+  private copyOf<N extends CatalogueName>(
     site: CopySite,
-    catalogue: PassReadonly<Record<string, Value>>,
-    key: string,
+    catalogue: N,
     id: string,
-  ): PassWritable<PassReadonly<Value>> | undefined {
-    const seenKey = `${site.api}#${key}`;
-    const declared = Object.hasOwn(catalogue, id) ? catalogue[id] : undefined;
+  ): IrClosedDeclarations[CatalogueDefinition<N>] | undefined {
+    const seenKey = `${site.api}#${catalogue}:${id}`;
+    const declarations: PassReadonly<Record<string, unknown>> = site.source[catalogue];
+    const declared: unknown = Object.hasOwn(declarations, id) ? declarations[id] : undefined;
 
     if (this.seen.has(seenKey) || declared === undefined) return undefined;
     this.seen.add(seenKey);
+    const definition: CatalogueDefinition<N> = CATALOGUES[catalogue].definition;
+    const copied: unknown = pipelineCopy(declared);
+    const { closed, unknowns } = checkIrClosedDeclaration(
+      definition,
+      copied,
+      treeSchemasPointer("", catalogue, id),
+    );
 
-    return pipelineCopy(declared);
+    if (unknowns === undefined) return closed;
+    this.reportUnknowns(site, `the ${CATALOGUES[catalogue].kind} '${id}'`, unknowns);
+
+    return undefined;
+  }
+
+  private reportUnknowns(
+    site: CopySite,
+    copied: string,
+    unknowns: readonly IrClosedUnknown[],
+  ): void {
+    const named = unknowns.map((unknown) => `${quote(unknown.value)} at ${unknown.pointer}`);
+
+    this.reporter.error({
+      rule: "relay-unknown",
+      pointer: site.pointer,
+      message: `${copied} that ${site.relays} uses holds what this compiler does not know (${named.join(", ")}), so it is not copied`,
+      fix: `compile with a seampact version that reads the IR of ${site.api}, or relay another operation`,
+    });
   }
 
   private copied<Value extends Declaration>(relayed: Value, site: CopySite): Value {
@@ -336,10 +394,39 @@ class RelayCopier {
   }
 }
 
+// The public operation a relay route names, from a workspace api that ran or an import; undefined when neither
+// holds it, or when the imported one holds what this IR revision does not know: tree.nodes reports both.
+function publicOperation(
+  context: PassContext,
+  target: { api: string; operationId: string },
+): { source: CopySite["source"]; operation: RelayedOperation } | undefined {
+  const relayed = context.relayed(target.api);
+
+  if (relayed !== undefined) {
+    const operation = relayed.operations.find((each) => each.id === target.operationId);
+
+    return operation === undefined
+      ? undefined
+      : { source: relayed, operation: pipelineCopy(operation) };
+  }
+
+  const imported = context.imported(target.api);
+  const index = imported?.operations.findIndex((each) => each.id === target.operationId) ?? -1;
+
+  if (imported === undefined || index < 0) return undefined;
+  const check = checkIrClosedDeclaration(
+    "Operation",
+    pipelineCopy(imported.operations[index]),
+    treeSchemasPointer("", "operations", String(index)),
+  );
+
+  return check.closed === undefined ? undefined : { source: imported, operation: check.closed };
+}
+
 /**
  * Copies the declarations each relay route's public operation uses (ADR 0002 section 7) from the derived draft of
- * the workspace api it names. A route naming an api or operation that has not run is tree.nodes' to report; an
- * imported api's declarations are not copied here.
+ * the workspace api it names, or from the IR of the import it names. A route naming an api or operation that has
+ * not run, or an imported operation this compiler cannot read, is tree.nodes' to report.
  */
 export function treeSchemasCopyRelayDeclarations(
   compiler: TreeSchemasCompiler,
@@ -353,18 +440,17 @@ export function treeSchemasCopyRelayDeclarations(
   for (const node of nodes) {
     if (node.kind !== "relay") continue;
     const target = relayTarget(node.settings.relays);
-    const relayed = target === undefined ? undefined : context.relayed(target.api);
-    const operation = relayed?.operations.find((each) => each.id === target?.operationId);
+    const found = target === undefined ? undefined : publicOperation(context, target);
 
-    if (target === undefined || relayed === undefined || operation === undefined) continue;
+    if (target === undefined || found === undefined) continue;
     copier.copyRoute(
       {
-        relayed,
+        source: found.source,
         api: target.api,
         pointer: treeSchemasPointer(node.pointer, "relays"),
         relays: `${target.api}.${target.operationId}`,
       },
-      pipelineCopy(operation),
+      found.operation,
     );
   }
 

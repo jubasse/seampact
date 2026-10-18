@@ -78,3 +78,9 @@ proofs:
       - 'core: packages/core/compiler/src/passes/tree/schemas/code-params.test.ts#error code params a default code declared with params on a tree node takes the reserved params id'
       - 'core: packages/core/compiler/src/passes/tree/schemas/code-params.test.ts#error code params equal params on two nodes, or on a node and in the catalogue, are hoisted once'
       - 'core: packages/core/compiler/src/passes/tree/schemas/code-params.test.ts#error code params different params of one code are left to the derive pass, the first declaration hoisted'
+  - id: CHK-052
+    tests:
+      - 'core: packages/core/compiler/src/passes/tree/schemas/relays.test.ts#relay declarations copied a declaration the copied shape uses joins the api with its public origin and directions'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/relays.test.ts#relay declarations copied from an import join the api with the import''s origin, as from a workspace api'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/relays.test.ts#relay declarations copied from an import refuse a declaration holding an unknown variant, naming the import, and copy the others'
+      - 'core: packages/core/compiler/src/passes/tree/schemas/relays.test.ts#relay declarations copied from an import refuse a different declaration this api names the same'

@@ -1,5 +1,10 @@
-import type { ContractIR, IrWriter, Operation } from "@seampact/spec/ir";
-import { listIrUnknowns } from "@seampact/spec/ir";
+import {
+  type ContractIR,
+  checkIrClosedDeclaration,
+  type IrClosedUnknown,
+  type IrWriter,
+  listIrUnknowns,
+} from "@seampact/spec/ir";
 import {
   type DraftIR,
   type DraftOperation,
@@ -402,8 +407,9 @@ function relayedSource(
   };
 }
 
-// An imported IR may hold a union arm or an open-enum value this compiler does not know: the operation is copied
-// only when none sits in it, its format or its paging style; each one found is named.
+// An imported IR may hold a union arm, an open-enum value or a member this compiler does not know: the operation
+// is copied only when none sits in it, its format or its paging style; each one found is named. The operation and
+// its format are narrowed by the closed-IR guard, the paging style (no guard definition) by `listIrUnknowns`.
 function importedSource(
   site: TreeNodesSite,
   target: RelayTarget,
@@ -412,23 +418,35 @@ function importedSource(
   const index = imported.operations.findIndex(
     (candidate) => candidate.kind === OPERATION_KIND && candidate.id === target.id,
   );
-  const operation = imported.operations[index];
+  const found = imported.operations[index];
 
-  if (operation === undefined) {
+  if (found === undefined) {
     reportNoOperation(site, target);
 
     return undefined;
   }
 
-  const style = operation.paging?.style;
-  const copiedPointers = [
-    `/operations/${index}`,
-    ...(operation.format === undefined ? [] : [pipelinePointerBelow("/formats", operation.format)]),
-    ...(style === undefined ? [] : [pipelinePointerBelow("/pagings", style)]),
+  const operation = checkIrClosedDeclaration("Operation", found, `/operations/${index}`);
+  const formatId = found.format;
+  const formatEntry = ownEntry(imported.formats, formatId);
+  const format =
+    formatId === undefined || formatEntry === undefined
+      ? undefined
+      : checkIrClosedDeclaration(
+          "WireFormat",
+          formatEntry,
+          pipelinePointerBelow("/formats", formatId),
+        );
+  const style = found.paging?.style;
+  const styleUnknowns =
+    style === undefined ? [] : unknownsUnder(imported, pipelinePointerBelow("/pagings", style));
+  const unknowns = [
+    ...namedUnknowns(operation.unknowns),
+    ...namedUnknowns(format?.unknowns),
+    ...styleUnknowns,
   ];
-  const unknowns = unknownsUnder(imported, copiedPointers);
 
-  if (!isKnownOperation(operation, unknowns)) {
+  if (operation.closed === undefined || unknowns.length > 0) {
     reportTarget(
       site,
       `relays ${target.text}, which holds what this compiler does not know (${unknowns.join(", ")}), so it cannot be copied`,
@@ -440,39 +458,36 @@ function importedSource(
   }
 
   const surfaces = imported.api.surfaces;
-  const surface = operation.surface;
+  const surface = operation.closed.surface;
 
   return {
     api: target.api,
-    operation,
+    operation: operation.closed,
     surfacePrefix: Object.hasOwn(surfaces, surface) ? surfaces[surface]?.prefix : undefined,
-    format: knownEntry(imported.formats, operation.format, unknowns),
-    pagingStyle: knownEntry(imported.pagings, style, unknowns),
+    format: format?.closed,
+    pagingStyle: knownEntry(imported.pagings, style, styleUnknowns),
   };
 }
 
-// Each unknown union tag or open-enum value at or below one of the pointers, named by its pointer and value.
-function unknownsUnder(imported: PassReadonly<ContractIR>, pointers: readonly string[]): string[] {
+const namedUnknowns = (unknowns: readonly IrClosedUnknown[] | undefined): string[] =>
+  (unknowns ?? []).map(({ pointer, value }) => `${value} at ${pointer}`);
+
+// Each unknown union tag or open-enum value at or below the pointer, named by its pointer and value.
+function unknownsUnder(imported: PassReadonly<ContractIR>, root: string): string[] {
   const { kinds, values } = listIrUnknowns(imported);
-  const isUnder = (pointer: string) =>
-    pointers.some((root) => pointer === root || pointer.startsWith(`${root}/`));
+  const isUnder = (pointer: string) => pointer === root || pointer.startsWith(`${root}/`);
 
   return [
     ...kinds
       .filter(({ pointer }) => isUnder(pointer))
-      .map(({ pointer, tag, value }) => `${tag} ${value} at ${pointer}`),
+      .map(({ pointer, tag, value }) => `${value} at ${pointer}/${tag}`),
     ...values
       .filter(({ pointer }) => isUnder(pointer))
       .map(({ pointer, value }) => `${value} at ${pointer}`),
   ];
 }
 
-// `listIrUnknowns` found no unknown arm or value in the operation, so it is one the writer types describe.
-const isKnownOperation = (
-  operation: PassReadonly<Operation>,
-  unknowns: readonly string[],
-): operation is PassReadonly<IrWriter.Operation> => unknowns.length === 0;
-
+// `listIrUnknowns` found no unknown arm or value in the paging style, so it is one the writer types describe.
 function knownEntry<Reader, Writer extends Reader>(
   catalogue: Readonly<Record<string, Reader>>,
   id: string | undefined,
