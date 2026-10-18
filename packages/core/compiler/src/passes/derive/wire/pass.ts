@@ -1,7 +1,7 @@
 import type { DraftIR, PassContextOf, PassPart } from "../../../pipeline/seam.js";
 import { deriveWireBodyHeaders } from "./bodies.js";
 import { deriveWireBodyLimit } from "./body-limit.js";
-import { deriveWireCache } from "./cache.js";
+import { deriveWireCache, deriveWireReportSettingFaults } from "./cache.js";
 import { deriveWireConcurrency } from "./concurrency.js";
 import { deriveWireCredentials } from "./credentials.js";
 import { deriveWireHeaderTag } from "./header-tag.js";
@@ -84,6 +84,7 @@ function deriveWirePassRun(draft: DraftIR, context: PassContextOf<"derive.wire">
     context,
     reporter: deriveWireReporter(context),
     reportedCollisions: new Set(),
+    settingFaults: new Map(),
   };
   const unknownKeys = deriveWireUnknownKeysPolicy(scope);
   const idempotency = deriveWireIdempotencyConvention(scope);
@@ -105,4 +106,5 @@ function deriveWirePassRun(draft: DraftIR, context: PassContextOf<"derive.wire">
   }
 
   deriveWireCheckExemptions(idempotency, exemptions, scope);
+  deriveWireReportSettingFaults(scope);
 }

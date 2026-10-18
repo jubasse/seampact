@@ -110,26 +110,55 @@ describe("cache headers", () => {
     expect(cacheOf("plain")).toBeUndefined();
   });
 
-  test("a family that is not declared or sets no maxAge, or no freshness, is refused at the cache", () => {
+  test("a family that is not declared or sets no maxAge is refused at the cache, naming the route", () => {
     const unknown = deriveWireRunContract(
       deriveWireFixtureVariant("lifecycle", [["freshness: minute", "freshness: hourly"]]),
     );
-    const none = deriveWireRunContract(
-      deriveWireFixtureVariant("lifecycle", [["freshness: minute, etag", "etag"]]),
-    );
-
     const noMaxAge = deriveWireRunContract(
       deriveWireFixtureVariant("lifecycle", [["minute: 60s", "minute: { noCache: true }"]]),
     );
 
-    for (const refused of [unknown, none, noMaxAge])
+    for (const refused of [unknown, noMaxAge])
       expect(refused.diagnostics.map(deriveWireLocated)).toEqual([
         {
           rule: "seampact/derive/cache-family",
           pointer: "/surfaces/app/routes/docs/ops/get/cache",
-          related: [],
+          related: ["/surfaces/app/routes/docs/ops/get"],
         },
       ]);
+  });
+
+  test("a cache without freshness is refused at the cache", () => {
+    const none = deriveWireRunContract(
+      deriveWireFixtureVariant("lifecycle", [["freshness: minute, etag", "etag"]]),
+    );
+
+    expect(none.diagnostics.map(deriveWireLocated)).toEqual([
+      {
+        rule: "seampact/derive/cache-freshness",
+        pointer: "/surfaces/app/routes/docs/ops/get/cache",
+        related: ["/surfaces/app/routes/docs/ops/get"],
+      },
+    ]);
+  });
+
+  test("a fault of a collection's cache is reported once, naming each GET route it reaches", () => {
+    const refused = deriveWireRunContract(
+      deriveWireFixtureVariant("lifecycle", [
+        [
+          "concurrency: { version: query.revision, field: revision }",
+          "concurrency: { version: query.revision, field: revision }\n        cache: { freshness: hourly }",
+        ],
+      ]),
+    );
+
+    expect(refused.diagnostics.map(deriveWireLocated)).toEqual([
+      {
+        rule: "seampact/derive/cache-family",
+        pointer: "/surfaces/app/routes/notes/cache",
+        related: ["/surfaces/app/routes/notes/ops/list", "/surfaces/app/routes/notes/ops/get"],
+      },
+    ]);
   });
 
   test("cache written on a non-GET route is refused", () => {
@@ -193,6 +222,33 @@ describe("sensitive responses are no-store", () => {
       },
     ]);
     expect(refused.diagnostics[0]?.message).toContain("'Key.secret'");
-    expect(refused.diagnostics[0]?.message).toContain("'neverKeys'");
+  });
+
+  test("a collection's cache over a sensitive field is refused once, naming each route and the field", () => {
+    const refused = deriveWireRunContract(
+      deriveWireFixtureVariant("lifecycle", [
+        [
+          "concurrency: { version: query.revision, field: revision }",
+          "concurrency: { version: query.revision, field: revision }\n        cache: { freshness: minute }",
+        ],
+        ["revision: { type: integer } }", "revision: { type: integer, sensitive: true } }"],
+      ]),
+    );
+
+    expect(
+      refused.diagnostics
+        .map(deriveWireLocated)
+        .filter((located) => located.pointer === "/surfaces/app/routes/notes/cache"),
+    ).toEqual([
+      {
+        rule: "seampact/derive/cache-sensitive",
+        pointer: "/surfaces/app/routes/notes/cache",
+        related: [
+          "/surfaces/app/routes/notes/ops/list",
+          "/surfaces/app/routes/notes/ops/get",
+          "/schemas/Note/properties/revision",
+        ],
+      },
+    ]);
   });
 });

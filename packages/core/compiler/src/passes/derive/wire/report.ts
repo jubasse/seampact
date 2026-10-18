@@ -13,6 +13,7 @@ export type DeriveWireRule =
   | "derived-name-collision"
   | "cache-method"
   | "cache-family"
+  | "cache-freshness"
   | "cache-sensitive";
 
 export interface DeriveWireRelated {

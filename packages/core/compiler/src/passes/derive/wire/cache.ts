@@ -14,6 +14,7 @@ import {
   deriveWireAddResponseHeader,
   deriveWireSuccessResponses,
 } from "./params.js";
+import type { DeriveWireProblem } from "./report.js";
 import {
   type DeriveWireRoute,
   type DeriveWireScope,
@@ -99,7 +100,7 @@ function cacheOf(
   const family = value.freshness;
 
   if (typeof family !== "string") {
-    reportFamily(setting, "names no freshness", scope);
+    reportFreshness(route, setting, scope);
 
     return undefined;
   }
@@ -110,7 +111,7 @@ function cacheOf(
     return undefined;
   }
 
-  const directives = family === NEVER ? undefined : directivesOf(family, setting, scope);
+  const directives = family === NEVER ? undefined : directivesOf(route, family, setting, scope);
 
   if (family !== NEVER && directives === undefined) return undefined;
 
@@ -154,6 +155,7 @@ function sensitiveNoStore(
 
 // A family is a max-age (`60s`) or a mapping of directives in camel case; durations become milliseconds.
 function directivesOf(
+  route: DeriveWireRoute,
   family: string,
   setting: InheritedEntry,
   scope: DeriveWireScope,
@@ -162,6 +164,7 @@ function directivesOf(
 
   if (reading === undefined) {
     reportFamily(
+      route,
       setting,
       `names the family '${family}', which conventions.cache.families does not declare`,
       scope,
@@ -190,7 +193,7 @@ function directivesOf(
   const maxAgeMs = durationOf("maxAge");
 
   if (maxAgeMs === undefined) {
-    reportFamily(setting, `names the family '${family}', which sets no maxAge`, scope);
+    reportFamily(route, setting, `names the family '${family}', which sets no maxAge`, scope);
 
     return undefined;
   }
@@ -324,13 +327,35 @@ function reportMethod(
   });
 }
 
-function reportFamily(setting: InheritedEntry, what: string, scope: DeriveWireScope): void {
-  scope.reporter.error({
+function reportFamily(
+  route: DeriveWireRoute,
+  setting: InheritedEntry,
+  what: string,
+  scope: DeriveWireScope,
+): void {
+  const problem: DeriveWireProblem = {
     rule: "cache-family",
     message: `cache ${what}`,
     fix: "Name a family declared in conventions.cache.families with its maxAge, or freshness: never.",
     pointer: setting.origin.pointer,
-  });
+  };
+
+  addSettingFault(`${problem.rule} ${problem.pointer} ${problem.message}`, problem, route, scope);
+}
+
+function reportFreshness(
+  route: DeriveWireRoute,
+  setting: InheritedEntry,
+  scope: DeriveWireScope,
+): void {
+  const problem: DeriveWireProblem = {
+    rule: "cache-freshness",
+    message: "cache gives no freshness, so no Cache-Control can be derived from it",
+    fix: "Write freshness: a family of conventions.cache.families, or never.",
+    pointer: setting.origin.pointer,
+  };
+
+  addSettingFault(`${problem.rule} ${problem.pointer}`, problem, route, scope);
 }
 
 function reportSensitive(
@@ -340,15 +365,44 @@ function reportSensitive(
   scope: DeriveWireScope,
 ): void {
   const { family, sensitive } = found;
-
-  scope.reporter.error({
+  const problem: DeriveWireProblem = {
     rule: "cache-sensitive",
-    message: `operation '${route.id}' answers the sensitive field '${sensitive.schema}.${sensitive.property}', so its cache family '${family}' would store it`,
+    message: `cache family '${family}' would store the sensitive field '${sensitive.schema}.${sensitive.property}', which the routes it reaches answer`,
     fix: "Drop cache or sensitive, or write freshness: never.",
     pointer: setting.origin.pointer,
-    related: [
-      { pointer: route.node.pointer, message: "the route" },
-      { pointer: sensitive.origin.pointer, message: "the sensitive field" },
-    ],
-  });
+    related: [{ pointer: sensitive.origin.pointer, message: "the sensitive field" }],
+  };
+
+  addSettingFault(
+    `${problem.rule} ${problem.pointer} ${sensitive.origin.pointer}`,
+    problem,
+    route,
+    scope,
+  );
+}
+
+// An inherited cache reaches every GET route below it: its fault is reported once, naming each route it reaches.
+function addSettingFault(
+  key: string,
+  problem: DeriveWireProblem,
+  route: DeriveWireRoute,
+  scope: DeriveWireScope,
+): void {
+  const routeRelated = { pointer: route.node.pointer, message: "a route it reaches" };
+  const known = scope.settingFaults.get(key);
+
+  if (known === undefined) {
+    scope.settingFaults.set(key, { problem, routes: [routeRelated] });
+
+    return;
+  }
+
+  if (!known.routes.some((reached) => reached.pointer === routeRelated.pointer))
+    known.routes.push(routeRelated);
+}
+
+/** Reports each fault of an inherited setting once, the routes it reaches first in `related`. */
+export function deriveWireReportSettingFaults(scope: DeriveWireScope): void {
+  for (const { problem, routes } of scope.settingFaults.values())
+    scope.reporter.error({ ...problem, related: [...routes, ...(problem.related ?? [])] });
 }
