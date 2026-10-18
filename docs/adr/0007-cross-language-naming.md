@@ -139,7 +139,7 @@ The TypeScript implementation lives in `@seampact/spec/naming`, because the comp
 
 ### Amendment 2026-10-19: generated modules
 
-Generated names are scoped by ES module namespace imports, not by a generated object or a TypeScript `namespace`. Each target writes one `index.ts` per api (`<out>/<api>/index.ts`) that re-exports that api's modules, and names are unique within one target output; two targets or two apis may export the same name. The docs and examples show namespace imports (`import * as TasksNest from '.../tasks/nestjs'`, `import type * as Tasks from '.../tasks/types'`); flat imports stay allowed ([A36](../decisions.md#a36)).
+Generated names are scoped by ES module namespace imports, not by a generated object or a TypeScript `namespace`. Each target writes one `index.ts` per api (`<out>/<api>/index.ts`) that re-exports that api's modules flat (`export *`), and names are unique within one module; a role whose names repeat another module of the same target goes under a sub-namespace named by its role (`schemas`, `inputSchemas`, `outputSchemas`), and a module with internals, such as the fetch runtime, re-exports its public names by an explicit list. Two targets or two apis may export the same name. The docs and examples show namespace imports (`import * as TasksNest from '.../tasks/nestjs'`, `import type * as Tasks from '.../tasks/types'`); flat imports stay allowed ([A36](../decisions.md#a36)).
 
 ## Consequences
 

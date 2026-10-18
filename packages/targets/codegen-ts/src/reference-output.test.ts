@@ -10,6 +10,7 @@ import {
   typeErrorsOf,
 } from "./generated-project.test-support.js";
 import { target } from "./index.js";
+import { SCHEMAS_MODULE, SCHEMAS_NAMESPACE } from "./layout.js";
 
 const GOLDEN_IRS = ["tasks", "tasksService"];
 
@@ -17,8 +18,19 @@ const temporaryRoot = mkdtempSync(join(tmpdir(), "seampact-codegen-ts-"));
 
 afterAll(() => rmSync(temporaryRoot, { recursive: true, force: true }));
 
-// The api index re-exports every module; a name two modules share would be a type error in the index itself.
-const INDEX_PROBE = `import * as Api from "./${OUTPUT_DIRECTORY}/index.js";\nexport type UsesIndex = keyof typeof Api;`;
+// Every public export is reachable through the api index: the schemas under their namespace, operations flat.
+function indexProbe(exportRefs: readonly ExportRef[]): string {
+  const uses = exportRefs.map((exportRef, index) => {
+    const path =
+      exportRef.module === SCHEMAS_MODULE
+        ? `${SCHEMAS_NAMESPACE}.${exportRef.export}`
+        : exportRef.export;
+
+    return `export type IndexUses${index} = Api.${path};`;
+  });
+
+  return [`import type * as Api from "./${OUTPUT_DIRECTORY}/index.js";`, ...uses].join("\n");
+}
 
 function probeSource(exportRefs: readonly ExportRef[]): string {
   const link: Link<"types"> = {
@@ -34,7 +46,7 @@ function probeSource(exportRefs: readonly ExportRef[]): string {
     })
     .join("\n");
 
-  return `${probes}\n${INDEX_PROBE}`;
+  return `${probes}\n${indexProbe(exportRefs)}`;
 }
 
 test.each(GOLDEN_IRS)("the generated reference types compile: %s", async (name) => {

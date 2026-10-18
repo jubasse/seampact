@@ -1,8 +1,10 @@
 import {
+  apiIndexSource,
   below,
   type GeneratedFile,
   type GenerateInput,
   type GenerateOutcome,
+  type IndexedModule,
   type IrLocation,
   type NoOptions,
   operationLocation,
@@ -95,20 +97,18 @@ function schemasFile(ir: ContractIR, layout: TypesLayout, refusals: Refusal[]): 
   return [{ path: `${SCHEMAS_MODULE}${MODULE_EXTENSION}`, contents: `${source}\n` }];
 }
 
-// The api index: the schemas under `schemas`, the three operation modules flat, so `import * as Tasks from "<out>"`
-// reaches every name.
+// The api index: the schemas under `schemas`, the three operation modules flat, so `import type * as Tasks from
+// "<out>/index.js"` reaches every name.
 function indexFile(files: readonly GeneratedFile[]): GeneratedFile[] {
-  const lines = files.map((file) => {
-    const specifier = `./${file.path.slice(0, -MODULE_EXTENSION.length)}.js`;
+  if (files.length === 0) return [];
 
-    return file.path === `${SCHEMAS_MODULE}${MODULE_EXTENSION}`
-      ? `export * as ${SCHEMAS_NAMESPACE} from "${specifier}";`
-      : `export * from "${specifier}";`;
+  const modules = files.map((file): IndexedModule => {
+    const module = file.path.slice(0, -MODULE_EXTENSION.length);
+
+    return module === SCHEMAS_MODULE ? { module, namespace: SCHEMAS_NAMESPACE } : { module };
   });
 
-  if (lines.length === 0) return [];
-
-  return [{ path: `${INDEX_MODULE}${MODULE_EXTENSION}`, contents: `${lines.join("\n")}\n` }];
+  return [{ path: `${INDEX_MODULE}${MODULE_EXTENSION}`, contents: apiIndexSource(modules) }];
 }
 
 function operationFiles(ir: ContractIR, layout: TypesLayout, refusals: Refusal[]): GeneratedFile[] {

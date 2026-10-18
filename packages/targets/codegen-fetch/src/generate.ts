@@ -1,9 +1,11 @@
 import {
+  apiIndexSource,
   below,
   ExportNames,
   type GeneratedFile,
   type GenerateInput,
   type GenerateOutcome,
+  type IndexedModule,
   operationLocation,
   type Refusal,
   refuseInconsistentIr,
@@ -29,6 +31,26 @@ import { refuseFormatForms } from "./wire-format.js";
 export const CLIENT_ARTEFACT = "client";
 
 export type ClientArtefact = typeof CLIENT_ARTEFACT;
+
+// The runtime's public names; its plan and call helpers stay private to the client.
+const INDEXED_MODULES: readonly IndexedModule[] = [
+  { module: CLIENT_MODULE },
+  {
+    module: RUNTIME_MODULE,
+    typeNames: [
+      "CallOptions",
+      "CallResult",
+      "ClientConfig",
+      "ErrorResult",
+      "NotModifiedResult",
+      "ReplayFlag",
+      "SuccessResult",
+      "TimedCallOptions",
+      "UnexpectedResult",
+    ],
+    valueNames: ["ContractError"],
+  },
+];
 
 const RELATIVE_URLS = "relative";
 const ABSOLUTE_URLS = "absolute";
@@ -58,7 +80,7 @@ export function generateClient(
     },
     {
       path: `${INDEX_MODULE}${MODULE_EXTENSION}`,
-      contents: `export * from "./${CLIENT_MODULE}.js";\n`,
+      contents: apiIndexSource(INDEXED_MODULES),
     },
   ];
 
