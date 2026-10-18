@@ -199,12 +199,18 @@ describe("sensitive responses are no-store", () => {
       });
   });
 
-  test("freshness: never keeps its own cache, already no-store", () => {
+  test("freshness: never over a sensitive field keeps its own cache, derived from the cache and the field", () => {
     expect(cacheOf("neverKeys")).toMatchObject({
       family: "never",
       noStore: true,
       perCallerKind: [{ caller: "identified", cacheControl: "no-store" }],
-      derivedFrom: { derivation: "cache.headers" },
+      derivedFrom: {
+        derivation: "cache.sensitive",
+        from: [
+          { layer: "api", pointer: "/surfaces/app/routes/neverKeys/cache" },
+          { layer: "api", pointer: "/schemas/Key/properties/secret" },
+        ],
+      },
     });
     expect(cacheOf("neverKeys")?.directives).toBeUndefined();
   });

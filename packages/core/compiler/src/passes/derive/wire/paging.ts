@@ -9,6 +9,18 @@ import {
 } from "./params.js";
 import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 
+// A keyed or split sort direction: `asc` or `desc` (grammar section 14). The pattern uses no construct ADR 0003
+// section 9 normalises, so its normalised form is its written form.
+const SORT_DIRECTION_PATTERN = "^(?:asc|desc)$";
+
+const SORT_DIRECTION_USE: IrWriter.ScalarTypeUse = Object.freeze({
+  kind: "scalar",
+  type: "string",
+  refinements: Object.freeze({
+    pattern: Object.freeze({ source: SORT_DIRECTION_PATTERN, normalized: SORT_DIRECTION_PATTERN }),
+  }),
+});
+
 // The request parameters and page headers of a paged list (`paging.params`, ADR 0002 section 14, ADR 0006
 // section 5), from the style tree.nodes resolved and the limits it wrote. Every parameter is optional: a request
 // without a position reads the first page, without a limit `defaultLimit`. A cursor, `after`, `before` or opaque
@@ -160,7 +172,7 @@ function writeSort(route: DeriveWireRoute, role: Role, paged: Paged, scope: Deri
       return;
     case "keyed":
       for (const key of keys)
-        add(optional(role.name.replace(KEY_PLACEHOLDER, key), DERIVE_WIRE_STRING_USE, paged));
+        add(optional(role.name.replace(KEY_PLACEHOLDER, key), SORT_DIRECTION_USE, paged));
 
       return;
     case "split": {
@@ -170,7 +182,7 @@ function writeSort(route: DeriveWireRoute, role: Role, paged: Paged, scope: Deri
         );
 
       add(optional(role.name, DERIVE_WIRE_STRING_USE, paged));
-      add(optional(role.direction, DERIVE_WIRE_STRING_USE, paged));
+      add(optional(role.direction, SORT_DIRECTION_USE, paged));
     }
   }
 }

@@ -19,6 +19,12 @@ const integer = (minimum: string, maximum?: string) => ({
   refinements: { minimum, ...(maximum === undefined ? {} : { maximum }) },
 });
 
+const DIRECTION = {
+  kind: "scalar",
+  type: "string",
+  refinements: { pattern: { source: "^(?:asc|desc)$", normalized: "^(?:asc|desc)$" } },
+};
+
 const LIST = (explode: boolean) => ({ kind: "list", style: "form", explode, brackets: false });
 
 const NUMBER = { kind: "number", style: "form", explode: true, brackets: false };
@@ -60,7 +66,7 @@ describe("paging params", () => {
       optional("page", integer("1"), NUMBER),
       optional("per_page", integer("1", "50"), NUMBER),
       optional("sort", STRING, TEXT),
-      optional("direction", STRING, TEXT),
+      optional("direction", DIRECTION, TEXT),
     ]);
     expect(deriveWireResponseHeaders(run, "listNotes")).toEqual({
       200: ["X-Total-Count", "Link"],
@@ -77,8 +83,8 @@ describe("paging params", () => {
   test("an offset, a limit sent as a header and a keyed sort, one parameter per key", () => {
     expect(pagingQuery("listDrafts")).toEqual([
       optional("offset", integer("0"), NUMBER),
-      optional("order[revision]", STRING, TEXT),
-      optional("order[text]", STRING, TEXT),
+      optional("order[revision]", DIRECTION, TEXT),
+      optional("order[text]", DIRECTION, TEXT),
     ]);
     expect(deriveWireDerivedHeaders(run, "listDrafts").at(-1)).toEqual([
       "X-Limit",

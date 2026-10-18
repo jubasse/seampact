@@ -121,6 +121,9 @@ function cacheOf(
   if (directives !== undefined)
     from.push(pipelineCopy(deriveWireOriginAt(scope, `/conventions/cache/families/${family}`)));
 
+  // `freshness: never` over a sensitive field is the no-store `cache.sensitive` derives, from both.
+  if (sensitive !== undefined) from.push(pipelineCopy(sensitive.origin));
+
   return {
     family,
     ...(directives === undefined ? {} : { directives }),
@@ -133,7 +136,7 @@ function cacheOf(
     })),
     noStore: directives === undefined,
     origin: pipelineCopy(setting.origin),
-    derivedFrom: { derivation: CACHE_HEADERS, from },
+    derivedFrom: { derivation: sensitive === undefined ? CACHE_HEADERS : CACHE_SENSITIVE, from },
   };
 }
 
