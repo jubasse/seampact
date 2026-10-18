@@ -14,9 +14,10 @@ import { type TreeSchemasReporter, treeSchemasPointer } from "./raw.js";
 
 // Relay-copied declarations (ADR 0002 section 7): the schemas, enums and named formats a relay route's copied
 // shape uses join this api, each keeping its origin in the public api with `api` naming it (ADR 0004 section 6).
-// A name this api already declares must hold the same declaration; a different one is refused, naming both. The
-// copied uses also give this api's declarations their directions: a parameter or the body input is read, a
-// success response written.
+// A name this api already declares, or another relay route copied first, must hold the same declaration; a
+// different one is refused, naming both. A copied schema keeps its extension values, so the extension keys they
+// use are copied too. The copied uses also give this api's declarations their directions: a parameter or the body
+// input is read, a success response written. Nothing about access is copied, so a rule's proof schema is not.
 
 /** A use of a relay route's copied shape, in the direction its position is read or written. */
 export interface TreeSchemasRelayUse {
@@ -29,12 +30,19 @@ export interface TreeSchemasRelayCopies {
   schemas: IrWriter.Schema[];
   enums: IrWriter.Enum[];
   scalars: IrWriter.Scalar[];
+  extensionKeys: IrWriter.ExtensionKeyDecl[];
   uses: TreeSchemasRelayUse[];
 }
 
-type DeclarationKind = "schema" | "enum" | "named format";
+type DeclarationKind = "schema" | "enum" | "named format" | "extension key";
 
-type Declaration = IrWriter.Schema | IrWriter.Enum | IrWriter.Scalar;
+type Declaration = IrWriter.Schema | IrWriter.Enum | IrWriter.Scalar | IrWriter.ExtensionKeyDecl;
+
+/** This api's declarations a copy is compared with, by id. */
+export interface TreeSchemasLocalDeclarations {
+  enums: readonly IrWriter.Enum[];
+  extensionKeys: readonly IrWriter.ExtensionKeyDecl[];
+}
 
 interface CopySite {
   readonly relayed: PassReadonly<DraftIR>;
@@ -68,7 +76,6 @@ function operationUses(operation: DraftOperation): TreeSchemasRelayUse[] {
   return [
     ...params.map((param) => read(param.type)),
     ...(input === undefined ? [] : [read(input.schema)]),
-    ...(input?.proofs ?? []).map((proof) => read(proof.schema)),
     ...successes.flatMap((response) => [
       ...(response.body === undefined ? [] : [written(response.body)]),
       ...response.headers.map((header) => written(header.type)),
@@ -112,15 +119,46 @@ function withoutIgnored(value: unknown): unknown {
 const contentOf = (declaration: Declaration): string =>
   pipelineCanonical(withoutIgnored(declaration));
 
+// The extension key ids a copied schema's values use: its own and its properties'.
+function extensionKeyIds(schema: IrWriter.Schema): string[] {
+  const slots = [
+    schema.extensions,
+    ...(schema.kind === "object" ? schema.properties.map((property) => property.extensions) : []),
+  ];
+
+  return slots.flatMap((slot) =>
+    Object.entries(slot).flatMap(([prefix, keys]) =>
+      Object.keys(keys).map((key) => `${prefix}-${key}`),
+    ),
+  );
+}
+
+interface FirstCopy {
+  readonly declaration: Declaration;
+  readonly site: CopySite;
+}
+
 class RelayCopier {
-  readonly copies: TreeSchemasRelayCopies = { schemas: [], enums: [], scalars: [], uses: [] };
+  readonly copies: TreeSchemasRelayCopies = {
+    schemas: [],
+    enums: [],
+    scalars: [],
+    extensionKeys: [],
+    uses: [],
+  };
   private readonly seen = new Set<string>();
+  private readonly firstCopies = new Map<string, FirstCopy>();
+  private readonly enums: ReadonlyMap<string, IrWriter.Enum>;
+  private readonly extensionKeys: ReadonlyMap<string, IrWriter.ExtensionKeyDecl>;
 
   constructor(
     private readonly compiler: TreeSchemasCompiler,
-    private readonly enums: ReadonlyMap<string, IrWriter.Enum>,
+    local: TreeSchemasLocalDeclarations,
     private readonly reporter: TreeSchemasReporter,
-  ) {}
+  ) {
+    this.enums = new Map(local.enums.map((declared) => [declared.id, declared]));
+    this.extensionKeys = new Map(local.extensionKeys.map((declared) => [declared.id, declared]));
+  }
 
   copyRoute(site: CopySite, operation: DraftOperation): void {
     for (const relayUse of operationUses(operation)) {
@@ -159,10 +197,9 @@ class RelayCopier {
     const relayed = this.relayedOf(site, site.relayed.schemas, `schema:${id}`, id);
 
     if (relayed === undefined) return;
-    const local = this.compiler.schemas.get(id);
+    this.join(site, "schema", relayed, this.compiler.schemas.get(id), this.copies.schemas);
 
-    if (local === undefined) this.copies.schemas.push(this.copied(relayed, site));
-    else this.compare(site, "schema", relayed, local);
+    for (const keyId of extensionKeyIds(relayed)) this.extensionKey(site, keyId);
 
     if (relayed.kind === "object") {
       for (const property of relayed.properties) this.reach(site, property.type);
@@ -184,10 +221,23 @@ class RelayCopier {
     const relayed = this.relayedOf(site, site.relayed.enums, `enum:${id}`, id);
 
     if (relayed === undefined) return;
-    const local = this.enums.get(id);
+    this.join(site, "enum", relayed, this.enums.get(id), this.copies.enums);
 
-    if (local === undefined) this.copies.enums.push(this.copied(relayed, site));
-    else this.compare(site, "enum", relayed, local);
+    if (relayed.source?.kind === "enum") this.enumOf(site, relayed.source.enum);
+  }
+
+  private extensionKey(site: CopySite, id: string): void {
+    const relayed = this.relayedOf(site, site.relayed.extensionKeys, `extensionKey:${id}`, id);
+
+    if (relayed === undefined) return;
+    this.join(
+      site,
+      "extension key",
+      relayed,
+      this.extensionKeys.get(id),
+      this.copies.extensionKeys,
+    );
+    this.reach(site, relayed.schema);
   }
 
   private scalar(site: CopySite, id: string): void {
@@ -196,8 +246,36 @@ class RelayCopier {
     if (relayed === undefined) return;
     const local = this.compiler.scalars.all().find((declared) => declared.id === id);
 
-    if (local === undefined) this.copies.scalars.push(this.copied(relayed, site));
-    else this.compare(site, "named format", relayed, local);
+    this.join(site, "named format", relayed, local, this.copies.scalars);
+  }
+
+  // A declaration this api lacks is copied once; a later copy of that id from another api is compared with it.
+  private join<Value extends Declaration>(
+    site: CopySite,
+    kind: DeclarationKind,
+    relayed: Value,
+    local: Value | undefined,
+    copies: Value[],
+  ): void {
+    if (local !== undefined) {
+      this.compareLocal(site, kind, relayed, local);
+
+      return;
+    }
+
+    const firstKey = `${kind}#${relayed.id}`;
+    const first = this.firstCopies.get(firstKey);
+
+    if (first !== undefined) {
+      this.compareFirst(site, kind, relayed, first);
+
+      return;
+    }
+
+    const copied = this.copied(relayed, site);
+
+    copies.push(copied);
+    this.firstCopies.set(firstKey, { declaration: copied, site });
   }
 
   // A writable copy of a declaration of the public api, once per name and api; undefined once seen.
@@ -219,10 +297,11 @@ class RelayCopier {
   private copied<Value extends Declaration>(relayed: Value, site: CopySite): Value {
     withApiOrigins(relayed, site.api);
 
-    return { ...relayed, directions: [] };
+    // This api writes the directions from its own uses; an extension key has none.
+    return "directions" in relayed ? { ...relayed, directions: [] } : relayed;
   }
 
-  private compare(
+  private compareLocal(
     site: CopySite,
     kind: DeclarationKind,
     relayed: Declaration,
@@ -237,6 +316,24 @@ class RelayCopier {
       related: [{ pointer: local.origin.pointer, message: `this api's ${kind} '${local.id}'` }],
     });
   }
+
+  private compareFirst(
+    site: CopySite,
+    kind: DeclarationKind,
+    relayed: Declaration,
+    first: FirstCopy,
+  ): void {
+    if (contentOf(relayed) === contentOf(first.declaration)) return;
+    this.reporter.error({
+      rule: "relay-declaration",
+      pointer: site.pointer,
+      message: `the ${kind} '${relayed.id}' that ${site.relays} uses differs from the one ${first.site.relays} uses`,
+      fix: "declare it once in a shared file both public apis load, or rename one of them",
+      related: [
+        { pointer: first.site.pointer, message: `the route relaying ${first.site.relays}` },
+      ],
+    });
+  }
 }
 
 /**
@@ -246,16 +343,12 @@ class RelayCopier {
  */
 export function treeSchemasCopyRelayDeclarations(
   compiler: TreeSchemasCompiler,
-  enums: readonly IrWriter.Enum[],
+  local: TreeSchemasLocalDeclarations,
   nodes: readonly TreeNode[],
   context: PassContext,
   reporter: TreeSchemasReporter,
 ): TreeSchemasRelayCopies {
-  const copier = new RelayCopier(
-    compiler,
-    new Map(enums.map((declared) => [declared.id, declared])),
-    reporter,
-  );
+  const copier = new RelayCopier(compiler, local, reporter);
 
   for (const node of nodes) {
     if (node.kind !== "relay") continue;

@@ -97,7 +97,7 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
     const declaredEnums = treeSchemasCompileEnums(context.raw.merged.enums, reporter);
     const relays = treeSchemasCopyRelayDeclarations(
       compiler,
-      declaredEnums,
+      { enums: declaredEnums, extensionKeys },
       nodes,
       context,
       reporter,
@@ -130,7 +130,7 @@ export const treeSchemasPass: PassPart<"tree.schemas"> = {
 
     for (const declared of enums) draft.enums[declared.id] = structuredClone(declared);
 
-    for (const declared of extensionKeys)
+    for (const declared of [...extensionKeys, ...relays.extensionKeys])
       draft.extensionKeys[declared.id] = structuredClone(declared);
 
     return treeSchemasService({
