@@ -17,26 +17,26 @@ import {
   type TypeUse,
 } from "@seampact/spec/ir";
 import type { ValidatorsLayout } from "./layout.js";
+import { CODE_POINT_LENGTH, IS_DATE_TIME, type WireCheck } from "./module-source.js";
 
 // What a module needs to write a validator: the IR, the planned names, where refusals go, the direction its
-// schema references resolve in, and how it refers to a schema validator and to the code point counter.
+// schema references resolve in, and how it refers to a schema validator and to a generated check.
 export interface ValidatorContext {
   ir: ContractIR;
   layout: ValidatorsLayout;
   refusals: Refusal[];
   direction: SchemaDirection;
   referToSchema(schemaId: string, exportName: string): string;
-  codePointLength(): string;
+  wireCheck(check: WireCheck): string;
 }
 
 // Stands in for a refused form; the target writes no file once any form is refused.
 export const REFUSED_VALIDATOR = "z.never()";
 
-const STRING_FORMAT_VALIDATORS: ReadonlyMap<string, string> = new Map([
-  ["uuid", "z.uuid()"],
-  // RFC 3339 with a time offset; a value without one is refused (ADR 0003 section 8).
-  ["date-time", "z.iso.datetime({ offset: true })"],
-]);
+// The `8-4-4-4-12` hex layout of ADR 0003 section 8, in either case; zod's `uuid()` also checks the RFC 9562
+// version and variant digits, which the contract does not.
+const UUID_VALIDATOR =
+  'z.string().regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/, { error: "Expected a UUID: 8-4-4-4-12 hex digits." })';
 
 const BASE_VALIDATORS: ReadonlyMap<string, string> = new Map([
   ["string", "z.string()"],
@@ -243,7 +243,7 @@ function baseValidator(
 ): string {
   if (typeUse.format !== undefined) {
     const formatValidator =
-      typeUse.type === "string" ? STRING_FORMAT_VALIDATORS.get(typeUse.format) : undefined;
+      typeUse.type === "string" ? stringFormatValidator(typeUse.format, context) : undefined;
 
     if (formatValidator !== undefined) return formatValidator;
 
@@ -265,6 +265,17 @@ function baseValidator(
   context.refusals.push(refuseUnknownValueAt(below(location, "type"), typeUse.type));
 
   return REFUSED_VALIDATOR;
+}
+
+function stringFormatValidator(format: string, context: ValidatorContext): string | undefined {
+  if (format === "uuid") return UUID_VALIDATOR;
+
+  // RFC 3339 with a time offset; a value without one is refused.
+  if (format === "date-time") {
+    return `z.string().refine(${context.wireCheck(IS_DATE_TIME)}, { error: "Expected an RFC 3339 date-time with a time offset." })`;
+  }
+
+  return undefined;
 }
 
 // String lengths count Unicode code points (ADR 0003 section 1); zod's own `min` and `max` count UTF-16 units.
@@ -289,7 +300,7 @@ function lengthChecks(
     return [];
   }
 
-  const counter = context.codePointLength();
+  const counter = context.wireCheck(CODE_POINT_LENGTH);
   const checks: string[] = [];
 
   if (minLength !== undefined) {
@@ -359,7 +370,8 @@ function boundChecks(
   });
 }
 
-// The decimal literal as JavaScript source when a JavaScript number holds it exactly, else undefined.
+// The decimal literal as JavaScript source when it reads back unchanged from the nearest double, as a JSON
+// decoder would read it (`0.1` does), else undefined.
 function exactNumberLiteral(literal: string): string | undefined {
   const value = Number(literal);
 

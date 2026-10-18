@@ -15,7 +15,7 @@ import {
   type Property,
 } from "@seampact/spec/ir";
 import type { ValidatorsLayout } from "./layout.js";
-import { CODE_POINT_LENGTH, type ModuleSource } from "./module-source.js";
+import type { ModuleSource, WireCheck } from "./module-source.js";
 import { type ValidatorContext, validatorExpression } from "./validator-expression.js";
 
 interface SchemaDeclaration {
@@ -39,7 +39,7 @@ export function schemaModuleSource(
   layout: ValidatorsLayout,
   refusals: Refusal[],
 ): ModuleSource {
-  let usesCodePoints = false;
+  const wireChecks = new Set<WireCheck>();
 
   const declarations = Object.entries(ir.schemas).flatMap(
     ([schemaId, schema]): SchemaDeclaration[] => {
@@ -73,10 +73,10 @@ export function schemaModuleSource(
 
           return exportName;
         },
-        codePointLength() {
-          usesCodePoints = true;
+        wireCheck(check) {
+          wireChecks.add(check);
 
-          return CODE_POINT_LENGTH;
+          return check;
         },
       };
 
@@ -88,7 +88,7 @@ export function schemaModuleSource(
 
   return {
     declarations: ordered.map((declaration) => declaration.source),
-    usesCodePoints,
+    wireChecks,
     namespaces: [],
   };
 }

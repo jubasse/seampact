@@ -10,16 +10,16 @@ import {
 } from "@seampact/codegen-core";
 import type { ContractIR } from "@seampact/spec/ir";
 import {
-  CODE_POINTS_MODULE,
   OPERATION_INPUT_MODULE,
   planValidatorsLayout,
   SCHEMA_MODULES,
+  WIRE_CHECKS_MODULE,
 } from "./layout.js";
 import {
-  CODE_POINTS_SOURCE,
   type ModuleSource,
   moduleContents,
   modulePath,
+  WIRE_CHECKS_SOURCE,
 } from "./module-source.js";
 import { operationInputModuleSource } from "./operation-input.js";
 import { schemaModuleSource } from "./schema-module.js";
@@ -59,8 +59,8 @@ export function generateValidators(
     return contents === undefined ? [] : [{ path: modulePath(module), contents }];
   });
 
-  if (modules.some(({ source }) => source.usesCodePoints)) {
-    files.push({ path: modulePath(CODE_POINTS_MODULE), contents: CODE_POINTS_SOURCE });
+  if (modules.some(({ source }) => source.wireChecks.size > 0)) {
+    files.push({ path: modulePath(WIRE_CHECKS_MODULE), contents: WIRE_CHECKS_SOURCE });
   }
 
   return { status: "generated", files };

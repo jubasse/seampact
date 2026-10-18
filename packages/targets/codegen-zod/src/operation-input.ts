@@ -17,7 +17,7 @@ import {
   type Param,
 } from "@seampact/spec/ir";
 import { SCHEMA_MODULES, type ValidatorsLayout } from "./layout.js";
-import { CODE_POINT_LENGTH, type ModuleSource } from "./module-source.js";
+import type { ModuleSource, WireCheck } from "./module-source.js";
 import {
   REFUSED_VALIDATOR,
   type ValidatorContext,
@@ -42,7 +42,7 @@ export function operationInputModuleSource(
   layout: ValidatorsLayout,
   refusals: Refusal[],
 ): ModuleSource {
-  let usesCodePoints = false;
+  const wireChecks = new Set<WireCheck>();
   let usesInputSchemas = false;
 
   const context: ValidatorContext = {
@@ -55,10 +55,10 @@ export function operationInputModuleSource(
 
       return `${INPUT_SCHEMAS_NAMESPACE}.${exportName}`;
     },
-    codePointLength() {
-      usesCodePoints = true;
+    wireCheck(check) {
+      wireChecks.add(check);
 
-      return CODE_POINT_LENGTH;
+      return check;
     },
   };
 
@@ -68,7 +68,7 @@ export function operationInputModuleSource(
 
   return {
     declarations,
-    usesCodePoints,
+    wireChecks,
     namespaces: usesInputSchemas
       ? [{ name: INPUT_SCHEMAS_NAMESPACE, module: SCHEMA_MODULES.input }]
       : [],
@@ -90,17 +90,16 @@ function operationDeclaration(
     );
   }
 
-  if (query.length > 0) {
-    const objectConstructor = queryConstructor(
-      operation,
-      below(location, "unknownQuery"),
-      context.refusals,
-    );
+  // Always present, even without a declared param, so that an unknown query key is refused on every operation.
+  const objectConstructor = queryConstructor(
+    operation,
+    below(location, "unknownQuery"),
+    context.refusals,
+  );
 
-    members.push(
-      `query: ${paramsObject(objectConstructor, query, (name) => name, below(paramsLocation, "query"), context)},`,
-    );
-  }
+  members.push(
+    `query: ${paramsObject(objectConstructor, query, (name) => name, below(paramsLocation, "query"), context)},`,
+  );
 
   if (header.length > 0) {
     const headerLocation = below(paramsLocation, "header");

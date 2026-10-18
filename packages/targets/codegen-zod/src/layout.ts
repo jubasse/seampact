@@ -27,7 +27,7 @@ export const SCHEMA_MODULES: Readonly<Record<SchemaDirection, string>> = {
   output: "schemas/output",
 };
 export const OPERATION_INPUT_MODULE = "operations/input";
-export const CODE_POINTS_MODULE = "code-points";
+export const WIRE_CHECKS_MODULE = "wire-checks";
 
 export const MODULE_EXTENSION = ".ts";
 
