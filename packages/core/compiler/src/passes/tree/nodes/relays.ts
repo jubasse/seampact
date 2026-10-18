@@ -12,6 +12,7 @@ import {
   pipelineCopy,
   pipelinePointerBelow,
 } from "../../../pipeline/seam.js";
+import { accessRightsQuoted } from "../../access/rights/report.js";
 import {
   type TreeNodesRule,
   treeNodesError,
@@ -20,7 +21,6 @@ import {
 } from "./diagnostics.js";
 import type { TreeNodesSite } from "./fields.js";
 import { type TreeNodesContext, treeNodesText } from "./raw.js";
-import { accessRightsQuoted } from "../../access/rights/report.js";
 
 // Relay routes (ADR 0002 section 7): the shape of the public operation a relay route names, copied from the
 // derived draft of a workspace api (`relayed`) or from the IR of an import (`imported`). Only the public
