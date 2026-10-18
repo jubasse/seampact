@@ -31,16 +31,20 @@ export function treeNodesDegradable(
 
   if (origin === undefined) throw new Error(`the raw tree has no origin for ${pointer}`);
 
-  const paths = written.filter((path) => typeof path === "string");
+  const header = site.context.conventions.get("degradedHeader")?.value;
+  const paths = written.map((path, index) => {
+    if (typeof path !== "string")
+      throw new Error(`${pointer}/${index} is not a string, which validate guarantees`);
+
+    return path;
+  });
   const success = responses.find(
     (response) => response.status < 300 && response.body !== undefined,
   );
 
   paths.forEach((path, index) => {
-    checkPath(site, path, `${pointer}/${index}`, success?.body);
+    checkPath(site, path, `${pointer}/${index}`, success?.body, typeof header === "string");
   });
-
-  const header = site.context.conventions.get("degradedHeader")?.value;
 
   if (!formatFillsDegraded(site, format) && typeof header !== "string")
     site.context.report(
@@ -68,19 +72,40 @@ function formatFillsDegraded(site: TreeNodesSite, format: string): boolean {
   );
 }
 
-// The success data a path reaches into; a route with no success body has none to leave out.
+// The success data a path reaches into; a route with no success body has none to leave out. Where the header is
+// written, its value lists the path as written, so a name it cannot carry is refused.
 function checkPath(
   site: TreeNodesSite,
   path: string,
   pointer: string,
   body: IrWriter.TypeUse | undefined,
+  headerWritten: boolean,
 ): void {
-  const fault = body === undefined ? NO_PROPERTY : pathFault(site, path.split("."), body);
+  const segments = path.split(".");
+  const fault = body === undefined ? NO_PROPERTY : pathFault(site, segments, body);
 
-  if (fault !== undefined) reportPath(site, path, pointer, fault);
+  if (fault !== undefined) {
+    reportPath(site, pointer, {
+      message: `The degradable path ${path} of ${site.operationId} ${fault}; only an optional part can be left out.`,
+      fix: "Name an optional object property of the success data, or make the property optional.",
+    });
+
+    return;
+  }
+
+  if (headerWritten && segments.some(nameUnfitForHeader))
+    reportPath(site, pointer, {
+      message: `The degradable path ${path} of ${site.operationId} names a property the degraded header cannot carry: a name may hold no comma, no character outside visible ASCII and space, and no leading or trailing space.`,
+      fix: "Rename the property, or leave it out of degradable.",
+    });
 }
 
 const NO_PROPERTY = "names no property of the success data";
+
+// The header value is a comma-separated list (RFC 9110 section 5.6.1) of the paths as written.
+const HEADER_UNSAFE_NAME = /[^\x20-\x7e]|,|^ | $/;
+
+const nameUnfitForHeader = (name: string): boolean => HEADER_UNSAFE_NAME.test(name);
 
 // Each segment names a property of the object reached so far, in every variant of a union; the last one must be
 // optional. Undefined when the path fits.
@@ -122,13 +147,17 @@ function variantsFault(
   return undefined;
 }
 
-function reportPath(site: TreeNodesSite, path: string, pointer: string, why: string): void {
+function reportPath(
+  site: TreeNodesSite,
+  pointer: string,
+  { message, fix }: { readonly message: string; readonly fix: string },
+): void {
   site.context.report(
     treeNodesError({
       rule: "degradable-path",
       origin: treeNodesNodeOrigin(site.context.origin(pointer) ?? site.node.origin),
-      message: `The degradable path ${path} of ${site.operationId} ${why}; only an optional part can be left out.`,
-      fix: "Name an optional object property of the success data, or make the property optional.",
+      message,
+      fix,
     }),
   );
 }

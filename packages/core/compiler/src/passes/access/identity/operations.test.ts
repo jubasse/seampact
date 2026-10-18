@@ -1072,7 +1072,7 @@ describe("relay routes", () => {
     expect(relay).not.toHaveProperty("csrf");
   });
 
-  test("an operation without safe that is not a relay route is an internal error", () => {
+  test("an operation without safe is an internal error", () => {
     expect(() =>
       compile(
         `  app:

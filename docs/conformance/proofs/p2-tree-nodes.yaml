@@ -69,6 +69,8 @@ proofs:
       - 'core: packages/core/compiler/src/passes/tree/nodes/relays.test.ts#relay routes copy the public shape'
       - 'core: packages/core/compiler/src/passes/tree/nodes/relays.test.ts#relay routes copy from an imported IR the same shape, and name what it holds unknown'
       - 'core: packages/core/compiler/src/passes/tree/nodes/relays.test.ts#tree.nodes diagnostics are located: relays'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/relays.test.ts#an imported operation that contradicts its own IR is refused, located, not an internal error'
+      - 'core: packages/core/compiler/src/passes/tree/nodes/relays.test.ts#an imported paging style holding a member this compiler does not know is refused, not copied'
       - 'core: packages/core/compiler/src/passes/tree/nodes/pass.test.ts#tree halves on the reference contract (%s)'
   - id: CHK-053
     fixtures: []

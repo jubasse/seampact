@@ -44,15 +44,17 @@ import { treeNodesPaging } from "./paging.js";
 import { treeNodesParams, treeNodesUnknownQuery } from "./params.js";
 import { treeNodesCheckPathParts, treeNodesPath } from "./paths.js";
 import { type TreeNodesContext, treeNodesSetting } from "./raw.js";
-import { type TreeNodesRelayDeclaration, treeNodesRelayShape } from "./relays.js";
+import {
+  TREE_NODES_OPERATION_KIND,
+  type TreeNodesRelayDeclaration,
+  treeNodesRelayShape,
+} from "./relays.js";
 import { treeNodesFormat, treeNodesResponses } from "./responses.js";
 import { treeNodesConcurrency, treeNodesOwner } from "./writes.js";
 
 // The operations of the api (ADR 0002 sections 6 and 7): one per route, relay route and `ops` entry, in tree order,
 // each with its id, name, surface, op, resource, method, path, safety, declared parameters, input and responses,
 // format and origin. A relay route's method, path, format and shape are copied from the public operation it relays.
-
-const OPERATION_KIND = "httpOperation";
 
 const HTTP_METHODS: readonly IrWriter.HttpMethod[] = ["get", "post", "put", "patch", "delete"];
 
@@ -218,7 +220,7 @@ function operationOf(
   const params = treeNodesParams(site, path, safe, input?.schema);
 
   return {
-    kind: OPERATION_KIND,
+    kind: TREE_NODES_OPERATION_KIND,
     id: name.id,
     name: pipelineCopy(name.name),
     surface: surfaceOf(node),
@@ -252,7 +254,7 @@ function relayOperationOf(
   const copied = treeNodesRelayShape(site, prefix, relayDeclarations);
 
   return {
-    kind: OPERATION_KIND,
+    kind: TREE_NODES_OPERATION_KIND,
     id: name.id,
     name: pipelineCopy(name.name),
     surface,

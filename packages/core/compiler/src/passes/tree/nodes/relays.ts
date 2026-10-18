@@ -3,7 +3,6 @@ import {
   checkIrClosedDeclaration,
   type IrClosedUnknown,
   type IrWriter,
-  listIrUnknowns,
 } from "@seampact/spec/ir";
 import {
   type DraftIR,
@@ -13,6 +12,7 @@ import {
   pipelineCopy,
   pipelinePointerBelow,
 } from "../../../pipeline/seam.js";
+import { accessRightsQuoted } from "../../access/rights/report.js";
 import {
   type TreeNodesRule,
   treeNodesError,
@@ -30,7 +30,8 @@ import { type TreeNodesContext, treeNodesText } from "./raw.js";
 
 const RELAY_DERIVATION = "relay.route";
 
-const OPERATION_KIND = "httpOperation";
+/** The `kind` of the operations tree.nodes writes and relays. */
+export const TREE_NODES_OPERATION_KIND = "httpOperation";
 
 // The derivations of tree.nodes that a relay route copies, since it has no `op` to derive them again.
 const COPIED_RESPONSE_DERIVATIONS: readonly string[] = [
@@ -88,6 +89,7 @@ export function treeNodesRelayShape(
   declarations: TreeNodesRelayDeclaration[],
 ): DraftOperation | undefined {
   const target = relayTarget(site);
+
   const source = relaySource(site, target);
 
   if (source === undefined) return undefined;
@@ -98,7 +100,7 @@ export function treeNodesRelayShape(
   if (operation.origin === undefined)
     throw new Error(`the relayed operation ${target.text} has no origin`);
 
-  const stamp: RelayStamp = { api, from: relayOrigin(operation.origin, api) };
+  const stamp: RelayStamp = { api, from: treeNodesRelayOrigin(operation.origin, api) };
 
   pushDeclarations(source, site, target, declarations);
 
@@ -119,7 +121,7 @@ export function treeNodesRelayShape(
           },
         }),
     ...(operation.format === undefined ? {} : { format: operation.format }),
-    relays: { kind: OPERATION_KIND, api, id: target.id },
+    relays: { kind: TREE_NODES_OPERATION_KIND, api, id: target.id },
   };
 }
 
@@ -227,7 +229,10 @@ function pushDeclarations(
       ...relaySite,
       catalogue: "formats",
       id: operation.format,
-      value: { ...pipelineCopy(source.format), origin: relayOrigin(source.format.origin, api) },
+      value: {
+        ...pipelineCopy(source.format),
+        origin: treeNodesRelayOrigin(source.format.origin, api),
+      },
     });
 
   if (style !== undefined && source.pagingStyle !== undefined)
@@ -237,14 +242,19 @@ function pushDeclarations(
       id: style,
       value: {
         ...pipelineCopy(source.pagingStyle),
-        origin: relayOrigin(source.pagingStyle.origin, api),
+        origin: treeNodesRelayOrigin(source.pagingStyle.origin, api),
       },
     });
 }
 
-// An element copied from another api carries that api; an element that api copied in turn keeps its own, and a
-// core declaration, which no api holds, has none.
-function relayOrigin(origin: PassReadonly<IrWriter.Origin>, api: string): IrWriter.Origin {
+/**
+ * An element copied from another api carries that api; an element that api copied in turn keeps its own, and a
+ * core declaration, which no api holds, has none.
+ */
+export function treeNodesRelayOrigin(
+  origin: PassReadonly<IrWriter.Origin>,
+  api: string,
+): IrWriter.Origin {
   if (origin.layer === "core" || origin.api !== undefined) return pipelineCopy(origin);
 
   return { api, ...pipelineCopy(origin) };
@@ -263,7 +273,9 @@ function stamped<Element extends { origin?: IrWriter.Origin; derivedFrom?: IrWri
 ): Element {
   return {
     ...element,
-    ...(element.origin === undefined ? {} : { origin: relayOrigin(element.origin, stamp.api) }),
+    ...(element.origin === undefined
+      ? {}
+      : { origin: treeNodesRelayOrigin(element.origin, stamp.api) }),
     derivedFrom: { derivation: RELAY_DERIVATION, from: [pipelineCopy(stamp.from)] },
   };
 }
@@ -300,7 +312,7 @@ function copiedInput(
     media: input.media,
     schema: pipelineCopy(input.schema),
     ...(input.fields === undefined ? {} : { fields: pipelineCopy(input.fields) }),
-    origin: relayOrigin(input.origin, api),
+    origin: treeNodesRelayOrigin(input.origin, api),
   };
 }
 
@@ -329,10 +341,17 @@ function copiedPaging(paging: PassReadonly<IrWriter.Paging>, api: string): IrWri
     ...(paging.token === undefined ? {} : { token: paging.token }),
     sortKeys: paging.sortKeys.map((sortKey) => ({
       key: sortKey.key,
-      ...(sortKey.origin === undefined ? {} : { origin: relayOrigin(sortKey.origin, api) }),
+      ...(sortKey.origin === undefined
+        ? {}
+        : { origin: treeNodesRelayOrigin(sortKey.origin, api) }),
     })),
-    origin: relayOrigin(paging.origin, api),
+    origin: treeNodesRelayOrigin(paging.origin, api),
   };
+}
+
+// A path is under a prefix at a segment boundary: `/v10/x` is not under `/v1`.
+function pathUnderPrefix(path: string, prefix: string | undefined): boolean {
+  return prefix !== undefined && (path === prefix || path.startsWith(`${prefix}/`));
 }
 
 // The public path after its surface's prefix, appended to this surface's prefix.
@@ -340,7 +359,7 @@ function relayPath(source: RelaySource, ownPrefix: string): string {
   const { operation, surfacePrefix } = source;
   const path = operation.path ?? "";
 
-  if (surfacePrefix === undefined || !path.startsWith(surfacePrefix))
+  if (surfacePrefix === undefined || !pathUnderPrefix(path, surfacePrefix))
     throw new Error(
       `the relayed operation ${source.api}.${operation.id} has the path ${path}, which does not start with the prefix of its surface ${operation.surface}`,
     );
@@ -383,7 +402,7 @@ function relayedSource(
   relayed: PassReadonly<DraftIR>,
 ): RelaySource | undefined {
   const operation = relayed.operations.find(
-    (candidate) => candidate.kind === OPERATION_KIND && candidate.id === target.id,
+    (candidate) => candidate.kind === TREE_NODES_OPERATION_KIND && candidate.id === target.id,
   );
 
   if (operation === undefined) {
@@ -408,16 +427,15 @@ function relayedSource(
 }
 
 // An imported IR may hold a union arm, an open-enum value or a member this compiler does not know: the operation
-// is copied only when none sits in it, its format or its paging style; each one found is named. The operation and
-// its format are narrowed by the closed-IR guard, the paging style (no guard definition) by `listIrUnknowns`.
+// is copied only when none sits in it, its format or its paging style; each one found is named. All three are
+// narrowed by the closed-IR guard. An import is external input, so an operation whose path leaves its surface's
+// prefix or that names a format or paging style the import does not hold is refused, located, as well.
 function importedSource(
   site: TreeNodesSite,
   target: RelayTarget,
   imported: PassReadonly<ContractIR>,
 ): RelaySource | undefined {
-  const index = imported.operations.findIndex(
-    (candidate) => candidate.kind === OPERATION_KIND && candidate.id === target.id,
-  );
+  const index = importedOperationIndex(imported, target.id);
   const found = imported.operations[index];
 
   if (found === undefined) {
@@ -427,23 +445,17 @@ function importedSource(
   }
 
   const operation = checkIrClosedDeclaration("Operation", found, `/operations/${index}`);
-  const formatId = found.format;
-  const formatEntry = ownEntry(imported.formats, formatId);
-  const format =
-    formatId === undefined || formatEntry === undefined
-      ? undefined
-      : checkIrClosedDeclaration(
-          "WireFormat",
-          formatEntry,
-          pipelinePointerBelow("/formats", formatId),
-        );
-  const style = found.paging?.style;
-  const styleUnknowns =
-    style === undefined ? [] : unknownsUnder(imported, pipelinePointerBelow("/pagings", style));
+  const format = importedDeclaration("WireFormat", imported.formats, "/formats", found.format);
+  const style = importedDeclaration(
+    "PagingStyle",
+    imported.pagings,
+    "/pagings",
+    found.paging?.style,
+  );
   const unknowns = [
     ...namedUnknowns(operation.unknowns),
     ...namedUnknowns(format?.unknowns),
-    ...styleUnknowns,
+    ...namedUnknowns(style?.unknowns),
   ];
 
   if (operation.closed === undefined || unknowns.length > 0) {
@@ -459,49 +471,88 @@ function importedSource(
 
   const surfaces = imported.api.surfaces;
   const surface = operation.closed.surface;
+  const surfacePrefix = Object.hasOwn(surfaces, surface) ? surfaces[surface]?.prefix : undefined;
+  const inconsistency = importInconsistency(operation.closed, surfacePrefix, {
+    formatMissing: found.format !== undefined && format === undefined,
+    styleMissing: found.paging?.style !== undefined && style === undefined,
+  });
+
+  if (inconsistency !== undefined) {
+    reportTarget(
+      site,
+      `relays ${target.text}, but the import ${target.api} is inconsistent: ${inconsistency}`,
+      `Relay an operation of an IR that ${target.api} compiled, or fix the import.`,
+    );
+
+    return undefined;
+  }
 
   return {
     api: target.api,
     operation: operation.closed,
-    surfacePrefix: Object.hasOwn(surfaces, surface) ? surfaces[surface]?.prefix : undefined,
+    surfacePrefix,
     format: format?.closed,
-    pagingStyle: knownEntry(imported.pagings, style, styleUnknowns),
+    pagingStyle: style?.closed,
   };
+}
+
+interface ImportedMissing {
+  readonly formatMissing: boolean;
+  readonly styleMissing: boolean;
+}
+
+// What an imported operation holds that contradicts its own IR, else undefined: a path outside its surface's
+// prefix, a format or a paging style its catalogue lacks.
+function importInconsistency(
+  operation: IrWriter.Operation,
+  surfacePrefix: string | undefined,
+  { formatMissing, styleMissing }: ImportedMissing,
+): string | undefined {
+  const { path, surface } = operation;
+
+  if (path !== undefined && surfacePrefix === undefined)
+    return `the operation ${operation.id} is on the surface ${surface}, which the import does not declare`;
+
+  if (path !== undefined && !pathUnderPrefix(path, surfacePrefix))
+    return `the operation ${operation.id} has the path ${accessRightsQuoted(path)}, which does not start with the prefix of its surface ${surface}`;
+
+  if (formatMissing)
+    return `the operation ${operation.id} names a wire format the import does not declare`;
+
+  if (styleMissing)
+    return `the operation ${operation.id} names a paging style the import does not declare`;
+
+  return undefined;
+}
+
+// The operation of an id, an `httpOperation` first: one of another kind is refused by the closed-IR guard.
+function importedOperationIndex(imported: PassReadonly<ContractIR>, id: string): number {
+  const httpIndex = imported.operations.findIndex(
+    (candidate) => candidate.kind === TREE_NODES_OPERATION_KIND && candidate.id === id,
+  );
+
+  return httpIndex >= 0
+    ? httpIndex
+    : imported.operations.findIndex((candidate) => candidate.id === id);
+}
+
+// An imported catalogue entry the operation names, checked by the closed-IR guard; undefined when it names none or
+// the catalogue lacks it.
+function importedDeclaration<Definition extends "WireFormat" | "PagingStyle">(
+  definition: Definition,
+  catalogue: Readonly<Record<string, object>>,
+  root: string,
+  id: string | undefined,
+) {
+  const entry = ownEntry(catalogue, id);
+
+  if (id === undefined || entry === undefined) return undefined;
+
+  return checkIrClosedDeclaration(definition, entry, pipelinePointerBelow(root, id));
 }
 
 const namedUnknowns = (unknowns: readonly IrClosedUnknown[] | undefined): string[] =>
   (unknowns ?? []).map(({ pointer, value }) => `${value} at ${pointer}`);
-
-// Each unknown union tag or open-enum value at or below the pointer, named by its pointer and value.
-function unknownsUnder(imported: PassReadonly<ContractIR>, root: string): string[] {
-  const { kinds, values } = listIrUnknowns(imported);
-  const isUnder = (pointer: string) => pointer === root || pointer.startsWith(`${root}/`);
-
-  return [
-    ...kinds
-      .filter(({ pointer }) => isUnder(pointer))
-      .map(({ pointer, tag, value }) => `${value} at ${pointer}/${tag}`),
-    ...values
-      .filter(({ pointer }) => isUnder(pointer))
-      .map(({ pointer, value }) => `${value} at ${pointer}`),
-  ];
-}
-
-// `listIrUnknowns` found no unknown arm or value in the paging style, so it is one the writer types describe.
-function knownEntry<Reader, Writer extends Reader>(
-  catalogue: Readonly<Record<string, Reader>>,
-  id: string | undefined,
-  unknowns: readonly string[],
-): Writer | undefined {
-  const entry = ownEntry(catalogue, id);
-
-  return entry !== undefined && isKnown<Reader, Writer>(entry, unknowns) ? entry : undefined;
-}
-
-const isKnown = <Reader, Writer extends Reader>(
-  _entry: Reader,
-  unknowns: readonly string[],
-): _entry is Writer => unknowns.length === 0;
 
 const ownEntry = <Value>(
   catalogue: Readonly<Record<string, Value>>,

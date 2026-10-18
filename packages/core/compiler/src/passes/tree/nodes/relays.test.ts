@@ -147,6 +147,23 @@ function importedIr(
   return imported;
 }
 
+function findOperation(ir: Record<string, unknown>, id: string) {
+  const operations = ir.operations;
+
+  if (!Array.isArray(operations)) throw new Error("the imported IR has no operations");
+
+  return operations.find((operation) => operation.id === id);
+}
+
+function pagingStyleOf(ir: Record<string, unknown>, id: string) {
+  const pagings = ir.pagings;
+
+  if (typeof pagings !== "object" || pagings === null)
+    throw new Error("the imported IR has no paging styles");
+
+  return Reflect.get(pagings, id);
+}
+
 test("relay routes copy the public shape", () => {
   const { draft, diagnostics } = runService(ACCEPTED_ROUTES, {
     relayed: new Map([[PUBLIC_API, publicDraft()]]),
@@ -333,4 +350,66 @@ test("tree.nodes diagnostics are located: relays", () => {
       if (origin.api === undefined)
         expect(Object.hasOwn(raw.locations, diagnosticLocationKey(origin))).toBe(true);
   }
+});
+
+test("an imported operation that contradicts its own IR is refused, located, not an internal error", () => {
+  const outsidePrefix = importedIr(publicDraft(), (ir) => {
+    findOperation(ir, "getTask").path = "/elsewhere/tasks/{taskId}";
+  });
+  const nextSegment = importedIr(publicDraft(), (ir) => {
+    findOperation(ir, "getTask").path = "/internal/v10/tasks/{taskId}";
+  });
+  const longPath = importedIr(publicDraft(), (ir) => {
+    findOperation(ir, "getTask").path = `/elsewhere/${"x".repeat(500)}`;
+  });
+  const noSurface = importedIr(publicDraft(), (ir) => {
+    findOperation(ir, "getTask").surface = "ghostSurface";
+  });
+  const noFormat = importedIr(publicDraft(), (ir) => {
+    findOperation(ir, "listTasks").format = "missing";
+  });
+  const noStyle = importedIr(publicDraft(), (ir) => {
+    findOperation(ir, "listTasks").paging.style = "missing";
+  });
+  const unknownKind = importedIr(publicDraft(), (ir) => {
+    findOperation(ir, "getTask").kind = "grpcOperation";
+  });
+
+  const run = (imported: ContractIR) =>
+    runService(ACCEPTED_ROUTES, { imports: new Map([[PUBLIC_API, imported]]) }).diagnostics;
+  const located = (imported: ContractIR) =>
+    run(imported).map(({ rule, origin }) => [rule, origin.pointer]);
+
+  expect(located(outsidePrefix)).toEqual([
+    ["seampact/tree/relay-target", `${ROUTES}/getTask/relays`],
+  ]);
+  expect(run(outsidePrefix)[0]?.message).toContain("does not start with the prefix of its surface");
+  expect(located(nextSegment)).toEqual([
+    ["seampact/tree/relay-target", `${ROUTES}/getTask/relays`],
+  ]);
+  expect(located(longPath)).toEqual([["seampact/tree/relay-target", `${ROUTES}/getTask/relays`]]);
+  expect(run(longPath)[0]?.message.length).toBeLessThan(400);
+  expect(located(noSurface)).toEqual([["seampact/tree/relay-target", `${ROUTES}/getTask/relays`]]);
+  expect(run(noSurface)[0]?.message).toContain(
+    "surface ghostSurface, which the import does not declare",
+  );
+  expect(located(noFormat)).toEqual([["seampact/tree/relay-target", `${ROUTES}/listTasks/relays`]]);
+  expect(located(noStyle)).toEqual([["seampact/tree/relay-target", `${ROUTES}/listTasks/relays`]]);
+  expect(located(unknownKind)).toEqual([
+    ["seampact/tree/relay-unknown", `${ROUTES}/getTask/relays`],
+  ]);
+  expect(run(unknownKind)[0]?.message).toContain("grpcOperation");
+});
+
+test("an imported paging style holding a member this compiler does not know is refused, not copied", () => {
+  const withMember = importedIr(publicDraft(), (ir) => {
+    pagingStyleOf(ir, "cursor").weight = 1;
+  });
+  const refused = runService(ACCEPTED_ROUTES, { imports: new Map([[PUBLIC_API, withMember]]) });
+
+  expect(refused.diagnostics.map(({ rule, origin }) => [rule, origin.pointer])).toEqual([
+    ["seampact/tree/relay-unknown", `${ROUTES}/listTasks/relays`],
+  ]);
+  expect(refused.diagnostics[0]?.message).toContain("weight at /pagings/cursor/weight");
+  expect(refused.draft.pagings).not.toHaveProperty("cursor.weight");
 });

@@ -23,9 +23,8 @@ import { accessIdentityCheckSignatureKey, accessIdentityInputFacts } from "./sig
 // The per-operation members of the half (ADR 0004 section 7): each operation tree.nodes wrote, matched back to
 // the tree node it was written from, gets its access, caller kinds, CSRF decision, principal requirements and
 // bindings, and the raw-body and unknown-key facts of its declared input. An operation whose access is refused
-// gets none of them; its error is reported. A relay route has no `safe` until tree.nodes copies it from the public
-// operation it relays, so it gets none of the members that depend on the direction (access, caller kinds, CSRF):
-// leaving them out is a tolerance, never a guessed direction.
+// gets none of them; its error is reported. A relay route's `safe` is copied by tree.nodes from the public operation
+// it relays.
 
 type Context = AccessIdentityScope["context"];
 
@@ -122,8 +121,8 @@ function operationNodes(nodes: readonly TreeNode[]): Map<string, TreeNode> {
   return byOrigin;
 }
 
-// tree.nodes writes each operation with its node's origin, an id, and `safe` beside its method; a relay route has no
-// method of its own yet.
+// tree.nodes writes each operation with its node's origin, an id, and `safe` beside its method, a relay route's
+// copied from the operation it relays.
 function routeOf(
   operation: DraftOperation,
   nodeByOrigin: ReadonlyMap<string, TreeNode>,
@@ -140,10 +139,10 @@ function routeOf(
 
   const safe = operation.safe;
 
-  if (safe === undefined && node.kind !== "relay")
+  if (safe === undefined)
     throw new Error(
       `operation '${id}' at ${node.pointer} has no safe, which tree.nodes writes beside its method`,
     );
 
-  return { id, node, ...(safe === undefined ? {} : { safe }), operation };
+  return { id, node, safe, operation };
 }

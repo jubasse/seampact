@@ -1042,3 +1042,82 @@ surfaces:
     `the schema service answers no ${direction} type at ${pointer}`,
   );
 });
+
+const DEGRADABLE_SCHEMAS = `
+api: { name: a, version: 1, kind: product }
+CONVENTIONS
+schemas:
+  Profile: { type: object, properties: { stats: { type: object } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      profile: { method: get, output: Profile, degradable: PATHS }
+`;
+
+function runDegradable(paths: readonly string[], properties: readonly string[], header: boolean) {
+  const workspace = treeNodesLoadInline(
+    DEGRADABLE_SCHEMAS.replace(
+      "CONVENTIONS",
+      header ? "conventions:\n  degradedHeader: X-Degraded" : "",
+    ).replace("PATHS", JSON.stringify(paths)),
+  );
+  const treeSchemas = treeNodesStubService({
+    typeUses: { [`${ROUTES}/profile/output`]: ref("Profile") },
+  });
+  const draft = treeNodesDraftWith(
+    objectSchema("Profile", Object.fromEntries(properties.map((name) => [name, ref("Stats")])), [
+      ...properties,
+    ]),
+    objectSchema("Stats", { views: text }, ["views"]),
+  );
+
+  return treeNodesRun(treeNodesApiOf(workspace), workspace, { treeSchemas, draft });
+}
+
+const located = (run: ReturnType<typeof runDegradable>) =>
+  run.diagnostics.map(({ rule, origin }) => [rule, origin.pointer]);
+
+test("degradable: a path naming no property is refused where it is written", () => {
+  const run = runDegradable(["stats..views", "stats.", "stats, host", ""], ["stats"], true);
+
+  expect(located(run)).toEqual([
+    ["seampact/tree/degradable-path", `${ROUTES}/profile/degradable/0`],
+    ["seampact/tree/degradable-path", `${ROUTES}/profile/degradable/1`],
+    ["seampact/tree/degradable-path", `${ROUTES}/profile/degradable/2`],
+    ["seampact/tree/degradable-path", `${ROUTES}/profile/degradable/3`],
+  ]);
+  expect(run.diagnostics[0]?.message).toContain("names no property of the success data");
+});
+
+test("degradable: without the header every declared optional property name is accepted", () => {
+  const run = runDegradable(
+    ["@context", "naïve", "first name"],
+    ["@context", "naïve", "first name"],
+    false,
+  );
+
+  expect(located(run)).toEqual([
+    ["seampact/tree/degradable-header", `${ROUTES}/profile/degradable`],
+  ]);
+});
+
+test("degradable: with the header, a name it cannot carry is refused with its own message", () => {
+  const names = ["a,b", "naïve", " lead", "trail ", "tab\tname"];
+  const run = runDegradable(names, names, true);
+
+  expect(located(run)).toEqual(
+    names.map((_, index) => [
+      "seampact/tree/degradable-path",
+      `${ROUTES}/profile/degradable/${index}`,
+    ]),
+  );
+  expect(run.diagnostics[0]?.message).toContain("the degraded header cannot carry");
+  expect(run.diagnostics[0]?.message).not.toContain("optional part");
+});
+
+test("degradable: with the header, a name of visible ASCII and inner spaces is accepted", () => {
+  const run = runDegradable(["@context", "first name"], ["@context", "first name"], true);
+
+  expect(located(run)).toEqual([]);
+});
