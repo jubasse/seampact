@@ -6,12 +6,14 @@ import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 // The credential parameters of the accepted schemes (`identity.authenticate`) and the CSRF header parameter
 // (`csrf.cookieWrite`), ADR 0006 section 5. A credential is a parameter only where it is a header or a query
 // value: a header or query scheme by its name, bearer and basic as `Authorization`, a signature scheme by its
-// header name. A cookie is no parameter: the OpenAPI mapping writes it through the scheme (`docs/ir/12`). A
-// credential is required only when it is the single scheme of a non-optional access; with several schemes the
-// caller presents one of them. The CSRF decision is access.identity's (`Operation.csrf`); this half writes its
-// header parameter, required only when every accepted scheme is a cookie that declares CSRF: on a write that also
-// accepts a bearer or another scheme, the target checks the header only on requests the cookie authenticates
-// (ADR 0012 "One neutral, typed hook per concern"), so a bearer client never sends it.
+// header name, which access.identity requires. A cookie is no parameter: the OpenAPI mapping writes it through
+// the scheme (`docs/ir/12`). A credential is required only when it is the single scheme of a non-optional
+// access; with several schemes the caller presents one of them.
+//
+// The CSRF decision is access.identity's (`Operation.csrf`); this half writes its header parameter, required only
+// when every accepted scheme is a cookie that declares CSRF. On a write that also accepts a bearer or another
+// scheme, the target checks the header only on requests the cookie authenticates (ADR 0012 "One neutral, typed
+// hook per concern"), so a bearer client never sends it.
 
 const AUTHORIZATION = "Authorization";
 
@@ -89,7 +91,12 @@ function credentialPlace(
     case "basic":
       return { in: "header", name: AUTHORIZATION };
     case "signature":
-      return scheme.name === undefined ? undefined : { in: "header", name: scheme.name };
+      if (scheme.name === undefined)
+        throw new Error(
+          `access.identity wrote signature scheme '${scheme.id}' without its header name`,
+        );
+
+      return { in: "header", name: scheme.name };
     case "cookie":
       return undefined;
   }

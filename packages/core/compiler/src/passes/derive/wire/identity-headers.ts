@@ -14,8 +14,8 @@ import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 // `deadlineHeader` (`identity.deadline`). A `versionToken` use drives two headers (`identity.versionToken`): the
 // response header on every success of every route of the identity, and the request header on writes only,
 // whatever its `for` says, since the derivation rule is the specific one. Its `required` is the use's (default
-// false). A use's type is its own `schema`, else the declaration's, else a string. A use runs after every
-// `identity.header` element, so derived elements keep the derivation table's order.
+// false). A use's type is its own `schema`, else the declaration's, else a string. versionToken uses are
+// written after every `identity.header` element, so derived elements keep the derivation table's order.
 
 const HEADER = "identity.header";
 

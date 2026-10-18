@@ -1,0 +1,14 @@
+lane: p2-derive-wire
+proofs:
+  - id: CHK-038
+    fixtures:
+      - fixtures/passes/derive-wire/wire/api.yaml
+      - fixtures/passes/derive-wire/reference/tasksService.derive-wire.json
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/identity-headers.test.ts#identity headers'
+  - id: CHK-149
+    fixtures:
+      - fixtures/passes/derive-wire/wire/api.yaml
+      - fixtures/passes/derive-wire/reference/tasks.derive-wire.json
+    tests:
+      - 'core: packages/core/compiler/src/passes/derive/wire/idempotency.test.ts#idempotency key'
