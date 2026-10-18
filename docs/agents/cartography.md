@@ -16,6 +16,8 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/openapi` | `packages/core/openapi` | core | Writes the OpenAPI 3.1 documents from the IR, with what OpenAPI cannot say as x-seampact-* extensions. |
 | `@seampact/spec` | `packages/core/spec` | core | The JSON Schemas of the YAML files and of the IR, with their TypeScript types, and the naming vectors. |
 | `@seampact/hooks` | `packages/runtime/hooks` | hooks | The neutral hook interfaces and idempotency store interface every generated Node server boundary types against. |
+| `@seampact/codegen-ts` | `packages/targets/codegen-ts` | target | Generates a named TypeScript type per schema and each operation's input, output and error union. |
+| `@seampact/codegen-zod` | `packages/targets/codegen-zod` | target | Generates Standard Schema zod validators per schema and direction, and one input validator per operation. |
 
 ## Compiler stages
 
@@ -89,3 +91,11 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/hooks`
 
 - `packages/runtime/hooks/src`: The neutral hook interfaces and the idempotency store interface every generated server boundary types against, types only.
+
+### `@seampact/codegen-ts`
+
+- `packages/targets/codegen-ts/src`: The TypeScript types target: one named type per schema and enum, and each operation's input, output and error union, provided to the other targets as the `types` link.
+
+### `@seampact/codegen-zod`
+
+- `packages/targets/codegen-zod/src`: The zod validators target: Standard Schema validators per schema and direction, with object schemas left unrefined so an app can extend them, and one input validator per operation, provided as the `validators` link.
