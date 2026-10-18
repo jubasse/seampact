@@ -2,7 +2,8 @@ import { describe, expect, test } from "vitest";
 import { draftFixtureApply } from "../pipeline/draft-fixture.js";
 import { createDraftIR, type DraftIR } from "../pipeline/seam.js";
 import type { JsonValue } from "../raw-tree.js";
-import { finalizeCanonicalOrder } from "./canonical-order.js";
+import { readFileSync } from "node:fs";
+import { finalizeCanonicalOrder, finalizeSortedArrayRows } from "./canonical-order.js";
 import {
   finalizeCompleteDraft,
   finalizeExpectIr,
@@ -42,8 +43,23 @@ function sortedArraysDraft(arrange: Arrange): DraftIR {
       user: {
         kind: "credential",
         schemes: { read: schemes(), write: schemes(), optionalRead: schemes() },
+        errors: arrange(["b.x", "a.x"]),
+        headers: arrange([
+          { header: "trace", for: "request" },
+          { header: "actor", for: "response" },
+          { header: "actor", for: "request" },
+        ]),
       },
-      hook: { kind: "signed" },
+      hook: { kind: "signed", errors: arrange(["b.x", "a.x"]) },
+    },
+    lint: {
+      // Equal keys: the reason's canonical bytes decide.
+      allows: arrange([
+        { rule: "r", at: { layer: "api", pointer: "/a" }, subtree: true, reason: "z" },
+        { rule: "r", at: { layer: "api", pointer: "/a" }, subtree: true, reason: "a" },
+        { rule: "r", at: { layer: "api", pointer: "/a" }, subtree: false, reason: "z" },
+        { rule: "r", at: { api: "x", layer: "api", pointer: "/a" }, subtree: false, reason: "z" },
+      ]),
     },
     operations: arrange([
       {
@@ -55,8 +71,9 @@ function sortedArraysDraft(arrange: Arrange): DraftIR {
           { code: "z.undeclared" },
           { code: "b.x" },
           { code: "a.x" },
-          { code: "a.y" },
+          { code: "a.y", roles: arrange([{ role: "subject" }, { role: "field" }]) },
         ]),
+        principalRequires: arrange([{ field: "b" }, { field: "a" }]),
         fieldRights: arrange([
           { schema: "T", pointer: "/b", direction: "output" },
           { schema: "T", pointer: "/a", direction: "output" },
@@ -70,7 +87,10 @@ function sortedArraysDraft(arrange: Arrange): DraftIR {
           { from: { in: "address", prefixBits: 24 }, to: { in: "scope" } },
           { from: { in: "address", prefixBits: 16 }, to: { in: "scope" } },
         ]),
-        cache: { vary: arrange(["b", "a"]) },
+        cache: {
+          vary: arrange(["b", "a"]),
+          perCallerKind: arrange([{ caller: "user" }, { caller: "service" }]),
+        },
         paging: { sortKeys: arrange([{ key: "b" }, { key: "a" }]) },
       },
       { id: "a" },
@@ -117,7 +137,13 @@ describe("canonical order is independent of pass order", () => {
       callerKinds: ["service", "user"],
       tags: ["Z", "z", "é"],
       responses: [{ status: 200 }, { status: 404 }, { status: 1000 }],
-      errors: [{ code: "a.y" }, { code: "a.x" }, { code: "b.x" }, { code: "z.undeclared" }],
+      errors: [
+        { code: "a.y", roles: [{ role: "field" }, { role: "subject" }] },
+        { code: "a.x" },
+        { code: "b.x" },
+        { code: "z.undeclared" },
+      ],
+      principalRequires: [{ field: "a" }, { field: "b" }],
       fieldRights: [
         { schema: "S", pointer: "/z", direction: "output" },
         { schema: "T", pointer: "/a", direction: "input" },
@@ -131,7 +157,7 @@ describe("canonical order is independent of pass order", () => {
         { from: { in: "path", name: "a" }, to: { name: "y" } },
         { from: { in: "path", name: "b" } },
       ],
-      cache: { vary: ["a", "b"] },
+      cache: { vary: ["a", "b"], perCallerKind: [{ caller: "service" }, { caller: "user" }] },
       paging: { sortKeys: [{ key: "a" }, { key: "b" }] },
     });
     expect(fromWritten.schemas.Union).toMatchObject({
@@ -142,7 +168,34 @@ describe("canonical order is independent of pass order", () => {
     expect(fromWritten.scalars.Slug?.directions).toEqual(["input", "output"]);
     expect(fromWritten.identities.user).toMatchObject({
       schemes: { read: ["M", "a", "z"], write: ["M", "a", "z"], optionalRead: ["M", "a", "z"] },
+      errors: ["a.x", "b.x"],
+      headers: [
+        { header: "actor", for: "request" },
+        { header: "actor", for: "response" },
+        { header: "trace", for: "request" },
+      ],
     });
+    expect(fromWritten.identities.hook).toMatchObject({ errors: ["a.x", "b.x"] });
+    expect(
+      fromWritten.lint?.allows.map(({ at, subtree, reason }) => [at.api, subtree, reason]),
+    ).toEqual([
+      [undefined, false, "z"],
+      [undefined, true, "a"],
+      [undefined, true, "z"],
+      ["x", false, "z"],
+    ]);
+  });
+
+  test("finalize sorts exactly the Sorted rows of ADR 0004 section 9", () => {
+    const ordering = readFileSync(
+      new URL("../../../../../docs/ir/09-canonical-ids-and-ordering.md", import.meta.url),
+      "utf8",
+    );
+    const sortedRows = [...ordering.matchAll(/^\| `([A-Za-z]+\.[A-Za-z]+)` \| Sorted\b/gmu)].map(
+      (match) => match[1],
+    );
+
+    expect(finalizeSortedArrayRows()).toEqual(sortedRows);
   });
 
   test.each(["tasks", "tasksService"] as const)(

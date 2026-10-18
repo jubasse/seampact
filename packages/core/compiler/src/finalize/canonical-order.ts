@@ -1,10 +1,12 @@
-import type { IrWriter } from "@seampact/spec/ir";
-import type { DraftIR, DraftOperation } from "../pipeline/seam.js";
+import { type IrWriter, walkIrInstance } from "@seampact/spec/ir";
+import type { DraftIR } from "../pipeline/seam.js";
+import { finalizeIsRecord } from "./record.js";
+import { finalizeSerializeJson } from "./serialize.js";
 
-// The canonical order of the IR's arrays (ADR 0004 section 9): the arrays of the "Sorted" column are sorted, every
-// other array keeps the order its pass wrote. Names, codes and keys compare by UTF-16 code units and statuses as
-// integers, so the order depends on no locale. Records need no order here: the serialiser sorts their members.
-// It sorts the arrays of finalize's own copy of the draft in place, never the draft.
+// The canonical order of the IR's arrays (ADR 0004 section 9): each array of the "Sorted" column is sorted by its
+// key, then by the element's canonical bytes on a tie; every other array keeps the order its pass wrote. Names,
+// codes and keys compare by UTF-16 code units and statuses as integers, so the order depends on no locale. Records
+// need no order here: the serialiser sorts their members. It sorts finalize's own copy of the draft in place.
 
 type Comparator<T> = (a: T, b: T) => number;
 
@@ -26,76 +28,138 @@ function byKeys<T>(...keys: readonly Comparator<T>[]): Comparator<T> {
   };
 }
 
+// The value at `path` below an array element, which the walk hands over untyped.
+function memberAt(item: unknown, path: readonly string[]): unknown {
+  let current = item;
+
+  for (const member of path) {
+    if (!finalizeIsRecord(current) || !Object.hasOwn(current, member)) return undefined;
+    current = current[member];
+  }
+
+  return current;
+}
+
+// An absent text sorts first, as an empty one.
 const byText =
-  <T>(read: (item: T) => string | undefined): Comparator<T> =>
-  (a, b) =>
-    finalizeCompareText(read(a) ?? "", read(b) ?? "");
+  (...path: string[]): Comparator<unknown> =>
+  (a, b) => {
+    const textOf = (item: unknown) => {
+      const value = memberAt(item, path);
 
+      return typeof value === "string" ? value : "";
+    };
+
+    return finalizeCompareText(textOf(a), textOf(b));
+  };
+
+// An absent number sorts first, as zero; `false` before `true`.
 const byNumber =
-  <T>(read: (item: T) => number | undefined): Comparator<T> =>
-  (a, b) =>
-    compareNumber(read(a) ?? 0, read(b) ?? 0);
+  (...path: string[]): Comparator<unknown> =>
+  (a, b) => {
+    const numberOf = (item: unknown) => {
+      const value = memberAt(item, path);
 
-const byValueSource: Comparator<IrWriter.ValueSource> = byKeys(
-  byText((source) => source.in),
-  byText((source) => source.name),
-  byNumber((source) => source.prefixBits),
-);
+      return typeof value === "number" ? value : value === true ? 1 : 0;
+    };
 
-const byBinding: Comparator<IrWriter.Binding> = byKeys(
-  (a, b) => byValueSource(a.from, b.from),
-  (a, b) => byValueSource(a.to, b.to),
-);
+    return compareNumber(numberOf(a), numberOf(b));
+  };
 
-const byFieldRight: Comparator<IrWriter.FieldRight> = byKeys(
-  byText((right) => right.schema),
-  byText((right) => right.pointer),
-  byText((right) => right.direction),
-);
+const byValue = byText();
+
+const byCanonicalBytes: Comparator<unknown> = (a, b) =>
+  finalizeCompareText(finalizeSerializeJson(a), finalizeSerializeJson(b));
+
+const byValueSource = (side: "from" | "to"): Comparator<unknown> =>
+  byKeys(byText(side, "in"), byText(side, "name"), byNumber(side, "prefixBits"));
+
+const byHeaderUse = byKeys(byText("header"), byText("for"));
+
+// An operation's errors sort by their code's status, then code: a code with no declaration fails the IR
+// invariants after this and sorts last meanwhile.
+function byErrorStatus(errors: Readonly<Record<string, IrWriter.ErrorDecl>>): Comparator<unknown> {
+  const statusOf = (item: unknown) => {
+    const code = memberAt(item, ["code"]);
+
+    if (typeof code !== "string" || !Object.hasOwn(errors, code)) return Number.MAX_SAFE_INTEGER;
+
+    return errors[code]?.http.status ?? Number.MAX_SAFE_INTEGER;
+  };
+
+  return byKeys((a, b) => compareNumber(statusOf(a), statusOf(b)), byText("code"));
+}
+
+// The key of each "Sorted" row of ADR 0004 section 9, by `Definition.member`.
+function sortedArrayKeys(
+  errors: Readonly<Record<string, IrWriter.ErrorDecl>>,
+): ReadonlyMap<string, Comparator<unknown>> {
+  return new Map<string, Comparator<unknown>>([
+    ["ApiDocument.surfaces", byValue],
+    ["Cache.perCallerKind", byText("caller")],
+    ["Cache.vary", byValue],
+    ["ContractIR.features", byValue],
+    ["ContractIR.kinds", byValue],
+    ["ContractIR.operations", byText("id")],
+    ["CredentialIdentity.errors", byValue],
+    ["CredentialIdentity.headers", byHeaderUse],
+    ["CredentialSchemes.optionalRead", byValue],
+    ["CredentialSchemes.read", byValue],
+    ["CredentialSchemes.write", byValue],
+    ["Degradable.paths", byValue],
+    ["Enum.directions", byValue],
+    ["ExtensionKeyDecl.places", byValue],
+    ["IdentityAccess.schemes", byValue],
+    [
+      "Lint.allows",
+      byKeys(
+        byText("rule"),
+        byText("at", "api"),
+        byText("at", "layer"),
+        byText("at", "pointer"),
+        byNumber("subtree"),
+      ),
+    ],
+    ["MapSchema.directions", byValue],
+    ["ObjectSchema.directions", byValue],
+    ["Operation.bindings", byKeys(byValueSource("from"), byValueSource("to"))],
+    ["Operation.callerKinds", byValue],
+    ["Operation.errors", byErrorStatus(errors)],
+    ["Operation.features", byValue],
+    ["Operation.fieldRights", byKeys(byText("schema"), byText("pointer"), byText("direction"))],
+    ["Operation.principalRequires", byText("field")],
+    ["Operation.responses", byNumber("status")],
+    ["Operation.tags", byValue],
+    ["OperationError.roles", byText("role")],
+    ["OptionalAccess.schemes", byValue],
+    ["Paging.sortKeys", byText("key")],
+    ["PagingStyle.handlerResult", byValue],
+    ["Right.errors", byValue],
+    ["Rule.errors", byValue],
+    ["Scalar.directions", byValue],
+    ["Scope.errors", byValue],
+    ["SignedIdentity.errors", byValue],
+    ["SignedIdentity.headers", byHeaderUse],
+    ["UnionSchema.directions", byValue],
+    ["UnionSchema.variants", byText("tag")],
+  ]);
+}
+
+/** The `Definition.member` rows finalize sorts, for the test against ADR 0004 section 9. */
+export const finalizeSortedArrayRows = (): string[] => [...sortedArrayKeys({}).keys()];
 
 /** Sorts the "Sorted" arrays of `ir`, finalize's copy of the draft, in place (ADR 0004 section 9). */
 export function finalizeCanonicalOrder(ir: DraftIR): void {
-  ir.operations.sort(byText((operation) => operation.id));
+  const keys = sortedArrayKeys(ir.errors);
 
-  for (const operation of ir.operations) sortOperation(operation, ir.errors);
+  // The walk visits an object before its members, so an array is sorted before its elements are walked.
+  walkIrInstance(ir, (node) => {
+    if (node.kind !== "object" || node.definition === undefined) return;
 
-  for (const schema of Object.values(ir.schemas)) {
-    schema.directions.sort(finalizeCompareText);
+    for (const [member, value] of Object.entries(node.value)) {
+      const key = keys.get(`${node.definition}.${member}`);
 
-    if (schema.kind === "union") schema.variants.sort(byText((variant) => variant.tag));
-  }
-
-  for (const declaration of [...Object.values(ir.enums), ...Object.values(ir.scalars)])
-    declaration.directions.sort(finalizeCompareText);
-
-  for (const identity of Object.values(ir.identities)) {
-    if (identity.kind !== "credential") continue;
-
-    identity.schemes.read.sort(finalizeCompareText);
-    identity.schemes.write.sort(finalizeCompareText);
-    identity.schemes.optionalRead.sort(finalizeCompareText);
-  }
-}
-
-function sortOperation(
-  operation: DraftOperation,
-  errors: Readonly<Record<string, IrWriter.ErrorDecl>>,
-): void {
-  // A code with no declaration fails the IR invariants after this; it sorts last meanwhile.
-  const statusOf = (code: string) =>
-    Object.hasOwn(errors, code) ? errors[code]?.http.status : Number.MAX_SAFE_INTEGER;
-
-  operation.callerKinds?.sort(finalizeCompareText);
-  operation.tags?.sort(finalizeCompareText);
-  operation.responses?.sort(byNumber((response) => response.status));
-  operation.errors?.sort(
-    byKeys(
-      byNumber((error) => statusOf(error.code)),
-      byText((error) => error.code),
-    ),
-  );
-  operation.fieldRights?.sort(byFieldRight);
-  operation.bindings?.sort(byBinding);
-  operation.cache?.vary.sort(finalizeCompareText);
-  operation.paging?.sortKeys.sort(byText((sortKey) => sortKey.key));
+      if (key !== undefined && Array.isArray(value)) value.sort(byKeys(key, byCanonicalBytes));
+    }
+  });
 }
