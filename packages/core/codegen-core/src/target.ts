@@ -1,6 +1,6 @@
 import type { ContractIR, IrSupport } from "@seampact/spec/ir";
 import type { DescriptorSet, LinkKind, ProvidedDescriptors } from "./descriptors.js";
-import type { LinkNeed, LinkOffer, LinkSet, Links } from "./links.js";
+import type { LinkNeeds, LinkOffers, LinkSet, Links } from "./links.js";
 import type { Refused } from "./refusal.js";
 
 // One artefact a target can emit, and whether it is emitted when the app config does not list artefacts.
@@ -19,8 +19,14 @@ export interface TargetMetadata<
   packageVersion: string;
   irSupport: IrSupport;
   artefacts: readonly ArtefactDeclaration<Artefact>[];
-  consumes: readonly LinkNeed<Consumed>[];
-  provides: readonly LinkOffer<Provided>[];
+  consumes: LinkNeeds<Consumed>;
+  provides: LinkOffers<Provided>;
+}
+
+// The metadata of any target, as the CLI reads it: each kind is present when the target consumes or provides it.
+export interface AnyTargetMetadata extends Omit<TargetMetadata, "consumes" | "provides"> {
+  consumes: Partial<LinkNeeds>;
+  provides: Partial<LinkOffers>;
 }
 
 export interface GenerateInput<Options, Artefact extends string, Consumed extends LinkKind> {
@@ -88,7 +94,7 @@ export interface GenerateRequest {
 
 // The target as the CLI sees it, whatever its options, artefacts and links.
 export interface Target {
-  metadata: TargetMetadata;
+  metadata: AnyTargetMetadata;
   parseOptions(raw: unknown): ParseOptionsOutcome<unknown>;
   generate(request: GenerateRequest): Promise<GenerateOutcome>;
   describe(ir: ContractIR, rawOptions: unknown): DescribeOutcome<DescriptorSet>;
