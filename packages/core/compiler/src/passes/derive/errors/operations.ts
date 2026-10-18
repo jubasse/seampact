@@ -342,12 +342,12 @@ function collect(
   for (const listed of deriveErrorsIdentityAttached(sources.context, route)) {
     const error = pendingOf(pending, listed.code);
 
-    const attachedByNode = error.attached?.origin !== undefined;
+    const nodeAttachment = error.attached?.origin === undefined ? undefined : error.attached;
 
     // A node attachment is the more specific: it keeps `derivedFrom`, so a relay route copies the code as a domain code.
-    addFrom(error, attachedByNode ? error.attached.derivation : listed.derivation, listed.from);
+    addFrom(error, nodeAttachment?.derivation ?? listed.derivation, listed.from);
 
-    if (!attachedByNode) error.attached = listed;
+    if (nodeAttachment === undefined) error.attached = listed;
   }
 
   return pending;
