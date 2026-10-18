@@ -3,21 +3,13 @@ import type { DerivationRoleName } from "../../../derivations/index.js";
 import { pipelineTreeNodes, type TreeNode } from "../../../pipeline/seam.js";
 import { type DeriveErrorsBinding, deriveErrorsBindingAt } from "./bindings.js";
 import {
+  DERIVE_ERRORS_PING_SURFACE,
   type DeriveErrorsRun,
   deriveErrorsLoadFiles,
   deriveErrorsLoadFixture,
   deriveErrorsLocated,
   deriveErrorsRunContract,
 } from "./test-support.js";
-
-const PING_SURFACE = `
-surfaces:
-  app:
-    prefix: /v{version}
-    access: { public: The contract checks role bindings only. }
-    routes:
-      ping: { method: get }
-`;
 
 function nodeAt(run: DeriveErrorsRun, pointer: string): TreeNode {
   const node = pipelineTreeNodes(run.context.raw).find(
@@ -42,7 +34,7 @@ const bindingAt = (
 const runInline = (body: string): DeriveErrorsRun =>
   deriveErrorsRunContract(
     deriveErrorsLoadFiles({
-      "api.yaml": `api: { name: shop, version: 1 }\n${body}${PING_SURFACE}`,
+      "api.yaml": `api: { name: shop, version: 1 }\n${body}${DERIVE_ERRORS_PING_SURFACE}`,
     }),
   );
 
@@ -141,11 +133,11 @@ errors:
     );
   });
 
-  test("a template that reads no required datum, or only a literal dollar, is refused", () => {
+  test("a template that reads no required datum, only a literal dollar, is refused", () => {
     const run = runInline(`conventions:
   errors:
     derived:
-      sortKeyForbidden: { code: shop.sort_denied, params: { detail: [$$key, '$keys', 3] } }
+      sortKeyForbidden: { code: shop.sort_denied, params: { detail: [$$key, other] } }
 errors:
   shop.sort_denied: { status: 403, params: { detail: { type: array, items: { type: string } } } }
 `);
@@ -155,16 +147,16 @@ errors:
     ]);
   });
 
-  test("a template reaches a datum as a slot, a member slot or a text slot filling a param", () => {
-    for (const params of [
-      "{ detail: $key }",
-      "{ detail: [$key.text] }",
-      `{ detail: 'key \${key}' }`,
+  test("a template reaches a datum as a slot, an array item or a text slot filling a param", () => {
+    for (const [params, type] of [
+      ["{ detail: $key }", "{ type: string }"],
+      ["{ detail: [$key] }", "{ type: array, items: { type: string } }"],
+      [`{ detail: 'key \${key}' }`, "{ type: string }"],
     ]) {
       const run = runInline(`conventions:
   errors: { derived: { sortKeyForbidden: { code: shop.sort_denied, params: ${params} } } }
 errors:
-  shop.sort_denied: { status: 403, params: { detail: { type: string } } }
+  shop.sort_denied: { status: 403, params: { detail: ${type} } }
 `);
 
       expect(run.diagnostics).toEqual([]);

@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { derivationRoles } from "../../../derivations/index.js";
 import {
   DERIVE_ERRORS_FIXTURES,
+  DERIVE_ERRORS_PING_SURFACE,
   deriveErrorsLoadFiles,
   deriveErrorsLoadFixture,
   deriveErrorsLocated,
@@ -13,15 +14,6 @@ import {
 
 const expectedRegistry = (path: string): unknown =>
   JSON.parse(readFileSync(`${DERIVE_ERRORS_FIXTURES}${path}`, "utf8"));
-
-const PING_SURFACE = `
-surfaces:
-  app:
-    prefix: /v{version}
-    access: { public: The contract checks error declarations only. }
-    routes:
-      ping: { method: get }
-`;
 
 const registryOf = (run: ReturnType<typeof deriveErrorsRunContract>): unknown => ({
   errors: { ...run.draft.errors },
@@ -96,7 +88,7 @@ describe("error registry", () => {
 conventions: { errors: { pattern: '[' } }
 errors:
   shop.failed: { status: 500 }
-${PING_SURFACE}`,
+${DERIVE_ERRORS_PING_SURFACE}`,
       }),
     );
 
@@ -115,7 +107,7 @@ ${PING_SURFACE}`,
         "api.yaml": `api: { name: shop, version: 1 }
 errors:
   shop.counted: { status: 400, params: { count: { type: integer } }, example: {} }
-${PING_SURFACE}`,
+${DERIVE_ERRORS_PING_SURFACE}`,
       }),
     );
 
@@ -123,6 +115,128 @@ ${PING_SURFACE}`,
       {
         rule: "seampact/derive/error-example",
         pointer: "/errors/shop.counted/example",
+        related: [],
+      },
+    ]);
+  });
+});
+
+describe("redeclared default codes", () => {
+  const redeclare = (declaration: string) =>
+    deriveErrorsRunContract(
+      deriveErrorsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }
+natures:
+  throttled: { base: unavailable }
+errors:
+  ${declaration}
+${DERIVE_ERRORS_PING_SURFACE}`,
+      }),
+    );
+
+  test("a redeclared default code without nature keeps the core nature, not the one of its status", () => {
+    const run = redeclare("api.idempotency_in_progress: { status: 409, title: Still running. }");
+
+    expect(run.diagnostics).toEqual([]);
+    expect(run.draft.errors["api.idempotency_in_progress"]?.nature).toBe("unavailable");
+  });
+
+  test("a redeclared default code may name a nature on its core base", () => {
+    expect(redeclare("api.rate_limited: { status: 429, nature: throttled }").diagnostics).toEqual(
+      [],
+    );
+  });
+
+  test("conventions.errors.pattern applies to a redeclared default code", () => {
+    const run = deriveErrorsRunContract(
+      deriveErrorsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }
+conventions: { errors: { pattern: '^(shop|api)[.][a-z]+$' } }
+errors:
+  api.not_found: { status: 404, title: Not here. }
+  api.rate_limited: { status: 429, title: Slow down. }
+${DERIVE_ERRORS_PING_SURFACE}`,
+      }),
+    );
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/error-pattern",
+        pointer: "/errors/api.not_found",
+        related: ["/conventions/errors/pattern"],
+      },
+      {
+        rule: "seampact/derive/error-pattern",
+        pointer: "/errors/api.rate_limited",
+        related: ["/conventions/errors/pattern"],
+      },
+    ]);
+  });
+
+  test("a redeclared default code changing its status or its nature is refused at the member", () => {
+    const run = redeclare("api.not_found: { status: 410, nature: unavailable }");
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/error-default",
+        pointer: "/errors/api.not_found/status",
+        related: [],
+      },
+      {
+        rule: "seampact/derive/error-default",
+        pointer: "/errors/api.not_found/nature",
+        related: [],
+      },
+    ]);
+  });
+});
+
+describe("listed error codes", () => {
+  test("a code a right, a rule or a scope lists that nobody declares is refused at the list item", () => {
+    const run = deriveErrorsRunContract(
+      deriveErrorsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }
+schemas:
+  OrgId: { type: string }
+scopes:
+  org: { id: OrgId, errors: [api.not_found, shop.not_member] }
+rights:
+  orgs.manage: { subject: { scope: org }, errors: [shop.denied] }
+rules:
+  throttle: { bucket: true, errors: [api.rate_limited, shop.slow_down] }
+${DERIVE_ERRORS_PING_SURFACE}`,
+      }),
+    );
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/error-unknown",
+        pointer: "/rights/orgs.manage/errors/0",
+        related: [],
+      },
+      { rule: "seampact/derive/error-unknown", pointer: "/rules/throttle/errors/1", related: [] },
+      { rule: "seampact/derive/error-unknown", pointer: "/scopes/org/errors/1", related: [] },
+    ]);
+  });
+
+  test("a code an identity lists that nobody declares is refused at the list item", () => {
+    const run = deriveErrorsRunContract(
+      deriveErrorsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }
+schemas:
+  Viewer: { type: object, properties: { id: { type: string } } }
+schemes:
+  bearer: { kind: bearer }
+identities:
+  viewer: { schemes: { read: [bearer], write: [bearer] }, principal: Viewer, errors: [api.unauthenticated, shop.nope] }
+${DERIVE_ERRORS_PING_SURFACE}`,
+      }),
+    );
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual([
+      {
+        rule: "seampact/derive/error-unknown",
+        pointer: "/identities/viewer/errors/1",
         related: [],
       },
     ]);
@@ -183,7 +297,9 @@ surfaces:
 describe("default codes", () => {
   test("a contract with no pack registers every default code, from the core, with its role and core params", () => {
     const run = deriveErrorsRunContract(
-      deriveErrorsLoadFiles({ "api.yaml": `api: { name: shop, version: 1 }\n${PING_SURFACE}` }),
+      deriveErrorsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }\n${DERIVE_ERRORS_PING_SURFACE}`,
+      }),
     );
 
     expect(run.diagnostics).toEqual([]);

@@ -8,6 +8,8 @@ proofs:
       - fixtures/passes/derive-errors/registry-refused/api.yaml
     tests:
       - 'core: packages/core/compiler/src/passes/derive/errors/registry.test.ts#error registry'
+      - 'core: packages/core/compiler/src/passes/derive/errors/registry.test.ts#redeclared default codes'
+      - 'core: packages/core/compiler/src/passes/derive/errors/registry.test.ts#listed error codes'
   - id: CHK-046
     fixtures:
       - fixtures/passes/derive-errors/registry/api.yaml
@@ -24,6 +26,7 @@ proofs:
     tests:
       - 'core: packages/core/compiler/src/passes/derive/errors/registry.test.ts#default codes'
       - 'core: packages/core/compiler/src/passes/derive/errors/bindings.test.ts#role bindings'
+      - 'core: packages/core/compiler/src/passes/derive/errors/role-params.test.ts#role params'
   - id: CHK-124
     fixtures:
       - fixtures/passes/derive-errors/registry/base.yaml

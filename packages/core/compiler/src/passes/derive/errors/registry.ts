@@ -236,6 +236,39 @@ function checkExample(
     });
 }
 
+// ADR 0006 section 6: a layer that redeclares a default code may add or change its params and docs, never its status
+// or nature; without `nature` it keeps the core one.
+function defaultCodeNature(
+  site: ErrorSite,
+  status: number,
+  role: DerivationRole,
+  sources: DeriveErrorsRegistrySources,
+): Nature {
+  const { reporter, natures } = sources;
+
+  if (status !== role.status)
+    reporter.error({
+      rule: "error-default",
+      message: `default code ${quote(site.code)} of role '${role.role}' is redeclared with status ${status}, but its status is ${role.status}`,
+      fix: `keep status ${role.status}, or declare another code and bind role '${role.role}' to it`,
+      pointer: pipelinePointerBelow(site.pointer, "status"),
+    });
+
+  if (deriveErrorsString(site.value, "nature") === undefined) return { nature: role.nature };
+
+  const written = natureOf(site, status, natures, reporter);
+
+  if (written.nature !== role.nature)
+    reporter.error({
+      rule: "error-default",
+      message: `default code ${quote(site.code)} of role '${role.role}' is redeclared with nature ${quote(written.natureName ?? written.nature)}, whose base is not its nature ${quote(role.nature)}`,
+      fix: `leave nature out, or name a nature on the base ${quote(role.nature)}`,
+      pointer: pipelinePointerBelow(site.pointer, "nature"),
+    });
+
+  return written;
+}
+
 function declarationOf(site: ErrorSite, sources: DeriveErrorsRegistrySources): IrWriter.ErrorDecl {
   const { context, reporter, natures } = sources;
   const status = deriveErrorsMember(site.value, "status");
@@ -254,7 +287,9 @@ function declarationOf(site: ErrorSite, sources: DeriveErrorsRegistrySources): I
   return {
     code: site.code,
     ...(family === undefined ? {} : { family }),
-    ...natureOf(site, status, natures, reporter),
+    ...(role === undefined
+      ? natureOf(site, status, natures, reporter)
+      : defaultCodeNature(site, status, role, sources)),
     http: { status },
     ...(params === undefined ? {} : { params }),
     ...(example === undefined ? {} : { example: pipelineCopy(example) }),
@@ -281,6 +316,31 @@ function coreDeclarationOf(role: DerivationRole): IrWriter.ErrorDecl {
   };
 }
 
+/** The catalogues whose entries list the codes they answer (ADR 0002 section 9). */
+const LISTING_CATALOGUES = ["identities", "rights", "rules", "scopes"] as const;
+
+// Every code an identity, right, rule or scope lists in its `errors`, with its pointer.
+function listedCodes(context: DeriveErrorsContext): { code: string; pointer: string }[] {
+  const listed: { code: string; pointer: string }[] = [];
+
+  for (const catalogue of LISTING_CATALOGUES)
+    for (const [name, entry] of deriveErrorsEntries(context.raw.merged[catalogue])) {
+      const codes = deriveErrorsMember(entry, "errors");
+
+      if (!Array.isArray(codes)) continue;
+
+      codes.forEach((code, index) => {
+        if (typeof code === "string")
+          listed.push({
+            code,
+            pointer: pipelinePointerBelow(`/${catalogue}`, name, "errors", String(index)),
+          });
+      });
+    }
+
+  return listed;
+}
+
 // An attached code nobody declares: the node attachments and `conventions.errors.every`.
 function checkAttachments(
   attachments: readonly ErrorSite[],
@@ -297,6 +357,15 @@ function checkAttachments(
     });
 
   for (const site of attachments) if (!registry.has(site.code)) unknown(site.code, site.pointer);
+
+  for (const site of listedCodes(context))
+    if (!registry.has(site.code))
+      reporter.error({
+        rule: "error-unknown",
+        message: `error code ${quote(site.code)} is listed here, but no layer or node declares it and it is no default code`,
+        fix: `declare ${quote(site.code)} with a status in 'errors', or list a declared code`,
+        pointer: site.pointer,
+      });
 
   const every = context.conventions.get("errors.every")?.value;
 
