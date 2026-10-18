@@ -35,6 +35,7 @@ export async function startServer(): Promise<RunningServer> {
   });
 
   app.useBodyParser("json", {
+    strict: false,
     limit: Math.max(TasksNest.LARGEST_BODY_LIMIT, TasksServiceNest.LARGEST_BODY_LIMIT),
   });
   app.useGlobalFilters(new PreRoutingFilter(app.getHttpAdapter()));
