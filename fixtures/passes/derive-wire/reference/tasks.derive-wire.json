@@ -1,0 +1,1063 @@
+{
+  "listChannels": {
+    "params": {
+      "header": [
+        {
+          "name": "Authorization",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/bearer"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "getChannel": {
+    "params": {
+      "header": [
+        {
+          "name": "Authorization",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/bearer"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "listTasks": {
+    "params": {
+      "header": [
+        {
+          "name": "Authorization",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/bearer"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "createTask": {
+    "params": {
+      "header": [
+        {
+          "name": "Authorization",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/bearer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "X-Csrf-Token",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": true,
+          "derivedFrom": {
+            "derivation": "idempotency.write",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/conventions/idempotency"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "responses": [
+      {
+        "status": 201,
+        "headers": [
+          {
+            "name": "Idempotency-Replayed",
+            "type": {
+              "kind": "scalar",
+              "type": "boolean",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "idempotency.write",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/idempotency"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "bodyLimitBytes": 1048576,
+    "idempotency": {
+      "kind": "derived",
+      "header": "Idempotency-Key",
+      "replayHeader": "Idempotency-Replayed",
+      "lifetimeMs": 86400000,
+      "required": true,
+      "enforce": "boundary",
+      "derivedFrom": {
+        "derivation": "idempotency.write",
+        "from": [
+          {
+            "layer": "shared",
+            "pointer": "/conventions/idempotency"
+          }
+        ]
+      }
+    }
+  },
+  "getTasksBatch": {
+    "params": {
+      "header": [
+        {
+          "name": "Authorization",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/bearer"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "bodyLimitBytes": 2097152
+  },
+  "searchTasks": {
+    "params": {
+      "header": [
+        {
+          "name": "Authorization",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/bearer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "X-Csrf-Token",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "bodyLimitBytes": 1048576,
+    "idempotency": {
+      "kind": "exempt",
+      "reason": "A read with a body; replaying it is harmless.",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/idempotency"
+      }
+    }
+  },
+  "getTask": {
+    "params": {
+      "header": [
+        {
+          "name": "Authorization",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/bearer"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "updateTask": {
+    "params": {
+      "header": [
+        {
+          "name": "Authorization",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/bearer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "X-Csrf-Token",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": true,
+          "derivedFrom": {
+            "derivation": "idempotency.write",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/conventions/idempotency"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "responses": [
+      {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Idempotency-Replayed",
+            "type": {
+              "kind": "scalar",
+              "type": "boolean",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "idempotency.write",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/idempotency"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "bodyLimitBytes": 1048576,
+    "idempotency": {
+      "kind": "derived",
+      "header": "Idempotency-Key",
+      "replayHeader": "Idempotency-Replayed",
+      "lifetimeMs": 86400000,
+      "required": true,
+      "enforce": "boundary",
+      "derivedFrom": {
+        "derivation": "idempotency.write",
+        "from": [
+          {
+            "layer": "shared",
+            "pointer": "/conventions/idempotency"
+          }
+        ]
+      }
+    }
+  },
+  "assignTask": {
+    "params": {
+      "header": [
+        {
+          "name": "Authorization",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/bearer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "X-Csrf-Token",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": true,
+          "derivedFrom": {
+            "derivation": "idempotency.write",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/conventions/idempotency"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "responses": [
+      {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Idempotency-Replayed",
+            "type": {
+              "kind": "scalar",
+              "type": "boolean",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "idempotency.write",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/idempotency"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "bodyLimitBytes": 1048576,
+    "idempotency": {
+      "kind": "derived",
+      "header": "Idempotency-Key",
+      "replayHeader": "Idempotency-Replayed",
+      "lifetimeMs": 86400000,
+      "required": true,
+      "enforce": "boundary",
+      "derivedFrom": {
+        "derivation": "idempotency.write",
+        "from": [
+          {
+            "layer": "shared",
+            "pointer": "/conventions/idempotency"
+          }
+        ]
+      }
+    }
+  },
+  "archiveTask": {
+    "params": {
+      "header": [
+        {
+          "name": "Authorization",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/bearer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "X-Csrf-Token",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": true,
+          "derivedFrom": {
+            "derivation": "idempotency.write",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/conventions/idempotency"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "responses": [
+      {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Idempotency-Replayed",
+            "type": {
+              "kind": "scalar",
+              "type": "boolean",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "idempotency.write",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/idempotency"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "bodyLimitBytes": 1048576,
+    "idempotency": {
+      "kind": "derived",
+      "header": "Idempotency-Key",
+      "replayHeader": "Idempotency-Replayed",
+      "lifetimeMs": 86400000,
+      "required": true,
+      "enforce": "boundary",
+      "derivedFrom": {
+        "derivation": "idempotency.write",
+        "from": [
+          {
+            "layer": "shared",
+            "pointer": "/conventions/idempotency"
+          }
+        ]
+      }
+    }
+  },
+  "purgeTask": {
+    "params": {
+      "header": [
+        {
+          "name": "Authorization",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/bearer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "X-Csrf-Token",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": true,
+          "derivedFrom": {
+            "derivation": "idempotency.write",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/conventions/idempotency"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "responses": [
+      {
+        "status": 204,
+        "headers": [
+          {
+            "name": "Idempotency-Replayed",
+            "type": {
+              "kind": "scalar",
+              "type": "boolean",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "idempotency.write",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/idempotency"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "bodyLimitBytes": 1048576,
+    "idempotency": {
+      "kind": "derived",
+      "header": "Idempotency-Key",
+      "replayHeader": "Idempotency-Replayed",
+      "lifetimeMs": 86400000,
+      "required": true,
+      "enforce": "boundary",
+      "derivedFrom": {
+        "derivation": "idempotency.write",
+        "from": [
+          {
+            "layer": "shared",
+            "pointer": "/conventions/idempotency"
+          }
+        ]
+      }
+    }
+  },
+  "getPreferences": {
+    "params": {
+      "header": [
+        {
+          "name": "Authorization",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/bearer"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "updatePreferences": {
+    "params": {
+      "header": [
+        {
+          "name": "Authorization",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/bearer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "X-Csrf-Token",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": true,
+          "derivedFrom": {
+            "derivation": "idempotency.write",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/conventions/idempotency"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "responses": [
+      {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Idempotency-Replayed",
+            "type": {
+              "kind": "scalar",
+              "type": "boolean",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "idempotency.write",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/idempotency"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "bodyLimitBytes": 1048576,
+    "idempotency": {
+      "kind": "derived",
+      "header": "Idempotency-Key",
+      "replayHeader": "Idempotency-Replayed",
+      "lifetimeMs": 86400000,
+      "required": true,
+      "enforce": "boundary",
+      "derivedFrom": {
+        "derivation": "idempotency.write",
+        "from": [
+          {
+            "layer": "shared",
+            "pointer": "/conventions/idempotency"
+          }
+        ]
+      }
+    }
+  },
+  "getDraft": {
+    "params": {
+      "header": [
+        {
+          "name": "Authorization",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/bearer"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
+  "deleteDraft": {
+    "params": {
+      "header": [
+        {
+          "name": "Authorization",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/bearer"
+              }
+            ]
+          }
+        },
+        {
+          "name": "X-Csrf-Token",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "csrf.cookieWrite",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/user"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/sessionCookie"
+              }
+            ]
+          }
+        },
+        {
+          "name": "Idempotency-Key",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": true,
+          "derivedFrom": {
+            "derivation": "idempotency.write",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/conventions/idempotency"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "responses": [
+      {
+        "status": 200,
+        "headers": [
+          {
+            "name": "Idempotency-Replayed",
+            "type": {
+              "kind": "scalar",
+              "type": "boolean",
+              "refinements": {}
+            },
+            "required": false,
+            "derivedFrom": {
+              "derivation": "idempotency.write",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/conventions/idempotency"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "idempotency": {
+      "kind": "derived",
+      "header": "Idempotency-Key",
+      "replayHeader": "Idempotency-Replayed",
+      "lifetimeMs": 86400000,
+      "required": true,
+      "enforce": "boundary",
+      "derivedFrom": {
+        "derivation": "idempotency.write",
+        "from": [
+          {
+            "layer": "shared",
+            "pointer": "/conventions/idempotency"
+          }
+        ]
+      }
+    }
+  },
+  "payments": {
+    "params": {
+      "header": [
+        {
+          "name": "Stripe-Signature",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": true,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/hooks/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/stripeSignature"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "bodyLimitBytes": 1048576
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "getTask": {
+    "params": {
+      "header": [
+        {
+          "name": "Authorization",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": true,
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/api/caller/identity"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/schemes/internalToken"
+              }
+            ]
+          }
+        },
+        {
+          "name": "X-Deadline",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": true,
+          "derivedFrom": {
+            "derivation": "identity.header",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/service/headers/deadline"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/headers/deadline"
+              }
+            ]
+          }
+        },
+        {
+          "name": "traceparent",
+          "type": {
+            "kind": "scalar",
+            "type": "string",
+            "refinements": {}
+          },
+          "required": false,
+          "derivedFrom": {
+            "derivation": "identity.header",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/identities/service/headers/trace"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/headers/trace"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "deadlineHeader": "X-Deadline"
+  }
+}
