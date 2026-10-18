@@ -47,7 +47,12 @@ interface ReferenceAppModule {
     authenticate: (request: unknown) => unknown;
     decide: (request: { name: string; purpose: { direction?: string } }) => unknown;
   };
-  readonly AppReply: new (status: number, contentType: string, body: string) => Error;
+  readonly AppReply: new (
+    status: number,
+    contentType: string,
+    body: string,
+    writer?: "send" | "writeHead",
+  ) => Error;
   resetScenario(): void;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
 }
@@ -162,16 +167,23 @@ describe("replies on contract routes", () => {
     }
   });
 
-  test("an app filter's declared error carries no Express ETag", async () => {
-    app.scenario.answers.getTask = () => {
-      throw new app.AppReply(404, PROBLEM_MEDIA, problemBody("api.not_found", 404));
-    };
+  test.each(["send", "writeHead"] as const)(
+    "an app filter's declared error written with %s carries no foreign ETag",
+    async (writer) => {
+      app.scenario.answers.getTask = () => {
+        throw new app.AppReply(404, PROBLEM_MEDIA, problemBody("api.not_found", 404), writer);
+      };
 
-    const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, { headers: BEARER });
+      const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+        headers: BEARER,
+      });
 
-    expect(reply.status).toBe(404);
-    expect(reply.headers.etag).toBeUndefined();
-  });
+      expect(app.calls.unexpected).toEqual([]);
+      expect(reply.status).toBe(404);
+      expect(reply.headers.etag).toBeUndefined();
+      expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+    },
+  );
 });
 
 describe("the request the boundary checks is the one Express routes", () => {
@@ -227,5 +239,40 @@ describe("the app's own routes keep NestJS's behaviour", () => {
 
     expect(reply.status).toBe(500);
     expect(app.calls.loggedErrors.join("\n")).toContain("own boom");
+  });
+});
+
+describe("requests the contract does not serve as sent", () => {
+  test.each([
+    ["a trailing slash", "GET", `/v1/channels/${CHANNEL}/tasks/${TASK}/`],
+    ["an upper-case path", "GET", `/V1/channels/${CHANNEL}/tasks/${TASK}`],
+    ["HEAD on a GET route", "HEAD", `/v1/channels/${CHANNEL}/tasks/${TASK}`],
+    ["a method the path does not serve", "PUT", `/v1/channels/${CHANNEL}/tasks/${TASK}`],
+  ])("%s answers the path's 404", async (_case, method, path) => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const reply = await send(method, path, { headers: BEARER });
+
+    expect(reply.status).toBe(404);
+    expect(error).not.toHaveBeenCalled();
+    expect(app.calls.handled).toEqual([]);
+  });
+});
+
+describe("idempotency", () => {
+  test("the same body with its members reordered replays the first reply", async () => {
+    const headers = writeHeaders();
+    const path = `/v1/channels/${CHANNEL}/tasks`;
+    const first = await send("POST", path, {
+      headers,
+      body: JSON.stringify({ title: "Plan", effort: 2 }),
+    });
+    const second = await send("POST", path, {
+      headers,
+      body: JSON.stringify({ effort: 2, title: "Plan" }),
+    });
+
+    expect([first.status, second.status]).toEqual([201, 201]);
+    expect(second.text).toBe(first.text);
+    expect(app.calls.handled).toEqual(["createTask"]);
   });
 });

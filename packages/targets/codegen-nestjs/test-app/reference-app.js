@@ -47,24 +47,31 @@ export function resetScenario() {
   calls.loggedErrors.length = 0;
 }
 
-/** Thrown by a handler to make the app's own filter write a reply. */
+/** Thrown by a handler to make the app's own filter write a reply, with Express's `send` or Node's `writeHead`. */
 export class AppReply extends Error {
-  constructor(status, contentType, body) {
+  constructor(status, contentType, body, writer = "send") {
     super(`app reply ${status}`);
     this.status = status;
     this.contentType = contentType;
     this.body = body;
+    this.writer = writer;
   }
 }
 
+// The `writeHead` form passes its headers as an argument, an ETag included, as some frameworks do.
 class AppReplyFilter {
   catch(exception, host) {
-    host
-      .switchToHttp()
-      .getResponse()
-      .status(exception.status)
-      .type(exception.contentType)
-      .send(exception.body);
+    const response = host.switchToHttp().getResponse();
+
+    if (exception.writer === "writeHead") {
+      response
+        .writeHead(exception.status, { "content-type": exception.contentType, etag: '"app-etag"' })
+        .end(exception.body);
+
+      return;
+    }
+
+    response.status(exception.status).type(exception.contentType).send(exception.body);
   }
 }
 

@@ -79,7 +79,7 @@ import {
   installOutgoingCheck,
   writeContractReply,
 } from "./node-server/outgoing-check.js";
-import { transportRefusal } from "./node-server/transport-checks.js";
+import { type PlatformFixes, transportRefusal } from "./node-server/transport-checks.js";
 
 export interface NestBoundaryOptions {
   readonly responses: ResponsesMode;
@@ -116,6 +116,12 @@ const FORBIDDEN_ROLE = "forbidden";
 const UNAUTHENTICATED_ROLE = "unauthenticated";
 const PAYLOAD_TOO_LARGE_ROLE = "payloadTooLarge";
 const NOT_FOUND_ROLE = "notFound";
+const NEST_FIXES: PlatformFixes = {
+  rawBody:
+    "NestJS keeps it as a Buffer on req.rawBody: create the app with { rawBody: true }, or pass the generated keepRawBody as the JSON parser's verify function with rawBody off.",
+  bodySize:
+    "Create the app with { rawBody: true }, or pass the generated keepRawBody as the JSON parser's verify function.",
+};
 const NOT_FOUND_STATUS = 404;
 
 const ROUTE_DECORATORS = { get: Get, post: Post, put: Put, patch: Patch, delete: Delete } as const;
@@ -177,6 +183,7 @@ function checkState(context: BoundaryContext, request: PlatformRequest): CheckSt
     pathParams: context.pathParams,
     hooks: context.hooks,
     isFrameworkDenial,
+    fixes: NEST_FIXES,
   };
 }
 
@@ -201,13 +208,14 @@ async function respondWithError(
   context: BoundaryContext | undefined,
   hooks: BoundaryHooks | undefined,
   api: ContractApi,
+  route: ContractRoute | undefined,
   error: ContractError,
   request: { readonly method: string; readonly path: string },
 ): Promise<void> {
   if (error.unexpectedCause !== undefined) {
     const where = {
       api: api.id,
-      operation: context?.route.id,
+      operation: route?.id,
       method: request.method,
       path: request.path,
     };
@@ -222,7 +230,7 @@ async function respondWithError(
     await reportUnexpected(hooks, error.unexpectedCause, where);
   }
 
-  await writeContractReply(response, context, renderContractReply(api, context?.route, error));
+  await writeContractReply(response, context, renderContractReply(api, route, error));
 }
 
 /** The NestJS boundary of one api. */
@@ -274,6 +282,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       boundaryContext.run(context, () => {
         const refusal = transportRefusal(matched.route, contractRequest(request), {
           ...(typeof recorded === "number" ? { recordedBytes: recorded } : {}),
+          fixes: NEST_FIXES,
         });
 
         if (refusal === undefined) {
@@ -282,7 +291,10 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
           return;
         }
 
-        void respondWithError(response, context, hooks, api, refusal, { method, path });
+        void respondWithError(response, context, hooks, api, context.route, refusal, {
+          method,
+          path,
+        });
       });
     };
 
@@ -309,7 +321,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
 
     const route = looselyMatchedRoute(api, request.path);
 
-    await respondWithError(response, undefined, hooks, api, notFoundError(route), request);
+    await respondWithError(response, undefined, hooks, api, route, notFoundError(route), request);
   }
 
   @Injectable()
@@ -422,6 +434,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       context,
       context?.hooks ?? platform.hooks,
       api,
+      context?.route,
       contractError,
       {
         method: request.method ?? "GET",
@@ -627,6 +640,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       undefined,
       platform.hooks,
       api,
+      route,
       preRoutingError(route, exception),
       {
         method: request.method ?? "GET",

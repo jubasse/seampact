@@ -8,10 +8,19 @@ const UNSUPPORTED_MEDIA_ROLE = "unsupportedMediaType";
 const IDENTITY_ENCODING = "identity";
 const JSON_SUFFIX = "+json";
 
+/** The setup fixes a framework placement names in its logs; the shared checks know no framework. */
+export interface PlatformFixes {
+  /** How to make the raw body of a signed route reach the boundary. */
+  readonly rawBody: string;
+  /** How to make the size of a request body known to the boundary. */
+  readonly bodySize: string;
+}
+
 /** What the platform reports about the body it read. */
 export interface ReadBody {
-  /** The parsed byte count recorded by the generated `verify` function, when it ran. */
+  /** The parsed byte count recorded by the platform's parser hook, when it ran. */
   readonly recordedBytes?: number;
+  readonly fixes: PlatformFixes;
 }
 
 /** The refusal of step 1's contract checks, or undefined when the request passes them. */
@@ -37,8 +46,7 @@ export function transportRefusal(
       route,
       new Error(
         `seampact: operation '${route.id}' got a body whose size neither the raw body, the recorded byte count nor ` +
-          "Content-Length gives. Create the app with { rawBody: true }, or pass the generated keepRawBody as the " +
-          "JSON parser's verify function.",
+          `Content-Length gives. ${readBody.fixes.bodySize}`,
       ),
     );
   }

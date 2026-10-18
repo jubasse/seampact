@@ -116,6 +116,17 @@ function roleCode(state: CheckState, role: string): string {
   return code;
 }
 
+// Object members sorted by name, so the same request with its members reordered digests the same.
 function digest(parts: readonly unknown[]): string {
-  return createHash("sha256").update(JSON.stringify(parts)).digest("hex");
+  return createHash("sha256").update(JSON.stringify(parts, sortedMembers)).digest("hex");
+}
+
+function sortedMembers(_name: string, value: unknown): unknown {
+  if (!isPlainObject(value)) return value;
+
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((name) => [name, value[name]]),
+  );
 }

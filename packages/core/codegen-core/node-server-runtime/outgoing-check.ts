@@ -312,8 +312,13 @@ export function installOutgoingCheck(
     return chunk instanceof Uint8Array ? Buffer.from(chunk) : Buffer.from(String(chunk));
   };
 
-  define(response, "writeHead", (...args: unknown[]) => {
-    if (phase === "undecided") decide(typeof args[0] === "number" ? args[0] : response.statusCode);
+  define(response, "writeHead", (...written: unknown[]) => {
+    const args = context.boundaryWriting ? written : withHeadersSet(response, written);
+
+    // A held head is written later: the body checks read the status from the response meanwhile.
+    if (typeof args[0] === "number") response.statusCode = args[0];
+
+    if (phase === "undecided") decide(response.statusCode);
 
     if (phase === "passing") return originalWriteHead(...args);
 
@@ -380,6 +385,53 @@ export function installOutgoingCheck(
 
     return response;
   });
+}
+
+// Moves the headers of `writeHead(status, [message,] headers)` onto the response, so the check sees them as it sees
+// `setHeader` (a framework may pass its ETag this way); returns the arguments without them.
+function withHeadersSet(response: ServerResponse, args: readonly unknown[]): unknown[] {
+  const headersIndex = typeof args[1] === "string" ? 2 : 1;
+  const headers = args[headersIndex];
+
+  if (headers === undefined || headers === null) return [...args];
+
+  for (const [name, value] of headerPairs(headers)) {
+    const current = response.getHeader(name);
+
+    response.setHeader(
+      name,
+      current === undefined
+        ? value
+        : [...(Array.isArray(current) ? current : [String(current)]), ...[value].flat()],
+    );
+  }
+
+  return args.slice(0, headersIndex);
+}
+
+// A `writeHead` headers argument: an object, a flat `[name, value, ...]` list, or a list of pairs.
+function headerPairs(headers: unknown): [string, string | string[]][] {
+  if (!Array.isArray(headers)) {
+    return typeof headers === "object" && headers !== null
+      ? Object.entries(headers).flatMap(([name, value]) =>
+          value === undefined
+            ? []
+            : [[name, Array.isArray(value) ? value.map(String) : String(value)]],
+        )
+      : [];
+  }
+
+  if (headers.every((entry) => Array.isArray(entry))) {
+    return headers.map((entry) => [String(entry[0]), String(entry[1])]);
+  }
+
+  const pairs: [string, string][] = [];
+
+  for (let index = 0; index + 1 < headers.length; index += 2) {
+    pairs.push([String(headers[index]), String(headers[index + 1])]);
+  }
+
+  return pairs;
 }
 
 function recordedReply(response: ServerResponse, chunks: readonly Buffer[]): ContractReply {

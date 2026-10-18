@@ -30,6 +30,7 @@ import {
   type ValueSource,
 } from "./contract-route.js";
 import { parseSignatureHeader } from "./signature-header.js";
+import type { PlatformFixes } from "./transport-checks.js";
 
 /** What every check step reads: the api, the matched route, the request and the registered hooks. */
 export interface CheckState {
@@ -40,6 +41,7 @@ export interface CheckState {
   readonly pathParams: Readonly<Record<string, string>>;
   readonly hooks: BoundaryHooks;
   readonly isFrameworkDenial: FrameworkDenialTest;
+  readonly fixes: PlatformFixes;
 }
 
 /** The caller once steps 2 to 5 passed: the principal (null when anonymous) and the resolved scopes. */
@@ -199,8 +201,7 @@ function authenticateRequest(
 function missingRawBodyMessage(state: CheckState): string {
   return (
     `seampact: operation '${state.route.id}' (${state.route.method.toUpperCase()} ${state.route.path}) is signed ` +
-    "but the request has no raw body as a Buffer on req.rawBody. Create the app with { rawBody: true }, or pass " +
-    "the generated keepRawBody as the JSON parser's verify function with rawBody off."
+    `but the request has no raw body. ${state.fixes.rawBody}`
   );
 }
 
