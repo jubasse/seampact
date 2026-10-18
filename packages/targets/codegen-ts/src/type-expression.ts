@@ -1,4 +1,12 @@
-import type { Refusal } from "@seampact/codegen-core";
+import {
+  below,
+  type IrLocation,
+  type Refusal,
+  refuseInconsistentIr,
+  refuseNotGeneratedYet,
+  refuseUnknownValueAt,
+  requireName,
+} from "@seampact/codegen-core";
 import {
   type ContractIR,
   isKnownVariant,
@@ -6,9 +14,7 @@ import {
   type ScalarTypeUse,
   type TypeUse,
 } from "@seampact/spec/ir";
-import { below, type IrLocation } from "./ir-location.js";
-import { requireName, type TypesLayout } from "./layout.js";
-import { refuseInconsistentIr, refuseNotGeneratedYet, refuseUnknownValueAt } from "./refusals.js";
+import type { TypesLayout } from "./layout.js";
 
 // What a module needs to write a type use: the IR, the planned names, where refusals go, and how it refers to a
 // schema or enum type (by its bare name in the schemas module, through the namespace import elsewhere).

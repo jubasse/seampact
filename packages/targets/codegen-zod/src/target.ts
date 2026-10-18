@@ -1,18 +1,12 @@
-import { defineTarget, type Target } from "@seampact/codegen-core";
+import { defineTarget, type NoOptions, parseNoOptions, type Target } from "@seampact/codegen-core";
 import { IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { format } from "prettier";
 import packageJson from "../package.json" with { type: "json" };
 import { generateValidators, VALIDATORS_ARTEFACT, type ValidatorsArtefact } from "./generate.js";
 import { planValidatorsLayout, validatorsDescriptor } from "./layout.js";
-import { parseValidatorsOptions, type ValidatorsOptions } from "./options.js";
 
 // The zod validators target, as the CLI loads it.
-export const target: Target = defineTarget<
-  ValidatorsOptions,
-  ValidatorsArtefact,
-  never,
-  "validators"
->({
+export const target: Target = defineTarget<NoOptions, ValidatorsArtefact, never, "validators">({
   metadata: {
     packageName: packageJson.name,
     packageVersion: packageJson.version,
@@ -27,7 +21,7 @@ export const target: Target = defineTarget<
     provides: { validators: { style: "standard-schema" } },
   },
   format,
-  parseOptions: parseValidatorsOptions,
+  parseOptions: parseNoOptions,
   generate: generateValidators,
   describe(ir) {
     const planned = planValidatorsLayout(ir);

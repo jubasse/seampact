@@ -1,7 +1,5 @@
+import { below, type IrLocation, refuseInconsistentIr, requireName } from "@seampact/codegen-core";
 import type { Operation } from "@seampact/spec/ir";
-import { below, type IrLocation } from "./ir-location.js";
-import { requireName } from "./layout.js";
-import { refuseInconsistentIr } from "./refusals.js";
 import { REFUSED_TYPE, schemaTypeReference, type TypeContext } from "./type-expression.js";
 
 // The union of the error codes the operation answers: the status from the `errors` registry, and `params` when

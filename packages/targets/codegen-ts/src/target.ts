@@ -1,13 +1,12 @@
-import { defineTarget, type Target } from "@seampact/codegen-core";
+import { defineTarget, type NoOptions, parseNoOptions, type Target } from "@seampact/codegen-core";
 import { IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { format } from "prettier";
 import packageJson from "../package.json" with { type: "json" };
 import { generateTypes, TYPES_ARTEFACT, type TypesArtefact } from "./generate.js";
 import { planTypesLayout, typesDescriptor } from "./layout.js";
-import { parseTypesOptions, type TypesOptions } from "./options.js";
 
 // The TypeScript types target, as the CLI loads it.
-export const target: Target = defineTarget<TypesOptions, TypesArtefact, never, "types">({
+export const target: Target = defineTarget<NoOptions, TypesArtefact, never, "types">({
   metadata: {
     packageName: packageJson.name,
     packageVersion: packageJson.version,
@@ -22,7 +21,7 @@ export const target: Target = defineTarget<TypesOptions, TypesArtefact, never, "
     provides: { types: { style: "typescript" } },
   },
   format,
-  parseOptions: parseTypesOptions,
+  parseOptions: parseNoOptions,
   generate: generateTypes,
   describe(ir) {
     const planned = planTypesLayout(ir);

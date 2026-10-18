@@ -1,5 +1,6 @@
-import { type Refusal, refuseUnknownValue } from "@seampact/codegen-core";
 import type { IrLocation } from "./ir-location.js";
+import type { Refusal } from "./refusal.js";
+import { refuseUnknownValue } from "./unknown-value.js";
 
 // A form of the IR this target knows but does not generate yet (A47): the code names the form, the message the
 // member and the operation.

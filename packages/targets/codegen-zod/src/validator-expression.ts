@@ -1,4 +1,13 @@
-import type { Refusal, SchemaDirection } from "@seampact/codegen-core";
+import {
+  below,
+  type IrLocation,
+  type Refusal,
+  refuseInconsistentIr,
+  refuseNotGeneratedYet,
+  refuseUnknownValueAt,
+  requireName,
+  type SchemaDirection,
+} from "@seampact/codegen-core";
 import {
   type ContractIR,
   type EnumTypeUse,
@@ -7,9 +16,7 @@ import {
   type ScalarTypeUse,
   type TypeUse,
 } from "@seampact/spec/ir";
-import { below, type IrLocation } from "./ir-location.js";
-import { requireName, type ValidatorsLayout } from "./layout.js";
-import { refuseInconsistentIr, refuseNotGeneratedYet, refuseUnknownValueAt } from "./refusals.js";
+import type { ValidatorsLayout } from "./layout.js";
 
 // What a module needs to write a validator: the IR, the planned names, where refusals go, the direction its
 // schema references resolve in, and how it refers to a schema validator and to the code point counter.

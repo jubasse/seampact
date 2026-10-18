@@ -1,7 +1,12 @@
+import {
+  below,
+  type IrLocation,
+  refuseInconsistentIr,
+  refuseNotGeneratedYet,
+  refuseUnknownValueAt,
+  requireName,
+} from "@seampact/codegen-core";
 import type { ContractIR, Operation, Response } from "@seampact/spec/ir";
-import { below, type IrLocation } from "./ir-location.js";
-import { requireName } from "./layout.js";
-import { refuseInconsistentIr, refuseNotGeneratedYet, refuseUnknownValueAt } from "./refusals.js";
 import { REFUSED_TYPE, type TypeContext, typeExpression } from "./type-expression.js";
 
 const JSON_MEDIA = "application/json";

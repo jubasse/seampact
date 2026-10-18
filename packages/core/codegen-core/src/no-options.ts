@@ -1,10 +1,11 @@
-import type { ParseOptionsOutcome, Refusal } from "@seampact/codegen-core";
+import type { Refusal } from "./refusal.js";
+import type { ParseOptionsOutcome } from "./target.js";
 
-// The target takes no option yet: naming and style options wait (A47).
-export type ValidatorsOptions = Record<string, never>;
+// The options of a target that takes none yet: naming and style options wait (A47).
+export type NoOptions = Record<string, never>;
 
 // Accepts `{}` only; each key is refused by name.
-export function parseValidatorsOptions(raw: unknown): ParseOptionsOutcome<ValidatorsOptions> {
+export function parseNoOptions(raw: unknown): ParseOptionsOutcome<NoOptions> {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
     return {
       status: "refused",

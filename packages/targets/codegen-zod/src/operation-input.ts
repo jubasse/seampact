@@ -1,4 +1,14 @@
-import type { Refusal } from "@seampact/codegen-core";
+import {
+  below,
+  type IrLocation,
+  operationLocation,
+  propertyKey,
+  type Refusal,
+  refuseInconsistentIr,
+  refuseNotGeneratedYet,
+  refuseUnknownValueAt,
+  requireName,
+} from "@seampact/codegen-core";
 import {
   type ContractIR,
   isKnownVariant,
@@ -6,11 +16,8 @@ import {
   type OperationInput,
   type Param,
 } from "@seampact/spec/ir";
-import { below, type IrLocation, operationLocation } from "./ir-location.js";
-import { requireName, SCHEMA_MODULES, type ValidatorsLayout } from "./layout.js";
+import { SCHEMA_MODULES, type ValidatorsLayout } from "./layout.js";
 import { CODE_POINT_LENGTH, type ModuleSource } from "./module-source.js";
-import { propertyKey } from "./property-key.js";
-import { refuseInconsistentIr, refuseNotGeneratedYet, refuseUnknownValueAt } from "./refusals.js";
 import {
   REFUSED_VALIDATOR,
   type ValidatorContext,

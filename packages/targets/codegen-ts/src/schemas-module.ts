@@ -1,9 +1,13 @@
+import {
+  below,
+  type IrLocation,
+  propertyKey,
+  refuseNotGeneratedYet,
+  requireName,
+  schemaLocation,
+} from "@seampact/codegen-core";
 import type { Enum, ObjectSchema, Property } from "@seampact/spec/ir";
 import { isKnownVariant } from "@seampact/spec/ir";
-import { below, type IrLocation, schemaLocation } from "./ir-location.js";
-import { requireName } from "./layout.js";
-import { propertyKey } from "./property-key.js";
-import { refuseNotGeneratedYet } from "./refusals.js";
 import { type TypeContext, typeExpression } from "./type-expression.js";
 
 // The source of the schemas module: one type per enum and one per schema, used for every direction the schema

@@ -1,5 +1,6 @@
 // The API the code generators are written against: target definitions, link descriptors, refusals, and the
-// steps around a target's generate (IR support and link checks, header, formatting, file writer).
+// steps around a target's generate (IR support and link checks, header, formatting, file writer), and the
+// helpers targets share (IR locations, located refusals, planned names, property keys).
 export { defineTarget } from "./define-target.js";
 export type {
   Descriptor,
@@ -17,7 +18,21 @@ export type {
   ValidatorsDescriptor,
 } from "./descriptors.js";
 export { importSpecifier } from "./import-specifier.js";
+export { below, type IrLocation, operationLocation, schemaLocation } from "./ir-location.js";
 export type { Link, LinkLocation, LinkNeeds, LinkOffers, LinkSet, Links } from "./links.js";
+export {
+  refuseInconsistentIr,
+  refuseNotGeneratedYet,
+  refuseUnknownValueAt,
+} from "./located-refusals.js";
+export { type NoOptions, parseNoOptions } from "./no-options.js";
+export {
+  declaredTypeIdentifier,
+  ExportNames,
+  requireName,
+  typeScriptIdentifier,
+} from "./planned-names.js";
+export { propertyKey } from "./property-key.js";
 export type { Refusal, Refused } from "./refusal.js";
 export type {
   AnyTargetMetadata,

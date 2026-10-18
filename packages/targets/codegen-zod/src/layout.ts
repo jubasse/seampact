@@ -1,8 +1,16 @@
-import type {
-  Refusal,
-  Refused,
-  SchemaDirection,
-  ValidatorsDescriptor,
+import {
+  below,
+  declaredTypeIdentifier,
+  ExportNames,
+  type IrLocation,
+  operationLocation,
+  type Refusal,
+  type Refused,
+  refuseUnknownValueAt,
+  requireName,
+  type SchemaDirection,
+  typeScriptIdentifier,
+  type ValidatorsDescriptor,
 } from "@seampact/codegen-core";
 import {
   type ContractIR,
@@ -11,9 +19,7 @@ import {
   type OperationId,
   type SchemaId,
 } from "@seampact/spec/ir";
-import { deriveName, identifier, isRole } from "@seampact/spec/naming";
-import { below, type IrLocation, operationLocation } from "./ir-location.js";
-import { refuseUnknownValueAt } from "./refusals.js";
+import { deriveName } from "@seampact/spec/naming";
 
 // The module paths of the generated files, without extension, relative to the output root.
 export const SCHEMA_MODULES: Readonly<Record<SchemaDirection, string>> = {
@@ -67,7 +73,7 @@ export function planValidatorsLayout(
 
   ir.operations.forEach((operation, index) => {
     const location = below(operationLocation(index, operation.id), "name");
-    const exportName = `${typeIdentifier(deriveName(operation.name.segments, "input"))}${VALIDATOR_SUFFIX}`;
+    const exportName = `${typeScriptIdentifier(deriveName(operation.name.segments, "input"))}${VALIDATOR_SUFFIX}`;
 
     operationExportNames.set(operation.id, exportName);
     operationModuleNames.claim(exportName, location, refusals);
@@ -114,15 +120,6 @@ export function validatorsDescriptor(
   return { kind: "validators", style: "standard-schema", schemas, operations };
 }
 
-// A planned name; the layout holds every id of the IR it was planned from.
-export function requireName<Key, Value>(names: ReadonlyMap<Key, Value>, key: Key): Value {
-  const name = names.get(key);
-
-  if (name === undefined) throw new Error(`no planned name for ${String(key)}`);
-
-  return name;
-}
-
 function knownDirections(
   directions: readonly string[],
   location: IrLocation,
@@ -138,47 +135,5 @@ function knownDirections(
 }
 
 function validatorName(name: Name, location: IrLocation, refusals: Refusal[]): string {
-  const role = name.role;
-
-  if (!isRole(role)) {
-    refusals.push(refuseUnknownValueAt(below(location, "role"), role));
-
-    return "";
-  }
-
-  return `${typeIdentifier(deriveName(name.segments, role, name.status))}${VALIDATOR_SUFFIX}`;
-}
-
-function typeIdentifier(name: ReturnType<typeof deriveName>): string {
-  const typeName = identifier(name, "typescript");
-
-  // Every type role has a TypeScript identifier (ADR 0007 section 4).
-  if (typeName === undefined) throw new Error(`the role ${name.role} has no TypeScript identifier`);
-
-  return typeName;
-}
-
-// The names one module exports; a second export of one name is refused, naming both members.
-class ExportNames {
-  private readonly claimed = new Map<string, string>();
-
-  constructor(private readonly module: string) {}
-
-  claim(exportName: string, location: IrLocation, refusals: Refusal[]): void {
-    const first = this.claimed.get(exportName);
-
-    if (first === undefined) {
-      this.claimed.set(exportName, location.member);
-
-      return;
-    }
-
-    refusals.push({
-      code: "export.name.duplicate",
-      message: `The name '${exportName}' of ${location.member} is already the name of ${first} in the module '${this.module}'.`,
-      fix: "Rename one of the two in the contract so that their names differ.",
-      member: location.member,
-      ...(location.operation === undefined ? {} : { operation: location.operation }),
-    });
-  }
+  return `${declaredTypeIdentifier(name, location, refusals)}${VALIDATOR_SUFFIX}`;
 }

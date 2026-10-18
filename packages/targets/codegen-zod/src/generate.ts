@@ -1,11 +1,14 @@
-import type {
-  GeneratedFile,
-  GenerateInput,
-  GenerateOutcome,
-  Refusal,
+import {
+  below,
+  type GeneratedFile,
+  type GenerateInput,
+  type GenerateOutcome,
+  type NoOptions,
+  type Refusal,
+  refuseNotGeneratedYet,
+  refuseUnknownValueAt,
 } from "@seampact/codegen-core";
 import type { ContractIR } from "@seampact/spec/ir";
-import { below } from "./ir-location.js";
 import {
   CODE_POINTS_MODULE,
   OPERATION_INPUT_MODULE,
@@ -19,8 +22,6 @@ import {
   modulePath,
 } from "./module-source.js";
 import { operationInputModuleSource } from "./operation-input.js";
-import type { ValidatorsOptions } from "./options.js";
-import { refuseNotGeneratedYet, refuseUnknownValueAt } from "./refusals.js";
 import { schemaModuleSource } from "./schema-module.js";
 
 export const VALIDATORS_ARTEFACT = "validators";
@@ -30,7 +31,7 @@ export type ValidatorsArtefact = typeof VALIDATORS_ARTEFACT;
 // The schema validators of each direction, the operation input validators and the code point counter they
 // share, or every refusal at once: a form the slice does not use is refused by name, never approximated (A47).
 export function generateValidators(
-  input: GenerateInput<ValidatorsOptions, ValidatorsArtefact, never>,
+  input: GenerateInput<NoOptions, ValidatorsArtefact, never>,
 ): GenerateOutcome {
   if (!input.artefacts.has(VALIDATORS_ARTEFACT)) return { status: "generated", files: [] };
 

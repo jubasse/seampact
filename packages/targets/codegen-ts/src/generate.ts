@@ -1,11 +1,16 @@
-import type {
-  GeneratedFile,
-  GenerateInput,
-  GenerateOutcome,
-  Refusal,
+import {
+  below,
+  type GeneratedFile,
+  type GenerateInput,
+  type GenerateOutcome,
+  type IrLocation,
+  type NoOptions,
+  operationLocation,
+  type Refusal,
+  refuseNotGeneratedYet,
+  refuseUnknownValueAt,
 } from "@seampact/codegen-core";
 import type { ContractIR, Operation } from "@seampact/spec/ir";
-import { below, type IrLocation, operationLocation } from "./ir-location.js";
 import {
   MODULE_EXTENSION,
   OPERATION_ERRORS_MODULE,
@@ -19,8 +24,6 @@ import { operationModuleContext } from "./module-context.js";
 import { operationErrorsDeclaration } from "./operation-errors.js";
 import { operationInputDeclaration } from "./operation-input.js";
 import { operationOutputDeclaration } from "./operation-output.js";
-import type { TypesOptions } from "./options.js";
-import { refuseNotGeneratedYet, refuseUnknownValueAt } from "./refusals.js";
 import { schemasModuleSource } from "./schemas-module.js";
 import type { TypeContext } from "./type-expression.js";
 
@@ -43,7 +46,7 @@ const OPERATION_MODULES: readonly { module: string; declaration: OperationDeclar
 // The schemas module and the three operation modules, or every refusal at once: a form the slice does not use
 // is refused by name, never approximated (A47).
 export function generateTypes(
-  input: GenerateInput<TypesOptions, TypesArtefact, never>,
+  input: GenerateInput<NoOptions, TypesArtefact, never>,
 ): GenerateOutcome {
   if (!input.artefacts.has(TYPES_ARTEFACT)) return { status: "generated", files: [] };
 

@@ -1,14 +1,20 @@
-import type { Refusal, SchemaDirection } from "@seampact/codegen-core";
+import {
+  below,
+  type IrLocation,
+  propertyKey,
+  type Refusal,
+  refuseNotGeneratedYet,
+  requireName,
+  type SchemaDirection,
+  schemaLocation,
+} from "@seampact/codegen-core";
 import {
   type ContractIR,
   isKnownVariant,
   type ObjectSchema,
   type Property,
 } from "@seampact/spec/ir";
-import { below, type IrLocation, schemaLocation } from "./ir-location.js";
-import { requireName, type ValidatorsLayout } from "./layout.js";
-import { propertyKey } from "./property-key.js";
-import { refuseNotGeneratedYet } from "./refusals.js";
+import type { ValidatorsLayout } from "./layout.js";
 import { CODE_POINT_LENGTH, type ModuleSource } from "./module-source.js";
 import { type ValidatorContext, validatorExpression } from "./validator-expression.js";
 
