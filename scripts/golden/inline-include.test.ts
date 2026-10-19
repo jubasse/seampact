@@ -75,15 +75,22 @@ describe("inline and included declarations", () => {
 
   it("give one IR", () => {
     let movingVariants = 0;
+    let includeDirectives = 0;
+    let fileDirectives = 0;
 
     for (let seed = 1; seed <= VARIANT_COUNT; seed++) {
       const variant = contractVariant(trees, seed, true);
 
-      if (variant.directives > 0) movingVariants++;
+      if (variant.includeDirectives + variant.fileDirectives > 0) movingVariants++;
+
+      includeDirectives += variant.includeDirectives;
+      fileDirectives += variant.fileDirectives;
 
       expect(compiledIrTexts(variant, `seed ${seed}`), `seed ${seed}`).toEqual(golden);
     }
 
     expect(movingVariants).toBeGreaterThanOrEqual(MINIMUM_MOVING_VARIANTS);
+    expect(includeDirectives).toBeGreaterThan(0);
+    expect(fileDirectives).toBeGreaterThan(0);
   });
 });

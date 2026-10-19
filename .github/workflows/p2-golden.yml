@@ -2,8 +2,8 @@ name: Golden IR determinism
 
 # `scripts/golden --check` on every golden case: it compiles each case and compares the IR and side table byte for
 # byte with the committed files. The matrix runs it on Linux, macOS and Windows, with two time zones and two locales
-# (one of them Turkish, for case mapping), and Windows checks out with `core.autocrlf true` so the contract sources
-# arrive with CRLF line endings. `golden-determinism` is the check to require.
+# (one of them Turkish, for case mapping), and Windows converts every case source to CRLF before the check. ICU takes its
+# default locale from the OS on Windows, so the Windows `lang` cells vary the time zone only. `golden-determinism` is the check to require.
 
 on:
   push:
@@ -38,10 +38,6 @@ jobs:
       LANG: ${{ matrix.lang }}
       LC_ALL: ${{ matrix.lang }}
     steps:
-      - name: Check out with CRLF line endings on Windows
-        if: runner.os == 'Windows'
-        shell: bash
-        run: git config --global core.autocrlf true
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
@@ -51,10 +47,17 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: The reference sources have CRLF line endings on Windows
+      # .gitattributes keeps the fixtures LF, so autocrlf cannot give them CRLF: convert every case source here.
+      - name: Convert every case source to CRLF on Windows
         if: runner.os == 'Windows'
         shell: bash
-        run: grep -q $'\r' fixtures/reference/tasks/api.yaml
+        run: |
+          for directory in fixtures/reference fixtures/validator-agreement fixtures/golden/*/contract; do
+            find "$directory" -name '*.yaml' | while read -r file; do
+              sed -i 's/\r$//; s/$/\r/' "$file"
+              grep -q $'\r' "$file"
+            done
+          done
       - name: Check every golden case
         run: node --experimental-transform-types --import ./scripts/ir-models/register.ts scripts/golden/cli.ts --check
 

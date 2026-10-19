@@ -83,6 +83,7 @@ conventions:
   operationIds: { order: nounVerb, case: snake }
   batch: { maxIds: 25, bodyLimit: 64KiB }
   cache:
+    sensitiveElsewhere: refuse
     families:
       brief: { maxAge: 30s, sharedMaxAge: 120s, staleWhileRevalidate: 15s, mustRevalidate: true }
       pinned: { maxAge: 3600s, immutable: true }

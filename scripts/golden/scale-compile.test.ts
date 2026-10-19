@@ -53,7 +53,8 @@ describe("scale fixture compiled", () => {
     );
 
     expect(counts.examples).toBe(119);
-    expect(counts.declaredSchemas.size + inline.length).toBe(241);
+    expect(counts.declaredSchemas.size).toBe(203);
+    expect(inline).toHaveLength(38);
 
     // What the IR keeps no schema for is what it keeps inline: scalars and arrays (docs/ir/05-schemas.md).
     for (const [name, declaration] of inline) {

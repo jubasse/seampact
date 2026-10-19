@@ -125,11 +125,11 @@ surfaces:
                   sortable: [createdAt, { key: wordCount, right: notes.seeWordCount }]
                   filteredBy: notes.read
                   query:
-                    state: { enum: NoteState }
-                    labels: { type: array, items: { type: string, maxLength: 30 }, maxItems: 4 }
-                    range: NoteFilter
-                    archived: { type: boolean }
-                    minWords: { type: integer, minimum: 0 }
+                    state?: { enum: NoteState }
+                    labels?: { type: array, items: { type: string, maxLength: 30 }, maxItems: 4 }
+                    range?: NoteFilter
+                    archived?: { type: boolean }
+                    minWords?: { type: integer, minimum: 0 }
               collection:
                 routes:
                   feedback:

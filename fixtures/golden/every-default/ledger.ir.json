@@ -95,6 +95,13 @@
         }
       }
     },
+    "cache.sensitiveElsewhere": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/cache/sensitiveElsewhere"
+      },
+      "value": "refuse"
+    },
     "deprecation.header": {
       "origin": {
         "layer": "api",

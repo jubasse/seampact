@@ -20,6 +20,9 @@ const DATA_KEYS = new Set(["example", "examples", "default", "value"]);
 /** The mapping of named tree nodes: it holds no `$include` key (ADR 0002 section 2). */
 const NODE_MAP_KEY = "routes";
 
+/** The mapping of named examples: each example's `value` may move to a `$file`. */
+const EXAMPLES_KEY = "examples";
+
 const MOVE_SLICE_PROBABILITY = 0.35;
 const MOVE_NODE_PROBABILITY = 0.3;
 const MOVE_DATA_PROBABILITY = 0.5;
@@ -108,13 +111,16 @@ export function readContractTrees(root: string, files: readonly string[]): Map<s
 
 export interface ContractVariant {
   files: Map<string, string>;
-  /** The `$include` and `$file` directives the variant uses. */
-  directives: number;
+  /** The `$include` directives the variant uses. */
+  includeDirectives: number;
+  /** The `$file` directives the variant uses. */
+  fileDirectives: number;
 }
 
 class VariantWriter {
   readonly files = new Map<string, string>();
-  directives = 0;
+  includeDirectives = 0;
+  fileDirectives = 0;
   private partCount = 0;
 
   private readonly random: () => number;
@@ -194,7 +200,7 @@ class VariantWriter {
     const body = this.mapping(moved, viaFragment ? 2 : 0, partDirectory, true, false).join("\n");
 
     this.files.set(part.path, viaFragment ? `Fragment:\n${body}\nOther: { x: 1 }\n` : `${body}\n`);
-    this.directives++;
+    this.includeDirectives++;
 
     return `${pad}$include: ${part.reference}${viaFragment ? "#/Fragment" : ""}`;
   }
@@ -210,6 +216,10 @@ class VariantWriter {
     const pad = " ".repeat(indent);
     const label = `${pad}${this.key(name)}:`;
 
+    if (isTree(value) && name === EXAMPLES_KEY) {
+      return [label, ...this.mapping(value, indent + 2, directory, false, false)];
+    }
+
     if (isTree(value) && DATA_KEYS.has(name)) return this.dataEntry(label, name, value, directory);
 
     if (!isTree(value) || Object.keys(value).length === 0)
@@ -222,7 +232,7 @@ class VariantWriter {
         part.path,
         `${this.mapping(value, 0, posix.dirname(part.path), true, false).join("\n")}\n`,
       );
-      this.directives++;
+      this.includeDirectives++;
 
       return [`${label} { $include: ${part.reference} }`];
     }
@@ -238,7 +248,7 @@ class VariantWriter {
       const part = this.newPart(directory, "json");
 
       this.files.set(part.path, `${JSON.stringify(value, null, 2)}\n`);
-      this.directives++;
+      this.fileDirectives++;
 
       return [`${label} { $file: ${part.reference} }`];
     }
@@ -257,5 +267,9 @@ export function contractVariant(
 
   for (const [path, tree] of trees) writer.writeFile(path, tree);
 
-  return { files: writer.files, directives: writer.directives };
+  return {
+    files: writer.files,
+    includeDirectives: writer.includeDirectives,
+    fileDirectives: writer.fileDirectives,
+  };
 }

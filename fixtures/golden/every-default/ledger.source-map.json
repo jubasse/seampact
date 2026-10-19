@@ -39,23 +39,30 @@
     "api#/conventions/cache/families": {
       "column": 5,
       "endColumn": 1,
-      "endLine": 89,
+      "endLine": 90,
       "file": "api.yaml",
-      "line": 86
+      "line": 87
     },
     "api#/conventions/cache/families/brief": {
       "column": 7,
       "endColumn": 98,
-      "endLine": 87,
+      "endLine": 88,
       "file": "api.yaml",
-      "line": 87
+      "line": 88
     },
     "api#/conventions/cache/families/pinned": {
       "column": 7,
       "endColumn": 49,
-      "endLine": 88,
+      "endLine": 89,
       "file": "api.yaml",
-      "line": 88
+      "line": 89
+    },
+    "api#/conventions/cache/sensitiveElsewhere": {
+      "column": 5,
+      "endColumn": 31,
+      "endLine": 86,
+      "file": "api.yaml",
+      "line": 86
     },
     "api#/conventions/deprecation/header": {
       "column": 18,
@@ -81,65 +88,65 @@
     "api#/conventions/errors/derived": {
       "column": 5,
       "endColumn": 1,
-      "endLine": 115,
+      "endLine": 116,
       "file": "api.yaml",
-      "line": 92
+      "line": 93
     },
     "api#/conventions/errors/derived/notFound": {
       "column": 7,
       "endColumn": 28,
-      "endLine": 100,
+      "endLine": 101,
       "file": "api.yaml",
-      "line": 100
+      "line": 101
     },
     "api#/conventions/errors/derived/payloadTooLarge": {
       "column": 7,
       "endColumn": 37,
-      "endLine": 107,
-      "file": "api.yaml",
-      "line": 107
-    },
-    "api#/conventions/errors/derived/schemaInvalid": {
-      "column": 7,
-      "endColumn": 1,
-      "endLine": 96,
-      "file": "api.yaml",
-      "line": 93
-    },
-    "api#/conventions/errors/derived/unauthenticated": {
-      "column": 7,
-      "endColumn": 43,
-      "endLine": 96,
-      "file": "api.yaml",
-      "line": 96
-    },
-    "api#/conventions/errors/derived/undeclaredStatus": {
-      "column": 7,
-      "endColumn": 37,
-      "endLine": 110,
-      "file": "api.yaml",
-      "line": 110
-    },
-    "api#/conventions/errors/derived/unsupportedMediaType": {
-      "column": 7,
-      "endColumn": 43,
       "endLine": 108,
       "file": "api.yaml",
       "line": 108
     },
+    "api#/conventions/errors/derived/schemaInvalid": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 97,
+      "file": "api.yaml",
+      "line": 94
+    },
+    "api#/conventions/errors/derived/unauthenticated": {
+      "column": 7,
+      "endColumn": 43,
+      "endLine": 97,
+      "file": "api.yaml",
+      "line": 97
+    },
+    "api#/conventions/errors/derived/undeclaredStatus": {
+      "column": 7,
+      "endColumn": 37,
+      "endLine": 111,
+      "file": "api.yaml",
+      "line": 111
+    },
+    "api#/conventions/errors/derived/unsupportedMediaType": {
+      "column": 7,
+      "endColumn": 43,
+      "endLine": 109,
+      "file": "api.yaml",
+      "line": 109
+    },
     "api#/conventions/errors/pattern": {
       "column": 5,
       "endColumn": 30,
-      "endLine": 90,
+      "endLine": 91,
       "file": "api.yaml",
-      "line": 90
+      "line": 91
     },
     "api#/conventions/errors/reach": {
       "column": 5,
       "endColumn": 20,
-      "endLine": 91,
+      "endLine": 92,
       "file": "api.yaml",
-      "line": 91
+      "line": 92
     },
     "api#/conventions/format": {
       "column": 3,
@@ -284,9 +291,9 @@
     "api#/enums/EntryKind": {
       "column": 3,
       "endColumn": 84,
-      "endLine": 117,
+      "endLine": 118,
       "file": "api.yaml",
-      "line": 117
+      "line": 118
     },
     "api#/errors/err.bad_input": {
       "column": 3,
@@ -368,107 +375,107 @@
     "api#/schemas/CreateEntry": {
       "column": 3,
       "endColumn": 1,
-      "endLine": 146,
+      "endLine": 147,
       "file": "api.yaml",
-      "line": 144
+      "line": 145
     },
     "api#/schemas/Entry": {
       "column": 3,
       "endColumn": 1,
-      "endLine": 139,
+      "endLine": 140,
       "file": "api.yaml",
-      "line": 131
+      "line": 132
     },
     "api#/schemas/Entry/properties/amount": {
       "column": 7,
       "endColumn": 59,
-      "endLine": 137,
-      "file": "api.yaml",
-      "line": 137
-    },
-    "api#/schemas/Entry/properties/entryId": {
-      "column": 7,
-      "endColumn": 23,
-      "endLine": 135,
-      "file": "api.yaml",
-      "line": 135
-    },
-    "api#/schemas/Entry/properties/kind": {
-      "column": 7,
-      "endColumn": 32,
-      "endLine": 136,
-      "file": "api.yaml",
-      "line": 136
-    },
-    "api#/schemas/Entry/properties/postedAt": {
-      "column": 7,
-      "endColumn": 52,
       "endLine": 138,
       "file": "api.yaml",
       "line": 138
     },
+    "api#/schemas/Entry/properties/entryId": {
+      "column": 7,
+      "endColumn": 23,
+      "endLine": 136,
+      "file": "api.yaml",
+      "line": 136
+    },
+    "api#/schemas/Entry/properties/kind": {
+      "column": 7,
+      "endColumn": 32,
+      "endLine": 137,
+      "file": "api.yaml",
+      "line": 137
+    },
+    "api#/schemas/Entry/properties/postedAt": {
+      "column": 7,
+      "endColumn": 52,
+      "endLine": 139,
+      "file": "api.yaml",
+      "line": 139
+    },
     "api#/schemas/EntryFilter": {
       "column": 3,
       "endColumn": 1,
-      "endLine": 144,
+      "endLine": 145,
       "file": "api.yaml",
-      "line": 139
+      "line": 140
     },
     "api#/schemas/EntryFilter/properties/kind": {
       "column": 7,
       "endColumn": 32,
-      "endLine": 142,
-      "file": "api.yaml",
-      "line": 142
-    },
-    "api#/schemas/EntryFilter/properties/since": {
-      "column": 7,
-      "endColumn": 49,
       "endLine": 143,
       "file": "api.yaml",
       "line": 143
     },
+    "api#/schemas/EntryFilter/properties/since": {
+      "column": 7,
+      "endColumn": 49,
+      "endLine": 144,
+      "file": "api.yaml",
+      "line": 144
+    },
     "api#/schemas/Issues/items": {
       "column": 5,
       "endColumn": 1,
-      "endLine": 131,
+      "endLine": 132,
       "file": "api.yaml",
-      "line": 127
+      "line": 128
     },
     "api#/schemas/Issues/items/properties/pointer": {
       "column": 21,
       "endColumn": 46,
-      "endLine": 130,
+      "endLine": 131,
       "file": "api.yaml",
-      "line": 130
+      "line": 131
     },
     "api#/schemas/Issues/items/properties/rule": {
       "column": 48,
       "endColumn": 70,
-      "endLine": 130,
+      "endLine": 131,
       "file": "api.yaml",
-      "line": 130
+      "line": 131
     },
     "api#/schemas/ReplaceEntry": {
       "column": 3,
       "endColumn": 1,
-      "endLine": 148,
+      "endLine": 149,
       "file": "api.yaml",
-      "line": 146
+      "line": 147
     },
     "api#/schemas/UserPrincipal": {
       "column": 3,
       "endColumn": 1,
-      "endLine": 125,
+      "endLine": 126,
       "file": "api.yaml",
-      "line": 121
+      "line": 122
     },
     "api#/schemas/UserPrincipal/properties/userId": {
       "column": 19,
       "endColumn": 57,
-      "endLine": 124,
+      "endLine": 125,
       "file": "api.yaml",
-      "line": 124
+      "line": 125
     },
     "api#/schemes/bearer": {
       "column": 3,
@@ -480,149 +487,149 @@
     "api#/surfaces/app": {
       "column": 3,
       "endColumn": 1,
-      "endLine": 175,
+      "endLine": 176,
       "file": "api.yaml",
-      "line": 150
+      "line": 151
     },
     "api#/surfaces/app/identity": {
       "column": 5,
       "endColumn": 19,
-      "endLine": 151,
+      "endLine": 152,
       "file": "api.yaml",
-      "line": 151
+      "line": 152
     },
     "api#/surfaces/app/routes/entries/id/entryId": {
       "column": 15,
       "endColumn": 31,
-      "endLine": 155,
-      "file": "api.yaml",
-      "line": 155
-    },
-    "api#/surfaces/app/routes/entries/item": {
-      "column": 9,
-      "endColumn": 20,
       "endLine": 156,
       "file": "api.yaml",
       "line": 156
     },
+    "api#/surfaces/app/routes/entries/item": {
+      "column": 9,
+      "endColumn": 20,
+      "endLine": 157,
+      "file": "api.yaml",
+      "line": 157
+    },
     "api#/surfaces/app/routes/entries/member/routes/closing_balance": {
       "column": 13,
       "endColumn": 1,
-      "endLine": 175,
+      "endLine": 176,
       "file": "api.yaml",
-      "line": 170
+      "line": 171
     },
     "api#/surfaces/app/routes/entries/member/routes/closing_balance/cache": {
       "column": 15,
       "endColumn": 43,
-      "endLine": 173,
-      "file": "api.yaml",
-      "line": 173
-    },
-    "api#/surfaces/app/routes/entries/member/routes/closing_balance/deprecated": {
-      "column": 15,
-      "endColumn": 94,
       "endLine": 174,
       "file": "api.yaml",
       "line": 174
     },
+    "api#/surfaces/app/routes/entries/member/routes/closing_balance/deprecated": {
+      "column": 15,
+      "endColumn": 94,
+      "endLine": 175,
+      "file": "api.yaml",
+      "line": 175
+    },
     "api#/surfaces/app/routes/entries/member/routes/closing_balance/output": {
       "column": 15,
       "endColumn": 28,
-      "endLine": 172,
+      "endLine": 173,
       "file": "api.yaml",
-      "line": 172
+      "line": 173
     },
     "api#/surfaces/app/routes/entries/ops/batch": {
       "column": 11,
       "endColumn": 20,
-      "endLine": 167,
+      "endLine": 168,
       "file": "api.yaml",
-      "line": 167
+      "line": 168
     },
     "api#/surfaces/app/routes/entries/ops/create": {
       "column": 11,
       "endColumn": 41,
-      "endLine": 164,
+      "endLine": 165,
       "file": "api.yaml",
-      "line": 164
+      "line": 165
     },
     "api#/surfaces/app/routes/entries/ops/create/input": {
       "column": 21,
       "endColumn": 39,
-      "endLine": 164,
+      "endLine": 165,
       "file": "api.yaml",
-      "line": 164
+      "line": 165
     },
     "api#/surfaces/app/routes/entries/ops/delete": {
       "column": 11,
       "endColumn": 21,
-      "endLine": 166,
+      "endLine": 167,
       "file": "api.yaml",
-      "line": 166
+      "line": 167
     },
     "api#/surfaces/app/routes/entries/ops/get": {
       "column": 11,
       "endColumn": 47,
-      "endLine": 163,
+      "endLine": 164,
       "file": "api.yaml",
-      "line": 163
+      "line": 164
     },
     "api#/surfaces/app/routes/entries/ops/get/cache": {
       "column": 18,
       "endColumn": 45,
-      "endLine": 163,
+      "endLine": 164,
       "file": "api.yaml",
-      "line": 163
+      "line": 164
     },
     "api#/surfaces/app/routes/entries/ops/list": {
       "column": 11,
       "endColumn": 1,
-      "endLine": 163,
+      "endLine": 164,
       "file": "api.yaml",
-      "line": 158
+      "line": 159
     },
     "api#/surfaces/app/routes/entries/ops/list/query/filter": {
       "column": 15,
       "endColumn": 34,
-      "endLine": 161,
-      "file": "api.yaml",
-      "line": 161
-    },
-    "api#/surfaces/app/routes/entries/ops/list/query/kinds": {
-      "column": 15,
-      "endColumn": 78,
       "endLine": 162,
       "file": "api.yaml",
       "line": 162
     },
+    "api#/surfaces/app/routes/entries/ops/list/query/kinds": {
+      "column": 15,
+      "endColumn": 78,
+      "endLine": 163,
+      "file": "api.yaml",
+      "line": 163
+    },
     "api#/surfaces/app/routes/entries/ops/list/sortable/0": {
       "column": 24,
       "endColumn": 32,
-      "endLine": 159,
+      "endLine": 160,
       "file": "api.yaml",
-      "line": 159
+      "line": 160
     },
     "api#/surfaces/app/routes/entries/ops/list/sortable/1": {
       "column": 34,
       "endColumn": 40,
-      "endLine": 159,
+      "endLine": 160,
       "file": "api.yaml",
-      "line": 159
+      "line": 160
     },
     "api#/surfaces/app/routes/entries/ops/update": {
       "column": 11,
       "endColumn": 42,
-      "endLine": 165,
+      "endLine": 166,
       "file": "api.yaml",
-      "line": 165
+      "line": 166
     },
     "api#/surfaces/app/routes/entries/ops/update/input": {
       "column": 21,
       "endColumn": 40,
-      "endLine": 165,
+      "endLine": 166,
       "file": "api.yaml",
-      "line": 165
+      "line": 166
     }
   }
 }

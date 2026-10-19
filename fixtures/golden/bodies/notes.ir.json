@@ -1769,9 +1769,9 @@
             "name": "state",
             "origin": {
               "layer": "api",
-              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/state"
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/state?"
             },
-            "required": true,
+            "required": false,
             "type": {
               "enum": "NoteState",
               "kind": "enum"
@@ -1787,9 +1787,9 @@
             "name": "labels",
             "origin": {
               "layer": "api",
-              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/labels"
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/labels?"
             },
-            "required": true,
+            "required": false,
             "type": {
               "items": {
                 "kind": "scalar",
@@ -1812,9 +1812,9 @@
             "name": "range",
             "origin": {
               "layer": "api",
-              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/range"
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/range?"
             },
-            "required": true,
+            "required": false,
             "type": {
               "kind": "ref",
               "schema": "NoteFilter"
@@ -1830,9 +1830,9 @@
             "name": "archived",
             "origin": {
               "layer": "api",
-              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/archived"
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/archived?"
             },
-            "required": true,
+            "required": false,
             "type": {
               "kind": "scalar",
               "refinements": {},
@@ -1849,9 +1849,9 @@
             "name": "minWords",
             "origin": {
               "layer": "api",
-              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/minWords"
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/minWords?"
             },
-            "required": true,
+            "required": false,
             "type": {
               "kind": "scalar",
               "refinements": {
