@@ -61,6 +61,8 @@ interface Route {
   readonly pattern: RegExp;
   readonly access: "user" | "service" | "public" | "stripe";
   readonly idempotent?: boolean;
+  /** The query keys the operation declares; any other key is refused. */
+  readonly queryKeys?: readonly string[];
   answer(call: Call, path: readonly string[]): Answer | Promise<Answer>;
 }
 
@@ -72,6 +74,7 @@ const task = (taskId: string, title = "Write the slice test") => ({
   createdAt: "2026-10-18T09:00:00.000Z",
 });
 
+const PAGE_QUERY_KEYS = ["cursor", "limit"];
 const API_ID = "tasks";
 const HTTP_ERROR_FLOOR = 400;
 
@@ -85,6 +88,7 @@ const ROUTES: readonly Route[] = [
   },
   {
     operation: "listChannels",
+    queryKeys: PAGE_QUERY_KEYS,
     method: "GET",
     pattern: /^\/v1\/channels$/,
     access: "user",
@@ -99,6 +103,7 @@ const ROUTES: readonly Route[] = [
   },
   {
     operation: "listTasks",
+    queryKeys: PAGE_QUERY_KEYS,
     method: "GET",
     pattern: /^\/v1\/channels\/([^/]+)\/tasks$/,
     access: "user",
@@ -260,6 +265,16 @@ async function handle(
 
   if (denial !== undefined) {
     send(response, denial);
+
+    return;
+  }
+
+  const undeclaredKey = [...call.url.searchParams.keys()].find(
+    (key) => !(route.queryKeys ?? []).includes(key),
+  );
+
+  if (undeclaredKey !== undefined) {
+    send(response, schemaInvalid(`/query/${undeclaredKey}`, "additionalProperties"));
 
     return;
   }
