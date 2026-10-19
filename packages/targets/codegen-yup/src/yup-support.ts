@@ -67,8 +67,6 @@ case "typeError":
 case "nullable":
 case "integer":
 return "type";
-case "oneOf":
-return "enum";
 case "min":
 return "minItems";
 case "max":

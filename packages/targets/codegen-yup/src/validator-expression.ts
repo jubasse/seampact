@@ -13,12 +13,29 @@ import {
 import type { YupRenderContext } from "./module-rendering.js";
 import { UNKNOWN_KEYS_TEST } from "./yup-support.js";
 
+// A plain integer is in the safe range of ADR 0003 and a number is finite, as the zod validators read them; yup
+// checks neither (JSON `1e999` is Infinity).
+function safeIntegerBounds(): string {
+  return [
+    namedTest(
+      "minimum",
+      "Expected at least -9007199254740991.",
+      "value >= -Number.MAX_SAFE_INTEGER",
+    ),
+    namedTest("maximum", "Expected at most 9007199254740991.", "value <= Number.MAX_SAFE_INTEGER"),
+  ].join("");
+}
+
+function finiteNumberTest(): string {
+  return namedTest("type", "Expected a finite number.", "Number.isFinite(value)");
+}
+
 // Every leaf is strict, so yup casts nothing: a value of another type is an issue. A query or header value
 // arrives already decoded.
 const BASE_VALIDATORS: Readonly<Record<ScalarBase, string>> = {
   string: "yup.string().strict()",
-  integer: "yup.number().strict().integer()",
-  number: "yup.number().strict()",
+  integer: `yup.number().strict().integer()${safeIntegerBounds()}`,
+  number: `yup.number().strict()${finiteNumberTest()}`,
   boolean: "yup.boolean().strict()",
 };
 
@@ -34,7 +51,8 @@ export function validatorExpression(plan: TypePlan, context: YupRenderContext): 
     case "schema":
       return context.referToSchema(plan.schemaId, plan.exportName);
     case "enum":
-      return `yup.mixed().oneOf(${JSON.stringify(plan.values)})`;
+      // A named test, not `oneOf`: yup lets a nullable schema skip `oneOf`, and null must be an enum issue.
+      return `yup.mixed().nullable()${namedTest("enum", "Expected one of the declared values.", `(${JSON.stringify(plan.values)} as readonly unknown[]).includes(value)`)}`;
     case "scalar":
       return scalarValidator(plan, context);
     case "array": {

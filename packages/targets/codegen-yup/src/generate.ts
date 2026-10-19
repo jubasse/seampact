@@ -1,28 +1,23 @@
 import {
-  apiIndexSource,
   type GeneratedFile,
   type GenerateInput,
   type GenerateOutcome,
-  type IndexedModule,
-  importSpecifier,
-  type Link,
   type NoOptions,
+  relativeModuleSpecifier,
 } from "@seampact/codegen-core";
 import {
-  INDEX_MODULE,
+  indexFile,
   type ModuleSource,
   moduleContents,
   modulePath,
   OPERATION_INPUT_MODULE,
-  planValidators,
   SCHEMA_MODULES,
-  SCHEMA_NAMESPACES,
   WIRE_CHECKS_MODULE,
   WIRE_CHECKS_SOURCE,
 } from "@seampact/codegen-core/validators";
 import { YUP_IMPORT } from "./layout.js";
 import { operationInputModuleSource } from "./operation-input.js";
-import { refuseAmbiguousPathKeys } from "./path-keys.js";
+import { planYupValidators } from "./path-keys.js";
 import { schemaModuleSource } from "./schema-module.js";
 import { YUP_SUPPORT_MODULE, YUP_SUPPORT_SOURCE } from "./yup-support.js";
 
@@ -37,14 +32,11 @@ export function generateValidators(
 ): GenerateOutcome {
   if (!input.artefacts.has(VALIDATORS_ARTEFACT)) return { status: "generated", files: [] };
 
-  const planned = planValidators(input.ir);
+  const planned = planYupValidators(input.ir);
 
   if (planned.status === "refused") return planned;
 
   const { plan } = planned;
-  const ambiguousKeys = refuseAmbiguousPathKeys(plan);
-
-  if (ambiguousKeys.length > 0) return { status: "refused", refusals: ambiguousKeys };
 
   const modules: { module: string; source: RenderedModule }[] = [
     { module: SCHEMA_MODULES.input, source: schemaModuleSource(plan.schemaModules.input) },
@@ -75,34 +67,7 @@ type RenderedModule = ModuleSource & { supportNames: ReadonlySet<string> };
 function libraryImports(module: string, supportNames: ReadonlySet<string>): string {
   if (supportNames.size === 0) return YUP_IMPORT;
 
-  const link: Link<"validators"> = {
-    descriptor: { kind: "validators", style: "standard-schema", schemas: {}, operations: {} },
-    location: { kind: "relative", path: "" },
-  };
-  const specifier = importSpecifier(
-    link,
-    { module: YUP_SUPPORT_MODULE, export: "" },
-    modulePath(module),
-  );
+  const specifier = relativeModuleSpecifier(modulePath(module), YUP_SUPPORT_MODULE);
 
   return `${YUP_IMPORT}\nimport { ${[...supportNames].sort().join(", ")} } from "${specifier}";`;
-}
-
-// The api index: each schema module under its direction's namespace, the operation input validators flat, so
-// `import * as Tasks from "<out>/index.js"` reaches every name; `wire-checks` stays internal.
-function indexFile(files: readonly GeneratedFile[]): GeneratedFile[] {
-  const written = new Set(files.map((file) => file.path));
-  const schemaModules = (["input", "output"] as const).flatMap((direction) =>
-    written.has(modulePath(SCHEMA_MODULES[direction]))
-      ? [{ module: SCHEMA_MODULES[direction], namespace: SCHEMA_NAMESPACES[direction] }]
-      : [],
-  );
-  const operationModules = written.has(modulePath(OPERATION_INPUT_MODULE))
-    ? [{ module: OPERATION_INPUT_MODULE }]
-    : [];
-  const modules: IndexedModule[] = [...schemaModules, ...operationModules];
-
-  if (modules.length === 0) return [];
-
-  return [{ path: modulePath(INDEX_MODULE), contents: apiIndexSource(modules) }];
 }

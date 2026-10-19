@@ -37,9 +37,15 @@ let operationInputs: Record<string, StandardValidator>;
 let inputSchemas: Record<string, ObjectValidator>;
 let outputSchemas: Record<string, ObjectValidator>;
 
-// Generates the reference validators into a project that resolves `yup` to this package's copy, then imports them.
-beforeAll(async () => {
-  const ir: ContractIR = JSON.parse(readFileSync(GOLDEN_IR, "utf8"));
+interface GeneratedModules {
+  standardSchemaOf: (schema: unknown) => StandardValidator;
+  operationInputs: Record<string, StandardValidator>;
+  inputSchemas: Record<string, ObjectValidator>;
+  outputSchemas: Record<string, ObjectValidator>;
+}
+
+// Generates the validators of an IR into a project that resolves `yup` to this package's copy, then imports them.
+async function generateAndImport(ir: ContractIR, name: string): Promise<GeneratedModules> {
   const outcome = await target.generate({
     ir,
     options: {},
@@ -49,19 +55,33 @@ beforeAll(async () => {
 
   if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
 
-  const outDir = join(temporaryRoot, "generated");
+  const root = join(temporaryRoot, name);
+  const outDir = join(root, "generated");
   const written = await writeGeneratedFiles(outDir, "@seampact/codegen-yup", outcome.files);
 
   if (written.status !== "written") throw new Error(JSON.stringify(written.refusals));
 
-  mkdirSync(join(temporaryRoot, "node_modules"));
-  symlinkSync(YUP_PACKAGE, join(temporaryRoot, "node_modules", "yup"), "dir");
-  writeFileSync(join(temporaryRoot, "package.json"), '{ "type": "module" }\n');
+  mkdirSync(join(root, "node_modules"));
+  symlinkSync(YUP_PACKAGE, join(root, "node_modules", "yup"), "dir");
+  writeFileSync(join(root, "package.json"), '{ "type": "module" }\n');
 
-  ({ standardSchemaOf } = await import(join(outDir, "yup-support.ts")));
-  operationInputs = await import(join(outDir, "operations/input.ts"));
-  inputSchemas = await import(join(outDir, "schemas/input.ts"));
-  outputSchemas = await import(join(outDir, "schemas/output.ts"));
+  return {
+    ...(await import(join(outDir, "yup-support.ts"))),
+    operationInputs: await import(join(outDir, "operations/input.ts")),
+    inputSchemas: await import(join(outDir, "schemas/input.ts")),
+    outputSchemas: await import(join(outDir, "schemas/output.ts")),
+  };
+}
+
+function goldenIr(): ContractIR {
+  return JSON.parse(readFileSync(GOLDEN_IR, "utf8"));
+}
+
+beforeAll(async () => {
+  ({ standardSchemaOf, operationInputs, inputSchemas, outputSchemas } = await generateAndImport(
+    goldenIr(),
+    "generated-root",
+  ));
 });
 
 afterAll(() => rmSync(temporaryRoot, { recursive: true, force: true }));
@@ -331,7 +351,7 @@ describe("object schemas stay plain (A45)", () => {
 describe("the custom checks of the generated validators", () => {
   test("every named test carries its contract rule as its name", () => {
     const sources = ["operations/input.ts", "schemas/output.ts"].map((file) =>
-      readFileSync(join(temporaryRoot, "generated", file), "utf8"),
+      readFileSync(join(temporaryRoot, "generated-root", "generated", file), "utf8"),
     );
     const tests = sources.flatMap((source) => source.match(/\.test\(\{[\s\S]*?\n\s*\}\)/g) ?? []);
 
@@ -362,6 +382,77 @@ describe("a wire name yup's issue path cannot carry is refused by name", () => {
     });
 
     expect(outcome).toMatchObject({
+      status: "refused",
+      refusals: [{ code: "wire.name.yupPath.unsupported" }],
+    });
+  });
+});
+
+describe("numbers: the safe integer range and finiteness the zod validators enforce", () => {
+  const updateTaskInput = (expectedVersion: number): unknown => ({
+    path: { channelId: CHANNEL_ID, taskId: CHANNEL_ID },
+    query: {},
+    headers: { authorization: "Bearer t", "if-match": "1", "idempotency-key": "k" },
+    body: { expectedVersion },
+  });
+
+  test.each([2 ** 53, 2 ** 60])("an integer of %d is a maximum issue", async (expectedVersion) => {
+    expect(
+      await rules(operationInputs.UpdateTaskInputSchema, updateTaskInput(expectedVersion)),
+    ).toContain("maximum");
+  });
+
+  test("an integer below the safe range is a minimum issue", async () => {
+    expect(
+      await rules(operationInputs.UpdateTaskInputSchema, updateTaskInput(-(2 ** 60))),
+    ).toContain("minimum");
+  });
+
+  test("a number that is Infinity, as JSON 1e999 reads, is a type issue", async () => {
+    const ir = goldenIr();
+    const schema = ir.schemas.CreateTask;
+    const effort =
+      schema !== undefined && isKnownVariant("Schema", schema) && schema.kind === "object"
+        ? schema.properties.find((property) => property.name === "effort")
+        : undefined;
+
+    if (effort === undefined || effort.type.kind !== "scalar") {
+      throw new Error("the golden IR has no scalar CreateTask effort");
+    }
+
+    effort.type = { kind: "scalar", type: "number", refinements: {} };
+
+    const generated = await generateAndImport(ir, "number-root");
+    const body = JSON.parse('{ "title": "t", "effort": 1e999 }');
+
+    expect(
+      await rules(generated.operationInputs.CreateTaskInputSchema, createTaskInput(body)),
+    ).toEqual(["type"]);
+  });
+});
+
+describe("enum: null is an enum issue, as on zod", () => {
+  test("a null task state", async () => {
+    expect(await rules(standardSchemaOf(outputSchemas.TaskSchema?.fields.state), null)).toEqual([
+      "enum",
+    ]);
+  });
+});
+
+describe("describe reports the same refusals as generate", () => {
+  test("a wire name yup's issue path cannot carry", () => {
+    const ir = goldenIr();
+    const schema = ir.schemas.CreateTask;
+    const property =
+      schema !== undefined && isKnownVariant("Schema", schema) && schema.kind === "object"
+        ? schema.properties[0]
+        : undefined;
+
+    if (property === undefined) throw new Error("the golden IR has no CreateTask property");
+
+    property.name = 'ti"tle';
+
+    expect(target.describe(ir, {})).toMatchObject({
       status: "refused",
       refusals: [{ code: "wire.name.yupPath.unsupported" }],
     });

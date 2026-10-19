@@ -1,6 +1,8 @@
 // The validator-neutral half of every validators target: the module layout and export names, the descriptor,
 // the shared wire checks, and the plan of each schema and operation input with every refusal, which a target
 // renders in its own library.
+
+export { indexFile } from "./index-file.js";
 export {
   INDEX_MODULE,
   MODULE_EXTENSION,
@@ -25,7 +27,11 @@ export type {
   TypePlan,
   UnknownKeys,
 } from "./type-plan.js";
-export { planValidators, type ValidatorsPlan } from "./validators-plan.js";
+export {
+  planValidators,
+  planValidatorsCollectingRefusals,
+  type ValidatorsPlan,
+} from "./validators-plan.js";
 export {
   CODE_POINT_LENGTH,
   IS_DATE_TIME,
