@@ -63,6 +63,16 @@ test("a missing validators link names the packages of every accepted style", () 
   ]);
 });
 
+test("a missing validators link of a class-validator-only consumer names codegen-class-validator alone", () => {
+  const consumer = stubNodeServerTarget(["class-validator"]);
+
+  const refusals = refuseUnmetLinks(consumer.metadata.consumes, { types: TYPES_LINK });
+
+  expect(refusals.map((refusal) => refusal.fix)).toEqual([
+    "Link `@seampact/codegen-class-validator` in the target's `link` entry.",
+  ]);
+});
+
 test("a node server target with both styles accepts a class-validator link", () => {
   const consumer = stubNodeServerTarget(["standard-schema", "class-validator"]);
 

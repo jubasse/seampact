@@ -14,7 +14,7 @@ export const VALIDATOR_CHOICES: Readonly<Record<string, ValidatorChoice>> = {
 
 // The choice an id names, or an error listing the known ids.
 export function validatorChoice(id: string): ValidatorChoice {
-  const choice = VALIDATOR_CHOICES[id];
+  const choice = Object.hasOwn(VALIDATOR_CHOICES, id) ? VALIDATOR_CHOICES[id] : undefined;
 
   if (choice === undefined) {
     throw new Error(
