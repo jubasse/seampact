@@ -25,6 +25,8 @@ By default a response is the bare payload and an error is an RFC 9457 `applicati
 
 You install the core, then only the generators your project uses. Installing the CLI pulls no code generator.
 
+Already running end to end today: the core, `codegen-ts`, `codegen-zod`, `codegen-fetch`, `codegen-nestjs`, `codegen-express`, `codegen-fastify` and `codegen-adonis`, with the signed-webhook and in-memory idempotency helpers. Every other package below is planned for 1.0 unless a row says it comes later.
+
 ### Core (npm)
 
 | Package | What it does |
