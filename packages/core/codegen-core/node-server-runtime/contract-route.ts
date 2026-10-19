@@ -103,6 +103,9 @@ export type AccessEntry =
       readonly signed?: SignedSource;
       /** The CSRF companion header read on a write authenticated by a cookie scheme. */
       readonly csrfHeader?: string;
+      /** The principal schema's name and its validator, which every principal a hook returns must pass. */
+      readonly principalSchema: string;
+      readonly principalValidator: StandardValidator;
     };
 
 /** Where a value comes from: a path param, a resolved scope's id, a principal member or a holder's member. */
@@ -197,6 +200,9 @@ export interface ContractRoute {
     /** The limit query member and the value the handler receives when the client sends none. */
     readonly limitParam?: string;
     readonly defaultLimit?: number;
+    /** The signed sort query member and every value an item may take: each key, ascending or `-` descending. */
+    readonly sortParam?: string;
+    readonly sortKeys: readonly string[];
   };
   readonly cache?: {
     readonly etag: boolean;
@@ -335,15 +341,21 @@ export function decodeRequestParams(
     if (raw !== undefined) path[rule.name] = decodeWireString(decodePathParam(raw), rule.decoding);
   }
 
-  const query: Record<string, unknown> = {};
+  const queryValues = new Map<string, unknown[]>();
 
   for (const [name, raw] of new URLSearchParams(request.rawQuery)) {
     const rule = route.params.query.find((candidate) => candidate.name === name);
+    // An undeclared member reaches the strict validator raw, so it reports it.
+    const value = rule === undefined ? raw : decodeWireString(raw, rule.decoding);
 
-    // An undeclared or repeated member reaches the strict validator raw, so it reports it.
-    query[name] =
-      rule === undefined || Object.hasOwn(query, name) ? raw : decodeWireString(raw, rule.decoding);
+    queryValues.set(name, [...(queryValues.get(name) ?? []), value]);
   }
+
+  // A repeated member reaches the validator as the list of its values, so it reports it rather than one value
+  // winning: a proxy reading the first and the boundary the last would disagree.
+  const query: Record<string, unknown> = Object.fromEntries(
+    [...queryValues].map(([name, values]) => [name, values.length === 1 ? values[0] : values]),
+  );
 
   const headers: Record<string, unknown> = {};
 

@@ -45,7 +45,12 @@ interface ReferenceAppModule {
   };
   readonly scenario: {
     answers: Record<string, (input: unknown) => unknown>;
-    decide: (request: { name: string; purpose: { direction?: string } }) => unknown;
+    authenticate: (request: unknown) => unknown;
+    decide: (request: {
+      name: string;
+      proof?: unknown;
+      purpose: { direction?: string };
+    }) => unknown;
   };
   readonly AppReply: new (
     status: number,
@@ -352,6 +357,110 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
         { pointer: "/extra", rule: "unknownKeys" },
       ]),
     );
+  });
+
+  test.each([
+    ["a member off its schema", { userId: 42, admin: true }],
+    ["a string", "root"],
+  ])("a principal that is %s answers 500 and reaches no handler", async (_case, principal) => {
+    app.scenario.authenticate = () => ({ principal });
+
+    const reply = await send("GET", `/v1/channels/${CHANNEL}`, { headers: BEARER });
+
+    expect(reply.status).toBe(500);
+    expect(app.calls.unexpected).toEqual([
+      expect.objectContaining({
+        exceptionOrReply: expect.objectContaining({
+          message: expect.stringContaining("does not match its schema 'UserPrincipal'"),
+        }),
+      }),
+    ]);
+    expect(app.calls.handled).toEqual([]);
+  });
+
+  test("a scope id off its schema answers 400 before the resolver sees it", async () => {
+    const reply = await send("GET", "/v1/channels/x'%20OR%201=1--", { headers: BEARER });
+
+    expect(reply.status).toBe(400);
+    expect(JSON.parse(reply.text).issues).toEqual([{ pointer: "/channelId", rule: "format" }]);
+    expect(app.calls.scopeIds).toEqual([]);
+  });
+
+  test("a body proof off its field schema answers 400 before the decider sees it", async () => {
+    const proofs: unknown[] = [];
+
+    app.scenario.decide = (request) => {
+      proofs.push(request.proof);
+
+      return { allow: true };
+    };
+
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks/${TASK}/purge`, {
+      headers: writeHeaders(),
+      body: JSON.stringify({ reauthToken: { $ne: null } }),
+    });
+
+    expect(reply.status).toBe(400);
+    expect(JSON.parse(reply.text).issues).toEqual([{ pointer: "/reauthToken", rule: "type" }]);
+    expect(proofs).toEqual([]);
+  });
+
+  test("a valid body proof reaches the decider", async () => {
+    const proofs: unknown[] = [];
+
+    app.scenario.answers.purgeTask = () => ({ status: 204 });
+    app.scenario.decide = (request) => {
+      proofs.push(request.proof);
+
+      return { allow: true };
+    };
+
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks/${TASK}/purge`, {
+      headers: writeHeaders(),
+      body: JSON.stringify({ reauthToken: "token" }),
+    });
+
+    expect(reply.status).toBe(204);
+    expect(proofs).toEqual(["token"]);
+  });
+
+  test("a repeated text query key answers 400 rather than keeping one value", async () => {
+    const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks?cursor=a&cursor=b`, {
+      headers: BEARER,
+    });
+
+    expect(reply.status).toBe(400);
+    expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+    expect(JSON.parse(reply.text).issues).toEqual([{ pointer: "/cursor", rule: "type" }]);
+    expect(app.calls.handled).toEqual([]);
+  });
+
+  test("a sort key the operation does not declare answers 400, a declared one passes", async () => {
+    app.scenario.answers.listTasks = () => ({ status: 200, body: { items: [] } });
+
+    const unknown = await send("GET", `/v1/channels/${CHANNEL}/tasks?sort=-createdAt,title`, {
+      headers: BEARER,
+    });
+    const declared = await send("GET", `/v1/channels/${CHANNEL}/tasks?sort=-createdAt,createdAt`, {
+      headers: BEARER,
+    });
+
+    expect(unknown.status).toBe(400);
+    expect(JSON.parse(unknown.text).issues).toEqual([{ pointer: "/sort/1", rule: "enum" }]);
+    expect(declared.status).toBe(200);
+    expect(app.calls.handled).toEqual(["listTasks"]);
+  });
+
+  test("the same key on an equivalently encoded path replays the first reply", async () => {
+    const headers = writeHeaders();
+    const body = JSON.stringify({ title: "Plan" });
+    const first = await send("POST", `/v1/channels/${CHANNEL}/tasks`, { headers, body });
+    const encodedChannel = CHANNEL.replaceAll("-", "%2D");
+    const second = await send("POST", `/v1/channels/${encodedChannel}/tasks`, { headers, body });
+
+    expect([first.status, second.status]).toEqual([201, 201]);
+    expect(second.text).toBe(first.text);
+    expect(app.calls.handled).toEqual(["createTask"]);
   });
 
   test("the boot check lists a missing handler and an unknown override at once", async () => {

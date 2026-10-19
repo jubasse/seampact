@@ -1,46 +1,19 @@
 // Steps 6 and 7 of the check order (ADR 0012): the whole request validated in one pass by the validators link,
 // then restricted input fields. Copied into the generated tree as is.
 import { type AccessGrant, type CheckState, decide } from "./access-checks.js";
-import {
-  ContractError,
-  isPlainObject,
-  MAX_RENDERED_ISSUES,
-  roleError,
-  roleParams,
-} from "./contract-error.js";
-import { type ContractRoute, decodeRequestParams, type StandardIssue } from "./contract-route.js";
+import { ContractError, isPlainObject, roleParams } from "./contract-error.js";
+import type { ContractRoute } from "./contract-route.js";
+import { schemaInvalidError, validateRequest } from "./input-issues.js";
 
-const SCHEMA_INVALID_ROLE = "schemaInvalid";
 const FORBIDDEN_ROLE = "forbidden";
-const FALLBACK_RULE = "invalid";
-
-// The validator input's parts, as an issue's `in` names them (ADR 0006 section 6).
-const ISSUE_PARTS: Readonly<Record<string, string>> = {
-  path: "path",
-  query: "query",
-  headers: "header",
-  body: "body",
-};
-
-/** One `schemaInvalid` issue: the input part, the pointer inside it and the contract's rule name. */
-export interface InputIssue {
-  readonly in: string;
-  readonly pointer: string;
-  readonly rule: string;
-}
 
 /** Step 6: the validated input `{ path, query, headers, body }`, or a 400 with every issue. */
 export async function validateRequestInput(state: CheckState): Promise<unknown> {
-  const { route, request } = state;
-  const params = decodeRequestParams(route, request, state.pathParams);
-  const candidate = route.input === undefined ? params : { ...params, body: request.body };
-  const result = await route.validator["~standard"].validate(candidate);
+  const validation = await validateRequest(state);
 
-  if (result.issues === undefined) return withDefaultLimit(route, result.value);
+  if (validation.issues.length === 0) return withDefaultLimit(state.route, validation.value);
 
-  const issues = inputIssues(candidate, result.issues);
-
-  throw roleError(route, SCHEMA_INVALID_ROLE, { issues: issues.slice(0, MAX_RENDERED_ISSUES) });
+  throw schemaInvalidError(state.route, validation.issues);
 }
 
 // The paging limit the client did not send is the contract's default, as the handler receives it.
@@ -54,102 +27,6 @@ function withDefaultLimit(route: ContractRoute, input: unknown): unknown {
   if (input.query[paging.limitParam] !== undefined) return input;
 
   return { ...input, query: { ...input.query, [paging.limitParam]: paging.defaultLimit } };
-}
-
-// The validator's issues named by the contract's rules (`minLength`, `required`, ...), never the validator's codes.
-function inputIssues(candidate: unknown, issues: readonly StandardIssue[]): InputIssue[] {
-  return issues.flatMap((issue) => {
-    const keys = (issue.path ?? []).map((segment) =>
-      typeof segment === "object" ? String(segment.key) : String(segment),
-    );
-    const code = issueMember(issue, "code");
-
-    if (code === "unrecognized_keys") {
-      const unknownKeys = issueMember(issue, "keys");
-
-      return (Array.isArray(unknownKeys) ? unknownKeys : []).map((key) =>
-        renderedIssue([...keys, String(key)], "unknownKeys"),
-      );
-    }
-
-    return [renderedIssue(keys, contractRule(issue, valueAt(candidate, keys)))];
-  });
-}
-
-function renderedIssue(keys: readonly string[], rule: string): InputIssue {
-  const [part = "", ...inside] = keys;
-
-  return {
-    in: ISSUE_PARTS[part] ?? part,
-    pointer: inside.map((key) => `/${key.replaceAll("~", "~0").replaceAll("/", "~1")}`).join(""),
-    rule,
-  };
-}
-
-function contractRule(issue: StandardIssue, value: unknown): string {
-  const origin = issueMember(issue, "origin");
-  const exclusive = issueMember(issue, "inclusive") === false;
-
-  switch (issueMember(issue, "code")) {
-    case "invalid_type":
-      return value === undefined ? "required" : "type";
-    case "too_small":
-      return origin === "string"
-        ? "minLength"
-        : origin === "array" || origin === "set"
-          ? "minItems"
-          : exclusive
-            ? "exclusiveMinimum"
-            : "minimum";
-    case "too_big":
-      return origin === "string"
-        ? "maxLength"
-        : origin === "array" || origin === "set"
-          ? "maxItems"
-          : exclusive
-            ? "exclusiveMaximum"
-            : "maximum";
-    // The validators link writes a regex only for a format; a `pattern` refinement is refused there.
-    case "invalid_format":
-      return "format";
-    case "not_multiple_of":
-      return "multipleOf";
-    case "invalid_value":
-      return "enum";
-    case "invalid_union":
-      return "oneOf";
-    case "invalid_key":
-    case "invalid_element":
-      return "type";
-    case "custom":
-      return customRule(issue);
-    default:
-      return FALLBACK_RULE;
-  }
-}
-
-// The validators link names the contract rule of each custom check in its `params`.
-function customRule(issue: StandardIssue): string {
-  const params = issueMember(issue, "params");
-  const rule = isPlainObject(params) ? params.rule : undefined;
-
-  return typeof rule === "string" ? rule : FALLBACK_RULE;
-}
-
-function issueMember(issue: StandardIssue, name: string): unknown {
-  return Reflect.get(issue, name);
-}
-
-function valueAt(value: unknown, keys: readonly string[]): unknown {
-  return keys.reduce<unknown>(
-    (current, key) =>
-      Array.isArray(current)
-        ? current[Number(key)]
-        : isPlainObject(current)
-          ? current[key]
-          : undefined,
-    value,
-  );
 }
 
 /** Step 7: a restricted input field sent without its right is refused with its pointer, or stripped. */
