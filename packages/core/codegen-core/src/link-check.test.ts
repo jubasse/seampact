@@ -20,7 +20,7 @@ function linksWithValidatorStyle(style: ValidatorStyle): LinkSet {
   };
 }
 
-function stubNodeServerTarget(validatorStyles?: readonly ValidatorStyle[]) {
+function stubNodeServerTarget(validatorStyles: readonly ValidatorStyle[]) {
   return nodeServerTarget({
     packageName: "@seampact/codegen-stub",
     packageVersion: "1.2.3",
@@ -31,12 +31,12 @@ function stubNodeServerTarget(validatorStyles?: readonly ValidatorStyle[]) {
       frameworkModule: "stub",
       frameworkSource: () => "",
     },
-    ...(validatorStyles === undefined ? {} : { validatorStyles }),
+    validatorStyles,
   });
 }
 
 test("a class-validator link on a standard-schema consumer is refused, naming codegen-zod and codegen-yup", () => {
-  const consumer = stubNodeServerTarget();
+  const consumer = stubNodeServerTarget(["standard-schema"]);
 
   const refusals = refuseUnmetLinks(
     consumer.metadata.consumes,
