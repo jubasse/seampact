@@ -48,7 +48,8 @@ export async function beginIdempotency(
   const principalDigest =
     grant.principal === null || grant.principal === undefined ? "" : digest([grant.principal]);
   const key = digest([state.api.id, route.id, grant.identity ?? "", principalDigest, clientKey]);
-  const fingerprint = digest([state.request.method, state.request.path, input]);
+  // The validated input holds the decoded path params, so an equivalent encoding of the path is the same request.
+  const fingerprint = digest([route.method, route.path, input]);
   const begin = await store.begin({
     key,
     fingerprint,

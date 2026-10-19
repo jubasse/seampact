@@ -1,6 +1,7 @@
-// Steps 2 to 5 of the check order (ADR 0012): authenticate, scopes outermost first, then requirements in declared
-// order, each hook call wrapped. Principal requirements and bindings are refused by the generator until a
-// contract needs them. Copied into the generated tree as is.
+// Steps 2 to 5 of the check order (ADR 0012): authenticate with the principal validated against its schema, scopes
+// outermost first with each id validated, then requirements in declared order with each body proof validated, each
+// hook call wrapped. Principal requirements and bindings are refused by the generator until a contract needs them.
+// Copied into the generated tree as is.
 import { createHash } from "node:crypto";
 import type {
   AuthenticateRequest,
@@ -27,9 +28,17 @@ import {
   decodePathParam,
   headerValue,
   headerValues,
+  type RequirementEntry,
   type SubjectEntry,
   type ValueSource,
 } from "./contract-route.js";
+import {
+  issuePointer,
+  issuesOnMember,
+  type RequestValidation,
+  schemaInvalidError,
+  validateRequest,
+} from "./input-issues.js";
 import { parseSignatureHeader } from "./signature-header.js";
 import type { PlatformFixes } from "./transport-checks.js";
 
@@ -58,26 +67,83 @@ const COOKIE_SEPARATOR = ";";
 
 /** Steps 2 to 5; throws a `ContractError` at the first refusal. */
 export async function authorizeRequest(state: CheckState): Promise<AccessGrant> {
+  const validation = onceValidated(state);
   const authenticated = await authenticate(state);
-  const scopes = await resolveScopes(state, authenticated.principal);
+  const scopes = await resolveScopes(state, authenticated.principal, validation);
   const grant: AccessGrant = { ...authenticated, scopes };
 
   for (const requirement of state.route.requires) {
+    const proof =
+      requirement.proof === undefined
+        ? undefined
+        : { value: validatedMember(state, await validation(), "body", requirement.proof) };
+    const pathValues = await validatedPathValues(state, requirement, validation);
     const decision = await decide(state, grant, {
       kind: requirement.kind,
       name: requirement.name,
       params: requirement.params,
       subject: requirement.subject,
-      proof: requirement.proof,
+      proof,
       bucket: requirement.bucket,
       errors: requirement.errors,
       purpose: { kind: "route" },
+      pathValues,
     });
 
     if (decision !== undefined) throw decision;
   }
 
   return grant;
+}
+
+// The request validated at most once, and only when a scope id or a body proof needs it before step 6.
+function onceValidated(state: CheckState): () => Promise<RequestValidation> {
+  let validation: Promise<RequestValidation> | undefined;
+
+  return () => {
+    validation ??= validateRequest(state);
+
+    return validation;
+  };
+}
+
+// The path params a requirement's subject id or bucket key reads, each validated before its decider sees it.
+async function validatedPathValues(
+  state: CheckState,
+  requirement: RequirementEntry,
+  validation: () => Promise<RequestValidation>,
+): Promise<Record<string, unknown>> {
+  const sources = [
+    ...(requirement.subject === undefined ? [] : [requirement.subject.source]),
+    ...(requirement.bucket?.key ?? []),
+  ];
+  const pathValues: Record<string, unknown> = {};
+
+  for (const source of sources) {
+    if (source.in !== "path") continue;
+
+    pathValues[source.name] = validatedMember(state, await validation(), "path", source.name);
+  }
+
+  return pathValues;
+}
+
+// A member a hook receives before step 6: its issues answer the `schemaInvalid` 400 now, else its value, the
+// validator's output when the whole request passed, the decoded value when only other members failed.
+function validatedMember(
+  state: CheckState,
+  validation: RequestValidation,
+  part: "path" | "body",
+  member: string,
+): unknown {
+  const issues = issuesOnMember(validation, part, member);
+
+  if (issues.length > 0) throw schemaInvalidError(state.route, issues);
+
+  const request = validation.issues.length === 0 ? validation.value : validation.candidate;
+  const values = isPlainObject(request) ? request[part] : undefined;
+
+  return isPlainObject(values) ? values[member] : undefined;
 }
 
 /** The operation as hooks receive it. */
@@ -131,10 +197,34 @@ async function authenticate(state: CheckState): Promise<Omit<AccessGrant, "scope
     result.principal !== undefined &&
     result.principal !== null
   ) {
-    return { identity: access.identity, principal: result.principal };
+    return {
+      identity: access.identity,
+      principal: await validatedPrincipal(state, access, result.principal),
+    };
   }
 
   throw denialOf(state.route, result, declaredCodes(state.route));
+}
+
+// A principal off its schema is the app's bug: a 500 reported to the hook, never a caller let in.
+async function validatedPrincipal(
+  state: CheckState,
+  access: Extract<AccessEntry, { kind: "identity" }>,
+  principal: unknown,
+): Promise<unknown> {
+  const result = await access.principalValidator["~standard"].validate(principal);
+
+  if (result.issues === undefined) return result.value;
+
+  const pointers = result.issues.map((issue) => `'${issuePointer(issue)}'`).join(", ");
+
+  throw unexpectedError(
+    state.route,
+    new Error(
+      `the authenticate hook of the identity '${access.identity}' answered a principal that does not match ` +
+        `its schema '${access.principalSchema}' (issues at ${pointers}). Return a principal of that schema.`,
+    ),
+  );
 }
 
 // Undefined when the request carries none of the identity's credentials, or a malformed signature header.
@@ -253,7 +343,11 @@ function unauthenticatedCode(route: ContractRoute): string {
   return code;
 }
 
-async function resolveScopes(state: CheckState, principal: unknown): Promise<ResolvedScope[]> {
+async function resolveScopes(
+  state: CheckState,
+  principal: unknown,
+  validation: () => Promise<RequestValidation>,
+): Promise<ResolvedScope[]> {
   const resolved: ResolvedScope[] = [];
 
   for (const scope of state.route.scopes) {
@@ -263,7 +357,17 @@ async function resolveScopes(state: CheckState, principal: unknown): Promise<Res
       throw unexpectedError(state.route, new Error(`no scope resolver for '${scope.scope}'`));
     }
 
-    const id = sourceValue(state, scope.source, { principal, scopes: resolved });
+    // The route table reads a scope id from a path param only, so the operation's validator checks it.
+    if (scope.source.in !== "path") {
+      throw unexpectedError(
+        state.route,
+        new Error(
+          `the scope '${scope.scope}' reads its id from '${scope.source.in}', not a path param`,
+        ),
+      );
+    }
+
+    const id = validatedMember(state, await validation(), "path", scope.source.name);
     const result: unknown = await callHook(
       () =>
         hook.resolveScope({
@@ -306,7 +410,8 @@ export interface DecideQuestion {
   readonly name: string;
   readonly params?: unknown | undefined;
   readonly subject?: SubjectEntry | undefined;
-  readonly proof?: string | undefined;
+  /** The rule's body proof, validated against its field schema. */
+  readonly proof?: { readonly value: unknown } | undefined;
   readonly bucket?:
     | undefined
     | {
@@ -319,6 +424,8 @@ export interface DecideQuestion {
   readonly purpose: Purpose;
   /** The holder object of an output field, the subject's record. */
   readonly holder?: Readonly<Record<string, unknown>> | undefined;
+  /** Path params already validated before step 6, read in place of the decoded wire value. */
+  readonly pathValues?: Readonly<Record<string, unknown>> | undefined;
 }
 
 export async function decide(
@@ -342,12 +449,10 @@ export async function decide(
     principal: grant.principal ?? null,
     ...subjectMember(state, grant, question),
     scopes: grant.scopes,
-    ...(question.proof === undefined
-      ? {}
-      : { proof: bodyMember(state.request.body, question.proof) }),
+    ...(question.proof === undefined ? {} : { proof: question.proof.value }),
     ...(question.bucket === undefined
       ? {}
-      : { bucket: throttleBucket(state, grant, question.bucket) }),
+      : { bucket: throttleBucket(state, grant, question.bucket, question) }),
     purpose: question.purpose,
     operation: operationRef(state),
     request: requestView(state),
@@ -371,7 +476,7 @@ function subjectMember(
 ): { subject?: SubjectRef } {
   if (question.subject === undefined) return {};
 
-  const id = sourceValue(state, question.subject.source, grant, question.holder);
+  const id = sourceValue(state, question.subject.source, grant, question);
 
   return {
     subject: {
@@ -386,8 +491,9 @@ function throttleBucket(
   state: CheckState,
   grant: AccessGrant,
   bucket: NonNullable<DecideQuestion["bucket"]>,
+  question: DecideQuestion,
 ): ThrottleBucket {
-  const values = bucket.key.map((source) => sourceValue(state, source, grant));
+  const values = bucket.key.map((source) => sourceValue(state, source, grant, question));
 
   return {
     id: bucket.id,
@@ -404,10 +510,14 @@ function sourceValue(
   state: CheckState,
   source: ValueSource,
   grant: { readonly principal: unknown; readonly scopes: readonly ResolvedScope[] },
-  holder?: Readonly<Record<string, unknown>>,
+  question: Pick<DecideQuestion, "holder" | "pathValues">,
 ): unknown {
   switch (source.in) {
     case "path": {
+      if (question.pathValues !== undefined && Object.hasOwn(question.pathValues, source.name)) {
+        return question.pathValues[source.name];
+      }
+
       const raw = state.pathParams[source.name];
 
       return raw === undefined ? undefined : decodePathParam(raw);
@@ -418,12 +528,8 @@ function sourceValue(
     case "principal":
       return isPlainObject(grant.principal) ? grant.principal[source.name] : undefined;
     case "holderField":
-      return holder?.[source.name];
+      return question.holder?.[source.name];
   }
-}
-
-function bodyMember(body: unknown, name: string): unknown {
-  return isPlainObject(body) ? body[name] : undefined;
 }
 
 // A hook's denial naming a declared code; anything else (an undeclared code, both arms, neither) is a 500.

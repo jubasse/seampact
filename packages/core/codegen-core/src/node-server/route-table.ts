@@ -3,6 +3,7 @@ import {
   isKnownVariant,
   type Operation,
   type Param,
+  type Principal,
   type Template,
   type TypeUse,
   type WireFormat,
@@ -35,6 +36,15 @@ const JSON_MEDIA = "application/json";
 const BOUNDARY_ENFORCEMENT = "boundary";
 const CURSOR_ROLE = "cursor";
 const LIMIT_ROLE = "limit";
+const SORT_ROLE = "sort";
+const SIGNED_SORT_STYLE = "signed";
+const DESCENDING_PREFIX = "-";
+
+// The validators link's descriptor and the module's imports of its validators.
+interface ValidatorLink {
+  readonly validators: ValidatorsDescriptor;
+  readonly imports: ModuleImports;
+}
 
 // A value written into the module as source text, such as an imported validator.
 class SourceExpression {
@@ -167,10 +177,10 @@ function routeEntry(
     method: operation.method,
     path: operation.path,
     safe: operation.safe,
-    access: accessEntry(ir, operation, location, refusals),
+    access: accessEntry(ir, operation, location, { validators, imports }, refusals),
     scopes: operation.scopes.map((scope, index) => ({
       scope: scope.scope,
-      source: valueSource(
+      source: scopeSource(
         scope.source,
         below(location, "scopes", String(index), "source"),
         refusals,
@@ -306,10 +316,10 @@ function handlerForms(
     ],
     [
       "paging.sortKeys",
-      "The sort keys",
+      "The page order by the sort keys",
       (operation.paging?.sortKeys.length ?? 0) > 0,
       "paging",
-      "Order the page by the sort key the boundary validated.",
+      "Order the page by the sort keys in the input, mapping each to a fixed column, never writing the client's string into the query; the boundary already refuses a key the operation does not declare.",
     ],
     [
       "identity.headers",
@@ -351,7 +361,7 @@ function refuseOperationForms(
     [
       "paging.sortKey.restricted",
       "A restricted sort key",
-      (operation.paging?.sortKeys ?? []).some((key) => "restrictedTo" in key),
+      (operation.paging?.sortKeys ?? []).some((key) => key.right !== undefined),
       "paging",
     ],
   ];
@@ -365,6 +375,7 @@ function accessEntry(
   ir: ContractIR,
   operation: Operation,
   location: IrLocation,
+  link: ValidatorLink,
   refusals: Refusal[],
 ): SourceValue {
   const access = operation.access;
@@ -407,6 +418,8 @@ function accessEntry(
       ? csrf.header
       : undefined;
 
+  const principal = principalEntry(identity.principal, link, accessLocation, refusals);
+
   if (identity.kind === "signed") {
     return {
       kind: "identity",
@@ -414,18 +427,80 @@ function accessEntry(
       anonymousAllowed,
       credentials: [],
       signed: signedSource(ir, identity.signed, accessLocation, refusals),
+      ...principal,
     };
   }
 
   return {
     kind: "identity",
     identity: access.identity,
+    ...principal,
     anonymousAllowed,
     credentials: access.schemes.map((schemeId) =>
       credentialSource(ir, schemeId, accessLocation, refusals),
     ),
     csrfHeader,
   };
+}
+
+// The principal schema's output validator: the boundary checks every principal a hook returns against it.
+function principalEntry(
+  principal: Principal,
+  link: ValidatorLink,
+  location: IrLocation,
+  refusals: Refusal[],
+): { principalSchema?: string; principalValidator?: SourceExpression } {
+  if (!isKnownVariant("Principal", principal)) {
+    refusals.push(refuseUnknownValueAt(below(location, "principal", "kind"), principal.kind));
+
+    return {};
+  }
+
+  if (principal.kind === "variants") {
+    refusals.push(
+      refuseNotGeneratedYet("principal.variants", "A principal with variants", location),
+    );
+
+    return {};
+  }
+
+  const validatorRef = Object.hasOwn(link.validators.schemas, principal.schema)
+    ? link.validators.schemas[principal.schema]?.output
+    : undefined;
+
+  if (validatorRef === undefined) {
+    refusals.push(
+      refuseInconsistentIr(
+        "link.validators.principal.missing",
+        `The validators link has no output validator for the principal schema '${principal.schema}'`,
+        location,
+      ),
+    );
+
+    return {};
+  }
+
+  return {
+    principalSchema: principal.schema,
+    principalValidator: link.imports.expression(validatorRef.module, validatorRef.export),
+  };
+}
+
+// A scope id is validated by the operation's input validator before its resolver runs, so it is a path param.
+function scopeSource(
+  source: { in: string; name?: string },
+  location: IrLocation,
+  refusals: Refusal[],
+): SourceValue {
+  if (source.in !== "path") {
+    refusals.push(
+      refuseNotGeneratedYet("scope.source", `A scope id read from '${source.in}'`, location),
+    );
+
+    return { in: source.in, name: source.name };
+  }
+
+  return valueSource(source, location, refusals);
 }
 
 function credentialSource(
@@ -874,11 +949,38 @@ function pagingEntry(
     return undefined;
   }
 
+  const sort = style.request.find((role) => role.role === SORT_ROLE);
+
+  if (sort !== undefined && (sort.style ?? SIGNED_SORT_STYLE) !== SIGNED_SORT_STYLE) {
+    refusals.push(
+      refuseNotGeneratedYet(
+        "paging.sort.style",
+        `The sort style '${sort.style ?? ""}'`,
+        below(location, "paging"),
+      ),
+    );
+  }
+
+  if (sort !== undefined && sort.in !== "query") {
+    refusals.push(
+      refuseNotGeneratedYet(
+        "paging.sort.in",
+        `A sort role in '${sort.in}'`,
+        below(location, "paging"),
+      ),
+    );
+  }
+
   return {
     cursorParam: cursor.name,
     nextCursorMember: nextCursor,
     limitParam: style.request.find((role) => role.role === LIMIT_ROLE)?.name,
     defaultLimit: paging.defaultLimit,
+    sortParam: sort?.name,
+    sortKeys: paging.sortKeys.flatMap((sortKey) => [
+      sortKey.key,
+      `${DESCENDING_PREFIX}${sortKey.key}`,
+    ]),
   };
 }
 
