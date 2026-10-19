@@ -13,7 +13,12 @@ export { handlerMapDeclarations, largestBodyLimit } from "./handler-map-module.j
 export { type NodeServerOptions, parseNodeServerOptions, type ResponsesMode } from "./options.js";
 export { compareRouteSpecificity } from "./route-order.js";
 export { type RouteTableOptions, routeTableSource } from "./route-table.js";
-export { NODE_SERVER_RUNTIME_DIRECTORY, nodeServerRuntimeFiles } from "./runtime-files.js";
+export {
+  NODE_SERVER_RUNTIME_DIRECTORY,
+  nodeServerRuntimeFiles,
+  SERVER_RUNTIME_DIRECTORIES,
+  type ServerRuntimeProfile,
+} from "./runtime-files.js";
 export {
   handlerInterfaceName,
   handlersSource,

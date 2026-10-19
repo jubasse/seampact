@@ -21,6 +21,7 @@ import {
   claimsBasePathAlone,
   registerBasePathClaim,
 } from "./node-server/base-path-claims.js";
+import { type BoundaryContext, boundaryContext } from "./node-server/boundary-context.js";
 import {
   type BootProblem,
   type BoundaryHooks,
@@ -48,8 +49,6 @@ import {
   logWriteFailure,
   notFoundError,
   type ReportedRequest,
-  respondNotServed,
-  respondWithError,
 } from "./node-server/error-reply.js";
 import {
   type HandlerBindings,
@@ -61,18 +60,18 @@ import {
   settingsOf,
 } from "./node-server/handler-map.js";
 import { validateRequestInput } from "./node-server/input-checks.js";
+import { installOutgoingCheck } from "./node-server/node-outgoing-check.js";
+import {
+  respondNotServed,
+  respondWithError,
+  writeContractReply,
+} from "./node-server/node-reply.js";
 import {
   bodyParserError,
   contractRequest,
   pathnameOf,
   reportedRequest,
 } from "./node-server/node-request.js";
-import {
-  type BoundaryContext,
-  boundaryContext,
-  installOutgoingCheck,
-  writeContractReply,
-} from "./node-server/outgoing-check.js";
 import {
   bodySizeRefusal,
   IDENTITY_ENCODING,

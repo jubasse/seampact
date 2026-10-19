@@ -2,13 +2,13 @@
 // registration"): the registration options, their boot check, the `responses` and `bodyValidation` settings of one
 // operation, and steps 6 to 9 around the bound handler method. Copied into the generated tree as is.
 import type { AccessGrant, CheckState } from "./access-checks.js";
+import type { BoundaryContext } from "./boundary-context.js";
 import type { BootProblem, BoundaryHooks } from "./boundary-hooks.js";
 import { type ContractReply, isPlainObject, unexpectedError } from "./contract-error.js";
 import type { ContractApi, ContractRoute, ResponsesMode } from "./contract-route.js";
 import { handlerReply } from "./handler-reply.js";
 import { beginIdempotency } from "./idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./input-checks.js";
-import type { BoundaryContext } from "./outgoing-check.js";
 
 const RESPONSES_MODES: readonly string[] = ["strict", "warn"];
 

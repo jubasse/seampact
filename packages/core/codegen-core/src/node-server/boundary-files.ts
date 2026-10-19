@@ -110,7 +110,7 @@ export function nodeServerBoundaryFiles(
   if (refusals.length > 0) return { status: "refused", refusals: withoutRepeats(refusals) };
 
   const files: GeneratedFile[] = [
-    ...nodeServerRuntimeFiles(),
+    ...nodeServerRuntimeFiles("node"),
     {
       path: moduleFile(placement.runtimeModule),
       contents: readFileSync(placement.runtimeSourceUrl, "utf8"),

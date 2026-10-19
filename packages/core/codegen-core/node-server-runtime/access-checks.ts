@@ -2,7 +2,6 @@
 // outermost first with each id validated, then requirements in declared order with each body proof validated, each
 // hook call wrapped. Principal requirements and bindings are refused by the generator until a contract needs them.
 // Copied into the generated tree as is.
-import { createHash } from "node:crypto";
 import type {
   AuthenticateRequest,
   OperationRef,
@@ -44,6 +43,7 @@ import {
   schemaInvalidError,
   validateRequest,
 } from "./input-issues.js";
+import { sha256Hex } from "./sha256.js";
 import { parseSignatureHeader } from "./signature-header.js";
 import type { PlatformFixes } from "./transport-checks.js";
 import { decodePathParam } from "./wire-decoding.js";
@@ -489,7 +489,7 @@ export async function decide(
     ...(question.proof === undefined ? {} : { proof: question.proof.value }),
     ...(question.bucket === undefined
       ? {}
-      : { bucket: throttleBucket(state, grant, question.bucket, question) }),
+      : { bucket: await throttleBucket(state, grant, question.bucket, question) }),
     purpose: question.purpose,
     operation: operationRef(state),
     request: requestView(state),
@@ -524,19 +524,17 @@ function subjectMember(
   };
 }
 
-function throttleBucket(
+async function throttleBucket(
   state: CheckState,
   grant: AccessGrant,
   bucket: NonNullable<DecideQuestion["bucket"]>,
   question: DecideQuestion,
-): ThrottleBucket {
+): Promise<ThrottleBucket> {
   const values = bucket.key.map((source) => sourceValue(state, source, grant, question));
 
   return {
     id: bucket.id,
-    key: createHash("sha256")
-      .update(JSON.stringify([state.api.id, bucket.id, values]))
-      .digest("hex"),
+    key: await sha256Hex(JSON.stringify([state.api.id, bucket.id, values])),
     values,
     ...(bucket.limit === undefined ? {} : { limit: bucket.limit }),
     ...(bucket.windowMs === undefined ? {} : { windowMs: bucket.windowMs }),

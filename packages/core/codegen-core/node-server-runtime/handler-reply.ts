@@ -1,7 +1,6 @@
 // Step 10 of the check order (ADR 0012) for the handler's result: a declared error becomes a contract error; a
 // declared success is projected (restricted output fields absent, undeclared members stripped), paged, given its
 // derived ETag or 304 and its cache headers. Copied into the generated tree as is.
-import { createHash } from "node:crypto";
 import { type AccessGrant, type CheckState, decide } from "./access-checks.js";
 import {
   ContractError,
@@ -15,6 +14,7 @@ import {
   type ResponseEntry,
   type ValueShape,
 } from "./contract-route.js";
+import { sha256Base64Url } from "./sha256.js";
 import { withQueryMember } from "./wire-decoding.js";
 
 const JSON_MEDIA = "application/json";
@@ -88,7 +88,7 @@ async function successReply(
   appendCacheHeaders(route, grant, headers);
 
   if (route.cache?.etag === true) {
-    const etag = `"${createHash("sha256").update(body).digest("base64url")}"`;
+    const etag = `"${await sha256Base64Url(body)}"`;
 
     headers.push(["etag", etag]);
 
