@@ -9,7 +9,9 @@ import {
   generateReferenceProject,
   problemBody,
   projectDirectory,
+  referenceChanges,
   referenceNoStoreCode,
+  referenceNoStoreOperation,
   type RawReply,
   type ReferenceIrChange,
   sendRawRequest,
@@ -96,7 +98,10 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
       project,
       expressTarget,
       { bodyValidation: true },
-      referenceNoStoreCode(NO_STORE_CODE),
+      referenceChanges(
+        referenceNoStoreCode(NO_STORE_CODE),
+        referenceNoStoreOperation("getPreferences"),
+      ),
     );
 
     expect(emitProject(project, files, build)).toEqual([]);
@@ -236,6 +241,43 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
     expect(tooLarge.headers["cache-control"]).toBe("no-store");
     expect(malformed.status).toBe(400);
     expect(malformed.headers["cache-control"]).toBeUndefined();
+  });
+
+  test("a declared noStore code the handler answers carries Cache-Control: no-store", async () => {
+    app.scenario.answers.createTask = () => ({ status: 413, code: NO_STORE_CODE });
+
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+      headers: writeHeaders(),
+      body: JSON.stringify({ title: "Plan" }),
+    });
+
+    expect(reply.status).toBe(413);
+    expect(reply.headers["cache-control"]).toBe("no-store");
+  });
+
+  test("an app-written noStore error reply without Cache-Control: no-store is replaced by a 500", async () => {
+    app.scenario.answers.createTask = () => {
+      throw new app.AppReply(413, PROBLEM_MEDIA, problemBody(NO_STORE_CODE, 413));
+    };
+
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+      headers: writeHeaders(),
+      body: JSON.stringify({ title: "Plan" }),
+    });
+
+    expect(reply.status).toBe(500);
+    expect(app.calls.unexpected).toHaveLength(1);
+  });
+
+  test("an app-written success reply of a noStore operation without no-store is replaced by a 500", async () => {
+    app.scenario.answers.getPreferences = () => {
+      throw new app.AppReply(200, "application/json", JSON.stringify({ locale: "en" }));
+    };
+
+    const reply = await send("GET", "/v1/me/preferences", { headers: BEARER });
+
+    expect(reply.status).toBe(500);
+    expect(app.calls.unexpected).toHaveLength(1);
   });
 
   test("a corrupt gzip body is the client's 400, not a server failure", async () => {

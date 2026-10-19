@@ -131,6 +131,27 @@ export function referenceNoStoreCode(code: string): ReferenceIrChange {
   };
 }
 
+/** Marks one cached operation of the `tasks` api `noStore`, as the compiler does for a sensitive field it returns. */
+export function referenceNoStoreOperation(operationId: string): ReferenceIrChange {
+  return (ir, api) => {
+    if (api !== "tasks") return ir;
+
+    return {
+      ...ir,
+      operations: ir.operations.map((operation) =>
+        operation.id === operationId && operation.cache !== undefined
+          ? { ...operation, cache: { ...operation.cache, noStore: true } }
+          : operation,
+      ),
+    };
+  };
+}
+
+/** Applies each change to the golden IR in order. */
+export function referenceChanges(...changes: readonly ReferenceIrChange[]): ReferenceIrChange {
+  return (ir, api) => changes.reduce((changed, change) => change(changed, api), ir);
+}
+
 /** Writes both reference apis' generated trees into a fresh project; returns every file written. */
 export async function generateReferenceProject(
   project: string,

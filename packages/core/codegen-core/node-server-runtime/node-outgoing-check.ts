@@ -22,6 +22,7 @@ import {
   warnViolation,
 } from "./outgoing-verdict.js";
 import {
+  CACHE_CONTROL_HEADER,
   CONTENT_ENCODING_HEADER,
   CONTENT_LENGTH_HEADER,
   CONTENT_TYPE_HEADER,
@@ -115,7 +116,7 @@ export function installOutgoingCheck(
     // Express's weak ETag, on any status the boundary did not write (ADR 0012 step 10).
     response.removeHeader(ETAG_HEADER);
 
-    const verdict = statusVerdict(context, status);
+    const verdict = statusVerdict(context, status, cacheControlOf(response));
 
     if (verdict.kind === "violation") {
       violation(verdict.reason);
@@ -150,6 +151,7 @@ export function installOutgoingCheck(
               context,
               response.statusCode,
               String(response.getHeader(CONTENT_TYPE_HEADER) ?? ""),
+              cacheControlOf(response),
               decoded,
             )
           : await successBodyViolation(context, response.statusCode, decoded);
@@ -254,6 +256,13 @@ export function installOutgoingCheck(
 
     return response;
   });
+}
+
+// The reply's `Cache-Control` as one string; a header set several times joins in order.
+function cacheControlOf(response: ServerResponse): string {
+  const value = response.getHeader(CACHE_CONTROL_HEADER);
+
+  return Array.isArray(value) ? value.join(", ") : String(value ?? "");
 }
 
 // Moves the headers of `writeHead(status, [message,] headers)` onto the response, so the check sees them as it sees
