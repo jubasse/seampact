@@ -2,11 +2,16 @@
 // describes, sends it with the platform fetch, and sorts the response into a success, a declared error or an
 // unexpected answer. Response bodies are not checked: unknown keys and enum members reach the caller as sent.
 
-/** The client's settings: the server root, an optional fetch (for credentials or tests) and default headers. */
+/**
+ * The client's settings: the server root, an optional fetch (for credentials, tests or a platform without a global
+ * fetch), default headers, and an optional idempotency key generator (for a platform without
+ * `crypto.randomUUID`, such as React Native's Hermes).
+ */
 export interface ClientConfig {
   readonly baseUrl: string;
   readonly fetch?: typeof fetch;
   readonly headers?: Readonly<Record<string, string>>;
+  readonly idempotencyKey?: () => string;
 }
 
 /** Per-call settings: a caller signal, and a timeout that wins over the operation's budget. */
@@ -186,6 +191,35 @@ export async function callOperationOrThrow<Success, Operation extends string>(
   return asDeclared(answer);
 }
 
+/**
+ * Refuses, when the client is created, a config that a call would fail on: no fetch on the platform and none
+ * given, or an operation with a generated idempotency key, no `crypto.randomUUID` and no generator given.
+ */
+export function checkClientConfig(
+  config: ClientConfig,
+  plans: Readonly<Record<string, OperationPlan>>,
+): void {
+  if (config.fetch === undefined && typeof globalThis.fetch !== "function") {
+    throw new TypeError(
+      "This platform has no global fetch: pass one as `fetch` in the client config.",
+    );
+  }
+
+  const generatesKeys = Object.values(plans).some((plan) => plan.idempotency !== undefined);
+
+  if (generatesKeys && config.idempotencyKey === undefined && platformRandomUuid() === undefined) {
+    throw new TypeError(
+      "This platform has no crypto.randomUUID to generate idempotency keys: pass a generator as `idempotencyKey` in the client config.",
+    );
+  }
+}
+
+function platformRandomUuid(): (() => string) | undefined {
+  const platformCrypto: { readonly randomUUID?: () => string } | undefined = globalThis.crypto;
+
+  return typeof platformCrypto?.randomUUID === "function" ? () => crypto.randomUUID() : undefined;
+}
+
 // The one unchecked step: the response is read as the contract declares it, never validated.
 function asDeclared<Declared>(answer: Answer): Declared {
   return answer as Declared;
@@ -200,14 +234,20 @@ async function answerOf(
   const timeoutMs = options.timeoutMs ?? plan.budgetMs;
   const headers = requestHeaders(config, plan, request, timeoutMs);
   const send = config.fetch ?? fetch;
-  const response = await send(requestUrl(config, plan, request), {
-    method: plan.method.toUpperCase(),
-    headers,
-    ...(plan.hasJsonBody ? { body: JSON.stringify(request.body) } : {}),
-    ...signalMember(options.signal, timeoutMs),
-  });
+  const { member, release } = callSignal(options.signal, timeoutMs);
 
-  return readAnswer(plan, response);
+  try {
+    const response = await send(requestUrl(config, plan, request), {
+      method: plan.method.toUpperCase(),
+      headers,
+      ...(plan.hasJsonBody ? { body: JSON.stringify(request.body) } : {}),
+      ...member,
+    });
+
+    return await readAnswer(plan, response);
+  } finally {
+    release();
+  }
 }
 
 function requestUrl(config: ClientConfig, plan: OperationPlan, request: RequestValues): string {
@@ -266,7 +306,7 @@ function requestHeaders(
   if (plan.hasJsonBody) headers.set("content-type", JSON_MEDIA);
 
   if (plan.idempotency !== undefined && !headers.has(plan.idempotency.header)) {
-    headers.set(plan.idempotency.header, crypto.randomUUID());
+    headers.set(plan.idempotency.header, idempotencyKeyOf(config));
   }
 
   if (plan.deadlineHeader !== undefined && !headers.has(plan.deadlineHeader)) {
@@ -297,46 +337,128 @@ function refuseFilledDefaultHeaders(config: ClientConfig, plan: OperationPlan): 
   }
 }
 
-function signalMember(
+interface CallSignal {
+  readonly member: { signal?: AbortSignal };
+  /** Clears the fallback timer and the listeners on the caller's signal, once the call settled. */
+  readonly release: () => void;
+}
+
+function callSignal(
   callerSignal: AbortSignal | undefined,
   timeoutMs: number | undefined,
-): { signal?: AbortSignal } {
+): CallSignal {
+  const releases: (() => void)[] = [];
   const signals = [
     ...(callerSignal === undefined ? [] : [callerSignal]),
-    ...(timeoutMs === undefined ? [] : [AbortSignal.timeout(timeoutMs)]),
+    ...(timeoutMs === undefined ? [] : [timeoutSignal(timeoutMs, releases)]),
   ];
+  const release = () => {
+    for (const each of releases) each();
+  };
 
-  if (signals.length === 0) return {};
+  const [onlySignal] = signals;
 
-  return { signal: AbortSignal.any(signals) };
+  if (onlySignal === undefined) return { member: {}, release };
+
+  const signal = signals.length === 1 ? onlySignal : anySignal(signals, releases);
+
+  return { member: { signal }, release };
+}
+
+// `AbortSignal.timeout` and `AbortSignal.any` are missing on some platforms (React Native's Hermes): an
+// `AbortController` stands in for them there. The fallback timeout aborts with a `TimeoutError` as the native one
+// does, built from `Error` since `DOMException` may be missing too.
+function timeoutSignal(timeoutMs: number, releases: (() => void)[]): AbortSignal {
+  if (typeof AbortSignal.timeout === "function") return AbortSignal.timeout(timeoutMs);
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    const reason = new Error("The operation timed out.");
+
+    reason.name = "TimeoutError";
+    controller.abort(reason);
+  }, timeoutMs);
+
+  releases.push(() => clearTimeout(timer));
+
+  return controller.signal;
+}
+
+function anySignal(signals: AbortSignal[], releases: (() => void)[]): AbortSignal {
+  if (typeof AbortSignal.any === "function") return AbortSignal.any(signals);
+
+  const controller = new AbortController();
+
+  for (const signal of signals) {
+    if (signal.aborted) {
+      controller.abort(signal.reason);
+      break;
+    }
+
+    const onAbort = () => controller.abort(signal.reason);
+
+    signal.addEventListener("abort", onAbort, { once: true });
+    releases.push(() => signal.removeEventListener("abort", onAbort));
+  }
+
+  return controller.signal;
+}
+
+// `checkClientConfig` refuses a missing generator at creation; the throw covers a direct `callOperation`.
+function idempotencyKeyOf(config: ClientConfig): string {
+  const generate = config.idempotencyKey ?? platformRandomUuid();
+
+  if (generate === undefined) {
+    throw new TypeError(
+      "No idempotency key generator: pass one as `idempotencyKey` in the client config.",
+    );
+  }
+
+  return generate();
 }
 
 async function readAnswer(plan: OperationPlan, response: Response): Promise<Answer> {
   const { status, headers } = response;
-  const body = await readBody(response);
+  const { body, isJson } = await readBody(response);
 
   if (status === NOT_MODIFIED && plan.notModified) return { ok: true, status, headers };
 
   const success = plan.successes.find((each) => each.status === status);
 
   if (success !== undefined) {
-    return successAnswer(plan, success, response, body) ?? unexpected(response, body);
+    const answer =
+      isJson || success.shape === "empty"
+        ? successAnswer(plan, success, response, body)
+        : undefined;
+
+    return answer ?? unexpected(response, body);
   }
 
   return errorAnswer(plan, response, body) ?? unexpected(response, body);
 }
 
-// The parsed JSON, the text when it is not JSON, or undefined when the response has no body.
-async function readBody(response: Response): Promise<unknown> {
+// The parsed JSON (typed only under a JSON media type), the text when it is not JSON, or undefined when the response has no body.
+async function readBody(response: Response): Promise<{ body: unknown; isJson: boolean }> {
   const text = await response.text();
 
-  if (text === "") return undefined;
+  if (text === "") return { body: undefined, isJson: false };
 
   try {
-    return JSON.parse(text);
+    return {
+      body: JSON.parse(text),
+      isJson: isJsonMediaType(response.headers.get("content-type")),
+    };
   } catch {
-    return text;
+    // Not JSON: an error answer or a declared JSON success with this body comes back as unexpected, with the text.
+    return { body: text, isJson: false };
   }
+}
+
+// `application/json` or a `+json` suffix, whatever the parameters or case.
+function isJsonMediaType(contentType: string | null): boolean {
+  const mediaType = contentType?.split(";")[0]?.trim().toLowerCase() ?? "";
+
+  return mediaType === JSON_MEDIA || mediaType.endsWith("+json");
 }
 
 function successAnswer(
@@ -354,7 +476,9 @@ function successAnswer(
   if (success.shape === "empty") return { ok: true, status, headers, ...replay };
 
   if (success.shape !== "page") {
-    return body === undefined ? undefined : { ok: true, status, headers, body, ...replay };
+    return body === undefined || body === null
+      ? undefined
+      : { ok: true, status, headers, body, ...replay };
   }
 
   if (!Array.isArray(body)) return undefined;
@@ -374,12 +498,20 @@ function nextCursorOf(link: string | null, cursorParam: string): string | undefi
 
     if (!relations.includes(NEXT_RELATION)) continue;
 
-    if (!URL.canParse(target, LINK_BASE)) return undefined;
-
-    return new URL(target, LINK_BASE).searchParams.get(cursorParam) ?? undefined;
+    return cursorOfTarget(target, cursorParam);
   }
 
   return undefined;
+}
+
+// `URL.canParse` is missing on some platforms (Hermes), so an unparsable target is caught instead.
+function cursorOfTarget(target: string, cursorParam: string): string | undefined {
+  try {
+    return new URL(target, LINK_BASE).searchParams.get(cursorParam) ?? undefined;
+  } catch {
+    // A target the URL parser refuses carries no cursor: the page is the last one for this client.
+    return undefined;
+  }
 }
 
 function errorAnswer(plan: OperationPlan, response: Response, body: unknown): Answer | undefined {
