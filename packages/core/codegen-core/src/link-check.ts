@@ -79,7 +79,9 @@ function refuseUnmetLink<Kind extends LinkKind>(
 
 // The first-party packages of every accepted style, such as "`@seampact/codegen-zod` or `@seampact/codegen-yup`".
 function providerList(styles: readonly LinkStyle[]): string {
-  const packageNames = styles.flatMap((style) => FIRST_PARTY_PROVIDERS[style]).map((name) => `\`${name}\``);
+  const packageNames = styles
+    .flatMap((style) => FIRST_PARTY_PROVIDERS[style])
+    .map((name) => `\`${name}\``);
 
   if (packageNames.length <= 1) return packageNames.join("");
 
