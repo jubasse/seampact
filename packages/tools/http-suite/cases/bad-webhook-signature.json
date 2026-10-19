@@ -1,7 +1,7 @@
 {
   "id": "bad-webhook-signature",
   "title": "401 for a bad signature on payments",
-  "checks": [],
+  "checks": ["CHK-073"],
   "profiles": ["default"],
   "steps": [
     {

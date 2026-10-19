@@ -1,0 +1,31 @@
+{
+  "id": "issues-reported-together",
+  "title": "Path and header issues of one request are reported together in one 400",
+  "checks": ["CHK-156"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/internal/v1/channels/10000000-0000-4000-8000-000000000001/tasks/not-a-uuid",
+        "headers": {
+          "authorization": "Bearer {{serviceJwt}}"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid",
+          "issues": [
+            {
+              "pointer": "/taskId"
+            },
+            {
+              "pointer": "/x-deadline"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

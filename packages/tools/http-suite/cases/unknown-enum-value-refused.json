@@ -1,0 +1,34 @@
+{
+  "id": "unknown-enum-value-refused",
+  "title": "An enum value the schema does not list is refused on input",
+  "checks": ["CHK-047"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:update}}"
+        },
+        "body": {
+          "state": "paused",
+          "expectedVersion": 1
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid",
+          "issues": [
+            {
+              "pointer": "/state",
+              "rule": "enum"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

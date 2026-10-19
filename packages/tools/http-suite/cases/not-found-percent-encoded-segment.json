@@ -1,7 +1,7 @@
 {
   "id": "not-found-percent-encoded-segment",
   "title": "404 in the api format for a percent-encoded static segment under the base path",
-  "checks": [],
+  "checks": ["CHK-029"],
   "profiles": ["default"],
   "steps": [
     {

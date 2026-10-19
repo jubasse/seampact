@@ -1,0 +1,45 @@
+{
+  "id": "batch-body-limit",
+  "title": "A batch body may pass 1 MiB and answers 413 above its 2 MiB",
+  "checks": ["CHK-039"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "title": "above the default, under the batch limit",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/batch",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        },
+        "body": {
+          "ids": ["20000000-0000-4000-8000-000000000001"],
+          "padding": "{{filler:1500000}}"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid"
+        }
+      }
+    },
+    {
+      "title": "above the batch limit",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/batch",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        },
+        "body": {
+          "ids": ["20000000-0000-4000-8000-000000000001"],
+          "padding": "{{filler:2200000}}"
+        }
+      },
+      "expect": {
+        "status": 413
+      }
+    }
+  ]
+}

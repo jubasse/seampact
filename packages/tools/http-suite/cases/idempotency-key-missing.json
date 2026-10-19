@@ -1,0 +1,23 @@
+{
+  "id": "idempotency-key-missing",
+  "title": "A write without its required idempotency key answers 400",
+  "checks": ["CHK-043"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        },
+        "body": {
+          "title": "No key"
+        }
+      },
+      "expect": {
+        "status": 400
+      }
+    }
+  ]
+}

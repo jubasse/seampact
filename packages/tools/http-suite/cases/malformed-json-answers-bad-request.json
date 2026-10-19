@@ -1,0 +1,27 @@
+{
+  "id": "malformed-json-answers-bad-request",
+  "title": "A body that is not JSON answers 400 in the api's error format",
+  "checks": ["CHK-029"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:create}}"
+        },
+        "bodyText": "{\"title\":"
+      },
+      "expect": {
+        "status": 400,
+        "headers": {
+          "content-type": {
+            "contains": ["application/problem+json"]
+          }
+        }
+      }
+    }
+  ]
+}

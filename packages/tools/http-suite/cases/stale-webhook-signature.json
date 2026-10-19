@@ -1,0 +1,31 @@
+{
+  "id": "stale-webhook-signature",
+  "title": "A signature older than the scheme's tolerance answers 401",
+  "checks": ["CHK-073"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/hooks/payments",
+        "body": {
+          "id": "evt_1",
+          "type": "invoice.paid",
+          "data": {}
+        },
+        "sign": {
+          "scheme": "stripe-v1",
+          "header": "stripe-signature",
+          "secret": "{{stripeSecret}}",
+          "ageSeconds": 600
+        }
+      },
+      "expect": {
+        "status": 401,
+        "body": {
+          "code": "api.unauthenticated"
+        }
+      }
+    }
+  ]
+}

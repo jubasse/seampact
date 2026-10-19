@@ -1,0 +1,25 @@
+{
+  "id": "delete-answers-body",
+  "title": "A DELETE answers 200 with its declared body",
+  "checks": ["CHK-023"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/me/drafts/30000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:delete}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "draftId": "30000000-0000-4000-8000-000000000001",
+          "body": "Draft text"
+        }
+      }
+    }
+  ]
+}

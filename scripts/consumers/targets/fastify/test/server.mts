@@ -1,10 +1,18 @@
-// Registers both apis' generated plugins on a Fastify app, with the not-found handler and `frameworkErrors` that
-// answer the requests the plugins never see in each api's format, on a free local port.
+// Registers both apis' generated plugins on a Fastify app, beside the http suite's control routes, with the
+// not-found handler and `frameworkErrors` that answer the requests the plugins never see in each api's format, on a
+// free local port.
+import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-suite";
 import Fastify, { type FastifyError, type FastifyReply, type FastifyRequest } from "fastify";
 import * as TasksFastify from "../generated/server/tasks/index.js";
 import * as TasksServiceFastify from "../generated/server/tasksService/index.js";
 import { tasksHandlers, tasksServiceHandlers } from "../src/handlers.mjs";
 import { tasksHooks, tasksServiceHooks } from "../src/hooks.mjs";
+import {
+  type ControlReply,
+  hookCallsReply,
+  loadScriptReply,
+  logLinesReply,
+} from "../src/suite-control.mjs";
 
 export interface RunningServer {
   readonly baseUrl: string;
@@ -23,6 +31,10 @@ function renderedByAnApi(request: FastifyRequest, reply: FastifyReply, error?: E
   );
 }
 
+function sendControlReply(reply: FastifyReply, controlReply: ControlReply): FastifyReply {
+  return reply.code(controlReply.status).send(controlReply.body);
+}
+
 export async function startServer(): Promise<RunningServer> {
   const app = Fastify({
     frameworkErrors(error: FastifyError, request: FastifyRequest, reply: FastifyReply) {
@@ -32,6 +44,9 @@ export async function startServer(): Promise<RunningServer> {
     },
   });
 
+  app.put(SCRIPT_ROUTE, (request, reply) => sendControlReply(reply, loadScriptReply(request.body)));
+  app.get(HOOK_CALLS_ROUTE, (_request, reply) => sendControlReply(reply, hookCallsReply()));
+  app.get(LOG_LINES_ROUTE, (_request, reply) => sendControlReply(reply, logLinesReply()));
   app.setNotFoundHandler((request, reply) => {
     if (renderedByAnApi(request, reply)) return;
 

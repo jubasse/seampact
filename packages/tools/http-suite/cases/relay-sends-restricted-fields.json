@@ -1,0 +1,58 @@
+{
+  "id": "relay-sends-restricted-fields",
+  "title": "A relay route sends every restricted field without asking the decider",
+  "checks": ["CHK-117"],
+  "profiles": ["default"],
+  "script": {
+    "decisions": [
+      {
+        "name": "tasks.seeEffort",
+        "deny": {
+          "code": "api.forbidden"
+        }
+      }
+    ],
+    "answers": {
+      "tasksService.getTask": {
+        "status": 200,
+        "body": {
+          "taskId": "20000000-0000-4000-8000-000000000001",
+          "title": "Estimate the slice",
+          "state": "open",
+          "effort": 5,
+          "version": 1,
+          "createdAt": "2026-10-18T09:00:00.000Z"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/internal/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{serviceJwt}}",
+          "x-deadline": "{{deadline:5000}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "taskId": "20000000-0000-4000-8000-000000000001",
+          "effort": 5
+        }
+      }
+    }
+  ],
+  "hookCalls": [
+    {
+      "hook": "authenticate:service",
+      "operation": "tasksService.getTask"
+    },
+    {
+      "hook": "decide:callerService",
+      "operation": "tasksService.getTask"
+    }
+  ]
+}

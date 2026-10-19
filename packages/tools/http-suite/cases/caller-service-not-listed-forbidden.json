@@ -1,0 +1,24 @@
+{
+  "id": "caller-service-not-listed-forbidden",
+  "title": "A service callerService does not list answers 403",
+  "checks": ["CHK-017"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/internal/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{foreignServiceJwt}}",
+          "x-deadline": "{{deadline:5000}}"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "body": {
+          "code": "api.forbidden"
+        }
+      }
+    }
+  ]
+}

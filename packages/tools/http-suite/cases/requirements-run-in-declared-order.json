@@ -1,0 +1,39 @@
+{
+  "id": "requirements-run-in-declared-order",
+  "title": "The identity, then each requirement in declared order, before the handler",
+  "checks": ["CHK-014"],
+  "profiles": ["default"],
+  "script": {},
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:create}}"
+        },
+        "body": {
+          "title": "In order"
+        }
+      },
+      "expect": {
+        "status": 201
+      }
+    }
+  ],
+  "hookCalls": [
+    {
+      "hook": "authenticate:user",
+      "operation": "tasks.createTask"
+    },
+    {
+      "hook": "decide:throttle",
+      "operation": "tasks.createTask"
+    },
+    {
+      "hook": "decide:roles",
+      "operation": "tasks.createTask"
+    }
+  ]
+}

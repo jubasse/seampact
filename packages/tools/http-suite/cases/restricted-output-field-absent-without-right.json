@@ -1,0 +1,49 @@
+{
+  "id": "restricted-output-field-absent-without-right",
+  "title": "A restricted output field is absent, not null, for a caller without its right",
+  "checks": ["CHK-025", "CHK-064"],
+  "profiles": ["default"],
+  "script": {
+    "decisions": [
+      {
+        "name": "tasks.seeEffort",
+        "purpose": "field",
+        "deny": {
+          "code": "api.forbidden"
+        }
+      }
+    ],
+    "answers": {
+      "tasks.getTask": {
+        "status": 200,
+        "body": {
+          "taskId": "20000000-0000-4000-8000-000000000001",
+          "title": "Estimate the slice",
+          "state": "open",
+          "effort": 5,
+          "version": 1,
+          "createdAt": "2026-10-18T09:00:00.000Z"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "taskId": "20000000-0000-4000-8000-000000000001",
+          "title": "Estimate the slice"
+        },
+        "absent": ["/effort"]
+      }
+    }
+  ]
+}

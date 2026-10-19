@@ -1,7 +1,7 @@
 {
   "id": "wrong-method-on-tasks-path",
   "title": "404 in the api format for a wrong method on a tasks path",
-  "checks": [],
+  "checks": ["CHK-029"],
   "profiles": ["default"],
   "steps": [
     {

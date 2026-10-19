@@ -1,0 +1,26 @@
+{
+  "id": "limit-above-max-refused",
+  "title": "A page limit above the operation's maxLimit is refused",
+  "checks": ["CHK-030"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        },
+        "query": {
+          "limit": "51"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "id": "restricted-output-field-present-with-right",
+  "title": "A restricted output field reaches a caller with its right",
+  "checks": ["CHK-025"],
+  "profiles": ["default"],
+  "script": {
+    "answers": {
+      "tasks.getTask": {
+        "status": 200,
+        "body": {
+          "taskId": "20000000-0000-4000-8000-000000000001",
+          "title": "Estimate the slice",
+          "state": "open",
+          "effort": 5,
+          "version": 1,
+          "createdAt": "2026-10-18T09:00:00.000Z"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "taskId": "20000000-0000-4000-8000-000000000001",
+          "effort": 5
+        }
+      }
+    }
+  ]
+}

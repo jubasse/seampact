@@ -1,0 +1,31 @@
+{
+  "id": "query-number-decoding",
+  "title": "A query number that does not decode is refused by name",
+  "checks": ["CHK-034"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        },
+        "query": {
+          "limit": "ten"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid",
+          "issues": [
+            {
+              "pointer": "/limit"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

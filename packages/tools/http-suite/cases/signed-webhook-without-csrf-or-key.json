@@ -1,0 +1,34 @@
+{
+  "id": "signed-webhook-without-csrf-or-key",
+  "title": "A signed request needs no CSRF header nor idempotency key, and an opaque member takes any JSON value",
+  "checks": ["CHK-073", "CHK-135"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/hooks/payments",
+        "body": {
+          "id": "evt_2",
+          "type": "invoice.paid",
+          "data": [
+            1,
+            "two",
+            null,
+            {
+              "nested": true
+            }
+          ]
+        },
+        "sign": {
+          "scheme": "stripe-v1",
+          "header": "stripe-signature",
+          "secret": "{{stripeSecret}}"
+        }
+      },
+      "expect": {
+        "status": 204
+      }
+    }
+  ]
+}

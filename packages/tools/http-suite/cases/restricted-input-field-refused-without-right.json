@@ -1,0 +1,40 @@
+{
+  "id": "restricted-input-field-refused-without-right",
+  "title": "A restricted input field sent without its right answers 403 with the field pointer",
+  "checks": ["CHK-092"],
+  "profiles": ["default"],
+  "script": {
+    "decisions": [
+      {
+        "name": "roles",
+        "purpose": "field",
+        "deny": {
+          "code": "api.forbidden"
+        }
+      }
+    ]
+  },
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:create}}"
+        },
+        "body": {
+          "title": "Estimated",
+          "effort": 3
+        }
+      },
+      "expect": {
+        "status": 403,
+        "body": {
+          "code": "api.forbidden",
+          "pointer": "/effort"
+        }
+      }
+    }
+  ]
+}

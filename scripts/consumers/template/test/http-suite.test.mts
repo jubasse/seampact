@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { loadSuiteCases, runSuite, type SuiteReport, writeSuiteReport } from "@seampact/http-suite";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import {
+  FOREIGN_SERVICE_JWT,
   SERVICE_JWT,
   STRIPE_SECRET,
   THROTTLE_RETRY_AFTER_MS,
@@ -32,6 +33,7 @@ beforeAll(async () => {
       serviceJwt: SERVICE_JWT,
       stripeSecret: STRIPE_SECRET,
       throttleRetryAfterMs: THROTTLE_RETRY_AFTER_MS,
+      foreignServiceJwt: FOREIGN_SERVICE_JWT,
     },
     cases,
   });

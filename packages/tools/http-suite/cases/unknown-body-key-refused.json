@@ -1,0 +1,28 @@
+{
+  "id": "unknown-body-key-refused",
+  "title": "An undeclared body key is refused by default",
+  "checks": ["CHK-134"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:create}}"
+        },
+        "body": {
+          "title": "Colored",
+          "color": "red"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid"
+        }
+      }
+    }
+  ]
+}

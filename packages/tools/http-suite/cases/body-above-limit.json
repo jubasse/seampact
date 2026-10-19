@@ -1,0 +1,24 @@
+{
+  "id": "body-above-limit",
+  "title": "A body above the 1 MiB default answers 413",
+  "checks": ["CHK-039", "CHK-029"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:create}}"
+        },
+        "body": {
+          "title": "{{filler:1100000}}"
+        }
+      },
+      "expect": {
+        "status": 413
+      }
+    }
+  ]
+}

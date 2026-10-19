@@ -14,6 +14,7 @@ const CREDENTIALS: SuiteCredentials = {
   serviceJwt: "service-jwt",
   stripeSecret: "whsec_test",
   throttleRetryAfterMs: 1500,
+  foreignServiceJwt: "foreign-service-jwt",
 };
 const NEXT_CURSOR = "c%2B2";
 const HOOK_CALLS = [{ hook: "authenticate", operation: "getTask" }];
@@ -70,6 +71,8 @@ async function answer(request: IncomingMessage, response: ServerResponse): Promi
       authorization: request.headers.authorization,
       key: request.headers["idempotency-key"],
     });
+  } else if (url.pathname === "/raw") {
+    json(200, { text: body, signatureAgeSeconds: signatureAgeSeconds(request) });
   } else if (url.pathname === "/signed") {
     json(200, { valid: request.headers["stripe-signature"] === stripeV1(body) });
   } else {
@@ -84,6 +87,12 @@ function stripeV1(body: string): string {
     .digest("hex");
 
   return `t=${timestamp},v1=${mac}`;
+}
+
+function signatureAgeSeconds(request: IncomingMessage): number {
+  const timestamp = /^t=(\d+),/.exec(String(request.headers["stripe-signature"]))?.[1];
+
+  return Math.floor(Date.now() / 1000) - Number(timestamp);
 }
 
 function suiteCase(id: string, value: Record<string, unknown>): SuiteCase {
@@ -160,6 +169,31 @@ describe("runSuite", () => {
     expect(report.cases[0]?.failures).toEqual([]);
   });
 
+  test("sends a body text as written, signed as of `ageSeconds` ago", async () => {
+    const report = await run([
+      suiteCase("raw", {
+        steps: [
+          {
+            request: {
+              method: "POST",
+              path: "/raw",
+              bodyText: '{"title":',
+              sign: {
+                scheme: "stripe-v1",
+                header: "stripe-signature",
+                secret: "{{stripeSecret}}",
+                ageSeconds: 600,
+              },
+            },
+            expect: { status: 200, body: { text: '{"title":', signatureAgeSeconds: 600 } },
+          },
+        ],
+      }),
+    ]);
+
+    expect(report.cases[0]?.failures).toEqual([]);
+  });
+
   test("names every mismatch of a step and an unknown placeholder", async () => {
     const report = await run([
       suiteCase("mismatches", {
@@ -188,18 +222,24 @@ describe("runSuite", () => {
     ]);
   });
 
-  test("loads the script and compares the recorded hook calls through the control routes", async () => {
+  test("loads each case's script, an empty one by default, and compares the recorded hook calls", async () => {
     const step = { request: { method: "GET", path: "/missing" }, expect: { status: 404 } };
+
+    loadedScripts.length = 0;
+
     const report = await run([
       suiteCase("scripted", {
-        script: { hooks: { decide: "allow" } },
+        script: { decisions: [{ name: "roles", deny: { code: "api.forbidden" } }] },
         steps: [step],
         hookCalls: HOOK_CALLS,
       }),
       suiteCase("other-calls", { steps: [step], hookCalls: [] }),
     ]);
 
-    expect(loadedScripts).toContainEqual({ hooks: { decide: "allow" } });
+    expect(loadedScripts).toEqual([
+      { decisions: [{ name: "roles", deny: { code: "api.forbidden" } }] },
+      {},
+    ]);
     expect(report.cases.map((result) => result.outcome)).toEqual(["passed", "failed"]);
     await expect(readLogLines(baseUrl, AbortSignal.timeout(1000))).rejects.toThrow("answered 404");
   });

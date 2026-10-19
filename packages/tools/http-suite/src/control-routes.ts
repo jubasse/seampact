@@ -1,18 +1,23 @@
 // The test-only routes a sample app serves beside the contract, so a case loads the doubles' script and reads what
 // the hooks recorded and what the app logged (ADR 0015 "Control routes"). Every sample app, in any language,
 // serves them with these paths and JSON bodies.
-import type { JsonValue, RecordedHookCall } from "./suite-case.js";
+import type { SampleAppScript } from "./sample-app-script.js";
+import type { RecordedHookCall } from "./suite-case.js";
 
 /** The path prefix of the control routes; the sample app allow-lists it as framework routes outside the contract. */
 export const CONTROL_ROUTE_PREFIX = "/__seampact";
 
 /**
- * `PUT` with the case's `script` as its JSON body: the doubles answer from it, and the recorded hook calls and
- * captured log lines start empty. Answers 204.
+ * `PUT` with the case's `script` as its JSON body (`SampleAppScript`): the doubles answer from it, and the recorded
+ * hook calls and captured log lines start empty. Answers 204, or 400 for a body that is not a script.
  */
 export const SCRIPT_ROUTE = `${CONTROL_ROUTE_PREFIX}/script`;
 
-/** `GET`: answers 200 with `{ "calls": RecordedHookCall[] }`, in call order since the last script load. */
+/**
+ * `GET`: answers 200 with `{ "calls": RecordedHookCall[] }`, in call order since the last script load: each
+ * authenticate and decide call, named as `authenticateHookName` and `decideHookName` name them, with the
+ * operation's `operationKey`.
+ */
 export const HOOK_CALLS_ROUTE = `${CONTROL_ROUTE_PREFIX}/hook-calls`;
 
 /** `GET`: answers 200 with `{ "lines": string[] }`, every log line the app wrote since the last script load. */
@@ -23,7 +28,7 @@ const OK = 200;
 
 export async function loadScript(
   baseUrl: string,
-  script: { readonly [member: string]: JsonValue },
+  script: SampleAppScript,
   signal: AbortSignal,
 ): Promise<void> {
   const answer = await fetch(`${baseUrl}${SCRIPT_ROUTE}`, {

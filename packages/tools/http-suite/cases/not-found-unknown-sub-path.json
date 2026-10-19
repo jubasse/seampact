@@ -1,7 +1,7 @@
 {
   "id": "not-found-unknown-sub-path",
   "title": "404 in the api format for an unknown sub-path under the base path",
-  "checks": [],
+  "checks": ["CHK-029"],
   "profiles": ["default"],
   "steps": [
     {
