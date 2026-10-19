@@ -59,8 +59,16 @@ export function prepareConsumerDirectory(directory: string): void {
   mkdirSync(directory, { recursive: true });
 }
 
+// Files a tool copies into the consumer, in `into` relative to its root, with the dependencies they need.
+export interface ConsumerExtras {
+  readonly sourceDirectory: string;
+  readonly into: string;
+  readonly dependencies: Readonly<Record<string, string>>;
+}
+
 // The template with the chosen validators, the target overlay copied over it after its base overlay (their config
-// and package entries merged), and the reference contract. A pair the target refuses fails at `generate`.
+// and package entries merged), the extras if any, and the reference contract. A pair the target refuses fails at
+// `generate`.
 export function assembleConsumer(options: {
   readonly consumersRoot: string;
   readonly repositoryRoot: string;
@@ -68,6 +76,7 @@ export function assembleConsumer(options: {
   readonly validators: ValidatorChoice;
   readonly directory: string;
   readonly commit: string;
+  readonly extras?: ConsumerExtras;
 }): void {
   const { consumersRoot, directory } = options;
 
@@ -89,6 +98,13 @@ export function assembleConsumer(options: {
     });
     appendConfigEntries(join(overlay, CONFIG_ENTRIES_FILE), join(directory, CONFIG_FILE));
     addPackageEntries(join(overlay, PACKAGE_ENTRIES_FILE), join(directory, PACKAGE_FILE));
+  }
+
+  if (options.extras !== undefined) {
+    cpSync(options.extras.sourceDirectory, join(directory, options.extras.into), {
+      recursive: true,
+    });
+    addDependencies(join(directory, PACKAGE_FILE), options.extras.dependencies);
   }
 
   cpSync(join(options.repositoryRoot, "fixtures/reference"), join(directory, CONTRACT_DIRECTORY), {
