@@ -25,6 +25,8 @@ const THROW_CLIENT = "clientThrow";
 const PROBE_FILE = "probe.ts";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const DEADLINE_TOLERANCE_MS = 1000;
+// The setup generates and type-checks two APIs, which outlasts the default hook timeout on a loaded machine.
+const SETUP_TIMEOUT_MILLISECONDS = 60_000;
 
 type Method = (request?: unknown, options?: unknown) => Promise<Record<string, unknown>>;
 
@@ -289,7 +291,7 @@ beforeAll(async () => {
   }
 
   isClientContractError = throwModule.isClientContractError;
-});
+}, SETUP_TIMEOUT_MILLISECONDS);
 
 afterAll(async () => {
   await stub?.close();
