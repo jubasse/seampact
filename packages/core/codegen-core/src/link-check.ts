@@ -1,3 +1,4 @@
+import { firstPartyPackagesOfStyle } from "@seampact/spec/compatibility";
 import type { LinkKind, LinkStyle } from "./descriptors.js";
 import type { LinkNeeds, LinkSet, Links } from "./links.js";
 import type { Refusal } from "./refusal.js";
@@ -7,14 +8,6 @@ import type { Refusal } from "./refusal.js";
 export function refuseUnmetLinks(needs: Partial<LinkNeeds>, links: LinkSet): Refusal[] {
   return Object.values(linkCheckByKind).flatMap((checkKind) => checkKind(needs, links));
 }
-
-// The first-party packages that provide each link style, named in the fix of a refused link. They move to
-// `@seampact/spec/compatibility` once its matrix is designed.
-const FIRST_PARTY_PROVIDERS: { readonly [Style in LinkStyle]: readonly string[] } = {
-  "standard-schema": ["@seampact/codegen-zod", "@seampact/codegen-yup"],
-  "class-validator": ["@seampact/codegen-class-validator"],
-  typescript: ["@seampact/codegen-ts"],
-};
 
 // One check per kind, so a new kind cannot be left unchecked.
 const linkCheckByKind: {
@@ -77,10 +70,11 @@ function refuseUnmetLink<Kind extends LinkKind>(
   return [];
 }
 
-// The first-party packages of every accepted style, such as "`@seampact/codegen-zod` or `@seampact/codegen-yup`".
+// The first-party packages of every accepted style, read from the compatibility matrix, such as
+// "`@seampact/codegen-zod` or `@seampact/codegen-yup`".
 function providerList(styles: readonly LinkStyle[]): string {
   const packageNames = styles
-    .flatMap((style) => FIRST_PARTY_PROVIDERS[style])
+    .flatMap((style) => firstPartyPackagesOfStyle(style))
     .map((name) => `\`${name}\``);
 
   if (packageNames.length <= 1) return packageNames.join("");

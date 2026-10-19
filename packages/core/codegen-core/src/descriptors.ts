@@ -1,4 +1,7 @@
+import type { ValidatorStyle } from "@seampact/spec/compatibility";
 import type { Direction, OperationId, SchemaId } from "@seampact/spec/ir";
+
+export type { ValidatorStyle };
 
 // A generated export a descriptor points at. `module` is a POSIX path relative to the provider's output root,
 // without extension; a consumer joins it to the link's location to write its import.
@@ -13,10 +16,6 @@ export type SchemaDirection = Extract<Direction, "input" | "output">;
 
 // One export per direction the schema is used in (its `directions` in the IR).
 export type SchemaExports = { readonly [Each in SchemaDirection]?: ExportRef };
-
-// How a validator target builds its exports. In both styles every export is a Standard Schema v1 value: in
-// `class-validator` it is an adapter over a decorated class, so the route table and the runtime read both alike.
-export type ValidatorStyle = "standard-schema" | "class-validator";
 
 // What a validator target provides (ADR 0009 "The provider seam"). Each export is a Standard Schema v1 value.
 export interface ValidatorsDescriptor {
