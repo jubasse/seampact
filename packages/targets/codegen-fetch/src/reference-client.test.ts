@@ -15,6 +15,7 @@ const REPOSITORY_ROOT = new URL("../../../../", import.meta.url);
 const LINKED_PACKAGES = {
   "@seampact/codegen-ts": "packages/targets/codegen-ts",
   "@seampact/hooks": "packages/runtime/hooks",
+  "@seampact/http-suite": "packages/tools/http-suite",
   "@seampact/idempotency-memory": "packages/runtime/idempotency-memory",
   "@seampact/signed-webhooks": "packages/runtime/signed-webhooks",
 };

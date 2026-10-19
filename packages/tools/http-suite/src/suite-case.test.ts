@@ -105,6 +105,43 @@ describe("parseSuiteCase", () => {
       }),
       "at '/steps/0/expect/headers/link': a header expectation holds one of",
     ],
+    [
+      "an empty contains list",
+      minimalCase({
+        steps: [
+          {
+            request: { method: "GET", path: "/" },
+            expect: { status: 200, headers: { link: { contains: [] } } },
+          },
+        ],
+      }),
+      "at '/steps/0/expect/headers/link/contains': `contains` lists at least one text",
+    ],
+    [
+      "a capture named like a credential",
+      minimalCase({
+        steps: [
+          {
+            request: { method: "GET", path: "/" },
+            capture: { userToken: { body: "/token" } },
+            expect: { status: 200 },
+          },
+        ],
+      }),
+      "at '/steps/0/capture/userToken': a capture cannot take the name of a credential",
+    ],
+    [
+      "an absent pointer without a slash",
+      minimalCase({
+        steps: [
+          {
+            request: { method: "GET", path: "/" },
+            expect: { status: 200, absent: ["nextCursor"] },
+          },
+        ],
+      }),
+      "at '/steps/0/expect/absent/0'",
+    ],
   ])("refuses %s by its pointer", (_case, value, message) => {
     expect(() => parseSuiteCase(value, SOURCE)).toThrow(SuiteCaseError);
     expect(() => parseSuiteCase(value, SOURCE)).toThrow(message);

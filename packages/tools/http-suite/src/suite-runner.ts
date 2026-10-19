@@ -4,7 +4,7 @@ import { signRequestBody } from "./request-signature.js";
 import { checkResponse, type ReceivedResponse, readPointer } from "./response-check.js";
 import type { CaptureSource, JsonValue, SuiteCase, SuiteProfile, SuiteStep } from "./suite-case.js";
 import { type CaseResult, type SuiteReport, suiteReportOf } from "./suite-report.js";
-import { TemplateScope } from "./template.js";
+import { TemplateError, TemplateScope } from "./template.js";
 
 /**
  * The credentials the sample app's hooks honour, read by the cases as `{{userToken}}`, `{{throttledUserToken}}`,
@@ -159,9 +159,14 @@ async function runStep(
     else scope.capture(name, value);
   }
 
-  if (failures.length > 0) return failures;
+  // The status often explains a failed capture, so the expectation is checked and reported too.
+  try {
+    return [...failures, ...checkResponse(filledExpectation(step, scope), response)];
+  } catch (error) {
+    if (failures.length === 0 || !(error instanceof TemplateError)) throw error;
 
-  return checkResponse(filledExpectation(step, scope), response);
+    return [...failures, error.message];
+  }
 }
 
 function capturedValue(source: CaptureSource, response: ReceivedResponse): JsonValue | undefined {

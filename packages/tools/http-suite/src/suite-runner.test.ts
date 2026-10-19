@@ -5,6 +5,7 @@ import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { HOOK_CALLS_ROUTE, readLogLines, SCRIPT_ROUTE } from "./control-routes.js";
 import { parseSuiteCase, type SuiteCase } from "./suite-case.js";
+import { SUITE_REPORT_FORMAT } from "./suite-report.js";
 import { runSuite, type SuiteCredentials } from "./suite-runner.js";
 
 const CREDENTIALS: SuiteCredentials = {
@@ -234,7 +235,57 @@ describe("runSuite", () => {
     });
   });
 
+  test("a failed case fails its checklist id and the report names its format", async () => {
+    const passing = { request: { method: "GET", path: "/items" }, expect: { status: 200 } };
+    const failing = { request: { method: "GET", path: "/items" }, expect: { status: 500 } };
+    const report = await run([
+      suiteCase("good", { checks: ["CHK-003"], steps: [passing] }),
+      suiteCase("bad", { checks: ["CHK-003"], steps: [failing] }),
+    ]);
+
+    expect(report.format).toBe(SUITE_REPORT_FORMAT);
+    expect(report.checks).toEqual({ "CHK-003": { outcome: "failed", cases: ["good", "bad"] } });
+  });
+
   test("refuses a refusal for a case the run does not hold", async () => {
     await expect(run([], { ghost: "no reason" })).rejects.toThrow("ghost");
+  });
+
+  test("a failed capture still reports the status that explains it", async () => {
+    const report = await run([
+      suiteCase("capture-on-error", {
+        steps: [
+          {
+            request: { method: "GET", path: "/missing" },
+            capture: { taskId: { body: "/taskId" } },
+            expect: { status: 200 },
+          },
+        ],
+      }),
+    ]);
+
+    expect(report.cases[0]?.failures).toEqual([
+      expect.stringContaining("capture 'taskId'"),
+      expect.stringContaining("status 404, expected 200"),
+    ]);
+  });
+
+  test("checks that a body member is absent and that array pointers take indexes only", async () => {
+    const report = await run([
+      suiteCase("absent-members", {
+        steps: [
+          {
+            request: { method: "GET", path: "/items" },
+            capture: { length: { body: "/length" } },
+            expect: { status: 200, absent: ["/0", "/length"] },
+          },
+        ],
+      }),
+    ]);
+
+    expect(report.cases[0]?.failures).toEqual([
+      expect.stringContaining("capture 'length'"),
+      "step 0 (GET /items): body member '/0' is 1, expected absent",
+    ]);
   });
 });

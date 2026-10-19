@@ -9,6 +9,8 @@ export interface ReceivedResponse {
   readonly json: JsonValue | undefined;
 }
 
+const ARRAY_INDEX = /^(?:0|[1-9]\d*)$/;
+
 export function checkResponse(expectation: StepExpectation, response: ReceivedResponse): string[] {
   const failures: string[] = [];
 
@@ -30,7 +32,23 @@ export function checkResponse(expectation: StepExpectation, response: ReceivedRe
 
   if (expectation.body !== undefined) failures.push(...checkBody(expectation.body, response));
 
+  failures.push(...checkAbsent(expectation.absent ?? [], response));
+
   return failures;
+}
+
+function checkAbsent(pointers: readonly string[], response: ReceivedResponse): string[] {
+  if (pointers.length === 0) return [];
+
+  if (response.json === undefined) return [`body is not JSON: ${JSON.stringify(response.text)}`];
+
+  return pointers.flatMap((pointer) => {
+    const actual = readPointer(response.json ?? null, pointer);
+
+    return actual === undefined
+      ? []
+      : [`body member '${pointer}' is ${JSON.stringify(actual)}, expected absent`];
+  });
 }
 
 function checkHeader(name: string, expectation: HeaderExpectation, value: string | null): string[] {
@@ -108,7 +126,7 @@ export function readPointer(document: JsonValue, pointer: string): JsonValue | u
     const member = token.replaceAll("~1", "/").replaceAll("~0", "~");
 
     if (Array.isArray(current)) {
-      current = Object.hasOwn(current, member) ? current[Number(member)] : undefined;
+      current = ARRAY_INDEX.test(member) ? current[Number(member)] : undefined;
       continue;
     }
 

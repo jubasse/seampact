@@ -50,13 +50,15 @@ export interface StepRequest {
 
 /**
  * What a response must show. `body` is a subset match: objects match member by member, arrays element by element
- * with the same length, other values by equality. `bodyText` is the exact text.
+ * with the same length, other values by equality. `bodyText` is the exact text. `absent` lists JSON pointers the
+ * body must hold nothing at.
  */
 export interface StepExpectation {
   readonly status: number;
   readonly headers?: Readonly<Record<string, HeaderExpectation>>;
   readonly body?: JsonValue;
   readonly bodyText?: string;
+  readonly absent?: readonly string[];
 }
 
 /**
@@ -107,11 +109,21 @@ const LOWERCASE_HEADER = /^[a-z0-9-]+$/;
 const MIN_STATUS = 100;
 const MAX_STATUS = 599;
 
+/** The variable names the runner fills from its credentials; a capture cannot take one. */
+export const CREDENTIAL_VARIABLES = [
+  "userToken",
+  "throttledUserToken",
+  "serviceJwt",
+  "stripeSecret",
+  "throttleRetryAfterMs",
+  "throttleRetryAfterSeconds",
+];
+
 const CASE_MEMBERS = ["id", "title", "checks", "profiles", "script", "steps", "hookCalls"];
 const STEP_MEMBERS = ["title", "request", "capture", "expect"];
 const REQUEST_MEMBERS = ["method", "path", "query", "headers", "body", "sign"];
 const SIGN_MEMBERS = ["scheme", "header", "secret"];
-const EXPECT_MEMBERS = ["status", "headers", "body", "bodyText"];
+const EXPECT_MEMBERS = ["status", "headers", "body", "bodyText", "absent"];
 const BODY_CAPTURE_MEMBERS = ["body"];
 const HEADER_CAPTURE_MEMBERS = ["header", "pattern"];
 const HEADER_EXPECTATION_MEMBERS = ["equals", "contains", "excludes", "absent"];
@@ -212,10 +224,13 @@ function readCaptures(
   const object = objectAt(reader, value, pointer, undefined);
 
   return Object.fromEntries(
-    Object.entries(object).map(([name, source]) => [
-      name,
-      readCaptureSource(reader, source, `${pointer}/${name}`),
-    ]),
+    Object.entries(object).map(([name, source]) => {
+      if (CREDENTIAL_VARIABLES.includes(name)) {
+        reader.fail(`${pointer}/${name}`, "a capture cannot take the name of a credential");
+      }
+
+      return [name, readCaptureSource(reader, source, `${pointer}/${name}`)];
+    }),
   );
 }
 
@@ -324,7 +339,26 @@ function readExpectation(reader: Reader, value: unknown, pointer: string): StepE
     ...(object.bodyText === undefined
       ? {}
       : { bodyText: stringAt(reader, object.bodyText, `${pointer}/bodyText`) }),
+    ...(object.absent === undefined
+      ? {}
+      : { absent: readAbsentPointers(reader, object.absent, `${pointer}/absent`) }),
   };
+}
+
+function readAbsentPointers(reader: Reader, value: unknown, pointer: string): string[] {
+  const pointers = arrayAt(reader, value, pointer);
+
+  if (pointers.length === 0) reader.fail(pointer, "`absent` lists at least one JSON pointer");
+
+  return pointers.map((item, index) => {
+    const absentPointer = stringAt(reader, item, `${pointer}/${index}`);
+
+    if (!absentPointer.startsWith("/")) {
+      reader.fail(`${pointer}/${index}`, "a JSON pointer to a member starts with `/`");
+    }
+
+    return absentPointer;
+  });
 }
 
 function readHeaderExpectations(
@@ -356,6 +390,10 @@ function readHeaderExpectation(reader: Reader, value: unknown, pointer: string):
 
   if (object.absent !== undefined && object.absent !== true) {
     reader.fail(`${pointer}/absent`, "`absent` is `true`");
+  }
+
+  if (Array.isArray(object.contains) && object.contains.length === 0) {
+    reader.fail(`${pointer}/contains`, "`contains` lists at least one text");
   }
 
   return {
