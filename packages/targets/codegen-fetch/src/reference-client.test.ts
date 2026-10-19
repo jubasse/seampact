@@ -343,12 +343,12 @@ describe("the generated reference client answers a stub server", () => {
       "listTasks",
     )({
       path: { channelId: "c 1" },
-      query: { limit: 2, sort: ["-createdAt", "title"] },
+      query: { limit: 2, sort: ["-createdAt", "createdAt"] },
       headers: user(),
     });
 
     expect(lastSent().url.pathname).toBe("/v1/channels/c%201/tasks");
-    expect(lastSent().url.search).toBe("?limit=2&sort=-createdAt,title");
+    expect(lastSent().url.search).toBe("?limit=2&sort=-createdAt,createdAt");
     expect(first).toMatchObject({ ok: true, status: 200, body: { nextCursor: "cursor-2" } });
     expect(first.body).toMatchObject({ items: [{ taskId: "task-1" }, { taskId: "task-2" }] });
 
