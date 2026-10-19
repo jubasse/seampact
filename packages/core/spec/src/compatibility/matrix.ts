@@ -94,6 +94,7 @@ export function serverTargetCompatibility(targetPackage: string): TargetCompatib
 
   if (entry === undefined) {
     const recordedPackages = SERVER_TARGETS.map((target) => target.package).join(", ");
+
     throw new Error(
       `compatibility: '${targetPackage}' is not a server target of the matrix; recorded: ${recordedPackages}.`,
     );
