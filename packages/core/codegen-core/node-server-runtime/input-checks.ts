@@ -7,9 +7,16 @@ import { schemaInvalidError, validateRequest } from "./input-issues.js";
 
 const FORBIDDEN_ROLE = "forbidden";
 
-/** Step 6: the validated input `{ path, query, headers, body }`, or a 400 with every issue. */
-export async function validateRequestInput(state: CheckState): Promise<unknown> {
-  const validation = await validateRequest(state);
+/**
+ * Step 6: the validated input `{ path, query, headers, body }`, or a 400 with every issue. The validation steps 4
+ * and 5 recorded on the grant is reused, never run twice; without a grant (a refusal before the access steps) the
+ * request is validated here.
+ */
+export async function validateRequestInput(
+  state: CheckState,
+  grant?: AccessGrant,
+): Promise<unknown> {
+  const validation = grant?.validation ?? (await validateRequest(state));
 
   if (validation.issues.length === 0) return withDefaultLimit(state.route, validation.value);
 

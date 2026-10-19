@@ -523,6 +523,31 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
       generated.router({ handlers, hooks: app.hooks, operations: { nothing: {} } }),
     ).toThrow(/TasksEndpoints[\s\S]*'operations' names 'nothing'/);
   });
+
+  test("an app whose router stack the router cannot read is refused by name", async () => {
+    const generated: RouterModule = await import(
+      pathToFileURL(join(build, "generated/server/tasks/express.js")).href
+    );
+    const contractRouter = generated.router({ handlers: app.handlers, hooks: app.hooks });
+    const stubApp = {};
+    const stubRequest = {
+      method: "GET",
+      url: "/v1/unknown",
+      originalUrl: "/v1/unknown",
+      headers: {},
+      app: stubApp,
+    };
+
+    expect(contractRouter).toBeTypeOf("function");
+
+    const refusal = await new Promise<unknown>((resolve) => {
+      if (typeof contractRouter === "function") {
+        Reflect.apply(contractRouter, undefined, [stubRequest, {}, resolve]);
+      }
+    });
+
+    expect(String(refusal)).toMatch(/api 'tasks' cannot read the router stack of the app/);
+  });
 });
 
 describe.each(EXPRESS_MAJORS)("two apis on one base path on %s", (_major, expressPackage) => {
