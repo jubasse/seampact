@@ -7,3 +7,4 @@ coverage/
 .favir/
 .vitest/
 .eslintcache
+.bench-output/
