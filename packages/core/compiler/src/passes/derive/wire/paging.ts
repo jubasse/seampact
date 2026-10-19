@@ -206,7 +206,7 @@ function patternUse(source: string): IrWriter.ScalarTypeUse {
   const normalised = treeSchemasNormalizePattern(source);
 
   if (!normalised.ok)
-    throw new Error(`the derived sort pattern '${source}' is not portable: ${normalised.reason}`);
+    throw new Error(`the derived sort pattern '${source}' is refused: ${normalised.message}`);
 
   return {
     kind: "scalar",

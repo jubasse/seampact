@@ -396,8 +396,8 @@ export class TreeSchemasScalars {
     this.reporter.error({
       rule: "pattern",
       pointer: treeSchemasPointer(pointer, "pattern"),
-      message: `the pattern is not portable: ${normalized.reason}`,
-      fix: "rewrite it in the portable subset of ADR 0003 section 9",
+      message: normalized.message,
+      fix: normalized.fix,
     });
 
     return false;
