@@ -75,6 +75,7 @@ const task = (taskId: string, title = "Write the slice test") => ({
 });
 
 const PAGE_QUERY_KEYS = ["cursor", "limit"];
+const LIST_TASKS_QUERY_KEYS = [...PAGE_QUERY_KEYS, "sort"];
 const API_ID = "tasks";
 const HTTP_ERROR_FLOOR = 400;
 
@@ -103,7 +104,7 @@ const ROUTES: readonly Route[] = [
   },
   {
     operation: "listTasks",
-    queryKeys: PAGE_QUERY_KEYS,
+    queryKeys: LIST_TASKS_QUERY_KEYS,
     method: "GET",
     pattern: /^\/v1\/channels\/([^/]+)\/tasks$/,
     access: "user",
