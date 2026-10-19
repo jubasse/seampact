@@ -4,6 +4,8 @@
 import type { ContractReply } from "./contract-error.js";
 
 export const ETAG_HEADER = "etag";
+/** The prefix of a weak entity tag, which a compressing middleware writes for the boundary's strong one. */
+export const WEAK_ETAG_PREFIX = "W/";
 export const VARY_HEADER = "vary";
 export const CONTENT_LENGTH_HEADER = "content-length";
 export const CONTENT_ENCODING_HEADER = "content-encoding";

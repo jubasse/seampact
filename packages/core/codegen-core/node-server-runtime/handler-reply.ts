@@ -14,13 +14,12 @@ import {
   type ResponseEntry,
   type ValueShape,
 } from "./contract-route.js";
-import { CACHE_CONTROL_HEADER, NO_STORE_DIRECTIVE } from "./reply-headers.js";
+import { CACHE_CONTROL_HEADER, NO_STORE_DIRECTIVE, WEAK_ETAG_PREFIX } from "./reply-headers.js";
 import { sha256Base64Url } from "./sha256.js";
 import { withQueryMember } from "./wire-decoding.js";
 
 const JSON_MEDIA = "application/json";
 const NOT_MODIFIED = 304;
-const WEAK_PREFIX = "W/";
 
 /** The reply of a handler's result, or the contract error it names. */
 export async function handlerReply(
@@ -81,7 +80,7 @@ async function successReply(
   }
 
   const payload = response.shape === "page" ? pageItems(state, handlerBody, headers) : handlerBody;
-  const projected = await project(state, grant, response.body, payload);
+  const projected = await projectPayload(state, grant, response, response.body, payload);
   const body = new TextEncoder().encode(JSON.stringify(projected));
 
   headers.unshift(["content-type", JSON_MEDIA]);
@@ -151,7 +150,44 @@ function ifNoneMatchHolds(ifNoneMatch: string | undefined, etag: string): boolea
   return ifNoneMatch
     .split(",")
     .map((tag) => tag.trim())
-    .some((tag) => tag === "*" || tag === etag || tag === `${WEAK_PREFIX}${etag}`);
+    .some((tag) => tag === "*" || tag === etag || tag === `${WEAK_ETAG_PREFIX}${etag}`);
+}
+
+// The body shape is the item's: a list or page projects each item, a table each value under its id.
+async function projectPayload(
+  state: CheckState,
+  grant: AccessGrant,
+  response: ResponseEntry,
+  itemShape: ValueShape,
+  payload: unknown,
+): Promise<unknown> {
+  if (response.shape === "list" || response.shape === "page") {
+    if (!Array.isArray(payload)) throw unexpectedPayload(state, "an array of items");
+
+    return Promise.all(payload.map((item) => project(state, grant, itemShape, item)));
+  }
+
+  if (response.shape === "table") {
+    if (!isPlainObject(payload)) throw unexpectedPayload(state, "an object keyed by item id");
+
+    const entries = await Promise.all(
+      Object.entries(payload).map(async ([id, item]) => [
+        id,
+        await project(state, grant, itemShape, item),
+      ]),
+    );
+
+    return Object.fromEntries(entries);
+  }
+
+  return project(state, grant, itemShape, payload);
+}
+
+function unexpectedPayload(state: CheckState, expected: string): ContractError {
+  return unexpectedError(
+    state.route,
+    new Error(`the handler of '${state.route.id}' returned a body that is not ${expected}`),
+  );
 }
 
 // Keeps the declared members of each object, and drops a restricted output field the caller has no right to.

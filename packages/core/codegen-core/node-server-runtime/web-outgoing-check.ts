@@ -25,6 +25,7 @@ import {
   CONTENT_ENCODING_HEADER,
   CONTENT_TYPE_HEADER,
   ETAG_HEADER,
+  WEAK_ETAG_PREFIX,
 } from "./reply-headers.js";
 import { IDENTITY_ENCODING } from "./transport-checks.js";
 import {
@@ -114,16 +115,24 @@ export async function checkOutgoingResponse(
   return heldResponse(context, request, outgoing, response.body, verdict.holdReason);
 }
 
-// The app's headers with a foreign ETag stripped and the boundary's own names set again, `Vary` merged.
+// The app's headers with a foreign ETag stripped and the boundary's own names set again, `Vary` merged. The
+// boundary's ETag made weak stays: a compressing middleware (`hono/compress`) weakens it for the encoded body, and
+// the boundary's If-None-Match check accepts the weak form.
 function appReplyHeaders(response: Response, own: BoundaryResponse | undefined): Headers {
   const headers = new Headers(response.headers);
   const ownEtag = own?.response.headers.get(ETAG_HEADER) ?? null;
 
-  if (headers.get(ETAG_HEADER) !== ownEtag) headers.delete(ETAG_HEADER);
+  if (!isOwnEtag(headers.get(ETAG_HEADER), ownEtag)) headers.delete(ETAG_HEADER);
 
   if (own !== undefined) restoreReplyNames(headers, own.reply.headers);
 
   return headers;
+}
+
+function isOwnEtag(etag: string | null, ownEtag: string | null): boolean {
+  if (etag === ownEtag) return true;
+
+  return ownEtag !== null && etag === `${WEAK_ETAG_PREFIX}${ownEtag}`;
 }
 
 function isRebuiltBoundaryResponse(own: Response, response: Response): boolean {
