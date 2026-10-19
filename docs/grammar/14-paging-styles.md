@@ -57,6 +57,8 @@ Request roles. A style has exactly one position role (`cursor`, `page`, `offset`
 | `limit` | the page size, from 1 to the route's `maxLimit`. A larger value answers 400 (SCN-012), or, with `overLimit: clamp`, is served as `maxLimit`, which the `limit` response role then reports, as Spring Data, GitHub and API Platform do. A style without it serves `defaultLimit` records per page |
 | `sort` | the sort keys of `sortable`; `style` is `signed` (`sort=-createdAt,title`), `pair` (`sort=createdAt,desc`, repeated), `keyed` (the name holds `{key}`: `order[createdAt]=desc`) or `split` (one key, its direction `asc` or `desc` in the parameter `direction` names: `sort=created&direction=desc`) |
 
+A `pair` item takes a direction in every item: `sort=createdAt` alone is refused with a 400, never read as ascending. A `signed` list splits on `,` and reads a leading `-` as descending, so a sort key whose name holds a `,` or starts with `-` is a compile error naming the key and the style, under the `signed` style only.
+
 Response roles, each a slot of the body, a header or a link:
 
 | Role | Value | Filled by | Kinds |

@@ -38,8 +38,10 @@ const REQUEST_ROLES: readonly IrWriter.PagingRole[] = [
 ];
 const PLACEMENTS: readonly IrWriter.PagingParamPlacement[] = ["query", "header"];
 const SORT_STYLES: readonly IrWriter.PagingParamStyle[] = ["signed", "pair", "keyed", "split"];
+
 // A sort role without `style` sends `sort=-createdAt,title`.
-const DEFAULT_SORT_STYLE: IrWriter.PagingParamStyle = "signed";
+export const TREE_NODES_DEFAULT_SORT_STYLE: IrWriter.PagingParamStyle = "signed";
+
 const URL_ROLES: readonly IrWriter.UrlRole[] = ["self", "first", "previous", "next", "last"];
 const HANDLER_RESULT: readonly IrWriter.HandlerResultMember[] = [
   "nextCursor",
@@ -259,7 +261,7 @@ class StyleReader {
       in: placement,
       name: parameter,
       ...(role === "page" ? { base: typeof base === "number" ? base : DEFAULT_PAGE_BASE } : {}),
-      ...(role === "sort" ? { style: style ?? DEFAULT_SORT_STYLE } : {}),
+      ...(role === "sort" ? { style: style ?? TREE_NODES_DEFAULT_SORT_STYLE } : {}),
       ...(typeof direction === "string" ? { direction } : {}),
     };
   }

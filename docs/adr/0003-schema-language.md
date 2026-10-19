@@ -354,6 +354,7 @@ A field then writes `{ format: money }`: its type is the scalar's, and writing `
 - Kept: literal characters; classes `[...]` with ranges and negation; `\d`, `\w`, `\s` and their negations; `.`; quantifiers `*`, `+`, `?`, `{n}`, `{n,}`, `{n,m}` (greedy); alternation `|`; groups `(...)` and `(?:...)`; anchors `^` and `$`.
 - Escapes: only a metacharacter may be escaped (`\.`, `\*`, `\+`, `\?`, `\(`, `\)`, `\[`, `\]`, `\{`, `\}`, `\|`, `\\`, `\^`, `\$`, `\/`), plus `\-` inside a class. A literal `{`, `}` or `]` must be escaped everywhere, and a literal `-` inside a class except as its first or last character. ECMAScript with `u` refuses the other escapes and the lone brackets.
 - Refused: backreferences, lookahead and lookbehind, named groups, lazy and possessive quantifiers, `\b`, Unicode property escapes (`\p{...}`), inline flags, and anything outside the lists above.
+- Refused as backtracking exponentially, since ECMAScript, Java and PCRE2 run a pattern by backtracking on request text: a group repeated more than once that holds a repetition of variable count (star height above 1: `(a+)+`, `(a*b?)*`, `([a-z0-9]+-)*`), and a group repeated more than once whose branches can start with the same character (`(a|ab)*`, `(a|a)*`). A group under `?` or a fixed count inside a repeated group (`(\d{3}-)?`, `(ab{3})*`) is kept. The fix is a pattern without such a group, or the check in the application's code (A45).
 
 The normalised meanings, matched per code point:
 

@@ -1121,3 +1121,48 @@ test("degradable: with the header, a name of visible ASCII and inner spaces is a
 
   expect(located(run)).toEqual([]);
 });
+
+test("sort keys: a signed style refuses a key holding ',' or starting with '-', a pair style takes it", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: a, version: 1, kind: product }
+pagings:
+  signed:
+    request: { cursor: { query: cursor }, limit: { query: limit }, sort: { query: sort } }
+    response: { body: $items }
+  pair:
+    request: { cursor: { query: cursor }, limit: { query: limit }, sort: { query: sort, style: pair } }
+    response: { body: $items }
+conventions:
+  paging: { maxLimit: 100 }
+schemas:
+  Note: { type: object, properties: { "a,b": { type: string }, "-c": { type: string }, d: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      signed: { method: get, item: Note, paging: signed, sortable: ["a,b", "-c", d] }
+      pair: { method: get, item: Note, paging: pair, sortable: ["a,b", "-c", d] }
+`);
+  const item = (route: string) => [`${ROUTES}/${route}/item`, ref("Note")] as const;
+  const treeSchemas = treeNodesStubService({
+    typeUses: Object.fromEntries(["signed", "pair"].map(item)),
+  });
+  const draft = treeNodesDraftWith(objectSchema("Note", { "a,b": text, "-c": text, d: text }));
+  const { diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas,
+    draft,
+  });
+
+  expect(diagnostics.map(({ rule, origin, message }) => [rule, origin.pointer, message])).toEqual([
+    [
+      "seampact/tree/sort-key-signed",
+      `${ROUTES}/signed/sortable/0`,
+      "The sort key a,b of signed holds a ',' or starts with '-', which the signed sort style signed cannot send.",
+    ],
+    [
+      "seampact/tree/sort-key-signed",
+      `${ROUTES}/signed/sortable/1`,
+      "The sort key -c of signed holds a ',' or starts with '-', which the signed sort style signed cannot send.",
+    ],
+  ]);
+});

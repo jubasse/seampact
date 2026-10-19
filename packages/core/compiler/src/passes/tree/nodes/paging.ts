@@ -2,6 +2,7 @@ import type { IrWriter, Origin } from "@seampact/spec/ir";
 import { pipelineCopy } from "../../../pipeline/seam.js";
 import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
 import type { TreeNodesSite } from "./fields.js";
+import { TREE_NODES_DEFAULT_SORT_STYLE } from "./pagings.js";
 import {
   type TreeNodesJson,
   treeNodesIsObject,
@@ -27,6 +28,11 @@ const DEFAULT_TOKEN: IrWriter.PagingToken = "opaque";
 const LIMIT_ROLE = "limit";
 const SORT_ROLE = "sort";
 const SINCE_ROLE = "since";
+
+// A signed sort list splits its items on `,` and reads a leading `-` as descending (ADR 0002 section 14).
+const SIGNED_SORT_STYLE: IrWriter.PagingParamStyle = "signed";
+const SIGNED_LIST_SEPARATOR = ",";
+const SIGNED_DESCENDING_PREFIX = "-";
 
 /** The paging style a list uses, as written: its id, its route settings and where it is named. */
 interface NamedStyle {
@@ -80,6 +86,7 @@ export function treeNodesPaging(
   const roles = requestRoles(style);
 
   if (!roles.includes(SORT_ROLE)) refuseSortWithoutRole(site, sortKeys, `the style ${named.id}`);
+  else if (sortStyleOf(style) === SIGNED_SORT_STYLE) refuseUnsignableKeys(site, named.id, sortKeys);
   refuseTakenNames(site, named.id, style, query);
   const limits = limitsOf(site, named, roles);
 
@@ -238,6 +245,30 @@ function reportUnknownKey(site: TreeNodesSite, key: string, schema: string, orig
       fix: `Name a property of ${schema}, or declare ${key} on it.`,
     }),
   );
+}
+
+const sortStyleOf = (style: TreeNodesJson): TreeNodesJson =>
+  treeNodesMember(treeNodesMember(treeNodesMember(style, "request"), SORT_ROLE), "style") ??
+  TREE_NODES_DEFAULT_SORT_STYLE;
+
+// A key holding the separator or starting with the descending sign could not be read back from a signed list.
+function refuseUnsignableKeys(
+  site: TreeNodesSite,
+  styleId: string,
+  sortKeys: readonly IrWriter.SortKey[],
+): void {
+  for (const { key, origin } of sortKeys) {
+    if (!key.includes(SIGNED_LIST_SEPARATOR) && !key.startsWith(SIGNED_DESCENDING_PREFIX)) continue;
+
+    site.context.report(
+      treeNodesError({
+        rule: "sort-key-signed",
+        origin: treeNodesNodeOrigin(origin ?? site.node.origin),
+        message: `The sort key ${key} of ${site.operationId} holds a ',' or starts with '-', which the signed sort style ${styleId} cannot send.`,
+        fix: `Rename ${key}, or use a paging style whose sort role is pair, keyed or split.`,
+      }),
+    );
+  }
 }
 
 function refuseSortWithoutRole(

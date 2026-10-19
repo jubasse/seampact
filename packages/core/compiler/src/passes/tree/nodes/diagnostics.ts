@@ -48,6 +48,7 @@ export type TreeNodesRule =
   | "paging-limit"
   | "paging-token"
   | "sort-key"
+  | "sort-key-signed"
   | "degradable-path"
   | "degradable-header"
   | "budget-duration"
