@@ -45,7 +45,7 @@ You install the core, then only the generators your project uses. Installing the
 | validators | `@seampact/codegen-zod`, `@seampact/codegen-yup` or `@seampact/codegen-class-validator` |
 | a typed `fetch` client | `@seampact/codegen-fetch` |
 | a server boundary | `@seampact/codegen-nestjs`, `@seampact/codegen-fastify`, `@seampact/codegen-express` or `@seampact/codegen-adonis`, plus `@seampact/hooks` unless the target vendors its types |
-| a frontend client | `@seampact/codegen-react`, `@seampact/codegen-angular` or `@seampact/codegen-vue` |
+| a frontend client (planned) | `@seampact/codegen-react`, `@seampact/codegen-angular` or `@seampact/codegen-vue` |
 | a Web-standard server boundary (planned) | `@seampact/codegen-hono` |
 | mock handlers for tests and local work (planned) | `@seampact/codegen-msw` |
 
@@ -79,9 +79,9 @@ Every generator renders the default format and every format and paging style you
 | `codegen-express` | server boundary for Express 4 and 5 | `validators`: zod or yup | middleware |
 | `codegen-adonis` | server boundary for AdonisJS 6 and 7 | `validators`: zod (VineJS planned) | middleware and exception handler |
 | `codegen-hono` (planned) | server boundary on Web-standard `Request` and `Response` | `validators`: zod | middleware |
-| `codegen-react` | hooks for TanStack Query, RTK Query or SWR, chosen with the `query` option | `client`: fetch | through the fetch client |
-| `codegen-vue` | plain composables, or with `query: tanstack` or `query: pinia-colada` | `client`: fetch | through the fetch client |
-| `codegen-angular` | injectable services over `HttpClient`, and with `state: ngrx` or `state: ngrx-signals` typed actions and effects, or a Signal Store feature | nothing | its own response readers |
+| `codegen-react` (planned) | hooks for TanStack Query, RTK Query or SWR, chosen with the `query` option | `client`: fetch | through the fetch client |
+| `codegen-vue` (planned) | plain composables, or with `query: tanstack` or `query: pinia-colada` | `client`: fetch | through the fetch client |
+| `codegen-angular` (planned) | injectable services over `HttpClient`, and with `state: ngrx` or `state: ngrx-signals` typed actions and effects, or a Signal Store feature | nothing | its own response readers |
 | `codegen-msw` (planned) | mock handlers for Mock Service Worker | `types` | not applicable: mocks the contract's own responses |
 | Spring Boot plugin | composed annotations, interceptor and argument resolver around your controllers, with Bean Validation | nothing | `ProblemDetail`, Spring Data `Page` |
 | `seampact/laravel` | routes, middleware and Form Requests around your controllers | nothing | API Resources and paginators |
@@ -130,7 +130,7 @@ app.use(TasksExpress.preRoutingErrorHandler);
 await app.register(TasksFastify.plugin, { handlers: { TasksEndpoints: tasksHandlers }, hooks: tasksHooks() });
 ```
 
-**AdonisJS 6 and 7.** Register the routes from `start/routes`, and let your exception handler call the generated helper first. Signed routes read the raw body through the body parser.
+**AdonisJS 6 and 7.** Register `@adonisjs/core/bodyparser_middleware` as router middleware and list the route's media type in `json.types` of the body parser config: without it every route that takes a body answers 500, failing closed. Register the routes from `start/routes`, one `controllers` entry per generated `*Endpoints` interface, each a lazy import of a module whose default export is your controller class implementing that interface. Signed routes read the raw body through the body parser.
 
 ```ts
 TasksAdonis.registerRoutes(router, {
@@ -139,9 +139,19 @@ TasksAdonis.registerRoutes(router, {
 });
 ```
 
+In `app/exceptions/handler`, call the generated helper first, once per api:
+
+```ts
+override async handle(error: unknown, ctx: HttpContext) {
+  if (await TasksAdonis.renderPreRoutingError(error, ctx)) return undefined;
+
+  return super.handle(error, ctx);
+}
+```
+
 ### Mobile and Capacitor
 
-React Native and Expo apps use the TypeScript types, the zod validators and the `fetch` client. Ionic and Capacitor apps are web apps, so they use the React, Angular or Vue targets. The `fetch` client accepts an injected `fetch`, which is how a Capacitor app sends its calls through native HTTP.
+Today, mobile and Capacitor apps use the TypeScript types, the zod validators and the `fetch` client. The `fetch` client accepts an injected `fetch`, which is how a Capacitor app sends its calls through native HTTP. React Native and Expo need a `crypto.randomUUID` polyfill until the client takes an injected key generator. Ionic and Capacitor apps are web apps, so they will use the React, Angular or Vue targets once those land (planned).
 
 ### Optional packages
 
