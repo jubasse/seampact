@@ -95,7 +95,7 @@ In pipeline order (ADR 0006 section 1).
 - `packages/core/spec/src/authoring`: The authoring grammar: the JSON Schemas of the YAML files (ADR 0002), their schema keywords and markers.
 - `packages/core/spec/src/authoring/grammar`: The grammar modules the authoring JSON Schemas are generated from, one per file and fragment kind (ADR 0002 and 0003).
 - `packages/core/spec/src/bundle`: Contract bundles (`@seampact/spec/bundle`): reserved, no export yet.
-- `packages/core/spec/src/compatibility`: The compatibility matrix (`@seampact/spec/compatibility`): reserved, no export yet.
+- `packages/core/spec/src/compatibility`: The compatibility matrix (`@seampact/spec/compatibility`): the first-party providers, and per server target the framework majors it supports and the validator styles it accepts.
 - `packages/core/spec/src/config`: The app config, `seampact.config.yaml` (`@seampact/spec/config`): its types and its JSON Schema.
 - `packages/core/spec/src/ir`: The IR (ADR 0004 and 0005): its JSON Schemas, generated types, writer view, validation and invariants.
 - `packages/core/spec/src/naming`: ADR 0007: cross-language naming.
