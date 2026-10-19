@@ -1,6 +1,9 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { pipelineCopy } from "../../../pipeline/seam.js";
-import { treeSchemasNormalizePattern } from "../../tree/schemas/index.js";
+import {
+  treeSchemasEscapePatternLiteral,
+  treeSchemasNormalizePattern,
+} from "../../tree/schemas/index.js";
 import {
   DERIVE_WIRE_LINK,
   DERIVE_WIRE_STRING_USE,
@@ -16,9 +19,6 @@ const SORT_DIRECTIONS: readonly string[] = ["asc", "desc"];
 const DESCENDING_PREFIX = "-";
 
 const PAIR_SEPARATOR = ",";
-
-// The characters ADR 0003 section 9 lets a pattern escape outside a class.
-const PATTERN_METACHARACTERS = /[\\^$.|?*+()[\]{}/]/g;
 
 // The request parameters and page headers of a paged list (`paging.params`, ADR 0002 section 14, ADR 0006
 // section 5), from the style tree.nodes resolved and the limits it wrote. Every parameter is optional: a request
@@ -200,7 +200,7 @@ const oneOfUse = (values: readonly string[]): IrWriter.ScalarTypeUse =>
   patternUse(`^${alternation(values)}$`);
 
 const alternation = (values: readonly string[]): string =>
-  `(?:${values.map((value) => value.replace(PATTERN_METACHARACTERS, "\\$&")).join("|")})`;
+  `(?:${values.map(treeSchemasEscapePatternLiteral).join("|")})`;
 
 function patternUse(source: string): IrWriter.ScalarTypeUse {
   const normalised = treeSchemasNormalizePattern(source);
