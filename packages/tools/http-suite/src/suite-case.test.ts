@@ -131,6 +131,39 @@ describe("parseSuiteCase", () => {
       "at '/steps/0/capture/userToken': a capture cannot take the name of a credential",
     ],
     [
+      "a body beside a body text",
+      minimalCase({
+        steps: [
+          {
+            request: { method: "POST", path: "/", body: {}, bodyText: "{" },
+            expect: { status: 400 },
+          },
+        ],
+      }),
+      "at '/steps/0/request': a request sends either `body` or `bodyText`, not both",
+    ],
+    [
+      "a negative signature age",
+      minimalCase({
+        steps: [
+          {
+            request: {
+              method: "POST",
+              path: "/",
+              sign: {
+                scheme: "stripe-v1",
+                header: "stripe-signature",
+                secret: "s",
+                ageSeconds: -1,
+              },
+            },
+            expect: { status: 200 },
+          },
+        ],
+      }),
+      "at '/steps/0/request/sign/ageSeconds'",
+    ],
+    [
       "an absent pointer without a slash",
       minimalCase({
         steps: [

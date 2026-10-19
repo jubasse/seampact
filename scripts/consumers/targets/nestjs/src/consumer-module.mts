@@ -1,4 +1,5 @@
-// The consumer's NestJS module: both apis' generated modules with the shared hooks, and the controllers.
+// The consumer's NestJS module: both apis' generated modules with the shared hooks, the controllers and the http
+// suite's control routes.
 import { Module } from "@nestjs/common";
 import * as TasksNest from "../generated/server/tasks/index.js";
 import * as TasksServiceNest from "../generated/server/tasksService/index.js";
@@ -12,6 +13,7 @@ import {
   TasksController,
 } from "./controllers.mjs";
 import { tasksHooks, tasksServiceHooks } from "./hooks.mjs";
+import { SuiteControlController } from "./suite-control-controller.mjs";
 
 @Module({
   imports: [
@@ -26,6 +28,7 @@ import { tasksHooks, tasksServiceHooks } from "./hooks.mjs";
     PreferencesController,
     HooksController,
     InternalController,
+    SuiteControlController,
   ],
 })
 export class ConsumerModule {}

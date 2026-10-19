@@ -1,0 +1,28 @@
+{
+  "id": "batch-read-without-csrf-or-key",
+  "title": "A batch read is a safe POST: no CSRF header and no idempotency key with a session cookie",
+  "checks": ["CHK-035"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/batch",
+        "headers": {
+          "cookie": "__Host-session={{userToken}}"
+        },
+        "body": {
+          "ids": ["20000000-0000-4000-8000-000000000001"]
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "20000000-0000-4000-8000-000000000001": {
+            "taskId": "20000000-0000-4000-8000-000000000001"
+          }
+        }
+      }
+    }
+  ]
+}

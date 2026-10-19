@@ -1,0 +1,30 @@
+{
+  "id": "undeclared-status-answers-internal-error",
+  "title": "A handler status the operation does not declare answers 500 api.internal",
+  "checks": ["CHK-064", "CHK-157"],
+  "profiles": ["default"],
+  "script": {
+    "answers": {
+      "tasks.health": {
+        "status": 418,
+        "body": {
+          "status": "teapot"
+        }
+      }
+    }
+  },
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/health"
+      },
+      "expect": {
+        "status": 500,
+        "body": {
+          "code": "api.internal"
+        }
+      }
+    }
+  ]
+}

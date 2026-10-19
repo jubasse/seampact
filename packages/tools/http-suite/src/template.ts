@@ -6,7 +6,10 @@ const PLACEHOLDER = /\{\{([^{}]+)\}\}/g;
 const WHOLE_PLACEHOLDER = /^\{\{([^{}]+)\}\}$/;
 const UUID_PREFIX = "uuid:";
 const DEADLINE_PREFIX = "deadline:";
-const DEADLINE_MS = /^\d+$/;
+const DEADLINE_MS = /^-?\d+$/;
+const FILLER_PREFIX = "filler:";
+const FILLER_LENGTH = /^\d+$/;
+const FILLER_CHARACTER = "a";
 
 /** A placeholder the case uses but no credential, capture or generator answers. */
 export class TemplateError extends Error {
@@ -73,13 +76,15 @@ export class TemplateScope {
 
     if (name.startsWith(DEADLINE_PREFIX)) return deadline(name.slice(DEADLINE_PREFIX.length));
 
+    if (name.startsWith(FILLER_PREFIX)) return filler(name.slice(FILLER_PREFIX.length));
+
     const value = this.#variables.get(name);
 
     if (value === undefined) {
       const known = [...this.#variables.keys()].sort().join(", ");
 
       throw new TemplateError(
-        `no value for '{{${name}}}'; known names: ${known}, and the generators uuid:<label>, deadline:<ms>`,
+        `no value for '{{${name}}}'; known names: ${known}, and the generators uuid:<label>, deadline:<ms>, filler:<length>`,
       );
     }
 
@@ -99,11 +104,20 @@ export class TemplateScope {
   }
 }
 
-// An RFC 3339 UTC date-time `milliseconds` from now, as a deadline header carries it.
+// An RFC 3339 UTC date-time `milliseconds` from now (before now when negative), as a deadline header carries it.
 function deadline(milliseconds: string): string {
   if (!DEADLINE_MS.test(milliseconds)) {
     throw new TemplateError(`'{{deadline:${milliseconds}}}' needs a whole number of milliseconds`);
   }
 
   return new Date(Date.now() + Number(milliseconds)).toISOString();
+}
+
+// A text of `length` ASCII characters, for a body above a size limit.
+function filler(length: string): string {
+  if (!FILLER_LENGTH.test(length)) {
+    throw new TemplateError(`'{{filler:${length}}}' needs a whole number of characters`);
+  }
+
+  return FILLER_CHARACTER.repeat(Number(length));
 }

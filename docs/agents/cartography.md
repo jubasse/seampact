@@ -155,4 +155,4 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/http-suite`
 
-- `packages/tools/http-suite/src`: The shared black-box HTTP suite (ADR 0015): the JSON case format and its shipped cases, the sample app's control routes, a runner against a base URL and the report keyed by checklist id.
+- `packages/tools/http-suite/src`: The shared black-box HTTP suite (ADR 0015): the JSON case format and its shipped cases, the sample app's control routes and the script a sample app answers from, a runner against a base URL and the report keyed by checklist id.

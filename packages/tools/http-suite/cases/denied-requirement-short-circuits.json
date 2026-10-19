@@ -1,0 +1,43 @@
+{
+  "id": "denied-requirement-short-circuits",
+  "title": "A denied requirement stops the checks: the later requirements are not asked",
+  "checks": ["CHK-014", "CHK-015"],
+  "profiles": ["default"],
+  "script": {},
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{throttledUserToken}}",
+          "idempotency-key": "{{uuid:create}}"
+        },
+        "body": {
+          "title": "Too many"
+        }
+      },
+      "expect": {
+        "status": 429,
+        "body": {
+          "code": "api.rate_limited"
+        },
+        "headers": {
+          "retry-after": {
+            "equals": "{{throttleRetryAfterSeconds}}"
+          }
+        }
+      }
+    }
+  ],
+  "hookCalls": [
+    {
+      "hook": "authenticate:user",
+      "operation": "tasks.createTask"
+    },
+    {
+      "hook": "decide:throttle",
+      "operation": "tasks.createTask"
+    }
+  ]
+}

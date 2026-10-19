@@ -1,0 +1,55 @@
+{
+  "id": "stale-body-version-conflict",
+  "title": "A stale expectedVersion answers 409 state.conflict, and a missing one 400",
+  "checks": ["CHK-041"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "title": "stale",
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:stale}}"
+        },
+        "body": {
+          "title": "Late",
+          "expectedVersion": 2
+        }
+      },
+      "expect": {
+        "status": 409,
+        "body": {
+          "code": "state.conflict"
+        }
+      }
+    },
+    {
+      "title": "missing",
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:missing}}"
+        },
+        "body": {
+          "title": "Late"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid",
+          "issues": [
+            {
+              "pointer": "/expectedVersion",
+              "rule": "required"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

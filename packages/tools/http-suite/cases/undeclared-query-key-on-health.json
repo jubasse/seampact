@@ -1,7 +1,7 @@
 {
   "id": "undeclared-query-key-on-health",
   "title": "400 for an undeclared query key on health",
-  "checks": [],
+  "checks": ["CHK-034", "CHK-134"],
   "profiles": ["default"],
   "steps": [
     {

@@ -1,5 +1,5 @@
 // The credentials every consumer's hooks honour and the http suite run passes to its cases.
-import { signRequestBody, STRIPE_V1_SCHEME } from "@seampact/http-suite";
+import { STRIPE_V1_SCHEME, signRequestBody } from "@seampact/http-suite";
 
 /** A signed-in user: `Authorization: Bearer <userToken>`. */
 export const USER_TOKEN = "seampact-user-token";
@@ -19,8 +19,15 @@ export const THROTTLE_RETRY_AFTER_MS = 1500;
 export const SERVICE_JWT =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2aWNlIjoiY2F0YWxvZyIsInVzZXJJZCI6InVzZXItMSJ9.c2VhbXBhY3QtdGVzdA";
 
-/** The service the service token stands for. */
+/** The service the service token stands for, the one the service api's `callerService` allows. */
 export const SERVICE_NAME = "catalog";
+
+/** The bearer token of another service, which the service api's `callerService` does not allow. */
+export const FOREIGN_SERVICE_JWT =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzZXJ2aWNlIjoidGlja2V0aW5nIiwidXNlcklkIjoidXNlci0xIn0.c2VhbXBhY3QtdGVzdA";
+
+/** The service the foreign service token stands for. */
+export const FOREIGN_SERVICE_NAME = "ticketing";
 
 /** The Stripe signature scheme's key id and its one valid secret. */
 export const STRIPE_KEY_ID = "stripe";

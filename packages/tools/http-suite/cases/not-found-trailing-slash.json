@@ -1,7 +1,7 @@
 {
   "id": "not-found-trailing-slash",
   "title": "404 in the api format for a trailing slash under the base path",
-  "checks": [],
+  "checks": ["CHK-029"],
   "profiles": ["default"],
   "steps": [
     {

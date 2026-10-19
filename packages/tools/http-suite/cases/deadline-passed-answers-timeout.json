@@ -1,0 +1,24 @@
+{
+  "id": "deadline-passed-answers-timeout",
+  "title": "A service call whose deadline has passed answers 504",
+  "checks": ["CHK-011"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/internal/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{serviceJwt}}",
+          "x-deadline": "{{deadline:-1000}}"
+        }
+      },
+      "expect": {
+        "status": 504,
+        "body": {
+          "code": "api.deadline_exceeded"
+        }
+      }
+    }
+  ]
+}

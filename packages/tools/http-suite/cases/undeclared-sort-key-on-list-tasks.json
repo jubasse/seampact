@@ -1,7 +1,7 @@
 {
   "id": "undeclared-sort-key-on-list-tasks",
   "title": "400 for an undeclared sort key on listTasks",
-  "checks": [],
+  "checks": ["CHK-033"],
   "profiles": ["default"],
   "steps": [
     {

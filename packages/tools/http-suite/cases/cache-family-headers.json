@@ -1,0 +1,28 @@
+{
+  "id": "cache-family-headers",
+  "title": "A cache family gives the Cache-Control of the caller kind, with Vary",
+  "checks": ["CHK-036"],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/me/preferences",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "cache-control": {
+            "contains": ["max-age=60"]
+          },
+          "vary": {
+            "contains": ["Authorization"]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 {
   "id": "idempotency-key-reused",
   "title": "422 for an idempotency key reused with another body",
-  "checks": [],
+  "checks": ["CHK-043"],
   "profiles": ["default"],
   "steps": [
     {

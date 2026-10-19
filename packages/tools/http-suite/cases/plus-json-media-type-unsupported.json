@@ -1,7 +1,7 @@
 {
   "id": "plus-json-media-type-unsupported",
   "title": "415 for a +json media type on a JSON route",
-  "checks": [],
+  "checks": ["CHK-029"],
   "profiles": ["default"],
   "steps": [
     {

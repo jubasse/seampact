@@ -1,7 +1,7 @@
 {
   "id": "empty-title-names-pointer-and-rule",
   "title": "400 for an empty title on create, naming the pointer and the rule",
-  "checks": [],
+  "checks": ["CHK-105"],
   "profiles": ["default"],
   "steps": [
     {

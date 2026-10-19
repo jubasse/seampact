@@ -8,7 +8,8 @@ import { TemplateError, TemplateScope } from "./template.js";
 
 /**
  * The credentials the sample app's hooks honour, read by the cases as `{{userToken}}`, `{{throttledUserToken}}`,
- * `{{serviceJwt}}`, `{{stripeSecret}}`, `{{throttleRetryAfterMs}}` and the derived `{{throttleRetryAfterSeconds}}`.
+ * `{{serviceJwt}}`, `{{foreignServiceJwt}}`, `{{stripeSecret}}`, `{{throttleRetryAfterMs}}` and the derived
+ * `{{throttleRetryAfterSeconds}}`.
  */
 export interface SuiteCredentials {
   readonly userToken: string;
@@ -16,6 +17,8 @@ export interface SuiteCredentials {
   readonly serviceJwt: string;
   readonly stripeSecret: string;
   readonly throttleRetryAfterMs: number;
+  /** The bearer token of a service the service api's `callerService` requirement does not allow. */
+  readonly foreignServiceJwt: string;
 }
 
 export interface SuiteRunOptions {
@@ -109,9 +112,7 @@ async function runCase(suiteCase: SuiteCase, context: RunContext): Promise<CaseR
   const failures: string[] = [];
 
   try {
-    if (suiteCase.script !== undefined) {
-      await loadScript(context.baseUrl, suiteCase.script, timeoutSignal(context));
-    }
+    await loadScript(context.baseUrl, suiteCase.script ?? {}, timeoutSignal(context));
 
     for (const [index, step] of suiteCase.steps.entries()) {
       const label = `step ${index} (${step.title ?? `${step.request.method} ${step.request.path}`})`;
@@ -217,7 +218,7 @@ async function send(
   const headers = new Headers(
     Object.entries(request.headers ?? {}).map(([name, value]) => [name, scope.fillText(value)]),
   );
-  const body = request.body === undefined ? undefined : JSON.stringify(scope.fill(request.body));
+  const body = bodyOf(request, scope);
 
   if (body !== undefined && !headers.has("content-type")) headers.set("content-type", JSON_MEDIA);
 
@@ -226,7 +227,12 @@ async function send(
 
     headers.set(
       request.sign.header,
-      signRequestBody(request.sign.scheme, scope.fillText(request.sign.secret), signed),
+      signRequestBody(
+        request.sign.scheme,
+        scope.fillText(request.sign.secret),
+        signed,
+        Date.now() - (request.sign.ageSeconds ?? 0) * MILLISECONDS_PER_SECOND,
+      ),
     );
   }
 
@@ -243,6 +249,12 @@ async function send(
   const text = await answer.text();
 
   return { status: answer.status, headers: answer.headers, text, json: parseJson(text) };
+}
+
+function bodyOf(request: SuiteStep["request"], scope: TemplateScope): string | undefined {
+  if (request.bodyText !== undefined) return scope.fillText(request.bodyText);
+
+  return request.body === undefined ? undefined : JSON.stringify(scope.fill(request.body));
 }
 
 function queryOf(

@@ -1,7 +1,7 @@
 {
   "id": "page-links-next-page",
   "title": "A page links the next one, and the next cursor reads the last page",
-  "checks": [],
+  "checks": ["CHK-030", "CHK-106"],
   "profiles": ["default"],
   "steps": [
     {

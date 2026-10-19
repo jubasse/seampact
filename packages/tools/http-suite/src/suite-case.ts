@@ -1,4 +1,16 @@
 // The case script format: one JSON file per case, read and checked here before any request is sent.
+import {
+  arrayAt,
+  type JsonReader,
+  jsonAt,
+  jsonObjectAt,
+  objectAt,
+  patternAt,
+  statusAt,
+  stringAt,
+  stringMapAt,
+} from "./json-reader.js";
+import { readSampleAppScript, type SampleAppScript } from "./sample-app-script.js";
 
 export type JsonValue =
   | null
@@ -27,17 +39,22 @@ export interface HeaderExpectation {
   readonly absent?: true;
 }
 
-/** A request signature the runner computes over the exact body bytes it sends. */
+/**
+ * A request signature the runner computes over the exact body bytes it sends, timestamped `ageSeconds` before now
+ * (0 by default) so a case can send a stale signature.
+ */
 export interface RequestSignature {
   readonly scheme: string;
   readonly header: string;
   readonly secret: string;
+  readonly ageSeconds?: number;
 }
 
 /**
  * The request of a step. `path` is sent as written (no normalisation, so a doubled slash or a percent-encoded
  * segment reaches the server); `query` is appended encoded; a `body` is sent as JSON with
- * `content-type: application/json` unless `headers` names another content type.
+ * `content-type: application/json` unless `headers` names another content type; `bodyText` is sent as written,
+ * for a body that is not valid JSON, with the same default content type.
  */
 export interface StepRequest {
   readonly method: string;
@@ -45,6 +62,7 @@ export interface StepRequest {
   readonly query?: Readonly<Record<string, JsonValue>>;
   readonly headers?: Readonly<Record<string, string>>;
   readonly body?: JsonValue;
+  readonly bodyText?: string;
   readonly sign?: RequestSignature;
 }
 
@@ -82,7 +100,8 @@ export interface SuiteStep {
 
 /**
  * A case: its id is its file name, `checks` the checklist ids it proves, `profiles` the profiles that run it.
- * `script` is loaded through the control routes before the first step; `hookCalls` is then the exact list of hook
+ * `script` is loaded through the control routes before the first step, an empty script when the case has none, so
+ * every case starts from the doubles' own answers and no recorded call; `hookCalls` is then the exact list of hook
  * calls the sample app must have recorded once every step has run.
  */
 export interface SuiteCase {
@@ -90,7 +109,7 @@ export interface SuiteCase {
   readonly title: string;
   readonly checks: readonly string[];
   readonly profiles: readonly SuiteProfile[];
-  readonly script?: { readonly [member: string]: JsonValue };
+  readonly script?: SampleAppScript;
   readonly steps: readonly SuiteStep[];
   readonly hookCalls?: readonly RecordedHookCall[];
 }
@@ -106,8 +125,6 @@ export const CHECK_ID = /^CHK-\d{3}$/;
 const PROFILE = /^(?:default|hand-written|boot|pack:[a-z0-9-]+|adapter:[a-z0-9-]+)$/;
 const HTTP_METHOD = /^[A-Z]+$/;
 const LOWERCASE_HEADER = /^[a-z0-9-]+$/;
-const MIN_STATUS = 100;
-const MAX_STATUS = 599;
 
 /** The variable names the runner fills from its credentials; a capture cannot take one. */
 export const CREDENTIAL_VARIABLES = [
@@ -117,12 +134,13 @@ export const CREDENTIAL_VARIABLES = [
   "stripeSecret",
   "throttleRetryAfterMs",
   "throttleRetryAfterSeconds",
+  "foreignServiceJwt",
 ];
 
 const CASE_MEMBERS = ["id", "title", "checks", "profiles", "script", "steps", "hookCalls"];
 const STEP_MEMBERS = ["title", "request", "capture", "expect"];
-const REQUEST_MEMBERS = ["method", "path", "query", "headers", "body", "sign"];
-const SIGN_MEMBERS = ["scheme", "header", "secret"];
+const REQUEST_MEMBERS = ["method", "path", "query", "headers", "body", "bodyText", "sign"];
+const SIGN_MEMBERS = ["scheme", "header", "secret", "ageSeconds"];
 const EXPECT_MEMBERS = ["status", "headers", "body", "bodyText", "absent"];
 const BODY_CAPTURE_MEMBERS = ["body"];
 const HEADER_CAPTURE_MEMBERS = ["header", "pattern"];
@@ -137,15 +155,9 @@ export class SuiteCaseError extends Error {
   }
 }
 
-interface Reader {
-  readonly source: string;
-  fail(pointer: string, problem: string): never;
-}
-
 /** Reads one parsed case file; `source` names it in errors. Every member is checked, an unknown one refused. */
 export function parseSuiteCase(value: unknown, source: string): SuiteCase {
-  const reader: Reader = {
-    source,
+  const reader: JsonReader = {
     fail: (pointer, problem) => {
       throw new SuiteCaseError(source, pointer, problem);
     },
@@ -167,7 +179,7 @@ export function parseSuiteCase(value: unknown, source: string): SuiteCase {
     profiles: readProfiles(reader, object.profiles),
     ...(object.script === undefined
       ? {}
-      : { script: jsonObjectAt(reader, object.script, "/script") }),
+      : { script: readSampleAppScript(reader, object.script, "/script") }),
     steps,
     ...(object.hookCalls === undefined
       ? {}
@@ -175,7 +187,7 @@ export function parseSuiteCase(value: unknown, source: string): SuiteCase {
   };
 }
 
-function readProfiles(reader: Reader, value: unknown): SuiteProfile[] {
+function readProfiles(reader: JsonReader, value: unknown): SuiteProfile[] {
   const profiles = arrayAt(reader, value, "/profiles").map((profile, index) =>
     patternAt(reader, profile, `/profiles/${index}`, PROFILE),
   );
@@ -189,7 +201,7 @@ function isSuiteProfile(profile: string): profile is SuiteProfile {
   return PROFILE.test(profile);
 }
 
-function readHookCalls(reader: Reader, value: unknown): RecordedHookCall[] {
+function readHookCalls(reader: JsonReader, value: unknown): RecordedHookCall[] {
   return arrayAt(reader, value, "/hookCalls").map((call, index) => {
     const pointer = `/hookCalls/${index}`;
     const object = objectAt(reader, call, pointer, HOOK_CALL_MEMBERS);
@@ -201,7 +213,7 @@ function readHookCalls(reader: Reader, value: unknown): RecordedHookCall[] {
   });
 }
 
-function readStep(reader: Reader, value: unknown, pointer: string): SuiteStep {
+function readStep(reader: JsonReader, value: unknown, pointer: string): SuiteStep {
   const object = objectAt(reader, value, pointer, STEP_MEMBERS);
 
   return {
@@ -217,7 +229,7 @@ function readStep(reader: Reader, value: unknown, pointer: string): SuiteStep {
 }
 
 function readCaptures(
-  reader: Reader,
+  reader: JsonReader,
   value: unknown,
   pointer: string,
 ): Record<string, CaptureSource> {
@@ -234,7 +246,7 @@ function readCaptures(
   );
 }
 
-function readCaptureSource(reader: Reader, value: unknown, pointer: string): CaptureSource {
+function readCaptureSource(reader: JsonReader, value: unknown, pointer: string): CaptureSource {
   const isBodyCapture = typeof value === "object" && value !== null && "body" in value;
   const object = objectAt(
     reader,
@@ -261,7 +273,7 @@ function readCaptureSource(reader: Reader, value: unknown, pointer: string): Cap
 }
 
 // An empty alternative makes any pattern match the empty string, so the match lists every group.
-function capturingGroupCount(reader: Reader, pattern: string, pointer: string): number {
+function capturingGroupCount(reader: JsonReader, pattern: string, pointer: string): number {
   try {
     return (new RegExp(`${pattern}|`).exec("")?.length ?? 1) - 1;
   } catch (error) {
@@ -272,11 +284,15 @@ function capturingGroupCount(reader: Reader, pattern: string, pointer: string): 
   }
 }
 
-function readRequest(reader: Reader, value: unknown, pointer: string): StepRequest {
+function readRequest(reader: JsonReader, value: unknown, pointer: string): StepRequest {
   const object = objectAt(reader, value, pointer, REQUEST_MEMBERS);
   const path = stringAt(reader, object.path, `${pointer}/path`);
 
   if (!path.startsWith("/")) reader.fail(`${pointer}/path`, "a path starts with '/'");
+
+  if (object.body !== undefined && object.bodyText !== undefined) {
+    reader.fail(pointer, "a request sends either `body` or `bodyText`, not both");
+  }
 
   return {
     method: patternAt(reader, object.method, `${pointer}/method`, HTTP_METHOD),
@@ -288,23 +304,37 @@ function readRequest(reader: Reader, value: unknown, pointer: string): StepReque
       ? {}
       : { headers: readHeaders(reader, object.headers, `${pointer}/headers`) }),
     ...(object.body === undefined ? {} : { body: jsonAt(reader, object.body, `${pointer}/body`) }),
+    ...(object.bodyText === undefined
+      ? {}
+      : { bodyText: stringAt(reader, object.bodyText, `${pointer}/bodyText`) }),
     ...(object.sign === undefined
       ? {}
       : { sign: readSignature(reader, object.sign, `${pointer}/sign`) }),
   };
 }
 
-function readSignature(reader: Reader, value: unknown, pointer: string): RequestSignature {
+function readSignature(reader: JsonReader, value: unknown, pointer: string): RequestSignature {
   const object = objectAt(reader, value, pointer, SIGN_MEMBERS);
 
   return {
     scheme: stringAt(reader, object.scheme, `${pointer}/scheme`),
     header: patternAt(reader, object.header, `${pointer}/header`, LOWERCASE_HEADER),
     secret: stringAt(reader, object.secret, `${pointer}/secret`),
+    ...(object.ageSeconds === undefined
+      ? {}
+      : { ageSeconds: ageSecondsAt(reader, object.ageSeconds, `${pointer}/ageSeconds`) }),
   };
 }
 
-function readHeaders(reader: Reader, value: unknown, pointer: string): Record<string, string> {
+function ageSecondsAt(reader: JsonReader, value: unknown, pointer: string): number {
+  if (!Number.isInteger(value) || Number(value) < 0) {
+    reader.fail(pointer, "`ageSeconds` is a whole number of seconds, 0 or more");
+  }
+
+  return Number(value);
+}
+
+function readHeaders(reader: JsonReader, value: unknown, pointer: string): Record<string, string> {
   const headers = stringMapAt(reader, value, pointer);
 
   for (const name of Object.keys(headers)) {
@@ -315,23 +345,15 @@ function readHeaders(reader: Reader, value: unknown, pointer: string): Record<st
   return headers;
 }
 
-function readExpectation(reader: Reader, value: unknown, pointer: string): StepExpectation {
+function readExpectation(reader: JsonReader, value: unknown, pointer: string): StepExpectation {
   const object = objectAt(reader, value, pointer, EXPECT_MEMBERS);
-  const status = object.status;
-
-  if (!Number.isInteger(status) || Number(status) < MIN_STATUS || Number(status) > MAX_STATUS) {
-    reader.fail(
-      `${pointer}/status`,
-      `the status is an integer from ${MIN_STATUS} to ${MAX_STATUS}`,
-    );
-  }
 
   if (object.body !== undefined && object.bodyText !== undefined) {
     reader.fail(pointer, "an expectation checks either `body` or `bodyText`, not both");
   }
 
   return {
-    status: Number(status),
+    status: statusAt(reader, object.status, `${pointer}/status`),
     ...(object.headers === undefined
       ? {}
       : { headers: readHeaderExpectations(reader, object.headers, `${pointer}/headers`) }),
@@ -345,7 +367,7 @@ function readExpectation(reader: Reader, value: unknown, pointer: string): StepE
   };
 }
 
-function readAbsentPointers(reader: Reader, value: unknown, pointer: string): string[] {
+function readAbsentPointers(reader: JsonReader, value: unknown, pointer: string): string[] {
   const pointers = arrayAt(reader, value, pointer);
 
   if (pointers.length === 0) reader.fail(pointer, "`absent` lists at least one JSON pointer");
@@ -362,7 +384,7 @@ function readAbsentPointers(reader: Reader, value: unknown, pointer: string): st
 }
 
 function readHeaderExpectations(
-  reader: Reader,
+  reader: JsonReader,
   value: unknown,
   pointer: string,
 ): Record<string, HeaderExpectation> {
@@ -378,7 +400,11 @@ function readHeaderExpectations(
   );
 }
 
-function readHeaderExpectation(reader: Reader, value: unknown, pointer: string): HeaderExpectation {
+function readHeaderExpectation(
+  reader: JsonReader,
+  value: unknown,
+  pointer: string,
+): HeaderExpectation {
   const object = objectAt(reader, value, pointer, HEADER_EXPECTATION_MEMBERS);
 
   if (Object.keys(object).length !== 1) {
@@ -412,89 +438,4 @@ function readHeaderExpectation(reader: Reader, value: unknown, pointer: string):
       : { excludes: stringAt(reader, object.excludes, `${pointer}/excludes`) }),
     ...(object.absent === true ? { absent: true } : {}),
   };
-}
-
-function objectAt(
-  reader: Reader,
-  value: unknown,
-  pointer: string,
-  allowedMembers: readonly string[] | undefined,
-): Record<string, unknown> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return reader.fail(pointer, "expected a JSON object");
-  }
-
-  const object: Record<string, unknown> = { ...value };
-
-  for (const member of Object.keys(object)) {
-    if (allowedMembers !== undefined && !allowedMembers.includes(member)) {
-      reader.fail(
-        `${pointer}/${member}`,
-        `unknown member; use one of ${allowedMembers.join(", ")}`,
-      );
-    }
-  }
-
-  return object;
-}
-
-function arrayAt(reader: Reader, value: unknown, pointer: string): unknown[] {
-  if (!Array.isArray(value)) return reader.fail(pointer, "expected a JSON array");
-
-  return [...value];
-}
-
-function stringAt(reader: Reader, value: unknown, pointer: string): string {
-  if (typeof value !== "string") return reader.fail(pointer, "expected a string");
-
-  return value;
-}
-
-function patternAt(reader: Reader, value: unknown, pointer: string, pattern: RegExp): string {
-  const text = stringAt(reader, value, pointer);
-
-  if (!pattern.test(text)) reader.fail(pointer, `'${text}' does not match ${pattern.source}`);
-
-  return text;
-}
-
-function stringMapAt(reader: Reader, value: unknown, pointer: string): Record<string, string> {
-  const object = objectAt(reader, value, pointer, undefined);
-
-  return Object.fromEntries(
-    Object.entries(object).map(([member, text]) => [
-      member,
-      stringAt(reader, text, `${pointer}/${member}`),
-    ]),
-  );
-}
-
-function jsonObjectAt(
-  reader: Reader,
-  value: unknown,
-  pointer: string,
-): { [member: string]: JsonValue } {
-  const object = objectAt(reader, value, pointer, undefined);
-
-  return Object.fromEntries(
-    Object.entries(object).map(([member, item]) => [
-      member,
-      jsonAt(reader, item, `${pointer}/${member}`),
-    ]),
-  );
-}
-
-// A copy of a parsed JSON value, so a case never shares its members with the caller's object.
-function jsonAt(reader: Reader, value: unknown, pointer: string): JsonValue {
-  if (value === null || typeof value === "boolean" || typeof value === "string") return value;
-
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? value : reader.fail(pointer, "expected a finite number");
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((item, index) => jsonAt(reader, item, `${pointer}/${index}`));
-  }
-
-  return jsonObjectAt(reader, value, pointer);
 }

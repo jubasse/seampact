@@ -1,7 +1,7 @@
 {
   "id": "idempotent-replay",
   "title": "An idempotent replay answers the same body with the replay flag",
-  "checks": [],
+  "checks": ["CHK-043", "CHK-149"],
   "profiles": ["default"],
   "steps": [
     {

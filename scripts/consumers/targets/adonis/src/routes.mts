@@ -1,20 +1,26 @@
-// The consumer's start/routes: both apis' routes with the shared hooks, each controller imported lazily.
-import type { Router } from "@adonisjs/core/http";
+// The consumer's start/routes: the http suite's control routes, and both apis' routes with the shared hooks, each
+// controller imported lazily.
+import type { HttpContext, Router } from "@adonisjs/core/http";
+import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-suite";
 import * as TasksAdonis from "../generated/server/tasks/index.js";
 import * as TasksServiceAdonis from "../generated/server/tasksService/index.js";
+import { tasksHooks, tasksServiceHooks } from "./hooks.mjs";
 import {
-  allowingDeciderHook,
-  createIdempotencyStore,
-  scopeResolverHook,
-  serviceAuthenticateHook,
-  stripeAuthenticateHook,
-  throttlingDeciderHook,
-  userAuthenticateHook,
-} from "./hooks.mjs";
+  type ControlReply,
+  hookCallsReply,
+  loadScriptReply,
+  logLinesReply,
+} from "./suite-control.mjs";
 
 const controllers = () => import("./controllers.mjs");
 
 export function registerContractRoutes(router: Router): void {
+  router.put(SCRIPT_ROUTE, ({ request, response }) =>
+    sendControlReply(response, loadScriptReply(request.body())),
+  );
+  router.get(HOOK_CALLS_ROUTE, ({ response }) => sendControlReply(response, hookCallsReply()));
+  router.get(LOG_LINES_ROUTE, ({ response }) => sendControlReply(response, logLinesReply()));
+
   TasksAdonis.registerRoutes(router, {
     controllers: {
       AppEndpoints: async () => ({ default: (await controllers()).AppController }),
@@ -24,22 +30,18 @@ export function registerContractRoutes(router: Router): void {
       PreferencesEndpoints: async () => ({ default: (await controllers()).PreferencesController }),
       HooksEndpoints: async () => ({ default: (await controllers()).HooksController }),
     },
-    hooks: {
-      authenticate: { user: userAuthenticateHook, stripe: stripeAuthenticateHook },
-      deciders: [{ names: "all", decider: throttlingDeciderHook }],
-      scopeResolvers: { channel: scopeResolverHook },
-      idempotencyStore: createIdempotencyStore(),
-    },
+    hooks: tasksHooks(),
   });
 
   TasksServiceAdonis.registerRoutes(router, {
     controllers: {
       InternalEndpoints: async () => ({ default: (await controllers()).InternalController }),
     },
-    hooks: {
-      authenticate: { service: serviceAuthenticateHook },
-      deciders: [{ names: "all", decider: allowingDeciderHook }],
-      scopeResolvers: {},
-    },
+    hooks: tasksServiceHooks(),
   });
+}
+
+function sendControlReply(response: HttpContext["response"], reply: ControlReply): void {
+  if (reply.body === undefined) response.status(reply.status).send("");
+  else response.status(reply.status).json(reply.body);
 }

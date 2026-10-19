@@ -1,7 +1,7 @@
 {
   "id": "not-found-doubled-slash",
   "title": "404 in the api format for a doubled slash under the base path",
-  "checks": [],
+  "checks": ["CHK-029"],
   "profiles": ["default"],
   "steps": [
     {
