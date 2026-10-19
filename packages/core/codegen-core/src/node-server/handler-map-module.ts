@@ -3,10 +3,10 @@ import { operationLocation } from "../ir-location.js";
 import { ExportNames } from "../planned-names.js";
 import type { Refusal } from "../refusal.js";
 import type { NodeServerOptions } from "./options.js";
-import { NODE_SERVER_RUNTIME_DIRECTORY } from "./runtime-files.js";
+import { SERVER_RUNTIME_DIRECTORIES, type ServerRuntimeProfile } from "./runtime-files.js";
 import { handlerInterfaceName, operationIdentifier } from "./server-types.js";
 
-// The declarations a handler-map framework module (Express, Fastify) starts with: the handler objects keyed by
+// The declarations a handler-map framework module (Express, Fastify, Hono) starts with: the handler objects keyed by
 // interface name, the operation names an override takes, each operation's binding, and the target options.
 
 const NO_BODY_LIMIT = 0;
@@ -17,6 +17,7 @@ export function handlerMapDeclarations(
   options: NodeServerOptions,
   frameworkModule: string,
   refusals: Refusal[],
+  runtimeProfile: ServerRuntimeProfile = "node",
 ): string[] {
   const overrideNames = new ExportNames(`${frameworkModule} operations`);
   const interfaces = new Set<string>();
@@ -34,7 +35,7 @@ export function handlerMapDeclarations(
   );
 
   return [
-    `import type { HandlerBindings, ResponseSettings } from "./${NODE_SERVER_RUNTIME_DIRECTORY}/handler-map.js";`,
+    `import type { HandlerBindings, ResponseSettings } from "./${SERVER_RUNTIME_DIRECTORIES[runtimeProfile]}/handler-map.js";`,
     'import type * as Handlers from "./handlers.js";',
     "",
     "/** The handler objects of the api, keyed by their interface's name. */",

@@ -1,0 +1,8 @@
+  - id: server
+    use: "@seampact/codegen-hono"
+    apis: [tasks, tasksService]
+    options:
+      bodyValidation: true
+    link:
+      types: types
+      validators: validators

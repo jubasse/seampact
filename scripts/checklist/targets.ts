@@ -6,6 +6,7 @@ export const SERVER_TARGETS: readonly string[] = [
   "fastify",
   "express",
   "adonis",
+  "hono",
   "spring-boot",
   "laravel",
   "symfony",

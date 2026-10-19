@@ -74,6 +74,7 @@ import {
 } from "./node-server/node-request.js";
 import {
   bodySizeRefusal,
+  charsetRefusal,
   IDENTITY_ENCODING,
   mediaTypeRefusal,
   type PlatformFixes,
@@ -89,7 +90,6 @@ const SUPPORTED_MAJOR = "5";
 const JSON_MEDIA = "application/json";
 const ANY_MEDIA = "*";
 const UNSUPPORTED_MEDIA_ROLE = "unsupportedMediaType";
-const UTF8_CHARSETS: readonly string[] = ["utf-8", "utf8"];
 const BAD_REQUEST = 400;
 const CLIENT_ERROR_FLOOR = 400;
 const SERVER_ERROR_FLOOR = 500;
@@ -289,10 +289,13 @@ export function createFastifyBoundary<
         : {}),
     });
 
-    const charset = charsetOf(headerValue(request.headers, "content-type"));
+    const charsetRefused = charsetRefusal(
+      context.route,
+      headerValue(request.headers, "content-type"),
+    );
 
-    if (charset !== undefined && !UTF8_CHARSETS.includes(charset)) {
-      done(roleError(context.route, UNSUPPORTED_MEDIA_ROLE));
+    if (charsetRefused !== undefined) {
+      done(charsetRefused);
 
       return;
     }
@@ -744,16 +747,6 @@ function isRouterError(error: unknown): boolean {
   const code: unknown = error instanceof Error ? Reflect.get(error, "code") : undefined;
 
   return typeof code === "string" && ROUTER_ERROR_CODES.includes(code);
-}
-
-function charsetOf(contentType: string | undefined): string | undefined {
-  const parameter = contentType
-    ?.split(";")
-    .slice(1)
-    .map((part) => part.trim().toLowerCase())
-    .find((part) => part.startsWith("charset="));
-
-  return parameter?.slice("charset=".length).replace(/^"|"$/g, "");
 }
 
 // Fastify's syntax with positional param names, a literal `:` doubled; the generator refuses a segment that mixes a

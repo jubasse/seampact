@@ -120,6 +120,17 @@ export function frameworkRefusal(route: ContractRoute, error: unknown): Contract
   return code === undefined ? unexpectedError(route, error) : new ContractError(code);
 }
 
+/** A client error a body read raises, as the operation's code of its status; a 500 when it declares none. */
+export function clientStatusError(
+  route: ContractRoute,
+  status: number,
+  exception: unknown,
+): ContractError {
+  const code = codeOfStatus(route, status);
+
+  return code === undefined ? unexpectedError(route, exception) : new ContractError(code);
+}
+
 /** Logs a failure of a reply the boundary writes outside a framework's error path; nothing else can answer it. */
 export function logWriteFailure(api: ContractApi, error: unknown): void {
   console.error(`seampact: writing a reply of api '${api.id}' failed`, error);

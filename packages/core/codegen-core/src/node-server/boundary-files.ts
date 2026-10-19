@@ -13,7 +13,11 @@ import type {
 } from "../target.js";
 import { type NodeServerOptions, parseNodeServerOptions } from "./options.js";
 import { routeTableSource } from "./route-table.js";
-import { NODE_SERVER_RUNTIME_DIRECTORY, nodeServerRuntimeFiles } from "./runtime-files.js";
+import {
+  nodeServerRuntimeFiles,
+  SERVER_RUNTIME_DIRECTORIES,
+  type ServerRuntimeProfile,
+} from "./runtime-files.js";
 import { handlersSource, hookTypesSource } from "./server-types.js";
 
 // The files of one api's Node server boundary: the shared runtime, the target's placement file, the route table,
@@ -32,6 +36,8 @@ export interface NodeServerPlacement {
   /** The module name of the api's framework module, such as `nestjs`, re-exported by the index first. */
   readonly frameworkModule: string;
   frameworkSource(ir: ContractIR, options: NodeServerOptions, refusals: Refusal[]): string;
+  /** The shared runtime the placement imports: `node` (the default) or `web` for a Web-standard placement. */
+  readonly runtimeProfile?: ServerRuntimeProfile;
 }
 
 /** A Node server target package: its name and version, its Prettier and its placement. */
@@ -47,6 +53,7 @@ const ROUTES_MODULE = "routes";
 const HANDLERS_MODULE = "handlers";
 const HOOKS_MODULE = "hooks";
 const INDEX_MODULE = "index";
+const DEFAULT_RUNTIME_PROFILE: ServerRuntimeProfile = "node";
 
 /**
  * A Node server target, as the CLI loads it. It reads the operation types through the `types` link and the input
@@ -86,12 +93,14 @@ export function nodeServerBoundaryFiles(
   const { ir, links, options } = input;
   const refusals: Refusal[] = [];
   const warnings: GenerateWarning[] = [];
+  const runtimeProfile = placement.runtimeProfile ?? DEFAULT_RUNTIME_PROFILE;
+  const runtimeDirectory = SERVER_RUNTIME_DIRECTORIES[runtimeProfile];
   const routes = routeTableSource(
     ir,
     links.validators,
     moduleFile(ROUTES_MODULE),
     {
-      runtimeModule: `./${NODE_SERVER_RUNTIME_DIRECTORY}/contract-route.js`,
+      runtimeModule: `./${runtimeDirectory}/contract-route.js`,
       withItemValidators: options.bodyValidation,
     },
     refusals,
@@ -102,7 +111,7 @@ export function nodeServerBoundaryFiles(
     ir,
     links.types,
     moduleFile(HOOKS_MODULE),
-    `./${NODE_SERVER_RUNTIME_DIRECTORY}/boundary-hooks.js`,
+    `./${runtimeDirectory}/boundary-hooks.js`,
     refusals,
   );
   const framework = placement.frameworkSource(ir, options, refusals);
@@ -110,7 +119,7 @@ export function nodeServerBoundaryFiles(
   if (refusals.length > 0) return { status: "refused", refusals: withoutRepeats(refusals) };
 
   const files: GeneratedFile[] = [
-    ...nodeServerRuntimeFiles("node"),
+    ...nodeServerRuntimeFiles(runtimeProfile),
     {
       path: moduleFile(placement.runtimeModule),
       contents: readFileSync(placement.runtimeSourceUrl, "utf8"),

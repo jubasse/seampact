@@ -13,6 +13,7 @@ export const PACKED_PACKAGES: readonly string[] = [
   "packages/targets/codegen-nestjs",
   "packages/targets/codegen-express",
   "packages/targets/codegen-fastify",
+  "packages/targets/codegen-hono",
   "packages/targets/codegen-adonis",
   "packages/runtime/signed-webhooks",
   "packages/runtime/idempotency-memory",

@@ -14,7 +14,7 @@ import {
   reportContractError,
 } from "./error-reply.js";
 import { settleIdempotency } from "./idempotency.js";
-import { BODY_HEADERS, groupedHeaders, mergedVary, VARY_HEADER } from "./outgoing-verdict.js";
+import { BODY_HEADERS, groupedHeaders, mergedVary, VARY_HEADER } from "./reply-headers.js";
 
 /** Writes a reply of the boundary's own with `res.end`, after completing its idempotency record. */
 export async function writeContractReply(
