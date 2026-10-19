@@ -53,14 +53,14 @@ describe("portable patterns", () => {
   });
 
   test.each([
-    ["(a+)+", "holds a repetition of its own"],
-    ["^(a*b?)*$", "holds a repetition of its own"],
-    ["(?:x{2,5}){3}", "holds a repetition of its own"],
-    ["^([a-z0-9]+-)*$", "holds a repetition of its own"],
-    ["(?:a?b|b)*", "holds a repetition of its own"],
+    ["(a+)+", "trailing repetition"],
+    ["^(a*b?)*$", "trailing repetition"],
+    ["(?:x{2,5}){3}", "trailing repetition"],
     ["(a|ab)*", "branches can start with the same character"],
     ["(a|a)+", "branches can start with the same character"],
+    ["(?:a?b|b)*", "branches can start with the same character"],
     ["(?:\\d|[0-5]x){2,}", "branches can start with the same character"],
+    ["((a|ab))*", "branches can start with the same character"],
   ])("%s is refused as backtracking exponentially (%s)", (source, reason) => {
     const result = treeSchemasNormalizePattern(source);
 
@@ -69,12 +69,19 @@ describe("portable patterns", () => {
     if (!result.ok) expect(result.message).toContain(reason);
   });
 
-  test.each(["^(\\d{3}-)?\\d{4}$", "(a+)?", "(?:ab{3})*", "(?:a|b)*", "(?:x|a?b)", "(?:^|,)a"])(
-    "%s repeats nothing that can backtrack exponentially",
-    (source) => {
-      expect(treeSchemasNormalizePattern(source).ok).toBe(true);
-    },
-  );
+  test.each([
+    "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+    "(\\d+,)*",
+    "^([a-z0-9]+-)*$",
+    "^(\\d{3}-)?\\d{4}$",
+    "(a+)?",
+    "(?:ab{3})*",
+    "(?:a|b)*",
+    "(?:x|a?b)",
+    "(?:^|,)a",
+  ])("%s repeats nothing that can backtrack exponentially", (source) => {
+    expect(treeSchemasNormalizePattern(source).ok).toBe(true);
+  });
 
   test("deeply nested groups are refused, not left to overflow the stack", () => {
     const result = treeSchemasNormalizePattern(`${"(".repeat(5000)}a${")".repeat(5000)}`);

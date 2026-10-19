@@ -3,8 +3,8 @@
 // `.` and the shorthands become explicit ASCII classes, and a class becomes its sorted, merged code point ranges.
 // `^` and `$` keep their text and mean the start and the end of the string (each target translates them).
 // A pattern that can backtrack exponentially is refused too, since the targets run it on request text: a repeated
-// group holding a repetition of variable count (star height above 1, as `(a+)+`), or a repeated alternation whose
-// branches can start with the same character (`(a|ab)*`).
+// group ending in a repetition of variable count over characters the group can start with (`(a+)+`), or a repeated
+// alternation whose branches can start with the same character (`(a|ab)*`).
 
 /** The result of normalising a pattern: its normalised form, or why it is refused and how to fix it. */
 export type TreeSchemasPatternResult =
@@ -73,23 +73,20 @@ function refuseBacktracking(reason: string): never {
 }
 
 // What the backtracking checks know of a parsed fragment besides its normalised text: the code points it can
-// start with, whether it can match the empty string, and whether it holds a repetition of variable count.
+// start and end with, the code points a trailing repetition of variable count (followed only by optional parts)
+// can end it with, whether it can match the empty string, and whether two branches of its alternation, seen
+// through groups of a single branch, can start with the same code point.
 interface Fragment {
   readonly text: string;
   readonly first: readonly Range[];
+  readonly last: readonly Range[];
+  readonly varyingTail: readonly Range[];
   readonly nullable: boolean;
-  readonly varies: boolean;
-}
-
-// An alternation also says whether two of its branches can start with the same code point.
-interface Alternation extends Fragment {
   readonly overlapping: boolean;
 }
 
-// A repeatable atom: a group carries its alternation's overlap, any other atom has none.
 interface Atom extends Fragment {
   readonly repeatable: boolean;
-  readonly overlapping: boolean;
 }
 
 /** A quantifier as written: its normalised text and its bounds, `max` undefined when unbounded. */
@@ -109,13 +106,17 @@ const overlaps = (left: readonly Range[], right: readonly Range[]): boolean =>
 const anyTwoOverlap = (sets: readonly (readonly Range[])[]): boolean =>
   sets.some((set, index) => sets.slice(index + 1).some((other) => overlaps(set, other)));
 
-// A repetition that can run more than once must not wrap a fragment that can split one text several ways.
+const varies = (repetition: Repetition | undefined): boolean =>
+  repetition !== undefined && repetition.min !== repetition.max;
+
+// A repetition that can run more than once must not wrap a fragment that can split one text several ways: one
+// whose trailing repetition can go on into the next pass, or whose branches can start alike.
 function refuseExponentialRepetition(atom: Atom, repetition: Repetition): void {
   if (repetition.max !== undefined && repetition.max <= ONCE) return;
 
-  if (atom.varies)
+  if (overlaps(atom.varyingTail, atom.first))
     refuseBacktracking(
-      `'${atom.text}${repetition.text}' repeats a group that holds a repetition of its own`,
+      `'${atom.text}${repetition.text}' repeats a group whose trailing repetition can match what the group starts with`,
     );
 
   if (atom.overlapping)
@@ -195,8 +196,9 @@ const literal = (codePoint: number, syntax: ReadonlySet<string>): Matched => ({
 const matching = ({ text, ranges }: Matched): Atom => ({
   text,
   first: ranges,
+  last: ranges,
+  varyingTail: [],
   nullable: false,
-  varies: false,
   repeatable: true,
   overlapping: false,
 });
@@ -233,7 +235,7 @@ class PatternParser {
     return char;
   }
 
-  private alternation(): Alternation {
+  private alternation(): Fragment {
     const branches = [this.sequence()];
 
     while (this.peek() === "|") {
@@ -244,17 +246,22 @@ class PatternParser {
     return {
       text: branches.map((branch) => branch.text).join("|"),
       first: branches.flatMap((branch) => branch.first),
+      last: branches.flatMap((branch) => branch.last),
+      varyingTail: branches.flatMap((branch) => branch.varyingTail),
       nullable: branches.some((branch) => branch.nullable),
-      varies: branches.some((branch) => branch.varies),
-      overlapping: anyTwoOverlap(branches.map((branch) => branch.first)),
+      overlapping:
+        anyTwoOverlap(branches.map((branch) => branch.first)) ||
+        (branches.length === 1 && branches.some((branch) => branch.overlapping)),
     };
   }
 
   private sequence(): Fragment {
     let text = "";
-    const first: Range[] = [];
+    let first: Range[] = [];
+    let last: Range[] = [];
+    let varyingTail: Range[] = [];
     let nullable = true;
-    let varies = false;
+    const items: { atom: Atom; repetition: Repetition | undefined }[] = [];
 
     while (this.peek() !== undefined && this.peek() !== "|" && this.peek() !== ")") {
       const atom = this.atom();
@@ -262,14 +269,27 @@ class PatternParser {
 
       if (repetition !== undefined) refuseExponentialRepetition(atom, repetition);
       text += atom.text + (repetition?.text ?? "");
+      items.push({ atom, repetition });
 
-      if (nullable) first.push(...atom.first);
-      nullable = nullable && (atom.nullable || repetition?.min === 0);
-      varies =
-        varies || atom.varies || (repetition !== undefined && repetition.min !== repetition.max);
+      // An optional item keeps what the items before it can end with; a required one replaces it.
+      const optional = atom.nullable || repetition?.min === 0;
+      const itemTail = varies(repetition) ? [...atom.last, ...atom.varyingTail] : atom.varyingTail;
+
+      if (nullable) first = [...first, ...atom.first];
+      last = optional ? [...last, ...atom.last] : [...atom.last];
+      varyingTail = optional ? [...varyingTail, ...itemTail] : [...itemTail];
+      nullable = nullable && optional;
     }
 
-    return { text, first, nullable, varies };
+    // A group of a single unrepeated item shows that item's overlap: `((a|ab))*` repeats `(a|ab)`.
+    const [only] = items;
+    const overlapping =
+      items.length === 1 &&
+      only !== undefined &&
+      only.repetition === undefined &&
+      only.atom.overlapping;
+
+    return { text, first, last, varyingTail, nullable, overlapping };
   }
 
   private atom(): Atom {
@@ -287,8 +307,9 @@ class PatternParser {
         return {
           text: char,
           first: [],
+          last: [],
+          varyingTail: [],
           nullable: true,
-          varies: false,
           repeatable: false,
           overlapping: false,
         };
@@ -307,7 +328,7 @@ class PatternParser {
     }
   }
 
-  private group(): Alternation {
+  private group(): Fragment {
     let open = "(";
 
     if (this.peek() === "?") {
