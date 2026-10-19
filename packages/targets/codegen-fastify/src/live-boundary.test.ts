@@ -376,8 +376,18 @@ describe("the boot check", () => {
     const { TasksEndpoints: _omitted, ...handlers } = app.handlers;
 
     await expect(
-      app.bootWith({ handlers, hooks: app.hooks, operations: { nothing: {} } }, {}, "/v1"),
-    ).rejects.toThrow(/TasksEndpoints[\s\S]*'operations' names 'nothing'[\s\S]*prefix '\/v1'/);
+      app.bootWith({ handlers, hooks: app.hooks, operations: { nothing: {} } }, {}, "/api"),
+    ).rejects.toThrow(
+      /TasksEndpoints[\s\S]*'operations' names 'nothing'[\s\S]*prefix '\/api'[\s\S]*under the prefix '\/v1'/,
+    );
+  });
+
+  test("a prefix equal to the contract's base path boots", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    await expect(
+      app.bootWith({ handlers: app.handlers, hooks: app.hooks }, {}, "/v1"),
+    ).resolves.toBeUndefined();
   });
 
   test("an instance without HEAD routes stops the boot", async () => {
