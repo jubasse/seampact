@@ -53,6 +53,7 @@ In pipeline order (ADR 0006 section 1).
 
 - `packages/core/codegen-core/src`: The API the code generators are written against: target definitions, link descriptors, refusals, and the steps around a target's generate (IR support and link checks, header, formatting, file writer), and the helpers targets share (IR locations, located refusals, planned names, property keys).
 - `packages/core/codegen-core/src/node-server`: The shared server boundary every Node and Web-standard server target generates (ADR 0016, ADR 0020): the framework-neutral runtime copied into the generated tree, the emitters of the route table, handler interfaces and hook types, the target options parser, the path segments a router cannot read, and the assembly of one api's boundary files around a target's placement.
+- `packages/core/codegen-core/src/validators`: The validator-neutral half of every validators target: the module layout and export names, the descriptor, the shared wire checks, and the plan of each schema and operation input with every refusal, which a target renders in its own library.
 
 ### `@seampact/compiler`
 
