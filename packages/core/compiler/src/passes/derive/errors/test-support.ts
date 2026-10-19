@@ -10,7 +10,6 @@ import {
   createDraftIR,
   type DraftIR,
   pipelineContext,
-  pipelineCopy,
   pipelineGuard,
   type TreeSchemaService,
 } from "../../../pipeline/seam.js";
@@ -226,42 +225,34 @@ export function deriveErrorsRunContract(
   return runOn(raw, workspace, draft, treeSchemas, options);
 }
 
-// The real schema service of an api (the fixture service answers no error params position), and the draft its run
-// fills, which holds the core schemas tree.schemas seeds.
-function schemaServiceOf(
-  raw: RawApi,
-  workspace: RawWorkspace,
-): { service: TreeSchemaService; seeded: DraftIR } {
+// The real schema service of an api: the fixture service answers no error params position.
+function schemaServiceOf(raw: RawApi, workspace: RawWorkspace): TreeSchemaService {
   const diagnostics: Diagnostic[] = [];
-  const seeded = createDraftIR();
   const service = treeSchemasPass.run(
-    seeded,
+    createDraftIR(),
     pipelineContext({ raw, workspace, report: (diagnostic) => diagnostics.push(diagnostic) }),
   );
 
   if (diagnostics.length > 0)
     throw new Error(`tree.schemas reports on ${raw.name}: ${JSON.stringify(diagnostics)}`);
 
-  return { service, seeded };
+  return service;
 }
 
 const REFERENCE_PUBLIC_API = "tasks";
 
 /**
- * Runs derive.errors (guarded) on the after-access fixture draft of a reference api, given the schemas tree.schemas
- * seeds that the fixture draft lacks (the core issue item of `schemaInvalid`). The reference service relays the
- * public api, so its run reads the public api's draft as derive.errors leaves it.
+ * Runs derive.errors (guarded) on the after-access fixture draft of a reference api, which holds the core schemas
+ * tree.schemas seeds. The reference service relays the public api, so its run reads the public api's draft as
+ * derive.errors leaves it.
  */
 export function deriveErrorsRunReference(
   workspace: RawWorkspace,
   api: DraftFixtureApi,
 ): DeriveErrorsRun {
   const raw = apiOf(workspace, api);
-  const { service, seeded } = schemaServiceOf(raw, workspace);
+  const service = schemaServiceOf(raw, workspace);
   const draft = draftFixture(api, "after-access");
-
-  for (const [id, schema] of Object.entries(seeded.schemas))
-    if (!Object.hasOwn(draft.schemas, id)) draft.schemas[id] = pipelineCopy(schema);
 
   const relayed =
     api === REFERENCE_PUBLIC_API
