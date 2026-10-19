@@ -359,7 +359,9 @@ function controlReplyFor(call: Call): ControlReply | undefined {
   const route = `${call.method} ${call.url.pathname}`;
 
   if (route === `PUT ${SCRIPT_ROUTE}`) return loadScriptReply(call.body);
+
   if (route === `GET ${HOOK_CALLS_ROUTE}`) return hookCallsReply();
+
   if (route === `GET ${LOG_LINES_ROUTE}`) return logLinesReply();
 
   return undefined;

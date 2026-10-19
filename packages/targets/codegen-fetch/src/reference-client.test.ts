@@ -257,6 +257,7 @@ beforeAll(async () => {
   writeFileSync(join(PROJECT, PROBE_FILE), PROBE);
   copyConsumerFile("template/test/credentials.mts", "test/credentials.mts");
   copyConsumerFile("targets/stub/test/server.mts", "test/server.mts");
+  copyConsumerFile("template/src/suite-control.mts", "src/suite-control.mts");
   linkWorkspacePackages();
 
   typesTarget = (
