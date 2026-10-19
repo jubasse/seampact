@@ -126,6 +126,7 @@ The module runs it in `onApplicationBootstrap`, before the app accepts a request
 - an identity used by a bound operation without an authenticate hook, a right or rule without a decider, a scope without a resolver, an idempotent operation without an idempotency store;
 - two deciders claiming one name;
 - a contract operation without a bound handler: no controller method carries its composite;
+- a route of the Express adapter absent from the route table and not allow-listed in `frameworkRoutes` (ADR 0012), unless `artefacts.bootCheck.frameworkRoutes` is false;
 - on a contract method, a NestJS decorator that writes after the boundary's reply (`Redirect`, `Render`, `Sse`) or a developer `Res`, `Response` or `Next` parameter, the `passthrough` cookie idiom included, all read through `Reflector`: NestJS would write again after the reply and raise `ERR_HTTP_HEADERS_SENT`;
 - a platform other than Express (`HttpAdapterHost`).
 
@@ -140,7 +141,7 @@ At run time: `@nestjs/common`, `@nestjs/core`, `rxjs`, the runtime of the `valid
 `generate` refuses by name, with the case's code and its fix, every input the slice does not serve ([A47](../decisions.md#a47)); each comes with the bringer named:
 
 - Waiting for the target after the slice: the NestJS Fastify platform (the boot check refuses a non-Express adapter); the thrown exception per error code; `nativeDocs` and `frameworkDocs`; `hooks: vendored` ([A40](../decisions.md#a40)); `accessHooks: false` and `access: native` ([A42](../decisions.md#a42)); per-right overrides, record loaders, `decideMany` and decider params checks; form, multipart, download and redirect bodies ([A39](../decisions.md#a39)); `api.wire.urls: absolute`; handler groupings other than ADR 0007's `handlers` default.
-- Waiting for the server entry keys of the CLI: `mount` and `frameworkRoutes`, with the boot checks of framework routes and of the installed hooks range.
+- Waiting for the server entry key `mount` of the CLI and the boot check of the installed hooks range.
 - Every IR form absent from the reference contract's golden IRs is refused until a consumer needs it.
 
 ### Left to the handler
