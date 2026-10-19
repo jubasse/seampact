@@ -2,9 +2,10 @@
 // stored with its normalised form, in ECMAScript `u` syntax with every engine-dependent construct spelled out:
 // `.` and the shorthands become explicit ASCII classes, and a class becomes its sorted, merged code point ranges.
 // `^` and `$` keep their text and mean the start and the end of the string (each target translates them).
-// A pattern that can backtrack exponentially is refused too, since the targets run it on request text: a repeated
-// group ending in a repetition of variable count over characters the group can start with (`(a+)+`), or a repeated
-// alternation whose branches can start with the same character (`(a|ab)*`).
+// Two shapes that backtrack exponentially are refused too, since the targets run patterns on request text: a
+// repeated group whose tail repetition of variable count can match what the group starts with (`(a+)+`,
+// `(.*,)+`), and a repeated alternation whose branches can start with the same character (`(a|ab)*`). Other
+// exponential shapes, as `((a|aa)b?)*`, are not detected.
 
 /** The result of normalising a pattern: its normalised form, or why it is refused and how to fix it. */
 export type TreeSchemasPatternResult =
@@ -73,14 +74,14 @@ function refuseBacktracking(reason: string): never {
 }
 
 // What the backtracking checks know of a parsed fragment besides its normalised text: the code points it can
-// start and end with, the code points a trailing repetition of variable count (followed only by optional parts)
-// can end it with, whether it can match the empty string, and whether two branches of its alternation, seen
+// start and end with, the characters of each repetition of variable count still in its tail (followed only by
+// optional parts or by required parts it overlaps), whether it can match the empty string, and whether two branches of its alternation, seen
 // through groups of a single branch, can start with the same code point.
 interface Fragment {
   readonly text: string;
   readonly first: readonly Range[];
   readonly last: readonly Range[];
-  readonly varyingTail: readonly Range[];
+  readonly varyingTails: readonly (readonly Range[])[];
   readonly nullable: boolean;
   readonly overlapping: boolean;
 }
@@ -114,7 +115,7 @@ const varies = (repetition: Repetition | undefined): boolean =>
 function refuseExponentialRepetition(atom: Atom, repetition: Repetition): void {
   if (repetition.max !== undefined && repetition.max <= ONCE) return;
 
-  if (overlaps(atom.varyingTail, atom.first))
+  if (atom.varyingTails.some((tail) => overlaps(tail, atom.first)))
     refuseBacktracking(
       `'${atom.text}${repetition.text}' repeats a group whose trailing repetition can match what the group starts with`,
     );
@@ -197,7 +198,7 @@ const matching = ({ text, ranges }: Matched): Atom => ({
   text,
   first: ranges,
   last: ranges,
-  varyingTail: [],
+  varyingTails: [],
   nullable: false,
   repeatable: true,
   overlapping: false,
@@ -247,7 +248,7 @@ class PatternParser {
       text: branches.map((branch) => branch.text).join("|"),
       first: branches.flatMap((branch) => branch.first),
       last: branches.flatMap((branch) => branch.last),
-      varyingTail: branches.flatMap((branch) => branch.varyingTail),
+      varyingTails: branches.flatMap((branch) => branch.varyingTails),
       nullable: branches.some((branch) => branch.nullable),
       overlapping:
         anyTwoOverlap(branches.map((branch) => branch.first)) ||
@@ -259,7 +260,7 @@ class PatternParser {
     let text = "";
     let first: Range[] = [];
     let last: Range[] = [];
-    let varyingTail: Range[] = [];
+    let varyingTails: (readonly Range[])[] = [];
     let nullable = true;
     const items: { atom: Atom; repetition: Repetition | undefined }[] = [];
 
@@ -271,13 +272,17 @@ class PatternParser {
       text += atom.text + (repetition?.text ?? "");
       items.push({ atom, repetition });
 
-      // An optional item keeps what the items before it can end with; a required one replaces it.
+      // An optional item keeps what the items before it can end with; a required one replaces it, but a
+      // repetition whose characters overlap the required item stays in the tail, since it can match that item too.
       const optional = atom.nullable || repetition?.min === 0;
-      const itemTail = varies(repetition) ? [...atom.last, ...atom.varyingTail] : atom.varyingTail;
+      const itemTails = varies(repetition) ? [atom.last, ...atom.varyingTails] : atom.varyingTails;
+      const keptTails = optional
+        ? varyingTails
+        : varyingTails.filter((tail) => overlaps(tail, atom.first));
 
       if (nullable) first = [...first, ...atom.first];
       last = optional ? [...last, ...atom.last] : [...atom.last];
-      varyingTail = optional ? [...varyingTail, ...itemTail] : [...itemTail];
+      varyingTails = [...keptTails, ...itemTails];
       nullable = nullable && optional;
     }
 
@@ -289,7 +294,7 @@ class PatternParser {
       only.repetition === undefined &&
       only.atom.overlapping;
 
-    return { text, first, last, varyingTail, nullable, overlapping };
+    return { text, first, last, varyingTails, nullable, overlapping };
   }
 
   private atom(): Atom {
@@ -308,7 +313,7 @@ class PatternParser {
           text: char,
           first: [],
           last: [],
-          varyingTail: [],
+          varyingTails: [],
           nullable: true,
           repeatable: false,
           overlapping: false,

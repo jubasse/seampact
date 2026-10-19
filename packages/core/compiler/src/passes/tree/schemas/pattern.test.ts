@@ -56,6 +56,8 @@ describe("portable patterns", () => {
     ["(a+)+", "trailing repetition"],
     ["^(a*b?)*$", "trailing repetition"],
     ["(?:x{2,5}){3}", "trailing repetition"],
+    ["^(?:.*,)+$", "trailing repetition"],
+    ["^(a+a)+$", "trailing repetition"],
     ["(a|ab)*", "branches can start with the same character"],
     ["(a|a)+", "branches can start with the same character"],
     ["(?:a?b|b)*", "branches can start with the same character"],
@@ -72,6 +74,7 @@ describe("portable patterns", () => {
   test.each([
     "^[a-z0-9]+(?:-[a-z0-9]+)*$",
     "(\\d+,)*",
+    "^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\\.)+[a-zA-Z]{2,}$",
     "^([a-z0-9]+-)*$",
     "^(\\d{3}-)?\\d{4}$",
     "(a+)?",
