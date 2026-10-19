@@ -75,8 +75,8 @@ function notFoundCodeOf(route: ContractRoute): string | undefined {
 /**
  * The reply to a request the contract does not serve: a method a contract path does not serve (OPTIONS included)
  * answers the path's 404 in the api's format when an operation of the path declares one; a path under the api's
- * base path that no route serves exactly answers the 404 of any operation declaring one. Else a bare 404 with no
- * body, since no operation fails there.
+ * base path that no route serves exactly answers the api's `notFound` code, never a domain 404 of one operation.
+ * Else a bare 404 with no body, since no operation fails there.
  */
 export async function respondNotServed(
   response: ServerResponse,
@@ -84,12 +84,13 @@ export async function respondNotServed(
   api: ContractApi,
   request: ReportedRequest,
 ): Promise<void> {
-  const declaring = api.routes.filter((candidate) => notFoundCodeOf(candidate) !== undefined);
   const route = matchesContractPath(api, request.path)
-    ? declaring.find((candidate) =>
-        matchesContractPath({ ...api, routes: [candidate] }, request.path),
+    ? api.routes.find(
+        (candidate) =>
+          notFoundCodeOf(candidate) !== undefined &&
+          matchesContractPath({ ...api, routes: [candidate] }, request.path),
       )
-    : declaring[0];
+    : api.routes.find((candidate) => codeOfRole(candidate, NOT_FOUND_ROLE) !== undefined);
 
   if (route === undefined) {
     response.writeHead(NOT_FOUND_STATUS, { "content-length": "0" });

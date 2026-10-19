@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import {
+  besideTasksOnSharedBasePaths,
   copyTestApp,
   emitProject,
   generateReferenceProject,
@@ -51,6 +52,7 @@ interface ReferenceAppModule {
   bootWith(registration: object, instanceOptions?: object, prefix?: string): Promise<void>;
   bootTwice(registration: object): Promise<void>;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  startTwoApiApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
 }
 
 let app: ReferenceAppModule;
@@ -378,11 +380,75 @@ describe("the boot check", () => {
     ).rejects.toThrow(/TasksEndpoints[\s\S]*'operations' names 'nothing'[\s\S]*prefix '\/v1'/);
   });
 
+  test("an instance without HEAD routes stops the boot", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    await expect(
+      app.bootWith({ handlers: app.handlers, hooks: app.hooks }, { exposeHeadRoutes: false }),
+    ).rejects.toThrow(/exposeHeadRoutes/);
+  });
+
   test("a second registration of the api in one app stops the boot", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     await expect(app.bootTwice({ handlers: app.handlers, hooks: app.hooks })).rejects.toThrow(
       /registered twice/,
     );
+  });
+});
+
+describe("two apis on one base path", () => {
+  const project = projectDirectory(import.meta.url, "live-two-apis");
+  let twoApiApp: ReferenceAppModule;
+  let twoApiServer: Awaited<ReturnType<ReferenceAppModule["startTwoApiApp"]>>;
+
+  beforeAll(async () => {
+    const files = await generateReferenceProject(
+      project,
+      fastifyTarget,
+      {},
+      besideTasksOnSharedBasePaths,
+    );
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+    twoApiApp = await import(copyTestApp(build, APP_SOURCE));
+    twoApiServer = await twoApiApp.startTwoApiApp();
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  afterAll(async () => {
+    await twoApiServer?.close();
+  });
+
+  beforeEach(() => {
+    twoApiApp.resetScenario();
+  });
+
+  test.each([
+    ["the first api", `/v1/channels/${CHANNEL}/tasks/${TASK}`],
+    ["the second api", `/v1/beside/channels/${CHANNEL}/tasks/${TASK}`],
+  ])("%s serves its own routes", async (_api, path) => {
+    const reply = await sendRawRequest(twoApiServer, "GET", path, { headers: BEARER });
+
+    expect(reply.status).toBe(200);
+    expect(twoApiApp.calls.handled).toEqual(["getTask"]);
+  });
+
+  test.each(["/v1/unknown", "/v1/hooks/unknown"])(
+    "%s, under a base path both apis claim, is the app's own 404",
+    async (path) => {
+      const reply = await sendRawRequest(twoApiServer, "GET", path, { headers: BEARER });
+
+      expect(reply.status).toBe(404);
+      expect(JSON.parse(reply.text)).toEqual({ message: "not found" });
+    },
+  );
+
+  test("a path under a base path one api claims alone answers that api's notFound code", async () => {
+    const reply = await sendRawRequest(twoApiServer, "GET", "/beside/unknown", { headers: BEARER });
+
+    expect(reply.status).toBe(404);
+    expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+    expect(JSON.parse(reply.text)).toMatchObject({ code: "api.not_found" });
   });
 });

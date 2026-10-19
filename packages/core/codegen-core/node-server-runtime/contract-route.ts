@@ -286,11 +286,9 @@ export function matchesContractPath(api: ContractApi, path: string): boolean {
  * that no route serves exactly is the api's 404, any other path the app's. An empty base path claims no path, so an
  * api without a prefix leaves the app's 404s alone.
  */
-export function isUnderBasePath(api: ContractApi, path: string): boolean {
+export function isUnderBasePath(api: Pick<ContractApi, "basePaths">, path: string): boolean {
   return api.basePaths.some(
-    (basePath) =>
-      basePath !== "" &&
-      (path === basePath || path.startsWith(basePath.endsWith("/") ? basePath : `${basePath}/`)),
+    (basePath) => basePath !== "" && (path === basePath || path.startsWith(`${basePath}/`)),
   );
 }
 

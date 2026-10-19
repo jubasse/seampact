@@ -63,6 +63,61 @@ export type ReferenceIrChange = (ir: ContractIR, api: string) => ContractIR;
 
 const UNCHANGED_IR: ReferenceIrChange = (ir) => ir;
 
+const BESIDE_API_ID = "tasksBeside";
+const SHARED_BASE_PATH = /^\/v1/;
+const BESIDE_PATH_START = "/v1/beside";
+const BESIDE_ONLY_SURFACE = "besideOnly";
+const BESIDE_ONLY_BASE_PATH = "/beside";
+const API_NOT_FOUND_CODE = "api.not_found";
+const DOMAIN_NOT_FOUND_CODE = "tasks.task_missing";
+const KEEPS_NOT_FOUND_ROLE = "archiveTask";
+
+/**
+ * Puts, in the `tasksService` slot, a second api beside `tasks` on the same base paths (`/v1`, `/v1/hooks`): the
+ * tasks contract under another id, each operation moved under `/v1/beside`, so its routes collide with none of
+ * `tasks` and the scenario's handlers and hooks serve it. It also claims `/beside` alone, through a surface without
+ * operations, and every operation but `archiveTask` answers a domain 404 code in place of the `notFound` one.
+ */
+export const besideTasksOnSharedBasePaths: ReferenceIrChange = (ir, api) => {
+  if (api === "tasks") return ir;
+
+  const tasks = readGoldenIr("tasks");
+  const appSurface = tasks.api.surfaces.app;
+  const apiNotFound = tasks.errors[API_NOT_FOUND_CODE];
+
+  if (appSurface === undefined || apiNotFound === undefined) {
+    throw new Error("the reference tasks contract lost its app surface or its api.not_found code");
+  }
+
+  return {
+    ...tasks,
+    api: {
+      ...tasks.api,
+      id: BESIDE_API_ID,
+      surfaces: {
+        ...tasks.api.surfaces,
+        [BESIDE_ONLY_SURFACE]: { ...appSurface, prefix: BESIDE_ONLY_BASE_PATH },
+      },
+    },
+    errors: {
+      ...tasks.errors,
+      [DOMAIN_NOT_FOUND_CODE]: { ...apiNotFound, code: DOMAIN_NOT_FOUND_CODE },
+    },
+    operations: tasks.operations.map((operation) => ({
+      ...operation,
+      path: operation.path.replace(SHARED_BASE_PATH, BESIDE_PATH_START),
+      errors:
+        operation.id === KEEPS_NOT_FOUND_ROLE
+          ? operation.errors
+          : operation.errors.map((binding) =>
+              binding.code === API_NOT_FOUND_CODE
+                ? { ...binding, code: DOMAIN_NOT_FOUND_CODE, roles: [] }
+                : binding,
+            ),
+    })),
+  };
+};
+
 /** Writes both reference apis' generated trees into a fresh project; returns every file written. */
 export async function generateReferenceProject(
   project: string,

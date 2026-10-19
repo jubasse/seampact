@@ -17,6 +17,11 @@ import type {
 } from "fastify";
 import { authorizeRequest, type CheckState } from "./node-server/access-checks.js";
 import {
+  basePathClaimsOf,
+  claimsBasePathAlone,
+  registerBasePathClaim,
+} from "./node-server/base-path-claims.js";
+import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
@@ -33,7 +38,6 @@ import {
   type ContractRequest,
   type ContractRoute,
   headerValue,
-  isUnderBasePath,
   matchContractPath,
   matchContractRoute,
   matchesContractPath,
@@ -134,6 +138,7 @@ export function createFastifyBoundary<
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
 
     registeredServers.add(fastify.server);
+    registerBasePathClaim(fastify.server, api);
     warnUnboundedParams();
     registered.hooks = options.hooks;
     replaceJsonParsers(fastify);
@@ -146,32 +151,38 @@ export function createFastifyBoundary<
 
   // Every method under each base path, below the contract routes, which find-my-way matches first: a path no route
   // serves exactly (a trailing slash, `//`, an unknown sub-path) or a method its path does not serve answers the
-  // api's 404 before any body is read. A path outside the base paths stays the app's. A contract route's path lands
-  // here only when the router refused a param (over maxParamLength): the operation's step 6 refusal.
+  // api's 404 before any body is read. A path outside the base paths stays the app's, and so does a path another
+  // api of the app also claims, which goes to the app's not-found handler. A contract route's path lands here only
+  // when the router refused a param (over maxParamLength): the operation's step 6 refusal. The first api to claim a
+  // base path registers its wildcard; another api on the same base path finds it registered and adds none.
   function registerUnservedBasePaths(fastify: FastifyInstance, hooks: BoundaryHooks): void {
     for (const basePath of api.basePaths) {
-      if (basePath === "") continue;
+      const wildcard = `${basePath}/*`;
 
-      fastify.all(`${basePath.replace(/\/$/, "")}/*`, {
-        onRequest: (request, reply) => {
+      if (basePath === "" || fastify.hasRoute({ url: wildcard, method: "GET" })) continue;
+
+      fastify.all(wildcard, {
+        onRequest: (request, reply, done) => {
           const reported = reportedRequest(request.raw);
           const matched = matchContractRoute(api, reported.method, reported.path);
 
-          if (matched === undefined) {
-            respondUnserved(reply, hooks, reported);
+          if (matched !== undefined) {
+            pathParamRefusal(matched.route, matched.pathParams, request)
+              .then((refusal) => writeDetached(reply, hooks, matched.route, refusal, reported))
+              .catch((failure: unknown) => logWriteFailure(api, failure));
 
             return;
           }
 
-          pathParamRefusal(matched.route, matched.pathParams, request)
-            .then((refusal) => writeDetached(reply, hooks, matched.route, refusal, reported))
-            .catch((failure: unknown) => logWriteFailure(api, failure));
+          if (!claimsBasePathAlone(api, basePathClaimsOf(request.server.server), reported.path)) {
+            done();
+
+            return;
+          }
+
+          respondUnserved(reply, hooks, reported);
         },
-        handler: async () => {
-          throw new Error(
-            `seampact: the base path catch-all of api '${api.id}' reached its handler`,
-          );
-        },
+        handler: async (_request, reply) => reply.callNotFound(),
       });
     }
   }
@@ -191,6 +202,15 @@ export function createFastifyBoundary<
       problems.push({
         problem: `the api '${api.id}' is registered twice in this app`,
         fix: "register the plugin once per api in an app",
+      });
+    }
+
+    // Fastify's types leave `exposeHeadRoutes` out of `initialConfig`, which holds it.
+    if (Reflect.get(fastify.initialConfig, "exposeHeadRoutes") === false) {
+      problems.push({
+        problem:
+          "the instance is created with exposeHeadRoutes: false, so HEAD on a GET path never reaches its operation",
+        fix: "create the Fastify instance without exposeHeadRoutes: false",
       });
     }
 
@@ -607,7 +627,11 @@ export function createFastifyBoundary<
 
     const matched = matchContractPath(api, reported.method, reported.path);
 
-    if (matched === undefined && error === undefined && isUnderBasePath(api, reported.path)) {
+    if (
+      matched === undefined &&
+      error === undefined &&
+      claimsBasePathAlone(api, basePathClaimsOf(request.server.server), reported.path)
+    ) {
       respondUnserved(reply, registered.hooks, reported);
 
       return true;

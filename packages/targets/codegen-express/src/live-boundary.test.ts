@@ -3,6 +3,7 @@ import { rmSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
+  besideTasksOnSharedBasePaths,
   copyTestApp,
   emitProject,
   generateReferenceProject,
@@ -62,6 +63,7 @@ interface ReferenceAppModule {
   readonly hooks: object;
   resetScenario(): void;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  startTwoApiApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
 }
 
 interface RouterModule {
@@ -520,6 +522,63 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
     expect(() =>
       generated.router({ handlers, hooks: app.hooks, operations: { nothing: {} } }),
     ).toThrow(/TasksEndpoints[\s\S]*'operations' names 'nothing'/);
+  });
+});
+
+describe.each(EXPRESS_MAJORS)("two apis on one base path on %s", (_major, expressPackage) => {
+  const project = projectDirectory(import.meta.url, `live-two-apis-${expressPackage}`);
+  let app: ReferenceAppModule;
+  let server: Awaited<ReturnType<ReferenceAppModule["startTwoApiApp"]>>;
+
+  beforeAll(async () => {
+    const files = await generateReferenceProject(
+      project,
+      expressTarget,
+      {},
+      besideTasksOnSharedBasePaths,
+    );
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+    linkExpress(project, expressPackage);
+    app = await import(copyTestApp(build, APP_SOURCE));
+    server = await app.startTwoApiApp();
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  afterAll(async () => {
+    await server?.close();
+  });
+
+  beforeEach(() => {
+    app.resetScenario();
+  });
+
+  test.each([
+    ["the first router", `/v1/channels/${CHANNEL}/tasks/${TASK}`],
+    ["the router mounted after it", `/v1/beside/channels/${CHANNEL}/tasks/${TASK}`],
+  ])("%s serves its own routes", async (_router, path) => {
+    const reply = await sendRawRequest(server, "GET", path, { headers: BEARER });
+
+    expect(reply.status).toBe(200);
+    expect(app.calls.handled).toEqual(["getTask"]);
+  });
+
+  test.each(["/v1/unknown", "/v1/hooks/unknown"])(
+    "%s, under a base path both apis claim, is the app's own 404",
+    async (path) => {
+      const reply = await sendRawRequest(server, "GET", path, { headers: BEARER });
+
+      expect(reply.status).toBe(404);
+      expect(reply.headers["content-type"] ?? "").not.toContain(PROBLEM_MEDIA);
+    },
+  );
+
+  test("a path under a base path one api claims alone answers that api's notFound code", async () => {
+    const reply = await sendRawRequest(server, "GET", "/beside/unknown", { headers: BEARER });
+
+    expect(reply.status).toBe(404);
+    expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+    expect(JSON.parse(reply.text)).toMatchObject({ code: "api.not_found" });
   });
 });
 

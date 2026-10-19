@@ -11,6 +11,11 @@ import {
   type CheckState,
 } from "./node-server/access-checks.js";
 import {
+  basePathClaimsOf,
+  claimsBasePathAlone,
+  registerBasePathClaim,
+} from "./node-server/base-path-claims.js";
+import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
@@ -29,7 +34,6 @@ import {
   type ContractApi,
   type ContractRequest,
   type ContractRoute,
-  isUnderBasePath,
   isUnderPrefix,
   matchContractPath,
   matchContractRoute,
@@ -263,8 +267,8 @@ export function createAdonisBoundary<
 >(api: ContractApi, options: AdonisBoundaryOptions, entries: readonly AdonisOperationEntry[]) {
   const requests = new WeakMap<BoundaryContext, ContractRequest>();
   const inputs = new WeakMap<HttpContext, { readonly id: string; readonly input: unknown }>();
-  // Set by `registerRoutes`: the hooks the exported helpers reach outside a request context.
-  const registered: { hooks?: BoundaryHooks } = {};
+  // Set by `registerRoutes`: the hooks and the router the exported helpers reach outside a request context.
+  const registered: { hooks?: BoundaryHooks; router?: Router } = {};
 
   const entryOf = (id: string): AdonisOperationEntry => {
     const entry = entries.find((candidate) => candidate.id === id);
@@ -551,6 +555,8 @@ export function createAdonisBoundary<
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
 
     registered.hooks = registration.hooks;
+    registered.router = router;
+    registerBasePathClaim(router, api);
     registeredApis.set(router, new Set([...(registeredApis.get(router) ?? []), api.id]));
 
     const replyOptions = replyOptionsOf(registration);
@@ -706,7 +712,13 @@ export function createAdonisBoundary<
     const { method, path } = requestLine(ctx);
     const routeNotFound = errorCode(error) === ROUTE_NOT_FOUND_CODE;
 
-    if (!matchesContractPath(api, path) && !(routeNotFound && isUnderBasePath(api, path))) {
+    // A path under a base path another api of the app also claims is left to the app's handler.
+    const claims = registered.router === undefined ? [] : basePathClaimsOf(registered.router);
+
+    if (
+      !matchesContractPath(api, path) &&
+      !(routeNotFound && claimsBasePathAlone(api, claims, path))
+    ) {
       return false;
     }
 

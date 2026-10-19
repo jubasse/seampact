@@ -47,6 +47,11 @@ import {
 import { from, mergeMap, type Observable, switchMap } from "rxjs";
 import { authorizeRequest, type CheckState } from "./node-server/access-checks.js";
 import {
+  basePathClaimsOf,
+  claimsBasePathAlone,
+  registerBasePathClaim,
+} from "./node-server/base-path-claims.js";
+import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
@@ -519,6 +524,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       }
 
       bootstrappedAdapters.add(adapter);
+      registerBasePathClaim(adapter, api);
 
       return [];
     }
@@ -586,6 +592,14 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
    * Renders a refusal raised before routing on a contract path, or the 404 of a path under the base path, in the
    * api's format; false when it does nothing.
    */
+  // A path under a base path another api of the app also claims is left to the app's default 404.
+  function claimsBasePathAloneInApp(path: string): boolean {
+    const adapter: unknown = platform.adapterHost?.httpAdapter;
+    const claims = typeof adapter === "object" && adapter !== null ? basePathClaimsOf(adapter) : [];
+
+    return claimsBasePathAlone(api, claims, path);
+  }
+
   function renderPreRoutingError(exception: unknown, host: ArgumentsHost): boolean {
     if (boundaryContext.getStore() !== undefined) return false;
 
@@ -596,7 +610,9 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
     const notServed =
       statusOf(exception) === NOT_FOUND && matchContractRoute(api, method, path) === undefined;
 
-    if (!matchesContractPath(api, path) && !(notServed && isUnderBasePath(api, path))) return false;
+    if (!matchesContractPath(api, path) && !(notServed && claimsBasePathAloneInApp(path))) {
+      return false;
+    }
 
     // NestJS's 404 for a method the contract path does not serve, or a path under the base path no route serves.
     if (notServed) {

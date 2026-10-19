@@ -210,6 +210,21 @@ describe("reference slice answers", () => {
     await expect(answer.json()).resolves.toMatchObject({ code: "api.csrf_invalid" });
   });
 
+  test("a write with a bearer beside the session cookie is not refused for CSRF", async () => {
+    const answer = await fetch(`${server.baseUrl}/v1/channels/${CHANNEL_ID}/tasks`, {
+      method: "POST",
+      headers: {
+        ...user,
+        cookie: SESSION_COOKIE,
+        "content-type": "application/json",
+        "idempotency-key": crypto.randomUUID(),
+      },
+      body: JSON.stringify({ title: "Bearer beside a cookie" }),
+    });
+
+    expect(answer.status).toBe(201);
+  });
+
   test("415 for a +json media type on a JSON route", async () => {
     const answer = await fetch(`${server.baseUrl}/v1/me/preferences`, {
       method: "PATCH",

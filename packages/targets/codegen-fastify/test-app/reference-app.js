@@ -1,9 +1,10 @@
 // A Fastify app around the generated `tasks` plugin, for the live boundary test: the shared scenario's handler map
 // and hooks, an app root hook, an app error handler, a not-found handler and `frameworkErrors` that call the
-// exported helper, and routes of the app's own. Copied next to the compiled generated tree, so it imports the
-// generated modules by relative path.
+// exported helper, and routes of the app's own; and an app with two apis on one base path. Copied next to the
+// compiled generated tree, so it imports the generated modules by relative path.
 import Fastify from "fastify";
 import * as TasksFastify from "../generated/server/tasks/index.js";
+import * as SecondFastify from "../generated/server/tasksService/index.js";
 import {
   ALLOWED_ORIGIN,
   AppReply,
@@ -118,6 +119,31 @@ export async function startReferenceApp() {
     throw new Error("own boom");
   });
   app.post("/own/echo", async (request) => request.body);
+  await app.listen({ port: 0, host: "127.0.0.1" });
+
+  const { port } = app.server.address();
+
+  return { host: "127.0.0.1", port, close: () => app.close() };
+}
+
+/**
+ * Builds an app registering the `tasks` plugin and, after it, the plugin of the api the test generated in the
+ * `tasksService` slot, on the same base paths; listens on a free port.
+ */
+export async function startTwoApiApp() {
+  resetScenario();
+
+  const app = Fastify();
+
+  app.setNotFoundHandler((request, reply) => {
+    if (TasksFastify.renderPreRoutingError(request, reply)) return;
+
+    if (SecondFastify.renderPreRoutingError(request, reply)) return;
+
+    reply.code(NOT_FOUND_STATUS).send({ message: "not found" });
+  });
+  await app.register(TasksFastify.plugin, { handlers, hooks });
+  await app.register(SecondFastify.plugin, { handlers, hooks });
   await app.listen({ port: 0, host: "127.0.0.1" });
 
   const { port } = app.server.address();
