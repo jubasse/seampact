@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { IdempotencyStore, SignedTemplateRequest } from "@seampact/hooks";
+import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-suite";
 import { createMemoryIdempotencyStore } from "@seampact/idempotency-memory";
 import { verifyTemplateSignature } from "@seampact/signed-webhooks";
 import {
@@ -18,6 +19,12 @@ import {
   USER_ID,
   USER_TOKEN,
 } from "./credentials.mjs";
+import {
+  type ControlReply,
+  hookCallsReply,
+  loadScriptReply,
+  logLinesReply,
+} from "../src/suite-control.mjs";
 
 export interface RunningServer {
   readonly baseUrl: string;
@@ -259,6 +266,14 @@ async function handle(
   idempotencyStore: IdempotencyStore,
 ): Promise<void> {
   const call = await readCall(request);
+  const controlReply = controlReplyOf(call);
+
+  if (controlReply !== undefined) {
+    send(response, controlReply);
+
+    return;
+  }
+
   const matched = matchRoute(call);
 
   if (matched === undefined) {
@@ -331,6 +346,23 @@ async function readCall(request: IncomingMessage): Promise<Call> {
     rawBody,
     body: text === "" ? undefined : JSON.parse(text),
   };
+}
+
+// The http suite's control routes, answered from the template's control state outside the contract.
+function controlReplyOf(call: Call): Answer | undefined {
+  const reply = controlReplyFor(call);
+
+  return reply === undefined ? undefined : { status: reply.status, body: reply.body };
+}
+
+function controlReplyFor(call: Call): ControlReply | undefined {
+  const route = `${call.method} ${call.url.pathname}`;
+
+  if (route === `PUT ${SCRIPT_ROUTE}`) return loadScriptReply(call.body);
+  if (route === `GET ${HOOK_CALLS_ROUTE}`) return hookCallsReply();
+  if (route === `GET ${LOG_LINES_ROUTE}`) return logLinesReply();
+
+  return undefined;
 }
 
 // HEAD is served by the path's GET operation; Node sends its status and headers without the body.
