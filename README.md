@@ -220,6 +220,7 @@ The ADRs cite product decisions by id (`A<n>`); [`docs/decisions.md`](docs/decis
 | [0017](docs/adr/0017-fastify-target.md) | the Fastify server target |
 | [0018](docs/adr/0018-express-target.md) | the Express server target |
 | [0019](docs/adr/0019-adonis-target.md) | the AdonisJS server target |
+| [0020](docs/adr/0020-hono-target.md) | the Hono server target and the Web-standard adapter |
 
 ## Contributing
 
