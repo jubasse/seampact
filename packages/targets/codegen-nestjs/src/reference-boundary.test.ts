@@ -12,11 +12,14 @@ import { target as nestjsTarget } from "./index.js";
 
 const PROJECT = projectDirectory(import.meta.url, "reference-boundary");
 
+// Generating the reference project outruns vitest's default 10 s hook limit on a loaded machine.
+const GENERATE_TIMEOUT_MILLISECONDS = 60_000;
+
 let files: string[] = [];
 
 beforeAll(async () => {
   files = await generateReferenceProject(PROJECT, nestjsTarget, { bodyValidation: true });
-});
+}, GENERATE_TIMEOUT_MILLISECONDS);
 
 describe("the generated reference boundary compiles", () => {
   test("both apis' types, validators and NestJS boundary type-check together", () => {
