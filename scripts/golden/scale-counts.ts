@@ -115,6 +115,11 @@ function declarationsOf(apis: readonly LoadedApi[]): Record<Catalogue, Declarati
   return merged;
 }
 
+/** The named schemas the apis declare, each by its raw declaration. */
+export function declaredSchemas(apis: readonly LoadedApi[]): Declarations {
+  return declarationsOf(apis).schemas;
+}
+
 function emptyDeclarations(): Record<Catalogue, Declarations> {
   return {
     schemas: {},

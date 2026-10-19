@@ -19,7 +19,17 @@ export interface GoldenCase {
 
 export const GOLDEN_CASES: GoldenCase[] = [
   { name: "reference", source: "fixtures/reference", entry: "workspace.yaml" },
+  { name: "bodies", source: `${GOLDEN_DIRECTORY}/bodies/contract`, entry: "workspace.yaml" },
+  { name: "agreement", source: "fixtures/validator-agreement", entry: "api.yaml" },
+  {
+    name: "every-default",
+    source: `${GOLDEN_DIRECTORY}/every-default/contract`,
+    entry: "workspace.yaml",
+  },
 ];
+
+/** The directory of a case that holds its contract source; the generators leave it alone. */
+const CONTRACT_SOURCE_DIRECTORY = /^fixtures\/golden\/[^/]+\/contract\//;
 
 /** Directories the generators own whole: a file there that they do not write is stale. */
 export const GENERATED_DIRECTORIES = [
@@ -111,5 +121,5 @@ export function findUnlistedFiles(
 ): string[] {
   return directories
     .flatMap((directory) => filesBelow(root, directory))
-    .filter((path) => !files.has(path));
+    .filter((path) => !files.has(path) && !CONTRACT_SOURCE_DIRECTORY.test(path));
 }

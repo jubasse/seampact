@@ -1,0 +1,157 @@
+# api.yaml: query fields, form and multipart bodies, and a sort key guarded by a scope right
+api:
+  name: notes
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: Notes shared inside a workspace.
+  compat: { policy: additive-only }
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  user:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: UserPrincipal
+
+scopes:
+  space: { id: SpaceId, errors: [api.not_found] }
+
+rights:
+  notes.read:
+    subject: { scope: space }
+  notes.seeWordCount:
+    subject: { scope: space }
+
+errors:
+  api.schema_invalid:
+    status: 400
+    nature: refused
+    params: { issues: Issues }
+    example: { issues: [{ pointer: /title, rule: minLength }] }
+
+pagings:
+  cursor:
+    request:
+      cursor: { query: cursor }
+      limit: { query: limit }
+      sort: { query: sort, style: signed }
+    response:
+      body: $items
+      links: { next: $next }
+
+conventions:
+  paging: { default: cursor, maxLimit: 100 }
+  idempotency: { header: Idempotency-Key, replayHeader: Idempotency-Replayed, lifetime: 24h }
+  bodyLimit: 1MiB
+  errors:
+    every: [api.internal]
+    derived:
+      schemaInvalid:
+        code: api.schema_invalid
+        params: { issues: { $each: $issues, $as: { pointer: $item.pointer, rule: $item.rule } } }
+
+enums:
+  NoteState: { values: [draft, published], reason: "Note states belong to this api." }
+
+schemas:
+  SpaceId: { type: string, format: uuid }
+  NoteId: { type: string, format: uuid }
+  UserPrincipal:
+    type: object
+    required: [userId]
+    properties: { userId: { type: string, format: uuid } }
+  Space:
+    type: object
+    required: [spaceId]
+    properties: { spaceId: SpaceId }
+  Issues:
+    type: array
+    items:
+      type: object
+      required: [pointer, rule]
+      properties: { pointer: { type: string }, rule: { type: string } }
+  Note:
+    type: object
+    required: [noteId, title, state, createdAt]
+    properties:
+      noteId: NoteId
+      title: { type: string, minLength: 1, maxLength: 200 }
+      state: { enum: NoteState }
+      wordCount: { type: integer, minimum: 0, restrictedTo: notes.seeWordCount }
+      createdAt: { type: string, format: date-time }
+  NoteFilter:
+    type: object
+    properties:
+      from: { type: string, format: date-time }
+      to: { type: string, format: date-time }
+  Feedback:
+    type: object
+    required: [message]
+    properties:
+      message: { type: string, maxLength: 1000 }
+      score: { type: integer, minimum: 1, maximum: 5 }
+      subscribe: { type: boolean }
+      tags: { type: array, items: { type: string, maxLength: 30 }, maxItems: 5 }
+  AttachmentMeta:
+    type: object
+    required: [label]
+    properties: { label: { type: string, maxLength: 80 } }
+  Attachment:
+    type: object
+    required: [attachmentId]
+    properties: { attachmentId: { type: string, format: uuid } }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      spaces:
+        kind: collection
+        id: { spaceId: SpaceId }
+        item: Space
+        ops: [get]
+        member:
+          scopes: { space: path.spaceId }
+          routes:
+            notes:
+              kind: collection
+              id: { noteId: NoteId }
+              item: Note
+              ops:
+                list:
+                  sortable: [createdAt, { key: wordCount, right: notes.seeWordCount }]
+                  filteredBy: notes.read
+                  query:
+                    state?: { enum: NoteState }
+                    labels?: { type: array, items: { type: string, maxLength: 30 }, maxItems: 4 }
+                    range?: NoteFilter
+                    archived?: { type: boolean }
+                    minWords?: { type: integer, minimum: 0 }
+              collection:
+                routes:
+                  feedback:
+                    method: post
+                    inputMedia: form
+                    idempotency: { exempt: "A feedback form is harmless to repeat." }
+                    input: Feedback
+                    responses:
+                      303: {}
+                  attach:
+                    method: post
+                    inputMedia: multipart
+                    bodyLimit: 25MiB
+                    idempotency: { exempt: "An upload is harmless to repeat." }
+                    input:
+                      type: object
+                      required: [file]
+                      properties:
+                        file: { file: { media: [image/png, application/pdf], maxSize: 20MiB } }
+                        caption: { type: string, maxLength: 200 }
+                        meta:
+                          type: string
+                          contentMediaType: application/json
+                          contentSchema: AttachmentMeta
+                    output: Attachment

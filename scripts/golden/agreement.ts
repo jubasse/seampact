@@ -165,3 +165,35 @@ export function agreementProblems(files: AgreementFiles, api: LoadedApi): string
     ...missingCases(rows),
   ];
 }
+
+// The shapes the IR keeps inline in their use instead of as a named schema (docs/ir/05-schemas.md).
+const INLINE_SHAPES = ["string", "integer", "number", "boolean", "array"];
+
+function irSchemaDirections(ir: JsonObject, name: string): unknown {
+  const schemas = ir.schemas;
+  const schema = isObject(schemas) ? schemas[name] : undefined;
+
+  return isObject(schema) ? schema.directions : undefined;
+}
+
+function irRowProblems(row: AgreementRow, ir: JsonObject, api: LoadedApi): string[] {
+  const directions = irSchemaDirections(ir, row.schema);
+
+  if (Array.isArray(directions)) {
+    return directions.includes(row.direction)
+      ? []
+      : [`${row.id}: the IR schema ${row.schema} has no ${row.direction} direction`];
+  }
+
+  const declarations = api.merged.schemas;
+  const declaration = isObject(declarations) ? declarations[row.schema] : undefined;
+
+  if (isObject(declaration) && INLINE_SHAPES.includes(String(declaration.type))) return [];
+
+  return [`${row.id}: the IR holds no schema ${row.schema}`];
+}
+
+/** Every row whose schema the compiled IR does not hold with the row's direction (a scalar or array stays inline). */
+export function agreementIrProblems(table: unknown, ir: JsonObject, api: LoadedApi): string[] {
+  return agreementRows(table).flatMap((row) => irRowProblems(row, ir, api));
+}
