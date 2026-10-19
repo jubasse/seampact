@@ -1,16 +1,16 @@
 // The routes of an Express app, for the framework-route boot check (ADR 0012 "The boot check"): the app's own
-// routes and those of the routers mounted at its root, beside the routes of the apis whose routers it mounts. A
-// router or sub-app mounted below a path is refused by name: Express keeps no readable mount path. Express 4 keeps
-// the app's router under `_router`, Express 5 under `router`. Copied into the generated tree as is.
+// routes and those of the routers mounted at its root, without the apis' routers, known by their claims, and without
+// the routes a boundary owns, known by their handlers. A router or sub-app mounted below a path is refused by name:
+// Express keeps no readable mount path. Express 4 keeps the app's router under `_router`, Express 5 under `router`.
+// Copied into the generated tree as is.
 import { basePathClaimsOf } from "./base-path-claims.js";
 import type { BootProblem } from "./boundary-hooks.js";
-import { contractRoutesOf, type ListedRoute } from "./framework-routes.js";
+import type { ListedRoute } from "./framework-route-patterns.js";
+import { isBoundaryRoute } from "./framework-routes.js";
 
 export interface ExpressRouteListing {
-  /** The routes the app and its root routers register outside the apis' routers. */
+  /** The routes the app and its root routers register outside the apis' routers and the boundary's routes. */
   readonly routes: readonly ListedRoute[];
-  /** The routes of the apis whose routers the app mounts. */
-  readonly contractRoutes: readonly ListedRoute[];
   readonly problems: readonly BootProblem[];
 }
 
@@ -20,13 +20,19 @@ const MOUNTED_APP_LAYER = "mounted_app";
 
 interface Listing {
   readonly routes: ListedRoute[];
-  readonly contractRoutes: ListedRoute[];
   readonly problems: BootProblem[];
+  readonly isBoundaryHandler: (handler: unknown) => boolean;
 }
 
-/** The routes of an Express app, of the apis it mounts, and a problem per mount the listing cannot read. */
-export function expressRouteListing(app: unknown): ExpressRouteListing {
-  const listing: Listing = { routes: [], contractRoutes: [], problems: [] };
+/**
+ * The routes of an Express app outside the apis it mounts, and a problem per mount the listing cannot read. A route
+ * one of whose handlers the boundary owns is the boundary's: marked by default, or as the target tells.
+ */
+export function expressRouteListing(
+  app: unknown,
+  isBoundaryHandler: (handler: unknown) => boolean = isBoundaryRoute,
+): ExpressRouteListing {
+  const listing: Listing = { routes: [], problems: [], isBoundaryHandler };
   const appRouter: unknown = isObjectLike(app)
     ? (Reflect.get(app, "_router") ?? Reflect.get(app, "router"))
     : undefined;
@@ -64,19 +70,16 @@ function listLayer(layer: object, listing: Listing, visited: Set<object>): void 
   const route: unknown = Reflect.get(layer, "route");
 
   if (isObjectLike(route)) {
-    listing.routes.push(...routeEntries(route));
+    if (!routeHandlers(route).some(listing.isBoundaryHandler)) {
+      listing.routes.push(...routeEntries(route));
+    }
 
     return;
   }
 
   const handle: unknown = Reflect.get(layer, "handle");
-  const claims = isObjectLike(handle) ? basePathClaimsOf(handle) : [];
 
-  if (claims.length > 0) {
-    listing.contractRoutes.push(...contractRoutesOf(claims));
-
-    return;
-  }
+  if (isObjectLike(handle) && basePathClaimsOf(handle).length > 0) return;
 
   const isRouter = isObjectLike(handle) && Array.isArray(Reflect.get(handle, "stack"));
   const isMountedApp = Reflect.get(layer, "name") === MOUNTED_APP_LAYER;
@@ -111,6 +114,16 @@ function routeEntries(route: object): ListedRoute[] {
         path: String(path),
       })),
     );
+}
+
+function routeHandlers(route: object): unknown[] {
+  const stack: unknown = Reflect.get(route, "stack");
+
+  if (!Array.isArray(stack)) return [];
+
+  return stack.map((layer: unknown) =>
+    isObjectLike(layer) ? Reflect.get(layer, "handle") : undefined,
+  );
 }
 
 // Express 4 marks a root mount with `regexp.fast_slash`, Express 5 with `slash`.

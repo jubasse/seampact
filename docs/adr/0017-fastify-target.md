@@ -97,7 +97,7 @@ The plugin runs it when Fastify loads it, so `app.ready()` and `app.listen()` re
 - a router `maxParamLength` (`fastify.initialConfig`) below the longest percent-encoded form of a declared path parameter (36 for a `uuid`, whose unreserved ASCII characters a client sends as is; else twelve characters per code point of its `maxLength`, or three per character when its pattern is anchored at both ends, has no top-level alternation and matches only ASCII, since a JSON Schema pattern matches anywhere in the value), since Fastify measures the encoded length and would refuse a valid request with a 414; a path parameter that is neither a `uuid` nor bounded by a `maxLength` is a warning naming it, not a failure;
 - a Fastify major other than 5 (`fastify.version`).
 
-The framework-route check of ADR 0012 runs at `onReady`, over the routes that `collectFrameworkRoutes(app)` recorded: the app calls it right after `Fastify()` creates the root instance, before any route, since Fastify lists a route only as it is added, and the plugin refuses the start by name when no collector is installed and the check is on.
+The framework-route check of ADR 0012 runs at `onReady`, over the routes that `collectFrameworkRoutes(app)` recorded: the app calls it right after `Fastify()` creates the root instance, before any route, since Fastify lists a route only as it is added, and the plugin refuses the start by name when no collector is installed and the check is on. `collectFrameworkRoutes(app)` itself throws, naming the fix, when the app already holds a route.
 
 ### What the generated code depends on
 

@@ -78,7 +78,7 @@ import {
   type ResponsesMode,
 } from "./node-server/contract-route.js";
 import { logWriteFailure, notFoundError } from "./node-server/error-reply.js";
-import { contractRoutesOf, frameworkRouteProblems } from "./node-server/framework-routes.js";
+import { frameworkRouteProblems } from "./node-server/framework-routes.js";
 import { handlerReply } from "./node-server/handler-reply.js";
 import { beginIdempotency } from "./node-server/idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./node-server/input-checks.js";
@@ -150,6 +150,14 @@ class TooManyRequestsRefusal {
   static [Symbol.hasInstance](value: unknown): boolean {
     return value instanceof HttpException && value.getStatus() === TOO_MANY_REQUESTS;
   }
+}
+
+// NestJS copies a controller method's metadata to the handler it registers on Express, so an operation's handler
+// carries the operation's metadata, whichever api of the app declares it.
+function isOperationHandler(handler: unknown): boolean {
+  return (
+    typeof handler === "function" && Reflect.getMetadata(OPERATION_METADATA, handler) !== undefined
+  );
 }
 
 function isFrameworkDenial(error: unknown): boolean {
@@ -512,21 +520,14 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       return problems;
     }
 
-    // Every route of the Express app outside the apis' routes must be allow-listed in the app config.
+    // Every route of the Express app outside the apis' operations must be allow-listed in the app config.
     private frameworkRouteProblems(): BootProblem[] {
       if (api.frameworkRoutes.status === "off") return [];
 
       const adapter: AbstractHttpAdapter | undefined = this.adapterHost.httpAdapter;
-      const listing = expressRouteListing(adapter?.getInstance());
-      const contractRoutes = [
-        ...listing.contractRoutes,
-        ...(adapter === undefined ? [] : contractRoutesOf(basePathClaimsOf(adapter))),
-      ];
+      const listing = expressRouteListing(adapter?.getInstance(), isOperationHandler);
 
-      return [
-        ...listing.problems,
-        ...frameworkRouteProblems(api.frameworkRoutes, listing.routes, contractRoutes),
-      ];
+      return [...listing.problems, ...frameworkRouteProblems(api.frameworkRoutes, listing.routes)];
     }
 
     // Replies written outside a request context report to one registration's hooks: one per api in an app.

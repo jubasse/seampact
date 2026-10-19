@@ -877,10 +877,18 @@ interface UncheckedAppModule {
   startUncheckedApp(options: {
     withUnlistedRoute: boolean;
   }): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  startUncheckedSubApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  checkAppWithOwnRoute(ownPath: string): void;
 }
 
+// A catch-all below the contract route `GET /v1/channels/{channelId}/tasks/{taskId}`, as each major writes it.
+const CATCH_ALL_UNDER_TASKS: Readonly<Record<(typeof EXPRESS_MAJORS)[number][1], string>> = {
+  express: "/v1/channels/:channelId/tasks/*rest",
+  express4: "/v1/channels/:channelId/tasks/*",
+};
+
 describe.each(EXPRESS_MAJORS)(
-  "an app that never calls checkFrameworkRoutes on %s",
+  "the framework-route check of an app on %s",
   (_major, expressPackage) => {
     const project = projectDirectory(import.meta.url, `live-unchecked-${expressPackage}`);
     const path = `/v1/channels/${CHANNEL}/tasks/${TASK}`;
@@ -898,7 +906,7 @@ describe.each(EXPRESS_MAJORS)(
       uncheckedModule = await import(copyTestApp(build, APP_SOURCE));
     }, SETUP_TIMEOUT_MILLISECONDS);
 
-    test("an unlisted route of the app gives 500 on every request, with the problem logged", async () => {
+    test("an app that never runs the check gives 500 on every request for an unlisted route, logged", async () => {
       const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
       const unchecked = await uncheckedModule.startUncheckedApp({ withUnlistedRoute: true });
 
@@ -920,7 +928,34 @@ describe.each(EXPRESS_MAJORS)(
       }
     });
 
-    test("an app whose own routes are all allow-listed serves normally", async () => {
+    test("a mounted sub-app's router checks the root app: its unlisted route gives 500", async () => {
+      const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const unchecked = await uncheckedModule.startUncheckedSubApp();
+
+      try {
+        const refused = await sendRawRequest(unchecked, "GET", path, { headers: BEARER });
+
+        expect(refused.status).toBe(500);
+        expect(logged).toHaveBeenCalledOnce();
+      } finally {
+        logged.mockRestore();
+        await unchecked.close();
+      }
+    });
+
+    test("an app route at a contract path, outside the generated router, is refused", () => {
+      const ownPath = "/v1/channels/:channelId/tasks/:taskId";
+
+      expect(() => uncheckedModule.checkAppWithOwnRoute(ownPath)).toThrow(`'GET ${ownPath}'`);
+    });
+
+    test("an app catch-all under a contract param path is refused", () => {
+      const ownPath = CATCH_ALL_UNDER_TASKS[expressPackage];
+
+      expect(() => uncheckedModule.checkAppWithOwnRoute(ownPath)).toThrow(`'GET ${ownPath}'`);
+    });
+
+    test("an app that never runs the check serves normally when its own routes are allow-listed", async () => {
       const clean = await uncheckedModule.startUncheckedApp({ withUnlistedRoute: false });
 
       try {

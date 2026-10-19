@@ -1,8 +1,9 @@
 // An Express app around the generated `tasks` router, for the live boundary test: the shared scenario's handler map
 // and hooks, app middleware before the router, an app error middleware, routes of the app's own and a router
 // mounted under a path with hooks of its own; an app with the router nested in a parent router, one without a
-// router; an app with two apis on one base path; and an app that never calls the framework-route check. Copied next to the compiled generated tree, so
-// it imports the generated modules by relative path. The test links `express` to the major it runs.
+// router; an app with two apis on one base path; apps that never call the framework-route check, one in a sub-app;
+// and apps with a route of their own the check refuses. Copied next to the compiled generated tree, so it imports
+// the generated modules by relative path. The test links `express` to the major it runs.
 import express from "express";
 import * as TasksExpress from "../generated/server/tasks/index.js";
 import * as SecondExpress from "../generated/server/tasksService/index.js";
@@ -205,4 +206,35 @@ async function listen(app) {
     port,
     close: () => new Promise((resolve) => server.close(() => resolve())),
   };
+}
+
+/**
+ * Builds an app with a route of its own at `ownPath`, registered before the `tasks` router, and runs the
+ * framework-route check over it; throws the check's refusal.
+ */
+export function checkAppWithOwnRoute(ownPath) {
+  resetScenario();
+
+  const app = express();
+
+  app.get(ownPath, (_request, response) => response.send("own"));
+  app.use(TasksExpress.router({ handlers, hooks }));
+  TasksExpress.checkFrameworkRoutes(app);
+}
+
+/**
+ * Builds an app that mounts, at its root, a sub-app serving the `tasks` router, beside an unlisted route of its
+ * own; never calls checkFrameworkRoutes; listens on a free port.
+ */
+export async function startUncheckedSubApp() {
+  resetScenario();
+
+  const app = express();
+  const subApp = express();
+
+  subApp.use(TasksExpress.router({ handlers, hooks }));
+  app.get(UNLISTED_OWN_ROUTE, (_request, response) => response.send("unlisted"));
+  app.use(subApp);
+
+  return listen(app);
 }

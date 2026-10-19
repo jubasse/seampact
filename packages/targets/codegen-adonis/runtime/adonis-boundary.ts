@@ -43,10 +43,11 @@ import {
   type ResponsesMode,
 } from "./node-server/contract-route.js";
 import { notFoundError, type ReportedRequest } from "./node-server/error-reply.js";
+import type { ListedRoute } from "./node-server/framework-route-patterns.js";
 import {
-  contractRoutesOf,
   frameworkRouteProblems,
-  type ListedRoute,
+  isBoundaryRoute,
+  markBoundaryRoute,
 } from "./node-server/framework-routes.js";
 import { handlerReply } from "./node-server/handler-reply.js";
 import { beginIdempotency } from "./node-server/idempotency.js";
@@ -573,8 +574,11 @@ export function createAdonisBoundary<
     const controllers = controllerLoader(registration.controllers, entries);
 
     for (const route of api.routes) {
+      const handler = handle(route, controllers);
+
+      markBoundaryRoute(handler);
       router
-        .route(adonisPath(route.path), adonisMethods(route), handle(route, controllers))
+        .route(adonisPath(route.path), adonisMethods(route), handler)
         .as(routeNameOf(route))
         .use([openContext(route, replyOptions), authorize(route), validate(route)]);
     }
@@ -588,11 +592,7 @@ export function createAdonisBoundary<
     const problems =
       listed === undefined
         ? [UNCOMMITTED_ROUTES_PROBLEM]
-        : frameworkRouteProblems(
-            api.frameworkRoutes,
-            listed,
-            contractRoutesOf(basePathClaimsOf(router)),
-          );
+        : frameworkRouteProblems(api.frameworkRoutes, listed);
 
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
   }
@@ -1048,13 +1048,16 @@ function listedRoutesOf(entry: unknown): ListedRoute[] {
   return routeJsonEntries(typeof toJSON === "function" ? toJSON.call(entry) : undefined);
 }
 
-// One route's JSON, `{ pattern, methods }`, or a list of them.
+// One route's JSON, `{ pattern, methods, handler }`, or a list of them; none for a route whose handler a boundary
+// registered, which Adonis keeps as given.
 function routeJsonEntries(json: unknown): ListedRoute[] {
   if (Array.isArray(json)) return json.flatMap(routeJsonEntries);
 
   if (!isPlainObject(json) || typeof json.pattern !== "string" || !Array.isArray(json.methods)) {
     return [];
   }
+
+  if (isBoundaryRoute(json.handler)) return [];
 
   const pattern = json.pattern;
 

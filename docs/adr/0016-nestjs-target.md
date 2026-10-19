@@ -126,7 +126,7 @@ The module runs it in `onApplicationBootstrap`, before the app accepts a request
 - an identity used by a bound operation without an authenticate hook, a right or rule without a decider, a scope without a resolver, an idempotent operation without an idempotency store;
 - two deciders claiming one name;
 - a contract operation without a bound handler: no controller method carries its composite;
-- a route of the Express adapter absent from the route table and not allow-listed in `frameworkRoutes` (ADR 0012), unless `artefacts.bootCheck.frameworkRoutes` is false;
+- a route of the Express adapter that no operation's decorated controller method registered and that is not allow-listed in `frameworkRoutes` (ADR 0012), unless `artefacts.bootCheck.frameworkRoutes` is false;
 - on a contract method, a NestJS decorator that writes after the boundary's reply (`Redirect`, `Render`, `Sse`) or a developer `Res`, `Response` or `Next` parameter, the `passthrough` cookie idiom included, all read through `Reflector`: NestJS would write again after the reply and raise `ERR_HTTP_HEADERS_SENT`;
 - a platform other than Express (`HttpAdapterHost`).
 

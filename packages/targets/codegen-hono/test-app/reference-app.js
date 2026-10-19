@@ -1,8 +1,8 @@
 // A Hono app around the generated `tasks` registration, for the live boundary test: the shared scenario's handler
 // map and hooks, app middleware before the api (headers, a refusal, a body read, a reply rewrite after `next()`), an
 // `onError` that calls the exported helpers, and routes of the app's own; an app with two apis on one base path;
-// the boot cases; and an app whose framework-route check has not run. Copied next to the compiled generated tree,
-// so it imports the generated modules by relative path.
+// the boot cases; an app whose framework-route check has not run, and apps with routes of their own for that
+// check. Copied next to the compiled generated tree, so it imports the generated modules by relative path.
 import { serve } from "@hono/node-server";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import { Hono } from "hono";
@@ -218,4 +218,16 @@ export function startTwoApiApp() {
   SecondHono.registerRoutes(app, { handlers, hooks });
 
   return listen(app);
+}
+
+/** An app that adds its own routes with `addOwnRoutes` before registering the api, for the framework-route check. */
+export function appWithOwnRoutes(addOwnRoutes) {
+  resetScenario();
+
+  const app = new Hono();
+
+  addOwnRoutes(app);
+  TasksHono.registerRoutes(app, { handlers, hooks });
+
+  return app;
 }

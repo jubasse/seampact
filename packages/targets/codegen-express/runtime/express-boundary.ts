@@ -334,7 +334,7 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
   // the router receives answers 500 and logs them, so an unchecked app never serves.
   function uncheckedFrameworkRoutesGuard(hooks: BoundaryHooks): RequestHandler {
     return (request, response, next) => {
-      const problems = checkedFrameworkRouteProblems(request.app);
+      const problems = checkedFrameworkRouteProblems(rootAppOf(request.app));
 
       if (problems.length === 0) {
         next();
@@ -584,7 +584,7 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
     const listing = expressRouteListing(app);
     const problems = [
       ...listing.problems,
-      ...frameworkRouteProblems(api.frameworkRoutes, listing.routes, listing.contractRoutes),
+      ...frameworkRouteProblems(api.frameworkRoutes, listing.routes),
     ];
 
     if (isObjectLike(app)) frameworkRouteResults.set(app, problems);
@@ -604,6 +604,25 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
 }
 
 // The app's stack is read only for a path under the api's base paths, so the app's own paths never depend on it.
+// A sub-app's `req.app` is the sub-app; Express links each mounted app to the app that mounts it by `parent`.
+function rootAppOf(app: unknown): unknown {
+  let current = app;
+  let parent = parentAppOf(current);
+
+  while (parent !== undefined) {
+    current = parent;
+    parent = parentAppOf(current);
+  }
+
+  return current;
+}
+
+function parentAppOf(app: unknown): object | undefined {
+  const parent: unknown = isObjectLike(app) ? Reflect.get(app, "parent") : undefined;
+
+  return isObjectLike(parent) ? parent : undefined;
+}
+
 function claimsAlone(api: ContractApi, app: unknown, path: string): boolean {
   if (!isUnderBasePath(api, path)) return false;
 

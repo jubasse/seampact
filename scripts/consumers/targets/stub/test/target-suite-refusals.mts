@@ -41,4 +41,5 @@ export const TARGET_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "missing-decider-fails-boot": STUB_REASON,
   "missing-scope-resolver-fails-boot": STUB_REASON,
   "missing-handler-fails-boot": STUB_REASON,
+  "unlisted-framework-route-fails-boot": STUB_REASON,
 };

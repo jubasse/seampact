@@ -112,6 +112,8 @@ Before the application accepts a request, the generated boot check refuses to st
 
 Node targets that cannot read a setting at boot check it on the request instead and answer 500 with the fix logged (ADR 0016, ADR 0019).
 
+The framework-route check lists the routes the framework registers when the check runs; a route added after it is not seen, and middleware that answers requests is not a route, so neither is listed. A route is the contract's when the generated code registered it, never because its path equals a contract path.
+
 In PHP, where an application boots per request, the check runs when the container or route cache is built and at boot when no cache exists; the generated dispatcher also answers 500 rather than call a missing hook.
 
 The app config may switch off the handler check and the framework-route check apart (`artefacts.bootCheck: { handlers: false, frameworkRoutes: false }`), for an app that serves part of an api or registers many routes of its own; while the target generates hooks, a missing hook is always refused, since nothing may fall back to allow.

@@ -1,7 +1,7 @@
 // The route table a Node server boundary reads: one entry per contract operation, emitted from the IR, and the
 // request view every check step receives. Copied into the generated tree as is.
 import type { SignatureTemplate } from "@seampact/hooks";
-import type { FrameworkRouteCheck } from "./framework-routes.js";
+import type { FrameworkRouteCheck } from "./framework-route-patterns.js";
 import {
   decodePathParam,
   decodeQueryMembers,

@@ -38,11 +38,10 @@ import {
   type ReportedRequest,
   reportContractError,
 } from "./web-server/error-reply.js";
+import type { ListedRoute } from "./web-server/framework-route-patterns.js";
 import {
-  contractRoutesOf,
   frameworkRouteProblems,
   isBoundaryRoute,
-  type ListedRoute,
   markBoundaryRoute,
 } from "./web-server/framework-routes.js";
 import {
@@ -420,11 +419,7 @@ export function createHonoBoundary<Hooks extends BoundaryHooks, Handlers, Operat
     const listed = app.routes
       .filter((entry) => !isBoundaryRoute(entry.handler) && !isMiddlewareEntry(entry))
       .map((entry): ListedRoute => ({ method: entry.method.toUpperCase(), path: entry.path }));
-    const problems = frameworkRouteProblems(
-      api.frameworkRoutes,
-      listed,
-      contractRoutesOf(basePathClaimsOf(app)),
-    );
+    const problems = frameworkRouteProblems(api.frameworkRoutes, listed);
 
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
 
@@ -447,12 +442,13 @@ interface HonoRouteEntry {
   readonly handler: unknown;
 }
 
-const ANY_METHOD = "ALL";
-const WILDCARD_SUFFIX = "*";
+// A middleware takes `next` as well as the context.
+const MIDDLEWARE_ARITY = 2;
 
-// Hono lists `app.use` middleware as routes of every method; a wildcard path for every method is taken as one.
+// Hono lists middleware among its routes; a handler that takes `next` is middleware, whatever its path or method,
+// the rule `hono/dev`'s `inspectRoutes` follows.
 function isMiddlewareEntry(entry: HonoRouteEntry): boolean {
-  return entry.method.toUpperCase() === ANY_METHOD && entry.path.endsWith(WILDCARD_SUFFIX);
+  return typeof entry.handler === "function" && entry.handler.length >= MIDDLEWARE_ARITY;
 }
 
 function claimedError(route: ContractRoute, error: unknown): ContractError | undefined {

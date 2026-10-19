@@ -53,11 +53,10 @@ import {
   notFoundError,
   type ReportedRequest,
 } from "./node-server/error-reply.js";
+import type { ListedRoute } from "./node-server/framework-route-patterns.js";
 import {
-  contractRoutesOf,
   frameworkRouteProblems,
   isBoundaryRoute,
-  type ListedRoute,
   markBoundaryRoute,
 } from "./node-server/framework-routes.js";
 import {
@@ -779,7 +778,6 @@ export function createFastifyBoundary<
         : frameworkRouteProblems(
             api.frameworkRoutes,
             collected.filter((route) => !isBoundaryRoute(route)).flatMap(listedRoutes),
-            contractRoutesOf(basePathClaimsOf(server)),
           );
 
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
@@ -797,6 +795,9 @@ export function createFastifyBoundary<
 // Fastify lists no routes; the collector each app installs first keeps every route record by the app's server, in
 // one registry for every api's copy of this module.
 const COLLECTED_ROUTES_KEY = Symbol.for("seampact.fastify.collected-routes");
+
+// What `printRoutes()` answers for an app that holds no route yet.
+const EMPTY_ROUTE_TREE = "(empty tree)";
 
 type CollectedRoutes = WeakMap<object, RouteOptions[]>;
 
@@ -824,6 +825,12 @@ function collectFrameworkRoutes(app: FastifyInstance): void {
   const registry = collectedRoutesRegistry();
 
   if (registry.has(app.server)) return;
+
+  if (app.printRoutes() !== EMPTY_ROUTE_TREE) {
+    throw new Error(
+      "seampact: collectFrameworkRoutes(app) ran once the app already held a route, which Fastify never reports to it, so the framework-route check could not list it. Fix: call collectFrameworkRoutes(app) right after Fastify() creates the app, before any route.",
+    );
+  }
 
   const collected: RouteOptions[] = [];
 

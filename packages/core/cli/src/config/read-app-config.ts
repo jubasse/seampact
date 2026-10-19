@@ -335,6 +335,7 @@ function resolveAppConfig(
     ...duplicateIdProblems(parsed, targets),
     ...outsideOutDirProblems(parsed, outDir, entries),
     ...overlappingOutProblems(parsed, entries),
+    ...switchedOffAllowListProblems(parsed, targets),
   ];
 
   if (problems.length > 0) return { status: "refused", problems };
@@ -351,6 +352,26 @@ function duplicateIdProblems(parsed: ParsedConfig, targets: readonly TargetEntry
       message: `Two target entries have the id '${entry.id}'.`,
       fix: "Give each target entry its own id.",
       where: whereOf(parsed, ["targets", index, "id"]),
+    }));
+}
+
+// An allow-list of a check switched off would be dropped without a word.
+function switchedOffAllowListProblems(
+  parsed: ParsedConfig,
+  targets: readonly TargetEntry[],
+): CliProblem[] {
+  return targets
+    .map((entry, index) => ({ entry, index }))
+    .filter(
+      ({ entry }) =>
+        entry.frameworkRoutes !== undefined &&
+        entry.artefacts?.bootCheck?.frameworkRoutes === false,
+    )
+    .map(({ entry, index }) => ({
+      code: "config.key.conflict",
+      message: `The entry '${entry.id}' allow-lists framework routes in 'frameworkRoutes' but switches their check off with 'artefacts.bootCheck.frameworkRoutes: false'.`,
+      fix: "Keep one: remove 'frameworkRoutes' to leave the check off, or remove the switch to check the routes against the allow-list.",
+      where: whereOf(parsed, ["targets", index, "frameworkRoutes"]),
     }));
 }
 

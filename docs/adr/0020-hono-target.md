@@ -115,7 +115,7 @@ The target options are ADR 0016's: `responses` (`strict`, the default, or `warn`
 - a base path on the app: a route the registration added whose `basePath` (Hono's public `app.routes` entries) is not `/`, as `app.basePath('/api')` gives, which differs from the empty `mount` the slice allows;
 - a second registration of the api on the same app.
 
-Hono has no start hook, so the framework-route check of ADR 0012 is `checkFrameworkRoutes(app)`, which the app calls once every route is added, before serving, and which throws the problems. Since a request's context does not reach the app, a contract request on an app whose check has not passed answers 500 in the api's format and logs that fix; nothing changes when the app config switches the check off.
+Hono has no start hook, so the framework-route check of ADR 0012 is `checkFrameworkRoutes(app)`, which the app calls once every route is added, before serving, and which throws the problems. Since a request's context does not reach the app, a contract request on an app whose check has not passed answers 500 in the api's format and logs that fix; nothing changes when the app config switches the check off. Hono lists middleware among its routes, so the check takes an entry whose handler declares `next` (two parameters or more) as middleware, whatever its path, and lists every other entry: a route handler declared with `next` counts as middleware.
 
 The Hono major is not readable at run time; `generate` checks the installed `hono` against the peer range, as ADR 0009 "Artefacts and the compatibility matrix" says.
 
