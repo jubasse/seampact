@@ -1,0 +1,53 @@
+{
+  "id": "page-links-next-page",
+  "title": "A page links the next one, and the next cursor reads the last page",
+  "checks": [],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "title": "first page",
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "query": {
+          "limit": 10
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "capture": {
+        "nextCursor": {
+          "header": "link",
+          "pattern": "[?&]cursor=([^&>]+)"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "link": {
+            "contains": ["rel=\"next\""]
+          }
+        }
+      }
+    },
+    {
+      "title": "last page",
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks?limit=10&cursor={{nextCursor}}",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "link": {
+            "absent": true
+          }
+        }
+      }
+    }
+  ]
+}

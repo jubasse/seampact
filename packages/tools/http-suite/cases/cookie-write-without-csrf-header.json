@@ -1,0 +1,27 @@
+{
+  "id": "cookie-write-without-csrf-header",
+  "title": "403 for a cookie write without its CSRF header",
+  "checks": [],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "cookie": "__Host-session=session-1",
+          "idempotency-key": "{{uuid:create}}"
+        },
+        "body": {
+          "title": "Cookie write"
+        }
+      },
+      "expect": {
+        "status": 403,
+        "body": {
+          "code": "api.csrf_invalid"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "head-runs-get-without-body",
+  "title": "HEAD runs the GET operation and answers its status and headers without a body",
+  "checks": [],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "HEAD",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "headers": {
+          "content-type": {
+            "contains": ["application/json"]
+          }
+        },
+        "bodyText": ""
+      }
+    }
+  ]
+}

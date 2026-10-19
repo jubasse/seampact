@@ -1,0 +1,317 @@
+{
+  "id": "every-operation-succeeds",
+  "title": "Every reference operation answers its declared success once",
+  "checks": [],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "title": "health",
+      "request": {
+        "method": "GET",
+        "path": "/v1/health"
+      },
+      "expect": {
+        "status": 200
+      }
+    },
+    {
+      "title": "listChannels",
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200
+      }
+    },
+    {
+      "title": "getChannel",
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "channelId": "10000000-0000-4000-8000-000000000001"
+        }
+      }
+    },
+    {
+      "title": "listTasks",
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "query": {
+          "limit": 10
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200
+      }
+    },
+    {
+      "title": "createTask",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:createTask}}"
+        },
+        "body": {
+          "title": "Write the slice"
+        }
+      },
+      "expect": {
+        "status": 201,
+        "body": {
+          "title": "Write the slice"
+        }
+      }
+    },
+    {
+      "title": "getTasksBatch",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/batch",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        },
+        "body": {
+          "ids": ["20000000-0000-4000-8000-000000000001"]
+        }
+      },
+      "expect": {
+        "status": 200
+      }
+    },
+    {
+      "title": "searchTasks",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/search",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        },
+        "body": {
+          "text": "slice"
+        }
+      },
+      "expect": {
+        "status": 200
+      }
+    },
+    {
+      "title": "getTask",
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "taskId": "20000000-0000-4000-8000-000000000001"
+        }
+      }
+    },
+    {
+      "title": "updateTask",
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:updateTask}}"
+        },
+        "body": {
+          "title": "Done",
+          "expectedVersion": 1
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "title": "Done"
+        }
+      }
+    },
+    {
+      "title": "archiveTask",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001/archive",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:archiveTask}}"
+        },
+        "body": {
+          "reason": "finished",
+          "expectedVersion": 1
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "taskId": "20000000-0000-4000-8000-000000000001",
+          "state": "archived"
+        }
+      }
+    },
+    {
+      "title": "assignTask",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001/assign",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:assignTask}}"
+        },
+        "body": {
+          "userId": "00000000-0000-4000-8000-000000000003"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "taskId": "20000000-0000-4000-8000-000000000001"
+        }
+      }
+    },
+    {
+      "title": "purgeTask",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001/purge",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:purgeTask}}"
+        },
+        "body": {
+          "reauthToken": "reauth"
+        }
+      },
+      "expect": {
+        "status": 204
+      }
+    },
+    {
+      "title": "getDraft",
+      "request": {
+        "method": "GET",
+        "path": "/v1/me/drafts/30000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "draftId": "30000000-0000-4000-8000-000000000001"
+        }
+      }
+    },
+    {
+      "title": "deleteDraft",
+      "request": {
+        "method": "DELETE",
+        "path": "/v1/me/drafts/30000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:deleteDraft}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "draftId": "30000000-0000-4000-8000-000000000001"
+        }
+      }
+    },
+    {
+      "title": "getPreferences",
+      "request": {
+        "method": "GET",
+        "path": "/v1/me/preferences",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "locale": "en"
+        }
+      }
+    },
+    {
+      "title": "updatePreferences",
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/me/preferences",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:updatePreferences}}"
+        },
+        "body": {
+          "digest": true
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "digest": true
+        }
+      }
+    },
+    {
+      "title": "payments",
+      "request": {
+        "method": "POST",
+        "path": "/v1/hooks/payments",
+        "body": {
+          "id": "evt_1",
+          "type": "invoice.paid",
+          "data": {}
+        },
+        "sign": {
+          "scheme": "stripe-v1",
+          "header": "stripe-signature",
+          "secret": "{{stripeSecret}}"
+        }
+      },
+      "expect": {
+        "status": 204
+      }
+    },
+    {
+      "title": "tasksService getTask",
+      "request": {
+        "method": "GET",
+        "path": "/internal/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{serviceJwt}}",
+          "x-deadline": "{{deadline:5000}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "taskId": "20000000-0000-4000-8000-000000000001"
+        }
+      }
+    }
+  ]
+}

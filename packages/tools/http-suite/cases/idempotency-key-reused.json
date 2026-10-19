@@ -1,0 +1,45 @@
+{
+  "id": "idempotency-key-reused",
+  "title": "422 for an idempotency key reused with another body",
+  "checks": [],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "title": "first",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:reused}}"
+        },
+        "body": {
+          "title": "First body"
+        }
+      },
+      "expect": {
+        "status": 201
+      }
+    },
+    {
+      "title": "other body",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:reused}}"
+        },
+        "body": {
+          "title": "Other body"
+        }
+      },
+      "expect": {
+        "status": 422,
+        "body": {
+          "code": "api.idempotency_key_reused"
+        }
+      }
+    }
+  ]
+}

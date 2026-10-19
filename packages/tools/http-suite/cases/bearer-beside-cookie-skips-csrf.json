@@ -1,0 +1,25 @@
+{
+  "id": "bearer-beside-cookie-skips-csrf",
+  "title": "A write with a bearer beside the session cookie is not refused for CSRF",
+  "checks": [],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "cookie": "__Host-session=session-1",
+          "idempotency-key": "{{uuid:create}}"
+        },
+        "body": {
+          "title": "Bearer beside a cookie"
+        }
+      },
+      "expect": {
+        "status": 201
+      }
+    }
+  ]
+}

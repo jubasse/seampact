@@ -1,4 +1,4 @@
-// The credentials every consumer's hooks honour, so one slice test runs against each server target.
+// The credentials every consumer's hooks honour and the http suite run passes to its cases.
 import { createHmac } from "node:crypto";
 
 /** A signed-in user: `Authorization: Bearer <userToken>`. */
