@@ -23,6 +23,9 @@ const FIXED_EXPORTS = [
   "MAX_RENDERED_ISSUES",
 ];
 
+// Generating the reference project outruns vitest's default 10 s hook limit on a loaded machine.
+const GENERATE_TIMEOUT_MILLISECONDS = 60_000;
+
 let files: string[] = [];
 
 beforeAll(async () => {
@@ -38,7 +41,7 @@ beforeAll(async () => {
       "",
     ].join("\n"),
   );
-});
+}, GENERATE_TIMEOUT_MILLISECONDS);
 
 describe("the generated reference plugin compiles", () => {
   test("both apis' types, validators and Fastify plugin type-check together", () => {

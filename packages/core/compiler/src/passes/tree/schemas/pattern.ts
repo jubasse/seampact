@@ -4,8 +4,9 @@
 // `^` and `$` keep their text and mean the start and the end of the string (each target translates them).
 // Two shapes that backtrack exponentially are refused too, since the targets run patterns on request text: a
 // repeated group whose tail repetition of variable count can match what the group starts with (`(a+)+`,
-// `(.*,)+`), and a repeated alternation whose branches can start with the same character (`(a|ab)*`). Other
-// exponential shapes, as `((a|aa)b?)*`, are not detected.
+// `(.*,)+`), and a repeated alternation whose branches can start with the same character (`(a|ab)*`), also
+// when the other parts of the repeated group are optional (`((a|aa)b?)*`). Other exponential shapes are not
+// detected.
 
 /** The result of normalising a pattern: its normalised form, or why it is refused and how to fix it. */
 export type TreeSchemasPatternResult =
@@ -75,8 +76,8 @@ function refuseBacktracking(reason: string): never {
 
 // What the backtracking checks know of a parsed fragment besides its normalised text: the code points it can
 // start and end with, the characters of each repetition of variable count still in its tail (followed only by
-// optional parts or by required parts it overlaps), whether it can match the empty string, and whether two branches of its alternation, seen
-// through groups of a single branch, can start with the same code point.
+// optional parts or by required parts it overlaps), whether it can match the empty string, and whether one pass
+// of it can be an alternation whose two branches start with the same code point.
 interface Fragment {
   readonly text: string;
   readonly first: readonly Range[];
@@ -97,6 +98,12 @@ interface Repetition {
   readonly max: number | undefined;
 }
 
+/** One item of a sequence: an atom and the quantifier written after it, if any. */
+interface SequenceItem {
+  readonly atom: Atom;
+  readonly repetition: Repetition | undefined;
+}
+
 const ONCE = 1;
 
 const overlaps = (left: readonly Range[], right: readonly Range[]): boolean =>
@@ -106,6 +113,12 @@ const overlaps = (left: readonly Range[], right: readonly Range[]): boolean =>
 
 const anyTwoOverlap = (sets: readonly (readonly Range[])[]): boolean =>
   sets.some((set, index) => sets.slice(index + 1).some((other) => overlaps(set, other)));
+
+const runsAtMostOnce = (repetition: Repetition | undefined): boolean =>
+  repetition === undefined || (repetition.max !== undefined && repetition.max <= ONCE);
+
+const isOptional = ({ atom, repetition }: SequenceItem): boolean =>
+  atom.nullable || repetition?.min === 0;
 
 const varies = (repetition: Repetition | undefined): boolean =>
   repetition !== undefined && repetition.min !== repetition.max;
@@ -252,7 +265,7 @@ class PatternParser {
       nullable: branches.some((branch) => branch.nullable),
       overlapping:
         anyTwoOverlap(branches.map((branch) => branch.first)) ||
-        (branches.length === 1 && branches.some((branch) => branch.overlapping)),
+        branches.some((branch) => branch.overlapping),
     };
   }
 
@@ -262,7 +275,7 @@ class PatternParser {
     let last: Range[] = [];
     let varyingTails: (readonly Range[])[] = [];
     let nullable = true;
-    const items: { atom: Atom; repetition: Repetition | undefined }[] = [];
+    const items: SequenceItem[] = [];
 
     while (this.peek() !== undefined && this.peek() !== "|" && this.peek() !== ")") {
       const atom = this.atom();
@@ -274,7 +287,7 @@ class PatternParser {
 
       // An optional item keeps what the items before it can end with; a required one replaces it, but a
       // repetition whose characters overlap the required item stays in the tail, since it can match that item too.
-      const optional = atom.nullable || repetition?.min === 0;
+      const optional = isOptional({ atom, repetition });
       const itemTails = varies(repetition) ? [atom.last, ...atom.varyingTails] : atom.varyingTails;
       const keptTails = optional
         ? varyingTails
@@ -286,13 +299,14 @@ class PatternParser {
       nullable = nullable && optional;
     }
 
-    // A group of a single unrepeated item shows that item's overlap: `((a|ab))*` repeats `(a|ab)`.
-    const [only] = items;
-    const overlapping =
-      items.length === 1 &&
-      only !== undefined &&
-      only.repetition === undefined &&
-      only.atom.overlapping;
+    // An item run at most once shows its overlap when every other item is optional, since one pass can then
+    // be that item alone: `((a|ab))*` and `((a|aa)b?)*` both repeat `(a|aa)`.
+    const overlapping = items.some(
+      (item, index) =>
+        item.atom.overlapping &&
+        runsAtMostOnce(item.repetition) &&
+        items.every((other, otherIndex) => otherIndex === index || isOptional(other)),
+    );
 
     return { text, first, last, varyingTails, nullable, overlapping };
   }

@@ -5,13 +5,7 @@ import { describe, expect, test } from "vitest";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
 import { loadFsReader } from "../load/index.js";
 import { loadMemoryReader } from "../load/reader.js";
-import { treeNodesWithBatchInput } from "../passes/tree/nodes/test-support.js";
 import type { DraftIR } from "./draft.js";
-import {
-  draftFixtureApply,
-  draftFixtureHalves,
-  draftFixtureSchemaService,
-} from "./draft-fixture.js";
 import { DraftAccessError } from "./guard.js";
 import { type HalfName, pipelineHalves } from "./halves.js";
 import { compileWorkspace, type PipelineOptions } from "./orchestrator.js";
@@ -322,20 +316,18 @@ describe("stop rule", () => {
     ]);
   });
 
-  test("the default stubs compile the reference contract without a diagnostic", () => {
+  test("the default passes compile the reference contract without a diagnostic", () => {
     for (const guard of [false, true]) {
       const result = compileWorkspace({
         reader: loadFsReader(REFERENCE),
         entry: "workspace.yaml",
         guard,
-        // The derive halves are stubs until their lanes land, so finalize would refuse the incomplete draft.
-        parts: { passes: { "tree.schemas": referenceTreeSchemas }, finalize: () => undefined },
       });
 
       expect(result.diagnostics).toEqual([]);
-      expect(result.apis.map((r) => [r.api, r.diagnostics, r.ir])).toEqual([
-        ["tasks", [], undefined],
-        ["tasksService", [], undefined],
+      expect(result.apis.map((r) => [r.api, r.diagnostics, r.ir?.irRevision])).toEqual([
+        ["tasks", [], IR_REVISION],
+        ["tasksService", [], IR_REVISION],
       ]);
       expect(Object.keys(result.locations).length).toBeGreaterThan(0);
       expect(result.files).toContain("workspace.yaml");
@@ -343,27 +335,6 @@ describe("stop rule", () => {
     }
   });
 });
-
-// tree.schemas as its fixture writes it for the reference contract: the after-tree schemas and enums, and the
-// schema service answering the reference contract's route positions (its batch ids input too), principals and
-// headers. The halves after it that are no longer stubs read both.
-const referenceTreeSchemas: PassParts["tree.schemas"] = {
-  pass: "tree",
-  half: "tree.schemas",
-  reads: [],
-  writes: ["schemas", "scalars", "enums", "extensionKeys"],
-  run: (draft, context) => {
-    const api = context.raw.name;
-
-    if (api !== "tasks" && api !== "tasksService")
-      throw new Error(`the reference contract has no api ${api}`);
-
-    for (const { half, members } of draftFixtureHalves(api, "after-tree"))
-      if (half === "tree.schemas") draftFixtureApply(draft, members);
-
-    return treeNodesWithBatchInput(draftFixtureSchemaService(api));
-  },
-};
 
 describe("guarded run", () => {
   test("an undeclared write throws, and each half's guard ends with its run", () => {

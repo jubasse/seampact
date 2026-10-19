@@ -1,5 +1,4 @@
 import type { IrWriter } from "@seampact/spec/ir";
-import { DERIVATION_ISSUE_SCHEMA_ID, derivationIssueMembers } from "../../../derivations/index.js";
 import type { PassReadonly, TreeSchemaService } from "../../../pipeline/seam.js";
 import { quote } from "../../../validate/diagnostics.js";
 
@@ -69,27 +68,12 @@ export interface DeriveErrorsObject {
   readonly properties: readonly DeriveErrorsMember[];
 }
 
-// The issue item of `schemaInvalid` is core data tree.schemas seeds; a draft whose tree half is a fixture (the
-// orchestrator's stubs) lacks it, so it is read from the role data it is seeded from (each member required).
-const ISSUE_OBJECT: DeriveErrorsObject = {
-  id: DERIVATION_ISSUE_SCHEMA_ID,
-  properties: derivationIssueMembers.map((member) => ({
-    name: member.name,
-    type: member.type,
-    optional: false,
-    nullable: false,
-  })),
-};
-
 /** The object schema a use names, if it names one. */
 export function deriveErrorsObjectOfUse(
   schemas: Schemas,
   use: Use,
 ): DeriveErrorsObject | undefined {
   if (use.kind !== "ref") return undefined;
-
-  if (use.schema === DERIVATION_ISSUE_SCHEMA_ID && !Object.hasOwn(schemas, use.schema))
-    return ISSUE_OBJECT;
 
   const schema = deriveErrorsSchemaOf(schemas, use.schema);
 

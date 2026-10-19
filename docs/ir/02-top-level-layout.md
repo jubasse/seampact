@@ -33,7 +33,7 @@ interface ContractIR {
 
 - `kinds` lists every declaration kind the document uses. A target declares the kinds it supports and refuses an IR with another kind by name, instead of ignoring an unknown collection (ADR 0014, FR-14). A later transport adds a kind and a sibling collection (for example `channels`); it never adds a value to the HTTP method enum.
 - Every declaration that an operation uses is at the top level and referenced by id, never nested in an operation, so a later transport reuses the same declarations (ADR 0014).
-- Only declarations reachable from an operation, an identity or a convention are kept. Lint reports unused declarations from the source (FR-12), not from the IR. Core declarations (section 6) follow the same rule: finalize drops every one no element references, so a default code, its params schema, `ApiEmptyBody` or the default format is in the IR only where something uses it.
+- Only declarations reachable from an operation or an identity are kept. A convention is informative and keeps no declaration: a paging style named only by `conventions` is dropped. Lint reports unused declarations from the source (FR-12), not from the IR. Core declarations (section 6) follow the same rule: finalize drops every one no element references, so a default code, its params schema, `ApiEmptyBody` or the default format is in the IR only where something uses it.
 
 ```ts
 interface Api {
