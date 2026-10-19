@@ -4,6 +4,7 @@ import {
   firstPartyPackagesOfStyle,
   offeredValidatorPairs,
   SERVER_TARGETS,
+  serverTargetCompatibility,
   type ValidatorPair,
 } from "./index.js";
 
@@ -74,4 +75,13 @@ test("provider ids are unique, so a tool can select a provider by id", () => {
   const providerIds = FIRST_PARTY_PROVIDERS.map((provider) => provider.id);
 
   expect(new Set(providerIds).size).toBe(providerIds.length);
+});
+
+test("a target package the matrix does not record is refused by name", () => {
+  expect(serverTargetCompatibility("@seampact/codegen-hono").framework.supportedMajors).toEqual([
+    4,
+  ]);
+  expect(() => serverTargetCompatibility("@seampact/codegen-stub")).toThrow(
+    "compatibility: '@seampact/codegen-stub' is not a server target of the matrix",
+  );
 });

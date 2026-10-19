@@ -1,5 +1,6 @@
 import type { Target } from "@seampact/codegen-core";
 import { nodeServerTarget } from "@seampact/codegen-core/node-server";
+import { serverTargetCompatibility } from "@seampact/spec/compatibility";
 import { format } from "prettier";
 import packageJson from "../package.json" with { type: "json" };
 import { expressModuleSource } from "./express-module.js";
@@ -16,4 +17,5 @@ export const target: Target = nodeServerTarget({
     frameworkModule: "express",
     frameworkSource: expressModuleSource,
   },
+  validatorStyles: serverTargetCompatibility(packageJson.name).validatorStyles,
 });

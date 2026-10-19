@@ -1,5 +1,6 @@
 import type { Target } from "@seampact/codegen-core";
 import { nodeServerTarget } from "@seampact/codegen-core/node-server";
+import { serverTargetCompatibility } from "@seampact/spec/compatibility";
 import { format } from "prettier";
 import packageJson from "../package.json" with { type: "json" };
 import { honoModuleSource } from "./hono-module.js";
@@ -17,4 +18,5 @@ export const target: Target = nodeServerTarget({
     frameworkSource: honoModuleSource,
     runtimeProfile: "web",
   },
+  validatorStyles: serverTargetCompatibility(packageJson.name).validatorStyles,
 });

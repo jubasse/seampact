@@ -88,6 +88,20 @@ export const SERVER_TARGETS: readonly TargetCompatibility[] = [
   },
 ];
 
+// The matrix entry of a server target package, or an error naming the recorded ones.
+export function serverTargetCompatibility(targetPackage: string): TargetCompatibility {
+  const entry = SERVER_TARGETS.find((target) => target.package === targetPackage);
+
+  if (entry === undefined) {
+    const recordedPackages = SERVER_TARGETS.map((target) => target.package).join(", ");
+    throw new Error(
+      `compatibility: '${targetPackage}' is not a server target of the matrix; recorded: ${recordedPackages}.`,
+    );
+  }
+
+  return entry;
+}
+
 // The first-party packages that provide a style, in matrix order.
 export function firstPartyPackagesOfStyle(style: ProviderStyle): readonly string[] {
   return FIRST_PARTY_PROVIDERS.filter((provider) => provider.style === style).map(

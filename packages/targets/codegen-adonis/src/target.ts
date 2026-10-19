@@ -7,6 +7,7 @@ import {
   nodeServerBoundaryFiles,
   parseNodeServerOptions,
 } from "@seampact/codegen-core/node-server";
+import { serverTargetCompatibility } from "@seampact/spec/compatibility";
 import { IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { format } from "prettier";
 import packageJson from "../package.json" with { type: "json" };
@@ -40,7 +41,7 @@ export const target: Target = defineTarget<
     artefacts: [{ id: BOUNDARY_ARTEFACT, defaultOn: true }],
     consumes: {
       types: { styles: ["typescript"] },
-      validators: { styles: ["standard-schema"] },
+      validators: { styles: [...serverTargetCompatibility(packageJson.name).validatorStyles] },
     },
     provides: {},
   },

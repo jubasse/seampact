@@ -10,6 +10,7 @@ export {
   type ProviderKind,
   type ProviderStyle,
   SERVER_TARGETS,
+  serverTargetCompatibility,
   type TargetCompatibility,
   type ValidatorPair,
   type ValidatorStyle,
