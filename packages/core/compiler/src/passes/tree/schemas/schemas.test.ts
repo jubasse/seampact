@@ -60,6 +60,8 @@ describe("schema shapes", () => {
       list: { type: array, items: { type: string }, minItems: 1, maxItems: 3 }
       table: { type: object, additionalProperties: { type: integer }, propertyNames: { type: string, format: uuid } }
       blob: { opaque: "A third party's free-form value." }
+      maybeBlob: { opaque: "A third party's free-form value.", nullable: true }
+      blobs: { type: array, items: { opaque: "A third party's free-form value.", nullable: true } }
       upload: { file: { media: [image/png], maxSize: 2KiB } }
       merged: { allOf: [Named, { type: object, properties: { extra: { type: boolean } } }] }
       json: { type: string, contentMediaType: application/json, contentSchema: Named }
@@ -87,6 +89,26 @@ describe("schema shapes", () => {
       kind: "opaque",
       reason: "A third party's free-form value.",
       origin: at("/schemas/Shapes/properties/blob"),
+    });
+    expect(typeOf(run, "Shapes", "maybeBlob")).toEqual({
+      kind: "opaque",
+      reason: "A third party's free-form value.",
+      origin: at("/schemas/Shapes/properties/maybeBlob"),
+    });
+    expect(schemaOf(run, "Shapes")).toMatchObject({
+      properties: expect.arrayContaining([
+        expect.objectContaining({ name: "blob", nullable: false }),
+        expect.objectContaining({ name: "maybeBlob", nullable: true }),
+      ]),
+    });
+    expect(typeOf(run, "Shapes", "blobs")).toEqual({
+      kind: "array",
+      items: {
+        kind: "opaque",
+        reason: "A third party's free-form value.",
+        origin: at("/schemas/Shapes/properties/blobs/items"),
+        nullable: true,
+      },
     });
     expect(typeOf(run, "Shapes", "upload")).toEqual({
       kind: "file",

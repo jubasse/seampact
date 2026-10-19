@@ -15,6 +15,19 @@ function generateTypes(ir: ContractIR): Promise<GenerateOutcome> {
   return target.generate({ ir, options: {}, links: {}, artefacts: new Set(["types"]) });
 }
 
+test("a nullable opaque property generates as the unknown value it already is", async () => {
+  const ir = readGoldenIr("tasks");
+  const data = ir.schemas.PaymentEvent?.kind === "object" ? ir.schemas.PaymentEvent : undefined;
+  const property = data?.properties.find((candidate) => candidate.name === "data");
+
+  if (property === undefined) throw new Error("the golden PaymentEvent lost its opaque data");
+  property.nullable = true;
+
+  const outcome = await generateTypes(ir);
+
+  expect(outcome.status === "generated" ? [] : outcome.refusals).toEqual([]);
+});
+
 test("the handler output leaves out the 304 that the boundary answers for an ETag", async () => {
   const outcome = await generateTypes(readGoldenIr("tasks"));
 

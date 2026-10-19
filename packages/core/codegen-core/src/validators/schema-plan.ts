@@ -94,9 +94,15 @@ function objectSchemaPlan(
 function propertyField(property: Property, location: IrLocation, context: PlanContext): FieldPlan {
   refusePropertyForms(property, location, context.refusals);
 
+  // A nullable opaque property moves its `nullable` back onto the type use it holds for (ADR 0003 section 2).
+  const typeUse =
+    property.nullable && property.type.kind === "opaque"
+      ? { ...property.type, nullable: true }
+      : property.type;
+
   return {
     key: property.name,
-    type: planTypeUse(property.type, below(location, "type"), context),
+    type: planTypeUse(typeUse, below(location, "type"), context),
     optional: property.optional,
   };
 }
@@ -104,7 +110,7 @@ function propertyField(property: Property, location: IrLocation, context: PlanCo
 // The property members that change the validator and that the slice does not use. `restrictedTo` on an optional
 // property needs nothing here: the boundary rejects or strips the field.
 function refusePropertyForms(property: Property, location: IrLocation, refusals: Refusal[]): void {
-  if (property.nullable) {
+  if (property.nullable && property.type.kind !== "opaque") {
     refusals.push(
       refuseNotGeneratedYet("type.nullable", "A nullable property", below(location, "nullable")),
     );

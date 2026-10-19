@@ -272,7 +272,7 @@ const irName = ({ segments, role, status }: Name): IrWriter.Name => ({
 });
 
 const withoutNullable = (use: IrWriter.TypeUse): { use: IrWriter.TypeUse; nullable: boolean } => {
-  if (use.kind === "opaque" || use.nullable !== true) return { use, nullable: false };
+  if (use.nullable !== true) return { use, nullable: false };
   const copy = { ...use };
 
   delete copy.nullable;
@@ -561,7 +561,7 @@ export class TreeSchemasCompiler {
 
     if (compiled === undefined) return undefined;
 
-    if (value.nullable === true && compiled.use.kind !== "opaque") compiled.use.nullable = true;
+    if (value.nullable === true) compiled.use.nullable = true;
 
     if (value.sensitive === true && position.place === "declared") markSensitive(compiled);
 
@@ -871,7 +871,7 @@ export class TreeSchemasCompiler {
     if (target.keysFrom !== undefined) this.recordUnknownKeysUse(target.keysFrom, position.pointer);
     const use = structuredClone(compiled.use);
 
-    if (target.nullable && use.kind !== "opaque") use.nullable = true;
+    if (target.nullable) use.nullable = true;
 
     return { use, sensitive: compiled.sensitive, headerUnion: compiled.headerUnion };
   }

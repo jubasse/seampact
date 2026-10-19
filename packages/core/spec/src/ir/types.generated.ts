@@ -718,6 +718,8 @@ export interface OpaqueTypeUse {
   docs?: Docs;
   /** The examples written at the position of this use, placed as its docs are. */
   examples?: unknown[];
+  /** The value may be JSON null (ADR 0003 section 2): an opaque value accepts null only with it; absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
+  nullable?: boolean;
 }
 
 /** A multipart field or a download (A39). */
