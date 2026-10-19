@@ -33,11 +33,24 @@ interface ConsumerMatrix {
   readonly validators: readonly string[];
 }
 
-interface WorkflowDocument {
-  readonly jobs: Readonly<
-    Record<string, { readonly strategy?: { readonly matrix: ConsumerMatrix } }>
-  >;
+interface WorkflowStep {
+  readonly run?: string;
 }
+
+interface WorkflowJob {
+  readonly strategy?: { readonly matrix: ConsumerMatrix };
+  readonly steps?: readonly WorkflowStep[];
+}
+
+interface WorkflowDocument {
+  readonly jobs: Readonly<Record<string, WorkflowJob>>;
+}
+
+// The consumer run must pass each matrix axis, or that axis is dead: the job would test one value of it.
+const CONSUMER_RUN_ARGUMENTS = [
+  `--target "\${{ matrix.target }}"`,
+  `--validators "\${{ matrix.validators }}"`,
+];
 
 // The key both sides compare: the server target package and framework major, then the validator provider id.
 function pairKey(target: string, frameworkMajor: number, validator: string): string {
@@ -56,6 +69,24 @@ function consumerTargetKey(targetId: string): string {
   return `${consumerTarget.target}@${consumerTarget.frameworkMajor}`;
 }
 
+function assertRunPassesEveryAxis(file: string, jobId: string, job: WorkflowJob): void {
+  const consumerRun = job.steps?.find((step) =>
+    step.run?.includes("scripts/consumers/cli.ts"),
+  )?.run;
+
+  if (consumerRun === undefined) {
+    throw new Error(
+      `consumers: ${file} job '${jobId}' has no step running scripts/consumers/cli.ts.`,
+    );
+  }
+
+  for (const argument of CONSUMER_RUN_ARGUMENTS) {
+    if (!consumerRun.includes(argument)) {
+      throw new Error(`consumers: ${file} job '${jobId}' run step does not pass ${argument}.`);
+    }
+  }
+}
+
 function workflowPairKeys(file: string): string[] {
   const document: WorkflowDocument = parse(readFileSync(join(WORKFLOWS_DIRECTORY, file), "utf8"));
 
@@ -65,6 +96,8 @@ function workflowPairKeys(file: string): string[] {
     if (matrix === undefined) {
       throw new Error(`consumers: ${file} job '${jobId}' has no strategy.matrix.`);
     }
+
+    assertRunPassesEveryAxis(file, jobId, job);
 
     return matrix.target.flatMap((targetId) =>
       matrix.validators.map((validator) => {
