@@ -928,10 +928,12 @@ describe("sensitive responses", () => {
   const storable = (ir: Json) => {
     node(ir, `${UPDATE}/cache`).noStore = false;
   };
+
   const withBody = (body: Json) => (ir: Json) => {
     storable(ir);
     node(ir, `${UPDATE}/responses/0`).body = body;
   };
+
   const withSchema = (id: string, schema: Json) => (ir: Json) => {
     node(ir, "/schemas")[id] = schema;
   };
