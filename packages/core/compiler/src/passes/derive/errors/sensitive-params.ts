@@ -1,4 +1,8 @@
-import { findIrSensitiveParamReaches, type IrSensitiveReach, type IrWriter } from "@seampact/spec/ir";
+import {
+  findIrSensitiveParamReaches,
+  type IrSensitiveReach,
+  type IrWriter,
+} from "@seampact/spec/ir";
 import type { ConventionReading, PassContext, PassReadonly } from "../../../pipeline/seam.js";
 import { quote } from "../../../validate/diagnostics.js";
 import type { DeriveErrorsReporter } from "./report.js";
@@ -30,7 +34,9 @@ export function deriveErrorsParamsNoStore(
   sources: DeriveErrorsSensitiveSources,
 ): boolean {
   const [found] = findIrSensitiveParamReaches(site.params, sources.schemas, (id) => {
-    throw new Error(`the params of ${quote(site.code)} reference schema '${id}', which tree.schemas did not write`);
+    throw new Error(
+      `the params of ${quote(site.code)} reference schema '${id}', which tree.schemas did not write`,
+    );
   });
 
   if (found === undefined) return false;

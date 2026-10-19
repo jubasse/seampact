@@ -61,7 +61,11 @@ export function findIrSensitiveParamReaches(
   schemas: Readonly<Record<string, unknown>>,
   onMissingSchema?: IrMissingSchemaHandler,
 ): IrSensitiveReach[] {
-  return findIrSensitiveReaches([{ body: { kind: "ref", schema: params } }], schemas, onMissingSchema);
+  return findIrSensitiveReaches(
+    [{ body: { kind: "ref", schema: params } }],
+    schemas,
+    onMissingSchema,
+  );
 }
 
 interface Walk {
