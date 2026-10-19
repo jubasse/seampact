@@ -32,7 +32,26 @@ export interface TargetEntry {
   link?: Record<string, string>;
   options?: Record<string, unknown>;
   operations?: OperationsFilter;
+  // The switches of a server target's boot check (ADR 0012); the other artefact switches wait.
+  artefacts?: ArtefactSwitches;
+  // The server's routes outside the contract the boot check accepts (ADR 0011, ADR 0012).
+  frameworkRoutes?: FrameworkRouteEntry[];
 }
+
+export interface ArtefactSwitches {
+  bootCheck?: { frameworkRoutes?: boolean };
+}
+
+// A path or a pattern (`*` one segment, `**` any number), for one method or every method, with its reason.
+export interface FrameworkRouteEntry {
+  method?: HttpMethod;
+  path: string;
+  reason: string;
+}
+
+export type HttpMethod = (typeof HTTP_METHODS)[number];
+
+const HTTP_METHODS = ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"] as const;
 
 // Operation ids or tags; an empty or absent `include` keeps every operation.
 export interface OperationsFilter {
@@ -45,6 +64,9 @@ const ENTRY_ID_PATTERN = "^[A-Za-z][A-Za-z0-9_-]*$";
 const nonEmptyString = { type: "string", minLength: 1 };
 
 const nameList = { type: "array", items: nonEmptyString, uniqueItems: true };
+
+// A path from the root whose segments are literal, `*` or `**`; a star never sits inside a segment.
+const FRAMEWORK_ROUTE_PATH_PATTERN = "^/(?:(?:[^/*]+|\\*|\\*\\*)(?:/(?:[^/*]+|\\*|\\*\\*))*)?$";
 
 export const APP_CONFIG_SCHEMA: JsonSchema = {
   $schema: JSON_SCHEMA_DIALECT,
@@ -62,6 +84,16 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
     targets: { type: "array", items: { $ref: "#/$defs/targetEntry" } },
   },
   $defs: {
+    frameworkRoute: {
+      type: "object",
+      additionalProperties: false,
+      required: ["path", "reason"],
+      properties: {
+        method: { enum: [...HTTP_METHODS] },
+        path: { type: "string", pattern: FRAMEWORK_ROUTE_PATH_PATTERN },
+        reason: nonEmptyString,
+      },
+    },
     pathSource: {
       type: "object",
       additionalProperties: false,
@@ -89,6 +121,18 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
           additionalProperties: false,
           properties: { include: nameList, exclude: nameList },
         },
+        artefacts: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            bootCheck: {
+              type: "object",
+              additionalProperties: false,
+              properties: { frameworkRoutes: { type: "boolean" } },
+            },
+          },
+        },
+        frameworkRoutes: { type: "array", items: { $ref: "#/$defs/frameworkRoute" } },
       },
       oneOf: [
         { required: ["api"], not: { required: ["apis"] } },

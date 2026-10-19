@@ -26,6 +26,7 @@ import {
   unprovidedKindProblems,
 } from "./entry-links.js";
 import { filterOperations } from "./filter-operations.js";
+import { frameworkRouteCheckOf, unreadFrameworkRouteKeyProblems } from "./framework-route-check.js";
 import { addLink, isLinkKind, type MutableLinkSet, relativeLocation } from "./link-set.js";
 
 // The files of one entry and api, generated in memory before anything is written.
@@ -142,7 +143,10 @@ function planEachEntry(
 
     if (target === undefined) throw new Error(`no resolved target for the entry ${entry.id}`);
 
+    const unreadKeyProblems = unreadFrameworkRouteKeyProblems(entry, target);
     const apis = planEntryApis(entry, root, compiled);
+
+    problems.push(...unreadKeyProblems);
 
     if (apis.status === "refused") problems.push(...apis.problems);
     else planned.set(entry.id, { entry, target, apis: apis.value });
@@ -226,6 +230,7 @@ async function generateApi(
     options: structuredClone(entry.options ?? {}),
     links: links.value,
     artefacts,
+    frameworkRoutes: frameworkRouteCheckOf(entry),
   });
 
   if (outcome.status === "refused") {
