@@ -33,6 +33,7 @@ import {
   type ContractRequest,
   type ContractRoute,
   headerValue,
+  isUnderBasePath,
   matchContractPath,
   matchContractRoute,
   matchesContractPath,
@@ -43,7 +44,7 @@ import {
   logWriteFailure,
   notFoundError,
   type ReportedRequest,
-  respondUnservedMethod,
+  respondNotServed,
   respondWithError,
 } from "./node-server/error-reply.js";
 import {
@@ -139,7 +140,41 @@ export function createFastifyBoundary<
     fastify.setErrorHandler(contractErrorHandler(options));
 
     for (const route of api.routes) registerRoute(fastify, route, options);
+
+    registerUnservedBasePaths(fastify, options.hooks);
   };
+
+  // Every method under each base path, below the contract routes, which find-my-way matches first: a path no route
+  // serves exactly (a trailing slash, `//`, an unknown sub-path) or a method its path does not serve answers the
+  // api's 404 before any body is read. A path outside the base paths stays the app's. A contract route's path lands
+  // here only when the router refused a param (over maxParamLength): the operation's step 6 refusal.
+  function registerUnservedBasePaths(fastify: FastifyInstance, hooks: BoundaryHooks): void {
+    for (const basePath of api.basePaths) {
+      if (basePath === "") continue;
+
+      fastify.all(`${basePath.replace(/\/$/, "")}/*`, {
+        onRequest: (request, reply) => {
+          const reported = reportedRequest(request.raw);
+          const matched = matchContractRoute(api, reported.method, reported.path);
+
+          if (matched === undefined) {
+            respondUnserved(reply, hooks, reported);
+
+            return;
+          }
+
+          pathParamRefusal(matched.route, matched.pathParams, request)
+            .then((refusal) => writeDetached(reply, hooks, matched.route, refusal, reported))
+            .catch((failure: unknown) => logWriteFailure(api, failure));
+        },
+        handler: async () => {
+          throw new Error(
+            `seampact: the base path catch-all of api '${api.id}' reached its handler`,
+          );
+        },
+      });
+    }
+  }
 
   function instanceProblems(fastify: FastifyInstance): BootProblem[] {
     const problems: BootProblem[] = [];
@@ -323,7 +358,7 @@ export function createFastifyBoundary<
     const reported = reportedRequest(request.raw);
     const matched = matchContractRoute(api, reported.method, reported.path);
 
-    // HEAD runs through the GET route; the contract serves no HEAD.
+    // A method the route's path does not serve, though Fastify routed it here.
     if (matched === undefined && matchesContractPath(api, reported.path)) {
       respondUnserved(reply, hooks, reported);
 
@@ -527,8 +562,8 @@ export function createFastifyBoundary<
     hooks: BoundaryHooks | undefined,
     reported: ReportedRequest,
   ): void {
-    respondUnservedMethod(hijackForBoundary(reply), hooks, api, reported).catch(
-      (failure: unknown) => logWriteFailure(api, failure),
+    respondNotServed(hijackForBoundary(reply), hooks, api, reported).catch((failure: unknown) =>
+      logWriteFailure(api, failure),
     );
   }
 
@@ -557,8 +592,9 @@ export function createFastifyBoundary<
   }
 
   /**
-   * On a contract path the plugin never saw: without an error the path's 404, and for Fastify's router errors
-   * (`FST_ERR_BAD_URL`, `FST_ERR_MAX_PARAM_LENGTH`) the operation's step 6 refusal; false when it does nothing.
+   * On a contract path the plugin never saw, or under the api's base path: without an error the api's 404, and for
+   * Fastify's router errors (`FST_ERR_BAD_URL`, `FST_ERR_MAX_PARAM_LENGTH`) the operation's step 6 refusal; false
+   * when it does nothing.
    */
   function renderPreRoutingError(
     request: FastifyRequest,
@@ -570,6 +606,12 @@ export function createFastifyBoundary<
     const reported = reportedRequest(request.raw);
 
     const matched = matchContractPath(api, reported.method, reported.path);
+
+    if (matched === undefined && error === undefined && isUnderBasePath(api, reported.path)) {
+      respondUnserved(reply, registered.hooks, reported);
+
+      return true;
+    }
 
     if (matched === undefined) return false;
 

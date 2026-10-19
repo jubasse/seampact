@@ -29,6 +29,7 @@ import {
   type ContractApi,
   type ContractRequest,
   type ContractRoute,
+  isUnderBasePath,
   isUnderPrefix,
   matchContractPath,
   matchContractRoute,
@@ -38,7 +39,7 @@ import {
 import {
   notFoundError,
   type ReportedRequest,
-  respondUnservedMethod,
+  respondNotServed,
   respondWithError,
 } from "./node-server/error-reply.js";
 import { handlerReply } from "./node-server/handler-reply.js";
@@ -202,7 +203,7 @@ function adonisPath(path: string): string {
 function adonisMethods(route: ContractRoute): string[] {
   const method = route.method.toUpperCase();
 
-  // As `router.get` does; the first middleware answers HEAD with the path's 404, since the contract serves none.
+  // As `router.get` does: HEAD runs the GET operation, whose reply goes out without its body.
   return route.method === GET_METHOD ? [method, HEAD_METHOD] : [method];
 }
 
@@ -338,12 +339,6 @@ export function createAdonisBoundary<
       const response = ctx.response.response;
       const { method, path } = requestLine(ctx);
       const hooks = registration.hooks;
-
-      if (method === HEAD_METHOD) {
-        await respondUnservedMethod(response, hooks, api, { method, path });
-
-        return;
-      }
 
       const matched = matchContractRoute(api, route.method, path);
 
@@ -701,15 +696,19 @@ export function createAdonisBoundary<
   }
 
   /**
-   * Renders, on a contract path, a refusal raised before the boundary; false when it does nothing. A request the
-   * router matched to a route other than this api's (an app's own route) is left to the app.
+   * Renders, on a contract path, a refusal raised before the boundary, and the api's 404 on a path under its base
+   * path that no route serves; false when it does nothing. A request the router matched to a route other than this
+   * api's (an app's own route) is left to the app.
    */
   async function renderPreRoutingError(error: unknown, ctx: HttpContext): Promise<boolean> {
     if (boundaryContext.getStore() !== undefined) return false;
 
     const { method, path } = requestLine(ctx);
+    const routeNotFound = errorCode(error) === ROUTE_NOT_FOUND_CODE;
 
-    if (!matchesContractPath(api, path)) return false;
+    if (!matchesContractPath(api, path) && !(routeNotFound && isUnderBasePath(api, path))) {
+      return false;
+    }
 
     const routedName = ctx.route?.name;
 
@@ -717,8 +716,8 @@ export function createAdonisBoundary<
       return false;
     }
 
-    if (errorCode(error) === ROUTE_NOT_FOUND_CODE) {
-      await respondUnservedMethod(ctx.response.response, registered.hooks, api, { method, path });
+    if (routeNotFound) {
+      await respondNotServed(ctx.response.response, registered.hooks, api, { method, path });
 
       return true;
     }

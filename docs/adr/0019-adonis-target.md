@@ -88,7 +88,7 @@ The boundary decodes the JSON body itself, with `JSON.parse` on `request.raw()`,
 
 - The bodyparser does the bounded read; its `json.limit` must be at least the largest route limit, which the target exports per api (`TasksAdonis.LARGEST_BODY_LIMIT`). The first middleware checks the route's own limit on the byte count of `request.raw()` re-encoded and answers 413; that count is the inflated size, which the route limit is about (ADR 0016 "Body limit, query and bounded values").
 - Media type: a contract route with a JSON body refuses another `Content-Type` with 415 in the first middleware, since the bodyparser only skips it. A form or multipart body is read by the bodyparser before that 415, within its `form.limit` or `multipart.limit`, and with `multipart.autoProcess` on its files are written to the temporary directory first; the refusal comes after that read.
-- `HEAD`: `router.get` also serves `HEAD`. The contract serves `HEAD` on no route, so the first middleware answers it with the path's 404 without calling the handler, bare when no operation of the path declares one, as ADR 0016 does for Express 5.
+- `HEAD`: `router.get` also serves `HEAD`, which runs the `GET` operation; its reply goes out without a body (ADR 0016 "Errors raised before routing"). A path under one of the api's base paths that no route serves gets `E_ROUTE_NOT_FOUND`, which `renderPreRoutingError` answers with the api's 404.
 - Path and query: decoded from the raw `request.request.url`, never from `ctx.params` or `request.qs()`, by the IR's wire form (ADR 0002 section 7), with ADR 0016's rules for a value that does not decode.
 - `MAX_RENDERED_ISSUES`, `MAX_CHECKED_ERROR_BODY_BYTES`, the throttle bucket key and the idempotency key are those of ADR 0016.
 

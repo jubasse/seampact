@@ -1,6 +1,6 @@
 // The Express placement of the shared request checks (ADR 0018): a router per api with one route per operation,
 // most specific first, whose middleware run step 1, the access steps, the input steps and the handler; one
-// catch-all per contract path; the router's narrow error middleware; the boot check; and the exported helpers for
+// catch-all per contract path and one for the api's base paths; the router's narrow error middleware; the boot check; and the exported helpers for
 // errors raised before the router. The same code serves Express 4 and 5. Each api's generated module calls
 // `createExpressBoundary` once with its route table.
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -22,6 +22,7 @@ import { ContractError, unexpectedError } from "./node-server/contract-error.js"
 import {
   type ContractApi,
   type ContractRoute,
+  isUnderBasePath,
   matchContractPath,
   matchContractRoute,
   matchesContractPath,
@@ -32,7 +33,7 @@ import {
   logWriteFailure,
   notFoundError,
   type ReportedRequest,
-  respondUnservedMethod,
+  respondNotServed,
   respondWithError,
 } from "./node-server/error-reply.js";
 import {
@@ -111,6 +112,8 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
       contractRouter.all(routePattern(path), unservedMethod(path, options.hooks));
     }
 
+    contractRouter.use(unservedBasePath(options.hooks));
+
     contractRouter.use(contractErrorMiddleware);
 
     return contractRouter;
@@ -179,7 +182,7 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
 
     const matched = matchContractRoute(api, reported.method, reported.path);
 
-    // HEAD runs through the GET route's middleware; the contract serves no HEAD.
+    // A method the route's path does not serve, though Express routed it here.
     if (matched === undefined && matchesContractPath(api, reported.path)) {
       respondUnserved(response, hooks, reported);
 
@@ -325,6 +328,22 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
     };
   }
 
+  // A path under the api's base path that no route serves exactly (a trailing slash, `//`, a percent-encoded
+  // static segment, an unknown sub-path): the api's 404; any other path is the app's.
+  function unservedBasePath(hooks: BoundaryHooks): RequestHandler {
+    return (request, response, next) => {
+      const reported = reportedRequest(request);
+
+      if (request.baseUrl !== NO_MOUNT || !isUnderBasePath(api, reported.path)) {
+        next();
+
+        return;
+      }
+
+      respondUnserved(response, hooks, reported);
+    };
+  }
+
   // A contract error, a parser refusal or a framework 401, 403 or 429 is answered; anything else is the app's.
   const contractErrorMiddleware: ErrorRequestHandler = (error, request, response, next) => {
     const context = contexts.get(response);
@@ -376,7 +395,7 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
     hooks: BoundaryHooks | undefined,
     reported: ReportedRequest,
   ): void {
-    respondUnservedMethod(response, hooks, api, reported).catch((failure: unknown) =>
+    respondNotServed(response, hooks, api, reported).catch((failure: unknown) =>
       logWriteFailure(api, failure),
     );
   }
@@ -428,6 +447,12 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
     const reported = reportedRequest(request);
 
     const route = matchContractPath(api, reported.method, reported.path)?.route;
+
+    if (route === undefined && error === undefined && isUnderBasePath(api, reported.path)) {
+      respondUnserved(response, registered.hooks, reported);
+
+      return true;
+    }
 
     if (route === undefined) return false;
 

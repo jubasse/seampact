@@ -19,7 +19,13 @@ import {
   deciderFor,
   type FrameworkDenialTest,
 } from "./boundary-hooks.js";
-import { ContractError, codeOfRole, isPlainObject, unexpectedError } from "./contract-error.js";
+import {
+  ContractError,
+  codeOfRole,
+  isPlainObject,
+  roleError,
+  unexpectedError,
+} from "./contract-error.js";
 import {
   type AccessEntry,
   type ContractApi,
@@ -62,6 +68,7 @@ export interface AccessGrant {
 }
 
 const UNAUTHENTICATED_ROLE = "unauthenticated";
+const CSRF_INVALID_ROLE = "csrfInvalid";
 const BEARER_PREFIX = /^Bearer[ ]+/i;
 const COOKIE_SEPARATOR = ";";
 
@@ -269,6 +276,7 @@ function authenticateRequest(
 
   const credentials: Record<string, string> = {};
   let byCookie = false;
+  let byOtherLocation = false;
 
   for (const source of access.credentials) {
     const value = credentialValue(state.request, source.in, source.name);
@@ -277,6 +285,7 @@ function authenticateRequest(
 
     credentials[source.scheme] = value;
     byCookie ||= source.in === "cookie";
+    byOtherLocation ||= source.in !== "cookie";
   }
 
   if (Object.keys(credentials).length === 0) return undefined;
@@ -285,6 +294,17 @@ function authenticateRequest(
     byCookie && !state.route.safe && access.csrfHeader !== undefined
       ? headerValue(state.request.headers, access.csrfHeader)
       : undefined;
+
+  // The boundary refuses a cookie-only write without its CSRF value; the hook still checks the value itself.
+  if (
+    byCookie &&
+    !byOtherLocation &&
+    !state.route.safe &&
+    access.csrfHeader !== undefined &&
+    (csrfToken === undefined || csrfToken === "")
+  ) {
+    throw roleError(state.route, CSRF_INVALID_ROLE);
+  }
 
   return { ...base, credentials, ...(csrfToken === undefined ? {} : { csrfToken }) };
 }

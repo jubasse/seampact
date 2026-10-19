@@ -12,7 +12,6 @@ const UNSUPPORTED_MEDIA_ROLE = "unsupportedMediaType";
 
 /** The content coding of a body sent as is. */
 export const IDENTITY_ENCODING = "identity";
-const JSON_SUFFIX = "+json";
 
 /** The setup fixes a framework placement names in its logs; the shared checks know no framework. */
 export interface PlatformFixes {
@@ -112,8 +111,9 @@ function bodySize(request: ContractRequest, readBody: ReadBody): number | undefi
   return undefined;
 }
 
+// The declared media type exactly: a `+json` suffix (`application/merge-patch+json`) is another media type.
 function isMediaOf(contentType: string, media: string): boolean {
   const essence = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
 
-  return essence === media || (media === "application/json" && essence.endsWith(JSON_SUFFIX));
+  return essence === media;
 }

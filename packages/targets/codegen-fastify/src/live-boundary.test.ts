@@ -241,7 +241,7 @@ describe("the request body", () => {
 });
 
 describe("requests the contract does not serve as sent", () => {
-  test.each(["HEAD", "DELETE", "OPTIONS"])(
+  test.each(["DELETE", "OPTIONS"])(
     "%s on a path that declares no 404 answers a bare 404, not a failure",
     async (method) => {
       const reply = await send(method, "/v1/health");
@@ -252,8 +252,16 @@ describe("requests the contract does not serve as sent", () => {
     },
   );
 
+  test("HEAD runs the GET operation and answers its status and headers without a body", async () => {
+    const reply = await send("HEAD", `/v1/channels/${CHANNEL}/tasks/${TASK}`, { headers: BEARER });
+
+    expect(reply.status).toBe(200);
+    expect(reply.headers["content-type"]).toContain("application/json");
+    expect(reply.text).toBe("");
+    expect(app.calls.handled).toEqual(["getTask"]);
+  });
+
   test.each([
-    ["HEAD on a GET route", "HEAD"],
     ["a method the path does not serve", "PUT"],
     ["OPTIONS", "OPTIONS"],
   ])("%s answers the path's 404 in the api's format", async (_case, method) => {
@@ -261,15 +269,38 @@ describe("requests the contract does not serve as sent", () => {
 
     expect(reply.status).toBe(404);
     expect(app.calls.handled).toEqual([]);
-
-    if (method !== "HEAD") expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+    expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
   });
 
-  test("a path no contract route serves is the app's own 404", async () => {
-    const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}/`, { headers: BEARER });
+  test.each([
+    ["a trailing slash", `/v1/channels/${CHANNEL}/tasks/${TASK}/`],
+    ["a doubled slash", `/v1//channels/${CHANNEL}/tasks/${TASK}`],
+    ["a percent-encoded static segment", `/v1/%63hannels/${CHANNEL}/tasks/${TASK}`],
+    ["an unknown sub-path", "/v1/unknown"],
+  ])("%s under the base path answers the api's 404", async (_case, path) => {
+    const reply = await send("GET", path, { headers: BEARER });
+
+    expect(reply.status).toBe(404);
+    expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+    expect(JSON.parse(reply.text)).toMatchObject({ code: "api.not_found" });
+    expect(app.calls.handled).toEqual([]);
+  });
+
+  test("a path outside the base path, as an upper-case one, is the app's own 404", async () => {
+    const reply = await send("GET", `/V1/channels/${CHANNEL}/tasks/${TASK}`, { headers: BEARER });
 
     expect(reply.status).toBe(404);
     expect(reply.headers["content-type"] ?? "").not.toContain(PROBLEM_MEDIA);
+  });
+
+  test("a +json media type on a JSON route answers 415", async () => {
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+      headers: { ...writeHeaders(), "content-type": "application/merge-patch+json" },
+      body: JSON.stringify({ title: "Plan" }),
+    });
+
+    expect(reply.status).toBe(415);
+    expect(app.calls.handled).toEqual([]);
   });
 
   test.each([

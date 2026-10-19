@@ -107,7 +107,8 @@ export function routeTableSource(
     );
   }
 
-  const table: SourceValue = { id: ir.api.id, format, routes, shapes };
+  const basePaths = [...new Set(Object.values(ir.api.surfaces).map((surface) => surface.prefix))];
+  const table: SourceValue = { id: ir.api.id, basePaths, format, routes, shapes };
 
   return [
     `import type { ContractApi } from "${options.runtimeModule}";`,
