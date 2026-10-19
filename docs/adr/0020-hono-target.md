@@ -62,7 +62,7 @@ serve({ fetch: app.fetch, port: 3000 });
 
 A request whose route handler finds no slot was served by a `fetch` that is not the wrapped one: `app.fetch` read before `registerRoutes` ran, or a sub-app the api was registered on and then mounted with `app.route`. It answers 500 in the api's format, with a log naming the fix (register on the app that serves, before reading its `fetch`), fail closed, since its reply would go out unchecked.
 
-The registration is generated into the target's module of the api, `hono.ts`, re-exported by the api's `index.ts` (ADR 0007 "Amendment 2026-10-19: generated modules"). Its fixed exports are `registerRoutes`, `renderContractError`, `renderPreRoutingError`, `isContractRoute`, `MAX_CHECKED_ERROR_BODY_BYTES` and `MAX_RENDERED_ISSUES`; no export is named by an operation, so none takes the reserved-name suffix. Next to it, the generated tree holds the shared `routes.ts`, `handlers.ts` and `hooks.ts` modules and the `web` profile of the shared runtime under `web-server/`, copied with the generated header (ADR 0009 "What generated code depends on at run time"); this target adds one placement file that imports them.
+The registration is generated into the target's module of the api, `hono.ts`, re-exported by the api's `index.ts` (ADR 0007 "Amendment 2026-10-19: generated modules"). Its fixed exports are `registerRoutes`, `checkFrameworkRoutes`, `renderContractError`, `renderPreRoutingError`, `isContractRoute`, `MAX_CHECKED_ERROR_BODY_BYTES` and `MAX_RENDERED_ISSUES`; no export is named by an operation, so none takes the reserved-name suffix. Next to it, the generated tree holds the shared `routes.ts`, `handlers.ts` and `hooks.ts` modules and the `web` profile of the shared runtime under `web-server/`, copied with the generated header (ADR 0009 "What generated code depends on at run time"); this target adds one placement file that imports them.
 
 ### Routes
 
@@ -114,6 +114,8 @@ The target options are ADR 0016's: `responses` (`strict`, the default, or `warn`
 - a key of `operations` that names no operation of the api;
 - a base path on the app: a route the registration added whose `basePath` (Hono's public `app.routes` entries) is not `/`, as `app.basePath('/api')` gives, which differs from the empty `mount` the slice allows;
 - a second registration of the api on the same app.
+
+Hono has no start hook, so the framework-route check of ADR 0012 is `checkFrameworkRoutes(app)`, which the app calls once every route is added, before serving, and which throws the problems. Since a request's context does not reach the app, a contract request on an app whose check has not passed answers 500 in the api's format and logs that fix; nothing changes when the app config switches the check off.
 
 The Hono major is not readable at run time; `generate` checks the installed `hono` against the peer range, as ADR 0009 "Artefacts and the compatibility matrix" says.
 

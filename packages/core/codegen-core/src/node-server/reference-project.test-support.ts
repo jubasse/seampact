@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { ContractIR } from "@seampact/spec/ir";
 import ts from "typescript";
+import type { FrameworkRouteCheck } from "../framework-route-check.js";
 import type { GeneratedFile, Target } from "../target.js";
 
 // Test support of the Node server targets: generates the reference contract's types, validators and a server
@@ -13,6 +14,9 @@ import type { GeneratedFile, Target } from "../target.js";
 const REPOSITORY_ROOT = new URL("../../../../../", import.meta.url);
 
 export const REFERENCE_APIS = ["tasks", "tasksService"] as const;
+
+// The test apps serve routes of their own, so the framework-route check is off unless a test asks for it.
+const FRAMEWORK_ROUTE_CHECK_OFF: FrameworkRouteCheck = { status: "off" };
 
 const LINKED_PACKAGES = {
   "@seampact/codegen-ts": "packages/targets/codegen-ts",
@@ -152,12 +156,16 @@ export function referenceChanges(...changes: readonly ReferenceIrChange[]): Refe
   return (ir, api) => changes.reduce((changed, change) => change(changed, api), ir);
 }
 
-/** Writes both reference apis' generated trees into a fresh project; returns every file written. */
+/**
+ * Writes both reference apis' generated trees into a fresh project; returns every file written. The framework-route
+ * check is off unless `frameworkRoutes` turns it on.
+ */
 export async function generateReferenceProject(
   project: string,
   serverTarget: Target,
   serverOptions: Readonly<Record<string, unknown>>,
   changeIr: ReferenceIrChange = UNCHANGED_IR,
+  frameworkRoutes: FrameworkRouteCheck = FRAMEWORK_ROUTE_CHECK_OFF,
 ): Promise<string[]> {
   rmSync(project, { recursive: true, force: true });
   mkdirSync(project, { recursive: true });
@@ -174,6 +182,7 @@ export async function generateReferenceProject(
         providers,
         serverTarget,
         serverOptions,
+        frameworkRoutes,
       ),
     ),
   );
@@ -304,6 +313,7 @@ async function generateApi(
   providers: Providers,
   serverTarget: Target,
   serverOptions: Readonly<Record<string, unknown>>,
+  frameworkRoutes: FrameworkRouteCheck,
 ): Promise<string[]> {
   const providerRequest = { ir, options: {}, links: {} };
 
@@ -329,8 +339,7 @@ async function generateApi(
         options: serverOptions,
         links: linksOf(providers, ir, api),
         artefacts: new Set(["boundary"]),
-        // The test apps serve routes of their own; the consumers' boot cases run the framework-route check.
-        frameworkRoutes: { status: "off" },
+        frameworkRoutes,
       }),
     ),
   ];

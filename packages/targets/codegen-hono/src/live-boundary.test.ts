@@ -64,6 +64,12 @@ interface ReferenceAppModule {
   startTwoApiApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
 }
 
+interface UncheckedAppModule {
+  readonly LISTED_OWN_ROUTE: string;
+  uncheckedApp(): { request(path: string, init?: RequestInit): Promise<Response> };
+  checkFrameworkRoutes(app: unknown): void;
+}
+
 let app: ReferenceAppModule;
 let server: Awaited<ReturnType<ReferenceAppModule["startReferenceApp"]>>;
 
@@ -593,5 +599,40 @@ describe("two apis on one base path", () => {
     expect(reply.status).toBe(404);
     expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
     expect(JSON.parse(reply.text)).toMatchObject({ code: "api.not_found" });
+  });
+});
+
+describe("an app that never calls checkFrameworkRoutes", () => {
+  const project = projectDirectory(import.meta.url, "live-unchecked");
+  let uncheckedModule: UncheckedAppModule;
+
+  beforeAll(async () => {
+    const files = await generateReferenceProject(project, honoTarget, {}, undefined, {
+      status: "on",
+      allowed: [{ path: "/own/listed", reason: "the test app's own route" }],
+    });
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+    uncheckedModule = await import(copyTestApp(build, APP_SOURCE));
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  test("answers 500 with the fix logged until the check runs, then serves", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const unchecked = uncheckedModule.uncheckedApp();
+    const path = `/v1/channels/${CHANNEL}/tasks/${TASK}`;
+
+    for (const attempt of [1, 2]) {
+      const refused = await unchecked.request(path, { headers: BEARER });
+
+      expect(refused.status, `attempt ${attempt}`).toBe(500);
+      expect(refused.headers.get("content-type")).toContain(PROBLEM_MEDIA);
+    }
+
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining("call checkFrameworkRoutes(app)"));
+
+    uncheckedModule.checkFrameworkRoutes(unchecked);
+
+    expect((await unchecked.request(path, { headers: BEARER })).status).toBe(200);
   });
 });

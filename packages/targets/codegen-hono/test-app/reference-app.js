@@ -1,8 +1,8 @@
 // A Hono app around the generated `tasks` registration, for the live boundary test: the shared scenario's handler
 // map and hooks, app middleware before the api (headers, a refusal, a body read, a reply rewrite after `next()`), an
 // `onError` that calls the exported helpers, and routes of the app's own; an app with two apis on one base path;
-// and the boot cases. Copied next to the compiled generated tree, so it imports the generated modules by relative
-// path.
+// the boot cases; and an app whose framework-route check has not run. Copied next to the compiled generated tree,
+// so it imports the generated modules by relative path.
 import { serve } from "@hono/node-server";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import { Hono } from "hono";
@@ -170,6 +170,24 @@ export function requestThroughSubApp(path, init) {
   root.route("/", subApp);
 
   return root.request(path, init);
+}
+
+/** The app's own route the framework-route test allow-lists. */
+export const LISTED_OWN_ROUTE = "/own/listed";
+
+/** The generated framework-route check of the `tasks` api, for the app below. */
+export const checkFrameworkRoutes = TasksHono.checkFrameworkRoutes;
+
+/** An app registering the api and an allow-listed route of its own, whose framework-route check has not run. */
+export function uncheckedApp() {
+  resetScenario();
+
+  const app = new Hono();
+
+  TasksHono.registerRoutes(app, { handlers, hooks });
+  app.get(LISTED_OWN_ROUTE, (c) => c.text("listed"));
+
+  return app;
 }
 
 /** Builds the app and listens on a free port. */

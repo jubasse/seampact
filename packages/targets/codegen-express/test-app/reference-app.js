@@ -1,7 +1,7 @@
 // An Express app around the generated `tasks` router, for the live boundary test: the shared scenario's handler map
 // and hooks, app middleware before the router, an app error middleware, routes of the app's own and a router
 // mounted under a path with hooks of its own; an app with the router nested in a parent router, one without a
-// router; and an app with two apis on one base path. Copied next to the compiled generated tree, so
+// router; an app with two apis on one base path; and an app that never calls the framework-route check. Copied next to the compiled generated tree, so
 // it imports the generated modules by relative path. The test links `express` to the major it runs.
 import express from "express";
 import * as TasksExpress from "../generated/server/tasks/index.js";
@@ -167,6 +167,29 @@ export async function startTwoApiApp() {
 
   app.use(TasksExpress.router({ handlers, hooks }));
   app.use(SecondExpress.router({ handlers, hooks }));
+
+  return listen(app);
+}
+
+/** The app's own route the framework-route test allow-lists, and one it does not. */
+export const LISTED_OWN_ROUTE = "/own/listed";
+export const UNLISTED_OWN_ROUTE = "/own/unlisted";
+
+/**
+ * Builds an app serving the `tasks` router and an allow-listed route of its own, plus an unlisted one when asked,
+ * that never calls checkFrameworkRoutes; listens on a free port.
+ */
+export async function startUncheckedApp({ withUnlistedRoute }) {
+  resetScenario();
+
+  const app = express();
+
+  app.get(LISTED_OWN_ROUTE, (_request, response) => response.send("listed"));
+
+  if (withUnlistedRoute)
+    app.get(UNLISTED_OWN_ROUTE, (_request, response) => response.send("unlisted"));
+
+  app.use(TasksExpress.router({ handlers, hooks }));
 
   return listen(app);
 }

@@ -872,6 +872,68 @@ describe("a body proof a decider changes on Express 5", () => {
   });
 });
 
+interface UncheckedAppModule {
+  readonly UNLISTED_OWN_ROUTE: string;
+  startUncheckedApp(options: {
+    withUnlistedRoute: boolean;
+  }): Promise<{ host: string; port: number; close(): Promise<void> }>;
+}
+
+describe.each(EXPRESS_MAJORS)(
+  "an app that never calls checkFrameworkRoutes on %s",
+  (_major, expressPackage) => {
+    const project = projectDirectory(import.meta.url, `live-unchecked-${expressPackage}`);
+    const path = `/v1/channels/${CHANNEL}/tasks/${TASK}`;
+    let uncheckedModule: UncheckedAppModule;
+
+    beforeAll(async () => {
+      const files = await generateReferenceProject(project, expressTarget, {}, undefined, {
+        status: "on",
+        allowed: [{ path: "/own/listed", reason: "the test app's own route" }],
+      });
+      const build = join(project, "build");
+
+      expect(emitProject(project, files, build)).toEqual([]);
+      linkExpress(project, expressPackage);
+      uncheckedModule = await import(copyTestApp(build, APP_SOURCE));
+    }, SETUP_TIMEOUT_MILLISECONDS);
+
+    test("an unlisted route of the app gives 500 on every request, with the problem logged", async () => {
+      const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const unchecked = await uncheckedModule.startUncheckedApp({ withUnlistedRoute: true });
+
+      try {
+        for (const attempt of [1, 2]) {
+          const refused = await sendRawRequest(unchecked, "GET", path, { headers: BEARER });
+
+          expect(refused.status, `attempt ${attempt}`).toBe(500);
+          expect(refused.headers["content-type"]).toContain(PROBLEM_MEDIA);
+        }
+
+        expect(logged).toHaveBeenCalledTimes(2);
+        expect(logged).toHaveBeenCalledWith(
+          expect.stringContaining(`GET ${uncheckedModule.UNLISTED_OWN_ROUTE}`),
+        );
+      } finally {
+        logged.mockRestore();
+        await unchecked.close();
+      }
+    });
+
+    test("an app whose own routes are all allow-listed serves normally", async () => {
+      const clean = await uncheckedModule.startUncheckedApp({ withUnlistedRoute: false });
+
+      try {
+        const reply = await sendRawRequest(clean, "GET", path, { headers: BEARER });
+
+        expect(reply.status).toBe(200);
+      } finally {
+        await clean.close();
+      }
+    });
+  },
+);
+
 // Points the project's `express` at the major under test; the generated tree and the app resolve it from there.
 function linkExpress(project: string, expressPackage: string): void {
   const link = join(project, "node_modules", "express");

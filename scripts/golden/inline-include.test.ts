@@ -12,6 +12,8 @@ import { type ContractVariant, contractVariant, readContractTrees } from "./vari
 
 const compiler = await loadGoldenCompiler();
 const REFERENCE_ROOT = join(REPO_ROOT, "fixtures/reference");
+// Compiling every variant takes over 30 s on a loaded machine.
+const VARIANTS_TIMEOUT_MILLISECONDS = 60_000;
 const REFERENCE_FILES = [
   "workspace.yaml",
   "shared/base.yaml",
@@ -92,5 +94,5 @@ describe("inline and included declarations", () => {
     expect(movingVariants).toBeGreaterThanOrEqual(MINIMUM_MOVING_VARIANTS);
     expect(includeDirectives).toBeGreaterThan(0);
     expect(fileDirectives).toBeGreaterThan(0);
-  });
+  }, VARIANTS_TIMEOUT_MILLISECONDS);
 });

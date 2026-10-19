@@ -1,7 +1,8 @@
 // The Hono placement of the shared request checks (ADR 0020): `registerRoutes` wraps the app's `fetch` once with a
 // request slot and the outgoing check, adds one route per operation, most specific first, whose handler runs every
 // step from the media type and the bounded body read to the handler's reply, then the catch-alls of the contract
-// paths and base paths; the boot check and the framework-route check the app calls; and the exported helpers for the app's `onError` and middleware. Each api's
+// paths and base paths; the boot check; the framework-route check the app calls before serving, without which every
+// contract request answers 500; and the exported helpers for the app's `onError` and middleware. Each api's
 // generated module calls `createHonoBoundary` once with its route table.
 import type { Context, Env, Hono, Next, Schema } from "hono";
 import { authorizeRequest, type CheckState } from "./web-server/access-checks.js";
@@ -102,6 +103,8 @@ export function createHonoBoundary<Hooks extends BoundaryHooks, Handlers, Operat
   const registered: { hooks?: BoundaryHooks } = {};
   // The apps the api is registered on: one registration per app.
   const registeredApps = new WeakSet<object>();
+  // The apps whose framework-route check has passed; a contract request on any other app answers 500.
+  const frameworkRoutesChecked = new WeakSet<object>();
 
   /** Registers the api's routes on the app that serves, wraps its `fetch` once; runs the boot check. */
   function registerRoutes<E extends Env, S extends Schema, BasePath extends string>(
@@ -185,7 +188,30 @@ export function createHonoBoundary<Hooks extends BoundaryHooks, Handlers, Operat
       return undefined;
     }
 
+    if (!frameworkRoutesReady(app)) {
+      return uncheckedFrameworkRoutesResponse(registered.hooks, undefined, reported);
+    }
+
     return notServedResponse(registered.hooks, api, reported);
+  }
+
+  function frameworkRoutesReady(app: object): boolean {
+    return api.frameworkRoutes.status === "off" || frameworkRoutesChecked.has(app);
+  }
+
+  // Hono's context has no app to check, so a request before `checkFrameworkRoutes(app)` answers 500 with the fix.
+  function uncheckedFrameworkRoutesResponse(
+    hooks: BoundaryHooks | undefined,
+    route: ContractRoute | undefined,
+    reported: ReportedRequest,
+  ): Promise<Response> {
+    const cause = new Error(
+      `seampact: the framework-route check of api '${api.id}' has not run on the app that serves it; call checkFrameworkRoutes(app) once every route is added, before serving, or switch it off with 'artefacts.bootCheck.frameworkRoutes: false'.`,
+    );
+
+    console.error(cause.message);
+
+    return errorResponse(undefined, hooks, api, route, unexpectedError(route, cause), reported);
   }
 
   async function serveContractRoute<E extends Env>(
@@ -202,6 +228,10 @@ export function createHonoBoundary<Hooks extends BoundaryHooks, Handlers, Operat
     // A path only Hono's decoding or relaxed routing leads here: the raw path is not this operation's, so no
     // handler runs under another operation's access and input.
     if (matched === undefined) return unservedOrNext(app, c.req.raw, next);
+
+    if (!frameworkRoutesReady(app)) {
+      return uncheckedFrameworkRoutesResponse(options.hooks, matched.route, reported);
+    }
 
     if (matched.route.id !== route.id) {
       return errorResponse(
@@ -397,6 +427,8 @@ export function createHonoBoundary<Hooks extends BoundaryHooks, Handlers, Operat
     );
 
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
+
+    frameworkRoutesChecked.add(app);
   }
 
   return {
