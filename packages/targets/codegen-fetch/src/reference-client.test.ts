@@ -326,7 +326,11 @@ describe("the generated reference client answers a stub server", () => {
         headers: user(),
         body: { ids: ["a", "b"] },
       }),
-    ).resolves.toMatchObject({ ok: true, status: 200, body: [{ taskId: "a" }, { taskId: "b" }] });
+    ).resolves.toMatchObject({
+      ok: true,
+      status: 200,
+      body: { a: { taskId: "a" }, b: { taskId: "b" } },
+    });
     await expect(
       call(
         tasks,
@@ -558,6 +562,23 @@ describe("the generated reference client answers a stub server", () => {
     )({ path: { channelId: "c1" }, headers: user(), body: { title: "x" } });
 
     expect(created).toMatchObject({ ok: false, unexpected: true, status: 201 });
+  });
+
+  test("a batch read answered as an array instead of a table comes back as unexpected", async () => {
+    const fake = createResultClient({
+      baseUrl: "http://api.test",
+      fetch: async () =>
+        new Response(JSON.stringify([{ taskId: "a" }]), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    });
+    const batch = await call(
+      fake,
+      "getTasksBatch",
+    )({ path: { channelId: "c1" }, headers: user(), body: { ids: ["a"] } });
+
+    expect(batch).toMatchObject({ ok: false, unexpected: true, status: 200 });
   });
 
   test("a success body that is not JSON comes back as unexpected", async () => {

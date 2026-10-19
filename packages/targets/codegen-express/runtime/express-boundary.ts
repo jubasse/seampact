@@ -91,8 +91,9 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
   const bodyGlue = expressBodyGlue(api);
   // The context of each contract response, for the error middleware and `renderContractError`.
   const contexts = new WeakMap<ServerResponse, BoundaryContext>();
-  // The hooks of the last router made, for the replies written outside a request context.
-  const registered: { hooks?: BoundaryHooks } = {};
+  // The hooks of each router made, for the replies written outside a request context.
+  const routerHooks = new WeakMap<object, BoundaryHooks>();
+  const routersMade: { count: number; lastHooks?: BoundaryHooks } = { count: 0 };
   const warnedGlobalParser = new Set<string>();
 
   function router<Operation extends string>(
@@ -105,9 +106,11 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
 
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
 
-    registered.hooks = options.hooks;
-
     const contractRouter = express.Router();
+
+    routerHooks.set(contractRouter, options.hooks);
+    routersMade.count += 1;
+    routersMade.lastHooks = options.hooks;
 
     for (const route of api.routes) {
       contractRouter[methodOf(route)](routePattern(route.path), ...routeMiddleware(route, options));
@@ -419,8 +422,35 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
     );
   }
 
-  /** Writes a contract error, or a framework refusal mapped to its role, in the api's format. */
-  function renderContractError(response: ServerResponse, error: unknown): Promise<void> {
+  /**
+   * The hooks of the router that answers a request outside a request context: the first router of this api in the
+   * stack of the request's app, nested routers included, since it runs before any later one. Without one found, the
+   * only router the api made; with several and none reachable, no hooks, logged by name.
+   */
+  function owningHooks(request: IncomingMessage | undefined): BoundaryHooks | undefined {
+    const app: unknown = request === undefined ? undefined : Reflect.get(request, "app");
+    const owner = nestedRouterHandles(app).find((handle) => routerHooks.has(handle));
+    const ownerHooks = owner === undefined ? undefined : routerHooks.get(owner);
+
+    if (ownerHooks !== undefined) return ownerHooks;
+
+    if (routersMade.count === 1) return routersMade.lastHooks;
+
+    console.error(noOwningRouterMessage(api, routersMade.count));
+
+    return undefined;
+  }
+
+  /** Writes a contract error, or a framework refusal mapped to its role, in the api's format; never rejects. */
+  async function renderContractError(response: ServerResponse, error: unknown): Promise<void> {
+    try {
+      await writeContractError(response, error);
+    } catch (failure: unknown) {
+      logWriteFailure(api, failure);
+    }
+  }
+
+  async function writeContractError(response: ServerResponse, error: unknown): Promise<void> {
     const context = contexts.get(response);
     const route = context?.route;
     const contractError =
@@ -429,10 +459,10 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
         : (claimedError(route, error) ?? unexpectedError(route, error));
     const request: IncomingMessage | undefined = response.req;
 
-    return respondWithError(
+    await respondWithError(
       response,
       context,
-      context?.hooks ?? registered.hooks,
+      context?.hooks ?? owningHooks(request),
       api,
       route,
       contractError,
@@ -460,7 +490,7 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
       error === undefined &&
       claimsAlone(api, Reflect.get(request, "app"), reported.path)
     ) {
-      respondUnserved(response, registered.hooks, reported);
+      respondUnserved(response, owningHooks(request), reported);
 
       return true;
     }
@@ -471,7 +501,7 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
       error === undefined &&
       matchContractRoute(api, reported.method, reported.path) === undefined
     ) {
-      respondUnserved(response, registered.hooks, reported);
+      respondUnserved(response, owningHooks(request), reported);
 
       return true;
     }
@@ -483,7 +513,7 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
 
     if (contractError === undefined) return false;
 
-    respondDetached(response, registered.hooks, route, contractError, reported);
+    respondDetached(response, owningHooks(request), route, contractError, reported);
 
     return true;
   }
@@ -535,6 +565,48 @@ function appBasePathClaims(api: ContractApi, app: unknown): BasePathClaim[] {
 
     return isObjectLike(handle) ? basePathClaimsOf(handle) : [];
   });
+}
+
+/**
+ * The handles of an app's router stack and of the routers nested in it, depth first in mount order; a stack that
+ * cannot be read yields none, and the caller falls back by name.
+ */
+function nestedRouterHandles(app: unknown): object[] {
+  const appRouter: unknown = isObjectLike(app)
+    ? (Reflect.get(app, "_router") ?? Reflect.get(app, "router"))
+    : undefined;
+  const handles: object[] = [];
+
+  collectStackHandles(appRouter, handles, new Set());
+
+  return handles;
+}
+
+function collectStackHandles(router: unknown, handles: object[], visited: Set<object>): void {
+  if (!isObjectLike(router) || visited.has(router)) return;
+
+  visited.add(router);
+
+  const stack: unknown = Reflect.get(router, "stack");
+
+  if (!Array.isArray(stack)) return;
+
+  for (const layer of stack) {
+    const handle: unknown = isObjectLike(layer) ? Reflect.get(layer, "handle") : undefined;
+
+    if (!isObjectLike(handle)) continue;
+
+    handles.push(handle);
+    collectStackHandles(handle, handles, visited);
+  }
+}
+
+function noOwningRouterMessage(api: ContractApi, routerCount: number): string {
+  return (
+    `seampact: no router of api '${api.id}' (${routerCount} made) is reachable from the app that received this ` +
+    "request, so its reply reports to no hooks. Mount one router of the api on that app with app.use(router(...)), " +
+    "directly or in a router mounted on it."
+  );
 }
 
 function unreadableRouterStackMessage(api: ContractApi): string {

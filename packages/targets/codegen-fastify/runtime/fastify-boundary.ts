@@ -39,6 +39,7 @@ import {
   type ContractRequest,
   type ContractRoute,
   headerValue,
+  isUnderBasePath,
   matchContractPath,
   matchContractRoute,
   matchesContractPath,
@@ -62,10 +63,12 @@ import {
 import { validateRequestInput } from "./node-server/input-checks.js";
 import { installOutgoingCheck } from "./node-server/node-outgoing-check.js";
 import {
+  encodeBoundaryReplies,
   respondNotServed,
   respondWithError,
   writeContractReply,
 } from "./node-server/node-reply.js";
+import { compressedReply } from "./node-server/node-reply-compression.js";
 import {
   bodyParserError,
   contractRequest,
@@ -94,6 +97,10 @@ const BAD_REQUEST = 400;
 const CLIENT_ERROR_FLOOR = 400;
 const SERVER_ERROR_FLOOR = 500;
 const CONTENT_TYPE_PARSER_ERROR_PREFIX = "FST_ERR_CTP_";
+// The reply decorator `@fastify/compress` adds, registered before the plugin.
+const COMPRESS_REPLY_DECORATOR = "compress";
+const PREFIX_ONLY = "no-slash";
+const ACCEPT_ENCODING_HEADER = "accept-encoding";
 // Fastify's router writes these itself unless the app routes them through `frameworkErrors`.
 const ROUTER_ERROR_CODES: readonly string[] = ["FST_ERR_BAD_URL", "FST_ERR_MAX_PARAM_LENGTH"];
 const DECODERS: Readonly<Record<string, () => NodeJS.ReadWriteStream>> = {
@@ -123,6 +130,9 @@ export function createFastifyBoundary<
   // The apps' servers the plugin is registered in: one registration per app, so replies outside a request context
   // report to one set of hooks.
   const registeredServers = new WeakSet<object>();
+  // The apps' servers that register `@fastify/compress`, whose `onSend` hook a hijacked reply skips: the boundary
+  // compresses its own replies there.
+  const compressingServers = new WeakSet<object>();
 
   const plugin: FastifyPluginAsync<RegistrationOptions<Hooks, Handlers, Operation>> = async (
     fastify,
@@ -137,6 +147,8 @@ export function createFastifyBoundary<
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
 
     registeredServers.add(fastify.server);
+
+    if (fastify.hasReplyDecorator(COMPRESS_REPLY_DECORATOR)) compressingServers.add(fastify.server);
     registerBasePathClaim(fastify.server, api);
     warnUnboundedParams();
     registered.hooks = options.hooks;
@@ -160,7 +172,7 @@ export function createFastifyBoundary<
 
       if (basePath === "" || fastify.hasRoute({ url: wildcard, method: "GET" })) continue;
 
-      fastify.all(wildcard, {
+      fastify.all(belowPrefix(fastify, wildcard), {
         onRequest: (request, reply, done) => {
           const reported = reportedRequest(request.raw);
           const matched = matchContractRoute(api, reported.method, reported.path);
@@ -213,10 +225,10 @@ export function createFastifyBoundary<
       });
     }
 
-    if (fastify.prefix !== "") {
+    if (!isServedPrefix(fastify.prefix)) {
       problems.push({
-        problem: `the plugin is registered under the prefix '${fastify.prefix}', which differs from the contract's empty mount`,
-        fix: "register the plugin without a prefix",
+        problem: `the plugin is registered under the prefix '${fastify.prefix}', which is neither the contract's empty mount nor its base path`,
+        fix: `register the plugin without a prefix${servedPrefixHint()}`,
       });
     }
 
@@ -235,6 +247,23 @@ export function createFastifyBoundary<
     }
 
     return problems;
+  }
+
+  // No prefix, or the base path every other base path of the api sits under: Fastify then registers each route
+  // at the path the contract declares.
+  function isServedPrefix(prefix: string): boolean {
+    if (prefix === "") return true;
+
+    return (
+      api.basePaths.includes(prefix) &&
+      api.basePaths.every((basePath) => isUnderBasePath({ basePaths: [prefix] }, basePath))
+    );
+  }
+
+  function servedPrefixHint(): string {
+    const servedPrefix = api.basePaths.find(isServedPrefix);
+
+    return servedPrefix === undefined ? "" : ` or under the prefix '${servedPrefix}'`;
   }
 
   function warnUnboundedParams(): void {
@@ -336,7 +365,9 @@ export function createFastifyBoundary<
 
     fastify.route({
       method: route.method.toUpperCase(),
-      url: fastifyPath(route.path),
+      url: fastifyPath(belowPrefix(fastify, route.path)),
+      // A route at the prefix itself serves only the prefix, not the undeclared path with a trailing slash.
+      prefixTrailingSlash: PREFIX_ONLY,
       ...(route.input === undefined ? {} : { bodyLimit: route.input.limitBytes }),
       config: { [operationConfigKey]: route.id },
       onRequest: (request, reply, done) => {
@@ -550,6 +581,14 @@ export function createFastifyBoundary<
 
     reply.hijack();
 
+    if (compressingServers.has(reply.server.server)) {
+      const acceptEncoding = headerValue(reply.request.headers, ACCEPT_ENCODING_HEADER);
+
+      encodeBoundaryReplies(reply.raw, (contractReply) =>
+        compressedReply(contractReply, acceptEncoding),
+      );
+    }
+
     return reply.raw;
   }
 
@@ -747,6 +786,14 @@ function isRouterError(error: unknown): boolean {
   const code: unknown = error instanceof Error ? Reflect.get(error, "code") : undefined;
 
   return typeof code === "string" && ROUTER_ERROR_CODES.includes(code);
+}
+
+// The path to register under the plugin's prefix, which Fastify prepends; the boot check allows only a prefix every
+// contract path starts with.
+function belowPrefix(fastify: FastifyInstance, path: string): string {
+  const below = path.slice(fastify.prefix.length);
+
+  return below === "" ? "/" : below;
 }
 
 // Fastify's syntax with positional param names, a literal `:` doubled; the generator refuses a segment that mixes a

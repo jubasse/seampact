@@ -16,6 +16,17 @@ import {
 import { settleIdempotency } from "./idempotency.js";
 import { BODY_HEADERS, groupedHeaders, mergedVary, VARY_HEADER } from "./reply-headers.js";
 
+/** Turns a contract reply into the one written on a response, after its idempotency record keeps it as rendered. */
+export type ReplyEncoder = (reply: ContractReply) => ContractReply;
+
+// The encoder of each response whose framework leaves the boundary's replies unencoded.
+const replyEncoders = new WeakMap<ServerResponse, ReplyEncoder>();
+
+/** Encodes every reply the boundary writes on this response, a replay and a contract error included. */
+export function encodeBoundaryReplies(response: ServerResponse, encoder: ReplyEncoder): void {
+  replyEncoders.set(response, encoder);
+}
+
 /** Writes a reply of the boundary's own with `res.end`, after completing its idempotency record. */
 export async function writeContractReply(
   response: ServerResponse,
@@ -39,9 +50,11 @@ export async function writeContractReply(
     return;
   }
 
-  response.statusCode = reply.status;
-  applyReplyHeaders(response, reply.headers);
-  response.end(reply.body);
+  const written = replyEncoders.get(response)?.(reply) ?? reply;
+
+  response.statusCode = written.status;
+  applyReplyHeaders(response, written.headers);
+  response.end(written.body);
 }
 
 /**

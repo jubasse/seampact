@@ -132,7 +132,7 @@ function payloadVariant(
     case "item":
       return `{ ${status} body: ${payload}; }`;
     case "table":
-      return `{ ${status} body: ${payload}[]; }`;
+      return `{ ${status} body: Record<string, ${payload}>; }`;
     case "page":
       return `{ ${status} body: ${pageResult(payload, operation, location, context)}; }`;
   }

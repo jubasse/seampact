@@ -10,6 +10,12 @@ import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-
 import { createMemoryIdempotencyStore } from "@seampact/idempotency-memory";
 import { verifyTemplateSignature } from "@seampact/signed-webhooks";
 import {
+  type ControlReply,
+  hookCallsReply,
+  loadScriptReply,
+  logLinesReply,
+} from "../src/suite-control.mjs";
+import {
   SERVICE_JWT,
   SERVICE_NAME,
   STRIPE_KEY_ID,
@@ -19,12 +25,6 @@ import {
   USER_ID,
   USER_TOKEN,
 } from "./credentials.mjs";
-import {
-  type ControlReply,
-  hookCallsReply,
-  loadScriptReply,
-  logLinesReply,
-} from "../src/suite-control.mjs";
 
 export interface RunningServer {
   readonly baseUrl: string;
@@ -136,7 +136,10 @@ const ROUTES: readonly Route[] = [
     method: "POST",
     pattern: /^\/v1\/channels\/([^/]+)\/tasks\/batch$/,
     access: "user",
-    answer: (call) => ({ status: 200, body: idsOf(call.body).map((taskId) => task(taskId)) }),
+    answer: (call) => ({
+      status: 200,
+      body: Object.fromEntries(idsOf(call.body).map((taskId) => [taskId, task(taskId)])),
+    }),
   },
   {
     operation: "searchTasks",

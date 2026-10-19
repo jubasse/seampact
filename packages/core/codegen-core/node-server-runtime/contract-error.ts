@@ -18,6 +18,8 @@ export interface ContractReply {
   readonly status: number;
   readonly headers: readonly (readonly [name: string, value: string])[];
   readonly body: Uint8Array;
+  /** On a 304: the byte length of the body it stands for, so an encoder gives it the validator that body would get. */
+  readonly representationBytes?: number;
 }
 
 /** A declared error code of the operation, raised by a check step and rendered by the filter. */

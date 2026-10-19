@@ -53,6 +53,7 @@ interface ReferenceAppModule {
     writer?: string,
   ) => Error;
   readonly RenderedByHelper: new (cause: unknown) => Error;
+  readonly DROP_PARSED_BODY_HEADER: string;
   frameworkRefusal(code: string, status: number): Error;
   registration(): Record<string, unknown>;
   resetScenario(): void;
@@ -399,6 +400,20 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
       expect(reply.status).toBe(400);
       expect(JSON.parse(reply.text).issues).toEqual([{ pointer: "", rule: "required" }]);
       expect(app.calls.handled).toEqual([]);
+    });
+
+    test("a body the bodyparser did not read answers 500 naming the bodyparser fix", async () => {
+      const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+        headers: { ...writeHeaders(), [app.DROP_PARSED_BODY_HEADER]: "1" },
+        body: JSON.stringify({ title: "Plan" }),
+      });
+
+      expect(reply.status).toBe(500);
+      expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+      expect(app.calls.handled).toEqual([]);
+      expect(String(app.calls.unexpected[0]?.exceptionOrReply)).toContain(
+        "got a body the bodyparser did not read",
+      );
     });
 
     test("a body over the route limit answers 413 with its limit", async () => {

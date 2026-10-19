@@ -6,6 +6,7 @@ const STUB_REASON =
 
 export const TARGET_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "batch-body-limit": STUB_REASON,
+  "batch-read-without-csrf-or-key": STUB_REASON,
   "body-above-limit": STUB_REASON,
   "cache-family-headers": STUB_REASON,
   "caller-service-not-listed-forbidden": STUB_REASON,
@@ -31,6 +32,7 @@ export const TARGET_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "scope-non-member-denied": STUB_REASON,
   "stale-body-version-conflict": STUB_REASON,
   "undeclared-handler-error-answers-internal-error": STUB_REASON,
+  "undeclared-member-stripped-from-page-items": STUB_REASON,
   "undeclared-status-answers-internal-error": STUB_REASON,
   "unknown-body-key-refused": STUB_REASON,
   "unknown-enum-value-refused": STUB_REASON,

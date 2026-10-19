@@ -9,6 +9,7 @@ import {
   problemBody,
   projectDirectory,
   type RawReply,
+  type ReferenceIrChange,
   sendRawRequest,
 } from "@seampact/codegen-core/node-server/test-support";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
@@ -30,6 +31,7 @@ const BEARER = { authorization: `Bearer user-${USER}` };
 const PROBLEM_MEDIA = "application/problem+json";
 const TOO_LARGE_BODY_BYTES = 1_048_577;
 const LONGER_THAN_MAX_PARAM_LENGTH = 101;
+const BASE_PATH = "/v1";
 
 interface ReferenceAppModule {
   readonly ALLOWED_ORIGIN: string;
@@ -52,6 +54,7 @@ interface ReferenceAppModule {
   bootWith(registration: object, instanceOptions?: object, prefix?: string): Promise<void>;
   bootTwice(registration: object): Promise<void>;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  startPrefixedApp(prefix: string): Promise<{ host: string; port: number; close(): Promise<void> }>;
   startTwoApiApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
 }
 
@@ -376,8 +379,18 @@ describe("the boot check", () => {
     const { TasksEndpoints: _omitted, ...handlers } = app.handlers;
 
     await expect(
-      app.bootWith({ handlers, hooks: app.hooks, operations: { nothing: {} } }, {}, "/v1"),
-    ).rejects.toThrow(/TasksEndpoints[\s\S]*'operations' names 'nothing'[\s\S]*prefix '\/v1'/);
+      app.bootWith({ handlers, hooks: app.hooks, operations: { nothing: {} } }, {}, "/api"),
+    ).rejects.toThrow(
+      /TasksEndpoints[\s\S]*'operations' names 'nothing'[\s\S]*prefix '\/api'[\s\S]*under the prefix '\/v1'/,
+    );
+  });
+
+  test("a prefix equal to the contract's base path boots", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    await expect(
+      app.bootWith({ handlers: app.handlers, hooks: app.hooks }, {}, "/v1"),
+    ).resolves.toBeUndefined();
   });
 
   test("an instance without HEAD routes stops the boot", async () => {
@@ -394,6 +407,47 @@ describe("the boot check", () => {
     await expect(app.bootTwice({ handlers: app.handlers, hooks: app.hooks })).rejects.toThrow(
       /registered twice/,
     );
+  });
+});
+
+const HEALTH_OPERATION = "health";
+
+// The health route moved to the base path itself, the path a registration prefix equal to it leaves as `/`.
+const healthAtBasePath: ReferenceIrChange = (ir, api) =>
+  api === "tasks"
+    ? {
+        ...ir,
+        operations: ir.operations.map((operation) =>
+          operation.id === HEALTH_OPERATION ? { ...operation, path: BASE_PATH } : operation,
+        ),
+      }
+    : ir;
+
+describe("a route at the base path under a prefix equal to it", () => {
+  const project = projectDirectory(import.meta.url, "live-route-at-prefix");
+  let prefixedApp: ReferenceAppModule;
+  let prefixedServer: Awaited<ReturnType<ReferenceAppModule["startPrefixedApp"]>>;
+
+  beforeAll(async () => {
+    const files = await generateReferenceProject(project, fastifyTarget, {}, healthAtBasePath);
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+    prefixedApp = await import(copyTestApp(build, APP_SOURCE));
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    prefixedServer = await prefixedApp.startPrefixedApp(BASE_PATH);
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  afterAll(async () => {
+    await prefixedServer?.close();
+  });
+
+  test("serves the base path and leaves its trailing-slash form unserved", async () => {
+    const served = await sendRawRequest(prefixedServer, "GET", BASE_PATH);
+    const trailingSlash = await sendRawRequest(prefixedServer, "GET", `${BASE_PATH}/`);
+
+    expect(served.status).toBe(200);
+    expect(trailingSlash.status).toBe(404);
   });
 });
 

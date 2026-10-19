@@ -475,6 +475,10 @@ function successAnswer(
 
   if (success.shape === "empty") return { ok: true, status, headers, ...replay };
 
+  if (success.shape === "table") {
+    return isTable(body) ? { ok: true, status, headers, body, ...replay } : undefined;
+  }
+
   if (success.shape !== "page") {
     return body === undefined || body === null
       ? undefined
@@ -487,6 +491,11 @@ function successAnswer(
   const page = nextCursor === undefined ? { items: body } : { items: body, nextCursor };
 
   return { ok: true, status, headers, body: page, ...replay };
+}
+
+// A table is a JSON object keyed by item id; an array or a scalar is outside the contract.
+function isTable(body: unknown): body is Record<string, unknown> {
+  return typeof body === "object" && body !== null && !Array.isArray(body);
 }
 
 // The cursor query param of the `Link` target whose relation is `next`; absent at the last page.
