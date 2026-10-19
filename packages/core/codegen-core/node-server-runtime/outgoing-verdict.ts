@@ -163,9 +163,14 @@ export async function successBodyViolation(
 
   if (response === undefined || validator === undefined) return undefined;
 
-  const items = bodyItems(parseJson(body), response.shape);
+  const parsed = parseJson(body);
+  const items = bodyItems(parsed, response.shape);
 
   if (typeof items === "string") return `a ${status} ${response.shape} body that is not ${items}`;
+
+  const misplacedKey = tableKeyMismatch(parsed, response.tableKeyProperty);
+
+  if (misplacedKey !== undefined) return `a ${status} table body ${misplacedKey}`;
 
   for (const item of items) {
     const result = await validator["~standard"].validate(item);
@@ -187,6 +192,21 @@ function bodyItems(parsed: unknown, shape: string): readonly unknown[] | string 
   }
 
   return [parsed];
+}
+
+// A table's keys are its items' ids: the first key that differs from its item's id property, described.
+function tableKeyMismatch(parsed: unknown, keyProperty: string | undefined): string | undefined {
+  if (keyProperty === undefined || !isPlainObject(parsed)) return undefined;
+
+  for (const [key, item] of Object.entries(parsed)) {
+    const itemId: unknown = isPlainObject(item) ? item[keyProperty] : undefined;
+
+    if (String(itemId) !== key) {
+      return `whose key '${key}' differs from its item's '${keyProperty}'`;
+    }
+  }
+
+  return undefined;
 }
 
 function parseJson(body: Uint8Array): unknown {

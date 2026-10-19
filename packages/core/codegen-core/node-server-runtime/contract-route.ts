@@ -160,6 +160,8 @@ export interface ResponseEntry {
   readonly body?: ValueShape;
   /** Present when the target option `bodyValidation` is on: validates one item of the body. */
   readonly itemValidator?: StandardValidator;
+  /** On a table: the item property each key of the body equals. */
+  readonly tableKeyProperty?: string;
 }
 
 export interface ContractRoute {

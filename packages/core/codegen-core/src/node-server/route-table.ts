@@ -249,6 +249,10 @@ function routeEntry(
       itemValidator: options.withItemValidators
         ? itemValidator(response.body, validators, imports)
         : undefined,
+      tableKeyProperty:
+        response.shape === "table"
+          ? tableKeyProperty(operation, below(location, "resource", "idProperty"), refusals)
+          : undefined,
     })),
     errors: Object.fromEntries(
       operation.errors.map((error, index) => [
@@ -1164,6 +1168,27 @@ function outputShapes(ir: ContractIR, refusals: Refusal[]): SourceValue {
   }
 
   return shapes;
+}
+
+// A table is keyed by each item's id property (ADR 0002 section 6), which the operation's resource carries.
+function tableKeyProperty(
+  operation: Operation,
+  location: IrLocation,
+  refusals: Refusal[],
+): string | undefined {
+  const idProperty = operation.resource?.idProperty;
+
+  if (idProperty === undefined) {
+    refusals.push(
+      refuseInconsistentIr(
+        "operation.table.idProperty.missing",
+        "A table response whose operation's resource has no item id property",
+        location,
+      ),
+    );
+  }
+
+  return idProperty;
 }
 
 function itemValidator(

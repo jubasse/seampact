@@ -38,6 +38,13 @@ const TASK = "44444444-4444-4444-8444-444444444444";
 const USER = "55555555-5555-4555-8555-555555555555";
 const BEARER = { authorization: `Bearer user-${USER}` };
 const PROBLEM_MEDIA = "application/problem+json";
+const TASK_ITEM = {
+  taskId: TASK,
+  title: "Write the slice test",
+  state: "open",
+  version: 1,
+  createdAt: "2026-10-18T09:00:00.000Z",
+};
 const TOO_LARGE_BODY_BYTES = 1_048_577;
 // The code of a body over its limit, marked as a code whose params carry a sensitive value.
 const NO_STORE_CODE = "api.payload_too_large";
@@ -295,6 +302,24 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
     expect(app.calls.unexpected).toHaveLength(1);
   });
 
+  test.each([
+    [200, "keyed by its items' ids", { [TASK]: TASK_ITEM }],
+    [500, "that is an array", [TASK_ITEM]],
+    [500, "keyed by something other than its items' ids", { [OTHER_CHANNEL]: TASK_ITEM }],
+  ])("answers %i to an app-written batch read %s", async (status, _case, table) => {
+    app.scenario.answers.getTasksBatch = () => {
+      throw new app.AppReply(200, "application/json", JSON.stringify(table));
+    };
+
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks/batch`, {
+      headers: BEARER,
+      body: JSON.stringify({ ids: [TASK] }),
+    });
+
+    expect(reply.status).toBe(status);
+    expect(app.calls.unexpected).toHaveLength(status === 200 ? 0 : 1);
+  });
+
   test("a corrupt gzip body is the client's 400, not a server failure", async () => {
     const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
       headers: { ...writeHeaders(), "content-encoding": "gzip" },
@@ -465,6 +490,7 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
 
     test("an error an app route renders without awaiting it reports to the nested router", async () => {
       const reply = await sendRawRequest(nestedServer, "GET", "/own/render-error");
+
       await new Promise((resolve) => setImmediate(resolve));
 
       expect(reply.status).toBe(500);
