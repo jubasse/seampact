@@ -250,9 +250,9 @@ describe("a required opaque member must be present, null is a value", () => {
   });
 
   test("absent data is required", async () => {
-    expect(
-      await inputVerdict("PaymentsInputSchema", payment({ id: "evt", type: "paid" })),
-    ).toEqual(["/body/data required"]);
+    expect(await inputVerdict("PaymentsInputSchema", payment({ id: "evt", type: "paid" }))).toEqual(
+      ["/body/data required"],
+    );
   });
 
   test("null data passes", async () => {

@@ -34,7 +34,11 @@ const BASE_TYPES: Readonly<Record<ScalarBase, string>> = {
 // A decorated class field. An optional field skips its checks when absent; `null` is still checked.
 export function fieldDeclaration(field: FieldPlan, context: DtoRenderContext): string {
   const presence = field.optional ? [`@${CONTRACT}.ValidateIfPresent()`] : [];
-  const decorators = [...presence, ...openTypePresence(field), ...typeDecorators(field.type, context)];
+  const decorators = [
+    ...presence,
+    ...openTypePresence(field),
+    ...typeDecorators(field.type, context),
+  ];
   const declaration = `${propertyKey(field.key)}${field.optional ? "?" : "!"}: ${typeText(field.type, context)};`;
 
   return [...decorators, declaration].join("\n");
