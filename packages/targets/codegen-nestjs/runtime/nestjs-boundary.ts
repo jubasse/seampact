@@ -78,11 +78,16 @@ import {
   type ResponsesMode,
 } from "./node-server/contract-route.js";
 import { logWriteFailure, notFoundError } from "./node-server/error-reply.js";
+import { routeKey } from "./node-server/framework-route-patterns.js";
 import { frameworkRouteProblems } from "./node-server/framework-routes.js";
 import { handlerReply } from "./node-server/handler-reply.js";
 import { beginIdempotency } from "./node-server/idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./node-server/input-checks.js";
-import { expressRouteListing } from "./node-server/node-express-routes.js";
+import {
+  everyRouteHandler,
+  expressRouteListing,
+  routeEntries,
+} from "./node-server/node-express-routes.js";
 import { installOutgoingCheck } from "./node-server/node-outgoing-check.js";
 import {
   respondNotServed,
@@ -158,6 +163,56 @@ function isOperationHandler(handler: unknown): boolean {
   return (
     typeof handler === "function" && Reflect.getMetadata(OPERATION_METADATA, handler) !== undefined
   );
+}
+
+// NestJS binds a middleware applied to a route as an Express route of its own, in a wrapper that keeps no trace of
+// the middleware. Every api records the routes it applies its middleware to, by adapter, in one registry for every
+// api's copy of this module; the check takes one Express route per record as the boundary's, so a second route at
+// a contract path is still listed.
+const MIDDLEWARE_ROUTES_KEY = Symbol.for("seampact.nestjs.middleware-routes");
+
+function middlewareRouteRegistry(): WeakMap<object, string[]> {
+  const existing: unknown = Reflect.get(globalThis, MIDDLEWARE_ROUTES_KEY);
+
+  if (existing instanceof WeakMap) return existing;
+
+  const created = new WeakMap<object, string[]>();
+
+  Reflect.set(globalThis, MIDDLEWARE_ROUTES_KEY, created);
+
+  return created;
+}
+
+function recordMiddlewareRoutes(adapter: object, routes: readonly ContractRoute[]): void {
+  const registry = middlewareRouteRegistry();
+  const keys = routes.map((route) => routeKey(methodOf(route).toUpperCase(), nestPath(route.path)));
+
+  registry.set(adapter, [...(registry.get(adapter) ?? []), ...keys]);
+}
+
+function middlewareRoutesOf(adapter: object): readonly string[] {
+  return middlewareRouteRegistry().get(adapter) ?? [];
+}
+
+// An operation's route, or one route per recorded middleware binding with its method and path; fresh per check.
+function boundaryRouteFilter(middlewareRoutes: readonly string[]): (route: object) => boolean {
+  const unclaimed = [...middlewareRoutes];
+
+  return (route) => {
+    if (everyRouteHandler(route, isOperationHandler)) return true;
+
+    const [entry, ...others] = routeEntries(route);
+
+    if (entry === undefined || others.length > 0) return false;
+
+    const index = unclaimed.indexOf(routeKey(entry.method, entry.path));
+
+    if (index === -1) return false;
+
+    unclaimed.splice(index, 1);
+
+    return true;
+  };
 }
 
 function isFrameworkDenial(error: unknown): boolean {
@@ -459,7 +514,11 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       // Claimed before any api's boot check runs, so each check sees every api's routes.
       const adapter: object | undefined = this.adapterHost.httpAdapter;
 
-      if (adapter !== undefined) registerBasePathClaim(adapter, api);
+      if (adapter !== undefined) {
+        registerBasePathClaim(adapter, api);
+        recordMiddlewareRoutes(adapter, api.routes);
+      }
+
       consumer.apply(middleware(this.hooks)).forRoutes(
         ...api.routes.map((route) => ({
           path: nestPath(route.path),
@@ -525,7 +584,10 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       if (api.frameworkRoutes.status === "off") return [];
 
       const adapter: AbstractHttpAdapter | undefined = this.adapterHost.httpAdapter;
-      const listing = expressRouteListing(adapter?.getInstance(), isOperationHandler);
+      const listing = expressRouteListing(
+        adapter?.getInstance(),
+        boundaryRouteFilter(adapter === undefined ? [] : middlewareRoutesOf(adapter)),
+      );
 
       return [...listing.problems, ...frameworkRouteProblems(api.frameworkRoutes, listing.routes)];
     }

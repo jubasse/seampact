@@ -21,18 +21,18 @@ const MOUNTED_APP_LAYER = "mounted_app";
 interface Listing {
   readonly routes: ListedRoute[];
   readonly problems: BootProblem[];
-  readonly isBoundaryHandler: (handler: unknown) => boolean;
+  readonly isBoundaryOwned: (route: object) => boolean;
 }
 
 /**
- * The routes of an Express app outside the apis it mounts, and a problem per mount the listing cannot read. A route
- * whose every handler the boundary owns is the boundary's: marked by default, or as the target tells.
+ * The routes of an Express app outside the apis it mounts, and a problem per mount the listing cannot read. An
+ * Express route (`layer.route`) is the boundary's when every handler is marked, or as the target tells.
  */
 export function expressRouteListing(
   app: unknown,
-  isBoundaryHandler: (handler: unknown) => boolean = isBoundaryRoute,
+  isBoundaryOwned: (route: object) => boolean = isEveryHandlerMarked,
 ): ExpressRouteListing {
-  const listing: Listing = { routes: [], problems: [], isBoundaryHandler };
+  const listing: Listing = { routes: [], problems: [], isBoundaryOwned };
   const appRouter: unknown = isObjectLike(app)
     ? (Reflect.get(app, "_router") ?? Reflect.get(app, "router"))
     : undefined;
@@ -70,7 +70,7 @@ function listLayer(layer: object, listing: Listing, visited: Set<object>): void 
   const route: unknown = Reflect.get(layer, "route");
 
   if (isObjectLike(route)) {
-    if (!isBoundaryOwned(route, listing)) listing.routes.push(...routeEntries(route));
+    if (!listing.isBoundaryOwned(route)) listing.routes.push(...routeEntries(route));
 
     return;
   }
@@ -97,7 +97,8 @@ function listLayer(layer: object, listing: Listing, visited: Set<object>): void 
   });
 }
 
-function routeEntries(route: object): ListedRoute[] {
+/** The methods and path of an Express route, as the listing names them. */
+export function routeEntries(route: object): ListedRoute[] {
   const methods: unknown = Reflect.get(route, "methods");
   const paths: unknown = Reflect.get(route, "path");
   const pathList = Array.isArray(paths) ? paths : [paths];
@@ -114,15 +115,19 @@ function routeEntries(route: object): ListedRoute[] {
     );
 }
 
-function isBoundaryOwned(route: object, listing: Listing): boolean {
+/** Whether every handler of an Express route passes `isOwned`; false for a route without a handler. */
+export function everyRouteHandler(route: object, isOwned: (handler: unknown) => boolean): boolean {
   const stack: unknown = Reflect.get(route, "stack");
 
   if (!Array.isArray(stack) || stack.length === 0) return false;
 
   return stack.every(
-    (layer: unknown) =>
-      isObjectLike(layer) && listing.isBoundaryHandler(Reflect.get(layer, "handle")),
+    (layer: unknown) => isObjectLike(layer) && isOwned(Reflect.get(layer, "handle")),
   );
+}
+
+function isEveryHandlerMarked(route: object): boolean {
+  return everyRouteHandler(route, isBoundaryRoute);
 }
 
 // Express 4 marks a root mount with `regexp.fast_slash`, Express 5 with `slash`.
