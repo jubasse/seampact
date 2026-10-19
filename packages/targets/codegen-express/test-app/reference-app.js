@@ -1,6 +1,7 @@
 // An Express app around the generated `tasks` router, for the live boundary test: the shared scenario's handler map
 // and hooks, app middleware before the router, an app error middleware, routes of the app's own and a router
-// mounted under a path with hooks of its own; and an app with two apis on one base path. Copied next to the compiled generated tree, so
+// mounted under a path with hooks of its own; an app with the router nested in a parent router, one without a
+// router; and an app with two apis on one base path. Copied next to the compiled generated tree, so
 // it imports the generated modules by relative path. The test links `express` to the major it runs.
 import express from "express";
 import * as TasksExpress from "../generated/server/tasks/index.js";
@@ -27,6 +28,19 @@ const mountedRouterHooks = {
   ...hooks,
   onUnexpectedError(exceptionOrReply) {
     mountedRouterUnexpected.push(exceptionOrReply);
+  },
+};
+
+// The route's own body limit: a lower app parser limit is a setup error, not the client's 413.
+const APP_PARSER_LIMIT = "1mb";
+
+/** What the hooks of the router nested in a parent router saw. */
+export const nestedRouterUnexpected = [];
+
+const nestedRouterHooks = {
+  ...hooks,
+  onUnexpectedError(exceptionOrReply) {
+    nestedRouterUnexpected.push(exceptionOrReply);
   },
 };
 
@@ -74,23 +88,13 @@ export async function startReferenceApp() {
     response.setHeader("strict-transport-security", "max-age=63072000");
     response.setHeader("x-content-type-options", "nosniff");
 
-    const failure = request.headers[FAIL_BEFORE_HEADER];
-
-    if (typeof failure === "string") {
-      next(Object.assign(new Error("refused before the router"), { status: Number(failure) }));
-
-      return;
-    }
-
-    next();
+    failBeforeOnDemand(request, response, next);
   });
   app.use(
     TasksExpress.router({ handlers, hooks, operations: { getChannel: { responses: "warn" } } }),
   );
   app.use("/mounted", TasksExpress.router({ handlers, hooks: mountedRouterHooks }));
-  app.get("/own/render-error", (_request, response) => {
-    TasksExpress.renderContractError(response, new Error(APP_RENDERED_ERROR));
-  });
+  app.get("/own/render-error", renderWithoutAwait);
   app.get("/own/boom", () => {
     throw new Error("own boom");
   });
@@ -105,6 +109,51 @@ export async function startReferenceApp() {
   });
 
   return listen(app);
+}
+
+/**
+ * Builds an app whose `tasks` router sits in a parent router mounted at the root, with hooks of its own, an app
+ * middleware that fails before it on demand, an app body parser at the route's limit, and an app route that renders an error without awaiting it; listens
+ * on a free port.
+ */
+export async function startNestedRouterApp() {
+  const app = express();
+  const parentRouter = express.Router();
+
+  app.use(failBeforeOnDemand);
+  app.use(express.json({ limit: APP_PARSER_LIMIT }));
+  parentRouter.use(TasksExpress.router({ handlers, hooks: nestedRouterHooks }));
+  app.use(parentRouter);
+  app.get("/own/render-error", renderWithoutAwait);
+  app.use(TasksExpress.preRoutingErrorHandler);
+
+  return listen(app);
+}
+
+/** Builds an app that mounts no `tasks` router but renders its errors; listens on a free port. */
+export async function startRouterlessApp() {
+  const app = express();
+
+  app.get("/own/render-error", renderWithoutAwait);
+
+  return listen(app);
+}
+
+// As an app may write it: the promise is dropped, so a rejection would be unhandled.
+function renderWithoutAwait(_request, response) {
+  TasksExpress.renderContractError(response, new Error(APP_RENDERED_ERROR));
+}
+
+function failBeforeOnDemand(request, _response, next) {
+  const failure = request.headers[FAIL_BEFORE_HEADER];
+
+  if (typeof failure === "string") {
+    next(Object.assign(new Error("refused before the router"), { status: Number(failure) }));
+
+    return;
+  }
+
+  next();
 }
 
 /**

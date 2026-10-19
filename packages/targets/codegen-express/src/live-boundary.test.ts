@@ -47,6 +47,7 @@ interface ReferenceAppModule {
   readonly FAIL_BEFORE_HEADER: string;
   readonly APP_RENDERED_ERROR: string;
   readonly mountedRouterUnexpected: unknown[];
+  readonly nestedRouterUnexpected: unknown[];
   readonly calls: {
     readonly scopeIds: unknown[];
     readonly handled: string[];
@@ -73,6 +74,8 @@ interface ReferenceAppModule {
   resetScenario(): void;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
   startTwoApiApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  startNestedRouterApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  startRouterlessApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
 }
 
 // The message of a reported exception, whether the hook recorded it alone or with its context.
@@ -417,6 +420,73 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
     expect(reply.status).toBe(500);
     expect(app.calls.unexpected.map(reportedMessage)).toEqual([app.APP_RENDERED_ERROR]);
     expect(app.mountedRouterUnexpected.map(reportedMessage)).not.toContain(app.APP_RENDERED_ERROR);
+  });
+
+  describe("with the router nested in a parent router", () => {
+    let nestedServer: Awaited<ReturnType<ReferenceAppModule["startNestedRouterApp"]>>;
+    const unhandled: unknown[] = [];
+    const recordUnhandled = (reason: unknown): void => {
+      unhandled.push(reason);
+    };
+
+    beforeAll(async () => {
+      nestedServer = await app.startNestedRouterApp();
+      process.on("unhandledRejection", recordUnhandled);
+    });
+
+    afterAll(async () => {
+      process.off("unhandledRejection", recordUnhandled);
+      await nestedServer?.close();
+    });
+
+    beforeEach(() => {
+      unhandled.length = 0;
+      app.nestedRouterUnexpected.length = 0;
+    });
+
+    test("an app middleware's 401 before the router answers in the api's format", async () => {
+      const reply = await sendRawRequest(nestedServer, "GET", "/v1/me/preferences", {
+        headers: { [app.FAIL_BEFORE_HEADER]: "401" },
+      });
+
+      expect(reply.status).toBe(401);
+      expect(JSON.parse(reply.text)).toMatchObject({ code: "api.unauthenticated" });
+    });
+
+    test("an app body parser's 413 before the router answers in the api's format", async () => {
+      const reply = await sendRawRequest(nestedServer, "POST", `/v1/channels/${CHANNEL}/tasks`, {
+        headers: writeHeaders(),
+        body: JSON.stringify({ title: "x".repeat(TOO_LARGE_BODY_BYTES) }),
+      });
+
+      expect(reply.status).toBe(413);
+      expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+    });
+
+    test("an error an app route renders without awaiting it reports to the nested router", async () => {
+      const reply = await sendRawRequest(nestedServer, "GET", "/own/render-error");
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(reply.status).toBe(500);
+      expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+      expect(app.nestedRouterUnexpected.map(reportedMessage)).toEqual([app.APP_RENDERED_ERROR]);
+      expect(unhandled).toEqual([]);
+    });
+  });
+
+  test("an error rendered by an app with none of the api's routers answers in its format and says why", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const routerless = await app.startRouterlessApp();
+
+    try {
+      const reply = await sendRawRequest(routerless, "GET", "/own/render-error");
+
+      expect(reply.status).toBe(500);
+      expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+      expect(error).toHaveBeenCalledWith(expect.stringContaining("is reachable from the app"));
+    } finally {
+      await routerless.close();
+    }
   });
 
   test("an app middleware's 401 before the router is rendered by the exported error middleware", async () => {
