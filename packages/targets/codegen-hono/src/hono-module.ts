@@ -32,6 +32,8 @@ export function honoModuleSource(
     "",
     "/** Registers the api on the app that serves: `registerRoutes(app, { handlers, hooks })`; runs the boot check. */",
     "export const registerRoutes = boundary.registerRoutes;",
+    "/** The framework-route boot check: call it with the app once every route is added, before it serves. */",
+    "export const checkFrameworkRoutes = boundary.checkFrameworkRoutes;",
     "/** The reply of a contract error in the api's format, for the app's `onError`. */",
     "export const renderContractError = boundary.renderContractError;",
     "/** The api's reply to a 401, 403 or 429 app middleware raised on a contract route, for `onError`; undefined otherwise. */",

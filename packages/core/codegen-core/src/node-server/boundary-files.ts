@@ -3,6 +3,7 @@ import { type ContractIR, IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { apiIndexSource } from "../api-index.js";
 import { defineTarget } from "../define-target.js";
 import type { ValidatorStyle } from "../descriptors.js";
+import type { TunableBootCheck } from "../framework-route-check.js";
 import type { GenerateWarning } from "../generate-warning.js";
 import { type Refusal, withoutRepeats } from "../refusal.js";
 import type {
@@ -27,6 +28,9 @@ import { handlersSource, hookTypesSource } from "./server-types.js";
 export const BOUNDARY_ARTEFACT = "boundary";
 
 export type BoundaryArtefact = typeof BOUNDARY_ARTEFACT;
+
+/** The boot checks a Node server target generates that its app config entry may tune. */
+export const NODE_SERVER_BOOT_CHECKS: readonly TunableBootCheck[] = ["frameworkRoutes"];
 
 /** What a Node server target adds to the shared files. */
 export interface NodeServerPlacement {
@@ -74,6 +78,7 @@ export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target
         features: [],
       },
       artefacts: [{ id: BOUNDARY_ARTEFACT, defaultOn: true }],
+      bootChecks: NODE_SERVER_BOOT_CHECKS,
       consumes: {
         types: { styles: ["typescript"] },
         validators: { styles: [...targetPackage.validatorStyles] },
@@ -105,6 +110,7 @@ export function nodeServerBoundaryFiles(
     {
       runtimeModule: `./${runtimeDirectory}/contract-route.js`,
       withItemValidators: options.bodyValidation,
+      frameworkRoutes: input.frameworkRoutes,
     },
     refusals,
     warnings,

@@ -3,7 +3,7 @@
 import { Module } from "@nestjs/common";
 import * as TasksNest from "../generated/server/tasks/index.js";
 import * as TasksServiceNest from "../generated/server/tasksService/index.js";
-import { bootVariantIs } from "./boot-variant.mjs";
+import { bootVariantIs, servesUnlistedRoute } from "./boot-variant.mjs";
 import {
   AppController,
   ChannelsController,
@@ -14,7 +14,7 @@ import {
   TasksController,
 } from "./controllers.mjs";
 import { tasksHooks, tasksServiceHooks } from "./hooks.mjs";
-import { SuiteControlController } from "./suite-control-controller.mjs";
+import { SuiteControlController, UnlistedRouteController } from "./suite-control-controller.mjs";
 
 @Module({
   imports: [
@@ -31,6 +31,8 @@ import { SuiteControlController } from "./suite-control-controller.mjs";
     HooksController,
     InternalController,
     SuiteControlController,
+    // The framework-route boot variants serve a route outside the contract.
+    ...(servesUnlistedRoute() ? [UnlistedRouteController] : []),
   ],
 })
 export class ConsumerModule {}

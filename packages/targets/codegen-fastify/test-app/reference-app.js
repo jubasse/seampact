@@ -1,7 +1,8 @@
 // A Fastify app around the generated `tasks` plugin, for the live boundary test: the shared scenario's handler map
 // and hooks, an app root hook, an app error handler, a not-found handler and `frameworkErrors` that call the
 // exported helper, and routes of the app's own; an app with the plugin under a prefix; and an app with two apis on
-// one base path. Copied next to the compiled generated tree, so it imports the generated modules by relative path.
+// one base path; and an app that installs the framework-route collector too late. Copied next to the compiled
+// generated tree, so it imports the generated modules by relative path.
 import Fastify from "fastify";
 import * as TasksFastify from "../generated/server/tasks/index.js";
 import * as SecondFastify from "../generated/server/tasksService/index.js";
@@ -54,6 +55,19 @@ export async function bootWith(registrationOptions, instanceOptions = {}, prefix
   });
   await app.ready();
   await app.close();
+}
+
+/** Installs the framework-route collector on an app that already holds a route of its own. */
+export async function collectAfterOwnRoute() {
+  const app = Fastify();
+
+  app.get("/late", () => "late");
+
+  try {
+    TasksFastify.collectFrameworkRoutes(app);
+  } finally {
+    await app.close();
+  }
 }
 
 /** A fresh instance with the plugin registered twice; resolves once ready. */

@@ -6,3 +6,18 @@
     link:
       types: types
       validators: validators
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+  # The same server with the route of the 'allow-listed-framework-route' boot variant allow-listed, which that
+  # variant loads in place of the one above.
+  - id: server-allow-listed
+    use: "@seampact/codegen-hono"
+    apis: [tasks, tasksService]
+    options:
+      bodyValidation: true
+    link:
+      types: types
+      validators: validators
+    frameworkRoutes:
+      - { path: "/__seampact/**", reason: "The http suite's control routes (ADR 0015); not part of the api." }
+      - { method: GET, path: /v1/unlisted, reason: "The boot variant's framework route outside the contract." }

@@ -27,11 +27,11 @@ const SOURCE_KEY_WAITS: Readonly<Record<string, string>> = {
 
 const SERVER_ENTRY_BRINGER = "the server targets, through a codegen-core seam (p5)";
 
+const ARTEFACT_SWITCH_BRINGER = "artefact switches and their checks (p3-config)";
+
 const ENTRY_KEY_WAITS: Readonly<Record<string, string>> = {
-  artefacts: "artefact switches and their checks (p3-config)",
   mount: SERVER_ENTRY_BRINGER,
   access: SERVER_ENTRY_BRINGER,
-  frameworkRoutes: SERVER_ENTRY_BRINGER,
   frameworkDocs: SERVER_ENTRY_BRINGER,
   allowUntested: "the compatibility matrix (p3-config)",
 };
@@ -62,10 +62,40 @@ function targetEntryWaits(entry: unknown, index: number): ConfigWait[] {
 
   const path = ["targets", index];
   const keyWaits = waitingKeysOf(entry, path, ENTRY_KEY_WAITS);
+  const artefactWaits = Object.hasOwn(entry, "artefacts")
+    ? artefactSwitchWaits(entry.artefacts, [...path, "artefacts"])
+    : [];
   const useWaits = typeof entry.use === "string" ? nativeUseWaits(entry.use, [...path, "use"]) : [];
   const linkWaits = isRecord(entry.link) ? moduleLinkWaits(entry.link, [...path, "link"]) : [];
 
-  return [...keyWaits, ...useWaits, ...linkWaits];
+  return [...keyWaits, ...artefactWaits, ...useWaits, ...linkWaits];
+}
+
+// `artefacts.bootCheck.frameworkRoutes` is read; every other artefact switch waits, `bootCheck` as a whole too.
+function artefactSwitchWaits(artefacts: unknown, path: KeyPath): ConfigWait[] {
+  if (!isRecord(artefacts)) return [];
+
+  const switchWaits = Object.keys(artefacts)
+    .filter((key) => key !== "bootCheck")
+    .map((key) => switchWait([...path, key], `the artefact switch '${key}'`));
+
+  if (!Object.hasOwn(artefacts, "bootCheck")) return switchWaits;
+
+  const bootCheckPath = [...path, "bootCheck"];
+
+  if (!isRecord(artefacts.bootCheck)) {
+    return [...switchWaits, switchWait(bootCheckPath, "the artefact switch 'bootCheck'")];
+  }
+
+  const bootCheckWaits = Object.keys(artefacts.bootCheck)
+    .filter((key) => key !== "frameworkRoutes")
+    .map((key) => switchWait([...bootCheckPath, key], `the boot check switch '${key}'`));
+
+  return [...switchWaits, ...bootCheckWaits];
+}
+
+function switchWait(path: KeyPath, what: string): ConfigWait {
+  return { path, what, bringer: ARTEFACT_SWITCH_BRINGER };
 }
 
 // A Maven `group:artifact` coordinate or a Composer `vendor/name`; npm names never hold a colon, and an unscoped

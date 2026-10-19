@@ -57,8 +57,9 @@ export async function startServer(): Promise<RunningServer> {
   router.use([() => import("@adonisjs/core/bodyparser_middleware")]);
   server.errorHandler(() => import("../src/exception-handler.mjs"));
   registerContractRoutes(router);
-  await app.start(() => undefined);
-  await server.boot();
+  // The server boots, committing the routes, inside the start callback, as Adonis's own HTTP server process does:
+  // the framework-route check reads the committed routes once the app is ready.
+  await app.start(() => server.boot());
 
   const nodeServer = createServer((request, response) => server.handle(request, response));
 

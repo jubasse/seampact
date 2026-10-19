@@ -9,6 +9,7 @@ import {
   type WireFormat,
 } from "@seampact/spec/ir";
 import type { ValidatorsDescriptor } from "../descriptors.js";
+import type { FrameworkRouteCheck } from "../framework-route-check.js";
 import { type GenerateWarning, warnLeftToHandler } from "../generate-warning.js";
 import { importSpecifier } from "../import-specifier.js";
 import { below, type IrLocation, operationLocation } from "../ir-location.js";
@@ -29,6 +30,8 @@ export interface RouteTableOptions {
   readonly runtimeModule: string;
   /** Adds each JSON response's item validator, for the target option `bodyValidation`. */
   readonly withItemValidators: boolean;
+  /** The entry's framework-route check, read by the boot check of the app's routes outside the contract. */
+  readonly frameworkRoutes: FrameworkRouteCheck;
 }
 
 const API_LOCATION: IrLocation = { member: "" };
@@ -46,6 +49,20 @@ interface ValidatorLink {
 }
 
 // A value written into the module as source text, such as an imported validator.
+// The allow-list as written in the config, each entry copied member by member.
+function frameworkRoutesValue(check: FrameworkRouteCheck): SourceValue {
+  if (check.status === "off") return { status: "off" };
+
+  return {
+    status: "on",
+    allowed: check.allowed.map((allowance) => ({
+      ...(allowance.method === undefined ? {} : { method: allowance.method.toUpperCase() }),
+      path: allowance.path,
+      reason: allowance.reason,
+    })),
+  };
+}
+
 class SourceExpression {
   constructor(readonly text: string) {}
 }
@@ -108,7 +125,8 @@ export function routeTableSource(
   }
 
   const basePaths = [...new Set(Object.values(ir.api.surfaces).map((surface) => surface.prefix))];
-  const table: SourceValue = { id: ir.api.id, basePaths, format, routes, shapes };
+  const frameworkRoutes = frameworkRoutesValue(options.frameworkRoutes);
+  const table: SourceValue = { id: ir.api.id, basePaths, format, routes, shapes, frameworkRoutes };
 
   return [
     `import type { ContractApi } from "${options.runtimeModule}";`,

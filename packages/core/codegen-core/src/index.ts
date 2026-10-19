@@ -19,6 +19,12 @@ export type {
   ValidatorStyle,
   ValidatorsDescriptor,
 } from "./descriptors.js";
+export {
+  DEFAULT_FRAMEWORK_ROUTE_CHECK,
+  type FrameworkRouteAllowance,
+  type FrameworkRouteCheck,
+  type TunableBootCheck,
+} from "./framework-route-check.js";
 export { type GenerateWarning, warnLeftToHandler } from "./generate-warning.js";
 export { importSpecifier, relativeModuleSpecifier } from "./import-specifier.js";
 export { below, type IrLocation, operationLocation, schemaLocation } from "./ir-location.js";

@@ -29,6 +29,8 @@ export function expressModuleSource(
     "",
     "/** The api's router: `app.use(router({ handlers, hooks }))`, at the app's root; runs the boot check. */",
     "export const router = boundary.router<OperationName>;",
+    "/** The framework-route boot check: call it with the app once every route is mounted, before it listens. */",
+    "export const checkFrameworkRoutes = boundary.checkFrameworkRoutes;",
     "/** An error middleware for refusals raised before the router; mount it after the router. */",
     "export const preRoutingErrorHandler = boundary.preRoutingErrorHandler;",
     "/** Renders a refusal raised before the router on a contract path, or its 404; false when it does nothing. */",

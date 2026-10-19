@@ -1,8 +1,9 @@
 // The Express placement of the shared request checks (ADR 0018): a router per api with one route per operation,
 // most specific first, whose middleware run step 1, the access steps, the input steps and the handler; one
 // catch-all per contract path and one for the api's base paths; the router's narrow error middleware; the boot
-// check; and the exported helpers for errors raised before the router. The same code serves Express 4 and 5. Each api's generated module calls
-// `createExpressBoundary` once with its route table.
+// check; the framework-route check, which the app calls before listening or the router runs on the first request;
+// and the exported helpers for errors raised before the router. The same code serves Express 4 and 5. Each api's
+// generated module calls `createExpressBoundary` once with its route table.
 import type { IncomingMessage, ServerResponse } from "node:http";
 import express, {
   type ErrorRequestHandler,
@@ -21,6 +22,7 @@ import {
 } from "./node-server/base-path-claims.js";
 import { type BoundaryContext, boundaryContext } from "./node-server/boundary-context.js";
 import {
+  type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
   hookBootProblems,
@@ -41,6 +43,7 @@ import {
   notFoundError,
   type ReportedRequest,
 } from "./node-server/error-reply.js";
+import { frameworkRouteProblems } from "./node-server/framework-routes.js";
 import {
   type HandlerBindings,
   handlerResultReply,
@@ -50,6 +53,7 @@ import {
   runInputSteps,
   settingsOf,
 } from "./node-server/handler-map.js";
+import { expressRouteListing, isObjectLike } from "./node-server/node-express-routes.js";
 import { installOutgoingCheck } from "./node-server/node-outgoing-check.js";
 import {
   respondNotServed,
@@ -95,6 +99,8 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
   const routerHooks = new WeakMap<object, BoundaryHooks>();
   const routersMade: { count: number; lastHooks?: BoundaryHooks } = { count: 0 };
   const warnedGlobalParser = new Set<string>();
+  // The framework-route check's problems per app, once it has run: on the app's call or on its first request.
+  const frameworkRouteResults = new WeakMap<object, readonly BootProblem[]>();
 
   function router<Operation extends string>(
     options: RegistrationOptions<Hooks, Handlers, Operation>,
@@ -111,6 +117,10 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
     routerHooks.set(contractRouter, options.hooks);
     routersMade.count += 1;
     routersMade.lastHooks = options.hooks;
+
+    if (api.frameworkRoutes.status === "on") {
+      contractRouter.use(uncheckedFrameworkRoutesGuard(options.hooks));
+    }
 
     for (const route of api.routes) {
       contractRouter[methodOf(route)](routePattern(route.path), ...routeMiddleware(route, options));
@@ -317,6 +327,29 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
       hooks: context.hooks,
       isFrameworkDenial: isStatusDenial,
       fixes: EXPRESS_FIXES,
+    };
+  }
+
+  // An app that never called `checkFrameworkRoutes` is checked on its first request; with problems, every request
+  // the router receives answers 500 and logs them, so an unchecked app never serves.
+  function uncheckedFrameworkRoutesGuard(hooks: BoundaryHooks): RequestHandler {
+    return (request, response, next) => {
+      const problems = checkedFrameworkRouteProblems(rootAppOf(request.app));
+
+      if (problems.length === 0) {
+        next();
+
+        return;
+      }
+
+      const reported = reportedRequest(request);
+      const route = matchContractPath(api, reported.method, reported.path)?.route;
+      const cause = new Error(
+        `${bootProblemsMessage(api, problems)}\nThe check ran on the first request, since the app did not call checkFrameworkRoutes(app) before listening; every request answers 500 until the app restarts.`,
+      );
+
+      console.error(cause.message);
+      respondDetached(response, hooks, route, unexpectedError(route, cause), reported);
     };
   }
 
@@ -530,8 +563,38 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
     return matchContractRoute(api, reported.method, reported.path) !== undefined;
   }
 
+  /**
+   * The framework-route boot check: every route of the app outside the apis' routers must be allow-listed in the
+   * app config. Express has no start hook, so the app calls it once every route is mounted, before it listens.
+   */
+  function checkFrameworkRoutes(app: unknown): void {
+    if (api.frameworkRoutes.status === "off") return;
+
+    const problems = checkedFrameworkRouteProblems(app);
+
+    if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
+  }
+
+  // Runs the check once per app and keeps its problems; an app that is not an object is checked every time.
+  function checkedFrameworkRouteProblems(app: unknown): readonly BootProblem[] {
+    const known = isObjectLike(app) ? frameworkRouteResults.get(app) : undefined;
+
+    if (known !== undefined) return known;
+
+    const listing = expressRouteListing(app);
+    const problems = [
+      ...listing.problems,
+      ...frameworkRouteProblems(api.frameworkRoutes, listing.routes),
+    ];
+
+    if (isObjectLike(app)) frameworkRouteResults.set(app, problems);
+
+    return problems;
+  }
+
   return {
     router,
+    checkFrameworkRoutes,
     preRoutingErrorHandler,
     renderPreRoutingError,
     renderContractError,
@@ -541,6 +604,25 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
 }
 
 // The app's stack is read only for a path under the api's base paths, so the app's own paths never depend on it.
+// A sub-app's `req.app` is the sub-app; Express links each mounted app to the app that mounts it by `parent`.
+function rootAppOf(app: unknown): unknown {
+  let current = app;
+  let parent = parentAppOf(current);
+
+  while (parent !== undefined) {
+    current = parent;
+    parent = parentAppOf(current);
+  }
+
+  return current;
+}
+
+function parentAppOf(app: unknown): object | undefined {
+  const parent: unknown = isObjectLike(app) ? Reflect.get(app, "parent") : undefined;
+
+  return isObjectLike(parent) ? parent : undefined;
+}
+
 function claimsAlone(api: ContractApi, app: unknown, path: string): boolean {
   if (!isUnderBasePath(api, path)) return false;
 
@@ -615,11 +697,6 @@ function unreadableRouterStackMessage(api: ContractApi): string {
     "(no 'router.stack' or '_router.stack' on req.app), so it cannot tell which base paths another api shares. " +
     "Mount the router on an Express 4 or 5 app with app.use()."
   );
-}
-
-// Express's apps, routers and layers are functions or objects.
-function isObjectLike(value: unknown): value is object {
-  return typeof value === "function" || (typeof value === "object" && value !== null);
 }
 
 function claimedError(route: ContractRoute, error: unknown): ContractError | undefined {

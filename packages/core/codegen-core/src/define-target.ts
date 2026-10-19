@@ -1,6 +1,7 @@
 import type { ContractIR } from "@seampact/spec/ir";
 import type { DescriptorSet, LinkKind } from "./descriptors.js";
 import { finishFiles } from "./finish-files.js";
+import { DEFAULT_FRAMEWORK_ROUTE_CHECK } from "./framework-route-check.js";
 import { checkGeneratedPaths } from "./generated-paths.js";
 import { refuseUnsupportedIr } from "./ir-support-refusal.js";
 import { meetsEveryNeed, refuseUnmetLinks } from "./link-check.js";
@@ -51,6 +52,7 @@ export function defineTarget<
       options: parsedOptions.options,
       links,
       artefacts,
+      frameworkRoutes: structuredClone(request.frameworkRoutes ?? DEFAULT_FRAMEWORK_ROUTE_CHECK),
     });
 
     if (generated.status === "refused") return generated;

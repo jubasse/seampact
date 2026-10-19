@@ -53,6 +53,7 @@ interface ReferenceAppModule {
   resetScenario(): void;
   bootWith(registration: object, instanceOptions?: object, prefix?: string): Promise<void>;
   bootTwice(registration: object): Promise<void>;
+  collectAfterOwnRoute(): Promise<void>;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
   startPrefixedApp(prefix: string): Promise<{ host: string; port: number; close(): Promise<void> }>;
   startTwoApiApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
@@ -373,6 +374,12 @@ describe("the contract's checks", () => {
 });
 
 describe("the boot check", () => {
+  test("refuses a framework-route collector installed once the app holds a route", async () => {
+    await expect(app.collectAfterOwnRoute()).rejects.toThrow(
+      "call collectFrameworkRoutes(app) right after Fastify() creates the app, before any route",
+    );
+  });
+
   test("lists a missing handler, an unknown override and a prefix at once", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 

@@ -2,6 +2,7 @@ import { defineTarget, type Target } from "@seampact/codegen-core";
 import {
   BOUNDARY_ARTEFACT,
   type BoundaryArtefact,
+  NODE_SERVER_BOOT_CHECKS,
   type NodeServerOptions,
   type NodeServerPlacement,
   nodeServerBoundaryFiles,
@@ -39,6 +40,7 @@ export const target: Target = defineTarget<
       features: [],
     },
     artefacts: [{ id: BOUNDARY_ARTEFACT, defaultOn: true }],
+    bootChecks: NODE_SERVER_BOOT_CHECKS,
     consumes: {
       types: { styles: ["typescript"] },
       validators: { styles: [...serverTargetCompatibility(packageJson.name).validatorStyles] },

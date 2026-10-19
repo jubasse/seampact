@@ -14,6 +14,7 @@ import {
   referenceNoStoreOperation,
   sendRawRequest,
 } from "@seampact/codegen-core/node-server/test-support";
+import type { Hono } from "hono";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { target as honoTarget } from "./index.js";
 
@@ -62,6 +63,13 @@ interface ReferenceAppModule {
   requestThroughSubApp(path: string, init?: RequestInit): Promise<Response>;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
   startTwoApiApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+}
+
+interface UncheckedAppModule {
+  readonly LISTED_OWN_ROUTE: string;
+  uncheckedApp(): { request(path: string, init?: RequestInit): Promise<Response> };
+  checkFrameworkRoutes(app: unknown): void;
+  appWithOwnRoutes(addOwnRoutes: (app: Hono) => void): unknown;
 }
 
 let app: ReferenceAppModule;
@@ -593,5 +601,63 @@ describe("two apis on one base path", () => {
     expect(reply.status).toBe(404);
     expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
     expect(JSON.parse(reply.text)).toMatchObject({ code: "api.not_found" });
+  });
+});
+
+describe("the framework-route check of an app", () => {
+  const project = projectDirectory(import.meta.url, "live-unchecked");
+  let uncheckedModule: UncheckedAppModule;
+
+  beforeAll(async () => {
+    const files = await generateReferenceProject(project, honoTarget, {}, undefined, {
+      status: "on",
+      allowed: [{ path: "/own/listed", reason: "the test app's own route" }],
+    });
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+    uncheckedModule = await import(copyTestApp(build, APP_SOURCE));
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  test("answers 500 with the fix logged until the check runs, then serves", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const unchecked = uncheckedModule.uncheckedApp();
+    const path = `/v1/channels/${CHANNEL}/tasks/${TASK}`;
+
+    for (const attempt of [1, 2]) {
+      const refused = await unchecked.request(path, { headers: BEARER });
+
+      expect(refused.status, `attempt ${attempt}`).toBe(500);
+      expect(refused.headers.get("content-type")).toContain(PROBLEM_MEDIA);
+    }
+
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining("call checkFrameworkRoutes(app)"));
+
+    uncheckedModule.checkFrameworkRoutes(unchecked);
+
+    expect((await unchecked.request(path, { headers: BEARER })).status).toBe(200);
+  });
+
+  test("an app route at a contract path, added before the api, is refused", () => {
+    const ownPath = "/v1/channels/:channelId/tasks/:taskId";
+    const app = uncheckedModule.appWithOwnRoutes((own) => own.get(ownPath, (c) => c.text("own")));
+
+    expect(() => uncheckedModule.checkFrameworkRoutes(app)).toThrow(`'GET ${ownPath}'`);
+  });
+
+  test("an app catch-all for every method is a route, refused", () => {
+    const app = uncheckedModule.appWithOwnRoutes((own) =>
+      own.all("/proxy/*", (c) => c.text("proxied")),
+    );
+
+    expect(() => uncheckedModule.checkFrameworkRoutes(app)).toThrow("'ALL /proxy/*'");
+  });
+
+  test("an app middleware on a plain path is not a route", () => {
+    const app = uncheckedModule.appWithOwnRoutes((own) =>
+      own.use("/admin", async (_c, next) => next()),
+    );
+
+    expect(() => uncheckedModule.checkFrameworkRoutes(app)).not.toThrow();
   });
 });

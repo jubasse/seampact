@@ -5,6 +5,7 @@
 export {
   BOUNDARY_ARTEFACT,
   type BoundaryArtefact,
+  NODE_SERVER_BOOT_CHECKS,
   type NodeServerPlacement,
   type NodeServerTargetPackage,
   nodeServerBoundaryFiles,
