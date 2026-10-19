@@ -83,6 +83,7 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 | `ir.value-source.place` | `in: resolver` only as an operation scope's source; `in: holderField` only as a field right subject's source. |
 | `ir.header.members` | `HeaderDecl.name` and `in` for every semantic but `versionToken`; `response` and `request` for `versionToken` only. |
 | `ir.cache.directives` | `Cache.directives` is absent if and only if the family is `never`, and a `never` family sets `noStore`. |
+| `ir.cache.sensitive-no-store` | An operation whose response body reaches a property with `sensitive` (through array items, JSON content, object properties, map values and union variants) has a `cache` that sets `noStore` (ADR 0003 section 6). |
 | `ir.csrf.cookie` | An unsafe operation whose access accepts a cookie scheme has `csrf` (derived or exempt). |
 | `ir.field-wire.members` | `FieldWire` of kind `file` or `json` has no `style`, `explode` or `brackets`; a query wire kind has all three. |
 | `ir.property.nullable` | A property's type use has no `nullable`: `Property.nullable` holds it. |

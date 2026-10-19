@@ -923,6 +923,73 @@ describe("degradable and deprecation", () => {
   });
 });
 
+describe("sensitive responses", () => {
+  const TASK_USE = { kind: "ref", schema: "Task" };
+  const storable = (ir: Json) => {
+    node(ir, `${UPDATE}/cache`).noStore = false;
+  };
+  const withBody = (body: Json) => (ir: Json) => {
+    storable(ir);
+    node(ir, `${UPDATE}/responses/0`).body = body;
+  };
+  const withSchema = (id: string, schema: Json) => (ir: Json) => {
+    node(ir, "/schemas")[id] = schema;
+  };
+
+  test("an operation whose response carries a sensitive field sets noStore", () => {
+    expect(violationsAfter(storable)).toEqual(at("ir.cache.sensitive-no-store", UPDATE));
+    expect(
+      violationsAfter((ir) => {
+        delete node(ir, UPDATE).cache;
+      }),
+    ).toEqual(at("ir.cache.sensitive-no-store", UPDATE));
+    expect(
+      violationsAfter((ir) => {
+        storable(ir);
+        node(ir, EFFORT).sensitive = false;
+      }),
+    ).toEqual([]);
+  });
+
+  test("a sensitive field is reached through items, JSON content, map values and union variants", () => {
+    const bodies: Json[] = [
+      { kind: "array", items: TASK_USE },
+      {
+        kind: "scalar",
+        type: "string",
+        content: { media: "application/json", schema: TASK_USE },
+      },
+      { kind: "ref", schema: "TaskMap" },
+      { kind: "ref", schema: "TaskUnion" },
+    ];
+
+    for (const body of bodies)
+      expect(
+        violationsAfter((ir) => {
+          withSchema("TaskMap", { kind: "map", values: TASK_USE })(ir);
+          withSchema("TaskUnion", { kind: "union", variants: [{ tag: "task", schema: "Task" }] })(
+            ir,
+          );
+          withBody(body)(ir);
+        }),
+      ).toEqual(at("ir.cache.sensitive-no-store", UPDATE));
+  });
+
+  test("a recursive schema without a sensitive field ends", () => {
+    const loop = {
+      kind: "object",
+      properties: [{ name: "next", sensitive: false, type: { kind: "ref", schema: "Loop" } }],
+    };
+
+    expect(
+      violationsAfter((ir) => {
+        withSchema("Loop", loop)(ir);
+        withBody({ kind: "ref", schema: "Loop" })(ir);
+      }),
+    ).toEqual([]);
+  });
+});
+
 describe("error roles and retry headers", () => {
   const each = (as: Json): Json => ({ kind: "each", of: "issues", as });
   const item = { kind: "slot", slot: "item", path: ["pointer"] };

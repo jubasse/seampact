@@ -1281,7 +1281,7 @@
         "vary": ["Authorization"],
         "etag": true,
         "perCallerKind": [{ "caller": "identified", "cacheControl": "private, max-age=60" }],
-        "noStore": false,
+        "noStore": true,
         "origin": { "layer": "api", "pointer": "/cache" },
         "derivedFrom": {
           "derivation": "cache.headers",
