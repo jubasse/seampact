@@ -1,5 +1,6 @@
 import type { ContractIR, IrSupport } from "@seampact/spec/ir";
 import type { DescriptorSet, LinkKind, ProvidedDescriptors } from "./descriptors.js";
+import type { FrameworkRouteCheck, TunableBootCheck } from "./framework-route-check.js";
 import type { GenerateWarning } from "./generate-warning.js";
 import type { LinkNeeds, LinkOffers, LinkSet, Links } from "./links.js";
 import type { Refused } from "./refusal.js";
@@ -22,6 +23,8 @@ export interface TargetMetadata<
   artefacts: readonly ArtefactDeclaration<Artefact>[];
   consumes: LinkNeeds<Consumed>;
   provides: LinkOffers<Provided>;
+  /** The boot checks the app config entry may tune; none when absent. */
+  bootChecks?: readonly TunableBootCheck[];
 }
 
 // The metadata of any target, as the CLI reads it: each kind is present when the target consumes or provides it.
@@ -35,6 +38,7 @@ export interface GenerateInput<Options, Artefact extends string, Consumed extend
   options: Options;
   links: Links<Consumed>;
   artefacts: ReadonlySet<Artefact>;
+  frameworkRoutes: FrameworkRouteCheck;
 }
 
 // One file a target writes. `path` is a POSIX path relative to the target's output root.
@@ -98,6 +102,8 @@ export interface GenerateRequest {
   options: unknown;
   links: LinkSet;
   artefacts: ReadonlySet<string>;
+  /** The entry's framework-route check; the default check when absent. */
+  frameworkRoutes?: FrameworkRouteCheck;
 }
 
 // The target as the CLI sees it, whatever its options, artefacts and links.

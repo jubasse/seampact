@@ -1,8 +1,9 @@
 // The Fastify placement of the shared request checks (ADR 0017): an encapsulated plugin per api with one route per
 // operation, most specific first, whose route hooks run step 1, the decoding of a compressed body, the access steps
-// and the input steps around the handler; the plugin's JSON parser and narrow error handler; the boot check; and the
-// exported helpers for the requests the plugin never sees. Each api's generated module calls
-// `createFastifyBoundary` once with its route table.
+// and the input steps around the handler; the plugin's JSON parser and narrow error handler; the boot check, with
+// the framework-route check at ready over the routes the app's collector saw; and the exported helpers for the
+// requests the plugin never sees. Each api's generated module calls `createFastifyBoundary` once with its route
+// table.
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { PassThrough, type Readable } from "node:stream";
 import { createBrotliDecompress, createGunzip, createInflate } from "node:zlib";
@@ -14,6 +15,7 @@ import type {
   FastifyRequest,
   HookHandlerDoneFunction,
   RouteHandlerMethod,
+  RouteOptions,
 } from "fastify";
 import { authorizeRequest, type CheckState } from "./node-server/access-checks.js";
 import {
@@ -34,6 +36,13 @@ import {
   roleError,
   unexpectedError,
 } from "./node-server/contract-error.js";
+import {
+  contractRoutesOf,
+  frameworkRouteProblems,
+  isBoundaryRoute,
+  type ListedRoute,
+  markBoundaryRoute,
+} from "./node-server/framework-routes.js";
 import {
   type ContractApi,
   type ContractRequest,
@@ -154,6 +163,8 @@ export function createFastifyBoundary<
     registered.hooks = options.hooks;
     replaceJsonParsers(fastify);
     fastify.setErrorHandler(contractErrorHandler(options));
+    fastify.addHook("onRoute", (routeOptions) => markBoundaryRoute(routeOptions));
+    fastify.addHook("onReady", async () => checkFrameworkRoutes(fastify.server));
 
     for (const route of api.routes) registerRoute(fastify, route, options);
 
@@ -750,12 +761,81 @@ export function createFastifyBoundary<
     return matchContractRoute(api, reported.method, reported.path) !== undefined;
   }
 
+  // The framework-route boot check, at `ready`: every route the app's collector saw outside the apis' routes must be
+  // allow-listed in the app config.
+  function checkFrameworkRoutes(server: object): void {
+    if (api.frameworkRoutes.status === "off") return;
+
+    const collected = collectedRoutesOf(server);
+    const problems =
+      collected === undefined
+        ? [
+            {
+              problem: "the app's routes are not collected, so the framework-route check cannot list them",
+              fix: "call collectFrameworkRoutes(app) right after Fastify() creates the app, or switch the check off with 'artefacts.bootCheck.frameworkRoutes: false'",
+            },
+          ]
+        : frameworkRouteProblems(
+            api.frameworkRoutes,
+            collected.filter((route) => !isBoundaryRoute(route)).flatMap(listedRoutes),
+            contractRoutesOf(basePathClaimsOf(server)),
+          );
+
+    if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
+  }
+
   return {
     plugin,
+    collectFrameworkRoutes,
     renderContractError,
     renderPreRoutingError,
     isContractRoute,
   };
+}
+
+// Fastify lists no routes; the collector each app installs first keeps every route record by the app's server, in
+// one registry for every api's copy of this module.
+const COLLECTED_ROUTES_KEY = Symbol.for("seampact.fastify.collected-routes");
+
+type CollectedRoutes = WeakMap<object, RouteOptions[]>;
+
+function collectedRoutesRegistry(): CollectedRoutes {
+  const existing: unknown = Reflect.get(globalThis, COLLECTED_ROUTES_KEY);
+
+  if (existing instanceof WeakMap) return existing;
+
+  const created: CollectedRoutes = new WeakMap();
+
+  Reflect.set(globalThis, COLLECTED_ROUTES_KEY, created);
+
+  return created;
+}
+
+function collectedRoutesOf(server: object): readonly RouteOptions[] | undefined {
+  return collectedRoutesRegistry().get(server);
+}
+
+/**
+ * Collects every route the app registers, for the framework-route boot check: the app calls it right after
+ * `Fastify()`, before any route, since Fastify reports a route only to the hooks added before it.
+ */
+function collectFrameworkRoutes(app: FastifyInstance): void {
+  const registry = collectedRoutesRegistry();
+
+  if (registry.has(app.server)) return;
+
+  const collected: RouteOptions[] = [];
+
+  registry.set(app.server, collected);
+  app.addHook("onRoute", (routeOptions) => {
+    collected.push(routeOptions);
+  });
+}
+
+function listedRoutes(routeOptions: RouteOptions): ListedRoute[] {
+  const methods = Array.isArray(routeOptions.method) ? routeOptions.method : [routeOptions.method];
+
+  return methods.map((method) => ({ method: method.toUpperCase(), path: routeOptions.url }));
 }
 
 function claimedError(route: ContractRoute, error: unknown): ContractError | undefined {

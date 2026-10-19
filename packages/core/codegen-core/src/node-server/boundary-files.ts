@@ -74,6 +74,7 @@ export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target
         features: [],
       },
       artefacts: [{ id: BOUNDARY_ARTEFACT, defaultOn: true }],
+      bootChecks: ["frameworkRoutes"],
       consumes: {
         types: { styles: ["typescript"] },
         validators: { styles: [...targetPackage.validatorStyles] },
@@ -105,6 +106,7 @@ export function nodeServerBoundaryFiles(
     {
       runtimeModule: `./${runtimeDirectory}/contract-route.js`,
       withItemValidators: options.bodyValidation,
+      frameworkRoutes: input.frameworkRoutes,
     },
     refusals,
     warnings,

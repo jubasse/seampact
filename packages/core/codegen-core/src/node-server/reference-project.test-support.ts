@@ -329,6 +329,8 @@ async function generateApi(
         options: serverOptions,
         links: linksOf(providers, ir, api),
         artefacts: new Set(["boundary"]),
+        // The test apps serve routes of their own; the consumers' boot cases run the framework-route check.
+        frameworkRoutes: { status: "off" },
       }),
     ),
   ];

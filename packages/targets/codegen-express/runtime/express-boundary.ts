@@ -1,7 +1,7 @@
 // The Express placement of the shared request checks (ADR 0018): a router per api with one route per operation,
 // most specific first, whose middleware run step 1, the access steps, the input steps and the handler; one
 // catch-all per contract path and one for the api's base paths; the router's narrow error middleware; the boot
-// check; and the exported helpers for errors raised before the router. The same code serves Express 4 and 5. Each api's generated module calls
+// check and the framework-route check the app calls; and the exported helpers for errors raised before the router. The same code serves Express 4 and 5. Each api's generated module calls
 // `createExpressBoundary` once with its route table.
 import type { IncomingMessage, ServerResponse } from "node:http";
 import express, {
@@ -26,6 +26,8 @@ import {
   hookBootProblems,
 } from "./node-server/boundary-hooks.js";
 import { ContractError, unexpectedError } from "./node-server/contract-error.js";
+import { frameworkRouteProblems } from "./node-server/framework-routes.js";
+import { expressRouteListing, isObjectLike } from "./node-server/node-express-routes.js";
 import {
   type ContractApi,
   type ContractRoute,
@@ -530,8 +532,25 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
     return matchContractRoute(api, reported.method, reported.path) !== undefined;
   }
 
+  /**
+   * The framework-route boot check: every route of the app outside the apis' routers must be allow-listed in the
+   * app config. Express has no start hook, so the app calls it once every route is mounted, before it listens.
+   */
+  function checkFrameworkRoutes(app: unknown): void {
+    if (api.frameworkRoutes.status === "off") return;
+
+    const listing = expressRouteListing(app);
+    const problems = [
+      ...listing.problems,
+      ...frameworkRouteProblems(api.frameworkRoutes, listing.routes, listing.contractRoutes),
+    ];
+
+    if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
+  }
+
   return {
     router,
+    checkFrameworkRoutes,
     preRoutingErrorHandler,
     renderPreRoutingError,
     renderContractError,
@@ -615,11 +634,6 @@ function unreadableRouterStackMessage(api: ContractApi): string {
     "(no 'router.stack' or '_router.stack' on req.app), so it cannot tell which base paths another api shares. " +
     "Mount the router on an Express 4 or 5 app with app.use()."
   );
-}
-
-// Express's apps, routers and layers are functions or objects.
-function isObjectLike(value: unknown): value is object {
-  return typeof value === "function" || (typeof value === "object" && value !== null);
 }
 
 function claimedError(route: ContractRoute, error: unknown): ContractError | undefined {

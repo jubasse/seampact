@@ -1,5 +1,5 @@
 // The NestJS placement of the shared request checks (ADR 0016): the module middleware, the per-operation composite
-// and input decorators, the guard, the interceptor, the narrow filter, the dynamic module with its boot check, and
+// and input decorators, the guard, the interceptor, the narrow filter, the dynamic module with its boot check (the framework-route check included), and
 // the exported helpers. Each api's generated module calls `createNestBoundary` once with its route table.
 import type { ServerResponse } from "node:http";
 import {
@@ -38,6 +38,7 @@ import {
   Version,
 } from "@nestjs/common";
 import {
+  type AbstractHttpAdapter,
   BaseExceptionFilter,
   DiscoveryModule,
   DiscoveryService,
@@ -66,6 +67,8 @@ import {
   renderContractReply,
   unexpectedError,
 } from "./node-server/contract-error.js";
+import { contractRoutesOf, frameworkRouteProblems } from "./node-server/framework-routes.js";
+import { expressRouteListing } from "./node-server/node-express-routes.js";
 import {
   type ContractApi,
   type ContractRoute,
@@ -445,6 +448,10 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
     configure(consumer: MiddlewareConsumer): void {
       platform.adapterHost = this.adapterHost;
       platform.hooks = this.hooks;
+      // Claimed before any api's boot check runs, so each check sees every api's routes.
+      const adapter: object | undefined = this.adapterHost.httpAdapter;
+
+      if (adapter !== undefined) registerBasePathClaim(adapter, api);
       consumer.apply(middleware(this.hooks)).forRoutes(
         ...api.routes.map((route) => ({
           path: nestPath(route.path),
@@ -459,6 +466,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
         ...this.handlerProblems(),
         ...this.platformProblems(),
         ...this.repeatedRegistrationProblems(),
+        ...this.frameworkRouteProblems(),
       ];
 
       if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
@@ -502,6 +510,23 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       }
 
       return problems;
+    }
+
+    // Every route of the Express app outside the apis' routes must be allow-listed in the app config.
+    private frameworkRouteProblems(): BootProblem[] {
+      if (api.frameworkRoutes.status === "off") return [];
+
+      const adapter: AbstractHttpAdapter | undefined = this.adapterHost.httpAdapter;
+      const listing = expressRouteListing(adapter?.getInstance());
+      const contractRoutes = [
+        ...listing.contractRoutes,
+        ...(adapter === undefined ? [] : contractRoutesOf(basePathClaimsOf(adapter))),
+      ];
+
+      return [
+        ...listing.problems,
+        ...frameworkRouteProblems(api.frameworkRoutes, listing.routes, contractRoutes),
+      ];
     }
 
     // Replies written outside a request context report to one registration's hooks: one per api in an app.

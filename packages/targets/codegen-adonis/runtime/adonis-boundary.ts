@@ -1,6 +1,7 @@
 // The AdonisJS placement of the shared request checks (ADR 0019): the routes of one api, in the route table's
-// order, each with three inline route middleware and a generated route handler, the boot check, and the helpers an
-// app's exception handler calls. Each api's generated module calls `createAdonisBoundary` once with its route table.
+// order, each with three inline route middleware and a generated route handler, the boot check with the
+// framework-route check once the app is ready, and the helpers an app's exception handler calls. Each api's
+// generated module calls `createAdonisBoundary` once with its route table.
 import type { ServerResponse } from "node:http";
 import string from "@adonisjs/core/helpers/string";
 import type { HttpContext, Router } from "@adonisjs/core/http";
@@ -31,6 +32,11 @@ import {
   roleError,
   unexpectedError,
 } from "./node-server/contract-error.js";
+import {
+  contractRoutesOf,
+  frameworkRouteProblems,
+  type ListedRoute,
+} from "./node-server/framework-routes.js";
 import {
   type ContractApi,
   type ContractRequest,
@@ -559,6 +565,10 @@ export function createAdonisBoundary<
     registerBasePathClaim(router, api);
     registeredApis.set(router, new Set([...(registeredApis.get(router) ?? []), api.id]));
 
+    // Adonis lists its routes once the app is ready; an app already ready is checked now.
+    if (app.isReady) checkFrameworkRoutes(router);
+    else void app.ready(() => checkFrameworkRoutes(router));
+
     const replyOptions = replyOptionsOf(registration);
     const controllers = controllerLoader(registration.controllers, entries);
 
@@ -568,6 +578,17 @@ export function createAdonisBoundary<
         .as(routeNameOf(route))
         .use([openContext(route, replyOptions), authorize(route), validate(route)]);
     }
+  }
+
+  // Every route of the router outside the apis' routes must be allow-listed in the app config.
+  function checkFrameworkRoutes(router: Router): void {
+    const problems = frameworkRouteProblems(
+      api.frameworkRoutes,
+      adonisListedRoutes(router),
+      contractRoutesOf(basePathClaimsOf(router)),
+    );
+
+    if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
   }
 
   interface ReplyOptionsOf {
@@ -979,4 +1000,36 @@ function listedProblems(
       problem: `the ${what} '${requiredOf(route)}' is not in the bodyparser's ${setting}`,
       fix: `add '${requiredOf(route)}' to ${setting} in config/bodyparser.ts`,
     }));
+}
+
+// The router's routes, through its groups and resources, as Adonis 6 and 7 keep them in `routes` before and after
+// the commit.
+function adonisListedRoutes(router: Router): ListedRoute[] {
+  return listedRoutesOf(Reflect.get(router, "routes"));
+}
+
+function listedRoutesOf(entry: unknown): ListedRoute[] {
+  if (Array.isArray(entry)) return entry.flatMap(listedRoutesOf);
+
+  if (typeof entry !== "object" || entry === null) return [];
+
+  const nested: unknown = Reflect.get(entry, "routes");
+
+  if (Array.isArray(nested)) return nested.flatMap(listedRoutesOf);
+
+  // A brisk route holds its route once its handler is set.
+  if (Reflect.has(entry, "route")) return listedRoutesOf(Reflect.get(entry, "route"));
+
+  const toJSON: unknown = Reflect.get(entry, "toJSON");
+  const json: unknown = typeof toJSON === "function" ? toJSON.call(entry) : undefined;
+
+  if (!isPlainObject(json) || typeof json.pattern !== "string" || !Array.isArray(json.methods)) {
+    return [];
+  }
+
+  const pattern = json.pattern;
+
+  return json.methods
+    .filter((method): method is string => typeof method === "string")
+    .map((method) => ({ method: method.toUpperCase(), path: pattern }));
 }

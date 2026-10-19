@@ -31,6 +31,8 @@ export function fastifyModuleSource(
     "",
     "/** The api's plugin: `await app.register(plugin, { handlers, hooks })`, without a prefix; runs the boot check. */",
     "export const plugin = boundary.plugin;",
+    "/** Collects the app's routes for the framework-route boot check: call it right after `Fastify()`, before any route. */",
+    "export const collectFrameworkRoutes = boundary.collectFrameworkRoutes;",
     "/** Writes a contract error in the api's format, for an app error handler. */",
     "export const renderContractError = boundary.renderContractError;",
     "/** Renders a contract path's 404 or a router error in the api's format, for `setNotFoundHandler` and `frameworkErrors`; false when it does nothing. */",

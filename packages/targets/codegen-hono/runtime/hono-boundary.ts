@@ -1,7 +1,7 @@
 // The Hono placement of the shared request checks (ADR 0020): `registerRoutes` wraps the app's `fetch` once with a
 // request slot and the outgoing check, adds one route per operation, most specific first, whose handler runs every
 // step from the media type and the bounded body read to the handler's reply, then the catch-alls of the contract
-// paths and base paths; the boot check; and the exported helpers for the app's `onError` and middleware. Each api's
+// paths and base paths; the boot check and the framework-route check the app calls; and the exported helpers for the app's `onError` and middleware. Each api's
 // generated module calls `createHonoBoundary` once with its route table.
 import type { Context, Env, Hono, Next, Schema } from "hono";
 import { authorizeRequest, type CheckState } from "./web-server/access-checks.js";
@@ -17,6 +17,13 @@ import {
   bootProblemsMessage,
   hookBootProblems,
 } from "./web-server/boundary-hooks.js";
+import {
+  contractRoutesOf,
+  frameworkRouteProblems,
+  isBoundaryRoute,
+  type ListedRoute,
+  markBoundaryRoute,
+} from "./web-server/framework-routes.js";
 import {
   ContractError,
   type ContractReply,
@@ -127,7 +134,11 @@ export function createHonoBoundary<Hooks extends BoundaryHooks, Handlers, Operat
     }
 
     registerCatchAlls(app);
-    problems.push(...basePathProblems(app.routes.slice(firstAddedRoute)));
+
+    const addedRoutes = app.routes.slice(firstAddedRoute);
+
+    for (const added of addedRoutes) markBoundaryRoute(added.handler);
+    problems.push(...basePathProblems(addedRoutes));
 
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
 
@@ -371,7 +382,45 @@ export function createHonoBoundary<Hooks extends BoundaryHooks, Handlers, Operat
     return matchContractRoute(api, reported.method, reported.path) !== undefined;
   }
 
-  return { registerRoutes, renderContractError, renderPreRoutingError, isContractRoute };
+  /**
+   * The framework-route boot check: every route of the app outside the apis' routes must be allow-listed in the
+   * app config. Hono has no start hook, so the app calls it once every route is added, before it serves.
+   */
+  function checkFrameworkRoutes(app: { readonly routes: readonly HonoRouteEntry[] }): void {
+    const listed = app.routes
+      .filter((entry) => !isBoundaryRoute(entry.handler) && !isMiddlewareEntry(entry))
+      .map((entry): ListedRoute => ({ method: entry.method.toUpperCase(), path: entry.path }));
+    const problems = frameworkRouteProblems(
+      api.frameworkRoutes,
+      listed,
+      contractRoutesOf(basePathClaimsOf(app)),
+    );
+
+    if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
+  }
+
+  return {
+    registerRoutes,
+    checkFrameworkRoutes,
+    renderContractError,
+    renderPreRoutingError,
+    isContractRoute,
+  };
+}
+
+/** One entry of `app.routes`, as Hono lists every route and middleware it holds. */
+interface HonoRouteEntry {
+  readonly method: string;
+  readonly path: string;
+  readonly handler: unknown;
+}
+
+const ANY_METHOD = "ALL";
+const WILDCARD_SUFFIX = "*";
+
+// Hono lists `app.use` middleware as routes of every method; a wildcard path for every method is taken as one.
+function isMiddlewareEntry(entry: HonoRouteEntry): boolean {
+  return entry.method.toUpperCase() === ANY_METHOD && entry.path.endsWith(WILDCARD_SUFFIX);
 }
 
 function claimedError(route: ContractRoute, error: unknown): ContractError | undefined {
