@@ -1,5 +1,6 @@
 // Mounts both apis' generated routers at the root of an Express app, after the http suite's control routes and
-// with the exported error middleware for refusals raised before them, on a free local port. The `express4` overlay
+// with the exported error middleware for refusals raised before them, runs the framework-route check, and listens
+// on a free local port. The `express4` overlay
 // runs the same app on Express 4.
 import { once } from "node:events";
 import type { AddressInfo } from "node:net";
@@ -7,7 +8,11 @@ import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-
 import express, { type Response } from "express";
 import * as TasksExpress from "../generated/server/tasks/index.js";
 import * as TasksServiceExpress from "../generated/server/tasksService/index.js";
-import { withoutMissingHandler } from "../src/boot-variant.mjs";
+import {
+  servesUnlistedRoute,
+  UNLISTED_ROUTE,
+  withoutMissingHandler,
+} from "../src/boot-variant.mjs";
 import { tasksHandlers, tasksServiceHandlers } from "../src/handlers.mjs";
 import { tasksHooks, tasksServiceHooks } from "../src/hooks.mjs";
 import {
@@ -32,6 +37,10 @@ export async function startServer(): Promise<RunningServer> {
   );
   app.get(HOOK_CALLS_ROUTE, (_request, response) => sendControlReply(response, hookCallsReply()));
   app.get(LOG_LINES_ROUTE, (_request, response) => sendControlReply(response, logLinesReply()));
+
+  if (servesUnlistedRoute())
+    app.get(UNLISTED_ROUTE, (_request, response) => response.status(204).end());
+
   app.use(
     TasksExpress.router({
       handlers: withoutMissingHandler({
@@ -53,6 +62,8 @@ export async function startServer(): Promise<RunningServer> {
   );
   app.use(TasksExpress.preRoutingErrorHandler);
   app.use(TasksServiceExpress.preRoutingErrorHandler);
+  TasksExpress.checkFrameworkRoutes(app);
+  TasksServiceExpress.checkFrameworkRoutes(app);
 
   const server = app.listen(0, HOST);
 

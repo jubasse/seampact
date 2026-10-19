@@ -33,11 +33,6 @@ import {
   unexpectedError,
 } from "./node-server/contract-error.js";
 import {
-  contractRoutesOf,
-  frameworkRouteProblems,
-  type ListedRoute,
-} from "./node-server/framework-routes.js";
-import {
   type ContractApi,
   type ContractRequest,
   type ContractRoute,
@@ -48,6 +43,11 @@ import {
   type ResponsesMode,
 } from "./node-server/contract-route.js";
 import { notFoundError, type ReportedRequest } from "./node-server/error-reply.js";
+import {
+  contractRoutesOf,
+  frameworkRouteProblems,
+  type ListedRoute,
+} from "./node-server/framework-routes.js";
 import { handlerReply } from "./node-server/handler-reply.js";
 import { beginIdempotency } from "./node-server/idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./node-server/input-checks.js";
@@ -582,11 +582,17 @@ export function createAdonisBoundary<
 
   // Every route of the router outside the apis' routes must be allow-listed in the app config.
   function checkFrameworkRoutes(router: Router): void {
-    const problems = frameworkRouteProblems(
-      api.frameworkRoutes,
-      adonisListedRoutes(router),
-      contractRoutesOf(basePathClaimsOf(router)),
-    );
+    if (api.frameworkRoutes.status === "off") return;
+
+    const listed = adonisListedRoutes(router);
+    const problems =
+      listed === undefined
+        ? [UNCOMMITTED_ROUTES_PROBLEM]
+        : frameworkRouteProblems(
+            api.frameworkRoutes,
+            listed,
+            contractRoutesOf(basePathClaimsOf(router)),
+          );
 
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
   }
@@ -1002,10 +1008,27 @@ function listedProblems(
     }));
 }
 
-// The router's routes, through its groups and resources, as Adonis 6 and 7 keep them in `routes` before and after
-// the commit.
-function adonisListedRoutes(router: Router): ListedRoute[] {
-  return listedRoutesOf(Reflect.get(router, "routes"));
+const UNCOMMITTED_ROUTES_PROBLEM: BootProblem = {
+  problem:
+    "the router's routes are not committed when the app is ready, so the framework-route check cannot list them",
+  fix: "boot the HTTP server (server.boot()) inside app.start's callback, as Adonis's own HTTP server process does, or switch the check off with 'artefacts.bootCheck.frameworkRoutes: false'",
+};
+
+// The router's routes: once committed, Adonis 6 and 7 list them by domain with `toJSON()`; before, Adonis 6 keeps
+// them, through their groups and resources, in `routes`, and Adonis 7 keeps them private. Undefined when they
+// cannot be read yet.
+function adonisListedRoutes(router: Router): ListedRoute[] | undefined {
+  const toJSON: unknown = Reflect.get(router, "toJSON");
+
+  if (Reflect.get(router, "commited") === true && typeof toJSON === "function") {
+    const byDomain: unknown = toJSON.call(router);
+
+    return isPlainObject(byDomain) ? Object.values(byDomain).flatMap(routeJsonEntries) : undefined;
+  }
+
+  const registered: unknown = Reflect.get(router, "routes");
+
+  return Array.isArray(registered) ? listedRoutesOf(registered) : undefined;
 }
 
 function listedRoutesOf(entry: unknown): ListedRoute[] {
@@ -1021,7 +1044,13 @@ function listedRoutesOf(entry: unknown): ListedRoute[] {
   if (Reflect.has(entry, "route")) return listedRoutesOf(Reflect.get(entry, "route"));
 
   const toJSON: unknown = Reflect.get(entry, "toJSON");
-  const json: unknown = typeof toJSON === "function" ? toJSON.call(entry) : undefined;
+
+  return routeJsonEntries(typeof toJSON === "function" ? toJSON.call(entry) : undefined);
+}
+
+// One route's JSON, `{ pattern, methods }`, or a list of them.
+function routeJsonEntries(json: unknown): ListedRoute[] {
+  if (Array.isArray(json)) return json.flatMap(routeJsonEntries);
 
   if (!isPlainObject(json) || typeof json.pattern !== "string" || !Array.isArray(json.methods)) {
     return [];

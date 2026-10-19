@@ -33,7 +33,8 @@ export function expressRouteListing(app: unknown): ExpressRouteListing {
 
   if (!isObjectLike(appRouter) || !Array.isArray(Reflect.get(appRouter, "stack"))) {
     listing.problems.push({
-      problem: "the framework-route check cannot read the app's router stack ('router.stack' or '_router.stack')",
+      problem:
+        "the framework-route check cannot read the app's router stack ('router.stack' or '_router.stack')",
       fix: "pass the Express 4 or 5 app itself, or switch the check off with 'artefacts.bootCheck.frameworkRoutes: false'",
     });
 

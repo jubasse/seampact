@@ -26,8 +26,6 @@ import {
   hookBootProblems,
 } from "./node-server/boundary-hooks.js";
 import { ContractError, unexpectedError } from "./node-server/contract-error.js";
-import { frameworkRouteProblems } from "./node-server/framework-routes.js";
-import { expressRouteListing, isObjectLike } from "./node-server/node-express-routes.js";
 import {
   type ContractApi,
   type ContractRoute,
@@ -43,6 +41,7 @@ import {
   notFoundError,
   type ReportedRequest,
 } from "./node-server/error-reply.js";
+import { frameworkRouteProblems } from "./node-server/framework-routes.js";
 import {
   type HandlerBindings,
   handlerResultReply,
@@ -52,6 +51,7 @@ import {
   runInputSteps,
   settingsOf,
 } from "./node-server/handler-map.js";
+import { expressRouteListing, isObjectLike } from "./node-server/node-express-routes.js";
 import { installOutgoingCheck } from "./node-server/node-outgoing-check.js";
 import {
   respondNotServed,

@@ -18,13 +18,6 @@ import {
   hookBootProblems,
 } from "./web-server/boundary-hooks.js";
 import {
-  contractRoutesOf,
-  frameworkRouteProblems,
-  isBoundaryRoute,
-  type ListedRoute,
-  markBoundaryRoute,
-} from "./web-server/framework-routes.js";
-import {
   ContractError,
   type ContractReply,
   renderContractReply,
@@ -44,6 +37,13 @@ import {
   type ReportedRequest,
   reportContractError,
 } from "./web-server/error-reply.js";
+import {
+  contractRoutesOf,
+  frameworkRouteProblems,
+  isBoundaryRoute,
+  type ListedRoute,
+  markBoundaryRoute,
+} from "./web-server/framework-routes.js";
 import {
   type HandlerBindings,
   handlerResultReply,

@@ -37,13 +37,6 @@ import {
   unexpectedError,
 } from "./node-server/contract-error.js";
 import {
-  contractRoutesOf,
-  frameworkRouteProblems,
-  isBoundaryRoute,
-  type ListedRoute,
-  markBoundaryRoute,
-} from "./node-server/framework-routes.js";
-import {
   type ContractApi,
   type ContractRequest,
   type ContractRoute,
@@ -60,6 +53,13 @@ import {
   notFoundError,
   type ReportedRequest,
 } from "./node-server/error-reply.js";
+import {
+  contractRoutesOf,
+  frameworkRouteProblems,
+  isBoundaryRoute,
+  type ListedRoute,
+  markBoundaryRoute,
+} from "./node-server/framework-routes.js";
 import {
   type HandlerBindings,
   handlerResultReply,
@@ -771,7 +771,8 @@ export function createFastifyBoundary<
       collected === undefined
         ? [
             {
-              problem: "the app's routes are not collected, so the framework-route check cannot list them",
+              problem:
+                "the app's routes are not collected, so the framework-route check cannot list them",
               fix: "call collectFrameworkRoutes(app) right after Fastify() creates the app, or switch the check off with 'artefacts.bootCheck.frameworkRoutes: false'",
             },
           ]

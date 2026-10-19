@@ -67,8 +67,6 @@ import {
   renderContractReply,
   unexpectedError,
 } from "./node-server/contract-error.js";
-import { contractRoutesOf, frameworkRouteProblems } from "./node-server/framework-routes.js";
-import { expressRouteListing } from "./node-server/node-express-routes.js";
 import {
   type ContractApi,
   type ContractRoute,
@@ -80,9 +78,11 @@ import {
   type ResponsesMode,
 } from "./node-server/contract-route.js";
 import { logWriteFailure, notFoundError } from "./node-server/error-reply.js";
+import { contractRoutesOf, frameworkRouteProblems } from "./node-server/framework-routes.js";
 import { handlerReply } from "./node-server/handler-reply.js";
 import { beginIdempotency } from "./node-server/idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./node-server/input-checks.js";
+import { expressRouteListing } from "./node-server/node-express-routes.js";
 import { installOutgoingCheck } from "./node-server/node-outgoing-check.js";
 import {
   respondNotServed,

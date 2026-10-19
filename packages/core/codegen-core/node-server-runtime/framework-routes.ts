@@ -129,7 +129,9 @@ function segmentsMatch(pattern: readonly string[], path: readonly string[]): boo
   if (first === undefined) return path.length === 0;
 
   if (first === ANY_SEGMENTS) {
-    return path.some((_, index) => segmentsMatch(rest, path.slice(index))) || segmentsMatch(rest, []);
+    return (
+      path.some((_, index) => segmentsMatch(rest, path.slice(index))) || segmentsMatch(rest, [])
+    );
   }
 
   const [segment, ...pathRest] = path;

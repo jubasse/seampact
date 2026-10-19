@@ -9,6 +9,7 @@ import {
   type WireFormat,
 } from "@seampact/spec/ir";
 import type { ValidatorsDescriptor } from "../descriptors.js";
+import type { FrameworkRouteCheck } from "../framework-route-check.js";
 import { type GenerateWarning, warnLeftToHandler } from "../generate-warning.js";
 import { importSpecifier } from "../import-specifier.js";
 import { below, type IrLocation, operationLocation } from "../ir-location.js";
@@ -18,7 +19,6 @@ import {
   refuseNotGeneratedYet,
   refuseUnknownValueAt,
 } from "../located-refusals.js";
-import type { FrameworkRouteCheck } from "../framework-route-check.js";
 import type { Refusal } from "../refusal.js";
 import { compareRouteSpecificity } from "./route-order.js";
 

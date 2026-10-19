@@ -66,12 +66,22 @@ test("reads the framework-route allow-list and the boot check switch of a target
 
 test.each([
   ["no reason", "{ path: /metrics }", "The key 'reason' is required here."],
-  ["an empty reason", '{ path: /metrics, reason: "" }', "The value must NOT have fewer than 1 characters."],
+  [
+    "an empty reason",
+    '{ path: /metrics, reason: "" }',
+    "The value must NOT have fewer than 1 characters.",
+  ],
   ["a star inside a segment", "{ path: '/metrics*', reason: r }", "The value must match pattern"],
   ["a relative path", "{ path: metrics, reason: r }", "The value must match pattern"],
-  ["an unknown method", "{ method: get, path: /metrics, reason: r }", "The value must be equal to one of the allowed values."],
+  [
+    "an unknown method",
+    "{ method: get, path: /metrics, reason: r }",
+    "The value must be equal to one of the allowed values.",
+  ],
 ])("refuses a framework route with %s", async (_, route, message) => {
-  const outcome = await readConfigText(`${SERVER_ENTRY_HEAD}    frameworkRoutes:\n      - ${route}\n`);
+  const outcome = await readConfigText(
+    `${SERVER_ENTRY_HEAD}    frameworkRoutes:\n      - ${route}\n`,
+  );
 
   expect(outcome).toMatchObject({
     status: "refused",
