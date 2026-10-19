@@ -221,6 +221,8 @@ public data class OpaqueTypeUse(
     public val docs: Docs? = null,
     /** The examples written at the position of this use, placed as its docs are. */
     public val examples: List<JsonElement>? = null,
+    /** The value may be JSON null (ADR 0003 section 2): an opaque value accepts null only with it; absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
+    public val nullable: Boolean? = null,
 ) : TypeUse {
     init {
         require(kind == "opaque") { "OpaqueTypeUse: kind is \"opaque\", got \"" + kind + "\"" }

@@ -184,6 +184,8 @@ public data class ErrorDecl(
     public val docs: Docs,
     public val origin: Origin,
     public val default: ErrorRole? = null,
+    /** Every response of this code carries Cache-Control: no-store, since its params reach a sensitive value (ADR 0003 section 6, conventions.cache.sensitiveElsewhere: noStore); absent means false (invariant ir.error.sensitive-no-store). */
+    public val noStore: Boolean? = null,
 )
 
 /** The HTTP attributes of an error code (ADR 0014). */

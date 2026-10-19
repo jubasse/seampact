@@ -22,6 +22,7 @@ final readonly class ErrorDecl
      * @param IrOpaque|null $example
      * @param string|null $title
      * @param ErrorRole|null $default
+     * @param bool|null $noStore Every response of this code carries Cache-Control: no-store, since its params reach a sensitive value (ADR 0003 section 6, conventions.cache.sensitiveElsewhere: noStore); absent means false (invariant ir.error.sensitive-no-store).
      */
     public function __construct(
         public string $code,
@@ -35,6 +36,7 @@ final readonly class ErrorDecl
         public ?IrOpaque $example = null,
         public ?string $title = null,
         public ?ErrorRole $default = null,
+        public ?bool $noStore = null,
     ) {
     }
 
@@ -54,6 +56,7 @@ final readonly class ErrorDecl
             example: IrHydration::optionalOpaque($members, 'example'),
             title: IrHydration::optional($members, 'title', static fn (mixed $item): string => IrHydration::string($item, 'ErrorDecl.title')),
             default: IrHydration::optional($members, 'default', static fn (mixed $item): ErrorRole => ErrorRole::fromJson($item)),
+            noStore: IrHydration::optional($members, 'noStore', static fn (mixed $item): bool => IrHydration::boolean($item, 'ErrorDecl.noStore')),
         );
     }
 
@@ -82,6 +85,9 @@ final readonly class ErrorDecl
         $json->{'origin'} = $this->origin->toJson();
         if ($this->default !== null) {
             $json->{'default'} = $this->default->toJson();
+        }
+        if ($this->noStore !== null) {
+            $json->{'noStore'} = $this->noStore;
         }
         return $json;
     }
