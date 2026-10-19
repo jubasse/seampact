@@ -19,6 +19,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/idempotency-memory` | `packages/runtime/idempotency-memory` | helper | An in-memory idempotency store for one process, for development and tests. |
 | `@seampact/signed-webhooks` | `packages/runtime/signed-webhooks` | helper | Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook. |
 | `@seampact/codegen-adonis` | `packages/targets/codegen-adonis` | target | Generates the AdonisJS boundary around your controllers: the routes of each api with their checking middleware, the reply path, the error helpers for your exception handler and a boot check, validating with zod. |
+| `@seampact/codegen-class-validator` | `packages/targets/codegen-class-validator` | target | Generates decorated class-validator DTO classes per schema and direction, with Standard Schema adapters for the NestJS target. |
 | `@seampact/codegen-express` | `packages/targets/codegen-express` | target | Generates an Express router per api that serves each contract route behind its access, validation and reply checks around your handler map, on Express 4 and 5, validating with zod. |
 | `@seampact/codegen-fastify` | `packages/targets/codegen-fastify` | target | Generates a Fastify plugin per api that registers each contract route with its access, validation and reply checks around your handler map, on Fastify 5, validating with zod. |
 | `@seampact/codegen-fetch` | `packages/targets/codegen-fetch` | target | Generates a typed fetch client with one method per operation, returning its success and error responses as typed results. |
@@ -114,6 +115,10 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/codegen-adonis`
 
 - `packages/targets/codegen-adonis/src`: The AdonisJS server target: the boundary around the app's controllers for each api, placing the shared Node request checks of codegen-core in inline route middleware and a generated route handler, validating with zod.
+
+### `@seampact/codegen-class-validator`
+
+- `packages/targets/codegen-class-validator/src`: The class-validator validators target: decorated DTO classes per schema and direction, custom constraints for the contract rules class-validator lacks, and Standard Schema adapters validating with strict options, provided as the `validators` link of style `class-validator`, which the NestJS target reads.
 
 ### `@seampact/codegen-express`
 
