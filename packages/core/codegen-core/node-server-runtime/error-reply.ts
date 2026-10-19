@@ -1,23 +1,22 @@
-// The error replies every Node server placement writes: a contract error reported and rendered in the api's format,
-// the 404 of a request the api does not serve (a bare one when no operation can answer it), and a framework refusal
-// (an error carrying a 401, 403 or 429 status) mapped to its role. Copied into the generated tree as is.
-import type { ServerResponse } from "node:http";
+// The error replies every server placement renders: a contract error reported to the hook or the log, the 404 of a
+// request the api does not serve (a bare one when no operation can answer it), and a framework refusal (an error
+// carrying a 401, 403 or 429 status) mapped to its role. Copied into the generated tree as is.
 import { type BoundaryHooks, reportUnexpected } from "./boundary-hooks.js";
 import {
   ContractError,
   codeOfRole,
   codeOfStatus,
   isPlainObject,
-  renderContractReply,
   unexpectedError,
 } from "./contract-error.js";
 import { type ContractApi, type ContractRoute, matchesContractPath } from "./contract-route.js";
-import { type BoundaryContext, writeContractReply } from "./outgoing-check.js";
+
+/** The status of a request the api does not serve. */
+export const NOT_FOUND_STATUS = 404;
 
 const UNAUTHORIZED = 401;
 const FORBIDDEN = 403;
 const TOO_MANY_REQUESTS = 429;
-const NOT_FOUND_STATUS = 404;
 const UNAUTHENTICATED_ROLE = "unauthenticated";
 const FORBIDDEN_ROLE = "forbidden";
 const NOT_FOUND_ROLE = "notFound";
@@ -28,35 +27,31 @@ export interface ReportedRequest {
   readonly path: string;
 }
 
-/** Reports an unexpected failure to the hook (or the log), then writes the error in the api's format. */
-export async function respondWithError(
-  response: ServerResponse,
-  context: BoundaryContext | undefined,
+/** Reports the unexpected failure behind a contract error to the hook, or the log when none is registered. */
+export async function reportContractError(
   hooks: BoundaryHooks | undefined,
   api: ContractApi,
   route: ContractRoute | undefined,
   error: ContractError,
   request: ReportedRequest,
 ): Promise<void> {
-  if (error.unexpectedCause !== undefined) {
-    const where = {
-      api: api.id,
-      operation: route?.id,
-      method: request.method,
-      path: request.path,
-    };
+  if (error.unexpectedCause === undefined) return;
 
-    if (hooks?.onUnexpectedError === undefined) {
-      console.error(
-        `seampact: unexpected failure on operation '${where.operation ?? "(none)"}'`,
-        error.unexpectedCause,
-      );
-    }
+  const where = {
+    api: api.id,
+    operation: route?.id,
+    method: request.method,
+    path: request.path,
+  };
 
-    await reportUnexpected(hooks, error.unexpectedCause, where);
+  if (hooks?.onUnexpectedError === undefined) {
+    console.error(
+      `seampact: unexpected failure on operation '${where.operation ?? "(none)"}'`,
+      error.unexpectedCause,
+    );
   }
 
-  await writeContractReply(response, context, renderContractReply(api, route, error));
+  await reportUnexpected(hooks, error.unexpectedCause, where);
 }
 
 /** The path's 404: the route's `notFound` code, else its code of status 404, else a 500. */
@@ -73,33 +68,19 @@ function notFoundCodeOf(route: ContractRoute): string | undefined {
 }
 
 /**
- * The reply to a request the contract does not serve: a method a contract path does not serve (OPTIONS included)
- * answers the path's 404 in the api's format when an operation of the path declares one; a path under the api's
- * base path that no route serves exactly answers the api's `notFound` code, never a domain 404 of one operation.
- * Else a bare 404 with no body, since no operation fails there.
+ * The route whose 404 answers a request the contract does not serve: a method a contract path does not serve
+ * (OPTIONS included) answers the path's 404 in the api's format when an operation of the path declares one; a path
+ * under the api's base path that no route serves exactly answers the api's `notFound` code, never a domain 404 of
+ * one operation. Undefined when no operation can answer it: the reply is then a bare 404 with no body.
  */
-export async function respondNotServed(
-  response: ServerResponse,
-  hooks: BoundaryHooks | undefined,
-  api: ContractApi,
-  request: ReportedRequest,
-): Promise<void> {
-  const route = matchesContractPath(api, request.path)
+export function notServedRoute(api: ContractApi, path: string): ContractRoute | undefined {
+  return matchesContractPath(api, path)
     ? api.routes.find(
         (candidate) =>
           notFoundCodeOf(candidate) !== undefined &&
-          matchesContractPath({ ...api, routes: [candidate] }, request.path),
+          matchesContractPath({ ...api, routes: [candidate] }, path),
       )
     : api.routes.find((candidate) => codeOfRole(candidate, NOT_FOUND_ROLE) !== undefined);
-
-  if (route === undefined) {
-    response.writeHead(NOT_FOUND_STATUS, { "content-length": "0" });
-    response.end();
-
-    return;
-  }
-
-  await respondWithError(response, undefined, hooks, api, route, notFoundError(route), request);
 }
 
 /** The number in an error's `status` or `statusCode`, as `http-errors` and Fastify set them. */

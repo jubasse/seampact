@@ -1,154 +1,31 @@
-// The request context of a contract route and the outgoing response check (ADR 0016 "The outgoing response
-// check"): whoever writes the reply, an undeclared status, a framework ETag or 304, or an error body outside the
-// api's format or codes is a violation, handled by the `responses` mode. Copied into the generated tree as is.
-import { AsyncLocalStorage } from "node:async_hooks";
+// The outgoing response check on a Node `ServerResponse` (ADR 0016 "The outgoing response check"): it wraps
+// `writeHead`, `write` and `end` of one contract request's response, holds the body the verdict rules read, and
+// decodes a compressed one with `node:zlib`. Copied into the generated tree of the Node server targets as is.
 import { constants } from "node:buffer";
 import type { ServerResponse } from "node:http";
 import { brotliDecompressSync, gunzipSync, inflateSync } from "node:zlib";
-import type { AccessGrant } from "./access-checks.js";
-import {
-  type BoundaryHooks,
-  reportUnexpected,
-  type UnexpectedErrorContext,
-} from "./boundary-hooks.js";
-import {
-  type ContractReply,
-  isPlainObject,
-  renderContractReply,
-  unexpectedError,
-} from "./contract-error.js";
-import type { ContractApi, ContractRoute, ResponsesMode } from "./contract-route.js";
+import { type BoundaryContext, unexpectedContext } from "./boundary-context.js";
+import { reportUnexpected } from "./boundary-hooks.js";
+import { type ContractReply, renderContractReply, unexpectedError } from "./contract-error.js";
 import { settleIdempotency } from "./idempotency.js";
+import { applyReplyHeaders } from "./node-reply.js";
+import {
+  CONTENT_ENCODING_HEADER,
+  CONTENT_LENGTH_HEADER,
+  CONTENT_TYPE_HEADER,
+  ETAG_HEADER,
+  errorBodyViolation,
+  type HoldReason,
+  MAX_CHECKED_ERROR_BODY_BYTES,
+  statusVerdict,
+  successBodyViolation,
+  type ViolatingReply,
+} from "./outgoing-verdict.js";
 import { IDENTITY_ENCODING } from "./transport-checks.js";
 
-/** The longest error body the check holds to read its code; a longer one is a violation. */
-export const MAX_CHECKED_ERROR_BODY_BYTES = 65536;
-
-const NOT_MODIFIED = 304;
-const ETAG_HEADER = "etag";
-const VARY_HEADER = "vary";
-const CONTENT_LENGTH_HEADER = "content-length";
-// Headers that describe the body: the boundary replaces them, and keeps every other header the app set.
-const BODY_HEADERS = ["content-type", CONTENT_LENGTH_HEADER, "content-encoding", ETAG_HEADER];
 const DECODERS: Readonly<
   Record<string, (body: Buffer, options: { maxOutputLength: number }) => Buffer>
 > = { gzip: gunzipSync, deflate: inflateSync, br: brotliDecompressSync };
-const LIST_SHAPES: ReadonlySet<string> = new Set(["list", "table", "page"]);
-
-/** The state of one contract request, opened before any check runs. */
-export interface BoundaryContext {
-  readonly api: ContractApi;
-  readonly route: ContractRoute;
-  readonly pathParams: Readonly<Record<string, string>>;
-  readonly hooks: BoundaryHooks;
-  readonly bodyValidation: boolean;
-  mode: ResponsesMode;
-  /** True while the boundary writes its own reply, which skips the contract checks. */
-  boundaryWriting: boolean;
-  idempotencyKey?: string;
-  grant?: AccessGrant;
-  input?: unknown;
-  /** An exception no seampact filter claims, kept so a violating reply reports it to `onUnexpectedError`. */
-  unclaimedException?: unknown;
-}
-
-/** What `onUnexpectedError` receives for a reply outside the contract when no exception is known. */
-export interface ViolatingReply {
-  readonly status: number;
-  readonly headers: readonly (readonly [name: string, value: string])[];
-  readonly body: Uint8Array;
-  readonly violation: string;
-}
-
-/** The context of the contract request being served, absent outside one. */
-export const boundaryContext = new AsyncLocalStorage<BoundaryContext>();
-
-/** The context hooks receive in `onUnexpectedError`. */
-export function unexpectedContext(
-  context: BoundaryContext,
-  method: string,
-  path: string,
-): UnexpectedErrorContext {
-  return { api: context.api.id, operation: context.route.id, method, path };
-}
-
-/** Writes a reply of the boundary's own with `res.end`, after completing its idempotency record. */
-export async function writeContractReply(
-  response: ServerResponse,
-  context: BoundaryContext | undefined,
-  reply: ContractReply,
-): Promise<void> {
-  if (context?.idempotencyKey !== undefined) {
-    const key = context.idempotencyKey;
-
-    delete context.idempotencyKey;
-    await settleIdempotency(context.hooks, key, reply);
-  }
-
-  if (context !== undefined) context.boundaryWriting = true;
-
-  if (response.headersSent) {
-    console.error(
-      `seampact: a reply of operation '${context?.route.id ?? "(none)"}' was already sent; the boundary's ${reply.status} is dropped.`,
-    );
-
-    return;
-  }
-
-  response.statusCode = reply.status;
-  applyReplyHeaders(response, reply.headers);
-  response.end(reply.body);
-}
-
-// Replaces the body headers and the reply's own names, merges `Vary`, and keeps what the app's middleware set
-// (CORS, security headers, a throttler's `Retry-After`).
-function applyReplyHeaders(response: ServerResponse, headers: ContractReply["headers"]): void {
-  const grouped = groupedHeaders(headers);
-
-  for (const name of [...BODY_HEADERS, ...grouped.keys()]) {
-    if (name !== VARY_HEADER) response.removeHeader(name);
-  }
-
-  for (const [name, values] of grouped) {
-    response.setHeader(
-      name,
-      name === VARY_HEADER ? mergedVary(response.getHeader(VARY_HEADER), values) : values,
-    );
-  }
-}
-
-function mergedVary(
-  current: ReturnType<ServerResponse["getHeader"]>,
-  added: readonly string[],
-): string {
-  const names: string[] = [];
-
-  for (const value of [...(Array.isArray(current) ? current : [current]), ...added]) {
-    if (value === undefined) continue;
-
-    for (const name of String(value).split(",")) {
-      const trimmed = name.trim();
-
-      if (trimmed !== "" && !names.some((known) => known.toLowerCase() === trimmed.toLowerCase())) {
-        names.push(trimmed);
-      }
-    }
-  }
-
-  return names.join(", ");
-}
-
-function groupedHeaders(headers: ContractReply["headers"]): Map<string, string[]> {
-  const grouped = new Map<string, string[]>();
-
-  for (const [name, value] of headers) {
-    const lowerName = name.toLowerCase();
-
-    grouped.set(lowerName, [...(grouped.get(lowerName) ?? []), value]);
-  }
-
-  return grouped;
-}
 
 type Phase = "undecided" | "passing" | "holding" | "replaced";
 
@@ -168,7 +45,7 @@ export function installOutgoingCheck(
   let heldBytes = 0;
   let phase: Phase = "undecided";
   let headArgs: unknown[] | undefined;
-  let holdReason: "error" | "success" = "error";
+  let holdReason: HoldReason = "error";
   let warned = false;
 
   // Under `warn` the violation is logged once and the caller lets the reply go out; under `strict` it is replaced.
@@ -255,33 +132,24 @@ export function installOutgoingCheck(
     // Express's weak ETag, on any status the boundary did not write (ADR 0012 step 10).
     response.removeHeader(ETAG_HEADER);
 
-    if (status === NOT_MODIFIED) {
-      violation("a 304 the boundary did not write");
+    const verdict = statusVerdict(context, status);
+
+    if (verdict.kind === "violation") {
+      violation(verdict.reason);
 
       if (phase === "undecided") phase = "passing";
 
       return;
     }
 
-    const success = context.route.responses.find((entry) => entry.status === status);
-
-    if (success !== undefined) {
-      holdReason = "success";
-      phase = context.bodyValidation && success.itemValidator !== undefined ? "holding" : "passing";
+    if (verdict.kind === "pass") {
+      phase = "passing";
 
       return;
     }
 
-    if (Object.values(context.route.errors).some((entry) => entry.status === status)) {
-      holdReason = "error";
-      phase = "holding";
-
-      return;
-    }
-
-    violation(`the undeclared status ${status}`);
-
-    if (phase === "undecided") phase = "passing";
+    holdReason = verdict.holdReason;
+    phase = "holding";
   };
 
   const flush = async (): Promise<void> => {
@@ -295,7 +163,12 @@ export function installOutgoingCheck(
       typeof decoded === "string"
         ? decoded
         : holdReason === "error"
-          ? errorBodyViolation(context, response, decoded)
+          ? errorBodyViolation(
+              context,
+              response.statusCode,
+              String(response.getHeader(CONTENT_TYPE_HEADER) ?? ""),
+              decoded,
+            )
           : await successBodyViolation(context, response.statusCode, decoded);
 
     if (reason !== undefined) {
@@ -464,7 +337,7 @@ function recordedReply(response: ServerResponse, chunks: readonly Buffer[]): Con
 // The held body as the client decodes it, or the violation: a compressed body (compression middleware) is decoded
 // within the cap, and an encoding the check cannot decode is outside the contract.
 function decodedBody(response: ServerResponse, body: Buffer, maxBytes: number): Buffer | string {
-  const encoding = String(response.getHeader("content-encoding") ?? IDENTITY_ENCODING)
+  const encoding = String(response.getHeader(CONTENT_ENCODING_HEADER) ?? IDENTITY_ENCODING)
     .trim()
     .toLowerCase();
   const decode = DECODERS[encoding];
@@ -480,69 +353,6 @@ function decodedBody(response: ServerResponse, body: Buffer, maxBytes: number): 
     return error instanceof RangeError
       ? `an error body over ${maxBytes} bytes once decoded`
       : `a body that does not decode as '${encoding}'`;
-  }
-}
-
-function errorBodyViolation(
-  context: BoundaryContext,
-  response: ServerResponse,
-  body: Buffer,
-): string | undefined {
-  const contentType = String(response.getHeader("content-type") ?? "")
-    .split(";")[0]
-    ?.trim();
-
-  if (contentType !== context.api.format.media)
-    return `an error body of media '${contentType}', not the api's format`;
-
-  const parsed = parseJson(body);
-  const code = isPlainObject(parsed) ? parsed[context.api.format.codeMember] : undefined;
-
-  if (typeof code !== "string") return "an error body without a code in the api's format";
-
-  const entry = Object.hasOwn(context.route.errors, code) ? context.route.errors[code] : undefined;
-
-  if (entry === undefined || entry.status !== response.statusCode) {
-    return `the code '${code}' with status ${response.statusCode}, which the operation does not declare`;
-  }
-
-  return undefined;
-}
-
-async function successBodyViolation(
-  context: BoundaryContext,
-  status: number,
-  body: Buffer,
-): Promise<string | undefined> {
-  const response = context.route.responses.find((entry) => entry.status === status);
-  const validator = response?.itemValidator;
-
-  if (response === undefined || validator === undefined) return undefined;
-
-  const parsed = parseJson(body);
-  const isList = LIST_SHAPES.has(response.shape);
-
-  if (isList && !Array.isArray(parsed))
-    return `a ${status} ${response.shape} body that is not a JSON array`;
-
-  const items = isList && Array.isArray(parsed) ? parsed : [parsed];
-
-  for (const item of items) {
-    const result = await validator["~standard"].validate(item);
-
-    if (result.issues !== undefined)
-      return `a ${status} body that fails its output schema: ${result.issues[0]?.message ?? ""}`;
-  }
-
-  return undefined;
-}
-
-function parseJson(body: Buffer): unknown {
-  try {
-    return JSON.parse(body.toString("utf8"));
-  } catch {
-    // Not JSON: the caller reports the body as outside the format.
-    return undefined;
   }
 }
 

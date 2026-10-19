@@ -1,7 +1,6 @@
 // Idempotency at the boundary: the claim's fixed-size key and fingerprint, begin with its replay, running and
 // mismatch answers, and the record completed or abandoned with the reply that went out. Copied into the generated
 // tree as is.
-import { createHash } from "node:crypto";
 import type { StoredResponse } from "@seampact/hooks";
 import type { AccessGrant, CheckState } from "./access-checks.js";
 import type { BoundaryHooks } from "./boundary-hooks.js";
@@ -12,6 +11,7 @@ import {
   isPlainObject,
   unexpectedError,
 } from "./contract-error.js";
+import { sha256Hex } from "./sha256.js";
 
 const IN_PROGRESS_ROLE = "idempotencyInProgress";
 const KEY_REUSED_ROLE = "idempotencyKeyReused";
@@ -46,10 +46,18 @@ export async function beginIdempotency(
   }
 
   const principalDigest =
-    grant.principal === null || grant.principal === undefined ? "" : digest([grant.principal]);
-  const key = digest([state.api.id, route.id, grant.identity ?? "", principalDigest, clientKey]);
+    grant.principal === null || grant.principal === undefined
+      ? ""
+      : await digest([grant.principal]);
+  const key = await digest([
+    state.api.id,
+    route.id,
+    grant.identity ?? "",
+    principalDigest,
+    clientKey,
+  ]);
   // The validated input holds the decoded path params, so an equivalent encoding of the path is the same request.
-  const fingerprint = digest([route.method, route.path, input]);
+  const fingerprint = await digest([route.method, route.path, input]);
   const begin = await store.begin({
     key,
     fingerprint,
@@ -118,8 +126,8 @@ function roleCode(state: CheckState, role: string): string {
 }
 
 // Object members sorted by name, so the same request with its members reordered digests the same.
-function digest(parts: readonly unknown[]): string {
-  return createHash("sha256").update(JSON.stringify(parts, sortedMembers)).digest("hex");
+function digest(parts: readonly unknown[]): Promise<string> {
+  return sha256Hex(JSON.stringify(parts, sortedMembers));
 }
 
 function sortedMembers(_name: string, value: unknown): unknown {

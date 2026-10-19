@@ -27,7 +27,7 @@ export function fastifyModuleSource(
     'import { CONTRACT_API } from "./routes.js";',
     ...handlerMapDeclarations(ir, options, FASTIFY_MODULE, refusals),
     "",
-    'export { MAX_CHECKED_ERROR_BODY_BYTES } from "./node-server/outgoing-check.js";',
+    'export { MAX_CHECKED_ERROR_BODY_BYTES } from "./node-server/outgoing-verdict.js";',
     'export { MAX_RENDERED_ISSUES } from "./node-server/contract-error.js";',
     "",
     "const boundary = createFastifyBoundary<SeampactHooks, ContractHandlers, OperationName>(CONTRACT_API, GENERATED_SETTINGS, HANDLER_BINDINGS);",

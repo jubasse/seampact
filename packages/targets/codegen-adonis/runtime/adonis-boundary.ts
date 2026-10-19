@@ -15,6 +15,7 @@ import {
   claimsBasePathAlone,
   registerBasePathClaim,
 } from "./node-server/base-path-claims.js";
+import { type BoundaryContext, boundaryContext } from "./node-server/boundary-context.js";
 import {
   type BootProblem,
   type BoundaryHooks,
@@ -40,22 +41,17 @@ import {
   matchesContractPath,
   type ResponsesMode,
 } from "./node-server/contract-route.js";
-import {
-  notFoundError,
-  type ReportedRequest,
-  respondNotServed,
-  respondWithError,
-} from "./node-server/error-reply.js";
+import { notFoundError, type ReportedRequest } from "./node-server/error-reply.js";
 import { handlerReply } from "./node-server/handler-reply.js";
 import { beginIdempotency } from "./node-server/idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./node-server/input-checks.js";
-import { announcesBody, DEFAULT_METHOD, requestTarget } from "./node-server/node-request.js";
+import { installOutgoingCheck } from "./node-server/node-outgoing-check.js";
 import {
-  type BoundaryContext,
-  boundaryContext,
-  installOutgoingCheck,
+  respondNotServed,
+  respondWithError,
   writeContractReply,
-} from "./node-server/outgoing-check.js";
+} from "./node-server/node-reply.js";
+import { announcesBody, DEFAULT_METHOD, requestTarget } from "./node-server/node-request.js";
 import { type PlatformFixes, transportRefusal } from "./node-server/transport-checks.js";
 
 /** The target options this api was generated with. */
