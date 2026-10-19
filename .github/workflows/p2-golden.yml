@@ -52,12 +52,29 @@ jobs:
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          for directory in fixtures/reference fixtures/validator-agreement fixtures/golden/*/contract; do
-            find "$directory" -name '*.yaml' | while read -r file; do
-              sed -i 's/\r$//; s/$/\r/' "$file"
-              grep -q $'\r' "$file"
-            done
-          done
+          node --input-type=module -e '
+            import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+            import { join } from "node:path";
+            const caseDirectories = ["fixtures/reference", "fixtures/validator-agreement",
+              ...readdirSync("fixtures/golden").map((name) => join("fixtures/golden", name, "contract"))];
+            let convertedCount = 0;
+            for (const directory of caseDirectories) {
+              let entries;
+              try { entries = readdirSync(directory, { recursive: true }); } catch (error) {
+                if (error.code === "ENOENT") continue;
+                throw error;
+              }
+              for (const entry of entries.filter((name) => name.endsWith(".yaml"))) {
+                const file = join(directory, entry);
+                const crlfText = readFileSync(file, "utf8").replace(/\r?\n/g, "\r\n");
+                writeFileSync(file, crlfText);
+                if (!readFileSync(file, "utf8").includes("\r\n")) throw new Error(`${file} has no CRLF after conversion`);
+                convertedCount += 1;
+              }
+            }
+            if (convertedCount === 0) throw new Error("no case source found to convert to CRLF");
+            console.log(`converted ${convertedCount} case sources to CRLF`);
+          '
       - name: Check every golden case
         run: node --experimental-transform-types --import ./scripts/ir-models/register.ts scripts/golden/cli.ts --check
 
