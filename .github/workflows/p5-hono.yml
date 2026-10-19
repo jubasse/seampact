@@ -25,6 +25,7 @@ jobs:
       fail-fast: false
       matrix:
         target: [hono]
+        validators: [zod, yup]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -35,5 +36,5 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Run the ${{ matrix.target }} consumer from packed tarballs
-        run: node scripts/consumers/cli.ts --target "${{ matrix.target }}" --dir "$RUNNER_TEMP/test-seampact-${{ matrix.target }}"
+      - name: Run the ${{ matrix.target }} consumer on ${{ matrix.validators }} from packed tarballs
+        run: node scripts/consumers/cli.ts --target "${{ matrix.target }}" --validators "${{ matrix.validators }}" --dir "$RUNNER_TEMP/test-seampact-${{ matrix.target }}-${{ matrix.validators }}"
