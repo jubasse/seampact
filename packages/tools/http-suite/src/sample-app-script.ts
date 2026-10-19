@@ -70,6 +70,17 @@ export function decideHookName(requirement: string): string {
   return `decide:${requirement}`;
 }
 
+/**
+ * The right the sample app maps to a decide hook of its own (CHK-091): its own double answers the right, every other
+ * right and rule reaches the generic decide double.
+ */
+export const OVERRIDDEN_RIGHT = "tasks.update";
+
+/** The hook name the sample app's own decide double records: `decide-override:<right>`. */
+export function overriddenDecideHookName(right: string): string {
+  return `decide-override:${right}`;
+}
+
 /** The operation a double records and an answer is keyed by: `<api>.<operationId>`. */
 export function operationKey(api: string, operationId: string): string {
   return `${api}.${operationId}`;
