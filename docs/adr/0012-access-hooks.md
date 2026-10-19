@@ -124,7 +124,7 @@ The order is fixed in every target and stops at the first failure (FR-5):
 3. Principal requirements (403).
 4. Scope resolution, outermost scope first (each scope's declared denial). A scope id is checked against its schema before its resolver runs; an invalid one answers the `schemaInvalid` 400 with that member's issues only.
 5. Requirements in declared order. A body proof is read from the parsed body and checked against its own field schema in this step; an invalid one answers the `schemaInvalid` 400 with that member's issues only, before the decider runs. A subject id or a throttle bucket key read from a path param is checked the same way before its decider runs. A registered record loader runs here, before the decide call that receives the record; a record it does not find answers the `notFound` role at this step, before any 403 (as Laravel's route-model binding and API Platform's providers do).
-6. Input validation (400), reporting every issue of path, query, headers and body at once.
+6. Input validation (400), reporting every issue of path, query, headers and body at once. On a route with a scope id or a body proof, step 6 reuses the validation steps 4 and 5 ran, so it validates the request as read there: a body that app code rewrites between those steps is not validated again.
 7. Restricted input fields (403 with the field pointer, or stripped, per A21) and restricted sort keys (403).
 8. Principal bindings (403). A binding whose principal side or input side is absent or null is a mismatch, never a match.
 9. The handler.
