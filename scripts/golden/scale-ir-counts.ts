@@ -77,6 +77,7 @@ export function scaleIrCounts(irs: Record<string, JsonObject>): ScaleIrCounts {
 
     for (const [code, declaration] of Object.entries(membersOf(ir, "errors"))) {
       if (!isObject(declaration)) continue;
+
       if (membersOf(declaration, "origin").layer === CORE_LAYER) continue;
 
       codes.add(code);

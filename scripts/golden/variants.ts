@@ -67,6 +67,7 @@ function resolveTree(
   inData: boolean,
 ): TreeValue {
   if (Array.isArray(value)) return value.map((item) => resolveTree(root, directory, item, inData));
+
   if (!isTree(value)) return value;
 
   const keys = Object.keys(value);
@@ -116,10 +117,13 @@ class VariantWriter {
   directives = 0;
   private partCount = 0;
 
-  constructor(
-    private readonly random: () => number,
-    private readonly moving: boolean,
-  ) {}
+  private readonly random: () => number;
+  private readonly moving: boolean;
+
+  constructor(random: () => number, moving: boolean) {
+    this.random = random;
+    this.moving = moving;
+  }
 
   /** The relative path from a file's folder to a new part file below `parts/`. */
   private newPart(directory: string, extension: string): { path: string; reference: string } {
@@ -207,6 +211,7 @@ class VariantWriter {
     const label = `${pad}${this.key(name)}:`;
 
     if (isTree(value) && DATA_KEYS.has(name)) return this.dataEntry(label, name, value, directory);
+
     if (!isTree(value) || Object.keys(value).length === 0)
       return [`${label} ${JSON.stringify(value)}`];
 
