@@ -2140,6 +2140,260 @@
       "payload": [],
       "expected": "reject",
       "rule": "adr0003/consequences/list-is-not-object"
+    },
+    {
+      "id": "Quantity.below-safe-minimum",
+      "schema": "Quantity",
+      "direction": "input",
+      "payload": {
+        "count": -9007199254740992
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/safe-integer"
+    },
+    {
+      "id": "Quantity.safe-minimum",
+      "schema": "Quantity",
+      "direction": "input",
+      "payload": {
+        "count": -9007199254740991
+      },
+      "expected": "accept",
+      "rule": "adr0003/8/safe-integer"
+    },
+    {
+      "id": "Member.null",
+      "schema": "Member",
+      "direction": "input",
+      "payload": {
+        "role": null
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/type-checked"
+    },
+    {
+      "id": "Bounds.above-exclusive-minimum",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "aboveZero": 1
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/exclusive-minimum"
+    },
+    {
+      "id": "Bounds.at-exclusive-minimum",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "aboveZero": 0
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/exclusive-minimum"
+    },
+    {
+      "id": "Bounds.below-exclusive-minimum",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "aboveZero": -1
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/exclusive-minimum"
+    },
+    {
+      "id": "Bounds.output-at-exclusive-minimum",
+      "schema": "Bounds",
+      "direction": "output",
+      "payload": {
+        "aboveZero": 0
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/exclusive-minimum"
+    },
+    {
+      "id": "Bounds.below-exclusive-maximum",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "belowHundred": 99
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/exclusive-maximum"
+    },
+    {
+      "id": "Bounds.at-exclusive-maximum",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "belowHundred": 100
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/exclusive-maximum"
+    },
+    {
+      "id": "Bounds.above-exclusive-maximum",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "belowHundred": 101
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/exclusive-maximum"
+    },
+    {
+      "id": "Bounds.output-at-exclusive-maximum",
+      "schema": "Bounds",
+      "direction": "output",
+      "payload": {
+        "belowHundred": 100
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/exclusive-maximum"
+    },
+    {
+      "id": "Bounds.multiple",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "step": 10
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/multiple-of"
+    },
+    {
+      "id": "Bounds.multiple-zero",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "step": 0
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/multiple-of"
+    },
+    {
+      "id": "Bounds.multiple-negative",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "step": -5
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/multiple-of"
+    },
+    {
+      "id": "Bounds.multiple-largest-safe",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "step": 9007199254740990
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/multiple-of"
+    },
+    {
+      "id": "Bounds.not-a-multiple",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "step": 7
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/multiple-of"
+    },
+    {
+      "id": "Bounds.output-not-a-multiple",
+      "schema": "Bounds",
+      "direction": "output",
+      "payload": {
+        "step": 7
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/multiple-of"
+    },
+    {
+      "id": "Bounds.fraction-for-multiple",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "step": 2.5
+      },
+      "expected": "reject",
+      "rule": "adr0003/8/integer-fraction"
+    },
+    {
+      "id": "Bounds.fraction-inside-bounds",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "fraction": 0.5
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/exclusive-minimum"
+    },
+    {
+      "id": "Bounds.fraction-at-minimum",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "fraction": 0
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/exclusive-minimum"
+    },
+    {
+      "id": "Bounds.fraction-at-maximum",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "fraction": 1
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/exclusive-maximum"
+    },
+    {
+      "id": "Bounds.fraction-string",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "fraction": "0.5"
+      },
+      "expected": "reject",
+      "rule": "adr0003/4/type-checked"
+    },
+    {
+      "id": "Bounds.fraction-infinity",
+      "schema": "Bounds",
+      "direction": "input",
+      "payloadText": "{\"fraction\":1e999}",
+      "expected": "reject",
+      "rule": "adr0003/1/finite-number"
+    },
+    {
+      "id": "Bounds.plain-infinity",
+      "schema": "Bounds",
+      "direction": "input",
+      "payloadText": "{\"plain\":1e999}",
+      "expected": "reject",
+      "rule": "adr0003/1/finite-number"
+    },
+    {
+      "id": "Bounds.plain-negative-infinity",
+      "schema": "Bounds",
+      "direction": "input",
+      "payloadText": "{\"plain\":-1e999}",
+      "expected": "reject",
+      "rule": "adr0003/1/finite-number"
+    },
+    {
+      "id": "Bounds.plain-finite",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "plain": 1.5
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/finite-number"
     }
   ]
 }

@@ -122,6 +122,30 @@ export function maximumCheck(limit: number): ContractCheck {
   };
 }
 
+export function exclusiveMinimumCheck(limit: number): ContractCheck {
+  return {
+    rule: "exclusiveMinimum",
+    message: `Expected more than ${limit}.`,
+    test: onNumbers((value) => value > limit),
+  };
+}
+
+export function exclusiveMaximumCheck(limit: number): ContractCheck {
+  return {
+    rule: "exclusiveMaximum",
+    message: `Expected less than ${limit}.`,
+    test: onNumbers((value) => value < limit),
+  };
+}
+
+export function multipleOfCheck(divisor: number): ContractCheck {
+  return {
+    rule: "multipleOf",
+    message: `Expected a multiple of ${divisor}.`,
+    test: onNumbers((value) => value % divisor === 0),
+  };
+}
+
 /** The safe-integer range as a lower and an upper bound check, for an integer field or the items of a list. */
 export function safeIntegerChecks(): ContractCheck[] {
   return [minimumCheck(-SAFE_INTEGER_LIMIT), maximumCheck(SAFE_INTEGER_LIMIT)];
@@ -189,6 +213,18 @@ export function Minimum(limit: number): PropertyDecorator {
 
 export function Maximum(limit: number): PropertyDecorator {
   return Satisfies(maximumCheck(limit));
+}
+
+export function ExclusiveMinimum(limit: number): PropertyDecorator {
+  return Satisfies(exclusiveMinimumCheck(limit));
+}
+
+export function ExclusiveMaximum(limit: number): PropertyDecorator {
+  return Satisfies(exclusiveMaximumCheck(limit));
+}
+
+export function MultipleOf(divisor: number): PropertyDecorator {
+  return Satisfies(multipleOfCheck(divisor));
 }
 
 // Each item of a list against its checks, the type check first. class-validator's `each` reports a failing item

@@ -45,6 +45,10 @@ surfaces:
         method: post
         input: PatchArticle
         output: PatchArticle
+      echoBounds:
+        method: post
+        input: Bounds
+        output: Bounds
       echoReceipt:
         method: post
         input: Receipt

@@ -92,6 +92,14 @@ Percent:
   type: object
   required: [value]
   properties: { value: { type: integer, minimum: 0, maximum: 100 } }
+Bounds:
+  type: object
+  properties:
+    aboveZero: { type: integer, exclusiveMinimum: 0 }
+    belowHundred: { type: integer, exclusiveMaximum: 100 }
+    step: { type: integer, multipleOf: 5 }
+    fraction: { type: number, exclusiveMinimum: 0, exclusiveMaximum: 1 }
+    plain: { type: number }
 Instant:
   type: object
   required: [at]

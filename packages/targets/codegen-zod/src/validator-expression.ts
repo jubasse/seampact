@@ -108,6 +108,12 @@ function scalarCheck(check: ScalarCheck, context: ZodRenderContext): string {
       return `.gte(${check.literal})`;
     case "maximum":
       return `.lte(${check.literal})`;
+    case "exclusiveMinimum":
+      return `.gt(${check.literal})`;
+    case "exclusiveMaximum":
+      return `.lt(${check.literal})`;
+    case "multipleOf":
+      return `.multipleOf(${check.literal})`;
   }
 }
 

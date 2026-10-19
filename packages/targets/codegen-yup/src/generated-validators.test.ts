@@ -247,12 +247,20 @@ describe("operation input: every issue names a contract rule and nothing is cast
     ]);
   });
 
-  test("a fractional integer, a bound and an unknown body key each name their rule", async () => {
+  test("a fractional integer reports its type alone, as zod does, beside an unknown body key", async () => {
     const body = { title: "t", effort: -1.5, extra: true };
 
     expect(
       (await rules(operationInputs.CreateTaskInputSchema, createTaskInput(body))).sort(),
-    ).toEqual(["minimum", "type", "unknownKeys"]);
+    ).toEqual(["type", "unknownKeys"]);
+  });
+
+  test("a bound and an unknown body key each name their rule", async () => {
+    const body = { title: "t", effort: -1, extra: true };
+
+    expect(
+      (await rules(operationInputs.CreateTaskInputSchema, createTaskInput(body))).sort(),
+    ).toEqual(["minimum", "unknownKeys"]);
   });
 
   test("a body that is not an object is a type issue", async () => {

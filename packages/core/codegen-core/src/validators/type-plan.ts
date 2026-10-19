@@ -42,6 +42,17 @@ export interface ScalarPlan {
   readonly checks: readonly ScalarCheck[];
 }
 
+// The numeric refinements of an integer or a number, each the exact decimal literal of the contract.
+const NUMERIC_RULES = [
+  "minimum",
+  "maximum",
+  "exclusiveMinimum",
+  "exclusiveMaximum",
+  "multipleOf",
+] as const;
+
+export type NumericRule = (typeof NUMERIC_RULES)[number];
+
 export type StringFormat = "uuid" | "date-time";
 
 // A string length counts Unicode code points (ADR 0003 section 1); a bound is the exact decimal literal of the
@@ -50,7 +61,7 @@ export type ScalarCheck =
   | { readonly rule: "format"; readonly format: StringFormat; readonly message: string }
   | { readonly rule: "minLength" | "maxLength"; readonly limit: number; readonly message: string }
   | { readonly rule: "pattern"; readonly normalized: string; readonly message: string }
-  | { readonly rule: "minimum" | "maximum"; readonly literal: string };
+  | { readonly rule: NumericRule; readonly literal: string };
 
 // One member of an object, parameter set or proof list: its key as written on the wire, its type and whether
 // it may be absent.
@@ -256,26 +267,6 @@ function refuseScalarForms(
       refuseNotGeneratedYet("scalar.content", "A JSON text field", below(location, "content")),
     );
   }
-
-  const refinements = typeUse.refinements;
-  const refinementsLocation = below(location, "refinements");
-  const notGenerated = [
-    ["exclusiveMinimum", refinements.exclusiveMinimum],
-    ["exclusiveMaximum", refinements.exclusiveMaximum],
-    ["multipleOf", refinements.multipleOf],
-  ] as const;
-
-  for (const [refinement, value] of notGenerated) {
-    if (value === undefined) continue;
-
-    refusals.push(
-      refuseNotGeneratedYet(
-        `scalar.${refinement}`,
-        `The refinement '${refinement}'`,
-        below(refinementsLocation, refinement),
-      ),
-    );
-  }
 }
 
 // The base type, with its format check first, or undefined once refused.
@@ -400,10 +391,11 @@ function boundChecks(
   location: IrLocation,
   refusals: Refusal[],
 ): ScalarCheck[] {
-  const { minimum, maximum } = typeUse.refinements;
+  const refinements = typeUse.refinements;
   const refinementsLocation = below(location, "refinements");
+  const written = NUMERIC_RULES.filter((rule) => refinements[rule] !== undefined);
 
-  if (minimum === undefined && maximum === undefined) return [];
+  if (written.length === 0) return [];
 
   if (!NUMERIC_TYPES.includes(typeUse.type)) {
     refusals.push(
@@ -417,13 +409,8 @@ function boundChecks(
     return [];
   }
 
-  const bounds = [
-    ["minimum", minimum],
-    ["maximum", maximum],
-  ] as const;
-
-  return bounds.flatMap(([rule, literal]): ScalarCheck[] => {
-    if (literal === undefined) return [];
+  return written.flatMap((rule): ScalarCheck[] => {
+    const literal = refinements[rule] ?? "";
 
     if (!isExactNumberLiteral(literal)) {
       refusals.push(

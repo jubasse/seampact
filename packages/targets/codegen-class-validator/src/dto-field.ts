@@ -152,6 +152,12 @@ function scalarCheckDecorator(check: ScalarCheck, context: DtoRenderContext): st
       return `@${CONTRACT}.Minimum(${check.literal})`;
     case "maximum":
       return `@${CONTRACT}.Maximum(${check.literal})`;
+    case "exclusiveMinimum":
+      return `@${CONTRACT}.ExclusiveMinimum(${check.literal})`;
+    case "exclusiveMaximum":
+      return `@${CONTRACT}.ExclusiveMaximum(${check.literal})`;
+    case "multipleOf":
+      return `@${CONTRACT}.MultipleOf(${check.literal})`;
   }
 }
 
@@ -169,6 +175,12 @@ function itemCheck(check: ScalarCheck): string {
       return `${CONTRACT}.minimumCheck(${check.literal})`;
     case "maximum":
       return `${CONTRACT}.maximumCheck(${check.literal})`;
+    case "exclusiveMinimum":
+      return `${CONTRACT}.exclusiveMinimumCheck(${check.literal})`;
+    case "exclusiveMaximum":
+      return `${CONTRACT}.exclusiveMaximumCheck(${check.literal})`;
+    case "multipleOf":
+      return `${CONTRACT}.multipleOfCheck(${check.literal})`;
   }
 }
 
