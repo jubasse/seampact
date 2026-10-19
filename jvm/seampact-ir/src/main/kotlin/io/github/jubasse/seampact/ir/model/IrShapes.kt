@@ -1,4 +1,4 @@
-// Generated from scripts/ir-models/kotlin.ts by scripts/ir-models for IR revision 5. Do not edit.
+// Generated from scripts/ir-models/kotlin.ts by scripts/ir-models for IR revision 6. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 
 package io.github.jubasse.seampact.ir.model

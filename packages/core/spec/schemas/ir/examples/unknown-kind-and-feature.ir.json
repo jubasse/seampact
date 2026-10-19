@@ -1,6 +1,6 @@
 {
   "irVersion": 1,
-  "irRevision": 5,
+  "irRevision": 6,
   "kinds": ["httpOperation", "channel"],
   "features": ["streaming"],
   "api": {

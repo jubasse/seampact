@@ -1,4 +1,4 @@
-// Generated from packages/core/spec/schemas/ir/formats.schema.json by scripts/ir-models for IR revision 5. Do not edit.
+// Generated from packages/core/spec/schemas/ir/formats.schema.json by scripts/ir-models for IR revision 6. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 @file:OptIn(ExperimentalSerializationApi::class)
 @file:UseSerializers(IrIntegerSerializer::class)

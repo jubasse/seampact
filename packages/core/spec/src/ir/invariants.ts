@@ -6,7 +6,7 @@ import {
   walkIrInstance,
 } from "./instance-walk.js";
 import type { SchemaNode } from "./schemas.js";
-import { findIrSensitiveProperty } from "./sensitive-field.js";
+import { findIrSensitiveReaches, type IrSensitiveReach } from "./sensitive-field.js";
 import { isIrSameTypeUse } from "./type-use.js";
 import { irUnionTags } from "./unions.js";
 
@@ -607,7 +607,7 @@ function checkRetryHeader(
     );
 }
 
-// A response that carries a sensitive field is never stored: the operation has a `cache` that sets `noStore`.
+// A response that carries a sensitive value is never stored: the operation has a `cache` that sets `noStore`.
 function checkSensitiveNoStore(
   operation: Json,
   pointer: string,
@@ -619,16 +619,28 @@ function checkSensitiveNoStore(
   if (cache?.noStore === true) return;
 
   const responses = Array.isArray(operation.responses) ? operation.responses : [];
-  const bodies = responses.map((response) => (isRecord(response) ? response.body : undefined));
-  const found = findIrSensitiveProperty(bodies, schemaEntries);
+  const [found] = findIrSensitiveReaches(responses, schemaEntries);
 
   if (found === undefined) return;
 
   fail(
     "ir.cache.sensitive-no-store",
     pointer,
-    `A response carries the sensitive property '${found.property}' of '${found.schema}', so the operation's 'cache' sets 'noStore'.`,
+    `A response carries ${sensitiveReachText(found)}, so the operation's 'cache' sets 'noStore'.`,
   );
+}
+
+function sensitiveReachText(reach: IrSensitiveReach): string {
+  switch (reach.place) {
+    case "field":
+      return `the sensitive property '${reach.property}' of '${reach.schema}'`;
+    case "body":
+      return `a sensitive value outside any property of its body (response ${reach.response})`;
+    case "mapKey":
+      return `the sensitive keys of '${reach.schema}'`;
+    case "header":
+      return `the sensitive header '${reach.header}'`;
+  }
 }
 
 interface OperationScope {

@@ -169,6 +169,13 @@
               },
               "$comment": "ADR 0002 section 13"
             },
+            "sensitiveElsewhere": {
+              "enum": [
+                "noStore",
+                "refuse"
+              ],
+              "$comment": "ADR 0002 section 13"
+            },
             "$include": {
               "$ref": "common.schema.json#/$defs/include"
             }

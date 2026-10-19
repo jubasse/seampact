@@ -770,6 +770,8 @@ export interface ScalarTypeUse {
   scalar?: ScalarId;
   refinements: Refinements;
   content?: JsonContent;
+  /** The value is secret (ADR 0003 section 6): a use of a declared scalar marked sensitive; absent means false. A property's own type use leaves it out: Property.sensitive holds it. A response carrying it is no-store (invariant ir.cache.sensitive-no-store). */
+  sensitive?: boolean;
   /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
   nullable?: boolean;
   /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */
@@ -1179,7 +1181,7 @@ export interface Cache {
   vary: string[];
   etag: boolean;
   perCallerKind: CallerCacheControl[];
-  /** Authoritative: when true the response is never stored, whatever 'directives' hold. True when the family is 'never' or a response carries a sensitive field (ADR 0003 section 6, invariant ir.cache.sensitive-no-store). */
+  /** Authoritative: when true the response is never stored, whatever 'directives' hold. True when the family is 'never' or a response carries a sensitive value: a sensitive property or scalar use in its body or a header's type (ADR 0003 section 6, invariant ir.cache.sensitive-no-store). */
   noStore: boolean;
   origin: Origin;
   derivedFrom?: DerivedFrom;

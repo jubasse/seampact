@@ -280,6 +280,24 @@ const withoutNullable = (use: IrWriter.TypeUse): { use: IrWriter.TypeUse; nullab
   return { use: copy, nullable: true };
 };
 
+// A declared scalar marked sensitive: every use of it carries the mark, so a body, an item, a map key or a header
+// holding it stays sensitive (ADR 0003 section 6); a property holds the mark itself (`ownTypeUse`).
+const markSensitive = (compiled: TreeSchemasCompiled): void => {
+  compiled.sensitive = true;
+
+  if (compiled.use.kind === "scalar") compiled.use.sensitive = true;
+};
+
+// A property's own type use: `nullable` and `sensitive` move to the property.
+const ownTypeUse = (use: IrWriter.TypeUse): { use: IrWriter.TypeUse; nullable: boolean } => {
+  if (use.kind !== "scalar" || use.sensitive !== true) return withoutNullable(use);
+  const copy = { ...use };
+
+  delete copy.sensitive;
+
+  return withoutNullable(copy);
+};
+
 /** The schemas of one api, compiled once each, and the type use at each schema position compiled. */
 export class TreeSchemasCompiler {
   /** Every named schema written so far, by id, children before their parent. */
@@ -545,7 +563,7 @@ export class TreeSchemasCompiler {
 
     if (value.nullable === true && compiled.use.kind !== "opaque") compiled.use.nullable = true;
 
-    if (value.sensitive === true && position.place === "declared") compiled.sensitive = true;
+    if (value.sensitive === true && position.place === "declared") markSensitive(compiled);
 
     if (!this.applyUnknownKeys(value, compiled.use, position.pointer)) return undefined;
 
@@ -1273,7 +1291,7 @@ export class TreeSchemasCompiler {
     if (compiled === undefined || codeName === false || refusedRequired.length > 0)
       return undefined;
 
-    const { use, nullable } = withoutNullable(compiled.use);
+    const { use, nullable } = ownTypeUse(compiled.use);
     const fieldShape = treeSchemasIsObject(field) ? treeSchemasShapeOf(field) : undefined;
     const writesSchema = fieldShape !== undefined && SCHEMA_WRITING_SHAPES.has(fieldShape);
     // An inline object, map or union keeps its examples on its hoisted schema.

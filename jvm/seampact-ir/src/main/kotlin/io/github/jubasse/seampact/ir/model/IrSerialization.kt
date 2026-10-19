@@ -1,4 +1,4 @@
-// Generated from scripts/ir-models/kotlin.ts by scripts/ir-models for IR revision 5. Do not edit.
+// Generated from scripts/ir-models/kotlin.ts by scripts/ir-models for IR revision 6. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 @file:OptIn(ExperimentalSerializationApi::class)
 
@@ -26,7 +26,7 @@ import kotlinx.serialization.json.JsonPrimitive
 /** The IR versions this model was generated for (ADR 0005 section 2). */
 public object IrModelVersion {
     public const val IR_VERSION: Long = 1
-    public const val IR_REVISION: Long = 5
+    public const val IR_REVISION: Long = 6
 }
 
 /** The JSON configuration of the IR model: unknown members are tolerated and dropped (ADR 0005 section 3). */

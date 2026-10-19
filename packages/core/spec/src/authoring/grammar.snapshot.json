@@ -630,7 +630,8 @@
     "budget": "ADR 0002 section 13"
   },
   "conventions.schema.json#/$defs/conventions/properties/cache": {
-    "families": "ADR 0002 section 13"
+    "families": "ADR 0002 section 13",
+    "sensitiveElsewhere": "ADR 0002 section 13"
   },
   "conventions.schema.json#/$defs/conventions/properties/query": {
     "lists": "ADR 0002 section 7",

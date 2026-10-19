@@ -1020,6 +1020,43 @@ describe("sensitive responses", () => {
     ).toEqual([]);
   });
 
+  test("a sensitive scalar use is reached as a body, its items, a map key and a header type", () => {
+    const SECRET_USE = { kind: "scalar", type: "string", refinements: {}, sensitive: true };
+    const PLAIN_USE = { kind: "scalar", type: "string", refinements: {} };
+    const secretKeys = { kind: "map", keys: SECRET_USE, values: PLAIN_USE };
+    const withSecretHeader = (ir: Json) => {
+      storable(ir);
+      list(ir, `${UPDATE}/responses/0/headers`).push({
+        name: "X-Token",
+        type: SECRET_USE,
+        required: true,
+      });
+    };
+
+    const changes = [
+      withBody(SECRET_USE),
+      withBody({ kind: "array", items: SECRET_USE }),
+      withBody({ kind: "ref", schema: "SecretKeys" }),
+      withSecretHeader,
+    ];
+
+    for (const change of changes)
+      expect(
+        violationsAfter((ir) => {
+          withSchema("SecretKeys", secretKeys)(ir);
+          node(ir, EFFORT).sensitive = false;
+          change(ir);
+        }),
+      ).toEqual(at("ir.cache.sensitive-no-store", UPDATE));
+
+    expect(
+      violationsAfter((ir) => {
+        withSchema("PlainKeys", { ...secretKeys, keys: PLAIN_USE })(ir);
+        withBody({ kind: "ref", schema: "PlainKeys" })(ir);
+      }),
+    ).toEqual([]);
+  });
+
   test("a recursive schema without a sensitive field ends", () => {
     const loop = {
       kind: "object",
