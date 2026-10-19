@@ -75,7 +75,7 @@ The IR is change-controlled (ADR 0005, section "1. Two steps"; AGENTS.md says an
 3. Raise `IR_REVISION` by one in `packages/core/spec/src/ir/version.ts`.
 4. Regenerate the TypeScript types: `UPDATE_IR_TYPES=1 pnpm vitest run packages/core/spec/src/ir/types.test.ts`.
 5. Regenerate the Kotlin models: `node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write`. CI regenerates the native models and fails on any difference (ADR 0005, section "5. Readers and the seam"). The PHP models are regenerated in the same PR (ADR 0005, section "1. Two steps"); the command is not written in the template, so it is not decided yet in these documents.
-6. Regenerate the golden IR files. The golden IR of the reference contract changes only in an IR change PR (ADR 0005, section "5. Readers and the seam").
+6. Regenerate the golden IR files. The golden IR of the reference contract changes in an IR change PR (ADR 0005, section "5. Readers and the seam"), or in a compiler change that writes other values in the same format; a format change still takes this path.
 7. Add the changeset: copy `packages/core/spec/schemas/ir/CHANGE-TEMPLATE.md` to `.changeset/<branch>.md` and fill the "IR change" section (irRevision old to new, classification, one row per field or kind, and what a target must do).
 8. Update the IR section under `docs/ir/` that describes the member.
 

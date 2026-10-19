@@ -142,6 +142,35 @@ describe("derived triggers reached through the triggers contract", () => {
   });
 });
 
+describe("input.invalid under the unknown-query policy", () => {
+  const pingContract = (policy: string): string => `api: { name: edge, version: 1 }
+surfaces:
+  app:
+    prefix: /v{version}
+    access: { public: The contract checks the query policy only. }
+    routes:
+      ping: { method: get, unknownQuery: ${policy} }
+`;
+
+  const pingErrorCodes = (policy: string): string[] => {
+    const { draft } = deriveErrorsRunContract(
+      deriveErrorsLoadFiles({ "api.yaml": pingContract(policy) }),
+    );
+
+    return draft.operations[0]?.errors?.map((error) => error.code) ?? [];
+  };
+
+  test("an operation without input that refuses unknown query keys answers schemaInvalid", () => {
+    expect(pingErrorCodes("refuse")).toContain("api.schema_invalid");
+  });
+
+  test("an operation without input that ignores unknown query keys does not", () => {
+    expect(pingErrorCodes('{ ignore: "Probes add a cache buster." }')).not.toContain(
+      "api.schema_invalid",
+    );
+  });
+});
+
 describe("api.gateway", () => {
   const gatewayContract = (role: string): string => `api: { name: edge, version: 1${role} }
 surfaces:

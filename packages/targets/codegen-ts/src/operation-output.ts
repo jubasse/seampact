@@ -181,7 +181,7 @@ function pageResult(
   return `{\nitems: ${itemType}[];\n${members.join("\n")}\n}`;
 }
 
-function pagingStyleOf(operation: Operation, ir: ContractIR) {
+export function pagingStyleOf(operation: Operation, ir: ContractIR) {
   const styleId = operation.paging?.style;
 
   if (styleId === undefined || !Object.hasOwn(ir.pagings, styleId)) return undefined;

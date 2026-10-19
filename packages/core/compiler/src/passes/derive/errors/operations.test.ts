@@ -176,7 +176,12 @@ describe("derived codes", () => {
     expect(derivationOf(draft, "listChannels", "api.unauthenticated")).toBe(
       "identity.authenticate",
     );
-    expect(derivationOf(draft, "listChannels", "api.schema_invalid")).toBe("paging.params");
+    expect(derivationOf(draft, "listChannels", "api.schema_invalid")).toBe("input.invalid");
+    expect(
+      errorOf(draft, "listChannels", "api.schema_invalid").derivedFrom?.from.map(
+        (origin) => origin.pointer,
+      ),
+    ).toContain("/conventions/paging/default");
     expect(
       errorOf(draft, "createTask", "api.rate_limited").retryHeader?.derivedFrom.derivation,
     ).toBe("rule.bucket");

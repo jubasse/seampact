@@ -4545,6 +4545,73 @@
       "docs": {},
       "errors": [
         {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/health"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "pointer"
+                              ],
+                              "slot": "item"
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "rule"
+                              ],
+                              "slot": "item"
+                            }
+                          }
+                        ]
+                      },
+                      "kind": "each",
+                      "of": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
           "code": "api.internal",
           "derivedFrom": {
             "derivation": "response.undeclared",
@@ -5288,7 +5355,12 @@
             "type": {
               "items": {
                 "kind": "scalar",
-                "refinements": {},
+                "refinements": {
+                  "pattern": {
+                    "normalized": "^(?:createdAt|-createdAt)$",
+                    "source": "^(?:createdAt|-createdAt)$"
+                  }
+                },
                 "type": "string"
               },
               "kind": "array"

@@ -19,11 +19,14 @@ const integer = (minimum: string, maximum?: string) => ({
   refinements: { minimum, ...(maximum === undefined ? {} : { maximum }) },
 });
 
-const DIRECTION = {
+// A string of exactly the values one pattern allows; these patterns normalise to their written form.
+const patterned = (source: string) => ({
   kind: "scalar",
   type: "string",
-  refinements: { pattern: { source: "^(?:asc|desc)$", normalized: "^(?:asc|desc)$" } },
-};
+  refinements: { pattern: { source, normalized: source } },
+});
+
+const DIRECTION = patterned("^(?:asc|desc)$");
 
 const LIST = (explode: boolean) => ({ kind: "list", style: "form", explode, brackets: false });
 
@@ -61,11 +64,11 @@ describe("paging params", () => {
     ]);
   });
 
-  test("page from its base (GitHub), a split sort, the total header and one Link", () => {
+  test("page from its base (GitHub), a split sort of the declared keys, the total header and one Link", () => {
     expect(pagingQuery("listNotes")).toEqual([
       optional("page", integer("1"), NUMBER),
       optional("per_page", integer("1", "50"), NUMBER),
-      optional("sort", STRING, TEXT),
+      optional("sort", patterned("^(?:revision)$"), TEXT),
       optional("direction", DIRECTION, TEXT),
     ]);
     expect(deriveWireResponseHeaders(run, "listNotes")).toEqual({
@@ -73,10 +76,14 @@ describe("paging params", () => {
     });
   });
 
-  test("page from base 0 with a repeated pair sort", () => {
+  test("page from base 0 with a repeated pair sort, each a declared key and a direction", () => {
     expect(pagingQuery("history")).toEqual([
       optional("page", integer("0"), NUMBER),
-      optional("sort", { kind: "array", items: STRING }, LIST(true)),
+      optional(
+        "sort",
+        { kind: "array", items: patterned("^(?:revision),(?:asc|desc)$") },
+        LIST(true),
+      ),
     ]);
   });
 
@@ -99,7 +106,7 @@ describe("paging params", () => {
     );
   });
 
-  test("a signed sort is one comma-separated list, and no sort parameter without sortable", () => {
+  test("a signed sort is one comma-separated list of the declared keys and their descending forms, and no sort parameter without sortable", () => {
     const sorted = deriveWireRunContract(
       deriveWireFixtureVariant("lifecycle", [
         [
@@ -111,7 +118,10 @@ describe("paging params", () => {
 
     expect(
       deriveWireOperation(sorted, "plain").params?.query.find((param) => param.name === "sort"),
-    ).toMatchObject({ type: { kind: "array", items: STRING }, wire: LIST(false) });
+    ).toMatchObject({
+      type: { kind: "array", items: patterned("^(?:text|-text)$") },
+      wire: LIST(false),
+    });
     expect(pagingQuery("plain").map((param) => param.name)).not.toContain("sort");
   });
 

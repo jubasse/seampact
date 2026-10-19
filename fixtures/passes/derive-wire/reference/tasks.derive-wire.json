@@ -264,7 +264,12 @@
             "items": {
               "kind": "scalar",
               "type": "string",
-              "refinements": {}
+              "refinements": {
+                "pattern": {
+                  "source": "^(?:createdAt|-createdAt)$",
+                  "normalized": "^(?:createdAt|-createdAt)$"
+                }
+              }
             }
           },
           "required": false,

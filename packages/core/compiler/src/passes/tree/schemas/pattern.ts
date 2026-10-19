@@ -20,6 +20,12 @@ const MAX_REPEAT = 1000;
 const MAX_GROUP_DEPTH = 100;
 
 const METACHARACTERS = new Set([..."\\^$.|?*+()[]{}/"]);
+
+/** Escapes every character ADR 0003 section 9 lets a pattern escape, so `text` matches itself literally. */
+export function treeSchemasEscapePatternLiteral(text: string): string {
+  return [...text].map((char) => (METACHARACTERS.has(char) ? `\\${char}` : char)).join("");
+}
+
 const DIGITS: readonly Range[] = [[0x30, 0x39]];
 const WORD: readonly Range[] = [
   [0x30, 0x39],

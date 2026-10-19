@@ -195,9 +195,6 @@ export interface ContractRoute {
     /** The limit query member and the value the handler receives when the client sends none. */
     readonly limitParam?: string;
     readonly defaultLimit?: number;
-    /** The signed sort query member and every value an item may take: each key, ascending or `-` descending. */
-    readonly sortParam?: string;
-    readonly sortKeys: readonly string[];
   };
   readonly cache?: {
     readonly etag: boolean;

@@ -125,6 +125,26 @@ describe("query: unknown keys are refused, also on an operation without query pa
   });
 });
 
+describe("pattern: a sort value is one of the declared keys or its descending form", () => {
+  const listTasksInput = (sort: string[]): unknown => ({
+    path: { channelId: "0f8fad5b-d9cb-469f-a165-70867728950e" },
+    query: { sort },
+    headers: {},
+  });
+
+  test.each([[["createdAt"]], [["-createdAt"]]])("accepts %j", (sort) => {
+    expect(inputValidator("ListTasksInputSchema").safeParse(listTasksInput(sort)).success).toBe(
+      true,
+    );
+  });
+
+  test.each([[["title"]], [["createdAt2"]], [["+createdAt"]]])("refuses %j", (sort) => {
+    expect(inputValidator("ListTasksInputSchema").safeParse(listTasksInput(sort)).success).toBe(
+      false,
+    );
+  });
+});
+
 describe("the custom checks of the generated validators", () => {
   test("every refine names its contract rule in params.rule", () => {
     const sources = ["operations/input.ts", "schemas/output.ts"].map((file) =>

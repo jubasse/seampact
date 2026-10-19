@@ -38,7 +38,6 @@ const CURSOR_ROLE = "cursor";
 const LIMIT_ROLE = "limit";
 const SORT_ROLE = "sort";
 const SIGNED_SORT_STYLE = "signed";
-const DESCENDING_PREFIX = "-";
 
 // The validators link's descriptor and the module's imports of its validators.
 interface ValidatorLink {
@@ -976,11 +975,6 @@ function pagingEntry(
     nextCursorMember: nextCursor,
     limitParam: style.request.find((role) => role.role === LIMIT_ROLE)?.name,
     defaultLimit: paging.defaultLimit,
-    sortParam: sort?.name,
-    sortKeys: paging.sortKeys.flatMap((sortKey) => [
-      sortKey.key,
-      `${DESCENDING_PREFIX}${sortKey.key}`,
-    ]),
   };
 }
 

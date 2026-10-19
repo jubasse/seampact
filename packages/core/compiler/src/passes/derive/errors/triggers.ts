@@ -63,8 +63,11 @@ function operationOrigin(route: DeriveErrorsRoute): IrWriter.Origin {
   return origin;
 }
 
+// A refused undeclared query key is an invalid input, so such an operation answers schemaInvalid
+// even when it declares no input.
 const hasInput = (operation: DraftOperation): boolean =>
   operation.input !== undefined ||
+  operation.unknownQuery?.policy === "refuse" ||
   (operation.params !== undefined &&
     operation.params.path.length + operation.params.query.length + operation.params.header.length >
       0);

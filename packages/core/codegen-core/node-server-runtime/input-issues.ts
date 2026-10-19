@@ -48,26 +48,17 @@ export interface RequestValidation {
   readonly issues: readonly InputIssue[];
 }
 
-/** Validates the whole request, the sort keys of a paged list included. */
+/** Validates the whole request; a sort value off the declared keys fails its pattern like any input. */
 export async function validateRequest(state: CheckState): Promise<RequestValidation> {
   const { route, request } = state;
   const params = decodeRequestParams(route, request, state.pathParams);
   const candidate: RequestCandidate =
     route.input === undefined ? params : { ...params, body: request.body };
   const result = await route.validator["~standard"].validate(candidate);
-  const sortIssues = sortKeyIssues(route, candidate);
 
-  if (result.issues === undefined && sortIssues.length === 0) {
-    return { candidate, value: result.value, issues: [] };
-  }
+  if (result.issues === undefined) return { candidate, value: result.value, issues: [] };
 
-  return {
-    candidate,
-    issues: [
-      ...(result.issues === undefined ? [] : inputIssues(candidate, result.issues)),
-      ...sortIssues,
-    ],
-  };
+  return { candidate, issues: inputIssues(candidate, result.issues) };
 }
 
 /** The issues on one member of a part: at it, below it, or on a value that holds it. */
@@ -98,25 +89,6 @@ export function schemaInvalidError(
 /** An issue's path as a JSON pointer, for a log line. */
 export function issuePointer(issue: StandardIssue): string {
   return jsonPointer(issueKeys(issue));
-}
-
-// Each item of a signed sort parameter is one of the operation's keys, ascending or `-` descending.
-function sortKeyIssues(route: ContractRoute, candidate: RequestCandidate): InputIssue[] {
-  const paging = route.paging;
-
-  if (paging?.sortParam === undefined) return [];
-
-  const sortParam = paging.sortParam;
-  const items = candidate.query[sortParam];
-
-  // The route table decodes a sort parameter (signed style, query only) as a list, so only an absent one is not.
-  if (!Array.isArray(items)) return [];
-
-  return items.flatMap((item: unknown, index) =>
-    typeof item === "string" && !paging.sortKeys.includes(item)
-      ? [renderedIssue(["query", sortParam, String(index)], ENUM_RULE)]
-      : [],
-  );
 }
 
 function issueKeys(issue: StandardIssue): string[] {
