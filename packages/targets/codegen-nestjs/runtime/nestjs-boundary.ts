@@ -64,10 +64,20 @@ import {
   type ContractRoute,
   isUnderPrefix,
   looselyMatchedRoute,
+  matchContractPath,
   matchContractRoute,
   matchesContractPath,
   type ResponsesMode,
 } from "./node-server/contract-route.js";
+import {
+  logWriteFailure,
+  notFoundError,
+  respondUnservedMethod,
+  respondWithError,
+} from "./node-server/error-reply.js";
+import { handlerReply } from "./node-server/handler-reply.js";
+import { beginIdempotency } from "./node-server/idempotency.js";
+import { checkRestrictedInput, validateRequestInput } from "./node-server/input-checks.js";
 import {
   bodyParserError,
   clearEmptyBody,
@@ -78,11 +88,7 @@ import {
   parserErrorStatus,
   pathnameOf,
   reportedRequest,
-} from "./node-server/express-platform.js";
-import { notFoundError, respondWithError } from "./node-server/error-reply.js";
-import { handlerReply } from "./node-server/handler-reply.js";
-import { beginIdempotency } from "./node-server/idempotency.js";
-import { checkRestrictedInput, validateRequestInput } from "./node-server/input-checks.js";
+} from "./node-server/node-request.js";
 import {
   type BoundaryContext,
   boundaryContext,
@@ -112,6 +118,7 @@ const NEXT_PARAM_TYPE = 2;
 const OPERATION_METADATA = "seampact:operation";
 const RESPONSE_INDEX_METADATA = "seampact:responseIndex";
 const EXPRESS_PLATFORM = "express";
+const NOT_FOUND = 404;
 const TOO_MANY_REQUESTS = 429;
 const INTERNAL_STATUS = 500;
 const FORBIDDEN_ROLE = "forbidden";
@@ -182,6 +189,8 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
   const reflector = new Reflector();
   // Set when the module starts: what the exported pre-routing filter and helper reach outside a request context.
   const platform: { adapterHost?: HttpAdapterHost; hooks?: BoundaryHooks } = {};
+  // The HTTP adapters of the apps the module was bootstrapped in.
+  const bootstrappedAdapters = new WeakSet<object>();
 
   const routeOf = (id: string): ContractRoute => {
     const route = api.routes.find((candidate) => candidate.id === id);
@@ -253,6 +262,12 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
         undefined,
         renderContractReply(api, undefined, unexpectedError(undefined, undefined)),
       );
+
+      return;
+    }
+
+    if (matchesContractPath(api, request.path)) {
+      await respondUnservedMethod(response, hooks, api, request);
 
       return;
     }
@@ -445,6 +460,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
         ...hookBootProblems(api, this.hooks),
         ...this.handlerProblems(),
         ...this.platformProblems(),
+        ...this.repeatedRegistrationProblems(),
       ];
 
       if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
@@ -488,6 +504,26 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       }
 
       return problems;
+    }
+
+    // Replies written outside a request context report to one registration's hooks: one per api in an app.
+    private repeatedRegistrationProblems(): BootProblem[] {
+      const adapter: unknown = this.adapterHost.httpAdapter;
+
+      if (typeof adapter !== "object" || adapter === null) return [];
+
+      if (bootstrappedAdapters.has(adapter)) {
+        return [
+          {
+            problem: `the api '${api.id}' is registered twice in this app`,
+            fix: "import the api's SeampactModule.forRoot(...) once in an app",
+          },
+        ];
+      }
+
+      bootstrappedAdapters.add(adapter);
+
+      return [];
     }
 
     private platformProblems(): BootProblem[] {
@@ -559,9 +595,18 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
 
     if (!matchesContractPath(api, path)) return false;
 
-    const route =
-      matchContractRoute(api, request.method ?? DEFAULT_METHOD, path)?.route ??
-      api.routes.find((candidate) => matchesContractPath({ ...api, routes: [candidate] }, path));
+    const method = request.method ?? DEFAULT_METHOD;
+
+    // NestJS's 404 for a method the contract path does not serve.
+    if (statusOf(exception) === NOT_FOUND && matchContractRoute(api, method, path) === undefined) {
+      respondUnservedMethod(response, platform.hooks, api, { method, path }).catch(
+        (failure: unknown) => logWriteFailure(api, failure),
+      );
+
+      return true;
+    }
+
+    const route = matchContractPath(api, method, path)?.route;
 
     void respondWithError(
       response,
@@ -570,7 +615,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       api,
       route,
       preRoutingError(route, exception),
-      { method: request.method ?? DEFAULT_METHOD, path },
+      { method, path },
     );
 
     return true;

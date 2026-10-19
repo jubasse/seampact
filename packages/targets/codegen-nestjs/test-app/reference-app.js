@@ -255,6 +255,27 @@ const recordingLogger = {
   },
 };
 
+/** Boots an app that imports the api's module twice, with two hook objects; resolves once initialised. */
+export async function bootTwice() {
+  class TwiceModule {}
+
+  Module({
+    imports: [
+      TasksNest.SeampactModule.forRoot(hooks),
+      TasksNest.SeampactModule.forRoot({ ...hooks }),
+    ],
+    controllers: [TasksController],
+  })(TwiceModule);
+
+  const app = await NestFactory.create(TwiceModule, { rawBody: true, logger: recordingLogger });
+
+  try {
+    await app.init();
+  } finally {
+    await app.close();
+  }
+}
+
 /** Boots the app on a free port with the documented setup 1 (`rawBody: true`). */
 export async function startReferenceApp() {
   resetScenario();

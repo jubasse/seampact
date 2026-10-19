@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { copyFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   emitProject,
   generateReferenceProject,
@@ -11,6 +10,7 @@ import {
   type RawReply,
   sendRawRequest,
 } from "@seampact/codegen-core/node-server/test-support";
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { target as nestjsTarget } from "./index.js";
 
 // Boots NestJS with Express around the generated `tasks` boundary (the app in `test-app/`) and sends requests to
@@ -59,6 +59,7 @@ interface ReferenceAppModule {
   ) => Error;
   resetScenario(): void;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  bootTwice(): Promise<void>;
 }
 
 let app: ReferenceAppModule;
@@ -239,6 +240,18 @@ describe("the app's own routes keep NestJS's behaviour", () => {
 });
 
 describe("requests the contract does not serve as sent", () => {
+  // OPTIONS is left out: the app's CORS answers it.
+  test.each(["HEAD", "DELETE"])(
+    "%s on a path that declares no 404 answers a bare 404, not a failure",
+    async (method) => {
+      const reply = await send(method, "/v1/health");
+
+      expect(reply.status).toBe(404);
+      expect(reply.text).toBe("");
+      expect(app.calls.unexpected).toEqual([]);
+    },
+  );
+
   test.each([
     ["a trailing slash", "GET", `/v1/channels/${CHANNEL}/tasks/${TASK}/`],
     ["an upper-case path", "GET", `/V1/channels/${CHANNEL}/tasks/${TASK}`],
@@ -327,5 +340,11 @@ describe("validation", () => {
 
     expect(reply.status).toBe(200);
     expect(received).toMatchObject({ query: { limit: 50 } });
+  });
+});
+
+describe("the boot check", () => {
+  test("a second registration of the api in one app stops the boot", async () => {
+    await expect(app.bootTwice()).rejects.toThrow(/registered twice/);
   });
 });

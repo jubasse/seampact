@@ -1,4 +1,3 @@
-import { beforeAll, describe, expect, test } from "vitest";
 import {
   generateReferenceProject,
   projectDirectory,
@@ -7,6 +6,7 @@ import {
   referenceLinks,
   typeErrorsOf,
 } from "@seampact/codegen-core/node-server/test-support";
+import { beforeAll, describe, expect, test } from "vitest";
 import { target as nestjsTarget } from "./index.js";
 
 const PROJECT = projectDirectory(import.meta.url, "reference-boundary");

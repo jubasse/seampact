@@ -1,6 +1,6 @@
 // The error replies every Node server placement writes: a contract error reported and rendered in the api's format,
-// a contract path's 404, and a framework refusal (an error carrying a 401, 403 or 429 status) mapped to its role.
-// Copied into the generated tree as is.
+// a contract path's 404 (a bare one for an unserved method on a path that declares none), and a framework refusal
+// (an error carrying a 401, 403 or 429 status) mapped to its role. Copied into the generated tree as is.
 import type { ServerResponse } from "node:http";
 import { type BoundaryHooks, reportUnexpected } from "./boundary-hooks.js";
 import {
@@ -11,7 +11,7 @@ import {
   renderContractReply,
   unexpectedError,
 } from "./contract-error.js";
-import type { ContractApi, ContractRoute } from "./contract-route.js";
+import { type ContractApi, type ContractRoute, matchesContractPath } from "./contract-route.js";
 import { type BoundaryContext, writeContractReply } from "./outgoing-check.js";
 
 const UNAUTHORIZED = 401;
@@ -61,14 +61,41 @@ export async function respondWithError(
 
 /** The path's 404: the route's `notFound` code, else its code of status 404, else a 500. */
 export function notFoundError(route: ContractRoute | undefined): ContractError {
-  const code =
-    route === undefined
-      ? undefined
-      : (codeOfRole(route, NOT_FOUND_ROLE) ?? codeOfStatus(route, NOT_FOUND_STATUS));
+  const code = route === undefined ? undefined : notFoundCodeOf(route);
 
   return code === undefined
     ? unexpectedError(route, new Error("the contract path has no 404 code to answer"))
     : new ContractError(code);
+}
+
+function notFoundCodeOf(route: ContractRoute): string | undefined {
+  return codeOfRole(route, NOT_FOUND_ROLE) ?? codeOfStatus(route, NOT_FOUND_STATUS);
+}
+
+/**
+ * The reply to a method a contract path does not serve, HEAD included: the path's 404 in the api's format when an
+ * operation of the path declares one, else a bare 404 with no body, since no operation fails there.
+ */
+export async function respondUnservedMethod(
+  response: ServerResponse,
+  hooks: BoundaryHooks | undefined,
+  api: ContractApi,
+  request: ReportedRequest,
+): Promise<void> {
+  const route = api.routes.find(
+    (candidate) =>
+      notFoundCodeOf(candidate) !== undefined &&
+      matchesContractPath({ ...api, routes: [candidate] }, request.path),
+  );
+
+  if (route === undefined) {
+    response.writeHead(NOT_FOUND_STATUS, { "content-length": "0" });
+    response.end();
+
+    return;
+  }
+
+  await respondWithError(response, undefined, hooks, api, route, notFoundError(route), request);
 }
 
 /** The number in an error's `status` or `statusCode`, as `http-errors` and Fastify set them. */

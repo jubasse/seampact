@@ -255,6 +255,17 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
     expect(reply.status).not.toBe(200);
   });
 
+  test.each(["HEAD", "DELETE", "OPTIONS"])(
+    "%s on a path that declares no 404 answers a bare 404, not a failure",
+    async (method) => {
+      const reply = await send(method, "/v1/health");
+
+      expect(reply.status).toBe(404);
+      expect(reply.text).toBe("");
+      expect(app.calls.unexpected).toEqual([]);
+    },
+  );
+
   test.each([
     ["HEAD on a GET route", "HEAD"],
     ["a method the path does not serve", "PUT"],

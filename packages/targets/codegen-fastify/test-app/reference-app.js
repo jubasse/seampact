@@ -55,6 +55,16 @@ export async function bootWith(registrationOptions, instanceOptions = {}, prefix
   await app.close();
 }
 
+/** A fresh instance with the plugin registered twice; resolves once ready. */
+export async function bootTwice(registrationOptions) {
+  const app = Fastify();
+
+  await app.register(TasksFastify.plugin, registrationOptions);
+  await app.register(TasksFastify.plugin, registrationOptions);
+  await app.ready();
+  await app.close();
+}
+
 /** Builds the app and listens on a free port. */
 export async function startReferenceApp() {
   resetScenario();
