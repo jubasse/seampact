@@ -40,6 +40,12 @@ const SORT_ROLE = "sort";
 const SIGNED_SORT_STYLE = "signed";
 const DESCENDING_PREFIX = "-";
 
+// The validators link's descriptor and the module's imports of its validators.
+interface ValidatorLink {
+  readonly validators: ValidatorsDescriptor;
+  readonly imports: ModuleImports;
+}
+
 // A value written into the module as source text, such as an imported validator.
 class SourceExpression {
   constructor(readonly text: string) {}
@@ -369,7 +375,7 @@ function accessEntry(
   ir: ContractIR,
   operation: Operation,
   location: IrLocation,
-  link: { readonly validators: ValidatorsDescriptor; readonly imports: ModuleImports },
+  link: ValidatorLink,
   refusals: Refusal[],
 ): SourceValue {
   const access = operation.access;
@@ -440,7 +446,7 @@ function accessEntry(
 // The principal schema's output validator: the boundary checks every principal a hook returns against it.
 function principalEntry(
   principal: Principal,
-  link: { readonly validators: ValidatorsDescriptor; readonly imports: ModuleImports },
+  link: ValidatorLink,
   location: IrLocation,
   refusals: Refusal[],
 ): { principalSchema?: string; principalValidator?: SourceExpression } {

@@ -1,7 +1,7 @@
 // Steps 2 to 5 of the check order (ADR 0012): authenticate with the principal validated against its schema, scopes
 // outermost first with each id validated, then requirements in declared order with each body proof validated, each
-// hook call wrapped. Principal requirements and bindings are refused by the generator until a
-// contract needs them. Copied into the generated tree as is.
+// hook call wrapped. Principal requirements and bindings are refused by the generator until a contract needs them.
+// Copied into the generated tree as is.
 import { createHash } from "node:crypto";
 import type {
   AuthenticateRequest,
