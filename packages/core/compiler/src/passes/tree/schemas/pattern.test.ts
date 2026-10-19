@@ -63,6 +63,9 @@ describe("portable patterns", () => {
     ["(?:a?b|b)*", "branches can start with the same character"],
     ["(?:\\d|[0-5]x){2,}", "branches can start with the same character"],
     ["((a|ab))*", "branches can start with the same character"],
+    ["^((a|aa)b?)*$", "branches can start with the same character"],
+    ["^(?:b?(a|aa))+$", "branches can start with the same character"],
+    ["^(?:(a|aa)|c)*$", "branches can start with the same character"],
   ])("%s is refused as backtracking exponentially (%s)", (source, reason) => {
     const result = treeSchemasNormalizePattern(source);
 
@@ -82,6 +85,8 @@ describe("portable patterns", () => {
     "(?:a|b)*",
     "(?:x|a?b)",
     "(?:^|,)a",
+    "^(?:(a|ab)c)*$",
+    "^(?:x(a|aa))*$",
   ])("%s repeats nothing that can backtrack exponentially", (source) => {
     expect(treeSchemasNormalizePattern(source).ok).toBe(true);
   });
