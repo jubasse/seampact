@@ -3,6 +3,7 @@ import { median, spreadShare } from "./statistics.ts";
 
 const BYTES_PER_MEGABYTE = 1024 * 1024;
 const PERCENT = 100;
+const NOT_MEASURED = "not measured (--latency)";
 const INVALID_MARK = "invalid (rate not held)";
 
 const HEADER = [
@@ -20,6 +21,8 @@ function pair2(left: number, right: number, digits: number): string {
 
 // The fixed-rate latencies, or a mark when a server did not hold the rate: those latencies are not at equal load.
 function latencyCell(route: RouteMeasurement, pick: (sample: RunSample) => number): string {
+  if (route.fixedRate === undefined) return NOT_MEASURED;
+
   if (!route.fixedRate.reached) return INVALID_MARK;
 
   const { seampact, baseline } = route.fixedRate.samples;
@@ -65,7 +68,7 @@ export function summaryTable(results: BenchResults): string {
   const rows = results.pairs.flatMap((pair) =>
     pair.routes.map((route) => `| ${row(pair, route)} |`),
   );
-  const caption = `commit ${results.commit.slice(0, 8)}, node ${results.node}, ${results.durationSeconds} s runs, ${results.repeats} repeats alternating; latency at 70% of the lower saturation rate of the two servers.`;
+  const caption = `commit ${results.commit.slice(0, 8)}, node ${results.node}, ${results.durationSeconds} s runs, ${results.repeats} repeats alternating; latency, when measured, at 70% of the lower saturation rate of the two servers.`;
 
   return [caption, "", ...HEADER, ...rows].join("\n");
 }
@@ -79,9 +82,10 @@ function keyedRates(results: BenchResults): Map<string, { rate: number; p99: num
             `${pair.pairId} ${route.routeId}`,
             {
               rate: medianOf(route.saturation.seampact, (s) => s.requestsPerSecond),
-              p99: route.fixedRate.reached
-                ? medianOf(route.fixedRate.samples.seampact, (s) => s.latencyP99Ms)
-                : undefined,
+              p99:
+                route.fixedRate?.reached === true
+                  ? medianOf(route.fixedRate.samples.seampact, (s) => s.latencyP99Ms)
+                  : undefined,
             },
           ] as const,
       ),

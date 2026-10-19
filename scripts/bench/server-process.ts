@@ -1,5 +1,6 @@
 import { type ChildProcess, fork } from "node:child_process";
 import { join } from "node:path";
+import { pinProcess } from "./pinning.ts";
 
 export type ServerKind = "seampact" | "baseline";
 
@@ -39,6 +40,8 @@ export class ServerProcess {
     readonly baselineFramework: string;
     readonly validators: string;
     readonly nodeArguments?: readonly string[];
+    /** The core every thread of the server is pinned to. */
+    readonly cpu?: number;
   }): Promise<ServerProcess> {
     const child = fork(
       join(options.projectDirectory, "bench/server-entry.mts"),
@@ -55,6 +58,9 @@ export class ServerProcess {
         stdio: ["ignore", "inherit", "inherit", "ipc"],
       },
     );
+
+    if (options.cpu !== undefined && child.pid !== undefined) pinProcess(child.pid, options.cpu);
+
     const ready = await nextMessage<ReadyMessage>(child, "ready", BOOT_TIMEOUT_MS);
 
     return new ServerProcess(child, ready.baseUrl);

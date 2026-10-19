@@ -48,21 +48,20 @@ export function packOnce(workDirectory: string): PackedTarballs {
   return { directory, byPackage: packPackages(REPO_ROOT, directory) };
 }
 
-// The assembled project of a pair, installed and generated; with `reuse`, the project of an earlier run on the
-// same commit keeps its install and only takes the bench sources again. The packages build and pack when the
-// first project needs them.
+// The assembled project of a pair, installed and generated. A project of an earlier run on the same commit is
+// cached under the work directory and only takes the bench sources again, unless `fresh` asks for a rebuild or
+// `packages/` has uncommitted changes (the cache holds the packages packed from the commit). The packages build
+// and pack when the first project that needs them is assembled.
 export function prepareProject(options: {
   readonly pair: BenchPair;
   readonly workDirectory: string;
   readonly tarballs: () => PackedTarballs;
-  readonly reuse: boolean;
+  readonly fresh: boolean;
 }): string {
   const directory = join(options.workDirectory, options.pair.id);
   const commit = currentCommit();
 
-  if (options.reuse) refuseReuseOnChangedPackages();
-
-  if (options.reuse && isProjectOfCommit(directory, commit)) {
+  if (!options.fresh && !packagesChanged() && isProjectOfCommit(directory, commit)) {
     cpSync(BENCH_SOURCES, join(directory, BENCH_DIRECTORY), { recursive: true });
 
     return directory;
@@ -128,17 +127,13 @@ function switchBodyValidationOff(directory: string): void {
   writeFileSync(file, config.replaceAll(BODY_VALIDATION_ON, BODY_VALIDATION_OFF));
 }
 
-// A reused project keeps the packages packed from its own commit, so changed packages would not be measured.
-function refuseReuseOnChangedPackages(): void {
+// A cached project keeps the packages packed from its own commit, so uncommitted changes would not be measured.
+function packagesChanged(): boolean {
   const changed = execFileSync("git", ["status", "--porcelain", "--", "packages"], {
     cwd: REPO_ROOT,
   })
     .toString()
     .trim();
 
-  if (changed !== "") {
-    throw new Error(
-      `bench: --reuse keeps the packages of the earlier run, but packages/ has uncommitted changes:\n${changed}\nrun without --reuse, or commit them.`,
-    );
-  }
+  return changed !== "";
 }
