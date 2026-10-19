@@ -26,12 +26,12 @@ Every server target generates exactly three hook interfaces (FR-25), unless the 
 - a read-only view of the request (method, path, headers, client address) and the operation reference;
 - the operation's extension metadata (A20).
 
-It answers a typed principal (tagged with its variant when the identity declares several, FR-27) or a denial limited to the identity's declared codes. The hook is not called when no declared credential is present: the boundary answers 401, or continues with a null principal on a public or optional-auth route. A refused credential on an optional-auth route is treated as anonymous (FR-4), or answers 401 when the route says `onRefused: reject` (A40). The boundary validates the returned principal against the principal schema; an invalid principal is a server error (500), never accepted.
+It answers a typed principal (tagged with its variant when the identity declares several, FR-27) or a denial limited to the identity's declared codes. The hook is not called when no declared credential is present: the boundary answers 401, or continues with a null principal on a public or optional-auth route. A refused credential on an optional-auth route is treated as anonymous (FR-4), or answers 401 when the route says `onRefused: reject` (A40). The boundary validates the returned principal against the principal schema; an invalid principal is a server error (500), never accepted. The principal reaches later hooks and the handler as its schema declares: members the schema does not declare are dropped, like undeclared output fields.
 
 **Decide**, for every requirement, right or rule. It receives:
 - the kind (right or rule), the name and the typed params declared at the use site;
 - the principal, or null for an anonymous caller on a public or optional-auth route: always possible for a rule, and for a right only when it is guest-enabled, since a non-guest right on such a route is a compile error (FR-22, SCN-036, SCN-063);
-- the subject reference, when the right has one: the subject type and the id taken from its declared source; plus the loaded record when the application registers a loader for that resource type, in which case the handler receives the same record;
+- the subject reference, when the right has one: the subject type and the id taken from its declared source, checked against its schema first when that source is the request; plus the loaded record when the application registers a loader for that resource type, in which case the handler receives the same record;
 - the resolved scopes, outermost first;
 - the rule's proof, when the rule declares one (FR-41), and for a throttle requirement the bucket with its key sources and limits;
 - the purpose (route requirement, restricted field with its pointer and direction, or restricted sort key);
@@ -123,7 +123,7 @@ The order is fixed in every target and stops at the first failure (FR-5):
 2. Authenticate (401), over the raw body for a signed identity.
 3. Principal requirements (403).
 4. Scope resolution, outermost scope first (each scope's declared denial). A scope id is checked against its schema before its resolver runs; an invalid one answers the `schemaInvalid` 400 with that member's issues only.
-5. Requirements in declared order. A body proof is read from the parsed body and checked against its own field schema in this step; an invalid one answers the `schemaInvalid` 400 with that member's issues only, before the decider runs. A registered record loader runs here, before the decide call that receives the record; a record it does not find answers the `notFound` role at this step, before any 403 (as Laravel's route-model binding and API Platform's providers do).
+5. Requirements in declared order. A body proof is read from the parsed body and checked against its own field schema in this step; an invalid one answers the `schemaInvalid` 400 with that member's issues only, before the decider runs. A subject id or a throttle bucket key read from a path param is checked the same way before its decider runs. A registered record loader runs here, before the decide call that receives the record; a record it does not find answers the `notFound` role at this step, before any 403 (as Laravel's route-model binding and API Platform's providers do).
 6. Input validation (400), reporting every issue of path, query, headers and body at once.
 7. Restricted input fields (403 with the field pointer, or stripped, per A21) and restricted sort keys (403).
 8. Principal bindings (403). A binding whose principal side or input side is absent or null is a mismatch, never a match.

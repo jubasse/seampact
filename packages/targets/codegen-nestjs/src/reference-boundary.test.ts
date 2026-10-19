@@ -54,6 +54,21 @@ describe("the generated reference boundary compiles", () => {
     );
   });
 
+  test("a scope id read from a query param is refused once, by name", async () => {
+    const ir = readGoldenIr("tasks");
+    const scopedOperation = ir.operations.find((operation) => operation.scopes.length > 0);
+    const [scope] = scopedOperation?.scopes ?? [];
+
+    if (scope === undefined) throw new Error("the golden tasks api has no scoped operation");
+
+    scope.source = { ...scope.source, in: "query" };
+
+    const forms = await reportedForms("tasks", ir);
+
+    expect(forms).toContainEqual(expect.objectContaining({ code: "scope.source.unsupported" }));
+    expect(forms).not.toContainEqual(expect.objectContaining({ code: "valueSource.unsupported" }));
+  });
+
   test("the list filter right is the handler's by design, so it is no warning", async () => {
     expect(await reportedForms("tasks")).not.toContainEqual(
       expect.objectContaining({ code: "filteredBy.handler" }),

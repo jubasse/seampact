@@ -316,10 +316,10 @@ function handlerForms(
     ],
     [
       "paging.sortKeys",
-      "The sort keys",
+      "The page order by the sort keys",
       (operation.paging?.sortKeys.length ?? 0) > 0,
       "paging",
-      "The boundary refuses a sort key the operation does not declare; order the page by the keys in the input, mapping each to a fixed column, never writing the client's string into the query.",
+      "Order the page by the sort keys in the input, mapping each to a fixed column, never writing the client's string into the query; the boundary already refuses a key the operation does not declare.",
     ],
     [
       "identity.headers",
@@ -496,6 +496,8 @@ function scopeSource(
     refusals.push(
       refuseNotGeneratedYet("scope.source", `A scope id read from '${source.in}'`, location),
     );
+
+    return { in: source.in, name: source.name };
   }
 
   return valueSource(source, location, refusals);

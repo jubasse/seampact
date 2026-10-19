@@ -109,6 +109,7 @@ function sortKeyIssues(route: ContractRoute, candidate: RequestCandidate): Input
   const sortParam = paging.sortParam;
   const items = candidate.query[sortParam];
 
+  // The route table decodes a sort parameter (signed style, query only) as a list, so only an absent one is not.
   if (!Array.isArray(items)) return [];
 
   return items.flatMap((item: unknown, index) =>

@@ -386,6 +386,25 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
     expect(app.calls.scopeIds).toEqual([]);
   });
 
+  test("a subject id off its schema answers 400 before the decider sees it", async () => {
+    const decided: string[] = [];
+
+    app.scenario.decide = (request) => {
+      decided.push(request.name);
+
+      return { allow: true };
+    };
+
+    const reply = await send("PATCH", `/v1/channels/${CHANNEL}/tasks/x'%20OR%201=1--`, {
+      headers: writeHeaders(),
+      body: JSON.stringify({ title: "Plan" }),
+    });
+
+    expect(reply.status).toBe(400);
+    expect(JSON.parse(reply.text).issues).toEqual([{ pointer: "/taskId", rule: "format" }]);
+    expect(decided).toEqual([]);
+  });
+
   test("a body proof off its field schema answers 400 before the decider sees it", async () => {
     const proofs: unknown[] = [];
 
