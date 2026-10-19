@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { GenerateOutcome } from "@seampact/codegen-core";
-import type { ContractIR } from "@seampact/spec/ir";
+import { type ContractIR, isKnownVariant } from "@seampact/spec/ir";
 import { afterAll, expect, test } from "vitest";
 import { readGoldenIr, typeErrorsOf } from "./generated-project.test-support.js";
 import { target } from "./index.js";
@@ -17,8 +17,13 @@ function generateTypes(ir: ContractIR): Promise<GenerateOutcome> {
 
 test("a nullable opaque property generates as the unknown value it already is", async () => {
   const ir = readGoldenIr("tasks");
-  const data = ir.schemas.PaymentEvent?.kind === "object" ? ir.schemas.PaymentEvent : undefined;
-  const property = data?.properties.find((candidate) => candidate.name === "data");
+  const paymentEvent = ir.schemas.PaymentEvent;
+  const property =
+    paymentEvent !== undefined &&
+    isKnownVariant("Schema", paymentEvent) &&
+    paymentEvent.kind === "object"
+      ? paymentEvent.properties.find((candidate) => candidate.name === "data")
+      : undefined;
 
   if (property === undefined) throw new Error("the golden PaymentEvent lost its opaque data");
   property.nullable = true;
