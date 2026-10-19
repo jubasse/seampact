@@ -38,8 +38,7 @@ export async function startServer(): Promise<RunningServer> {
   app.use(compress());
   app.onError(
     async (error, c) =>
-      (await renderedByAnApi(c, error)) ??
-      c.json({ message: error.message }, INTERNAL_STATUS),
+      (await renderedByAnApi(c, error)) ?? c.json({ message: error.message }, INTERNAL_STATUS),
   );
   TasksHono.registerRoutes(app, {
     handlers: {
