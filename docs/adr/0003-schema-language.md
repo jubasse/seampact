@@ -255,7 +255,7 @@ These keywords are not JSON Schema. Each compiles to an explicit IR field. On a 
 | Keyword | Where | Meaning |
 |---|---|---|
 | `nullable: true` | any schema | section 5 |
-| `sensitive: true` | a property or a scalar schema | the value is secret: `format: password` in OpenAPI, redacted by generated serializers in logs, traces and idempotency storage, and `Cache-Control: no-store` on any response carrying it (CHK-026, SCN-054); a route declaring a `cache` family other than `never` and returning it is a compile error (ADR 0002 section 10) |
+| `sensitive: true` | a property or a scalar schema | the value is secret: `format: password` in OpenAPI, redacted by generated serializers in logs, traces and idempotency storage, and `Cache-Control: no-store` on any response carrying it, error replies whose code's params reach it included, or a compile error instead under `conventions.cache.sensitiveElsewhere: refuse` for a value outside a success body (CHK-026, SCN-054); a route declaring a `cache` family other than `never` and returning it is a compile error (ADR 0002 section 10) |
 | `codeName` | a property | the identifier generated code uses for the property, when its wire name makes a poor one (`class`, `2fa`); the wire name is unchanged (ADR 0007) |
 | `restrictedTo` | a property | the property is visible or writable only with a right (below) |
 | `discriminator` | a union | section 3: a property name, or `{ from: header.<Name> }` on a route's whole input |
