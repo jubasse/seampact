@@ -15,11 +15,11 @@ export interface ValidatorsPlan {
   readonly operationInputs: readonly OperationInputPlan[];
 }
 
-// The plan, or every refusal at once: a form the slice does not use is refused by name, never approximated
-// (A47), so every validators target refuses the same forms.
-export function planValidators(
+// The plan with the refusals found while building it, for a target that adds refusals of its own to the
+// shared ones; a layout refusal leaves nothing to plan.
+export function planValidatorsCollectingRefusals(
   ir: ContractIR,
-): { status: "planned"; plan: ValidatorsPlan } | Refused {
+): { status: "collected"; plan: ValidatorsPlan; refusals: Refusal[] } | Refused {
   const planned = planValidatorsLayout(ir);
 
   if (planned.status === "refused") return planned;
@@ -38,10 +38,24 @@ export function planValidators(
     operationInputs: planOperationInputs(ir, layout, refusals),
   };
 
-  // A schema used in both directions is planned twice; its refusals are reported once.
-  if (refusals.length > 0) return { status: "refused", refusals: withoutRepeats(refusals) };
+  return { status: "collected", plan, refusals };
+}
 
-  return { status: "planned", plan };
+// The plan, or every refusal at once: a form the slice does not use is refused by name, never approximated
+// (A47), so every validators target refuses the same forms.
+export function planValidators(
+  ir: ContractIR,
+): { status: "planned"; plan: ValidatorsPlan } | Refused {
+  const collected = planValidatorsCollectingRefusals(ir);
+
+  if (collected.status === "refused") return collected;
+
+  // A schema used in both directions is planned twice; its refusals are reported once.
+  if (collected.refusals.length > 0) {
+    return { status: "refused", refusals: withoutRepeats(collected.refusals) };
+  }
+
+  return { status: "planned", plan: collected.plan };
 }
 
 // The enum forms that change a validator: open output enums, an enum's fallback and its code names.

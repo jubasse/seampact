@@ -10,6 +10,7 @@ export const DEFAULT_VALIDATOR_CHOICE = "zod";
 
 export const VALIDATOR_CHOICES: Readonly<Record<string, ValidatorChoice>> = {
   zod: { package: "@seampact/codegen-zod", dependencies: { zod: "4.6.7" } },
+  yup: { package: "@seampact/codegen-yup", dependencies: { yup: "1.7.1" } },
 };
 
 // The choice an id names, or an error listing the known ids.
