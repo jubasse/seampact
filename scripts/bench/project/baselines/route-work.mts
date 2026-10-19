@@ -40,7 +40,9 @@ interface Requirement {
   readonly kind: "right" | "rule";
   readonly name: string;
   readonly params?: unknown;
-  readonly bucket?: unknown;
+  readonly bucketId?: string;
+  /** The path param that names the subject the decider is asked about. */
+  readonly subject?: { readonly type: string; readonly idParam: string };
 }
 
 type RouteMethod = "get" | "post" | "patch";
@@ -100,11 +102,12 @@ const RATE_LIMITED_STATUS = 429;
 const DENIED_STATUS = 403;
 const MILLISECONDS_PER_SECOND = 1000;
 
-const THROTTLE = { kind: "rule", name: "throttle", bucket: { name: "write" } };
+const THROTTLE = { kind: "rule", name: "throttle", bucketId: "write" };
 const CHANNEL_EDITOR = {
   kind: "right",
   name: "roles",
   params: { allowed: ["owner", "editor"] },
+  subject: { type: "channel", idParam: "channelId" },
 };
 
 /** The contract facts of the five measured routes, and the health floor, as the check order reads them. */
@@ -140,7 +143,9 @@ export const BASELINE_ROUTES: Readonly<Record<string, BaselineRoute>> = {
     path: "/v1/channels/{channelId}/tasks/{taskId}",
     identity: "user",
     scoped: true,
-    requirements: [{ kind: "right", name: "tasks.update" }],
+    requirements: [
+      { kind: "right", name: "tasks.update", subject: { type: "task", idParam: "taskId" } },
+    ],
     idempotent: true,
     answersBody: true,
     requiredHeaders: [IDEMPOTENCY_HEADER],
@@ -185,7 +190,7 @@ export async function runBaselineRoute(
   if (issues.length > 0) return refusal(400, "api.schema_invalid", { issues });
 
   const scopes = route.scoped ? [await resolveScope(request.path.channelId)] : [];
-  const denial = await firstDenial(route, principal, scopes, request);
+  const denial = await firstDenial(route, routeId, principal, scopes, request);
 
   if (denial !== undefined) return denied(denial);
 
@@ -272,24 +277,48 @@ async function resolveScope(channelId: string | undefined) {
 
 async function firstDenial(
   route: BaselineRoute,
+  routeId: string,
   principal: Principal,
   scopes: readonly unknown[],
   request: BaselineRequest,
 ) {
   for (const requirement of route.requirements ?? []) {
-    const decision = await decider.decide({
-      ...requirement,
-      principal,
-      scopes,
-      ...(requirement.name === "tasks.update"
-        ? { subject: { type: "task", id: request.path.taskId } }
-        : {}),
-    });
+    const decision = await decider.decide(
+      decideRequest(route, routeId, requirement, principal, scopes, request),
+    );
 
     if (decision.deny !== undefined) return decision.deny;
   }
 
   return undefined;
+}
+
+// The request the generated boundary hands a decider: purpose, operation, request view and extensions included.
+function decideRequest(
+  route: BaselineRoute,
+  routeId: string,
+  requirement: Requirement,
+  principal: Principal,
+  scopes: readonly unknown[],
+  request: BaselineRequest,
+) {
+  const { bucketId, subject, ...declared } = requirement;
+
+  return {
+    ...declared,
+    principal,
+    scopes,
+    ...(subject === undefined
+      ? {}
+      : { subject: { type: subject.type, id: request.path[subject.idParam] } }),
+    ...(bucketId === undefined
+      ? {}
+      : { bucket: { id: bucketId, key: digest([principal]), values: [principal] } }),
+    purpose: { kind: "route" },
+    operation: { kind: "httpOperation", api: API_ID, id: routeId },
+    request: { method: route.method.toUpperCase(), path: route.path, headers: {} },
+    extensions: { requirement: {}, operation: {} },
+  };
 }
 
 async function idempotently(
