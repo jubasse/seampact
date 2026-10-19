@@ -33,4 +33,10 @@ describe("query decoding", () => {
       "sort=a%2Cb,c&q=x+y&cursor=n%2F1",
     );
   });
+
+  test("the next page link percent-encodes bytes outside the query set and keeps escapes and commas", () => {
+    expect(withQueryMember('q=a>b&r="x"&s=a%2Cb,c&t=100%&cursor=old', "cursor", "n")).toBe(
+      "q=a%3Eb&r=%22x%22&s=a%2Cb,c&t=100%25&cursor=n",
+    );
+  });
 });

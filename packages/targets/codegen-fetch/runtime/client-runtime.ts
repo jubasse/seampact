@@ -234,14 +234,20 @@ async function answerOf(
   const timeoutMs = options.timeoutMs ?? plan.budgetMs;
   const headers = requestHeaders(config, plan, request, timeoutMs);
   const send = config.fetch ?? fetch;
-  const response = await send(requestUrl(config, plan, request), {
-    method: plan.method.toUpperCase(),
-    headers,
-    ...(plan.hasJsonBody ? { body: JSON.stringify(request.body) } : {}),
-    ...signalMember(options.signal, timeoutMs),
-  });
+  const { member, release } = callSignal(options.signal, timeoutMs);
 
-  return readAnswer(plan, response);
+  try {
+    const response = await send(requestUrl(config, plan, request), {
+      method: plan.method.toUpperCase(),
+      headers,
+      ...(plan.hasJsonBody ? { body: JSON.stringify(request.body) } : {}),
+      ...member,
+    });
+
+    return await readAnswer(plan, response);
+  } finally {
+    release();
+  }
 }
 
 function requestUrl(config: ClientConfig, plan: OperationPlan, request: RequestValues): string {
@@ -331,35 +337,54 @@ function refuseFilledDefaultHeaders(config: ClientConfig, plan: OperationPlan): 
   }
 }
 
-function signalMember(
+interface CallSignal {
+  readonly member: { signal?: AbortSignal };
+  /** Clears the fallback timer and the listeners on the caller's signal, once the call settled. */
+  readonly release: () => void;
+}
+
+function callSignal(
   callerSignal: AbortSignal | undefined,
   timeoutMs: number | undefined,
-): { signal?: AbortSignal } {
+): CallSignal {
+  const releases: (() => void)[] = [];
   const signals = [
     ...(callerSignal === undefined ? [] : [callerSignal]),
-    ...(timeoutMs === undefined ? [] : [timeoutSignal(timeoutMs)]),
+    ...(timeoutMs === undefined ? [] : [timeoutSignal(timeoutMs, releases)]),
   ];
+  const release = () => {
+    for (const each of releases) each();
+  };
 
   const [onlySignal] = signals;
 
-  if (onlySignal === undefined) return {};
+  if (onlySignal === undefined) return { member: {}, release };
 
-  return { signal: signals.length === 1 ? onlySignal : anySignal(signals) };
+  const signal = signals.length === 1 ? onlySignal : anySignal(signals, releases);
+
+  return { member: { signal }, release };
 }
 
 // `AbortSignal.timeout` and `AbortSignal.any` are missing on some platforms (React Native's Hermes): an
-// `AbortController` stands in for them there.
-function timeoutSignal(timeoutMs: number): AbortSignal {
+// `AbortController` stands in for them there. The fallback timeout aborts with a `TimeoutError` as the native one
+// does, built from `Error` since `DOMException` may be missing too.
+function timeoutSignal(timeoutMs: number, releases: (() => void)[]): AbortSignal {
   if (typeof AbortSignal.timeout === "function") return AbortSignal.timeout(timeoutMs);
 
   const controller = new AbortController();
+  const timer = setTimeout(() => {
+    const reason = new Error("The operation timed out.");
 
-  setTimeout(() => controller.abort(), timeoutMs);
+    reason.name = "TimeoutError";
+    controller.abort(reason);
+  }, timeoutMs);
+
+  releases.push(() => clearTimeout(timer));
 
   return controller.signal;
 }
 
-function anySignal(signals: AbortSignal[]): AbortSignal {
+function anySignal(signals: AbortSignal[], releases: (() => void)[]): AbortSignal {
   if (typeof AbortSignal.any === "function") return AbortSignal.any(signals);
 
   const controller = new AbortController();
@@ -370,13 +395,16 @@ function anySignal(signals: AbortSignal[]): AbortSignal {
       break;
     }
 
-    signal.addEventListener("abort", () => controller.abort(signal.reason), { once: true });
+    const onAbort = () => controller.abort(signal.reason);
+
+    signal.addEventListener("abort", onAbort, { once: true });
+    releases.push(() => signal.removeEventListener("abort", onAbort));
   }
 
   return controller.signal;
 }
 
-// Called only after `checkClientConfig` found a generator or `crypto.randomUUID`.
+// `checkClientConfig` refuses a missing generator at creation; the throw covers a direct `callOperation`.
 function idempotencyKeyOf(config: ClientConfig): string {
   const generate = config.idempotencyKey ?? platformRandomUuid();
 
@@ -409,18 +437,28 @@ async function readAnswer(plan: OperationPlan, response: Response): Promise<Answ
   return errorAnswer(plan, response, body) ?? unexpected(response, body);
 }
 
-// The parsed JSON, the text when it is not JSON, or undefined when the response has no body.
+// The parsed JSON (typed only under a JSON media type), the text when it is not JSON, or undefined when the response has no body.
 async function readBody(response: Response): Promise<{ body: unknown; isJson: boolean }> {
   const text = await response.text();
 
   if (text === "") return { body: undefined, isJson: false };
 
   try {
-    return { body: JSON.parse(text), isJson: true };
+    return {
+      body: JSON.parse(text),
+      isJson: isJsonMediaType(response.headers.get("content-type")),
+    };
   } catch {
     // Not JSON: an error answer or a declared JSON success with this body comes back as unexpected, with the text.
     return { body: text, isJson: false };
   }
+}
+
+// `application/json` or a `+json` suffix, whatever the parameters or case.
+function isJsonMediaType(contentType: string | null): boolean {
+  const mediaType = contentType?.split(";")[0]?.trim().toLowerCase() ?? "";
+
+  return mediaType === JSON_MEDIA || mediaType.endsWith("+json");
 }
 
 function successAnswer(
@@ -438,7 +476,9 @@ function successAnswer(
   if (success.shape === "empty") return { ok: true, status, headers, ...replay };
 
   if (success.shape !== "page") {
-    return body === undefined ? undefined : { ok: true, status, headers, body, ...replay };
+    return body === undefined || body === null
+      ? undefined
+      : { ok: true, status, headers, body, ...replay };
   }
 
   if (!Array.isArray(body)) return undefined;
@@ -458,12 +498,20 @@ function nextCursorOf(link: string | null, cursorParam: string): string | undefi
 
     if (!relations.includes(NEXT_RELATION)) continue;
 
-    if (!URL.canParse(target, LINK_BASE)) return undefined;
-
-    return new URL(target, LINK_BASE).searchParams.get(cursorParam) ?? undefined;
+    return cursorOfTarget(target, cursorParam);
   }
 
   return undefined;
+}
+
+// `URL.canParse` is missing on some platforms (Hermes), so an unparsable target is caught instead.
+function cursorOfTarget(target: string, cursorParam: string): string | undefined {
+  try {
+    return new URL(target, LINK_BASE).searchParams.get(cursorParam) ?? undefined;
+  } catch {
+    // A target the URL parser refuses carries no cursor: the page is the last one for this client.
+    return undefined;
+  }
 }
 
 function errorAnswer(plan: OperationPlan, response: Response, body: unknown): Answer | undefined {

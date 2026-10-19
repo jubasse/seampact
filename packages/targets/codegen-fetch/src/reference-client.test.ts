@@ -493,6 +493,71 @@ describe("the generated reference client answers a stub server", () => {
     expect(page.body).not.toHaveProperty("nextCursor");
   });
 
+  test("a next link is read without URL.canParse", async () => {
+    const { canParse } = URL;
+    const fake = createResultClient({
+      baseUrl: "http://api.test",
+      fetch: async () =>
+        new Response("[]", {
+          status: 200,
+          headers: {
+            "content-type": "application/json",
+            link: '<http://[bad>; rel="next", </x?cursor=c2>; rel="next"',
+          },
+        }),
+    });
+
+    Object.assign(URL, { canParse: undefined });
+
+    try {
+      const page = await call(fake, "listTasks")({ path: { channelId: "c1" }, headers: user() });
+
+      expect(page).toMatchObject({ ok: true, body: { items: [] } });
+      expect(page.body).not.toHaveProperty("nextCursor");
+    } finally {
+      Object.assign(URL, { canParse });
+    }
+  });
+
+  test("a next link target reads its cursor without URL.canParse", async () => {
+    const { canParse } = URL;
+    const fake = createResultClient({
+      baseUrl: "http://api.test",
+      fetch: async () =>
+        new Response("[]", {
+          status: 200,
+          headers: { "content-type": "application/json", link: '</x?q=a&cursor=c2>; rel="next"' },
+        }),
+    });
+
+    Object.assign(URL, { canParse: undefined });
+
+    try {
+      const page = await call(fake, "listTasks")({ path: { channelId: "c1" }, headers: user() });
+
+      expect(page).toMatchObject({ ok: true, body: { nextCursor: "c2" } });
+    } finally {
+      Object.assign(URL, { canParse });
+    }
+  });
+
+  test.each([
+    ["text/plain", "123"],
+    ["application/json", "null"],
+  ])("a %s success body %s comes back as unexpected", async (contentType, text) => {
+    const fake = createResultClient({
+      baseUrl: "http://api.test",
+      fetch: async () =>
+        new Response(text, { status: 201, headers: { "content-type": contentType } }),
+    });
+    const created = await call(
+      fake,
+      "createTask",
+    )({ path: { channelId: "c1" }, headers: user(), body: { title: "x" } });
+
+    expect(created).toMatchObject({ ok: false, unexpected: true, status: 201 });
+  });
+
   test("a success body that is not JSON comes back as unexpected", async () => {
     const fake = createResultClient({
       baseUrl: "http://api.test",
@@ -545,14 +610,37 @@ describe("the generated reference client answers a stub server", () => {
   test("a platform without AbortSignal.any or AbortSignal.timeout still applies the timeout", async () => {
     const { any, timeout } = AbortSignal;
     const caller = new AbortController();
-    let sentSignal: AbortSignal | undefined;
     const fake = createResultClient({
       baseUrl: "http://api.test",
-      fetch: async (_url, init) => {
-        sentSignal = init?.signal ?? undefined;
+      fetch: (_url, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), {
+            once: true,
+          });
+        }),
+    });
 
-        return new Response(null, { status: 500 });
-      },
+    Object.assign(AbortSignal, { any: undefined, timeout: undefined });
+
+    try {
+      await expect(
+        call(fake, "listTasks")(
+          { path: { channelId: "c1" }, headers: user() },
+          { signal: caller.signal, timeoutMs: 5 },
+        ),
+      ).rejects.toMatchObject({ name: "TimeoutError" });
+    } finally {
+      Object.assign(AbortSignal, { any, timeout });
+    }
+  });
+
+  test("the fallback signals leave no listener on the caller's signal once the call settled", async () => {
+    const { any, timeout } = AbortSignal;
+    const caller = new AbortController();
+    const removed = vi.spyOn(caller.signal, "removeEventListener");
+    const fake = createResultClient({
+      baseUrl: "http://api.test",
+      fetch: async () => new Response(null, { status: 500 }),
     });
 
     Object.assign(AbortSignal, { any: undefined, timeout: undefined });
@@ -560,15 +648,13 @@ describe("the generated reference client answers a stub server", () => {
     try {
       await call(fake, "listTasks")(
         { path: { channelId: "c1" }, headers: user() },
-        { signal: caller.signal, timeoutMs: 5 },
+        { signal: caller.signal, timeoutMs: 60_000 },
       );
     } finally {
       Object.assign(AbortSignal, { any, timeout });
     }
 
-    expect(sentSignal?.aborted).toBe(false);
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(sentSignal?.aborted).toBe(true);
+    expect(removed).toHaveBeenCalledWith("abort", expect.any(Function));
   });
 
   test("the deadline header on tasksService", async () => {

@@ -51,7 +51,11 @@ function rawQueryPairs(rawQuery: string): [string, string][] {
   return rawQuery
     .split("&")
     .filter((pair) => pair !== "")
-    .map((pair): [string, string] => [rawPairName(pair), pair.slice(rawPairName(pair).length + 1)]);
+    .map((pair): [string, string] => {
+      const name = rawPairName(pair);
+
+      return [name, pair.slice(name.length + 1)];
+    });
 }
 
 function rawPairName(pair: string): string {
@@ -90,11 +94,20 @@ export function decodePathParam(raw: string): string {
   }
 }
 
-/** The raw query string with the member `name` set to `value`, every other pair kept exactly as received. */
+// Bytes outside the RFC 3986 query set (and `%`, `,` kept as sent) are percent-encoded, so a raw `>` or `"` the
+// server accepted cannot break the `Link` target built from the pair.
+const NOT_QUERY_SAFE = /[^A-Za-z0-9\-._~!$&'()*+,;=:@/?%]|%(?![0-9A-Fa-f]{2})/gu;
+
+function queryEncodedPair(pair: string): string {
+  return pair.replace(NOT_QUERY_SAFE, (character) => encodeURIComponent(character));
+}
+
+/** The raw query string with the member `name` set to `value`, every other pair kept as received, made link-safe. */
 export function withQueryMember(rawQuery: string, name: string, value: string): string {
   const keptPairs = rawQuery
     .split("&")
-    .filter((pair) => pair !== "" && formDecoded(rawPairName(pair)) !== name);
+    .filter((pair) => pair !== "" && formDecoded(rawPairName(pair)) !== name)
+    .map(queryEncodedPair);
 
   return [...keptPairs, `${encodeURIComponent(name)}=${encodeURIComponent(value)}`].join("&");
 }
