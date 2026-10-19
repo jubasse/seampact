@@ -17,7 +17,8 @@ export interface RunningServer {
 }
 
 const HOST = "127.0.0.1";
-const APP_KEY = "seampact-consumer-app-key-0123456789";
+
+export const APP_KEY = "seampact-consumer-app-key-0123456789";
 const ENCRYPTION_MODULE = "@adonisjs/core/encryption";
 const FIRST_MAJOR_WITH_ENCRYPTION_CONFIG = 7;
 const APP_ROOT = new URL("../", import.meta.url);
@@ -75,7 +76,7 @@ export async function startServer(): Promise<RunningServer> {
 }
 
 // AdonisJS 7 refuses to boot without an encryption config; AdonisJS 6 has no `drivers` to write one with.
-async function encryptionConfig(): Promise<Record<string, unknown>> {
+export async function encryptionConfig(): Promise<Record<string, unknown>> {
   const manifest: unknown = createRequire(import.meta.url)("@adonisjs/core/package.json");
   const version: unknown =
     typeof manifest === "object" && manifest !== null
@@ -107,7 +108,7 @@ async function encryptionConfig(): Promise<Record<string, unknown>> {
   };
 }
 
-function portOf(address: AddressInfo | string | null): number {
+export function portOf(address: AddressInfo | string | null): number {
   if (address === null || typeof address === "string") {
     throw new Error(`The AdonisJS app listens on ${String(address)}, not on a TCP port.`);
   }

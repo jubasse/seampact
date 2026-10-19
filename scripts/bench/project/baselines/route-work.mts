@@ -1,6 +1,7 @@
 // The work every hand-written baseline route does once its framework has routed the request and parsed the body:
 // authenticate, validate, resolve the scope, decide the requirements, claim the idempotency key, call the
-// handler. The hooks and handlers are the consumer template's own, so only the boundary differs from the
+// handler, then check the reply against its response schema and cut it to the declared shape (what the generated
+// route does with `bodyValidation` on). The hooks and handlers are the consumer template's own, so only the boundary differs from the
 // generated route.
 import { createHash } from "node:crypto";
 import { verifyTemplateSignature } from "@seampact/signed-webhooks";
@@ -14,6 +15,7 @@ import {
   USER_ID,
   USER_TOKEN,
 } from "../../test/credentials.mjs";
+import type { RouteOutput } from "./validators/response-facts.mjs";
 
 /** What a framework hands over once it has routed the request and parsed the body. */
 export interface BaselineRequest {
@@ -52,6 +54,8 @@ export interface BaselineRoute {
   readonly idempotent?: boolean;
   /** The success body is a page: the items alone, the next cursor in a `link` header. */
   readonly paged?: boolean;
+  /** The success reply carries a body the response schema checks. */
+  readonly answersBody?: boolean;
   readonly requiredHeaders?: readonly string[];
 }
 
@@ -68,11 +72,14 @@ if (validatorsId === undefined) {
   );
 }
 
-const { validateRouteInput }: { validateRouteInput: ValidateRouteInput } = await import(
-  `./validators/${validatorsId}.mjs`
-);
+const {
+  validateRouteInput,
+  validateRouteOutput,
+}: { validateRouteInput: ValidateRouteInput; validateRouteOutput: ValidateRouteOutput } =
+  await import(`./validators/${validatorsId}.mjs`);
 
 type ValidateRouteInput = (routeId: string, parts: unknown) => Promise<readonly string[]>;
+type ValidateRouteOutput = (routeId: string, body: unknown) => Promise<RouteOutput>;
 
 const API_ID = "tasks";
 const IDEMPOTENCY_HEADER = "idempotency-key";
@@ -88,6 +95,11 @@ const USER_IDS_BY_TOKEN = new Map([
   [THROTTLED_USER_TOKEN, THROTTLED_USER_ID],
 ]);
 
+const RATE_LIMITED = "api.rate_limited";
+const RATE_LIMITED_STATUS = 429;
+const DENIED_STATUS = 403;
+const MILLISECONDS_PER_SECOND = 1000;
+
 const THROTTLE = { kind: "rule", name: "throttle", bucket: { name: "write" } };
 const CHANNEL_EDITOR = {
   kind: "right",
@@ -97,14 +109,21 @@ const CHANNEL_EDITOR = {
 
 /** The contract facts of the five measured routes, and the health floor, as the check order reads them. */
 export const BASELINE_ROUTES: Readonly<Record<string, BaselineRoute>> = {
-  health: { method: "get", path: "/v1/health", identity: undefined },
-  getChannel: { method: "get", path: "/v1/channels/{channelId}", identity: "user", scoped: true },
+  health: { method: "get", path: "/v1/health", identity: undefined, answersBody: true },
+  getChannel: {
+    method: "get",
+    path: "/v1/channels/{channelId}",
+    identity: "user",
+    scoped: true,
+    answersBody: true,
+  },
   listTasks: {
     method: "get",
     path: "/v1/channels/{channelId}/tasks",
     identity: "user",
     scoped: true,
     paged: true,
+    answersBody: true,
   },
   createTask: {
     method: "post",
@@ -113,6 +132,7 @@ export const BASELINE_ROUTES: Readonly<Record<string, BaselineRoute>> = {
     scoped: true,
     requirements: [THROTTLE, CHANNEL_EDITOR],
     idempotent: true,
+    answersBody: true,
     requiredHeaders: [IDEMPOTENCY_HEADER],
   },
   updateTask: {
@@ -122,6 +142,7 @@ export const BASELINE_ROUTES: Readonly<Record<string, BaselineRoute>> = {
     scoped: true,
     requirements: [{ kind: "right", name: "tasks.update" }],
     idempotent: true,
+    answersBody: true,
     requiredHeaders: [IDEMPOTENCY_HEADER],
   },
   payments: {
@@ -166,7 +187,7 @@ export async function runBaselineRoute(
   const scopes = route.scoped ? [await resolveScope(request.path.channelId)] : [];
   const denial = await firstDenial(route, principal, scopes, request);
 
-  if (denial !== undefined) return refusal(403, denial.code);
+  if (denial !== undefined) return denied(denial);
 
   const input = {
     path: request.path,
@@ -175,7 +196,8 @@ export async function runBaselineRoute(
     body: request.body,
   };
 
-  if (!route.idempotent) return answer(route, request, await tasksHandlers[routeId](input));
+  if (!route.idempotent)
+    return answer(route, routeId, request, await tasksHandlers[routeId](input));
 
   return idempotently(routeId, principal, request, () => tasksHandlers[routeId](input));
 }
@@ -293,9 +315,11 @@ async function idempotently(
     };
   }
 
-  if (begin.outcome !== "started") return refusal(409, "api.idempotency_conflict");
+  if (begin.outcome === "mismatch") return refusal(422, "api.idempotency_key_reused");
 
-  const reply = answer(route, request, await run());
+  if (begin.outcome !== "started") return refusal(409, "api.idempotency_in_progress");
+
+  const reply = await answer(route, routeId, request, await run());
 
   await idempotencyStore.complete(key, {
     status: reply.status,
@@ -310,7 +334,25 @@ function digest(parts: readonly unknown[]): string {
   return createHash("sha256").update(JSON.stringify(parts)).digest("hex");
 }
 
-function answer(
+async function answer(
+  route: BaselineRoute,
+  routeId: string,
+  request: BaselineRequest,
+  output: { status: number; body?: unknown },
+): Promise<BaselineReply> {
+  const reply = pagedReply(route, request, output);
+
+  if (!route.answersBody) return reply;
+
+  const checked = await validateRouteOutput(routeId, reply.body);
+
+  if (checked.issues.length > 0)
+    return refusal(500, "api.response_invalid", { issues: checked.issues });
+
+  return { ...reply, body: checked.body };
+}
+
+function pagedReply(
   route: BaselineRoute,
   request: BaselineRequest,
   output: { status: number; body?: unknown },
@@ -327,6 +369,21 @@ function answer(
     status: output.status,
     body: items,
     headers: { link: `<${request.url}${separator}cursor=${nextCursor}>; rel="next"` },
+  };
+}
+
+// A denial of the decider as the generated route answers it: 403, or 429 with the delay in the body and, in whole
+// seconds rounded up, in `retry-after`.
+function denied(denial: { code: string; params?: { retryAfterMs?: number } }): BaselineReply {
+  if (denial.code !== RATE_LIMITED) return refusal(DENIED_STATUS, denial.code, denial.params);
+
+  const retryAfterMs = denial.params?.retryAfterMs;
+
+  return {
+    ...refusal(RATE_LIMITED_STATUS, RATE_LIMITED, denial.params),
+    ...(retryAfterMs === undefined
+      ? {}
+      : { headers: { "retry-after": String(Math.ceil(retryAfterMs / MILLISECONDS_PER_SECOND)) } }),
   };
 }
 

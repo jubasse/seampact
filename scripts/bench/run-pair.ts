@@ -13,8 +13,10 @@ export interface MeasureOptions {
   readonly connections: number;
 }
 
-// The share of the baseline's saturation rate the fixed-rate runs send.
+// The share of the lower of the two servers' saturation rates the fixed-rate runs send, so neither server queues.
 const FIXED_RATE_SHARE = 0.7;
+// A fixed-rate run whose achieved rate falls short of the rate sent by more than this share is not at equal load.
+const RATE_SHORTFALL_TOLERANCE = 0.05;
 const SETTLE_MS = 500;
 const KINDS: readonly ServerKind[] = ["seampact", "baseline"];
 
@@ -142,7 +144,11 @@ async function measureRoute(
   const overallRate = Math.max(
     1,
     Math.round(
-      FIXED_RATE_SHARE * median(saturation.baseline.map((sample) => sample.requestsPerSecond)),
+      FIXED_RATE_SHARE *
+        Math.min(
+          median(saturation.seampact.map((sample) => sample.requestsPerSecond)),
+          median(saturation.baseline.map((sample) => sample.requestsPerSecond)),
+        ),
     ),
   );
   const fixedSamples = await alternatingRuns(
@@ -154,7 +160,21 @@ async function measureRoute(
     overallRate,
   );
 
-  return { routeId, saturation, fixedRate: { overallRate, samples: fixedSamples } };
+  return {
+    routeId,
+    saturation,
+    fixedRate: {
+      overallRate,
+      samples: fixedSamples,
+      reached: KINDS.every((kind) => reachedRate(fixedSamples[kind], overallRate)),
+    },
+  };
+}
+
+function reachedRate(samples: readonly RunSample[], overallRate: number): boolean {
+  const achieved = median(samples.map((sample) => sample.requestsPerSecond));
+
+  return achieved >= overallRate * (1 - RATE_SHORTFALL_TOLERANCE);
 }
 
 async function alternatingRuns(

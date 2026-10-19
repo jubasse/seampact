@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildPackages, packPackages } from "../consumers/build-and-pack.ts";
 import {
@@ -25,6 +25,10 @@ const BENCH_DEPENDENCIES = { autocannon: "8.0.0", tsx: "4.23.15" } as const;
 
 // tsx depends on esbuild, whose install script pnpm refuses unless it is approved; esbuild runs without it.
 const INSTALL_WITHOUT_BUILD_SCRIPT_CHECK = "--config.strictDepBuilds=false";
+
+const CONFIG_FILE = "seampact.config.yaml";
+const BODY_VALIDATION_ON = "bodyValidation: true";
+const BODY_VALIDATION_OFF = "bodyValidation: false";
 
 export function currentCommit(): string {
   return execFileSync("git", ["rev-parse", "HEAD"], { cwd: REPO_ROOT }).toString().trim();
@@ -56,6 +60,8 @@ export function prepareProject(options: {
   const directory = join(options.workDirectory, options.pair.id);
   const commit = currentCommit();
 
+  if (options.reuse) refuseReuseOnChangedPackages();
+
   if (options.reuse && isProjectOfCommit(directory, commit)) {
     cpSync(BENCH_SOURCES, join(directory, BENCH_DIRECTORY), { recursive: true });
 
@@ -76,6 +82,9 @@ export function prepareProject(options: {
       dependencies: BENCH_DEPENDENCIES,
     },
   });
+
+  if (!options.pair.bodyValidation) switchBodyValidationOff(directory);
+
   mkdirSync(join(directory, VENDOR_DIRECTORY), { recursive: true });
   const tarballs = options.tarballs();
 
@@ -105,4 +114,31 @@ function isProjectOfCommit(directory: string, commit: string): boolean {
     existsSync(join(directory, "node_modules")) &&
     readFileSync(marker, "utf8").trim() === commit
   );
+}
+
+// The consumer config of every target turns the outgoing body check on; the second row of a pair turns it off.
+function switchBodyValidationOff(directory: string): void {
+  const file = join(directory, CONFIG_FILE);
+  const config = readFileSync(file, "utf8");
+
+  if (!config.includes(BODY_VALIDATION_ON)) {
+    throw new Error(`bench: ${file} has no '${BODY_VALIDATION_ON}' to switch off.`);
+  }
+
+  writeFileSync(file, config.replaceAll(BODY_VALIDATION_ON, BODY_VALIDATION_OFF));
+}
+
+// A reused project keeps the packages packed from its own commit, so changed packages would not be measured.
+function refuseReuseOnChangedPackages(): void {
+  const changed = execFileSync("git", ["status", "--porcelain", "--", "packages"], {
+    cwd: REPO_ROOT,
+  })
+    .toString()
+    .trim();
+
+  if (changed !== "") {
+    throw new Error(
+      `bench: --reuse keeps the packages of the earlier run, but packages/ has uncommitted changes:\n${changed}\nrun without --reuse, or commit them.`,
+    );
+  }
 }

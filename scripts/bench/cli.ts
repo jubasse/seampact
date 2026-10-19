@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { REPO_ROOT } from "../golden/repo-root.ts";
 import { currentCommit, type PackedTarballs, packOnce, prepareProject } from "./bench-project.ts";
-import { benchPairs, selectPairs } from "./pairs.ts";
+import { benchPairs, selectPairs, withoutBodyValidation } from "./pairs.ts";
 import { profilePair } from "./profile.ts";
 import type { BenchResults, PairMeasurement } from "./results.ts";
 import { type MeasureOptions, measurePair, probePair } from "./run-pair.ts";
@@ -21,10 +21,13 @@ const EXIT_FAILED = 1;
 const EXIT_USAGE = 2;
 
 const USAGE =
-  "usage: node scripts/bench/cli.ts (--all | --target <overlay> --validators <id>) [--check] [--profile] [--route <ids>] [--duration <s>] [--warmup <s>] [--repeats <n>] [--connections <n>] [--out <dir>] [--work <dir>] [--reuse] [--compare <results.json>]";
+  "usage: node scripts/bench/cli.ts (--all | --target <overlay> --validators <id>) [--check] [--body-validation <on|off|both>] [--profile] [--route <ids>] [--duration <s>] [--warmup <s>] [--repeats <n>] [--connections <n>] [--out <dir>] [--work <dir>] [--reuse] [--compare <results.json>]";
 const CONSUMERS_ROOT = join(REPO_ROOT, "scripts/consumers");
 const DEFAULT_OUT = join(REPO_ROOT, ".bench-output/latest");
 const DEFAULT_WORK = join(tmpdir(), "seampact-bench");
+const BODY_VALIDATION_CHOICES = ["on", "off", "both"] as const;
+
+type BodyValidationChoice = (typeof BODY_VALIDATION_CHOICES)[number];
 const DEFAULT_ROUTES = [
   "health",
   "getChannel",
@@ -45,6 +48,7 @@ interface Invocation {
   readonly check: boolean;
   readonly profile: boolean;
   readonly reuse: boolean;
+  readonly bodyValidation: BodyValidationChoice;
   readonly out: string;
   readonly work: string;
   readonly compare?: string;
@@ -69,12 +73,21 @@ function parseInvocation(argv: string[]): Invocation | string {
         check: { type: "boolean", default: false },
         profile: { type: "boolean", default: false },
         reuse: { type: "boolean", default: false },
+        "body-validation": { type: "string", default: "both" },
         compare: { type: "string" },
       },
     });
 
     if (!values.all && (values.target === undefined || values.validators === undefined)) {
       return "pass --all, or --target <overlay> and --validators <id>";
+    }
+
+    const bodyValidation = BODY_VALIDATION_CHOICES.find(
+      (choice) => choice === values["body-validation"],
+    );
+
+    if (bodyValidation === undefined) {
+      return `--body-validation '${values["body-validation"]}' is not one of ${BODY_VALIDATION_CHOICES.join(", ")}.`;
     }
 
     const numbers = {
@@ -94,6 +107,7 @@ function parseInvocation(argv: string[]): Invocation | string {
       check: values.check,
       profile: values.profile,
       reuse: values.reuse,
+      bodyValidation,
       out: resolve(values.out ?? DEFAULT_OUT),
       work: resolve(values.work ?? DEFAULT_WORK),
       ...(values.compare === undefined ? {} : { compare: resolve(values.compare) }),
@@ -164,8 +178,19 @@ function selectedPairs(invocation: Invocation) {
   });
 }
 
+// A measuring run reports each pair with the generated server's outgoing body check on, off, or both rows.
+function measuredPairs(invocation: Invocation) {
+  return selectedPairs(invocation).flatMap((pair) => {
+    if (invocation.bodyValidation === "on") return [pair];
+
+    if (invocation.bodyValidation === "off") return [withoutBodyValidation(pair)];
+
+    return [pair, withoutBodyValidation(pair)];
+  });
+}
+
 async function runMeasurements(invocation: Invocation): Promise<number> {
-  const pairs = selectedPairs(invocation);
+  const pairs = measuredPairs(invocation);
   const tarballs = packedOnDemand(invocation.work);
   const startedAt = new Date().toISOString();
   const measured: PairMeasurement[] = [];

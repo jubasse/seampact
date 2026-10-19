@@ -8,6 +8,8 @@ export interface BenchPair {
   readonly overlay: string;
   readonly baselineFramework: string;
   readonly validators: string;
+  /** The generated server checks outgoing bodies against the declared response (the consumer config's setting). */
+  readonly bodyValidation: boolean;
 }
 
 const TARGET_PACKAGE_PREFIX = "@seampact/codegen-";
@@ -38,6 +40,7 @@ export function benchPairs(consumersRoot: string): readonly BenchPair[] {
       overlay,
       baselineFramework: targetId,
       validators: pair.validator,
+      bodyValidation: true,
     };
   });
 }
@@ -62,4 +65,11 @@ export function selectPairs(
   }
 
   return chosen;
+}
+
+const BODY_VALIDATION_OFF_SUFFIX = "-body-off";
+
+// The same pair with the generated server's outgoing body check switched off, measured as a second row.
+export function withoutBodyValidation(pair: BenchPair): BenchPair {
+  return { ...pair, id: `${pair.id}${BODY_VALIDATION_OFF_SUFFIX}`, bodyValidation: false };
 }

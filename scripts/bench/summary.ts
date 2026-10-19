@@ -5,7 +5,7 @@ const BYTES_PER_MEGABYTE = 1024 * 1024;
 const PERCENT = 100;
 
 const HEADER = [
-  "| pair | route | req/s seampact | req/s baseline | ratio | spread | p50 ms (seampact / baseline) | p99 ms (seampact / baseline) | peak RSS MB (seampact / baseline) | idle RSS MB (seampact / baseline) | load |",
+  "| pair | route | req/s seampact | req/s baseline | ratio | spread | p50 ms (seampact / baseline) | p99 ms (seampact / baseline) | peak RSS MB, cumulative over the pair's earlier routes (seampact / baseline) | idle RSS MB (seampact / baseline) | load |",
   "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
 ];
 
@@ -17,9 +17,17 @@ function pair2(left: number, right: number, digits: number): string {
   return `${left.toFixed(digits)} / ${right.toFixed(digits)}`;
 }
 
+// The fixed-rate latencies, or a mark when a server did not hold the rate: those latencies are not at equal load.
+function latencyCell(route: RouteMeasurement, pick: (sample: RunSample) => number): string {
+  if (!route.fixedRate.reached) return "invalid (rate not held)";
+
+  const { seampact, baseline } = route.fixedRate.samples;
+
+  return pair2(medianOf(seampact, pick), medianOf(baseline, pick), 1);
+}
+
 function row(pair: PairMeasurement, route: RouteMeasurement): string {
   const { seampact, baseline } = route.saturation;
-  const fixed = route.fixedRate.samples;
   const seampactRate = medianOf(seampact, (sample) => sample.requestsPerSecond);
   const baselineRate = medianOf(baseline, (sample) => sample.requestsPerSecond);
   const spread = Math.max(
@@ -35,16 +43,8 @@ function row(pair: PairMeasurement, route: RouteMeasurement): string {
     baselineRate.toFixed(0),
     (seampactRate / baselineRate).toFixed(2),
     `${(spread * PERCENT).toFixed(0)}%`,
-    pair2(
-      medianOf(fixed.seampact, (s) => s.latencyP50Ms),
-      medianOf(fixed.baseline, (s) => s.latencyP50Ms),
-      1,
-    ),
-    pair2(
-      medianOf(fixed.seampact, (s) => s.latencyP99Ms),
-      medianOf(fixed.baseline, (s) => s.latencyP99Ms),
-      1,
-    ),
+    latencyCell(route, (s) => s.latencyP50Ms),
+    latencyCell(route, (s) => s.latencyP99Ms),
     pair2(
       medianOf(seampact, (s) => s.peakRssBytes) / BYTES_PER_MEGABYTE,
       medianOf(baseline, (s) => s.peakRssBytes) / BYTES_PER_MEGABYTE,
@@ -64,7 +64,7 @@ export function summaryTable(results: BenchResults): string {
   const rows = results.pairs.flatMap((pair) =>
     pair.routes.map((route) => `| ${row(pair, route)} |`),
   );
-  const caption = `commit ${results.commit.slice(0, 8)}, node ${results.node}, ${results.durationSeconds} s runs, ${results.repeats} repeats alternating; latency at 70% of the baseline's saturation rate.`;
+  const caption = `commit ${results.commit.slice(0, 8)}, node ${results.node}, ${results.durationSeconds} s runs, ${results.repeats} repeats alternating; latency at 70% of the lower saturation rate of the two servers.`;
 
   return [caption, "", ...HEADER, ...rows].join("\n");
 }

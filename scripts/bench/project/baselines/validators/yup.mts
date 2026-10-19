@@ -1,6 +1,7 @@
 // The baseline's request schemas written once with yup, with the contract's rules: unknown query and body keys
 // refused, no coercion (strict mode), the same bounds and formats.
 import * as yup from "yup";
+import { DATE_TIME, NAME_MAX, type RouteOutput } from "./response-facts.mjs";
 
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 const TITLE_MAX = 200;
@@ -88,5 +89,43 @@ async function partIssues(part: string, schema: yup.Schema, value: unknown): Pro
     if (!(error instanceof yup.ValidationError)) throw error;
 
     return error.errors.map((message) => `${part}: ${message}`);
+  }
+}
+
+const task = yup.object({
+  taskId: uuid,
+  title: title.required(),
+  state: yup.string().required().oneOf(["open", "done", "archived"]),
+  effort: yup.number().integer().min(0),
+  version: yup.number().required().integer().min(1),
+  createdAt: yup.string().required().matches(DATE_TIME),
+});
+
+// The success body of each route that answers one; `stripUnknown` drops the keys the contract does not declare,
+// as the generated runtime's projection does.
+const responseSchemas: Readonly<Record<string, yup.Schema>> = {
+  health: yup.object({ status: yup.string().required() }),
+  getChannel: yup.object({ channelId: uuid, name: yup.string().required().min(1).max(NAME_MAX) }),
+  listTasks: yup.array(task.required()).required(),
+  createTask: task,
+  updateTask: task,
+};
+
+/** The success body of a route checked against its response schema and cut to the declared shape. */
+export async function validateRouteOutput(routeId: string, body: unknown): Promise<RouteOutput> {
+  const schema = Object.hasOwn(responseSchemas, routeId) ? responseSchemas[routeId] : undefined;
+
+  if (schema === undefined)
+    throw new Error(`bench: no yup response schema for route '${routeId}'.`);
+
+  try {
+    return {
+      issues: [],
+      body: await schema.validate(body, { strict: true, stripUnknown: true, abortEarly: false }),
+    };
+  } catch (error) {
+    if (!(error instanceof yup.ValidationError)) throw error;
+
+    return { issues: error.errors.map((message) => `body: ${message}`), body };
   }
 }

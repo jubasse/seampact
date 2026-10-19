@@ -13,6 +13,7 @@ import {
   Max,
   Min,
 } from "class-validator";
+import { DATE_TIME, NAME_MAX, type RouteOutput } from "./response-facts.mjs";
 
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 const TITLE_MAX = 200;
@@ -53,6 +54,24 @@ class PaymentEventBody {
   @IsString() id!: string;
   @IsString() type!: string;
   @IsDefined() data!: unknown;
+}
+
+class HealthResponse {
+  @IsString() status!: string;
+}
+
+class ChannelResponse {
+  @Matches(UUID) channelId!: string;
+  @IsString() @Length(1, NAME_MAX) name!: string;
+}
+
+class TaskResponse {
+  @Matches(UUID) taskId!: string;
+  @IsString() @Length(1, TITLE_MAX) title!: string;
+  @IsIn(STATES) state!: string;
+  @IsOptional() @IsInt() @Min(0) effort?: number;
+  @IsInt() @Min(1) version!: number;
+  @Matches(DATE_TIME) createdAt!: string;
 }
 
 type Part = "path" | "query" | "body";
@@ -118,5 +137,45 @@ async function partIssues(part: Part, metatype: Metatype, value: unknown): Promi
         : [error.message];
 
     return messages.map((message) => `${part}: ${message}`);
+  }
+}
+
+type ResponseShape = { readonly metatype: Metatype; readonly list: boolean };
+
+const responseShapes: Readonly<Record<string, ResponseShape>> = {
+  health: { metatype: HealthResponse, list: false },
+  getChannel: { metatype: ChannelResponse, list: false },
+  listTasks: { metatype: TaskResponse, list: true },
+  createTask: { metatype: TaskResponse, list: false },
+  updateTask: { metatype: TaskResponse, list: false },
+};
+
+// Transforms to class instances so that `whitelist` drops the members the contract does not declare, as the
+// generated runtime's projection does.
+const responsePipe = new ValidationPipe({
+  whitelist: true,
+  forbidUnknownValues: false,
+  transform: true,
+});
+
+/** The success body of a route checked against its response classes and cut to the declared shape. */
+export async function validateRouteOutput(routeId: string, body: unknown): Promise<RouteOutput> {
+  const shape = Object.hasOwn(responseShapes, routeId) ? responseShapes[routeId] : undefined;
+
+  if (shape === undefined)
+    throw new Error(`bench: no class-validator response classes for route '${routeId}'.`);
+
+  const items = shape.list ? (Array.isArray(body) ? body : [undefined]) : [body];
+
+  try {
+    const checked = await Promise.all(
+      items.map((item) => responsePipe.transform(item, { type: "body", metatype: shape.metatype })),
+    );
+
+    return { issues: [], body: shape.list ? checked : checked[0] };
+  } catch (error) {
+    if (!(error instanceof BadRequestException)) throw error;
+
+    return { issues: [`body: ${error.message}`], body };
   }
 }

@@ -2,12 +2,11 @@
 // middleware, the logger at warn), the contract's routes added to its router as plain handlers. Runs on the
 // AdonisJS major the consumer installs.
 import { createServer } from "node:http";
-import { createRequire } from "node:module";
-import type { AddressInfo } from "node:net";
 import { Ignitor } from "@adonisjs/core";
 import { defineConfig as defineBodyparserConfig } from "@adonisjs/core/bodyparser";
 import { defineConfig as defineHttpConfig, type Router, type Server } from "@adonisjs/core/http";
 import { defineConfig as defineLoggerConfig } from "@adonisjs/core/logger";
+import { APP_KEY, encryptionConfig, portOf } from "../../../test/server.mjs";
 import { BASELINE_ROUTES, colonPath, runBaselineRoute } from "../route-work.mjs";
 
 export interface RunningServer {
@@ -16,9 +15,6 @@ export interface RunningServer {
 }
 
 const HOST = "127.0.0.1";
-const APP_KEY = "seampact-consumer-app-key-0123456789";
-const ENCRYPTION_MODULE = "@adonisjs/core/encryption";
-const FIRST_MAJOR_WITH_ENCRYPTION_CONFIG = 7;
 const BODY_LIMIT = "2mb";
 // The consumer root, the app root the generated server boots on as well.
 const APP_ROOT = new URL("../../../", import.meta.url);
@@ -88,45 +84,4 @@ function addBaselineRoutes(router: Router): void {
       return reply.body === undefined ? response.send(null) : reply.body;
     });
   }
-}
-
-// AdonisJS 7 refuses to boot without an encryption config; AdonisJS 6 has no `drivers` to write one with.
-async function encryptionConfig(): Promise<Record<string, unknown>> {
-  const manifest: unknown = createRequire(import.meta.url)("@adonisjs/core/package.json");
-  const version: unknown =
-    typeof manifest === "object" && manifest !== null
-      ? Reflect.get(manifest, "version")
-      : undefined;
-
-  if (Number(String(version).split(".")[0]) < FIRST_MAJOR_WITH_ENCRYPTION_CONFIG) return {};
-
-  const encryption: Record<string, unknown> = await import(ENCRYPTION_MODULE);
-  const { defineConfig, drivers } = encryption;
-
-  if (typeof defineConfig !== "function" || typeof drivers !== "object" || drivers === null) {
-    throw new Error(
-      `${ENCRYPTION_MODULE} has no defineConfig and drivers on AdonisJS ${String(version)}.`,
-    );
-  }
-
-  const aes256gcm: unknown = Reflect.get(drivers, "aes256gcm");
-
-  if (typeof aes256gcm !== "function") {
-    throw new Error(`${ENCRYPTION_MODULE} has no aes256gcm driver on AdonisJS ${String(version)}.`);
-  }
-
-  return {
-    encryption: defineConfig({
-      default: "app",
-      list: { app: aes256gcm({ id: "app", keys: [APP_KEY] }) },
-    }),
-  };
-}
-
-function portOf(address: AddressInfo | string | null): number {
-  if (address === null || typeof address === "string") {
-    throw new Error(`The AdonisJS baseline listens on ${String(address)}, not on a TCP port.`);
-  }
-
-  return address.port;
 }
