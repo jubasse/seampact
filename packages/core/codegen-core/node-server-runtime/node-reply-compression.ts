@@ -1,7 +1,7 @@
 // The boundary's own compression of its replies, for a framework whose compression plugin never sees them (Fastify's
 // `reply.hijack()` skips `@fastify/compress`): a body at or above the threshold is encoded in the coding the client
-// prefers among br, gzip and deflate, its ETag made weak, and `Vary: Accept-Encoding` added. Copied into the generated
-// tree of the Node server targets as is.
+// prefers among br, gzip and deflate, its ETag made weak, and `Vary: Accept-Encoding` added. A 304 gets the ETag and
+// `Vary` its 200 would have (RFC 9110 section 15.4.5). Copied into the generated tree of the Node server targets as is.
 import { brotliCompressSync, deflateSync, gzipSync } from "node:zlib";
 import type { ContractReply } from "./contract-error.js";
 import {
@@ -18,6 +18,7 @@ const ACCEPT_ENCODING = "Accept-Encoding";
 const ANY_CODING = "*";
 const QUALITY_PARAMETER = /^q=([0-9.]+)$/i;
 const FULL_QUALITY = 1;
+const NOT_MODIFIED = 304;
 
 // In the server's order of preference, which breaks a tie between equal client qualities.
 const ENCODERS = [
@@ -33,7 +34,7 @@ export function compressedReply(
   reply: ContractReply,
   acceptEncoding: string | undefined,
 ): ContractReply {
-  if (reply.body.byteLength < COMPRESSION_THRESHOLD_BYTES) return reply;
+  if (representedBytes(reply) < COMPRESSION_THRESHOLD_BYTES) return reply;
 
   if (reply.headers.some(([name]) => name.toLowerCase() === CONTENT_ENCODING_HEADER)) return reply;
 
@@ -42,6 +43,9 @@ export function compressedReply(
 
   if (encoder === undefined) return { ...reply, headers };
 
+  // A 304 has no body to encode; it carries the weak ETag the encoded 200 has.
+  if (reply.status === NOT_MODIFIED) return { ...reply, headers: headers.map(weakEtag) };
+
   const [coding, encode] = encoder;
 
   return {
@@ -49,6 +53,13 @@ export function compressedReply(
     headers: [...headers.map(weakEtag), [CONTENT_ENCODING_HEADER, coding]],
     body: new Uint8Array(encode(reply.body)),
   };
+}
+
+// A 304 stands for the body of its 200, which decides the coding that body would get.
+function representedBytes(reply: ContractReply): number {
+  return reply.status === NOT_MODIFIED
+    ? (reply.representationBytes ?? reply.body.byteLength)
+    : reply.body.byteLength;
 }
 
 // The encoded body is another representation of the same content, so its validator is weak.

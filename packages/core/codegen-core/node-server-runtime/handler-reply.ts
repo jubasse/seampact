@@ -96,6 +96,7 @@ async function successReply(
         status: NOT_MODIFIED,
         headers: headers.filter(([name]) => name !== "content-type"),
         body: new Uint8Array(),
+        representationBytes: body.byteLength,
       };
     }
   }
