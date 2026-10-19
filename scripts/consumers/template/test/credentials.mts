@@ -1,5 +1,5 @@
-// The credentials every consumer's hooks honour, so one slice test runs against each server target.
-import { createHmac } from "node:crypto";
+// The credentials every consumer's hooks honour and the http suite run passes to its cases.
+import { signRequestBody, STRIPE_V1_SCHEME } from "@seampact/http-suite";
 
 /** A signed-in user: `Authorization: Bearer <userToken>`. */
 export const USER_TOKEN = "seampact-user-token";
@@ -27,8 +27,6 @@ export const STRIPE_KEY_ID = "stripe";
 
 export const STRIPE_SECRET = "whsec_seampact_test_secret";
 
-const MILLISECONDS_PER_SECOND = 1000;
-
 export function bearer(token: string): string {
   return `Bearer ${token}`;
 }
@@ -42,10 +40,5 @@ export function stripeSignature(
   secret: string = STRIPE_SECRET,
   nowMs: number = Date.now(),
 ): string {
-  const timestamp = String(Math.floor(nowMs / MILLISECONDS_PER_SECOND));
-  const mac = createHmac("sha256", secret)
-    .update(`${timestamp}.${JSON.stringify(body)}`)
-    .digest("hex");
-
-  return `t=${timestamp},v1=${mac}`;
+  return signRequestBody(STRIPE_V1_SCHEME, secret, JSON.stringify(body), nowMs);
 }

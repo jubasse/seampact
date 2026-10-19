@@ -1,5 +1,5 @@
 // The handlers every Node server consumer's controllers delegate to, framework-neutral and typed by the generated
-// operation types: one declared success per operation, as the slice test expects.
+// operation types: one declared success per operation, as the http suite expects.
 import type * as Tasks from "../generated/types/tasks/index.js";
 import type * as TasksService from "../generated/types/tasksService/index.js";
 

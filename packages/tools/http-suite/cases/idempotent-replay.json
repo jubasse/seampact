@@ -1,0 +1,58 @@
+{
+  "id": "idempotent-replay",
+  "title": "An idempotent replay answers the same body with the replay flag",
+  "checks": [],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "title": "first",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:replay}}"
+        },
+        "body": {
+          "title": "Only once"
+        }
+      },
+      "capture": {
+        "firstBody": {
+          "body": ""
+        }
+      },
+      "expect": {
+        "status": 201,
+        "headers": {
+          "idempotency-replayed": {
+            "excludes": "true"
+          }
+        }
+      }
+    },
+    {
+      "title": "replay",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:replay}}"
+        },
+        "body": {
+          "title": "Only once"
+        }
+      },
+      "expect": {
+        "status": 201,
+        "headers": {
+          "idempotency-replayed": {
+            "equals": "true"
+          }
+        },
+        "body": "{{firstBody}}"
+      }
+    }
+  ]
+}

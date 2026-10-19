@@ -19,6 +19,7 @@ export const PACKED_PACKAGES: readonly string[] = [
   "packages/targets/codegen-adonis",
   "packages/runtime/signed-webhooks",
   "packages/runtime/idempotency-memory",
+  "packages/tools/http-suite",
 ];
 
 export const BUILD_CONFIG = "tsconfig.build.json";

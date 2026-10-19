@@ -1,0 +1,25 @@
+{
+  "id": "outside-base-path-is-app-not-found",
+  "title": "A path outside the base path is the app's own 404",
+  "checks": [],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/V1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 404,
+        "headers": {
+          "content-type": {
+            "excludes": "application/problem+json"
+          }
+        }
+      }
+    }
+  ]
+}

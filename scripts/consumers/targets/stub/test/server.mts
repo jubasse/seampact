@@ -1,6 +1,7 @@
 // The stub server of the `stub` overlay: a `node:http` server answering the reference operations as the
-// contract declares them, with the honoured credentials, so the slice test checks the client and the packed
-// installs without a server target. It proves the client only; each server target's own consumer is the proof.
+// contract declares them, with the honoured credentials, so the http suite checks the packed installs without a
+// server target and the fetch target's reference client test runs the client against it. It proves no server
+// target; each server target's own consumer is the proof.
 import { createHash } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";

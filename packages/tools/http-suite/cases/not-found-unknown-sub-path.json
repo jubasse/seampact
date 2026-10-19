@@ -1,0 +1,28 @@
+{
+  "id": "not-found-unknown-sub-path",
+  "title": "404 in the api format for an unknown sub-path under the base path",
+  "checks": [],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/unknown",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 404,
+        "headers": {
+          "content-type": {
+            "contains": ["application/problem+json"]
+          }
+        },
+        "body": {
+          "code": "api.not_found"
+        }
+      }
+    }
+  ]
+}

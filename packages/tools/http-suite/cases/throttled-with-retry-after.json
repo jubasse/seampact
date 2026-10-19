@@ -1,0 +1,33 @@
+{
+  "id": "throttled-with-retry-after",
+  "title": "429 with retryAfterMs and its Retry-After header",
+  "checks": [],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{throttledUserToken}}",
+          "idempotency-key": "{{uuid:create}}"
+        },
+        "body": {
+          "title": "Too many"
+        }
+      },
+      "expect": {
+        "status": 429,
+        "headers": {
+          "retry-after": {
+            "equals": "{{throttleRetryAfterSeconds}}"
+          }
+        },
+        "body": {
+          "code": "api.rate_limited",
+          "retryAfterMs": "{{throttleRetryAfterMs}}"
+        }
+      }
+    }
+  ]
+}

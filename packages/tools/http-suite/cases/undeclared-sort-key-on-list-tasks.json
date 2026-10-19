@@ -1,0 +1,23 @@
+{
+  "id": "undeclared-sort-key-on-list-tasks",
+  "title": "400 for an undeclared sort key on listTasks",
+  "checks": [],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks?sort=title",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid"
+        }
+      }
+    }
+  ]
+}

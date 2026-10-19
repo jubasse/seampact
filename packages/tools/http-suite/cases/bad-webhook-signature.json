@@ -1,0 +1,30 @@
+{
+  "id": "bad-webhook-signature",
+  "title": "401 for a bad signature on payments",
+  "checks": [],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "POST",
+        "path": "/v1/hooks/payments",
+        "body": {
+          "id": "evt_2",
+          "type": "invoice.paid",
+          "data": {}
+        },
+        "sign": {
+          "scheme": "stripe-v1",
+          "header": "stripe-signature",
+          "secret": "{{stripeSecret}}_other"
+        }
+      },
+      "expect": {
+        "status": 401,
+        "body": {
+          "code": "api.unauthenticated"
+        }
+      }
+    }
+  ]
+}

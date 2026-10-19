@@ -1,0 +1,28 @@
+{
+  "id": "wrong-method-on-tasks-service-path",
+  "title": "404 in the api format for a wrong method on a tasksService path",
+  "checks": [],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "PUT",
+        "path": "/internal/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{serviceJwt}}"
+        }
+      },
+      "expect": {
+        "status": 404,
+        "headers": {
+          "content-type": {
+            "contains": ["application/problem+json"]
+          }
+        },
+        "body": {
+          "code": "api.not_found"
+        }
+      }
+    }
+  ]
+}

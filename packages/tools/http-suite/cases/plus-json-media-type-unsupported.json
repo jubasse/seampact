@@ -1,0 +1,28 @@
+{
+  "id": "plus-json-media-type-unsupported",
+  "title": "415 for a +json media type on a JSON route",
+  "checks": [],
+  "profiles": ["default"],
+  "steps": [
+    {
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/me/preferences",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "content-type": "application/merge-patch+json",
+          "idempotency-key": "{{uuid:update}}"
+        },
+        "body": {
+          "digest": true
+        }
+      },
+      "expect": {
+        "status": 415,
+        "body": {
+          "code": "api.unsupported_media_type"
+        }
+      }
+    }
+  ]
+}
