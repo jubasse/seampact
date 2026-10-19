@@ -75,24 +75,28 @@ describe("inline and included declarations", () => {
     expect(compiledIrTexts(contractVariant(trees, 0, false), "whole")).toEqual(golden);
   });
 
-  it("give one IR", () => {
-    let movingVariants = 0;
-    let includeDirectives = 0;
-    let fileDirectives = 0;
+  it(
+    "give one IR",
+    () => {
+      let movingVariants = 0;
+      let includeDirectives = 0;
+      let fileDirectives = 0;
 
-    for (let seed = 1; seed <= VARIANT_COUNT; seed++) {
-      const variant = contractVariant(trees, seed, true);
+      for (let seed = 1; seed <= VARIANT_COUNT; seed++) {
+        const variant = contractVariant(trees, seed, true);
 
-      if (variant.includeDirectives + variant.fileDirectives > 0) movingVariants++;
+        if (variant.includeDirectives + variant.fileDirectives > 0) movingVariants++;
 
-      includeDirectives += variant.includeDirectives;
-      fileDirectives += variant.fileDirectives;
+        includeDirectives += variant.includeDirectives;
+        fileDirectives += variant.fileDirectives;
 
-      expect(compiledIrTexts(variant, `seed ${seed}`), `seed ${seed}`).toEqual(golden);
-    }
+        expect(compiledIrTexts(variant, `seed ${seed}`), `seed ${seed}`).toEqual(golden);
+      }
 
-    expect(movingVariants).toBeGreaterThanOrEqual(MINIMUM_MOVING_VARIANTS);
-    expect(includeDirectives).toBeGreaterThan(0);
-    expect(fileDirectives).toBeGreaterThan(0);
-  }, VARIANTS_TIMEOUT_MILLISECONDS);
+      expect(movingVariants).toBeGreaterThanOrEqual(MINIMUM_MOVING_VARIANTS);
+      expect(includeDirectives).toBeGreaterThan(0);
+      expect(fileDirectives).toBeGreaterThan(0);
+    },
+    VARIANTS_TIMEOUT_MILLISECONDS,
+  );
 });
