@@ -118,6 +118,19 @@ export const besideTasksOnSharedBasePaths: ReferenceIrChange = (ir, api) => {
   };
 };
 
+/** Marks one error code of the `tasks` api `noStore`, as the compiler does for a code whose params are sensitive. */
+export function referenceNoStoreCode(code: string): ReferenceIrChange {
+  return (ir, api) => {
+    if (api !== "tasks") return ir;
+    const declaration = ir.errors[code];
+
+    if (declaration === undefined)
+      throw new Error(`the reference tasks contract lost its error code '${code}'`);
+
+    return { ...ir, errors: { ...ir.errors, [code]: { ...declaration, noStore: true } } };
+  };
+}
+
 /** Writes both reference apis' generated trees into a fresh project; returns every file written. */
 export async function generateReferenceProject(
   project: string,

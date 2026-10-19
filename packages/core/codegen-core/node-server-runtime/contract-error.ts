@@ -11,6 +11,7 @@ export const PAYLOAD_TOO_LARGE_ROLE = "payloadTooLarge";
 const INTERNAL_STATUS = 500;
 const UNDECLARED_STATUS_ROLE = "undeclaredStatus";
 const FALLBACK_INTERNAL_CODE = "api.internal";
+const NO_STORE = "no-store";
 
 /** A reply the boundary writes itself: status, headers in order, and the body bytes. */
 export interface ContractReply {
@@ -110,6 +111,8 @@ export function renderContractReply(
   const retryHeader = retryHeaderOf(entry, params);
 
   if (retryHeader !== undefined) headers.push(retryHeader);
+
+  if (entry.noStore === true) headers.push(["cache-control", NO_STORE]);
 
   return {
     status: entry.status,

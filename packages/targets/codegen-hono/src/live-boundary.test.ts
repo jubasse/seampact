@@ -8,6 +8,7 @@ import {
   generateReferenceProject,
   problemBody,
   projectDirectory,
+  referenceNoStoreCode,
   type RawReply,
   sendRawRequest,
 } from "@seampact/codegen-core/node-server/test-support";
@@ -29,6 +30,8 @@ const USER = "55555555-5555-4555-8555-555555555555";
 const BEARER = { authorization: `Bearer user-${USER}` };
 const PROBLEM_MEDIA = "application/problem+json";
 const TOO_LARGE_BODY_BYTES = 1_048_577;
+// The code of a body over its limit, marked as a code whose params carry a sensitive value.
+const NO_STORE_CODE = "api.payload_too_large";
 
 interface ReferenceAppModule {
   readonly ALLOWED_ORIGIN: string;
@@ -75,7 +78,12 @@ function writeHeaders(): Record<string, string> {
 }
 
 beforeAll(async () => {
-  const files = await generateReferenceProject(PROJECT, honoTarget, { bodyValidation: true });
+  const files = await generateReferenceProject(
+    PROJECT,
+    honoTarget,
+    { bodyValidation: true },
+    referenceNoStoreCode(NO_STORE_CODE),
+  );
 
   expect(emitProject(PROJECT, files, BUILD)).toEqual([]);
   app = await import(copyTestApp(BUILD, APP_SOURCE));
@@ -203,6 +211,20 @@ describe("the request body", () => {
     expect(tooLarge.status).toBe(413);
     expect(tooLarge.headers["content-type"]).toContain(PROBLEM_MEDIA);
     expect(app.calls.handled).toEqual([]);
+  });
+
+  test("an error code marked noStore answers Cache-Control: no-store, another code none", async () => {
+    const path = `/v1/channels/${CHANNEL}/tasks`;
+    const malformed = await send("POST", path, { headers: writeHeaders(), body: "{" });
+    const tooLarge = await send("POST", path, {
+      headers: writeHeaders(),
+      body: JSON.stringify({ title: "x".repeat(TOO_LARGE_BODY_BYTES) }),
+    });
+
+    expect(tooLarge.status).toBe(413);
+    expect(tooLarge.headers["cache-control"]).toBe("no-store");
+    expect(malformed.status).toBe(400);
+    expect(malformed.headers["cache-control"]).toBeUndefined();
   });
 
   test("a body that is not JSON answers the 415 before it is read", async () => {

@@ -915,6 +915,7 @@ function errorEntry(
             param: error.retryHeader.param,
             unit: error.retryHeader.unit,
           },
+    noStore: declaration.noStore === true ? true : undefined,
   };
 }
 
