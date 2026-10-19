@@ -3,6 +3,7 @@ import { median, spreadShare } from "./statistics.ts";
 
 const BYTES_PER_MEGABYTE = 1024 * 1024;
 const PERCENT = 100;
+const INVALID_MARK = "invalid (rate not held)";
 
 const HEADER = [
   "| pair | route | req/s seampact | req/s baseline | ratio | spread | p50 ms (seampact / baseline) | p99 ms (seampact / baseline) | peak RSS MB, cumulative over the pair's earlier routes (seampact / baseline) | idle RSS MB (seampact / baseline) | load |",
@@ -19,7 +20,7 @@ function pair2(left: number, right: number, digits: number): string {
 
 // The fixed-rate latencies, or a mark when a server did not hold the rate: those latencies are not at equal load.
 function latencyCell(route: RouteMeasurement, pick: (sample: RunSample) => number): string {
-  if (!route.fixedRate.reached) return "invalid (rate not held)";
+  if (!route.fixedRate.reached) return INVALID_MARK;
 
   const { seampact, baseline } = route.fixedRate.samples;
 
@@ -69,7 +70,7 @@ export function summaryTable(results: BenchResults): string {
   return [caption, "", ...HEADER, ...rows].join("\n");
 }
 
-function keyedRates(results: BenchResults): Map<string, { rate: number; p99: number }> {
+function keyedRates(results: BenchResults): Map<string, { rate: number; p99: number | undefined }> {
   return new Map(
     results.pairs.flatMap((pair) =>
       pair.routes.map(
@@ -78,7 +79,9 @@ function keyedRates(results: BenchResults): Map<string, { rate: number; p99: num
             `${pair.pairId} ${route.routeId}`,
             {
               rate: medianOf(route.saturation.seampact, (s) => s.requestsPerSecond),
-              p99: medianOf(route.fixedRate.samples.seampact, (s) => s.latencyP99Ms),
+              p99: route.fixedRate.reached
+                ? medianOf(route.fixedRate.samples.seampact, (s) => s.latencyP99Ms)
+                : undefined,
             },
           ] as const,
       ),
@@ -99,13 +102,13 @@ export function compareTable(before: BenchResults, after: BenchResults): string 
 
     if (then === undefined) {
       lines.push(
-        `| ${key} | not in the earlier run | ${now.rate.toFixed(0)} | | | ${now.p99.toFixed(1)} | |`,
+        `| ${key} | not in the earlier run | ${now.rate.toFixed(0)} | | ${p99Cell(now.p99)} | |`,
       );
       continue;
     }
 
     lines.push(
-      `| ${key} | ${then.rate.toFixed(0)} | ${now.rate.toFixed(0)} | ${percentChange(then.rate, now.rate)} | ${then.p99.toFixed(1)} | ${now.p99.toFixed(1)} | ${percentChange(then.p99, now.p99)} |`,
+      `| ${key} | ${then.rate.toFixed(0)} | ${now.rate.toFixed(0)} | ${percentChange(then.rate, now.rate)} | ${p99Cell(then.p99)} | ${p99Cell(now.p99)} | ${p99Change(then.p99, now.p99)} |`,
     );
   }
 
@@ -116,4 +119,13 @@ function percentChange(before: number, after: number): string {
   const change = ((after - before) / before) * PERCENT;
 
   return `${change >= 0 ? "+" : ""}${change.toFixed(1)}%`;
+}
+
+function p99Cell(p99: number | undefined): string {
+  return p99 === undefined ? INVALID_MARK : p99.toFixed(1);
+}
+
+// No ratio when either side's latencies are marked invalid.
+function p99Change(before: number | undefined, after: number | undefined): string {
+  return before === undefined || after === undefined ? "" : percentChange(before, after);
 }

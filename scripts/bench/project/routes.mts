@@ -76,6 +76,7 @@ const signedPayment: BenchRequest = {
 
 export const HEALTH_ROUTE: BenchRoute = {
   id: "health",
+  successStatus: 200,
   title: "GET /v1/health (framework floor)",
   request: () => ({ method: "GET", path: "/v1/health", headers: {} }),
   refusedRequest: () => ({ method: "GET", path: `/v1/health${UNKNOWN_QUERY}`, headers: {} }),
@@ -85,6 +86,7 @@ export const HEALTH_ROUTE: BenchRoute = {
 export const COMPARED_ROUTES: readonly BenchRoute[] = [
   {
     id: "getChannel",
+    successStatus: 200,
     title: "simple GET channel",
     request: () => ({ method: "GET", path: CHANNEL_PATH, headers: USER_HEADERS }),
     refusedRequest: () => ({
@@ -96,6 +98,7 @@ export const COMPARED_ROUTES: readonly BenchRoute[] = [
   },
   {
     id: "updateTask",
+    successStatus: 200,
     title: "validated JSON write",
     request: () =>
       userWrite("PATCH", `${TASKS_PATH}/${TASK_ID}`, { title: "Done", expectedVersion: 1 }),
@@ -115,6 +118,7 @@ export const COMPARED_ROUTES: readonly BenchRoute[] = [
   },
   {
     id: "listTasks",
+    successStatus: 200,
     title: "paged list",
     request: () => ({
       method: "GET",
@@ -130,6 +134,7 @@ export const COMPARED_ROUTES: readonly BenchRoute[] = [
   },
   {
     id: "payments",
+    successStatus: 204,
     title: "signed webhook",
     request: () => signedPayment,
     refusedRequest: () => ({
@@ -166,6 +171,7 @@ export const COMPARED_ROUTES: readonly BenchRoute[] = [
   },
   {
     id: "createTask",
+    successStatus: 201,
     title: "idempotent write",
     request: () => userWrite("POST", TASKS_PATH, { title: "Write the bench" }),
     refusedRequest: () =>

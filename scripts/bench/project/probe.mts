@@ -126,6 +126,12 @@ async function successDifferences(route: BenchRoute, options: ProbeArguments): P
     );
   }
 
+  if (baseline.status !== route.successStatus) {
+    differences.push(
+      `${route.id}: the baseline answered ${baseline.status} to the valid request, the contract declares ${route.successStatus}`,
+    );
+  }
+
   if (seampact.status !== baseline.status || seampactBody !== baselineBody) {
     differences.push(
       `${route.id}: seampact ${seampact.status} ${seampactBody} against baseline ${baseline.status} ${baselineBody}`,
