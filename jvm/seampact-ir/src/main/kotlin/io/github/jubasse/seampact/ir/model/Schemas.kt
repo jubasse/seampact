@@ -341,7 +341,7 @@ public data class ScalarTypeUse(
     public val scalar: ScalarId? = null,
     public val refinements: Refinements,
     public val content: JsonContent? = null,
-    /** The value is secret (ADR 0003 section 6): a use of a declared scalar marked sensitive; absent means false. A property's own type use leaves it out: Property.sensitive holds it. A response carrying it is no-store (invariant ir.cache.sensitive-no-store). */
+    /** The value is secret (ADR 0003 section 6): a use of a declared scalar marked sensitive; absent means false. A property's own type use leaves it out: Property.sensitive holds it (invariant ir.property.sensitive). A response carrying it is no-store (invariant ir.cache.sensitive-no-store). */
     public val sensitive: Boolean? = null,
     /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
     public val nullable: Boolean? = null,

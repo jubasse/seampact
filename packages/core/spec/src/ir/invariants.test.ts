@@ -159,6 +159,11 @@ describe("checkIrInvariants", () => {
       }),
     ).toEqual(one("ir.property.nullable"));
     expect(
+      broken("Property", (property) => {
+        (property.type as Record<string, unknown>).sensitive = true;
+      }),
+    ).toEqual(one("ir.property.sensitive"));
+    expect(
       broken("Scalar", (scalar) => {
         (scalar.type as Record<string, unknown>).scalar = "money";
       }),

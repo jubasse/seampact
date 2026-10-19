@@ -29,6 +29,7 @@ export type IrInvariantId =
   | "ir.csrf.cookie"
   | "ir.field-wire.members"
   | "ir.property.nullable"
+  | "ir.property.sensitive"
   | "ir.scalar.type"
   | "ir.id.scalar"
   | "ir.ref.resolves"
@@ -935,6 +936,13 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
             "ir.property.nullable",
             pointer,
             "A property's type use has no 'nullable': the property holds it.",
+          );
+
+        if (isRecord(value.type) && has(value.type, "sensitive"))
+          fail(
+            "ir.property.sensitive",
+            pointer,
+            "A property's type use has no 'sensitive': the property holds it.",
           );
         break;
       }

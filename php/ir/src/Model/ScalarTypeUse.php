@@ -19,7 +19,7 @@ final readonly class ScalarTypeUse extends TypeUse
      * @param string|null $format A portable format of ADR 0003 section 8 ('uuid', 'int64', 'decimal'...); a named format is 'scalar'.
      * @param string|null $scalar The named format this use reads, from the scalars catalogue.
      * @param JsonContent|null $content
-     * @param bool|null $sensitive The value is secret (ADR 0003 section 6): a use of a declared scalar marked sensitive; absent means false. A property's own type use leaves it out: Property.sensitive holds it. A response carrying it is no-store (invariant ir.cache.sensitive-no-store).
+     * @param bool|null $sensitive The value is secret (ADR 0003 section 6): a use of a declared scalar marked sensitive; absent means false. A property's own type use leaves it out: Property.sensitive holds it (invariant ir.property.sensitive). A response carrying it is no-store (invariant ir.cache.sensitive-no-store).
      * @param bool|null $nullable The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable).
      * @param Docs|null $docs The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own.
      * @param list<mixed>|null $examples The examples written at the position of this use, placed as its docs are.

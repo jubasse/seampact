@@ -766,7 +766,7 @@ export interface ScalarTypeUse {
   scalar?: ScalarId;
   refinements: Refinements;
   content?: JsonContent;
-  /** The value is secret (ADR 0003 section 6): a use of a declared scalar marked sensitive; absent means false. A property's own type use leaves it out: Property.sensitive holds it. A response carrying it is no-store (invariant ir.cache.sensitive-no-store). */
+  /** The value is secret (ADR 0003 section 6): a use of a declared scalar marked sensitive; absent means false. A property's own type use leaves it out: Property.sensitive holds it (invariant ir.property.sensitive). A response carrying it is no-store (invariant ir.cache.sensitive-no-store). */
   sensitive?: boolean;
   /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
   nullable?: boolean;

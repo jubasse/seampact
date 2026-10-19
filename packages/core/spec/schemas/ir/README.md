@@ -87,6 +87,7 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 | `ir.csrf.cookie` | An unsafe operation whose access accepts a cookie scheme has `csrf` (derived or exempt). |
 | `ir.field-wire.members` | `FieldWire` of kind `file` or `json` has no `style`, `explode` or `brackets`; a query wire kind has all three. |
 | `ir.property.nullable` | A property's type use has no `nullable`: `Property.nullable` holds it. |
+| `ir.property.sensitive` | A property's type use has no `sensitive`: `Property.sensitive` holds it. |
 | `ir.scalar.type` | A named format's own type names no `scalar`. |
 | `ir.id.scalar` | `Scope.idSchema` and `ResourceSubject.idSchema` are a `scalar` or `enum` type use without `nullable`; `RuleProof.schema` and `InputProof.schema` are anything but `opaque` and `file`. |
 | `ir.ref.resolves` | Every member whose schema is a `$ref` to a catalogue id definition (the key of a top-level or api map, such as `SchemeId` or `SurfaceId`) names an existing key, read with `Object.hasOwn`. |

@@ -14,7 +14,7 @@ A sensitive value answered outside a field of a success body (a whole body, an a
 
 | Field or kind | Schema path | Change | Additive, tightening or breaking | Guarded by |
 |---|---|---|---|---|
-| `ScalarTypeUse.sensitive` | `schemas.schema.json#/$defs/ScalarTypeUse/properties/sensitive` | added | additive | exact `irRevision` match (before 1.0) |
+| `ScalarTypeUse.sensitive` | `schemas.schema.json#/$defs/ScalarTypeUse/properties/sensitive` | added, with invariant `ir.property.sensitive` | tightening | exact `irRevision` match (before 1.0) |
 | `ErrorDecl.noStore` | `declarations.schema.json#/$defs/ErrorDecl/properties/noStore` | added, with invariant `ir.error.sensitive-no-store` | tightening | exact `irRevision` match (before 1.0) |
 | `OpaqueTypeUse.nullable` | `schemas.schema.json#/$defs/OpaqueTypeUse/properties/nullable` | added; `Property.nullable` now also holds for an opaque property | additive | exact `irRevision` match (before 1.0) |
 | `Cache.noStore` | `operation.schema.json#/$defs/Cache/properties/noStore` | invariant `ir.cache.sensitive-no-store` also reaches a sensitive scalar use, a map key and a response header's type | tightening | exact `irRevision` match (before 1.0) |
