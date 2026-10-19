@@ -1,0 +1,70 @@
+name: Golden IR determinism
+
+# `scripts/golden --check` on every golden case: it compiles each case and compares the IR and side table byte for
+# byte with the committed files. The matrix runs it on Linux, macOS and Windows, with two time zones and two locales
+# (one of them Turkish, for case mapping), and Windows checks out with `core.autocrlf true` so the contract sources
+# arrive with CRLF line endings. `golden-determinism` is the check to require.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: golden-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  determinism:
+    name: determinism (${{ matrix.os }}, ${{ matrix.tz }}, ${{ matrix.lang }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, tz: UTC, lang: en_US.UTF-8 }
+          - { os: ubuntu-latest, tz: Pacific/Kiritimati, lang: tr_TR.UTF-8 }
+          - { os: macos-latest, tz: America/Los_Angeles, lang: en_US.UTF-8 }
+          - { os: macos-latest, tz: Asia/Kolkata, lang: tr_TR.UTF-8 }
+          - { os: windows-latest, tz: UTC, lang: en_US.UTF-8 }
+          - { os: windows-latest, tz: Pacific/Auckland, lang: tr_TR.UTF-8 }
+    env:
+      TZ: ${{ matrix.tz }}
+      LANG: ${{ matrix.lang }}
+      LC_ALL: ${{ matrix.lang }}
+    steps:
+      - name: Check out with CRLF line endings on Windows
+        if: runner.os == 'Windows'
+        shell: bash
+        run: git config --global core.autocrlf true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: The reference sources have CRLF line endings on Windows
+        if: runner.os == 'Windows'
+        shell: bash
+        run: grep -q $'\r' fixtures/reference/tasks/api.yaml
+      - name: Check every golden case
+        run: node --experimental-transform-types --import ./scripts/ir-models/register.ts scripts/golden/cli.ts --check
+
+  golden-determinism:
+    needs: determinism
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every matrix job passed
+        env:
+          RESULT: ${{ needs.determinism.result }}
+        run: test "$RESULT" = success
