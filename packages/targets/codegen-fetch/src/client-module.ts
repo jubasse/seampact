@@ -77,6 +77,7 @@ function runtimeImport(body: string): string {
 const RUNTIME_VALUES: readonly string[] = [
   "callOperation",
   "callOperationOrThrow",
+  "checkClientConfig",
   "ContractError",
 ];
 const RUNTIME_TYPES: readonly string[] = [
@@ -174,5 +175,5 @@ function createClientSource(
     return `${propertyKey(methodName)}: (...args) => ${call},`;
   });
 
-  return `/** The client of every operation, sending to \`config.baseUrl\` with the platform fetch unless \`config.fetch\` is given. */\nexport function createClient(config: ClientConfig): Client {\nreturn {\n${members.join("\n")}\n};\n}`;
+  return `/** The client of every operation, sending to \`config.baseUrl\` with the platform fetch unless \`config.fetch\` is given. */\nexport function createClient(config: ClientConfig): Client {\ncheckClientConfig(config, plans);\n\nreturn {\n${members.join("\n")}\n};\n}`;
 }

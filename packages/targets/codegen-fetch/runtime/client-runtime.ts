@@ -2,11 +2,16 @@
 // describes, sends it with the platform fetch, and sorts the response into a success, a declared error or an
 // unexpected answer. Response bodies are not checked: unknown keys and enum members reach the caller as sent.
 
-/** The client's settings: the server root, an optional fetch (for credentials or tests) and default headers. */
+/**
+ * The client's settings: the server root, an optional fetch (for credentials, tests or a platform without a global
+ * fetch), default headers, and an optional idempotency key generator (for a platform without
+ * `crypto.randomUUID`, such as React Native's Hermes).
+ */
 export interface ClientConfig {
   readonly baseUrl: string;
   readonly fetch?: typeof fetch;
   readonly headers?: Readonly<Record<string, string>>;
+  readonly idempotencyKey?: () => string;
 }
 
 /** Per-call settings: a caller signal, and a timeout that wins over the operation's budget. */
@@ -186,6 +191,35 @@ export async function callOperationOrThrow<Success, Operation extends string>(
   return asDeclared(answer);
 }
 
+/**
+ * Refuses, when the client is created, a config that a call would fail on: no fetch on the platform and none
+ * given, or an operation with a generated idempotency key, no `crypto.randomUUID` and no generator given.
+ */
+export function checkClientConfig(
+  config: ClientConfig,
+  plans: Readonly<Record<string, OperationPlan>>,
+): void {
+  if (config.fetch === undefined && typeof globalThis.fetch !== "function") {
+    throw new TypeError(
+      "This platform has no global fetch: pass one as `fetch` in the client config.",
+    );
+  }
+
+  const generatesKeys = Object.values(plans).some((plan) => plan.idempotency !== undefined);
+
+  if (generatesKeys && config.idempotencyKey === undefined && platformRandomUuid() === undefined) {
+    throw new TypeError(
+      "This platform has no crypto.randomUUID to generate idempotency keys: pass a generator as `idempotencyKey` in the client config.",
+    );
+  }
+}
+
+function platformRandomUuid(): (() => string) | undefined {
+  const platformCrypto: { readonly randomUUID?: () => string } | undefined = globalThis.crypto;
+
+  return typeof platformCrypto?.randomUUID === "function" ? () => crypto.randomUUID() : undefined;
+}
+
 // The one unchecked step: the response is read as the contract declares it, never validated.
 function asDeclared<Declared>(answer: Answer): Declared {
   return answer as Declared;
@@ -266,7 +300,7 @@ function requestHeaders(
   if (plan.hasJsonBody) headers.set("content-type", JSON_MEDIA);
 
   if (plan.idempotency !== undefined && !headers.has(plan.idempotency.header)) {
-    headers.set(plan.idempotency.header, crypto.randomUUID());
+    headers.set(plan.idempotency.header, idempotencyKeyOf(config));
   }
 
   if (plan.deadlineHeader !== undefined && !headers.has(plan.deadlineHeader)) {
@@ -303,39 +337,89 @@ function signalMember(
 ): { signal?: AbortSignal } {
   const signals = [
     ...(callerSignal === undefined ? [] : [callerSignal]),
-    ...(timeoutMs === undefined ? [] : [AbortSignal.timeout(timeoutMs)]),
+    ...(timeoutMs === undefined ? [] : [timeoutSignal(timeoutMs)]),
   ];
 
-  if (signals.length === 0) return {};
+  const [onlySignal] = signals;
 
-  return { signal: AbortSignal.any(signals) };
+  if (onlySignal === undefined) return {};
+
+  return { signal: signals.length === 1 ? onlySignal : anySignal(signals) };
+}
+
+// `AbortSignal.timeout` and `AbortSignal.any` are missing on some platforms (React Native's Hermes): an
+// `AbortController` stands in for them there.
+function timeoutSignal(timeoutMs: number): AbortSignal {
+  if (typeof AbortSignal.timeout === "function") return AbortSignal.timeout(timeoutMs);
+
+  const controller = new AbortController();
+
+  setTimeout(() => controller.abort(), timeoutMs);
+
+  return controller.signal;
+}
+
+function anySignal(signals: AbortSignal[]): AbortSignal {
+  if (typeof AbortSignal.any === "function") return AbortSignal.any(signals);
+
+  const controller = new AbortController();
+
+  for (const signal of signals) {
+    if (signal.aborted) {
+      controller.abort(signal.reason);
+      break;
+    }
+
+    signal.addEventListener("abort", () => controller.abort(signal.reason), { once: true });
+  }
+
+  return controller.signal;
+}
+
+// Called only after `checkClientConfig` found a generator or `crypto.randomUUID`.
+function idempotencyKeyOf(config: ClientConfig): string {
+  const generate = config.idempotencyKey ?? platformRandomUuid();
+
+  if (generate === undefined) {
+    throw new TypeError(
+      "No idempotency key generator: pass one as `idempotencyKey` in the client config.",
+    );
+  }
+
+  return generate();
 }
 
 async function readAnswer(plan: OperationPlan, response: Response): Promise<Answer> {
   const { status, headers } = response;
-  const body = await readBody(response);
+  const { body, isJson } = await readBody(response);
 
   if (status === NOT_MODIFIED && plan.notModified) return { ok: true, status, headers };
 
   const success = plan.successes.find((each) => each.status === status);
 
   if (success !== undefined) {
-    return successAnswer(plan, success, response, body) ?? unexpected(response, body);
+    const answer =
+      isJson || success.shape === "empty"
+        ? successAnswer(plan, success, response, body)
+        : undefined;
+
+    return answer ?? unexpected(response, body);
   }
 
   return errorAnswer(plan, response, body) ?? unexpected(response, body);
 }
 
 // The parsed JSON, the text when it is not JSON, or undefined when the response has no body.
-async function readBody(response: Response): Promise<unknown> {
+async function readBody(response: Response): Promise<{ body: unknown; isJson: boolean }> {
   const text = await response.text();
 
-  if (text === "") return undefined;
+  if (text === "") return { body: undefined, isJson: false };
 
   try {
-    return JSON.parse(text);
+    return { body: JSON.parse(text), isJson: true };
   } catch {
-    return text;
+    // Not JSON: an error answer or a declared JSON success with this body comes back as unexpected, with the text.
+    return { body: text, isJson: false };
   }
 }
 

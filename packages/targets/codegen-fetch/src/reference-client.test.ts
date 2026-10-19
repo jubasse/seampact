@@ -4,7 +4,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import type { GeneratedFile, Target } from "@seampact/codegen-core";
 import type { ContractIR } from "@seampact/spec/ir";
 import ts from "typescript";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { target as clientTarget } from "./index.js";
 
 // The consumer layout of the run script, under the package's git-ignored `.vitest/`. Its `node_modules` links the
@@ -33,6 +33,7 @@ interface ClientModule {
     baseUrl: string;
     fetch?: typeof fetch;
     headers?: Record<string, string>;
+    idempotencyKey?: () => string;
   }): Record<string, Method>;
   isClientContractError?: (error: unknown) => boolean;
 }
@@ -488,6 +489,84 @@ describe("the generated reference client answers a stub server", () => {
 
     expect(page).toMatchObject({ ok: true, status: 200, body: { items: [] } });
     expect(page.body).not.toHaveProperty("nextCursor");
+  });
+
+  test("a success body that is not JSON comes back as unexpected", async () => {
+    const fake = createResultClient({
+      baseUrl: "http://api.test",
+      fetch: async () =>
+        new Response("<html>maintenance</html>", {
+          status: 201,
+          headers: { "content-type": "text/html" },
+        }),
+    });
+    const created = await call(
+      fake,
+      "createTask",
+    )({ path: { channelId: "c1" }, headers: user(), body: { title: "x" } });
+
+    expect(created).toMatchObject({
+      ok: false,
+      unexpected: true,
+      status: 201,
+      body: "<html>maintenance</html>",
+    });
+  });
+
+  test("the idempotency key generator of the config replaces crypto.randomUUID", async () => {
+    vi.stubGlobal("crypto", undefined);
+
+    try {
+      expect(() => createResultClient({ baseUrl: "http://api.test" })).toThrow(/idempotencyKey/);
+
+      const fake = createResultClient({
+        baseUrl: "http://api.test",
+        idempotencyKey: () => "generated-key",
+        fetch: async (input, init) => {
+          sent.push({ url: new URL(String(input)), headers: new Headers(init?.headers) });
+
+          return new Response(null, { status: 500 });
+        },
+      });
+
+      await call(
+        fake,
+        "createTask",
+      )({ path: { channelId: "c1" }, headers: user(), body: { title: "x" } });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+
+    expect(lastSent().headers.get("idempotency-key")).toBe("generated-key");
+  });
+
+  test("a platform without AbortSignal.any or AbortSignal.timeout still applies the timeout", async () => {
+    const { any, timeout } = AbortSignal;
+    const caller = new AbortController();
+    let sentSignal: AbortSignal | undefined;
+    const fake = createResultClient({
+      baseUrl: "http://api.test",
+      fetch: async (_url, init) => {
+        sentSignal = init?.signal ?? undefined;
+
+        return new Response(null, { status: 500 });
+      },
+    });
+
+    Object.assign(AbortSignal, { any: undefined, timeout: undefined });
+
+    try {
+      await call(fake, "listTasks")(
+        { path: { channelId: "c1" }, headers: user() },
+        { signal: caller.signal, timeoutMs: 5 },
+      );
+    } finally {
+      Object.assign(AbortSignal, { any, timeout });
+    }
+
+    expect(sentSignal?.aborted).toBe(false);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(sentSignal?.aborted).toBe(true);
   });
 
   test("the deadline header on tasksService", async () => {
