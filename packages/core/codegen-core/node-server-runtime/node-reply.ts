@@ -61,7 +61,9 @@ export function applyReplyHeaders(
   for (const [name, values] of grouped) {
     response.setHeader(
       name,
-      name === VARY_HEADER ? mergedVary(responseHeaderValues(response, VARY_HEADER), values) : values,
+      name === VARY_HEADER
+        ? mergedVary(responseHeaderValues(response, VARY_HEADER), values)
+        : values,
     );
   }
 }
