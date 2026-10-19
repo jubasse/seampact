@@ -147,6 +147,23 @@ describe("reference slice answers", () => {
     expect(answer).toMatchObject({ ok: false, status: 400, code: "api.schema_invalid" });
   });
 
+  // Raw requests: the generated client sends neither an undeclared query key nor, once typed, an undeclared sort key.
+  test("400 for an undeclared query key on health", async () => {
+    const answer = await fetch(`${server.baseUrl}/v1/health?x=1`);
+
+    expect(answer.status).toBe(400);
+    await expect(answer.json()).resolves.toMatchObject({ code: "api.schema_invalid" });
+  });
+
+  test("400 for an undeclared sort key on listTasks", async () => {
+    const answer = await fetch(`${server.baseUrl}/v1/channels/${CHANNEL_ID}/tasks?sort=title`, {
+      headers: user,
+    });
+
+    expect(answer.status).toBe(400);
+    await expect(answer.json()).resolves.toMatchObject({ code: "api.schema_invalid" });
+  });
+
   test("401 for a bad signature on payments", async () => {
     const event = { id: "evt_2", type: "invoice.paid", data: {} };
     const signedWithAnotherSecret = stripeSignature(event, `${STRIPE_SECRET}_other`);
