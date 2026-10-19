@@ -1,5 +1,6 @@
-# The slice consumer: the reference contract's types, validators and fetch client for both apis. An overlay
-# appends its own entries to `targets`, which stays the last key.
+# The slice consumer: the reference contract's types, validators and fetch client for both apis. The harness
+# writes the validators package of the chosen library into the placeholder; an overlay appends its own entries to
+# `targets`, which stays the last key.
 outDir: generated
 sources:
   reference:
@@ -9,7 +10,7 @@ targets:
     use: "@seampact/codegen-ts"
     apis: [tasks, tasksService]
   - id: validators
-    use: "@seampact/codegen-zod"
+    use: "{{validators}}"
     apis: [tasks, tasksService]
   - id: client
     use: "@seampact/codegen-fetch"
