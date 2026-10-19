@@ -8,6 +8,7 @@ import {
   requireName,
 } from "@seampact/codegen-core";
 import type { Operation, OperationInput, Param } from "@seampact/spec/ir";
+import { sortParamTypes } from "./sort-param.js";
 import { REFUSED_TYPE, type TypeContext, typeExpression } from "./type-expression.js";
 
 const JSON_MEDIA = "application/json";
@@ -34,7 +35,7 @@ export function operationInputDeclaration(
 
   if (operation.params.query.length > 0) {
     members.push(
-      `query: ${paramsType(operation.params.query, (name) => name, below(paramsLocation, "query"), context)};`,
+      `query: ${paramsType(operation.params.query, (name) => name, below(paramsLocation, "query"), context, sortParamTypes(operation, "query", context))};`,
     );
   }
 
@@ -43,7 +44,7 @@ export function operationInputDeclaration(
 
     refuseDuplicateHeaders(operation.params.header, headerLocation, context);
     members.push(
-      `headers: ${paramsType(operation.params.header, (name) => name.toLowerCase(), headerLocation, context)};`,
+      `headers: ${paramsType(operation.params.header, (name) => name.toLowerCase(), headerLocation, context, sortParamTypes(operation, "header", context))};`,
     );
   }
 
@@ -61,6 +62,7 @@ function paramsType(
   keyOf: (wireName: string) => string,
   location: IrLocation,
   context: TypeContext,
+  sortTypes: ReadonlyMap<string, string> = new Map(),
 ): string {
   const members = params.map((param, index) => {
     const paramLocation = below(location, index);
@@ -75,7 +77,9 @@ function paramsType(
       );
     }
 
-    const type = typeExpression(param.type, below(paramLocation, "type"), context);
+    const type =
+      sortTypes.get(param.name) ??
+      typeExpression(param.type, below(paramLocation, "type"), context);
 
     return `${propertyKey(keyOf(param.name))}${param.required ? "" : "?"}: ${type};`;
   });

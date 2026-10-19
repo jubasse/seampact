@@ -30,6 +30,21 @@ test("the handler output leaves out the 304 that the boundary answers for an ETa
   expect(typeErrorsOf(join(temporaryRoot, "etag"), outcome.files, probe)).toEqual([]);
 });
 
+test("a signed sort parameter takes the declared keys and their descending forms only", async () => {
+  const outcome = await generateTypes(readGoldenIr("tasks"));
+
+  if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
+
+  const probe = [
+    'import type { ListTasksInput } from "./generated/operations/input.js";',
+    'export const declaredSort: ListTasksInput["query"]["sort"] = ["createdAt", "-createdAt"];',
+    "// @ts-expect-error title is no sort key of listTasks",
+    'export const undeclaredSort: ListTasksInput["query"]["sort"] = ["title"];',
+  ].join("\n");
+
+  expect(typeErrorsOf(join(temporaryRoot, "sort"), outcome.files, probe)).toEqual([]);
+});
+
 test("a response header the route writes itself is refused by name", async () => {
   const ir = readGoldenIr("tasks");
   const operationIndex = ir.operations.findIndex((operation) => operation.id === "createTask");
