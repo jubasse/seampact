@@ -119,6 +119,18 @@ function writeAppReply(error, ctx) {
 }
 
 // Server middleware: a header on every reply, and the refusals shield and auth raise before the boundary.
+/** A request header that makes the app drop the body the bodyparser read, as an app without its middleware would. */
+export const DROP_PARSED_BODY_HEADER = "x-test-drop-parsed-body";
+
+// Router middleware after the bodyparser: with the header, the request keeps no raw body.
+class DropParsedBodyMiddleware {
+  async handle(ctx, next) {
+    if (ctx.request.header(DROP_PARSED_BODY_HEADER) !== undefined) ctx.request.updateRawBody("");
+
+    return next();
+  }
+}
+
 class AppServerMiddleware {
   async handle(ctx, next) {
     ctx.response.response.setHeader("x-content-type-options", "nosniff");
@@ -307,7 +319,10 @@ export async function startReferenceApp(major) {
   const server = await app.container.make("server");
 
   server.use([() => Promise.resolve({ default: AppServerMiddleware })]);
-  router.use([() => import("@adonisjs/core/bodyparser_middleware")]);
+  router.use([
+    () => import("@adonisjs/core/bodyparser_middleware"),
+    () => Promise.resolve({ default: DropParsedBodyMiddleware }),
+  ]);
   server.errorHandler(() => Promise.resolve({ default: AppExceptionHandler }));
 
   TasksAdonis.registerRoutes(router, registration());
