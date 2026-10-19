@@ -465,7 +465,7 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
     });
 
     expect(unknown.status).toBe(400);
-    expect(JSON.parse(unknown.text).issues).toEqual([{ pointer: "/sort/1", rule: "enum" }]);
+    expect(JSON.parse(unknown.text).issues).toEqual([{ pointer: "/sort/1", rule: "pattern" }]);
     expect(declared.status).toBe(200);
     expect(app.calls.handled).toEqual(["listTasks"]);
   });
