@@ -38,6 +38,7 @@ const UNAUTHENTICATED = { deny: { code: "api.unauthenticated" } } as const;
 const STRIPE_ACCOUNT = "acct_seampact";
 const THROTTLE_RULE = "throttle";
 const CALLER_SERVICE_RIGHT = "callerService";
+const ROLES_RIGHT = "roles";
 const FORBIDDEN: Forbidden = { code: "api.forbidden", params: {} };
 
 type Unauthenticated = { readonly code: "api.unauthenticated" };
@@ -111,6 +112,8 @@ export const stripeAuthenticateHook = {
 export const tasksDeciderHook = {
   decide(request: RequirementRequest): Decision<TasksDenial> {
     recordHookCall(decideHookName(request.name), request.operation);
+
+    assertRolesRequestComplete(request);
 
     const scripted = scriptedDecision(request.name, request.purpose.kind);
 
@@ -207,6 +210,25 @@ function notFoundDenial(denial: ScriptedDenial): NotFound {
   }
 
   return { code: denial.code };
+}
+
+// The boundary must hand a `roles` decide request its `allowed` param and its scope subject; a double that
+// answered without them would let a boundary that drops them pass.
+function assertRolesRequestComplete(request: RequirementRequest): void {
+  if (request.name !== ROLES_RIGHT) return;
+
+  const { params } = request;
+  const hasAllowed =
+    typeof params === "object" &&
+    params !== null &&
+    "allowed" in params &&
+    Array.isArray(params.allowed);
+
+  if (!hasAllowed || request.subject === undefined) {
+    throw new Error(
+      `the '${ROLES_RIGHT}' decide request lacks its 'allowed' param or its scope subject: the boundary dropped them`,
+    );
+  }
 }
 
 function callerServiceAllowed(request: RequirementRequest): boolean {

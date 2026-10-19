@@ -16,7 +16,15 @@
         }
       },
       "expect": {
-        "status": 400
+        "status": 400,
+        "body": {
+          "code": "api.schema_invalid",
+          "issues": [
+            {
+              "pointer": "/idempotency-key"
+            }
+          ]
+        }
       }
     }
   ]

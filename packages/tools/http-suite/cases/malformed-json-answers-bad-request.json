@@ -20,6 +20,9 @@
           "content-type": {
             "contains": ["application/problem+json"]
           }
+        },
+        "body": {
+          "code": "api.schema_invalid"
         }
       }
     }

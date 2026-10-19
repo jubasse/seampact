@@ -38,7 +38,15 @@
         }
       },
       "expect": {
-        "status": 413
+        "status": 413,
+        "headers": {
+          "content-type": {
+            "contains": ["application/problem+json"]
+          }
+        },
+        "body": {
+          "code": "api.payload_too_large"
+        }
       }
     }
   ]

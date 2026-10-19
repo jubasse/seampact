@@ -21,6 +21,11 @@
         "status": 429,
         "body": {
           "code": "api.rate_limited"
+        },
+        "headers": {
+          "retry-after": {
+            "equals": "{{throttleRetryAfterSeconds}}"
+          }
         }
       }
     }

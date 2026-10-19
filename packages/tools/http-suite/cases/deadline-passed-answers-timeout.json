@@ -14,7 +14,10 @@
         }
       },
       "expect": {
-        "status": 504
+        "status": 504,
+        "body": {
+          "code": "api.deadline_exceeded"
+        }
       }
     }
   ]

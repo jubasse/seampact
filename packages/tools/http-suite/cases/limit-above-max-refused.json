@@ -18,7 +18,12 @@
       "expect": {
         "status": 400,
         "body": {
-          "code": "api.schema_invalid"
+          "code": "api.schema_invalid",
+          "issues": [
+            {
+              "pointer": "/limit"
+            }
+          ]
         }
       }
     }
