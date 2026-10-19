@@ -169,3 +169,17 @@ function walkVariants(variants: unknown, holder: Holder, walk: Walk): void {
       walkSchema(variant.schema, holder, walk);
   }
 }
+
+/** The reach as a phrase for a message: what is sensitive and where. */
+export function sensitiveReachText(reach: IrSensitiveReach): string {
+  switch (reach.place) {
+    case "field":
+      return `the sensitive property '${reach.property}' of '${reach.schema}'`;
+    case "body":
+      return `a sensitive value outside any property of its body (response ${reach.response})`;
+    case "mapKey":
+      return `the sensitive keys of '${reach.schema}'`;
+    case "header":
+      return `the sensitive header '${reach.header}'`;
+  }
+}

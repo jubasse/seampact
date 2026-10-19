@@ -8,12 +8,12 @@ import {
   writeGeneratedFiles,
 } from "@seampact/codegen-core";
 import type { TargetEntry } from "@seampact/spec/config";
-import { EXIT_REFUSED, EXIT_SUCCESS, type CliIo, printProblems, printWarnings } from "../cli-io.js";
+import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS, printProblems, printWarnings } from "../cli-io.js";
 import { type CliProblem, entryWhere, problemFromRefusal } from "../cli-problem.js";
 import { type LoadedAppConfig, readAppConfig, resolveTarget } from "../config/index.js";
 import { resolveEntryApis, usedSources } from "./api-refs.js";
-import type { ConfigLocation } from "./config-location.js";
 import { type CompiledApi, compileSources } from "./compile-sources.js";
+import type { ConfigLocation } from "./config-location.js";
 import {
   linksOf,
   orderEntries,
@@ -21,8 +21,8 @@ import {
   type PlannedEntry,
   pairedApi,
   pairingProblems,
-  unknownLinkEntryProblems,
   unconsumedKindProblems,
+  unknownLinkEntryProblems,
   unprovidedKindProblems,
 } from "./entry-links.js";
 import { filterOperations } from "./filter-operations.js";

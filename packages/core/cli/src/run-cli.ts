@@ -1,8 +1,8 @@
 import { parseArgs } from "node:util";
-import { EXIT_USAGE, type CliIo, printProblems } from "./cli-io.js";
+import { type CliIo, EXIT_USAGE, printProblems } from "./cli-io.js";
 import type { CliProblem } from "./cli-problem.js";
-import { errorCode } from "./error-code.js";
 import { compileCommand, configLocation, generateCommand } from "./commands/index.js";
+import { errorCode } from "./error-code.js";
 
 const USAGE = `Usage: seampact <command> [options]
 

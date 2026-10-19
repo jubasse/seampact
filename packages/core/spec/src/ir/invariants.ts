@@ -9,7 +9,7 @@ import type { SchemaNode } from "./schemas.js";
 import {
   findIrSensitiveParamReaches,
   findIrSensitiveReaches,
-  type IrSensitiveReach,
+  sensitiveReachText,
 } from "./sensitive-field.js";
 import { isIrSameTypeUse } from "./type-use.js";
 import { irUnionTags } from "./unions.js";
@@ -653,19 +653,6 @@ function checkErrorSensitiveNoStore(
     pointer,
     `The params of the error carry ${sensitiveReachText(found)}, so its declaration sets 'noStore'.`,
   );
-}
-
-function sensitiveReachText(reach: IrSensitiveReach): string {
-  switch (reach.place) {
-    case "field":
-      return `the sensitive property '${reach.property}' of '${reach.schema}'`;
-    case "body":
-      return `a sensitive value outside any property of its body (response ${reach.response})`;
-    case "mapKey":
-      return `the sensitive keys of '${reach.schema}'`;
-    case "header":
-      return `the sensitive header '${reach.header}'`;
-  }
 }
 
 interface OperationScope {

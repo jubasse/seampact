@@ -173,7 +173,7 @@ function overlayProperty(
   property.docs = { ...property.docs, ...treeSchemasDocs(overlay) };
   const use = structuredClone(property.type);
 
-  if (property.nullable && use.kind !== "opaque") use.nullable = true;
+  if (property.nullable) use.nullable = true;
   const examples = host.examples(overlay, pointer, use);
 
   if (examples !== undefined) property.examples = examples;

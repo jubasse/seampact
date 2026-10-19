@@ -7,8 +7,8 @@ import {
   printDiagnostics,
 } from "@seampact/compiler";
 import type { ContractIR } from "@seampact/spec/ir";
-import type { CliProblem } from "../cli-problem.js";
 import type { CliIo } from "../cli-io.js";
+import type { CliProblem } from "../cli-problem.js";
 
 const WORKSPACE_ENTRY = "workspace.yaml";
 

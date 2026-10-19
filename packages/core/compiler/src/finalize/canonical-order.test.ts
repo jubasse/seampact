@@ -1,8 +1,8 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
 import { draftFixtureApply } from "../pipeline/draft-fixture.js";
 import { createDraftIR, type DraftIR } from "../pipeline/seam.js";
 import type { JsonValue } from "../raw-tree.js";
-import { readFileSync } from "node:fs";
 import { finalizeCanonicalOrder, finalizeSortedArrayRows } from "./canonical-order.js";
 import {
   finalizeCompleteDraft,

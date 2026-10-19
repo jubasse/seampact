@@ -1,8 +1,8 @@
 import { pipelinePointerBelow } from "../../../pipeline/seam.js";
 import { quote } from "../../../validate/diagnostics.js";
 import type { DeriveErrorsBindingCheck } from "./bindings.js";
-import { deriveErrorsObjectOfUse } from "./role-param-fit.js";
 import { deriveErrorsMember } from "./read.js";
+import { deriveErrorsObjectOfUse } from "./role-param-fit.js";
 
 // The retry header writes the `conventions.rateLimit.param` value as a non-negative safe integer (IR invariant
 // `ir.error.retry-header`), so the code's param must provably be one: a required, non-nullable integer with a

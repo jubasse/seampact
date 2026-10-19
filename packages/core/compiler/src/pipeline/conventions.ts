@@ -119,6 +119,9 @@ export type PipelineConventionDefault =
     }
   | { readonly path: ConventionPath; readonly from: ConventionPath };
 
+/** The `cache.sensitiveElsewhere` value that refuses a sensitive value outside a body field; the default is `noStore`. */
+export const SENSITIVE_ELSEWHERE_REFUSE = "refuse";
+
 /**
  * The core defaults of ADR 0002 section 13, deep-frozen; a key without a default (`paging.default`, `rateLimit`,
  * `idempotency.header`) is absent.

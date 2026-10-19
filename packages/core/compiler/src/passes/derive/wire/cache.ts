@@ -1,4 +1,5 @@
 import type { IrWriter } from "@seampact/spec/ir";
+import { SENSITIVE_ELSEWHERE_REFUSE } from "../../../pipeline/conventions.js";
 import {
   type ConventionReading,
   type InheritedEntry,
@@ -55,8 +56,6 @@ const CACHE_ETAG = "cache.etag";
 
 const CACHE_SENSITIVE = "cache.sensitive";
 
-const REFUSE_ELSEWHERE = "refuse";
-
 type Directives = IrWriter.CacheDirectives;
 
 type CallerKind = IrWriter.CallerCacheControl["caller"];
@@ -90,7 +89,8 @@ export function deriveWireCache(route: DeriveWireRoute, scope: DeriveWireScope):
 }
 
 // The sensitive value that makes the operation no-store: its first field, else its first value elsewhere unless
-// the convention refuses that value, which is then reported.
+// the convention refuses that value, which is then reported. Only the route's first value elsewhere is reported;
+// the next one appears once it is fixed.
 function noStoreValue(
   route: DeriveWireRoute,
   scope: DeriveWireScope,
@@ -100,7 +100,7 @@ function noStoreValue(
   if (elsewhere === undefined) return field;
   const policy = scope.context.conventions.get("cache.sensitiveElsewhere");
 
-  if (policy?.value !== REFUSE_ELSEWHERE) return field ?? elsewhere;
+  if (policy?.value !== SENSITIVE_ELSEWHERE_REFUSE) return field ?? elsewhere;
 
   reportElsewhere(route, elsewhere, policy, scope);
 

@@ -2,7 +2,9 @@ import {
   findIrSensitiveParamReaches,
   type IrSensitiveReach,
   type IrWriter,
+  sensitiveReachText,
 } from "@seampact/spec/ir";
+import { SENSITIVE_ELSEWHERE_REFUSE } from "../../../pipeline/conventions.js";
 import type { ConventionReading, PassContext, PassReadonly } from "../../../pipeline/seam.js";
 import { quote } from "../../../validate/diagnostics.js";
 import type { DeriveErrorsReporter } from "./report.js";
@@ -11,8 +13,6 @@ import type { DeriveErrorsReporter } from "./report.js";
 // scalar use marked sensitive, at any depth of the params schema. Every response of the code is no-store under
 // `conventions.cache.sensitiveElsewhere: noStore`, the default (`ErrorDecl.noStore`), and the declaration is a
 // compile error under `refuse`, located at its params.
-
-const REFUSE_ELSEWHERE = "refuse";
 
 /** What the check reads: the conventions, the reporter and the schemas tree.schemas wrote. */
 export interface DeriveErrorsSensitiveSources {
@@ -42,7 +42,7 @@ export function deriveErrorsParamsNoStore(
   if (found === undefined) return false;
   const policy = sources.context.conventions.get("cache.sensitiveElsewhere");
 
-  if (policy?.value !== REFUSE_ELSEWHERE) return true;
+  if (policy?.value !== SENSITIVE_ELSEWHERE_REFUSE) return true;
 
   reportRefused(site, found, policy, sources.reporter);
 
@@ -57,23 +57,11 @@ function reportRefused(
 ): void {
   reporter.error({
     rule: "cache-sensitive-elsewhere",
-    message: `conventions.cache.sensitiveElsewhere is refuse, so the params of error ${quote(site.code)} may not carry ${reachText(found)}`,
+    message: `conventions.cache.sensitiveElsewhere is refuse, so the params of error ${quote(site.code)} may not carry ${sensitiveReachText(found)}`,
     fix: "Drop the sensitive mark from the params, or set conventions.cache.sensitiveElsewhere: noStore.",
     pointer: site.pointer,
     ...(policy.origin === undefined
       ? {}
       : { related: [{ pointer: policy.origin.pointer, message: "the convention" }] }),
   });
-}
-
-function reachText(reach: IrSensitiveReach): string {
-  switch (reach.place) {
-    case "field":
-      return `the sensitive field '${reach.schema}.${reach.property}'`;
-    case "mapKey":
-      return `the sensitive keys of map '${reach.schema}'`;
-    case "body":
-    case "header":
-      return "a sensitive value";
-  }
 }

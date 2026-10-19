@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { finalizeSerializeJson } from "@seampact/compiler";
-import { EXIT_REFUSED, EXIT_SUCCESS, type CliIo, printProblems } from "../cli-io.js";
+import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS, printProblems } from "../cli-io.js";
 import type { CliProblem } from "../cli-problem.js";
 import { readAppConfig } from "../config/index.js";
 import { usedSources } from "./api-refs.js";
