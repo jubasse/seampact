@@ -83,6 +83,7 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 | `ir.value-source.place` | `in: resolver` only as an operation scope's source; `in: holderField` only as a field right subject's source. |
 | `ir.header.members` | `HeaderDecl.name` and `in` for every semantic but `versionToken`; `response` and `request` for `versionToken` only. |
 | `ir.cache.directives` | `Cache.directives` is absent if and only if the family is `never`, and a `never` family sets `noStore`. |
+| `ir.cache.sensitive-no-store` | An operation whose response body reaches a property with `sensitive` (through array items, JSON content, object properties, map values and union variants) has a `cache` that sets `noStore` (ADR 0003 section 6). |
 | `ir.csrf.cookie` | An unsafe operation whose access accepts a cookie scheme has `csrf` (derived or exempt). |
 | `ir.field-wire.members` | `FieldWire` of kind `file` or `json` has no `style`, `explode` or `brackets`; a query wire kind has all three. |
 | `ir.property.nullable` | A property's type use has no `nullable`: `Property.nullable` holds it. |
@@ -102,7 +103,6 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 | `ir.operation.role-once` | A role appears at most once in an operation's error role bindings, across elements and within one. |
 | `ir.error.role-params` | A role binding has `params` if and only if its code declares params, and holds no `each` inside another `each`'s `as`. |
 | `ir.error.retry-header` | A `retryHeader` sits only on a code of status 429; its `param` is a required, non-nullable `integer` member of the code's params with `minimum` at least 0 and `maximum` at most 9007199254740991; its `derivedFrom.derivation` is `rule.bucket`. |
-| `ir.cache.sensitive-no-store` | Planned (p2-finalize): a response that carries a sensitive field sets `Cache.noStore`. Not checked yet: it needs a walk of the response schemas. |
 
 ## Readers
 

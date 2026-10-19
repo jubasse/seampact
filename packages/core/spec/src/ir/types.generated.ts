@@ -1179,7 +1179,7 @@ export interface Cache {
   vary: string[];
   etag: boolean;
   perCallerKind: CallerCacheControl[];
-  /** Authoritative: when true the response is never stored, whatever 'directives' hold. True when the family is 'never' or a response carries a sensitive field (ADR 0003 section 6). */
+  /** Authoritative: when true the response is never stored, whatever 'directives' hold. True when the family is 'never' or a response carries a sensitive field (ADR 0003 section 6, invariant ir.cache.sensitive-no-store). */
   noStore: boolean;
   origin: Origin;
   derivedFrom?: DerivedFrom;

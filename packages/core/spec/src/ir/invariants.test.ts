@@ -923,6 +923,118 @@ describe("degradable and deprecation", () => {
   });
 });
 
+describe("sensitive responses", () => {
+  const TASK_USE = { kind: "ref", schema: "Task" };
+  const storable = (ir: Json) => {
+    node(ir, `${UPDATE}/cache`).noStore = false;
+  };
+
+  const withBody = (body: Json) => (ir: Json) => {
+    storable(ir);
+    node(ir, `${UPDATE}/responses/0`).body = body;
+  };
+
+  const withSchema = (id: string, schema: Json) => (ir: Json) => {
+    node(ir, "/schemas")[id] = schema;
+  };
+
+  test("an operation whose response carries a sensitive field sets noStore", () => {
+    expect(violationsAfter(storable)).toEqual(at("ir.cache.sensitive-no-store", UPDATE));
+    expect(
+      violationsAfter((ir) => {
+        delete node(ir, UPDATE).cache;
+      }),
+    ).toEqual(at("ir.cache.sensitive-no-store", UPDATE));
+    expect(
+      violationsAfter((ir) => {
+        storable(ir);
+        node(ir, EFFORT).sensitive = false;
+      }),
+    ).toEqual([]);
+  });
+
+  test("a sensitive field is reached through items, JSON content, map values and union variants", () => {
+    const bodies: Json[] = [
+      { kind: "array", items: TASK_USE },
+      {
+        kind: "scalar",
+        type: "string",
+        content: { media: "application/json", schema: TASK_USE },
+      },
+      { kind: "ref", schema: "TaskMap" },
+      { kind: "ref", schema: "TaskUnion" },
+    ];
+
+    for (const body of bodies)
+      expect(
+        violationsAfter((ir) => {
+          withSchema("TaskMap", { kind: "map", values: TASK_USE })(ir);
+          withSchema("TaskUnion", { kind: "union", variants: [{ tag: "task", schema: "Task" }] })(
+            ir,
+          );
+          withBody(body)(ir);
+        }),
+      ).toEqual(at("ir.cache.sensitive-no-store", UPDATE));
+  });
+
+  test("a sensitive field is reached through a property's type, a later union variant and a later response", () => {
+    const PLAIN_USE = { kind: "ref", schema: "Plain" };
+    const holder = {
+      kind: "object",
+      properties: [{ name: "tasks", sensitive: false, type: { kind: "array", items: TASK_USE } }],
+    };
+    const plainOrTask = {
+      kind: "union",
+      variants: [
+        { tag: "plain", schema: "Plain" },
+        { tag: "task", schema: "Task" },
+      ],
+    };
+
+    const sensitiveSecondResponse = (ir: Json) => {
+      list(ir, `${UPDATE}/responses`).push({ ...node(ir, `${UPDATE}/responses/0`), status: 203 });
+      withBody(PLAIN_USE)(ir);
+    };
+
+    const changes = [
+      withBody({ kind: "ref", schema: "Holder" }),
+      withBody({ kind: "ref", schema: "PlainOrTask" }),
+      sensitiveSecondResponse,
+    ];
+
+    for (const change of changes)
+      expect(
+        violationsAfter((ir) => {
+          withSchema("Plain", { kind: "object", properties: [] })(ir);
+          withSchema("Holder", holder)(ir);
+          withSchema("PlainOrTask", plainOrTask)(ir);
+          change(ir);
+        }),
+      ).toEqual(at("ir.cache.sensitive-no-store", UPDATE));
+
+    expect(
+      violationsAfter((ir) => {
+        withSchema("Plain", { kind: "object", properties: [] })(ir);
+        withBody(PLAIN_USE)(ir);
+      }),
+    ).toEqual([]);
+  });
+
+  test("a recursive schema without a sensitive field ends", () => {
+    const loop = {
+      kind: "object",
+      properties: [{ name: "next", sensitive: false, type: { kind: "ref", schema: "Loop" } }],
+    };
+
+    expect(
+      violationsAfter((ir) => {
+        withSchema("Loop", loop)(ir);
+        withBody({ kind: "ref", schema: "Loop" })(ir);
+      }),
+    ).toEqual([]);
+  });
+});
+
 describe("error roles and retry headers", () => {
   const each = (as: Json): Json => ({ kind: "each", of: "issues", as });
   const item = { kind: "slot", slot: "item", path: ["pointer"] };

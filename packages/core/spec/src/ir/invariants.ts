@@ -6,6 +6,7 @@ import {
   walkIrInstance,
 } from "./instance-walk.js";
 import type { SchemaNode } from "./schemas.js";
+import { findIrSensitiveProperty } from "./sensitive-field.js";
 import { isIrSameTypeUse } from "./type-use.js";
 import { irUnionTags } from "./unions.js";
 
@@ -20,6 +21,7 @@ export type IrInvariantId =
   | "ir.value-source.place"
   | "ir.header.members"
   | "ir.cache.directives"
+  | "ir.cache.sensitive-no-store"
   | "ir.csrf.cookie"
   | "ir.field-wire.members"
   | "ir.property.nullable"
@@ -605,13 +607,39 @@ function checkRetryHeader(
     );
 }
 
+// A response that carries a sensitive field is never stored: the operation has a `cache` that sets `noStore`.
+function checkSensitiveNoStore(
+  operation: Json,
+  pointer: string,
+  schemaEntries: Json,
+  fail: Fail,
+): void {
+  const cache = isRecord(operation.cache) ? operation.cache : undefined;
+
+  if (cache?.noStore === true) return;
+
+  const responses = Array.isArray(operation.responses) ? operation.responses : [];
+  const bodies = responses.map((response) => (isRecord(response) ? response.body : undefined));
+  const found = findIrSensitiveProperty(bodies, schemaEntries);
+
+  if (found === undefined) return;
+
+  fail(
+    "ir.cache.sensitive-no-store",
+    pointer,
+    `A response carries the sensitive property '${found.property}' of '${found.schema}', so the operation's 'cache' sets 'noStore'.`,
+  );
+}
+
 interface OperationScope {
   formats: Json;
   operations: unknown[];
   apiId: unknown;
+  schemaEntries: Json;
 }
 
-// The rules that read an operation as a whole: its degradable header, its deprecation headers, its role bindings.
+// The rules that read an operation as a whole: its degradable header, its deprecation headers, its role bindings,
+// the no-store of a sensitive response.
 function checkOperationMembers(
   operation: Json,
   pointer: string,
@@ -631,6 +659,7 @@ function checkOperationMembers(
 
   checkDeprecationHeaders(operation, pointer, scope.operations, scope.apiId, fail);
   checkRolesOnce(operation, pointer, fail);
+  checkSensitiveNoStore(operation, pointer, scope.schemaEntries, fail);
 }
 
 // Returns every invariant violation of an IR document, empty for a sound one. Pure and Ajv-free; it expects a
@@ -800,7 +829,7 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
       }
 
       case "Operation": {
-        checkOperationMembers(value, pointer, { formats, operations, apiId }, fail);
+        checkOperationMembers(value, pointer, { formats, operations, apiId, schemaEntries }, fail);
         const access = value.access;
 
         if (value.safe !== false || !isRecord(access)) break;
