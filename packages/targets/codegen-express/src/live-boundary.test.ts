@@ -9,11 +9,11 @@ import {
   generateReferenceProject,
   problemBody,
   projectDirectory,
+  type RawReply,
+  type ReferenceIrChange,
   referenceChanges,
   referenceNoStoreCode,
   referenceNoStoreOperation,
-  type RawReply,
-  type ReferenceIrChange,
   sendRawRequest,
 } from "@seampact/codegen-core/node-server/test-support";
 import type { ContractIR } from "@seampact/spec/ir";

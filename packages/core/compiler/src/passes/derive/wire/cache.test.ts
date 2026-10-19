@@ -344,4 +344,65 @@ describe("sensitive values outside a field of the body", () => {
       "conventions.cache.sensitiveElsewhere is refuse, so no route may answer the sensitive header 'X-Token' of a 200 response",
     );
   });
+
+  describe("a field and a header on one route", () => {
+    const FIELD_POINTER = "/schemas/Key/properties/secret";
+    const HEADER_POINTER = "/surfaces/app/routes/mixed/responses/200/headers/X-Token";
+    const mixedRoute = (extra: string) =>
+      `      mixed:\n        method: get\n${extra}        responses: { 200: { body: Key, headers: { X-Token: Token } } }\n`;
+
+    const mixedRun = (route: string, policy?: "noStore" | "refuse") =>
+      deriveWireRunContract(
+        deriveWireFixtureVariant("lifecycle", [
+          ...(policy === undefined
+            ? []
+            : [["  cache:\n", `  cache:\n    sensitiveElsewhere: ${policy}\n`] as const]),
+          [EDIT_DRAFT, [EDIT_DRAFT, ...TOKEN_SCHEMAS].join("\n")],
+          ["      plain:\n", `${route}      plain:\n`],
+        ]),
+      );
+
+    test("the field names the no-store, the header being only a later value", () => {
+      const run = mixedRun(mixedRoute("        cache: { freshness: minute }\n"));
+      const [diagnostic] = run.diagnostics.map(deriveWireLocated);
+
+      expect(diagnostic).toMatchObject({
+        rule: "seampact/derive/cache-sensitive",
+        related: ["/surfaces/app/routes/mixed", FIELD_POINTER],
+      });
+    });
+
+    test("under refuse, the header is reported and the field still makes the cache no-store", () => {
+      const run = mixedRun(mixedRoute(""), "refuse");
+
+      expect(run.diagnostics.map(deriveWireLocated)).toEqual([
+        {
+          rule: "seampact/derive/cache-sensitive-elsewhere",
+          pointer: HEADER_POINTER,
+          related: ["/surfaces/app/routes/mixed", "/conventions/cache/sensitiveElsewhere"],
+        },
+      ]);
+      expect(deriveWireOperation(run, "mixed").cache).toMatchObject(noStoreAt(FIELD_POINTER));
+    });
+
+    test("under refuse, a write answering only a sensitive header is reported and written no cache", () => {
+      const run = mixedRun(
+        "      mixed:\n        method: post\n        responses: { 200: { body: Note, headers: { X-Token: Token } } }\n",
+        "refuse",
+      );
+
+      expect(
+        run.diagnostics
+          .map(deriveWireLocated)
+          .filter((located) => located.rule === "seampact/derive/cache-sensitive-elsewhere"),
+      ).toEqual([
+        {
+          rule: "seampact/derive/cache-sensitive-elsewhere",
+          pointer: HEADER_POINTER,
+          related: ["/surfaces/app/routes/mixed", "/conventions/cache/sensitiveElsewhere"],
+        },
+      ]);
+      expect(deriveWireOperation(run, "mixed").cache).toBeUndefined();
+    });
+  });
 });

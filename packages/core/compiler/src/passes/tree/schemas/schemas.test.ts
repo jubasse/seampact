@@ -51,6 +51,22 @@ describe("tree.schemas matches the after-tree fixture", () => {
   );
 });
 
+describe("a declared opaque alias", () => {
+  const run = schemas(`
+  Blob: { opaque: "A third party's free-form value.", nullable: true }
+  Holder: { type: object, properties: { blob: Blob, blobs: { type: array, items: Blob } } }
+`);
+
+  test("written nullable, its use is nullable and a property of it is nullable", () => {
+    expect(run.diagnostics).toEqual([]);
+    expect(propertyOf(run, "Holder", "blob")?.nullable).toBe(true);
+    expect(typeOf(run, "Holder", "blobs")).toMatchObject({
+      kind: "array",
+      items: { kind: "opaque", nullable: true },
+    });
+  });
+});
+
 describe("schema shapes", () => {
   const run = schemas(`
   Shapes:
@@ -356,6 +372,15 @@ describe("marks", () => {
     });
     expect(propertyOf(run, "Account", "effort")?.restrictedTo?.right).toBe("tasks.seeEffort");
     expect(propertyOf(run, "Account", "locale")?.default).toBe("en");
+  });
+
+  test("a property typed by a sensitive scalar holds the mark, its type use does not", () => {
+    expect(propertyOf(run, "Account", "secret")?.sensitive).toBe(true);
+    expect(typeOf(run, "Account", "secret")).toEqual({
+      kind: "scalar",
+      type: "string",
+      refinements: {},
+    });
   });
 
   test.each([

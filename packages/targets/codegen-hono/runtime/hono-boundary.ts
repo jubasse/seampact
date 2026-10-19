@@ -49,8 +49,8 @@ import {
 import { mediaTypeRefusal, type PlatformFixes } from "./web-server/transport-checks.js";
 import { checkOutgoingResponse, recordBoundaryResponse } from "./web-server/web-outgoing-check.js";
 import {
-  readContractBody,
   type ReadRequestBody,
+  readContractBody,
   webContractRequest,
   webReportedRequest,
 } from "./web-server/web-request.js";

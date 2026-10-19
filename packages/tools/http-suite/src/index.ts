@@ -10,7 +10,7 @@ export {
   SCRIPT_ROUTE,
 } from "./control-routes.js";
 export { CASES_DIRECTORY, loadSuiteCases } from "./load-cases.js";
-export { signRequestBody, STRIPE_V1_SCHEME } from "./request-signature.js";
+export { STRIPE_V1_SCHEME, signRequestBody } from "./request-signature.js";
 export {
   type CaptureSource,
   type HeaderExpectation,
