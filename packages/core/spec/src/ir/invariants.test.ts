@@ -1057,6 +1057,41 @@ describe("sensitive responses", () => {
     ).toEqual([]);
   });
 
+  test("an error code whose params carry a sensitive value sets noStore", () => {
+    const LOCKED_DECL = "/errors/tasks.locked";
+    const SECRET_USE = { kind: "scalar", type: "string", refinements: {}, sensitive: true };
+
+    const paramsOf = (schema: string) => (ir: Json) => {
+      const declaration = node(ir, LOCKED_DECL);
+
+      declaration.params = schema;
+      delete declaration.noStore;
+    };
+
+    expect(violationsAfter(paramsOf("Task"))).toEqual(
+      at("ir.error.sensitive-no-store", LOCKED_DECL),
+    );
+    expect(
+      violationsAfter((ir) => {
+        withSchema("SecretKeys", { kind: "map", keys: SECRET_USE, values: SECRET_USE })(ir);
+        withSchema("SecretHolder", {
+          kind: "object",
+          properties: [
+            { name: "keys", sensitive: false, type: { kind: "ref", schema: "SecretKeys" } },
+          ],
+        })(ir);
+        paramsOf("SecretHolder")(ir);
+      }),
+    ).toEqual(at("ir.error.sensitive-no-store", LOCKED_DECL));
+    expect(
+      violationsAfter((ir) => {
+        paramsOf("Task")(ir);
+        node(ir, LOCKED_DECL).noStore = true;
+      }),
+    ).toEqual([]);
+    expect(violationsAfter(paramsOf("LockedParams"))).toEqual([]);
+  });
+
   test("a recursive schema without a sensitive field ends", () => {
     const loop = {
       kind: "object",

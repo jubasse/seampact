@@ -20,7 +20,7 @@ export type {
 } from "./closed-declaration.js";
 export { checkIrInvariants } from "./invariants.js";
 export type { IrInvariantId, IrInvariantViolation } from "./invariants.js";
-export { findIrSensitiveReaches } from "./sensitive-field.js";
+export { findIrSensitiveParamReaches, findIrSensitiveReaches } from "./sensitive-field.js";
 export type { IrMissingSchemaHandler, IrSensitiveReach } from "./sensitive-field.js";
 export { isKnownVariant } from "./unions.js";
 export {

@@ -1,6 +1,6 @@
 // Where the responses of an operation carry a sensitive value (ADR 0003 section 6): a property marked `sensitive`,
 // or a scalar use marked `sensitive`, reached from a body through array items, JSON content, object properties, map
-// keys and values and union variants, or from a response header's type. Each schema is walked once per holder kind,
+// keys and values and union variants, from a response header's type, or from the params schema of an error code. Each schema is walked once per holder kind,
 // so a recursive schema ends. The walk reads untyped JSON: an unknown use or schema kind is the reader's to name.
 
 type Json = Record<string, unknown>;
@@ -50,6 +50,18 @@ export function findIrSensitiveReaches(
   });
 
   return walk.reaches;
+}
+
+/**
+ * Every sensitive value the params schema of an error code carries, walked as the body of one response: each reach
+ * has `response` 0, and is a `field` or a `mapKey` (params is an object schema).
+ */
+export function findIrSensitiveParamReaches(
+  params: string,
+  schemas: Readonly<Record<string, unknown>>,
+  onMissingSchema?: IrMissingSchemaHandler,
+): IrSensitiveReach[] {
+  return findIrSensitiveReaches([{ body: { kind: "ref", schema: params } }], schemas, onMissingSchema);
 }
 
 interface Walk {

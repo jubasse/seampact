@@ -6,7 +6,11 @@ import {
   walkIrInstance,
 } from "./instance-walk.js";
 import type { SchemaNode } from "./schemas.js";
-import { findIrSensitiveReaches, type IrSensitiveReach } from "./sensitive-field.js";
+import {
+  findIrSensitiveParamReaches,
+  findIrSensitiveReaches,
+  type IrSensitiveReach,
+} from "./sensitive-field.js";
 import { isIrSameTypeUse } from "./type-use.js";
 import { irUnionTags } from "./unions.js";
 
@@ -40,7 +44,8 @@ export type IrInvariantId =
   | "ir.deprecation.since"
   | "ir.operation.role-once"
   | "ir.error.role-params"
-  | "ir.error.retry-header";
+  | "ir.error.retry-header"
+  | "ir.error.sensitive-no-store";
 
 export interface IrInvariantViolation {
   id: IrInvariantId;
@@ -630,6 +635,26 @@ function checkSensitiveNoStore(
   );
 }
 
+// An error code whose params carry a sensitive value is never stored: its declaration sets `noStore`.
+function checkErrorSensitiveNoStore(
+  declaration: Json,
+  pointer: string,
+  schemaEntries: Json,
+  fail: Fail,
+): void {
+  if (declaration.noStore === true || typeof declaration.params !== "string") return;
+
+  const [found] = findIrSensitiveParamReaches(declaration.params, schemaEntries);
+
+  if (found === undefined) return;
+
+  fail(
+    "ir.error.sensitive-no-store",
+    pointer,
+    `The params of the error carry ${sensitiveReachText(found)}, so its declaration sets 'noStore'.`,
+  );
+}
+
 function sensitiveReachText(reach: IrSensitiveReach): string {
   switch (reach.place) {
     case "field":
@@ -896,6 +921,10 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
 
       case "Deprecation":
         checkDeprecationDates(value, pointer, fail);
+        break;
+
+      case "ErrorDecl":
+        checkErrorSensitiveNoStore(value, pointer, schemaEntries, fail);
         break;
 
       case "OperationError":

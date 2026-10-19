@@ -9,6 +9,8 @@ interface ErrorDecl {
   params?: SchemaRef;  example?: unknown;  title?: string;  docs;
   origin;                                   // the catalogue entry or the tree node that declared it (A35)
   default?: ErrorRole;                      // set when the code is a role's core default (ADR 0006 section 6)
+  noStore?: boolean;                        // irRevision 6: its params carry a sensitive value, so every response
+                                            // of the code is 'Cache-Control: no-store'
 }
 interface NatureDecl { id: NatureId; base: 'refused' | 'unavailable' | 'failed'; docs; origin }
 interface HeaderDecl {

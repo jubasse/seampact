@@ -211,6 +211,8 @@ export interface ErrorDecl {
   docs: Docs;
   origin: Origin;
   default?: ErrorRole;
+  /** Every response of this code carries Cache-Control: no-store, since its params reach a sensitive value (ADR 0003 section 6, conventions.cache.sensitiveElsewhere: noStore); absent means false (invariant ir.error.sensitive-no-store). */
+  noStore?: boolean;
 }
 
 /** A nature of the contract (ADR 0002 section 11). */

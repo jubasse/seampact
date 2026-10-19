@@ -379,3 +379,44 @@ describe("default codes", () => {
     expect(draft.schemas["ApiPayloadTooLargeParams"]?.origin.layer).toBe("core");
   });
 });
+
+describe("error params carrying a sensitive value", () => {
+  // A code whose params hold a sensitive scalar under a map key, one with a sensitive property, and a plain one.
+  const sensitiveParamsRun = (policy?: "noStore" | "refuse") =>
+    deriveErrorsRunContract(
+      deriveErrorsLoadFiles({
+        "api.yaml": `api: { name: shop, version: 1 }
+${policy === undefined ? "" : `conventions: { cache: { sensitiveElsewhere: ${policy} } }`}
+schemas:
+  Token: { type: string, sensitive: true }
+errors:
+  shop.keyed: { status: 409, params: { byToken: { type: object, propertyNames: { $ref: Token }, additionalProperties: { type: string } } } }
+  shop.leaked: { status: 409, params: { secret: { type: string, sensitive: true } } }
+  shop.plain: { status: 409, params: { count: { type: integer } } }
+${DERIVE_ERRORS_PING_SURFACE}`,
+      }),
+    );
+
+  const noStoreOf = (run: ReturnType<typeof deriveErrorsRunContract>) =>
+    ["shop.keyed", "shop.leaked", "shop.plain"].map((code) => run.draft.errors[code]?.noStore);
+
+  test("by default, the code is no-store", () => {
+    for (const run of [sensitiveParamsRun(), sensitiveParamsRun("noStore")]) {
+      expect(run.diagnostics).toEqual([]);
+      expect(noStoreOf(run)).toEqual([true, true, undefined]);
+    }
+  });
+
+  test("under refuse, each code is refused at its params, relating the convention", () => {
+    const run = sensitiveParamsRun("refuse");
+
+    expect(run.diagnostics.map(deriveErrorsLocated)).toEqual(
+      ["shop.keyed", "shop.leaked"].map((code) => ({
+        rule: "seampact/derive/cache-sensitive-elsewhere",
+        pointer: `/errors/${code}/params`,
+        related: ["/conventions/cache/sensitiveElsewhere"],
+      })),
+    );
+    expect(noStoreOf(run)).toEqual([undefined, undefined, undefined]);
+  });
+});
