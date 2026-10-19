@@ -198,7 +198,7 @@ Test consumer projects live in `~/Dev/test-seampact-<name>` or a temporary direc
 
 | Ecosystem | How the unpublished packages are installed |
 |---|---|
-| npm | `pnpm pack` writes a tarball per package; the consumer's `package.json` lists the tarballs, and an `overrides` entry (pnpm 12 reads it from the consumer's `pnpm-workspace.yaml`) maps every `@seampact/*` package to its tarball so transitive dependencies resolve to tarballs too |
+| npm | `pnpm pack` writes a tarball per package; the consumer's `package.json` lists the tarballs, and an `overrides` entry (pnpm 11 and later read it from the consumer's `pnpm-workspace.yaml` only, not from the `pnpm` field of `package.json`) maps every `@seampact/*` package to its tarball so transitive dependencies resolve to tarballs too |
 | JVM | `publishToMavenLocal` from the monorepo; the consumer lists `mavenLocal()` in its plugin and dependency repositories |
 | PHP | Composer path repositories pointing at the split trees of ADR 0010, with symlinks off so the install is a copy |
 | Binary | a locally built binary, referenced by path and hash in the plugin's override |

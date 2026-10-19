@@ -32,7 +32,7 @@ const CONFIG_FILE = "seampact.config.yaml";
 const PACKAGE_FILE = "package.json";
 const CONTRACT_DIRECTORY = "contract";
 
-// pnpm 10 and later read `overrides` from the workspace file only, not from the `pnpm` field of package.json.
+// pnpm 11 and later read `overrides` from the workspace file only, not from the `pnpm` field of package.json.
 const PNPM_SETTINGS_FILE = "pnpm-workspace.yaml";
 
 interface ConsumerManifest {
