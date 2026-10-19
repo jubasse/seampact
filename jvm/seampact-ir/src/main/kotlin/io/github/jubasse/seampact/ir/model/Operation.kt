@@ -1,4 +1,4 @@
-// Generated from packages/core/spec/schemas/ir/operation.schema.json by scripts/ir-models for IR revision 4. Do not edit.
+// Generated from packages/core/spec/schemas/ir/operation.schema.json by scripts/ir-models for IR revision 5. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 @file:OptIn(ExperimentalSerializationApi::class)
 @file:UseSerializers(IrIntegerSerializer::class)
@@ -66,7 +66,7 @@ public data class Cache(
     public val vary: List<String>,
     public val etag: Boolean,
     public val perCallerKind: List<CallerCacheControl>,
-    /** Authoritative: when true the response is never stored, whatever 'directives' hold. True when the family is 'never' or a response carries a sensitive field (ADR 0003 section 6). */
+    /** Authoritative: when true the response is never stored, whatever 'directives' hold. True when the family is 'never' or a response carries a sensitive field (ADR 0003 section 6, invariant ir.cache.sensitive-no-store). */
     public val noStore: Boolean,
     public val origin: Origin,
     public val derivedFrom: DerivedFrom? = null,

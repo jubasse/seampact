@@ -6,6 +6,7 @@ import {
   walkIrInstance,
 } from "./instance-walk.js";
 import type { SchemaNode } from "./schemas.js";
+import { findIrSensitiveProperty } from "./sensitive-field.js";
 import { isIrSameTypeUse } from "./type-use.js";
 import { irUnionTags } from "./unions.js";
 
@@ -606,97 +607,6 @@ function checkRetryHeader(
     );
 }
 
-/** A sensitive property and the schema holding it. */
-interface SensitiveProperty {
-  schema: string;
-  property: string;
-}
-
-// The first sensitive property a type use reaches (ADR 0003 section 6): through array items, JSON content,
-// object properties, map values and union variants, each schema walked once so a recursive schema ends. An
-// unknown use or schema kind is the reader's to name, and a missing schema is ir.ref.resolves'.
-function sensitiveBelow(
-  use: unknown,
-  schemaEntries: Json,
-  visited: Set<string>,
-): SensitiveProperty | undefined {
-  if (!isRecord(use)) return undefined;
-
-  switch (use.kind) {
-    case "array":
-      return sensitiveBelow(use.items, schemaEntries, visited);
-    case "scalar":
-      return isRecord(use.content)
-        ? sensitiveBelow(use.content.schema, schemaEntries, visited)
-        : undefined;
-    case "ref":
-      return typeof use.schema === "string"
-        ? sensitiveInSchema(use.schema, schemaEntries, visited)
-        : undefined;
-    default:
-      return undefined;
-  }
-}
-
-function sensitiveInSchema(
-  id: string,
-  schemaEntries: Json,
-  visited: Set<string>,
-): SensitiveProperty | undefined {
-  if (visited.has(id) || !Object.hasOwn(schemaEntries, id)) return undefined;
-
-  visited.add(id);
-  const schema = schemaEntries[id];
-
-  if (!isRecord(schema)) return undefined;
-
-  switch (schema.kind) {
-    case "object":
-      return sensitiveProperty(id, schema.properties, schemaEntries, visited);
-    case "map":
-      return sensitiveBelow(schema.values, schemaEntries, visited);
-    case "union":
-      return sensitiveVariant(schema.variants, schemaEntries, visited);
-    default:
-      return undefined;
-  }
-}
-
-function sensitiveProperty(
-  id: string,
-  properties: unknown,
-  schemaEntries: Json,
-  visited: Set<string>,
-): SensitiveProperty | undefined {
-  for (const property of Array.isArray(properties) ? properties : []) {
-    if (!isRecord(property)) continue;
-
-    if (property.sensitive === true) return { schema: id, property: String(property.name) };
-
-    const found = sensitiveBelow(property.type, schemaEntries, visited);
-
-    if (found !== undefined) return found;
-  }
-
-  return undefined;
-}
-
-function sensitiveVariant(
-  variants: unknown,
-  schemaEntries: Json,
-  visited: Set<string>,
-): SensitiveProperty | undefined {
-  for (const variant of Array.isArray(variants) ? variants : []) {
-    if (!isRecord(variant) || typeof variant.schema !== "string") continue;
-
-    const found = sensitiveInSchema(variant.schema, schemaEntries, visited);
-
-    if (found !== undefined) return found;
-  }
-
-  return undefined;
-}
-
 // A response that carries a sensitive field is never stored: the operation has a `cache` that sets `noStore`.
 function checkSensitiveNoStore(
   operation: Json,
@@ -709,23 +619,16 @@ function checkSensitiveNoStore(
   if (cache?.noStore === true) return;
 
   const responses = Array.isArray(operation.responses) ? operation.responses : [];
-  const visited = new Set<string>();
+  const bodies = responses.map((response) => (isRecord(response) ? response.body : undefined));
+  const found = findIrSensitiveProperty(bodies, schemaEntries);
 
-  for (const response of responses) {
-    const found = isRecord(response)
-      ? sensitiveBelow(response.body, schemaEntries, visited)
-      : undefined;
+  if (found === undefined) return;
 
-    if (found === undefined) continue;
-
-    fail(
-      "ir.cache.sensitive-no-store",
-      pointer,
-      `A response carries the sensitive property '${found.property}' of '${found.schema}', so the operation's 'cache' sets 'noStore'.`,
-    );
-
-    return;
-  }
+  fail(
+    "ir.cache.sensitive-no-store",
+    pointer,
+    `A response carries the sensitive property '${found.property}' of '${found.schema}', so the operation's 'cache' sets 'noStore'.`,
+  );
 }
 
 interface OperationScope {

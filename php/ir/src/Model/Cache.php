@@ -1,6 +1,6 @@
 <?php
 
-// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 4. Do not edit.
+// Generated from packages/core/spec/schemas/ir by scripts/ir-models for IR revision 5. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 
 declare(strict_types=1);
@@ -16,7 +16,7 @@ final readonly class Cache
      * @param list<string> $vary
      * @param bool $etag
      * @param list<CallerCacheControl> $perCallerKind
-     * @param bool $noStore Authoritative: when true the response is never stored, whatever 'directives' hold. True when the family is 'never' or a response carries a sensitive field (ADR 0003 section 6).
+     * @param bool $noStore Authoritative: when true the response is never stored, whatever 'directives' hold. True when the family is 'never' or a response carries a sensitive field (ADR 0003 section 6, invariant ir.cache.sensitive-no-store).
      * @param Origin $origin
      * @param CacheDirectives|null $directives Absent if and only if the family is 'never' (invariant ir.cache.directives).
      * @param DerivedFrom|null $derivedFrom

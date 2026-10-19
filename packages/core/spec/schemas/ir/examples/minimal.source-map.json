@@ -1,5 +1,5 @@
 {
-  "irRevision": 4,
+  "irRevision": 5,
   "locations": {
     "api#": { "file": "contract/api.yaml", "line": 1, "column": 1, "endLine": 40, "endColumn": 1 },
     "pack:@acme/pack-tenancy#/rights/tasks.effort": {

@@ -6,6 +6,7 @@
 
 ## IR change
 
+- irRevision: 4 to 5
 - Classification: tightening (ADR 0005 section 4: a reader of the new revision refuses IR an older compiler could write)
 
 | Field or kind | Schema path | Change | Additive, tightening or breaking | Guarded by |

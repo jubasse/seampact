@@ -513,7 +513,7 @@
         "perCallerKind": { "type": "array", "items": { "$ref": "#/$defs/CallerCacheControl" } },
         "noStore": {
           "type": "boolean",
-          "description": "Authoritative: when true the response is never stored, whatever 'directives' hold. True when the family is 'never' or a response carries a sensitive field (ADR 0003 section 6)."
+          "description": "Authoritative: when true the response is never stored, whatever 'directives' hold. True when the family is 'never' or a response carries a sensitive field (ADR 0003 section 6, invariant ir.cache.sensitive-no-store)."
         },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" },
         "derivedFrom": { "$ref": "common.schema.json#/$defs/DerivedFrom" }
