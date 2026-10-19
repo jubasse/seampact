@@ -127,6 +127,7 @@ Run on Express 4.22.3 and 5.3.0 (`compression` 1.8.2) and Node 24.21, and not ke
 - App middleware mounted before the router is outside the boundary: its refusals are in the api's format only when the app mounts the exported error middleware or calls the helper, and a reply it writes itself is not checked. The README's setup mounts the router before such middleware where the order allows.
 - A global JSON parser before the router works, with a warning, and costs the raw bytes of signed routes unless it uses `keepRawBody`.
 - A mount path answers 500 per request, with a log naming the fix, instead of refusing to start.
+- A reply written outside a request context (`preRoutingErrorHandler`, `renderPreRoutingError`, or `renderContractError` on a response no contract route entered) reports to the hooks of the api's first router in the stack of the request's app, the one that runs before any other mount of it; an app that mounts none is refused by name.
 - A contract path answers only its declared methods, and `HEAD` where it declares `GET`: `OPTIONS` gets the path's 404, so CORS preflights are answered by app middleware mounted before the router.
 
 ## Traceability

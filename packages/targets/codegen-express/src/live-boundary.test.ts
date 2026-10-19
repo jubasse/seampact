@@ -45,6 +45,8 @@ const NO_STORE_CODE = "api.payload_too_large";
 interface ReferenceAppModule {
   readonly ALLOWED_ORIGIN: string;
   readonly FAIL_BEFORE_HEADER: string;
+  readonly APP_RENDERED_ERROR: string;
+  readonly mountedRouterUnexpected: unknown[];
   readonly calls: {
     readonly scopeIds: unknown[];
     readonly handled: string[];
@@ -71,6 +73,16 @@ interface ReferenceAppModule {
   resetScenario(): void;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
   startTwoApiApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+}
+
+// The message of a reported exception, whether the hook recorded it alone or with its context.
+function reportedMessage(entry: unknown): string | undefined {
+  const reported =
+    typeof entry === "object" && entry !== null && "exceptionOrReply" in entry
+      ? entry.exceptionOrReply
+      : entry;
+
+  return reported instanceof Error ? reported.message : undefined;
 }
 
 interface RouterModule {
@@ -397,6 +409,14 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
 
     expect(reply.status).toBe(500);
     expect(error).toHaveBeenCalledWith(expect.stringContaining("mounted under '/mounted'"));
+  });
+
+  test("an error rendered outside a request context reports to the router that serves the app, not the last made", async () => {
+    const reply = await send("GET", "/own/render-error");
+
+    expect(reply.status).toBe(500);
+    expect(app.calls.unexpected.map(reportedMessage)).toEqual([app.APP_RENDERED_ERROR]);
+    expect(app.mountedRouterUnexpected.map(reportedMessage)).not.toContain(app.APP_RENDERED_ERROR);
   });
 
   test("an app middleware's 401 before the router is rendered by the exported error middleware", async () => {

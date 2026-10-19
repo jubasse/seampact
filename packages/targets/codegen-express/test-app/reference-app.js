@@ -1,6 +1,6 @@
 // An Express app around the generated `tasks` router, for the live boundary test: the shared scenario's handler map
 // and hooks, app middleware before the router, an app error middleware, routes of the app's own and a router
-// mounted under a path; and an app with two apis on one base path. Copied next to the compiled generated tree, so
+// mounted under a path with hooks of its own; and an app with two apis on one base path. Copied next to the compiled generated tree, so
 // it imports the generated modules by relative path. The test links `express` to the major it runs.
 import express from "express";
 import * as TasksExpress from "../generated/server/tasks/index.js";
@@ -16,6 +16,19 @@ import {
 } from "./reference-scenario.js";
 
 export * from "./reference-scenario.js";
+
+/** The message of the error an app route renders with `renderContractError`, outside any request context. */
+export const APP_RENDERED_ERROR = "rendered by an app route";
+/** What the hooks of the router mounted under a path saw: none of the root router's reports. */
+export const mountedRouterUnexpected = [];
+
+// The router mounted under a path is made last, with hooks of its own.
+const mountedRouterHooks = {
+  ...hooks,
+  onUnexpectedError(exceptionOrReply) {
+    mountedRouterUnexpected.push(exceptionOrReply);
+  },
+};
 
 // The `writeHead` form passes its headers as an argument, an ETag included, as some frameworks do.
 function appReplyMiddleware(error, _request, response, next) {
@@ -74,7 +87,10 @@ export async function startReferenceApp() {
   app.use(
     TasksExpress.router({ handlers, hooks, operations: { getChannel: { responses: "warn" } } }),
   );
-  app.use("/mounted", TasksExpress.router({ handlers, hooks }));
+  app.use("/mounted", TasksExpress.router({ handlers, hooks: mountedRouterHooks }));
+  app.get("/own/render-error", (_request, response) => {
+    TasksExpress.renderContractError(response, new Error(APP_RENDERED_ERROR));
+  });
   app.get("/own/boom", () => {
     throw new Error("own boom");
   });

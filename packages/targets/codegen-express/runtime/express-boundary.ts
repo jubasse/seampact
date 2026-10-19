@@ -91,8 +91,8 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
   const bodyGlue = expressBodyGlue(api);
   // The context of each contract response, for the error middleware and `renderContractError`.
   const contexts = new WeakMap<ServerResponse, BoundaryContext>();
-  // The hooks of the last router made, for the replies written outside a request context.
-  const registered: { hooks?: BoundaryHooks } = {};
+  // The hooks of each router made, for the replies written outside a request context.
+  const routerHooks = new WeakMap<object, BoundaryHooks>();
   const warnedGlobalParser = new Set<string>();
 
   function router<Operation extends string>(
@@ -105,9 +105,9 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
 
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
 
-    registered.hooks = options.hooks;
-
     const contractRouter = express.Router();
+
+    routerHooks.set(contractRouter, options.hooks);
 
     for (const route of api.routes) {
       contractRouter[methodOf(route)](routePattern(route.path), ...routeMiddleware(route, options));
@@ -419,8 +419,26 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
     );
   }
 
+  /**
+   * The hooks of the router that answers a request outside a request context: the first router of this api in the
+   * stack of the request's app, since it runs before any later one. An app that mounts none is refused by name.
+   */
+  function owningHooks(request: IncomingMessage | undefined): BoundaryHooks {
+    const app: unknown = request === undefined ? undefined : Reflect.get(request, "app");
+    const owner = app === undefined ? undefined : appRouterHandles(api, app).find(isOwnRouter);
+    const hooks = owner === undefined ? undefined : routerHooks.get(owner);
+
+    if (hooks === undefined) throw new Error(noOwningRouterMessage(api));
+
+    return hooks;
+  }
+
+  function isOwnRouter(handle: object): boolean {
+    return routerHooks.has(handle);
+  }
+
   /** Writes a contract error, or a framework refusal mapped to its role, in the api's format. */
-  function renderContractError(response: ServerResponse, error: unknown): Promise<void> {
+  async function renderContractError(response: ServerResponse, error: unknown): Promise<void> {
     const context = contexts.get(response);
     const route = context?.route;
     const contractError =
@@ -429,10 +447,10 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
         : (claimedError(route, error) ?? unexpectedError(route, error));
     const request: IncomingMessage | undefined = response.req;
 
-    return respondWithError(
+    await respondWithError(
       response,
       context,
-      context?.hooks ?? registered.hooks,
+      context?.hooks ?? owningHooks(request),
       api,
       route,
       contractError,
@@ -460,7 +478,7 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
       error === undefined &&
       claimsAlone(api, Reflect.get(request, "app"), reported.path)
     ) {
-      respondUnserved(response, registered.hooks, reported);
+      respondUnserved(response, owningHooks(request), reported);
 
       return true;
     }
@@ -471,7 +489,7 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
       error === undefined &&
       matchContractRoute(api, reported.method, reported.path) === undefined
     ) {
-      respondUnserved(response, registered.hooks, reported);
+      respondUnserved(response, owningHooks(request), reported);
 
       return true;
     }
@@ -483,7 +501,7 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
 
     if (contractError === undefined) return false;
 
-    respondDetached(response, registered.hooks, route, contractError, reported);
+    respondDetached(response, owningHooks(request), route, contractError, reported);
 
     return true;
   }
@@ -523,6 +541,11 @@ function claimsAlone(api: ContractApi, app: unknown, path: string): boolean {
  * cannot tell a base path it claims alone from one another api shares.
  */
 function appBasePathClaims(api: ContractApi, app: unknown): BasePathClaim[] {
+  return appRouterHandles(api, app).flatMap((handle) => basePathClaimsOf(handle));
+}
+
+// The handles of the app's router stack, in mount order; an app without a stack to read is refused by name.
+function appRouterHandles(api: ContractApi, app: unknown): object[] {
   const appRouter: unknown = isObjectLike(app)
     ? (Reflect.get(app, "_router") ?? Reflect.get(app, "router"))
     : undefined;
@@ -533,8 +556,15 @@ function appBasePathClaims(api: ContractApi, app: unknown): BasePathClaim[] {
   return stack.flatMap((layer: unknown) => {
     const handle: unknown = isObjectLike(layer) ? Reflect.get(layer, "handle") : undefined;
 
-    return isObjectLike(handle) ? basePathClaimsOf(handle) : [];
+    return isObjectLike(handle) ? [handle] : [];
   });
+}
+
+function noOwningRouterMessage(api: ContractApi): string {
+  return (
+    `seampact: no router of api '${api.id}' is mounted on the app that received this request, so its reply has ` +
+    "no hooks to report to. Mount the api's router with app.use(router({ handlers, hooks })) on that app."
+  );
 }
 
 function unreadableRouterStackMessage(api: ContractApi): string {
