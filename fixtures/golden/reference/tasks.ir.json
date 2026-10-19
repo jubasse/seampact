@@ -5355,7 +5355,12 @@
             "type": {
               "items": {
                 "kind": "scalar",
-                "refinements": {},
+                "refinements": {
+                  "pattern": {
+                    "normalized": "^(?:createdAt|-createdAt)$",
+                    "source": "^(?:createdAt|-createdAt)$"
+                  }
+                },
                 "type": "string"
               },
               "kind": "array"

@@ -1,5 +1,6 @@
 import type { IrWriter } from "@seampact/spec/ir";
 import { pipelineCopy } from "../../../pipeline/seam.js";
+import { treeSchemasNormalizePattern } from "../../tree/schemas/index.js";
 import {
   DERIVE_WIRE_LINK,
   DERIVE_WIRE_STRING_USE,
@@ -9,17 +10,15 @@ import {
 } from "./params.js";
 import type { DeriveWireRoute, DeriveWireScope } from "./routes.js";
 
-// A keyed or split sort direction: `asc` or `desc` (grammar section 14). The pattern uses no construct ADR 0003
-// section 9 normalises, so its normalised form is its written form.
-const SORT_DIRECTION_PATTERN = "^(?:asc|desc)$";
+// A sort direction: `asc` or `desc` (grammar section 14); a signed key is descending with its `-` prefix.
+const SORT_DIRECTIONS: readonly string[] = ["asc", "desc"];
 
-const SORT_DIRECTION_USE: IrWriter.ScalarTypeUse = Object.freeze({
-  kind: "scalar",
-  type: "string",
-  refinements: Object.freeze({
-    pattern: Object.freeze({ source: SORT_DIRECTION_PATTERN, normalized: SORT_DIRECTION_PATTERN }),
-  }),
-});
+const DESCENDING_PREFIX = "-";
+
+const PAIR_SEPARATOR = ",";
+
+// The characters ADR 0003 section 9 lets a pattern escape outside a class.
+const PATTERN_METACHARACTERS = /[\\^$.|?*+()[\]{}/]/g;
 
 // The request parameters and page headers of a paged list (`paging.params`, ADR 0002 section 14, ADR 0006
 // section 5), from the style tree.nodes resolved and the limits it wrote. Every parameter is optional: a request
@@ -28,7 +27,7 @@ const SORT_DIRECTION_USE: IrWriter.ScalarTypeUse = Object.freeze({
 // from 1 to `maxLimit`, the bound written only with `overLimit: reject`, since a clamped limit is served, not
 // refused. The sort parameter follows its `style`: `signed` one comma-separated list (`sort=-createdAt,title`),
 // `pair` a repeated one (`sort=createdAt,desc`), `keyed` one parameter per sort key (`order[createdAt]=desc`) and
-// `split` the key and its direction parameter; the keys themselves are `paging.sortKeys`. The style's response
+// `split` the key and its direction parameter; a pattern admits the `paging.sortKeys` only. The style's response
 // headers, and one `Link` header for its relations, go on the `page` response, each optional since a template slot
 // may be absent at either end of the list. The page shape itself is tree.nodes'.
 
@@ -156,23 +155,23 @@ function writeSort(route: DeriveWireRoute, role: Role, paged: Paged, scope: Deri
   const place = role.in === "query" ? "query" : "header";
   const add = (derived: DeriveWireDerived): void =>
     deriveWireAddParam(route, place, derived, scope);
-  const list = (explode: boolean): DeriveWireDerived => ({
-    ...optional(role.name, { kind: "array", items: DERIVE_WIRE_STRING_USE }, paged),
+  const list = (items: IrWriter.ScalarTypeUse, explode: boolean): DeriveWireDerived => ({
+    ...optional(role.name, { kind: "array", items }, paged),
     wire: { kind: "list", style: "form", explode, brackets: false },
   });
 
   switch (role.style ?? "signed") {
     case "signed":
-      add(list(false));
+      add(list(signedSortUse(keys), false));
 
       return;
     case "pair":
-      add(list(true));
+      add(list(pairSortUse(keys), true));
 
       return;
     case "keyed":
       for (const key of keys)
-        add(optional(role.name.replace(KEY_PLACEHOLDER, key), SORT_DIRECTION_USE, paged));
+        add(optional(role.name.replace(KEY_PLACEHOLDER, key), sortDirectionUse(), paged));
 
       return;
     case "split": {
@@ -181,10 +180,39 @@ function writeSort(route: DeriveWireRoute, role: Role, paged: Paged, scope: Deri
           `tree.nodes wrote a split sort role without its direction on '${route.id}'`,
         );
 
-      add(optional(role.name, DERIVE_WIRE_STRING_USE, paged));
-      add(optional(role.direction, SORT_DIRECTION_USE, paged));
+      add(optional(role.name, oneOfUse(keys), paged));
+      add(optional(role.direction, sortDirectionUse(), paged));
     }
   }
+}
+
+// The sort values a style accepts, each a string of exactly the declared keys (ADR 0003 section 9 pattern): a
+// signed item is a key or its descending form, a pair item a key and a direction, a split key one key.
+const signedSortUse = (keys: readonly string[]): IrWriter.ScalarTypeUse =>
+  oneOfUse(keys.flatMap((key) => [key, `${DESCENDING_PREFIX}${key}`]));
+
+const pairSortUse = (keys: readonly string[]): IrWriter.ScalarTypeUse =>
+  patternUse(`^${alternation(keys)}${PAIR_SEPARATOR}${alternation(SORT_DIRECTIONS)}$`);
+
+const sortDirectionUse = (): IrWriter.ScalarTypeUse => oneOfUse(SORT_DIRECTIONS);
+
+const oneOfUse = (values: readonly string[]): IrWriter.ScalarTypeUse =>
+  patternUse(`^${alternation(values)}$`);
+
+const alternation = (values: readonly string[]): string =>
+  `(?:${values.map((value) => value.replace(PATTERN_METACHARACTERS, "\\$&")).join("|")})`;
+
+function patternUse(source: string): IrWriter.ScalarTypeUse {
+  const normalised = treeSchemasNormalizePattern(source);
+
+  if (!normalised.ok)
+    throw new Error(`the derived sort pattern '${source}' is not portable: ${normalised.reason}`);
+
+  return {
+    kind: "scalar",
+    type: "string",
+    refinements: { pattern: { source, normalized: normalised.normalized } },
+  };
 }
 
 function writePageHeaders(route: DeriveWireRoute, paged: Paged, scope: DeriveWireScope): void {

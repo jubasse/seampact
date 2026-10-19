@@ -140,7 +140,7 @@ Every derived element carries `derivedFrom: { derivation, from }` with a derivat
 
 | Derivation id | Trigger | Derived | Role |
 |---|---|---|---|
-| `input.invalid` | any input: path, query, headers or body | 400 | `schemaInvalid` |
+| `input.invalid` | any input: path, query, headers or body, or a refused undeclared query key | 400 | `schemaInvalid` |
 | `body.limit` | a request body | `input.bodyLimitBytes` (route, then `batch`, then `conventions.bodyLimit`, 1 MiB by default), 413 | `payloadTooLarge` |
 | `body.media` | a request body | 415 for a media other than the route's `inputMedia` | `unsupportedMediaType` |
 | `identity.authenticate` | identity or optional access | credential parameters of the accepted schemes, 401 (on optional access, only with `onRefused: reject`) | `unauthenticated` |

@@ -38,7 +38,13 @@ const row = (
 
 /** Every row of ADR 0006 section 5, in the ADR's order. */
 export const derivationTable: readonly DerivationRow[] = derivationFreeze([
-  row("input.invalid", "any input", "400", ["schemaInvalid"], null),
+  row(
+    "input.invalid",
+    "any input, or a refused undeclared query key",
+    "400",
+    ["schemaInvalid"],
+    null,
+  ),
   row(
     "body.limit",
     "a request body",
