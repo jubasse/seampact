@@ -11,7 +11,7 @@ import {
   UUID_LAYOUT,
 } from "@seampact/codegen-core/validators";
 import type { YupRenderContext } from "./module-rendering.js";
-import { UNKNOWN_KEYS_TEST } from "./yup-support.js";
+import { IS_MULTIPLE_OF, UNKNOWN_KEYS_TEST } from "./yup-support.js";
 
 // What a numeric rule leaves to the type check: an integer's rules skip a value that is no integer, a number's one
 // that is not finite, so a value of the wrong type reports its type alone, as zod's aborting checks do.
@@ -176,7 +176,7 @@ function scalarCheck(check: ScalarCheck, base: ScalarBase, context: YupRenderCon
         base,
         check.rule,
         `Expected a multiple of ${check.literal}.`,
-        `value % ${check.literal} === 0`,
+        `${context.supportName(IS_MULTIPLE_OF)}(value, ${check.literal})`,
       );
   }
 }

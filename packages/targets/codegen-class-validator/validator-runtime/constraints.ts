@@ -138,11 +138,25 @@ export function exclusiveMaximumCheck(limit: number): ContractCheck {
   };
 }
 
+function decimalPlaces(value: number): number {
+  const [mantissa = "", exponent = "0"] = String(value).split("e");
+  const fraction = (mantissa.split(".")[1] ?? "").length;
+
+  return Math.max(0, fraction - Number(exponent));
+}
+
+// A remainder that holds for decimal steps: both numbers are scaled to integers first, since `3 % 0.1` is not 0.
+export function isMultipleOf(value: number, step: number): boolean {
+  const scale = 10 ** Math.max(decimalPlaces(value), decimalPlaces(step));
+
+  return Math.round(value * scale) % Math.round(step * scale) === 0;
+}
+
 export function multipleOfCheck(divisor: number): ContractCheck {
   return {
     rule: "multipleOf",
     message: `Expected a multiple of ${divisor}.`,
-    test: onNumbers((value) => value % divisor === 0),
+    test: onNumbers((value) => isMultipleOf(value, divisor)),
   };
 }
 
@@ -207,13 +221,17 @@ export function Present(): PropertyDecorator {
   });
 }
 
-/** An opaque value that is not nullable: any JSON value but `null`. */
-export function NotNull(): PropertyDecorator {
-  return Satisfies({
+/** The check of an opaque value that is not nullable: any JSON value but `null`. */
+export function notNullCheck(): ContractCheck {
+  return {
     rule: TYPE_RULE,
     message: "Expected a value, not null.",
     test: (value) => value !== null,
-  });
+  };
+}
+
+export function NotNull(): PropertyDecorator {
+  return Satisfies(notNullCheck());
 }
 
 export function Minimum(limit: number): PropertyDecorator {

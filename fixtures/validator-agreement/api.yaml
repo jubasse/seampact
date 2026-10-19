@@ -49,6 +49,10 @@ surfaces:
         method: post
         input: Bounds
         output: Bounds
+      echoOpaqueItems:
+        method: post
+        input: OpaqueItems
+        output: OpaqueItems
       echoReceipt:
         method: post
         input: Receipt

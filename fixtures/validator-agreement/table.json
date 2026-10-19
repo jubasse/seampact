@@ -1230,6 +1230,45 @@
       "rule": "adr0003/2/opaque-nullable"
     },
     {
+      "id": "OpaqueItems.values",
+      "case": "opaque-value",
+      "schema": "OpaqueItems",
+      "direction": "input",
+      "payload": {
+        "items": [
+          1,
+          "a",
+          {
+            "b": null
+          }
+        ]
+      },
+      "expected": "accept",
+      "rule": "adr0003/2/opaque"
+    },
+    {
+      "id": "OpaqueItems.null-item",
+      "case": "opaque-value",
+      "schema": "OpaqueItems",
+      "direction": "input",
+      "payload": {
+        "items": [null, 1]
+      },
+      "expected": "reject",
+      "rule": "adr0003/2/opaque"
+    },
+    {
+      "id": "OpaqueItems.output-null-item",
+      "case": "opaque-value",
+      "schema": "OpaqueItems",
+      "direction": "output",
+      "payload": {
+        "items": [1, null]
+      },
+      "expected": "reject",
+      "rule": "adr0003/2/opaque"
+    },
+    {
       "id": "Member.known",
       "schema": "Member",
       "direction": "input",
@@ -2287,6 +2326,36 @@
       "direction": "input",
       "payload": {
         "step": 9007199254740990
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/multiple-of"
+    },
+    {
+      "id": "Bounds.decimal-step-integer",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "tenth": 3
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/multiple-of"
+    },
+    {
+      "id": "Bounds.decimal-step-output",
+      "schema": "Bounds",
+      "direction": "output",
+      "payload": {
+        "tenth": 3
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/multiple-of"
+    },
+    {
+      "id": "Bounds.hundredth-step-integer",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "hundredth": 3
       },
       "expected": "accept",
       "rule": "adr0003/1/multiple-of"

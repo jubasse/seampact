@@ -12,22 +12,22 @@ import { REPO_ROOT } from "../golden/repo-root.ts";
 import { generatedSubset } from "./generated-subset.ts";
 import { loadProviderValidators, validatorProviderIds } from "./providers.ts";
 
-// The schemas of the agreement table that no validator runs yet, each because a provider refuses its form or
-// because the schema is no named schema of the IR. Removing a name here is the proof that its form now generates.
-const NOT_RUN_YET = [
-  "Comment",
-  "Counts",
-  "Day",
-  "Formats",
-  "IgnoreKeys",
-  "KeepKeys",
-  "Notice",
-  "Owner",
-  "PatchArticle",
-  "Receipt",
-  "SubtreeKeys",
-  "Tags",
-];
+// The schemas of the agreement table that no validator runs yet, each with why: all three providers refuse its
+// form, or it is no named schema of the IR. Removing a name here is the proof that its form now generates.
+const NOT_RUN_YET: Readonly<Record<string, string>> = {
+  Comment: "a schema that refers to itself is refused",
+  Counts: "a map (additionalProperties, propertyNames) is refused",
+  Day: "the date format is refused",
+  Formats: "the email, uri, uri-reference, int64 and decimal formats are refused",
+  IgnoreKeys: "unknownKeys ignore on an operation input is refused",
+  KeepKeys: "unknownKeys keep on an operation input is refused",
+  Notice: "a root tagged union is refused",
+  Owner: "an enum narrowed to some members is refused",
+  PatchArticle: "a nullable property and the date format are refused",
+  Receipt: "a nullable scalar property is refused",
+  SubtreeKeys: "unknownKeys ignore on a property is refused",
+  Tags: "an array root is no named schema of the IR",
+};
 
 // Rows on which the three validators agree with each other and give the opposite of the table's verdict; a
 // disagreement with ADR 0003 is fixed in the validators; only a gap upstream of them stays listed.
@@ -70,7 +70,7 @@ describe("validator agreement runner", () => {
 
     for (const name of Object.keys(subset.schemas)) notRun.delete(name);
 
-    expect([...notRun].sort()).toEqual(NOT_RUN_YET);
+    expect([...notRun].sort()).toEqual(Object.keys(NOT_RUN_YET).sort());
   });
 
   it.each(rows)(
@@ -83,6 +83,13 @@ describe("validator agreement runner", () => {
         expect(other.verdict).toBe(first?.verdict);
         expect(other.rules).toEqual(first?.rules);
       }
+    },
+  );
+
+  it.each(rows.filter((row) => row.received !== undefined))(
+    "$id: the providers hand over the received value",
+    async (row) => {
+      for (const result of await verdictsOf(row)) expect(result.value).toEqual(row.received);
     },
   );
 

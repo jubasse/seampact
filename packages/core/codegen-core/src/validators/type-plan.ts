@@ -398,7 +398,11 @@ function boundChecks(
 ): ScalarCheck[] {
   const refinements = typeUse.refinements;
   const refinementsLocation = below(location, "refinements");
-  const written = NUMERIC_RULES.filter((rule) => refinements[rule] !== undefined);
+  const written = NUMERIC_RULES.flatMap((rule) => {
+    const literal = refinements[rule];
+
+    return literal === undefined ? [] : [{ rule, literal }];
+  });
 
   if (written.length === 0) return [];
 
@@ -414,9 +418,7 @@ function boundChecks(
     return [];
   }
 
-  return written.flatMap((rule): ScalarCheck[] => {
-    const literal = refinements[rule] ?? "";
-
+  return written.flatMap(({ rule, literal }): ScalarCheck[] => {
     if (!isExactNumberLiteral(literal)) {
       refusals.push(
         refuseNotGeneratedYet(

@@ -103,7 +103,7 @@ function itemDecorators(items: TypePlan, context: DtoRenderContext): string[] {
     case "refused":
       throw refusedPlanReached();
     case "unknown":
-      return [];
+      return [`@${CONTRACT}.ArrayItems([${CONTRACT}.notNullCheck()])`];
     case "schema":
       return [
         `@${CONTRACT}.ArrayItems([${CONTRACT}.objectTypeCheck()])`,

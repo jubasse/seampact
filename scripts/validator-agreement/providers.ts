@@ -25,6 +25,9 @@ const PROVIDER_LIBRARIES: Readonly<Record<string, readonly string[]>> = {
   "class-validator": ["class-validator", "class-transformer", "reflect-metadata"],
 };
 
+// The providers whose schema modules export plain library schemas that a support module wraps into a Standard Schema.
+const WRAPS_STANDARD_SCHEMA: ReadonlySet<string> = new Set(["yup"]);
+
 export interface StandardResult {
   value?: unknown;
   issues?: readonly { path?: readonly PropertyKey[] }[];
@@ -125,11 +128,19 @@ async function yupStandardSchemaOf(
 function schemaOf(schemas: Record<string, unknown>, row: AgreementRow): StandardSchema {
   const schema = schemas[`${row.schema}Schema`];
 
-  if (!isRecord(schema) || !isRecord(schema["~standard"])) {
+  if (!isStandardSchema(schema)) {
     throw new Error(`${row.id}: no generated ${row.direction} validator for ${row.schema}`);
   }
 
-  return schema as unknown as StandardSchema;
+  return schema;
+}
+
+function isStandardSchema(value: unknown): value is StandardSchema {
+  return (
+    isRecord(value) &&
+    isRecord(value["~standard"]) &&
+    typeof value["~standard"].validate === "function"
+  );
 }
 
 interface InputIssue {
@@ -251,8 +262,9 @@ export async function loadProviderValidators(
   }
 
   // yup's schema modules export plain yup schemas; its support module wraps them into the contract's Standard Schema.
-  const standardSchemaOf =
-    providerId === "yup" ? await yupStandardSchemaOf(outputDirectory) : undefined;
+  const standardSchemaOf = WRAPS_STANDARD_SCHEMA.has(providerId)
+    ? await yupStandardSchemaOf(outputDirectory)
+    : undefined;
   const modules = {
     input: await importModule(join(outputDirectory, "schemas/input.ts")),
     output: await importModule(join(outputDirectory, "schemas/output.ts")),
