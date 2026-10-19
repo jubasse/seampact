@@ -1,4 +1,4 @@
-import { posix } from "node:path";
+import { relativeModuleSpecifier } from "../import-specifier.js";
 import { MODULE_EXTENSION, WIRE_CHECKS_MODULE } from "./layout.js";
 import type { WireCheck } from "./wire-checks.js";
 
@@ -21,13 +21,13 @@ export function moduleContents(
 
   if (source.wireChecks.size > 0) {
     imports.push(
-      `import { ${[...source.wireChecks].sort().join(", ")} } from "${relativeSpecifier(module, WIRE_CHECKS_MODULE)}";`,
+      `import { ${[...source.wireChecks].sort().join(", ")} } from "${relativeModuleSpecifier(module, WIRE_CHECKS_MODULE)}";`,
     );
   }
 
   for (const namespace of source.namespaces) {
     imports.push(
-      `import * as ${namespace.name} from "${relativeSpecifier(module, namespace.module)}";`,
+      `import * as ${namespace.name} from "${relativeModuleSpecifier(module, namespace.module)}";`,
     );
   }
 
@@ -36,11 +36,4 @@ export function moduleContents(
 
 export function modulePath(module: string): string {
   return `${module}${MODULE_EXTENSION}`;
-}
-
-function relativeSpecifier(fromModule: string, toModule: string): string {
-  const relative = posix.relative(posix.dirname(fromModule), toModule);
-  const dotted = relative.startsWith("../") ? relative : `./${relative}`;
-
-  return `${dotted}.js`;
 }
