@@ -8,6 +8,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import type { ValidatorChoice } from "./validator-choice.ts";
 
 // The file that marks a directory as a consumer this script made, holding the monorepo commit it was built from.
 export const COMMIT_FILE = ".seampact-commit";
@@ -32,6 +33,9 @@ const CONFIG_FILE = "seampact.config.yaml";
 const PACKAGE_FILE = "package.json";
 const CONTRACT_DIRECTORY = "contract";
 
+// The template config's `use:` value of its `validators` entry, replaced by the chosen provider package.
+const VALIDATORS_PLACEHOLDER = "{{validators}}";
+
 // pnpm 11 and later read `overrides` from the workspace file only, not from the `pnpm` field of package.json.
 const PNPM_SETTINGS_FILE = "pnpm-workspace.yaml";
 
@@ -55,12 +59,13 @@ export function prepareConsumerDirectory(directory: string): void {
   mkdirSync(directory, { recursive: true });
 }
 
-// The template, the target overlay copied over it after its base overlay (their config and package entries
-// merged), and the reference contract.
+// The template with the chosen validators, the target overlay copied over it after its base overlay (their config
+// and package entries merged), and the reference contract. A pair the target refuses fails at `generate`.
 export function assembleConsumer(options: {
   readonly consumersRoot: string;
   readonly repositoryRoot: string;
   readonly target: string;
+  readonly validators: ValidatorChoice;
   readonly directory: string;
   readonly commit: string;
 }): void {
@@ -75,6 +80,7 @@ export function assembleConsumer(options: {
   const overlays = overlayChain(join(consumersRoot, "targets"), options.target);
 
   cpSync(join(consumersRoot, "template"), directory, { recursive: true });
+  useValidators(options.validators, directory);
 
   for (const overlay of overlays) {
     cpSync(overlay, directory, {
@@ -89,6 +95,20 @@ export function assembleConsumer(options: {
     recursive: true,
   });
   writeFileSync(join(directory, COMMIT_FILE), `${options.commit}\n`);
+}
+
+function useValidators(choice: ValidatorChoice, directory: string): void {
+  const configFile = join(directory, CONFIG_FILE);
+  const config = readFileSync(configFile, "utf8");
+
+  if (config.split(VALIDATORS_PLACEHOLDER).length !== 2) {
+    throw new Error(
+      `consumers: the template ${CONFIG_FILE} must hold '${VALIDATORS_PLACEHOLDER}' once, as the \`use\` of its validators entry.`,
+    );
+  }
+
+  writeFileSync(configFile, config.replace(VALIDATORS_PLACEHOLDER, choice.package));
+  addDependencies(join(directory, PACKAGE_FILE), choice.dependencies);
 }
 
 // The target's overlay, after the overlay it names as its base, if any.
@@ -140,6 +160,10 @@ function addPackageEntries(entriesFile: string, manifestFile: string): void {
     );
   }
 
+  addDependencies(manifestFile, entries);
+}
+
+function addDependencies(manifestFile: string, entries: Readonly<Record<string, string>>): void {
   const manifest: ConsumerManifest = JSON.parse(readFileSync(manifestFile, "utf8"));
 
   manifest.dependencies = { ...manifest.dependencies, ...entries };

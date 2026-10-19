@@ -12,8 +12,12 @@ export function importSpecifier(link: Link, exportRef: ExportRef, fromFile: stri
     return `${link.location.specifier}/${exportRef.module}${MODULE_SUFFIX}`;
   }
 
-  const providerModule = posix.join(link.location.path, exportRef.module);
-  const relativeModule = posix.relative(posix.dirname(fromFile), providerModule);
+  return relativeModuleSpecifier(fromFile, posix.join(link.location.path, exportRef.module));
+}
+
+// The POSIX relative specifier a file at `fromFile` imports the module `toModule` with, both relative to one root.
+export function relativeModuleSpecifier(fromFile: string, toModule: string): string {
+  const relativeModule = posix.relative(posix.dirname(fromFile), toModule);
   const dotted = relativeModule.startsWith("../") ? relativeModule : `./${relativeModule}`;
 
   return `${dotted}${MODULE_SUFFIX}`;

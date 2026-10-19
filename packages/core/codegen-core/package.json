@@ -20,6 +20,10 @@
       "./node-server": {
         "types": "./dist/node-server/index.d.ts",
         "default": "./dist/node-server/index.js"
+      },
+      "./validators": {
+        "types": "./dist/validators/index.d.ts",
+        "default": "./dist/validators/index.js"
       }
     }
   },
@@ -39,6 +43,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./node-server": "./src/node-server/index.ts",
+    "./validators": "./src/validators/index.ts",
     "./node-server/test-support": "./src/node-server/test-support.ts"
   }
 }

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { type ContractIR, IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { apiIndexSource } from "../api-index.js";
 import { defineTarget } from "../define-target.js";
+import type { ValidatorStyle } from "../descriptors.js";
 import type { GenerateWarning } from "../generate-warning.js";
 import { type Refusal, withoutRepeats } from "../refusal.js";
 import type {
@@ -46,6 +47,8 @@ export interface NodeServerTargetPackage {
   readonly packageVersion: string;
   readonly format: SourceFormat;
   readonly placement: NodeServerPlacement;
+  /** The validator styles the target reads through its `validators` link; `standard-schema` by default. */
+  readonly validatorStyles?: readonly ValidatorStyle[];
 }
 
 const MODULE_EXTENSION = ".ts";
@@ -54,6 +57,7 @@ const HANDLERS_MODULE = "handlers";
 const HOOKS_MODULE = "hooks";
 const INDEX_MODULE = "index";
 const DEFAULT_RUNTIME_PROFILE: ServerRuntimeProfile = "node";
+const DEFAULT_VALIDATOR_STYLES: readonly ValidatorStyle[] = ["standard-schema"];
 
 /**
  * A Node server target, as the CLI loads it. It reads the operation types through the `types` link and the input
@@ -73,7 +77,7 @@ export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target
       artefacts: [{ id: BOUNDARY_ARTEFACT, defaultOn: true }],
       consumes: {
         types: { styles: ["typescript"] },
-        validators: { styles: ["standard-schema"] },
+        validators: { styles: [...(targetPackage.validatorStyles ?? DEFAULT_VALIDATOR_STYLES)] },
       },
       provides: {},
     },

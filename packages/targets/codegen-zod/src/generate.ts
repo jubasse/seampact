@@ -1,30 +1,24 @@
 import {
   apiIndexSource,
-  below,
   type GeneratedFile,
   type GenerateInput,
   type GenerateOutcome,
   type IndexedModule,
   type NoOptions,
-  type Refusal,
-  refuseNotGeneratedYet,
-  refuseUnknownValueAt,
 } from "@seampact/codegen-core";
-import type { ContractIR } from "@seampact/spec/ir";
 import {
   INDEX_MODULE,
-  OPERATION_INPUT_MODULE,
-  planValidatorsLayout,
-  SCHEMA_MODULES,
-  SCHEMA_NAMESPACES,
-  WIRE_CHECKS_MODULE,
-} from "./layout.js";
-import {
   type ModuleSource,
   moduleContents,
   modulePath,
+  OPERATION_INPUT_MODULE,
+  planValidators,
+  SCHEMA_MODULES,
+  SCHEMA_NAMESPACES,
+  WIRE_CHECKS_MODULE,
   WIRE_CHECKS_SOURCE,
-} from "./module-source.js";
+} from "@seampact/codegen-core/validators";
+import { ZOD_IMPORT } from "./layout.js";
 import { operationInputModuleSource } from "./operation-input.js";
 import { schemaModuleSource } from "./schema-module.js";
 
@@ -39,26 +33,19 @@ export function generateValidators(
 ): GenerateOutcome {
   if (!input.artefacts.has(VALIDATORS_ARTEFACT)) return { status: "generated", files: [] };
 
-  const { ir } = input;
-  const planned = planValidatorsLayout(ir);
+  const planned = planValidators(input.ir);
 
   if (planned.status === "refused") return planned;
 
-  const { layout } = planned;
-  const refusals: Refusal[] = [];
-
-  refuseApiForms(ir, refusals);
-
+  const { plan } = planned;
   const modules: { module: string; source: ModuleSource }[] = [
-    { module: SCHEMA_MODULES.input, source: schemaModuleSource("input", ir, layout, refusals) },
-    { module: SCHEMA_MODULES.output, source: schemaModuleSource("output", ir, layout, refusals) },
-    { module: OPERATION_INPUT_MODULE, source: operationInputModuleSource(ir, layout, refusals) },
+    { module: SCHEMA_MODULES.input, source: schemaModuleSource(plan.schemaModules.input) },
+    { module: SCHEMA_MODULES.output, source: schemaModuleSource(plan.schemaModules.output) },
+    { module: OPERATION_INPUT_MODULE, source: operationInputModuleSource(plan.operationInputs) },
   ];
 
-  if (refusals.length > 0) return { status: "refused", refusals: distinctRefusals(refusals) };
-
   const files: GeneratedFile[] = modules.flatMap(({ module, source }) => {
-    const contents = moduleContents(module, source);
+    const contents = moduleContents(module, source, ZOD_IMPORT);
 
     return contents === undefined ? [] : [{ path: modulePath(module), contents }];
   });
@@ -87,57 +74,4 @@ function indexFile(files: readonly GeneratedFile[]): GeneratedFile[] {
   if (modules.length === 0) return [];
 
   return [{ path: modulePath(INDEX_MODULE), contents: apiIndexSource(modules) }];
-}
-
-// The enum forms that change a validator: open output enums, an enum's fallback and its code names.
-function refuseApiForms(ir: ContractIR, refusals: Refusal[]): void {
-  const outputEnums = ir.api.wire.outputEnums;
-  const outputEnumsLocation = below({ member: "" }, "api", "wire", "outputEnums");
-
-  if (outputEnums === "open") {
-    refusals.push(
-      refuseNotGeneratedYet("wire.outputEnums.open", "Open output enums", outputEnumsLocation),
-    );
-  } else if (outputEnums !== "enum") {
-    refusals.push(refuseUnknownValueAt(outputEnumsLocation, outputEnums));
-  }
-
-  for (const [enumId, declaration] of Object.entries(ir.enums)) {
-    const location = below({ member: "" }, "enums", enumId);
-
-    if (declaration.codeNames !== undefined) {
-      refusals.push(
-        refuseNotGeneratedYet(
-          "enum.codeNames",
-          "An enum value's code name",
-          below(location, "codeNames"),
-        ),
-      );
-    }
-
-    if (declaration.fallback !== undefined) {
-      refusals.push(
-        refuseNotGeneratedYet(
-          "enum.fallback",
-          "An open enum's fallback",
-          below(location, "fallback"),
-        ),
-      );
-    }
-  }
-}
-
-// A schema used in both directions is written twice; its refusals are reported once.
-function distinctRefusals(refusals: readonly Refusal[]): Refusal[] {
-  const seen = new Set<string>();
-
-  return refusals.filter((refusal) => {
-    const key = `${refusal.code}\u0000${refusal.member ?? ""}`;
-
-    if (seen.has(key)) return false;
-
-    seen.add(key);
-
-    return true;
-  });
 }

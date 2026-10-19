@@ -14,10 +14,14 @@ export type SchemaDirection = Extract<Direction, "input" | "output">;
 // One export per direction the schema is used in (its `directions` in the IR).
 export type SchemaExports = { readonly [Each in SchemaDirection]?: ExportRef };
 
+// How a validator target builds its exports. In both styles every export is a Standard Schema v1 value: in
+// `class-validator` it is an adapter over a decorated class, so the route table and the runtime read both alike.
+export type ValidatorStyle = "standard-schema" | "class-validator";
+
 // What a validator target provides (ADR 0009 "The provider seam"). Each export is a Standard Schema v1 value.
 export interface ValidatorsDescriptor {
   kind: "validators";
-  style: "standard-schema";
+  style: ValidatorStyle;
   schemas: Readonly<Record<SchemaId, SchemaExports>>;
   operations: Readonly<Record<OperationId, OperationValidatorExports>>;
 }
@@ -43,8 +47,8 @@ export interface OperationTypeExports {
   errors: ExportRef;
 }
 
-// The one list of link kinds: each kind, its descriptor, and through it its styles. The `client` kind and the
-// `class-validator` style wait for the targets that use them.
+// The one list of link kinds: each kind, its descriptor, and through it its styles. The `client` kind waits for
+// the target that uses it.
 export interface DescriptorByKind {
   validators: ValidatorsDescriptor;
   types: TypesDescriptor;
