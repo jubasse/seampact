@@ -11,7 +11,8 @@ import { NO_STORE_DIRECTIVE } from "./reply-headers.js";
 export const MAX_CHECKED_ERROR_BODY_BYTES = 65536;
 
 const NOT_MODIFIED = 304;
-const LIST_SHAPES: ReadonlySet<string> = new Set(["list", "table", "page"]);
+const LIST_SHAPES: ReadonlySet<string> = new Set(["list", "page"]);
+const TABLE_SHAPE = "table";
 const UTF8_KEEPING_BOM = new TextDecoder("utf-8", { ignoreBOM: true });
 
 /** What `onUnexpectedError` receives for a reply outside the contract when no exception is known. */
@@ -162,13 +163,9 @@ export async function successBodyViolation(
 
   if (response === undefined || validator === undefined) return undefined;
 
-  const parsed = parseJson(body);
-  const isList = LIST_SHAPES.has(response.shape);
+  const items = bodyItems(parseJson(body), response.shape);
 
-  if (isList && !Array.isArray(parsed))
-    return `a ${status} ${response.shape} body that is not a JSON array`;
-
-  const items = isList && Array.isArray(parsed) ? parsed : [parsed];
+  if (typeof items === "string") return `a ${status} ${response.shape} body that is not ${items}`;
 
   for (const item of items) {
     const result = await validator["~standard"].validate(item);
@@ -178,6 +175,18 @@ export async function successBodyViolation(
   }
 
   return undefined;
+}
+
+// The items a body holds by its shape: a list or page is a JSON array, a table a JSON object keyed by item id
+// (ADR 0002 section 6), any other shape one item. A body outside its shape gives what it should have been.
+function bodyItems(parsed: unknown, shape: string): readonly unknown[] | string {
+  if (LIST_SHAPES.has(shape)) return Array.isArray(parsed) ? parsed : "a JSON array";
+
+  if (shape === TABLE_SHAPE) {
+    return isPlainObject(parsed) ? Object.values(parsed) : "a JSON object keyed by item id";
+  }
+
+  return [parsed];
 }
 
 function parseJson(body: Uint8Array): unknown {

@@ -77,7 +77,10 @@ export const tasksHandlers = scripted("tasks", {
   },
 
   getTasksBatch(input: Tasks.GetTasksBatchInput): Tasks.GetTasksBatchOutput {
-    return { status: 200, body: input.body.ids.map((taskId) => task(taskId)) };
+    return {
+      status: 200,
+      body: Object.fromEntries(input.body.ids.map((taskId) => [taskId, task(taskId)])),
+    };
   },
 
   searchTasks(_input: Tasks.SearchTasksInput): Tasks.SearchTasksOutput {

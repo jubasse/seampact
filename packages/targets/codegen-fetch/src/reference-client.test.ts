@@ -326,7 +326,8 @@ describe("the generated reference client answers a stub server", () => {
         headers: user(),
         body: { ids: ["a", "b"] },
       }),
-    ).resolves.toMatchObject({ ok: true, status: 200, body: [{ taskId: "a" }, { taskId: "b" }] });
+    ).resolves.toMatchObject({ ok: true, status: 200, body: { a: { taskId: "a" }, b: { taskId: "b" } },
+    });
     await expect(
       call(
         tasks,

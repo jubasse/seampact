@@ -136,7 +136,10 @@ const ROUTES: readonly Route[] = [
     method: "POST",
     pattern: /^\/v1\/channels\/([^/]+)\/tasks\/batch$/,
     access: "user",
-    answer: (call) => ({ status: 200, body: idsOf(call.body).map((taskId) => task(taskId)) }),
+    answer: (call) => ({
+      status: 200,
+      body: Object.fromEntries(idsOf(call.body).map((taskId) => [taskId, task(taskId)])),
+    }),
   },
   {
     operation: "searchTasks",
