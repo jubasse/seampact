@@ -30,8 +30,8 @@ import {
   type ContractRequest,
   type ContractRoute,
   isUnderPrefix,
-  matchContractRoute,
   matchContractPath,
+  matchContractRoute,
   matchesContractPath,
   type ResponsesMode,
 } from "./node-server/contract-route.js";
@@ -44,13 +44,13 @@ import {
 import { handlerReply } from "./node-server/handler-reply.js";
 import { beginIdempotency } from "./node-server/idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./node-server/input-checks.js";
+import { announcesBody, DEFAULT_METHOD, requestTarget } from "./node-server/node-request.js";
 import {
   type BoundaryContext,
   boundaryContext,
   installOutgoingCheck,
   writeContractReply,
 } from "./node-server/outgoing-check.js";
-import { announcesBody, DEFAULT_METHOD, requestTarget } from "./node-server/node-request.js";
 import { type PlatformFixes, transportRefusal } from "./node-server/transport-checks.js";
 
 /** The target options this api was generated with. */

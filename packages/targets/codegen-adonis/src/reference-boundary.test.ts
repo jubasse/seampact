@@ -1,7 +1,5 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { beforeAll, describe, expect, test } from "vitest";
-import { target as adonisTarget } from "./index.js";
 import {
   projectDirectory,
   REFERENCE_COMPILER_OPTIONS,
@@ -9,7 +7,9 @@ import {
   referenceLinks,
   typeErrorsOf,
 } from "@seampact/codegen-core/node-server/test-support";
+import { beforeAll, describe, expect, test } from "vitest";
 import { type AdonisMajor, generateAdonisProject } from "./adonis-major.test-support.js";
+import { target as adonisTarget } from "./index.js";
 
 // Generating and type-checking both apis outruns vitest's default 5 s test limit on a loaded machine.
 const COMPILE_TIMEOUT_MILLISECONDS = 60_000;

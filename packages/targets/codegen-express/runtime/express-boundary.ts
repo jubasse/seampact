@@ -24,6 +24,7 @@ import {
   type ContractRoute,
   matchContractPath,
   matchContractRoute,
+  matchesContractPath,
 } from "./node-server/contract-route.js";
 import {
   frameworkRefusal,
@@ -31,8 +32,18 @@ import {
   logWriteFailure,
   notFoundError,
   type ReportedRequest,
+  respondUnservedMethod,
   respondWithError,
 } from "./node-server/error-reply.js";
+import {
+  type HandlerBindings,
+  handlerResultReply,
+  type RegistrationOptions,
+  type ResponseSettings,
+  registrationProblems,
+  runInputSteps,
+  settingsOf,
+} from "./node-server/handler-map.js";
 import {
   bodyParserRefusal,
   clearEmptyBody,
@@ -43,15 +54,6 @@ import {
   ownBodyParserRefusal,
   reportedRequest,
 } from "./node-server/node-request.js";
-import {
-  type HandlerBindings,
-  handlerResultReply,
-  type RegistrationOptions,
-  type ResponseSettings,
-  registrationProblems,
-  runInputSteps,
-  settingsOf,
-} from "./node-server/handler-map.js";
 import {
   type BoundaryContext,
   boundaryContext,
@@ -177,8 +179,15 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
 
     const matched = matchContractRoute(api, reported.method, reported.path);
 
-    // HEAD runs through the GET route's middleware; the contract serves no HEAD. A request Express routed to
-    // another operation than the raw path names is refused too, so no handler runs under another's checks.
+    // HEAD runs through the GET route's middleware; the contract serves no HEAD.
+    if (matched === undefined && matchesContractPath(api, reported.path)) {
+      respondUnserved(response, hooks, reported);
+
+      return;
+    }
+
+    // A request Express routed to another operation than the raw path names is refused too, so no handler runs
+    // under another's checks.
     if (matched === undefined || matched.route.id !== route.id) {
       respondDetached(response, hooks, route, notFoundError(route), reported);
 
@@ -312,7 +321,7 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
         return;
       }
 
-      respondDetached(response, hooks, route, notFoundError(route), reported);
+      respondUnserved(response, hooks, reported);
     };
   }
 
@@ -360,6 +369,16 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
 
     console.error(cause.message);
     respondDetached(response, hooks, route, unexpectedError(route, cause), reported);
+  }
+
+  function respondUnserved(
+    response: ServerResponse,
+    hooks: BoundaryHooks | undefined,
+    reported: ReportedRequest,
+  ): void {
+    respondUnservedMethod(response, hooks, api, reported).catch((failure: unknown) =>
+      logWriteFailure(api, failure),
+    );
   }
 
   function respondDetached(
@@ -411,6 +430,15 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
     const route = matchContractPath(api, reported.method, reported.path)?.route;
 
     if (route === undefined) return false;
+
+    if (
+      error === undefined &&
+      matchContractRoute(api, reported.method, reported.path) === undefined
+    ) {
+      respondUnserved(response, registered.hooks, reported);
+
+      return true;
+    }
 
     const contractError =
       error === undefined

@@ -3,12 +3,12 @@ import { copyFileSync, mkdirSync } from "node:fs";
 import { request as httpRequest, type IncomingHttpHeaders } from "node:http";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import {
   emitProject,
   problemBody,
   projectDirectory,
 } from "@seampact/codegen-core/node-server/test-support";
+import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { type AdonisMajor, generateAdonisProject } from "./adonis-major.test-support.js";
 
 // Boots AdonisJS 7 and 6 around the generated `tasks` boundary (the app in `test-app/`) and sends requests to it:

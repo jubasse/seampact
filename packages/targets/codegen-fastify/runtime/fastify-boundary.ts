@@ -35,6 +35,7 @@ import {
   headerValue,
   matchContractPath,
   matchContractRoute,
+  matchesContractPath,
 } from "./node-server/contract-route.js";
 import {
   frameworkRefusal,
@@ -42,14 +43,9 @@ import {
   logWriteFailure,
   notFoundError,
   type ReportedRequest,
+  respondUnservedMethod,
   respondWithError,
 } from "./node-server/error-reply.js";
-import {
-  bodyParserError,
-  contractRequest,
-  pathnameOf,
-  reportedRequest,
-} from "./node-server/node-request.js";
 import {
   type HandlerBindings,
   handlerResultReply,
@@ -60,6 +56,12 @@ import {
   settingsOf,
 } from "./node-server/handler-map.js";
 import { validateRequestInput } from "./node-server/input-checks.js";
+import {
+  bodyParserError,
+  contractRequest,
+  pathnameOf,
+  reportedRequest,
+} from "./node-server/node-request.js";
 import {
   type BoundaryContext,
   boundaryContext,
@@ -114,6 +116,9 @@ export function createFastifyBoundary<
   const readBodies = new WeakMap<IncomingMessage, ReadBody>();
   // The hooks of the last plugin registered, for the replies written outside a request context.
   const registered: { hooks?: BoundaryHooks } = {};
+  // The apps' servers the plugin is registered in: one registration per app, so replies outside a request context
+  // report to one set of hooks.
+  const registeredServers = new WeakSet<object>();
 
   const plugin: FastifyPluginAsync<RegistrationOptions<Hooks, Handlers, Operation>> = async (
     fastify,
@@ -127,6 +132,7 @@ export function createFastifyBoundary<
 
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
 
+    registeredServers.add(fastify.server);
     warnUnboundedParams();
     registered.hooks = options.hooks;
     replaceJsonParsers(fastify);
@@ -143,6 +149,13 @@ export function createFastifyBoundary<
       problems.push({
         problem: `Fastify is ${fastify.version}; this target serves Fastify ${SUPPORTED_MAJOR} only`,
         fix: `install fastify ${SUPPORTED_MAJOR}`,
+      });
+    }
+
+    if (registeredServers.has(fastify.server)) {
+      problems.push({
+        problem: `the api '${api.id}' is registered twice in this app`,
+        fix: "register the plugin once per api in an app",
       });
     }
 
@@ -310,9 +323,16 @@ export function createFastifyBoundary<
     const reported = reportedRequest(request.raw);
     const matched = matchContractRoute(api, reported.method, reported.path);
 
-    // HEAD, and a path only Fastify's relaxed routing accepts: the contract does not serve them as sent. Fastify
-    // decodes a percent-encoded static segment, so it can route to another operation than the raw path names: the
-    // path's 404 then, so no handler runs under another operation's access and input.
+    // HEAD runs through the GET route; the contract serves no HEAD.
+    if (matched === undefined && matchesContractPath(api, reported.path)) {
+      respondUnserved(reply, hooks, reported);
+
+      return;
+    }
+
+    // A path only Fastify's relaxed routing accepts: the contract does not serve it as sent. Fastify decodes a
+    // percent-encoded static segment, so it can route to another operation than the raw path names: the path's 404
+    // then, so no handler runs under another operation's access and input.
     if (matched === undefined || matched.route.id !== route.id) {
       writeDetached(reply, hooks, route, notFoundError(route), reported);
 
@@ -502,6 +522,16 @@ export function createFastifyBoundary<
     );
   }
 
+  function respondUnserved(
+    reply: FastifyReply,
+    hooks: BoundaryHooks | undefined,
+    reported: ReportedRequest,
+  ): void {
+    respondUnservedMethod(hijackForBoundary(reply), hooks, api, reported).catch(
+      (failure: unknown) => logWriteFailure(api, failure),
+    );
+  }
+
   function writeDetached(
     reply: FastifyReply,
     hooks: BoundaryHooks | undefined,
@@ -542,6 +572,15 @@ export function createFastifyBoundary<
     const matched = matchContractPath(api, reported.method, reported.path);
 
     if (matched === undefined) return false;
+
+    if (
+      error === undefined &&
+      matchContractRoute(api, reported.method, reported.path) === undefined
+    ) {
+      respondUnserved(reply, registered.hooks, reported);
+
+      return true;
+    }
 
     if (error === undefined) {
       writeDetached(reply, registered.hooks, matched.route, notFoundError(matched.route), reported);

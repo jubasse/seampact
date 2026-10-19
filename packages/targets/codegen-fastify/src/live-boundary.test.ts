@@ -49,6 +49,7 @@ interface ReferenceAppModule {
   readonly hooks: object;
   resetScenario(): void;
   bootWith(registration: object, instanceOptions?: object, prefix?: string): Promise<void>;
+  bootTwice(registration: object): Promise<void>;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
 }
 
@@ -240,6 +241,17 @@ describe("the request body", () => {
 });
 
 describe("requests the contract does not serve as sent", () => {
+  test.each(["HEAD", "DELETE", "OPTIONS"])(
+    "%s on a path that declares no 404 answers a bare 404, not a failure",
+    async (method) => {
+      const reply = await send(method, "/v1/health");
+
+      expect(reply.status).toBe(404);
+      expect(reply.text).toBe("");
+      expect(app.calls.unexpected).toEqual([]);
+    },
+  );
+
   test.each([
     ["HEAD on a GET route", "HEAD"],
     ["a method the path does not serve", "PUT"],
@@ -333,5 +345,13 @@ describe("the boot check", () => {
     await expect(
       app.bootWith({ handlers, hooks: app.hooks, operations: { nothing: {} } }, {}, "/v1"),
     ).rejects.toThrow(/TasksEndpoints[\s\S]*'operations' names 'nothing'[\s\S]*prefix '\/v1'/);
+  });
+
+  test("a second registration of the api in one app stops the boot", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    await expect(app.bootTwice({ handlers: app.handlers, hooks: app.hooks })).rejects.toThrow(
+      /registered twice/,
+    );
   });
 });
