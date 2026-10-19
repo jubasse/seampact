@@ -75,6 +75,7 @@ const task = (taskId: string, title = "Write the slice test") => ({
 });
 
 const PAGE_QUERY_KEYS = ["cursor", "limit"];
+const SORT_VALUES = ["createdAt", "-createdAt"];
 const LIST_TASKS_QUERY_KEYS = [...PAGE_QUERY_KEYS, "sort"];
 const API_ID = "tasks";
 const HTTP_ERROR_FLOOR = 400;
@@ -276,6 +277,17 @@ async function handle(
 
   if (undeclaredKey !== undefined) {
     send(response, schemaInvalid(`/query/${undeclaredKey}`, "additionalProperties"));
+
+    return;
+  }
+
+  const undeclaredSort = (call.url.searchParams.get("sort") ?? "")
+    .split(",")
+    .filter((value) => value !== "")
+    .find((value) => !SORT_VALUES.includes(value));
+
+  if (undeclaredSort !== undefined) {
+    send(response, schemaInvalid("/query/sort", "pattern"));
 
     return;
   }
