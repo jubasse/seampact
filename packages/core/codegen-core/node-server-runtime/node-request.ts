@@ -4,8 +4,7 @@
 // Copied into the generated tree as is.
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
-  ContractError,
-  codeOfStatus,
+  type ContractError,
   isPlainObject,
   PAYLOAD_TOO_LARGE_ROLE,
   roleError,
@@ -17,7 +16,7 @@ import {
   type ContractRoute,
   matchContractRoute,
 } from "./contract-route.js";
-import type { ReportedRequest } from "./error-reply.js";
+import { clientStatusError, type ReportedRequest } from "./error-reply.js";
 
 const PAYLOAD_TOO_LARGE = 413;
 const FIRST_CLIENT_ERROR_STATUS = 400;
@@ -186,9 +185,7 @@ export function bodyParserError(
 ): ContractError {
   if (status === PAYLOAD_TOO_LARGE) return payloadTooLargeError(route, exception);
 
-  const code = codeOfStatus(route, status);
-
-  return code === undefined ? unexpectedError(route, exception) : new ContractError(code);
+  return clientStatusError(route, status, exception);
 }
 
 // A parser limit below the route's would refuse bodies the contract accepts: a setup error, not the client's.

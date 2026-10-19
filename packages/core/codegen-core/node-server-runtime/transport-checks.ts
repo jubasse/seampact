@@ -9,6 +9,7 @@ import {
 import { type ContractRequest, type ContractRoute, headerValue } from "./contract-route.js";
 
 const UNSUPPORTED_MEDIA_ROLE = "unsupportedMediaType";
+const CHARSET_PARAMETER = "charset=";
 
 /** The content coding of a body sent as is. */
 export const IDENTITY_ENCODING = "identity";
@@ -116,4 +117,15 @@ function isMediaOf(contentType: string, media: string): boolean {
   const essence = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
 
   return essence === media;
+}
+
+/** The lowercase `charset` parameter of a Content-Type value, without quotes; undefined when it has none. */
+export function charsetOf(contentType: string | null | undefined): string | undefined {
+  const parameter = contentType
+    ?.split(";")
+    .slice(1)
+    .map((part) => part.trim().toLowerCase())
+    .find((part) => part.startsWith(CHARSET_PARAMETER));
+
+  return parameter?.slice(CHARSET_PARAMETER.length).replace(/^"|"$/g, "");
 }

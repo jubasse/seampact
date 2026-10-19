@@ -1,18 +1,15 @@
+import type { Refusal } from "@seampact/codegen-core";
 import {
-  below,
-  operationLocation,
-  type Refusal,
-  refuseNotGeneratedYet,
-} from "@seampact/codegen-core";
-import { handlerMapDeclarations, type NodeServerOptions } from "@seampact/codegen-core/node-server";
+  handlerMapDeclarations,
+  mixedSegmentRefusals,
+  type NodeServerOptions,
+} from "@seampact/codegen-core/node-server";
 import type { ContractIR } from "@seampact/spec/ir";
 
 // The `fastify` module of one api: the plugin built from its route table and handler bindings, and the fixed
 // exports of ADR 0017 "Placement". No export is named by an operation.
 
 const FASTIFY_MODULE = "fastify";
-const PLACEHOLDER = /\{[^}]+\}/;
-const WHOLE_PLACEHOLDER = /^\{[^}]+\}$/;
 
 export function fastifyModuleSource(
   ir: ContractIR,
@@ -42,22 +39,4 @@ export function fastifyModuleSource(
     "export const isContractRoute = boundary.isContractRoute;",
     "",
   ].join("\n");
-}
-
-// find-my-way reads a param up to the next `/`, so `{id}:archive` would be one param named `p1::archive`: a path
-// segment that mixes a placeholder with literal text is refused until a find-my-way form is proven (A47).
-function mixedSegmentRefusals(ir: ContractIR): Refusal[] {
-  return ir.operations.flatMap((operation, index) =>
-    operation.path
-      .split("/")
-      .some((segment) => PLACEHOLDER.test(segment) && !WHOLE_PLACEHOLDER.test(segment))
-      ? [
-          refuseNotGeneratedYet(
-            "path.segment.mixed",
-            "A path segment that mixes a placeholder with literal text, such as '{id}:archive',",
-            below(operationLocation(index, operation.id), "path"),
-          ),
-        ]
-      : [],
-  );
 }

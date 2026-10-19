@@ -4,23 +4,29 @@
 import { constants } from "node:buffer";
 import type { ServerResponse } from "node:http";
 import { brotliDecompressSync, gunzipSync, inflateSync } from "node:zlib";
-import { type BoundaryContext, unexpectedContext } from "./boundary-context.js";
-import { reportUnexpected } from "./boundary-hooks.js";
+import type { BoundaryContext } from "./boundary-context.js";
 import { type ContractReply, renderContractReply, unexpectedError } from "./contract-error.js";
 import { settleIdempotency } from "./idempotency.js";
 import { applyReplyHeaders } from "./node-reply.js";
+import {
+  errorBodyViolation,
+  type HoldReason,
+  MAX_CHECKED_ERROR_BODY_BYTES,
+  oversizedDecodedBodyViolation,
+  oversizedErrorBodyViolation,
+  reportViolation,
+  statusVerdict,
+  successBodyViolation,
+  undecodableBodyViolation,
+  unreadableEncodingViolation,
+  warnViolation,
+} from "./outgoing-verdict.js";
 import {
   CONTENT_ENCODING_HEADER,
   CONTENT_LENGTH_HEADER,
   CONTENT_TYPE_HEADER,
   ETAG_HEADER,
-  errorBodyViolation,
-  type HoldReason,
-  MAX_CHECKED_ERROR_BODY_BYTES,
-  statusVerdict,
-  successBodyViolation,
-  type ViolatingReply,
-} from "./outgoing-verdict.js";
+} from "./reply-headers.js";
 import { IDENTITY_ENCODING } from "./transport-checks.js";
 
 const DECODERS: Readonly<
@@ -51,11 +57,7 @@ export function installOutgoingCheck(
   // Under `warn` the violation is logged once and the caller lets the reply go out; under `strict` it is replaced.
   const violation = (reason: string): void => {
     if (context.mode === "warn") {
-      if (!warned) {
-        console.warn(
-          `seampact: contract violation on operation '${context.route.id}': ${reason}; sent as written (responses: warn).`,
-        );
-      }
+      if (!warned) warnViolation(context, reason);
 
       warned = true;
 
@@ -63,7 +65,7 @@ export function installOutgoingCheck(
     }
 
     phase = "replaced";
-    void reportViolation(reason);
+    void reportViolation(context, request, reason, recordedReply(response, held));
 
     const reply = renderContractReply(
       context.api,
@@ -78,25 +80,6 @@ export function installOutgoingCheck(
     ]);
     originalWriteHead(reply.status);
     originalEnd(Buffer.from(reply.body));
-  };
-
-  const reportViolation = async (reason: string): Promise<void> => {
-    const where = unexpectedContext(context, request.method, request.path);
-    const reported: unknown =
-      context.unclaimedException ??
-      ({
-        ...recordedReply(response, held),
-        violation: reason,
-      } satisfies ViolatingReply);
-
-    if (context.hooks.onUnexpectedError === undefined) {
-      console.error(
-        `seampact: contract violation on operation '${context.route.id}': ${reason}; replaced by a 500 (responses: strict).`,
-        context.unclaimedException ?? "",
-      );
-    }
-
-    await reportUnexpected(context.hooks, reported, where);
   };
 
   const settle = async (reply: ContractReply): Promise<void> => {
@@ -235,7 +218,7 @@ export function installOutgoingCheck(
       }
 
       if (holdReason === "error" && heldBytes > MAX_CHECKED_ERROR_BODY_BYTES) {
-        violation(`an error body over ${MAX_CHECKED_ERROR_BODY_BYTES} bytes`);
+        violation(oversizedErrorBodyViolation(MAX_CHECKED_ERROR_BODY_BYTES));
 
         if (phase === "holding") release();
       }
@@ -344,15 +327,14 @@ function decodedBody(response: ServerResponse, body: Buffer, maxBytes: number): 
 
   if (encoding === IDENTITY_ENCODING) return body;
 
-  if (decode === undefined)
-    return `a body in the content encoding '${encoding}', which the check cannot read`;
+  if (decode === undefined) return unreadableEncodingViolation(encoding);
 
   try {
     return decode(body, { maxOutputLength: maxBytes });
   } catch (error) {
     return error instanceof RangeError
-      ? `an error body over ${maxBytes} bytes once decoded`
-      : `a body that does not decode as '${encoding}'`;
+      ? oversizedDecodedBodyViolation(maxBytes)
+      : undecodableBodyViolation(encoding);
   }
 }
 

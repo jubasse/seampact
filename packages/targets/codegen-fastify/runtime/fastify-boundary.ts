@@ -74,6 +74,7 @@ import {
 } from "./node-server/node-request.js";
 import {
   bodySizeRefusal,
+  charsetOf,
   IDENTITY_ENCODING,
   mediaTypeRefusal,
   type PlatformFixes,
@@ -744,16 +745,6 @@ function isRouterError(error: unknown): boolean {
   const code: unknown = error instanceof Error ? Reflect.get(error, "code") : undefined;
 
   return typeof code === "string" && ROUTER_ERROR_CODES.includes(code);
-}
-
-function charsetOf(contentType: string | undefined): string | undefined {
-  const parameter = contentType
-    ?.split(";")
-    .slice(1)
-    .map((part) => part.trim().toLowerCase())
-    .find((part) => part.startsWith("charset="));
-
-  return parameter?.slice("charset=".length).replace(/^"|"$/g, "");
 }
 
 // Fastify's syntax with positional param names, a literal `:` doubled; the generator refuses a segment that mixes a

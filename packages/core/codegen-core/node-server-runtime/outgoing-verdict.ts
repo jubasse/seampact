@@ -1,24 +1,13 @@
 // The verdict rules of the outgoing response check (ADR 0016 "The outgoing response check"), shared by every server
 // profile: whoever writes the reply, an undeclared status, a framework ETag or 304, or an error body outside the
 // api's format or codes is a violation, handled by the `responses` mode. Copied into the generated tree as is.
-import type { BoundaryContext } from "./boundary-context.js";
+import { type BoundaryContext, unexpectedContext } from "./boundary-context.js";
+import { reportUnexpected } from "./boundary-hooks.js";
 import { type ContractReply, isPlainObject } from "./contract-error.js";
+import type { ReportedRequest } from "./error-reply.js";
 
 /** The longest error body the check holds to read its code; a longer one is a violation. */
 export const MAX_CHECKED_ERROR_BODY_BYTES = 65536;
-
-export const ETAG_HEADER = "etag";
-export const VARY_HEADER = "vary";
-export const CONTENT_LENGTH_HEADER = "content-length";
-export const CONTENT_ENCODING_HEADER = "content-encoding";
-export const CONTENT_TYPE_HEADER = "content-type";
-// Headers that describe the body: the boundary replaces them, and keeps every other header the app set.
-export const BODY_HEADERS: readonly string[] = [
-  CONTENT_TYPE_HEADER,
-  CONTENT_LENGTH_HEADER,
-  CONTENT_ENCODING_HEADER,
-  ETAG_HEADER,
-];
 
 const NOT_MODIFIED = 304;
 const LIST_SHAPES: ReadonlySet<string> = new Set(["list", "table", "page"]);
@@ -61,34 +50,55 @@ export function statusVerdict(context: BoundaryContext, status: number): StatusV
   return { kind: "violation", reason: `the undeclared status ${status}` };
 }
 
-/** The reply's headers grouped by lowercase name, in their order. */
-export function groupedHeaders(headers: ContractReply["headers"]): Map<string, string[]> {
-  const grouped = new Map<string, string[]>();
-
-  for (const [name, value] of headers) {
-    const lowerName = name.toLowerCase();
-
-    grouped.set(lowerName, [...(grouped.get(lowerName) ?? []), value]);
-  }
-
-  return grouped;
+/** Logs a violation that goes out as written under `responses: warn`; the check logs it once per reply. */
+export function warnViolation(context: BoundaryContext, reason: string): void {
+  console.warn(
+    `seampact: contract violation on operation '${context.route.id}': ${reason}; sent as written (responses: warn).`,
+  );
 }
 
-/** The `Vary` names already set followed by the added ones, each once whatever its case. */
-export function mergedVary(current: readonly string[], added: readonly string[]): string {
-  const names: string[] = [];
+/**
+ * Reports a violation replaced by a 500 under `responses: strict`: the kept exception, else the violating reply, to
+ * `onUnexpectedError`, or to the log when no hook is registered.
+ */
+export async function reportViolation(
+  context: BoundaryContext,
+  request: ReportedRequest,
+  reason: string,
+  reply: ContractReply,
+): Promise<void> {
+  const where = unexpectedContext(context, request.method, request.path);
+  const reported: unknown =
+    context.unclaimedException ?? ({ ...reply, violation: reason } satisfies ViolatingReply);
 
-  for (const value of [...current, ...added]) {
-    for (const name of value.split(",")) {
-      const trimmed = name.trim();
-
-      if (trimmed !== "" && !names.some((known) => known.toLowerCase() === trimmed.toLowerCase())) {
-        names.push(trimmed);
-      }
-    }
+  if (context.hooks.onUnexpectedError === undefined) {
+    console.error(
+      `seampact: contract violation on operation '${context.route.id}': ${reason}; replaced by a 500 (responses: strict).`,
+      context.unclaimedException ?? "",
+    );
   }
 
-  return names.join(", ");
+  await reportUnexpected(context.hooks, reported, where);
+}
+
+/** The violation of an error body longer than the check holds. */
+export function oversizedErrorBodyViolation(maxBytes: number): string {
+  return `an error body over ${maxBytes} bytes`;
+}
+
+/** The violation of a held body longer than the check holds once decoded. */
+export function oversizedDecodedBodyViolation(maxBytes: number): string {
+  return `an error body over ${maxBytes} bytes once decoded`;
+}
+
+/** The violation of a held body in a content coding the check has no decoder for. */
+export function unreadableEncodingViolation(encoding: string): string {
+  return `a body in the content encoding '${encoding}', which the check cannot read`;
+}
+
+/** The violation of a held body its declared content coding does not decode. */
+export function undecodableBodyViolation(encoding: string): string {
+  return `a body that does not decode as '${encoding}'`;
 }
 
 /** The violation of a held error body, from its status and media type, or undefined when it is in the contract. */
