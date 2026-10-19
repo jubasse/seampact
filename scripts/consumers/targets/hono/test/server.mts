@@ -9,6 +9,7 @@ import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import * as TasksHono from "../generated/server/tasks/index.js";
 import * as TasksServiceHono from "../generated/server/tasksService/index.js";
+import { withoutMissingHandler } from "../src/boot-variant.mjs";
 import { tasksHandlers, tasksServiceHandlers } from "../src/handlers.mjs";
 import { tasksHooks, tasksServiceHooks } from "../src/hooks.mjs";
 import {
@@ -51,14 +52,14 @@ export async function startServer(): Promise<RunningServer> {
   app.get(HOOK_CALLS_ROUTE, () => controlResponse(hookCallsReply()));
   app.get(LOG_LINES_ROUTE, () => controlResponse(logLinesReply()));
   TasksHono.registerRoutes(app, {
-    handlers: {
+    handlers: withoutMissingHandler({
       AppEndpoints: tasksHandlers,
       ChannelsEndpoints: tasksHandlers,
       TasksEndpoints: tasksHandlers,
       DraftsEndpoints: tasksHandlers,
       PreferencesEndpoints: tasksHandlers,
       HooksEndpoints: tasksHandlers,
-    },
+    }),
     hooks: tasksHooks(),
     clientAddress,
   });

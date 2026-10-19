@@ -4,7 +4,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { HOOK_CALLS_ROUTE, readLogLines, SCRIPT_ROUTE } from "./control-routes.js";
-import { parseSuiteCase, type SuiteCase } from "./suite-case.js";
+import { parseSuiteCase, type SuiteCase, type SuiteProfile } from "./suite-case.js";
 import { SUITE_REPORT_FORMAT } from "./suite-report.js";
 import { runSuite, type SuiteCredentials } from "./suite-runner.js";
 
@@ -95,14 +95,21 @@ function signatureAgeSeconds(request: IncomingMessage): number {
   return Math.floor(Date.now() / 1000) - Number(timestamp);
 }
 
+const TARGET = "double";
+
 function suiteCase(id: string, value: Record<string, unknown>): SuiteCase {
   return parseSuiteCase({ id, title: id, checks: [], profiles: ["default"], ...value }, id);
 }
 
-async function run(cases: SuiteCase[], refusals?: Record<string, string>) {
+async function run(
+  cases: SuiteCase[],
+  refusals?: Record<string, string>,
+  profile: SuiteProfile = "default",
+) {
   return runSuite({
     baseUrl,
-    profile: "default",
+    target: TARGET,
+    profile,
     credentials: CREDENTIALS,
     cases,
     ...(refusals === undefined ? {} : { refusals }),
@@ -284,7 +291,29 @@ describe("runSuite", () => {
     ]);
 
     expect(report.format).toBe(SUITE_REPORT_FORMAT);
+    expect(report.target).toBe(TARGET);
     expect(report.checks).toEqual({ "CHK-003": { outcome: "failed", cases: ["good", "bad"] } });
+  });
+
+  test("the hand-written profile proves its profile check with every case of the run", async () => {
+    const step = { request: { method: "GET", path: "/items" }, expect: { status: 200 } };
+    const handWritten = (id: string, checks: string[]) =>
+      parseSuiteCase({ id, title: id, checks, profiles: ["hand-written"], steps: [step] }, id);
+    const report = await run(
+      [handWritten("a", ["CHK-018"]), handWritten("b", [])],
+      { b: "a target bug" },
+      "hand-written",
+    );
+
+    expect(report.profile).toBe("hand-written");
+    expect(report.checks).toEqual({
+      "CHK-018": { outcome: "passed", cases: ["a"] },
+      "CHK-098": { outcome: "refused", cases: ["a", "b"] },
+    });
+  });
+
+  test("refuses the boot profile, whose cases send no request", async () => {
+    await expect(run([], undefined, "boot")).rejects.toThrow("runBootSuite");
   });
 
   test("refuses a refusal for a case the run does not hold", async () => {

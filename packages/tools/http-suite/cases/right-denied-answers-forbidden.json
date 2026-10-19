@@ -2,7 +2,7 @@
   "id": "right-denied-answers-forbidden",
   "title": "A roles right the decider denies answers 403 api.forbidden",
   "checks": ["CHK-018"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "script": {
     "decisions": [
       {

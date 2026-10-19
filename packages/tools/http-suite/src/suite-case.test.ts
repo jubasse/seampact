@@ -15,6 +15,56 @@ function minimalCase(overrides: Record<string, unknown> = {}): Record<string, un
   };
 }
 
+function bootCase(boot: Record<string, unknown>, overrides: Record<string, unknown> = {}) {
+  return {
+    id: "missing-decider-refused",
+    title: "Refused",
+    checks: ["CHK-062"],
+    profiles: ["boot"],
+    boot,
+    ...overrides,
+  };
+}
+
+describe("parseSuiteCase, boot cases", () => {
+  test("reads a refusal with its diagnostic and a start, both without steps", () => {
+    const refusal = { variant: "missing-decider", outcome: "refuses", diagnostic: ["no decider"] };
+
+    expect(parseSuiteCase(bootCase(refusal), SOURCE)).toMatchObject({ steps: [], boot: refusal });
+    expect(
+      parseSuiteCase(
+        bootCase({ variant: "allow-listed-framework-route", outcome: "starts" }),
+        SOURCE,
+      ).boot,
+    ).toEqual({ variant: "allow-listed-framework-route", outcome: "starts" });
+  });
+
+  test.each([
+    [bootCase({ variant: "missing-decider", outcome: "refuses" }), "/boot/diagnostic"],
+    [
+      bootCase({ variant: "missing-decider", outcome: "refuses", diagnostic: [] }),
+      "/boot/diagnostic",
+    ],
+    [
+      bootCase({ variant: "missing-decider", outcome: "starts", diagnostic: ["x"] }),
+      "/boot/diagnostic",
+    ],
+    [bootCase({ variant: "missing-cache", outcome: "starts" }), "/boot/variant"],
+    [bootCase({ variant: "missing-decider", outcome: "hangs" }), "/boot/outcome"],
+    [
+      bootCase(
+        { variant: "missing-decider", outcome: "starts" },
+        { profiles: ["boot", "default"] },
+      ),
+      "/profiles",
+    ],
+    [bootCase({ variant: "missing-decider", outcome: "starts" }, { steps: [] }), "/steps"],
+    [minimalCase({ boot: { variant: "missing-decider", outcome: "starts" } }), "/boot"],
+  ])("refuses a malformed boot case %#", (value, pointer) => {
+    expect(() => parseSuiteCase(value, SOURCE)).toThrow(`at '${pointer}'`);
+  });
+});
+
 describe("parseSuiteCase", () => {
   test("reads a case and copies its JSON values", () => {
     const body = { title: "Write" };

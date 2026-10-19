@@ -6,6 +6,14 @@ import type { SuiteProfile } from "./suite-case.js";
 
 export const SUITE_REPORT_FORMAT = "seampact-http-suite-report/1";
 
+/**
+ * The checklist ids a whole profile proves rather than one case: the `hand-written` profile proves that the target
+ * passes the suite with hand-written hooks and no adapter (CHK-098), so every case of its run counts for the id.
+ */
+export const PROFILE_CHECKS: Readonly<Partial<Record<SuiteProfile, readonly string[]>>> = {
+  "hand-written": ["CHK-098"],
+};
+
 /** `refused`: the run did not send the case, for the reason the sample app gave by case id. */
 export type CaseOutcome = "passed" | "failed" | "refused";
 
@@ -26,25 +34,31 @@ export interface CheckResult {
   readonly cases: readonly string[];
 }
 
-export interface SuiteReport {
-  readonly format: typeof SUITE_REPORT_FORMAT;
+/** The run a report describes: the server target the sample app was built with, and the profile. */
+export interface SuiteRun {
+  readonly target: string;
   readonly profile: SuiteProfile;
+}
+
+export interface SuiteReport extends SuiteRun {
+  readonly format: typeof SUITE_REPORT_FORMAT;
   readonly summary: Readonly<Record<CaseOutcome, number>>;
   readonly cases: readonly CaseResult[];
   readonly checks: Readonly<Record<string, CheckResult>>;
 }
 
-export function suiteReportOf(profile: SuiteProfile, cases: readonly CaseResult[]): SuiteReport {
+export function suiteReportOf(run: SuiteRun, cases: readonly CaseResult[]): SuiteReport {
   return {
     format: SUITE_REPORT_FORMAT,
-    profile,
+    target: run.target,
+    profile: run.profile,
     summary: {
       passed: countOutcome(cases, "passed"),
       failed: countOutcome(cases, "failed"),
       refused: countOutcome(cases, "refused"),
     },
     cases: cases.map((result) => structuredClone(result)),
-    checks: checkResultsOf(cases),
+    checks: checkResultsOf(run.profile, cases),
   };
 }
 
@@ -57,13 +71,20 @@ function countOutcome(cases: readonly CaseResult[], outcome: CaseOutcome): numbe
   return cases.filter((result) => result.outcome === outcome).length;
 }
 
-function checkResultsOf(cases: readonly CaseResult[]): Record<string, CheckResult> {
+function checkResultsOf(
+  profile: SuiteProfile,
+  cases: readonly CaseResult[],
+): Record<string, CheckResult> {
   const casesByCheck = new Map<string, CaseResult[]>();
 
   for (const result of cases) {
     for (const check of result.checks) {
       casesByCheck.set(check, [...(casesByCheck.get(check) ?? []), result]);
     }
+  }
+
+  for (const check of PROFILE_CHECKS[profile] ?? []) {
+    if (cases.length > 0) casesByCheck.set(check, [...cases]);
   }
 
   return Object.fromEntries(

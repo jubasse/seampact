@@ -2,7 +2,7 @@
   "id": "cookie-write-without-csrf-header",
   "title": "403 for a cookie write without its CSRF header",
   "checks": ["CHK-007"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "steps": [
     {
       "request": {

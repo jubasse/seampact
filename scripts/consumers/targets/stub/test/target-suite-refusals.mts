@@ -36,4 +36,9 @@ export const TARGET_SUITE_REFUSALS: Readonly<Record<string, string>> = {
   "undeclared-status-answers-internal-error": STUB_REASON,
   "unknown-body-key-refused": STUB_REASON,
   "unknown-enum-value-refused": STUB_REASON,
+  "overridden-right-reaches-its-own-hook": STUB_REASON,
+  "missing-authenticate-hook-fails-boot": STUB_REASON,
+  "missing-decider-fails-boot": STUB_REASON,
+  "missing-scope-resolver-fails-boot": STUB_REASON,
+  "missing-handler-fails-boot": STUB_REASON,
 };

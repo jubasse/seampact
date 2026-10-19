@@ -2,7 +2,7 @@
   "id": "recent-auth-denied",
   "title": "A recentAuth rule the decider denies answers 401 api.reauthentication_required",
   "checks": ["CHK-016"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "script": {
     "decisions": [
       {

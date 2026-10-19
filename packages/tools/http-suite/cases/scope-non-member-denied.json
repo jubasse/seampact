@@ -2,7 +2,7 @@
   "id": "scope-non-member-denied",
   "title": "A channel the scope resolver denies answers its declared 404",
   "checks": ["CHK-093"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "script": {
     "scopes": {
       "channel": {

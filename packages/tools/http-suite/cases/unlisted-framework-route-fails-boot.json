@@ -1,0 +1,11 @@
+{
+  "id": "unlisted-framework-route-fails-boot",
+  "title": "The app serving a framework route its config does not allow-list refuses to start",
+  "checks": ["CHK-062", "CHK-063"],
+  "profiles": ["boot"],
+  "boot": {
+    "variant": "unlisted-framework-route",
+    "outcome": "refuses",
+    "diagnostic": ["cannot start", "/v1/unlisted"]
+  }
+}

@@ -1,4 +1,5 @@
 // Runs cases against a sample app at a base URL, one step after another, and answers the suite report.
+import { BOOT_PROFILE } from "./boot-variant.js";
 import { loadScript, readHookCalls } from "./control-routes.js";
 import { signRequestBody } from "./request-signature.js";
 import { checkResponse, type ReceivedResponse, readPointer } from "./response-check.js";
@@ -23,6 +24,8 @@ export interface SuiteCredentials {
 
 export interface SuiteRunOptions {
   readonly baseUrl: string;
+  /** The server target the sample app was built with, as the report names it. */
+  readonly target: string;
   readonly profile: SuiteProfile;
   readonly credentials: SuiteCredentials;
   readonly cases: readonly SuiteCase[];
@@ -44,7 +47,13 @@ interface RunContext {
 export async function runSuite(options: SuiteRunOptions): Promise<SuiteReport> {
   const refusals = options.refusals ?? {};
 
-  refuseForeignCases(options);
+  if (options.profile === BOOT_PROFILE) {
+    throw new Error(
+      "http-suite: the boot profile sends no request; run its cases with runBootSuite",
+    );
+  }
+
+  refuseForeignCases(options.cases, options.profile);
   refuseUnknownRefusals(options.cases, refusals);
 
   const context: RunContext = {
@@ -62,10 +71,11 @@ export async function runSuite(options: SuiteRunOptions): Promise<SuiteReport> {
     );
   }
 
-  return suiteReportOf(options.profile, results);
+  return suiteReportOf({ target: options.target, profile: options.profile }, results);
 }
 
-function refuseForeignCases({ cases, profile }: SuiteRunOptions): void {
+/** Throws when a case does not run in `profile`. */
+export function refuseForeignCases(cases: readonly SuiteCase[], profile: SuiteProfile): void {
   const foreign = cases.filter((suiteCase) => !suiteCase.profiles.includes(profile));
 
   if (foreign.length > 0) {
@@ -75,7 +85,8 @@ function refuseForeignCases({ cases, profile }: SuiteRunOptions): void {
   }
 }
 
-function refuseUnknownRefusals(
+/** Throws when a refusal names a case the run does not hold, so a stale refusal is removed. */
+export function refuseUnknownRefusals(
   cases: readonly SuiteCase[],
   refusals: Readonly<Record<string, string>>,
 ): void {
@@ -99,11 +110,11 @@ function variablesOf(credentials: SuiteCredentials): Record<string, JsonValue> {
   };
 }
 
-function refusedResult(suiteCase: SuiteCase, reason: string): CaseResult {
+export function refusedResult(suiteCase: SuiteCase, reason: string): CaseResult {
   return { ...caseHeader(suiteCase), outcome: "refused", failures: [], reason };
 }
 
-function caseHeader(suiteCase: SuiteCase): Pick<CaseResult, "id" | "title" | "checks"> {
+export function caseHeader(suiteCase: SuiteCase): Pick<CaseResult, "id" | "title" | "checks"> {
   return { id: suiteCase.id, title: suiteCase.title, checks: [...suiteCase.checks] };
 }
 

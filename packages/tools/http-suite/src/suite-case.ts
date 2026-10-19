@@ -1,4 +1,6 @@
 // The case script format: one JSON file per case, read and checked here before any request is sent.
+
+import { BOOT_PROFILE, BOOT_VARIANTS, type BootVariant, isBootVariant } from "./boot-variant.js";
 import {
   arrayAt,
   type JsonReader,
@@ -99,10 +101,23 @@ export interface SuiteStep {
 }
 
 /**
+ * What a boot case expects of the sample app started with its variant: it `starts`, or it `refuses` to start and
+ * its output holds each `diagnostic` text.
+ */
+export type BootExpectation =
+  | { readonly variant: BootVariant; readonly outcome: "starts" }
+  | {
+      readonly variant: BootVariant;
+      readonly outcome: "refuses";
+      readonly diagnostic: readonly string[];
+    };
+
+/**
  * A case: its id is its file name, `checks` the checklist ids it proves, `profiles` the profiles that run it.
  * `script` is loaded through the control routes before the first step, an empty script when the case has none, so
  * every case starts from the doubles' own answers and no recorded call; `hookCalls` is then the exact list of hook
- * calls the sample app must have recorded once every step has run.
+ * calls the sample app must have recorded once every step has run. A boot case runs in the `boot` profile only and
+ * holds `boot` in place of `steps`, `script` and `hookCalls`; its `steps` are empty.
  */
 export interface SuiteCase {
   readonly id: string;
@@ -112,6 +127,7 @@ export interface SuiteCase {
   readonly script?: SampleAppScript;
   readonly steps: readonly SuiteStep[];
   readonly hookCalls?: readonly RecordedHookCall[];
+  readonly boot?: BootExpectation;
 }
 
 /** One hook call the sample app records: the hook's name and the operation it ran for. */
@@ -137,7 +153,9 @@ export const CREDENTIAL_VARIABLES = [
   "foreignServiceJwt",
 ];
 
-const CASE_MEMBERS = ["id", "title", "checks", "profiles", "script", "steps", "hookCalls"];
+const CASE_MEMBERS = ["id", "title", "checks", "profiles", "script", "steps", "hookCalls", "boot"];
+const HTTP_CASE_MEMBERS = ["script", "steps", "hookCalls"];
+const BOOT_MEMBERS = ["variant", "outcome", "diagnostic"];
 const STEP_MEMBERS = ["title", "request", "capture", "expect"];
 const REQUEST_MEMBERS = ["method", "path", "query", "headers", "body", "bodyText", "sign"];
 const SIGN_MEMBERS = ["scheme", "header", "secret", "ageSeconds"];
@@ -163,7 +181,21 @@ export function parseSuiteCase(value: unknown, source: string): SuiteCase {
     },
   };
   const object = objectAt(reader, value, "", CASE_MEMBERS);
-  const id = patternAt(reader, object.id, "/id", CASE_ID);
+  const header = {
+    id: patternAt(reader, object.id, "/id", CASE_ID),
+    title: stringAt(reader, object.title, "/title"),
+    checks: arrayAt(reader, object.checks, "/checks").map((check, index) =>
+      patternAt(reader, check, `/checks/${index}`, CHECK_ID),
+    ),
+    profiles: readProfiles(reader, object.profiles),
+  };
+
+  if (header.profiles.includes(BOOT_PROFILE)) return readBootCase(reader, object, header);
+
+  if (object.boot !== undefined) {
+    reader.fail("/boot", "a case with `boot` runs in the `boot` profile only");
+  }
+
   const steps = arrayAt(reader, object.steps, "/steps").map((step, index) =>
     readStep(reader, step, `/steps/${index}`),
   );
@@ -171,12 +203,7 @@ export function parseSuiteCase(value: unknown, source: string): SuiteCase {
   if (steps.length === 0) reader.fail("/steps", "a case has at least one step");
 
   return {
-    id,
-    title: stringAt(reader, object.title, "/title"),
-    checks: arrayAt(reader, object.checks, "/checks").map((check, index) =>
-      patternAt(reader, check, `/checks/${index}`, CHECK_ID),
-    ),
-    profiles: readProfiles(reader, object.profiles),
+    ...header,
     ...(object.script === undefined
       ? {}
       : { script: readSampleAppScript(reader, object.script, "/script") }),
@@ -185,6 +212,62 @@ export function parseSuiteCase(value: unknown, source: string): SuiteCase {
       ? {}
       : { hookCalls: readHookCalls(reader, object.hookCalls) }),
   };
+}
+
+type CaseHeader = Pick<SuiteCase, "id" | "title" | "checks" | "profiles">;
+
+// The boot profile starts the sample app and sends no request, so a boot case is in no other profile.
+function readBootCase(
+  reader: JsonReader,
+  object: Readonly<Record<string, unknown>>,
+  header: CaseHeader,
+): SuiteCase {
+  if (header.profiles.length > 1) {
+    reader.fail("/profiles", "a boot case runs in the `boot` profile only");
+  }
+
+  for (const member of HTTP_CASE_MEMBERS) {
+    if (object[member] !== undefined) {
+      reader.fail(`/${member}`, `a boot case holds \`boot\` in place of \`${member}\``);
+    }
+  }
+
+  return { ...header, steps: [], boot: readBootExpectation(reader, object.boot) };
+}
+
+function readBootExpectation(reader: JsonReader, value: unknown): BootExpectation {
+  const object = objectAt(reader, value, "/boot", BOOT_MEMBERS);
+  const variant = stringAt(reader, object.variant, "/boot/variant");
+  const outcome = stringAt(reader, object.outcome, "/boot/outcome");
+
+  if (!isBootVariant(variant)) {
+    return reader.fail(
+      "/boot/variant",
+      `not a boot variant; use one of ${BOOT_VARIANTS.join(", ")}`,
+    );
+  }
+
+  if (outcome === "starts") {
+    if (object.diagnostic !== undefined) {
+      reader.fail("/boot/diagnostic", "an app that starts writes no diagnostic");
+    }
+
+    return { variant, outcome };
+  }
+
+  if (outcome !== "refuses") {
+    return reader.fail("/boot/outcome", "`outcome` is `starts` or `refuses`");
+  }
+
+  const diagnostic = arrayAt(reader, object.diagnostic, "/boot/diagnostic").map((text, index) =>
+    stringAt(reader, text, `/boot/diagnostic/${index}`),
+  );
+
+  if (diagnostic.length === 0) {
+    reader.fail("/boot/diagnostic", "a refusal names its diagnostic with at least one text");
+  }
+
+  return { variant, outcome, diagnostic };
 }
 
 function readProfiles(reader: JsonReader, value: unknown): SuiteProfile[] {

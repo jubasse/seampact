@@ -2,7 +2,7 @@
   "id": "restricted-output-field-absent-without-right",
   "title": "A restricted output field is absent, not null, for a caller without its right",
   "checks": ["CHK-025", "CHK-064"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "script": {
     "decisions": [
       {

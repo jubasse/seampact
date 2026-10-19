@@ -2,7 +2,7 @@
   "id": "denied-requirement-short-circuits",
   "title": "A denied requirement stops the checks: the later requirements are not asked",
   "checks": ["CHK-014", "CHK-015"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "script": {},
   "steps": [
     {

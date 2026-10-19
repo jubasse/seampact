@@ -1,0 +1,65 @@
+{
+  "id": "overridden-right-reaches-its-own-hook",
+  "title": "The right the app maps to its own hook reaches that hook, the others the generic one",
+  "checks": ["CHK-091"],
+  "profiles": ["hand-written"],
+  "steps": [
+    {
+      "title": "the overridden right",
+      "request": {
+        "method": "PATCH",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks/20000000-0000-4000-8000-000000000001",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:update}}"
+        },
+        "body": {
+          "title": "Done",
+          "expectedVersion": 1
+        }
+      },
+      "expect": {
+        "status": 200
+      }
+    },
+    {
+      "title": "the other requirements",
+      "request": {
+        "method": "POST",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "headers": {
+          "authorization": "Bearer {{userToken}}",
+          "idempotency-key": "{{uuid:create}}"
+        },
+        "body": {
+          "title": "Generic"
+        }
+      },
+      "expect": {
+        "status": 201
+      }
+    }
+  ],
+  "hookCalls": [
+    {
+      "hook": "authenticate:user",
+      "operation": "tasks.updateTask"
+    },
+    {
+      "hook": "decide-override:tasks.update",
+      "operation": "tasks.updateTask"
+    },
+    {
+      "hook": "authenticate:user",
+      "operation": "tasks.createTask"
+    },
+    {
+      "hook": "decide:throttle",
+      "operation": "tasks.createTask"
+    },
+    {
+      "hook": "decide:roles",
+      "operation": "tasks.createTask"
+    }
+  ]
+}

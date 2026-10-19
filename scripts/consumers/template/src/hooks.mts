@@ -11,7 +11,13 @@ import type {
   ResolveScopeRequest,
   ScopeResolution,
 } from "@seampact/hooks";
-import { authenticateHookName, decideHookName, type ScriptedDenial } from "@seampact/http-suite";
+import {
+  authenticateHookName,
+  decideHookName,
+  OVERRIDDEN_RIGHT,
+  overriddenDecideHookName,
+  type ScriptedDenial,
+} from "@seampact/http-suite";
 import { createMemoryIdempotencyStore } from "@seampact/idempotency-memory";
 import { verifyTemplateSignature } from "@seampact/signed-webhooks";
 import {
@@ -27,6 +33,7 @@ import {
   USER_ID,
   USER_TOKEN,
 } from "../test/credentials.mjs";
+import { bootVariantIs, withoutMemberUnder } from "./boot-variant.mjs";
 import {
   recordHookCall,
   scriptedDecision,
@@ -126,6 +133,20 @@ export const tasksDeciderHook = {
     }
 
     return { allow: true };
+  },
+};
+
+/**
+ * The app's own decider for the overridden right (CHK-091): it records under its own hook name and denies what the
+ * script denies, while every other right and rule reaches `tasksDeciderHook`.
+ */
+export const overriddenRightDeciderHook = {
+  decide(request: RequirementRequest): Decision<TasksDenial> {
+    recordHookCall(overriddenDecideHookName(request.name), request.operation);
+
+    const scripted = scriptedDecision(request.name, request.purpose.kind);
+
+    return scripted === undefined ? { allow: true } : { deny: tasksDenial(scripted) };
   },
 };
 
@@ -251,12 +272,28 @@ function userIdOf(principal: unknown): string | undefined {
   return typeof principal.userId === "string" ? principal.userId : undefined;
 }
 
-/** The `tasks` api's hooks, as every overlay registers them; the registration checks them against its hook types. */
+/**
+ * The `tasks` api's hooks, as every overlay registers them; the registration checks them against its hook types.
+ * The overridden right has a decider of its own beside the generic one; a boot variant leaves out what it names.
+ */
 export function tasksHooks() {
   return {
-    authenticate: { user: userAuthenticateHook, stripe: stripeAuthenticateHook },
-    deciders: [{ names: "all" as const, decider: tasksDeciderHook }],
-    scopeResolvers: { channel: scopeResolverHook },
+    authenticate: withoutMemberUnder(
+      "missing-authenticate-hook",
+      { user: userAuthenticateHook, stripe: stripeAuthenticateHook },
+      "user",
+    ),
+    deciders: bootVariantIs("missing-decider")
+      ? []
+      : [
+          { names: "all" as const, decider: tasksDeciderHook },
+          { names: [OVERRIDDEN_RIGHT] as const, decider: overriddenRightDeciderHook },
+        ],
+    scopeResolvers: withoutMemberUnder(
+      "missing-scope-resolver",
+      { channel: scopeResolverHook },
+      "channel",
+    ),
     idempotencyStore: createIdempotencyStore(),
     onUnexpectedError: logUnexpectedError,
   };

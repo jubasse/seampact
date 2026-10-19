@@ -3,6 +3,7 @@
 import { Module } from "@nestjs/common";
 import * as TasksNest from "../generated/server/tasks/index.js";
 import * as TasksServiceNest from "../generated/server/tasksService/index.js";
+import { bootVariantIs } from "./boot-variant.mjs";
 import {
   AppController,
   ChannelsController,
@@ -21,7 +22,8 @@ import { SuiteControlController } from "./suite-control-controller.mjs";
     TasksServiceNest.SeampactModule.forRoot(tasksServiceHooks()),
   ],
   controllers: [
-    AppController,
+    // The `missing-handler` boot variant leaves out the controller of the `health` operation.
+    ...(bootVariantIs("missing-handler") ? [] : [AppController]),
     ChannelsController,
     TasksController,
     DraftsController,

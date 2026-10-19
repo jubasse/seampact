@@ -7,6 +7,7 @@ import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-
 import express, { type Response } from "express";
 import * as TasksExpress from "../generated/server/tasks/index.js";
 import * as TasksServiceExpress from "../generated/server/tasksService/index.js";
+import { withoutMissingHandler } from "../src/boot-variant.mjs";
 import { tasksHandlers, tasksServiceHandlers } from "../src/handlers.mjs";
 import { tasksHooks, tasksServiceHooks } from "../src/hooks.mjs";
 import {
@@ -33,14 +34,14 @@ export async function startServer(): Promise<RunningServer> {
   app.get(LOG_LINES_ROUTE, (_request, response) => sendControlReply(response, logLinesReply()));
   app.use(
     TasksExpress.router({
-      handlers: {
+      handlers: withoutMissingHandler({
         AppEndpoints: tasksHandlers,
         ChannelsEndpoints: tasksHandlers,
         TasksEndpoints: tasksHandlers,
         DraftsEndpoints: tasksHandlers,
         PreferencesEndpoints: tasksHandlers,
         HooksEndpoints: tasksHandlers,
-      },
+      }),
       hooks: tasksHooks(),
     }),
   );

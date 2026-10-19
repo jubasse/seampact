@@ -2,7 +2,7 @@
   "id": "restricted-input-field-refused-without-right",
   "title": "A restricted input field sent without its right answers 403 with the field pointer",
   "checks": ["CHK-092"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "script": {
     "decisions": [
       {
