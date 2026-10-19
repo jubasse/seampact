@@ -47,7 +47,10 @@ function isCalendarDate(text: string): boolean {
 
   if (match === null) return false;
   const [year, month, day] = match.slice(1).map(Number) as [number, number, number];
-  const date = new Date(Date.UTC(year, month - 1, day));
+  const date = new Date(0);
+
+  // setUTCFullYear, unlike Date.UTC, reads years 0 to 99 as written.
+  date.setUTCFullYear(year, month - 1, day);
 
   return (
     date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day

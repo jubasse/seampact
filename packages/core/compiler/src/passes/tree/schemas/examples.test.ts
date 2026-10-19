@@ -231,6 +231,13 @@ describe("text examples parsed by the wire form", () => {
     expect(text("x", ref("Task"))).toEqual(["this ref use has no text form"]);
     expect(text("1e400", scalar("number"))).toEqual(["'1e400' is past the range of a JSON number"]);
   });
+
+  test("a date in the years 0 to 99 is read as written, not as 19xx", () => {
+    expect(text("0050-03-01", scalar("string", {}, "date"))).toEqual([]);
+    expect(text("0004-02-29", scalar("string", {}, "date"))).toEqual([]);
+    expect(text("0099-12-31T23:59:59Z", scalar("string", {}, "date-time"))).toEqual([]);
+    expect(text("0001-02-29", scalar("string", {}, "date"))).not.toEqual([]);
+  });
 });
 
 describe("defaults parsed like an example", () => {
