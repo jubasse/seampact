@@ -41,10 +41,12 @@ export function validatorExpression(plan: TypePlan, context: ZodRenderContext): 
         "codegen-zod: a refused plan reached the renderer; generate returns the plan's refusals instead.",
       );
     case "unknown":
-      return "z.unknown()";
+      return plan.nullable ? "z.unknown()" : `z.unknown()${nonNullCheck()}`;
     case "schema":
       return context.referToSchema(plan.schemaId, plan.exportName);
     case "enum":
+      if (plan.openMembers) return "z.string()";
+
       return plan.values.length === 0 ? "z.never()" : `z.enum(${JSON.stringify(plan.values)})`;
     case "scalar":
       return scalarValidator(plan, context);
@@ -108,7 +110,18 @@ function scalarCheck(check: ScalarCheck, context: ZodRenderContext): string {
       return `.gte(${check.literal})`;
     case "maximum":
       return `.lte(${check.literal})`;
+    case "exclusiveMinimum":
+      return `.gt(${check.literal})`;
+    case "exclusiveMaximum":
+      return `.lt(${check.literal})`;
+    case "multipleOf":
+      return `.multipleOf(${check.literal})`;
   }
+}
+
+// A non-nullable opaque value takes any JSON value but `null` (ADR 0003 section 2).
+function nonNullCheck(): string {
+  return customCheck("(value) => value !== null", "Expected a value, not null.", "type");
 }
 
 // A custom zod check always names its contract rule in `params.rule`, which a server boundary renders; every

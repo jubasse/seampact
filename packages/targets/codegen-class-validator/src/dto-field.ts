@@ -65,10 +65,14 @@ function typeDecorators(plan: TypePlan, context: DtoRenderContext): string[] {
     case "refused":
       throw refusedPlanReached();
     case "unknown":
-      return [`@${context.validator("Allow")}()`];
+      return plan.nullable
+        ? [`@${context.validator("Allow")}()`]
+        : [`@${context.validator("Allow")}()`, `@${CONTRACT}.NotNull()`];
     case "schema":
       return nestedDtoDecorators(context.referToDto(plan.schemaId, plan.exportName), context);
     case "enum":
+      if (plan.openMembers) return [`@${context.validator("IsString")}()`];
+
       return [`@${context.validator("IsIn")}(${JSON.stringify(plan.values)})`];
     case "scalar":
       return scalarDecorators(plan, context);
@@ -101,15 +105,21 @@ function itemDecorators(items: TypePlan, context: DtoRenderContext): string[] {
     case "refused":
       throw refusedPlanReached();
     case "unknown":
-      return [];
+      return items.nullable ? [] : [`@${CONTRACT}.ArrayItems([${CONTRACT}.notNullCheck()])`];
     case "schema":
       return [
         `@${CONTRACT}.ArrayItems([${CONTRACT}.objectTypeCheck()])`,
         `@${context.validator("ValidateNested")}({ each: true })`,
         `@${context.transformer("Type")}(() => ${context.referToDto(items.schemaId, items.exportName)})`,
       ];
-    case "enum":
-      return [`@${CONTRACT}.ArrayItems([${CONTRACT}.enumCheck(${JSON.stringify(items.values)})])`];
+    case "enum": {
+      const check = items.openMembers
+        ? `${CONTRACT}.scalarTypeCheck("string")`
+        : `${CONTRACT}.enumCheck(${JSON.stringify(items.values)})`;
+
+      return [`@${CONTRACT}.ArrayItems([${check}])`];
+    }
+
     case "scalar": {
       const checks = [
         `${CONTRACT}.scalarTypeCheck(${JSON.stringify(items.base)})`,
@@ -152,6 +162,12 @@ function scalarCheckDecorator(check: ScalarCheck, context: DtoRenderContext): st
       return `@${CONTRACT}.Minimum(${check.literal})`;
     case "maximum":
       return `@${CONTRACT}.Maximum(${check.literal})`;
+    case "exclusiveMinimum":
+      return `@${CONTRACT}.ExclusiveMinimum(${check.literal})`;
+    case "exclusiveMaximum":
+      return `@${CONTRACT}.ExclusiveMaximum(${check.literal})`;
+    case "multipleOf":
+      return `@${CONTRACT}.MultipleOf(${check.literal})`;
   }
 }
 
@@ -169,6 +185,12 @@ function itemCheck(check: ScalarCheck): string {
       return `${CONTRACT}.minimumCheck(${check.literal})`;
     case "maximum":
       return `${CONTRACT}.maximumCheck(${check.literal})`;
+    case "exclusiveMinimum":
+      return `${CONTRACT}.exclusiveMinimumCheck(${check.literal})`;
+    case "exclusiveMaximum":
+      return `${CONTRACT}.exclusiveMaximumCheck(${check.literal})`;
+    case "multipleOf":
+      return `${CONTRACT}.multipleOfCheck(${check.literal})`;
   }
 }
 

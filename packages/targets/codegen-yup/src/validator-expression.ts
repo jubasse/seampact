@@ -11,18 +11,31 @@ import {
   UUID_LAYOUT,
 } from "@seampact/codegen-core/validators";
 import type { YupRenderContext } from "./module-rendering.js";
-import { UNKNOWN_KEYS_TEST } from "./yup-support.js";
+import { IS_MULTIPLE_OF, UNKNOWN_KEYS_TEST } from "./yup-support.js";
+
+// What a numeric rule leaves to the type check: an integer's rules skip a value that is no integer, a number's one
+// that is not finite, so a value of the wrong type reports its type alone, as zod's aborting checks do.
+const NUMERIC_RULE_SKIPS: Readonly<Partial<Record<ScalarBase, string>>> = {
+  integer: "!Number.isInteger(value)",
+  number: "!Number.isFinite(value)",
+};
 
 // A plain integer is in the safe range of ADR 0003 and a number is finite, as the zod validators read them; yup
 // checks neither (JSON `1e999` is Infinity).
 function safeIntegerBounds(): string {
   return [
-    namedTest(
+    numericTest(
+      "integer",
       "minimum",
       "Expected at least -9007199254740991.",
       "value >= -Number.MAX_SAFE_INTEGER",
     ),
-    namedTest("maximum", "Expected at most 9007199254740991.", "value <= Number.MAX_SAFE_INTEGER"),
+    numericTest(
+      "integer",
+      "maximum",
+      "Expected at most 9007199254740991.",
+      "value <= Number.MAX_SAFE_INTEGER",
+    ),
   ].join("");
 }
 
@@ -47,10 +60,12 @@ export function validatorExpression(plan: TypePlan, context: YupRenderContext): 
         "codegen-yup: a refused plan reached the renderer; generate returns the plan's refusals instead.",
       );
     case "unknown":
-      return "yup.mixed().nullable()";
+      return plan.nullable ? "yup.mixed().nullable()" : "yup.mixed()";
     case "schema":
       return context.referToSchema(plan.schemaId, plan.exportName);
     case "enum":
+      if (plan.openMembers) return "yup.string().strict()";
+
       // A named test, not `oneOf`: yup lets a nullable schema skip `oneOf`, and null must be an enum issue.
       return `yup.mixed().nullable()${namedTest("enum", "Expected one of the declared values.", `(${JSON.stringify(plan.values)} as readonly unknown[]).includes(value)`)}`;
     case "scalar":
@@ -97,14 +112,14 @@ function fieldValidator(field: FieldPlan, context: YupRenderContext): string {
 }
 
 function scalarValidator(plan: ScalarPlan, context: YupRenderContext): string {
-  const checks = plan.checks.map((check) => scalarCheck(check, context));
+  const checks = plan.checks.map((check) => scalarCheck(check, plan.base, context));
 
   return `${BASE_VALIDATORS[plan.base]}${checks.join("")}`;
 }
 
 // String lengths count Unicode code points through the generated counter: a JavaScript length counts UTF-16
 // units. The uuid layout is a regex, since a library's own uuid check may also test the version digits.
-function scalarCheck(check: ScalarCheck, context: YupRenderContext): string {
+function scalarCheck(check: ScalarCheck, base: ScalarBase, context: YupRenderContext): string {
   switch (check.rule) {
     case "format":
       return check.format === "uuid"
@@ -129,18 +144,56 @@ function scalarCheck(check: ScalarCheck, context: YupRenderContext): string {
         `new RegExp(${JSON.stringify(check.normalized)}, "u").test(value)`,
       );
     case "minimum":
-      return namedTest(
+      return numericTest(
+        base,
         check.rule,
         `Expected at least ${check.literal}.`,
         `value >= ${check.literal}`,
       );
     case "maximum":
-      return namedTest(
+      return numericTest(
+        base,
         check.rule,
         `Expected at most ${check.literal}.`,
         `value <= ${check.literal}`,
       );
+    case "exclusiveMinimum":
+      return numericTest(
+        base,
+        check.rule,
+        `Expected more than ${check.literal}.`,
+        `value > ${check.literal}`,
+      );
+    case "exclusiveMaximum":
+      return numericTest(
+        base,
+        check.rule,
+        `Expected less than ${check.literal}.`,
+        `value < ${check.literal}`,
+      );
+    case "multipleOf":
+      return numericTest(
+        base,
+        check.rule,
+        `Expected a multiple of ${check.literal}.`,
+        `${context.supportName(IS_MULTIPLE_OF)}(value, ${check.literal})`,
+      );
   }
+}
+
+function numericTest(
+  base: ScalarBase,
+  rule: string,
+  message: string,
+  predicateOnValue: string,
+): string {
+  const skip = NUMERIC_RULE_SKIPS[base];
+
+  return namedTest(
+    rule,
+    message,
+    skip === undefined ? predicateOnValue : `${skip} || ${predicateOnValue}`,
+  );
 }
 
 // A check always carries its contract rule as its name, which a server boundary renders; every check of the

@@ -1,10 +1,11 @@
-// The generated module the yup validators share: the unknown keys check of input objects, and the Standard Schema
+// The generated module the yup validators share: the unknown keys check of input objects, the multiple-of check, and the Standard Schema
 // that validates an operation's request and names each issue by its contract rule, the convention a server
 // boundary renders (`code: "custom"` with `params.rule`).
 export const YUP_SUPPORT_MODULE = "yup-support";
 
 export const UNKNOWN_KEYS_TEST = "unknownKeysTest";
 export const STANDARD_SCHEMA_OF = "standardSchemaOf";
+export const IS_MULTIPLE_OF = "isMultipleOf";
 
 // yup writes an error path as `a.b[0]["c.d"]`: a name with a dot is bracketed, an index is `[n]`. The generator
 // refuses a name with `"`, `[` or `]`, which would make the path ambiguous, so the split below is exact.
@@ -28,6 +29,20 @@ readonly version: 1;
 readonly vendor: "yup";
 readonly validate: (value: unknown) => Promise<InputResult>;
 };
+}
+
+function decimalPlaces(value: number): number {
+const [mantissa = "", exponent = "0"] = String(value).split("e");
+const fraction = (mantissa.split(".")[1] ?? "").length;
+
+return Math.max(0, fraction - Number(exponent));
+}
+
+// A remainder that holds for decimal steps: both numbers are scaled to integers first, since \`3 % 0.1\` is not 0.
+export function ${IS_MULTIPLE_OF}(value: number, step: number): boolean {
+const scale = 10 ** Math.max(decimalPlaces(value), decimalPlaces(step));
+
+return Math.round(value * scale) % Math.round(step * scale) === 0;
 }
 
 function declaredKeys(schema: object): ReadonlySet<string> {

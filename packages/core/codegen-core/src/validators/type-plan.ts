@@ -25,7 +25,8 @@ export type TypePlan =
   // An opaque value: any JSON value, `null` only when nullable (ADR 0003 section 2).
   | { readonly kind: "unknown"; readonly nullable: boolean }
   | { readonly kind: "schema"; readonly schemaId: string; readonly exportName: string }
-  | { readonly kind: "enum"; readonly values: readonly string[] }
+  // An output enum keeps an unknown member (ADR 0003 section 4): `openMembers` makes the validators accept any string.
+  | { readonly kind: "enum"; readonly values: readonly string[]; readonly openMembers: boolean }
   | {
       readonly kind: "array";
       readonly items: TypePlan;
@@ -42,6 +43,17 @@ export interface ScalarPlan {
   readonly checks: readonly ScalarCheck[];
 }
 
+// The numeric refinements of an integer or a number, each the exact decimal literal of the contract.
+const NUMERIC_RULES = [
+  "minimum",
+  "maximum",
+  "exclusiveMinimum",
+  "exclusiveMaximum",
+  "multipleOf",
+] as const;
+
+export type NumericRule = (typeof NUMERIC_RULES)[number];
+
 export type StringFormat = "uuid" | "date-time";
 
 // A string length counts Unicode code points (ADR 0003 section 1); a bound is the exact decimal literal of the
@@ -50,7 +62,7 @@ export type ScalarCheck =
   | { readonly rule: "format"; readonly format: StringFormat; readonly message: string }
   | { readonly rule: "minLength" | "maxLength"; readonly limit: number; readonly message: string }
   | { readonly rule: "pattern"; readonly normalized: string; readonly message: string }
-  | { readonly rule: "minimum" | "maximum"; readonly literal: string };
+  | { readonly rule: NumericRule; readonly literal: string };
 
 // One member of an object, parameter set or proof list: its key as written on the wire, its type and whether
 // it may be absent.
@@ -218,7 +230,11 @@ function enumPlan(typeUse: EnumTypeUse, location: IrLocation, context: PlanConte
     return REFUSED;
   }
 
-  return { kind: "enum", values: [...declaration.values] };
+  return {
+    kind: "enum",
+    values: [...declaration.values],
+    openMembers: context.direction === "output",
+  };
 }
 
 function scalarPlan(typeUse: ScalarTypeUse, location: IrLocation, context: PlanContext): TypePlan {
@@ -254,26 +270,6 @@ function refuseScalarForms(
   if (typeUse.content !== undefined) {
     refusals.push(
       refuseNotGeneratedYet("scalar.content", "A JSON text field", below(location, "content")),
-    );
-  }
-
-  const refinements = typeUse.refinements;
-  const refinementsLocation = below(location, "refinements");
-  const notGenerated = [
-    ["exclusiveMinimum", refinements.exclusiveMinimum],
-    ["exclusiveMaximum", refinements.exclusiveMaximum],
-    ["multipleOf", refinements.multipleOf],
-  ] as const;
-
-  for (const [refinement, value] of notGenerated) {
-    if (value === undefined) continue;
-
-    refusals.push(
-      refuseNotGeneratedYet(
-        `scalar.${refinement}`,
-        `The refinement '${refinement}'`,
-        below(refinementsLocation, refinement),
-      ),
     );
   }
 }
@@ -400,10 +396,15 @@ function boundChecks(
   location: IrLocation,
   refusals: Refusal[],
 ): ScalarCheck[] {
-  const { minimum, maximum } = typeUse.refinements;
+  const refinements = typeUse.refinements;
   const refinementsLocation = below(location, "refinements");
+  const written = NUMERIC_RULES.flatMap((rule) => {
+    const literal = refinements[rule];
 
-  if (minimum === undefined && maximum === undefined) return [];
+    return literal === undefined ? [] : [{ rule, literal }];
+  });
+
+  if (written.length === 0) return [];
 
   if (!NUMERIC_TYPES.includes(typeUse.type)) {
     refusals.push(
@@ -417,14 +418,7 @@ function boundChecks(
     return [];
   }
 
-  const bounds = [
-    ["minimum", minimum],
-    ["maximum", maximum],
-  ] as const;
-
-  return bounds.flatMap(([rule, literal]): ScalarCheck[] => {
-    if (literal === undefined) return [];
-
+  return written.flatMap(({ rule, literal }): ScalarCheck[] => {
     if (!isExactNumberLiteral(literal)) {
       refusals.push(
         refuseNotGeneratedYet(

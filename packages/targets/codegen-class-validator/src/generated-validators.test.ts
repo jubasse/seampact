@@ -26,6 +26,7 @@ interface Issue {
 
 interface ContractCheck {
   rule: string;
+  test(value: unknown): boolean;
 }
 
 type DtoClass = new () => object;
@@ -43,6 +44,7 @@ let adapter: Adapter;
 let constraints: {
   scalarTypeCheck(type: "integer"): ContractCheck;
   safeIntegerChecks(): ContractCheck[];
+  multipleOfCheck(divisor: number): ContractCheck;
   failingItemChecks(item: unknown, checks: readonly ContractCheck[]): ContractCheck[];
 };
 
@@ -255,10 +257,10 @@ describe("a required opaque member must be present, null is a value", () => {
     );
   });
 
-  test("null data passes", async () => {
+  test("null data is a type issue, the opaque value not being nullable", async () => {
     expect(
       await inputVerdict("PaymentsInputSchema", payment({ id: "evt", type: "paid", data: null })),
-    ).toBe("valid");
+    ).toEqual(["/body/data type"]);
   });
 });
 
@@ -384,5 +386,19 @@ describe("a subclass of a DTO keeps its checks (A45)", () => {
     expect(await verdict(adapter.dtoSchema(AppCreateTask, "input"), { title: "" })).toEqual([
       "/title minLength",
     ]);
+  });
+});
+
+describe("the multiple-of check of the runtime", () => {
+  test.each([
+    [3, 0.1, true],
+    [0.07, 0.01, true],
+    [0.075, 0.01, false],
+    [0.3, 0.1, true],
+    [10, 5, true],
+    [7, 5, false],
+    [-9, 3, true],
+  ])("%s is a multiple of %s: %s", (value, step, expected) => {
+    expect(constraints.multipleOfCheck(step).test(value)).toBe(expected);
   });
 });

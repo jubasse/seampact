@@ -101,8 +101,8 @@ function jsonPointer(keys: readonly string[]): string {
   return keys.map((key) => `/${key.replaceAll("~", "~0").replaceAll("/", "~1")}`).join("");
 }
 
-// The validator's issues named by the contract's rules (`minLength`, `required`, ...), never the validator's codes.
-function inputIssues(candidate: unknown, issues: readonly StandardIssue[]): InputIssue[] {
+/** The validator's issues named by the contract's rules (`minLength`, `required`, ...), never the validator's codes. */
+export function inputIssues(candidate: unknown, issues: readonly StandardIssue[]): InputIssue[] {
   return issues.flatMap((issue) => {
     const keys = issueKeys(issue);
     const code = issueMember(issue, "code");

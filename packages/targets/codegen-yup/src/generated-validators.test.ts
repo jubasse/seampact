@@ -33,12 +33,14 @@ interface ObjectValidator extends StandardValidator {
 const temporaryRoot = mkdtempSync(join(tmpdir(), "seampact-codegen-yup-run-"));
 
 let standardSchemaOf: (schema: unknown) => StandardValidator;
+let isMultipleOf: (value: number, step: number) => boolean;
 let operationInputs: Record<string, StandardValidator>;
 let inputSchemas: Record<string, ObjectValidator>;
 let outputSchemas: Record<string, ObjectValidator>;
 
 interface GeneratedModules {
   standardSchemaOf: (schema: unknown) => StandardValidator;
+  isMultipleOf: (value: number, step: number) => boolean;
   operationInputs: Record<string, StandardValidator>;
   inputSchemas: Record<string, ObjectValidator>;
   outputSchemas: Record<string, ObjectValidator>;
@@ -78,10 +80,8 @@ function goldenIr(): ContractIR {
 }
 
 beforeAll(async () => {
-  ({ standardSchemaOf, operationInputs, inputSchemas, outputSchemas } = await generateAndImport(
-    goldenIr(),
-    "generated-root",
-  ));
+  ({ standardSchemaOf, isMultipleOf, operationInputs, inputSchemas, outputSchemas } =
+    await generateAndImport(goldenIr(), "generated-root"));
 });
 
 afterAll(() => rmSync(temporaryRoot, { recursive: true, force: true }));
@@ -247,12 +247,20 @@ describe("operation input: every issue names a contract rule and nothing is cast
     ]);
   });
 
-  test("a fractional integer, a bound and an unknown body key each name their rule", async () => {
+  test("a fractional integer reports its type alone, as zod does, beside an unknown body key", async () => {
     const body = { title: "t", effort: -1.5, extra: true };
 
     expect(
       (await rules(operationInputs.CreateTaskInputSchema, createTaskInput(body))).sort(),
-    ).toEqual(["minimum", "type", "unknownKeys"]);
+    ).toEqual(["type", "unknownKeys"]);
+  });
+
+  test("a bound and an unknown body key each name their rule", async () => {
+    const body = { title: "t", effort: -1, extra: true };
+
+    expect(
+      (await rules(operationInputs.CreateTaskInputSchema, createTaskInput(body))).sort(),
+    ).toEqual(["minimum", "unknownKeys"]);
   });
 
   test("a body that is not an object is a type issue", async () => {
@@ -431,10 +439,10 @@ describe("numbers: the safe integer range and finiteness the zod validators enfo
   });
 });
 
-describe("enum: null is an enum issue, as on zod", () => {
+describe("an output enum is any string: null is a type issue, as on zod", () => {
   test("a null task state", async () => {
     expect(await rules(standardSchemaOf(outputSchemas.TaskSchema?.fields.state), null)).toEqual([
-      "enum",
+      "type",
     ]);
   });
 });
@@ -473,5 +481,19 @@ describe("a required opaque member: absent is refused, null is valid", () => {
     const validator = standardSchemaOf(inputSchemas.PaymentEventSchema);
 
     expect(await rules(validator, paymentEvent({ data: null }))).not.toContain("required");
+  });
+});
+
+describe("the multiple-of check of the support module", () => {
+  test.each([
+    [3, 0.1, true],
+    [0.07, 0.01, true],
+    [0.075, 0.01, false],
+    [0.3, 0.1, true],
+    [10, 5, true],
+    [7, 5, false],
+    [-9, 3, true],
+  ])("%s is a multiple of %s: %s", (value, step, expected) => {
+    expect(isMultipleOf(value, step)).toBe(expected);
   });
 });
