@@ -18,6 +18,7 @@ export function bootVariantIs(variant: BootVariant): boolean {
   return BOOT_VARIANT === variant;
 }
 
+// The return type keeps `member` on purpose: under the variant the member is missing at runtime by design.
 /** A copy of `object`, without `member` when this process runs `variant`. */
 export function withoutMemberUnder<Value extends object>(
   variant: BootVariant,

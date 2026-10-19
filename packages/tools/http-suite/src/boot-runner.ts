@@ -1,7 +1,7 @@
 // Runs the boot profile: starts the sample app once per boot case, in a process of its own with the case's variant,
 // and checks that it starts or refuses to start with the named diagnostic (ADR 0015 "Boot tests").
 import { spawn } from "node:child_process";
-import { BOOT_STARTED_LINE, BOOT_VARIANT_ENV } from "./boot-variant.js";
+import { BOOT_PROFILE, BOOT_STARTED_LINE, BOOT_VARIANT_ENV } from "./boot-variant.js";
 import type { BootExpectation, SuiteCase } from "./suite-case.js";
 import { type CaseResult, type SuiteReport, suiteReportOf } from "./suite-report.js";
 import {
@@ -32,7 +32,6 @@ export interface BootAttempt {
   readonly timedOut: boolean;
 }
 
-const BOOT_PROFILE = "boot";
 const DEFAULT_BOOT_TIMEOUT_MS = 60_000;
 // A failure quotes the end of the output, where the diagnostic of a failed boot is.
 const QUOTED_OUTPUT_LENGTH = 1500;

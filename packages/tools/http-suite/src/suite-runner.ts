@@ -1,4 +1,5 @@
 // Runs cases against a sample app at a base URL, one step after another, and answers the suite report.
+import { BOOT_PROFILE } from "./boot-variant.js";
 import { loadScript, readHookCalls } from "./control-routes.js";
 import { signRequestBody } from "./request-signature.js";
 import { checkResponse, type ReceivedResponse, readPointer } from "./response-check.js";
@@ -36,7 +37,6 @@ export interface SuiteRunOptions {
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 const MILLISECONDS_PER_SECOND = 1000;
 const JSON_MEDIA = "application/json";
-const BOOT_PROFILE = "boot";
 
 interface RunContext {
   readonly baseUrl: string;

@@ -1,6 +1,6 @@
 // The case script format: one JSON file per case, read and checked here before any request is sent.
 
-import { BOOT_VARIANTS, type BootVariant, isBootVariant } from "./boot-variant.js";
+import { BOOT_PROFILE, BOOT_VARIANTS, type BootVariant, isBootVariant } from "./boot-variant.js";
 import {
   arrayAt,
   type JsonReader,
@@ -154,7 +154,6 @@ export const CREDENTIAL_VARIABLES = [
 ];
 
 const CASE_MEMBERS = ["id", "title", "checks", "profiles", "script", "steps", "hookCalls", "boot"];
-const BOOT_PROFILE = "boot";
 const HTTP_CASE_MEMBERS = ["script", "steps", "hookCalls"];
 const BOOT_MEMBERS = ["variant", "outcome", "diagnostic"];
 const STEP_MEMBERS = ["title", "request", "capture", "expect"];

@@ -23,6 +23,9 @@ export const BOOT_VARIANTS = [
 
 export type BootVariant = (typeof BOOT_VARIANTS)[number];
 
+/** The profile name of the boot cases, in the case files and the suite report. */
+export const BOOT_PROFILE = "boot";
+
 /** The environment variable a boot process reads its variant from; unset, the sample app boots as configured. */
 export const BOOT_VARIANT_ENV = "SEAMPACT_SUITE_BOOT_VARIANT";
 

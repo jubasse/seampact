@@ -5,8 +5,9 @@ import { join } from "node:path";
 import { expect, test } from "vitest";
 import { CONSUMER_ROOT, describeHttpProfile } from "./suite-run.mjs";
 
-// The adapters of ADR 0009 and the authorization libraries they wrap.
-const AUTHORIZATION_PACKAGES = [/^@seampact\/adapter-/, /^@casl\//, /casbin/, /^accesscontrol$/];
+// The adapters of ADR 0009, by the end of their package name, and the authorization libraries they wrap.
+const ADAPTER_IDS = ["nestjs-casl", "laravel-spatie"];
+const AUTHORIZATION_PACKAGES = [/^@casl\//, /casbin/, /^accesscontrol$/];
 
 describeHttpProfile("hand-written");
 
@@ -20,6 +21,10 @@ test("the consumer installs no adapter or authorization library", () => {
   ];
 
   expect(
-    installed.filter((name) => AUTHORIZATION_PACKAGES.some((rule) => rule.test(name))),
+    installed.filter(
+      (name) =>
+        ADAPTER_IDS.some((id) => name.endsWith(id)) ||
+        AUTHORIZATION_PACKAGES.some((rule) => rule.test(name)),
+    ),
   ).toEqual([]);
 });
