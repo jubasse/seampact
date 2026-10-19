@@ -49,6 +49,7 @@ const LEAVES = [
   "batch.bodyLimit",
   "batch.budget",
   "cache.families",
+  "cache.sensitiveElsewhere",
   "restrictedInput",
   "outputEnums",
   "pathVersion",
@@ -118,6 +119,9 @@ export type PipelineConventionDefault =
     }
   | { readonly path: ConventionPath; readonly from: ConventionPath };
 
+/** The `cache.sensitiveElsewhere` value that refuses a sensitive value outside a body field; the default is `noStore`. */
+export const SENSITIVE_ELSEWHERE_REFUSE = "refuse";
+
 /**
  * The core defaults of ADR 0002 section 13, deep-frozen; a key without a default (`paging.default`, `rateLimit`,
  * `idempotency.header`) is absent.
@@ -135,6 +139,7 @@ export const pipelineConventionDefaults: readonly PipelineConventionDefault[] = 
   { path: "bodyLimit", value: "1MiB" },
   { path: "batch.bodyLimit", from: "bodyLimit" },
   { path: "cache.families", value: {} },
+  { path: "cache.sensitiveElsewhere", value: "noStore" },
   { path: "restrictedInput", value: "reject" },
   { path: "outputEnums", value: "enum" },
   { path: "pathVersion", value: "prefix" },

@@ -19,6 +19,7 @@ export type DeriveWireRule =
   | "cache-family"
   | "cache-freshness"
   | "cache-sensitive"
+  | "cache-sensitive-elsewhere"
   | "bucket-limits";
 
 export interface DeriveWireRelated {

@@ -14,13 +14,13 @@ import {
   type ResponseEntry,
   type ValueShape,
 } from "./contract-route.js";
+import { CACHE_CONTROL_HEADER, NO_STORE_DIRECTIVE } from "./reply-headers.js";
 import { sha256Base64Url } from "./sha256.js";
 import { withQueryMember } from "./wire-decoding.js";
 
 const JSON_MEDIA = "application/json";
 const NOT_MODIFIED = 304;
 const WEAK_PREFIX = "W/";
-const NO_STORE = "no-store";
 
 /** The reply of a handler's result, or the contract error it names. */
 export async function handlerReply(
@@ -138,9 +138,9 @@ function appendCacheHeaders(
 
   const callerKind =
     grant.principal === null || grant.principal === undefined ? "anonymous" : "identified";
-  const cacheControl = cache.noStore ? NO_STORE : cache.cacheControl[callerKind];
+  const cacheControl = cache.noStore ? NO_STORE_DIRECTIVE : cache.cacheControl[callerKind];
 
-  if (cacheControl !== undefined) headers.push(["cache-control", cacheControl]);
+  if (cacheControl !== undefined) headers.push([CACHE_CONTROL_HEADER, cacheControl]);
 
   if (cache.vary.length > 0) headers.push(["vary", cache.vary.join(", ")]);
 }

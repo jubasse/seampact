@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { writeGeneratedFiles } from "@seampact/codegen-core";
-import type { ContractIR } from "@seampact/spec/ir";
+import { type ContractIR, isKnownVariant } from "@seampact/spec/ir";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { target } from "./index.js";
 
@@ -155,5 +155,30 @@ describe("the custom checks of the generated validators", () => {
     expect(refines.length).toBeGreaterThan(0);
 
     for (const refine of refines) expect(refine).toMatch(/params: \{ rule: "\w+" \}/);
+  });
+});
+
+describe("a nullable opaque property", () => {
+  test("generates in every direction", async () => {
+    const ir: ContractIR = JSON.parse(readFileSync(GOLDEN_IR, "utf8"));
+    const paymentEvent = ir.schemas.PaymentEvent;
+    const data =
+      paymentEvent !== undefined &&
+      isKnownVariant("Schema", paymentEvent) &&
+      paymentEvent.kind === "object"
+        ? paymentEvent.properties.find((candidate) => candidate.name === "data")
+        : undefined;
+
+    if (data === undefined) throw new Error("the golden PaymentEvent lost its opaque data");
+    data.nullable = true;
+
+    const outcome = await target.generate({
+      ir,
+      options: {},
+      links: {},
+      artefacts: new Set(["validators"]),
+    });
+
+    expect(outcome.status === "generated" ? [] : outcome.refusals).toEqual([]);
   });
 });

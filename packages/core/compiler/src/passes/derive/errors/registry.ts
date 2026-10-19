@@ -6,6 +6,7 @@ import {
 } from "../../../derivations/index.js";
 import {
   type PassContextOf,
+  type PassReadonly,
   pipelineCanonical,
   pipelineCopy,
   pipelinePointerBelow,
@@ -22,6 +23,7 @@ import {
   deriveErrorsString,
 } from "./read.js";
 import type { DeriveErrorsReporter } from "./report.js";
+import { deriveErrorsParamsNoStore } from "./sensitive-params.js";
 
 // The error registry of ADR 0006 section 6 ("Error declarations on the tree", A35): the declarations of the `errors`
 // catalogue (api, base, shared and packs, merged by the loader, which refuses one code in two layers) and of
@@ -44,6 +46,8 @@ export interface DeriveErrorsRegistrySources {
   readonly context: DeriveErrorsContext;
   readonly reporter: DeriveErrorsReporter;
   readonly natures: ReadonlyMap<IrWriter.NatureId, IrWriter.NatureDecl>;
+  /** The schemas tree.schemas wrote, which a declaration's params name. */
+  readonly schemas: PassReadonly<Record<IrWriter.SchemaId, IrWriter.Schema>>;
 }
 
 // One `errors` entry of the catalogue or of a tree node, at its pointer.
@@ -283,6 +287,12 @@ function declarationOf(site: ErrorSite, sources: DeriveErrorsRegistrySources): I
   const role = roleOfDefaultCode(site.code);
 
   checkExample(site, params, context, reporter);
+  const noStore =
+    params !== undefined &&
+    deriveErrorsParamsNoStore(
+      { code: site.code, params, pointer: pipelinePointerBelow(site.pointer, "params") },
+      sources,
+    );
 
   return {
     code: site.code,
@@ -297,6 +307,7 @@ function declarationOf(site: ErrorSite, sources: DeriveErrorsRegistrySources): I
     docs: deriveErrorsDocs(site.value),
     origin: deriveErrorsOriginOf(context, site.pointer),
     ...(role === undefined ? {} : { default: role.role }),
+    ...(noStore ? { noStore } : {}),
   };
 }
 

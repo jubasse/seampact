@@ -36,6 +36,7 @@ conventions:
 | `bodyLimit` | the default request body limit | `1MiB` |
 | `batch` | `{ maxIds, bodyLimit, budget }` for `batch` ops | `maxIds` required when a `batch` op sets none; `bodyLimit` from `bodyLimit`; no budget |
 | `cache.families` | freshness families: a max-age (`60s`), or `{ maxAge, sharedMaxAge, staleWhileRevalidate, staleIfError, immutable, noCache, mustRevalidate }`, each key a `Cache-Control` directive in camel case (`noCache: true` writes `no-cache`, for a response always revalidated with its ETag) | empty: each family a `cache.freshness` names is required |
+| `cache.sensitiveElsewhere` | `noStore` or `refuse`: a response carrying a `sensitive` value outside a field of its success body, which is a whole scalar body or its items, a map key, a response header's type or an error code's `params`; `noStore` makes it `no-store` as a sensitive field is (section 10), every response of that error code included, `refuse` is a compile error naming the value and each route answering it, or the error code's `params` | `noStore` |
 | `restrictedInput` | `reject` or `strip`: a restricted field sent without its right ([A21](../decisions.md#a21)); overridable per field (ADR 0003) | `reject` |
 | `outputEnums` | `enum` or `open`: how the emitter writes an output enum (FR-29) | `enum` |
 | `pathVersion` | `prefix` or `none`: whether every surface's path starts with `/v{version}` (section 6); a surface's `pathVersion` overrides it | `prefix` (A33) |

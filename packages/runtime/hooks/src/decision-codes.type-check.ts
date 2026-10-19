@@ -1,7 +1,7 @@
 // Type-level assertions, checked by `tsc`: a denial names only the codes its request declares, with their params.
 import type { AuthenticateResult } from "./authenticate.js";
-import type { Decision, DecideHook, DeniableCodes, RequirementRequest } from "./decide.js";
-import type { ScopeResolution, ResolvedScope } from "./resolve-scope.js";
+import type { DecideHook, Decision, DeniableCodes, RequirementRequest } from "./decide.js";
+import type { ResolvedScope, ScopeResolution } from "./resolve-scope.js";
 
 type NotProjectMember = {
   readonly code: "notProjectMember";

@@ -1,5 +1,7 @@
 import type { IrWriter } from "@seampact/spec/ir";
+import { SENSITIVE_ELSEWHERE_REFUSE } from "../../../pipeline/conventions.js";
 import {
+  type ConventionReading,
   type InheritedEntry,
   pipelineCopy,
   pipelineIsJsonObject,
@@ -21,7 +23,7 @@ import {
   deriveWireAccessOf,
   deriveWireOriginAt,
 } from "./routes.js";
-import { type DeriveWireSensitiveField, deriveWireSensitiveField } from "./sensitive.js";
+import { type DeriveWireSensitiveValue, deriveWireSensitive } from "./sensitive.js";
 
 // The cache of an operation (ADR 0002 section 10, ADR 0006 section 5). `cache.headers`: an inherited `cache` applies
 // to GET routes; its `freshness` names a family of `conventions.cache.families`, or `never` (no-store). The
@@ -32,7 +34,9 @@ import { type DeriveWireSensitiveField, deriveWireSensitiveField } from "./sensi
 // it), the optional `If-None-Match` parameter and an
 // empty 304 response carrying the `ETag`. `cache.sensitive`: a response carrying a sensitive field is no-store, so
 // an operation without `cache` gets `{ family: never, noStore }` located at the field, and a family other than
-// `never` there is a compile error naming the field and the route.
+// `never` there is a compile error naming the field and the route. A sensitive value elsewhere (a whole body or its
+// items, a map key, a response header) is no-store the same way under `conventions.cache.sensitiveElsewhere:
+// noStore`, the default, and a compile error naming it and each route answering it under `refuse`.
 
 const NEVER = "never";
 
@@ -67,7 +71,7 @@ export function deriveWireCache(route: DeriveWireRoute, scope: DeriveWireScope):
     return;
   }
 
-  const sensitive = deriveWireSensitiveField(route, scope);
+  const sensitive = noStoreValue(route, scope);
 
   if (setting === undefined || !isGet) {
     if (sensitive !== undefined) route.operation.cache = sensitiveNoStore(route, sensitive);
@@ -84,10 +88,29 @@ export function deriveWireCache(route: DeriveWireRoute, scope: DeriveWireScope):
   if (written.etag) writeEntityTag(route, setting.origin, scope);
 }
 
+// The sensitive value that makes the operation no-store: its first field, else its first value elsewhere unless
+// the convention refuses that value, which is then reported. Only the route's first value elsewhere is reported;
+// the next one appears once it is fixed.
+function noStoreValue(
+  route: DeriveWireRoute,
+  scope: DeriveWireScope,
+): DeriveWireSensitiveValue | undefined {
+  const { field, elsewhere } = deriveWireSensitive(route, scope);
+
+  if (elsewhere === undefined) return field;
+  const policy = scope.context.conventions.get("cache.sensitiveElsewhere");
+
+  if (policy?.value !== SENSITIVE_ELSEWHERE_REFUSE) return field ?? elsewhere;
+
+  reportElsewhere(route, elsewhere, policy, scope);
+
+  return field;
+}
+
 function cacheOf(
   route: DeriveWireRoute,
   setting: InheritedEntry,
-  sensitive: DeriveWireSensitiveField | undefined,
+  sensitive: DeriveWireSensitiveValue | undefined,
   scope: DeriveWireScope,
 ): IrWriter.Cache | undefined {
   const value = setting.value;
@@ -142,7 +165,7 @@ function cacheOf(
 
 function sensitiveNoStore(
   route: DeriveWireRoute,
-  sensitive: DeriveWireSensitiveField,
+  sensitive: DeriveWireSensitiveValue,
 ): IrWriter.Cache {
   return {
     family: NEVER,
@@ -364,16 +387,16 @@ function reportFreshness(
 function reportSensitive(
   route: DeriveWireRoute,
   setting: InheritedEntry,
-  found: { readonly family: string; readonly sensitive: DeriveWireSensitiveField },
+  found: { readonly family: string; readonly sensitive: DeriveWireSensitiveValue },
   scope: DeriveWireScope,
 ): void {
   const { family, sensitive } = found;
   const problem: DeriveWireProblem = {
     rule: "cache-sensitive",
-    message: `cache family '${family}' would store the sensitive field '${sensitive.schema}.${sensitive.property}', which the routes it reaches answer`,
+    message: `cache family '${family}' would store ${sensitive.text}, which the routes it reaches answer`,
     fix: "Drop cache or sensitive, or write freshness: never.",
     pointer: setting.origin.pointer,
-    related: [{ pointer: sensitive.origin.pointer, message: "the sensitive field" }],
+    related: [{ pointer: sensitive.origin.pointer, message: "the sensitive value" }],
   };
 
   addSettingFault(
@@ -382,6 +405,27 @@ function reportSensitive(
     route,
     scope,
   );
+}
+
+function reportElsewhere(
+  route: DeriveWireRoute,
+  elsewhere: DeriveWireSensitiveValue,
+  policy: ConventionReading,
+  scope: DeriveWireScope,
+): void {
+  // A derived header has a core origin: the route that answers it locates the fault.
+  const pointer = elsewhere.origin.layer === "core" ? route.node.pointer : elsewhere.origin.pointer;
+  const problem: DeriveWireProblem = {
+    rule: "cache-sensitive-elsewhere",
+    message: `conventions.cache.sensitiveElsewhere is refuse, so no route may answer ${elsewhere.text}`,
+    fix: "Answer the value in a property of the body, drop its sensitive mark, or set conventions.cache.sensitiveElsewhere: noStore.",
+    pointer,
+    ...(policy.origin === undefined
+      ? {}
+      : { related: [{ pointer: policy.origin.pointer, message: "the convention" }] }),
+  };
+
+  addSettingFault(`${problem.rule} ${pointer}`, problem, route, scope);
 }
 
 // An inherited cache reaches every GET route below it: its fault is reported once, naming each route it reaches.

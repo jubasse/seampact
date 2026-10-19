@@ -83,10 +83,11 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 | `ir.value-source.place` | `in: resolver` only as an operation scope's source; `in: holderField` only as a field right subject's source. |
 | `ir.header.members` | `HeaderDecl.name` and `in` for every semantic but `versionToken`; `response` and `request` for `versionToken` only. |
 | `ir.cache.directives` | `Cache.directives` is absent if and only if the family is `never`, and a `never` family sets `noStore`. |
-| `ir.cache.sensitive-no-store` | An operation whose response body reaches a property with `sensitive` (through array items, JSON content, object properties, map values and union variants) has a `cache` that sets `noStore` (ADR 0003 section 6). |
+| `ir.cache.sensitive-no-store` | An operation whose response reaches a property with `sensitive` or a scalar use with `sensitive` (from its body through array items, JSON content, object properties, map keys and values and union variants, or from a response header's type) has a `cache` that sets `noStore` (ADR 0003 section 6). |
 | `ir.csrf.cookie` | An unsafe operation whose access accepts a cookie scheme has `csrf` (derived or exempt). |
 | `ir.field-wire.members` | `FieldWire` of kind `file` or `json` has no `style`, `explode` or `brackets`; a query wire kind has all three. |
 | `ir.property.nullable` | A property's type use has no `nullable`: `Property.nullable` holds it. |
+| `ir.property.sensitive` | A property's type use has no `sensitive`: `Property.sensitive` holds it. |
 | `ir.scalar.type` | A named format's own type names no `scalar`. |
 | `ir.id.scalar` | `Scope.idSchema` and `ResourceSubject.idSchema` are a `scalar` or `enum` type use without `nullable`; `RuleProof.schema` and `InputProof.schema` are anything but `opaque` and `file`. |
 | `ir.ref.resolves` | Every member whose schema is a `$ref` to a catalogue id definition (the key of a top-level or api map, such as `SchemeId` or `SurfaceId`) names an existing key, read with `Object.hasOwn`. |
@@ -103,6 +104,7 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 | `ir.operation.role-once` | A role appears at most once in an operation's error role bindings, across elements and within one. |
 | `ir.error.role-params` | A role binding has `params` if and only if its code declares params, and holds no `each` inside another `each`'s `as`. |
 | `ir.error.retry-header` | A `retryHeader` sits only on a code of status 429; its `param` is a required, non-nullable `integer` member of the code's params with `minimum` at least 0 and `maximum` at most 9007199254740991; its `derivedFrom.derivation` is `rule.bucket`. |
+| `ir.error.sensitive-no-store` | An error code whose params reach a property with `sensitive` or a scalar use with `sensitive` (through array items, JSON content, object properties, map keys and values and union variants) sets `noStore` (ADR 0003 section 6). |
 
 ## Readers
 

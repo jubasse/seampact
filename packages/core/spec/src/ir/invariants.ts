@@ -6,7 +6,11 @@ import {
   walkIrInstance,
 } from "./instance-walk.js";
 import type { SchemaNode } from "./schemas.js";
-import { findIrSensitiveProperty } from "./sensitive-field.js";
+import {
+  findIrSensitiveParamReaches,
+  findIrSensitiveReaches,
+  sensitiveReachText,
+} from "./sensitive-field.js";
 import { isIrSameTypeUse } from "./type-use.js";
 import { irUnionTags } from "./unions.js";
 
@@ -25,6 +29,7 @@ export type IrInvariantId =
   | "ir.csrf.cookie"
   | "ir.field-wire.members"
   | "ir.property.nullable"
+  | "ir.property.sensitive"
   | "ir.scalar.type"
   | "ir.id.scalar"
   | "ir.ref.resolves"
@@ -40,7 +45,8 @@ export type IrInvariantId =
   | "ir.deprecation.since"
   | "ir.operation.role-once"
   | "ir.error.role-params"
-  | "ir.error.retry-header";
+  | "ir.error.retry-header"
+  | "ir.error.sensitive-no-store";
 
 export interface IrInvariantViolation {
   id: IrInvariantId;
@@ -607,7 +613,7 @@ function checkRetryHeader(
     );
 }
 
-// A response that carries a sensitive field is never stored: the operation has a `cache` that sets `noStore`.
+// A response that carries a sensitive value is never stored: the operation has a `cache` that sets `noStore`.
 function checkSensitiveNoStore(
   operation: Json,
   pointer: string,
@@ -619,15 +625,34 @@ function checkSensitiveNoStore(
   if (cache?.noStore === true) return;
 
   const responses = Array.isArray(operation.responses) ? operation.responses : [];
-  const bodies = responses.map((response) => (isRecord(response) ? response.body : undefined));
-  const found = findIrSensitiveProperty(bodies, schemaEntries);
+  const [found] = findIrSensitiveReaches(responses, schemaEntries);
 
   if (found === undefined) return;
 
   fail(
     "ir.cache.sensitive-no-store",
     pointer,
-    `A response carries the sensitive property '${found.property}' of '${found.schema}', so the operation's 'cache' sets 'noStore'.`,
+    `A response carries ${sensitiveReachText(found)}, so the operation's 'cache' sets 'noStore'.`,
+  );
+}
+
+// An error code whose params carry a sensitive value is never stored: its declaration sets `noStore`.
+function checkErrorSensitiveNoStore(
+  declaration: Json,
+  pointer: string,
+  schemaEntries: Json,
+  fail: Fail,
+): void {
+  if (declaration.noStore === true || typeof declaration.params !== "string") return;
+
+  const [found] = findIrSensitiveParamReaches(declaration.params, schemaEntries);
+
+  if (found === undefined) return;
+
+  fail(
+    "ir.error.sensitive-no-store",
+    pointer,
+    `The params of the error carry ${sensitiveReachText(found)}, so its declaration sets 'noStore'.`,
   );
 }
 
@@ -886,6 +911,10 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
         checkDeprecationDates(value, pointer, fail);
         break;
 
+      case "ErrorDecl":
+        checkErrorSensitiveNoStore(value, pointer, schemaEntries, fail);
+        break;
+
       case "OperationError":
         checkRoleParams(value, pointer, errors, fail);
         checkRetryHeader(value, pointer, errors, schemaEntries, fail);
@@ -907,6 +936,13 @@ export function checkIrInvariants(ir: unknown): IrInvariantViolation[] {
             "ir.property.nullable",
             pointer,
             "A property's type use has no 'nullable': the property holds it.",
+          );
+
+        if (isRecord(value.type) && has(value.type, "sensitive"))
+          fail(
+            "ir.property.sensitive",
+            pointer,
+            "A property's type use has no 'sensitive': the property holds it.",
           );
         break;
       }

@@ -92,7 +92,8 @@ function propertyMember(property: Property, location: IrLocation, context: TypeC
 // The property members that change the type and that the slice does not use. `restrictedTo` on an optional
 // property needs nothing here: the boundary rejects or strips the field.
 function refusePropertyForms(property: Property, location: IrLocation, context: TypeContext): void {
-  if (property.nullable) {
+  // An opaque value is typed `unknown`, which holds null already.
+  if (property.nullable && property.type.kind !== "opaque") {
     context.refusals.push(
       refuseNotGeneratedYet("type.nullable", "A nullable property", below(location, "nullable")),
     );

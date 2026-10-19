@@ -6,7 +6,7 @@ import {
   DEFAULT_OUT_DIR,
   type TargetEntry,
 } from "@seampact/spec/config";
-import { type ErrorObject, Ajv2020 } from "ajv/dist/2020.js";
+import { Ajv2020, type ErrorObject } from "ajv/dist/2020.js";
 import {
   type Document,
   isAlias,

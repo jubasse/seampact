@@ -59,7 +59,11 @@
         "title": { "type": "string" },
         "docs": { "$ref": "common.schema.json#/$defs/Docs" },
         "origin": { "$ref": "common.schema.json#/$defs/Origin" },
-        "default": { "$ref": "#/$defs/ErrorRole" }
+        "default": { "$ref": "#/$defs/ErrorRole" },
+        "noStore": {
+          "type": "boolean",
+          "description": "Every response of this code carries Cache-Control: no-store, since its params reach a sensitive value (ADR 0003 section 6, conventions.cache.sensitiveElsewhere: noStore); absent means false (invariant ir.error.sensitive-no-store)."
+        }
       }
     },
     "NatureDecl": {

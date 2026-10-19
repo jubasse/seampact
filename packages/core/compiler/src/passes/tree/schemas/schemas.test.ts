@@ -51,6 +51,22 @@ describe("tree.schemas matches the after-tree fixture", () => {
   );
 });
 
+describe("a declared opaque alias", () => {
+  const run = schemas(`
+  Blob: { opaque: "A third party's free-form value.", nullable: true }
+  Holder: { type: object, properties: { blob: Blob, blobs: { type: array, items: Blob } } }
+`);
+
+  test("written nullable, its use is nullable and a property of it is nullable", () => {
+    expect(run.diagnostics).toEqual([]);
+    expect(propertyOf(run, "Holder", "blob")?.nullable).toBe(true);
+    expect(typeOf(run, "Holder", "blobs")).toMatchObject({
+      kind: "array",
+      items: { kind: "opaque", nullable: true },
+    });
+  });
+});
+
 describe("schema shapes", () => {
   const run = schemas(`
   Shapes:
@@ -60,6 +76,8 @@ describe("schema shapes", () => {
       list: { type: array, items: { type: string }, minItems: 1, maxItems: 3 }
       table: { type: object, additionalProperties: { type: integer }, propertyNames: { type: string, format: uuid } }
       blob: { opaque: "A third party's free-form value." }
+      maybeBlob: { opaque: "A third party's free-form value.", nullable: true }
+      blobs: { type: array, items: { opaque: "A third party's free-form value.", nullable: true } }
       upload: { file: { media: [image/png], maxSize: 2KiB } }
       merged: { allOf: [Named, { type: object, properties: { extra: { type: boolean } } }] }
       json: { type: string, contentMediaType: application/json, contentSchema: Named }
@@ -87,6 +105,26 @@ describe("schema shapes", () => {
       kind: "opaque",
       reason: "A third party's free-form value.",
       origin: at("/schemas/Shapes/properties/blob"),
+    });
+    expect(typeOf(run, "Shapes", "maybeBlob")).toEqual({
+      kind: "opaque",
+      reason: "A third party's free-form value.",
+      origin: at("/schemas/Shapes/properties/maybeBlob"),
+    });
+    expect(schemaOf(run, "Shapes")).toMatchObject({
+      properties: expect.arrayContaining([
+        expect.objectContaining({ name: "blob", nullable: false }),
+        expect.objectContaining({ name: "maybeBlob", nullable: true }),
+      ]),
+    });
+    expect(typeOf(run, "Shapes", "blobs")).toEqual({
+      kind: "array",
+      items: {
+        kind: "opaque",
+        reason: "A third party's free-form value.",
+        origin: at("/schemas/Shapes/properties/blobs/items"),
+        nullable: true,
+      },
     });
     expect(typeOf(run, "Shapes", "upload")).toEqual({
       kind: "file",
@@ -334,6 +372,15 @@ describe("marks", () => {
     });
     expect(propertyOf(run, "Account", "effort")?.restrictedTo?.right).toBe("tasks.seeEffort");
     expect(propertyOf(run, "Account", "locale")?.default).toBe("en");
+  });
+
+  test("a property typed by a sensitive scalar holds the mark, its type use does not", () => {
+    expect(propertyOf(run, "Account", "secret")?.sensitive).toBe(true);
+    expect(typeOf(run, "Account", "secret")).toEqual({
+      kind: "scalar",
+      type: "string",
+      refinements: {},
+    });
   });
 
   test.each([

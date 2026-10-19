@@ -8,6 +8,8 @@ export const VARY_HEADER = "vary";
 export const CONTENT_LENGTH_HEADER = "content-length";
 export const CONTENT_ENCODING_HEADER = "content-encoding";
 export const CONTENT_TYPE_HEADER = "content-type";
+export const CACHE_CONTROL_HEADER = "cache-control";
+export const NO_STORE_DIRECTIVE = "no-store";
 // Headers that describe the body: the boundary replaces them, and keeps every other header the app set.
 export const BODY_HEADERS: readonly string[] = [
   CONTENT_TYPE_HEADER,

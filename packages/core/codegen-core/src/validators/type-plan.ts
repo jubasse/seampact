@@ -22,7 +22,8 @@ import type { ValidatorsLayout } from "./layout.js";
 // A plan with a refusal is never rendered.
 export type TypePlan =
   | { readonly kind: "refused" }
-  | { readonly kind: "unknown" }
+  // An opaque value: any JSON value, `null` only when nullable (ADR 0003 section 2).
+  | { readonly kind: "unknown"; readonly nullable: boolean }
   | { readonly kind: "schema"; readonly schemaId: string; readonly exportName: string }
   | { readonly kind: "enum"; readonly values: readonly string[] }
   | {
@@ -110,7 +111,7 @@ export function planTypeUse(
     case "ref":
       return refPlan(typeUse, location, context);
     case "opaque":
-      return { kind: "unknown" };
+      return { kind: "unknown", nullable: typeUse.nullable === true };
     case "file":
       context.refusals.push(refuseNotGeneratedYet("type.file", "A file type", location));
 

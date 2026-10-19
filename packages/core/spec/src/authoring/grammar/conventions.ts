@@ -104,6 +104,7 @@ export function conventionsDefs(): Record<string, JsonSchema> {
                   ),
                 }),
               ),
+              sensitiveElsewhere: kw(S, oneOfValues("noStore", "refuse")),
             },
           }),
         ),

@@ -258,3 +258,151 @@ describe("sensitive responses are no-store", () => {
     ]);
   });
 });
+
+describe("sensitive values outside a field of the body", () => {
+  const TOKEN_SCHEMAS = [
+    "  Token: { type: string, sensitive: true }",
+    "  TokenTable: { type: object, propertyNames: { $ref: Token }, additionalProperties: { type: string } }",
+    "  Holder: { type: object, required: [tokens], properties: { tokens: { type: array, items: { $ref: Token } } } }",
+  ];
+  const TOKEN_ROUTES = [
+    "      token: { method: get, output: Token }",
+    "      tokens: { method: get, output: { type: array, items: { $ref: Token } } }",
+    "      table: { method: get, output: TokenTable }",
+    "      signed: { method: get, responses: { 200: { body: Note, headers: { X-Token: Token } } } }",
+    "      held: { method: get, output: Holder }",
+  ];
+  const EDIT_DRAFT = "  EditDraft: { type: object, properties: { text: { type: string } } }";
+
+  // The policy written under `conventions.cache`, or none for the default.
+  const tokenRun = (policy?: "noStore" | "refuse") =>
+    deriveWireRunContract(
+      deriveWireFixtureVariant("lifecycle", [
+        ...(policy === undefined
+          ? []
+          : [["  cache:\n", `  cache:\n    sensitiveElsewhere: ${policy}\n`] as const]),
+        [EDIT_DRAFT, [EDIT_DRAFT, ...TOKEN_SCHEMAS].join("\n")],
+        ["      plain:\n", `${TOKEN_ROUTES.join("\n")}\n      plain:\n`],
+      ]),
+    );
+
+  const noStoreAt = (pointer: string) => ({
+    family: "never",
+    noStore: true,
+    perCallerKind: [{ caller: "identified", cacheControl: "no-store" }],
+    origin: { layer: "api", pointer },
+    derivedFrom: { derivation: "cache.sensitive", from: [{ layer: "api", pointer }] },
+  });
+
+  test("by default, a sensitive body, its items, a map key and a response header are no-store at the value", () => {
+    const run = tokenRun();
+    const cacheIn = (id: string) => deriveWireOperation(run, id).cache;
+
+    expect(run.diagnostics).toEqual([]);
+    expect(cacheIn("token")).toMatchObject(noStoreAt("/surfaces/app/routes/token/output"));
+    expect(cacheIn("tokens")).toMatchObject(noStoreAt("/surfaces/app/routes/tokens/output"));
+    expect(cacheIn("table")).toMatchObject(noStoreAt("/schemas/TokenTable"));
+    expect(cacheIn("signed")).toMatchObject(
+      noStoreAt("/surfaces/app/routes/signed/responses/200/headers/X-Token"),
+    );
+  });
+
+  test("a property holding sensitive items is a field, no-store under either policy", () => {
+    for (const policy of ["noStore", "refuse"] as const)
+      expect(deriveWireOperation(tokenRun(policy), "held").cache).toMatchObject(
+        noStoreAt("/schemas/Holder/properties/tokens"),
+      );
+  });
+
+  test("under refuse, each value outside a field is a compile error naming it and the route", () => {
+    const refused = tokenRun("refuse");
+    const convention = "/conventions/cache/sensitiveElsewhere";
+
+    expect(refused.diagnostics.map(deriveWireLocated)).toEqual([
+      {
+        rule: "seampact/derive/cache-sensitive-elsewhere",
+        pointer: "/surfaces/app/routes/token/output",
+        related: ["/surfaces/app/routes/token", convention],
+      },
+      {
+        rule: "seampact/derive/cache-sensitive-elsewhere",
+        pointer: "/surfaces/app/routes/tokens/output",
+        related: ["/surfaces/app/routes/tokens", convention],
+      },
+      {
+        rule: "seampact/derive/cache-sensitive-elsewhere",
+        pointer: "/schemas/TokenTable",
+        related: ["/surfaces/app/routes/table", convention],
+      },
+      {
+        rule: "seampact/derive/cache-sensitive-elsewhere",
+        pointer: "/surfaces/app/routes/signed/responses/200/headers/X-Token",
+        related: ["/surfaces/app/routes/signed", convention],
+      },
+    ]);
+    expect(refused.diagnostics[3]?.message).toBe(
+      "conventions.cache.sensitiveElsewhere is refuse, so no route may answer the sensitive header 'X-Token' of a 200 response",
+    );
+  });
+
+  describe("a field and a header on one route", () => {
+    const FIELD_POINTER = "/schemas/Key/properties/secret";
+    const HEADER_POINTER = "/surfaces/app/routes/mixed/responses/200/headers/X-Token";
+    const mixedRoute = (extra: string) =>
+      `      mixed:\n        method: get\n${extra}        responses: { 200: { body: Key, headers: { X-Token: Token } } }\n`;
+
+    const mixedRun = (route: string, policy?: "noStore" | "refuse") =>
+      deriveWireRunContract(
+        deriveWireFixtureVariant("lifecycle", [
+          ...(policy === undefined
+            ? []
+            : [["  cache:\n", `  cache:\n    sensitiveElsewhere: ${policy}\n`] as const]),
+          [EDIT_DRAFT, [EDIT_DRAFT, ...TOKEN_SCHEMAS].join("\n")],
+          ["      plain:\n", `${route}      plain:\n`],
+        ]),
+      );
+
+    test("the field names the no-store, the header being only a later value", () => {
+      const run = mixedRun(mixedRoute("        cache: { freshness: minute }\n"));
+      const [diagnostic] = run.diagnostics.map(deriveWireLocated);
+
+      expect(diagnostic).toMatchObject({
+        rule: "seampact/derive/cache-sensitive",
+        related: ["/surfaces/app/routes/mixed", FIELD_POINTER],
+      });
+    });
+
+    test("under refuse, the header is reported and the field still makes the cache no-store", () => {
+      const run = mixedRun(mixedRoute(""), "refuse");
+
+      expect(run.diagnostics.map(deriveWireLocated)).toEqual([
+        {
+          rule: "seampact/derive/cache-sensitive-elsewhere",
+          pointer: HEADER_POINTER,
+          related: ["/surfaces/app/routes/mixed", "/conventions/cache/sensitiveElsewhere"],
+        },
+      ]);
+      expect(deriveWireOperation(run, "mixed").cache).toMatchObject(noStoreAt(FIELD_POINTER));
+    });
+
+    test("under refuse, a write answering only a sensitive header is reported and written no cache", () => {
+      const run = mixedRun(
+        "      mixed:\n        method: post\n        responses: { 200: { body: Note, headers: { X-Token: Token } } }\n",
+        "refuse",
+      );
+
+      expect(
+        run.diagnostics
+          .map(deriveWireLocated)
+          .filter((located) => located.rule === "seampact/derive/cache-sensitive-elsewhere"),
+      ).toEqual([
+        {
+          rule: "seampact/derive/cache-sensitive-elsewhere",
+          pointer: HEADER_POINTER,
+          related: ["/surfaces/app/routes/mixed", "/conventions/cache/sensitiveElsewhere"],
+        },
+      ]);
+      expect(deriveWireOperation(run, "mixed").cache).toBeUndefined();
+    });
+  });
+});

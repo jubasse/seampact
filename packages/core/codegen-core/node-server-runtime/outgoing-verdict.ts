@@ -5,6 +5,7 @@ import { type BoundaryContext, unexpectedContext } from "./boundary-context.js";
 import { reportUnexpected } from "./boundary-hooks.js";
 import { type ContractReply, isPlainObject } from "./contract-error.js";
 import type { ReportedRequest } from "./error-reply.js";
+import { NO_STORE_DIRECTIVE } from "./reply-headers.js";
 
 /** The longest error body the check holds to read its code; a longer one is a violation. */
 export const MAX_CHECKED_ERROR_BODY_BYTES = 65536;
@@ -31,13 +32,24 @@ export type StatusVerdict =
 export type HoldReason = "error" | "success";
 
 /** The verdict on a status the app wrote: declared and checked, declared and passed, or a violation. */
-export function statusVerdict(context: BoundaryContext, status: number): StatusVerdict {
+export function statusVerdict(
+  context: BoundaryContext,
+  status: number,
+  cacheControlHeader: string,
+): StatusVerdict {
   if (status === NOT_MODIFIED)
     return { kind: "violation", reason: "a 304 the boundary did not write" };
 
   const success = context.route.responses.find((entry) => entry.status === status);
 
   if (success !== undefined) {
+    if (context.route.cache?.noStore === true && !hasNoStoreDirective(cacheControlHeader)) {
+      return {
+        kind: "violation",
+        reason: `a ${status} reply without Cache-Control: no-store, which the operation requires`,
+      };
+    }
+
     return context.bodyValidation && success.itemValidator !== undefined
       ? { kind: "hold", holdReason: "success" }
       : { kind: "pass" };
@@ -106,6 +118,7 @@ export function errorBodyViolation(
   context: BoundaryContext,
   status: number,
   contentTypeHeader: string,
+  cacheControlHeader: string,
   body: Uint8Array,
 ): string | undefined {
   const contentType = contentTypeHeader.split(";")[0]?.trim();
@@ -124,7 +137,18 @@ export function errorBodyViolation(
     return `the code '${code}' with status ${status}, which the operation does not declare`;
   }
 
+  if (entry.noStore === true && !hasNoStoreDirective(cacheControlHeader)) {
+    return `the code '${code}' without Cache-Control: no-store, which its sensitive params require`;
+  }
+
   return undefined;
+}
+
+// `private, no-store` carries the directive; a header value that lacks it does not.
+function hasNoStoreDirective(cacheControlHeader: string): boolean {
+  return cacheControlHeader
+    .split(",")
+    .some((directive) => directive.trim().toLowerCase() === NO_STORE_DIRECTIVE);
 }
 
 /** The violation of a held success body against its output schema, or undefined when it validates. */

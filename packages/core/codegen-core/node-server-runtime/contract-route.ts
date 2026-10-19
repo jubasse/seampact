@@ -70,6 +70,8 @@ export interface ErrorEntry {
     readonly param: string;
     readonly unit: "s" | "ms";
   };
+  /** Set when the code's params carry a sensitive value: its reply is `Cache-Control: no-store`. */
+  readonly noStore?: true;
 }
 
 export interface CredentialSource {

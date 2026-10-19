@@ -11,8 +11,8 @@ import { TreeSchemasCompiler } from "./compile.js";
 import { treeSchemasCoreReservations } from "./core.js";
 import { treeSchemasRefuseOutputUnknownKeys, treeSchemasWriteDirections } from "./directions.js";
 import { treeSchemasCompileEnums } from "./enums.js";
-import { treeSchemasCheckExtensionValues, treeSchemasCompileExtensionKeys } from "./extensions.js";
 import { TreeSchemasExampleChecker, treeSchemasCheckWrittenExamples } from "./example-check.js";
+import { treeSchemasCheckExtensionValues, treeSchemasCompileExtensionKeys } from "./extensions.js";
 import {
   treeSchemasCompileBatchInputs,
   treeSchemasCompileVersionProperties,

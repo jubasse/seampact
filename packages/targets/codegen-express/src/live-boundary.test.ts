@@ -11,6 +11,9 @@ import {
   projectDirectory,
   type RawReply,
   type ReferenceIrChange,
+  referenceChanges,
+  referenceNoStoreCode,
+  referenceNoStoreOperation,
   sendRawRequest,
 } from "@seampact/codegen-core/node-server/test-support";
 import type { ContractIR } from "@seampact/spec/ir";
@@ -36,6 +39,8 @@ const USER = "55555555-5555-4555-8555-555555555555";
 const BEARER = { authorization: `Bearer user-${USER}` };
 const PROBLEM_MEDIA = "application/problem+json";
 const TOO_LARGE_BODY_BYTES = 1_048_577;
+// The code of a body over its limit, marked as a code whose params carry a sensitive value.
+const NO_STORE_CODE = "api.payload_too_large";
 
 interface ReferenceAppModule {
   readonly ALLOWED_ORIGIN: string;
@@ -89,7 +94,15 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
   ): Promise<RawReply> => sendRawRequest(server, method, path, options);
 
   beforeAll(async () => {
-    const files = await generateReferenceProject(project, expressTarget, { bodyValidation: true });
+    const files = await generateReferenceProject(
+      project,
+      expressTarget,
+      { bodyValidation: true },
+      referenceChanges(
+        referenceNoStoreCode(NO_STORE_CODE),
+        referenceNoStoreOperation("getPreferences"),
+      ),
+    );
 
     expect(emitProject(project, files, build)).toEqual([]);
     linkExpress(project, expressPackage);
@@ -214,6 +227,57 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
     expect(tooLarge.status).toBe(413);
     expect(tooLarge.headers["content-type"]).toContain(PROBLEM_MEDIA);
     expect(app.calls.handled).toEqual([]);
+  });
+
+  test("an error code marked noStore answers Cache-Control: no-store, another code none", async () => {
+    const path = `/v1/channels/${CHANNEL}/tasks`;
+    const malformed = await send("POST", path, { headers: writeHeaders(), body: "{" });
+    const tooLarge = await send("POST", path, {
+      headers: writeHeaders(),
+      body: JSON.stringify({ title: "x".repeat(TOO_LARGE_BODY_BYTES) }),
+    });
+
+    expect(tooLarge.status).toBe(413);
+    expect(tooLarge.headers["cache-control"]).toBe("no-store");
+    expect(malformed.status).toBe(400);
+    expect(malformed.headers["cache-control"]).toBeUndefined();
+  });
+
+  test("a declared noStore code the handler answers carries Cache-Control: no-store", async () => {
+    app.scenario.answers.createTask = () => ({ status: 413, code: NO_STORE_CODE });
+
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+      headers: writeHeaders(),
+      body: JSON.stringify({ title: "Plan" }),
+    });
+
+    expect(reply.status).toBe(413);
+    expect(reply.headers["cache-control"]).toBe("no-store");
+  });
+
+  test("an app-written noStore error reply without Cache-Control: no-store is replaced by a 500", async () => {
+    app.scenario.answers.createTask = () => {
+      throw new app.AppReply(413, PROBLEM_MEDIA, problemBody(NO_STORE_CODE, 413));
+    };
+
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+      headers: writeHeaders(),
+      body: JSON.stringify({ title: "Plan" }),
+    });
+
+    expect(reply.status).toBe(500);
+    expect(app.calls.unexpected).toHaveLength(1);
+  });
+
+  test("an app-written success reply of a noStore operation without no-store is replaced by a 500", async () => {
+    app.scenario.answers.getPreferences = () => {
+      throw new app.AppReply(200, "application/json", JSON.stringify({ locale: "en" }));
+    };
+
+    const reply = await send("GET", "/v1/me/preferences", { headers: BEARER });
+
+    expect(reply.status).toBe(500);
+    expect(app.calls.unexpected).toHaveLength(1);
   });
 
   test("a corrupt gzip body is the client's 400, not a server failure", async () => {

@@ -159,6 +159,11 @@ describe("checkIrInvariants", () => {
       }),
     ).toEqual(one("ir.property.nullable"));
     expect(
+      broken("Property", (property) => {
+        (property.type as Record<string, unknown>).sensitive = true;
+      }),
+    ).toEqual(one("ir.property.sensitive"));
+    expect(
       broken("Scalar", (scalar) => {
         (scalar.type as Record<string, unknown>).scalar = "money";
       }),
@@ -1018,6 +1023,78 @@ describe("sensitive responses", () => {
         withBody(PLAIN_USE)(ir);
       }),
     ).toEqual([]);
+  });
+
+  test("a sensitive scalar use is reached as a body, its items, a map key and a header type", () => {
+    const SECRET_USE = { kind: "scalar", type: "string", refinements: {}, sensitive: true };
+    const PLAIN_USE = { kind: "scalar", type: "string", refinements: {} };
+    const secretKeys = { kind: "map", keys: SECRET_USE, values: PLAIN_USE };
+    const withSecretHeader = (ir: Json) => {
+      storable(ir);
+      list(ir, `${UPDATE}/responses/0/headers`).push({
+        name: "X-Token",
+        type: SECRET_USE,
+        required: true,
+      });
+    };
+
+    const changes = [
+      withBody(SECRET_USE),
+      withBody({ kind: "array", items: SECRET_USE }),
+      withBody({ kind: "ref", schema: "SecretKeys" }),
+      withSecretHeader,
+    ];
+
+    for (const change of changes)
+      expect(
+        violationsAfter((ir) => {
+          withSchema("SecretKeys", secretKeys)(ir);
+          node(ir, EFFORT).sensitive = false;
+          change(ir);
+        }),
+      ).toEqual(at("ir.cache.sensitive-no-store", UPDATE));
+
+    expect(
+      violationsAfter((ir) => {
+        withSchema("PlainKeys", { ...secretKeys, keys: PLAIN_USE })(ir);
+        withBody({ kind: "ref", schema: "PlainKeys" })(ir);
+      }),
+    ).toEqual([]);
+  });
+
+  test("an error code whose params carry a sensitive value sets noStore", () => {
+    const LOCKED_DECL = "/errors/tasks.locked";
+    const SECRET_USE = { kind: "scalar", type: "string", refinements: {}, sensitive: true };
+
+    const paramsOf = (schema: string) => (ir: Json) => {
+      const declaration = node(ir, LOCKED_DECL);
+
+      declaration.params = schema;
+      delete declaration.noStore;
+    };
+
+    expect(violationsAfter(paramsOf("Task"))).toEqual(
+      at("ir.error.sensitive-no-store", LOCKED_DECL),
+    );
+    expect(
+      violationsAfter((ir) => {
+        withSchema("SecretKeys", { kind: "map", keys: SECRET_USE, values: SECRET_USE })(ir);
+        withSchema("SecretHolder", {
+          kind: "object",
+          properties: [
+            { name: "keys", sensitive: false, type: { kind: "ref", schema: "SecretKeys" } },
+          ],
+        })(ir);
+        paramsOf("SecretHolder")(ir);
+      }),
+    ).toEqual(at("ir.error.sensitive-no-store", LOCKED_DECL));
+    expect(
+      violationsAfter((ir) => {
+        paramsOf("Task")(ir);
+        node(ir, LOCKED_DECL).noStore = true;
+      }),
+    ).toEqual([]);
+    expect(violationsAfter(paramsOf("LockedParams"))).toEqual([]);
   });
 
   test("a recursive schema without a sensitive field ends", () => {

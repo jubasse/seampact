@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { checkIrInvariants, type ContractIR, createIrValidator } from "@seampact/spec/ir";
+import { type ContractIR, checkIrInvariants, createIrValidator } from "@seampact/spec/ir";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { expect, test } from "vitest";
 import { type FilterOutcome, filterOperations } from "./filter-operations.js";

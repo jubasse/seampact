@@ -107,7 +107,7 @@ interface Cache {
                 immutable: boolean; noCache: boolean; mustRevalidate: boolean } | null;   // null for 'never' (no-store)
   anonymous: 'public' | 'private'; vary: string[]; etag: boolean;
   perCallerKind: { caller: 'anonymous' | 'identified'; cacheControl: string }[];   // what OpenAPI lists
-  noStore: boolean;                          // true when 'never' or a response carries a sensitive field
+  noStore: boolean;                          // true when 'never' or a response carries a sensitive value
   origin; derivedFrom?;
 }
 interface Paging {
@@ -118,3 +118,5 @@ interface Paging {
   origin;
 }
 ```
+
+- `Cache.noStore` is set on an operation whose responses carry a sensitive value (ADR 0003 section 6, invariant `ir.cache.sensitive-no-store`): a property marked sensitive, or a scalar use marked sensitive (section 5), reached from a body through array items, JSON content, object properties, map keys and values and union variants, or from a response header's type. Without a `cache`, the compiler writes `{ family: never, noStore: true }` located at the value, derivation `cache.sensitive`. A value outside a field of the body (a whole scalar body or its items, a map key, a response header) is no-store under `conventions.cache.sensitiveElsewhere: noStore`, the default, and a compile error under `refuse` (ADR 0002 section 13), so the IR never holds one without `noStore`. An error code whose params carry a sensitive value follows the same convention through `ErrorDecl.noStore` (section 4, invariant `ir.error.sensitive-no-store`): a target writes `Cache-Control: no-store` on every response of that code, whatever the operation's `cache`.

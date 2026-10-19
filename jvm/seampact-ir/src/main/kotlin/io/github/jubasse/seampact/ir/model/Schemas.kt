@@ -1,4 +1,4 @@
-// Generated from packages/core/spec/schemas/ir/schemas.schema.json by scripts/ir-models for IR revision 5. Do not edit.
+// Generated from packages/core/spec/schemas/ir/schemas.schema.json by scripts/ir-models for IR revision 6. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 @file:OptIn(ExperimentalSerializationApi::class)
 @file:UseSerializers(IrIntegerSerializer::class)
@@ -221,6 +221,8 @@ public data class OpaqueTypeUse(
     public val docs: Docs? = null,
     /** The examples written at the position of this use, placed as its docs are. */
     public val examples: List<JsonElement>? = null,
+    /** The value may be JSON null (ADR 0003 section 2): an opaque value accepts null only with it; absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
+    public val nullable: Boolean? = null,
 ) : TypeUse {
     init {
         require(kind == "opaque") { "OpaqueTypeUse: kind is \"opaque\", got \"" + kind + "\"" }
@@ -339,6 +341,8 @@ public data class ScalarTypeUse(
     public val scalar: ScalarId? = null,
     public val refinements: Refinements,
     public val content: JsonContent? = null,
+    /** The value is secret (ADR 0003 section 6): a use of a declared scalar marked sensitive; absent means false. A property's own type use leaves it out: Property.sensitive holds it (invariant ir.property.sensitive). A response carrying it is no-store (invariant ir.cache.sensitive-no-store). */
+    public val sensitive: Boolean? = null,
     /** The value may be JSON null (ADR 0003 section 5); absent means false. A property's own type use leaves it out: Property.nullable holds it (invariant ir.property.nullable). */
     public val nullable: Boolean? = null,
     /** The docs written at the position of this use (today the compiler writes them on array items, map keys or values and JSON content schemas). An inline object, map or union keeps them on its hoisted schema; a property and a named format hold their own. */

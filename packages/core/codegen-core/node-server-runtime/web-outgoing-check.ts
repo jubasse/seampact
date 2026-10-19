@@ -20,7 +20,12 @@ import {
   unreadableEncodingViolation,
   warnViolation,
 } from "./outgoing-verdict.js";
-import { CONTENT_ENCODING_HEADER, CONTENT_TYPE_HEADER, ETAG_HEADER } from "./reply-headers.js";
+import {
+  CACHE_CONTROL_HEADER,
+  CONTENT_ENCODING_HEADER,
+  CONTENT_TYPE_HEADER,
+  ETAG_HEADER,
+} from "./reply-headers.js";
 import { IDENTITY_ENCODING } from "./transport-checks.js";
 import {
   type ByteStream,
@@ -91,7 +96,11 @@ export async function checkOutgoingResponse(
     return new Response(response.body, outgoing);
   }
 
-  const verdict = statusVerdict(context, response.status);
+  const verdict = statusVerdict(
+    context,
+    response.status,
+    outgoing.headers.get(CACHE_CONTROL_HEADER) ?? "",
+  );
 
   if (verdict.kind === "violation") {
     return violatingResponse(context, request, outgoing, response.body, EMPTY_BODY, verdict.reason);
@@ -153,6 +162,7 @@ async function heldResponse(
             context,
             outgoing.status,
             outgoing.headers.get(CONTENT_TYPE_HEADER) ?? "",
+            outgoing.headers.get(CACHE_CONTROL_HEADER) ?? "",
             decoded,
           )
         : await successBodyViolation(context, outgoing.status, decoded);

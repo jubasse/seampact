@@ -1,6 +1,7 @@
 // The contract's refusals and their rendering in the api's error format: the exception every check step throws,
 // and the reply it becomes. Copied into the generated tree as is.
 import type { ContractApi, ContractRoute, ErrorEntry, FormatTemplate } from "./contract-route.js";
+import { CACHE_CONTROL_HEADER, NO_STORE_DIRECTIVE } from "./reply-headers.js";
 
 /** The longest issues list rendered into a `schemaInvalid` error's params. */
 export const MAX_RENDERED_ISSUES = 100;
@@ -110,6 +111,8 @@ export function renderContractReply(
   const retryHeader = retryHeaderOf(entry, params);
 
   if (retryHeader !== undefined) headers.push(retryHeader);
+
+  if (entry.noStore === true) headers.push([CACHE_CONTROL_HEADER, NO_STORE_DIRECTIVE]);
 
   return {
     status: entry.status,

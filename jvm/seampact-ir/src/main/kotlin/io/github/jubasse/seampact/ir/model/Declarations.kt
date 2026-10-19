@@ -1,4 +1,4 @@
-// Generated from packages/core/spec/schemas/ir/declarations.schema.json by scripts/ir-models for IR revision 5. Do not edit.
+// Generated from packages/core/spec/schemas/ir/declarations.schema.json by scripts/ir-models for IR revision 6. Do not edit.
 // Regenerate: node --import ./scripts/ir-models/register.ts scripts/ir-models/cli.ts --write
 @file:OptIn(ExperimentalSerializationApi::class)
 @file:UseSerializers(IrIntegerSerializer::class)
@@ -184,6 +184,8 @@ public data class ErrorDecl(
     public val docs: Docs,
     public val origin: Origin,
     public val default: ErrorRole? = null,
+    /** Every response of this code carries Cache-Control: no-store, since its params reach a sensitive value (ADR 0003 section 6, conventions.cache.sensitiveElsewhere: noStore); absent means false (invariant ir.error.sensitive-no-store). */
+    public val noStore: Boolean? = null,
 )
 
 /** The HTTP attributes of an error code (ADR 0014). */
