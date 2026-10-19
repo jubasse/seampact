@@ -5,7 +5,7 @@ import packageJson from "../package.json" with { type: "json" };
 import { nestjsModuleSource } from "./nestjs-module.js";
 
 // The NestJS target, as the CLI loads it. Its placement is a checked source of this package one directory above both
-// `src` and `dist`, and the `nestjs` module of each api.
+// `src` and `dist`, and the `nestjs` module of each api. It reads Standard Schema and class-validator validators.
 export const target: Target = nodeServerTarget({
   packageName: packageJson.name,
   packageVersion: packageJson.version,
@@ -16,4 +16,5 @@ export const target: Target = nodeServerTarget({
     frameworkModule: "nestjs",
     frameworkSource: nestjsModuleSource,
   },
+  validatorStyles: ["standard-schema", "class-validator"],
 });

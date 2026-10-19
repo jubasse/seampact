@@ -16,6 +16,7 @@ export type {
   SchemaDirection,
   SchemaExports,
   TypesDescriptor,
+  ValidatorStyle,
   ValidatorsDescriptor,
 } from "./descriptors.js";
 export { type GenerateWarning, warnLeftToHandler } from "./generate-warning.js";

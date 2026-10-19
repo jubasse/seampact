@@ -8,6 +8,14 @@ export function refuseUnmetLinks(needs: Partial<LinkNeeds>, links: LinkSet): Ref
   return Object.values(linkCheckByKind).flatMap((checkKind) => checkKind(needs, links));
 }
 
+// The first-party packages that provide each link style, named in the fix of a refused link. They move to
+// `@seampact/spec/compatibility` once its matrix is designed.
+const FIRST_PARTY_PROVIDERS: { readonly [Style in LinkStyle]: readonly string[] } = {
+  "standard-schema": ["@seampact/codegen-zod", "@seampact/codegen-yup"],
+  "class-validator": ["@seampact/codegen-class-validator"],
+  typescript: ["@seampact/codegen-ts"],
+};
+
 // One check per kind, so a new kind cannot be left unchecked.
 const linkCheckByKind: {
   readonly [Kind in LinkKind]: (needs: Partial<LinkNeeds>, links: LinkSet) => Refusal[];
@@ -32,13 +40,14 @@ function refuseUnmetLink<Kind extends LinkKind>(
   if (need === undefined) return [];
 
   const accepted = need.styles.join(", ");
+  const providers = providerList(need.styles);
 
   if (link === undefined) {
     return [
       {
         code: "link.missing",
         message: `This target consumes a '${kind}' link in style ${accepted}, and none is given.`,
-        fix: `Link a target that provides '${kind}' in style ${accepted} in the target's \`link\` entry.`,
+        fix: `Link ${providers} in the target's \`link\` entry.`,
       },
     ];
   }
@@ -50,7 +59,7 @@ function refuseUnmetLink<Kind extends LinkKind>(
       {
         code: "link.kind.mismatch",
         message: `The '${kind}' link points at a '${descriptor.kind}' descriptor.`,
-        fix: `Link a target that provides '${kind}' in style ${accepted}.`,
+        fix: `Link ${providers}.`,
       },
     ];
   }
@@ -60,10 +69,19 @@ function refuseUnmetLink<Kind extends LinkKind>(
       {
         code: "link.style.unsupported",
         message: `The '${kind}' link provides style '${descriptor.style}'; this target reads ${accepted}.`,
-        fix: `Link a target that provides '${kind}' in style ${accepted}.`,
+        fix: `Link ${providers}.`,
       },
     ];
   }
 
   return [];
+}
+
+// The first-party packages of every accepted style, such as "`@seampact/codegen-zod` or `@seampact/codegen-yup`".
+function providerList(styles: readonly LinkStyle[]): string {
+  const packageNames = styles.flatMap((style) => FIRST_PARTY_PROVIDERS[style]).map((name) => `\`${name}\``);
+
+  if (packageNames.length <= 1) return packageNames.join("");
+
+  return `${packageNames.slice(0, -1).join(", ")} or ${packageNames.at(-1)}`;
 }
