@@ -131,6 +131,28 @@ describe("finalize id collisions", () => {
     );
   });
 
+  test("a named format collides with a schema and with an error code", () => {
+    const draft = editedDraft([
+      { addError: "Sku", origin: { layer: "shared", pointer: "/errors/api.rate_limited" } },
+    ]);
+    const scalar = (id: string): IrWriter.Scalar => ({
+      id,
+      name: { segments: [id.toLowerCase()], role: "schema" },
+      type: { kind: "scalar", type: "string", refinements: {} },
+      directions: ["input"],
+      docs: {},
+      origin: { layer: "api", pointer: `/scalars/${id}` },
+    });
+
+    draft.scalars.Sku = scalar("Sku");
+    draft.scalars.Task = scalar("Task");
+
+    expect(finalizeIdCollisions(draft).map((d) => d.message)).toEqual([
+      "The schema 'Task' and the named format 'Task' have one id, so a document would write both as the component 'Task'.",
+      "The error code 'Sku' equals the id of the named format 'Sku', so a document would write both as the component 'Sku'.",
+    ]);
+  });
+
   test("two core declarations under one id are an internal error", () => {
     const draft = editedDraft([
       { addError: "ApiEmptyBody", origin: { layer: "core", pointer: "/errors/ApiEmptyBody" } },
