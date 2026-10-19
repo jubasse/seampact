@@ -346,7 +346,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       throw unexpectedError(context.route, new Error("seampact: the guard did not run"));
 
     const state = checkState(context, request);
-    const validated = await validateRequestInput(state);
+    const validated = await validateRequestInput(state, grant);
     const input = await checkRestrictedInput(state, grant, validated);
 
     context.input = input;

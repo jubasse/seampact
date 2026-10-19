@@ -476,7 +476,11 @@ export function createAdonisBoundary<
       try {
         const grant = requireGrant(context);
         const state = checkState(context);
-        const input = await checkRestrictedInput(state, grant, await validateRequestInput(state));
+        const input = await checkRestrictedInput(
+          state,
+          grant,
+          await validateRequestInput(state, grant),
+        );
 
         context.input = input;
         inputs.set(ctx, { id: route.id, input });

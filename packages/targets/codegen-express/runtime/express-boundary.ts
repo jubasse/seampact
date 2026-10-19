@@ -28,6 +28,7 @@ import { ContractError, unexpectedError } from "./node-server/contract-error.js"
 import {
   type ContractApi,
   type ContractRoute,
+  isUnderBasePath,
   matchContractPath,
   matchContractRoute,
   matchesContractPath,
@@ -341,10 +342,7 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
     return (request, response, next) => {
       const reported = reportedRequest(request);
 
-      if (
-        request.baseUrl !== NO_MOUNT ||
-        !claimsBasePathAlone(api, appBasePathClaims(request.app), reported.path)
-      ) {
+      if (request.baseUrl !== NO_MOUNT || !claimsAlone(api, request.app, reported.path)) {
         next();
 
         return;
@@ -461,7 +459,7 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
     if (
       route === undefined &&
       error === undefined &&
-      claimsBasePathAlone(api, appBasePathClaims(Reflect.get(request, "app")), reported.path)
+      claimsAlone(api, Reflect.get(request, "app"), reported.path)
     ) {
       respondUnserved(response, registered.hooks, reported);
 
@@ -513,23 +511,39 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
   };
 }
 
+// The app's stack is read only for a path under the api's base paths, so the app's own paths never depend on it.
+function claimsAlone(api: ContractApi, app: unknown, path: string): boolean {
+  if (!isUnderBasePath(api, path)) return false;
+
+  return claimsBasePathAlone(api, appBasePathClaims(api, app), path);
+}
+
 /**
  * The claims of the contract routers mounted on an app, read from its router's stack, which Express 4 keeps under
- * `_router` and Express 5 under `router`; none when the app has no stack to read.
+ * `_router` and Express 5 under `router`. An app without a stack to read is refused by name: without it, the api
+ * cannot tell a base path it claims alone from one another api shares.
  */
-function appBasePathClaims(app: unknown): BasePathClaim[] {
-  if (!isObjectLike(app)) return [];
-
-  const appRouter: unknown = Reflect.get(app, "_router") ?? Reflect.get(app, "router");
+function appBasePathClaims(api: ContractApi, app: unknown): BasePathClaim[] {
+  const appRouter: unknown = isObjectLike(app)
+    ? (Reflect.get(app, "_router") ?? Reflect.get(app, "router"))
+    : undefined;
   const stack: unknown = isObjectLike(appRouter) ? Reflect.get(appRouter, "stack") : undefined;
 
-  if (!Array.isArray(stack)) return [];
+  if (!Array.isArray(stack)) throw new Error(unreadableRouterStackMessage(api));
 
   return stack.flatMap((layer: unknown) => {
     const handle: unknown = isObjectLike(layer) ? Reflect.get(layer, "handle") : undefined;
 
     return isObjectLike(handle) ? basePathClaimsOf(handle) : [];
   });
+}
+
+function unreadableRouterStackMessage(api: ContractApi): string {
+  return (
+    `seampact: the router of api '${api.id}' cannot read the router stack of the app it serves ` +
+    "(no 'router.stack' or '_router.stack' on req.app), so it cannot tell which base paths another api shares. " +
+    "Mount the router on an Express 4 or 5 app with app.use()."
+  );
 }
 
 // Express's apps, routers and layers are functions or objects.

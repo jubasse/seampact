@@ -60,11 +60,15 @@ export interface CheckState {
   readonly fixes: PlatformFixes;
 }
 
-/** The caller once steps 2 to 5 passed: the principal (null when anonymous) and the resolved scopes. */
+/**
+ * The caller once steps 2 to 5 passed: the principal (null when anonymous), the resolved scopes, and the request
+ * validation a scope id, a body proof or a path subject needed, which step 6 reuses.
+ */
 export interface AccessGrant {
   readonly identity?: string;
   readonly principal: unknown;
   readonly scopes: readonly ResolvedScope[];
+  readonly validation?: RequestValidation;
 }
 
 const UNAUTHENTICATED_ROLE = "unauthenticated";
@@ -74,7 +78,8 @@ const COOKIE_SEPARATOR = ";";
 
 /** Steps 2 to 5; throws a `ContractError` at the first refusal. */
 export async function authorizeRequest(state: CheckState): Promise<AccessGrant> {
-  const validation = onceValidated(state);
+  const once = onceValidated(state);
+  const validation = once.validation;
   const authenticated = await authenticate(state);
   const scopes = await resolveScopes(state, authenticated.principal, validation);
   const grant: AccessGrant = { ...authenticated, scopes };
@@ -100,17 +105,28 @@ export async function authorizeRequest(state: CheckState): Promise<AccessGrant> 
     if (decision !== undefined) throw decision;
   }
 
-  return grant;
+  const validated = await once.settled();
+
+  return validated === undefined ? grant : { ...grant, validation: validated };
+}
+
+interface OnceValidated {
+  readonly validation: () => Promise<RequestValidation>;
+  /** The validation when a step asked for it, else undefined. */
+  readonly settled: () => Promise<RequestValidation | undefined>;
 }
 
 // The request validated at most once, and only when a scope id or a body proof needs it before step 6.
-function onceValidated(state: CheckState): () => Promise<RequestValidation> {
-  let validation: Promise<RequestValidation> | undefined;
+function onceValidated(state: CheckState): OnceValidated {
+  let pending: Promise<RequestValidation> | undefined;
 
-  return () => {
-    validation ??= validateRequest(state);
+  return {
+    validation: () => {
+      pending ??= validateRequest(state);
 
-    return validation;
+      return pending;
+    },
+    settled: async () => pending,
   };
 }
 
@@ -150,7 +166,8 @@ function validatedMember(
   const request = validation.issues.length === 0 ? validation.value : validation.candidate;
   const values = isPlainObject(request) ? request[part] : undefined;
 
-  return isPlainObject(values) ? values[member] : undefined;
+  // A copy, since step 6 reuses this validation: a hook that changes its value never reaches the handler input.
+  return isPlainObject(values) ? structuredClone(values[member]) : undefined;
 }
 
 /** The operation as hooks receive it. */

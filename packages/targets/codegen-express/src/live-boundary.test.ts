@@ -10,8 +10,10 @@ import {
   problemBody,
   projectDirectory,
   type RawReply,
+  type ReferenceIrChange,
   sendRawRequest,
 } from "@seampact/codegen-core/node-server/test-support";
+import type { ContractIR } from "@seampact/spec/ir";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 import { target as expressTarget } from "./index.js";
 
@@ -523,6 +525,31 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
       generated.router({ handlers, hooks: app.hooks, operations: { nothing: {} } }),
     ).toThrow(/TasksEndpoints[\s\S]*'operations' names 'nothing'/);
   });
+
+  test("an app whose router stack the router cannot read is refused by name", async () => {
+    const generated: RouterModule = await import(
+      pathToFileURL(join(build, "generated/server/tasks/express.js")).href
+    );
+    const contractRouter = generated.router({ handlers: app.handlers, hooks: app.hooks });
+    const stubApp = {};
+    const stubRequest = {
+      method: "GET",
+      url: "/v1/unknown",
+      originalUrl: "/v1/unknown",
+      headers: {},
+      app: stubApp,
+    };
+
+    expect(contractRouter).toBeTypeOf("function");
+
+    const refusal = await new Promise<unknown>((resolve) => {
+      if (typeof contractRouter === "function") {
+        Reflect.apply(contractRouter, undefined, [stubRequest, {}, resolve]);
+      }
+    });
+
+    expect(String(refusal)).toMatch(/api 'tasks' cannot read the router stack of the app/);
+  });
 });
 
 describe.each(EXPRESS_MAJORS)("two apis on one base path on %s", (_major, expressPackage) => {
@@ -579,6 +606,89 @@ describe.each(EXPRESS_MAJORS)("two apis on one base path on %s", (_major, expres
     expect(reply.status).toBe(404);
     expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
     expect(JSON.parse(reply.text)).toMatchObject({ code: "api.not_found" });
+  });
+});
+
+const PROOF_RULE = "recentAuth";
+const PROOF_LIST: ContractIR["rules"][string]["proof"] = {
+  in: "body",
+  name: "reauthToken",
+  schema: { kind: "array", items: { kind: "scalar", type: "string", refinements: {} } },
+};
+
+// The `tasks` contract with the purge route's body proof as a list of texts, a value a decider could change.
+const listProof: ReferenceIrChange = (ir, api) => {
+  const rule = ir.rules[PROOF_RULE];
+
+  if (api !== "tasks" || rule === undefined || PROOF_LIST === undefined) return ir;
+
+  return {
+    ...ir,
+    rules: { ...ir.rules, [PROOF_RULE]: { ...rule, proof: PROOF_LIST } },
+    operations: ir.operations.map((operation) =>
+      operation.input?.proofs === undefined
+        ? operation
+        : {
+            ...operation,
+            input: {
+              ...operation.input,
+              proofs: operation.input.proofs.map((proof) => ({
+                ...proof,
+                schema: PROOF_LIST.schema,
+              })),
+            },
+          },
+    ),
+  };
+};
+
+describe("a body proof a decider changes on Express 5", () => {
+  const project = projectDirectory(import.meta.url, "live-list-proof");
+  let app: ReferenceAppModule;
+  let server: Awaited<ReturnType<ReferenceAppModule["startReferenceApp"]>>;
+
+  beforeAll(async () => {
+    const files = await generateReferenceProject(project, expressTarget, {}, listProof);
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+    linkExpress(project, "express");
+    app = await import(copyTestApp(build, APP_SOURCE));
+    server = await app.startReferenceApp();
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  afterAll(async () => {
+    await server?.close();
+  });
+
+  test("reaches the handler as the client sent it", async () => {
+    const handledProofs: unknown[] = [];
+
+    app.resetScenario();
+    app.scenario.decide = (request) => {
+      if (Array.isArray(request.proof)) request.proof.push("changed by the decider");
+
+      return { allow: true };
+    };
+
+    app.scenario.answers.purgeTask = (input) => {
+      handledProofs.push(Reflect.get(Reflect.get(Object(input), "body") ?? {}, "reauthToken"));
+
+      return { status: 204 };
+    };
+
+    const reply = await sendRawRequest(
+      server,
+      "POST",
+      `/v1/channels/${CHANNEL}/tasks/${TASK}/purge`,
+      {
+        headers: writeHeaders(),
+        body: JSON.stringify({ reauthToken: ["token"] }),
+      },
+    );
+
+    expect(reply.status).toBe(204);
+    expect(handledProofs).toEqual([["token"]]);
   });
 });
 

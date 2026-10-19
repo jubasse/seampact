@@ -205,7 +205,7 @@ export async function runInputSteps(
   context: BoundaryContext,
 ): Promise<{ readonly replay: ContractReply } | undefined> {
   const grant = requireGrant(context);
-  const validated = await validateRequestInput(state);
+  const validated = await validateRequestInput(state, grant);
   const input = await checkRestrictedInput(state, grant, validated);
 
   context.input = input;
