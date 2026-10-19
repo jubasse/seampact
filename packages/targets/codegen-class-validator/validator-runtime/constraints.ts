@@ -3,7 +3,6 @@
 import {
   isBoolean,
   isIn,
-  isInt,
   isNumber,
   isObject,
   isString,
@@ -29,14 +28,18 @@ export const ITEM_CHECKS = "checks";
 
 const TYPE_RULE = "type";
 
-// The `8-4-4-4-12` layout of ADR 0003 section 8, any version and variant digit: `IsUUID` checks both.
+// The `8-4-4-4-12` layout of ADR 0003 section 8, any version and variant digit: `IsUUID` checks both. The runtime
+// is emitted as is and cannot import codegen-core, so a test asserts this equals its `UUID_LAYOUT`.
 const UUID_LAYOUT = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+// An integer is a safe integer, as the contract's integer type reads (zod `z.int()`); past it is `minimum`/`maximum`.
+const SAFE_INTEGER_LIMIT = Number.MAX_SAFE_INTEGER;
 
 const FINITE_NUMBER = { allowNaN: false, allowInfinity: false } as const;
 
 const SCALAR_TESTS: Readonly<Record<ScalarType, (value: unknown) => boolean>> = {
   string: isString,
-  integer: isInt,
+  integer: Number.isInteger,
   number: (value) => isNumber(value, FINITE_NUMBER),
   boolean: isBoolean,
 };
@@ -119,6 +122,11 @@ export function maximumCheck(limit: number): ContractCheck {
   };
 }
 
+/** The safe-integer range as a lower and an upper bound check, for an integer field or the items of a list. */
+export function safeIntegerChecks(): ContractCheck[] {
+  return [minimumCheck(-SAFE_INTEGER_LIMIT), maximumCheck(SAFE_INTEGER_LIMIT)];
+}
+
 /** The checks of one item that fail: its type check alone when the type is wrong, else every failing rule. */
 export function failingItemChecks(
   item: unknown,
@@ -154,6 +162,25 @@ export function MinLength(limit: number, message: string): PropertyDecorator {
 
 export function MaxLength(limit: number, message: string): PropertyDecorator {
   return Satisfies(maxLengthCheck(limit, message));
+}
+
+export function SafeInteger(): PropertyDecorator {
+  const [lower, upper] = safeIntegerChecks();
+
+  return (target, propertyKey) => {
+    for (const check of [lower, upper]) {
+      if (check !== undefined) Satisfies(check)(target, propertyKey);
+    }
+  };
+}
+
+/** A required property whose type is open: it must be present, and `null` is a value (`IsDefined` refuses it). */
+export function Present(): PropertyDecorator {
+  return Satisfies({
+    rule: "required",
+    message: "Expected a value.",
+    test: (value) => value !== undefined,
+  });
 }
 
 export function Minimum(limit: number): PropertyDecorator {

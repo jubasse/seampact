@@ -34,10 +34,15 @@ const BASE_TYPES: Readonly<Record<ScalarBase, string>> = {
 // A decorated class field. An optional field skips its checks when absent; `null` is still checked.
 export function fieldDeclaration(field: FieldPlan, context: DtoRenderContext): string {
   const presence = field.optional ? [`@${CONTRACT}.ValidateIfPresent()`] : [];
-  const decorators = [...presence, ...typeDecorators(field.type, context)];
+  const decorators = [...presence, ...openTypePresence(field), ...typeDecorators(field.type, context)];
   const declaration = `${propertyKey(field.key)}${field.optional ? "?" : "!"}: ${typeText(field.type, context)};`;
 
   return [...decorators, declaration].join("\n");
+}
+
+// An opaque required field has no type check to refuse its absence.
+function openTypePresence(field: FieldPlan): string[] {
+  return field.type.kind === "unknown" && !field.optional ? [`@${CONTRACT}.Present()`] : [];
 }
 
 // A field holding a nested DTO class: an object, validated through the class `@Type` names.
@@ -104,6 +109,7 @@ function itemDecorators(items: TypePlan, context: DtoRenderContext): string[] {
     case "scalar": {
       const checks = [
         `${CONTRACT}.scalarTypeCheck(${JSON.stringify(items.base)})`,
+        ...(items.base === "integer" ? [`...${CONTRACT}.safeIntegerChecks()`] : []),
         ...items.checks.map(itemCheck),
       ];
 
@@ -122,6 +128,7 @@ function scalarDecorators(plan: ScalarPlan, context: DtoRenderContext): string[]
 
   return [
     `@${context.validator(base.name)}(${base.options})`,
+    ...(plan.base === "integer" ? [`@${CONTRACT}.SafeInteger()`] : []),
     ...plan.checks.map((check) => scalarCheckDecorator(check, context)),
   ];
 }

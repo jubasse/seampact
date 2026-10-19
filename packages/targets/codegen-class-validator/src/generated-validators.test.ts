@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { writeGeneratedFiles } from "@seampact/codegen-core";
+import { UUID_LAYOUT } from "@seampact/codegen-core/validators";
 import type { ContractIR } from "@seampact/spec/ir";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { target } from "./index.js";
@@ -23,6 +24,10 @@ interface Issue {
   params: { rule: string };
 }
 
+interface ContractCheck {
+  rule: string;
+}
+
 type DtoClass = new () => object;
 
 interface Adapter {
@@ -35,6 +40,11 @@ let operationInputs: Record<string, StandardSchema>;
 let outputSchemas: Record<string, StandardSchema>;
 let inputDtos: Record<string, DtoClass>;
 let adapter: Adapter;
+let constraints: {
+  scalarTypeCheck(type: "integer"): ContractCheck;
+  safeIntegerChecks(): ContractCheck[];
+  failingItemChecks(item: unknown, checks: readonly ContractCheck[]): ContractCheck[];
+};
 
 // Generates the reference validators into a project that resolves the libraries to this package's copies and
 // compiles legacy decorators, then imports them after `reflect-metadata`, as a NestJS app does.
@@ -76,6 +86,7 @@ beforeAll(async () => {
   operationInputs = await import(join(outDir, "operations/input.ts"));
   outputSchemas = await import(join(outDir, "schemas/output.ts"));
   inputDtos = await import(join(outDir, "dtos/input.ts"));
+  constraints = await import(join(outDir, "constraints.ts"));
   adapter = await import(join(outDir, "class-validator-schema.ts"));
 });
 
@@ -204,6 +215,60 @@ describe("types and presence: no conversion, null is no absence", () => {
       "/body type",
     ]);
   });
+});
+
+describe("integers are safe integers, as zod reads them", () => {
+  test.each([2 ** 53, 1e300])("%s on a field is a maximum issue", async (effort) => {
+    expect(await inputVerdict("CreateTaskInputSchema", createTask({ title: "a", effort }))).toEqual(
+      ["/body/effort maximum"],
+    );
+  });
+
+  test("-(2 ** 53) on a field is a minimum issue", async () => {
+    expect(
+      await inputVerdict("CreateTaskInputSchema", createTask({ title: "a", effort: -(2 ** 53) })),
+    ).toEqual(["/body/effort minimum"]);
+  });
+
+  test("an integer list item past the safe range fails its checks", () => {
+    const checks = [constraints.scalarTypeCheck("integer"), ...constraints.safeIntegerChecks()];
+
+    expect(constraints.failingItemChecks(2 ** 53, checks).map((check) => check.rule)).toEqual([
+      "maximum",
+    ]);
+    expect(constraints.failingItemChecks(2 ** 53 - 1, checks)).toEqual([]);
+    expect(constraints.failingItemChecks(1.5, checks).map((check) => check.rule)).toEqual(["type"]);
+  });
+});
+
+describe("a required opaque member must be present, null is a value", () => {
+  const payment = (body: unknown): unknown => ({
+    path: {},
+    query: {},
+    headers: { "stripe-signature": "s" },
+    body,
+  });
+
+  test("absent data is required", async () => {
+    expect(
+      await inputVerdict("PaymentsInputSchema", payment({ id: "evt", type: "paid" })),
+    ).toEqual(["/body/data required"]);
+  });
+
+  test("null data passes", async () => {
+    expect(
+      await inputVerdict("PaymentsInputSchema", payment({ id: "evt", type: "paid", data: null })),
+    ).toBe("valid");
+  });
+});
+
+test("the runtime uuid layout is the one codegen-core exports", () => {
+  const runtime = readFileSync(
+    new URL("../validator-runtime/constraints.ts", import.meta.url),
+    "utf8",
+  );
+
+  expect(runtime).toContain(String(new RegExp(UUID_LAYOUT)));
 });
 
 describe("lengths count code points", () => {
