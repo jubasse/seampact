@@ -187,6 +187,7 @@ function scalarValidator(
   const base = baseValidator(typeUse, location, context);
   const checks = [
     ...lengthChecks(typeUse, location, context),
+    ...patternChecks(typeUse, location, context),
     ...boundChecks(typeUse, location, context),
   ];
 
@@ -217,7 +218,6 @@ function refuseScalarForms(
   const refinements = typeUse.refinements;
   const refinementsLocation = below(location, "refinements");
   const notGenerated = [
-    ["pattern", refinements.pattern],
     ["exclusiveMinimum", refinements.exclusiveMinimum],
     ["exclusiveMaximum", refinements.exclusiveMaximum],
     ["multipleOf", refinements.multipleOf],
@@ -330,6 +330,37 @@ function lengthChecks(
   }
 
   return checks;
+}
+
+// The normalised pattern is ECMAScript `u` syntax with no engine-dependent construct left (ADR 0003 section 9).
+function patternChecks(
+  typeUse: ScalarTypeUse,
+  location: IrLocation,
+  context: ValidatorContext,
+): string[] {
+  const { pattern } = typeUse.refinements;
+
+  if (pattern === undefined) return [];
+
+  if (typeUse.type !== "string") {
+    context.refusals.push(
+      refuseInconsistentIr(
+        "scalar.pattern.misplaced",
+        `A pattern on a ${typeUse.type}`,
+        below(location, "refinements", "pattern"),
+      ),
+    );
+
+    return [];
+  }
+
+  return [
+    customCheck(
+      `(value) => new RegExp(${JSON.stringify(pattern.normalized)}, "u").test(value)`,
+      `Expected a value matching ${pattern.source}.`,
+      "pattern",
+    ),
+  ];
 }
 
 function characters(count: number): string {
