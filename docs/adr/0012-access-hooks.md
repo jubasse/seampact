@@ -122,8 +122,8 @@ The order is fixed in every target and stops at the first failure (FR-5):
 1. Transport refusals raised while the framework parses: unknown route (404), body too large (413), unsupported media type (415), malformed body (400), and the refusals of the framework's own security layers (below), rendered in the api's declared error format (ADR 0008). A malformed body is one that does not parse as its declared media type; a value of the wrong type is a step 6 issue.
 2. Authenticate (401), over the raw body for a signed identity.
 3. Principal requirements (403).
-4. Scope resolution, outermost scope first (each scope's declared denial).
-5. Requirements in declared order. A body proof is read from the parsed body and checked against its own field schema in this step. A registered record loader runs here, before the decide call that receives the record; a record it does not find answers the `notFound` role at this step, before any 403 (as Laravel's route-model binding and API Platform's providers do).
+4. Scope resolution, outermost scope first (each scope's declared denial). A scope id is checked against its schema before its resolver runs; an invalid one answers the `schemaInvalid` 400 with that member's issues only.
+5. Requirements in declared order. A body proof is read from the parsed body and checked against its own field schema in this step; an invalid one answers the `schemaInvalid` 400 with that member's issues only, before the decider runs. A registered record loader runs here, before the decide call that receives the record; a record it does not find answers the `notFound` role at this step, before any 403 (as Laravel's route-model binding and API Platform's providers do).
 6. Input validation (400), reporting every issue of path, query, headers and body at once.
 7. Restricted input fields (403 with the field pointer, or stripped, per A21) and restricted sort keys (403).
 8. Principal bindings (403). A binding whose principal side or input side is absent or null is a mismatch, never a match.
