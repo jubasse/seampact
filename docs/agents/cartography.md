@@ -22,6 +22,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/codegen-express` | `packages/targets/codegen-express` | target | Generates an Express router per api that serves each contract route behind its access, validation and reply checks around your handler map, on Express 4 and 5, validating with zod. |
 | `@seampact/codegen-fastify` | `packages/targets/codegen-fastify` | target | Generates a Fastify plugin per api that registers each contract route with its access, validation and reply checks around your handler map, on Fastify 5, validating with zod. |
 | `@seampact/codegen-fetch` | `packages/targets/codegen-fetch` | target | Generates a typed fetch client with one method per operation, returning its success and error responses as typed results. |
+| `@seampact/codegen-hono` | `packages/targets/codegen-hono` | target | Generates a registerRoutes function per api that adds each contract route to a Hono 4 app with its access, validation and reply checks around your handler map, validating with zod. |
 | `@seampact/codegen-nestjs` | `packages/targets/codegen-nestjs` | target | Generates the NestJS boundary around your controllers: a decorator per operation, the access guard, the validation and response interceptor, an input decorator, the error filter and a boot check, validating with zod. |
 | `@seampact/codegen-ts` | `packages/targets/codegen-ts` | target | Generates a named TypeScript type per schema and each operation's input, output and error union. |
 | `@seampact/codegen-zod` | `packages/targets/codegen-zod` | target | Generates Standard Schema zod validators per schema and direction, and one input validator per operation. |
@@ -51,7 +52,7 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/codegen-core`
 
 - `packages/core/codegen-core/src`: The API the code generators are written against: target definitions, link descriptors, refusals, and the steps around a target's generate (IR support and link checks, header, formatting, file writer), and the helpers targets share (IR locations, located refusals, planned names, property keys).
-- `packages/core/codegen-core/src/node-server`: The shared Node server boundary every Node server target generates (ADR 0016): the framework-neutral runtime copied into the generated tree, the emitters of the route table, handler interfaces and hook types, the target options parser, and the assembly of one api's boundary files around a target's placement.
+- `packages/core/codegen-core/src/node-server`: The shared server boundary every Node and Web-standard server target generates (ADR 0016, ADR 0020): the framework-neutral runtime copied into the generated tree, the emitters of the route table, handler interfaces and hook types, the target options parser, the path segments a router cannot read, and the assembly of one api's boundary files around a target's placement.
 
 ### `@seampact/compiler`
 
@@ -123,6 +124,10 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/codegen-fetch`
 
 - `packages/targets/codegen-fetch/src`: The fetch client target: one typed method per operation over the platform fetch, reading its request, success and error types from the `types` link.
+
+### `@seampact/codegen-hono`
+
+- `packages/targets/codegen-hono/src`: The Hono server target: a `registerRoutes` function per api that places the shared request checks of codegen-core, in their Web-standard profile, around the app's handler map on Hono 4, validating with zod.
 
 ### `@seampact/codegen-nestjs`
 
