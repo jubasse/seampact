@@ -78,7 +78,7 @@ import {
   parserErrorStatus,
   pathnameOf,
   reportedRequest,
-} from "./node-server/express-platform.js";
+} from "./node-server/node-request.js";
 import { notFoundError, respondWithError } from "./node-server/error-reply.js";
 import { handlerReply } from "./node-server/handler-reply.js";
 import { beginIdempotency } from "./node-server/idempotency.js";

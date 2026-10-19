@@ -126,7 +126,7 @@ function adonisRefusals(ir: ContractIR, operation: Operation, index: number): Re
     refusals.push(
       refuseNotGeneratedYet(
         "path.segment.mixed",
-        "A path segment mixing a param with text",
+        "A path segment that mixes a placeholder with literal text, such as '{id}:archive',",
         below(location, "path"),
       ),
     );
@@ -138,7 +138,7 @@ function adonisRefusals(ir: ContractIR, operation: Operation, index: number): Re
     refusals.push(
       refuseNotGeneratedYet(
         "input.body.topLevel",
-        "A request body that is not a JSON object or array, which the AdonisJS bodyparser's strict mode refuses,",
+        "A request body schema other than a plain object, map or array (a union or an alias of an object included),",
         below(location, "input", "schema"),
       ),
     );

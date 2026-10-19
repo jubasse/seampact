@@ -312,6 +312,10 @@ export async function startReferenceApp(major) {
 
   TasksAdonis.registerRoutes(router, registration());
   router.get("/own/ping", () => ({ pong: true }));
+  // An app route on a path a contract template matches, with a method the contract does not serve there.
+  router.put("/v1/channels/:channelId", () => {
+    throw new AppReply(409, "text/plain", "own conflict");
+  });
 
   await app.start(() => undefined);
   await server.boot();

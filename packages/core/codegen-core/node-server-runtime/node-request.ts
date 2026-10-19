@@ -1,6 +1,6 @@
-// The Express-platform glue shared by the targets that run on Express (NestJS on Express, Express): the request
-// target as Express routes it, the JSON parser's `verify` function that records the parsed byte count and keeps the
-// raw body of signed routes, the empty body read as no body, and a body parser's error mapped to its contract role.
+// The Node request glue the Node server targets share: the raw request target, the request as the shared checks
+// read it, the JSON parser's `verify` function that records the parsed byte count and keeps the raw body of signed
+// routes, the zero-byte body read as no body, and a body parser's error mapped to its contract role.
 // Copied into the generated tree as is.
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
@@ -122,7 +122,8 @@ export function clearEmptyBody(request: ExpressRequest, recordedBytes: number | 
   }
 }
 
-function announcesBody(request: IncomingMessage): boolean {
+/** Whether a request announces body bytes: a non-zero Content-Length or a Transfer-Encoding. */
+export function announcesBody(request: IncomingMessage): boolean {
   return (
     request.headers["transfer-encoding"] !== undefined ||
     Number(request.headers["content-length"] ?? 0) > 0

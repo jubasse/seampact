@@ -1,6 +1,6 @@
-// The AdonisJS placement of the shared request checks (ADR 0019): the routes of one api, most specific first, each
-// with three inline route middleware and a generated route handler, the boot check, and the helpers an app's
-// exception handler calls. Each api's generated module calls `createAdonisBoundary` once with its route table.
+// The AdonisJS placement of the shared request checks (ADR 0019): the routes of one api, in the route table's
+// order, each with three inline route middleware and a generated route handler, the boot check, and the helpers an
+// app's exception handler calls. Each api's generated module calls `createAdonisBoundary` once with its route table.
 import type { ServerResponse } from "node:http";
 import string from "@adonisjs/core/helpers/string";
 import type { HttpContext, Router } from "@adonisjs/core/http";
@@ -15,7 +15,6 @@ import {
   type BoundaryHooks,
   bootProblemsMessage,
   hookBootProblems,
-  reportUnexpected,
 } from "./node-server/boundary-hooks.js";
 import {
   ContractError,
@@ -23,7 +22,6 @@ import {
   codeOfStatus,
   isPlainObject,
   PAYLOAD_TOO_LARGE_ROLE,
-  renderContractReply,
   roleError,
   unexpectedError,
 } from "./node-server/contract-error.js";
@@ -33,10 +31,16 @@ import {
   type ContractRoute,
   isUnderPrefix,
   matchContractRoute,
+  matchContractPath,
   matchesContractPath,
   type ResponsesMode,
 } from "./node-server/contract-route.js";
-import { requestTarget } from "./node-server/express-platform.js";
+import {
+  notFoundError,
+  type ReportedRequest,
+  respondUnservedMethod,
+  respondWithError,
+} from "./node-server/error-reply.js";
 import { handlerReply } from "./node-server/handler-reply.js";
 import { beginIdempotency } from "./node-server/idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./node-server/input-checks.js";
@@ -46,6 +50,7 @@ import {
   installOutgoingCheck,
   writeContractReply,
 } from "./node-server/outgoing-check.js";
+import { announcesBody, DEFAULT_METHOD, requestTarget } from "./node-server/node-request.js";
 import { type PlatformFixes, transportRefusal } from "./node-server/transport-checks.js";
 
 /** The target options this api was generated with. */
@@ -103,10 +108,8 @@ const ROUTE_NOT_FOUND_CODE = "E_ROUTE_NOT_FOUND";
 const ENTITY_TOO_LARGE_CODE = "E_REQUEST_ENTITY_TOO_LARGE";
 const BAD_REQUEST = 400;
 const STRICT_JSON_REFUSAL = 422;
-const NOT_FOUND = 404;
 const UNAUTHENTICATED_ROLE = "unauthenticated";
 const FORBIDDEN_ROLE = "forbidden";
-const NOT_FOUND_ROLE = "notFound";
 const CSRF_INVALID_ROLE = "csrfInvalid";
 const HEAD_METHOD = "HEAD";
 const GET_METHOD = "get";
@@ -114,11 +117,12 @@ const UTF8 = "utf8";
 const UTF8_ENCODINGS: readonly string[] = ["utf8", "utf-8"];
 const BODYPARSER_CONFIG_KEY = "bodyparser";
 const PATH_PARAM = /\{([^}]+)\}/g;
-const PARAM_SEGMENT = /^\{[^}]+\}$/;
 const BODYPARSER_FIX =
   "Register @adonisjs/core/bodyparser_middleware as router middleware in start/kernel.ts and list the route's media type in the bodyparser config's json.types.";
 const ADONIS_FIXES: PlatformFixes = { rawBody: BODYPARSER_FIX, bodySize: BODYPARSER_FIX };
 const NO_RAW_BODY = new Uint8Array();
+// The apis registered per router, so a second registration of one api in one app stops the boot.
+const registeredApis = new WeakMap<Router, Set<string>>();
 
 /** A framework refusal the boundary maps by its `code` and `status`, without importing its package. */
 function isRefusal(error: unknown, refusal: { readonly code: string; readonly status: number }) {
@@ -164,21 +168,8 @@ function asContractError(route: ContractRoute, error: unknown): ContractError {
   return code === undefined ? unexpectedError(route, error) : new ContractError(code);
 }
 
-function notFoundError(route: ContractRoute | undefined): ContractError {
-  const code =
-    route === undefined
-      ? undefined
-      : (codeOfRole(route, NOT_FOUND_ROLE) ?? codeOfStatus(route, NOT_FOUND));
-
-  return code === undefined
-    ? unexpectedError(route, new Error("the contract path has no 404 code to answer"))
-    : new ContractError(code);
-}
-
 // A refusal raised before the boundary's first middleware, in the route's terms; anything unknown is a 500.
 function preRoutingError(route: ContractRoute | undefined, error: unknown): ContractError {
-  if (errorCode(error) === ROUTE_NOT_FOUND_CODE) return notFoundError(route);
-
   if (route === undefined) return unexpectedError(route, error);
 
   if (isRefusal(error, BAD_CSRF_TOKEN)) {
@@ -204,48 +195,6 @@ function preRoutingError(route: ContractRoute | undefined, error: unknown): Cont
   return unexpectedError(route, error);
 }
 
-// Reports an unexpected failure to the hook (or the log), then writes the error in the api's format.
-async function respondWithError(
-  response: ServerResponse,
-  context: BoundaryContext | undefined,
-  hooks: BoundaryHooks | undefined,
-  api: ContractApi,
-  route: ContractRoute | undefined,
-  error: ContractError,
-  request: { readonly method: string; readonly path: string },
-): Promise<void> {
-  if (error.unexpectedCause !== undefined) {
-    const where = { api: api.id, operation: route?.id, method: request.method, path: request.path };
-
-    if (hooks?.onUnexpectedError === undefined) {
-      console.error(
-        `seampact: unexpected failure on operation '${where.operation ?? "(none)"}'`,
-        error.unexpectedCause,
-      );
-    }
-
-    await reportUnexpected(hooks, error.unexpectedCause, where);
-  }
-
-  await writeContractReply(response, context, renderContractReply(api, route, error));
-}
-
-/** Static segments before params at each segment, so a static route is never shadowed by a param route. */
-function mostSpecificFirst(left: ContractRoute, right: ContractRoute): number {
-  const leftSegments = left.path.split("/");
-  const rightSegments = right.path.split("/");
-  const shared = Math.min(leftSegments.length, rightSegments.length);
-
-  for (let index = 0; index < shared; index += 1) {
-    const leftIsParam = PARAM_SEGMENT.test(leftSegments[index] ?? "");
-    const rightIsParam = PARAM_SEGMENT.test(rightSegments[index] ?? "");
-
-    if (leftIsParam !== rightIsParam) return leftIsParam ? 1 : -1;
-  }
-
-  return 0;
-}
-
 function adonisPath(path: string): string {
   return path.replace(PATH_PARAM, ":$1");
 }
@@ -265,14 +214,15 @@ function accessKindOf(route: ContractRoute): RouteAccessKind {
   return route.access.anonymousAllowed ? "optional" : "identity";
 }
 
-function requestLine(ctx: HttpContext): { method: string; path: string; rawQuery: string } {
+function requestLine(ctx: HttpContext): ReportedRequest & { readonly rawQuery: string } {
   const { path, rawQuery } = requestTarget(ctx.request.request);
 
-  return { method: ctx.request.request.method ?? "GET", path, rawQuery };
+  return { method: ctx.request.request.method ?? DEFAULT_METHOD, path, rawQuery };
 }
 
 // The bodyparser keeps the decoded body only; the boundary decodes the JSON itself, since `request.body()` may have
 // trimmed or nulled its strings (ADR 0019 "Raw body and decoded body").
+// Zero body bytes is no body, as on every Node target.
 function decodedBody(route: ContractRoute, raw: string | null): unknown {
   if (route.input === undefined || raw === null || raw === "") return undefined;
 
@@ -285,7 +235,8 @@ function decodedBody(route: ContractRoute, raw: string | null): unknown {
   }
 }
 
-function contractRequestOf(ctx: HttpContext, route: ContractRoute): ContractRequest {
+// The request before its body is decoded: the media type and size checks run on the raw bytes first.
+function undecodedRequestOf(ctx: HttpContext): ContractRequest {
   const { method, path, rawQuery } = requestLine(ctx);
   const raw = ctx.request.raw();
   const remoteAddress = ctx.request.request.socket.remoteAddress;
@@ -295,7 +246,7 @@ function contractRequestOf(ctx: HttpContext, route: ContractRoute): ContractRequ
     path,
     rawQuery,
     headers: ctx.request.request.headers,
-    body: decodedBody(route, raw),
+    body: undefined,
     // The received bytes as far as Adonis keeps them: the decoded string, re-encoded as UTF-8. Without it the step
     // 1 check counts zero bytes, and a body present then fails closed (`stepOneRefusal`).
     rawBody: raw === null ? NO_RAW_BODY : Buffer.from(raw, UTF8),
@@ -309,7 +260,6 @@ export function createAdonisBoundary<
   Controllers extends object,
   Operation extends string,
 >(api: ContractApi, options: AdonisBoundaryOptions, entries: readonly AdonisOperationEntry[]) {
-  const orderedApi: ContractApi = { ...api, routes: [...api.routes].sort(mostSpecificFirst) };
   const requests = new WeakMap<BoundaryContext, ContractRequest>();
   const inputs = new WeakMap<HttpContext, { readonly id: string; readonly input: unknown }>();
   // Set by `registerRoutes`: the hooks the exported helpers reach outside a request context.
@@ -325,6 +275,7 @@ export function createAdonisBoundary<
   };
 
   const routeNameOf = (route: ContractRoute): string => `${api.id}.${entryOf(route.id).operation}`;
+  const ownRouteNames = (): ReadonlySet<string> => new Set(api.routes.map(routeNameOf));
 
   function checkState(context: BoundaryContext): CheckState {
     const request = requests.get(context);
@@ -389,18 +340,26 @@ export function createAdonisBoundary<
       const hooks = registration.hooks;
 
       if (method === HEAD_METHOD) {
-        await respondWithError(response, undefined, hooks, api, route, notFoundError(route), {
-          method,
-          path,
-        });
+        await respondUnservedMethod(response, hooks, api, { method, path });
 
         return;
       }
 
-      const matched = matchContractRoute({ ...api, routes: [route] }, route.method, path);
+      const matched = matchContractRoute(api, route.method, path);
 
       if (matched === undefined) {
         await respondOffContractPath(response, hooks, route, { method, path });
+
+        return;
+      }
+
+      // AdonisJS routed the request to another operation than the raw path names: the path's 404, so no
+      // controller runs under another operation's checks.
+      if (matched.route.id !== route.id) {
+        await respondWithError(response, undefined, hooks, api, route, notFoundError(route), {
+          method,
+          path,
+        });
 
         return;
       }
@@ -438,15 +397,14 @@ export function createAdonisBoundary<
     const route = context.route;
 
     try {
-      const request = contractRequestOf(ctx, route);
-
-      requests.set(context, request);
-
-      const refusal = transportRefusal(route, request, { fixes: ADONIS_FIXES });
+      const undecoded = undecodedRequestOf(ctx);
+      const refusal = transportRefusal(route, undecoded, { fixes: ADONIS_FIXES });
 
       if (refusal !== undefined) return refusal;
 
-      if (route.input !== undefined && ctx.request.raw() === null && ctx.request.hasBody()) {
+      const raw = ctx.request.raw();
+
+      if (route.input !== undefined && raw === null && announcesBody(ctx.request.request)) {
         return unexpectedError(
           route,
           new Error(
@@ -454,6 +412,8 @@ export function createAdonisBoundary<
           ),
         );
       }
+
+      requests.set(context, { ...undecoded, body: decodedBody(route, raw) });
 
       return undefined;
     } catch (error) {
@@ -590,16 +550,18 @@ export function createAdonisBoundary<
       ...bodyValidationProblems(registration),
       ...unknownOperationProblems(registration),
       ...bodyparserProblems(api),
+      ...repeatedRegistrationProblems(router),
     ];
 
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
 
     registered.hooks = registration.hooks;
+    registeredApis.set(router, new Set([...(registeredApis.get(router) ?? []), api.id]));
 
     const replyOptions = replyOptionsOf(registration);
     const controllers = controllerLoader(registration.controllers, entries);
 
-    for (const route of orderedApi.routes) {
+    for (const route of api.routes) {
       router
         .route(adonisPath(route.path), adonisMethods(route), handle(route, controllers))
         .as(routeNameOf(route))
@@ -652,6 +614,18 @@ export function createAdonisBoundary<
         problem: `no controller for the interface '${name}'`,
         fix: `add 'controllers.${name}: () => import(...)' with a controller that implements ${name}`,
       }));
+  }
+
+  // The replies written outside a request context report to one registration's hooks.
+  function repeatedRegistrationProblems(router: Router): BootProblem[] {
+    if (!registeredApis.get(router)?.has(api.id)) return [];
+
+    return [
+      {
+        problem: `the api '${api.id}' is registered twice on this router`,
+        fix: "call registerRoutes once per api in an app",
+      },
+    ];
   }
 
   // An override for an operation the api does not have would be dropped silently.
@@ -726,7 +700,10 @@ export function createAdonisBoundary<
     return true;
   }
 
-  /** Renders, on a contract path, a refusal raised before the boundary; false when it does nothing. */
+  /**
+   * Renders, on a contract path, a refusal raised before the boundary; false when it does nothing. A request the
+   * router matched to a route other than this api's (an app's own route) is left to the app.
+   */
   async function renderPreRoutingError(error: unknown, ctx: HttpContext): Promise<boolean> {
     if (boundaryContext.getStore() !== undefined) return false;
 
@@ -734,11 +711,19 @@ export function createAdonisBoundary<
 
     if (!matchesContractPath(api, path)) return false;
 
-    const route =
-      matchContractRoute(orderedApi, method, path)?.route ??
-      orderedApi.routes.find((candidate) =>
-        matchesContractPath({ ...api, routes: [candidate] }, path),
-      );
+    const routedName = ctx.route?.name;
+
+    if (ctx.route !== undefined && (routedName === undefined || !ownRouteNames().has(routedName))) {
+      return false;
+    }
+
+    if (errorCode(error) === ROUTE_NOT_FOUND_CODE) {
+      await respondUnservedMethod(ctx.response.response, registered.hooks, api, { method, path });
+
+      return true;
+    }
+
+    const route = matchContractPath(api, method, path)?.route;
 
     await respondWithError(
       ctx.response.response,
@@ -777,7 +762,7 @@ function controllerLoader(
         loaded.set(entry.endpoints, controller);
       }
 
-      const { controllerClass, missingMethods } = await controller;
+      const { controllerClass, missingMethods } = await loadedOrUnexpected(controller, route);
 
       if (missingMethods.length > 0) {
         throw unexpectedError(
@@ -800,6 +785,18 @@ function controllerLoader(
       return instance;
     },
   };
+}
+
+// A controller that failed to load answers the route's 500 with `onUnexpectedError`, as a missing method does.
+async function loadedOrUnexpected(
+  controller: Promise<LoadedController>,
+  route: ContractRoute,
+): Promise<LoadedController> {
+  try {
+    return await controller;
+  } catch (error) {
+    throw unexpectedError(route, error);
+  }
 }
 
 interface LoadedController {

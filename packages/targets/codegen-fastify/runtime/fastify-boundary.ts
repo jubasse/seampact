@@ -49,7 +49,7 @@ import {
   contractRequest,
   pathnameOf,
   reportedRequest,
-} from "./node-server/express-platform.js";
+} from "./node-server/node-request.js";
 import {
   type HandlerBindings,
   handlerResultReply,

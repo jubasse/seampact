@@ -328,7 +328,49 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
     });
   });
 
+  describe("requests the contract does not serve", () => {
+    test.each(["DELETE", "HEAD"])(
+      "%s on a path that declares no 404 answers a bare 404, not a failure",
+      async (method) => {
+        const reply = await send(method, "/v1/health");
+
+        expect(reply.status).toBe(404);
+        expect(reply.text).toBe("");
+        expect(app.calls.unexpected).toEqual([]);
+      },
+    );
+
+    test("an app route on a contract path keeps its own errors", async () => {
+      const reply = await send("PUT", `/v1/channels/${CHANNEL}`, { headers: BEARER });
+
+      expect(reply.status).toBe(409);
+      expect(reply.text).toBe("own conflict");
+    });
+  });
+
   describe("body checks", () => {
+    test("a form body on a JSON route answers the route's 415 before it is decoded", async () => {
+      const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+        headers: { ...writeHeaders(), "content-type": "application/x-www-form-urlencoded" },
+        body: "title=Plan",
+      });
+
+      expect(reply.status).toBe(415);
+      expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+      expect(app.calls.handled).toEqual([]);
+    });
+
+    test("an empty JSON body is no body, so a required body answers 400 required", async () => {
+      const reply = await send("PATCH", "/v1/me/preferences", {
+        headers: { ...writeHeaders(), "content-length": "0" },
+        body: "",
+      });
+
+      expect(reply.status).toBe(400);
+      expect(JSON.parse(reply.text).issues).toEqual([{ pointer: "", rule: "required" }]);
+      expect(app.calls.handled).toEqual([]);
+    });
+
     test("a body over the route limit answers 413 with its limit", async () => {
       const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
         headers: writeHeaders(),
@@ -397,6 +439,12 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
 
       expect(names.indexOf("tasks.getTasksBatch")).toBeLessThan(names.indexOf("tasks.archiveTask"));
       expect(names.indexOf("tasks.searchTasks")).toBeLessThan(names.indexOf("tasks.purgeTask"));
+    });
+
+    test("a second registration of the api in one app stops the boot", () => {
+      expect(() => generated.registerRoutes(server.router, app.registration())).toThrow(
+        /registered twice/,
+      );
     });
 
     test("an override for an operation the api does not have stops the boot", () => {
