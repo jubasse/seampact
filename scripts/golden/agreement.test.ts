@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
@@ -7,11 +8,12 @@ import {
   AGREEMENT_ENTRY,
   type AgreementFiles,
   type AgreementRow,
+  agreementIrProblems,
   agreementProblems,
   agreementRows,
   readAgreementFiles,
 } from "./agreement.ts";
-import { type LoadedApi, loadGoldenCompiler } from "./compiler.ts";
+import { type JsonObject, type LoadedApi, loadGoldenCompiler } from "./compiler.ts";
 import { REPO_ROOT } from "./repo-root.ts";
 
 const compiler = await loadGoldenCompiler();
@@ -121,6 +123,38 @@ describe("validator agreement table", () => {
 
     expect(agreementProblems(tableOf(rows), agreementApi())).toEqual([
       "StrictKeys.root-unknown-key: only an accepted input has a received value",
+    ]);
+  });
+});
+
+describe("validator agreement table on the compiled IR", () => {
+  const ir: JsonObject = JSON.parse(
+    readFileSync(join(REPO_ROOT, "fixtures/golden/agreement/agreement.ir.json"), "utf8"),
+  );
+
+  it("validator agreement table rows name a schema and direction of the IR", () => {
+    expect(agreementIrProblems(files.table, ir, agreementApi())).toEqual([]);
+  });
+
+  it("names a row whose direction the IR schema lacks", () => {
+    const rows = committedRows();
+    const row = rowNamed(rows, "Notice.assigned");
+
+    row.schema = "ApiPayloadTooLargeParams";
+    row.direction = "input";
+
+    expect(agreementIrProblems({ rows }, ir, agreementApi())).toEqual([
+      "Notice.assigned: the IR schema ApiPayloadTooLargeParams has no input direction",
+    ]);
+  });
+
+  it("names a row whose schema the IR does not hold", () => {
+    const rows = committedRows();
+
+    rowNamed(rows, "Notice.assigned").schema = "Missing";
+
+    expect(agreementIrProblems({ rows }, ir, agreementApi())).toEqual([
+      "Notice.assigned: the IR holds no schema Missing",
     ]);
   });
 });

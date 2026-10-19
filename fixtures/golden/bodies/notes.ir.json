@@ -1,0 +1,2938 @@
+{
+  "api": {
+    "compat": {
+      "policy": "additive-only"
+    },
+    "docs": {
+      "summary": "Notes shared inside a workspace."
+    },
+    "documents": {},
+    "extensions": {},
+    "id": "notes",
+    "kind": "product",
+    "maturity": "provisional",
+    "name": {
+      "role": "schema",
+      "segments": [
+        "notes"
+      ]
+    },
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    },
+    "pathVersion": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      },
+      "value": "prefix"
+    },
+    "surfaces": {
+      "app": {
+        "name": {
+          "role": "schema",
+          "segments": [
+            "app"
+          ]
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app"
+        },
+        "pathVersion": "prefix",
+        "prefix": "/v1"
+      }
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  },
+  "buckets": {},
+  "conventions": {
+    "bodyLimit": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/bodyLimit"
+      },
+      "value": "1MiB"
+    },
+    "errors.derived": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/errors/derived"
+      },
+      "value": {
+        "schemaInvalid": {
+          "code": "api.schema_invalid",
+          "params": {
+            "issues": {
+              "$as": {
+                "pointer": "$item.pointer",
+                "rule": "$item.rule"
+              },
+              "$each": "$issues"
+            }
+          }
+        }
+      }
+    },
+    "errors.every": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/errors/every"
+      },
+      "value": [
+        "api.internal"
+      ]
+    },
+    "idempotency.header": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/idempotency/header"
+      },
+      "value": "Idempotency-Key"
+    },
+    "idempotency.lifetime": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/idempotency/lifetime"
+      },
+      "value": "24h"
+    },
+    "idempotency.replayHeader": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/idempotency/replayHeader"
+      },
+      "value": "Idempotency-Replayed"
+    },
+    "paging.default": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/paging/default"
+      },
+      "value": "cursor"
+    },
+    "paging.maxLimit": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/conventions/paging/maxLimit"
+      },
+      "value": 100
+    }
+  },
+  "enums": {
+    "NoteState": {
+      "directions": [
+        "input",
+        "output"
+      ],
+      "docs": {},
+      "id": "NoteState",
+      "localReason": "Note states belong to this api.",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "note",
+          "state"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/enums/NoteState"
+      },
+      "values": [
+        "draft",
+        "published"
+      ]
+    }
+  },
+  "errors": {
+    "api.forbidden": {
+      "code": "api.forbidden",
+      "default": "forbidden",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 403
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.forbidden"
+      },
+      "params": "ApiForbiddenParams"
+    },
+    "api.internal": {
+      "code": "api.internal",
+      "default": "undeclaredStatus",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 500
+      },
+      "nature": "failed",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.internal"
+      }
+    },
+    "api.not_found": {
+      "code": "api.not_found",
+      "default": "notFound",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 404
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.not_found"
+      }
+    },
+    "api.payload_too_large": {
+      "code": "api.payload_too_large",
+      "default": "payloadTooLarge",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 413
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.payload_too_large"
+      },
+      "params": "ApiPayloadTooLargeParams"
+    },
+    "api.schema_invalid": {
+      "code": "api.schema_invalid",
+      "default": "schemaInvalid",
+      "docs": {},
+      "example": {
+        "issues": [
+          {
+            "pointer": "/title",
+            "rule": "minLength"
+          }
+        ]
+      },
+      "family": "api",
+      "http": {
+        "status": 400
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/api.schema_invalid"
+      },
+      "params": "ApiSchemaInvalidParams"
+    },
+    "api.sort_key_forbidden": {
+      "code": "api.sort_key_forbidden",
+      "default": "sortKeyForbidden",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 403
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.sort_key_forbidden"
+      },
+      "params": "ApiSortKeyForbiddenParams"
+    },
+    "api.unauthenticated": {
+      "code": "api.unauthenticated",
+      "default": "unauthenticated",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 401
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.unauthenticated"
+      }
+    },
+    "api.unsupported_media_type": {
+      "code": "api.unsupported_media_type",
+      "default": "unsupportedMediaType",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 415
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.unsupported_media_type"
+      }
+    }
+  },
+  "extensionKeys": {},
+  "features": [],
+  "formats": {
+    "bare": {
+      "absent": "omit",
+      "error": {
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "code"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "title"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "status"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "detail"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "instance"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "code"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "nature"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "traceId"
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": [],
+        "media": "application/problem+json"
+      },
+      "id": "bare",
+      "media": "application/json",
+      "meta": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "items"
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        }
+      }
+    }
+  },
+  "headers": {},
+  "identities": {
+    "user": {
+      "docs": {},
+      "errors": [],
+      "extensions": {},
+      "headers": [],
+      "id": "user",
+      "kind": "credential",
+      "origin": {
+        "layer": "api",
+        "pointer": "/identities/user"
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "UserPrincipal"
+      },
+      "schemes": {
+        "optionalRead": [],
+        "read": [
+          "bearer"
+        ],
+        "write": [
+          "bearer"
+        ]
+      }
+    }
+  },
+  "irRevision": 6,
+  "irVersion": 1,
+  "kinds": [
+    "httpOperation"
+  ],
+  "lint": {
+    "allows": [],
+    "rules": {}
+  },
+  "natures": {},
+  "operations": [
+    {
+      "access": {
+        "identity": "user",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        },
+        "schemes": [
+          "bearer"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/attach"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "pointer"
+                              ],
+                              "slot": "item"
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "rule"
+                              ],
+                              "slot": "item"
+                            }
+                          }
+                        ]
+                      },
+                      "kind": "each",
+                      "of": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.not_found",
+          "derivedFrom": {
+            "derivation": "scope.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/spaces/member/scopes/space"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/attach/input"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "limitBytes"
+                    }
+                  }
+                ]
+              },
+              "role": "payloadTooLarge"
+            }
+          ]
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/attach/input"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ]
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/every/0"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/attach"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "attachNotes",
+      "idempotency": {
+        "kind": "exempt",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/attach/idempotency"
+        },
+        "reason": "An upload is harmless to repeat."
+      },
+      "input": {
+        "bodyLimitBytes": 26214400,
+        "fields": [
+          {
+            "name": "file",
+            "wire": {
+              "kind": "file"
+            }
+          },
+          {
+            "name": "caption",
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "text",
+              "style": "form"
+            }
+          },
+          {
+            "name": "meta",
+            "wire": {
+              "kind": "json"
+            }
+          }
+        ],
+        "media": "multipart/form-data",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/attach/input"
+        },
+        "rawBody": false,
+        "schema": {
+          "kind": "ref",
+          "schema": "AttachNotesInput"
+        }
+      },
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "provisional",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        },
+        "source": "api"
+      },
+      "method": "post",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "attach",
+          "notes"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/attach"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            },
+            "name": "Authorization",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [
+          {
+            "name": "spaceId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/id/spaceId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/v1/spaces/{spaceId}/notes/attach",
+      "principalRequires": [],
+      "requires": [],
+      "resource": {
+        "idProperty": "noteId",
+        "type": "notes"
+      },
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Attachment"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "media": "application/json",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/attach/output"
+          },
+          "shape": "item",
+          "status": 200
+        }
+      ],
+      "safe": false,
+      "scopes": [
+        {
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/scopes/space"
+          },
+          "scope": "space",
+          "source": {
+            "in": "path",
+            "name": "spaceId"
+          }
+        }
+      ],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "identity": "user",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        },
+        "schemes": [
+          "bearer"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/feedback"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "pointer"
+                              ],
+                              "slot": "item"
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "rule"
+                              ],
+                              "slot": "item"
+                            }
+                          }
+                        ]
+                      },
+                      "kind": "each",
+                      "of": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.not_found",
+          "derivedFrom": {
+            "derivation": "scope.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/spaces/member/scopes/space"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.payload_too_large",
+          "derivedFrom": {
+            "derivation": "body.limit",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/feedback/input"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "limitBytes"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "limitBytes"
+                    }
+                  }
+                ]
+              },
+              "role": "payloadTooLarge"
+            }
+          ]
+        },
+        {
+          "code": "api.unsupported_media_type",
+          "derivedFrom": {
+            "derivation": "body.media",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/feedback/input"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unsupportedMediaType"
+            }
+          ]
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/every/0"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/feedback"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "feedbackNotes",
+      "idempotency": {
+        "kind": "exempt",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/feedback/idempotency"
+        },
+        "reason": "A feedback form is harmless to repeat."
+      },
+      "input": {
+        "bodyLimitBytes": 1048576,
+        "fields": [
+          {
+            "name": "message",
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "text",
+              "style": "form"
+            }
+          },
+          {
+            "name": "score",
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "number",
+              "style": "form"
+            }
+          },
+          {
+            "name": "subscribe",
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "boolean",
+              "style": "form"
+            }
+          },
+          {
+            "name": "tags",
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "list",
+              "style": "form"
+            }
+          }
+        ],
+        "media": "application/x-www-form-urlencoded",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/feedback/input"
+        },
+        "rawBody": false,
+        "schema": {
+          "kind": "ref",
+          "schema": "Feedback"
+        }
+      },
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "provisional",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        },
+        "source": "api"
+      },
+      "method": "post",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "feedback",
+          "notes"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/feedback"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            },
+            "name": "Authorization",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [
+          {
+            "name": "spaceId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/id/spaceId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/v1/spaces/{spaceId}/notes/feedback",
+      "principalRequires": [],
+      "requires": [],
+      "resource": {
+        "idProperty": "noteId",
+        "type": "notes"
+      },
+      "responses": [
+        {
+          "headers": [
+            {
+              "derivedFrom": {
+                "derivation": "redirect.location",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/feedback/responses/303"
+                  }
+                ]
+              },
+              "name": "Location",
+              "required": true,
+              "type": {
+                "format": "uri-reference",
+                "kind": "scalar",
+                "refinements": {},
+                "type": "string"
+              }
+            }
+          ],
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/feedback/responses/303"
+          },
+          "shape": "redirect",
+          "status": 303
+        }
+      ],
+      "safe": false,
+      "scopes": [
+        {
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/scopes/space"
+          },
+          "scope": "space",
+          "source": {
+            "in": "path",
+            "name": "spaceId"
+          }
+        }
+      ],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "identity": "user",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        },
+        "schemes": [
+          "bearer"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/spaces/ops/0"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "pointer"
+                              ],
+                              "slot": "item"
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "rule"
+                              ],
+                              "slot": "item"
+                            }
+                          }
+                        ]
+                      },
+                      "kind": "each",
+                      "of": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.not_found",
+          "derivedFrom": {
+            "derivation": "scope.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/spaces/member/scopes/space"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/every/0"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/spaces/ops/0"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "getSpace",
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "provisional",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        },
+        "source": "api"
+      },
+      "method": "get",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "get",
+          "space"
+        ]
+      },
+      "op": "get",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/spaces/ops/0"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            },
+            "name": "Authorization",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [
+          {
+            "name": "spaceId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/id/spaceId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/v1/spaces/{spaceId}",
+      "principalRequires": [],
+      "requires": [],
+      "resource": {
+        "idParam": "spaceId",
+        "idProperty": "spaceId",
+        "type": "spaces"
+      },
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Space"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [],
+          "media": "application/json",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/item"
+          },
+          "shape": "item",
+          "status": 200
+        }
+      ],
+      "safe": true,
+      "scopes": [
+        {
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/scopes/space"
+          },
+          "scope": "space",
+          "source": {
+            "in": "path",
+            "name": "spaceId"
+          }
+        }
+      ],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    },
+    {
+      "access": {
+        "identity": "user",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/app/identity"
+        },
+        "schemes": [
+          "bearer"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/conventions/paging/default"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list"
+              },
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "pointer"
+                              ],
+                              "slot": "item"
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "rule"
+                              ],
+                              "slot": "item"
+                            }
+                          }
+                        ]
+                      },
+                      "kind": "each",
+                      "of": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.sort_key_forbidden",
+          "derivedFrom": {
+            "derivation": "sortKey.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/conventions/paging/default"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "key"
+                    },
+                    "value": {
+                      "kind": "slot",
+                      "path": [],
+                      "slot": "key"
+                    }
+                  }
+                ]
+              },
+              "role": "sortKeyForbidden"
+            }
+          ]
+        },
+        {
+          "code": "api.not_found",
+          "derivedFrom": {
+            "derivation": "scope.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/spaces/member/scopes/space"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/conventions/errors/every/0"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [
+        {
+          "derivedFrom": {
+            "derivation": "fieldRight.restricted",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/schemas/Note/properties/wordCount/restrictedTo"
+              }
+            ]
+          },
+          "direction": "output",
+          "pointer": "/wordCount",
+          "right": "notes.seeWordCount",
+          "schema": "Note",
+          "subject": {
+            "source": {
+              "in": "scope",
+              "name": "space"
+            }
+          }
+        }
+      ],
+      "filteredBy": "notes.read",
+      "format": "bare",
+      "id": "listNotes",
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "provisional",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        },
+        "source": "api"
+      },
+      "method": "get",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "list",
+          "notes"
+        ]
+      },
+      "op": "list",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list"
+      },
+      "paging": {
+        "defaultLimit": 100,
+        "maxLimit": 100,
+        "origin": {
+          "layer": "api",
+          "pointer": "/conventions/paging/default"
+        },
+        "overLimit": "reject",
+        "sortKeys": [
+          {
+            "key": "createdAt",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/sortable/0"
+            }
+          },
+          {
+            "derivedFrom": {
+              "derivation": "sortKey.restricted",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/schemas/Note/properties/wordCount/restrictedTo"
+                }
+              ]
+            },
+            "key": "wordCount",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/sortable/1"
+            },
+            "right": "notes.seeWordCount",
+            "subject": {
+              "source": {
+                "in": "scope",
+                "name": "space"
+              }
+            }
+          }
+        ],
+        "style": "cursor"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/surfaces/app/identity"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/schemes/bearer"
+                }
+              ]
+            },
+            "name": "Authorization",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [
+          {
+            "name": "spaceId",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/id/spaceId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": [
+          {
+            "name": "state",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/state"
+            },
+            "required": true,
+            "type": {
+              "enum": "NoteState",
+              "kind": "enum"
+            },
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "text",
+              "style": "form"
+            }
+          },
+          {
+            "name": "labels",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/labels"
+            },
+            "required": true,
+            "type": {
+              "items": {
+                "kind": "scalar",
+                "refinements": {
+                  "maxLength": 30
+                },
+                "type": "string"
+              },
+              "kind": "array",
+              "maxItems": 4
+            },
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "list",
+              "style": "form"
+            }
+          },
+          {
+            "name": "range",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/range"
+            },
+            "required": true,
+            "type": {
+              "kind": "ref",
+              "schema": "NoteFilter"
+            },
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "object",
+              "style": "form"
+            }
+          },
+          {
+            "name": "archived",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/archived"
+            },
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "boolean"
+            },
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "boolean",
+              "style": "form"
+            }
+          },
+          {
+            "name": "minWords",
+            "origin": {
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/spaces/member/routes/notes/ops/list/query/minWords"
+            },
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {
+                "minimum": "0"
+              },
+              "type": "integer"
+            },
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "number",
+              "style": "form"
+            }
+          },
+          {
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            },
+            "name": "cursor",
+            "required": false,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            },
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "text",
+              "style": "form"
+            }
+          },
+          {
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            },
+            "name": "limit",
+            "required": false,
+            "type": {
+              "kind": "scalar",
+              "refinements": {
+                "maximum": "100",
+                "minimum": "1"
+              },
+              "type": "integer"
+            },
+            "wire": {
+              "brackets": false,
+              "explode": true,
+              "kind": "number",
+              "style": "form"
+            }
+          },
+          {
+            "derivedFrom": {
+              "derivation": "paging.params",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/conventions/paging/default"
+                },
+                {
+                  "layer": "api",
+                  "pointer": "/pagings/cursor"
+                }
+              ]
+            },
+            "name": "sort",
+            "required": false,
+            "type": {
+              "items": {
+                "kind": "scalar",
+                "refinements": {
+                  "pattern": {
+                    "normalized": "^(?:createdAt|-createdAt|wordCount|-wordCount)$",
+                    "source": "^(?:createdAt|-createdAt|wordCount|-wordCount)$"
+                  }
+                },
+                "type": "string"
+              },
+              "kind": "array"
+            },
+            "wire": {
+              "brackets": false,
+              "explode": false,
+              "kind": "list",
+              "style": "form"
+            }
+          }
+        ]
+      },
+      "path": "/v1/spaces/{spaceId}/notes",
+      "principalRequires": [],
+      "requires": [],
+      "resource": {
+        "idProperty": "noteId",
+        "type": "notes"
+      },
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Note"
+          },
+          "derivedFrom": {
+            "derivation": "response.format",
+            "from": [
+              {
+                "layer": "core",
+                "pointer": "/formats/bare"
+              }
+            ]
+          },
+          "headers": [
+            {
+              "derivedFrom": {
+                "derivation": "paging.params",
+                "from": [
+                  {
+                    "layer": "api",
+                    "pointer": "/conventions/paging/default"
+                  },
+                  {
+                    "layer": "api",
+                    "pointer": "/pagings/cursor"
+                  }
+                ]
+              },
+              "name": "Link",
+              "required": false,
+              "type": {
+                "kind": "scalar",
+                "refinements": {},
+                "type": "string"
+              }
+            }
+          ],
+          "media": "application/json",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/routes/notes/item"
+          },
+          "shape": "page",
+          "status": 200
+        }
+      ],
+      "safe": true,
+      "scopes": [
+        {
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/scopes/space"
+          },
+          "scope": "space",
+          "source": {
+            "in": "path",
+            "name": "spaceId"
+          }
+        }
+      ],
+      "surface": "app",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    }
+  ],
+  "packs": [],
+  "pagings": {
+    "cursor": {
+      "absent": "omit",
+      "handlerResult": [
+        "nextCursor"
+      ],
+      "id": "cursor",
+      "origin": {
+        "layer": "api",
+        "pointer": "/pagings/cursor"
+      },
+      "position": "cursor",
+      "request": [
+        {
+          "in": "query",
+          "name": "cursor",
+          "role": "cursor"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "role": "limit"
+        },
+        {
+          "in": "query",
+          "name": "sort",
+          "role": "sort",
+          "style": "signed"
+        }
+      ],
+      "response": {
+        "body": {
+          "kind": "slot",
+          "path": [],
+          "slot": "items"
+        },
+        "headers": [],
+        "links": [
+          {
+            "rel": "next",
+            "role": "next"
+          }
+        ],
+        "meta": []
+      }
+    }
+  },
+  "rights": {
+    "notes.read": {
+      "docs": {},
+      "errors": [
+        "api.forbidden"
+      ],
+      "extensions": {},
+      "id": "notes.read",
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/notes.read"
+      },
+      "subject": {
+        "kind": "scope",
+        "scope": "space"
+      }
+    },
+    "notes.seeWordCount": {
+      "docs": {},
+      "errors": [
+        "api.forbidden"
+      ],
+      "extensions": {},
+      "id": "notes.seeWordCount",
+      "origin": {
+        "layer": "api",
+        "pointer": "/rights/notes.seeWordCount"
+      },
+      "subject": {
+        "kind": "scope",
+        "scope": "space"
+      }
+    }
+  },
+  "rules": {},
+  "scalars": {},
+  "schemas": {
+    "ApiForbiddenParams": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiForbiddenParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "api",
+          "forbidden"
+        ]
+      },
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.forbidden/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "pointer",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.forbidden/params/pointer"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "ApiPayloadTooLargeParams": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiPayloadTooLargeParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "api",
+          "payload",
+          "too",
+          "large"
+        ]
+      },
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.payload_too_large/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "limitBytes",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.payload_too_large/params/limitBytes"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "minimum": "0"
+            },
+            "type": "integer"
+          }
+        }
+      ]
+    },
+    "ApiSchemaInvalidParams": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiSchemaInvalidParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "api",
+          "schema",
+          "invalid"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/errors/api.schema_invalid/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "issues",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/errors/api.schema_invalid/params/issues"
+          },
+          "sensitive": false,
+          "type": {
+            "items": {
+              "kind": "ref",
+              "schema": "IssuesItem"
+            },
+            "kind": "array"
+          }
+        }
+      ]
+    },
+    "ApiSortKeyForbiddenParams": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiSortKeyForbiddenParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "api",
+          "sort",
+          "key",
+          "forbidden"
+        ]
+      },
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.sort_key_forbidden/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "key",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.sort_key_forbidden/params/key"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "AttachNotesInput": {
+      "directions": [
+        "input"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "AttachNotesInput",
+      "kind": "object",
+      "name": {
+        "role": "input",
+        "segments": [
+          "attach",
+          "notes"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/attach/input"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "file",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/attach/input/properties/file"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "file",
+            "maxSizeBytes": 20971520,
+            "media": [
+              "image/png",
+              "application/pdf"
+            ]
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "caption",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/attach/input/properties/caption"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "maxLength": 200
+            },
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "meta",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/spaces/member/routes/notes/collection/routes/attach/input/properties/meta"
+          },
+          "sensitive": false,
+          "type": {
+            "content": {
+              "media": "application/json",
+              "schema": {
+                "kind": "ref",
+                "schema": "AttachmentMeta"
+              }
+            },
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "Attachment": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "Attachment",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "attachment"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Attachment"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "attachmentId",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Attachment/properties/attachmentId"
+          },
+          "sensitive": false,
+          "type": {
+            "format": "uuid",
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "AttachmentMeta": {
+      "directions": [
+        "input"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "AttachmentMeta",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "attachment",
+          "meta"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/AttachmentMeta"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "label",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/AttachmentMeta/properties/label"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "maxLength": 80
+            },
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "Feedback": {
+      "directions": [
+        "input"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "Feedback",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "feedback"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Feedback"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "message",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Feedback/properties/message"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "maxLength": 1000
+            },
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "score",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Feedback/properties/score"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "maximum": "5",
+              "minimum": "1"
+            },
+            "type": "integer"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "subscribe",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Feedback/properties/subscribe"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "boolean"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "tags",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Feedback/properties/tags"
+          },
+          "sensitive": false,
+          "type": {
+            "items": {
+              "kind": "scalar",
+              "refinements": {
+                "maxLength": 30
+              },
+              "type": "string"
+            },
+            "kind": "array",
+            "maxItems": 5
+          }
+        }
+      ]
+    },
+    "IssuesItem": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "IssuesItem",
+      "kind": "object",
+      "name": {
+        "role": "item",
+        "segments": [
+          "issues"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Issues/items"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "pointer",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Issues/items/properties/pointer"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "rule",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Issues/items/properties/rule"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "Note": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "Note",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "note"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Note"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "noteId",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Note/properties/noteId"
+          },
+          "sensitive": false,
+          "type": {
+            "format": "uuid",
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "title",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Note/properties/title"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "maxLength": 200,
+              "minLength": 1
+            },
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "state",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Note/properties/state"
+          },
+          "sensitive": false,
+          "type": {
+            "enum": "NoteState",
+            "kind": "enum"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "wordCount",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Note/properties/wordCount"
+          },
+          "restrictedTo": {
+            "origin": {
+              "layer": "api",
+              "pointer": "/schemas/Note/properties/wordCount/restrictedTo"
+            },
+            "right": "notes.seeWordCount"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "minimum": "0"
+            },
+            "type": "integer"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "createdAt",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Note/properties/createdAt"
+          },
+          "sensitive": false,
+          "type": {
+            "format": "date-time",
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "NoteFilter": {
+      "directions": [
+        "input"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "NoteFilter",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "note",
+          "filter"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/NoteFilter"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "from",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/NoteFilter/properties/from"
+          },
+          "sensitive": false,
+          "type": {
+            "format": "date-time",
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "to",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/NoteFilter/properties/to"
+          },
+          "sensitive": false,
+          "type": {
+            "format": "date-time",
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "Space": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "Space",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "space"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/Space"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "spaceId",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Space/properties/spaceId"
+          },
+          "sensitive": false,
+          "type": {
+            "format": "uuid",
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "UserPrincipal": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "UserPrincipal",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "user",
+          "principal"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemas/UserPrincipal"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "userId",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/UserPrincipal/properties/userId"
+          },
+          "sensitive": false,
+          "type": {
+            "format": "uuid",
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    }
+  },
+  "schemes": {
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "api",
+        "pointer": "/schemes/bearer"
+      }
+    }
+  },
+  "scopes": {
+    "space": {
+      "docs": {},
+      "errors": [
+        "api.not_found"
+      ],
+      "extensions": {},
+      "id": "space",
+      "idSchema": {
+        "format": "uuid",
+        "kind": "scalar",
+        "refinements": {},
+        "type": "string"
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/scopes/space"
+      }
+    }
+  },
+  "services": {}
+}
