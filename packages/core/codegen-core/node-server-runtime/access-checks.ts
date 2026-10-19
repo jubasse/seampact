@@ -25,7 +25,6 @@ import {
   type ContractApi,
   type ContractRequest,
   type ContractRoute,
-  decodePathParam,
   headerValue,
   headerValues,
   type RequirementEntry,
@@ -41,6 +40,7 @@ import {
 } from "./input-issues.js";
 import { parseSignatureHeader } from "./signature-header.js";
 import type { PlatformFixes } from "./transport-checks.js";
+import { decodePathParam } from "./wire-decoding.js";
 
 /** What every check step reads: the api, the matched route, the request and the registered hooks. */
 export interface CheckState {

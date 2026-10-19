@@ -1,19 +1,14 @@
 // The route table a Node server boundary reads: one entry per contract operation, emitted from the IR, and the
 // request view every check step receives. Copied into the generated tree as is.
 import type { SignatureTemplate } from "@seampact/hooks";
+import {
+  decodePathParam,
+  decodeQueryMembers,
+  decodeWireString,
+  type ParamRule,
+} from "./wire-decoding.js";
 
 export type ResponsesMode = "strict" | "warn";
-
-/** How a path, query or header string is decoded by the IR's wire form before the validator (ADR 0002 section 7). */
-export type WireDecoding = "text" | "number" | "boolean" | "list";
-
-export interface ParamRule {
-  /** The name as the validator's input object keys it: as declared for path and query, lower case for headers. */
-  readonly name: string;
-  readonly decoding: WireDecoding;
-  /** On a path param with a `maxLength`: the longest percent-encoded form of a valid value. */
-  readonly encodedMaxLength?: number;
-}
 
 /** A Standard Schema v1 value, as the validators link provides it. */
 export interface StandardValidator {
@@ -341,22 +336,7 @@ export function decodeRequestParams(
     if (raw !== undefined) path[rule.name] = decodeWireString(decodePathParam(raw), rule.decoding);
   }
 
-  const queryValues = new Map<string, unknown[]>();
-
-  for (const [name, raw] of new URLSearchParams(request.rawQuery)) {
-    const rule = route.params.query.find((candidate) => candidate.name === name);
-    // An undeclared member reaches the strict validator raw, so it reports it.
-    const value = rule === undefined ? raw : decodeWireString(raw, rule.decoding);
-
-    queryValues.set(name, [...(queryValues.get(name) ?? []), value]);
-  }
-
-  // A repeated member reaches the validator as the list of its values, so it reports it rather than one value
-  // winning: a proxy reading the first and the boundary the last would disagree.
-  const query: Record<string, unknown> = Object.fromEntries(
-    [...queryValues].map(([name, values]) => [name, values.length === 1 ? values[0] : values]),
-  );
-
+  const query = decodeQueryMembers(route.params.query, request.rawQuery);
   const headers: Record<string, unknown> = {};
 
   for (const rule of route.params.headers) {
@@ -367,31 +347,6 @@ export function decodeRequestParams(
   }
 
   return { path, query, headers };
-}
-
-const NUMBER_TEXT = /^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$/;
-
-// A value that does not decode stays the raw string, so the validator reports it with every other issue.
-function decodeWireString(raw: string, decoding: WireDecoding): unknown {
-  switch (decoding) {
-    case "text":
-      return raw;
-    case "number":
-      return NUMBER_TEXT.test(raw) ? Number(raw) : raw;
-    case "boolean":
-      return raw === "true" ? true : raw === "false" ? false : raw;
-    case "list":
-      return raw === "" ? [] : raw.split(",");
-  }
-}
-
-/** A path param percent-decoded; a malformed escape stays raw, so the validator reports the value (step 6). */
-export function decodePathParam(raw: string): string {
-  try {
-    return decodeURIComponent(raw);
-  } catch {
-    return raw;
-  }
 }
 
 /** A header's values in lower case, each value kept, for a hook's request view. */

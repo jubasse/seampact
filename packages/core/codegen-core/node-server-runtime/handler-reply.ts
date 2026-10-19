@@ -15,6 +15,7 @@ import {
   type ResponseEntry,
   type ValueShape,
 } from "./contract-route.js";
+import { withQueryMember } from "./wire-decoding.js";
 
 const JSON_MEDIA = "application/json";
 const NOT_MODIFIED = 304;
@@ -117,10 +118,10 @@ function pageItems(state: CheckState, handlerBody: unknown, headers: [string, st
   const nextCursor = handlerBody[paging.nextCursorMember];
 
   if (typeof nextCursor === "string") {
-    const query = new URLSearchParams(state.request.rawQuery);
+    // The other members keep their raw form, so a comma list and its encoded commas reach the next page as sent.
+    const query = withQueryMember(state.request.rawQuery, paging.cursorParam, nextCursor);
 
-    query.set(paging.cursorParam, nextCursor);
-    headers.push(["link", `<${state.request.path}?${query.toString()}>; rel="next"`]);
+    headers.push(["link", `<${state.request.path}?${query}>; rel="next"`]);
   }
 
   return handlerBody.items;
