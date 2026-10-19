@@ -60,7 +60,7 @@ export function validatorExpression(plan: TypePlan, context: YupRenderContext): 
         "codegen-yup: a refused plan reached the renderer; generate returns the plan's refusals instead.",
       );
     case "unknown":
-      return "yup.mixed()";
+      return plan.nullable ? "yup.mixed().nullable()" : "yup.mixed()";
     case "schema":
       return context.referToSchema(plan.schemaId, plan.exportName);
     case "enum":

@@ -65,7 +65,9 @@ function typeDecorators(plan: TypePlan, context: DtoRenderContext): string[] {
     case "refused":
       throw refusedPlanReached();
     case "unknown":
-      return [`@${context.validator("Allow")}()`, `@${CONTRACT}.NotNull()`];
+      return plan.nullable
+        ? [`@${context.validator("Allow")}()`]
+        : [`@${context.validator("Allow")}()`, `@${CONTRACT}.NotNull()`];
     case "schema":
       return nestedDtoDecorators(context.referToDto(plan.schemaId, plan.exportName), context);
     case "enum":
@@ -103,7 +105,7 @@ function itemDecorators(items: TypePlan, context: DtoRenderContext): string[] {
     case "refused":
       throw refusedPlanReached();
     case "unknown":
-      return [`@${CONTRACT}.ArrayItems([${CONTRACT}.notNullCheck()])`];
+      return items.nullable ? [] : [`@${CONTRACT}.ArrayItems([${CONTRACT}.notNullCheck()])`];
     case "schema":
       return [
         `@${CONTRACT}.ArrayItems([${CONTRACT}.objectTypeCheck()])`,

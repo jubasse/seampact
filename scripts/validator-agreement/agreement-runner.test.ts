@@ -29,13 +29,6 @@ const NOT_RUN_YET: Readonly<Record<string, string>> = {
   Tags: "an array root is no named schema of the IR",
 };
 
-// Rows on which the three validators agree with each other and give the opposite of the table's verdict; a
-// disagreement with ADR 0003 is fixed in the validators; only a gap upstream of them stays listed.
-const VALIDATORS_DIVERGE_FROM_TABLE: Readonly<Record<string, string>> = {
-  "OptionalEnvelope.null":
-    "the compiler writes no nullable on an opaque property, so the IR holds it as non-nullable",
-};
-
 const compiler = await loadGoldenCompiler();
 const compiled = compiler.compile(join(REPO_ROOT, AGREEMENT_DIRECTORY), AGREEMENT_ENTRY);
 const irText = compiled.apis[0]?.files?.irText;
@@ -93,21 +86,7 @@ describe("validator agreement runner", () => {
     },
   );
 
-  it.each(rows.filter((row) => !(row.id in VALIDATORS_DIVERGE_FROM_TABLE)))(
-    "$id: the providers give the table verdict",
-    async (row) => {
-      for (const result of await verdictsOf(row)) expect(result.verdict).toBe(row.expected);
-    },
-  );
-
-  it.each(Object.keys(VALIDATORS_DIVERGE_FROM_TABLE))(
-    "%s: the providers still give the verdict the table does not",
-    async (id) => {
-      const row = rows.find((each) => each.id === id);
-
-      if (row === undefined) throw new Error(`${id} is not a row the runner runs`);
-
-      for (const result of await verdictsOf(row)) expect(result.verdict).not.toBe(row.expected);
-    },
-  );
+  it.each(rows)("$id: the providers give the table verdict", async (row) => {
+    for (const result of await verdictsOf(row)) expect(result.verdict).toBe(row.expected);
+  });
 });
