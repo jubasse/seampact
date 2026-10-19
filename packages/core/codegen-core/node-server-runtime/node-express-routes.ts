@@ -26,7 +26,7 @@ interface Listing {
 
 /**
  * The routes of an Express app outside the apis it mounts, and a problem per mount the listing cannot read. A route
- * one of whose handlers the boundary owns is the boundary's: marked by default, or as the target tells.
+ * whose every handler the boundary owns is the boundary's: marked by default, or as the target tells.
  */
 export function expressRouteListing(
   app: unknown,
@@ -70,9 +70,7 @@ function listLayer(layer: object, listing: Listing, visited: Set<object>): void 
   const route: unknown = Reflect.get(layer, "route");
 
   if (isObjectLike(route)) {
-    if (!routeHandlers(route).some(listing.isBoundaryHandler)) {
-      listing.routes.push(...routeEntries(route));
-    }
+    if (!isBoundaryOwned(route, listing)) listing.routes.push(...routeEntries(route));
 
     return;
   }
@@ -116,13 +114,14 @@ function routeEntries(route: object): ListedRoute[] {
     );
 }
 
-function routeHandlers(route: object): unknown[] {
+function isBoundaryOwned(route: object, listing: Listing): boolean {
   const stack: unknown = Reflect.get(route, "stack");
 
-  if (!Array.isArray(stack)) return [];
+  if (!Array.isArray(stack) || stack.length === 0) return false;
 
-  return stack.map((layer: unknown) =>
-    isObjectLike(layer) ? Reflect.get(layer, "handle") : undefined,
+  return stack.every(
+    (layer: unknown) =>
+      isObjectLike(layer) && listing.isBoundaryHandler(Reflect.get(layer, "handle")),
   );
 }
 
