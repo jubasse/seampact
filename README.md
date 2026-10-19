@@ -4,7 +4,7 @@ Declare API semantics once. Derive framework-native boundaries from them.
 
 seampact is a contract system for HTTP APIs. You describe an API in plain YAML files: its endpoints, schemas, errors, who may call each route and what each route requires. seampact compiles them into a canonical intermediate representation (IR), and everything else is derived from it: an OpenAPI 3.1 document, lint, a compatibility diff between two versions, and generated code for the frameworks you use.
 
-**Status: development phase.** The reference contract already runs end to end on NestJS, Express 4 and 5, Fastify 5 and AdonisJS 6 and 7, with the TypeScript types, zod validators and the `fetch` client. No package is published to npm, Maven Central or Packagist yet, and nothing can be installed. The design decisions are recorded in [`docs/adr/`](docs/adr/).
+**Status: development phase.** The reference contract already runs end to end on NestJS, Express 4 and 5, Fastify 5, AdonisJS 6 and 7 and Hono 4, with the TypeScript types, zod validators and the `fetch` client. No package is published to npm, Maven Central or Packagist yet, and nothing can be installed. The design decisions are recorded in [`docs/adr/`](docs/adr/).
 
 ## What seampact generates, and what it leaves to you
 
@@ -25,7 +25,7 @@ By default a response is the bare payload and an error is an RFC 9457 `applicati
 
 You install the core, then only the generators your project uses. Installing the CLI pulls no code generator.
 
-Already running end to end today: the core, `codegen-ts`, `codegen-zod`, `codegen-fetch`, `codegen-nestjs`, `codegen-express`, `codegen-fastify` and `codegen-adonis`, with the signed-webhook and in-memory idempotency helpers. Every other package below is planned for 1.0 unless a row says it comes later.
+Already running end to end today: the core, `codegen-ts`, `codegen-zod`, `codegen-fetch`, `codegen-nestjs`, `codegen-express`, `codegen-fastify`, `codegen-adonis` and `codegen-hono`, with the signed-webhook and in-memory idempotency helpers. Every other package below is planned for 1.0 unless a row says it comes later.
 
 ### Core (npm)
 
@@ -48,7 +48,7 @@ Already running end to end today: the core, `codegen-ts`, `codegen-zod`, `codege
 | a typed `fetch` client | `@seampact/codegen-fetch` |
 | a server boundary | `@seampact/codegen-nestjs`, `@seampact/codegen-fastify`, `@seampact/codegen-express` or `@seampact/codegen-adonis`, plus `@seampact/hooks` unless the target vendors its types |
 | a frontend client (planned) | `@seampact/codegen-react`, `@seampact/codegen-angular` or `@seampact/codegen-vue` |
-| a Web-standard server boundary (planned) | `@seampact/codegen-hono` |
+| a Web-standard server boundary (Hono 4) | `@seampact/codegen-hono` |
 | mock handlers for tests and local work (planned) | `@seampact/codegen-msw` |
 
 A server generator does not install a validator generator. You choose one and link the two in your app's `seampact.config.yaml`, where you also turn each generated artefact on or off. The CLI checks the combination against a published compatibility matrix and, when it does not work, names the ones that do.
@@ -80,7 +80,7 @@ Every generator renders the default format and every format and paging style you
 | `codegen-fastify` | server boundary | `validators`: zod or yup, or Ajv without a link | route hooks |
 | `codegen-express` | server boundary for Express 4 and 5 | `validators`: zod or yup | middleware |
 | `codegen-adonis` | server boundary for AdonisJS 6 and 7 | `validators`: zod (VineJS planned) | middleware and exception handler |
-| `codegen-hono` (planned) | server boundary on Web-standard `Request` and `Response` | `validators`: zod | middleware |
+| `codegen-hono` | server boundary for Hono 4 on Web-standard `Request` and `Response` | `validators`: zod | middleware |
 | `codegen-react` (planned) | hooks for TanStack Query, RTK Query or SWR, chosen with the `query` option | `client`: fetch | through the fetch client |
 | `codegen-vue` (planned) | plain composables, or with `query: tanstack` or `query: pinia-colada` | `client`: fetch | through the fetch client |
 | `codegen-angular` (planned) | injectable services over `HttpClient`, and with `state: ngrx` or `state: ngrx-signals` typed actions and effects, or a Signal Store feature | nothing | its own response readers |
@@ -130,6 +130,17 @@ app.use(TasksExpress.preRoutingErrorHandler);
 
 ```ts
 await app.register(TasksFastify.plugin, { handlers: { TasksEndpoints: tasksHandlers }, hooks: tasksHooks() });
+```
+
+**Hono 4.** Register the routes on the app that serves, and pass the client address your runtime gives (here `@hono/node-server`). The boundary reads the raw bytes of signed routes itself; render refusals raised before a route ran from your `onError`.
+
+```ts
+TasksHono.registerRoutes(app, {
+  handlers: { TasksEndpoints: tasksHandlers },
+  hooks: tasksHooks(),
+  clientAddress: (c) => getConnInfo(c).remote.address,
+});
+app.onError(async (error, c) => (await TasksHono.renderPreRoutingError(c, error)) ?? c.text("error", 500));
 ```
 
 **AdonisJS 6 and 7.** Register `@adonisjs/core/bodyparser_middleware` as router middleware and list the route's media type in `json.types` of the body parser config: without it every route that takes a body answers 500, failing closed. Register the routes from `start/routes`, one `controllers` entry per generated `*Endpoints` interface, each a lazy import of a module whose default export is your controller class implementing that interface. Signed routes read the raw body through the body parser.
