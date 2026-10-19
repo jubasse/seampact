@@ -315,21 +315,51 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
       expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
     });
 
-    test.each([
-      ["a method the path does not serve", "PUT"],
-      ["HEAD on a GET route", "HEAD"],
-    ])("%s answers the path's 404", async (_case, method) => {
-      const reply = await send(method, `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+    test("a method the path does not serve answers the path's 404", async () => {
+      const reply = await send("PUT", `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
         headers: BEARER,
       });
 
       expect(reply.status).toBe(404);
       expect(app.calls.handled).toEqual([]);
     });
+
+    test("HEAD runs the GET operation and answers its status and headers without a body", async () => {
+      const reply = await send("HEAD", `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+        headers: BEARER,
+      });
+
+      expect(reply.status).toBe(200);
+      expect(reply.headers["content-type"]).toContain("application/json");
+      expect(reply.text).toBe("");
+      expect(app.calls.handled).toEqual(["getTask"]);
+    });
+
+    test.each([
+      ["a trailing slash", `/v1/channels/${CHANNEL}/tasks/${TASK}/`],
+      ["a doubled slash", `/v1//channels/${CHANNEL}/tasks/${TASK}`],
+      ["a percent-encoded static segment", `/v1/%63hannels/${CHANNEL}/tasks/${TASK}`],
+      ["an unknown sub-path", "/v1/unknown"],
+    ])("%s under the base path answers the api's 404", async (_case, path) => {
+      const reply = await send("GET", path, { headers: BEARER });
+
+      expect(reply.status).toBe(404);
+      expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+      expect(JSON.parse(reply.text)).toMatchObject({ code: "api.not_found" });
+      expect(app.calls.handled).toEqual([]);
+    });
+
+    test("a path outside the base path, as an upper-case one, is the app's 404", async () => {
+      const reply = await send("GET", `/V1/channels/${CHANNEL}/tasks/${TASK}`, { headers: BEARER });
+
+      expect(reply.status).toBe(404);
+      expect(reply.headers["content-type"] ?? "").not.toContain(PROBLEM_MEDIA);
+      expect(app.calls.handled).toEqual([]);
+    });
   });
 
   describe("requests the contract does not serve", () => {
-    test.each(["DELETE", "HEAD"])(
+    test.each(["DELETE"])(
       "%s on a path that declares no 404 answers a bare 404, not a failure",
       async (method) => {
         const reply = await send(method, "/v1/health");
@@ -381,19 +411,15 @@ describe.each(MAJORS)("AdonisJS %i", (major) => {
       expect(app.calls.handled).toEqual([]);
     });
 
-    test("a JSON body the bodyparser did not read answers 500 with the fix logged", async () => {
-      const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    test("a +json media type on a JSON route answers 415 before the bodyparser matters", async () => {
       const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
-        headers: { ...writeHeaders(), "content-type": "application/x-seampact+json" },
+        headers: { ...writeHeaders(), "content-type": "application/merge-patch+json" },
         body: JSON.stringify({ title: "Plan" }),
       });
 
-      expect(reply.status).toBe(500);
+      expect(reply.status).toBe(415);
       expect(app.calls.handled).toEqual([]);
-      expect(
-        app.calls.unexpected.map((call) => String(call.exceptionOrReply)).join("\n"),
-      ).toContain("bodyparser_middleware");
-      error.mockRestore();
+      expect(app.calls.unexpected).toEqual([]);
     });
 
     test("string values reach the handler as sent, never trimmed or nulled", async () => {

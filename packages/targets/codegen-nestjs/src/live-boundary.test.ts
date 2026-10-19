@@ -241,28 +241,55 @@ describe("the app's own routes keep NestJS's behaviour", () => {
 
 describe("requests the contract does not serve as sent", () => {
   // OPTIONS is left out: the app's CORS answers it.
-  test.each(["HEAD", "DELETE"])(
-    "%s on a path that declares no 404 answers a bare 404, not a failure",
-    async (method) => {
-      const reply = await send(method, "/v1/health");
+  test("DELETE on a path that declares no 404 answers a bare 404, not a failure", async () => {
+    const reply = await send("DELETE", "/v1/health");
 
-      expect(reply.status).toBe(404);
-      expect(reply.text).toBe("");
-      expect(app.calls.unexpected).toEqual([]);
-    },
-  );
+    expect(reply.status).toBe(404);
+    expect(reply.text).toBe("");
+    expect(app.calls.unexpected).toEqual([]);
+  });
+
+  test("HEAD runs the GET operation and answers its status and headers without a body", async () => {
+    const reply = await send("HEAD", `/v1/channels/${CHANNEL}/tasks/${TASK}`, { headers: BEARER });
+
+    expect(reply.status).toBe(200);
+    expect(reply.headers["content-type"]).toContain("application/json");
+    expect(reply.text).toBe("");
+    expect(app.calls.handled).toEqual(["getTask"]);
+  });
 
   test.each([
     ["a trailing slash", "GET", `/v1/channels/${CHANNEL}/tasks/${TASK}/`],
-    ["an upper-case path", "GET", `/V1/channels/${CHANNEL}/tasks/${TASK}`],
-    ["HEAD on a GET route", "HEAD", `/v1/channels/${CHANNEL}/tasks/${TASK}`],
+    ["a doubled slash", "GET", `/v1//channels/${CHANNEL}/tasks/${TASK}`],
+    ["a percent-encoded static segment", "GET", `/v1/%63hannels/${CHANNEL}/tasks/${TASK}`],
+    ["an unknown sub-path", "GET", "/v1/unknown"],
     ["a method the path does not serve", "PUT", `/v1/channels/${CHANNEL}/tasks/${TASK}`],
-  ])("%s answers the path's 404", async (_case, method, path) => {
+  ])("%s under the base path answers the api's 404", async (_case, method, path) => {
     const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const reply = await send(method, path, { headers: BEARER });
 
     expect(reply.status).toBe(404);
+    expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+    expect(JSON.parse(reply.text)).toMatchObject({ code: "api.not_found" });
     expect(error).not.toHaveBeenCalled();
+    expect(app.calls.handled).toEqual([]);
+  });
+
+  test("a path outside the base path, as an upper-case one, is the app's 404", async () => {
+    const reply = await send("GET", `/V1/channels/${CHANNEL}/tasks/${TASK}`, { headers: BEARER });
+
+    expect(reply.status).toBe(404);
+    expect(reply.headers["content-type"] ?? "").not.toContain(PROBLEM_MEDIA);
+    expect(app.calls.handled).toEqual([]);
+  });
+
+  test("a +json media type on a JSON route answers 415", async () => {
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+      headers: { ...writeHeaders(), "content-type": "application/merge-patch+json" },
+      body: JSON.stringify({ title: "Plan" }),
+    });
+
+    expect(reply.status).toBe(415);
     expect(app.calls.handled).toEqual([]);
   });
 });

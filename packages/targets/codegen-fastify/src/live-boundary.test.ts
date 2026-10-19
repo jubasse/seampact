@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import {
+  besideTasksOnSharedBasePaths,
   copyTestApp,
   emitProject,
   generateReferenceProject,
@@ -51,6 +52,7 @@ interface ReferenceAppModule {
   bootWith(registration: object, instanceOptions?: object, prefix?: string): Promise<void>;
   bootTwice(registration: object): Promise<void>;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  startTwoApiApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
 }
 
 let app: ReferenceAppModule;
@@ -241,7 +243,7 @@ describe("the request body", () => {
 });
 
 describe("requests the contract does not serve as sent", () => {
-  test.each(["HEAD", "DELETE", "OPTIONS"])(
+  test.each(["DELETE", "OPTIONS"])(
     "%s on a path that declares no 404 answers a bare 404, not a failure",
     async (method) => {
       const reply = await send(method, "/v1/health");
@@ -252,8 +254,16 @@ describe("requests the contract does not serve as sent", () => {
     },
   );
 
+  test("HEAD runs the GET operation and answers its status and headers without a body", async () => {
+    const reply = await send("HEAD", `/v1/channels/${CHANNEL}/tasks/${TASK}`, { headers: BEARER });
+
+    expect(reply.status).toBe(200);
+    expect(reply.headers["content-type"]).toContain("application/json");
+    expect(reply.text).toBe("");
+    expect(app.calls.handled).toEqual(["getTask"]);
+  });
+
   test.each([
-    ["HEAD on a GET route", "HEAD"],
     ["a method the path does not serve", "PUT"],
     ["OPTIONS", "OPTIONS"],
   ])("%s answers the path's 404 in the api's format", async (_case, method) => {
@@ -261,15 +271,38 @@ describe("requests the contract does not serve as sent", () => {
 
     expect(reply.status).toBe(404);
     expect(app.calls.handled).toEqual([]);
-
-    if (method !== "HEAD") expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+    expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
   });
 
-  test("a path no contract route serves is the app's own 404", async () => {
-    const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}/`, { headers: BEARER });
+  test.each([
+    ["a trailing slash", `/v1/channels/${CHANNEL}/tasks/${TASK}/`],
+    ["a doubled slash", `/v1//channels/${CHANNEL}/tasks/${TASK}`],
+    ["a percent-encoded static segment", `/v1/%63hannels/${CHANNEL}/tasks/${TASK}`],
+    ["an unknown sub-path", "/v1/unknown"],
+  ])("%s under the base path answers the api's 404", async (_case, path) => {
+    const reply = await send("GET", path, { headers: BEARER });
+
+    expect(reply.status).toBe(404);
+    expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+    expect(JSON.parse(reply.text)).toMatchObject({ code: "api.not_found" });
+    expect(app.calls.handled).toEqual([]);
+  });
+
+  test("a path outside the base path, as an upper-case one, is the app's own 404", async () => {
+    const reply = await send("GET", `/V1/channels/${CHANNEL}/tasks/${TASK}`, { headers: BEARER });
 
     expect(reply.status).toBe(404);
     expect(reply.headers["content-type"] ?? "").not.toContain(PROBLEM_MEDIA);
+  });
+
+  test("a +json media type on a JSON route answers 415", async () => {
+    const reply = await send("POST", `/v1/channels/${CHANNEL}/tasks`, {
+      headers: { ...writeHeaders(), "content-type": "application/merge-patch+json" },
+      body: JSON.stringify({ title: "Plan" }),
+    });
+
+    expect(reply.status).toBe(415);
+    expect(app.calls.handled).toEqual([]);
   });
 
   test.each([
@@ -347,11 +380,75 @@ describe("the boot check", () => {
     ).rejects.toThrow(/TasksEndpoints[\s\S]*'operations' names 'nothing'[\s\S]*prefix '\/v1'/);
   });
 
+  test("an instance without HEAD routes stops the boot", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    await expect(
+      app.bootWith({ handlers: app.handlers, hooks: app.hooks }, { exposeHeadRoutes: false }),
+    ).rejects.toThrow(/exposeHeadRoutes/);
+  });
+
   test("a second registration of the api in one app stops the boot", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     await expect(app.bootTwice({ handlers: app.handlers, hooks: app.hooks })).rejects.toThrow(
       /registered twice/,
     );
+  });
+});
+
+describe("two apis on one base path", () => {
+  const project = projectDirectory(import.meta.url, "live-two-apis");
+  let twoApiApp: ReferenceAppModule;
+  let twoApiServer: Awaited<ReturnType<ReferenceAppModule["startTwoApiApp"]>>;
+
+  beforeAll(async () => {
+    const files = await generateReferenceProject(
+      project,
+      fastifyTarget,
+      {},
+      besideTasksOnSharedBasePaths,
+    );
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+    twoApiApp = await import(copyTestApp(build, APP_SOURCE));
+    twoApiServer = await twoApiApp.startTwoApiApp();
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  afterAll(async () => {
+    await twoApiServer?.close();
+  });
+
+  beforeEach(() => {
+    twoApiApp.resetScenario();
+  });
+
+  test.each([
+    ["the first api", `/v1/channels/${CHANNEL}/tasks/${TASK}`],
+    ["the second api", `/v1/beside/channels/${CHANNEL}/tasks/${TASK}`],
+  ])("%s serves its own routes", async (_api, path) => {
+    const reply = await sendRawRequest(twoApiServer, "GET", path, { headers: BEARER });
+
+    expect(reply.status).toBe(200);
+    expect(twoApiApp.calls.handled).toEqual(["getTask"]);
+  });
+
+  test.each(["/v1/unknown", "/v1/hooks/unknown"])(
+    "%s, under a base path both apis claim, is the app's own 404",
+    async (path) => {
+      const reply = await sendRawRequest(twoApiServer, "GET", path, { headers: BEARER });
+
+      expect(reply.status).toBe(404);
+      expect(JSON.parse(reply.text)).toEqual({ message: "not found" });
+    },
+  );
+
+  test("a path under a base path one api claims alone answers that api's notFound code", async () => {
+    const reply = await sendRawRequest(twoApiServer, "GET", "/beside/unknown", { headers: BEARER });
+
+    expect(reply.status).toBe(404);
+    expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
+    expect(JSON.parse(reply.text)).toMatchObject({ code: "api.not_found" });
   });
 });

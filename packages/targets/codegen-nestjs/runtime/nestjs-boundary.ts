@@ -22,6 +22,7 @@ import {
   Module,
   type NestInterceptor,
   type NestModule,
+  NotFoundException,
   type OnApplicationBootstrap,
   Patch,
   Post,
@@ -46,6 +47,11 @@ import {
 import { from, mergeMap, type Observable, switchMap } from "rxjs";
 import { authorizeRequest, type CheckState } from "./node-server/access-checks.js";
 import {
+  basePathClaimsOf,
+  claimsBasePathAlone,
+  registerBasePathClaim,
+} from "./node-server/base-path-claims.js";
+import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
@@ -62,8 +68,8 @@ import {
 import {
   type ContractApi,
   type ContractRoute,
+  isUnderBasePath,
   isUnderPrefix,
-  looselyMatchedRoute,
   matchContractPath,
   matchContractRoute,
   matchesContractPath,
@@ -72,7 +78,7 @@ import {
 import {
   logWriteFailure,
   notFoundError,
-  respondUnservedMethod,
+  respondNotServed,
   respondWithError,
 } from "./node-server/error-reply.js";
 import { handlerReply } from "./node-server/handler-reply.js";
@@ -207,6 +213,11 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       const { method, path } = reportedRequest(request);
       const matched = matchContractRoute(api, method, path);
 
+      // A path outside the api's base paths that Express still routed here (`/V1/...` on `/v1`) is the app's 404.
+      if (matched === undefined && !isUnderBasePath(api, path) && !isUnderPrefix(api, path)) {
+        throw new NotFoundException(`Cannot ${method} ${path}`);
+      }
+
       if (matched === undefined) {
         void respondUnmatched(response, hooks, { method, path });
 
@@ -245,9 +256,8 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       });
     };
 
-  // Express routes a path case-insensitively, with or without a trailing slash, and HEAD as GET; the contract serves
-  // the path as written and no HEAD, so such a request answers the path's 404. Only a path under a prefix is a setup
-  // error.
+  // Express routes a path case-insensitively and with or without a trailing slash; the contract serves the path as
+  // written, so such a path under the base path answers the api's 404. Only a path under a prefix is a setup error.
   async function respondUnmatched(
     response: ServerResponse,
     hooks: BoundaryHooks,
@@ -266,15 +276,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       return;
     }
 
-    if (matchesContractPath(api, request.path)) {
-      await respondUnservedMethod(response, hooks, api, request);
-
-      return;
-    }
-
-    const route = looselyMatchedRoute(api, request.path);
-
-    await respondWithError(response, undefined, hooks, api, route, notFoundError(route), request);
+    await respondNotServed(response, hooks, api, request);
   }
 
   @Injectable()
@@ -522,6 +524,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       }
 
       bootstrappedAdapters.add(adapter);
+      registerBasePathClaim(adapter, api);
 
       return [];
     }
@@ -585,22 +588,36 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
     return problems;
   }
 
-  /** Renders a refusal raised before routing on a contract path in the api's format; false when it does nothing. */
+  /**
+   * Renders a refusal raised before routing on a contract path, or the 404 of a path under the base path, in the
+   * api's format; false when it does nothing.
+   */
+  // A path under a base path another api of the app also claims is left to the app's default 404.
+  function claimsBasePathAloneInApp(path: string): boolean {
+    const adapter: unknown = platform.adapterHost?.httpAdapter;
+    const claims = typeof adapter === "object" && adapter !== null ? basePathClaimsOf(adapter) : [];
+
+    return claimsBasePathAlone(api, claims, path);
+  }
+
   function renderPreRoutingError(exception: unknown, host: ArgumentsHost): boolean {
     if (boundaryContext.getStore() !== undefined) return false;
 
     const request: ExpressRequest = host.switchToHttp().getRequest();
     const response: ServerResponse = host.switchToHttp().getResponse();
     const path = pathnameOf(request);
-
-    if (!matchesContractPath(api, path)) return false;
-
     const method = request.method ?? DEFAULT_METHOD;
+    const notServed =
+      statusOf(exception) === NOT_FOUND && matchContractRoute(api, method, path) === undefined;
 
-    // NestJS's 404 for a method the contract path does not serve.
-    if (statusOf(exception) === NOT_FOUND && matchContractRoute(api, method, path) === undefined) {
-      respondUnservedMethod(response, platform.hooks, api, { method, path }).catch(
-        (failure: unknown) => logWriteFailure(api, failure),
+    if (!matchesContractPath(api, path) && !(notServed && claimsBasePathAloneInApp(path))) {
+      return false;
+    }
+
+    // NestJS's 404 for a method the contract path does not serve, or a path under the base path no route serves.
+    if (notServed) {
+      respondNotServed(response, platform.hooks, api, { method, path }).catch((failure: unknown) =>
+        logWriteFailure(api, failure),
       );
 
       return true;

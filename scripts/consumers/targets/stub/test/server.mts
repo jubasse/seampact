@@ -33,6 +33,10 @@ const NEXT_CURSOR = "cursor-2";
 const MILLISECONDS_PER_SECOND = 1000;
 const PROBLEM_MEDIA = "application/problem+json";
 const JSON_MEDIA = "application/json";
+// The api's base paths: a path under one that no route serves is the api's 404, any other the server's own.
+const BASE_PATHS = ["/v1", "/internal/v1"];
+const SESSION_COOKIE_NAME = "__Host-session";
+const CSRF_HEADER = "x-csrf-token";
 
 const STRIPE_TEMPLATE: SignedTemplateRequest["template"] = {
   algorithm: "hmac-sha256",
@@ -257,12 +261,22 @@ async function handle(
   const matched = matchRoute(call);
 
   if (matched === undefined) {
-    send(response, problem(404, "api.not_found"));
+    send(
+      response,
+      isUnderBasePath(call.url.pathname) ? problem(404, "api.not_found") : { status: 404 },
+    );
 
     return;
   }
 
   const { route, path } = matched;
+
+  if (call.rawBody.byteLength > 0 && mediaTypeOf(call) !== JSON_MEDIA) {
+    send(response, problem(415, "api.unsupported_media_type"));
+
+    return;
+  }
+
   const denial = await accessDenial(route, call);
 
   if (denial !== undefined) {
@@ -318,9 +332,12 @@ async function readCall(request: IncomingMessage): Promise<Call> {
   };
 }
 
+// HEAD is served by the path's GET operation; Node sends its status and headers without the body.
 function matchRoute(call: Call): { route: Route; path: string[] } | undefined {
+  const method = call.method === "HEAD" ? "GET" : call.method;
+
   for (const route of ROUTES) {
-    if (route.method !== call.method) continue;
+    if (route.method !== method) continue;
 
     const match = route.pattern.exec(call.url.pathname);
 
@@ -337,6 +354,8 @@ async function accessDenial(route: Route, call: Call): Promise<Answer | undefine
     case "public":
       return undefined;
     case "user":
+      if (isCookieWriteWithoutCsrf(call)) return problem(403, "api.csrf_invalid");
+
       return authorization === `Bearer ${USER_TOKEN}` ||
         authorization === `Bearer ${THROTTLED_USER_TOKEN}`
         ? undefined
@@ -448,7 +467,7 @@ function createTask(call: Call): Answer {
 
   const title = objectOf(call.body).title;
 
-  if (typeof title !== "string" || title === "") return schemaInvalid("/body/title", "minLength");
+  if (typeof title !== "string" || title === "") return schemaInvalid("/title", "minLength");
 
   return { status: 201, body: task("task-new", title) };
 }
@@ -497,6 +516,30 @@ function problem(
     headers: { "content-type": PROBLEM_MEDIA, ...headers },
     body: { type: code, title: code, status, code, ...params },
   };
+}
+
+function isUnderBasePath(pathname: string): boolean {
+  return BASE_PATHS.some(
+    (basePath) => pathname === basePath || pathname.startsWith(`${basePath}/`),
+  );
+}
+
+function mediaTypeOf(call: Call): string {
+  return (call.headers["content-type"] ?? "").split(";")[0]?.trim().toLowerCase() ?? "";
+}
+
+// A write the session cookie alone authenticates, sent without its CSRF header.
+function isCookieWriteWithoutCsrf(call: Call): boolean {
+  const cookies = (call.headers.cookie ?? "").split(";").map((cookie) => cookie.trim());
+  const csrfToken = call.headers[CSRF_HEADER];
+
+  return (
+    call.method !== "GET" &&
+    call.method !== "HEAD" &&
+    call.headers.authorization === undefined &&
+    cookies.some((cookie) => cookie.startsWith(`${SESSION_COOKIE_NAME}=`)) &&
+    (csrfToken === undefined || csrfToken === "")
+  );
 }
 
 function schemaInvalid(pointer: string, rule: string): Answer {

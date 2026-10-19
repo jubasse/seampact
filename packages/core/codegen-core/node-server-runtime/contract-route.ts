@@ -208,6 +208,8 @@ export interface ContractRoute {
 
 export interface ContractApi {
   readonly id: string;
+  /** The resolved prefix of each surface, as `/v1`: a path under one that no route serves is the api's 404. */
+  readonly basePaths: readonly string[];
   readonly format: ErrorFormat;
   readonly routes: readonly ContractRoute[];
   readonly shapes: Readonly<Record<string, ValueShape>>;
@@ -229,17 +231,23 @@ export interface ContractRequest {
 }
 
 const PATH_PARAM = /\{([^}]+)\}/g;
+const GET_METHOD = "get";
+const HEAD_METHOD = "head";
 
-/** The route serving a method and a path, with its path params still percent-encoded. */
+/**
+ * The route serving a method and a path, with its path params still percent-encoded. HEAD is served by the path's
+ * GET operation, whose reply goes out without its body (RFC 9110 9.3.2).
+ */
 export function matchContractRoute(
   api: ContractApi,
   method: string,
   path: string,
 ): { readonly route: ContractRoute; readonly pathParams: Record<string, string> } | undefined {
   const lowerMethod = method.toLowerCase();
+  const servedMethod = lowerMethod === HEAD_METHOD ? GET_METHOD : lowerMethod;
 
   for (const route of api.routes) {
-    if (route.method !== lowerMethod) continue;
+    if (route.method !== servedMethod) continue;
 
     const pathParams = matchPath(route.path, path);
 
@@ -274,13 +282,14 @@ export function matchesContractPath(api: ContractApi, path: string): boolean {
 }
 
 /**
- * The route whose template a path matches as Express 5 routes it, case-insensitive and with an optional trailing
- * slash, whatever the method: a request the contract does not serve as sent, answered with that route's 404.
+ * Whether a raw path is under one of the api's base paths, case-sensitive and at a segment boundary: such a path
+ * that no route serves exactly is the api's 404, any other path the app's. An empty base path claims no path, so an
+ * api without a prefix leaves the app's 404s alone.
  */
-export function looselyMatchedRoute(api: ContractApi, path: string): ContractRoute | undefined {
-  const loosePath = path.toLowerCase().replace(/(.)\/$/, "$1");
-
-  return api.routes.find((route) => matchPath(route.path.toLowerCase(), loosePath) !== undefined);
+export function isUnderBasePath(api: Pick<ContractApi, "basePaths">, path: string): boolean {
+  return api.basePaths.some(
+    (basePath) => basePath !== "" && (path === basePath || path.startsWith(`${basePath}/`)),
+  );
 }
 
 /** Whether a path is a contract path under a leading prefix, as a framework's global prefix makes it. */

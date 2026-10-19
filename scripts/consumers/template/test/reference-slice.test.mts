@@ -22,6 +22,13 @@ const ASSIGNEE_ID = "00000000-0000-4000-8000-000000000003";
 const CHANNEL = { channelId: CHANNEL_ID };
 const TASK = { channelId: CHANNEL_ID, taskId: TASK_ID };
 const SERVICE_TIMEOUT_MS = 5000;
+const PROBLEM_MEDIA = "application/problem+json";
+const SESSION_COOKIE = "__Host-session=session-1";
+const MILLISECONDS_PER_SECOND = 1000;
+// `Retry-After` carries the throttle's delay in whole seconds, rounded up.
+const THROTTLE_RETRY_AFTER_SECONDS = String(
+  Math.ceil(THROTTLE_RETRY_AFTER_MS / MILLISECONDS_PER_SECOND),
+);
 
 let server: Awaited<ReturnType<typeof startServer>>;
 let tasks: ReturnType<typeof createClient>;
@@ -141,10 +148,118 @@ describe("reference slice answers", () => {
     });
   });
 
-  test("400 for an empty title on create", async () => {
+  test("400 for an empty title on create, naming the pointer and the rule", async () => {
     const answer = await tasks.createTask({ path: CHANNEL, headers: user, body: { title: "" } });
 
-    expect(answer).toMatchObject({ ok: false, status: 400, code: "api.schema_invalid" });
+    expect(answer).toMatchObject({
+      ok: false,
+      status: 400,
+      code: "api.schema_invalid",
+      params: { issues: [{ pointer: "/title", rule: "minLength" }] },
+    });
+  });
+
+  test("a page links the next one, and the next cursor reads the last page", async () => {
+    const first = await tasks.listTasks({ path: CHANNEL, query: { limit: 10 }, headers: user });
+
+    expect(first.ok).toBe(true);
+
+    if (!first.ok) return;
+
+    const nextCursor = first.body.nextCursor;
+
+    if (nextCursor === undefined) throw new Error("the first page links no next page");
+
+    expect(first.headers.get("link")).toContain('rel="next"');
+    expect(first.headers.get("link")).toContain(`cursor=${encodeURIComponent(nextCursor)}`);
+
+    const last = await tasks.listTasks({
+      path: CHANNEL,
+      query: { limit: 10, cursor: nextCursor },
+      headers: user,
+    });
+
+    expect(last).toMatchObject({ ok: true, status: 200 });
+    expect(last.ok && last.body.nextCursor).toBeUndefined();
+    expect(last.headers.get("link")).toBeNull();
+  });
+
+  test("HEAD runs the GET operation and answers its status and headers without a body", async () => {
+    const answer = await fetch(`${server.baseUrl}/v1/channels/${CHANNEL_ID}/tasks/${TASK_ID}`, {
+      method: "HEAD",
+      headers: user,
+    });
+
+    expect(answer.status).toBe(200);
+    expect(answer.headers.get("content-type")).toContain("application/json");
+    await expect(answer.text()).resolves.toBe("");
+  });
+
+  test("403 for a cookie write without its CSRF header", async () => {
+    const answer = await fetch(`${server.baseUrl}/v1/channels/${CHANNEL_ID}/tasks`, {
+      method: "POST",
+      headers: {
+        cookie: SESSION_COOKIE,
+        "content-type": "application/json",
+        "idempotency-key": crypto.randomUUID(),
+      },
+      body: JSON.stringify({ title: "Cookie write" }),
+    });
+
+    expect(answer.status).toBe(403);
+    await expect(answer.json()).resolves.toMatchObject({ code: "api.csrf_invalid" });
+  });
+
+  test("a write with a bearer beside the session cookie is not refused for CSRF", async () => {
+    const answer = await fetch(`${server.baseUrl}/v1/channels/${CHANNEL_ID}/tasks`, {
+      method: "POST",
+      headers: {
+        ...user,
+        cookie: SESSION_COOKIE,
+        "content-type": "application/json",
+        "idempotency-key": crypto.randomUUID(),
+      },
+      body: JSON.stringify({ title: "Bearer beside a cookie" }),
+    });
+
+    expect(answer.status).toBe(201);
+  });
+
+  test("415 for a +json media type on a JSON route", async () => {
+    const answer = await fetch(`${server.baseUrl}/v1/me/preferences`, {
+      method: "PATCH",
+      headers: {
+        ...user,
+        "content-type": "application/merge-patch+json",
+        "idempotency-key": crypto.randomUUID(),
+      },
+      body: JSON.stringify({ digest: true }),
+    });
+
+    expect(answer.status).toBe(415);
+    await expect(answer.json()).resolves.toMatchObject({ code: "api.unsupported_media_type" });
+  });
+
+  test.each([
+    ["a trailing slash", `/v1/channels/${CHANNEL_ID}/tasks/${TASK_ID}/`],
+    ["a doubled slash", `/v1//channels/${CHANNEL_ID}/tasks/${TASK_ID}`],
+    ["a percent-encoded static segment", `/v1/%63hannels/${CHANNEL_ID}/tasks/${TASK_ID}`],
+    ["an unknown sub-path", "/v1/unknown"],
+  ])("404 in the api format for %s under the base path", async (_case, path) => {
+    const answer = await fetch(`${server.baseUrl}${path}`, { headers: user });
+
+    expect(answer.status).toBe(404);
+    expect(answer.headers.get("content-type")).toContain(PROBLEM_MEDIA);
+    await expect(answer.json()).resolves.toMatchObject({ code: "api.not_found" });
+  });
+
+  test("a path outside the base path is the app's own 404", async () => {
+    const answer = await fetch(`${server.baseUrl}/V1/channels/${CHANNEL_ID}/tasks/${TASK_ID}`, {
+      headers: user,
+    });
+
+    expect(answer.status).toBe(404);
+    expect(answer.headers.get("content-type") ?? "").not.toContain(PROBLEM_MEDIA);
   });
 
   // Raw requests: the generated client sends neither an undeclared query key nor, once typed, an undeclared sort key.
@@ -211,7 +326,7 @@ describe("reference slice answers", () => {
     });
 
     expect(answer.status).toBe(404);
-    expect(answer.headers.get("content-type")).toContain("application/problem+json");
+    expect(answer.headers.get("content-type")).toContain(PROBLEM_MEDIA);
     await expect(answer.json()).resolves.toMatchObject({ code: "api.not_found" });
   });
 
@@ -222,11 +337,11 @@ describe("reference slice answers", () => {
     );
 
     expect(answer.status).toBe(404);
-    expect(answer.headers.get("content-type")).toContain("application/problem+json");
+    expect(answer.headers.get("content-type")).toContain(PROBLEM_MEDIA);
     await expect(answer.json()).resolves.toMatchObject({ code: "api.not_found" });
   });
 
-  test("429 with retryAfterMs", async () => {
+  test("429 with retryAfterMs and its Retry-After header", async () => {
     const answer = await tasks.createTask({
       path: CHANNEL,
       headers: { authorization: bearer(THROTTLED_USER_TOKEN) },
@@ -239,5 +354,6 @@ describe("reference slice answers", () => {
       code: "api.rate_limited",
       params: { retryAfterMs: THROTTLE_RETRY_AFTER_MS },
     });
+    expect(answer.headers.get("retry-after")).toBe(THROTTLE_RETRY_AFTER_SECONDS);
   });
 });

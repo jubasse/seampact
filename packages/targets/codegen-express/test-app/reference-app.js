@@ -1,9 +1,10 @@
 // An Express app around the generated `tasks` router, for the live boundary test: the shared scenario's handler map
 // and hooks, app middleware before the router, an app error middleware, routes of the app's own and a router
-// mounted under a path. Copied next to the compiled generated tree, so it imports the generated modules by relative
-// path. The test links `express` to the major it runs.
+// mounted under a path; and an app with two apis on one base path. Copied next to the compiled generated tree, so
+// it imports the generated modules by relative path. The test links `express` to the major it runs.
 import express from "express";
 import * as TasksExpress from "../generated/server/tasks/index.js";
+import * as SecondExpress from "../generated/server/tasksService/index.js";
 import {
   ALLOWED_ORIGIN,
   AppReply,
@@ -87,6 +88,25 @@ export async function startReferenceApp() {
     response.status(error?.status ?? 500).json({ message: String(error?.message ?? error) });
   });
 
+  return listen(app);
+}
+
+/**
+ * Builds an app serving the `tasks` router and, after it, the router of the api the test generated in the
+ * `tasksService` slot, on the same base paths; listens on a free port.
+ */
+export async function startTwoApiApp() {
+  resetScenario();
+
+  const app = express();
+
+  app.use(TasksExpress.router({ handlers, hooks }));
+  app.use(SecondExpress.router({ handlers, hooks }));
+
+  return listen(app);
+}
+
+async function listen(app) {
   const server = await new Promise((resolve) => {
     const listening = app.listen(0, "127.0.0.1", () => resolve(listening));
   });

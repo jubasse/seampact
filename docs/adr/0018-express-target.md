@@ -44,7 +44,7 @@ The generated code is the same on both majors; the compatibility layer is three 
 
 - Route paths are anchored regular expressions built from the contract's path template, each literal escaped and each parameter a non-capturing `(?:[^/]+)`. Both majors accept them alike, while their string path syntaxes (`path-to-regexp` 0.1 and 8) read the same characters differently. A regular expression also matches only the exact case and slashes of the contract path. The groups capture nothing because both majors decode every capture while matching the layer: a malformed percent-encoding (`/tasks/%E0%A4%A`) would throw a 400 `URIError` before the route's first middleware, outside the boundary, where ADR 0016 keeps such a value raw for step 6 to report.
 - Express serves the first registered route whose pattern matches, so the router registers the route table's operations most specific first, static segments before parameters (`/tasks/search` before `/tasks/{id}`), and the shared `matchContractRoute` iterates the same order. When the route Express runs and the raw-path match name different operations, the boundary answers the path's `notFound` 404 before any check, so no handler runs under another operation's access and input.
-- The boundary never reads `req.params` or `req.query`: it matches the raw path and the request's own method, not the route's, with the shared `matchContractRoute`, decodes the path with `decodeRequestParams`, and decodes the raw query string of `req.originalUrl` by the IR's wire form, with form decoding (`+` is a space). Express 4's default `qs` parser and Express 5's `simple` parser therefore change nothing. Both majors run a `HEAD` request through the `GET` route's middleware; the contract serves no `HEAD`, so the boundary answers it with the path's `notFound` 404.
+- The boundary never reads `req.params` or `req.query`: it matches the raw path and the request's own method, not the route's, with the shared `matchContractRoute`, decodes the path with `decodeRequestParams`, and decodes the raw query string of `req.originalUrl` by the IR's wire form, with form decoding (`+` is a space). Express 4's default `qs` parser and Express 5's `simple` parser therefore change nothing. Both majors run a `HEAD` request through the `GET` route's middleware, which runs that `GET` operation; its reply goes out without a body (ADR 0016 "Errors raised before routing"). After the routes and the per-path catch-alls, the router answers a path under one of the api's base paths that no route serves exactly with the api's 404; any other path goes on to the app.
 - Each of the boundary's own async middleware forwards a rejection to `next`, so a contract exception reaches the router's error middleware on Express 4 as on Express 5. The developer's handler and the hooks are called from inside them.
 
 The reply is written with `res.statusCode`, `res.setHeader` and `res.end`, the same Node methods on both majors. The slice consumer runs once on the latest Express 4 and once on the latest Express 5, in one workflow matrix.
@@ -122,12 +122,12 @@ Run on Express 4.22.3 and 5.3.0 (`compression` 1.8.2) and Node 24.21, and not ke
 
 ## Consequences
 
-- An app keeps its Express app, its middleware, its error middleware and its 404 handler; on contract routes the boundary's checks and reply win, and its own routes are unchanged, Express ETags included.
+- An app keeps its Express app, its middleware, its error middleware and its 404 handler outside the api's base paths; on contract routes the boundary's checks and reply win, and its own routes are unchanged, Express ETags included.
 - One generated router serves Express 4 and 5; an app moves between majors without regenerating.
 - App middleware mounted before the router is outside the boundary: its refusals are in the api's format only when the app mounts the exported error middleware or calls the helper, and a reply it writes itself is not checked. The README's setup mounts the router before such middleware where the order allows.
 - A global JSON parser before the router works, with a warning, and costs the raw bytes of signed routes unless it uses `keepRawBody`.
 - A mount path answers 500 per request, with a log naming the fix, instead of refusing to start.
-- A contract path answers only its declared methods: `OPTIONS` and `HEAD` get the path's 404, so CORS preflights are answered by app middleware mounted before the router.
+- A contract path answers only its declared methods, and `HEAD` where it declares `GET`: `OPTIONS` gets the path's 404, so CORS preflights are answered by app middleware mounted before the router.
 
 ## Traceability
 

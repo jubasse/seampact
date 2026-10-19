@@ -1,5 +1,5 @@
 // The error replies every Node server placement writes: a contract error reported and rendered in the api's format,
-// a contract path's 404 (a bare one for an unserved method on a path that declares none), and a framework refusal
+// the 404 of a request the api does not serve (a bare one when no operation can answer it), and a framework refusal
 // (an error carrying a 401, 403 or 429 status) mapped to its role. Copied into the generated tree as is.
 import type { ServerResponse } from "node:http";
 import { type BoundaryHooks, reportUnexpected } from "./boundary-hooks.js";
@@ -73,20 +73,24 @@ function notFoundCodeOf(route: ContractRoute): string | undefined {
 }
 
 /**
- * The reply to a method a contract path does not serve, HEAD included: the path's 404 in the api's format when an
- * operation of the path declares one, else a bare 404 with no body, since no operation fails there.
+ * The reply to a request the contract does not serve: a method a contract path does not serve (OPTIONS included)
+ * answers the path's 404 in the api's format when an operation of the path declares one; a path under the api's
+ * base path that no route serves exactly answers the api's `notFound` code, never a domain 404 of one operation.
+ * Else a bare 404 with no body, since no operation fails there.
  */
-export async function respondUnservedMethod(
+export async function respondNotServed(
   response: ServerResponse,
   hooks: BoundaryHooks | undefined,
   api: ContractApi,
   request: ReportedRequest,
 ): Promise<void> {
-  const route = api.routes.find(
-    (candidate) =>
-      notFoundCodeOf(candidate) !== undefined &&
-      matchesContractPath({ ...api, routes: [candidate] }, request.path),
-  );
+  const route = matchesContractPath(api, request.path)
+    ? api.routes.find(
+        (candidate) =>
+          notFoundCodeOf(candidate) !== undefined &&
+          matchesContractPath({ ...api, routes: [candidate] }, request.path),
+      )
+    : api.routes.find((candidate) => codeOfRole(candidate, NOT_FOUND_ROLE) !== undefined);
 
   if (route === undefined) {
     response.writeHead(NOT_FOUND_STATUS, { "content-length": "0" });

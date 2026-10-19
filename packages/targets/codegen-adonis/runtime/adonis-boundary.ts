@@ -11,6 +11,11 @@ import {
   type CheckState,
 } from "./node-server/access-checks.js";
 import {
+  basePathClaimsOf,
+  claimsBasePathAlone,
+  registerBasePathClaim,
+} from "./node-server/base-path-claims.js";
+import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
@@ -38,7 +43,7 @@ import {
 import {
   notFoundError,
   type ReportedRequest,
-  respondUnservedMethod,
+  respondNotServed,
   respondWithError,
 } from "./node-server/error-reply.js";
 import { handlerReply } from "./node-server/handler-reply.js";
@@ -202,7 +207,7 @@ function adonisPath(path: string): string {
 function adonisMethods(route: ContractRoute): string[] {
   const method = route.method.toUpperCase();
 
-  // As `router.get` does; the first middleware answers HEAD with the path's 404, since the contract serves none.
+  // As `router.get` does: HEAD runs the GET operation, whose reply goes out without its body.
   return route.method === GET_METHOD ? [method, HEAD_METHOD] : [method];
 }
 
@@ -262,8 +267,8 @@ export function createAdonisBoundary<
 >(api: ContractApi, options: AdonisBoundaryOptions, entries: readonly AdonisOperationEntry[]) {
   const requests = new WeakMap<BoundaryContext, ContractRequest>();
   const inputs = new WeakMap<HttpContext, { readonly id: string; readonly input: unknown }>();
-  // Set by `registerRoutes`: the hooks the exported helpers reach outside a request context.
-  const registered: { hooks?: BoundaryHooks } = {};
+  // Set by `registerRoutes`: the hooks and the router the exported helpers reach outside a request context.
+  const registered: { hooks?: BoundaryHooks; router?: Router } = {};
 
   const entryOf = (id: string): AdonisOperationEntry => {
     const entry = entries.find((candidate) => candidate.id === id);
@@ -338,12 +343,6 @@ export function createAdonisBoundary<
       const response = ctx.response.response;
       const { method, path } = requestLine(ctx);
       const hooks = registration.hooks;
-
-      if (method === HEAD_METHOD) {
-        await respondUnservedMethod(response, hooks, api, { method, path });
-
-        return;
-      }
 
       const matched = matchContractRoute(api, route.method, path);
 
@@ -556,6 +555,8 @@ export function createAdonisBoundary<
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
 
     registered.hooks = registration.hooks;
+    registered.router = router;
+    registerBasePathClaim(router, api);
     registeredApis.set(router, new Set([...(registeredApis.get(router) ?? []), api.id]));
 
     const replyOptions = replyOptionsOf(registration);
@@ -701,15 +702,25 @@ export function createAdonisBoundary<
   }
 
   /**
-   * Renders, on a contract path, a refusal raised before the boundary; false when it does nothing. A request the
-   * router matched to a route other than this api's (an app's own route) is left to the app.
+   * Renders, on a contract path, a refusal raised before the boundary, and the api's 404 on a path under its base
+   * path that no route serves; false when it does nothing. A request the router matched to a route other than this
+   * api's (an app's own route) is left to the app.
    */
   async function renderPreRoutingError(error: unknown, ctx: HttpContext): Promise<boolean> {
     if (boundaryContext.getStore() !== undefined) return false;
 
     const { method, path } = requestLine(ctx);
+    const routeNotFound = errorCode(error) === ROUTE_NOT_FOUND_CODE;
 
-    if (!matchesContractPath(api, path)) return false;
+    // A path under a base path another api of the app also claims is left to the app's handler.
+    const claims = registered.router === undefined ? [] : basePathClaimsOf(registered.router);
+
+    if (
+      !matchesContractPath(api, path) &&
+      !(routeNotFound && claimsBasePathAlone(api, claims, path))
+    ) {
+      return false;
+    }
 
     const routedName = ctx.route?.name;
 
@@ -717,8 +728,8 @@ export function createAdonisBoundary<
       return false;
     }
 
-    if (errorCode(error) === ROUTE_NOT_FOUND_CODE) {
-      await respondUnservedMethod(ctx.response.response, registered.hooks, api, { method, path });
+    if (routeNotFound) {
+      await respondNotServed(ctx.response.response, registered.hooks, api, { method, path });
 
       return true;
     }

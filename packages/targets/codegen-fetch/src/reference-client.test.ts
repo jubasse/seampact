@@ -392,7 +392,7 @@ describe("the generated reference client answers a stub server", () => {
       ok: false,
       status: 400,
       code: "api.schema_invalid",
-      params: { issues: [{ pointer: "/body/title" }] },
+      params: { issues: [{ pointer: "/title" }] },
     });
 
     const throttled = await call(

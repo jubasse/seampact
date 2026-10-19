@@ -17,6 +17,11 @@ import type {
 } from "fastify";
 import { authorizeRequest, type CheckState } from "./node-server/access-checks.js";
 import {
+  basePathClaimsOf,
+  claimsBasePathAlone,
+  registerBasePathClaim,
+} from "./node-server/base-path-claims.js";
+import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
@@ -43,7 +48,7 @@ import {
   logWriteFailure,
   notFoundError,
   type ReportedRequest,
-  respondUnservedMethod,
+  respondNotServed,
   respondWithError,
 } from "./node-server/error-reply.js";
 import {
@@ -133,13 +138,54 @@ export function createFastifyBoundary<
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
 
     registeredServers.add(fastify.server);
+    registerBasePathClaim(fastify.server, api);
     warnUnboundedParams();
     registered.hooks = options.hooks;
     replaceJsonParsers(fastify);
     fastify.setErrorHandler(contractErrorHandler(options));
 
     for (const route of api.routes) registerRoute(fastify, route, options);
+
+    registerUnservedBasePaths(fastify, options.hooks);
   };
+
+  // Every method under each base path, below the contract routes, which find-my-way matches first: a path no route
+  // serves exactly (a trailing slash, `//`, an unknown sub-path) or a method its path does not serve answers the
+  // api's 404 before any body is read. A path outside the base paths stays the app's, and so does a path another
+  // api of the app also claims, which goes to the app's not-found handler. A contract route's path lands here only
+  // when the router refused a param (over maxParamLength): the operation's step 6 refusal. The first api to claim a
+  // base path registers its wildcard; another api on the same base path finds it registered and adds none.
+  function registerUnservedBasePaths(fastify: FastifyInstance, hooks: BoundaryHooks): void {
+    for (const basePath of api.basePaths) {
+      const wildcard = `${basePath}/*`;
+
+      if (basePath === "" || fastify.hasRoute({ url: wildcard, method: "GET" })) continue;
+
+      fastify.all(wildcard, {
+        onRequest: (request, reply, done) => {
+          const reported = reportedRequest(request.raw);
+          const matched = matchContractRoute(api, reported.method, reported.path);
+
+          if (matched !== undefined) {
+            pathParamRefusal(matched.route, matched.pathParams, request)
+              .then((refusal) => writeDetached(reply, hooks, matched.route, refusal, reported))
+              .catch((failure: unknown) => logWriteFailure(api, failure));
+
+            return;
+          }
+
+          if (!claimsBasePathAlone(api, basePathClaimsOf(request.server.server), reported.path)) {
+            done();
+
+            return;
+          }
+
+          respondUnserved(reply, hooks, reported);
+        },
+        handler: async (_request, reply) => reply.callNotFound(),
+      });
+    }
+  }
 
   function instanceProblems(fastify: FastifyInstance): BootProblem[] {
     const problems: BootProblem[] = [];
@@ -156,6 +202,15 @@ export function createFastifyBoundary<
       problems.push({
         problem: `the api '${api.id}' is registered twice in this app`,
         fix: "register the plugin once per api in an app",
+      });
+    }
+
+    // Fastify's types leave `exposeHeadRoutes` out of `initialConfig`, which holds it.
+    if (Reflect.get(fastify.initialConfig, "exposeHeadRoutes") === false) {
+      problems.push({
+        problem:
+          "the instance is created with exposeHeadRoutes: false, so HEAD on a GET path never reaches its operation",
+        fix: "create the Fastify instance without exposeHeadRoutes: false",
       });
     }
 
@@ -323,7 +378,7 @@ export function createFastifyBoundary<
     const reported = reportedRequest(request.raw);
     const matched = matchContractRoute(api, reported.method, reported.path);
 
-    // HEAD runs through the GET route; the contract serves no HEAD.
+    // A method the route's path does not serve, though Fastify routed it here.
     if (matched === undefined && matchesContractPath(api, reported.path)) {
       respondUnserved(reply, hooks, reported);
 
@@ -527,8 +582,8 @@ export function createFastifyBoundary<
     hooks: BoundaryHooks | undefined,
     reported: ReportedRequest,
   ): void {
-    respondUnservedMethod(hijackForBoundary(reply), hooks, api, reported).catch(
-      (failure: unknown) => logWriteFailure(api, failure),
+    respondNotServed(hijackForBoundary(reply), hooks, api, reported).catch((failure: unknown) =>
+      logWriteFailure(api, failure),
     );
   }
 
@@ -557,8 +612,9 @@ export function createFastifyBoundary<
   }
 
   /**
-   * On a contract path the plugin never saw: without an error the path's 404, and for Fastify's router errors
-   * (`FST_ERR_BAD_URL`, `FST_ERR_MAX_PARAM_LENGTH`) the operation's step 6 refusal; false when it does nothing.
+   * On a contract path the plugin never saw, or under the api's base path: without an error the api's 404, and for
+   * Fastify's router errors (`FST_ERR_BAD_URL`, `FST_ERR_MAX_PARAM_LENGTH`) the operation's step 6 refusal; false
+   * when it does nothing.
    */
   function renderPreRoutingError(
     request: FastifyRequest,
@@ -570,6 +626,16 @@ export function createFastifyBoundary<
     const reported = reportedRequest(request.raw);
 
     const matched = matchContractPath(api, reported.method, reported.path);
+
+    if (
+      matched === undefined &&
+      error === undefined &&
+      claimsBasePathAlone(api, basePathClaimsOf(request.server.server), reported.path)
+    ) {
+      respondUnserved(reply, registered.hooks, reported);
+
+      return true;
+    }
 
     if (matched === undefined) return false;
 
