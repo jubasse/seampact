@@ -458,3 +458,20 @@ describe("describe reports the same refusals as generate", () => {
     });
   });
 });
+
+describe("a required opaque member: absent is refused, null is valid", () => {
+  const paymentEvent = (members: object): unknown => ({ id: CHANNEL_ID, type: "paid", ...members });
+
+  test("a missing data member is required", async () => {
+    const validator = standardSchemaOf(inputSchemas.PaymentEventSchema);
+    const found = await rules(validator, paymentEvent({}));
+
+    expect(found).toContain("required");
+  });
+
+  test("a null data member is accepted", async () => {
+    const validator = standardSchemaOf(inputSchemas.PaymentEventSchema);
+
+    expect(await rules(validator, paymentEvent({ data: null }))).not.toContain("required");
+  });
+});

@@ -66,11 +66,9 @@ export function validatorExpression(plan: TypePlan, context: YupRenderContext): 
   }
 }
 
-// An item or a field that must be there; an opaque value accepts any value, a missing one included.
+// An item or a field that must be there; an opaque value too, where null is valid but a missing one is not.
 function presentValidator(plan: TypePlan, context: YupRenderContext): string {
-  const validator = validatorExpression(plan, context);
-
-  return plan.kind === "unknown" ? validator : `${validator}.defined()`;
+  return `${validatorExpression(plan, context)}.defined()`;
 }
 
 // `{ key: validator, ... }` inside the constructor of the object's unknown keys policy. Neither policy adds a
