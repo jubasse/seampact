@@ -1,7 +1,7 @@
 // A Fastify app around the generated `tasks` plugin, for the live boundary test: the shared scenario's handler map
 // and hooks, an app root hook, an app error handler, a not-found handler and `frameworkErrors` that call the
-// exported helper, and routes of the app's own; and an app with two apis on one base path. Copied next to the
-// compiled generated tree, so it imports the generated modules by relative path.
+// exported helper, and routes of the app's own; an app with the plugin under a prefix; and an app with two apis on
+// one base path. Copied next to the compiled generated tree, so it imports the generated modules by relative path.
 import Fastify from "fastify";
 import * as TasksFastify from "../generated/server/tasks/index.js";
 import * as SecondFastify from "../generated/server/tasksService/index.js";
@@ -64,6 +64,20 @@ export async function bootTwice(registrationOptions) {
   await app.register(TasksFastify.plugin, registrationOptions);
   await app.ready();
   await app.close();
+}
+
+/** Builds an app registering the `tasks` plugin under the given prefix; listens on a free port. */
+export async function startPrefixedApp(prefix) {
+  resetScenario();
+
+  const app = Fastify();
+
+  await app.register(TasksFastify.plugin, { handlers, hooks, prefix });
+  await app.listen({ port: 0, host: "127.0.0.1" });
+
+  const { port } = app.server.address();
+
+  return { host: "127.0.0.1", port, close: () => app.close() };
 }
 
 /** Builds the app and listens on a free port. */

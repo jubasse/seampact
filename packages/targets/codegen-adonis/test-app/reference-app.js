@@ -118,7 +118,6 @@ function writeAppReply(error, ctx) {
   ctx.response.status(error.status).header("content-type", error.contentType).send(error.body);
 }
 
-// Server middleware: a header on every reply, and the refusals shield and auth raise before the boundary.
 /** A request header that makes the app drop the body the bodyparser read, as an app without its middleware would. */
 export const DROP_PARSED_BODY_HEADER = "x-test-drop-parsed-body";
 
@@ -131,6 +130,7 @@ class DropParsedBodyMiddleware {
   }
 }
 
+// Server middleware: a header on every reply, and the refusals shield and auth raise before the boundary.
 class AppServerMiddleware {
   async handle(ctx, next) {
     ctx.response.response.setHeader("x-content-type-options", "nosniff");

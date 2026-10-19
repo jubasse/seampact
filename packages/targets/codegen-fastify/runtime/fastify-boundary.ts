@@ -63,8 +63,8 @@ import {
 import { validateRequestInput } from "./node-server/input-checks.js";
 import { installOutgoingCheck } from "./node-server/node-outgoing-check.js";
 import {
-  respondNotServed,
   encodeBoundaryReplies,
+  respondNotServed,
   respondWithError,
   writeContractReply,
 } from "./node-server/node-reply.js";
@@ -99,6 +99,7 @@ const SERVER_ERROR_FLOOR = 500;
 const CONTENT_TYPE_PARSER_ERROR_PREFIX = "FST_ERR_CTP_";
 // The reply decorator `@fastify/compress` adds, registered before the plugin.
 const COMPRESS_REPLY_DECORATOR = "compress";
+const PREFIX_ONLY = "no-slash";
 const ACCEPT_ENCODING_HEADER = "accept-encoding";
 // Fastify's router writes these itself unless the app routes them through `frameworkErrors`.
 const ROUTER_ERROR_CODES: readonly string[] = ["FST_ERR_BAD_URL", "FST_ERR_MAX_PARAM_LENGTH"];
@@ -365,6 +366,8 @@ export function createFastifyBoundary<
     fastify.route({
       method: route.method.toUpperCase(),
       url: fastifyPath(belowPrefix(fastify, route.path)),
+      // A route at the prefix itself serves only the prefix, not the undeclared path with a trailing slash.
+      prefixTrailingSlash: PREFIX_ONLY,
       ...(route.input === undefined ? {} : { bodyLimit: route.input.limitBytes }),
       config: { [operationConfigKey]: route.id },
       onRequest: (request, reply, done) => {
@@ -785,8 +788,6 @@ function isRouterError(error: unknown): boolean {
   return typeof code === "string" && ROUTER_ERROR_CODES.includes(code);
 }
 
-// Fastify's syntax with positional param names, a literal `:` doubled; the generator refuses a segment that mixes a
-// placeholder with literal text, which find-my-way would read as one param.
 // The path to register under the plugin's prefix, which Fastify prepends; the boot check allows only a prefix every
 // contract path starts with.
 function belowPrefix(fastify: FastifyInstance, path: string): string {
@@ -795,6 +796,8 @@ function belowPrefix(fastify: FastifyInstance, path: string): string {
   return below === "" ? "/" : below;
 }
 
+// Fastify's syntax with positional param names, a literal `:` doubled; the generator refuses a segment that mixes a
+// placeholder with literal text, which find-my-way would read as one param.
 function fastifyPath(template: string): string {
   let position = 0;
 
