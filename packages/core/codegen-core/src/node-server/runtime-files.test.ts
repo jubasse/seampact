@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import type { GeneratedFile } from "../target.js";
 import { nodeServerRuntimeFiles, type ServerRuntimeProfile } from "./runtime-files.js";
 
-const NODE_IMPORT = /from "(node:[^"]+)"/g;
+const NODE_IMPORT = /(?:\bfrom|\bimport\s*\(?)\s*"(node:[^"]+)"/g;
 const RELATIVE_IMPORT = /from "\.\/([^"]+)\.js"/g;
 // The one Node module the Web-standard runtimes provide (Bun, Deno, Next.js; Workers with `nodejs_als`).
 const WEB_ALLOWED_NODE_IMPORTS = ["node:async_hooks"];

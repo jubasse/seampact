@@ -61,13 +61,13 @@ export function applyReplyHeaders(
   for (const [name, values] of grouped) {
     response.setHeader(
       name,
-      name === VARY_HEADER ? mergedVary(headerValues(response, VARY_HEADER), values) : values,
+      name === VARY_HEADER ? mergedVary(responseHeaderValues(response, VARY_HEADER), values) : values,
     );
   }
 }
 
 /** The values of a response header as text, none when it is not set. */
-export function headerValues(response: ServerResponse, name: string): string[] {
+export function responseHeaderValues(response: ServerResponse, name: string): string[] {
   const value = response.getHeader(name);
 
   if (value === undefined) return [];

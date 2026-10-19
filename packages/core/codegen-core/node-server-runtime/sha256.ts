@@ -21,8 +21,17 @@ export async function sha256Base64Url(input: string | Uint8Array): Promise<strin
 
 async function sha256(input: string | Uint8Array): Promise<Uint8Array> {
   const bytes = typeof input === "string" ? new TextEncoder().encode(input) : input;
-  // A copy into a fresh buffer: `digest` takes an `ArrayBuffer`-backed view, which a Node `Buffer` may not be.
-  const digest = await crypto.subtle.digest("SHA-256", new Uint8Array(bytes));
+  // `digest` takes an `ArrayBuffer`-backed view, which a Node `Buffer` may not be; only such a view is copied.
+  const digest = await crypto.subtle.digest("SHA-256", arrayBufferBacked(bytes));
 
   return new Uint8Array(digest);
+}
+
+// `digest` takes an `ArrayBuffer`-backed view, which a Node `Buffer` may not be; only such a view is copied.
+function arrayBufferBacked(bytes: Uint8Array): Uint8Array<ArrayBuffer> {
+  return isArrayBufferBacked(bytes) ? bytes : new Uint8Array(bytes);
+}
+
+function isArrayBufferBacked(bytes: Uint8Array): bytes is Uint8Array<ArrayBuffer> {
+  return bytes.buffer instanceof ArrayBuffer;
 }
