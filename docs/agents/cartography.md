@@ -25,6 +25,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/codegen-hono` | `packages/targets/codegen-hono` | target | Generates a registerRoutes function per api that adds each contract route to a Hono 4 app with its access, validation and reply checks around your handler map, validating with zod. |
 | `@seampact/codegen-nestjs` | `packages/targets/codegen-nestjs` | target | Generates the NestJS boundary around your controllers: a decorator per operation, the access guard, the validation and response interceptor, an input decorator, the error filter and a boot check, validating with zod. |
 | `@seampact/codegen-ts` | `packages/targets/codegen-ts` | target | Generates a named TypeScript type per schema and each operation's input, output and error union. |
+| `@seampact/codegen-yup` | `packages/targets/codegen-yup` | target | Generates Standard Schema yup validators per schema and direction, and one input validator per operation. |
 | `@seampact/codegen-zod` | `packages/targets/codegen-zod` | target | Generates Standard Schema zod validators per schema and direction, and one input validator per operation. |
 
 ## Compiler stages
@@ -137,6 +138,10 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/codegen-ts`
 
 - `packages/targets/codegen-ts/src`: The TypeScript types target: one named type per schema and enum, and each operation's input, output and error union, provided to the other targets as the `types` link.
+
+### `@seampact/codegen-yup`
+
+- `packages/targets/codegen-yup/src`: The yup validators target: Standard Schema validators per schema and direction, with object schemas left unrefined so an app can extend them, and one input validator per operation, provided as the `validators` link.
 
 ### `@seampact/codegen-zod`
 

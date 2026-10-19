@@ -9,6 +9,7 @@ export const PACKED_PACKAGES: readonly string[] = [
   "packages/core/cli",
   "packages/targets/codegen-ts",
   "packages/targets/codegen-zod",
+  "packages/targets/codegen-yup",
   "packages/targets/codegen-fetch",
   "packages/targets/codegen-nestjs",
   "packages/targets/codegen-express",
