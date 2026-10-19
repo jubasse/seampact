@@ -53,6 +53,8 @@ Already running end to end today: the core, `codegen-ts`, `codegen-zod`, `codege
 
 A server generator does not install a validator generator. You choose one and link the two in your app's `seampact.config.yaml`, where you also turn each generated artefact on or off. The CLI checks the combination against a published compatibility matrix and, when it does not work, names the ones that do.
 
+`codegen-class-validator` works on `codegen-nestjs` only, and the app must load `reflect-metadata` once at startup (`import "reflect-metadata"` in its entry file) for the decorators to work.
+
 Each app of a repository (frontend, backend, service) has its own `seampact.config.yaml`; a monorepo can add a root one that lists the apps and shares contract sources. An app that only needs the OpenAPI document installs no generator at all, and an app that wants no seampact document says so.
 
 ### Java and PHP
@@ -79,8 +81,8 @@ Every generator renders the default format and every format and paging style you
 | `codegen-nestjs` | per-operation decorators, guard, interceptor and input decorators around your controllers | `validators`: zod, yup or class-validator | exception filters and interceptors |
 | `codegen-fastify` | server boundary | `validators`: zod or yup, or Ajv without a link | route hooks |
 | `codegen-express` | server boundary for Express 4 and 5 | `validators`: zod or yup | middleware |
-| `codegen-adonis` | server boundary for AdonisJS 6 and 7 | `validators`: zod (VineJS planned) | middleware and exception handler |
-| `codegen-hono` | server boundary for Hono 4 on Web-standard `Request` and `Response` | `validators`: zod | middleware |
+| `codegen-adonis` | server boundary for AdonisJS 6 and 7 | `validators`: zod or yup (VineJS planned) | middleware and exception handler |
+| `codegen-hono` | server boundary for Hono 4 on Web-standard `Request` and `Response` | `validators`: zod or yup | middleware |
 | `codegen-react` (planned) | hooks for TanStack Query, RTK Query or SWR, chosen with the `query` option | `client`: fetch | through the fetch client |
 | `codegen-vue` (planned) | plain composables, or with `query: tanstack` or `query: pinia-colada` | `client`: fetch | through the fetch client |
 | `codegen-angular` (planned) | injectable services over `HttpClient`, and with `state: ngrx` or `state: ngrx-signals` typed actions and effects, or a Signal Store feature | nothing | its own response readers |
