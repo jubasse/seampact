@@ -22,7 +22,8 @@ type TypeUse =                               // what a property, item, body or p
   | { kind: 'file'; media: string[]; maxSizeBytes?: number }   // a multipart field or a download (A39)
   | { kind: 'enum'; enum: EnumId; narrowedTo?: { values: string[]; reason?: Reason } }
   | { kind: 'scalar'; type: 'string' | 'integer' | 'number' | 'boolean'; format?: string; refinements: Refinements;
-      content?: { media: 'application/json'; schema: TypeUse } }   // a form or multipart text field holding JSON
+      content?: { media: 'application/json'; schema: TypeUse };   // a form or multipart text field holding JSON
+      sensitive?: boolean }                  // irRevision 6: a use of a declared scalar marked sensitive
   | { kind: 'array'; items: TypeUse; minItems?: number; maxItems?: number };
                                              // each use also with docs?: Docs and examples?: unknown[]
 ```
@@ -33,5 +34,6 @@ type TypeUse =                               // what a property, item, body or p
 - A pattern refinement holds the normalised form of ADR 0003 section 9, never the written text alone.
 - `directions` lists `input` and `output` as the schema is used; targets generate per-direction validators from it (ADR 0003 section 4).
 - `nullable` and `optional` are two members (FR-3, SCN-005).
+- A scalar use's `sensitive` (irRevision 6, absent means false) marks a use of a declared scalar written `sensitive: true` (ADR 0003 section 6), wherever it is used: a body, an array item, a map key or value, a parameter or a header. A property's own type use leaves it out, since `Property.sensitive` holds it, as `nullable`. A response that carries a sensitive property or scalar use is no-store (section 7, invariant `ir.cache.sensitive-no-store`).
 - Written annotations are kept, never dropped (irRevision 3): a schema's `deprecated` (absent means false), a property's `examples`, a union variant's `docs` (written beside its schema reference), and the `docs` and `examples` written at the position of a type use, held by that use, optional on every kind. The compiler writes them where the grammar allows them today: the items of an array use, the keys or values of a map schema, the schema of a JSON content. A property and a named format hold their own, and an inline object, map or union keeps them on its hoisted schema; a later position the grammar allows is an additive change.
 - An exact number in an opaque value (`default`, `examples`) has one form (irRevision 4, invariant `ir.value.exact-number`): an `int64` or `decimal` value is its format's string form whatever `api.wire.int64` says, and any other `integer` value a safe integer (section 13).
