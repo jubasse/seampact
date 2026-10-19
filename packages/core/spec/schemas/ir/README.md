@@ -103,7 +103,6 @@ The ADR 0003 subset has no conditional keyword, so these cross-member rules live
 | `ir.operation.role-once` | A role appears at most once in an operation's error role bindings, across elements and within one. |
 | `ir.error.role-params` | A role binding has `params` if and only if its code declares params, and holds no `each` inside another `each`'s `as`. |
 | `ir.error.retry-header` | A `retryHeader` sits only on a code of status 429; its `param` is a required, non-nullable `integer` member of the code's params with `minimum` at least 0 and `maximum` at most 9007199254740991; its `derivedFrom.derivation` is `rule.bucket`. |
-| `ir.cache.sensitive-no-store` | Planned (p2-finalize): a response that carries a sensitive field sets `Cache.noStore`. Not checked yet: it needs a walk of the response schemas. |
 
 ## Readers
 

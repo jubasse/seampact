@@ -15,4 +15,4 @@
 
 ### What a target must do
 
-- Nothing: the compiler already writes `noStore` on such an operation, and a target that honours `noStore` sends `Cache-Control: no-store` for it.
+- Nothing: the compiler already writes `noStore` on such an operation, and a target that honours `noStore` sends `Cache-Control: no-store` for it; a hand-written IR document whose response carries a sensitive field without `noStore` is now refused.

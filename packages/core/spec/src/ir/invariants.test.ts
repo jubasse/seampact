@@ -977,6 +977,49 @@ describe("sensitive responses", () => {
       ).toEqual(at("ir.cache.sensitive-no-store", UPDATE));
   });
 
+  test("a sensitive field is reached through a property's type, a later union variant and a later response", () => {
+    const PLAIN_USE = { kind: "ref", schema: "Plain" };
+    const holder = {
+      kind: "object",
+      properties: [{ name: "tasks", sensitive: false, type: { kind: "array", items: TASK_USE } }],
+    };
+    const plainOrTask = {
+      kind: "union",
+      variants: [
+        { tag: "plain", schema: "Plain" },
+        { tag: "task", schema: "Task" },
+      ],
+    };
+
+    const sensitiveSecondResponse = (ir: Json) => {
+      list(ir, `${UPDATE}/responses`).push({ ...node(ir, `${UPDATE}/responses/0`), status: 203 });
+      withBody(PLAIN_USE)(ir);
+    };
+
+    const changes = [
+      withBody({ kind: "ref", schema: "Holder" }),
+      withBody({ kind: "ref", schema: "PlainOrTask" }),
+      sensitiveSecondResponse,
+    ];
+
+    for (const change of changes)
+      expect(
+        violationsAfter((ir) => {
+          withSchema("Plain", { kind: "object", properties: [] })(ir);
+          withSchema("Holder", holder)(ir);
+          withSchema("PlainOrTask", plainOrTask)(ir);
+          change(ir);
+        }),
+      ).toEqual(at("ir.cache.sensitive-no-store", UPDATE));
+
+    expect(
+      violationsAfter((ir) => {
+        withSchema("Plain", { kind: "object", properties: [] })(ir);
+        withBody(PLAIN_USE)(ir);
+      }),
+    ).toEqual([]);
+  });
+
   test("a recursive schema without a sensitive field ends", () => {
     const loop = {
       kind: "object",
