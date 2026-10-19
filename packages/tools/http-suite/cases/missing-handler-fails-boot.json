@@ -1,0 +1,11 @@
+{
+  "id": "missing-handler-fails-boot",
+  "title": "The app without the handler of an operation refuses to start",
+  "checks": ["CHK-062"],
+  "profiles": ["boot"],
+  "boot": {
+    "variant": "missing-handler",
+    "outcome": "refuses",
+    "diagnostic": ["the api 'tasks' cannot start", "operation 'health'"]
+  }
+}

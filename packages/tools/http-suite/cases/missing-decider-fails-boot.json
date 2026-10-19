@@ -1,0 +1,11 @@
+{
+  "id": "missing-decider-fails-boot",
+  "title": "The app without a decider for a right or rule refuses to start",
+  "checks": ["CHK-062"],
+  "profiles": ["boot"],
+  "boot": {
+    "variant": "missing-decider",
+    "outcome": "refuses",
+    "diagnostic": ["the api 'tasks' cannot start", "no decider for 'roles'"]
+  }
+}

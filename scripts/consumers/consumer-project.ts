@@ -13,6 +13,9 @@ import type { ValidatorChoice } from "./validator-choice.ts";
 // The file that marks a directory as a consumer this script made, holding the monorepo commit it was built from.
 export const COMMIT_FILE = ".seampact-commit";
 
+// The file that names the target a consumer was assembled for, which the http suite's reports carry.
+export const TARGET_FILE = ".seampact-target";
+
 /** A target id names one directory under `targets/`: lowercase letters, digits and dashes. */
 export const TARGET_ID = /^[a-z0-9-]+$/;
 
@@ -38,6 +41,10 @@ const VALIDATORS_PLACEHOLDER = "{{validators}}";
 
 // pnpm 11 and later read `overrides` from the workspace file only, not from the `pnpm` field of package.json.
 const PNPM_SETTINGS_FILE = "pnpm-workspace.yaml";
+
+// pnpm refuses an install whose dependencies have build scripts it was not told about: esbuild, under the tsx that
+// starts the boot processes of the http suite, checks its platform binary in its own.
+const PNPM_BUILD_SETTINGS = "allowBuilds:\n  esbuild: true\n";
 
 interface ConsumerManifest {
   dependencies?: Record<string, string>;
@@ -111,6 +118,7 @@ export function assembleConsumer(options: {
     recursive: true,
   });
   writeFileSync(join(directory, COMMIT_FILE), `${options.commit}\n`);
+  writeFileSync(join(directory, TARGET_FILE), `${options.target}\n`);
 }
 
 function useValidators(choice: ValidatorChoice, directory: string): void {
@@ -211,5 +219,8 @@ export function useTarballs(directory: string, tarballs: ReadonlyMap<string, str
     ([name, specifier]) => `  ${JSON.stringify(name)}: ${JSON.stringify(specifier)}`,
   );
 
-  writeFileSync(join(directory, PNPM_SETTINGS_FILE), `overrides:\n${overrides.join("\n")}\n`);
+  writeFileSync(
+    join(directory, PNPM_SETTINGS_FILE),
+    `${PNPM_BUILD_SETTINGS}overrides:\n${overrides.join("\n")}\n`,
+  );
 }

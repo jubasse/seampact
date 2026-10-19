@@ -2,7 +2,7 @@
   "id": "recent-auth-proof-required",
   "title": "The recentAuth proof is a required body member",
   "checks": ["CHK-016"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "steps": [
     {
       "request": {

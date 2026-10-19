@@ -2,7 +2,7 @@
   "id": "bearer-beside-cookie-skips-csrf",
   "title": "A write with a bearer beside the session cookie is not refused for CSRF",
   "checks": ["CHK-007"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "steps": [
     {
       "request": {

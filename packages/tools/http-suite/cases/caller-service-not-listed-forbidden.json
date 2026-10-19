@@ -2,7 +2,7 @@
   "id": "caller-service-not-listed-forbidden",
   "title": "A service callerService does not list answers 403",
   "checks": ["CHK-017"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "steps": [
     {
       "request": {

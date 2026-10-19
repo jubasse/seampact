@@ -1,0 +1,11 @@
+{
+  "id": "missing-scope-resolver-fails-boot",
+  "title": "The app without a scope resolver for a scope refuses to start",
+  "checks": ["CHK-062"],
+  "profiles": ["boot"],
+  "boot": {
+    "variant": "missing-scope-resolver",
+    "outcome": "refuses",
+    "diagnostic": ["the api 'tasks' cannot start", "no scope resolver for the scope 'channel'"]
+  }
+}

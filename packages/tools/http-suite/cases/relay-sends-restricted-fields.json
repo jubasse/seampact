@@ -2,7 +2,7 @@
   "id": "relay-sends-restricted-fields",
   "title": "A relay route sends every restricted field without asking the decider",
   "checks": ["CHK-117"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "script": {
     "decisions": [
       {

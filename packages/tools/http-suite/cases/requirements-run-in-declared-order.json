@@ -2,7 +2,7 @@
   "id": "requirements-run-in-declared-order",
   "title": "The identity, then each requirement in declared order, before the handler",
   "checks": ["CHK-014"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "script": {},
   "steps": [
     {

@@ -4,6 +4,7 @@ import type { HttpContext, Router } from "@adonisjs/core/http";
 import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-suite";
 import * as TasksAdonis from "../generated/server/tasks/index.js";
 import * as TasksServiceAdonis from "../generated/server/tasksService/index.js";
+import { withoutMissingHandler } from "./boot-variant.mjs";
 import { tasksHooks, tasksServiceHooks } from "./hooks.mjs";
 import {
   type ControlReply,
@@ -22,14 +23,14 @@ export function registerContractRoutes(router: Router): void {
   router.get(LOG_LINES_ROUTE, ({ response }) => sendControlReply(response, logLinesReply()));
 
   TasksAdonis.registerRoutes(router, {
-    controllers: {
+    controllers: withoutMissingHandler({
       AppEndpoints: async () => ({ default: (await controllers()).AppController }),
       ChannelsEndpoints: async () => ({ default: (await controllers()).ChannelsController }),
       TasksEndpoints: async () => ({ default: (await controllers()).TasksController }),
       DraftsEndpoints: async () => ({ default: (await controllers()).DraftsController }),
       PreferencesEndpoints: async () => ({ default: (await controllers()).PreferencesController }),
       HooksEndpoints: async () => ({ default: (await controllers()).HooksController }),
-    },
+    }),
     hooks: tasksHooks(),
   });
 

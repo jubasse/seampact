@@ -2,7 +2,7 @@
   "id": "stale-webhook-signature",
   "title": "A signature older than the scheme's tolerance answers 401",
   "checks": ["CHK-073"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "steps": [
     {
       "request": {

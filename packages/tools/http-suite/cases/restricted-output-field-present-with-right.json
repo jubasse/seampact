@@ -2,7 +2,7 @@
   "id": "restricted-output-field-present-with-right",
   "title": "A restricted output field reaches a caller with its right",
   "checks": ["CHK-025"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "script": {
     "answers": {
       "tasks.getTask": {

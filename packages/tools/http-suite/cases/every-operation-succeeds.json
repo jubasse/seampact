@@ -2,7 +2,7 @@
   "id": "every-operation-succeeds",
   "title": "Every reference operation answers its declared success once",
   "checks": ["CHK-062", "CHK-105"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "steps": [
     {
       "title": "health",

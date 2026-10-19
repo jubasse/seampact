@@ -6,6 +6,7 @@ import { HOOK_CALLS_ROUTE, LOG_LINES_ROUTE, SCRIPT_ROUTE } from "@seampact/http-
 import Fastify, { type FastifyError, type FastifyReply, type FastifyRequest } from "fastify";
 import * as TasksFastify from "../generated/server/tasks/index.js";
 import * as TasksServiceFastify from "../generated/server/tasksService/index.js";
+import { withoutMissingHandler } from "../src/boot-variant.mjs";
 import { tasksHandlers, tasksServiceHandlers } from "../src/handlers.mjs";
 import { tasksHooks, tasksServiceHooks } from "../src/hooks.mjs";
 import {
@@ -41,14 +42,14 @@ function sendControlReply(reply: FastifyReply, controlReply: ControlReply): Fast
 /** The tasks plugin's handlers and hooks, without a prefix. */
 export function tasksRegistration() {
   return {
-    handlers: {
+    handlers: withoutMissingHandler({
       AppEndpoints: tasksHandlers,
       ChannelsEndpoints: tasksHandlers,
       TasksEndpoints: tasksHandlers,
       DraftsEndpoints: tasksHandlers,
       PreferencesEndpoints: tasksHandlers,
       HooksEndpoints: tasksHandlers,
-    },
+    }),
     hooks: tasksHooks(),
   };
 }

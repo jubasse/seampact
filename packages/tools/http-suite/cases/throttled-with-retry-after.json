@@ -2,7 +2,7 @@
   "id": "throttled-with-retry-after",
   "title": "429 with retryAfterMs and its Retry-After header",
   "checks": ["CHK-015"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "steps": [
     {
       "request": {

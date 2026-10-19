@@ -2,7 +2,7 @@
   "id": "restricted-input-field-accepted-with-right",
   "title": "A restricted input field sent with its right reaches the handler",
   "checks": ["CHK-092"],
-  "profiles": ["default"],
+  "profiles": ["default", "hand-written"],
   "steps": [
     {
       "request": {
