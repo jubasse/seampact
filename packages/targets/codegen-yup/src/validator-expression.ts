@@ -60,10 +60,12 @@ export function validatorExpression(plan: TypePlan, context: YupRenderContext): 
         "codegen-yup: a refused plan reached the renderer; generate returns the plan's refusals instead.",
       );
     case "unknown":
-      return "yup.mixed().nullable()";
+      return "yup.mixed()";
     case "schema":
       return context.referToSchema(plan.schemaId, plan.exportName);
     case "enum":
+      if (plan.openMembers) return "yup.string().strict()";
+
       // A named test, not `oneOf`: yup lets a nullable schema skip `oneOf`, and null must be an enum issue.
       return `yup.mixed().nullable()${namedTest("enum", "Expected one of the declared values.", `(${JSON.stringify(plan.values)} as readonly unknown[]).includes(value)`)}`;
     case "scalar":

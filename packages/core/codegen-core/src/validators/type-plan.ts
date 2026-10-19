@@ -25,7 +25,8 @@ export type TypePlan =
   // An opaque value: any JSON value, `null` only when nullable (ADR 0003 section 2).
   | { readonly kind: "unknown"; readonly nullable: boolean }
   | { readonly kind: "schema"; readonly schemaId: string; readonly exportName: string }
-  | { readonly kind: "enum"; readonly values: readonly string[] }
+  // An output enum keeps an unknown member (ADR 0003 section 4): `openMembers` makes the validators accept any string.
+  | { readonly kind: "enum"; readonly values: readonly string[]; readonly openMembers: boolean }
   | {
       readonly kind: "array";
       readonly items: TypePlan;
@@ -229,7 +230,11 @@ function enumPlan(typeUse: EnumTypeUse, location: IrLocation, context: PlanConte
     return REFUSED;
   }
 
-  return { kind: "enum", values: [...declaration.values] };
+  return {
+    kind: "enum",
+    values: [...declaration.values],
+    openMembers: context.direction === "output",
+  };
 }
 
 function scalarPlan(typeUse: ScalarTypeUse, location: IrLocation, context: PlanContext): TypePlan {

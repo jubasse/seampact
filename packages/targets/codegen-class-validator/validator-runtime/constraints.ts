@@ -207,6 +207,15 @@ export function Present(): PropertyDecorator {
   });
 }
 
+/** An opaque value that is not nullable: any JSON value but `null`. */
+export function NotNull(): PropertyDecorator {
+  return Satisfies({
+    rule: TYPE_RULE,
+    message: "Expected a value, not null.",
+    test: (value) => value !== null,
+  });
+}
+
 export function Minimum(limit: number): PropertyDecorator {
   return Satisfies(minimumCheck(limit));
 }

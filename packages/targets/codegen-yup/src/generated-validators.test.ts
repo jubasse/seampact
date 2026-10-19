@@ -439,10 +439,10 @@ describe("numbers: the safe integer range and finiteness the zod validators enfo
   });
 });
 
-describe("enum: null is an enum issue, as on zod", () => {
+describe("an output enum is any string: null is a type issue, as on zod", () => {
   test("a null task state", async () => {
     expect(await rules(standardSchemaOf(outputSchemas.TaskSchema?.fields.state), null)).toEqual([
-      "enum",
+      "type",
     ]);
   });
 });

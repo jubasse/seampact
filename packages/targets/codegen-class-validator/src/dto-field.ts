@@ -65,10 +65,12 @@ function typeDecorators(plan: TypePlan, context: DtoRenderContext): string[] {
     case "refused":
       throw refusedPlanReached();
     case "unknown":
-      return [`@${context.validator("Allow")}()`];
+      return [`@${context.validator("Allow")}()`, `@${CONTRACT}.NotNull()`];
     case "schema":
       return nestedDtoDecorators(context.referToDto(plan.schemaId, plan.exportName), context);
     case "enum":
+      if (plan.openMembers) return [`@${context.validator("IsString")}()`];
+
       return [`@${context.validator("IsIn")}(${JSON.stringify(plan.values)})`];
     case "scalar":
       return scalarDecorators(plan, context);
@@ -108,8 +110,14 @@ function itemDecorators(items: TypePlan, context: DtoRenderContext): string[] {
         `@${context.validator("ValidateNested")}({ each: true })`,
         `@${context.transformer("Type")}(() => ${context.referToDto(items.schemaId, items.exportName)})`,
       ];
-    case "enum":
-      return [`@${CONTRACT}.ArrayItems([${CONTRACT}.enumCheck(${JSON.stringify(items.values)})])`];
+    case "enum": {
+      const check = items.openMembers
+        ? `${CONTRACT}.scalarTypeCheck("string")`
+        : `${CONTRACT}.enumCheck(${JSON.stringify(items.values)})`;
+
+      return [`@${CONTRACT}.ArrayItems([${check}])`];
+    }
+
     case "scalar": {
       const checks = [
         `${CONTRACT}.scalarTypeCheck(${JSON.stringify(items.base)})`,

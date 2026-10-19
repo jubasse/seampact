@@ -29,14 +29,11 @@ const NOT_RUN_YET = [
   "Tags",
 ];
 
-// Rows on which the three validators agree with each other and give the opposite of the table's verdict. Each is a
-// decision to take (the table follows ADR 0003; the validators have their own tests), so the row pins the
-// validators' verdict here and flips to a failure once they follow the table.
+// Rows on which the three validators agree with each other and give the opposite of the table's verdict; a
+// disagreement with ADR 0003 is fixed in the validators; only a gap upstream of them stays listed.
 const VALIDATORS_DIVERGE_FROM_TABLE: Readonly<Record<string, string>> = {
-  "Envelope.null":
-    "a required opaque value takes null, ADR 0003 section 2 refuses it unless nullable",
-  "Member.unknown-member-output":
-    "an output enum refuses an unknown member, ADR 0003 section 4 accepts it",
+  "OptionalEnvelope.null":
+    "the compiler writes no nullable on an opaque property, so the IR holds it as non-nullable",
 };
 
 const compiler = await loadGoldenCompiler();

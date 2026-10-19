@@ -255,10 +255,10 @@ describe("a required opaque member must be present, null is a value", () => {
     );
   });
 
-  test("null data passes", async () => {
+  test("null data is a type issue, the opaque value not being nullable", async () => {
     expect(
       await inputVerdict("PaymentsInputSchema", payment({ id: "evt", type: "paid", data: null })),
-    ).toBe("valid");
+    ).toEqual(["/body/data type"]);
   });
 });
 
