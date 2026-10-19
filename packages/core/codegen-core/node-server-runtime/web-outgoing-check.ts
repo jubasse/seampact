@@ -60,8 +60,8 @@ export function recordBoundaryResponse(
 }
 
 /**
- * The `Response` that goes out for a request a contract route's handler served: the boundary's own as is, any other
- * checked as an app reply, under `strict` the api's 500 in place of a violation.
+ * The `Response` that goes out for a request a contract route's handler served: the boundary's own with its headers
+ * set again, any other checked as an app reply, under `strict` the api's 500 in place of a violation.
  */
 export async function checkOutgoingResponse(
   context: BoundaryContext,
@@ -70,7 +70,13 @@ export async function checkOutgoingResponse(
 ): Promise<Response> {
   const own = boundaryResponses.get(context);
 
-  if (own?.response === response) return response;
+  // The body is the boundary's: its own headers win again, body headers included, which also strips a foreign
+  // ETag; a middleware may have set headers on that object in place after `next()`.
+  if (own?.response === response) {
+    replaceReplyHeaders(response.headers, own.reply.headers);
+
+    return response;
+  }
 
   const outgoing: OutgoingReply = {
     status: response.status,
@@ -80,6 +86,8 @@ export async function checkOutgoingResponse(
 
   // Hono rebuilds the boundary's `Response` around the same body when a middleware sets a header after `next()`.
   if (own !== undefined && isRebuiltBoundaryResponse(own.response, response)) {
+    replaceReplyHeaders(outgoing.headers, own.reply.headers);
+
     return new Response(response.body, outgoing);
   }
 

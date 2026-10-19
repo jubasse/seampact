@@ -11,7 +11,7 @@ import {
 } from "./contract-error.js";
 import type { ContractRequest, ContractRoute } from "./contract-route.js";
 import { clientStatusError, type ReportedRequest } from "./error-reply.js";
-import { charsetOf, IDENTITY_ENCODING } from "./transport-checks.js";
+import { charsetRefusal, IDENTITY_ENCODING } from "./transport-checks.js";
 import {
   type ByteStream,
   canDecode,
@@ -22,7 +22,6 @@ import {
 
 const UNSUPPORTED_MEDIA_ROLE = "unsupportedMediaType";
 const BAD_REQUEST = 400;
-const UTF8_CHARSETS: readonly string[] = ["utf-8", "utf8"];
 const UTF8_KEEPING_BOM = new TextDecoder("utf-8", { ignoreBOM: true });
 
 /** A contract route's body as the boundary read it: parsed JSON, and its raw bytes on a signed route. */
@@ -125,11 +124,9 @@ function headerRefusal(
     return tooLargeError(route, limitBytes);
   }
 
-  const charset = charsetOf(request.headers.get("content-type"));
+  const charsetRefused = charsetRefusal(route, request.headers.get("content-type"));
 
-  if (charset !== undefined && !UTF8_CHARSETS.includes(charset)) {
-    return roleError(route, UNSUPPORTED_MEDIA_ROLE);
-  }
+  if (charsetRefused !== undefined) return charsetRefused;
 
   const coding = contentCoding(request.headers.get("content-encoding"));
 

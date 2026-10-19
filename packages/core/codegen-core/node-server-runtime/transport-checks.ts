@@ -10,6 +10,7 @@ import { type ContractRequest, type ContractRoute, headerValue } from "./contrac
 
 const UNSUPPORTED_MEDIA_ROLE = "unsupportedMediaType";
 const CHARSET_PARAMETER = "charset=";
+const UTF8_CHARSETS: readonly string[] = ["utf-8", "utf8"];
 
 /** The content coding of a body sent as is. */
 export const IDENTITY_ENCODING = "identity";
@@ -117,6 +118,18 @@ function isMediaOf(contentType: string, media: string): boolean {
   const essence = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
 
   return essence === media;
+}
+
+/** The 415 of a JSON body whose Content-Type names a charset other than UTF-8, or undefined. */
+export function charsetRefusal(
+  route: ContractRoute,
+  contentType: string | null | undefined,
+): ContractError | undefined {
+  const charset = charsetOf(contentType);
+
+  return charset !== undefined && !UTF8_CHARSETS.includes(charset)
+    ? roleError(route, UNSUPPORTED_MEDIA_ROLE)
+    : undefined;
 }
 
 /** The lowercase `charset` parameter of a Content-Type value, without quotes; undefined when it has none. */

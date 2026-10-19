@@ -35,6 +35,7 @@ interface ReferenceAppModule {
   readonly FAIL_BEFORE_HEADER: string;
   readonly READ_BODY_HEADER: string;
   readonly REWRITE_REPLY_HEADER: string;
+  readonly RELABEL_REPLY_HEADER: string;
   readonly calls: {
     readonly handled: string[];
     readonly unexpected: { readonly exceptionOrReply: unknown }[];
@@ -402,6 +403,36 @@ describe("the contract's checks", () => {
     expect(reply.status).toBe(500);
     expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
     expect(app.calls.unexpected).toHaveLength(1);
+  });
+});
+
+describe("headers app middleware sets on a contract reply after next()", () => {
+  test.each([
+    ["content-type", "content-type", "text/html"],
+    ["content-encoding", "content-encoding", "gzip"],
+  ])(
+    "%s set with c.header() gives way to the boundary's, other headers kept",
+    async (relabelling, name, value) => {
+      const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+        headers: { ...BEARER, [app.RELABEL_REPLY_HEADER]: relabelling },
+      });
+
+      expect(reply.status).toBe(200);
+      expect(reply.headers[name]).not.toBe(value);
+      expect(reply.headers["content-type"]).toContain("application/json");
+      expect(reply.headers["x-after-next"]).toBe("kept");
+      expect(JSON.parse(reply.text)).toMatchObject({ taskId: TASK });
+    },
+  );
+
+  test("a content type and an ETag set on c.res.headers give way to the boundary's", async () => {
+    const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+      headers: { ...BEARER, [app.RELABEL_REPLY_HEADER]: "in-place" },
+    });
+
+    expect(reply.status).toBe(200);
+    expect(reply.headers["content-type"]).toContain("application/json");
+    expect(reply.headers.etag).not.toBe('"app-etag"');
   });
 });
 

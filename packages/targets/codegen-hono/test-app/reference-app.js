@@ -28,6 +28,12 @@ export const READ_BODY_HEADER = "x-read-body-before";
 /** A request carrying this header has its reply replaced by app middleware after `next()`. */
 export const REWRITE_REPLY_HEADER = "x-rewrite-reply";
 
+/**
+ * A request carrying this header has the boundary's reply relabelled by app middleware after `next()`: `content-type`
+ * or `content-encoding` with `c.header()`, which rebuilds the reply around its body, or `in-place` on `c.res.headers`.
+ */
+export const RELABEL_REPLY_HEADER = "x-relabel-reply";
+
 const HOST = "127.0.0.1";
 const INTERNAL_STATUS = 500;
 const NOT_FOUND_STATUS = 404;
@@ -46,6 +52,21 @@ function appReplyResponse(error) {
   if (error.writer === "writeHead") headers.etag = '"app-etag"';
 
   return new Response(error.body, { status: error.status, headers });
+}
+
+function relabelReply(c, relabelling) {
+  if (relabelling === "in-place") {
+    c.res.headers.set("content-type", "text/html");
+    c.res.headers.set("etag", '"app-etag"');
+
+    return;
+  }
+
+  if (relabelling === "content-type") c.header("content-type", "text/html");
+
+  if (relabelling === "content-encoding") c.header("content-encoding", "gzip");
+
+  if (relabelling !== undefined) c.header("x-after-next", "kept");
 }
 
 function referenceApp(registration) {
@@ -70,6 +91,8 @@ function referenceApp(registration) {
     if (c.req.header(READ_BODY_HEADER) !== undefined) await c.req.text();
 
     await next();
+
+    relabelReply(c, c.req.header(RELABEL_REPLY_HEADER));
 
     if (c.req.header(REWRITE_REPLY_HEADER) !== undefined) {
       c.res = new Response("rewritten", {
