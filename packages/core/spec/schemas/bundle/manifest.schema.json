@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/bundle/manifest.schema.json",
+  "title": "The contract bundle manifest, seampact-bundle.json (ADR 0011)",
+  "description": "A reader checks this schema, then the rules no JSON Schema states (README.md, 'Manifest rules'): files sorted by path in code-unit order with no duplicate, even folded to ASCII lower case, and each api's file listed and named ir/<api>.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["formatVersion", "contract", "apis", "compiler", "packs", "files", "integrity"],
+  "properties": {
+    "formatVersion": {
+      "description": "The bundle format version; a reader refuses one it does not read.",
+      "const": 1
+    },
+    "contract": {
+      "description": "The contract package the bundle was made from.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "$ref": "#/$defs/label" },
+        "version": { "$ref": "#/$defs/label" }
+      }
+    },
+    "apis": {
+      "description": "Each api of the workspace, with the IR file and the IR version and revision it was written in.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "file", "irVersion", "irRevision"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Za-z0-9._@+-]+$" },
+          "file": { "type": "string", "pattern": "^ir/[A-Za-z0-9._@+-]+\\.json$" },
+          "irVersion": { "type": "integer", "minimum": 1 },
+          "irRevision": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "compiler": {
+      "description": "The compiler that wrote the IR.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "$ref": "#/$defs/label" },
+        "version": { "$ref": "#/$defs/label" }
+      }
+    },
+    "packs": {
+      "description": "The packs the apis apply (each IR's packs), sorted by name then version, without duplicates.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "version"],
+        "properties": {
+          "name": { "$ref": "#/$defs/label" },
+          "version": { "$ref": "#/$defs/label" }
+        }
+      }
+    },
+    "files": {
+      "description": "Every file of the bundle but the manifest, sorted by path in code-unit order.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "size", "sha256"],
+        "properties": {
+          "path": { "$ref": "#/$defs/path" },
+          "size": { "type": "integer", "minimum": 0 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    },
+    "integrity": {
+      "description": "sha256- and the padded standard base64 of the SHA-256 of the canonical file list.",
+      "type": "string",
+      "pattern": "^sha256-[A-Za-z0-9+/]{43}=$"
+    }
+  },
+  "$defs": {
+    "label": { "type": "string", "minLength": 1, "maxLength": 214 },
+    "path": {
+      "description": "A portable path: relative to the bundle root, forward slashes, under sources/ or ir/, each segment of [A-Za-z0-9._@+-] and neither . nor .. (no lookahead, so RE2-based validators read it)",
+      "type": "string",
+      "maxLength": 255,
+      "pattern": "^(?:sources|ir)(?:/(?:[A-Za-z0-9_@+-][A-Za-z0-9._@+-]*|\\.[A-Za-z0-9_@+-][A-Za-z0-9._@+-]*|\\.\\.[A-Za-z0-9._@+-]+))+$"
+    }
+  }
+}
