@@ -86,7 +86,7 @@ async function planEntries(location: ConfigLocation, io: CliIo): Promise<Step<Pl
 
   if (used.status === "refused") return used;
 
-  const compiled = compileSources(config.sources, used.names, io);
+  const compiled = await compileSources(config, used.names, io);
 
   if (compiled.failed) return { status: "refused", problems: compiled.problems };
 

@@ -26,7 +26,7 @@ export async function compileCommand(
 
   if (used.status === "refused") return refuse(io, used.problems);
 
-  const compiled = compileSources(read.config.sources, used.names, io);
+  const compiled = await compileSources(read.config, used.names, io);
 
   if (compiled.failed) return refuse(io, compiled.problems);
 

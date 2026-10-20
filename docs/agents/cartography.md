@@ -61,7 +61,7 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/compiler`
 
 - `packages/core/compiler/src`: Reads the YAML contract, reports errors with file, line and column, and produces the IR.
-- `packages/core/compiler/src/bundle`: Contract bundles in the compiler (ADR 0011): the workspace bundled and written as a directory or a reproducible tarball, the tarball reader, and the pinned-bundle check.
+- `packages/core/compiler/src/bundle`: Contract bundles in the compiler (ADR 0011): the workspace bundled and written as a directory or a reproducible tarball, the tarball reader, the pinned-bundle check, the three channels that fetch a bundle with its cache, workspace imports and the local-source refusal.
 - `packages/core/compiler/src/derivations`: The derivation table and the derivation roles of ADR 0006 sections 5 and 6, held as data.
 - `packages/core/compiler/src/diagnostics`: Located diagnostics: the diagnostic type, its sort order and the printer.
 - `packages/core/compiler/src/finalize`: The finalize stage (ADR 0006 section 1): pruning, canonical ids and ordering, the id collision check, IR validation and serialisation.

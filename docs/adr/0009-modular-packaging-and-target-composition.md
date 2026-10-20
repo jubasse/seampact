@@ -88,6 +88,7 @@ The CLI reads the app config, `seampact.config.yaml` (ADR 0011). For each target
 
 - A missing package fails `generate` with a diagnostic naming the package and the install command for the project's package manager.
 - Each target exports its metadata: name, the irVersion range and, before 1.0, the exact irRevision it reads (ADR 0005), the codegen-core API range, the `hooks` range of the code it emits, and the link kinds it provides or consumes. The CLI refuses a mismatch before calling `generate`, naming both versions.
+- A target receives each api's IR in its serialised member order (ADR 0004 section 10), whether the source is a `path` compiled in the run or a bundle, so the same contract generates the same files from either.
 - A target entry whose `use` is a Maven coordinate or a Composer package belongs to a native runner (ADR 0011); the Node CLI leaves it to that runner.
 
 ### The provider seam
