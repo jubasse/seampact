@@ -1,0 +1,57 @@
+# tasks/schemas.yaml: not shown in ADR 0002, written minimally for the reference contract
+Health:
+  type: object
+  required: [status]
+  properties: { status: { type: string } }
+Channel:
+  type: object
+  required: [channelId, name]
+  properties:
+    channelId: ChannelId
+    name: { type: string, minLength: 1, maxLength: 100 }
+CreateTask:
+  pick: { from: Task, fields: [title, effort] }
+  properties:
+    effort: { restrictedTo: { right: roles, params: { allowed: [owner] } } }
+UpdateTask:
+  pick: { from: Task, fields: [title, state, effort] }
+  required: []
+ArchiveTask:
+  type: object
+  required: [reason]
+  properties:
+    reason: { type: string, minLength: 1, maxLength: 500 }
+Preferences:
+  type: object
+  required: [locale]
+  properties:
+    locale: { type: string, minLength: 2, maxLength: 35 }
+    digest: { type: boolean }
+UpdatePreferences:
+  pick: { from: Preferences, fields: [locale, digest] }
+  required: []
+DraftId: { type: string, format: uuid }
+Draft:
+  type: object
+  required: [draftId, body]
+  properties:
+    draftId: DraftId
+    body: { type: string, maxLength: 20000 }
+PaymentEvent:
+  type: object
+  required: [id, type, data]
+  properties:
+    id: { type: string }
+    type: { type: string }
+    data: { opaque: "Stripe's object depends on the event type and its API version." }
+TaskQuery:
+  type: object
+  properties:
+    text: { type: string, maxLength: 200 }
+    states: { type: array, items: { enum: TaskState }, maxItems: 3 }
+TaskSearchResult:
+  type: object
+  required: [items]
+  properties:
+    items: { type: array, items: Task }
+    total: { type: integer, minimum: 0 }

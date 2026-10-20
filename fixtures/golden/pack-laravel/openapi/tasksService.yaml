@@ -1,0 +1,368 @@
+openapi: 3.1.0
+info:
+  title: tasksService
+  version: "1"
+x-seampact-api:
+  kind: service
+  caller:
+    identity: service
+    right: callerService
+x-seampact-format: laravel
+paths:
+  /internal/v1/channels/{channelId}/tasks/{taskId}:
+    get:
+      operationId: getTask
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-Deadline
+          in: header
+          required: true
+          schema:
+            type: string
+          x-seampact-semantic: deadline
+        - name: traceparent
+          in: header
+          required: false
+          schema:
+            type: string
+          x-seampact-semantic: traceContext
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Task"
+                required:
+                  - data
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: api.forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.forbidden"
+          x-seampact-errors:
+            - code: api.forbidden
+              derivedFrom: requirement.errors
+        "404":
+          description: api.not_found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.not_found"
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: relay.route
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+        "504":
+          description: api.deadline_exceeded
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.deadline_exceeded"
+          x-seampact-errors:
+            - code: api.deadline_exceeded
+              derivedFrom: identity.deadline
+      security:
+        - internalToken: []
+      x-seampact-access:
+        identity: service
+      x-seampact-requires:
+        - right: callerService
+          params:
+            allowed:
+              - catalog
+      x-seampact-maturity:
+        level: provisional
+        source: api
+      x-seampact-relays:
+        api: tasks
+        operationId: getTask
+components:
+  schemas:
+    ApiForbiddenParams:
+      type: object
+      properties:
+        pointer:
+          type: string
+    ApiSchemaInvalidParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/IssuesItem"
+      required:
+        - issues
+    IssuesItem:
+      type: object
+      properties:
+        pointer:
+          type: string
+        rule:
+          type: string
+      required:
+        - pointer
+        - rule
+    Task:
+      type: object
+      properties:
+        taskId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        state:
+          $ref: "#/components/schemas/TaskState"
+        effort:
+          type: integer
+          minimum: 0
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - taskId
+        - title
+        - state
+        - version
+        - createdAt
+    TaskState:
+      type: string
+      enum:
+        - open
+        - done
+        - archived
+    api.deadline_exceeded:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.deadline_exceeded
+        title:
+          type: string
+        status:
+          type: integer
+          const: 504
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.deadline_exceeded
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: unavailable
+    api.forbidden:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.forbidden
+            title:
+              type: string
+            status:
+              type: integer
+              const: 403
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.forbidden
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - title
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiForbiddenParams"
+      x-seampact-nature:
+        base: refused
+    api.internal:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.internal
+        title:
+          type: string
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.internal
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: failed
+    api.not_found:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.not_found
+        title:
+          type: string
+        status:
+          type: integer
+          const: 404
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.not_found
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    api.schema_invalid:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.schema_invalid
+            title:
+              type: string
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.schema_invalid
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - title
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiSchemaInvalidParams"
+      x-seampact-nature:
+        base: refused
+    api.unauthenticated:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.unauthenticated
+        title:
+          type: string
+        status:
+          type: integer
+          const: 401
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.unauthenticated
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+  securitySchemes:
+    internalToken:
+      type: http
+      scheme: bearer
+      bearerFormat: jwt

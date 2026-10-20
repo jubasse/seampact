@@ -1,0 +1,28 @@
+# JSON:API resource objects, page[number] paging and the errors array.
+pack: { name: '@seampact/pack-jsonapi', version: 0.0.0, extends: [] }
+
+formats:
+  jsonapi:
+    media: application/vnd.api+json
+    success:
+      item: { body: { data: { type: $collection, id: '${id}', attributes: $fields, links: { self: $self } } } }
+    error:
+      body:
+        errors:
+          - { status: '${status}', code: $code, title: $title, detail: $detail, meta: $params }
+
+pagings:
+  jsonapiPages:
+    request:
+      page: { query: 'page[number]' }
+      limit: { query: 'page[size]' }
+      sort: { query: sort, style: signed }
+    response:
+      body:
+        data: { $each: $items, $as: { type: $collection, id: '${itemId}', attributes: $itemFields, links: { self: $itemSelf } } }
+        links: { self: $self, first: $first, prev: $previous, next: $next, last: $last }
+        meta: { total: $total }
+
+conventions:
+  format: jsonapi
+  paging: { default: jsonapiPages }

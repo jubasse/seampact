@@ -1,0 +1,14 @@
+{
+  "name": "@seampact/pack-spring",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Spring Data's Page as a paging style.",
+  "seampact": {
+    "role": "pack",
+    "pack": "pack.yaml"
+  },
+  "files": [
+    "pack.yaml",
+    "README.md"
+  ]
+}

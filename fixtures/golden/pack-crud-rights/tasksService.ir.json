@@ -1,0 +1,1628 @@
+{
+  "api": {
+    "caller": {
+      "identity": "service",
+      "right": "callerService"
+    },
+    "compat": {
+      "policy": "none"
+    },
+    "docs": {},
+    "documents": {},
+    "extensions": {},
+    "id": "tasksService",
+    "kind": "service",
+    "maturity": "provisional",
+    "name": {
+      "role": "schema",
+      "segments": [
+        "tasks",
+        "service"
+      ]
+    },
+    "origin": {
+      "layer": "api",
+      "pointer": "/api"
+    },
+    "pathVersion": {
+      "origin": {
+        "layer": "api",
+        "pointer": "/api/version"
+      },
+      "value": "prefix"
+    },
+    "surfaces": {
+      "internal": {
+        "name": {
+          "role": "schema",
+          "segments": [
+            "internal"
+          ]
+        },
+        "origin": {
+          "layer": "api",
+          "pointer": "/surfaces/internal"
+        },
+        "pathVersion": "prefix",
+        "prefix": "/internal/v1"
+      }
+    },
+    "version": {
+      "kind": "path",
+      "number": 1
+    },
+    "wire": {
+      "int64": "string",
+      "outputEnums": "enum",
+      "urls": "relative"
+    }
+  },
+  "buckets": {},
+  "conventions": {
+    "batch.bodyLimit": {
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/batch/bodyLimit"
+      },
+      "value": "2MiB"
+    },
+    "batch.maxIds": {
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/batch/maxIds"
+      },
+      "value": 200
+    },
+    "bodyLimit": {
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/bodyLimit"
+      },
+      "value": "1MiB"
+    },
+    "cache.families": {
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/cache/families"
+      },
+      "value": {
+        "hour": "3600s",
+        "minute": "60s"
+      }
+    },
+    "errors.derived": {
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/errors/derived"
+      },
+      "value": {
+        "schemaInvalid": {
+          "code": "api.schema_invalid",
+          "params": {
+            "issues": {
+              "$as": {
+                "pointer": "$item.pointer",
+                "rule": "$item.rule"
+              },
+              "$each": "$issues"
+            }
+          }
+        }
+      }
+    },
+    "errors.every": {
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/errors/every"
+      },
+      "value": [
+        "api.internal"
+      ]
+    },
+    "idempotency.header": {
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/idempotency/header"
+      },
+      "value": "Idempotency-Key"
+    },
+    "idempotency.lifetime": {
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/idempotency/lifetime"
+      },
+      "value": "24h"
+    },
+    "idempotency.replayHeader": {
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/idempotency/replayHeader"
+      },
+      "value": "Idempotency-Replayed"
+    },
+    "paging.default": {
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/paging/default"
+      },
+      "value": "cursor"
+    },
+    "paging.maxLimit": {
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/paging/maxLimit"
+      },
+      "value": 100
+    },
+    "rateLimit.header": {
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/rateLimit/header"
+      },
+      "value": "Retry-After"
+    },
+    "rateLimit.param": {
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/rateLimit/param"
+      },
+      "value": "retryAfterMs"
+    },
+    "rateLimit.unit": {
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/rateLimit/unit"
+      },
+      "value": "s"
+    },
+    "restrictedInput": {
+      "origin": {
+        "layer": "shared",
+        "pointer": "/conventions/restrictedInput"
+      },
+      "value": "reject"
+    }
+  },
+  "enums": {
+    "Service": {
+      "directions": [
+        "input",
+        "output"
+      ],
+      "docs": {},
+      "id": "Service",
+      "localReason": "The product's internal services.",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "service"
+        ]
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/enums/Service"
+      },
+      "values": [
+        "catalog",
+        "ticketing"
+      ]
+    },
+    "Surface": {
+      "directions": [
+        "input"
+      ],
+      "docs": {},
+      "id": "Surface",
+      "localReason": "The product's entry points.",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "surface"
+        ]
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/enums/Surface"
+      },
+      "values": [
+        "app",
+        "studio"
+      ]
+    },
+    "TaskState": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "id": "TaskState",
+      "localReason": "Task states belong to this api.",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "task",
+          "state"
+        ]
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/enums/TaskState"
+      },
+      "values": [
+        "open",
+        "done",
+        "archived"
+      ]
+    }
+  },
+  "errors": {
+    "api.deadline_exceeded": {
+      "code": "api.deadline_exceeded",
+      "default": "deadlineExceeded",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 504
+      },
+      "nature": "unavailable",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.deadline_exceeded"
+      }
+    },
+    "api.forbidden": {
+      "code": "api.forbidden",
+      "default": "forbidden",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 403
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.forbidden"
+      },
+      "params": "ApiForbiddenParams"
+    },
+    "api.internal": {
+      "code": "api.internal",
+      "default": "undeclaredStatus",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 500
+      },
+      "nature": "failed",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.internal"
+      }
+    },
+    "api.not_found": {
+      "code": "api.not_found",
+      "default": "notFound",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 404
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.not_found"
+      }
+    },
+    "api.schema_invalid": {
+      "code": "api.schema_invalid",
+      "default": "schemaInvalid",
+      "docs": {},
+      "example": {
+        "issues": [
+          {
+            "pointer": "/title",
+            "rule": "minLength"
+          }
+        ]
+      },
+      "family": "api",
+      "http": {
+        "status": 400
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.schema_invalid"
+      },
+      "params": "ApiSchemaInvalidParams"
+    },
+    "api.unauthenticated": {
+      "code": "api.unauthenticated",
+      "default": "unauthenticated",
+      "docs": {},
+      "family": "api",
+      "http": {
+        "status": 401
+      },
+      "nature": "refused",
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.unauthenticated"
+      }
+    }
+  },
+  "extensionKeys": {},
+  "features": [],
+  "formats": {
+    "bare": {
+      "absent": "omit",
+      "error": {
+        "body": {
+          "kind": "object",
+          "members": [
+            {
+              "name": {
+                "kind": "text",
+                "text": "type"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "code"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "title"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "title"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "status"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "status"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "detail"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "detail"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "instance"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "instance"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "code"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "code"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "nature"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "nature"
+              }
+            },
+            {
+              "name": {
+                "kind": "text",
+                "text": "traceId"
+              },
+              "value": {
+                "kind": "slot",
+                "path": [],
+                "slot": "traceId"
+              }
+            }
+          ],
+          "merge": "params"
+        },
+        "headers": [],
+        "media": "application/problem+json"
+      },
+      "id": "bare",
+      "media": "application/json",
+      "meta": {},
+      "origin": {
+        "layer": "core",
+        "pointer": "/formats/bare"
+      },
+      "success": {
+        "item": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        },
+        "list": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        },
+        "page": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "items"
+          },
+          "headers": []
+        },
+        "table": {
+          "body": {
+            "kind": "slot",
+            "path": [],
+            "slot": "payload"
+          },
+          "headers": []
+        }
+      }
+    }
+  },
+  "headers": {
+    "actorSurface": {
+      "id": "actorSurface",
+      "in": "request",
+      "name": "X-Actor-Surface",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/headers/actorSurface"
+      },
+      "semantic": "actorSurface"
+    },
+    "deadline": {
+      "id": "deadline",
+      "in": "request",
+      "name": "X-Deadline",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/headers/deadline"
+      },
+      "semantic": "deadline"
+    },
+    "trace": {
+      "id": "trace",
+      "in": "request",
+      "name": "traceparent",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/headers/trace"
+      },
+      "semantic": "traceContext"
+    }
+  },
+  "identities": {
+    "service": {
+      "docs": {},
+      "errors": [],
+      "extensions": {},
+      "headers": [
+        {
+          "for": "writes",
+          "header": "actorSurface",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/identities/service/headers/actorSurface"
+          },
+          "required": true,
+          "schema": {
+            "enum": "Surface",
+            "kind": "enum"
+          }
+        },
+        {
+          "for": "all",
+          "header": "deadline",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/identities/service/headers/deadline"
+          },
+          "required": true
+        },
+        {
+          "for": "all",
+          "header": "trace",
+          "origin": {
+            "layer": "shared",
+            "pointer": "/identities/service/headers/trace"
+          },
+          "required": false
+        }
+      ],
+      "id": "service",
+      "kind": "credential",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/identities/service"
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "ServicePrincipal"
+      },
+      "schemes": {
+        "optionalRead": [],
+        "read": [
+          "internalToken"
+        ],
+        "write": [
+          "internalToken"
+        ]
+      }
+    },
+    "stripe": {
+      "docs": {},
+      "errors": [],
+      "extensions": {},
+      "headers": [],
+      "id": "stripe",
+      "kind": "signed",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/identities/stripe"
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "WebhookCaller"
+      },
+      "signed": "stripeSignature"
+    },
+    "user": {
+      "docs": {},
+      "errors": [],
+      "extensions": {},
+      "headers": [],
+      "id": "user",
+      "kind": "credential",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/identities/user"
+      },
+      "principal": {
+        "kind": "schema",
+        "schema": "UserPrincipal"
+      },
+      "schemes": {
+        "optionalRead": [],
+        "read": [
+          "bearer",
+          "sessionCookie"
+        ],
+        "write": [
+          "bearer",
+          "sessionCookie"
+        ]
+      }
+    }
+  },
+  "irRevision": 6,
+  "irVersion": 1,
+  "kinds": [
+    "httpOperation"
+  ],
+  "lint": {
+    "allows": [],
+    "rules": {}
+  },
+  "natures": {},
+  "operations": [
+    {
+      "access": {
+        "identity": "service",
+        "kind": "identity",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/caller/identity"
+        },
+        "schemes": [
+          "internalToken"
+        ]
+      },
+      "bindings": [],
+      "callerKinds": [
+        "identified"
+      ],
+      "deadlineHeader": "X-Deadline",
+      "docs": {},
+      "errors": [
+        {
+          "code": "api.schema_invalid",
+          "derivedFrom": {
+            "derivation": "input.invalid",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/internal/routes/getTask"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/derived/schemaInvalid"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "params": {
+                "kind": "object",
+                "members": [
+                  {
+                    "name": {
+                      "kind": "text",
+                      "text": "issues"
+                    },
+                    "value": {
+                      "as": {
+                        "kind": "object",
+                        "members": [
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "pointer"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "pointer"
+                              ],
+                              "slot": "item"
+                            }
+                          },
+                          {
+                            "name": {
+                              "kind": "text",
+                              "text": "rule"
+                            },
+                            "value": {
+                              "kind": "slot",
+                              "path": [
+                                "rule"
+                              ],
+                              "slot": "item"
+                            }
+                          }
+                        ]
+                      },
+                      "kind": "each",
+                      "of": "issues"
+                    }
+                  }
+                ]
+              },
+              "role": "schemaInvalid"
+            }
+          ]
+        },
+        {
+          "code": "api.unauthenticated",
+          "derivedFrom": {
+            "derivation": "identity.authenticate",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/api/caller/identity"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "unauthenticated"
+            }
+          ]
+        },
+        {
+          "code": "api.forbidden",
+          "derivedFrom": {
+            "derivation": "requirement.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/internal/requires/0"
+              }
+            ]
+          }
+        },
+        {
+          "code": "api.not_found",
+          "derivedFrom": {
+            "derivation": "relay.route",
+            "from": [
+              {
+                "api": "tasks",
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/get"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "notFound"
+            }
+          ]
+        },
+        {
+          "code": "api.internal",
+          "derivedFrom": {
+            "derivation": "response.undeclared",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/conventions/errors/every/0"
+              },
+              {
+                "layer": "api",
+                "pointer": "/surfaces/internal/routes/getTask"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "undeclaredStatus"
+            }
+          ]
+        },
+        {
+          "code": "api.deadline_exceeded",
+          "derivedFrom": {
+            "derivation": "identity.deadline",
+            "from": [
+              {
+                "layer": "shared",
+                "pointer": "/headers/deadline"
+              },
+              {
+                "layer": "shared",
+                "pointer": "/identities/service/headers/deadline"
+              },
+              {
+                "layer": "api",
+                "pointer": "/api"
+              }
+            ]
+          },
+          "roles": [
+            {
+              "role": "deadlineExceeded"
+            }
+          ]
+        }
+      ],
+      "examples": {},
+      "extensions": {},
+      "features": [],
+      "fieldRights": [],
+      "format": "bare",
+      "id": "getTask",
+      "internal": false,
+      "kind": "httpOperation",
+      "maturity": {
+        "level": "provisional",
+        "origin": {
+          "layer": "api",
+          "pointer": "/api/maturity"
+        },
+        "source": "api"
+      },
+      "method": "get",
+      "name": {
+        "role": "operation",
+        "segments": [
+          "get",
+          "task"
+        ]
+      },
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/internal/routes/getTask"
+      },
+      "params": {
+        "header": [
+          {
+            "derivedFrom": {
+              "derivation": "identity.authenticate",
+              "from": [
+                {
+                  "layer": "api",
+                  "pointer": "/api/caller/identity"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/schemes/internalToken"
+                }
+              ]
+            },
+            "name": "Authorization",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          },
+          {
+            "derivedFrom": {
+              "derivation": "identity.header",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/service/headers/deadline"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/headers/deadline"
+                }
+              ]
+            },
+            "name": "X-Deadline",
+            "required": true,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          },
+          {
+            "derivedFrom": {
+              "derivation": "identity.header",
+              "from": [
+                {
+                  "layer": "shared",
+                  "pointer": "/identities/service/headers/trace"
+                },
+                {
+                  "layer": "shared",
+                  "pointer": "/headers/trace"
+                }
+              ]
+            },
+            "name": "traceparent",
+            "required": false,
+            "type": {
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "path": [
+          {
+            "derivedFrom": {
+              "derivation": "relay.route",
+              "from": [
+                {
+                  "api": "tasks",
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/get"
+                }
+              ]
+            },
+            "name": "channelId",
+            "origin": {
+              "api": "tasks",
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/id/channelId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          },
+          {
+            "derivedFrom": {
+              "derivation": "relay.route",
+              "from": [
+                {
+                  "api": "tasks",
+                  "layer": "api",
+                  "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/get"
+                }
+              ]
+            },
+            "name": "taskId",
+            "origin": {
+              "api": "tasks",
+              "layer": "api",
+              "pointer": "/surfaces/app/routes/channels/member/routes/tasks/id/taskId"
+            },
+            "required": true,
+            "type": {
+              "format": "uuid",
+              "kind": "scalar",
+              "refinements": {},
+              "type": "string"
+            }
+          }
+        ],
+        "query": []
+      },
+      "path": "/internal/v1/channels/{channelId}/tasks/{taskId}",
+      "principalRequires": [],
+      "relays": {
+        "api": "tasks",
+        "id": "getTask",
+        "kind": "httpOperation"
+      },
+      "requires": [
+        {
+          "kind": "right",
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/internal/requires/0"
+          },
+          "params": {
+            "allowed": [
+              "catalog"
+            ]
+          },
+          "right": "callerService"
+        }
+      ],
+      "responses": [
+        {
+          "body": {
+            "kind": "ref",
+            "schema": "Task"
+          },
+          "derivedFrom": {
+            "derivation": "relay.route",
+            "from": [
+              {
+                "api": "tasks",
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/channels/member/routes/tasks/ops/get"
+              }
+            ]
+          },
+          "headers": [],
+          "media": "application/json",
+          "origin": {
+            "api": "tasks",
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/channels/member/routes/tasks/item"
+          },
+          "shape": "item",
+          "status": 200
+        }
+      ],
+      "safe": true,
+      "scopes": [],
+      "surface": "internal",
+      "tags": [],
+      "unknownQuery": {
+        "policy": "refuse"
+      },
+      "upstream": []
+    }
+  ],
+  "packs": [
+    {
+      "name": "@seampact/pack-crud-rights",
+      "version": "0.0.0"
+    }
+  ],
+  "pagings": {},
+  "rights": {
+    "callerService": {
+      "docs": {},
+      "errors": [
+        "api.forbidden"
+      ],
+      "extensions": {},
+      "id": "callerService",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rights/callerService"
+      },
+      "params": "CallerServiceParams",
+      "subject": {
+        "kind": "none"
+      }
+    },
+    "tasks.seeEffort": {
+      "docs": {},
+      "errors": [
+        "api.forbidden"
+      ],
+      "extensions": {},
+      "id": "tasks.seeEffort",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rights/tasks.seeEffort"
+      },
+      "subject": {
+        "idSchema": {
+          "format": "uuid",
+          "kind": "scalar",
+          "refinements": {},
+          "type": "string"
+        },
+        "kind": "resource",
+        "type": {
+          "role": "schema",
+          "segments": [
+            "task"
+          ]
+        }
+      }
+    }
+  },
+  "rules": {},
+  "scalars": {},
+  "schemas": {
+    "ApiForbiddenParams": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiForbiddenParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "api",
+          "forbidden"
+        ]
+      },
+      "origin": {
+        "layer": "core",
+        "pointer": "/errors/api.forbidden/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "pointer",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "core",
+            "pointer": "/errors/api.forbidden/params/pointer"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "ApiSchemaInvalidParams": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ApiSchemaInvalidParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "api",
+          "schema",
+          "invalid"
+        ]
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/errors/api.schema_invalid/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "issues",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/errors/api.schema_invalid/params/issues"
+          },
+          "sensitive": false,
+          "type": {
+            "items": {
+              "kind": "ref",
+              "schema": "IssuesItem"
+            },
+            "kind": "array"
+          }
+        }
+      ]
+    },
+    "CallerServiceParams": {
+      "directions": [
+        "input"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "CallerServiceParams",
+      "kind": "object",
+      "name": {
+        "role": "params",
+        "segments": [
+          "caller",
+          "service"
+        ]
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/rights/callerService/params"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "allowed",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/rights/callerService/params/allowed"
+          },
+          "sensitive": false,
+          "type": {
+            "items": {
+              "enum": "Service",
+              "kind": "enum"
+            },
+            "kind": "array",
+            "minItems": 1
+          }
+        }
+      ]
+    },
+    "IssuesItem": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "IssuesItem",
+      "kind": "object",
+      "name": {
+        "role": "item",
+        "segments": [
+          "issues"
+        ]
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemas/Issues/items"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "pointer",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/schemas/Issues/items/properties/pointer"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "rule",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/schemas/Issues/items/properties/rule"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "ServicePrincipal": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "ServicePrincipal",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "service",
+          "principal"
+        ]
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemas/ServicePrincipal"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "service",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/schemas/ServicePrincipal/properties/service"
+          },
+          "sensitive": false,
+          "type": {
+            "enum": "Service",
+            "kind": "enum"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "userId",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/schemas/ServicePrincipal/properties/userId"
+          },
+          "sensitive": false,
+          "type": {
+            "format": "uuid",
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "Task": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "Task",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "task"
+        ]
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemas/Task"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "taskId",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/schemas/Task/properties/taskId"
+          },
+          "sensitive": false,
+          "type": {
+            "format": "uuid",
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "title",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/schemas/Task/properties/title"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "maxLength": 200,
+              "minLength": 1
+            },
+            "type": "string"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "state",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/schemas/Task/properties/state"
+          },
+          "sensitive": false,
+          "type": {
+            "enum": "TaskState",
+            "kind": "enum"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "effort",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/schemas/Task/properties/effort"
+          },
+          "restrictedTo": {
+            "origin": {
+              "layer": "shared",
+              "pointer": "/schemas/Task/properties/effort/restrictedTo"
+            },
+            "right": "tasks.seeEffort"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "minimum": "0"
+            },
+            "type": "integer"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "version",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/schemas/Task/properties/version"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "minimum": "1"
+            },
+            "type": "integer"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "createdAt",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/schemas/Task/properties/createdAt"
+          },
+          "sensitive": false,
+          "type": {
+            "format": "date-time",
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "UserPrincipal": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "UserPrincipal",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "user",
+          "principal"
+        ]
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemas/UserPrincipal"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "userId",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/schemas/UserPrincipal/properties/userId"
+          },
+          "sensitive": false,
+          "type": {
+            "format": "uuid",
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "WebhookCaller": {
+      "directions": [
+        "output"
+      ],
+      "docs": {},
+      "examples": [],
+      "extensions": {},
+      "id": "WebhookCaller",
+      "kind": "object",
+      "name": {
+        "role": "schema",
+        "segments": [
+          "webhook",
+          "caller"
+        ]
+      },
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemas/WebhookCaller"
+      },
+      "properties": [
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "account",
+          "nullable": false,
+          "optional": false,
+          "origin": {
+            "layer": "shared",
+            "pointer": "/schemas/WebhookCaller/properties/account"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {},
+            "type": "string"
+          }
+        }
+      ]
+    }
+  },
+  "schemes": {
+    "bearer": {
+      "id": "bearer",
+      "kind": "bearer",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemes/bearer"
+      }
+    },
+    "csrfToken": {
+      "id": "csrfToken",
+      "kind": "header",
+      "name": "X-Csrf-Token",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemes/csrfToken"
+      }
+    },
+    "internalToken": {
+      "bearer": {
+        "format": "jwt"
+      },
+      "id": "internalToken",
+      "kind": "bearer",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemes/internalToken"
+      }
+    },
+    "sessionCookie": {
+      "csrf": "csrfToken",
+      "id": "sessionCookie",
+      "kind": "cookie",
+      "name": "__Host-session",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemes/sessionCookie"
+      }
+    },
+    "stripeSignature": {
+      "id": "stripeSignature",
+      "kind": "signature",
+      "name": "Stripe-Signature",
+      "origin": {
+        "layer": "shared",
+        "pointer": "/schemes/stripeSignature"
+      },
+      "signature": {
+        "algorithm": "hmac-sha256",
+        "encoding": "hex",
+        "format": "t={ts},v1={sig}",
+        "key": {
+          "kind": "value",
+          "value": "stripe"
+        },
+        "payload": "{ts}.{rawBody}",
+        "toleranceMs": 300000,
+        "verify": "template"
+      }
+    }
+  },
+  "scopes": {},
+  "services": {}
+}

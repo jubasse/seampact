@@ -15,6 +15,12 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/lint` | `packages/core/lint` | core | Lint rules over the IR, and the API to write your own. |
 | `@seampact/openapi` | `packages/core/openapi` | core | Writes the OpenAPI 3.1 documents from the IR, with what OpenAPI cannot say as x-seampact-* extensions. |
 | `@seampact/spec` | `packages/core/spec` | core | The JSON Schemas of the YAML files and of the IR, with their TypeScript types, the naming vectors and the bundle vectors. |
+| `@seampact/pack-api-platform` | `packages/packs/pack-api-platform` | pack | JSON-LD items, Hydra collections and the iri-reference format for API Platform. |
+| `@seampact/pack-crud-rights` | `packages/packs/pack-crud-rights` | pack | Derives a <resource>.<op> right for every list, get, create, update, delete and batch route and requires it first. |
+| `@seampact/pack-hal` | `packages/packs/pack-hal` | pack | HAL items and pages with _links, _embedded and Spring HATEOAS's page object. |
+| `@seampact/pack-jsonapi` | `packages/packs/pack-jsonapi` | pack | JSON:API resource objects, page[number] paging and the errors array. |
+| `@seampact/pack-laravel` | `packages/packs/pack-laravel` | pack | Laravel API Resources and paginators: data wrapping, length-aware and cursor pages. |
+| `@seampact/pack-spring` | `packages/packs/pack-spring` | pack | Spring Data's Page as a paging style. |
 | `@seampact/hooks` | `packages/runtime/hooks` | hooks | The neutral hook interfaces and idempotency store interface every generated Node server boundary types against. |
 | `@seampact/idempotency-memory` | `packages/runtime/idempotency-memory` | helper | An in-memory idempotency store for one process, for development and tests. |
 | `@seampact/signed-webhooks` | `packages/runtime/signed-webhooks` | helper | Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook. |

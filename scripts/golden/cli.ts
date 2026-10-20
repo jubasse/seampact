@@ -3,7 +3,12 @@ import { dirname, join } from "node:path";
 import { parseArgs } from "node:util";
 import { findStaleFiles } from "../ir-models/generate.ts";
 import { loadGoldenCompiler } from "./compiler.ts";
-import { allGeneratedFiles, findUnlistedFiles, WRITE_COMMAND } from "./golden.ts";
+import {
+  allGeneratedFiles,
+  findUnlistedFiles,
+  packVariantContracts,
+  WRITE_COMMAND,
+} from "./golden.ts";
 import { loadGoldenOpenApi } from "./openapi.ts";
 import { REPO_ROOT } from "./repo-root.ts";
 
@@ -29,6 +34,13 @@ function parseOptions(argv: string[]): { write?: boolean; check?: boolean } | st
   }
 }
 
+function writeFiles(files: ReadonlyMap<string, string>): void {
+  for (const [path, content] of files) {
+    mkdirSync(dirname(join(REPO_ROOT, path)), { recursive: true });
+    writeFileSync(join(REPO_ROOT, path), content);
+  }
+}
+
 async function main(argv: string[]): Promise<number> {
   const values = parseOptions(argv);
 
@@ -43,6 +55,9 @@ async function main(argv: string[]): Promise<number> {
 
     return EXIT_USAGE;
   }
+
+  // The variant contracts are compile inputs: they reach the disk before the cases are compiled.
+  if (values.write === true) writeFiles(packVariantContracts(REPO_ROOT));
 
   const { files, problems } = allGeneratedFiles(
     REPO_ROOT,
@@ -61,10 +76,7 @@ async function main(argv: string[]): Promise<number> {
   if (values.write === true) {
     for (const path of unlisted) rmSync(join(REPO_ROOT, path));
 
-    for (const [path, content] of files) {
-      mkdirSync(dirname(join(REPO_ROOT, path)), { recursive: true });
-      writeFileSync(join(REPO_ROOT, path), content);
-    }
+    writeFiles(files);
 
     console.error(`golden: wrote ${files.size} files`);
 

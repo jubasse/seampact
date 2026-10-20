@@ -1,0 +1,36 @@
+# Laravel API Resources and paginators: data wrapping, length-aware and cursor pages.
+pack: { name: '@seampact/pack-laravel', version: 0.0.0, extends: [] }
+
+formats:
+  laravel:
+    success:
+      item: { body: { data: $payload } }
+      table: { body: { data: $payload } }
+      list: { body: { data: $payload } }
+      page: { body: { data: $items, meta: $meta } }
+
+pagings:
+  laravelPages:
+    absent: null
+    request:
+      page: { query: page }
+      limit: { query: per_page }
+    response:
+      body:
+        data: $items
+        links: { first: $first, last: $last, prev: $previous, next: $next }
+        meta: { current_page: $page, from: $from, last_page: $totalPages, path: $path, per_page: $limit, to: $to, total: $total }
+  laravelCursor:
+    absent: null
+    request:
+      cursor: { query: cursor }
+      limit: { query: per_page }
+    response:
+      body:
+        data: $items
+        links: { first: null, last: null, prev: $previous, next: $next }
+        meta: { path: $path, per_page: $limit, next_cursor: $nextCursor, prev_cursor: $previousCursor }
+
+conventions:
+  format: laravel
+  paging: { default: laravelPages }

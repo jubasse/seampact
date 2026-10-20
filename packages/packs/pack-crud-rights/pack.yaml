@@ -1,0 +1,10 @@
+# Derives a <resource>.<op> right for every list, get, create, update, delete and batch route and requires it first.
+pack: { name: '@seampact/pack-crud-rights', version: 0.0.0, extends: [] }
+
+derive:
+  - entry: crud
+    select: { op: [list, get, create, update, delete, batch] }
+    declareRight:
+      name: '{resource}.{op}'
+      subject: { member: resource, collection: innermostScope }
+    require: { right: '{resource}.{op}' }

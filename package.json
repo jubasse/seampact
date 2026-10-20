@@ -20,6 +20,12 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@changesets/cli": "3.0.3",
+    "@seampact/pack-api-platform": "workspace:*",
+    "@seampact/pack-crud-rights": "workspace:*",
+    "@seampact/pack-hal": "workspace:*",
+    "@seampact/pack-jsonapi": "workspace:*",
+    "@seampact/pack-laravel": "workspace:*",
+    "@seampact/pack-spring": "workspace:*",
     "@seampact/spec": "workspace:*",
     "@stylistic/eslint-plugin": "5.10.0",
     "@types/node": "24.19.1",

@@ -1,0 +1,14 @@
+{
+  "name": "@seampact/pack-laravel",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Laravel API Resources and paginators: data wrapping, length-aware and cursor pages.",
+  "seampact": {
+    "role": "pack",
+    "pack": "pack.yaml"
+  },
+  "files": [
+    "pack.yaml",
+    "README.md"
+  ]
+}

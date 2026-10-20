@@ -1,0 +1,16 @@
+# Spring Data's Page as a paging style.
+pack: { name: '@seampact/pack-spring', version: 0.0.0, extends: [] }
+
+pagings:
+  springPage:
+    request:
+      page: { query: page, base: 0 }
+      limit: { query: size }
+      sort: { query: sort, style: pair }
+    response:
+      body:
+        content: $items
+        page: { size: $limit, number: $page, totalElements: $total, totalPages: $totalPages }
+
+conventions:
+  paging: { default: springPage }
