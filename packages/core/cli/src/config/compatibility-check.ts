@@ -61,7 +61,7 @@ export function checkAppCompatibility(
     if (root === undefined) throw new Error(`no output root for the entry ${entry.id}`);
 
     const where = entryWhere(entry.id);
-    const read = readInstalledVersion(root, record.framework.package, where);
+    const read = readInstalledVersion(root, record.framework.package, "framework", where);
 
     if (read.status === "refused") problems.push(read.problem);
     else installedVersions.set(entry.id, read.installed);
@@ -69,7 +69,7 @@ export function checkAppCompatibility(
     const libraries: InstalledVersion[] = [];
 
     for (const library of librariesInUse(entry, targets, record)) {
-      const readLibrary = readInstalledVersion(root, library.package, where);
+      const readLibrary = readInstalledVersion(root, library.package, "validatorLibrary", where);
 
       if (readLibrary.status === "refused") problems.push(readLibrary.problem);
       else libraries.push(readLibrary.installed);
@@ -306,7 +306,7 @@ function ownValidatorsLibraryProblems(
     return [];
 
   const where = entryWhere(entry.id);
-  const read = readInstalledVersion(root, ownValidator.library, where);
+  const read = readInstalledVersion(root, ownValidator.library, "validatorLibrary", where);
 
   if (read.status === "installed") return [];
 

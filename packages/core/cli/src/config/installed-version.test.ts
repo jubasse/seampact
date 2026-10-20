@@ -17,7 +17,7 @@ test("reads a package.json the package's exports hide", () => {
     }),
   });
 
-  expect(readInstalledVersion(join(root, "app"), "web-framework", WHERE)).toEqual({
+  expect(readInstalledVersion(join(root, "app"), "web-framework", "framework", WHERE)).toEqual({
     status: "installed",
     installed: { packageName: "web-framework", version: "5.2.1", major: 5 },
   });
@@ -29,7 +29,9 @@ test("finds a package hoisted above the app, and counts a pre-release by its maj
     "node_modules/@acme/framework/package.json": JSON.stringify({ version: "6.0.0-beta.2" }),
   });
 
-  expect(readInstalledVersion(join(root, "apps/web"), "@acme/framework", WHERE)).toEqual({
+  expect(
+    readInstalledVersion(join(root, "apps/web"), "@acme/framework", "framework", WHERE),
+  ).toEqual({
     status: "installed",
     installed: { packageName: "@acme/framework", version: "6.0.0-beta.2", major: 6 },
   });
@@ -41,7 +43,7 @@ test("refuses a missing package with the runtime install command of the app's pa
     "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
   });
 
-  expect(readInstalledVersion(root, "web-framework-absent", WHERE)).toEqual({
+  expect(readInstalledVersion(root, "web-framework-absent", "framework", WHERE)).toEqual({
     status: "refused",
     problem: {
       code: "config.matrix.framework-missing",
@@ -58,9 +60,26 @@ test("refuses an installed package without a readable version", () => {
     "node_modules/web-framework/package.json": JSON.stringify({ version: "latest" }),
   });
 
-  expect(readInstalledVersion(root, "web-framework", WHERE)).toMatchObject({
+  expect(readInstalledVersion(root, "web-framework", "framework", WHERE)).toMatchObject({
     status: "refused",
     problem: { code: "config.matrix.version-unreadable" },
+  });
+});
+
+test("names a validator library as such when its version cannot be read", () => {
+  const root = writeConfigTree({
+    "seampact.config.yaml": "",
+    "node_modules/schema-library/package.json": JSON.stringify({ version: "latest" }),
+  });
+
+  expect(readInstalledVersion(root, "schema-library", "validatorLibrary", WHERE)).toEqual({
+    status: "refused",
+    problem: {
+      code: "config.matrix.version-unreadable",
+      message: `The installed validator library 'schema-library' has no version the CLI can read: ${join(root, "node_modules/schema-library/package.json")} declares no \`version\` of the form <major>.<minor>.<patch>.`,
+      fix: "Reinstall 'schema-library' with your package manager.",
+      where: WHERE,
+    },
   });
 });
 
@@ -71,7 +90,7 @@ test("refuses a Plug'n'Play project by name, with the node-modules linker as the
     "yarn.lock": "",
   });
 
-  expect(readInstalledVersion(join(root, "app"), "web-framework", WHERE)).toEqual({
+  expect(readInstalledVersion(join(root, "app"), "web-framework", "framework", WHERE)).toEqual({
     status: "refused",
     problem: {
       code: "config.matrix.pnp-unsupported",
