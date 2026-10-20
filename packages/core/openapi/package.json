@@ -5,10 +5,27 @@
   "private": true,
   "type": "module",
   "main": "./src/index.ts",
+  "files": [
+    "dist",
+    "schemas"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./schemas/extensions/*.json": "./schemas/extensions/*.json"
+  },
   "seampact": {
     "role": "core"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@seampact/codegen-core": "workspace:*",
+    "@seampact/spec": "workspace:*",
+    "yaml": "2.9.1"
+  },
+  "devDependencies": {
+    "@redocly/openapi-core": "2.64.0",
+    "ajv": "8.20.0"
   }
 }
