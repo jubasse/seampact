@@ -7,6 +7,7 @@ const blankLineAlways = (prev, next) => ({ blankLine: "always", prev, next });
 export default [
   {
     ignores: [
+      ".work/**",
       "**/node_modules/**",
       "**/dist/**",
       "**/coverage/**",
