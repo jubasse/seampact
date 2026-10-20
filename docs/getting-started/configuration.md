@@ -67,7 +67,9 @@ The server target reads its validators from the entry its `validators` link name
 
 `@seampact/codegen-zod`, `@seampact/codegen-yup` and `@seampact/codegen-class-validator` work with the NestJS server. Install the library you pick in your app (`yup`, or `class-validator` and `class-transformer`), then run `npx seampact generate`.
 
-You see the `validators` folder rewritten. Without a `validators` link, `generate` stops with `link.missing` and names the packages to link. Fastify and AdonisJS require the link too.
+You see the `validators` folder rewritten. On NestJS, Express and Hono, a server without a `validators` link stops `generate` with `link.missing`, which names the packages to link.
+
+Fastify and AdonisJS can skip it: leave out the `validators` entry and the link, and the server validates with the framework's own library, Ajv on Fastify and VineJS on AdonisJS. Install `ajv` or `@vinejs/vine` in your app.
 
 ## Write OpenAPI documents
 
@@ -130,8 +132,13 @@ const config = NotesNest.withContractComponents({
   openapi: "3.1.0",
 });
 
-SwaggerModule.setup("docs", app, SwaggerModule.createDocument(app, config, { autoTagControllers: false }));
+const document = SwaggerModule.createDocument(app, config, { autoTagControllers: false });
+
+NotesNest.assertContractComponents(document);
+SwaggerModule.setup("docs", app, document);
 ```
+
+`assertContractComponents` stops the app if one of your classes has the same name as a contract schema, instead of letting it replace the schema in the document.
 
 You see the Swagger page at `localhost:3000/docs`. Without the `frameworkRoutes` entries, the app stops at boot with `the framework route 'GET /docs/swagger-ui-init.js' is outside the contract and not allow-listed`.
 
