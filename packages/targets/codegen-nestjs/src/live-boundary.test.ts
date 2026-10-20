@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { randomUUID } from "node:crypto";
 import { copyFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
