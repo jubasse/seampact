@@ -55,6 +55,36 @@ describe("seampact/not-found-role", () => {
     expect(await notFoundRuleOf("not-found-bound")).toEqual([]);
   });
 
+  test("does not fire on a 404 code a scope attaches beside the member 404", async () => {
+    expect(await notFoundRuleOf("not-found-scope")).toEqual([]);
+  });
+
+  test("proposes the derived binding for a code attached by conventions.errors.every", async () => {
+    const diagnostics = await runLint(lintInputOf(compiledFixtureApi("not-found-every")));
+    const [diagnostic] = diagnostics.filter(({ rule }) => rule === "seampact/not-found-role");
+
+    expect(diagnostic?.message).toContain("route 'getNote', which also answers");
+    expect(diagnostic?.fix).toContain("conventions.errors.derived.notFound to notes.gone");
+  });
+
+  test("names the member node for a code written on the collection", async () => {
+    const diagnostics = await runLint(lintInputOf(compiledFixtureApi("not-found-unbound")));
+    const [diagnostic] = diagnostics.filter(({ rule }) => rule === "seampact/not-found-role");
+
+    expect(diagnostic?.fix).toContain("on the member node of the collection");
+  });
+
+  test("does not fire on the relay copy of a route", async () => {
+    const linted = await lintedWorkspaceApis(fixtureDirectory("not-found-relay"));
+    const firedOn = linted
+      .filter(({ diagnostics }) =>
+        rulesOf(diagnostics).some((rule) => rule.endsWith("seampact/not-found-role")),
+      )
+      .map(({ api }) => api);
+
+    expect(firedOn).toEqual(["notes"]);
+  });
+
   test("does not fire when the route has one 404 code", async () => {
     // A collection route holds only parent ids, so it derives no notFound code.
     expect(await notFoundRuleOf("not-found-single")).toEqual([]);
