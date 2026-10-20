@@ -74,6 +74,7 @@ const LEAVES = [
   "errors.pattern",
   "errors.every",
   "errors.reach",
+  "errors.requireCode",
   "errors.derived",
 ] as const;
 
@@ -165,6 +166,7 @@ export const pipelineConventionDefaults: readonly PipelineConventionDefault[] = 
   { path: "access.guestRule", value: "refuse" },
   { path: "errors.every", value: [] },
   { path: "errors.reach", value: "subtree" },
+  { path: "errors.requireCode", value: true },
   // A34: each role is bound to its default code (ADR 0006 section 6) unless a layer binds it.
   ...derivationRoles.map(
     (role): PipelineConventionDefault => ({

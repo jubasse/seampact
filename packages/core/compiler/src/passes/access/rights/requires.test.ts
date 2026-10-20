@@ -174,14 +174,14 @@ describe("requirements shared by several routes", () => {
     ]);
   });
 
-  test("conventions.access.guestRule: off accepts a right without guest reason on a public route", () => {
+  test("conventions.access.guestRule: allow accepts a right without guest reason on a public route", () => {
     const { draft, diagnostics } = run(
       `    access: { public: The shop is open. }
     requires: [{ right: shop.open }]
     routes:
       first: { method: get }
 `,
-      'conventions: { access: { guestRule: "off" } }\n',
+      "conventions: { access: { guestRule: allow } }\n",
     );
 
     expect(diagnostics).toEqual([]);

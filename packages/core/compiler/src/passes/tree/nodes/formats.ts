@@ -328,12 +328,19 @@ class FormatReader {
 
     if (writtenBody !== undefined && body === undefined) return undefined;
 
-    if (body === undefined || !treeNodesTemplateUses(body, "code"))
+    if (body === undefined) return this.refuseCodeless(pointer);
+
+    if (!treeNodesTemplateUses(body, "code") && this.codeRequired())
       return this.refuseCodeless(pointer);
 
     return headers === undefined
       ? undefined
       : { media: textOf(treeNodesMember(written, "media")) ?? media, body, headers };
+  }
+
+  // `conventions.errors.requireCode: false` lifts the refusal of an error body that writes no `$code`.
+  codeRequired(): boolean {
+    return this.context.conventions.get("errors.requireCode")?.value !== false;
   }
 
   refuseCodeless(pointer: string): undefined {
@@ -342,7 +349,7 @@ class FormatReader {
         rule: "format-error-code",
         origin: treeNodesNodeOrigin(treeNodesOriginAt(this.context, pointer)),
         message: `The error body of ${this.owner} writes no $code, so a client cannot tell the error.`,
-        fix: `Write $code in the error body, as a member or inside a text ('https://errors.example.com/\${code}').`,
+        fix: `Write $code in the error body, as a member or inside a text ('https://errors.example.com/\${code}'), or set 'conventions.errors.requireCode: false'.`,
       }),
     );
 

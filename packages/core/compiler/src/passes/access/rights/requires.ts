@@ -410,7 +410,7 @@ function requirementOf(
 }
 
 // A right reaches an anonymous caller on a public or optional-auth route only when it is guest-enabled (SCN-063),
-// unless `conventions.access.guestRule` is `off`.
+// unless `conventions.access.guestRule` is `allow`.
 function checkGuest(
   context: AccessRightsContext,
   reporter: AccessRightsReporter,
@@ -420,7 +420,7 @@ function checkGuest(
 ): boolean {
   if (route.access === "identity" || right.guest !== undefined) return true;
 
-  if (context.conventions.get("access.guestRule")?.value === "off") return true;
+  if (context.conventions.get("access.guestRule")?.value === "allow") return true;
 
   // A pack derived the right or the requirement: the author changes the entry's selector or declares the right.
   const derived = right.derivedFrom !== undefined || use.derivedFrom !== undefined;

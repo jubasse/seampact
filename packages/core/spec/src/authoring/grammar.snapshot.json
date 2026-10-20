@@ -708,6 +708,7 @@
     "pattern": "ADR 0002 section 13",
     "every": "ADR 0002 section 11",
     "reach": "ADR 0002 section 11",
+    "requireCode": "ADR 0002 section 11",
     "derived": "ADR 0002 section 11"
   },
   "conventions.schema.json#/$defs/cacheDirectives": {

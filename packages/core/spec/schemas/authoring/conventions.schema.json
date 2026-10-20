@@ -530,10 +530,10 @@
             "guestRule": {
               "enum": [
                 "refuse",
-                "off"
+                "allow"
               ],
               "$comment": "ADR 0002 section 13",
-              "description": "off: a right required on a public or optional-auth route needs no guest reason; refuse (the default) requires one."
+              "description": "allow: a right required on a public or optional-auth route needs no guest reason; refuse (the default) requires one."
             },
             "$include": {
               "$ref": "common.schema.json#/$defs/include"
@@ -562,6 +562,11 @@
                 "resource"
               ],
               "$comment": "ADR 0002 section 11"
+            },
+            "requireCode": {
+              "type": "boolean",
+              "$comment": "ADR 0002 section 11",
+              "description": "false: a format error body may omit $code; true (the default) refuses one that writes none."
             },
             "derived": {
               "type": "object",
