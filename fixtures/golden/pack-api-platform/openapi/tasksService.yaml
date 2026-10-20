@@ -47,7 +47,7 @@ paths:
                   - type: object
                     properties:
                       "@context":
-                        type: string
+                        const: /contexts/Task
                       "@id":
                         type: string
                         format: uri-reference

@@ -38,7 +38,7 @@ paths:
                 type: object
                 properties:
                   "@context":
-                    type: string
+                    const: /contexts/Channel
                   "@id":
                     type: string
                   "@type":
@@ -158,7 +158,7 @@ paths:
                   - type: object
                     properties:
                       "@context":
-                        type: string
+                        const: /contexts/Channel
                       "@id":
                         type: string
                         format: uri-reference
@@ -261,7 +261,7 @@ paths:
                 type: object
                 properties:
                   "@context":
-                    type: string
+                    const: /contexts/Task
                   "@id":
                     type: string
                   "@type":
@@ -415,7 +415,7 @@ paths:
                   - type: object
                     properties:
                       "@context":
-                        type: string
+                        const: /contexts/Task
                       "@id":
                         type: string
                         format: uri-reference
@@ -694,7 +694,7 @@ paths:
                   - type: object
                     properties:
                       "@context":
-                        type: string
+                        const: /contexts/TaskSearchResult
                       "@id":
                         type: string
                         format: uri-reference
@@ -824,7 +824,7 @@ paths:
                   - type: object
                     properties:
                       "@context":
-                        type: string
+                        const: /contexts/Task
                       "@id":
                         type: string
                         format: uri-reference
@@ -928,7 +928,7 @@ paths:
                   - type: object
                     properties:
                       "@context":
-                        type: string
+                        const: /contexts/Task
                       "@id":
                         type: string
                         format: uri-reference
@@ -1109,7 +1109,7 @@ paths:
                   - type: object
                     properties:
                       "@context":
-                        type: string
+                        const: /contexts/Task
                       "@id":
                         type: string
                         format: uri-reference
@@ -1276,7 +1276,7 @@ paths:
                   - type: object
                     properties:
                       "@context":
-                        type: string
+                        const: /contexts/Task
                       "@id":
                         type: string
                         format: uri-reference
@@ -1575,7 +1575,7 @@ paths:
                   - type: object
                     properties:
                       "@context":
-                        type: string
+                        const: /contexts/Health
                       "@id":
                         type: string
                         format: uri-reference
@@ -1695,7 +1695,7 @@ paths:
                   - type: object
                     properties:
                       "@context":
-                        type: string
+                        const: /contexts/Draft
                       "@id":
                         type: string
                         format: uri-reference
@@ -1779,7 +1779,7 @@ paths:
                   - type: object
                     properties:
                       "@context":
-                        type: string
+                        const: /contexts/Draft
                       "@id":
                         type: string
                         format: uri-reference
@@ -1900,7 +1900,7 @@ paths:
                   - type: object
                     properties:
                       "@context":
-                        type: string
+                        const: /contexts/Preferences
                       "@id":
                         type: string
                         format: uri-reference
@@ -1998,7 +1998,7 @@ paths:
                   - type: object
                     properties:
                       "@context":
-                        type: string
+                        const: /contexts/Preferences
                       "@id":
                         type: string
                         format: uri-reference
