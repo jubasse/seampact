@@ -270,5 +270,7 @@ function schemeKeyValue(
     return undefined;
   }
 
-  return key.kind === "value" ? { value: key.value } : { from: valueSourceText(key.from) };
+  return key.kind === "value"
+    ? { value: key.value }
+    : { from: valueSourceText(context, key.from, below(location, "from")) };
 }

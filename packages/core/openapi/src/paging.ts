@@ -18,10 +18,17 @@ const LIMIT_ROLE = "limit";
 const ITEMS_SLOT = "items";
 const INSTANT_TOKEN = "instant";
 
-export function writePaging(context: EmitContext, operation: Operation, target: JsonObject): void {
+export function writePaging(
+  context: EmitContext,
+  operation: Operation,
+  target: JsonObject,
+  location: IrLocation,
+): void {
   const paging = operation.paging;
 
   if (paging === undefined) return;
+
+  const pagingLocation = below(location, "paging");
 
   if (paging.style === undefined) {
     writeExtension(context, target, "paging", { none: true });
@@ -30,29 +37,51 @@ export function writePaging(context: EmitContext, operation: Operation, target: 
   }
 
   const style = context.ir.pagings[paging.style];
-  const value: JsonObject = { style: paging.style };
 
-  if (style !== undefined) {
-    value.position = style.position;
+  if (style === undefined) {
+    refuseInconsistent(
+      context,
+      "paging.style",
+      `The paging style '${paging.style}' is not declared`,
+      below(pagingLocation, "style"),
+    );
 
-    const roles: JsonObject = {};
-
-    for (const role of style.request)
-      roles[role.role] = valueSourceText({ in: role.in, name: role.name });
-
-    value.roles = roles;
+    return;
   }
+
+  const value: JsonObject = { style: paging.style, position: style.position };
+  const roles: JsonObject = {};
+  const styleLocation = below({ member: "" }, "pagings", paging.style);
+
+  style.request.forEach((role, index) => {
+    roles[role.role] = valueSourceText(
+      context,
+      { in: role.in, name: role.name },
+      below(styleLocation, "request", index),
+    );
+  });
+
+  value.roles = roles;
 
   setDefined(value, "maxLimit", paging.maxLimit);
   setDefined(value, "defaultLimit", paging.defaultLimit);
   value.overLimit = paging.overLimit;
   setDefined(value, "token", paging.token);
-  value.sortKeys = paging.sortKeys.map((sortKey) => {
+  value.sortKeys = paging.sortKeys.map((sortKey, index) => {
     const item: JsonObject = { key: sortKey.key };
 
     setDefined(item, "right", sortKey.right);
     setDefined(item, "params", copyOptional(sortKey.params));
-    setDefined(item, "subject", sortKey.subject && valueSourceText(sortKey.subject.source));
+    setDefined(
+      item,
+      "subject",
+      sortKey.subject &&
+        valueSourceText(
+          context,
+          sortKey.subject.source,
+          below(pagingLocation, "sortKeys", index, "subject", "source"),
+        ),
+    );
 
     return item;
   });

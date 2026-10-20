@@ -216,6 +216,7 @@ paths:
         - schema: Note
           pointer: /wordCount
           right: notes.seeWordCount
+          subject: scope.space
           direction: output
       x-seampact-filtered-by: notes.read
       x-seampact-paging:

@@ -23,7 +23,11 @@ export function writeOperationMarks(
 ): void {
   if (operation.concurrency !== undefined) {
     writeExtension(context, target, "concurrency", {
-      version: valueSourceText(operation.concurrency.version),
+      version: valueSourceText(
+        context,
+        operation.concurrency.version,
+        below(location, "concurrency", "version"),
+      ),
       field: operation.concurrency.field,
     });
   }

@@ -277,7 +277,7 @@ function operationObject(
   operationObject.responses = responsesObject(context, operation, examples, location);
   writeOperationSecurity(context, operation, operationObject, location);
   writeOperationRights(context, operation, operationObject, location);
-  writePaging(context, operation, operationObject);
+  writePaging(context, operation, operationObject, location);
   writeOperationMarks(context, operation, documentFormat, operationObject, location);
   writeConsumerExtensions(operationObject, operation.extensions);
 

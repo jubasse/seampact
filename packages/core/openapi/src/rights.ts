@@ -33,9 +33,9 @@ export function writeOperationRights(
       context,
       target,
       "bindings",
-      operation.bindings.map((binding) => ({
-        from: valueSourceText(binding.from),
-        to: valueSourceText(binding.to),
+      operation.bindings.map((binding, index) => ({
+        from: valueSourceText(context, binding.from, below(location, "bindings", index, "from")),
+        to: valueSourceText(context, binding.to, below(location, "bindings", index, "to")),
       })),
     );
   }
@@ -45,7 +45,9 @@ export function writeOperationRights(
       context,
       target,
       "scopes",
-      operation.scopes.map((scope) => scopeItem(context, scope)),
+      operation.scopes.map((scope, index) =>
+        scopeItem(context, scope, below(location, "scopes", index)),
+      ),
     );
   }
 
@@ -62,14 +64,21 @@ export function writeOperationRights(
       context,
       target,
       "restricted-to",
-      operation.fieldRights.map((fieldRight) => {
+      operation.fieldRights.map((fieldRight, index) => {
         const item: JsonObject = {
           schema: fieldRight.schema,
           pointer: fieldRight.pointer,
           right: fieldRight.right,
         };
+        const subjectLocation = below(location, "fieldRights", index, "subject", "source");
 
         setDefined(item, "params", copyOptional(fieldRight.params));
+        setDefined(
+          item,
+          "subject",
+          fieldRight.subject &&
+            valueSourceText(context, fieldRight.subject.source, subjectLocation),
+        );
         item.direction = fieldRight.direction;
         setDefined(item, "input", fieldRight.inputPolicy);
         setDefined(item, "always", fieldRight.always);
@@ -83,8 +92,15 @@ export function writeOperationRights(
     writeExtension(context, target, "filtered-by", operation.filteredBy);
 }
 
-function scopeItem(context: EmitContext, scope: Operation["scopes"][number]): JsonObject {
-  const item: JsonObject = { scope: scope.scope, from: valueSourceText(scope.source) };
+function scopeItem(
+  context: EmitContext,
+  scope: Operation["scopes"][number],
+  location: IrLocation,
+): JsonObject {
+  const item: JsonObject = {
+    scope: scope.scope,
+    from: valueSourceText(context, scope.source, below(location, "source")),
+  };
 
   writeConsumerExtensions(item, context.ir.scopes[scope.scope]?.extensions ?? {});
 
@@ -106,7 +122,12 @@ function requirementItem(
     const item: JsonObject = { right: requirement.right };
 
     setDefined(item, "params", copyOptional(requirement.params));
-    setDefined(item, "subject", requirement.subject && valueSourceText(requirement.subject.source));
+    setDefined(
+      item,
+      "subject",
+      requirement.subject &&
+        valueSourceText(context, requirement.subject.source, below(location, "subject", "source")),
+    );
     setDefined(item, "entry", requirement.entry);
     writeConsumerExtensions(item, context.ir.rights[requirement.right]?.extensions ?? {});
 

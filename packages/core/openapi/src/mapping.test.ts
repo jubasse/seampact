@@ -104,11 +104,18 @@ describe("reference document states every mapped member", () => {
       { scope: "channel", from: "path.channelId" },
     ]);
     expect(at(operation(FULL, "updateTask"), "x-seampact-restricted-to")).toEqual([
-      { schema: "Task", pointer: "/effort", right: "tasks.seeEffort", direction: "output" },
+      {
+        schema: "Task",
+        pointer: "/effort",
+        right: "tasks.seeEffort",
+        subject: "holderField.taskId",
+        direction: "output",
+      },
       {
         schema: "UpdateTask",
         pointer: "/effort",
         right: "tasks.seeEffort",
+        subject: "path.taskId",
         direction: "input",
         input: "reject",
       },

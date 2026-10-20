@@ -249,6 +249,7 @@ paths:
         - schema: Task
           pointer: /effort
           right: tasks.seeEffort
+          subject: holderField.taskId
           direction: output
       x-seampact-filtered-by: tasks.read
       x-seampact-paging:
@@ -425,11 +426,13 @@ paths:
           params:
             allowed:
               - owner
+          subject: scope.channel
           direction: input
           input: reject
         - schema: Task
           pointer: /effort
           right: tasks.seeEffort
+          subject: holderField.taskId
           direction: output
       x-seampact-idempotency:
         header: Idempotency-Key
@@ -531,6 +534,7 @@ paths:
         - schema: Task
           pointer: /effort
           right: tasks.seeEffort
+          subject: holderField.taskId
           direction: output
       x-seampact-maturity:
         level: provisional
@@ -654,6 +658,7 @@ paths:
         - schema: TaskSearchResult
           pointer: /items/*/effort
           right: tasks.seeEffort
+          subject: holderField.taskId
           direction: output
       x-seampact-idempotency:
         exempt: A read with a body; replaying it is harmless.
@@ -732,6 +737,7 @@ paths:
         - schema: Task
           pointer: /effort
           right: tasks.seeEffort
+          subject: holderField.taskId
           direction: output
       x-seampact-maturity:
         level: provisional
@@ -882,10 +888,12 @@ paths:
         - schema: Task
           pointer: /effort
           right: tasks.seeEffort
+          subject: holderField.taskId
           direction: output
         - schema: UpdateTask
           pointer: /effort
           right: tasks.seeEffort
+          subject: path.taskId
           direction: input
           input: reject
       x-seampact-concurrency:
@@ -1038,6 +1046,7 @@ paths:
         - schema: Task
           pointer: /effort
           right: tasks.seeEffort
+          subject: holderField.taskId
           direction: output
       x-seampact-concurrency:
         version: body.expectedVersion
@@ -1198,6 +1207,7 @@ paths:
         - schema: Task
           pointer: /effort
           right: tasks.seeEffort
+          subject: holderField.taskId
           direction: output
       x-seampact-idempotency:
         header: Idempotency-Key
