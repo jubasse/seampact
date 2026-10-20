@@ -72,10 +72,14 @@ test("offers each target's own validators", () => {
       validator: "ajv",
       validatorPackage: "@seampact/codegen-fastify",
     },
-    ...[6, 7].map((frameworkMajor) => ({
+    ...[
+      { frameworkMajor: 6, consumer: "adonis6" },
+      { frameworkMajor: 7, consumer: "adonis" },
+    ].map(({ frameworkMajor, consumer }) => ({
       target: "@seampact/codegen-adonis",
       framework: "@adonisjs/core",
       frameworkMajor,
+      consumer,
       validator: "vinejs",
       validatorPackage: "@seampact/codegen-adonis",
     })),
