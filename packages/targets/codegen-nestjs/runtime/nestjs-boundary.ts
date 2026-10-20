@@ -447,7 +447,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     if (started?.outcome === "started") context.idempotencyKey = started.key;
 
     const result: unknown = await callMethod();
-    const reply = await handlerReply(state, grant, result);
+    const reply = await handlerReply(state, grant, context.input, result);
 
     await writeContractReply(response, context, reply);
 

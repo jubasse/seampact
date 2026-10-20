@@ -539,7 +539,12 @@ export function createAdonisBoundary<
         }
 
         const result: unknown = await method.call(controller, context.input);
-        const reply = await handlerReply(checkState(context), requireGrant(context), result);
+        const reply = await handlerReply(
+          checkState(context),
+          requireGrant(context),
+          context.input,
+          result,
+        );
 
         await writeContractReply(ctx.response.response, context, reply);
       } catch (error) {

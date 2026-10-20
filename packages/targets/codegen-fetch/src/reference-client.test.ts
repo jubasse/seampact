@@ -158,20 +158,6 @@ function headerPageIr(): ContractIR {
   })(readGoldenIr("tasks"), "tasks");
 }
 
-// codegen-ts does not type the `total` handler result yet; the client reads its page facts from the paging
-// style, never from the handler result, so its types are generated without it.
-function withTypedHandlerResults(ir: ContractIR): ContractIR {
-  return {
-    ...ir,
-    pagings: Object.fromEntries(
-      Object.entries(ir.pagings).map(([id, style]) => [
-        id,
-        { ...style, handlerResult: style.handlerResult.filter((member) => member !== "total") },
-      ]),
-    ),
-  };
-}
-
 // A since style: the page tells where the next sync starts and whether the feed is complete.
 function sincePageIr(): ContractIR {
   const ir = referencePageShape({
@@ -211,14 +197,13 @@ function writeFiles(directory: string, files: readonly GeneratedFile[]): string[
 }
 
 async function generateApi(api: string, ir: ContractIR = readGoldenIr(api)): Promise<string[]> {
-  const typesIr = withTypedHandlerResults(ir);
   const types = await typesTarget.generate({
-    ir: typesIr,
+    ir,
     options: {},
     links: {},
     artefacts: new Set(["types"]),
   });
-  const described = typesTarget.describe(typesIr, {});
+  const described = typesTarget.describe(ir, {});
 
   if (types.status !== "generated" || described.status !== "described") {
     throw new Error(`codegen-ts refused ${api}: ${JSON.stringify([types, described])}`);
