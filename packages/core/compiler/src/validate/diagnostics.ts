@@ -16,6 +16,7 @@ import {
 import { escapePointer } from "@seampact/spec/json";
 import type { ErrorObject } from "ajv";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
+import { mappingKeysHint } from "../diagnostics/mapping-keys.js";
 import type { FileLayerId } from "../raw-tree.js";
 import { validateRules } from "./rules.js";
 import { closestKeyword } from "./suggest.js";
@@ -482,7 +483,7 @@ function convertOne(e: ErrorObject, context: ConvertContext): Problem | undefine
         rule: validateRules.wrongType,
         pointer,
         message: `${subject} must be ${type}.`,
-        fix: `Write ${type}.`,
+        fix: `Write ${type}${mappingKeysHint(mappingKeysOf(e, type))}.`,
       };
     }
 
@@ -521,6 +522,15 @@ function convertOne(e: ErrorObject, context: ConvertContext): Problem | undefine
     default:
       return invalidValue(e);
   }
+}
+
+// The keys a mapping may hold, named in the fix that asks for a mapping; none when the schema lists none here.
+function mappingKeysOf(e: ErrorObject, type: string): string[] {
+  const properties = (e.parentSchema as SchemaNode | undefined)?.properties;
+
+  if (type !== "a mapping" || typeof properties !== "object" || properties === null) return [];
+
+  return Object.keys(properties).sort();
 }
 
 function article(type: string): string {

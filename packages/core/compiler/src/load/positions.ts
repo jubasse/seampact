@@ -728,6 +728,20 @@ export function expectedTypes(pos: Position): string[] | undefined {
   return [...types].sort().map((t) => words[t]);
 }
 
+/** The keys a mapping at this position may hold (its `properties`, `$include` apart), sorted; empty when it names none. */
+export function expectedKeys(pos: Position): string[] {
+  const keys = new Set<string>();
+
+  for (const node of leafSetOf(pos)) {
+    const { properties } = node;
+
+    if (typeof properties === "object" && properties !== null && !Array.isArray(properties))
+      for (const key of Object.keys(properties)) if (!key.startsWith("$")) keys.add(key);
+  }
+
+  return [...keys].sort();
+}
+
 /**
  * True when the position's integer form takes `n`: some node of the position that types an
  * integer bounds it with `minimum`, `maximum` or their exclusive forms, and `n` is within one of

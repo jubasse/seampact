@@ -18,7 +18,7 @@ Commands:
   generate [--config <path>]               Generate every target entry of the app config, or of every app a root config lists.
   check [--config <path>]                  Fail when the committed generated files or documents differ from a fresh run.
   lint [--config <path>]                   Run the core lint rules over each contract source.
-  diff --against <path> [--config <path>]  Classify the changes since the IRs at <path> (an IR file or a directory of <api>.ir.json).
+  diff --against <path> [--config <path>]  Classify the changes since the IRs at <path> (an IR file, or a directory of <api>.ir.json that "compile --out <dir>" writes).
 `;
 
 // The commands and flags of the CLI design that are not available yet; each answers with exit code 2.
