@@ -1,0 +1,194 @@
+import type { Target } from "@seampact/codegen-core";
+import type { TargetCompatibility } from "@seampact/spec/compatibility";
+import type { MatrixCheckLevel, TargetEntry } from "@seampact/spec/config";
+import { join } from "node:path";
+import { afterEach, expect, test } from "vitest";
+import {
+  type CompatibilityOutcome,
+  checkAppCompatibility,
+  checkCompatibility,
+} from "./compatibility-check.js";
+import { removeConfigTrees, writeConfigTree } from "./config-test-tree.test-support.js";
+import { stubTarget } from "./target-stub.test-support.js";
+
+const SERVER_PACKAGE = "@acme/codegen-server";
+
+afterEach(removeConfigTrees);
+
+// A matrix whose framework is tested on 4 and 5 and known broken on 3.
+const MATRIX: readonly TargetCompatibility[] = [
+  {
+    package: SERVER_PACKAGE,
+    framework: {
+      id: "web",
+      package: "web-framework",
+      tested: [
+        { major: 4, consumer: "web4" },
+        { major: 5, consumer: "web" },
+      ],
+      incompatible: [{ major: 3, reason: "its router has no route listing." }],
+    },
+    validatorStyles: ["standard-schema"],
+    ownValidators: [],
+  },
+];
+
+interface CheckCase {
+  installedMajor: number;
+  allowUntested?: string[];
+  level?: MatrixCheckLevel;
+  use?: string;
+}
+
+function check({
+  installedMajor,
+  allowUntested,
+  level = "warning",
+  use = SERVER_PACKAGE,
+}: CheckCase): CompatibilityOutcome {
+  const entry: TargetEntry = {
+    id: "server",
+    use,
+    api: "tasks",
+    ...(allowUntested === undefined ? {} : { allowUntested }),
+  };
+  const targets = new Map<string, Target>([["server", stubTarget(use)]]);
+  const installedVersions = new Map([
+    [
+      "server",
+      { packageName: "web-framework", version: `${installedMajor}.1.0`, major: installedMajor },
+    ],
+  ]);
+
+  return checkCompatibility({
+    entries: [entry],
+    targets,
+    installedVersions,
+    matrix: MATRIX,
+    level,
+  });
+}
+
+const UNTESTED = {
+  code: "config.matrix.untested",
+  message:
+    "web-framework 6.1.0 is installed, and the target '@acme/codegen-server' is tested on web 4, 5 only.",
+  fix: "Install a tested major, or accept this one with `allowUntested: [web@6]` on the entry.",
+  where: "entry 'server'",
+};
+
+test("passes a tested major", () => {
+  expect(check({ installedMajor: 5 })).toEqual({ problems: [], warnings: [] });
+});
+
+test("warns on an untested major, naming the tested ones (CHK-141)", () => {
+  expect(check({ installedMajor: 6 })).toEqual({ problems: [], warnings: [UNTESTED] });
+});
+
+test("refuses an untested major under checks.matrix: error", () => {
+  expect(check({ installedMajor: 6, level: "error" })).toEqual({
+    problems: [UNTESTED],
+    warnings: [],
+  });
+});
+
+test("accepts an untested major allowUntested names, under either level", () => {
+  expect(check({ installedMajor: 6, allowUntested: ["web@6"], level: "error" })).toEqual({
+    problems: [],
+    warnings: [],
+  });
+});
+
+test("refuses an incompatible major naming the reason and the tested majors, allowUntested or not (CHK-115)", () => {
+  const incompatible = {
+    code: "config.matrix.incompatible",
+    message:
+      "web-framework 3.1.0 is installed, and the target '@acme/codegen-server' does not work on web 3: its router has no route listing.",
+    fix: "Install a major of web-framework the target is tested on: 4, 5.",
+    where: "entry 'server'",
+  };
+
+  expect(check({ installedMajor: 3 })).toEqual({ problems: [incompatible], warnings: [] });
+  expect(check({ installedMajor: 3, allowUntested: ["web@3"] })).toEqual({
+    problems: [incompatible],
+    warnings: [],
+  });
+});
+
+test("refuses an allowUntested item naming another framework, naming the target's", () => {
+  expect(check({ installedMajor: 5, allowUntested: ["express@6"] })).toEqual({
+    problems: [
+      {
+        code: "config.matrix.unknown-framework",
+        message:
+          "The `allowUntested` item 'express@6' names the framework 'express', and the target '@acme/codegen-server' serves 'web'.",
+        fix: "Write the item as 'web@<major>', or remove it.",
+        where: "entry 'server'",
+      },
+    ],
+    warnings: [],
+  });
+});
+
+test("warns that an item naming a tested major can go", () => {
+  expect(check({ installedMajor: 5, allowUntested: ["web@4"] })).toEqual({
+    problems: [],
+    warnings: [
+      {
+        code: "config.matrix.allowed-tested",
+        message:
+          "The `allowUntested` item 'web@4' names a major the compatibility matrix tests the target '@acme/codegen-server' on, so it accepts nothing.",
+        fix: "Remove 'web@4' from the entry's `allowUntested`.",
+        where: "entry 'server'",
+      },
+    ],
+  });
+});
+
+test("checks no framework for a target the matrix does not record, and refuses allowUntested on it", () => {
+  expect(check({ installedMajor: 6, use: "@acme/codegen-client" })).toEqual({
+    problems: [],
+    warnings: [],
+  });
+  expect(
+    check({ installedMajor: 6, use: "@acme/codegen-client", allowUntested: ["web@6"] }),
+  ).toEqual({
+    problems: [
+      {
+        code: "config.matrix.unrecorded-target",
+        message:
+          "The compatibility matrix records no framework for the target '@acme/codegen-client', so `allowUntested` has nothing to accept.",
+        fix: "Remove `allowUntested` from the entry.",
+        where: "entry 'server'",
+      },
+    ],
+    warnings: [],
+  });
+});
+
+test("accepts an empty allowUntested on a target the matrix does not record", () => {
+  expect(check({ installedMajor: 6, use: "@acme/codegen-client", allowUntested: [] })).toEqual({
+    problems: [],
+    warnings: [],
+  });
+});
+
+test("reads the framework from the project of the entry's output directory, where the generated code imports it", () => {
+  const root = writeConfigTree({
+    "app/seampact.config.yaml": "",
+    "app/node_modules/web-framework/package.json": JSON.stringify({ version: "3.0.0" }),
+    "server/node_modules/web-framework/package.json": JSON.stringify({ version: "5.0.0" }),
+  });
+  const entry: TargetEntry = { id: "server", use: SERVER_PACKAGE, api: "tasks" };
+  const config = {
+    file: join(root, "app/seampact.config.yaml"),
+    outDir: join(root, "server"),
+    sources: new Map(),
+    entries: [{ entry, root: join(root, "server/src/generated") }],
+    checks: { matrix: "error" as const },
+  };
+
+  expect(
+    checkAppCompatibility(config, new Map([["server", stubTarget(SERVER_PACKAGE)]]), MATRIX),
+  ).toEqual({ problems: [], warnings: [] });
+});

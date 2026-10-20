@@ -5,10 +5,12 @@ import type { GenerateWarning } from "./generate-warning.js";
 import type { LinkNeeds, LinkOffers, LinkSet, Links } from "./links.js";
 import type { Refused } from "./refusal.js";
 
-// One artefact a target can emit, and whether it is emitted when the app config does not list artefacts.
+// One artefact a target can emit, whether it is emitted when the app config does not switch it, and the artefacts
+// it cannot be emitted without (the app config cannot switch those off while it is on).
 export interface ArtefactDeclaration<Artefact extends string = string> {
   id: Artefact;
   defaultOn: boolean;
+  needs?: readonly Artefact[];
 }
 
 // What a target generates for an app: a server serves the contract's routes, a client calls them, a provider gives

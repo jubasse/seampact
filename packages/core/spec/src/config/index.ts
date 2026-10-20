@@ -2,11 +2,15 @@
 // their JSON Schemas.
 
 export {
+  ALLOW_UNTESTED_PATTERN,
   APP_CONFIG_FILE_NAME,
   APP_CONFIG_SCHEMA,
   type AppConfig,
   type AppSource,
+  ARTEFACT_ID_PATTERN,
   type ArtefactSwitches,
+  BOOT_CHECK_ARTEFACT,
+  type BootCheckSwitches,
   type BundleSource,
   DEFAULT_DIFF_EXEMPTIONS,
   DEFAULT_DIFF_GATE,
@@ -27,6 +31,7 @@ export {
   type AppChecks,
   CHECK_LEVELS,
   type CheckLevel,
+  DEFAULT_MATRIX_CHECK_LEVEL,
   MATRIX_CHECK_LEVELS,
   type MatrixCheckLevel,
   type RootChecks,

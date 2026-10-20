@@ -5,6 +5,7 @@ import {
   offeredValidatorPairs,
   SERVER_TARGETS,
   serverTargetCompatibility,
+  supportedMajorsOf,
   type ValidatorPair,
 } from "./index.js";
 
@@ -42,6 +43,7 @@ test("a pair names the framework package and the validator package", () => {
     target: "@seampact/codegen-nestjs",
     framework: "@nestjs/core",
     frameworkMajor: 12,
+    consumer: "nestjs",
     validator: "class-validator",
     validatorPackage: "@seampact/codegen-class-validator",
   });
@@ -59,6 +61,7 @@ test("offers each target's own validators", () => {
       target: "@seampact/codegen-fastify",
       framework: "fastify",
       frameworkMajor: 5,
+      consumer: "fastify",
       validator: "ajv",
       validatorPackage: "@seampact/codegen-fastify",
     },
@@ -83,10 +86,61 @@ test("provider ids are unique, so a tool can select a provider by id", () => {
 });
 
 test("a target package the matrix does not record is refused by name", () => {
-  expect(serverTargetCompatibility("@seampact/codegen-hono").framework.supportedMajors).toEqual([
-    4,
-  ]);
+  expect(supportedMajorsOf(serverTargetCompatibility("@seampact/codegen-hono"))).toEqual([4]);
   expect(() => serverTargetCompatibility("@seampact/codegen-stub")).toThrow(
     "compatibility: '@seampact/codegen-stub' is not a server target of the matrix",
   );
+});
+
+test("each server target records its framework id, its tested majors with their consumer and no incompatible major", () => {
+  const frameworks = SERVER_TARGETS.map((target) => ({
+    target: target.package,
+    id: target.framework.id,
+    tested: target.framework.tested.map((tested) => `${tested.major}:${tested.consumer}`),
+    incompatible: target.framework.incompatible,
+  }));
+
+  expect(frameworks).toEqual([
+    { target: "@seampact/codegen-nestjs", id: "nestjs", tested: ["12:nestjs"], incompatible: [] },
+    {
+      target: "@seampact/codegen-express",
+      id: "express",
+      tested: ["4:express4", "5:express"],
+      incompatible: [],
+    },
+    { target: "@seampact/codegen-fastify", id: "fastify", tested: ["5:fastify"], incompatible: [] },
+    {
+      target: "@seampact/codegen-adonis",
+      id: "adonis",
+      tested: ["6:adonis6", "7:adonis"],
+      incompatible: [],
+    },
+    { target: "@seampact/codegen-hono", id: "hono", tested: ["4:hono"], incompatible: [] },
+  ]);
+});
+
+test("no framework major is both tested and incompatible", () => {
+  const contradictions = SERVER_TARGETS.flatMap(({ package: targetPackage, framework }) =>
+    framework.tested
+      .filter((tested) => framework.incompatible.some(({ major }) => major === tested.major))
+      .map((tested) => `${targetPackage}@${tested.major}`),
+  );
+
+  expect(contradictions).toEqual([]);
+});
+
+test("every pair carries the consumer overlay of its framework major", () => {
+  const consumers = new Set(
+    offeredValidatorPairs().map((pair) => `${pair.target}@${pair.frameworkMajor}:${pair.consumer}`),
+  );
+
+  expect([...consumers]).toEqual([
+    "@seampact/codegen-nestjs@12:nestjs",
+    "@seampact/codegen-express@4:express4",
+    "@seampact/codegen-express@5:express",
+    "@seampact/codegen-fastify@5:fastify",
+    "@seampact/codegen-adonis@6:adonis6",
+    "@seampact/codegen-adonis@7:adonis",
+    "@seampact/codegen-hono@4:hono",
+  ]);
 });

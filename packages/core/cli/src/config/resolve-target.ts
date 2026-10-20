@@ -5,7 +5,7 @@ import { TARGET_ROLES, type Target } from "@seampact/codegen-core";
 import type { CliProblem } from "../cli-problem.js";
 import { errorCode } from "../error-code.js";
 import { isRecord } from "../is-record.js";
-import { devInstallCommand } from "./package-manager.js";
+import { installFix } from "./package-manager.js";
 
 export type ResolveTargetOutcome =
   | { status: "resolved"; target: Target }
@@ -64,7 +64,7 @@ function resolveFromConfig(configFile: string, use: string, where: string): stri
       return {
         code: "config.target.missing",
         message: `The target package '${use}' is not installed in the app's project.`,
-        fix: installFix(configFile, use),
+        fix: installFix(dirname(configFile), use, "dev"),
         where,
       };
     }
@@ -88,16 +88,6 @@ function resolveFromConfig(configFile: string, use: string, where: string): stri
     }
 
     throw error;
-  }
-}
-
-function installFix(configFile: string, use: string): string {
-  try {
-    return `Install it: \`${devInstallCommand(dirname(configFile), use)}\`.`;
-  } catch (error) {
-    if (!(error instanceof SyntaxError)) throw error;
-
-    return `Install it with your package manager; a \`package.json\` above the config is not valid JSON (${error.message}).`;
   }
 }
 
@@ -148,5 +138,11 @@ function isTarget(value: unknown): value is Target {
 }
 
 function isArtefactDeclaration(value: unknown): boolean {
-  return isRecord(value) && typeof value.id === "string" && typeof value.defaultOn === "boolean";
+  return (
+    isRecord(value) &&
+    typeof value.id === "string" &&
+    typeof value.defaultOn === "boolean" &&
+    (value.needs === undefined ||
+      (Array.isArray(value.needs) && value.needs.every((need) => typeof need === "string")))
+  );
 }

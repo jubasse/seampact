@@ -13,6 +13,9 @@ export const MATRIX_CHECK_LEVELS = ["error", "warning"] as const;
 
 export type MatrixCheckLevel = (typeof MATRIX_CHECK_LEVELS)[number];
 
+// An untested framework major is not known to be broken, so it warns unless the app asks for `error` (ADR 0009).
+export const DEFAULT_MATRIX_CHECK_LEVEL: MatrixCheckLevel = "warning";
+
 export interface AppChecks {
   openapi?: CheckLevel;
   generated?: CheckLevel;

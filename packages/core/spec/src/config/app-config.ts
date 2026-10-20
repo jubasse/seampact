@@ -96,15 +96,32 @@ export interface TargetEntry {
   link?: Record<string, string>;
   options?: Record<string, unknown>;
   operations?: OperationsFilter;
-  // The switches of a server target's boot check (ADR 0012); the other artefact switches wait.
+  // Each artefact the target declares, switched on or off; absent, the target's default (ADR 0009).
   artefacts?: ArtefactSwitches;
+  // Framework majors the compatibility matrix has not tested, accepted without its warning: `<framework>@<major>`.
+  allowUntested?: string[];
   // The server's routes outside the contract the boot check accepts (ADR 0011, ADR 0012).
   frameworkRoutes?: FrameworkRouteEntry[];
 }
 
+// By artefact id; `bootCheck` also takes its checks apart (ADR 0012), its object form leaving the artefact on.
 export interface ArtefactSwitches {
-  bootCheck?: { frameworkRoutes?: boolean };
+  [artefact: string]: boolean | BootCheckSwitches | undefined;
+  bootCheck?: boolean | BootCheckSwitches;
 }
+
+export interface BootCheckSwitches {
+  frameworkRoutes?: boolean;
+}
+
+// The key `bootCheck` takes in its object form.
+export const BOOT_CHECK_ARTEFACT = "bootCheck";
+
+// An artefact id as a target declares it and an app config switches it: a name every DSL can write as a key.
+export const ARTEFACT_ID_PATTERN = "^[a-z][A-Za-z0-9]*$";
+
+// `<framework>@<major>`, the framework by its id in the compatibility matrix.
+export const ALLOW_UNTESTED_PATTERN = "^[a-z][a-z0-9-]*@(0|[1-9][0-9]*)$";
 
 // A path or a pattern (`*` one segment, `**` any number), for one method or every method, with its reason.
 export interface FrameworkRouteEntry {
@@ -128,7 +145,7 @@ const FRAMEWORK_ROUTE_PATH_PATTERN = "^/(?:(?:[^/*]+|\\*|\\*\\*)(?:/(?:[^/*]+|\\
 
 export const APP_CONFIG_SCHEMA: JsonSchema = {
   $schema: JSON_SCHEMA_DIALECT,
-  $id: "https://seampact.dev/schemas/config/app.json",
+  $id: "https://seampact.dev/schemas/config/app.schema.json",
   title: "seampact app config",
   type: "object",
   additionalProperties: false,
@@ -174,6 +191,7 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
         out: NON_EMPTY_STRING,
         link: {
           type: "object",
+          propertyNames: { pattern: ENTRY_ID_PATTERN },
           additionalProperties: { type: "string", pattern: ENTRY_ID_PATTERN },
         },
         options: { type: "object" },
@@ -184,14 +202,25 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
         },
         artefacts: {
           type: "object",
-          additionalProperties: false,
+          propertyNames: { pattern: ARTEFACT_ID_PATTERN },
           properties: {
-            bootCheck: {
-              type: "object",
-              additionalProperties: false,
-              properties: { frameworkRoutes: { type: "boolean" } },
+            [BOOT_CHECK_ARTEFACT]: {
+              oneOf: [
+                { type: "boolean" },
+                {
+                  type: "object",
+                  additionalProperties: false,
+                  properties: { frameworkRoutes: { type: "boolean" } },
+                },
+              ],
             },
           },
+          additionalProperties: { type: "boolean" },
+        },
+        allowUntested: {
+          type: "array",
+          items: { type: "string", pattern: ALLOW_UNTESTED_PATTERN },
+          uniqueItems: true,
         },
         frameworkRoutes: { type: "array", items: { $ref: "#/$defs/frameworkRoute" } },
       },

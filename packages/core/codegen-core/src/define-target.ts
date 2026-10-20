@@ -1,3 +1,4 @@
+import { ARTEFACT_ID_PATTERN } from "@seampact/spec/config";
 import type { ContractIR } from "@seampact/spec/ir";
 import type { DescriptorSet, LinkKind } from "./descriptors.js";
 import { finishFiles } from "./finish-files.js";
@@ -18,6 +19,7 @@ import type {
 // Wraps a target's pure generate into the target the CLI calls. Its `generate` runs, in order and without a way
 // to skip one: the IR support check, the options, the link and artefact checks, the target's own generate, the
 // path checks, the header and the formatter. Its `describe` runs the IR support check and the options first.
+// Artefact declarations the app config could not satisfy throw when the target is defined.
 export function defineTarget<
   Options,
   Artefact extends string,
@@ -26,6 +28,8 @@ export function defineTarget<
   Optional extends Consumed = never,
 >(definition: TargetDefinition<Options, Artefact, Consumed, Provided, Optional>): Target {
   const { metadata } = definition;
+
+  assertArtefactDeclarations(metadata.packageName, metadata.artefacts);
 
   async function generate(request: GenerateRequest): Promise<GenerateOutcome> {
     const irRefusals = refuseUnsupportedIr(request.ir, metadata);
@@ -123,4 +127,47 @@ function isDeclaredArtefactSet<Artefact extends string>(
   declared: readonly ArtefactDeclaration<Artefact>[],
 ): requested is ReadonlySet<Artefact> {
   return refuseUndeclaredArtefacts(requested, declared).length === 0;
+}
+
+// Ids an app config can switch, unique, each need a declared artefact other than itself, and no artefact on by default that needs one off by
+// default, which would refuse every app config that leaves both alone.
+function assertArtefactDeclarations(
+  packageName: string,
+  declared: readonly ArtefactDeclaration[],
+): void {
+  const problems = declared.flatMap((artefact, index) =>
+    artefactDeclarationProblems(artefact, declared.slice(0, index), declared),
+  );
+
+  if (problems.length > 0) {
+    throw new Error(`${packageName}: invalid artefact declarations: ${problems.join(" ")}`);
+  }
+}
+
+function artefactDeclarationProblems(
+  artefact: ArtefactDeclaration,
+  earlier: readonly ArtefactDeclaration[],
+  declared: readonly ArtefactDeclaration[],
+): string[] {
+  const duplicate = earlier.some((other) => other.id === artefact.id)
+    ? [`'${artefact.id}' is declared twice.`]
+    : [];
+  const unswitchable = new RegExp(ARTEFACT_ID_PATTERN).test(artefact.id)
+    ? []
+    : [`'${artefact.id}' is no id an app config can switch (${ARTEFACT_ID_PATTERN}).`];
+  const needProblems = (artefact.needs ?? []).flatMap((need) => {
+    const needed = declared.find((other) => other.id === need);
+
+    if (need === artefact.id) return [`'${artefact.id}' needs itself.`];
+
+    if (needed === undefined) return [`'${artefact.id}' needs '${need}', which is not declared.`];
+
+    if (artefact.defaultOn && !needed.defaultOn) {
+      return [`'${artefact.id}' is on by default and needs '${need}', which is off by default.`];
+    }
+
+    return [];
+  });
+
+  return [...unswitchable, ...duplicate, ...needProblems];
 }

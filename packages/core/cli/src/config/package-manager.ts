@@ -13,16 +13,34 @@ const LOCKFILES: readonly { file: string; manager: PackageManager }[] = [
   { file: "package-lock.json", manager: "npm" },
 ];
 
-const DEV_INSTALL_COMMANDS: Readonly<Record<PackageManager, string>> = {
-  pnpm: "pnpm add -D",
-  npm: "npm install -D",
-  yarn: "yarn add -D",
-  bun: "bun add -d",
-};
+// A target package is a dev dependency (it runs at generate time); a framework the generated code imports is a
+// runtime one.
+export type DependencyKind = "dev" | "runtime";
 
-// The command that adds `packageName` as a dev dependency of the project around `directory`.
-export function devInstallCommand(directory: string, packageName: string): string {
-  return `${DEV_INSTALL_COMMANDS[findPackageManager(directory)]} ${packageName}`;
+const INSTALL_COMMANDS: Readonly<Record<DependencyKind, Readonly<Record<PackageManager, string>>>> =
+  {
+    dev: { pnpm: "pnpm add -D", npm: "npm install -D", yarn: "yarn add -D", bun: "bun add -d" },
+    runtime: { pnpm: "pnpm add", npm: "npm install", yarn: "yarn add", bun: "bun add" },
+  };
+
+// The command that adds `packageName` as a dependency of that kind to the project around `directory`.
+export function installCommand(
+  directory: string,
+  packageName: string,
+  kind: DependencyKind,
+): string {
+  return `${INSTALL_COMMANDS[kind][findPackageManager(directory)]} ${packageName}`;
+}
+
+// The fix of a package missing from the project around `directory`: its install command, or why none could be told.
+export function installFix(directory: string, packageName: string, kind: DependencyKind): string {
+  try {
+    return `Install it: \`${installCommand(directory, packageName, kind)}\`.`;
+  } catch (error) {
+    if (!(error instanceof SyntaxError)) throw error;
+
+    return `Install it with your package manager; a \`package.json\` above ${directory} is not valid JSON (${error.message}).`;
+  }
 }
 
 // The package manager of the nearest directory, from `directory` up, with a lockfile or a `packageManager` field
