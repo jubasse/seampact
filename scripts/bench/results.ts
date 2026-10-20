@@ -18,8 +18,9 @@ export interface RouteMeasurement {
   readonly routeId: string;
   readonly saturation: SamplesByServer;
   // Runs at a fixed share of the lower saturation rate of the two servers, for the latency at equal load; `reached`
-  // is false when a server's achieved rate fell short of `overallRate`, which makes the latencies invalid.
-  readonly fixedRate: {
+  // is false when a server's achieved rate fell short of `overallRate`, which makes the latencies invalid. Absent
+  // when the run measured saturation only.
+  readonly fixedRate?: {
     readonly overallRate: number;
     readonly samples: SamplesByServer;
     readonly reached: boolean;

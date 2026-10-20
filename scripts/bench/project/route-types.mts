@@ -26,6 +26,8 @@ export interface ProbeSequence {
 export interface BenchRoute {
   readonly id: string;
   readonly title: string;
+  /** The status the contract declares for the valid request; both servers must answer it. */
+  readonly successStatus: number;
   /** The request number `serial`; a route that needs a fresh key per request reads it. */
   request(serial: number): BenchRequest;
   /** A request the contract refuses with a 400 on both servers: an unknown key. */

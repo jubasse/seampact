@@ -1,5 +1,6 @@
 import { loadavg } from "node:os";
 import type { BenchPair } from "./pairs.ts";
+import type { Placement } from "./pinning.ts";
 import type { PairMeasurement, RouteMeasurement, RunSample, SamplesByServer } from "./results.ts";
 import { runDriver } from "./run-driver.ts";
 import { type ServerKind, ServerProcess } from "./server-process.ts";
@@ -11,6 +12,12 @@ export interface MeasureOptions {
   readonly warmupSeconds: number;
   readonly repeats: number;
   readonly connections: number;
+  /** Also run each route at a fixed rate, for the latency at equal load. */
+  readonly latency: boolean;
+  /** The cores the pair's servers and load driver are pinned to; unpinned when absent. */
+  readonly placement?: Placement;
+  /** Aborted when another pair failed: this pair stops at its next run and stops its servers. */
+  readonly signal?: AbortSignal;
 }
 
 // The share of the lower of the two servers' saturation rates the fixed-rate runs send, so neither server queues.
@@ -40,11 +47,12 @@ export class ParityFailure extends Error {
 export async function probePair(
   pair: BenchPair,
   projectDirectory: string,
+  placement?: Placement,
 ): Promise<readonly string[]> {
-  const servers = await startServers(pair, projectDirectory);
+  const servers = await startServers(pair, projectDirectory, placement);
 
   try {
-    return await probeServers(servers, projectDirectory);
+    return await probeServers(servers, projectDirectory, placement);
   } finally {
     await stopServers(servers);
   }
@@ -53,11 +61,14 @@ export async function probePair(
 async function probeServers(
   servers: Record<ServerKind, ServerProcess>,
   projectDirectory: string,
+  placement?: Placement,
 ): Promise<readonly string[]> {
-  const verdict = await runDriver(projectDirectory, "probe", {
-    seampactUrl: servers.seampact.baseUrl,
-    baselineUrl: servers.baseline.baseUrl,
-  });
+  const verdict = await runDriver(
+    projectDirectory,
+    "probe",
+    { seampactUrl: servers.seampact.baseUrl, baselineUrl: servers.baseline.baseUrl },
+    placement?.driverCpu,
+  );
   const differences =
     typeof verdict === "object" && verdict !== null
       ? Reflect.get(verdict, "differences")
@@ -76,10 +87,10 @@ export async function measurePair(
   projectDirectory: string,
   options: MeasureOptions,
 ): Promise<PairMeasurement> {
-  const servers = await startServers(pair, projectDirectory);
+  const servers = await startServers(pair, projectDirectory, options.placement);
 
   try {
-    const differences = await probeServers(servers, projectDirectory);
+    const differences = await probeServers(servers, projectDirectory, options.placement);
 
     if (differences.length > 0) throw new ParityFailure(pair.id, differences);
 
@@ -102,6 +113,7 @@ export async function measurePair(
 async function startServers(
   pair: BenchPair,
   projectDirectory: string,
+  placement?: Placement,
 ): Promise<Record<ServerKind, ServerProcess>> {
   const start = (kind: ServerKind) =>
     ServerProcess.start({
@@ -109,6 +121,7 @@ async function startServers(
       kind,
       baselineFramework: pair.baselineFramework,
       validators: pair.validators,
+      ...(placement === undefined ? {} : { cpu: placement.serverCpu }),
     });
   const seampact = await start("seampact");
   const baseline = await start("baseline");
@@ -141,6 +154,9 @@ async function measureRoute(
     options,
     undefined,
   );
+
+  if (!options.latency) return { routeId, saturation };
+
   const overallRate = Math.max(
     1,
     Math.round(
@@ -191,6 +207,8 @@ async function alternatingRuns(
     const order = repeat % 2 === 0 ? KINDS : [...KINDS].reverse();
 
     for (const kind of order) {
+      options.signal?.throwIfAborted();
+
       samples[kind].push(
         await runOnce({
           pair,
@@ -220,14 +238,19 @@ async function runOnce(run: {
   run.server.resetMemory();
 
   const result = loadResultOf(
-    await runDriver(run.projectDirectory, "load", {
-      baseUrl: run.server.baseUrl,
-      routeId: run.routeId,
-      durationSeconds: run.options.durationSeconds,
-      warmupSeconds: run.overallRate === undefined ? run.options.warmupSeconds : 0,
-      connections: run.options.connections,
-      ...(run.overallRate === undefined ? {} : { overallRate: run.overallRate }),
-    }),
+    await runDriver(
+      run.projectDirectory,
+      "load",
+      {
+        baseUrl: run.server.baseUrl,
+        routeId: run.routeId,
+        durationSeconds: run.options.durationSeconds,
+        warmupSeconds: run.overallRate === undefined ? run.options.warmupSeconds : 0,
+        connections: run.options.connections,
+        ...(run.overallRate === undefined ? {} : { overallRate: run.overallRate }),
+      },
+      run.options.placement?.driverCpu,
+    ),
   );
 
   if (result.non2xx > 0 || result.errors > 0 || result.timeouts > 0) {

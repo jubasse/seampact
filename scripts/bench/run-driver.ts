@@ -5,23 +5,32 @@ import { promisify } from "node:util";
 const execFileAsync = promisify(execFile);
 const MAX_OUTPUT_BYTES = 16 * 1024 * 1024;
 
-// Runs one command of the project's load driver and answers its JSON document.
+function execOptions(projectDirectory: string) {
+  return { cwd: projectDirectory, maxBuffer: MAX_OUTPUT_BYTES };
+}
+
+// Runs one command of the project's load driver, pinned to `cpu` when given, and answers its JSON document.
 export async function runDriver(
   projectDirectory: string,
   command: "probe" | "load",
   driverArguments: object,
+  cpu?: number,
 ): Promise<unknown> {
-  const { stdout } = await execFileAsync(
-    process.execPath,
-    [
-      "--import",
-      "tsx",
-      join(projectDirectory, "bench/load-driver.mts"),
-      command,
-      JSON.stringify(driverArguments),
-    ],
-    { cwd: projectDirectory, maxBuffer: MAX_OUTPUT_BYTES },
-  );
+  const nodeArguments = [
+    "--import",
+    "tsx",
+    join(projectDirectory, "bench/load-driver.mts"),
+    command,
+    JSON.stringify(driverArguments),
+  ];
+  const { stdout } =
+    cpu === undefined
+      ? await execFileAsync(process.execPath, nodeArguments, execOptions(projectDirectory))
+      : await execFileAsync(
+          "taskset",
+          ["-c", String(cpu), process.execPath, ...nodeArguments],
+          execOptions(projectDirectory),
+        );
   const lastLine = stdout.trim().split("\n").at(-1);
 
   if (lastLine === undefined)

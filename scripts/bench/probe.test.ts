@@ -45,6 +45,7 @@ const routes: readonly BenchRoute[] = [
   {
     id: "list",
     title: "list",
+    successStatus: 200,
     request: () => listRequest,
     refusedRequest: () => ({ ...listRequest, path: "/list?unknown=1" }),
     volatileMembers: [],
@@ -52,6 +53,7 @@ const routes: readonly BenchRoute[] = [
   {
     id: "create",
     title: "create",
+    successStatus: 201,
     request: () => write("user", { title: "a" }, randomUUID()),
     refusedRequest: () => write("user", { title: "a", unknown: true }, randomUUID()),
     volatileMembers: ["id"],
@@ -80,6 +82,7 @@ const routes: readonly BenchRoute[] = [
   {
     id: "pay",
     title: "pay",
+    successStatus: 204,
     request: () => payment,
     refusedRequest: () => ({ ...payment, body: '{"unknown":true}' }),
     volatileMembers: [],
@@ -203,6 +206,18 @@ describe("the parity probe", () => {
 
   test("fails a baseline without the signature check", async () => {
     expect(await differencesWithout("signature")).toContain("pay (bad signature)");
+  });
+
+  test("fails a baseline answering another status than the contract declares", async () => {
+    const wrongStatus = routes.map((route) =>
+      route.id === "list" ? { ...route, successStatus: 202 } : route,
+    );
+    const verdict = await probe(
+      { seampactUrl: await urlOf(ALL_STEPS), baselineUrl: await urlOf(ALL_STEPS) },
+      wrongStatus,
+    );
+
+    expect(verdict.differences.join("\n")).toContain("the contract declares 202");
   });
 
   test("fails a baseline without a declared response header", async () => {

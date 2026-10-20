@@ -14,7 +14,7 @@ const MICROSECONDS_DIGITS = 1;
 const PROFILE_CONNECTIONS = 10;
 
 interface ProfileInvocation {
-  readonly reuse: boolean;
+  readonly fresh: boolean;
   readonly out: string;
   readonly work: string;
   readonly measure: {
@@ -44,7 +44,7 @@ export async function profilePair(
       pair,
       workDirectory: invocation.work,
       tarballs,
-      reuse: invocation.reuse,
+      fresh: invocation.fresh,
     });
 
     for (const routeId of invocation.measure.routeIds) {
