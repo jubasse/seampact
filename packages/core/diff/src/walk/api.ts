@@ -1,4 +1,4 @@
-import type { Api, PackRef, Surface } from "@seampact/spec/ir";
+import type { Api, ContractIR, PackRef, Surface } from "@seampact/spec/ir";
 import {
   type ChangeSite,
   compareKeptOrder,
@@ -21,6 +21,7 @@ export function compareApi(context: WalkContext): void {
   const after = context.after.api;
   const site: ChangeSite = { reaches: NO_POSITION, origin: after.origin };
   const commonOperations = commonOperationIds(context);
+  const defaultPathVersionOperations = operationsFollowingPathVersion(context);
 
   compareMembers(context, site, "Api", API_POINTER, before, after, {
     id: () => undefined,
@@ -30,7 +31,7 @@ export function compareApi(context: WalkContext): void {
         value: (valuePointer) =>
           emitAt(
             context,
-            { ...site, reaches: [{ position: "none", operations: commonOperations }] },
+            { ...site, reaches: [{ position: "none", operations: defaultPathVersionOperations }] },
             {
               kind: "operation.route",
               case: "pathVersion",
@@ -64,6 +65,24 @@ function commonOperationIds(context: WalkContext): string[] {
   return context.after.operations
     .map((operation) => operation.id)
     .filter((id) => beforeIds.has(id));
+}
+
+/** The common operations whose surface takes the api's pathVersion in both IRs, not a value of its own. */
+function operationsFollowingPathVersion(context: WalkContext): string[] {
+  const beforeIds = new Set(
+    context.before.operations
+      .filter((operation) => surfaceFollowsPathVersion(context.before, operation.surface))
+      .map((operation) => operation.id),
+  );
+
+  return context.after.operations
+    .filter((operation) => surfaceFollowsPathVersion(context.after, operation.surface))
+    .map((operation) => operation.id)
+    .filter((id) => beforeIds.has(id));
+}
+
+function surfaceFollowsPathVersion(ir: ContractIR, surfaceId: string): boolean {
+  return ir.api.surfaces[surfaceId]?.pathVersion === ir.api.pathVersion.value;
 }
 
 function compareWire(

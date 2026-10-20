@@ -118,7 +118,10 @@ function compareSchema(
     return;
   }
 
-  const deprecated = (memberPointer: string, beforeValue: unknown, afterValue: unknown) =>
+  // An absent flag means false: only a flip of the flag is a change.
+  const deprecated = (memberPointer: string, beforeValue: unknown, afterValue: unknown) => {
+    if ((beforeValue === true) === (afterValue === true)) return;
+
     emitAt(
       context,
       { ...site, reaches: withoutPosition(site.reaches) },
@@ -130,6 +133,7 @@ function compareSchema(
         after: afterValue,
       },
     );
+  };
 
   switch (before.kind) {
     case "object":
@@ -247,18 +251,21 @@ function compareProperty(
       compareNullable(context, site, memberPointer, before.nullable, after.nullable),
     default: (memberPointer) =>
       emitDefaultChange(context, site, memberPointer, before.default, after.default),
-    deprecated: (memberPointer) =>
+    deprecated: (memberPointer) => {
+      if ((before.deprecated === true) === (after.deprecated === true)) return;
+
       emitAt(
         context,
         { ...site, reaches: withoutPosition(site.reaches) },
         {
           kind: "deprecation",
-          case: after.deprecated ? "added" : "removed",
+          case: after.deprecated === true ? "added" : "removed",
           pointer: memberPointer,
           before: before.deprecated,
           after: after.deprecated,
         },
-      ),
+      );
+    },
   });
 }
 

@@ -566,7 +566,7 @@ const ROW_CASES: RowCase[] = [
     after: (ir) => {
       const states = propertyOf(ir, "TaskQuery", "states").type;
 
-      if (states.kind === "array") states.items = { kind: "enum", enum: "Role" };
+      if ("items" in states) states.items = { kind: "enum", enum: "Role" };
     },
   },
   {
@@ -628,7 +628,8 @@ const ROW_CASES: RowCase[] = [
     after: (ir) => {
       const taskState = ir.enums.TaskState;
 
-      if (taskState !== undefined) ir.enums.TaskState2 = { ...structuredClone(taskState), id: "TaskState2" };
+      if (taskState !== undefined)
+        ir.enums.TaskState2 = { ...structuredClone(taskState), id: "TaskState2" };
 
       narrowTaskState(ir, "TaskState2", ["open", "done", "archived"]);
     },
@@ -1062,29 +1063,26 @@ describe("the classification table", () => {
       ...rowCase,
       name: `${rowCase.kind} ${rowCase.case} at ${rowCase.position}${rowCase.note ?? ""}`,
     })),
-  )(
-    "classifies $name",
-    (rowCase) => {
-      const base = rowCase.base === undefined ? goldenIr() : editedIr(rowCase.base);
-      const after = editedIr(rowCase.after, base);
-      const changes = changesOf(base, after);
-      const change = changes.find(
-        (candidate) =>
-          candidate.kind === rowCase.kind &&
-          candidate.case === rowCase.case &&
-          candidate.position === rowCase.position &&
-          candidate.pointer.includes(rowCase.pointerFragment ?? ""),
-      );
+  )("classifies $name", (rowCase) => {
+    const base = rowCase.base === undefined ? goldenIr() : editedIr(rowCase.base);
+    const after = editedIr(rowCase.after, base);
+    const changes = changesOf(base, after);
+    const change = changes.find(
+      (candidate) =>
+        candidate.kind === rowCase.kind &&
+        candidate.case === rowCase.case &&
+        candidate.position === rowCase.position &&
+        candidate.pointer.includes(rowCase.pointerFragment ?? ""),
+    );
 
-      const unclassified = changes.filter(
-        (candidate) => candidate.kind === "unclassified" && rowCase.kind !== "unclassified",
-      );
+    const unclassified = changes.filter(
+      (candidate) => candidate.kind === "unclassified" && rowCase.kind !== "unclassified",
+    );
 
-      expect(change, `no ${rowCase.kind} ${rowCase.case} at ${rowCase.position}`).toBeDefined();
-      expect(unclassified).toEqual([]);
-      expect({ breaks: change?.breaks, classification: change?.classification }).toEqual(
-        EXPECTED_OUTCOMES[rowCase.expected],
-      );
-    },
-  );
+    expect(change, `no ${rowCase.kind} ${rowCase.case} at ${rowCase.position}`).toBeDefined();
+    expect(unclassified).toEqual([]);
+    expect({ breaks: change?.breaks, classification: change?.classification }).toEqual(
+      EXPECTED_OUTCOMES[rowCase.expected],
+    );
+  });
 });

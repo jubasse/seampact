@@ -153,7 +153,8 @@ function propertyEntries(
   return after.properties.flatMap((property, index) => {
     const previous = before.properties.find((candidate) => candidate.name === property.name);
 
-    if (previous === undefined || previous.deprecated === property.deprecated) return [];
+    if (previous === undefined || (previous.deprecated === true) === (property.deprecated === true))
+      return [];
 
     return [
       {
@@ -161,7 +162,7 @@ function propertyEntries(
         pointer: pointerJoin(pointer, "properties", index),
         schema: id,
         property: property.name,
-        status: property.deprecated ? ("deprecated" as const) : ("undeprecated" as const),
+        status: property.deprecated === true ? ("deprecated" as const) : ("undeprecated" as const),
       },
     ];
   });

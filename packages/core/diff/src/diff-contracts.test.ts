@@ -306,6 +306,18 @@ describe("the gate", () => {
 });
 
 describe("the deprecation report", () => {
+  test("reads an absent deprecated flag as false", () => {
+    const result = diffOk(
+      goldenIr(),
+      editedIr((ir) => {
+        objectSchemaOf(ir, "Task").deprecated = false;
+      }),
+    );
+
+    expect(result.changes).toEqual([]);
+    expect(result.deprecations).toEqual([]);
+  });
+
   test("reports a new deprecation with days to sunset", () => {
     const result = diffOk(goldenIr(), editedIr(deprecateHealth("2026-11-19")));
 
