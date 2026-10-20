@@ -1,0 +1,8 @@
+# workspace.template.yaml: the reference service api alone, relaying to `tasks` held in a release bundle of
+# fixtures/reference. The channel smoke test writes it as workspace.yaml with the bundle's URL, api and integrity.
+workspace:
+  apis:
+    tasksService: ./tasks-service/api.yaml
+  shared: ./shared/base.yaml
+  imports:
+    tasks: { release: { url: "{{releaseUrl}}" }, api: "{{api}}", integrity: "{{integrity}}" }

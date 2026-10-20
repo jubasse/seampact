@@ -42,7 +42,7 @@ const run = promisify(execFile);
 
 const SMOKE_TEST_TIMEOUT_MILLISECONDS = 180_000;
 const NPM = process.platform === "win32" ? "npm.cmd" : "npm";
-const IMPORTS_FIXTURE = join(REPO_ROOT, "fixtures/dist/imports");
+const IMPORTS_FIXTURE = join(REPO_ROOT, "fixtures/bundle-channels/imports");
 const GOLDEN_SERVICE_IR = join(REPO_ROOT, "fixtures/golden/reference/tasksService.ir.json");
 const PINNED_INTEGRITY = /integrity: (sha256-[A-Za-z0-9+/]+=*)/u;
 
