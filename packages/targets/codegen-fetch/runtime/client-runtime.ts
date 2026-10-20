@@ -130,7 +130,7 @@ export interface QueryPlan {
 }
 
 export type SuccessPlan =
-  | { readonly status: number; readonly shape: "empty" | "item" | "table" }
+  | { readonly status: number; readonly shape: "empty" | "item" | "table" | "list" }
   | { readonly status: number; readonly shape: "page"; readonly cursorParam: string };
 
 export interface ErrorPlan {
@@ -477,6 +477,10 @@ function successAnswer(
 
   if (success.shape === "table") {
     return isTable(body) ? { ok: true, status, headers, body, ...replay } : undefined;
+  }
+
+  if (success.shape === "list") {
+    return Array.isArray(body) ? { ok: true, status, headers, body, ...replay } : undefined;
   }
 
   if (success.shape !== "page") {

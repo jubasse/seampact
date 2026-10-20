@@ -4,9 +4,9 @@ import type { CliProblem } from "../cli-problem.js";
 import { isRecord } from "../is-record.js";
 import { installFix } from "./package-manager.js";
 
-// The version of a framework package installed in a project, read from its `package.json` in the `node_modules`
-// directories from a lookup directory up, as Node's ESM resolution searches them (it reads no global folder). The
-// file is read directly, not resolved, since a package's `exports` may hide its `package.json`.
+// The version of a framework or validator library package installed in a project, read from its `package.json` in
+// the `node_modules` directories from a lookup directory up, as Node's ESM resolution searches them (it reads no
+// global folder). The file is read directly, not resolved, since a package's `exports` may hide its `package.json`.
 
 export interface InstalledVersion {
   packageName: string;
@@ -18,6 +18,14 @@ export interface InstalledVersion {
 export type InstalledVersionOutcome =
   | { status: "installed"; installed: InstalledVersion }
   | { status: "refused"; problem: CliProblem };
+
+/** What the generated code imports the package as, which the problems name it by. */
+export type InstalledPackageRole = "framework" | "validatorLibrary";
+
+const ROLE_LABELS: Readonly<Record<InstalledPackageRole, string>> = {
+  framework: "framework package",
+  validatorLibrary: "validator library",
+};
 
 /** The code of the problem for a package that is not installed in the project. */
 export const FRAMEWORK_MISSING_CODE = "config.matrix.framework-missing";
@@ -31,6 +39,7 @@ const PNP_FILES: readonly string[] = [".pnp.cjs", ".pnp.js"];
 export function readInstalledVersion(
   lookupDirectory: string,
   packageName: string,
+  role: InstalledPackageRole,
   where: string,
 ): InstalledVersionOutcome {
   const packageJsonFile = findPackageJson(lookupDirectory, packageName);
@@ -38,7 +47,7 @@ export function readInstalledVersion(
   if (packageJsonFile === undefined) {
     return {
       status: "refused",
-      problem: missingPackageProblem(lookupDirectory, packageName, where),
+      problem: missingPackageProblem(lookupDirectory, packageName, role, where),
     };
   }
 
@@ -49,7 +58,7 @@ export function readInstalledVersion(
       status: "refused",
       problem: {
         code: "config.matrix.version-unreadable",
-        message: `The installed framework package '${packageName}' has no version the CLI can read: ${declared.reason}`,
+        message: `The installed ${ROLE_LABELS[role]} '${packageName}' has no version the CLI can read: ${declared.reason}`,
         fix: `Reinstall '${packageName}' with your package manager.`,
         where,
       },
@@ -73,6 +82,7 @@ function findPackageJson(lookupDirectory: string, packageName: string): string |
 function missingPackageProblem(
   lookupDirectory: string,
   packageName: string,
+  role: InstalledPackageRole,
   where: string,
 ): CliProblem {
   const pnpFile = ancestorsOf(lookupDirectory)
@@ -90,7 +100,7 @@ function missingPackageProblem(
 
   return {
     code: FRAMEWORK_MISSING_CODE,
-    message: `The framework package '${packageName}' is not installed in the project of the entry's output directory (${lookupDirectory}), so its version cannot be checked against the compatibility matrix; the generated code imports it.`,
+    message: `The ${ROLE_LABELS[role]} '${packageName}' is not installed in the project of the entry's output directory (${lookupDirectory}), so its version cannot be checked against the compatibility matrix; the generated code imports it.`,
     fix: installFix(lookupDirectory, packageName, "runtime"),
     where,
   };

@@ -37,7 +37,7 @@ const PLANNED_QUERY_WIRES = ["text", "number", "list"] as const;
 type QueryWireKind = (typeof PLANNED_QUERY_WIRES)[number];
 
 type SuccessPlan =
-  | { status: number; shape: "empty" | "item" | "table" }
+  | { status: number; shape: "empty" | "item" | "table" | "list" }
   | { status: number; shape: "page"; cursorParam: string };
 
 // The headers the client fills itself, by request key, so the method type makes them optional.
@@ -61,7 +61,7 @@ const NOT_MODIFIED = 304;
 const FORM_STYLE = "form";
 const KNOWN_QUERY_STYLES: readonly string[] = ["form", "deepObject"];
 const NOT_GENERATED_QUERY_WIRES: readonly string[] = ["boolean", "object"];
-const NOT_GENERATED_SHAPES: readonly string[] = ["list", "binary", "redirect"];
+const NOT_GENERATED_SHAPES: readonly string[] = ["binary", "redirect"];
 
 // The plan of one operation, every form the client cannot send or read refused by name into `refusals`.
 export function planOperation(
@@ -337,6 +337,10 @@ function successPlan(
       refuseNonJsonBody(response, location, refusals);
 
       return [{ status, shape: "table" }];
+    case "list":
+      refuseNonJsonBody(response, location, refusals);
+
+      return [{ status, shape: "list" }];
     case "page":
       refuseNonJsonBody(response, location, refusals);
 

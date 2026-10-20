@@ -41,17 +41,16 @@ In `src/main.ts`, add the import and, before `app.listen`, these lines.
 ```ts
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
-const config = NotesNest.withContractComponents({
+const config = {
   ...new DocumentBuilder().setTitle("Notes").setVersion("1").build(),
   openapi: "3.1.0",
-});
+};
 
-const document = SwaggerModule.createDocument(app, config, { autoTagControllers: false });
+const document = NotesNest.createContractDocument(app, config, { autoTagControllers: false });
 
-NotesNest.assertContractComponents(document);
 SwaggerModule.setup("docs", app, document);
 ```
 
-`assertContractComponents` stops the app if one of your classes has the same name as a contract schema, instead of letting it replace the schema in the document.
+`createContractDocument` adds the contract schemas to the document. It stops the app if one of your classes has the same name as a contract schema, instead of letting it replace the schema in the document.
 
 You see the Swagger page at `localhost:3000/docs`. Without the `frameworkRoutes` entries, the app stops at boot with `the framework route 'GET /docs/swagger-ui-init.js' is outside the contract and not allow-listed`.

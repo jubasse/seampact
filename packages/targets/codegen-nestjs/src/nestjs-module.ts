@@ -29,7 +29,12 @@ const FIXED_EXPORTS = [
 const LOCAL_NAMES = ["boundary", "createNestBoundary", "CONTRACT_API", "SeampactHooks"] as const;
 
 // The exports of the docs module, which the index re-exports beside the operation decorators.
-const DOCS_EXPORTS = ["documentedOperation", "withContractComponents"] as const;
+const DOCS_EXPORTS = [
+  "documentedOperation",
+  "withContractComponents",
+  "assertContractComponents",
+  "createContractDocument",
+] as const;
 
 const RESERVED_SUFFIX = "_";
 

@@ -33,6 +33,7 @@ interface DocsApp {
     openapi?: string,
     shadowSchemaName?: string,
   ): Promise<{ paths: object }>;
+  contractDocument(api: ApiModules, shadowSchemaName?: string): Promise<{ paths: object }>;
 }
 
 let app: DocsApp;
@@ -116,6 +117,20 @@ describe("the NestJS native document", () => {
 
   test("an app class named like a contract schema is refused, naming both schemas", async () => {
     await expect(app.nativeDocument([tasks], "3.1.0", "Task")).rejects.toThrow(
+      /component 'schemas\.Task' of api 'tasks'.*finished document holds/s,
+    );
+  });
+
+  test("createContractDocument writes the document in one call, agreeing with the seampact document", async () => {
+    const framework = await app.contractDocument(tasks);
+
+    expect(
+      nativeDocsDisagreements(referenceNativeDocsDocument("tasks").document, framework),
+    ).toEqual([]);
+  });
+
+  test("createContractDocument refuses an app class named like a contract schema", async () => {
+    await expect(app.contractDocument(tasks, "Task")).rejects.toThrow(
       /component 'schemas\.Task' of api 'tasks'.*finished document holds/s,
     );
   });

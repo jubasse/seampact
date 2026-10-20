@@ -20,11 +20,19 @@ const KNOWN_POSITIONS: readonly string[] = ["cursor", "page", "offset", "since"]
 
 // A wire format the client reads: success bodies are the bare payload (items for a page), no success or error
 // header, no `$meta`, and errors are a JSON object carrying the code with the code's params merged in.
-export function refuseFormatForms(format: WireFormat): Refusal[] {
+// A list envelope or header is refused only when a list operation uses the format.
+export function refuseFormatForms(format: WireFormat, listShapeUsed: boolean): Refusal[] {
   const location = below({ member: "" }, "formats", format.id);
   const refusals: Refusal[] = [];
 
-  for (const shape of ["item", "table"] as const) {
+  const bodyShapes = listShapeUsed
+    ? (["item", "table", "list"] as const)
+    : (["item", "table"] as const);
+  const headerShapes = listShapeUsed
+    ? (["item", "table", "list", "page"] as const)
+    : (["item", "table", "page"] as const);
+
+  for (const shape of bodyShapes) {
     refuseEnvelope(
       format.success[shape].body,
       PAYLOAD_SLOT,
@@ -40,7 +48,7 @@ export function refuseFormatForms(format: WireFormat): Refusal[] {
     refusals,
   );
 
-  for (const shape of ["item", "table", "page"] as const) {
+  for (const shape of headerShapes) {
     if (format.success[shape].headers.length > 0) {
       refusals.push(
         refuseNotGeneratedYet(

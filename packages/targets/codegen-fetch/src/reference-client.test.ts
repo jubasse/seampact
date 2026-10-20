@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "nod
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { GeneratedFile, Target } from "@seampact/codegen-core";
+import { referenceUnpagedList } from "@seampact/codegen-core/node-server/test-support";
 import type { ContractIR } from "@seampact/spec/ir";
 import ts from "typescript";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
@@ -21,6 +22,8 @@ const LINKED_PACKAGES = {
 };
 const CONSUMERS = new URL("scripts/consumers/", REPOSITORY_ROOT);
 const APIS = ["tasks", "tasksService"] as const;
+// The tasks api with `listChannels` declared `paging: none`, generated beside the goldens.
+const UNPAGED_API = "tasksUnpaged";
 const RESULT_CLIENT = "client";
 const THROW_CLIENT = "clientThrow";
 const PROBE_FILE = "probe.ts";
@@ -76,6 +79,10 @@ function readGoldenIr(name: string): ContractIR {
   );
 }
 
+function unpagedTasksIr(): ContractIR {
+  return referenceUnpagedList("listChannels")(readGoldenIr("tasks"), "tasks");
+}
+
 function writeFiles(directory: string, files: readonly GeneratedFile[]): string[] {
   return files.map((file) => {
     const path = join(PROJECT, directory, file.path);
@@ -87,8 +94,7 @@ function writeFiles(directory: string, files: readonly GeneratedFile[]): string[
   });
 }
 
-async function generateApi(api: string): Promise<string[]> {
-  const ir = readGoldenIr(api);
+async function generateApi(api: string, ir: ContractIR = readGoldenIr(api)): Promise<string[]> {
   const types = await typesTarget.generate({
     ir,
     options: {},
@@ -140,6 +146,7 @@ const PROBE = `
 import { createClient } from "./generated/client/tasks/client.js";
 import { createClient as createServiceClient } from "./generated/client/tasksService/client.js";
 import { createClient as createThrowingClient, isClientContractError } from "./generated/clientThrow/tasks/client.js";
+import { createClient as createUnpagedClient } from "./generated/client/tasksUnpaged/client.js";
 
 import * as TasksIndex from "./generated/client/tasks/index.js";
 
@@ -184,6 +191,13 @@ export async function probe(): Promise<void> {
   if (page.ok) {
     const nextCursor: string | undefined = page.body.nextCursor;
     void nextCursor;
+  }
+
+  const channels = await createUnpagedClient({ baseUrl: "http://localhost" }).listChannels();
+
+  if (channels.ok) {
+    const channelIds: string[] = channels.body.map((channel) => channel.channelId);
+    void channelIds;
   }
 
   const preferences = await client.getPreferences();
@@ -264,7 +278,12 @@ beforeAll(async () => {
     await importProjectModule<{ target: Target }>("node_modules/@seampact/codegen-ts/src/index.ts")
   ).target;
 
-  const paths = (await Promise.all(APIS.map(generateApi))).flat();
+  const paths = (
+    await Promise.all([
+      ...APIS.map((api) => generateApi(api)),
+      generateApi(UNPAGED_API, unpagedTasksIr()),
+    ])
+  ).flat();
 
   expect(typeErrorsOf(paths)).toEqual([]);
 
@@ -579,6 +598,27 @@ describe("the generated reference client answers a stub server", () => {
     )({ path: { channelId: "c1" }, headers: user(), body: { ids: ["a"] } });
 
     expect(batch).toMatchObject({ ok: false, unexpected: true, status: 200 });
+  });
+
+  test("a paging none list reads a bare array, and an object comes back as unexpected", async () => {
+    const unpaged = await importProjectModule<ClientModule>(
+      `generated/client/${UNPAGED_API}/client.ts`,
+    );
+    const answering = (body: unknown) =>
+      unpaged.createClient({
+        baseUrl: "http://api.test",
+        fetch: async () =>
+          new Response(JSON.stringify(body), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          }),
+      });
+
+    const list = await call(answering([{ channelId: "c1" }]), "listChannels")();
+    const object = await call(answering({ items: [] }), "listChannels")();
+
+    expect(list).toMatchObject({ ok: true, status: 200, body: [{ channelId: "c1" }] });
+    expect(object).toMatchObject({ ok: false, unexpected: true, status: 200 });
   });
 
   test("a success body that is not JSON comes back as unexpected", async () => {
