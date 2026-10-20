@@ -229,6 +229,16 @@ describe("emitter options change only what they name", () => {
     ).toEqual(["/color", "/extensions/1", "/reasons"]);
     expect(outcome.status === "refused" ? outcome.refusals[1]?.message : "").toContain("'acces'");
   });
+
+  it("shows a refused value bounded, and an object by its kind", () => {
+    const outcome = parseEmitterOptions({ reasons: { hide: true }, inputSchemas: "x".repeat(200) });
+    const messages = outcome.status === "refused" ? outcome.refusals.map((r) => r.message) : [];
+
+    expect(messages).toEqual([
+      "An object is not a value of 'reasons'.",
+      `'${"x".repeat(64)}...' is not a value of 'inputSchemas'.`,
+    ]);
+  });
 });
 
 describe("strict input still accepts proofs", () => {

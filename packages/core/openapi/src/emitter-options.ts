@@ -64,7 +64,7 @@ export function parseEmitterOptions(raw: unknown): ParsedEmitterOptions {
       refusals.push(
         optionRefusal(
           `/${key}`,
-          `'${key}' is not an OpenAPI option.`,
+          `${optionValueText(key)} is not an OpenAPI option.`,
           `Use one of ${OPTION_KEYS.join(", ")}.`,
         ),
       );
@@ -122,7 +122,7 @@ function parseExtensions(raw: unknown, refusals: Refusal[]): ExtensionSelection 
     refusals.push(
       optionRefusal(
         `/extensions/${index}`,
-        `'${String(name)}' is not an x-seampact extension name.`,
+        `${optionValueText(name)} is not an x-seampact extension name.`,
         `Use a name after 'x-seampact-', one of ${EXTENSION_NAMES.join(", ")}.`,
       ),
     );
@@ -147,7 +147,7 @@ function parseChoice<Choice extends string>(
   refusals.push(
     optionRefusal(
       `/${option}`,
-      `'${String(raw)}' is not a value of '${option}'.`,
+      `${optionValueText(raw)} is not a value of '${option}'.`,
       `Use one of ${values.join(", ")}.`,
     ),
   );
@@ -217,4 +217,24 @@ function optionRefusal(member: string, message: string, fix: string): Refusal {
 
 function refusedWith(...refusals: Refusal[]): ParsedEmitterOptions {
   return { status: "refused", refusals };
+}
+
+const MAX_SHOWN_VALUE_LENGTH = 64;
+
+// A config value as a message starts with it: a string quoted and cut to the bound, any other value by its kind.
+function optionValueText(value: unknown): string {
+  if (typeof value === "string") {
+    const shown =
+      value.length <= MAX_SHOWN_VALUE_LENGTH
+        ? value
+        : `${value.slice(0, MAX_SHOWN_VALUE_LENGTH)}...`;
+
+    return `'${shown}'`;
+  }
+
+  if (value === null) return "Null";
+
+  if (Array.isArray(value)) return "An array";
+
+  return typeof value === "object" ? "An object" : `The ${typeof value} ${String(value)}`;
 }

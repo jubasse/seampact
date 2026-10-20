@@ -499,7 +499,12 @@ export function propertySchema(
   return schema;
 }
 
-function markSensitive(context: EmitContext, schema: JsonObject, location: IrLocation): void {
+/** Marks a sensitive scalar `format: password`; a sensitive value of another shape is refused by name. */
+export function markSensitive(
+  context: EmitContext,
+  schema: JsonObject,
+  location: IrLocation,
+): void {
   if (typeof schema.type === "string") {
     schema.format = PASSWORD_FORMAT;
 
@@ -555,7 +560,6 @@ function unionSchema(
   }
 
   const branches = named.variants.map((unionVariant) => {
-    const reference = schemaReference(context, unionVariant.schema, "shared");
     const branch =
       tag.in === "body"
         ? bodyTaggedBranch(context, unionVariant.schema, tag.property, unionVariant.tag, variant)
@@ -563,10 +567,10 @@ function unionSchema(
 
     setDefined(branch, "description", unionVariant.docs?.description ?? unionVariant.docs?.summary);
 
-    return { branch, reference };
+    return branch;
   });
 
-  schema.oneOf = branches.map(({ branch }) => branch);
+  schema.oneOf = branches;
 
   if (tag.in === "header") {
     writeExtension(context, schema, "discriminator", { in: "header", name: tag.name });
@@ -574,13 +578,15 @@ function unionSchema(
     return schema;
   }
 
+  // The mapping names each tag's shared variant, under strict input too: the variant's strict twin refuses the tag
+  // member, which only the union's branch declares.
   const mapping: JsonObject = {};
 
-  named.variants.forEach((unionVariant, index) => {
-    const reference = branches[index]?.reference.$ref;
+  for (const unionVariant of named.variants) {
+    const reference = schemaReference(context, unionVariant.schema, "shared").$ref;
 
     if (typeof reference === "string") mapping[unionVariant.tag] = reference;
-  });
+  }
 
   schema.discriminator = { propertyName: tag.property, mapping };
 

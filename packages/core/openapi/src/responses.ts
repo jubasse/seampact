@@ -5,6 +5,7 @@ import {
   type EmitContext,
   refuseInconsistent,
   refuseNotEmitted,
+  refuseUnknown,
   writeExtension,
 } from "./emit-context.js";
 import { type ExampleSet, responseExamples } from "./examples.js";
@@ -21,6 +22,10 @@ const SUCCESSOR_LINK_SEMANTIC = "successorLink";
 const CACHE_CONTROL_HEADER = "Cache-Control";
 const SUCCESS_STATUS_LIMIT = 300;
 const REDIRECT_STATUS_LIMIT = 400;
+
+// Shapes the IR knows that the emitter does not write yet (A47); any other shape is an unknown value.
+const KNOWN_UNEMITTED_SHAPES: readonly string[] = ["list", "binary"];
+
 const NOT_MODIFIED_STATUS = 304;
 
 export function successResponses(
@@ -120,6 +125,12 @@ function responseBodySchema(
   if (response.shape === "empty" || response.shape === "redirect") return undefined;
 
   const shape = emittedShapeOf(response.shape);
+
+  if (shape === undefined && !KNOWN_UNEMITTED_SHAPES.includes(response.shape)) {
+    refuseUnknown(context, below(location, "shape"), response.shape);
+
+    return undefined;
+  }
 
   if (shape === undefined) {
     refuseNotEmitted(

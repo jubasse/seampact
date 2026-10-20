@@ -13,6 +13,17 @@
     ".": "./src/index.ts",
     "./schemas/extensions/*.json": "./schemas/extensions/*.json"
   },
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./schemas/extensions/*.json": "./schemas/extensions/*.json"
+    }
+  },
   "seampact": {
     "role": "core"
   },

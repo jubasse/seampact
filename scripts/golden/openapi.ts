@@ -18,12 +18,13 @@ interface EmittedDocument {
   text: string;
 }
 
+type EmitOutcome =
+  | { status: "emitted"; documents: EmittedDocument[] }
+  | { status: "refused"; refusals: { code: string; message: string; fix: string }[] };
+
+// The module is typed only as far as the guard checks it; each outcome is checked when it is read.
 interface OpenApiModule {
-  emitDocuments(
-    ir: object,
-  ):
-    | { status: "emitted"; documents: EmittedDocument[] }
-    | { status: "refused"; refusals: { code: string; message: string; fix: string }[] };
+  emitDocuments(ir: object): unknown;
 }
 
 export interface GoldenOpenApi {
@@ -40,11 +41,57 @@ function isOpenApiModule(value: unknown): value is OpenApiModule {
   );
 }
 
+function isEmitOutcome(value: unknown): value is EmitOutcome {
+  if (typeof value !== "object" || value === null || !("status" in value)) return false;
+
+  if (value.status === "emitted") {
+    return (
+      "documents" in value &&
+      Array.isArray(value.documents) &&
+      value.documents.every(isEmittedDocument)
+    );
+  }
+
+  return (
+    value.status === "refused" &&
+    "refusals" in value &&
+    Array.isArray(value.refusals) &&
+    value.refusals.every(isRefusal)
+  );
+}
+
+function isEmittedDocument(value: unknown): value is EmittedDocument {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "text" in value &&
+    typeof value.text === "string" &&
+    (!("name" in value) || value.name === undefined || typeof value.name === "string")
+  );
+}
+
+function isRefusal(value: unknown): value is { code: string; message: string; fix: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "code" in value &&
+    typeof value.code === "string" &&
+    "message" in value &&
+    typeof value.message === "string" &&
+    "fix" in value &&
+    typeof value.fix === "string"
+  );
+}
+
 function goldenOpenApi(openApi: OpenApiModule): GoldenOpenApi {
   return {
     documents(apiName, irText) {
       const files = new Map<string, string>();
       const outcome = openApi.emitDocuments(JSON.parse(irText));
+
+      if (!isEmitOutcome(outcome)) {
+        return { files, problems: [`openapi: emitDocuments returned an outcome of another shape`] };
+      }
 
       if (outcome.status === "refused") {
         return {

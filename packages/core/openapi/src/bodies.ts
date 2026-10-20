@@ -18,8 +18,8 @@ import {
 import { derivedFromValue } from "./ir-text.js";
 import type { JsonObject } from "./json-value.js";
 import {
+  markSensitive,
   objectSchema,
-  PASSWORD_FORMAT,
   refusesUnknownKeys,
   schemaReference,
   typeUseSchema,
@@ -200,10 +200,11 @@ function proofsSchema(
   const properties: JsonObject = {};
 
   proofs.forEach((proof, index) => {
-    const schema = typeUseSchema(context, proof.schema, "input", below(location, index, "schema"));
+    const schemaLocation = below(location, index, "schema");
+    const schema = typeUseSchema(context, proof.schema, "input", schemaLocation);
 
     // Every proof is sensitive (ADR 0002 section 9).
-    if (typeof schema.type === "string") schema.format = PASSWORD_FORMAT;
+    markSensitive(context, schema, schemaLocation);
 
     writeExtension(context, schema, "derived-from", derivedFromValue(proof.derivedFrom));
     properties[proof.name] = schema;
@@ -221,15 +222,23 @@ function bodyEncoding(
   const encoding: JsonObject = {};
 
   if (input.media === FORM_MEDIA) {
-    const fields = [...(input.fields ?? []), ...(input.proofs ?? []).flatMap(proofField)];
+    const fields = [
+      ...(input.fields ?? []).map((field, index) => ({
+        field,
+        fieldLocation: below(location, "fields", index),
+      })),
+      ...(input.proofs ?? []).flatMap((proof, index) =>
+        proofField(proof).map((field) => ({
+          field,
+          fieldLocation: below(location, "proofs", index),
+        })),
+      ),
+    ];
 
-    for (const field of fields) {
-      if (ENCODED_FIELD_KINDS.includes(field.wire.kind)) {
-        encoding[field.name] = {
-          style: field.wire.style ?? "form",
-          explode: field.wire.explode ?? true,
-        };
-      }
+    for (const { field, fieldLocation } of fields) {
+      const fieldEncoding = formFieldEncoding(context, field, fieldLocation);
+
+      if (fieldEncoding !== undefined) encoding[field.name] = fieldEncoding;
     }
   }
 
@@ -246,6 +255,36 @@ function bodyEncoding(
   }
 
   return encoding;
+}
+
+// A form list or object field states its style; a bracketed name has no place in the body schema's property names.
+function formFieldEncoding(
+  context: EmitContext,
+  field: { name: string; wire: FieldWire },
+  location: IrLocation,
+): JsonObject | undefined {
+  if (!ENCODED_FIELD_KINDS.includes(field.wire.kind)) return undefined;
+
+  const wireLocation = below(location, "wire");
+
+  if (field.wire.brackets === true) {
+    refuseNotEmitted(context, "input.brackets", "A form field named with brackets", wireLocation);
+
+    return undefined;
+  }
+
+  if (field.wire.style === undefined || field.wire.explode === undefined) {
+    refuseInconsistent(
+      context,
+      "input.field-wire",
+      `The form field '${field.name}' has no style or explode`,
+      wireLocation,
+    );
+
+    return undefined;
+  }
+
+  return { style: field.wire.style, explode: field.wire.explode };
 }
 
 function proofField(proof: InputProof): { name: string; wire: FieldWire }[] {

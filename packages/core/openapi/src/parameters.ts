@@ -5,10 +5,11 @@ import { type JsonObject, setDefined } from "./json-value.js";
 import { pagingLimitDefault } from "./paging.js";
 import { typeUseSchema, wireValue } from "./schemas.js";
 
-// The path, query and header parameters of an operation. Credential and CSRF headers are stated by the security
-// schemes, never as parameters; an identity header carries its `x-seampact-semantic`.
+// The path, query and header parameters of an operation. Credential and CSRF parameters, in a header or the query,
+// are stated by the security schemes, never as parameters (the IR holds no cookie parameter); an identity header
+// carries its `x-seampact-semantic`.
 
-const SCHEME_HEADER_DERIVATIONS: readonly string[] = ["identity.authenticate", "csrf.cookieWrite"];
+const SCHEME_DERIVATIONS: readonly string[] = ["identity.authenticate", "csrf.cookieWrite"];
 const BRACKETS_SUFFIX = "[]";
 
 export function operationParameters(
@@ -25,7 +26,7 @@ export function operationParameters(
 
   for (const [place, params] of places) {
     params.forEach((param, index) => {
-      if (place === "header" && writtenBySecurity(param)) return;
+      if (writtenBySecurity(param)) return;
 
       parameters.push(
         parameterObject(context, operation, place, param, below(location, "params", place, index)),
@@ -38,8 +39,7 @@ export function operationParameters(
 
 function writtenBySecurity(param: Param): boolean {
   return (
-    param.derivedFrom !== undefined &&
-    SCHEME_HEADER_DERIVATIONS.includes(param.derivedFrom.derivation)
+    param.derivedFrom !== undefined && SCHEME_DERIVATIONS.includes(param.derivedFrom.derivation)
   );
 }
 
