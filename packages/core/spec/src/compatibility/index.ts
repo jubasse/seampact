@@ -42,9 +42,19 @@ export interface FrameworkSupport {
   readonly incompatible: readonly IncompatibleMajor[];
 }
 
+// A library the target's generated code imports for one artefact: the app installs it when the artefact is on, and
+// `id` is the name `allowUntested` and the diagnostics use for it.
+export interface LibrarySupport {
+  readonly id: string;
+  readonly package: string;
+  readonly artefact: string;
+  readonly testedMajors: readonly number[];
+}
+
 export interface TargetCompatibility {
   readonly package: string;
   readonly framework: FrameworkSupport;
+  readonly libraries?: readonly LibrarySupport[];
   readonly validatorStyles: readonly ValidatorStyle[];
   readonly ownValidators: readonly OwnValidator[];
 }
@@ -82,6 +92,14 @@ export const SERVER_TARGETS: readonly TargetCompatibility[] = [
       tested: [{ major: 12, consumer: "nestjs" }],
       incompatible: [],
     },
+    libraries: [
+      {
+        id: "nestjs-swagger",
+        package: "@nestjs/swagger",
+        artefact: "nativeDocs",
+        testedMajors: [12],
+      },
+    ],
     validatorStyles: ["standard-schema", "class-validator"],
     ownValidators: [],
   },
@@ -107,6 +125,14 @@ export const SERVER_TARGETS: readonly TargetCompatibility[] = [
       tested: [{ major: 5, consumer: "fastify" }],
       incompatible: [],
     },
+    libraries: [
+      {
+        id: "fastify-swagger",
+        package: "@fastify/swagger",
+        artefact: "nativeDocs",
+        testedMajors: [9],
+      },
+    ],
     validatorStyles: ["standard-schema"],
     ownValidators: [{ id: "ajv", library: "ajv" }],
   },

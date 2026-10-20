@@ -20,6 +20,8 @@ export {
   type DiffConfig,
   type DiffExemption,
   type DiffGateScope,
+  FRAMEWORK_DOCS_SWITCHES,
+  type FrameworkDocsSwitch,
   type GitBundleSource,
   type OperationsFilter,
   type PackageBundleSource,

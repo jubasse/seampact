@@ -461,6 +461,9 @@
           "items": {
             "$ref": "#/$defs/frameworkRoute"
           }
+        },
+        "frameworkDocs": {
+          "enum": ["keep", "off"]
         }
       },
       "oneOf": [

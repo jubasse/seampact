@@ -11,6 +11,7 @@ import {
 import type { CliProblem } from "../cli-problem.js";
 import { apiRefsOf, parseApiRef } from "../commands/api-refs.js";
 import { isRecord } from "../is-record.js";
+import { isFrameworkRouteCheckOff } from "./artefact-switches.js";
 import {
   type ParsedConfig,
   parseConfigFile,
@@ -18,7 +19,6 @@ import {
   waitProblems,
   whereOf,
 } from "./config-file.js";
-import { isFrameworkRouteCheckOff } from "./artefact-switches.js";
 import { findConfigWaits } from "./config-waits.js";
 import { findRootConfig } from "./find-root-config.js";
 import { isInsideOrEqual, isStrictlyInside } from "./path-containment.js";
@@ -131,6 +131,7 @@ function resolveAppConfig(file: string, parsed: ParsedConfig, config: AppConfig)
     ...outsideOutDirProblems(parsed, outDir, entries),
     ...overlappingOutProblems(parsed, entries),
     ...switchedOffAllowListProblems(parsed, targets),
+    ...frameworkDocsConflictProblems(parsed, targets),
   ];
 
   if (problems.length > 0) return { status: "refused", problems };
@@ -229,6 +230,22 @@ function switchedOffAllowListProblems(
       message: `The entry '${entry.id}' allow-lists framework routes in 'frameworkRoutes' but switches their check off with '${switchOffKey(entry)}: false'.`,
       fix: "Keep one: remove 'frameworkRoutes' to leave the check off, or remove the switch to check the routes against the allow-list.",
       where: whereOf(parsed, ["targets", index, "frameworkRoutes"]),
+    }));
+}
+
+// `frameworkDocs: off` asks for no framework document while `nativeDocs` completes one.
+function frameworkDocsConflictProblems(
+  parsed: ParsedConfig,
+  targets: readonly TargetEntry[],
+): CliProblem[] {
+  return targets
+    .map((entry, index) => ({ entry, index }))
+    .filter(({ entry }) => entry.frameworkDocs === "off" && entry.artefacts?.nativeDocs === true)
+    .map(({ entry, index }) => ({
+      code: "config.key.conflict",
+      message: `The entry '${entry.id}' sets 'frameworkDocs: off' and 'artefacts.nativeDocs: true': one switches the framework's document off, the other completes it.`,
+      fix: "Keep one: remove 'frameworkDocs: off' to complete the framework's document, or switch 'artefacts.nativeDocs' off.",
+      where: whereOf(parsed, ["targets", index, "frameworkDocs"]),
     }));
 }
 

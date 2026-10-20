@@ -94,6 +94,31 @@ test("refuses an allow-list beside the framework-route check switched off", asyn
   });
 });
 
+test.each(["keep", "off"])("reads frameworkDocs: %s", async (value) => {
+  const outcome = await readConfigText(`${SERVER_ENTRY_HEAD}    frameworkDocs: ${value}\n`);
+
+  expect(outcome).toMatchObject({
+    status: "read",
+    config: { entries: [{ entry: { frameworkDocs: value } }] },
+  });
+});
+
+test("refuses frameworkDocs: off beside nativeDocs: true, naming both", async () => {
+  const outcome = await readConfigText(
+    `${SERVER_ENTRY_HEAD}    frameworkDocs: off\n    artefacts: { nativeDocs: true }\n`,
+  );
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    problems: [
+      {
+        code: "config.key.conflict",
+        message: expect.stringMatching(/frameworkDocs: off.*artefacts\.nativeDocs: true/),
+      },
+    ],
+  });
+});
+
 test.each([
   ["no reason", "{ path: /metrics }", "The key 'reason' is required here."],
   [
@@ -361,11 +386,6 @@ test.each([
   ["the diff settings", "diff: { gate: both }\n", "'diff'"],
   ["a mount", `${SERVER_ENTRY_HEAD}    mount: /api\n`, "'mount'"],
   ["native access", `${SERVER_ENTRY_HEAD}    access: { native: "Spring Security." }\n`, "'access'"],
-  [
-    "the framework's own documents",
-    `${SERVER_ENTRY_HEAD}    frameworkDocs: off\n`,
-    "'frameworkDocs'",
-  ],
   [
     "the boot check's handler switch",
     `${SERVER_ENTRY_HEAD}    artefacts: { bootCheck: { handlers: false } }\n`,

@@ -52,7 +52,7 @@ export function filterOperations(ir: ContractIR, selection: OperationSelection):
   return { status: "filtered", ir: { ...structuredClone(ir), operations: structuredClone(kept) } };
 }
 
-function isInDocument(
+export function isInDocument(
   ir: ContractIR,
   documentId: string | undefined,
   operation: Operation,

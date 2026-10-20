@@ -140,7 +140,7 @@ export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target
           : [{ id: OWN_VALIDATORS_ARTEFACT, defaultOn: true } as const]),
         ...(targetPackage.placement.nativeDocs === undefined
           ? []
-          : [{ id: NATIVE_DOCS_ARTEFACT, defaultOn: false } as const]),
+          : [{ id: NATIVE_DOCS_ARTEFACT, defaultOn: false, needs: [BOUNDARY_ARTEFACT] } as const]),
       ],
       bootChecks: NODE_SERVER_BOOT_CHECKS,
       ...(targetPackage.frameworkDocsOffFix === undefined
@@ -186,10 +186,6 @@ export function nodeServerBoundaryFiles(
   const boundaryOn = input.artefacts.has(BOUNDARY_ARTEFACT);
   const ownValidatorsOn = input.artefacts.has(OWN_VALIDATORS_ARTEFACT);
   const givenLink = input.links.validators;
-
-  if (input.artefacts.has(NATIVE_DOCS_ARTEFACT) && !boundaryOn) {
-    return { status: "refused", refusals: [nativeDocsNeedsBoundary()] };
-  }
 
   if (givenLink === undefined && boundaryOn && !ownValidatorsOn) {
     return { status: "refused", refusals: [validatorsArtefactNeeded()] };
@@ -244,14 +240,6 @@ function validatorsArtefactNeeded(): Refusal {
     message:
       "The boundary needs validators, and the entry gives no `validators` link and turns the `validators` artefact off.",
     fix: "Link a validators provider in the target's `link` entry, or add `validators` to its `artefacts`.",
-  };
-}
-
-function nativeDocsNeedsBoundary(): Refusal {
-  return {
-    code: "artefact.nativeDocs.needs",
-    message: `The '${NATIVE_DOCS_ARTEFACT}' artefact completes the boundary's routes in the framework's document, and the '${BOUNDARY_ARTEFACT}' artefact is off.`,
-    fix: `Turn '${BOUNDARY_ARTEFACT}' on, or turn '${NATIVE_DOCS_ARTEFACT}' off.`,
   };
 }
 

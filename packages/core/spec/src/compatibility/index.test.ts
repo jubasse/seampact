@@ -162,3 +162,32 @@ test("every pair carries the consumer overlay of its framework major", () => {
     "@seampact/codegen-hono@4:hono",
   ]);
 });
+
+test("the nestjs and fastify targets record the docs library their nativeDocs artefact imports", () => {
+  const libraries = SERVER_TARGETS.flatMap((target) =>
+    (target.libraries ?? []).map((library) => ({
+      target: target.package,
+      id: library.id,
+      package: library.package,
+      artefact: library.artefact,
+      testedMajors: library.testedMajors,
+    })),
+  );
+
+  expect(libraries).toEqual([
+    {
+      target: "@seampact/codegen-nestjs",
+      id: "nestjs-swagger",
+      package: "@nestjs/swagger",
+      artefact: "nativeDocs",
+      testedMajors: [12],
+    },
+    {
+      target: "@seampact/codegen-fastify",
+      id: "fastify-swagger",
+      package: "@fastify/swagger",
+      artefact: "nativeDocs",
+      testedMajors: [9],
+    },
+  ]);
+});
