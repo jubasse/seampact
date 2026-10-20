@@ -96,7 +96,6 @@ Pre-1.0. The reference contract runs end to end on every server above. Nothing i
 - [Sharing a contract between repositories](docs/sharing-a-contract.md)
 - [What seampact does not do](docs/scope.md)
 - [Roadmap after 1.0](docs/roadmap.md)
-- [Design decisions](docs/design-decisions.md)
 
 ## Roadmap
 
