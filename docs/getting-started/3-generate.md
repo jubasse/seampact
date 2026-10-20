@@ -32,4 +32,6 @@ You see one line per target, and the files appear in `src/__generated__` and `op
 
 Every config key is in [configuration](configuration.md).
 
-Next: [4. Write the handlers](4-handlers-nestjs.md)
+Using Express? Put `@seampact/codegen-express` in `use` of the `server` target instead of `@seampact/codegen-nestjs`.
+
+Next: [4. Write the handlers](4-handlers-nestjs.md), or [for Express](4-handlers-express.md)

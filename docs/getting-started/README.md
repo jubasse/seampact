@@ -7,7 +7,7 @@ You need Node.js 24 or later, pnpm, and a checkout of this repository. Nothing i
 1. [Install](1-install.md)
 2. [Write the contract](2-contract.md)
 3. [Generate the code](3-generate.md)
-4. [Write the handlers (NestJS)](4-handlers-nestjs.md)
+4. Write the handlers: [NestJS](4-handlers-nestjs.md) or [Express](4-handlers-express.md)
 5. [Run it](5-run.md)
 6. [Check a change](6-check-a-change.md)
 
