@@ -1,6 +1,6 @@
 import type { ArtefactDeclaration } from "@seampact/codegen-core";
+import { nodeServerTarget } from "@seampact/codegen-core/node-server";
 import type { ArtefactSwitches } from "@seampact/spec/config";
-import { target as expressTarget } from "@seampact/codegen-express";
 import { expect, test } from "vitest";
 import { selectArtefacts } from "./artefact-switches.js";
 import { stubTarget } from "./target-stub.test-support.js";
@@ -63,6 +63,21 @@ test("switches the boot check off as a boolean", () => {
   expect(outcome).toEqual({ status: "selected", artefacts: new Set(["boundary"]) });
 });
 
+// A Node server target as the Express package builds it: a boundary artefact and tunable boot checks, no
+// `bootCheck` artefact. A core package may not depend on a target package, so the test builds it here.
+const NODE_SERVER_TARGET = nodeServerTarget({
+  packageName: "@seampact/codegen-express",
+  packageVersion: "1.0.0",
+  format: async (source) => source,
+  placement: {
+    runtimeModule: "express-boundary",
+    runtimeSourceUrl: new URL("./express-boundary.ts", import.meta.url),
+    frameworkModule: "express",
+    frameworkSource: () => "",
+  },
+  validatorStyles: ["standard-schema"],
+});
+
 test.each([false, true])(
   "takes the boot check as a boolean for a target that declares boot checks (bootCheck: %s)",
   (bootCheck) => {
@@ -73,7 +88,7 @@ test.each([false, true])(
       artefacts: { bootCheck },
     };
 
-    expect(selectArtefacts(entry, expressTarget)).toEqual({
+    expect(selectArtefacts(entry, NODE_SERVER_TARGET)).toEqual({
       status: "selected",
       artefacts: new Set(["boundary"]),
     });
