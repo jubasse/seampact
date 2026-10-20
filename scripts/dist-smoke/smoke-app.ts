@@ -7,6 +7,7 @@ import { REPO_ROOT } from "../golden/repo-root.ts";
 
 const CODEGEN_TS = join(REPO_ROOT, "packages/targets/codegen-ts");
 const CONFIG_FILE = "seampact.config.yaml";
+
 export const GENERATED_DIRECTORY = "__generated__";
 
 /** The config of an app whose one source `contract` is `source`, a YAML flow mapping. */
