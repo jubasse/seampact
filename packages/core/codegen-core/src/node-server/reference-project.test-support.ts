@@ -1,7 +1,13 @@
 import { copyFileSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { ContractIR } from "@seampact/spec/ir";
+import type {
+  ContractIR,
+  HandlerResultMember,
+  PagingResponse,
+  Response,
+  Template,
+} from "@seampact/spec/ir";
 import ts from "typescript";
 import type { FrameworkRouteCheck } from "../framework-route-check.js";
 import type { NativeDocsDocument } from "../native-docs-document.js";
@@ -262,6 +268,87 @@ export function referenceUnpagedList(operationId: string): ReferenceIrChange {
     };
   };
 }
+
+/** The page shape a paging style of the `tasks` api answers, and the format page body it joins its `meta` to. */
+export interface ReferencePageShape {
+  styleId: string;
+  response: PagingResponse;
+  handlerResult: HandlerResultMember[];
+  formatPageBody?: Template;
+}
+
+/**
+ * Gives a paging style of the `tasks` api another response, and its page responses the paging headers it writes:
+ * its own headers, and `Link` when it has relations.
+ */
+export function referencePageShape(shape: ReferencePageShape): ReferenceIrChange {
+  return (ir, api) => {
+    if (api !== "tasks") return ir;
+
+    const style = ir.pagings[shape.styleId];
+
+    if (style === undefined)
+      throw new Error(`the tasks api has no paging style '${shape.styleId}'`);
+
+    const headerNames = [
+      ...shape.response.headers.map((header) => header.name),
+      ...(shape.response.links.length > 0 ? ["Link"] : []),
+    ];
+
+    return {
+      ...ir,
+      formats: Object.fromEntries(
+        Object.entries(ir.formats).map(([id, format]) => [
+          id,
+          shape.formatPageBody === undefined
+            ? format
+            : {
+                ...format,
+                success: {
+                  ...format.success,
+                  page: { ...format.success.page, body: shape.formatPageBody },
+                },
+              },
+        ]),
+      ),
+      pagings: {
+        ...ir.pagings,
+        [shape.styleId]: { ...style, response: shape.response, handlerResult: shape.handlerResult },
+      },
+      operations: ir.operations.map((operation) =>
+        operation.paging?.style === shape.styleId
+          ? {
+              ...operation,
+              responses: operation.responses.map((response) =>
+                withPagingHeaders(response, headerNames),
+              ),
+            }
+          : operation,
+      ),
+    };
+  };
+}
+
+function withPagingHeaders(response: Response, headerNames: readonly string[]): Response {
+  if (response.shape !== "page") return response;
+
+  const pagingHeader = response.headers.find(
+    (header) => header.derivedFrom?.derivation === PAGING_DERIVATION,
+  );
+
+  if (pagingHeader === undefined) throw new Error("the page response has no paging header to copy");
+
+  const otherHeaders = response.headers.filter(
+    (header) => header.derivedFrom?.derivation !== PAGING_DERIVATION,
+  );
+
+  return {
+    ...response,
+    headers: [...otherHeaders, ...headerNames.map((name) => ({ ...pagingHeader, name }))],
+  };
+}
+
+const PAGING_DERIVATION = "paging.params";
 
 /** Applies each change to the golden IR in order. */
 export function referenceChanges(...changes: readonly ReferenceIrChange[]): ReferenceIrChange {

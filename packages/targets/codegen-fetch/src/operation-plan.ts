@@ -358,7 +358,9 @@ function successPlan(
   if (shape === "page") {
     refuseNonJsonBody(response, location, refusals);
 
-    return format === undefined ? [] : pagePlan(response, operation, ir, format, location, refusals);
+    return format === undefined
+      ? []
+      : pagePlan(response, operation, ir, format, location, refusals);
   }
 
   refusals.push(

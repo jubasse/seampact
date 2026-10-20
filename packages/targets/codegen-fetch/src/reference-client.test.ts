@@ -1,9 +1,13 @@
 import { mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { GeneratedFile, Target } from "@seampact/codegen-core";
-import { referenceUnpagedList } from "@seampact/codegen-core/node-server/test-support";
-import type { ContractIR } from "@seampact/spec/ir";
+import {
+  referencePageShape,
+  referenceUnpagedList,
+} from "@seampact/codegen-core/node-server/test-support";
+import type { ContractIR, Template } from "@seampact/spec/ir";
 import ts from "typescript";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { target as clientTarget } from "./index.js";
@@ -24,6 +28,11 @@ const CONSUMERS = new URL("scripts/consumers/", REPOSITORY_ROOT);
 const APIS = ["tasks", "tasksService"] as const;
 // The tasks api with `listChannels` declared `paging: none`, generated beside the goldens.
 const UNPAGED_API = "tasksUnpaged";
+// The tasks api with the `cursor` style answering other page shapes, and the pack-laravel golden.
+const META_PAGE_API = "tasksMetaPage";
+const FLAT_PAGE_API = "tasksFlatPage";
+const HEADER_PAGE_API = "tasksHeaderPage";
+const LARAVEL_API = "laravelTasks";
 const RESULT_CLIENT = "client";
 const THROW_CLIENT = "clientThrow";
 const PROBE_FILE = "probe.ts";
@@ -73,10 +82,84 @@ let createResultClient: ClientModule["createClient"];
 let isClientContractError: (error: unknown) => boolean;
 let typesTarget: Target;
 
-function readGoldenIr(name: string): ContractIR {
+function readGoldenIr(name: string, golden = "reference"): ContractIR {
   return JSON.parse(
-    readFileSync(new URL(`fixtures/golden/reference/${name}.ir.json`, REPOSITORY_ROOT), "utf8"),
+    readFileSync(new URL(`fixtures/golden/${golden}/${name}.ir.json`, REPOSITORY_ROOT), "utf8"),
   );
+}
+
+const slot = (name: string): Template => ({ kind: "slot", slot: name, path: [] });
+const object = (members: Record<string, Template>): Template => ({
+  kind: "object",
+  members: Object.entries(members).map(([name, value]) => ({
+    name: { kind: "text", text: name },
+    value,
+  })),
+});
+
+// `{ data: $items, meta: $meta }`, the style adding its members to `$meta`.
+function metaPageIr(): ContractIR {
+  return referencePageShape({
+    styleId: "cursor",
+    formatPageBody: object({ data: slot("items"), meta: slot("meta") }),
+    response: {
+      meta: [
+        { name: "nextCursor", value: slot("nextCursor") },
+        { name: "perPage", value: slot("limit") },
+      ],
+      headers: [],
+      links: [],
+    },
+    handlerResult: ["nextCursor"],
+  })(readGoldenIr("tasks"), "tasks");
+}
+
+// Flat members beside `$items`, with a literal the client leaves alone.
+function flatPageIr(): ContractIR {
+  return referencePageShape({
+    styleId: "cursor",
+    response: {
+      body: object({
+        object: { kind: "literal", value: "list" },
+        items: slot("items"),
+        next_cursor: slot("nextCursor"),
+        limit: slot("limit"),
+        url: slot("path"),
+      }),
+      meta: [],
+      headers: [],
+      links: [],
+    },
+    handlerResult: ["nextCursor"],
+  })(readGoldenIr("tasks"), "tasks");
+}
+
+// A bare array, the facts in headers and in `Link`.
+function headerPageIr(): ContractIR {
+  return referencePageShape({
+    styleId: "cursor",
+    response: {
+      body: slot("items"),
+      meta: [],
+      headers: [{ name: "X-Total-Count", value: slot("total") }],
+      links: [{ rel: "next", role: "next" }],
+    },
+    handlerResult: ["nextCursor", "total"],
+  })(readGoldenIr("tasks"), "tasks");
+}
+
+// codegen-ts does not type the `total` handler result yet; the client reads its page facts from the paging
+// style, never from the handler result, so its types are generated without it.
+function withTypedHandlerResults(ir: ContractIR): ContractIR {
+  return {
+    ...ir,
+    pagings: Object.fromEntries(
+      Object.entries(ir.pagings).map(([id, style]) => [
+        id,
+        { ...style, handlerResult: style.handlerResult.filter((member) => member !== "total") },
+      ]),
+    ),
+  };
 }
 
 function unpagedTasksIr(): ContractIR {
@@ -95,13 +178,14 @@ function writeFiles(directory: string, files: readonly GeneratedFile[]): string[
 }
 
 async function generateApi(api: string, ir: ContractIR = readGoldenIr(api)): Promise<string[]> {
+  const typesIr = withTypedHandlerResults(ir);
   const types = await typesTarget.generate({
-    ir,
+    ir: typesIr,
     options: {},
     links: {},
     artefacts: new Set(["types"]),
   });
-  const described = typesTarget.describe(ir, {});
+  const described = typesTarget.describe(typesIr, {});
 
   if (types.status !== "generated" || described.status !== "described") {
     throw new Error(`codegen-ts refused ${api}: ${JSON.stringify([types, described])}`);
@@ -147,6 +231,8 @@ import { createClient } from "./generated/client/tasks/client.js";
 import { createClient as createServiceClient } from "./generated/client/tasksService/client.js";
 import { createClient as createThrowingClient, isClientContractError } from "./generated/clientThrow/tasks/client.js";
 import { createClient as createUnpagedClient } from "./generated/client/tasksUnpaged/client.js";
+import { createClient as createHeaderPageClient } from "./generated/client/tasksHeaderPage/client.js";
+import { createClient as createLaravelClient } from "./generated/client/laravelTasks/client.js";
 
 import * as TasksIndex from "./generated/client/tasks/index.js";
 
@@ -199,6 +285,27 @@ export async function probe(): Promise<void> {
     const channelIds: string[] = channels.body.map((channel) => channel.channelId);
     void channelIds;
   }
+
+  const headerPage = await createHeaderPageClient({ baseUrl: "http://localhost" }).listTasks({ path: { channelId: "c" } });
+
+  if (headerPage.ok) {
+    const total: number = headerPage.body.total;
+    const next: string | undefined = headerPage.body.next;
+    void [total, next];
+  }
+
+  const laravel = createLaravelClient({ baseUrl: "http://localhost" });
+  const laravelPage = await laravel.listTasks({ path: { channelId: "c" }, query: { page: 2 } });
+
+  if (laravelPage.ok) {
+    const totals: number[] = [laravelPage.body.total, laravelPage.body.totalPages, laravelPage.body.page];
+    const from: number | undefined = laravelPage.body.from;
+    void [totals, from];
+  }
+
+  const laravelTask = await laravel.getTask({ path: { channelId: "c", taskId: "t" } });
+
+  if (laravelTask.ok) void laravelTask.body.title;
 
   const preferences = await client.getPreferences();
 
@@ -282,6 +389,10 @@ beforeAll(async () => {
     await Promise.all([
       ...APIS.map((api) => generateApi(api)),
       generateApi(UNPAGED_API, unpagedTasksIr()),
+      generateApi(META_PAGE_API, metaPageIr()),
+      generateApi(FLAT_PAGE_API, flatPageIr()),
+      generateApi(HEADER_PAGE_API, headerPageIr()),
+      generateApi(LARAVEL_API, readGoldenIr("tasks", "pack-laravel")),
     ])
   ).flat();
 
@@ -318,6 +429,42 @@ afterAll(async () => {
   await stub?.close();
   rmSync(PROJECT, { recursive: true, force: true });
 });
+
+interface CannedAnswer {
+  status: number;
+  body: unknown;
+  headers?: Record<string, string>;
+}
+
+// A booted server answering the next canned response, for the page shapes the stub server does not serve.
+async function startCannedServer() {
+  let next: CannedAnswer = { status: 500, body: null };
+  const server = createServer((_request, response) => {
+    response.writeHead(next.status, { "content-type": "application/json", ...next.headers });
+    response.end(JSON.stringify(next.body));
+  });
+
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+
+  const address = server.address();
+
+  if (address === null || typeof address === "string")
+    throw new Error("the canned server has no port");
+
+  return {
+    baseUrl: `http://127.0.0.1:${address.port}`,
+    answerNext(answer: CannedAnswer): void {
+      next = answer;
+    },
+    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
+  };
+}
+
+async function cannedClient(api: string, canned: { baseUrl: string }) {
+  const module = await importProjectModule<ClientModule>(`generated/client/${api}/client.ts`);
+
+  return module.createClient({ baseUrl: canned.baseUrl });
+}
 
 function call(client: Record<string, Method>, operation: string): Method {
   const method = client[operation];
@@ -788,6 +935,132 @@ describe("the generated reference client answers a stub server", () => {
     expect(thrown).toMatchObject({
       operation: "getTask",
       failure: { ok: false, unexpected: false, status: 401, code: "api.unauthenticated" },
+    });
+  });
+});
+
+describe("the generated client reads every page shape of its paging style", () => {
+  const tasks = [{ taskId: "task-1" }, { taskId: "task-2" }];
+  let canned: Awaited<ReturnType<typeof startCannedServer>>;
+
+  beforeAll(async () => {
+    canned = await startCannedServer();
+  });
+
+  afterAll(async () => {
+    await canned?.close();
+  });
+
+  test("a { data, meta } page joins the style's meta members", async () => {
+    const client = await cannedClient(META_PAGE_API, canned);
+
+    canned.answerNext({
+      status: 200,
+      body: { data: tasks, meta: { nextCursor: "cursor-2", perPage: 2 } },
+    });
+
+    await expect(call(client, "listTasks")({ path: { channelId: "c1" } })).resolves.toMatchObject({
+      ok: true,
+      body: { items: tasks, nextCursor: "cursor-2", limit: 2 },
+    });
+
+    canned.answerNext({ status: 200, body: { data: tasks, meta: { perPage: 2 } } });
+
+    const last = await call(client, "listTasks")({ path: { channelId: "c1" } });
+
+    expect(last.body).toEqual({ items: tasks, limit: 2 });
+  });
+
+  test("a page body with flat members beside its items", async () => {
+    const client = await cannedClient(FLAT_PAGE_API, canned);
+
+    canned.answerNext({
+      status: 200,
+      body: { object: "list", items: tasks, next_cursor: "cursor-2", limit: 2, url: "/v1" },
+    });
+
+    const page = await call(client, "listTasks")({ path: { channelId: "c1" } });
+
+    expect(page).toMatchObject({ ok: true, status: 200 });
+    expect(page.body).toEqual({ items: tasks, nextCursor: "cursor-2", limit: 2 });
+
+    canned.answerNext({ status: 200, body: { object: "list", items: tasks } });
+
+    await expect(call(client, "listTasks")({ path: { channelId: "c1" } })).resolves.toMatchObject({
+      ok: false,
+      unexpected: true,
+      status: 200,
+    });
+  });
+
+  test("a page whose facts travel in headers and in Link", async () => {
+    const client = await cannedClient(HEADER_PAGE_API, canned);
+
+    canned.answerNext({
+      status: 200,
+      body: tasks,
+      headers: {
+        "x-total-count": "7",
+        link: '</v1/channels/c1/tasks?cursor=cursor-2>; rel="next"',
+      },
+    });
+
+    const page = await call(client, "listTasks")({ path: { channelId: "c1" } });
+
+    expect(page.body).toEqual({
+      items: tasks,
+      total: 7,
+      next: "/v1/channels/c1/tasks?cursor=cursor-2",
+      nextCursor: "cursor-2",
+    });
+
+    canned.answerNext({ status: 200, body: tasks, headers: { "x-total-count": "many" } });
+
+    await expect(call(client, "listTasks")({ path: { channelId: "c1" } })).resolves.toMatchObject({
+      ok: false,
+      unexpected: true,
+    });
+  });
+
+  test("pack-laravel: data-wrapped items and a length-aware page", async () => {
+    const client = await cannedClient(LARAVEL_API, canned);
+
+    canned.answerNext({ status: 200, body: { data: { taskId: "t1", title: "Write" } } });
+
+    await expect(
+      call(client, "getTask")({ path: { channelId: "c1", taskId: "t1" } }),
+    ).resolves.toMatchObject({ ok: true, body: { taskId: "t1", title: "Write" } });
+
+    canned.answerNext({
+      status: 200,
+      body: {
+        data: tasks,
+        links: { first: "/p1", last: "/p4", prev: "/p1", next: null },
+        meta: {
+          current_page: 2,
+          from: 3,
+          last_page: 4,
+          path: "/v1/channels/c1/tasks",
+          per_page: 2,
+          to: 4,
+          total: 7,
+        },
+      },
+    });
+
+    const page = await call(client, "listTasks")({ path: { channelId: "c1" }, query: { page: 2 } });
+
+    expect(page.body).toEqual({
+      items: tasks,
+      first: "/p1",
+      last: "/p4",
+      previous: "/p1",
+      page: 2,
+      from: 3,
+      totalPages: 4,
+      limit: 2,
+      to: 4,
+      total: 7,
     });
   });
 });
