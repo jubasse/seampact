@@ -133,6 +133,20 @@ test("refuses a merged document covering an app the root does not list", async (
   });
 });
 
+test("takes a merged document's app as the directory it names, in the spelling of `apps`", async () => {
+  const { outcome } = await readRoot(
+    "apps: [api]\nopenapi:\n  all: { path: all.yaml, apps: [./api/] }\n",
+    {
+      "api/seampact.config.yaml": APP_CONFIG,
+    },
+  );
+
+  expect(outcome).toMatchObject({
+    status: "read",
+    config: { openapi: [{ name: "all", apps: ["api"] }] },
+  });
+});
+
 test("reads every app of a workspace with the root folded in, and reports every app's problems", async () => {
   const directory = writeConfigTree({
     "seampact.config.yaml": "apps: [api, web]\nsources:\n  shared: { path: ./contracts }\n",

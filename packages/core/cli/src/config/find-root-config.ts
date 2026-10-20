@@ -14,14 +14,16 @@ export type RootDiscovery =
   | { status: "found"; root: LoadedRootConfig; listed: boolean }
   | { status: "refused"; problems: CliProblem[] };
 
-// The app's root config: the nearest `seampact.config.yaml` holding `apps` above the app's directory, searched up
-// to the first directory holding `.git` (else the filesystem root). `listed` is whether its `apps` lists the app;
-// an app it does not list stands alone (ADR 0011 "The app config").
+// The app's root config: the nearest `seampact.config.yaml` holding `apps` that lists the app, above the app's
+// directory, searched up to the first directory holding `.git` (else the filesystem root). When no root lists the
+// app, the nearest root found comes back with `listed: false`: the app stands alone (ADR 0011 "The app config").
+// Every ancestor `seampact.config.yaml` is parsed, so one with a YAML error refuses the app, naming that file.
 export async function findRootConfig(
   appFile: string,
   appDisplayName: string,
 ): Promise<RootDiscovery> {
   const appDirectory = dirname(appFile);
+  let nearestUnlisting: RootDiscovery | undefined;
 
   if (existsSync(join(appDirectory, REPOSITORY_MARKER))) return { status: "none" };
 
@@ -30,10 +32,12 @@ export async function findRootConfig(
     const displayName = join(dirname(appDisplayName), relative(appDirectory, candidate));
     const found = await rootConfigAt(candidate, displayName, appDirectory);
 
-    if (found !== undefined) return found;
+    if (found !== undefined && (found.status !== "found" || found.listed)) return found;
+
+    nearestUnlisting ??= found;
 
     if (existsSync(join(directory, REPOSITORY_MARKER)) || dirname(directory) === directory) {
-      return { status: "none" };
+      return nearestUnlisting ?? { status: "none" };
     }
   }
 }

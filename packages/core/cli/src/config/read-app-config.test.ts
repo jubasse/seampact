@@ -247,6 +247,36 @@ test("leaves an app the nearest root does not list alone, and names the root for
   });
 });
 
+test("walks past a nearer root that does not list the app to the root that does", async () => {
+  const directory = writeConfigTree({
+    ...ROOT_FILES,
+    "apps/seampact.config.yaml": "apps: [other]\n",
+    "apps/other/seampact.config.yaml": "sources:\n  own: { path: ./c }\n",
+  });
+
+  expect(await readTreeApp(directory)).toMatchObject({
+    status: "read",
+    config: {
+      rootFile: join(directory, "seampact.config.yaml"),
+      sources: new Map([
+        ["own", { kind: "path", directory: join(directory, "apps/api/contracts") }],
+        ["shared", { kind: "path", directory: join(directory, "contracts") }],
+      ]),
+    },
+  });
+});
+
+test("refuses an app below an ancestor config with a YAML error, naming that file", async () => {
+  const directory = writeConfigTree({ ...ROOT_FILES, "apps/seampact.config.yaml": "targets: [\n" });
+
+  expect(await readTreeApp(directory)).toMatchObject({
+    status: "refused",
+    problems: [
+      { code: "config.yaml.syntax", where: expect.stringContaining("apps/seampact.config.yaml") },
+    ],
+  });
+});
+
 test("stops the search for a root at the first directory holding .git", async () => {
   const directory = writeConfigTree({ ...ROOT_FILES, "apps/.git/HEAD": "ref: refs/heads/main\n" });
 

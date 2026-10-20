@@ -111,17 +111,17 @@ function resolveRootConfig(
 
     return { name, directory: appDirectory, file: join(appDirectory, APP_CONFIG_FILE_NAME) };
   });
-  const openapi = Object.entries(config.openapi ?? {}).map(([name, entry]) =>
-    loadedMergedDocument(directory, name, entry, config.apps),
-  );
-
   const problems = [
     ...appPlacementProblems(parsed, directory, apps),
     ...duplicateAppProblems(parsed, apps),
-    ...unknownMergedAppProblems(parsed, config),
+    ...unknownMergedAppProblems(parsed, config, directory, apps),
   ];
 
   if (problems.length > 0) return { status: "refused", problems };
+
+  const openapi = Object.entries(config.openapi ?? {}).map(([name, entry]) =>
+    loadedMergedDocument(directory, name, entry, apps),
+  );
 
   const allowLocal = config.allowLocal === undefined ? {} : { allowLocal: config.allowLocal };
 
@@ -143,12 +143,15 @@ function loadedMergedDocument(
   directory: string,
   name: string,
   entry: MergedDocumentEntry,
-  rootApps: readonly string[],
+  rootApps: readonly WorkspaceApp[],
 ): LoadedMergedDocument {
   return {
     name,
     file: resolve(directory, entry.path),
-    apps: [...(entry.apps ?? rootApps)],
+    apps:
+      entry.apps === undefined
+        ? rootApps.map((app) => app.name)
+        : entry.apps.map((item) => listedApp(directory, item, rootApps).name),
     prefix: structuredClone(entry.prefix ?? {}),
     options: documentOptionsOf(entry),
   };
@@ -231,15 +234,40 @@ function duplicateAppProblems(parsed: ParsedConfig, apps: readonly WorkspaceApp[
   });
 }
 
-function unknownMergedAppProblems(parsed: ParsedConfig, config: RootConfig): CliProblem[] {
+// The app of `apps` a merged document's item names, compared as resolved directories (`apps/api/` is `apps/api`).
+function findListedApp(
+  directory: string,
+  item: string,
+  apps: readonly WorkspaceApp[],
+): WorkspaceApp | undefined {
+  const itemDirectory = resolve(directory, item);
+
+  return apps.find((app) => app.directory === itemDirectory);
+}
+
+function listedApp(directory: string, item: string, apps: readonly WorkspaceApp[]): WorkspaceApp {
+  const found = findListedApp(directory, item, apps);
+
+  if (found === undefined)
+    throw new Error(`the merged document's app ${item} passed the apps check unlisted`);
+
+  return found;
+}
+
+function unknownMergedAppProblems(
+  parsed: ParsedConfig,
+  config: RootConfig,
+  directory: string,
+  apps: readonly WorkspaceApp[],
+): CliProblem[] {
   return Object.entries(config.openapi ?? {}).flatMap(([name, entry]) =>
     (entry.apps ?? [])
       .map((app, index) => ({ app, index }))
-      .filter(({ app }) => !config.apps.includes(app))
+      .filter(({ app }) => findListedApp(directory, app, apps) === undefined)
       .map(({ app, index }) => ({
         code: "config.openapi.unknown-app",
         message: `The merged document '${name}' covers '${app}', which \`apps\` does not list (${config.apps.join(", ")}).`,
-        fix: "Name app directories as `apps` writes them, or add the app to `apps`.",
+        fix: "Name a directory `apps` lists, or add the app to `apps`.",
         where: whereOf(parsed, ["openapi", name, "apps", index]),
       })),
   );

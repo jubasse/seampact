@@ -324,3 +324,19 @@ test("does not resolve a root path source the app never uses under allowLocal: f
   expect(exitCode).toBe(EXIT_SUCCESS);
   expect(existsSync(join(app, "docs/service.yaml"))).toBe(true);
 });
+
+test("writes the default documents with the operations the server entries serve", async () => {
+  const app = makeApp(
+    "sources:\n  a: { path: ./a }\ntargets:\n  - { id: server, use: fake-server, api: tasks, operations: { include: [listTasks] } }\n  - { id: other, use: fake-server, api: tasks, operations: { include: [getChannel] } }\n",
+    [{ name: "fake-server", role: "server" }],
+  );
+
+  expect((await generateOutput(app)).exitCode).toBe(EXIT_SUCCESS);
+
+  const document = readFileSync(join(app, "openapi/tasks.full.yaml"), "utf8");
+
+  expect(document.match(/operationId: \w+/g)?.sort()).toEqual([
+    "operationId: getChannel",
+    "operationId: listTasks",
+  ]);
+});
