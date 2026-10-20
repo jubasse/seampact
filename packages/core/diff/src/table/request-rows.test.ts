@@ -190,6 +190,42 @@ const ROW_CASES: RowCase[] = [
   },
   {
     kind: "access",
+    case: "principalOptionalAdded",
+    position: "input",
+    expected: "-",
+    base: (ir) => {
+      operationOf(ir, "getTask").access = { kind: "public", reason: "open data", origin: ORIGIN };
+    },
+    after: (ir) => {
+      operationOf(ir, "getTask").access = {
+        kind: "optional",
+        identity: "user",
+        schemes: ["bearer"],
+        onRefused: "anonymous",
+        origin: ORIGIN,
+      };
+    },
+  },
+  {
+    kind: "access",
+    case: "principalOptionalRemoved",
+    position: "input",
+    expected: "S",
+    base: (ir) => {
+      operationOf(ir, "getTask").access = {
+        kind: "optional",
+        identity: "user",
+        schemes: ["bearer"],
+        onRefused: "anonymous",
+        origin: ORIGIN,
+      };
+    },
+    after: (ir) => {
+      operationOf(ir, "getTask").access = { kind: "public", reason: "open data", origin: ORIGIN };
+    },
+  },
+  {
+    kind: "access",
     case: "tightened",
     position: "input",
     expected: "C",
@@ -329,6 +365,20 @@ const ROW_CASES: RowCase[] = [
 
       if (roles !== undefined && isKnownVariant("Requirement", roles) && roles.kind === "right")
         roles.params = { allowed: ["owner"] };
+    },
+  },
+  {
+    kind: "order",
+    case: "scopes",
+    position: "input",
+    expected: "info",
+    base: (ir) => {
+      const [scope] = operationOf(ir, "getTask").scopes;
+
+      if (scope !== undefined) operationOf(ir, "getTask").scopes.push({ ...scope, scope: "extra" });
+    },
+    after: (ir) => {
+      operationOf(ir, "getTask").scopes.reverse();
     },
   },
   {
@@ -529,7 +579,20 @@ const ROW_CASES: RowCase[] = [
     kind: "idempotency",
     case: "lifetimeLengthened",
     position: "input",
+    expected: "C",
+    gateFails: true,
+    after: (ir) => {
+      createIdempotency(ir).lifetimeMs *= 2;
+    },
+  },
+  {
+    kind: "idempotency",
+    case: "lifetimeLengthenedUnenforced",
+    position: "input",
     expected: "-",
+    base: (ir) => {
+      createIdempotency(ir).enforce = "none";
+    },
     after: (ir) => {
       createIdempotency(ir).lifetimeMs *= 2;
     },
@@ -547,7 +610,8 @@ const ROW_CASES: RowCase[] = [
     kind: "idempotency",
     case: "enforceAdded",
     position: "input",
-    expected: "-",
+    expected: "C",
+    gateFails: true,
     base: (ir) => {
       createIdempotency(ir).enforce = "none";
     },

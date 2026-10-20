@@ -36,6 +36,12 @@ const OVER_LIMIT_CASES: Readonly<Record<string, string>> = {
   clamp: "overLimitClamped",
 };
 
+function lifetimeCase(before: DerivedIdempotency, after: DerivedIdempotency): string {
+  if (after.lifetimeMs < before.lifetimeMs) return "lifetimeShortened";
+
+  return after.enforce === "boundary" ? "lifetimeLengthened" : "lifetimeLengthenedUnenforced";
+}
+
 export function behaviourComparisons(
   context: WalkContext,
   before: Operation,
@@ -172,12 +178,12 @@ function compareIdempotency(
           before: beforeOn.required,
           after: afterOn.required,
         }),
-      // A shorter lifetime lets a replay reach the handler sooner.
+      // A shorter lifetime lets a replay reach the handler sooner; a longer one, under a boundary, replays or
+      // refuses a key that `before` clients reused once it expired.
       lifetimeMs: (memberPointer) =>
         emitAt(context, input, {
           kind: "idempotency",
-          case:
-            afterOn.lifetimeMs < beforeOn.lifetimeMs ? "lifetimeShortened" : "lifetimeLengthened",
+          case: lifetimeCase(beforeOn, afterOn),
           pointer: memberPointer,
           before: beforeOn.lifetimeMs,
           after: afterOn.lifetimeMs,

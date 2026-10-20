@@ -171,7 +171,7 @@ function compareAccess(
   if (beforeRank !== afterRank) {
     emitAt(context, site, {
       kind: "access",
-      case: afterRank > beforeRank ? "tightened" : "loosened",
+      case: rankChangeCase(beforeRank, afterRank),
       pointer,
       before: before.kind,
       after: after.kind,
@@ -215,6 +215,17 @@ function compareAccess(
       });
     },
   });
+}
+
+// Public and optional-anonymous admit the same clients; only the principal the handler may receive differs.
+function rankChangeCase(beforeRank: number, afterRank: number): string {
+  if (beforeRank === PUBLIC_RANK && afterRank === OPTIONAL_ANONYMOUS_RANK)
+    return "principalOptionalAdded";
+
+  if (beforeRank === OPTIONAL_ANONYMOUS_RANK && afterRank === PUBLIC_RANK)
+    return "principalOptionalRemoved";
+
+  return afterRank > beforeRank ? "tightened" : "loosened";
 }
 
 function accessRank(
@@ -464,7 +475,9 @@ function compareFieldRights(
         kind: "fieldRight",
         case: fieldRightCase,
         pointer: entryPointer,
-        after: fieldRight.right,
+        ...(fieldRightCase === "removed"
+          ? { before: fieldRight.right }
+          : { after: fieldRight.right }),
       });
   };
 

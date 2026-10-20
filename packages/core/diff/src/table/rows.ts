@@ -84,8 +84,8 @@ export const DIFF_TABLE = {
     int64Wire: BOTH_POSITIONS_CS,
     outputEnums: BOTH_POSITIONS_CS,
     urls: BOTH_POSITIONS_CS,
-    // A query param's or a form field's wire form (style, explode, brackets).
-    wire: BOTH_POSITIONS_CS,
+    // A query param's or a form field's wire form (style, explode, brackets): input only.
+    wire: INPUT_CS,
   },
   refinement: {
     tightened: { input: "C", output: "S", none: UNREACHED },
@@ -129,11 +129,11 @@ export const DIFF_TABLE = {
     refused: { input: "C" },
     ignored: { input: "-" },
   },
-  // The policy for undeclared keys of a referenced object, absent read as `refuse` on input and `ignore` on output.
+  // The policy for undeclared keys of a referenced object, absent read as `refuse`; set on input uses only.
   unknownKeys: {
-    refused: { input: "C", output: "S", none: UNREACHED },
-    ignored: { input: "-", output: "-", none: UNREACHED },
-    kept: { input: "S", output: "C", none: UNREACHED },
+    refused: { input: "C", none: UNREACHED },
+    ignored: { input: "-", none: UNREACHED },
+    kept: { input: "S", none: UNREACHED },
   },
   // A body has one media type: a change removes the one a client sends.
   body: {
@@ -173,6 +173,8 @@ export const DIFF_TABLE = {
   access: {
     tightened: { input: "C" },
     loosened: { input: "S" },
+    principalOptionalAdded: { input: "-" },
+    principalOptionalRemoved: { input: "S" },
     identity: { input: "CS" },
     schemeAdded: { input: "-" },
     schemeRemoved: { input: "C" },
@@ -210,9 +212,11 @@ export const DIFF_TABLE = {
     header: { input: "CS" },
     replayHeader: { output: "C" },
     lifetimeShortened: { input: "S" },
-    lifetimeLengthened: { input: "-" },
+    // Under a boundary a key reused after the old lifetime is refused or replayed; unenforced, the handler decides.
+    lifetimeLengthened: { input: "C" },
+    lifetimeLengthenedUnenforced: { input: "-" },
     enforceDropped: { input: "S" },
-    enforceAdded: { input: "-" },
+    enforceAdded: { input: "C" },
   },
   paging: {
     added: { input: "CS" },

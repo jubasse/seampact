@@ -175,6 +175,19 @@ const ROW_CASES: RowCase[] = [
   },
   {
     kind: "identity",
+    case: "schemeRoles",
+    position: "input",
+    expected: "CS",
+    note: " beside an added scheme",
+    after: (ir) => {
+      const { schemes } = credentialIdentity(ir, "user");
+
+      schemes.read.push("internalToken");
+      schemes.write = ["bearer"];
+    },
+  },
+  {
+    kind: "identity",
     case: "schemeRemoved",
     position: "input",
     expected: "C",

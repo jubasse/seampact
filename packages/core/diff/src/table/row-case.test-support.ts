@@ -1,7 +1,7 @@
 import type { ContractIR } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import type { DiffPosition } from "../result.js";
-import { changesOf, editedIr, goldenIr } from "../test-support.js";
+import { changesOf, diffOk, editedIr, goldenIr } from "../test-support.js";
 import type { DiffKind } from "./rows.js";
 
 // One case per row, case and position of the classification table (CHK-175, CHK-176), each a golden IR pair
@@ -17,6 +17,8 @@ export interface RowCase {
   position: DiffPosition;
   expected: Expected;
   note?: string;
+  /** The case must also fail the `additive-only` gate. */
+  gateFails?: boolean;
   /** Picks the change whose pointer holds this fragment, when the same row is also reported elsewhere. */
   pointerFragment?: string;
   base?: Edit;
@@ -59,6 +61,8 @@ export function testRowCases(title: string, rowCases: readonly RowCase[]): void 
       expect({ breaks: change?.breaks, classification: change?.classification }).toEqual(
         EXPECTED_OUTCOMES[rowCase.expected],
       );
+
+      if (rowCase.gateFails === true) expect(diffOk(base, after).gate.passed).toBe(false);
     });
   });
 }

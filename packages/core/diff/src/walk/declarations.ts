@@ -256,6 +256,8 @@ function identityComparisons(
         pointer,
         credentialSchemes(before),
         credentialSchemes(after),
+        schemeRoles(before),
+        schemeRoles(after),
       ),
     principal: (pointer) =>
       comparePrincipal(context, site, pointer, before.principal, after.principal),
@@ -272,6 +274,19 @@ function credentialSchemes(identity: Identity): string[] {
   return [...new Set([...read, ...write, ...optionalRead])];
 }
 
+// The roles each scheme holds, as `read`, `write` and `optionalRead`.
+function schemeRoles(identity: Identity): ReadonlyMap<string, string> {
+  const roles = new Map<string, string[]>();
+
+  if (isKnownVariant("Identity", identity) && identity.kind === "credential") {
+    for (const role of ["read", "write", "optionalRead"] as const)
+      for (const scheme of identity.schemes[role])
+        roles.set(scheme, [...(roles.get(scheme) ?? []), role]);
+  }
+
+  return new Map([...roles].map(([scheme, held]) => [scheme, held.join(",")]));
+}
+
 // A scheme an identity reads is one its clients may send: removing one refuses them, adding one admits more.
 function compareSchemeLists(
   context: WalkContext,
@@ -279,6 +294,8 @@ function compareSchemeLists(
   pointer: string,
   before: readonly string[],
   after: readonly string[],
+  beforeRoles: ReadonlyMap<string, string>,
+  afterRoles: ReadonlyMap<string, string>,
 ): void {
   const added = after.filter((scheme) => !before.includes(scheme));
   const removed = before.filter((scheme) => !after.includes(scheme));
@@ -289,9 +306,12 @@ function compareSchemeLists(
   for (const scheme of removed)
     emitAt(context, site, { kind: "identity", case: "schemeRemoved", pointer, before: scheme });
 
-  // The same schemes moved between read, write and optional read: which requests each admits changed.
-  if (added.length === 0 && removed.length === 0)
-    emitAt(context, site, { kind: "identity", case: "schemeRoles", pointer });
+  // A scheme kept but moved between read, write and optional read: which requests it admits changed.
+  const moved = after.some(
+    (scheme) => beforeRoles.has(scheme) && beforeRoles.get(scheme) !== afterRoles.get(scheme),
+  );
+
+  if (moved) emitAt(context, site, { kind: "identity", case: "schemeRoles", pointer });
 }
 
 function comparePrincipal(

@@ -1,3 +1,4 @@
+import { describe, expect, test } from "vitest";
 import {
   type ContractIR,
   isKnownVariant,
@@ -7,7 +8,7 @@ import {
   type ResponseHeader,
   type TypeUse,
 } from "@seampact/spec/ir";
-import { goldenIr, objectSchemaOf, operationOf } from "../test-support.js";
+import { changesOf, editedIr, goldenIr, objectSchemaOf, operationOf } from "../test-support.js";
 import { type RowCase, testRowCases } from "./row-case.test-support.js";
 
 // The response rows: shapes, response headers, the error codes an operation answers, field rights and list
@@ -55,10 +56,6 @@ function refUse(use: TypeUse | undefined): RefTypeUse {
     throw new Error("the test IR holds no reference there");
 
   return use;
-}
-
-function taskRef(ir: ContractIR): RefTypeUse {
-  return refUse(firstResponse(ir, "getTask").body);
 }
 
 function createRef(ir: ContractIR): RefTypeUse {
@@ -294,15 +291,6 @@ const ROW_CASES: RowCase[] = [
   },
   {
     kind: "unknownKeys",
-    case: "kept",
-    position: "output",
-    expected: "C",
-    after: (ir) => {
-      taskRef(ir).unknownKeys = { policy: "keep", reason: "passthrough" };
-    },
-  },
-  {
-    kind: "unknownKeys",
     case: "ignored",
     position: "input",
     expected: "-",
@@ -331,27 +319,19 @@ const ROW_CASES: RowCase[] = [
       delete createRef(ir).unknownKeys;
     },
   },
-  {
-    kind: "unknownKeys",
-    case: "refused",
-    position: "output",
-    expected: "S",
-    after: (ir) => {
-      taskRef(ir).unknownKeys = { policy: "refuse" };
-    },
-  },
-  {
-    kind: "unknownKeys",
-    case: "ignored",
-    position: "output",
-    expected: "-",
-    base: (ir) => {
-      taskRef(ir).unknownKeys = { policy: "keep", reason: "passthrough" };
-    },
-    after: (ir) => {
-      taskRef(ir).unknownKeys = { policy: "ignore", reason: "strict output" };
-    },
-  },
 ];
 
 testRowCases("the response rows", ROW_CASES);
+
+describe("a removed field right", () => {
+  test("holds the right in before and none in after", () => {
+    const base = goldenIr();
+    const after = editedIr((ir) => {
+      operationOf(ir, "getTask").fieldRights = [];
+    }, base);
+    const removed = changesOf(base, after).find((change) => change.kind === "fieldRight");
+
+    expect(removed?.before).toBe(operationOf(base, "getTask").fieldRights[0]?.right);
+    expect(removed?.after).toBeUndefined();
+  });
+});
