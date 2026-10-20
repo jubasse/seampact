@@ -4,7 +4,7 @@ Declare API semantics once. Derive framework-native boundaries from them.
 
 seampact is a contract system for HTTP APIs. You describe an API in plain YAML files: its endpoints, schemas, errors, who may call each route and what each route requires. seampact compiles them into a canonical intermediate representation (IR), and everything else is derived from it: an OpenAPI 3.1 document, lint, a compatibility diff between two versions, and generated code for the frameworks you use.
 
-**Status: development phase.** The reference contract already runs end to end on NestJS, Express 4 and 5, Fastify 5, AdonisJS 6 and 7 and Hono 4, with the TypeScript types, zod validators and the `fetch` client. No package is published to npm, Maven Central or Packagist yet; [`docs/getting-started.md`](docs/getting-started.md) installs them from your checkout and runs a NestJS app. The design decisions are recorded in [`docs/adr/`](docs/adr/).
+**Status: development phase.** The reference contract already runs end to end on NestJS, Express 4 and 5, Fastify 5, AdonisJS 6 and 7 and Hono 4, with the TypeScript types, zod validators and the `fetch` client. No package is published to npm, Maven Central or Packagist yet; [`docs/getting-started/`](docs/getting-started/README.md) installs them from your checkout and runs a NestJS app. The design decisions are recorded in [`docs/adr/`](docs/adr/).
 
 ## What seampact generates, and what it leaves to you
 
