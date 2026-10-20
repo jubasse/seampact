@@ -14,6 +14,7 @@ errors:
 ```
 
 - `status` is from 400 to 599.
+- `title` is a short text for people. It is optional: a code without one sends no `title` member.
 - `params` is the extra data in the error body. It is optional.
 - `nature` tells a client whether a retry can help: `refused` (no), `unavailable` (maybe later) or `failed` (the server broke). It defaults from the status, so you rarely write it.
 
@@ -35,7 +36,7 @@ notes:
 
 ## The codes you get for free
 
-Seampact adds the codes the boundary needs: `api.not_found`, `api.schema_invalid`, `api.forbidden` and the others. You do not declare them. Handlers return them by name, for example `Notes.ErrorCode.ApiNotFound`.
+Seampact adds the codes the boundary needs: `api.not_found`, `api.schema_invalid`, `api.forbidden` and the others. You do not declare them, and they have no `title`. Handlers return them by name, for example `Notes.ErrorCode.ApiNotFound`.
 
 ## Use your own code for a built-in case
 

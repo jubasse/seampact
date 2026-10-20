@@ -2193,8 +2193,6 @@ components:
         type:
           type: string
           const: api.csrf_invalid
-        title:
-          type: string
         status:
           type: integer
           const: 403
@@ -2211,7 +2209,6 @@ components:
           type: string
       required:
         - type
-        - title
         - status
         - code
         - nature
@@ -2224,8 +2221,6 @@ components:
             type:
               type: string
               const: api.forbidden
-            title:
-              type: string
             status:
               type: integer
               const: 403
@@ -2242,7 +2237,6 @@ components:
               type: string
           required:
             - type
-            - title
             - status
             - code
             - nature
@@ -2255,8 +2249,6 @@ components:
         type:
           type: string
           const: api.idempotency_in_progress
-        title:
-          type: string
         status:
           type: integer
           const: 409
@@ -2273,7 +2265,6 @@ components:
           type: string
       required:
         - type
-        - title
         - status
         - code
         - nature
@@ -2285,8 +2276,6 @@ components:
         type:
           type: string
           const: api.idempotency_key_reused
-        title:
-          type: string
         status:
           type: integer
           const: 422
@@ -2303,7 +2292,6 @@ components:
           type: string
       required:
         - type
-        - title
         - status
         - code
         - nature
@@ -2315,8 +2303,6 @@ components:
         type:
           type: string
           const: api.internal
-        title:
-          type: string
         status:
           type: integer
           const: 500
@@ -2333,7 +2319,6 @@ components:
           type: string
       required:
         - type
-        - title
         - status
         - code
         - nature
@@ -2345,8 +2330,6 @@ components:
         type:
           type: string
           const: api.not_found
-        title:
-          type: string
         status:
           type: integer
           const: 404
@@ -2363,7 +2346,6 @@ components:
           type: string
       required:
         - type
-        - title
         - status
         - code
         - nature
@@ -2376,8 +2358,6 @@ components:
             type:
               type: string
               const: api.payload_too_large
-            title:
-              type: string
             status:
               type: integer
               const: 413
@@ -2394,7 +2374,6 @@ components:
               type: string
           required:
             - type
-            - title
             - status
             - code
             - nature
@@ -2408,8 +2387,6 @@ components:
             type:
               type: string
               const: api.rate_limited
-            title:
-              type: string
             status:
               type: integer
               const: 429
@@ -2426,7 +2403,6 @@ components:
               type: string
           required:
             - type
-            - title
             - status
             - code
             - nature
@@ -2439,8 +2415,6 @@ components:
         type:
           type: string
           const: api.reauthentication_required
-        title:
-          type: string
         status:
           type: integer
           const: 401
@@ -2457,7 +2431,6 @@ components:
           type: string
       required:
         - type
-        - title
         - status
         - code
         - nature
@@ -2470,8 +2443,6 @@ components:
             type:
               type: string
               const: api.schema_invalid
-            title:
-              type: string
             status:
               type: integer
               const: 400
@@ -2488,7 +2459,6 @@ components:
               type: string
           required:
             - type
-            - title
             - status
             - code
             - nature
@@ -2501,8 +2471,6 @@ components:
         type:
           type: string
           const: api.unauthenticated
-        title:
-          type: string
         status:
           type: integer
           const: 401
@@ -2519,7 +2487,6 @@ components:
           type: string
       required:
         - type
-        - title
         - status
         - code
         - nature
@@ -2531,8 +2498,6 @@ components:
         type:
           type: string
           const: api.unsupported_media_type
-        title:
-          type: string
         status:
           type: integer
           const: 415
@@ -2549,7 +2514,6 @@ components:
           type: string
       required:
         - type
-        - title
         - status
         - code
         - nature
@@ -2561,8 +2525,6 @@ components:
         type:
           type: string
           const: state.conflict
-        title:
-          type: string
         status:
           type: integer
           const: 409
@@ -2579,7 +2541,6 @@ components:
           type: string
       required:
         - type
-        - title
         - status
         - code
         - nature

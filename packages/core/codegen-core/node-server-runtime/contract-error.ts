@@ -98,9 +98,10 @@ export function renderContractReply(
     roles: [UNDECLARED_STATUS_ROLE],
   };
   const params = declared === undefined ? undefined : error.params;
+  // RFC 9457 makes `title` optional: a code without a written title leaves the slot empty.
   const slots: Record<string, unknown> = {
     code: entry.code,
-    title: entry.title ?? entry.code,
+    title: entry.title,
     status: entry.status,
     nature: entry.nature,
   };

@@ -62,5 +62,5 @@ export function sendRawRequest(
 
 /** The body of a refusal in the reference api's problem format. */
 export function problemBody(code: string, status: number): string {
-  return JSON.stringify({ type: code, title: code, status, code, nature: "refused" });
+  return JSON.stringify({ type: code, status, code, nature: "refused" });
 }

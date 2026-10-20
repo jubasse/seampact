@@ -143,6 +143,19 @@ export function referenceNoStoreCode(code: string): ReferenceIrChange {
   };
 }
 
+/** Writes a `title` on one error code of the `tasks` api, which declares none. */
+export function referenceErrorTitle(code: string, title: string): ReferenceIrChange {
+  return (ir, api) => {
+    if (api !== "tasks") return ir;
+    const declaration = ir.errors[code];
+
+    if (declaration === undefined)
+      throw new Error(`the reference tasks contract lost its error code '${code}'`);
+
+    return { ...ir, errors: { ...ir.errors, [code]: { ...declaration, title } } };
+  };
+}
+
 /** Marks one cached operation of the `tasks` api `noStore`, as the compiler does for a sensitive field it returns. */
 export function referenceNoStoreOperation(operationId: string): ReferenceIrChange {
   return (ir, api) => {

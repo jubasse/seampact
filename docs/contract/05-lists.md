@@ -4,7 +4,23 @@ A list is a route that returns many records. It needs a paging style, so a clien
 
 ## Declare a paging style
 
-A style says which query parameters a client sends and how the page comes back. It lives under `pagings`.
+A style says which query parameters a client sends and how the page comes back. It lives under `pagings`. seampact imposes no shape: you write the body your clients expect. A list without a style fails to compile, and the error shows an example.
+
+Page numbers, with the page facts under a `meta` key:
+
+```yaml
+pagings:
+  pages:
+    request:
+      page: { query: page }
+      limit: { query: limit }
+    response:
+      body: { items: $items, meta: { page: $page, limit: $limit, total: $total } }
+```
+
+The client sends `?page=2&limit=20` and gets `{ "items": [...], "meta": { "page": 2, "limit": 20, "total": 57 } }`.
+
+A cursor, with the next page in a `Link` header:
 
 ```yaml
 pagings:
@@ -18,7 +34,21 @@ pagings:
       links: { next: $next }
 ```
 
-Here the client sends `?cursor=...&limit=20`, the body is the array of records, and the next page is a `Link` header.
+The client sends `?cursor=...&limit=20`, and the body is the array of records.
+
+Page facts as flat members beside the items:
+
+```yaml
+pagings:
+  flatPages:
+    request:
+      page: { query: page }
+      limit: { query: limit }
+    response:
+      body: { items: $items, page: $page, totalPages: $totalPages }
+```
+
+The body is `{ "items": [...], "page": 2, "totalPages": 3 }`.
 
 ## Use it on a list
 

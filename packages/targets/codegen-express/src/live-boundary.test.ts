@@ -8,6 +8,7 @@ import {
   emitProject,
   generateReferenceProject,
   problemBody,
+  referenceErrorTitle,
   projectDirectory,
   type RawReply,
   type ReferenceIrChange,
@@ -49,6 +50,9 @@ const TASK_ITEM = {
 const TOO_LARGE_BODY_BYTES = 1_048_577;
 // The code of a body over its limit, marked as a code whose params carry a sensitive value.
 const NO_STORE_CODE = "api.payload_too_large";
+// A code given a written title; every other code of the reference api declares none.
+const TITLED_CODE = "api.unauthenticated";
+const WRITTEN_TITLE = "Sign in first.";
 
 interface ReferenceAppModule {
   readonly ALLOWED_ORIGIN: string;
@@ -123,6 +127,7 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
       { bodyValidation: true },
       referenceChanges(
         referenceNoStoreCode(NO_STORE_CODE),
+        referenceErrorTitle(TITLED_CODE, WRITTEN_TITLE),
         referenceNoStoreOperation("getPreferences"),
         referenceUnpagedList("listChannels"),
       ),
@@ -413,6 +418,20 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
     expect(reply.headers["content-type"]).toContain(PROBLEM_MEDIA);
     expect(JSON.parse(reply.text)).toMatchObject({ code: "api.not_found" });
     expect(app.calls.handled).toEqual([]);
+  });
+
+  test("a code without a written title sends no title member", async () => {
+    const reply = await send("GET", "/v1/unknown", { headers: BEARER });
+
+    expect(reply.status).toBe(404);
+    expect(JSON.parse(reply.text)).not.toHaveProperty("title");
+  });
+
+  test("a code with a written title sends it", async () => {
+    const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`);
+
+    expect(reply.status).toBe(401);
+    expect(JSON.parse(reply.text)).toMatchObject({ code: TITLED_CODE, title: WRITTEN_TITLE });
   });
 
   test("a path outside the base path, as an upper-case one, is the app's 404", async () => {

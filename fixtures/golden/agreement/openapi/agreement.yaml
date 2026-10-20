@@ -1844,8 +1844,6 @@ components:
         type:
           type: string
           const: api.internal
-        title:
-          type: string
         status:
           type: integer
           const: 500
@@ -1862,7 +1860,6 @@ components:
           type: string
       required:
         - type
-        - title
         - status
         - code
         - nature
@@ -1875,8 +1872,6 @@ components:
             type:
               type: string
               const: api.payload_too_large
-            title:
-              type: string
             status:
               type: integer
               const: 413
@@ -1893,7 +1888,6 @@ components:
               type: string
           required:
             - type
-            - title
             - status
             - code
             - nature
@@ -1907,8 +1901,6 @@ components:
             type:
               type: string
               const: api.schema_invalid
-            title:
-              type: string
             status:
               type: integer
               const: 400
@@ -1925,7 +1917,6 @@ components:
               type: string
           required:
             - type
-            - title
             - status
             - code
             - nature
@@ -1938,8 +1929,6 @@ components:
         type:
           type: string
           const: api.unsupported_media_type
-        title:
-          type: string
         status:
           type: integer
           const: 415
@@ -1956,7 +1945,6 @@ components:
           type: string
       required:
         - type
-        - title
         - status
         - code
         - nature

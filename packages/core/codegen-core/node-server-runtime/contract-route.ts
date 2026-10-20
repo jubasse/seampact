@@ -57,7 +57,7 @@ export interface ErrorFormat {
 
 export interface ErrorEntry {
   readonly code: string;
-  /** The code's declared title; the code stands in when it declares none. */
+  /** The code's written title; absent when it declares none, and the body then has no title. */
   readonly title?: string;
   readonly status: number;
   readonly nature: string;

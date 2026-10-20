@@ -228,7 +228,7 @@ surfaces:
   expect(operation(run.draft.operations, "everything").responses?.[0]?.shape).toBe("list");
 });
 
-test("paging declared: a list with neither a style nor a default names both fixes", () => {
+test("paging declared: a list with neither a style nor a default shows a page-style example and paging: none", () => {
   const workspace = treeNodesLoadInline(`
 api: { name: a, version: 1, kind: product }
 schemas:
@@ -245,7 +245,7 @@ surfaces:
   expect(run.diagnostics.map(({ rule, fix }) => ({ rule, fix }))).toEqual([
     {
       rule: "seampact/tree/paging-style",
-      fix: "Declare a style in pagings and name it in paging (or conventions.paging.default), or apply a format pack that provides one; paging: none serves the whole list.",
+      fix: "Declare a paging style and name it, for example `pagings: { pages: { request: { page: { query: page }, limit: { query: limit } }, response: { body: { items: $items, meta: { page: $page, limit: $limit, total: $total } } } } }` with `paging: { pages: { maxLimit: 100 } }` on the list or `conventions: { paging: { default: pages, maxLimit: 100 } }`; or write `paging: none` to serve the whole list.",
     },
   ]);
   expect(operation(run.draft.operations, "notes").paging).toBeUndefined();

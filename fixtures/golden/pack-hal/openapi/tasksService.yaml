@@ -196,8 +196,6 @@ components:
         type:
           type: string
           const: api.deadline_exceeded
-        title:
-          type: string
         status:
           type: integer
           const: 504
@@ -214,7 +212,6 @@ components:
           type: string
       required:
         - type
-        - title
         - status
         - code
         - nature
@@ -227,8 +224,6 @@ components:
             type:
               type: string
               const: api.forbidden
-            title:
-              type: string
             status:
               type: integer
               const: 403
@@ -245,7 +240,6 @@ components:
               type: string
           required:
             - type
-            - title
             - status
             - code
             - nature
@@ -258,8 +252,6 @@ components:
         type:
           type: string
           const: api.internal
-        title:
-          type: string
         status:
           type: integer
           const: 500
@@ -276,7 +268,6 @@ components:
           type: string
       required:
         - type
-        - title
         - status
         - code
         - nature
@@ -288,8 +279,6 @@ components:
         type:
           type: string
           const: api.not_found
-        title:
-          type: string
         status:
           type: integer
           const: 404
@@ -306,7 +295,6 @@ components:
           type: string
       required:
         - type
-        - title
         - status
         - code
         - nature
@@ -319,8 +307,6 @@ components:
             type:
               type: string
               const: api.schema_invalid
-            title:
-              type: string
             status:
               type: integer
               const: 400
@@ -337,7 +323,6 @@ components:
               type: string
           required:
             - type
-            - title
             - status
             - code
             - nature
@@ -350,8 +335,6 @@ components:
         type:
           type: string
           const: api.unauthenticated
-        title:
-          type: string
         status:
           type: integer
           const: 401
@@ -368,7 +351,6 @@ components:
           type: string
       required:
         - type
-        - title
         - status
         - code
         - nature
