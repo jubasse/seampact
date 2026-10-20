@@ -46,7 +46,8 @@ const ENTRY_KEY_WAITS: Readonly<Record<string, string>> = {
 
 const NATIVE_RUNNER_BRINGER = "the native runners, Gradle, Maven and Composer (p6)";
 
-const MODULE_LINK_BRINGER = "links to outputs in other packages (p3-config)";
+// A module link only arises across the apps of a monorepo, and no app links across apps yet.
+const MODULE_LINK_BRINGER = "links across the apps of a monorepo, once an app needs one";
 
 // Every key or value form of an app config that waits; `config` is the parsed YAML, not yet schema-checked. A root
 // config waits as a whole.
