@@ -8,7 +8,7 @@ import {
   writeExtension,
 } from "./emit-context.js";
 import { originKey } from "./ir-text.js";
-import { compareCodeUnits, type JsonObject } from "./json-value.js";
+import { compareCodeUnits, type JsonObject, setDefined } from "./json-value.js";
 import { schemaReference, writeDocs } from "./schemas.js";
 import { membersWritingSlot, type SlotValue, templateSchema } from "./templates.js";
 
@@ -126,11 +126,7 @@ function errorResponse(
 function errorItem(context: EmitContext, error: OperationError, location: IrLocation): JsonObject {
   const item: JsonObject = { code: error.code };
 
-  if (error.derivedFrom !== undefined) {
-    item.derivedFrom = error.derivedFrom.derivation;
-  } else if (error.origin !== undefined) {
-    item.origin = originKey(error.origin);
-  } else {
+  if (error.derivedFrom === undefined && error.origin === undefined) {
     refuseInconsistent(
       context,
       "error.provenance",
@@ -138,6 +134,9 @@ function errorItem(context: EmitContext, error: OperationError, location: IrLoca
       location,
     );
   }
+
+  setDefined(item, "derivedFrom", error.derivedFrom?.derivation);
+  setDefined(item, "origin", error.origin && originKey(error.origin));
 
   return item;
 }

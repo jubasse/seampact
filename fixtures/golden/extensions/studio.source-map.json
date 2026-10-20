@@ -459,7 +459,7 @@
     "api#/surfaces/app": {
       "column": 3,
       "endColumn": 1,
-      "endLine": 164,
+      "endLine": 166,
       "file": "api.yaml",
       "line": 129
     },
@@ -480,7 +480,7 @@
     "api#/surfaces/app/routes/studios/member/routes/events": {
       "column": 13,
       "endColumn": 1,
-      "endLine": 164,
+      "endLine": 166,
       "file": "api.yaml",
       "line": 157
     },
@@ -490,6 +490,13 @@
       "endLine": 159,
       "file": "api.yaml",
       "line": 159
+    },
+    "api#/surfaces/app/routes/studios/member/routes/events/errors/studio.encoder_offline": {
+      "column": 17,
+      "endColumn": 90,
+      "endLine": 163,
+      "file": "api.yaml",
+      "line": 163
     },
     "api#/surfaces/app/routes/studios/member/routes/events/idempotency": {
       "column": 15,
@@ -501,9 +508,9 @@
     "api#/surfaces/app/routes/studios/member/routes/events/input": {
       "column": 15,
       "endColumn": 33,
-      "endLine": 162,
+      "endLine": 164,
       "file": "api.yaml",
-      "line": 162
+      "line": 164
     },
     "api#/surfaces/app/routes/studios/member/routes/events/requires/0": {
       "column": 26,
@@ -515,9 +522,9 @@
     "api#/surfaces/app/routes/studios/member/routes/events/responses/204": {
       "column": 28,
       "endColumn": 35,
-      "endLine": 163,
+      "endLine": 165,
       "file": "api.yaml",
-      "line": 163
+      "line": 165
     },
     "api#/surfaces/app/routes/studios/member/routes/profile": {
       "column": 13,

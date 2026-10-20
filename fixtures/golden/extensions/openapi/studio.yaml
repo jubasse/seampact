@@ -98,6 +98,16 @@ paths:
           x-seampact-errors:
             - code: api.internal
               derivedFrom: response.undeclared
+        "503":
+          description: studio.encoder_offline
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/studio.encoder_offline"
+          x-seampact-errors:
+            - code: studio.encoder_offline
+              derivedFrom: node.errors
+              origin: api#/surfaces/app/routes/studios/member/routes/events
       security:
         - sessionCookie: []
       x-seampact-access:
@@ -784,6 +794,36 @@ components:
         - nature
       x-seampact-nature:
         base: refused
+    studio.encoder_offline:
+      type: object
+      properties:
+        type:
+          type: string
+          const: studio.encoder_offline
+        title:
+          type: string
+        status:
+          type: integer
+          const: 503
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: studio.encoder_offline
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: unavailable
   securitySchemes:
     csrfToken:
       type: apiKey

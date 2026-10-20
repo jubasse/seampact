@@ -159,5 +159,7 @@ surfaces:
               csrf: { exempt: "Stream events come from the studio's own encoder." }
               idempotency: { exempt: "An event is harmless to repeat." }
               requires: [{ right: streams.manage }]
+              errors:
+                studio.encoder_offline: { status: 503, title: 'The encoder is offline.' }
               input: StreamEvent
               responses: { 204: {} }

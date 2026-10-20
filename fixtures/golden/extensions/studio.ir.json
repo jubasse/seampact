@@ -340,6 +340,20 @@
         "layer": "core",
         "pointer": "/errors/api.unsupported_media_type"
       }
+    },
+    "studio.encoder_offline": {
+      "code": "studio.encoder_offline",
+      "docs": {},
+      "family": "studio",
+      "http": {
+        "status": 503
+      },
+      "nature": "unavailable",
+      "origin": {
+        "layer": "api",
+        "pointer": "/surfaces/app/routes/studios/member/routes/events/errors/studio.encoder_offline"
+      },
+      "title": "The encoder is offline."
     }
   },
   "extensionKeys": {
@@ -1060,6 +1074,22 @@
               "role": "undeclaredStatus"
             }
           ]
+        },
+        {
+          "code": "studio.encoder_offline",
+          "derivedFrom": {
+            "derivation": "node.errors",
+            "from": [
+              {
+                "layer": "api",
+                "pointer": "/surfaces/app/routes/studios/member/routes/events"
+              }
+            ]
+          },
+          "origin": {
+            "layer": "api",
+            "pointer": "/surfaces/app/routes/studios/member/routes/events"
+          }
         }
       ],
       "examples": {},
