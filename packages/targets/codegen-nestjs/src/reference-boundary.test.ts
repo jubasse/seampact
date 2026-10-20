@@ -1,9 +1,11 @@
 import {
+  GENERATE_TIMEOUT_MILLISECONDS,
   generateReferenceProject,
   projectDirectory,
   REFERENCE_COMPILER_OPTIONS,
   readGoldenIr,
   referenceLinks,
+  TYPE_CHECK_TIMEOUT_MILLISECONDS,
   typeErrorsOf,
 } from "@seampact/codegen-core/node-server/test-support";
 import type { ContractIR } from "@seampact/spec/ir";
@@ -12,9 +14,6 @@ import { target as nestjsTarget } from "./index.js";
 
 const PROJECT = projectDirectory(import.meta.url, "reference-boundary");
 
-// Generating the reference project outruns vitest's default 10 s hook limit on a loaded machine.
-const GENERATE_TIMEOUT_MILLISECONDS = 60_000;
-
 let files: string[] = [];
 
 beforeAll(async () => {
@@ -22,9 +21,13 @@ beforeAll(async () => {
 }, GENERATE_TIMEOUT_MILLISECONDS);
 
 describe("the generated reference boundary compiles", () => {
-  test("both apis' types, validators and NestJS boundary type-check together", () => {
-    expect(typeErrorsOf(PROJECT, files, REFERENCE_COMPILER_OPTIONS)).toEqual([]);
-  });
+  test(
+    "both apis' types, validators and NestJS boundary type-check together",
+    () => {
+      expect(typeErrorsOf(PROJECT, files, REFERENCE_COMPILER_OPTIONS)).toEqual([]);
+    },
+    TYPE_CHECK_TIMEOUT_MILLISECONDS,
+  );
 
   test("an unknown option is refused by name", () => {
     expect(nestjsTarget.parseOptions({ responses: "loose", extra: true })).toMatchObject({

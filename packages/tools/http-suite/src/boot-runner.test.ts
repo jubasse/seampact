@@ -10,13 +10,19 @@ if (variant === "allow-listed-framework-route") console.log(${JSON.stringify(BOO
 else if (variant === "missing-handler") setInterval(() => {}, 1000);
 else { console.error("seampact: the api 'tasks' cannot start: no decider for 'roles'"); process.exit(1); }
 `;
-const BOOT_TIMEOUT_MS = 500;
+// A started process gets room to start on a busy machine; only the hanging app needs a short wait.
+const START_TIMEOUT_MS = 20_000;
+const HANG_TIMEOUT_MS = 500;
 
 function bootCase(id: string, boot: Record<string, unknown>): SuiteCase {
   return parseSuiteCase({ id, title: id, checks: ["CHK-062"], profiles: ["boot"], boot }, id);
 }
 
-function run(cases: SuiteCase[], refusals?: Record<string, string>) {
+function run(
+  cases: SuiteCase[],
+  refusals?: Record<string, string>,
+  bootTimeoutMs = START_TIMEOUT_MS,
+) {
   return runBootSuite({
     target: "double",
     cases,
@@ -24,7 +30,7 @@ function run(cases: SuiteCase[], refusals?: Record<string, string>) {
     command: process.execPath,
     args: ["-e", SAMPLE_APP],
     cwd: process.cwd(),
-    bootTimeoutMs: BOOT_TIMEOUT_MS,
+    bootTimeoutMs,
   });
 }
 
@@ -78,9 +84,11 @@ describe("runBootSuite", () => {
   });
 
   test("stops an app that neither starts nor exits", async () => {
-    const report = await run([
-      bootCase("hangs", { variant: "missing-handler", outcome: "refuses", diagnostic: ["x"] }),
-    ]);
+    const report = await run(
+      [bootCase("hangs", { variant: "missing-handler", outcome: "refuses", diagnostic: ["x"] })],
+      undefined,
+      HANG_TIMEOUT_MS,
+    );
 
     expect(report.cases[0]?.failures).toEqual([
       expect.stringContaining("neither started nor exited in time"),

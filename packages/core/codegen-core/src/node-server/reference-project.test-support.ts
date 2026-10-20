@@ -15,6 +15,11 @@ const REPOSITORY_ROOT = new URL("../../../../../", import.meta.url);
 
 export const REFERENCE_APIS = ["tasks", "tasksService"] as const;
 
+// Generating the reference project outruns vitest's default 10 s hook limit on a loaded machine.
+export const GENERATE_TIMEOUT_MILLISECONDS = 60_000;
+// Type-checking both apis takes tens of seconds on a busy machine.
+export const TYPE_CHECK_TIMEOUT_MILLISECONDS = 120_000;
+
 // The test apps serve routes of their own, so the framework-route check is off unless a test asks for it.
 const FRAMEWORK_ROUTE_CHECK_OFF: FrameworkRouteCheck = { status: "off" };
 
