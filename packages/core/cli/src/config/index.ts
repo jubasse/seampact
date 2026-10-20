@@ -1,7 +1,14 @@
 // The app config and the monorepo root config as the CLI reads them: the YAML readers and their refusals, the root
-// an app belongs to, the OpenAPI documents an app and a root write, and the target packages an app names, resolved
-// from the app's own project.
+// an app belongs to, the OpenAPI documents an app and a root write, the target packages an app names, resolved
+// from the app's own project, the artefacts each entry generates and the compatibility matrix check.
 
+export { type ArtefactSelection, selectArtefacts } from "./artefact-switches.js";
+export {
+  type CompatibilityInput,
+  type CompatibilityOutcome,
+  checkAppCompatibility,
+  checkCompatibility,
+} from "./compatibility-check.js";
 export {
   defaultDocumentDirectory,
   type MergedContribution,
@@ -11,6 +18,11 @@ export {
   planAppDocuments,
   planMergedDocuments,
 } from "./document-plan.js";
+export {
+  type InstalledVersion,
+  type InstalledVersionOutcome,
+  readInstalledVersion,
+} from "./installed-version.js";
 export { type AppConfigEntry, type LoadedAppConfig, readAppConfig } from "./read-app-config.js";
 export {
   type LoadedMergedDocument,

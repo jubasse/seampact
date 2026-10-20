@@ -17,6 +17,7 @@ import type { ContractIR } from "@seampact/spec/ir";
 import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS, printProblems, printWarnings } from "../cli-io.js";
 import { type CliProblem, entryWhere, problemFromRefusal } from "../cli-problem.js";
 import {
+  checkAppCompatibility,
   defaultDocumentDirectory,
   type LoadedAppConfig,
   openApiApiNames,
@@ -24,6 +25,7 @@ import {
   planAppDocuments,
   readAppConfig,
   resolveTarget,
+  selectArtefacts,
 } from "../config/index.js";
 import {
   entryApiRefs,
@@ -72,6 +74,8 @@ interface EmittedAppDocument {
 
 interface GeneratePlan {
   entries: PlannedEntry[];
+  // The artefacts each entry generates, by entry id.
+  artefacts: ReadonlyMap<string, ReadonlySet<string>>;
   documents: PlannedDocument[];
   // Where the app's default documents go: a document seampact wrote there and the config dropped is removed.
   defaultDocumentDirectory: string;
@@ -108,7 +112,7 @@ export async function generateCommand(location: ConfigLocation, io: CliIo): Prom
     return EXIT_REFUSED;
   }
 
-  const generated = await generateEntries(planned.value.entries);
+  const generated = await generateEntries(planned.value.entries, planned.value.artefacts);
   const emitted = emitAppDocuments(planned.value.documents);
   const problems = [
     ...(generated.status === "refused" ? generated.problems : []),
@@ -153,6 +157,20 @@ async function planGenerate(location: ConfigLocation, io: CliIo): Promise<Step<G
 
   if (targets.status === "refused") return targets;
 
+  const artefacts = selectEntryArtefacts(config, targets.value);
+  const compatibility = checkAppCompatibility(config, targets.value);
+
+  printWarnings(io, compatibility.warnings);
+
+  const configProblems = [
+    ...(artefacts.status === "refused" ? artefacts.problems : []),
+    ...compatibility.problems,
+  ];
+
+  if (artefacts.status === "refused" || configProblems.length > 0) {
+    return { status: "refused", problems: configProblems };
+  }
+
   const unknownSources = unknownSourceProblems(config);
 
   if (unknownSources.length > 0) return { status: "refused", problems: unknownSources };
@@ -185,6 +203,7 @@ async function planGenerate(location: ConfigLocation, io: CliIo): Promise<Step<G
     status: "done",
     value: {
       entries: ordered.entries.map((entry) => plannedEntry(planned.value, entry.id)),
+      artefacts: artefacts.value,
       documents: documents.value,
       defaultDocumentDirectory: defaultDocumentDirectory(config),
     },
@@ -272,6 +291,30 @@ function plannedEntry(planned: ReadonlyMap<string, PlannedEntry>, entryId: strin
   return found;
 }
 
+// The artefacts of each entry, from its target's declarations and its `artefacts` switches.
+function selectEntryArtefacts(
+  config: LoadedAppConfig,
+  targets: ReadonlyMap<string, Target>,
+): Step<Map<string, ReadonlySet<string>>> {
+  const selected = new Map<string, ReadonlySet<string>>();
+  const problems: CliProblem[] = [];
+
+  for (const { entry } of config.entries) {
+    const target = targets.get(entry.id);
+
+    if (target === undefined) throw new Error(`no resolved target for the entry ${entry.id}`);
+
+    const selection = selectArtefacts(entry, target);
+
+    if (selection.status === "refused") problems.push(...selection.problems);
+    else selected.set(entry.id, selection.artefacts);
+  }
+
+  return problems.length > 0
+    ? { status: "refused", problems }
+    : { status: "done", value: selected };
+}
+
 async function resolveTargets(config: LoadedAppConfig): Promise<Step<Map<string, Target>>> {
   const targets = new Map<string, Target>();
   const problems: CliProblem[] = [];
@@ -347,7 +390,10 @@ function planEntryApis(
   return problems.length > 0 ? { status: "refused", problems } : { status: "done", value: apis };
 }
 
-async function generateEntries(planned: readonly PlannedEntry[]): Promise<Step<GeneratedOutput[]>> {
+async function generateEntries(
+  planned: readonly PlannedEntry[],
+  artefacts: ReadonlyMap<string, ReadonlySet<string>>,
+): Promise<Step<GeneratedOutput[]>> {
   const byId = new Map(planned.map((each) => [each.entry.id, each]));
   const describe = memoizedDescribe();
   const outputs: GeneratedOutput[] = [];
@@ -355,7 +401,13 @@ async function generateEntries(planned: readonly PlannedEntry[]): Promise<Step<G
 
   for (const consumer of planned) {
     for (const plannedApi of consumer.apis) {
-      const generated = await generateApi(consumer, plannedApi, byId, describe);
+      const generated = await generateApi(
+        consumer,
+        plannedApi,
+        byId,
+        describe,
+        entryArtefacts(artefacts, consumer.entry.id),
+      );
 
       if (generated.status === "refused") problems.push(...generated.problems);
       else outputs.push(generated.value);
@@ -370,22 +422,18 @@ async function generateApi(
   plannedApi: PlannedApi,
   byId: ReadonlyMap<string, PlannedEntry>,
   describe: Describe,
+  artefacts: ReadonlySet<string>,
 ): Promise<Step<GeneratedOutput>> {
   const { entry, target } = consumer;
   const links = buildLinks(consumer, plannedApi, byId, describe);
 
   if (links.status === "refused") return links;
 
-  const artefacts = new Set(
-    target.metadata.artefacts
-      .filter((artefact) => artefact.defaultOn)
-      .map((artefact) => artefact.id),
-  );
   const outcome = await target.generate({
     ir: plannedApi.ir,
     options: structuredClone(entry.options ?? {}),
     links: links.value,
-    artefacts,
+    artefacts: new Set(artefacts),
     frameworkRoutes: frameworkRouteCheckOf(entry),
   });
 
@@ -408,6 +456,17 @@ async function generateApi(
       warnings: outcome.warnings ?? [],
     },
   };
+}
+
+function entryArtefacts(
+  artefacts: ReadonlyMap<string, ReadonlySet<string>>,
+  entryId: string,
+): ReadonlySet<string> {
+  const found = artefacts.get(entryId);
+
+  if (found === undefined) throw new Error(`no selected artefacts for the entry ${entryId}`);
+
+  return found;
 }
 
 // codegen-core's own `link.*` refusals name the kind; the CLI adds both entry ids.

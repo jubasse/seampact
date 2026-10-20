@@ -14,20 +14,12 @@ export interface BenchPair {
 
 const TARGET_PACKAGE_PREFIX = "@seampact/codegen-";
 
-// The pairs of the compatibility matrix, in matrix order: a target's highest framework major runs on its own
-// overlay (`express`), each other major on the overlay named with it (`express4`).
+// The pairs of the compatibility matrix, in matrix order, each on the consumer overlay the matrix records for its
+// framework major (`express`, `express4`).
 export function benchPairs(consumersRoot: string): readonly BenchPair[] {
-  const offered = offeredValidatorPairs();
-
-  return offered.map((pair) => {
+  return offeredValidatorPairs().map((pair) => {
     const targetId = pair.target.slice(TARGET_PACKAGE_PREFIX.length);
-    const highestMajor = Math.max(
-      ...offered
-        .filter((other) => other.target === pair.target)
-        .map((other) => other.frameworkMajor),
-    );
-    const overlay =
-      pair.frameworkMajor === highestMajor ? targetId : `${targetId}${pair.frameworkMajor}`;
+    const overlay = pair.consumer;
 
     if (!existsSync(join(consumersRoot, "targets", overlay))) {
       throw new Error(

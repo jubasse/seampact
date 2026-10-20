@@ -25,7 +25,7 @@ export const APP_ONLY_KEYS = ["outDir", "targets", "diff"] as const;
 
 export const ROOT_CONFIG_SCHEMA: JsonSchema = {
   $schema: JSON_SCHEMA_DIALECT,
-  $id: "https://seampact.dev/schemas/config/root.json",
+  $id: "https://seampact.dev/schemas/config/root.schema.json",
   title: "seampact root config",
   type: "object",
   additionalProperties: false,

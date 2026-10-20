@@ -1,4 +1,4 @@
-// The compatibility matrix (`@seampact/spec/compatibility`): the first-party providers, and per server target the framework majors it supports and the validator styles it accepts.
+// The compatibility matrix (`@seampact/spec/compatibility`): the first-party providers, and per server target the framework majors it is tested on or refuses and the validator styles it accepts.
 // One file with no relative import, so the repository scripts that Node runs from source can import it.
 
 export type ProviderKind = "validators" | "types";
@@ -21,9 +21,25 @@ export interface OwnValidator {
   readonly library: string;
 }
 
+// A framework major a consumer project runs the target on; `consumer` is its overlay under `scripts/consumers/targets`.
+export interface TestedMajor {
+  readonly major: number;
+  readonly consumer: string;
+}
+
+// A framework major the target is known not to work on, refused even when the app config allows it untested.
+export interface IncompatibleMajor {
+  readonly major: number;
+  readonly reason: string;
+}
+
+// `id` is the name the app config's `allowUntested` and the diagnostics use; `package` is the one whose installed
+// version the compatibility check reads.
 export interface FrameworkSupport {
+  readonly id: string;
   readonly package: string;
-  readonly supportedMajors: readonly number[];
+  readonly tested: readonly TestedMajor[];
+  readonly incompatible: readonly IncompatibleMajor[];
 }
 
 export interface TargetCompatibility {
@@ -38,6 +54,8 @@ export interface ValidatorPair {
   readonly target: string;
   readonly framework: string;
   readonly frameworkMajor: number;
+  // The consumer overlay that tests this framework major.
+  readonly consumer: string;
   readonly validator: string;
   readonly validatorPackage: string;
 }
@@ -58,31 +76,62 @@ export const FIRST_PARTY_PROVIDERS: readonly FirstPartyProvider[] = [
 export const SERVER_TARGETS: readonly TargetCompatibility[] = [
   {
     package: "@seampact/codegen-nestjs",
-    framework: { package: "@nestjs/core", supportedMajors: [12] },
+    framework: {
+      id: "nestjs",
+      package: "@nestjs/core",
+      tested: [{ major: 12, consumer: "nestjs" }],
+      incompatible: [],
+    },
     validatorStyles: ["standard-schema", "class-validator"],
     ownValidators: [],
   },
   {
     package: "@seampact/codegen-express",
-    framework: { package: "express", supportedMajors: [4, 5] },
+    framework: {
+      id: "express",
+      package: "express",
+      tested: [
+        { major: 4, consumer: "express4" },
+        { major: 5, consumer: "express" },
+      ],
+      incompatible: [],
+    },
     validatorStyles: ["standard-schema"],
     ownValidators: [],
   },
   {
     package: "@seampact/codegen-fastify",
-    framework: { package: "fastify", supportedMajors: [5] },
+    framework: {
+      id: "fastify",
+      package: "fastify",
+      tested: [{ major: 5, consumer: "fastify" }],
+      incompatible: [],
+    },
     validatorStyles: ["standard-schema"],
     ownValidators: [{ id: "ajv", library: "ajv" }],
   },
   {
     package: "@seampact/codegen-adonis",
-    framework: { package: "@adonisjs/core", supportedMajors: [6, 7] },
+    framework: {
+      id: "adonis",
+      package: "@adonisjs/core",
+      tested: [
+        { major: 6, consumer: "adonis6" },
+        { major: 7, consumer: "adonis" },
+      ],
+      incompatible: [],
+    },
     validatorStyles: ["standard-schema"],
     ownValidators: [],
   },
   {
     package: "@seampact/codegen-hono",
-    framework: { package: "hono", supportedMajors: [4] },
+    framework: {
+      id: "hono",
+      package: "hono",
+      tested: [{ major: 4, consumer: "hono" }],
+      incompatible: [],
+    },
     validatorStyles: ["standard-schema"],
     ownValidators: [],
   },
@@ -103,6 +152,11 @@ export function serverTargetCompatibility(targetPackage: string): TargetCompatib
   return entry;
 }
 
+// The framework majors a consumer project tests the target on, in matrix order.
+export function supportedMajorsOf(target: TargetCompatibility): readonly number[] {
+  return target.framework.tested.map((tested) => tested.major);
+}
+
 // The first-party packages that provide a style, in matrix order.
 export function firstPartyPackagesOfStyle(style: ProviderStyle): readonly string[] {
   return FIRST_PARTY_PROVIDERS.filter((provider) => provider.style === style).map(
@@ -113,11 +167,12 @@ export function firstPartyPackagesOfStyle(style: ProviderStyle): readonly string
 // Every offered target, framework major and validator provider combination; a target's own validators have the target package as their validator package.
 export function offeredValidatorPairs(): readonly ValidatorPair[] {
   return SERVER_TARGETS.flatMap((target) =>
-    target.framework.supportedMajors.flatMap((frameworkMajor) =>
+    target.framework.tested.flatMap((tested) =>
       validatorPackagesOf(target).map((provider) => ({
         target: target.package,
         framework: target.framework.package,
-        frameworkMajor,
+        frameworkMajor: tested.major,
+        consumer: tested.consumer,
         validator: provider.id,
         validatorPackage: provider.package,
       })),

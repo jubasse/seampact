@@ -1,5 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import type { JsonSchema } from "@seampact/spec/authoring";
+import { BOOT_CHECK_ARTEFACT } from "@seampact/spec/config";
 import { Ajv2020, type ErrorObject } from "ajv/dist/2020.js";
 import {
   type Document,
@@ -216,9 +217,20 @@ function schemaErrorProblems(
     .filter(
       (error) => !(error.keyword === "oneOf" && hasDeeperPath(error.instancePath, oneOfPaths)),
     )
-    .map((error) => schemaErrorProblem(parsed, error))
+    .map((error) => ({ keyword: error.keyword, ...schemaErrorProblem(parsed, error) }))
     .filter(({ keyPath }) => !isAtOrUnder(keyPath, reportedPaths))
+    .filter(
+      ({ keyword, keyPath }) => !(keyword === "oneOf" && holdsReportedPath(keyPath, reportedPaths)),
+    )
     .map(({ problem }) => problem);
+}
+
+// A value fails its `oneOf` because of a key reported already, such as a waiting key: that report names it.
+function holdsReportedPath(keyPath: string, reportedPaths: ReadonlySet<string>): boolean {
+  return [...reportedPaths].some(
+    (reportedPath) =>
+      reportedPath.startsWith(`${keyPath}.`) || reportedPath.startsWith(`${keyPath}[`),
+  );
 }
 
 // An outer `oneOf` fails because an inner one did; the inner one names the value to correct.
@@ -296,6 +308,13 @@ function oneOfSentences(path: KeyPath): { message: string; fix: string } {
       message:
         "A source takes one form: 'path', 'package' with 'version', 'release' or 'git'; 'integrity' goes with a bundle form only.",
       fix: "Keep the keys of one form (ADR 0011 'The app config').",
+    };
+  }
+
+  if (path.at(-1) === BOOT_CHECK_ARTEFACT) {
+    return {
+      message: "'bootCheck' is true, false or '{ frameworkRoutes }'.",
+      fix: "Switch the boot check with a boolean, or its framework-route check alone with '{ frameworkRoutes: false }'.",
     };
   }
 

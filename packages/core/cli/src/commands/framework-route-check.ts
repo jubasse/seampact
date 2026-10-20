@@ -1,6 +1,7 @@
 import type { FrameworkRouteCheck, Target } from "@seampact/codegen-core";
 import type { TargetEntry } from "@seampact/spec/config";
 import { type CliProblem, entryWhere } from "../cli-problem.js";
+import { frameworkRoutesSwitchOf, isFrameworkRouteCheckOff } from "../config/artefact-switches.js";
 
 // The framework-route boot check of a target entry (ADR 0012 "The boot check"): its `frameworkRoutes` allow-list
 // and its `artefacts.bootCheck.frameworkRoutes` switch, for a target that generates the check.
@@ -9,7 +10,7 @@ const FRAMEWORK_ROUTE_CHECK = "frameworkRoutes";
 
 /** The check the entry asks: off when switched off, else on with the entry's allow-list, copied. */
 export function frameworkRouteCheckOf(entry: TargetEntry): FrameworkRouteCheck {
-  if (entry.artefacts?.bootCheck?.frameworkRoutes === false) return { status: "off" };
+  if (isFrameworkRouteCheckOff(entry.artefacts)) return { status: "off" };
 
   return {
     status: "on",
@@ -27,7 +28,7 @@ export function unreadFrameworkRouteKeyProblems(entry: TargetEntry, target: Targ
 
   const writtenKeys = [
     ...(entry.frameworkRoutes === undefined ? [] : ["frameworkRoutes"]),
-    ...(entry.artefacts?.bootCheck?.frameworkRoutes === undefined
+    ...(frameworkRoutesSwitchOf(entry.artefacts) === undefined
       ? []
       : ["artefacts.bootCheck.frameworkRoutes"]),
   ];

@@ -3,7 +3,7 @@ import { type ContractIR, IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { format } from "prettier";
 import { expect, test } from "vitest";
 import { defineTarget } from "./define-target.js";
-import type { GeneratedFile } from "./target.js";
+import type { ArtefactDeclaration, GeneratedFile } from "./target.js";
 
 const PACKAGE_NAME = "@seampact/codegen-stub";
 const PACKAGE_VERSION = "1.2.3";
@@ -124,3 +124,67 @@ test.each(unsupportedIrCases)(
     expect(refusal?.fix).toContain(`Update ${PACKAGE_NAME}`);
   },
 );
+
+function targetDeclaring(artefacts: readonly ArtefactDeclaration<"types" | "docs">[]) {
+  return () =>
+    defineTarget<object, "types" | "docs">({
+      metadata: {
+        packageName: PACKAGE_NAME,
+        packageVersion: PACKAGE_VERSION,
+        role: "provider",
+        irSupport: { irVersions: [IR_VERSION], irRevision: IR_REVISION, kinds: [], features: [] },
+        artefacts,
+        consumes: {},
+        provides: {},
+      },
+      format,
+      parseOptions: () => ({ status: "parsed", options: {} }),
+      generate: () => ({ status: "generated", files: [] }),
+    });
+}
+
+test.each([
+  {
+    name: "an undeclared need",
+    artefacts: [{ id: "types", defaultOn: true, needs: ["docs"] }],
+    message: "'types' needs 'docs', which is not declared.",
+  },
+  {
+    name: "a self need",
+    artefacts: [{ id: "types", defaultOn: true, needs: ["types"] }],
+    message: "'types' needs itself.",
+  },
+  {
+    name: "a default-on artefact needing a default-off one",
+    artefacts: [
+      { id: "types", defaultOn: true, needs: ["docs"] },
+      { id: "docs", defaultOn: false },
+    ],
+    message: "'types' is on by default and needs 'docs', which is off by default.",
+  },
+  {
+    name: "a duplicate id",
+    artefacts: [
+      { id: "types", defaultOn: true },
+      { id: "types", defaultOn: false },
+    ],
+    message: "'types' is declared twice.",
+  },
+] satisfies {
+  name: string;
+  artefacts: ArtefactDeclaration<"types" | "docs">[];
+  message: string;
+}[])("defineTarget throws on $name", ({ artefacts, message }) => {
+  expect(targetDeclaring(artefacts)).toThrow(
+    `${PACKAGE_NAME}: invalid artefact declarations: ${message}`,
+  );
+});
+
+test("defineTarget accepts a default-off artefact needing a default-on one", () => {
+  expect(
+    targetDeclaring([
+      { id: "types", defaultOn: true },
+      { id: "docs", defaultOn: false, needs: ["types"] },
+    ]),
+  ).not.toThrow();
+});

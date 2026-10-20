@@ -1,6 +1,7 @@
 import { dirname, resolve } from "node:path";
 import {
   APP_CONFIG_SCHEMA,
+  type AppChecks,
   type AppConfig,
   type AppOpenApi,
   DEFAULT_OUT_DIR,
@@ -17,6 +18,7 @@ import {
   waitProblems,
   whereOf,
 } from "./config-file.js";
+import { isFrameworkRouteCheckOff } from "./artefact-switches.js";
 import { findConfigWaits } from "./config-waits.js";
 import { findRootConfig } from "./find-root-config.js";
 import { isInsideOrEqual, isStrictlyInside } from "./path-containment.js";
@@ -39,6 +41,8 @@ export interface LoadedAppConfig {
   entries: readonly AppConfigEntry[];
   // The app's `openapi` as it writes it; absent when the app does not write the key.
   openapi?: AppOpenApi;
+  // The app's `checks` as it writes them; absent when the app does not write the key.
+  checks?: AppChecks;
   // The root config folded in, for an app its root lists.
   rootFile?: string;
 }
@@ -133,6 +137,7 @@ function resolveAppConfig(file: string, parsed: ParsedConfig, config: AppConfig)
 
   const allowLocal = config.allowLocal === undefined ? {} : { allowLocal: config.allowLocal };
   const openapi = config.openapi === undefined ? {} : { openapi: structuredClone(config.openapi) };
+  const checks = config.checks === undefined ? {} : { checks: structuredClone(config.checks) };
   const loaded: LoadedAppConfig = {
     file,
     outDir,
@@ -140,6 +145,7 @@ function resolveAppConfig(file: string, parsed: ParsedConfig, config: AppConfig)
     sources: resolvedSources(directory, config.sources),
     entries,
     ...openapi,
+    ...checks,
   };
 
   return { status: "read", app: { parsed, config, loaded } };
@@ -216,15 +222,20 @@ function switchedOffAllowListProblems(
     .map((entry, index) => ({ entry, index }))
     .filter(
       ({ entry }) =>
-        entry.frameworkRoutes !== undefined &&
-        entry.artefacts?.bootCheck?.frameworkRoutes === false,
+        entry.frameworkRoutes !== undefined && isFrameworkRouteCheckOff(entry.artefacts),
     )
     .map(({ entry, index }) => ({
       code: "config.key.conflict",
-      message: `The entry '${entry.id}' allow-lists framework routes in 'frameworkRoutes' but switches their check off with 'artefacts.bootCheck.frameworkRoutes: false'.`,
+      message: `The entry '${entry.id}' allow-lists framework routes in 'frameworkRoutes' but switches their check off with '${switchOffKey(entry)}: false'.`,
       fix: "Keep one: remove 'frameworkRoutes' to leave the check off, or remove the switch to check the routes against the allow-list.",
       where: whereOf(parsed, ["targets", index, "frameworkRoutes"]),
     }));
+}
+
+function switchOffKey(entry: TargetEntry): string {
+  return entry.artefacts?.bootCheck === false
+    ? "artefacts.bootCheck"
+    : "artefacts.bootCheck.frameworkRoutes";
 }
 
 function outsideOutDirProblems(

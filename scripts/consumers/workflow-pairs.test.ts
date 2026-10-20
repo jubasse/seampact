@@ -16,18 +16,10 @@ const CONSUMER_WORKFLOWS = [
   "validators-2.yml",
 ];
 
-// The server target package and framework major each consumer target id tests, by its overlay under `targets/`.
-const CONSUMER_TARGETS: Readonly<
-  Record<string, { readonly target: string; readonly frameworkMajor: number }>
-> = {
-  nestjs: { target: "@seampact/codegen-nestjs", frameworkMajor: 12 },
-  express: { target: "@seampact/codegen-express", frameworkMajor: 5 },
-  express4: { target: "@seampact/codegen-express", frameworkMajor: 4 },
-  fastify: { target: "@seampact/codegen-fastify", frameworkMajor: 5 },
-  hono: { target: "@seampact/codegen-hono", frameworkMajor: 4 },
-  adonis: { target: "@seampact/codegen-adonis", frameworkMajor: 7 },
-  adonis6: { target: "@seampact/codegen-adonis", frameworkMajor: 6 },
-};
+// The server target package and framework major each consumer target id tests, from the matrix's tested majors.
+const CONSUMER_TARGETS: ReadonlyMap<string, string> = new Map(
+  offeredValidatorPairs().map((pair) => [pair.consumer, `${pair.target}@${pair.frameworkMajor}`]),
+);
 
 interface ConsumerMatrix {
   readonly target: readonly string[];
@@ -59,15 +51,15 @@ function pairKey(target: string, frameworkMajor: number, validator: string): str
 }
 
 function consumerTargetKey(targetId: string): string {
-  const consumerTarget = Object.hasOwn(CONSUMER_TARGETS, targetId)
-    ? CONSUMER_TARGETS[targetId]
-    : undefined;
+  const consumerTarget = CONSUMER_TARGETS.get(targetId);
 
   if (consumerTarget === undefined) {
-    throw new Error(`consumers: workflow target '${targetId}' has no entry in CONSUMER_TARGETS.`);
+    throw new Error(
+      `consumers: workflow target '${targetId}' is no consumer the compatibility matrix records.`,
+    );
   }
 
-  return `${consumerTarget.target}@${consumerTarget.frameworkMajor}`;
+  return consumerTarget;
 }
 
 function assertRunPassesEveryAxis(file: string, jobId: string, job: WorkflowJob): void {

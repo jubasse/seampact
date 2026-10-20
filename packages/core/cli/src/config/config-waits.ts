@@ -1,4 +1,4 @@
-import { ROOT_CONFIG_MARKER_KEY } from "@seampact/spec/config";
+import { BOOT_CHECK_ARTEFACT, ROOT_CONFIG_MARKER_KEY } from "@seampact/spec/config";
 import { isRecord } from "../is-record.js";
 import type { KeyPath } from "./key-path.js";
 
@@ -20,7 +20,6 @@ const ROOT_KEY_WAITS: Readonly<Record<string, string>> = {
 const CHECKS_KEY_WAITS: Readonly<Record<string, string>> = {
   openapi: "the `check` command (p3-cli)",
   generated: "the `check` command (p3-cli)",
-  matrix: "the compatibility matrix (p3-config)",
 };
 
 // A command run on a root config, a file holding `apps`, waits as a whole: the root's merged documents and their
@@ -34,13 +33,15 @@ const ROOT_RUN_WAIT: ConfigWait = {
 
 const SERVER_ENTRY_BRINGER = "the server targets, through a codegen-core seam (p5)";
 
-const ARTEFACT_SWITCH_BRINGER = "artefact switches and their checks (p3-config)";
+// The handler check of the boot check comes with the access hooks (ADR 0012).
+const BOOT_CHECK_SWITCH_WAITS: Readonly<Record<string, string>> = {
+  handlers: SERVER_ENTRY_BRINGER,
+};
 
 const ENTRY_KEY_WAITS: Readonly<Record<string, string>> = {
   mount: SERVER_ENTRY_BRINGER,
   access: SERVER_ENTRY_BRINGER,
   frameworkDocs: SERVER_ENTRY_BRINGER,
-  allowUntested: "the compatibility matrix (p3-config)",
 };
 
 const NATIVE_RUNNER_BRINGER = "the native runners, Gradle, Maven and Composer (p6)";
@@ -77,31 +78,19 @@ function targetEntryWaits(entry: unknown, index: number): ConfigWait[] {
   return [...keyWaits, ...artefactWaits, ...useWaits, ...linkWaits];
 }
 
-// `artefacts.bootCheck.frameworkRoutes` is read; every other artefact switch waits, `bootCheck` as a whole too.
+// Every artefact switch is read but the boot check's `handlers`.
 function artefactSwitchWaits(artefacts: unknown, path: KeyPath): ConfigWait[] {
-  if (!isRecord(artefacts)) return [];
+  const bootCheck = isRecord(artefacts) ? artefacts[BOOT_CHECK_ARTEFACT] : undefined;
 
-  const switchWaits = Object.keys(artefacts)
-    .filter((key) => key !== "bootCheck")
-    .map((key) => switchWait([...path, key], `the artefact switch '${key}'`));
+  if (!isRecord(bootCheck)) return [];
 
-  if (!Object.hasOwn(artefacts, "bootCheck")) return switchWaits;
-
-  const bootCheckPath = [...path, "bootCheck"];
-
-  if (!isRecord(artefacts.bootCheck)) {
-    return [...switchWaits, switchWait(bootCheckPath, "the artefact switch 'bootCheck'")];
-  }
-
-  const bootCheckWaits = Object.keys(artefacts.bootCheck)
-    .filter((key) => key !== "frameworkRoutes")
-    .map((key) => switchWait([...bootCheckPath, key], `the boot check switch '${key}'`));
-
-  return [...switchWaits, ...bootCheckWaits];
-}
-
-function switchWait(path: KeyPath, what: string): ConfigWait {
-  return { path, what, bringer: ARTEFACT_SWITCH_BRINGER };
+  return Object.entries(BOOT_CHECK_SWITCH_WAITS)
+    .filter(([key]) => Object.hasOwn(bootCheck, key))
+    .map(([key, bringer]) => ({
+      path: [...path, BOOT_CHECK_ARTEFACT, key],
+      what: `the boot check switch '${key}'`,
+      bringer,
+    }));
 }
 
 // A Maven `group:artifact` coordinate or a Composer `vendor/name`; npm names never hold a colon, and an unscoped

@@ -119,19 +119,54 @@ test.each([
   });
 });
 
-test("refuses by name the artefact switches that wait, beside the read boot check switch", async () => {
+test("reads every artefact switch, the boot check as a boolean, and allowUntested", async () => {
   const outcome = await readConfigText(
-    `${SERVER_ENTRY_HEAD}    artefacts: { types: false, bootCheck: { handlers: false, frameworkRoutes: false } }\n`,
+    `${SERVER_ENTRY_HEAD}    artefacts: { types: false, nativeDocs: true, bootCheck: false }\n    allowUntested: [express@6]\nchecks: { matrix: error }\n`,
+  );
+
+  expect(outcome).toMatchObject({
+    status: "read",
+    config: {
+      checks: { matrix: "error" },
+      entries: [
+        {
+          entry: {
+            artefacts: { types: false, nativeDocs: true, bootCheck: false },
+            allowUntested: ["express@6"],
+          },
+        },
+      ],
+    },
+  });
+});
+
+test("refuses an allow-list beside the whole boot check switched off", async () => {
+  const outcome = await readConfigText(
+    `${SERVER_ENTRY_HEAD}    artefacts: { bootCheck: false }\n    frameworkRoutes:\n      - { path: /metrics, reason: r }\n`,
   );
 
   expect(outcome).toMatchObject({
     status: "refused",
     problems: [
-      { code: "config.key.waits", message: expect.stringContaining("'types'") },
-      { code: "config.key.waits", message: expect.stringContaining("'handlers'") },
+      {
+        code: "config.key.conflict",
+        message: expect.stringContaining("with 'artefacts.bootCheck: false'"),
+      },
     ],
   });
-  expect(outcome.status === "refused" ? outcome.problems : []).toHaveLength(2);
+});
+
+test.each([
+  ["an artefact switch that is no boolean", "artefacts: { types: off }", "must be boolean"],
+  ["a boot check of another form", "artefacts: { bootCheck: on }", "'bootCheck' is true, false"],
+  ["an allowUntested item without its major", "allowUntested: [express]", "must match pattern"],
+])("refuses %s", async (_, key, message) => {
+  const outcome = await readConfigText(`${SERVER_ENTRY_HEAD}    ${key}\n`);
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    problems: [{ code: "config.schema", message: expect.stringContaining(message) }],
+  });
 });
 
 test("refuses the diff settings by name until the diff command reads them", async () => {
@@ -323,7 +358,6 @@ test.each([
   ["a command run on a root config", "apps: [api]\n", "on the monorepo root config"],
   ["the OpenAPI drift check", "checks: { openapi: warning }\n", "'openapi'"],
   ["the generated files' drift check", "checks: { generated: disabled }\n", "'generated'"],
-  ["the matrix check level", "checks: { matrix: error }\n", "'matrix'"],
   ["the diff settings", "diff: { gate: both }\n", "'diff'"],
   ["a mount", `${SERVER_ENTRY_HEAD}    mount: /api\n`, "'mount'"],
   ["native access", `${SERVER_ENTRY_HEAD}    access: { native: "Spring Security." }\n`, "'access'"],
@@ -331,11 +365,6 @@ test.each([
     "the framework's own documents",
     `${SERVER_ENTRY_HEAD}    frameworkDocs: off\n`,
     "'frameworkDocs'",
-  ],
-  [
-    "an untested framework major",
-    `${SERVER_ENTRY_HEAD}    allowUntested: [nestjs@13]\n`,
-    "'allowUntested'",
   ],
   [
     "the boot check's handler switch",
