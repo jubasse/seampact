@@ -126,6 +126,18 @@ test("warnings.ignore silences a warning by its form and keeps the others", asyn
   expect(output).toContain("sortKeys.handler");
 });
 
+test("refuses artefacts.bootCheck.hooks for a target that generates no hook boot check", async () => {
+  const app = makeApp(
+    "sources:\n  a: { path: ./a }\ntargets:\n  - { id: server, use: fake-server, api: tasks, artefacts: { bootCheck: { hooks: off } } }\n",
+    [{ name: "fake-server" }],
+  );
+  const { exitCode, output } = await generateErrors(app);
+
+  expect(exitCode).toBe(EXIT_REFUSED);
+  expect(output).toContain("config.key.unsupported");
+  expect(output).toContain("artefacts.bootCheck.hooks");
+});
+
 test("writes the documents an OpenAPI-only app lists, with no target package installed", async () => {
   const app = makeApp(
     "sources:\n  a: { path: ./a }\nopenapi:\n  tasksService: { path: docs/service.yaml, extensions: none }\n",

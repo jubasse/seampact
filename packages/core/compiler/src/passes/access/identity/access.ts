@@ -139,6 +139,11 @@ function identitySource(
   return { name: scope.caller, pointer: ACCESS_IDENTITY_SERVICE_CALLER_POINTER, origin };
 }
 
+// `conventions.service.allowPublic`: a service api that lets a route be public or optional-auth.
+function servicePublicRoutesAllowed(scope: AccessIdentityScope): boolean {
+  return scope.context.conventions.get("service.allowPublic")?.value === true;
+}
+
 // The identity a source names; undefined when it is refused (reported here, or with the identity itself).
 function identityOf(
   source: IdentitySource,
@@ -182,11 +187,11 @@ function writtenAccess(
   if (written === undefined || (reason === undefined && optionalReason === undefined))
     throw new Error(`the access at ${pointer} is neither public nor optionalAuth`);
 
-  if (scope.caller !== undefined) {
+  if (scope.caller !== undefined && !servicePublicRoutesAllowed(scope)) {
     scope.reporter.error({
       rule: "service-access",
       message: `a service api runs every route under its caller identity '${scope.caller}', so ${reason === undefined ? "optional-auth" : "public"} access is refused`,
-      fix: "Remove 'access': the routes of a service api are identified by 'api.caller.identity'.",
+      fix: "Remove 'access': the routes of a service api are identified by 'api.caller.identity', or set 'conventions.service.allowPublic: true'.",
       pointer,
     });
 

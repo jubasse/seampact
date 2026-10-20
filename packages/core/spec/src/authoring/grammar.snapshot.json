@@ -608,6 +608,8 @@
     "degradedHeader": "ADR 0002 section 13",
     "urls": "ADR 0002 section 13",
     "rights": "ADR 0002 section 2",
+    "service": "ADR 0002 section 13",
+    "access": "ADR 0002 section 13",
     "errors": "ADR 0002 section 11"
   },
   "conventions.schema.json#/$defs/conventions/properties/paging": {
@@ -695,6 +697,12 @@
   },
   "conventions.schema.json#/$defs/conventions/properties/rights": {
     "pattern": "ADR 0002 section 2"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/service": {
+    "allowPublic": "ADR 0002 section 13"
+  },
+  "conventions.schema.json#/$defs/conventions/properties/access": {
+    "guestRule": "ADR 0002 section 13"
   },
   "conventions.schema.json#/$defs/conventions/properties/errors": {
     "pattern": "ADR 0002 section 13",

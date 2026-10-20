@@ -50,6 +50,8 @@ conventions:
 | `degradedHeader` | the header listing degraded parts | unset: required for a `degradable` route whose format has no `degraded` meta field |
 | `urls` | `relative` or `absolute`: how the URL slots and roles are written (section 13) | `relative` |
 | `rights.pattern` | a pattern every right name must also match (section 2) | unset: the core pattern only (A20) |
+| `service.allowPublic` | `true`: a service api (`api.kind: service`, section 2) may declare `public` or `optionalAuth` routes, which then run without the caller identity; `false` refuses them | `false` |
+| `access.guestRule` | `refuse` or `off`: a right required on a public or optional-auth route needs a `guest` reason (section 2); with `off` it needs none (write `"off"` quoted, YAML reads a plain `off` as a boolean) | `refuse` |
 | `errors.pattern` | a pattern every error code must also match, the dotted `family.name` form for example (`'^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$'`) | unset: the core pattern only (A36) |
 | `errors.every` | codes attached to every operation (section 11) | empty |
 | `errors.reach` | `subtree` or `resource`: how far a code attached on a node reaches (section 11) | `subtree` (A35) |

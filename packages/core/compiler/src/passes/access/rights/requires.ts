@@ -381,7 +381,7 @@ function requirementOf(
 
   if (right === undefined) return undefined;
 
-  if (!checkGuest(reporter, input.route, right, use)) return undefined;
+  if (!checkGuest(context, reporter, input.route, right, use)) return undefined;
 
   const subjectText = accessRightsString(use.item, "subject");
   const resolved = accessRightsSubject(context, reporter, {
@@ -409,14 +409,18 @@ function requirementOf(
   };
 }
 
-// A right reaches an anonymous caller on a public or optional-auth route only when it is guest-enabled (SCN-063).
+// A right reaches an anonymous caller on a public or optional-auth route only when it is guest-enabled (SCN-063),
+// unless `conventions.access.guestRule` is `off`.
 function checkGuest(
+  context: AccessRightsContext,
   reporter: AccessRightsReporter,
   route: AccessRightsRoute,
   right: IrWriter.Right,
   use: RequirementUse,
 ): boolean {
   if (route.access === "identity" || right.guest !== undefined) return true;
+
+  if (context.conventions.get("access.guestRule")?.value === "off") return true;
 
   // A pack derived the right or the requirement: the author changes the entry's selector or declares the right.
   const derived = right.derivedFrom !== undefined || use.derivedFrom !== undefined;

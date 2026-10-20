@@ -882,6 +882,23 @@ describe("service api identity", () => {
     ]);
     expect(compiled.operation("other").access).toBeUndefined();
   });
+
+  test("conventions.service.allowPublic lets a service api have public and optional-auth routes", () => {
+    const compiled = compile(
+      `  internal:
+    routes:
+      open: { method: get, access: { public: "Probes." }, output: Event }
+      relaxed: { method: get, access: { optionalAuth: "Maybe." }, output: Event }
+`,
+      {},
+      undefined,
+      `${SERVICE_API}\nconventions: { service: { allowPublic: true } }`,
+    );
+
+    expect(compiled.rules).toEqual([]);
+    expect(compiled.operation("open").access).toMatchObject({ kind: "public" });
+    expect(compiled.operation("relaxed").access).toMatchObject({ kind: "optional" });
+  });
 });
 
 describe("refusals reached from a route", () => {

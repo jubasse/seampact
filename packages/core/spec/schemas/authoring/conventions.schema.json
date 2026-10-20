@@ -509,6 +509,39 @@
           "additionalProperties": false,
           "$comment": "ADR 0002 section 2"
         },
+        "service": {
+          "type": "object",
+          "properties": {
+            "allowPublic": {
+              "type": "boolean",
+              "$comment": "ADR 0002 section 13",
+              "description": "true: a service api may declare public or optional-auth routes; false (the default) refuses them."
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 13"
+        },
+        "access": {
+          "type": "object",
+          "properties": {
+            "guestRule": {
+              "enum": [
+                "refuse",
+                "off"
+              ],
+              "$comment": "ADR 0002 section 13",
+              "description": "off: a right required on a public or optional-auth route needs no guest reason; refuse (the default) requires one."
+            },
+            "$include": {
+              "$ref": "common.schema.json#/$defs/include"
+            }
+          },
+          "additionalProperties": false,
+          "$comment": "ADR 0002 section 13"
+        },
         "errors": {
           "type": "object",
           "properties": {

@@ -69,6 +69,8 @@ const LEAVES = [
   "degradedHeader",
   "urls",
   "rights.pattern",
+  "service.allowPublic",
+  "access.guestRule",
   "errors.pattern",
   "errors.every",
   "errors.reach",
@@ -159,6 +161,8 @@ export const pipelineConventionDefaults: readonly PipelineConventionDefault[] = 
   { path: "operationIds.order", value: "verbNoun" },
   { path: "operationIds.case", value: "camel" },
   { path: "urls", value: "relative" },
+  { path: "service.allowPublic", value: false },
+  { path: "access.guestRule", value: "refuse" },
   { path: "errors.every", value: [] },
   { path: "errors.reach", value: "subtree" },
   // A34: each role is bound to its default code (ADR 0006 section 6) unless a layer binds it.

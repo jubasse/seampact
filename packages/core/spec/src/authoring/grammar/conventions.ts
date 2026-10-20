@@ -194,6 +194,30 @@ export function conventionsDefs(): Record<string, JsonSchema> {
             },
           }),
         ),
+        service: kw(
+          S,
+          object({
+            props: {
+              allowPublic: kw(
+                S,
+                { type: "boolean" },
+                "true: a service api may declare public or optional-auth routes; false (the default) refuses them.",
+              ),
+            },
+          }),
+        ),
+        access: kw(
+          S,
+          object({
+            props: {
+              guestRule: kw(
+                S,
+                oneOfValues("refuse", "off"),
+                "off: a right required on a public or optional-auth route needs no guest reason; refuse (the default) requires one.",
+              ),
+            },
+          }),
+        ),
         errors: kw(
           A2(11),
           object({
