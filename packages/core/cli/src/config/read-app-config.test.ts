@@ -330,7 +330,9 @@ test.each([
 });
 
 test("names the app to run in when a command is run on a root config", async () => {
-  expect(await readConfigText("apps: [api]\nopenapi: { all: { path: all.yaml } }\n")).toEqual({
+  expect(
+    await readConfigText("apps: [api]\nopenapi: { all: { path: all.yaml, apps: [api] } }\n"),
+  ).toEqual({
     status: "refused",
     problems: [
       {

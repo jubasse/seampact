@@ -4,10 +4,12 @@ import {
   type AppConfig,
   type AppOpenApi,
   DEFAULT_OUT_DIR,
+  ROOT_CONFIG_MARKER_KEY,
   type TargetEntry,
 } from "@seampact/spec/config";
 import type { CliProblem } from "../cli-problem.js";
 import { apiRefsOf, parseApiRef } from "../commands/api-refs.js";
+import { isRecord } from "../is-record.js";
 import {
   type ParsedConfig,
   parseConfigFile,
@@ -97,12 +99,14 @@ async function readAppConfigAlone(file: string, displayName: string): Promise<Re
   if (parsedFile.status === "refused") return parsedFile;
 
   const { parsed, value } = parsedFile;
-  const validated = validateConfig<AppConfig>(
-    parsed,
-    value,
-    APP_CONFIG_SCHEMA,
-    waitProblems(parsed, findConfigWaits(value)),
-  );
+  const keyProblems = waitProblems(parsed, findConfigWaits(value));
+
+  // A root config waits as a whole; its keys are not the app config's to check.
+  if (isRecord(value) && Object.hasOwn(value, ROOT_CONFIG_MARKER_KEY)) {
+    return { status: "refused", problems: keyProblems.map(({ problem }) => problem) };
+  }
+
+  const validated = validateConfig<AppConfig>(parsed, value, APP_CONFIG_SCHEMA, keyProblems);
 
   if (validated.status === "refused") return validated;
 

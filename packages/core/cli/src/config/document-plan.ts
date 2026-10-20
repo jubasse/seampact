@@ -348,7 +348,7 @@ export function planMergedDocuments(
 
       if (app === undefined) throw new Error(`the workspace has no app ${appName}`);
 
-      return appContributions(appName, app.config, rolesByApp.get(appName) ?? new Map());
+      return appContributions(appName, app.config, rolesByApp.get(appName));
     }),
   }));
   const problems = pathConflictProblems(documents);
@@ -359,9 +359,11 @@ export function planMergedDocuments(
 function appContributions(
   appName: string,
   config: LoadedAppConfig,
-  entryRoles: ReadonlyMap<string, TargetRole>,
+  entryRoles: ReadonlyMap<string, TargetRole> | undefined,
 ): MergedContribution[] {
   if (config.entries.length > 0) {
+    if (entryRoles === undefined) throw new Error(`no entry roles for the app ${appName}`);
+
     return config.entries
       .filter(({ entry }) => roleOf(entryRoles, entry.id) === "server")
       .flatMap(({ entry }) =>
