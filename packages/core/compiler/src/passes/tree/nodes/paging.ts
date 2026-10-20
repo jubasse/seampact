@@ -144,12 +144,16 @@ function namedStyle(site: TreeNodesSite): NamedStyle | undefined {
       rule: "paging-style",
       origin: treeNodesNodeOrigin(site.node.origin),
       message: `The list ${site.operationId} names no paging style, and conventions.paging.default sets none.`,
-      fix: "Declare a style in pagings and name it in paging (or conventions.paging.default), or apply a format pack that provides one; paging: none serves the whole list.",
+      fix: PAGING_STYLE_FIX,
     }),
   );
 
   return undefined;
 }
+
+// The shape is the api's own: the example is one page-numbers style among many, not a default.
+const PAGING_STYLE_FIX =
+  "Declare a paging style and name it, for example `pagings: { pages: { request: { page: { query: page }, limit: { query: limit } }, response: { body: { items: $items, meta: { page: $page, limit: $limit, total: $total } } } } }` with `paging: { pages: { maxLimit: 100 } }` on the list or `conventions: { paging: { default: pages, maxLimit: 100 } }`; or write `paging: none` to serve the whole list.";
 
 function declaredStyle(site: TreeNodesSite, id: string, origin: Origin): TreeNodesJson | undefined {
   const pagings = site.context.raw.merged.pagings;

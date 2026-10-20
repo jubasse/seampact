@@ -180,6 +180,8 @@ function errorCodeReference(
   });
 }
 
+const NEVER_SENT: SlotValue = { schema: {}, presence: "never" };
+
 /** The format's error body for one code: its code and status as constants, its params schema merged or nested. */
 function errorCodeComponent(
   context: EmitContext,
@@ -190,11 +192,12 @@ function errorCodeComponent(
   const maybe = (schema: JsonObject): SlotValue => ({ schema, presence: "maybe" });
   const params =
     declared.params === undefined
-      ? { schema: {}, presence: "never" as const }
+      ? NEVER_SENT
       : always(schemaReference(context, declared.params, "shared"));
   const slots = new Map<string, SlotValue>([
     [CODE_SLOT, always({ type: "string", const: declared.code })],
-    ["title", always({ type: "string" })],
+    // RFC 9457 makes `title` optional: a code without a written title sends none.
+    ["title", declared.title === undefined ? NEVER_SENT : always({ type: "string" })],
     ["status", always({ type: "integer", const: declared.http.status })],
     ["nature", always({ type: "string" })],
     ["detail", maybe({ type: "string" })],

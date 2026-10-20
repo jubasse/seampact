@@ -2082,8 +2082,6 @@ components:
           const: Error
         type:
           type: string
-        title:
-          type: string
         detail:
           type: string
         status:
@@ -2097,7 +2095,6 @@ components:
         - "@id"
         - "@type"
         - type
-        - title
         - status
         - code
       x-seampact-nature:
@@ -2114,8 +2111,6 @@ components:
               const: Error
             type:
               type: string
-            title:
-              type: string
             detail:
               type: string
             status:
@@ -2129,7 +2124,6 @@ components:
             - "@id"
             - "@type"
             - type
-            - title
             - status
             - code
         - $ref: "#/components/schemas/ApiForbiddenParams"
@@ -2146,8 +2140,6 @@ components:
           const: Error
         type:
           type: string
-        title:
-          type: string
         detail:
           type: string
         status:
@@ -2161,7 +2153,6 @@ components:
         - "@id"
         - "@type"
         - type
-        - title
         - status
         - code
       x-seampact-nature:
@@ -2177,8 +2168,6 @@ components:
           const: Error
         type:
           type: string
-        title:
-          type: string
         detail:
           type: string
         status:
@@ -2192,7 +2181,6 @@ components:
         - "@id"
         - "@type"
         - type
-        - title
         - status
         - code
       x-seampact-nature:
@@ -2208,8 +2196,6 @@ components:
           const: Error
         type:
           type: string
-        title:
-          type: string
         detail:
           type: string
         status:
@@ -2223,7 +2209,6 @@ components:
         - "@id"
         - "@type"
         - type
-        - title
         - status
         - code
       x-seampact-nature:
@@ -2239,8 +2224,6 @@ components:
           const: Error
         type:
           type: string
-        title:
-          type: string
         detail:
           type: string
         status:
@@ -2254,7 +2237,6 @@ components:
         - "@id"
         - "@type"
         - type
-        - title
         - status
         - code
       x-seampact-nature:
@@ -2271,8 +2253,6 @@ components:
               const: Error
             type:
               type: string
-            title:
-              type: string
             detail:
               type: string
             status:
@@ -2286,7 +2266,6 @@ components:
             - "@id"
             - "@type"
             - type
-            - title
             - status
             - code
         - $ref: "#/components/schemas/ApiPayloadTooLargeParams"
@@ -2304,8 +2283,6 @@ components:
               const: Error
             type:
               type: string
-            title:
-              type: string
             detail:
               type: string
             status:
@@ -2319,7 +2296,6 @@ components:
             - "@id"
             - "@type"
             - type
-            - title
             - status
             - code
         - $ref: "#/components/schemas/ApiRateLimitedParams"
@@ -2336,8 +2312,6 @@ components:
           const: Error
         type:
           type: string
-        title:
-          type: string
         detail:
           type: string
         status:
@@ -2351,7 +2325,6 @@ components:
         - "@id"
         - "@type"
         - type
-        - title
         - status
         - code
       x-seampact-nature:
@@ -2368,8 +2341,6 @@ components:
               const: Error
             type:
               type: string
-            title:
-              type: string
             detail:
               type: string
             status:
@@ -2383,7 +2354,6 @@ components:
             - "@id"
             - "@type"
             - type
-            - title
             - status
             - code
         - $ref: "#/components/schemas/ApiSchemaInvalidParams"
@@ -2400,8 +2370,6 @@ components:
           const: Error
         type:
           type: string
-        title:
-          type: string
         detail:
           type: string
         status:
@@ -2415,7 +2383,6 @@ components:
         - "@id"
         - "@type"
         - type
-        - title
         - status
         - code
       x-seampact-nature:
@@ -2431,8 +2398,6 @@ components:
           const: Error
         type:
           type: string
-        title:
-          type: string
         detail:
           type: string
         status:
@@ -2446,7 +2411,6 @@ components:
         - "@id"
         - "@type"
         - type
-        - title
         - status
         - code
       x-seampact-nature:
@@ -2462,8 +2426,6 @@ components:
           const: Error
         type:
           type: string
-        title:
-          type: string
         detail:
           type: string
         status:
@@ -2477,7 +2439,6 @@ components:
         - "@id"
         - "@type"
         - type
-        - title
         - status
         - code
       x-seampact-nature:

@@ -15,7 +15,7 @@ errors:
     example: { retryAfterMs: 1500 }
 ```
 
-A declaration defines a code once: `status` (400 to 599), `nature`, `family`, `params` (a fields map or a schema name), `example` (the params), `title`, `description` (FR-6, SCN-037). `nature` may be left out: it is then `unavailable` for 408, 425, 429, 502, 503 and 504, `refused` for every other 4xx and `failed` for every other 5xx. A redeclared default code left without `nature` keeps its core nature instead ([ADR 0006](../adr/0006-compiler-pass-pipeline.md) section 6). `family` groups codes in docs and clients; it defaults to the code up to its first dot (section 4).
+A declaration defines a code once: `status` (400 to 599), `nature`, `family`, `params` (a fields map or a schema name), `example` (the params), `title`, `description` (FR-6, SCN-037). `title` is optional, as in RFC 9457: a code without one sends no `title` member. `nature` may be left out: it is then `unavailable` for 408, 425, 429, 502, 503 and 504, `refused` for every other 4xx and `failed` for every other 5xx. A redeclared default code left without `nature` keeps its core nature instead ([ADR 0006](../adr/0006-compiler-pass-pipeline.md) section 6). `family` groups codes in docs and clients; it defaults to the code up to its first dot (section 4).
 
 Codes are declared at every level of the tree ([A35](../decisions.md#a35)): in the `errors` catalogue (the api's global level, with its base and packs), or in `errors` on any node: a surface root, a collection, a single, a `collection` or `member` scope node, or a route. On a node, `errors` maps a code to one of:
 
