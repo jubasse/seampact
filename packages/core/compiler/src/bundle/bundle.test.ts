@@ -5,6 +5,7 @@ import { loadMemoryReader } from "../load/reader.js";
 import { buildBundle } from "./build.js";
 import {
   builtContents,
+  PACK_CONTRACT,
   GOLDEN_REFERENCE,
   REFERENCE,
   REFERENCE_CONTRACT,
@@ -19,18 +20,6 @@ function filesUnder(directory: string): string[] {
     .map((entry) => relative(directory, join(entry.parentPath, entry.name)).split(sep).join("/"))
     .sort();
 }
-
-const PACK_CONTRACT = {
-  "package.json": JSON.stringify({ name: "@acme/contract", version: "3.1.0" }),
-  "api.yaml": "api: { name: t, version: 1 }\npacks: ['@acme/pack-a']\n",
-  "node_modules/@acme/pack-a/package.json": JSON.stringify({
-    name: "@acme/pack-a",
-    version: "1.2.0",
-    seampact: { role: "pack", pack: "lib/pack.yaml" },
-  }),
-  "node_modules/@acme/pack-a/lib/pack.yaml":
-    "pack: { name: '@acme/pack-a', version: 1.2.0 }\nrights:\n  r.one: {}\nconventions:\n  paging: { default: cursor }\n",
-};
 
 test("bundle of the reference contract", () => {
   const output = join(temporaryDirectory(), "bundle");

@@ -48,3 +48,16 @@ export function builtContents(options: BundleBuildOptions): BundleContents {
 
   return built.contents;
 }
+
+/** A one-api contract applying an npm pack, for a memory reader. */
+export const PACK_CONTRACT = {
+  "package.json": JSON.stringify({ name: "@acme/contract", version: "3.1.0" }),
+  "api.yaml": "api: { name: t, version: 1 }\npacks: ['@acme/pack-a']\n",
+  "node_modules/@acme/pack-a/package.json": JSON.stringify({
+    name: "@acme/pack-a",
+    version: "1.2.0",
+    seampact: { role: "pack", pack: "lib/pack.yaml" },
+  }),
+  "node_modules/@acme/pack-a/lib/pack.yaml":
+    "pack: { name: '@acme/pack-a', version: 1.2.0 }\nrights:\n  r.one: {}\nconventions:\n  paging: { default: cursor }\n",
+};

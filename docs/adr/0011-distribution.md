@@ -30,7 +30,7 @@ The manifest holds the bundle format version, the contract package name and vers
 
 Integrity is `sha256-<base64>` over the canonical file list: one line per file, `<sha256 hex>  <path>`, sorted by path in code-unit order, the manifest itself excluded. The tarball is reproducible: entries sorted, modification times, owners and modes fixed, gzip with no timestamp or file name. The same sources and compiler therefore give the same integrity and the same tarball bytes on every machine.
 
-`seampact bundle` compiles the workspace and writes the bundle. A bundle always carries its sources, so a consumer can review them and the IR can be rebuilt; it never carries OpenAPI documents or generated code, which each consumer generates.
+`seampact bundle` compiles the workspace and writes the bundle. A bundle always carries its sources, so a consumer can review them and the IR can be rebuilt; it never carries OpenAPI documents or generated code, which each consumer generates. Rebuilding the IR from a bundle's sources is out of 1.0 until a consumer needs it: no loader reads `sources/.packs/`, so the vendored packs are there for review and the sources still name their packs by package.
 
 ### Channels
 

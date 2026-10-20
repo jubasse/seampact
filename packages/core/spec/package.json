@@ -7,7 +7,8 @@
   "files": [
     "dist",
     "schemas",
-    "vectors/naming"
+    "vectors/naming",
+    "vectors/bundle"
   ],
   "main": "./src/index.ts",
   "scripts": {
@@ -25,7 +26,8 @@
     "./naming/vectors.json": "./vectors/naming/vectors.json",
     "./naming/vectors.schema.json": "./vectors/naming/vectors.schema.json",
     "./naming/reserved-words.json": "./vectors/naming/reserved-words.json",
-    "./naming/reserved-words.schema.json": "./vectors/naming/reserved-words.schema.json"
+    "./naming/reserved-words.schema.json": "./vectors/naming/reserved-words.schema.json",
+    "./bundle/vectors/*.json": "./vectors/bundle/*.json"
   },
   "publishConfig": {
     "main": "./dist/index.js",
@@ -63,7 +65,8 @@
       "./naming/vectors.json": "./vectors/naming/vectors.json",
       "./naming/vectors.schema.json": "./vectors/naming/vectors.schema.json",
       "./naming/reserved-words.json": "./vectors/naming/reserved-words.json",
-      "./naming/reserved-words.schema.json": "./vectors/naming/reserved-words.schema.json"
+      "./naming/reserved-words.schema.json": "./vectors/naming/reserved-words.schema.json",
+      "./bundle/vectors/*.json": "./vectors/bundle/*.json"
     }
   },
   "seampact": {

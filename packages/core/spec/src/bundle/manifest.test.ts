@@ -1,5 +1,6 @@
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { expect, test } from "vitest";
+import BUNDLE_VECTORS from "../../vectors/bundle/vectors.json" with { type: "json" };
 import { canonicalBundleFileList } from "./file-list.js";
 import {
   BUNDLE_MANIFEST_SCHEMA,
@@ -156,4 +157,20 @@ test("the canonical file list is sorted, one line per file, the last one ended",
       { path: "sources/B", sha256: "c" },
     ]),
   ).toBe("a  ir/a\nc  sources/B\nb  sources/b\n");
+});
+
+test("the schema accepts every vector manifest but the invalid ones", () => {
+  for (const vector of BUNDLE_VECTORS.directories) {
+    const manifestFile = vector.files.find((file) => file.path === "seampact-bundle.json");
+
+    if (manifestFile === undefined) continue;
+    const manifest: unknown = JSON.parse(
+      Buffer.from(manifestFile.base64, "base64").toString("utf8"),
+    );
+    const refused = vector.expected.failures.some(
+      (failure) => failure.code === "bundle.manifest-invalid",
+    );
+
+    expect(problemsOf(manifest).length > 0, vector.id).toBe(refused);
+  }
 });

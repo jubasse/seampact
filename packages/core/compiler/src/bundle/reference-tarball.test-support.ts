@@ -32,7 +32,7 @@ export function referenceTarball(directory: string = REFERENCE): Uint8Array {
   return bundleTarball(built.contents);
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (import.meta.main) {
   const output = process.argv[2];
 
   if (output === undefined)
