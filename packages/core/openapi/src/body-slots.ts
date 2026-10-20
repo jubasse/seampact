@@ -1,5 +1,5 @@
 import { below, type IrLocation } from "@seampact/codegen-core";
-import type { NamedTemplate, SuccessShapes, WireFormat } from "@seampact/spec/ir";
+import type { NamedTemplate, Operation, SuccessShapes, WireFormat } from "@seampact/spec/ir";
 import type { EmitContext } from "./emit-context.js";
 import type { JsonObject } from "./json-value.js";
 import { typeUseSchema } from "./schemas.js";
@@ -9,6 +9,7 @@ import { type SlotSchemas, type SlotValue, templateSchema } from "./templates.js
 // body describes, and `$meta`, the format's `meta` fields joined by a paging style's `meta` members.
 
 const META_SLOT = "meta";
+const COLLECTION_SLOT = "collection";
 const ALWAYS_FILLED_META: readonly string[] = ["now", "handler"];
 
 /** The response shapes the emitter writes through the format: `list` waits for a consumer (A47). */
@@ -28,12 +29,25 @@ export function urlSchema(context: EmitContext): JsonObject {
   };
 }
 
-export function successSlots(context: EmitContext, status: number): Map<string, SlotValue> {
-  return new Map<string, SlotValue>([
+export function successSlots(
+  context: EmitContext,
+  operation: Operation,
+  status: number,
+): Map<string, SlotValue> {
+  const slots = new Map<string, SlotValue>([
     ["status", { schema: { type: "integer", const: status }, presence: "always" }],
     ["path", { schema: { type: "string" }, presence: "always" }],
     ["self", { schema: urlSchema(context), presence: "always" }],
   ]);
+
+  // `$collection` is the resource type the IR fixes per operation; a route of no resource has no value for it.
+  if (operation.resource !== undefined)
+    slots.set(COLLECTION_SLOT, {
+      schema: { const: operation.resource.type },
+      presence: "always",
+    });
+
+  return slots;
 }
 
 /** `$meta`: the format's `meta` fields, then the style's `meta` members read over its response roles. */

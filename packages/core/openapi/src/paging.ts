@@ -134,7 +134,7 @@ export function pageBodySchema(
   }
 
   const roleSlots = pagingRoleSlots(context, operation.paging?.token);
-  const slots = successSlots(context, status);
+  const slots = successSlots(context, operation, status);
 
   for (const [slot, value] of roleSlots) slots.set(slot, value);
 

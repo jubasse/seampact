@@ -1,5 +1,10 @@
 import { below, type IrLocation } from "@seampact/codegen-core";
-import { type Absent, isKnownVariant, type Template } from "@seampact/spec/ir";
+import {
+  type Absent,
+  isKnownVariant,
+  type ObjectTemplateMember,
+  type Template,
+} from "@seampact/spec/ir";
 import { type EmitContext, refuseNotEmitted, refuseUnknown } from "./emit-context.js";
 import { copyJsonValue, type JsonObject, type JsonValue } from "./json-value.js";
 import { nullableSchema } from "./schemas.js";
@@ -80,6 +85,26 @@ function slotSchema(
   return value;
 }
 
+/** The text a member name writes: its own text, or the value of the one name slot, `$collection` (ADR 0002 section 13). */
+function memberNameOf(
+  context: EmitContext,
+  name: ObjectTemplateMember["name"],
+  slots: SlotSchemas,
+  location: IrLocation,
+): string | undefined {
+  if (isKnownVariant("MemberName", name) && name.kind === "text") return name.text;
+
+  const slotValue =
+    isKnownVariant("MemberName", name) && name.kind === "slot" ? slots.get(name.slot) : undefined;
+  const text = slotValue?.schema.const;
+
+  if (typeof text === "string") return text;
+
+  refuseNotEmitted(context, "template.member-name", "A member named by a slot", location);
+
+  return undefined;
+}
+
 function objectTemplateSchema(
   context: EmitContext,
   template: Extract<Template, { kind: "object" }>,
@@ -94,16 +119,9 @@ function objectTemplateSchema(
   template.members.forEach((member, index) => {
     const memberLocation = below(location, "members", index);
 
-    if (!isKnownVariant("MemberName", member.name) || member.name.kind !== "text") {
-      refuseNotEmitted(
-        context,
-        "template.member-name",
-        "A member named by a slot",
-        below(memberLocation, "name"),
-      );
+    const memberName = memberNameOf(context, member.name, slots, below(memberLocation, "name"));
 
-      return;
-    }
+    if (memberName === undefined) return;
 
     const value = templateSchema(
       context,
@@ -117,8 +135,8 @@ function objectTemplateSchema(
 
     if (value.presence === "never") {
       if (absent === "null") {
-        properties[member.name.text] = { type: "null" };
-        required.push(member.name.text);
+        properties[memberName] = { type: "null" };
+        required.push(memberName);
       }
 
       return;
@@ -128,9 +146,9 @@ function objectTemplateSchema(
 
     const nullWhenAbsent = value.presence === "maybe" && absent === "null";
 
-    properties[member.name.text] = nullWhenAbsent ? nullableSchema(value.schema) : value.schema;
+    properties[memberName] = nullWhenAbsent ? nullableSchema(value.schema) : value.schema;
 
-    if (value.presence === "always" || nullWhenAbsent) required.push(member.name.text);
+    if (value.presence === "always" || nullWhenAbsent) required.push(memberName);
   });
 
   const schema: JsonObject = { type: "object", properties };

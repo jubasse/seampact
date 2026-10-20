@@ -164,7 +164,7 @@ function responseBodySchema(
     return pageBodySchema(context, operation, format, payload, response.status, location);
   }
 
-  const slots = successSlots(context, response.status);
+  const slots = successSlots(context, operation, response.status);
   const payloadSchema =
     shape === "table" ? { type: "object", additionalProperties: payload } : payload;
 

@@ -103,3 +103,30 @@ describe("refuses by name what no document can state", () => {
     expect(refusalCodes(ir)).toContain("ir.value.unknown");
   });
 });
+
+describe("writes the collection name slot", () => {
+  it("names a page member after the resource type of the operation", () => {
+    const ir = readGoldenIr("reference/tasks");
+    const listTasks = operationOf(ir, "listTasks");
+    const style = ir.pagings[listTasks.paging?.style ?? ""];
+
+    if (style === undefined) throw new Error("listTasks names a paging style it does not declare");
+
+    style.response.body = {
+      kind: "object",
+      members: [
+        {
+          name: { kind: "slot", slot: "collection" },
+          value: { kind: "slot", slot: "items", path: [] },
+        },
+      ],
+    };
+
+    const outcome = emitDocuments(ir);
+    const document = outcome.status === "emitted" ? parse(outcome.documents[0]?.text ?? "") : {};
+    const response = at(document, "paths", listTasks.path, listTasks.method, "responses", "200");
+
+    expect(refusalCodes(ir)).toEqual([]);
+    expect(JSON.stringify(response)).toContain(`"${listTasks.resource?.type}":`);
+  });
+});
