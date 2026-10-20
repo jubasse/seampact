@@ -91,7 +91,8 @@ export function packVariantFiles(
   const generated = new Map<string, string>();
 
   for (const variant of PACK_VARIANTS) {
-    const files = new Map(reference);
+    // A Windows checkout gives the reference CRLF line ends; the edits and the committed variants are LF.
+    const files = new Map([...reference].map(([file, text]) => [file, text.replace(/\r\n/g, "\n")]));
 
     for (const edit of variant.edits) {
       const text = files.get(edit.file);
