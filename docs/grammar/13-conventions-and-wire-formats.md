@@ -98,7 +98,7 @@ A template describes a JSON value the boundary writes. The same language serves 
 | `$$` | a literal `$` (`$$ref` writes `$ref`) |
 | a mapping | an object; each key is a member name, written literally |
 | the key `$merge: <slot>` | spreads an object slot's members beside the others; a member defined twice is a compile error naming both |
-| a key that is a name slot (`$collection`) | the member name is the slot's value |
+| a key that is a name slot (`$collection`) | the member name is the slot's value; a literal member of the same name in that object is a compile error naming both |
 | `{ $each: <slot>, $as: <template> }` | an array: `$as` applied to each element of an array slot; inside it, `$item` is the element |
 | a sequence | an array of templates |
 | any other scalar | a literal |
