@@ -99,11 +99,11 @@ export const DIFF_TABLE = {
     required: { input: "CS" },
     optional: { input: { when: "afterRefusesUnknownQuery", holds: "C", otherwise: "-" } },
   },
+  // A body has one media type: a change removes the one a client sends.
   body: {
     added: { input: "C" },
     removed: { input: "CS" },
     mediaRemoved: { input: "C" },
-    mediaAdded: { input: "-" },
   },
   response: {
     added: { output: "C" },

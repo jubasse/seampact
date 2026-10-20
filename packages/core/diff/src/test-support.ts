@@ -2,7 +2,13 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { type ContractIR, isKnownVariant, type KnownSchema, type ObjectSchema, type Operation } from "@seampact/spec/ir";
+import {
+  type ContractIR,
+  isKnownVariant,
+  type KnownSchema,
+  type ObjectSchema,
+  type Operation,
+} from "@seampact/spec/ir";
 import { diffContracts } from "./diff-contracts.js";
 import type { DiffOptions } from "./options.js";
 import type { DiffChange, DiffResult } from "./result.js";
@@ -55,7 +61,8 @@ export function objectSchemaOf(ir: ContractIR, id: string): ObjectSchema {
 export function knownSchemaOf(ir: ContractIR, id: string): KnownSchema {
   const schema = ir.schemas[id];
 
-  if (schema === undefined || !isKnownVariant("Schema", schema)) throw new Error(`no schema ${id} in the test IR`);
+  if (schema === undefined || !isKnownVariant("Schema", schema))
+    throw new Error(`no schema ${id} in the test IR`);
 
   return schema;
 }
