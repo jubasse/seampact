@@ -122,7 +122,7 @@ export const SERVER_TARGETS: readonly TargetCompatibility[] = [
       incompatible: [],
     },
     validatorStyles: ["standard-schema"],
-    ownValidators: [],
+    ownValidators: [{ id: "vinejs", library: "@vinejs/vine" }],
   },
   {
     package: "@seampact/codegen-hono",

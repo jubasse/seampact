@@ -19,6 +19,7 @@ const VALIDATOR_DEPENDENCIES: Readonly<Record<string, Readonly<Record<string, st
   yup: { yup: "1.7.1" },
   "class-validator": { "class-validator": "0.15.1", "class-transformer": "0.5.1" },
   ajv: { ajv: "8.20.0" },
+  vinejs: { "@vinejs/vine": "4.4.0" },
 };
 
 // The ids a target generates itself, which no provider package serves.

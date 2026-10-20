@@ -11,6 +11,7 @@ import {
   TYPE_CHECK_TIMEOUT_MILLISECONDS,
   typeErrorsOf,
 } from "@seampact/codegen-core/node-server/test-support";
+import { isKnownVariant } from "@seampact/spec/ir";
 import { beforeAll, describe, expect, test } from "vitest";
 import { target as fastifyTarget } from "./index.js";
 
@@ -195,6 +196,53 @@ describe("with no validators link the target writes its own Ajv validators", () 
 
     expect(result.issues).toEqual([
       expect.objectContaining({ message: "Expected at most 200 characters." }),
+    ]);
+  });
+
+  test("a member named after an Object.prototype member is read from the payload only", async () => {
+    const ir = readGoldenIr("tasks");
+    const schema = ir.schemas.CreateTask;
+    const [title, effort] =
+      schema !== undefined && isKnownVariant("Schema", schema) && schema.kind === "object"
+        ? schema.properties
+        : [];
+
+    if (title === undefined || effort === undefined) {
+      throw new Error("the golden IR has no CreateTask title and effort");
+    }
+
+    title.name = "toString";
+    effort.name = "valueOf";
+
+    const outcome = await fastifyTarget.generate({
+      ir,
+      options: { bodyValidation: true },
+      links: await typesLinkOnly(),
+      artefacts: new Set(["boundary", "validators"]),
+    });
+
+    if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
+
+    const schemasFile = outcome.files.find((file) => file.path === "validators/schemas/input.ts");
+
+    if (schemasFile === undefined) throw new Error("no validators/schemas/input.ts generated");
+
+    const schemasPath = join(PROJECT, "generated/own-prototype/tasks", schemasFile.path);
+
+    for (const file of outcome.files.filter((file) => file.path.startsWith("validators/"))) {
+      const path = join(PROJECT, "generated/own-prototype/tasks", file.path);
+
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, file.contents);
+    }
+
+    const { CreateTaskSchema } = await import(schemasPath);
+
+    expect(await CreateTaskSchema["~standard"].validate({ toString: "x" })).toEqual({
+      value: { toString: "x" },
+    });
+    expect((await CreateTaskSchema["~standard"].validate({})).issues).toEqual([
+      expect.objectContaining({ path: ["toString"], params: { rule: "required" } }),
     ]);
   });
 

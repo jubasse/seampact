@@ -24,7 +24,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/hooks` | `packages/runtime/hooks` | hooks | The neutral hook interfaces and idempotency store interface every generated Node server boundary types against. |
 | `@seampact/idempotency-memory` | `packages/runtime/idempotency-memory` | helper | An in-memory idempotency store for one process, for development and tests. |
 | `@seampact/signed-webhooks` | `packages/runtime/signed-webhooks` | helper | Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook. |
-| `@seampact/codegen-adonis` | `packages/targets/codegen-adonis` | target | Generates the AdonisJS boundary around your controllers: the routes of each api with their checking middleware, the reply path, the error helpers for your exception handler and a boot check, validating with zod. |
+| `@seampact/codegen-adonis` | `packages/targets/codegen-adonis` | target | Generates the AdonisJS boundary around your controllers: the routes of each api with their checking middleware, the reply path, the error helpers for your exception handler and a boot check, validating with the zod or yup link you give or with VineJS validators it generates. |
 | `@seampact/codegen-class-validator` | `packages/targets/codegen-class-validator` | target | Generates decorated class-validator DTO classes per schema and direction, with Standard Schema adapters for the NestJS target. |
 | `@seampact/codegen-express` | `packages/targets/codegen-express` | target | Generates an Express router per api that serves each contract route behind its access, validation and reply checks around your handler map, on Express 4 and 5, validating with zod. |
 | `@seampact/codegen-fastify` | `packages/targets/codegen-fastify` | target | Generates a Fastify plugin per api that registers each contract route with its access, validation and reply checks around your handler map, on Fastify 5, validating with the zod or yup link you give or with Ajv validators it generates. |
@@ -130,6 +130,7 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/codegen-adonis`
 
 - `packages/targets/codegen-adonis/src`: The AdonisJS server target: the boundary around the app's controllers for each api, placing the shared Node request checks of codegen-core in inline route middleware and a generated route handler, validating with zod.
+- `packages/targets/codegen-adonis/src/vinejs`: The VineJS validators the AdonisJS target writes itself when its entry gives no `validators` link: the shape rendered from the shared validator plan, and the Standard Schema adapter that builds the VineJS schema from it and names issues by contract rule.
 
 ### `@seampact/codegen-class-validator`
 

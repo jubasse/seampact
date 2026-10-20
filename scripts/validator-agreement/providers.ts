@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   FIRST_PARTY_PROVIDERS,
@@ -27,6 +27,7 @@ const PROVIDER_LIBRARIES: Readonly<Record<string, readonly string[]>> = {
   yup: ["yup"],
   "class-validator": ["class-validator", "class-transformer", "reflect-metadata"],
   ajv: ["ajv"],
+  vinejs: ["@vinejs/vine"],
 };
 
 const TYPES_PROVIDER_ID = "ts";
@@ -215,6 +216,7 @@ function linkLibraries(
   mkdirSync(join(projectRoot, "node_modules"));
 
   for (const library of libraries) {
+    mkdirSync(dirname(join(projectRoot, "node_modules", library)), { recursive: true });
     symlinkSync(
       join(REPO_ROOT, packageDirectory, "node_modules", library),
       join(projectRoot, "node_modules", library),

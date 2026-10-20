@@ -341,10 +341,10 @@ importers:
     devDependencies:
       '@adonisjs/core':
         specifier: 7.6.0
-        version: 7.6.0(supports-color@10.2.2)(youch@4.1.1)
+        version: 7.6.0(@vinejs/vine@4.4.0)(supports-color@10.2.2)(youch@4.1.1)
       '@adonisjs/core-6':
         specifier: npm:@adonisjs/core@6.21.0
-        version: '@adonisjs/core@6.21.0(supports-color@10.2.2)'
+        version: '@adonisjs/core@6.21.0(@vinejs/vine@4.4.0)(supports-color@10.2.2)'
       '@seampact/codegen-core':
         specifier: workspace:*
         version: link:../../core/codegen-core
@@ -354,6 +354,9 @@ importers:
       '@types/node':
         specifier: 24.19.1
         version: 24.19.1
+      '@vinejs/vine':
+        specifier: 4.4.0
+        version: 4.4.0
       typescript:
         specifier: 6.0.3
         version: 6.0.3
@@ -1433,6 +1436,14 @@ packages:
     resolution: {integrity: sha512-8eQ9R218XORK+KLosnf4bu/QsUXvUyVwTbArg7/0NMB1Pu87OJKvj4nhFblkYE8gQV73mW1dx1ptlPCkwRGa7A==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
+  '@vinejs/compiler@4.2.0':
+    resolution: {integrity: sha512-wMQjR7fxCOFMT5Q1p6xjCsH63XgCvwPUGAGGRqiHHja7PwJwcBx6FPQ9X90WtqIcF5PqpRyHNSQ1k+tKiICVMg==}
+    engines: {node: '>=18.0.0'}
+
+  '@vinejs/vine@4.4.0':
+    resolution: {integrity: sha512-cfnNXjs9+f+22d3Eb8koyg2qlCbaT394XBlL4AeEr1WM+NH1omFcXwe1zrkW4hHwPDSfUd4lFUdNO6E+YnTeWQ==}
+    engines: {node: '>=18.16.0'}
+
   '@vitest/mocker@5.0.3':
     resolution: {integrity: sha512-T8sWAIbkSyAjkwTcaEc3Iu0o9A27X1/kdXrizhZkGuSKScRQtRzclfAMpOTcGdXCsqxeWlpGy3XjqaW8CpLORg==}
     peerDependencies:
@@ -1564,6 +1575,10 @@ packages:
     resolution: {integrity: sha512-+ys997U96po4Kx/ABpBCqhA9EuxJaQWDQg7295H4hBphv3IZg0boBKuwYpt4YXp6MZ5AmZQnU/tyMTlRpaSejg==}
     engines: {node: '>= 0.4'}
 
+  camelcase@9.0.0:
+    resolution: {integrity: sha512-TO9xmyXTZ9HUHI8M1OnvExxYB0eYVS/1e5s7IDMTAoIcwUd+aNcFODs6Xk83mobk0velyHFQgA1yIrvYc6wclw==}
+    engines: {node: '>=20'}
+
   case-anything@3.1.7:
     resolution: {integrity: sha512-52UPzAJDZgxaNsYK4kvmov1kVaAfPc+OU2j0OSUZWbdWMuJd7Axi94XWSfSuafMd7K9avhsEnU6W6rXJdAd+Ug==}
     engines: {node: '>=18'}
@@ -1654,6 +1669,9 @@ packages:
   data-uri-to-buffer@2.0.2:
     resolution: {integrity: sha512-ND9qDTLc6diwj+Xe5cdAgVTbLVdXbtxTJRXRhli8Mowuaan+0EJOtdqJ0QCHNSSPyoXGx9HX2/VMnKeC34AChA==}
 
+  dayjs@1.11.23:
+    resolution: {integrity: sha512-QDTCU0M0MxR3hQfnlDJfwekQiaanm1ubOD231u73WBckQ/fsamwRLiE2GBz6D3a/xF1NgfiDLJjXBa1hYOYTtQ==}
+
   debug@2.6.9:
     resolution: {integrity: sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA==}
     peerDependencies:
@@ -1689,6 +1707,9 @@ packages:
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
+
+  dlv@1.1.3:
+    resolution: {integrity: sha512-+HlytyjlPKnIG8XuRG8WvmBP8xs8P71y+SKKS6ZXWoEgLuePxtDoUEiH7WkdePWrQ5JBpE6aoVqfZfJUQkjXwA==}
 
   dotenv@16.6.1:
     resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
@@ -2294,6 +2315,10 @@ packages:
   negotiator@1.1.0:
     resolution: {integrity: sha512-NMPBRMJgiQHjbd8phG3Vebdx4kZ1H121rbl5IkMqeOsahptB9BKo/d7oJ3zTXqTgagn2bWlNSXkh0QUGM31RYg==}
     engines: {node: '>=18'}
+
+  normalize-url@8.1.1:
+    resolution: {integrity: sha512-JYc0DPlpGWB40kH5g07gGTrYuMqV653k3uBKY6uITPWds3M0ov3GaWGp9lbE3Bzngx8+XkfzgvASb9vk9JDFXQ==}
+    engines: {node: '>=14.16'}
 
   object-assign@4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
@@ -2996,7 +3021,7 @@ snapshots:
     dependencies:
       '@poppinss/utils': 7.1.2
 
-  '@adonisjs/core@6.21.0(supports-color@10.2.2)':
+  '@adonisjs/core@6.21.0(@vinejs/vine@4.4.0)(supports-color@10.2.2)':
     dependencies:
       '@adonisjs/ace': 13.4.0
       '@adonisjs/application': 8.4.2(@adonisjs/config@5.0.3)(@adonisjs/fold@10.2.1)
@@ -3026,10 +3051,12 @@ snapshots:
       string-width: 7.2.0
       youch: 3.3.4
       youch-terminal: 2.2.3
+    optionalDependencies:
+      '@vinejs/vine': 4.4.0
     transitivePeerDependencies:
       - supports-color
 
-  '@adonisjs/core@7.6.0(supports-color@10.2.2)(youch@4.1.1)':
+  '@adonisjs/core@7.6.0(@vinejs/vine@4.4.0)(supports-color@10.2.2)(youch@4.1.1)':
     dependencies:
       '@adonisjs/ace': 14.1.1(youch@4.1.1)
       '@adonisjs/application': 9.1.0(@adonisjs/config@6.1.0)(@adonisjs/fold@11.1.0)
@@ -3056,6 +3083,7 @@ snapshots:
       pretty-hrtime: 1.0.3
       string-width: 8.3.0
     optionalDependencies:
+      '@vinejs/vine': 4.4.0
       youch: 4.1.1
     transitivePeerDependencies:
       - supports-color
@@ -3900,6 +3928,21 @@ snapshots:
       '@typescript-eslint/types': 8.71.0
       eslint-visitor-keys: 5.0.1
 
+  '@vinejs/compiler@4.2.0': {}
+
+  '@vinejs/vine@4.4.0':
+    dependencies:
+      '@poppinss/macroable': 1.1.2
+      '@poppinss/types': 1.2.1
+      '@standard-schema/spec': 1.1.0
+      '@types/validator': 13.15.10
+      '@vinejs/compiler': 4.2.0
+      camelcase: 9.0.0
+      dayjs: 1.11.23
+      dlv: 1.1.3
+      normalize-url: 8.1.1
+      validator: 13.15.35
+
   '@vitest/mocker@5.0.3(vite@8.3.4(@types/node@24.19.1)(yaml@2.9.1))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
@@ -4045,6 +4088,8 @@ snapshots:
       call-bind-apply-helpers: 1.0.2
       get-intrinsic: 1.3.0
 
+  camelcase@9.0.0: {}
+
   case-anything@3.1.7: {}
 
   chai@6.3.0: {}
@@ -4115,6 +4160,8 @@ snapshots:
 
   data-uri-to-buffer@2.0.2: {}
 
+  dayjs@1.11.23: {}
+
   debug@2.6.9(supports-color@10.2.2):
     dependencies:
       ms: 2.0.0
@@ -4136,6 +4183,8 @@ snapshots:
   destroy@1.2.0: {}
 
   detect-libc@2.1.2: {}
+
+  dlv@1.1.3: {}
 
   dotenv@16.6.1: {}
 
@@ -4785,6 +4834,8 @@ snapshots:
   negotiator@1.1.0:
     dependencies:
       content-type: 2.1.0
+
+  normalize-url@8.1.1: {}
 
   object-assign@4.1.1: {}
 
