@@ -235,7 +235,7 @@ The default wire format (A30), as fixed members so every target writes the same 
 | Member | Value |
 |---|---|
 | `type` | the error code, as a relative URI reference (`api.forbidden`) |
-| `title` | the error's `title`, or its code |
+| `title` | the error's written `title`; the member is left out when the code has none |
 | `status` | the HTTP status |
 | `detail` | optional text from the handler or hook; never parsed by a client |
 | `instance` | optional, a reference to this occurrence |
