@@ -54,40 +54,8 @@ token:
 
 On a route, the allow reaches every route below it. Each rule's fix says where its allow goes.
 
-## Write your own rule
+## Your own rules
 
-A rule is a few lines. It reads the compiled contract and reports what it finds. Put it in a plugin file.
-
-```js
-import { defineLintPlugin } from "@seampact/lint";
-
-export default defineLintPlugin({
-  name: "house",
-  rules: [
-    {
-      name: "no-delete",
-      defaultSeverity: "warning",
-      reports: "a DELETE route",
-      silencedOn: "the route",
-      check({ ir, report }) {
-        for (const operation of ir.operations) {
-          if (operation.method !== "delete") continue;
-
-          report({
-            message: `The route '${operation.id}' deletes data.`,
-            fix: "Archive instead, or allow house/no-delete on the route with a reason.",
-            origin: operation.origin,
-            allowAt: [operation.origin],
-          });
-        }
-      },
-    },
-  ],
-});
-```
-
-The rule id is `house/no-delete`. Its level and its allow work like the core rules'.
-
-`seampact lint` does not load plugins yet. Until it does, `lint.rules: { house/no-delete: error }` prints `seampact/lint/unclaimed-rule`: no plugin owns the rule, so the setting is ignored. Run your plugin from a script with `runLint` of `@seampact/lint`.
+House rules are planned. `seampact lint` does not load plugins yet, so a level set for a rule no plugin owns prints `seampact/lint/unclaimed-rule` and is ignored.
 
 Errors: [Troubleshooting](../troubleshooting/README.md). The rules in full: [Grammar 12](../grammar/12-enums-examples-docs-extensions.md).
