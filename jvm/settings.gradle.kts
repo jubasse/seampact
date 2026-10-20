@@ -15,3 +15,4 @@ dependencyResolutionManagement {
 rootProject.name = "seampact-jvm"
 
 include("seampact-ir")
+include("seampact-hooks")

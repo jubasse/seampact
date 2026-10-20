@@ -70,6 +70,7 @@ let loadedPackageExports: Omit<PackageTypes, "enumValuesByName"> | undefined;
 
 function packageExports(): Omit<PackageTypes, "enumValuesByName"> {
   loadedPackageExports ??= loadPackageExports();
+
   return loadedPackageExports;
 }
 
@@ -83,13 +84,16 @@ function loadPackageExports(): Omit<PackageTypes, "enumValuesByName"> {
 
   const indexFile = program.getSourceFile(indexPath);
   const moduleSymbol = indexFile === undefined ? undefined : checker.getSymbolAtLocation(indexFile);
+
   if (moduleSymbol === undefined) {
     throw new Error(`The TypeScript program has no module for ${indexPath}.`);
   }
 
   const exportsByName = new Map<string, ts.Symbol>();
+
   for (const exported of checker.getExportsOfModule(moduleSymbol)) {
     const isAlias = (exported.flags & ts.SymbolFlags.Alias) !== 0;
+
     exportsByName.set(exported.name, isAlias ? checker.getAliasedSymbol(exported) : exported);
   }
 
@@ -103,17 +107,20 @@ function propertyTypeText(packageTypes: PackageTypes, property: ts.Symbol): stri
 function isNullable(packageTypes: PackageTypes, property: ts.Symbol): boolean {
   const propertyType = packageTypes.checker.getTypeOfSymbol(property);
   const parts = propertyType.isUnion() ? propertyType.types : [propertyType];
+
   return parts.some((part) => (part.flags & ts.TypeFlags.Null) !== 0);
 }
 
 function stringLiteralValues(packageTypes: PackageTypes, property: ts.Symbol): string[] {
   const propertyType = packageTypes.checker.getTypeOfSymbol(property);
   const parts = propertyType.isUnion() ? propertyType.types : [propertyType];
+
   return parts.flatMap((part) => (part.isStringLiteral() ? [part.value] : [])).sort();
 }
 
 function isNeverMember(property: ts.Symbol): boolean {
   const declaration = property.declarations?.[0];
+
   return (
     declaration !== undefined &&
     ts.isPropertySignature(declaration) &&
@@ -128,12 +135,14 @@ function checkDiscriminant(
   discriminant: ShapeDiscriminant,
 ): string[] {
   const property = properties.find((candidate) => candidate.name === discriminant.member);
+
   if (property === undefined) {
     return [`${label}.${discriminant.member}: missing in npm`];
   }
 
   const expectedLiteral = JSON.stringify(discriminant.value);
   const actualLiteral = propertyTypeText(packageTypes, property);
+
   return actualLiteral === expectedLiteral
     ? []
     : [
@@ -151,6 +160,7 @@ function checkMember(
   const memberLabel = `${label}.${member.name}`;
 
   const isOptional = (property.flags & ts.SymbolFlags.Optional) !== 0;
+
   if (isOptional !== (member.optional ?? false)) {
     problems.push(
       `${memberLabel}: optional is ${isOptional} in npm and ${!isOptional} in the manifest`,
@@ -158,6 +168,7 @@ function checkMember(
   }
 
   const nullable = isNullable(packageTypes, property);
+
   if (nullable !== (member.nullable ?? false)) {
     problems.push(
       `${memberLabel}: nullable is ${nullable} in npm and ${!nullable} in the manifest`,
@@ -167,6 +178,7 @@ function checkMember(
   if (member.enum !== undefined) {
     const expectedValues = [...(packageTypes.enumValuesByName.get(member.enum) ?? [])].sort();
     const actualValues = stringLiteralValues(packageTypes, property);
+
     if (actualValues.join("|") !== expectedValues.join("|")) {
       problems.push(
         `${memberLabel}: npm has ${actualValues.join(" | ")}, enum ${member.enum} has ${expectedValues.join(" | ")}`,
@@ -190,10 +202,12 @@ function checkMembers(
 
   for (const member of npmMembers) {
     const property = propertiesByName.get(member.name);
+
     if (property === undefined) {
       problems.push(`${label}.${member.name}: missing in npm`);
       continue;
     }
+
     problems.push(...checkMember(packageTypes, label, property, member));
   }
 
@@ -202,6 +216,7 @@ function checkMembers(
   }
 
   const listedNames = new Set([...npmMembers.map((member) => member.name), discriminant?.member]);
+
   for (const property of properties) {
     if (!listedNames.has(property.name)) {
       problems.push(`${label}.${property.name}: in npm but not in the manifest`);
@@ -225,12 +240,14 @@ function checkMethods(
     const signature = property
       ? packageTypes.checker.getTypeOfSymbol(property).getCallSignatures()[0]
       : undefined;
+
     if (signature === undefined) {
       problems.push(`${label}.${method.name}: missing in npm`);
       continue;
     }
 
     const parameterNames = signature.getParameters().map((parameter) => parameter.name);
+
     if (parameterNames.join(",") !== method.parameters.join(",")) {
       problems.push(
         `${label}.${method.name}: npm takes (${parameterNames.join(", ")}), the manifest (${method.parameters.join(", ")})`,
@@ -239,6 +256,7 @@ function checkMethods(
   }
 
   const listedNames = new Set(methods.map((method) => method.name));
+
   for (const property of properties) {
     if (!listedNames.has(property.name)) {
       problems.push(`${label}.${property.name}: in npm but not in the manifest`);
@@ -255,9 +273,11 @@ function findNpmArm(
   arm: ShapeArm,
 ): ts.Type | undefined {
   const discriminant = arm.discriminant;
+
   if (discriminant !== undefined) {
     return npmArms.find((npmArm) => {
       const property = npmArm.getProperty(discriminant.member);
+
       return (
         property !== undefined &&
         propertyTypeText(packageTypes, property) === JSON.stringify(discriminant.value)
@@ -266,8 +286,10 @@ function findNpmArm(
   }
 
   const firstMember = arm.members?.[0]?.name;
+
   return npmArms.find((npmArm) => {
     const property = firstMember === undefined ? undefined : npmArm.getProperty(firstMember);
+
     return property !== undefined && !isNeverMember(property);
   });
 }
@@ -283,6 +305,7 @@ function checkUnion(packageTypes: PackageTypes, type: ShapeType, unionType: ts.T
   for (const arm of type.arms ?? []) {
     const armLabel = `${type.name}.${arm.name ?? arm.type}`;
     const npmArm = findNpmArm(packageTypes, unionType.types, arm);
+
     if (npmArm === undefined) {
       problems.push(`${armLabel}: missing in npm`);
       continue;
@@ -290,6 +313,7 @@ function checkUnion(packageTypes: PackageTypes, type: ShapeType, unionType: ts.T
 
     matchedArms.add(npmArm);
     const presentProperties = npmArm.getProperties().filter((property) => !isNeverMember(property));
+
     problems.push(
       ...checkMembers(
         packageTypes,
@@ -302,6 +326,7 @@ function checkUnion(packageTypes: PackageTypes, type: ShapeType, unionType: ts.T
   }
 
   const unmatchedArms = unionType.types.filter((npmArm) => !matchedArms.has(npmArm));
+
   for (const npmArm of unmatchedArms) {
     problems.push(
       `${type.name}: npm arm ${packageTypes.checker.typeToString(npmArm)} is not in the manifest`,
@@ -319,21 +344,25 @@ function lowerFirst(text: string): string {
 function resolveNpmType(packageTypes: PackageTypes, name: string): ts.Type | undefined {
   const [ownerName = name, nestedName] = name.split(NESTED_TYPE_SEPARATOR);
   const owner = packageTypes.exportsByName.get(ownerName);
+
   if (owner === undefined) {
     return undefined;
   }
 
   const ownerType = packageTypes.checker.getDeclaredTypeOfSymbol(owner);
+
   if (nestedName === undefined) {
     return ownerType;
   }
 
   const holder = ownerType.getProperty(lowerFirst(nestedName));
+
   return holder === undefined ? undefined : packageTypes.checker.getTypeOfSymbol(holder);
 }
 
 function checkType(packageTypes: PackageTypes, type: ShapeType): string[] {
   const npmType = resolveNpmType(packageTypes, type.name);
+
   if (npmType === undefined) {
     return [`${type.name}: missing in npm`];
   }
@@ -378,6 +407,7 @@ function checkHooksShape(manifest: ShapeManifest): string[] {
   }
 
   const npmTypeNames = new Set(manifest.types.filter(existsInNpm).map((type) => type.name));
+
   for (const exportedName of packageTypes.exportsByName.keys()) {
     if (!npmTypeNames.has(exportedName)) {
       problems.push(`${exportedName}: exported by npm but not in the manifest`);
