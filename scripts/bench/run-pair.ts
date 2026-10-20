@@ -25,6 +25,7 @@ const FIXED_RATE_SHARE = 0.7;
 // A fixed-rate run whose achieved rate falls short of the rate sent by more than this share is not at equal load.
 const RATE_SHORTFALL_TOLERANCE = 0.05;
 const SETTLE_MS = 500;
+
 export const KINDS: readonly ServerKind[] = ["seampact", "baseline"];
 
 interface LoadResult {

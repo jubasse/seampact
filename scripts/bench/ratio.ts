@@ -140,6 +140,7 @@ async function loadBoth(
 
     return requestsOf(kind, routeId, result);
   };
+
   const [seampact, baseline] = await Promise.all([loadOnce("seampact"), loadOnce("baseline")]);
 
   return { seampact, baseline };
