@@ -1,0 +1,795 @@
+openapi: 3.1.0
+info:
+  title: studio
+  version: "1"
+  summary: Profiles and streams of a studio.
+x-seampact-api:
+  kind: product
+x-seampact-format: bare
+x-acme-audience:
+  - partners
+  - staff
+x-acme-owner-team: studio
+paths:
+  /v1/studios/{studioId}/events:
+    post:
+      operationId: eventsStudio
+      parameters:
+        - name: studioId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-Stream-Event
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StreamEvent"
+      responses:
+        "204":
+          description: Success.
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unauthenticated"
+          x-seampact-errors:
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: api.forbidden
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.forbidden"
+          x-seampact-errors:
+            - code: api.forbidden
+              derivedFrom: requirement.errors
+        "404":
+          description: api.not_found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.not_found"
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: scope.errors
+        "413":
+          description: api.payload_too_large
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.payload_too_large"
+          x-seampact-errors:
+            - code: api.payload_too_large
+              derivedFrom: body.limit
+        "415":
+          description: api.unsupported_media_type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unsupported_media_type"
+          x-seampact-errors:
+            - code: api.unsupported_media_type
+              derivedFrom: body.media
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - sessionCookie: []
+      x-seampact-access:
+        identity: user
+      x-seampact-csrf:
+        exempt: Stream events come from the studio's own encoder.
+      x-seampact-scopes:
+        - scope: studio
+          from: path.studioId
+          x-acme-owner: platform
+          x-acme-scope-kind: tenant
+          x-acme-tier: gold
+      x-seampact-requires:
+        - right: streams.manage
+          subject: scope.studio
+          x-acme-owner: video
+          x-acme-right-group: streams
+          x-acme-tier: gold
+      x-seampact-idempotency:
+        exempt: An event is harmless to repeat.
+      x-seampact-maturity:
+        level: provisional
+        source: api
+  /v1/studios/{studioId}/profile:
+    patch:
+      operationId: profileStudio
+      parameters:
+        - name: studioId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/UpdateProfile"
+                - type: object
+                  properties:
+                    reauthToken:
+                      type: string
+                      minLength: 1
+                      maxLength: 512
+                      format: password
+                      x-seampact-derived-from:
+                        derivation: rule.proof
+                        from:
+                          - api#/surfaces/app/routes/studios/member/routes/profile/requires/1
+                          - api#/rules/recentAuth/proof
+                  required:
+                    - reauthToken
+      responses:
+        "200":
+          description: Success.
+          headers:
+            Idempotency-Replayed:
+              schema:
+                type: boolean
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - no-store
+              x-seampact-cache-control:
+                identified: no-store
+            X-Degraded:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          description: api.schema_invalid
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.schema_invalid"
+          x-seampact-errors:
+            - code: api.schema_invalid
+              derivedFrom: input.invalid
+        "401":
+          description: api.reauthentication_required, api.unauthenticated
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.reauthentication_required"
+                  - $ref: "#/components/schemas/api.unauthenticated"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.reauthentication_required
+              derivedFrom: requirement.errors
+            - code: api.unauthenticated
+              derivedFrom: identity.authenticate
+        "403":
+          description: api.csrf_invalid, api.forbidden
+          content:
+            application/problem+json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/api.csrf_invalid"
+                  - $ref: "#/components/schemas/api.forbidden"
+                discriminator:
+                  propertyName: code
+          x-seampact-errors:
+            - code: api.csrf_invalid
+              derivedFrom: csrf.cookieWrite
+            - code: api.forbidden
+              derivedFrom: principal.requires
+        "404":
+          description: api.not_found
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.not_found"
+          x-seampact-errors:
+            - code: api.not_found
+              derivedFrom: scope.errors
+        "409":
+          description: api.idempotency_in_progress
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.idempotency_in_progress"
+          x-seampact-errors:
+            - code: api.idempotency_in_progress
+              derivedFrom: idempotency.write
+        "413":
+          description: api.payload_too_large
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.payload_too_large"
+          x-seampact-errors:
+            - code: api.payload_too_large
+              derivedFrom: body.limit
+        "415":
+          description: api.unsupported_media_type
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.unsupported_media_type"
+          x-seampact-errors:
+            - code: api.unsupported_media_type
+              derivedFrom: body.media
+        "422":
+          description: api.idempotency_key_reused
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.idempotency_key_reused"
+          x-seampact-errors:
+            - code: api.idempotency_key_reused
+              derivedFrom: idempotency.write
+        "500":
+          description: api.internal
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/api.internal"
+          x-seampact-errors:
+            - code: api.internal
+              derivedFrom: response.undeclared
+      security:
+        - sessionCookie: []
+          csrfToken: []
+      x-seampact-access:
+        identity: user
+      x-seampact-principal-requires:
+        - profileId
+      x-seampact-bindings:
+        - from: body.profileId
+          to: principal.profileId
+      x-seampact-scopes:
+        - scope: studio
+          from: path.studioId
+          x-acme-owner: platform
+          x-acme-scope-kind: tenant
+          x-acme-tier: gold
+      x-seampact-requires:
+        - right: streams.manage
+          subject: scope.studio
+          x-acme-owner: video
+          x-acme-right-group: streams
+          x-acme-tier: gold
+        - rule: recentAuth
+          x-acme-audit: true
+          x-acme-rule-window: 300
+          x-acme-tier: silver
+      x-seampact-idempotency:
+        header: Idempotency-Key
+        replayHeader: Idempotency-Replayed
+        lifetimeMs: 86400000
+        required: true
+        enforce: boundary
+      x-seampact-upstream:
+        - streaming
+        - catalog
+      x-seampact-maturity:
+        level: provisional
+        source: upstream
+      x-seampact-degradable:
+        paths:
+          - stats
+        header: X-Degraded
+      x-acme-audit: true
+      x-acme-cost: 3
+      x-acme-invalidates:
+        - profiles
+        - studios
+      x-acme-owner-team: profiles
+      x-acme-rate-class: write
+      x-acme-since: 2026-03
+      x-acme-tags:
+        - profile
+      x-acme-tax-basis: exclusive
+      x-acme-tier: gold
+components:
+  schemas:
+    ApiForbiddenParams:
+      type: object
+      properties:
+        pointer:
+          type: string
+    ApiPayloadTooLargeParams:
+      type: object
+      properties:
+        limitBytes:
+          type: integer
+          minimum: 0
+    ApiSchemaInvalidIssue:
+      type: object
+      properties:
+        in:
+          type: string
+          pattern: ^(?:path|query|header|body)$
+        pointer:
+          type: string
+        rule:
+          type: string
+      required:
+        - in
+        - pointer
+        - rule
+    ApiSchemaInvalidParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiSchemaInvalidIssue"
+      required:
+        - issues
+    Profile:
+      type: object
+      properties:
+        profileId:
+          type: string
+          format: uuid
+          x-acme-column: profile_id
+        displayName:
+          type: string
+          maxLength: 80
+          x-acme-label: Name
+          x-acme-searchable: true
+        email:
+          type: string
+          format: email
+          x-acme-pii: true
+          x-acme-since: 2026-02
+        streamKey:
+          type: string
+          format: password
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?(0|[1-9][0-9]*)(\.[0-9]+)?$
+          x-seampact-minimum: "0"
+          x-seampact-maximum: "1000"
+          x-seampact-multipleOf: "0.01"
+          x-acme-tax-basis: inclusive
+        viewers:
+          type: string
+          format: int64
+          pattern: ^-?(0|[1-9][0-9]*)$
+          x-seampact-exclusiveMinimum: "-1"
+          x-seampact-exclusiveMaximum: "1000000000000"
+        state:
+          $ref: "#/components/schemas/StreamState"
+        stats:
+          $ref: "#/components/schemas/ProfileStats"
+      required:
+        - profileId
+        - displayName
+      x-acme-entity: profile
+      x-acme-pii: true
+      x-acme-since: 2026-01
+      x-acme-table: profiles
+      x-acme-tags:
+        - people
+    ProfileStats:
+      type: object
+      properties:
+        views:
+          type: integer
+          minimum: 0
+    StreamEvent:
+      oneOf:
+        - $ref: "#/components/schemas/StreamEventStarted"
+        - $ref: "#/components/schemas/StreamEventStopped"
+      x-seampact-discriminator:
+        in: header
+        name: X-Stream-Event
+    StreamEventStarted:
+      type: object
+      properties:
+        startedAt:
+          type: string
+          format: date-time
+    StreamEventStopped:
+      type: object
+      properties: {}
+    StreamState:
+      type: string
+      x-seampact-enum:
+        - live
+        - ended
+        - unknown
+      x-seampact-enum-fallback: unknown
+    UpdateProfile:
+      type: object
+      properties:
+        profileId:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+          maxLength: 80
+      required:
+        - profileId
+    api.csrf_invalid:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.csrf_invalid
+        title:
+          type: string
+        status:
+          type: integer
+          const: 403
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.csrf_invalid
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    api.forbidden:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.forbidden
+            title:
+              type: string
+            status:
+              type: integer
+              const: 403
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.forbidden
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - title
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiForbiddenParams"
+      x-seampact-nature:
+        base: refused
+    api.idempotency_in_progress:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.idempotency_in_progress
+        title:
+          type: string
+        status:
+          type: integer
+          const: 409
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.idempotency_in_progress
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: unavailable
+    api.idempotency_key_reused:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.idempotency_key_reused
+        title:
+          type: string
+        status:
+          type: integer
+          const: 422
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.idempotency_key_reused
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    api.internal:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.internal
+        title:
+          type: string
+        status:
+          type: integer
+          const: 500
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.internal
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: failed
+    api.not_found:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.not_found
+        title:
+          type: string
+        status:
+          type: integer
+          const: 404
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.not_found
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    api.payload_too_large:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.payload_too_large
+            title:
+              type: string
+            status:
+              type: integer
+              const: 413
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.payload_too_large
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - title
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiPayloadTooLargeParams"
+      x-seampact-nature:
+        base: refused
+    api.reauthentication_required:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.reauthentication_required
+        title:
+          type: string
+        status:
+          type: integer
+          const: 401
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.reauthentication_required
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    api.schema_invalid:
+      allOf:
+        - type: object
+          properties:
+            type:
+              type: string
+              const: api.schema_invalid
+            title:
+              type: string
+            status:
+              type: integer
+              const: 400
+            detail:
+              type: string
+            instance:
+              type: string
+            code:
+              type: string
+              const: api.schema_invalid
+            nature:
+              type: string
+            traceId:
+              type: string
+          required:
+            - type
+            - title
+            - status
+            - code
+            - nature
+        - $ref: "#/components/schemas/ApiSchemaInvalidParams"
+      x-seampact-nature:
+        base: refused
+    api.unauthenticated:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.unauthenticated
+        title:
+          type: string
+        status:
+          type: integer
+          const: 401
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.unauthenticated
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+    api.unsupported_media_type:
+      type: object
+      properties:
+        type:
+          type: string
+          const: api.unsupported_media_type
+        title:
+          type: string
+        status:
+          type: integer
+          const: 415
+        detail:
+          type: string
+        instance:
+          type: string
+        code:
+          type: string
+          const: api.unsupported_media_type
+        nature:
+          type: string
+        traceId:
+          type: string
+      required:
+        - type
+        - title
+        - status
+        - code
+        - nature
+      x-seampact-nature:
+        base: refused
+  securitySchemes:
+    csrfToken:
+      type: apiKey
+      in: header
+      name: X-Csrf-Token
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: __Host-studio

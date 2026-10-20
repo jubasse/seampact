@@ -1,7 +1,12 @@
 import { below, type IrLocation } from "@seampact/codegen-core";
 import type { Operation, WireFormat } from "@seampact/spec/ir";
 import { addMetaSlot, successSlots, urlSchema } from "./body-slots.js";
-import { type EmitContext, refuseInconsistent, refuseNotEmitted, writeExtension } from "./emit-context.js";
+import {
+  type EmitContext,
+  refuseInconsistent,
+  refuseNotEmitted,
+  writeExtension,
+} from "./emit-context.js";
 import { valueSourceText } from "./ir-text.js";
 import { copyOptional, type JsonObject, type JsonValue, setDefined } from "./json-value.js";
 import { type SlotValue, templateSchema } from "./templates.js";
@@ -32,7 +37,8 @@ export function writePaging(context: EmitContext, operation: Operation, target: 
 
     const roles: JsonObject = {};
 
-    for (const role of style.request) roles[role.role] = valueSourceText({ in: role.in, name: role.name });
+    for (const role of style.request)
+      roles[role.role] = valueSourceText({ in: role.in, name: role.name });
 
     value.roles = roles;
   }
@@ -65,7 +71,8 @@ export function pagingLimitDefault(
   const style = paging?.style === undefined ? undefined : context.ir.pagings[paging.style];
   const limitRole = style?.request.find((role) => role.role === LIMIT_ROLE);
 
-  if (limitRole === undefined || limitRole.in !== place || limitRole.name !== name) return undefined;
+  if (limitRole === undefined || limitRole.in !== place || limitRole.name !== name)
+    return undefined;
 
   return paging?.defaultLimit;
 }
@@ -79,7 +86,8 @@ export function pageBodySchema(
   status: number,
   location: IrLocation,
 ): JsonObject | undefined {
-  const style = operation.paging?.style === undefined ? undefined : context.ir.pagings[operation.paging.style];
+  const style =
+    operation.paging?.style === undefined ? undefined : context.ir.pagings[operation.paging.style];
 
   if (style === undefined) {
     refuseInconsistent(context, "page.style", "A page response without a paging style", location);
@@ -106,7 +114,14 @@ export function pageBodySchema(
   const styleLocation = below({ member: "" }, "pagings", style.id, "response");
   const body = style.response.body;
 
-  addMetaSlot(context, slots, format, body === undefined ? style.response.meta : [], roleSlots, styleLocation);
+  addMetaSlot(
+    context,
+    slots,
+    format,
+    body === undefined ? style.response.meta : [],
+    roleSlots,
+    styleLocation,
+  );
 
   const template = body ?? format.success.page.body;
   const templateLocation =
@@ -122,7 +137,8 @@ function pagingRoleSlots(context: EmitContext, token: string | undefined): Map<s
   const integer: SlotValue = { schema: { type: "integer" }, presence: "always" };
   const always = (schema: JsonObject): SlotValue => ({ schema, presence: "always" });
   const maybe = (schema: JsonObject): SlotValue => ({ schema, presence: "maybe" });
-  const since: JsonObject = token === INSTANT_TOKEN ? { type: "string", format: "date-time" } : { type: "string" };
+  const since: JsonObject =
+    token === INSTANT_TOKEN ? { type: "string", format: "date-time" } : { type: "string" };
 
   return new Map<string, SlotValue>([
     ["nextCursor", maybe({ type: "string" })],

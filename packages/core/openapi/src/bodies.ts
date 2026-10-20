@@ -46,10 +46,17 @@ export function requestBody(
 
   if (examples !== undefined) mediaObject.examples = examples;
 
-  const body: JsonObject = { required: true, content: { [bodyMedia(context, operation, input)]: mediaObject } };
-  const unknownKeys = input.schema.kind === "ref" && "unknownKeys" in input.schema ? input.schema.unknownKeys : undefined;
+  const body: JsonObject = {
+    required: true,
+    content: { [bodyMedia(context, operation, input)]: mediaObject },
+  };
+  const unknownKeys =
+    input.schema.kind === "ref" && "unknownKeys" in input.schema
+      ? input.schema.unknownKeys
+      : undefined;
 
-  if (unknownKeys !== undefined) writeUnknownKeys(context, body, unknownKeys, below(inputLocation, "schema"));
+  if (unknownKeys !== undefined)
+    writeUnknownKeys(context, body, unknownKeys, below(inputLocation, "schema"));
 
   if (input.rawBody) writeExtension(context, body, "raw-body", true);
 
@@ -88,11 +95,13 @@ function bodyMedia(context: EmitContext, operation: Operation, input: OperationI
 function bodySchema(context: EmitContext, input: OperationInput, location: IrLocation): JsonObject {
   const proofs = input.proofs ?? [];
 
-  if (proofs.length === 0) return typeUseSchema(context, input.schema, "input", below(location, "schema"));
+  if (proofs.length === 0)
+    return typeUseSchema(context, input.schema, "input", below(location, "schema"));
 
   const strict = context.options.inputSchemas === "strict";
   const proofObject = proofsSchema(context, proofs, below(location, "proofs"));
-  const inputSchemaId = input.schema.kind === "ref" && "schema" in input.schema ? input.schema.schema : undefined;
+  const inputSchemaId =
+    input.schema.kind === "ref" && "schema" in input.schema ? input.schema.schema : undefined;
 
   if (inputSchemaId === EMPTY_BODY_SCHEMA_ID) {
     if (strict) proofObject.unevaluatedProperties = false;
@@ -100,7 +109,9 @@ function bodySchema(context: EmitContext, input: OperationInput, location: IrLoc
     return proofObject;
   }
 
-  const wrapper: JsonObject = { allOf: [inputTopLevel(context, input, inputSchemaId, location), proofObject] };
+  const wrapper: JsonObject = {
+    allOf: [inputTopLevel(context, input, inputSchemaId, location), proofObject],
+  };
 
   if (strict) wrapper.unevaluatedProperties = false;
 
@@ -117,8 +128,18 @@ function inputTopLevel(
 ): JsonObject {
   const named = inputSchemaId === undefined ? undefined : context.ir.schemas[inputSchemaId];
 
-  if (inputSchemaId === undefined || named === undefined || !isKnownVariant("Schema", named) || named.kind !== "object") {
-    refuseInconsistent(context, "input.proofs", "A body proof on an input that is not an object schema", location);
+  if (
+    inputSchemaId === undefined ||
+    named === undefined ||
+    !isKnownVariant("Schema", named) ||
+    named.kind !== "object"
+  ) {
+    refuseInconsistent(
+      context,
+      "input.proofs",
+      "A body proof on an input that is not an object schema",
+      location,
+    );
 
     return {};
   }
@@ -134,7 +155,11 @@ function inputTopLevel(
   return topLevel;
 }
 
-function proofsSchema(context: EmitContext, proofs: readonly InputProof[], location: IrLocation): JsonObject {
+function proofsSchema(
+  context: EmitContext,
+  proofs: readonly InputProof[],
+  location: IrLocation,
+): JsonObject {
   const properties: JsonObject = {};
 
   proofs.forEach((proof, index) => {
@@ -151,7 +176,11 @@ function proofsSchema(context: EmitContext, proofs: readonly InputProof[], locat
 }
 
 // A form body encodes each list or object field with its style; a multipart body states each file part's media.
-function bodyEncoding(context: EmitContext, input: OperationInput, location: IrLocation): JsonObject {
+function bodyEncoding(
+  context: EmitContext,
+  input: OperationInput,
+  location: IrLocation,
+): JsonObject {
   const encoding: JsonObject = {};
 
   if (input.media === FORM_MEDIA) {
@@ -159,16 +188,23 @@ function bodyEncoding(context: EmitContext, input: OperationInput, location: IrL
 
     for (const field of fields) {
       if (ENCODED_FIELD_KINDS.includes(field.wire.kind)) {
-        encoding[field.name] = { style: field.wire.style ?? "form", explode: field.wire.explode ?? true };
+        encoding[field.name] = {
+          style: field.wire.style ?? "form",
+          explode: field.wire.explode ?? true,
+        };
       }
     }
   }
 
   if (input.media === MULTIPART_MEDIA) {
     for (const field of input.fields ?? []) {
-      const media = field.wire.kind === "file" ? fileFieldMedia(context, input, field.name, location) : undefined;
+      const media =
+        field.wire.kind === "file"
+          ? fileFieldMedia(context, input, field.name, location)
+          : undefined;
 
-      if (media !== undefined && media.length > 0) encoding[field.name] = { contentType: media.join(", ") };
+      if (media !== undefined && media.length > 0)
+        encoding[field.name] = { contentType: media.join(", ") };
     }
   }
 
@@ -185,7 +221,8 @@ function fileFieldMedia(
   fieldName: string,
   location: IrLocation,
 ): readonly string[] | undefined {
-  const schemaId = input.schema.kind === "ref" && "schema" in input.schema ? input.schema.schema : undefined;
+  const schemaId =
+    input.schema.kind === "ref" && "schema" in input.schema ? input.schema.schema : undefined;
   const named = schemaId === undefined ? undefined : context.ir.schemas[schemaId];
   const property =
     named !== undefined && isKnownVariant("Schema", named) && named.kind === "object"
@@ -193,7 +230,12 @@ function fileFieldMedia(
       : undefined;
 
   if (property === undefined || property.type.kind !== "file" || !("media" in property.type)) {
-    refuseInconsistent(context, "input.file", `The file field '${fieldName}' has no file property`, location);
+    refuseInconsistent(
+      context,
+      "input.file",
+      `The file field '${fieldName}' has no file property`,
+      location,
+    );
 
     return undefined;
   }

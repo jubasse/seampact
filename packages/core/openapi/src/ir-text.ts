@@ -10,7 +10,9 @@ const ADDRESS_PLACE = "address";
 /** `path.taskId`, `scope.channel`, `host`, `address/64`. */
 export function valueSourceText(source: ValueSource): string {
   if (source.in === ADDRESS_PLACE) {
-    return source.prefixBits === undefined ? ADDRESS_PLACE : `${ADDRESS_PLACE}/${source.prefixBits}`;
+    return source.prefixBits === undefined
+      ? ADDRESS_PLACE
+      : `${ADDRESS_PLACE}/${source.prefixBits}`;
   }
 
   if (PLACES_WITHOUT_NAME.includes(source.in) || source.name === undefined) return source.in;

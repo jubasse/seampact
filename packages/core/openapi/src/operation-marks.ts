@@ -34,11 +34,16 @@ export function writeOperationMarks(
 
   writeUnknownQuery(context, operation, target, location);
 
-  if (operation.budgetMs !== undefined) writeExtension(context, target, "budget-ms", operation.budgetMs);
+  if (operation.budgetMs !== undefined)
+    writeExtension(context, target, "budget-ms", operation.budgetMs);
 
-  if (operation.upstream.length > 0) writeExtension(context, target, "upstream", [...operation.upstream]);
+  if (operation.upstream.length > 0)
+    writeExtension(context, target, "upstream", [...operation.upstream]);
 
-  const maturity: JsonObject = { level: operation.maturity.level, source: operation.maturity.source };
+  const maturity: JsonObject = {
+    level: operation.maturity.level,
+    source: operation.maturity.source,
+  };
 
   setDefined(maturity, "reason", optionalReason(context, operation.maturity.reason));
   writeExtension(context, target, "maturity", maturity);
@@ -55,13 +60,22 @@ export function writeOperationMarks(
   if (operation.internal) writeExtension(context, target, "internal", true);
 
   if (operation.relays !== undefined) {
-    writeExtension(context, target, "relays", { api: operation.relays.api, operationId: operation.relays.id });
+    writeExtension(context, target, "relays", {
+      api: operation.relays.api,
+      operationId: operation.relays.id,
+    });
   }
 
-  if (operation.format !== documentFormat) writeExtension(context, target, "format", operation.format);
+  if (operation.format !== documentFormat)
+    writeExtension(context, target, "format", operation.format);
 }
 
-function writeIdempotency(context: EmitContext, operation: Operation, target: JsonObject, location: IrLocation): void {
+function writeIdempotency(
+  context: EmitContext,
+  operation: Operation,
+  target: JsonObject,
+  location: IrLocation,
+): void {
   const idempotency = operation.idempotency;
 
   if (idempotency === undefined) return;
@@ -73,7 +87,9 @@ function writeIdempotency(context: EmitContext, operation: Operation, target: Js
   }
 
   if (idempotency.kind === "exempt") {
-    writeExtension(context, target, "idempotency", { exempt: reasonValue(context, idempotency.reason) });
+    writeExtension(context, target, "idempotency", {
+      exempt: reasonValue(context, idempotency.reason),
+    });
 
     return;
   }
@@ -87,7 +103,12 @@ function writeIdempotency(context: EmitContext, operation: Operation, target: Js
   });
 }
 
-function writeUnknownQuery(context: EmitContext, operation: Operation, target: JsonObject, location: IrLocation): void {
+function writeUnknownQuery(
+  context: EmitContext,
+  operation: Operation,
+  target: JsonObject,
+  location: IrLocation,
+): void {
   const unknownQuery = operation.unknownQuery;
 
   if (!isKnownVariant("UnknownQuery", unknownQuery)) {
@@ -97,7 +118,9 @@ function writeUnknownQuery(context: EmitContext, operation: Operation, target: J
   }
 
   if (unknownQuery.policy === "ignore") {
-    writeExtension(context, target, "unknown-query", { ignore: reasonValue(context, unknownQuery.reason) });
+    writeExtension(context, target, "unknown-query", {
+      ignore: reasonValue(context, unknownQuery.reason),
+    });
   }
 }
 

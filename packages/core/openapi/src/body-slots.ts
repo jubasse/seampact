@@ -22,7 +22,10 @@ export function emittedShapeOf(shape: string): EmittedShape | undefined {
 
 /** A URL a target writes: a relative reference, or absolute under `api.wire.urls: absolute`. */
 export function urlSchema(context: EmitContext): JsonObject {
-  return { type: "string", format: context.ir.api.wire.urls === "absolute" ? "uri" : "uri-reference" };
+  return {
+    type: "string",
+    format: context.ir.api.wire.urls === "absolute" ? "uri" : "uri-reference",
+  };
 }
 
 export function successSlots(context: EmitContext, status: number): Map<string, SlotValue> {
@@ -57,7 +60,13 @@ export function addMetaSlot(
   }
 
   styleMeta.forEach((member, index) => {
-    const value = templateSchema(context, member.value, roleSlots, format.absent, below(location, "meta", index));
+    const value = templateSchema(
+      context,
+      member.value,
+      roleSlots,
+      format.absent,
+      below(location, "meta", index),
+    );
 
     if (value === undefined) return;
 

@@ -44,7 +44,10 @@ export function writeOperationSecurity(
       writeExtension(context, target, "access", { identity: access.identity });
       break;
     case "optional": {
-      const schemes = [...access.schemes, ...optionalReadSchemes(context, operation, access.identity)];
+      const schemes = [
+        ...access.schemes,
+        ...optionalReadSchemes(context, operation, access.identity),
+      ];
 
       target.security = [...requirementsOf(context, operation, schemes, location), {}];
       writeExtension(context, target, "access", {
@@ -59,7 +62,11 @@ export function writeOperationSecurity(
   writeCsrf(context, operation, target, location);
 }
 
-function optionalReadSchemes(context: EmitContext, operation: Operation, identityId: string): string[] {
+function optionalReadSchemes(
+  context: EmitContext,
+  operation: Operation,
+  identityId: string,
+): string[] {
   const identity = context.ir.identities[identityId];
 
   if (!operation.safe || identity === undefined || !isKnownVariant("Identity", identity)) return [];
@@ -92,7 +99,12 @@ function requirementsOf(
 
 function useScheme(context: EmitContext, schemeId: string, location: IrLocation): string {
   if (context.ir.schemes[schemeId] === undefined) {
-    refuseInconsistent(context, "scheme.missing", `The scheme '${schemeId}' is not declared`, location);
+    refuseInconsistent(
+      context,
+      "scheme.missing",
+      `The scheme '${schemeId}' is not declared`,
+      location,
+    );
   }
 
   context.securitySchemes.add(schemeId);
@@ -100,7 +112,12 @@ function useScheme(context: EmitContext, schemeId: string, location: IrLocation)
   return schemeId;
 }
 
-function writeCsrf(context: EmitContext, operation: Operation, target: JsonObject, location: IrLocation): void {
+function writeCsrf(
+  context: EmitContext,
+  operation: Operation,
+  target: JsonObject,
+  location: IrLocation,
+): void {
   const csrf = operation.csrf;
 
   if (csrf === undefined) return;
@@ -139,7 +156,11 @@ export function securitySchemesComponent(context: EmitContext): JsonObject {
   return component;
 }
 
-function securityScheme(context: EmitContext, scheme: KnownScheme, location: IrLocation): JsonObject {
+function securityScheme(
+  context: EmitContext,
+  scheme: KnownScheme,
+  location: IrLocation,
+): JsonObject {
   switch (scheme.kind) {
     case "cookie":
       return { type: "apiKey", in: "cookie", name: scheme.name };
@@ -150,16 +171,13 @@ function securityScheme(context: EmitContext, scheme: KnownScheme, location: IrL
     case "basic":
       return { type: "http", scheme: "basic" };
     case "bearer":
-      return bearerScheme(context, scheme.bearer);
+      return bearerScheme(scheme.bearer);
     case "signature":
       return signatureScheme(context, scheme.name, scheme.signature, below(location, "signature"));
   }
 }
 
-function bearerScheme(
-  context: EmitContext,
-  facts: Extract<KnownScheme, { kind: "bearer" }>["bearer"],
-): JsonObject {
+function bearerScheme(facts: Extract<KnownScheme, { kind: "bearer" }>["bearer"]): JsonObject {
   if (facts?.oauth2 !== undefined) {
     return { type: "oauth2", flows: copyJsonValue(facts.oauth2.flows) };
   }
@@ -184,7 +202,12 @@ function signatureScheme(
   const scheme: JsonObject = { type: "apiKey", in: "header" };
 
   if (headerName === undefined) {
-    refuseInconsistent(context, "signature.header", "A signature scheme without its header", location);
+    refuseInconsistent(
+      context,
+      "signature.header",
+      "A signature scheme without its header",
+      location,
+    );
   } else {
     scheme.name = headerName;
   }
@@ -222,7 +245,11 @@ function signatureScheme(
   return scheme;
 }
 
-function schemeKeyValue(context: EmitContext, key: SchemeKey, location: IrLocation): JsonObject | undefined {
+function schemeKeyValue(
+  context: EmitContext,
+  key: SchemeKey,
+  location: IrLocation,
+): JsonObject | undefined {
   if (!isKnownVariant("SchemeKey", key)) {
     refuseUnknown(context, below(location, "kind"), key.kind);
 

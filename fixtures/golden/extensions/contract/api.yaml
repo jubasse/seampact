@@ -1,0 +1,163 @@
+# api.yaml: consumer extension keys at every place, and the OpenAPI extensions the other cases leave unused
+api:
+  name: studio
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: Profiles and streams of a studio.
+  compat: { policy: additive-only }
+  x-acme-owner-team: studio
+  x-acme-audience: [partners, staff]
+
+extensions:
+  acme:
+    owner-team: { at: [api, operation], schema: { type: string } }
+    audience: { at: [api], schema: { type: array, items: { type: string } } }
+    tier: { at: [operation, right, rule, scope], schema: { enum: Tier } }
+    invalidates: { at: [operation], schema: { type: array, items: { type: string } } }
+    rate-class: { at: [operation], schema: { type: string } }
+    audit: { at: [operation, rule], schema: { type: boolean } }
+    entity: { at: [schema], schema: { type: string } }
+    table: { at: [schema], schema: { type: string } }
+    searchable: { at: [property], schema: { type: boolean } }
+    column: { at: [property], schema: { type: string } }
+    pii: { at: [property, schema], schema: { type: boolean } }
+    label: { at: [property], schema: { type: string } }
+    scope-kind: { at: [scope], schema: { type: string } }
+    right-group: { at: [right], schema: { type: string } }
+    rule-window: { at: [rule], schema: { type: integer } }
+    tax-basis: { at: [operation, property], schema: { enum: TaxBasis } }
+    cost: { at: [operation], schema: { type: integer } }
+    tags: { at: [schema, operation], schema: { type: array, items: { type: string } } }
+    since: { at: [operation, property, schema], schema: { type: string } }
+    owner: { at: [right, scope], schema: { type: string } }
+
+schemes:
+  sessionCookie: { kind: cookie, name: __Host-studio, csrf: csrfToken }
+  csrfToken: { kind: header, name: X-Csrf-Token }
+
+identities:
+  user:
+    schemes: { read: [sessionCookie], write: [sessionCookie] }
+    principal: UserPrincipal
+
+services:
+  catalog: { maturity: stable }
+  streaming: { maturity: provisional }
+
+scopes:
+  studio:
+    id: StudioId
+    errors: [api.not_found]
+    x-acme-tier: gold
+    x-acme-scope-kind: tenant
+    x-acme-owner: platform
+
+rights:
+  streams.manage:
+    subject: { scope: studio }
+    x-acme-tier: gold
+    x-acme-right-group: streams
+    x-acme-owner: video
+
+rules:
+  recentAuth:
+    proof: { in: body, name: reauthToken, schema: ReauthToken }
+    errors: [api.reauthentication_required]
+    x-acme-tier: silver
+    x-acme-audit: true
+    x-acme-rule-window: 300
+
+errors:
+  api.reauthentication_required: { status: 401 }
+
+conventions:
+  idempotency: { header: Idempotency-Key, replayHeader: Idempotency-Replayed, lifetime: 24h }
+  bodyLimit: 1MiB
+  outputEnums: open
+  degradedHeader: X-Degraded
+  errors:
+    every: [api.internal]
+
+enums:
+  Tier: { values: [gold, silver], reason: "Acme's support tiers." }
+  TaxBasis: { values: [inclusive, exclusive], reason: "Acme's tax rules." }
+  StreamState: { values: [live, ended, unknown], fallback: unknown, reason: "Stream states belong to this api." }
+
+schemas:
+  StudioId: { type: string, format: uuid }
+  ProfileId: { type: string, format: uuid }
+  ReauthToken: { type: string, minLength: 1, maxLength: 512 }
+  UserPrincipal:
+    type: object
+    required: [userId]
+    properties:
+      userId: { type: string, format: uuid }
+      profileId: ProfileId
+  Profile:
+    type: object
+    required: [profileId, displayName]
+    x-acme-entity: profile
+    x-acme-table: profiles
+    x-acme-pii: true
+    x-acme-tags: [people]
+    x-acme-since: '2026-01'
+    properties:
+      profileId: { $ref: ProfileId, x-acme-column: profile_id }
+      displayName: { type: string, maxLength: 80, x-acme-searchable: true, x-acme-label: Name }
+      email: { type: string, format: email, x-acme-pii: true, x-acme-since: '2026-02' }
+      streamKey: { type: string, sensitive: true }
+      price: { type: string, format: decimal, minimum: 0, maximum: 1000, multipleOf: 0.01, x-acme-tax-basis: inclusive }
+      viewers: { type: integer, format: int64, exclusiveMinimum: -1, exclusiveMaximum: 1000000000000 }
+      state: { enum: StreamState }
+      stats:
+        type: object
+        properties: { views: { type: integer, minimum: 0 } }
+  UpdateProfile:
+    type: object
+    required: [profileId]
+    properties:
+      profileId: ProfileId
+      displayName: { type: string, maxLength: 80 }
+  StreamEvent:
+    discriminator: { from: header.X-Stream-Event }
+    oneOf:
+      started: { type: object, properties: { startedAt: { type: string, format: date-time } } }
+      stopped: { type: object }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      studios:
+        kind: collection
+        id: { studioId: StudioId }
+        member:
+          scopes: { studio: path.studioId }
+          routes:
+            profile:
+              method: patch
+              principal: { requires: [profileId] }
+              bindings: { body.profileId: principal.profileId }
+              requires: [{ right: streams.manage }, { rule: recentAuth }]
+              upstream: [streaming, catalog]
+              degradable: [stats]
+              x-acme-owner-team: profiles
+              x-acme-tier: gold
+              x-acme-invalidates: [profiles, studios]
+              x-acme-rate-class: write
+              x-acme-audit: true
+              x-acme-tax-basis: exclusive
+              x-acme-cost: 3
+              x-acme-tags: [profile]
+              x-acme-since: '2026-03'
+              input: UpdateProfile
+              output: Profile
+            events:
+              method: post
+              csrf: { exempt: "Stream events come from the studio's own encoder." }
+              idempotency: { exempt: "An event is harmless to repeat." }
+              requires: [{ right: streams.manage }]
+              input: StreamEvent
+              responses: { 204: {} }

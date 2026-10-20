@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/internal.schema.json",
+  "title": "x-seampact-internal",
+  "description": "Marks an internal operation in a document that keeps it.",
+  "const": true
+}

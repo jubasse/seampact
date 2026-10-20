@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/relays.schema.json",
+  "title": "x-seampact-relays",
+  "description": "The operation of another api this one relays.",
+  "type": "object",
+  "properties": {
+    "api": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operationId": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": ["api", "operationId"],
+  "additionalProperties": false
+}

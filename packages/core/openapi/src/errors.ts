@@ -51,7 +51,11 @@ export function errorResponses(
   return responses;
 }
 
-function codesByStatus(context: EmitContext, operation: Operation, location: IrLocation): StatusCodes[] {
+function codesByStatus(
+  context: EmitContext,
+  operation: Operation,
+  location: IrLocation,
+): StatusCodes[] {
   const groups = new Map<number, StatusCodes>();
 
   operation.errors.forEach((error, index) => {
@@ -88,8 +92,11 @@ function errorResponse(
   group: StatusCodes,
   location: IrLocation,
 ): JsonObject {
-  const references = group.errors.map(({ declared }) => errorCodeReference(context, format, declared));
-  const schema: JsonObject = references.length === 1 && references[0] !== undefined ? references[0] : { oneOf: references };
+  const references = group.errors.map(({ declared }) =>
+    errorCodeReference(context, format, declared),
+  );
+  const schema: JsonObject =
+    references.length === 1 && references[0] !== undefined ? references[0] : { oneOf: references };
   const discriminatorMember = membersWritingSlot(format.error.body, CODE_SLOT).at(-1);
 
   if (references.length > 1 && discriminatorMember !== undefined) {
@@ -108,7 +115,9 @@ function errorResponse(
     context,
     response,
     "errors",
-    group.errors.map(({ error, index }) => errorItem(context, error, below(location, "errors", index))),
+    group.errors.map(({ error, index }) =>
+      errorItem(context, error, below(location, "errors", index)),
+    ),
   );
 
   return response;
@@ -122,7 +131,12 @@ function errorItem(context: EmitContext, error: OperationError, location: IrLoca
   } else if (error.origin !== undefined) {
     item.origin = originKey(error.origin);
   } else {
-    refuseInconsistent(context, "error.provenance", "An operation error with neither derivedFrom nor origin", location);
+    refuseInconsistent(
+      context,
+      "error.provenance",
+      "An operation error with neither derivedFrom nor origin",
+      location,
+    );
   }
 
   return item;
@@ -143,7 +157,11 @@ function retryHeaders(group: StatusCodes): JsonObject {
   return headers;
 }
 
-function errorCodeReference(context: EmitContext, format: WireFormat, declared: ErrorDecl): JsonObject {
+function errorCodeReference(
+  context: EmitContext,
+  format: WireFormat,
+  declared: ErrorDecl,
+): JsonObject {
   const known = context.errorCodeFormats.get(declared.code);
 
   if (known !== undefined && known !== format.id) {
@@ -164,7 +182,11 @@ function errorCodeReference(context: EmitContext, format: WireFormat, declared: 
 }
 
 /** The format's error body for one code: its code and status as constants, its params schema merged or nested. */
-function errorCodeComponent(context: EmitContext, format: WireFormat, declared: ErrorDecl): JsonObject {
+function errorCodeComponent(
+  context: EmitContext,
+  format: WireFormat,
+  declared: ErrorDecl,
+): JsonObject {
   const always = (schema: JsonObject): SlotValue => ({ schema, presence: "always" });
   const maybe = (schema: JsonObject): SlotValue => ({ schema, presence: "maybe" });
   const params =
@@ -182,7 +204,8 @@ function errorCodeComponent(context: EmitContext, format: WireFormat, declared: 
     [PARAMS_SLOT, params],
   ]);
   const location = below({ member: "" }, "formats", format.id, "error", "body");
-  const schema = templateSchema(context, format.error.body, slots, format.absent, location)?.schema ?? {};
+  const schema =
+    templateSchema(context, format.error.body, slots, format.absent, location)?.schema ?? {};
 
   writeDocs(schema, declared.docs);
 

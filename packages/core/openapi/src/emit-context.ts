@@ -1,5 +1,9 @@
 import type { IrLocation, Refusal } from "@seampact/codegen-core";
-import { refuseInconsistentIr, refuseNotGeneratedYet, refuseUnknownValueAt } from "@seampact/codegen-core";
+import {
+  refuseInconsistentIr,
+  refuseNotGeneratedYet,
+  refuseUnknownValueAt,
+} from "@seampact/codegen-core";
 import type { ContractIR, Extensions, SchemeId } from "@seampact/spec/ir";
 import type { EmitterOptions } from "./emitter-options.js";
 import { ALL_EXTENSIONS, NO_EXTENSIONS } from "./emitter-options.js";
@@ -76,7 +80,10 @@ export function reasonValue(context: EmitContext, reason: string): string | true
 }
 
 /** A reason member that is not the whole meaning of its object, left out under `reasons: omit`. */
-export function optionalReason(context: EmitContext, reason: string | undefined): string | undefined {
+export function optionalReason(
+  context: EmitContext,
+  reason: string | undefined,
+): string | undefined {
   return context.options.reasons === "omit" ? undefined : reason;
 }
 

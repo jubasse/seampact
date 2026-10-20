@@ -1665,6 +1665,12 @@ components:
                   const: done
               required:
                 - kind
+      discriminator:
+        propertyName: kind
+        mapping:
+          assigned: "#/components/schemas/NoticeAssigned"
+          cancelled: "#/components/schemas/NoticeCancelled"
+          done: "#/components/schemas/NoticeDone"
     NoticeAssigned:
       type: object
       properties:

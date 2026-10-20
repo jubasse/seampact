@@ -34,7 +34,16 @@ import { serializeDocument } from "./serialize.js";
 export const OPENAPI_VERSION = "3.1.0";
 
 const HTTP_OPERATION_KIND = "httpOperation";
-const METHOD_ORDER: readonly string[] = ["get", "put", "post", "delete", "options", "head", "patch", "trace"];
+const METHOD_ORDER: readonly string[] = [
+  "get",
+  "put",
+  "post",
+  "delete",
+  "options",
+  "head",
+  "patch",
+  "trace",
+];
 
 export interface EmittedDocument {
   /** The `api.documents` key, or absent for the one document of an api that declares none. */
@@ -48,7 +57,10 @@ export type EmitOutcome =
   | { status: "refused"; refusals: readonly Refusal[] };
 
 /** The OpenAPI documents of an api, or the refusals that stop them, each naming the IR member and the fix. */
-export function emitDocuments(ir: ContractIR, options: EmitterOptions = DEFAULT_EMITTER_OPTIONS): EmitOutcome {
+export function emitDocuments(
+  ir: ContractIR,
+  options: EmitterOptions = DEFAULT_EMITTER_OPTIONS,
+): EmitOutcome {
   const unsupported = checkIrSupport(ir, {
     irVersions: [IR_VERSION],
     irRevision: IR_REVISION,
@@ -95,7 +107,10 @@ export function emitDocuments(ir: ContractIR, options: EmitterOptions = DEFAULT_
   return { status: "emitted", documents };
 }
 
-function selectedOperations(ir: ContractIR, selection: ApiDocument): { operation: Operation; index: number }[] {
+function selectedOperations(
+  ir: ContractIR,
+  selection: ApiDocument,
+): { operation: Operation; index: number }[] {
   return ir.operations
     .map((operation, index) => ({ operation, index }))
     .filter(({ operation }) => selection.surfaces.includes(operation.surface))
@@ -121,7 +136,9 @@ function buildDocument(context: EmitContext, selection: ApiDocument): JsonObject
     });
   }
 
-  const tags = [...new Set(selected.flatMap(({ operation }) => operation.tags))].sort(compareCodeUnits);
+  const tags = [...new Set(selected.flatMap(({ operation }) => operation.tags))].sort(
+    compareCodeUnits,
+  );
 
   if (tags.length > 0) document.tags = tags.map((name) => ({ name }));
 
@@ -155,7 +172,10 @@ function infoObject(ir: ContractIR): JsonObject {
   const version = ir.api.version;
   const info: JsonObject = {
     title: ir.api.id,
-    version: version.kind === "path" && "number" in version ? String(version.number) : versionLabel(version),
+    version:
+      version.kind === "path" && "number" in version
+        ? String(version.number)
+        : versionLabel(version),
   };
 
   setDefined(info, "summary", ir.api.docs.summary);
@@ -165,7 +185,9 @@ function infoObject(ir: ContractIR): JsonObject {
 }
 
 function versionLabel(version: ContractIR["api"]["version"]): string {
-  return "label" in version && typeof version.label === "string" ? version.label : String(version.kind);
+  return "label" in version && typeof version.label === "string"
+    ? version.label
+    : String(version.kind);
 }
 
 // The format most operations use is the document's; ties go to the first id in code-unit order.
@@ -263,7 +285,9 @@ function responsesObject(
 ): JsonObject {
   const success = successResponses(context, operation, examples, location);
   const errors = errorResponses(context, operation, location);
-  const statuses = [...new Set([...success.keys(), ...errors.keys()])].sort((left, right) => left - right);
+  const statuses = [...new Set([...success.keys(), ...errors.keys()])].sort(
+    (left, right) => left - right,
+  );
   const responses: JsonObject = {};
 
   for (const status of statuses) {
@@ -288,7 +312,11 @@ function responsesObject(
 function drainSchemaComponents(context: EmitContext): JsonObject {
   const written = new Map<string, JsonObject>();
 
-  for (let request = context.pendingComponents.shift(); request !== undefined; request = context.pendingComponents.shift()) {
+  for (
+    let request = context.pendingComponents.shift();
+    request !== undefined;
+    request = context.pendingComponents.shift()
+  ) {
     written.set(request.key, request.build(context));
   }
 

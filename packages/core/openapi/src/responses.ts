@@ -1,7 +1,12 @@
 import { below, type IrLocation } from "@seampact/codegen-core";
 import type { Operation, Response, ResponseHeader, WireFormat } from "@seampact/spec/ir";
 import { addMetaSlot, emittedShapeOf, successSlots } from "./body-slots.js";
-import { type EmitContext, refuseInconsistent, refuseNotEmitted, writeExtension } from "./emit-context.js";
+import {
+  type EmitContext,
+  refuseInconsistent,
+  refuseNotEmitted,
+  writeExtension,
+} from "./emit-context.js";
 import { type ExampleSet, responseExamples } from "./examples.js";
 import { isJsonObject, type JsonObject } from "./json-value.js";
 import { pageBodySchema } from "./paging.js";
@@ -28,7 +33,12 @@ export function successResponses(
   const format = context.ir.formats[operation.format];
 
   if (format === undefined) {
-    refuseInconsistent(context, "format.missing", `The format '${operation.format}' is not declared`, location);
+    refuseInconsistent(
+      context,
+      "format.missing",
+      `The format '${operation.format}' is not declared`,
+      location,
+    );
 
     return responses;
   }
@@ -94,7 +104,12 @@ function responseBodySchema(
   const shape = emittedShapeOf(response.shape);
 
   if (shape === undefined) {
-    refuseNotEmitted(context, "response.shape", `A '${response.shape}' response`, below(location, "shape"));
+    refuseNotEmitted(
+      context,
+      "response.shape",
+      `A '${response.shape}' response`,
+      below(location, "shape"),
+    );
 
     return undefined;
   }
@@ -121,7 +136,8 @@ function responseBodySchema(
   }
 
   const slots = successSlots(context, response.status);
-  const payloadSchema = shape === "table" ? { type: "object", additionalProperties: payload } : payload;
+  const payloadSchema =
+    shape === "table" ? { type: "object", additionalProperties: payload } : payload;
 
   slots.set(PAYLOAD_SLOT, { schema: payloadSchema, presence: "always" });
 
@@ -129,7 +145,8 @@ function responseBodySchema(
 
   addMetaSlot(context, slots, format, [], new Map(), formatLocation);
 
-  return templateSchema(context, format.success[shape].body, slots, format.absent, formatLocation)?.schema;
+  return templateSchema(context, format.success[shape].body, slots, format.absent, formatLocation)
+    ?.schema;
 }
 
 function responseHeaders(
@@ -141,7 +158,12 @@ function responseHeaders(
   const headers: JsonObject = {};
 
   response.headers.forEach((header, index) => {
-    headers[header.name] = headerObject(context, operation, header, below(location, "headers", index));
+    headers[header.name] = headerObject(
+      context,
+      operation,
+      header,
+      below(location, "headers", index),
+    );
   });
 
   const success = response.status < SUCCESS_STATUS_LIMIT || response.status === NOT_MODIFIED_STATUS;
@@ -175,7 +197,10 @@ function headerObject(
 ): JsonObject {
   const headerObject: JsonObject = {};
 
-  if (header.semantic === SUCCESSOR_LINK_SEMANTIC && operation.deprecated?.successorRel !== undefined) {
+  if (
+    header.semantic === SUCCESSOR_LINK_SEMANTIC &&
+    operation.deprecated?.successorRel !== undefined
+  ) {
     headerObject.description = `The successor operation, with rel "${operation.deprecated.successorRel}".`;
   }
 
@@ -183,7 +208,8 @@ function headerObject(
 
   headerObject.schema = typeUseSchema(context, header.type, "shared", below(location, "type"));
 
-  if (header.semantic !== undefined) writeExtension(context, headerObject, "semantic", header.semantic);
+  if (header.semantic !== undefined)
+    writeExtension(context, headerObject, "semantic", header.semantic);
 
   return headerObject;
 }

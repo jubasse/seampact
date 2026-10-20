@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/errors.schema.json",
+  "title": "x-seampact-errors",
+  "description": "The codes of an error response, each with its derivation or the origin of the node that attached it.",
+  "type": "array",
+  "items": {
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "derivedFrom": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["code", "derivedFrom"],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "minLength": 1
+          },
+          "origin": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["code", "origin"],
+        "additionalProperties": false
+      }
+    ]
+  }
+}

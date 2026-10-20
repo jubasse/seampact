@@ -1,0 +1,586 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 11,
+      "file": "api.yaml",
+      "line": 2
+    },
+    "api#/api/maturity": {
+      "column": 3,
+      "endColumn": 24,
+      "endLine": 6,
+      "file": "api.yaml",
+      "line": 6
+    },
+    "api#/api/version": {
+      "column": 3,
+      "endColumn": 13,
+      "endLine": 4,
+      "file": "api.yaml",
+      "line": 4
+    },
+    "api#/conventions/bodyLimit": {
+      "column": 3,
+      "endColumn": 18,
+      "endLine": 76,
+      "file": "api.yaml",
+      "line": 76
+    },
+    "api#/conventions/degradedHeader": {
+      "column": 3,
+      "endColumn": 29,
+      "endLine": 78,
+      "file": "api.yaml",
+      "line": 78
+    },
+    "api#/conventions/errors/every": {
+      "column": 5,
+      "endColumn": 26,
+      "endLine": 80,
+      "file": "api.yaml",
+      "line": 80
+    },
+    "api#/conventions/errors/every/0": {
+      "column": 13,
+      "endColumn": 25,
+      "endLine": 80,
+      "file": "api.yaml",
+      "line": 80
+    },
+    "api#/conventions/idempotency": {
+      "column": 3,
+      "endColumn": 94,
+      "endLine": 75,
+      "file": "api.yaml",
+      "line": 75
+    },
+    "api#/conventions/idempotency/header": {
+      "column": 18,
+      "endColumn": 41,
+      "endLine": 75,
+      "file": "api.yaml",
+      "line": 75
+    },
+    "api#/conventions/idempotency/lifetime": {
+      "column": 79,
+      "endColumn": 92,
+      "endLine": 75,
+      "file": "api.yaml",
+      "line": 75
+    },
+    "api#/conventions/idempotency/replayHeader": {
+      "column": 43,
+      "endColumn": 77,
+      "endLine": 75,
+      "file": "api.yaml",
+      "line": 75
+    },
+    "api#/conventions/outputEnums": {
+      "column": 3,
+      "endColumn": 20,
+      "endLine": 77,
+      "file": "api.yaml",
+      "line": 77
+    },
+    "api#/enums/StreamState": {
+      "column": 3,
+      "endColumn": 114,
+      "endLine": 85,
+      "file": "api.yaml",
+      "line": 85
+    },
+    "api#/enums/TaxBasis": {
+      "column": 3,
+      "endColumn": 76,
+      "endLine": 84,
+      "file": "api.yaml",
+      "line": 84
+    },
+    "api#/enums/Tier": {
+      "column": 3,
+      "endColumn": 68,
+      "endLine": 83,
+      "file": "api.yaml",
+      "line": 83
+    },
+    "api#/errors/api.reauthentication_required": {
+      "column": 3,
+      "endColumn": 49,
+      "endLine": 72,
+      "file": "api.yaml",
+      "line": 72
+    },
+    "api#/extensions/acme/audience": {
+      "column": 5,
+      "endColumn": 78,
+      "endLine": 15,
+      "file": "api.yaml",
+      "line": 15
+    },
+    "api#/extensions/acme/audit": {
+      "column": 5,
+      "endColumn": 64,
+      "endLine": 19,
+      "file": "api.yaml",
+      "line": 19
+    },
+    "api#/extensions/acme/column": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 23,
+      "file": "api.yaml",
+      "line": 23
+    },
+    "api#/extensions/acme/cost": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 30,
+      "file": "api.yaml",
+      "line": 30
+    },
+    "api#/extensions/acme/entity": {
+      "column": 5,
+      "endColumn": 55,
+      "endLine": 20,
+      "file": "api.yaml",
+      "line": 20
+    },
+    "api#/extensions/acme/invalidates": {
+      "column": 5,
+      "endColumn": 87,
+      "endLine": 17,
+      "file": "api.yaml",
+      "line": 17
+    },
+    "api#/extensions/acme/label": {
+      "column": 5,
+      "endColumn": 56,
+      "endLine": 25,
+      "file": "api.yaml",
+      "line": 25
+    },
+    "api#/extensions/acme/owner": {
+      "column": 5,
+      "endColumn": 60,
+      "endLine": 33,
+      "file": "api.yaml",
+      "line": 33
+    },
+    "api#/extensions/acme/owner-team": {
+      "column": 5,
+      "endColumn": 67,
+      "endLine": 14,
+      "file": "api.yaml",
+      "line": 14
+    },
+    "api#/extensions/acme/pii": {
+      "column": 5,
+      "endColumn": 63,
+      "endLine": 24,
+      "file": "api.yaml",
+      "line": 24
+    },
+    "api#/extensions/acme/rate-class": {
+      "column": 5,
+      "endColumn": 62,
+      "endLine": 18,
+      "file": "api.yaml",
+      "line": 18
+    },
+    "api#/extensions/acme/right-group": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 27,
+      "file": "api.yaml",
+      "line": 27
+    },
+    "api#/extensions/acme/rule-window": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 28,
+      "file": "api.yaml",
+      "line": 28
+    },
+    "api#/extensions/acme/scope-kind": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 26,
+      "file": "api.yaml",
+      "line": 26
+    },
+    "api#/extensions/acme/searchable": {
+      "column": 5,
+      "endColumn": 62,
+      "endLine": 22,
+      "file": "api.yaml",
+      "line": 22
+    },
+    "api#/extensions/acme/since": {
+      "column": 5,
+      "endColumn": 75,
+      "endLine": 32,
+      "file": "api.yaml",
+      "line": 32
+    },
+    "api#/extensions/acme/table": {
+      "column": 5,
+      "endColumn": 54,
+      "endLine": 21,
+      "file": "api.yaml",
+      "line": 21
+    },
+    "api#/extensions/acme/tags": {
+      "column": 5,
+      "endColumn": 88,
+      "endLine": 31,
+      "file": "api.yaml",
+      "line": 31
+    },
+    "api#/extensions/acme/tax-basis": {
+      "column": 5,
+      "endColumn": 73,
+      "endLine": 29,
+      "file": "api.yaml",
+      "line": 29
+    },
+    "api#/extensions/acme/tier": {
+      "column": 5,
+      "endColumn": 74,
+      "endLine": 16,
+      "file": "api.yaml",
+      "line": 16
+    },
+    "api#/identities/user": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 43,
+      "file": "api.yaml",
+      "line": 40
+    },
+    "api#/rights/streams.manage": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 62,
+      "file": "api.yaml",
+      "line": 57
+    },
+    "api#/rules/recentAuth": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 70,
+      "file": "api.yaml",
+      "line": 64
+    },
+    "api#/rules/recentAuth/proof": {
+      "column": 5,
+      "endColumn": 64,
+      "endLine": 65,
+      "file": "api.yaml",
+      "line": 65
+    },
+    "api#/schemas/Profile": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 116,
+      "file": "api.yaml",
+      "line": 97
+    },
+    "api#/schemas/Profile/properties/displayName": {
+      "column": 7,
+      "endColumn": 96,
+      "endLine": 107,
+      "file": "api.yaml",
+      "line": 107
+    },
+    "api#/schemas/Profile/properties/email": {
+      "column": 7,
+      "endColumn": 88,
+      "endLine": 108,
+      "file": "api.yaml",
+      "line": 108
+    },
+    "api#/schemas/Profile/properties/price": {
+      "column": 7,
+      "endColumn": 121,
+      "endLine": 110,
+      "file": "api.yaml",
+      "line": 110
+    },
+    "api#/schemas/Profile/properties/profileId": {
+      "column": 7,
+      "endColumn": 64,
+      "endLine": 106,
+      "file": "api.yaml",
+      "line": 106
+    },
+    "api#/schemas/Profile/properties/state": {
+      "column": 7,
+      "endColumn": 35,
+      "endLine": 112,
+      "file": "api.yaml",
+      "line": 112
+    },
+    "api#/schemas/Profile/properties/stats": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 116,
+      "file": "api.yaml",
+      "line": 113
+    },
+    "api#/schemas/Profile/properties/stats/properties/views": {
+      "column": 23,
+      "endColumn": 59,
+      "endLine": 115,
+      "file": "api.yaml",
+      "line": 115
+    },
+    "api#/schemas/Profile/properties/streamKey": {
+      "column": 7,
+      "endColumn": 51,
+      "endLine": 109,
+      "file": "api.yaml",
+      "line": 109
+    },
+    "api#/schemas/Profile/properties/viewers": {
+      "column": 7,
+      "endColumn": 103,
+      "endLine": 111,
+      "file": "api.yaml",
+      "line": 111
+    },
+    "api#/schemas/StreamEvent": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 127,
+      "file": "api.yaml",
+      "line": 122
+    },
+    "api#/schemas/StreamEvent/oneOf/started": {
+      "column": 7,
+      "endColumn": 96,
+      "endLine": 125,
+      "file": "api.yaml",
+      "line": 125
+    },
+    "api#/schemas/StreamEvent/oneOf/started/properties/startedAt": {
+      "column": 46,
+      "endColumn": 92,
+      "endLine": 125,
+      "file": "api.yaml",
+      "line": 125
+    },
+    "api#/schemas/StreamEvent/oneOf/stopped": {
+      "column": 7,
+      "endColumn": 32,
+      "endLine": 126,
+      "file": "api.yaml",
+      "line": 126
+    },
+    "api#/schemas/UpdateProfile": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 122,
+      "file": "api.yaml",
+      "line": 116
+    },
+    "api#/schemas/UpdateProfile/properties/displayName": {
+      "column": 7,
+      "endColumn": 51,
+      "endLine": 121,
+      "file": "api.yaml",
+      "line": 121
+    },
+    "api#/schemas/UpdateProfile/properties/profileId": {
+      "column": 7,
+      "endColumn": 27,
+      "endLine": 120,
+      "file": "api.yaml",
+      "line": 120
+    },
+    "api#/schemas/UserPrincipal": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 97,
+      "file": "api.yaml",
+      "line": 91
+    },
+    "api#/schemas/UserPrincipal/properties/profileId": {
+      "column": 7,
+      "endColumn": 27,
+      "endLine": 96,
+      "file": "api.yaml",
+      "line": 96
+    },
+    "api#/schemas/UserPrincipal/properties/userId": {
+      "column": 7,
+      "endColumn": 45,
+      "endLine": 95,
+      "file": "api.yaml",
+      "line": 95
+    },
+    "api#/schemes/csrfToken": {
+      "column": 3,
+      "endColumn": 50,
+      "endLine": 37,
+      "file": "api.yaml",
+      "line": 37
+    },
+    "api#/schemes/sessionCookie": {
+      "column": 3,
+      "endColumn": 72,
+      "endLine": 36,
+      "file": "api.yaml",
+      "line": 36
+    },
+    "api#/scopes/studio": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 55,
+      "file": "api.yaml",
+      "line": 49
+    },
+    "api#/services/catalog": {
+      "column": 3,
+      "endColumn": 32,
+      "endLine": 45,
+      "file": "api.yaml",
+      "line": 45
+    },
+    "api#/services/streaming": {
+      "column": 3,
+      "endColumn": 39,
+      "endLine": 46,
+      "file": "api.yaml",
+      "line": 46
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 164,
+      "file": "api.yaml",
+      "line": 129
+    },
+    "api#/surfaces/app/identity": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 131,
+      "file": "api.yaml",
+      "line": 131
+    },
+    "api#/surfaces/app/routes/studios/id/studioId": {
+      "column": 15,
+      "endColumn": 33,
+      "endLine": 135,
+      "file": "api.yaml",
+      "line": 135
+    },
+    "api#/surfaces/app/routes/studios/member/routes/events": {
+      "column": 13,
+      "endColumn": 1,
+      "endLine": 164,
+      "file": "api.yaml",
+      "line": 157
+    },
+    "api#/surfaces/app/routes/studios/member/routes/events/csrf": {
+      "column": 15,
+      "endColumn": 84,
+      "endLine": 159,
+      "file": "api.yaml",
+      "line": 159
+    },
+    "api#/surfaces/app/routes/studios/member/routes/events/idempotency": {
+      "column": 15,
+      "endColumn": 73,
+      "endLine": 160,
+      "file": "api.yaml",
+      "line": 160
+    },
+    "api#/surfaces/app/routes/studios/member/routes/events/input": {
+      "column": 15,
+      "endColumn": 33,
+      "endLine": 162,
+      "file": "api.yaml",
+      "line": 162
+    },
+    "api#/surfaces/app/routes/studios/member/routes/events/requires/0": {
+      "column": 26,
+      "endColumn": 51,
+      "endLine": 161,
+      "file": "api.yaml",
+      "line": 161
+    },
+    "api#/surfaces/app/routes/studios/member/routes/events/responses/204": {
+      "column": 28,
+      "endColumn": 35,
+      "endLine": 163,
+      "file": "api.yaml",
+      "line": 163
+    },
+    "api#/surfaces/app/routes/studios/member/routes/profile": {
+      "column": 13,
+      "endColumn": 1,
+      "endLine": 157,
+      "file": "api.yaml",
+      "line": 139
+    },
+    "api#/surfaces/app/routes/studios/member/routes/profile/bindings/body.profileId": {
+      "column": 27,
+      "endColumn": 62,
+      "endLine": 142,
+      "file": "api.yaml",
+      "line": 142
+    },
+    "api#/surfaces/app/routes/studios/member/routes/profile/degradable": {
+      "column": 15,
+      "endColumn": 34,
+      "endLine": 145,
+      "file": "api.yaml",
+      "line": 145
+    },
+    "api#/surfaces/app/routes/studios/member/routes/profile/input": {
+      "column": 15,
+      "endColumn": 35,
+      "endLine": 155,
+      "file": "api.yaml",
+      "line": 155
+    },
+    "api#/surfaces/app/routes/studios/member/routes/profile/output": {
+      "column": 15,
+      "endColumn": 30,
+      "endLine": 156,
+      "file": "api.yaml",
+      "line": 156
+    },
+    "api#/surfaces/app/routes/studios/member/routes/profile/principal/requires/0": {
+      "column": 39,
+      "endColumn": 48,
+      "endLine": 141,
+      "file": "api.yaml",
+      "line": 141
+    },
+    "api#/surfaces/app/routes/studios/member/routes/profile/requires/0": {
+      "column": 26,
+      "endColumn": 51,
+      "endLine": 143,
+      "file": "api.yaml",
+      "line": 143
+    },
+    "api#/surfaces/app/routes/studios/member/routes/profile/requires/1": {
+      "column": 53,
+      "endColumn": 73,
+      "endLine": 143,
+      "file": "api.yaml",
+      "line": 143
+    },
+    "api#/surfaces/app/routes/studios/member/scopes/studio": {
+      "column": 21,
+      "endColumn": 42,
+      "endLine": 137,
+      "file": "api.yaml",
+      "line": 137
+    }
+  }
+}

@@ -27,6 +27,11 @@ export const GOLDEN_CASES: GoldenCase[] = [
     source: `${GOLDEN_DIRECTORY}/every-default/contract`,
     entry: "workspace.yaml",
   },
+  {
+    name: "extensions",
+    source: `${GOLDEN_DIRECTORY}/extensions/contract`,
+    entry: "workspace.yaml",
+  },
 ];
 
 /** The directory of a case that holds its contract source; the generators leave it alone. */

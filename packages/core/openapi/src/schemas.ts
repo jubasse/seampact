@@ -96,7 +96,11 @@ function knownUseSchema(
 }
 
 /** A multipart file field or a download: a string of the media type, its size bound as an extension. */
-export function fileSchema(context: EmitContext, media: readonly string[], maxSizeBytes?: number): JsonObject {
+export function fileSchema(
+  context: EmitContext,
+  media: readonly string[],
+  maxSizeBytes?: number,
+): JsonObject {
   const schema: JsonObject = { type: "string" };
 
   if (media.length === 1) schema.contentMediaType = media[0] ?? "";
@@ -115,7 +119,12 @@ function refSchema(
   const named = context.ir.schemas[use.schema];
 
   if (named === undefined) {
-    refuseInconsistent(context, "schema.missing", `The schema '${use.schema}' is not declared`, location);
+    refuseInconsistent(
+      context,
+      "schema.missing",
+      `The schema '${use.schema}' is not declared`,
+      location,
+    );
 
     return {};
   }
@@ -124,11 +133,19 @@ function refSchema(
   const policy = use.unknownKeys?.policy;
   const refusesUnknownKeys = policy === undefined || policy === "refuse";
 
-  return schemaReference(context, use.schema, variant === "input" && refusesUnknownKeys ? "input" : "shared");
+  return schemaReference(
+    context,
+    use.schema,
+    variant === "input" && refusesUnknownKeys ? "input" : "shared",
+  );
 }
 
 /** A `$ref` to a named schema, the strict twin when the schema is an input. */
-export function schemaReference(context: EmitContext, schemaId: string, variant: SchemaVariant): JsonObject {
+export function schemaReference(
+  context: EmitContext,
+  schemaId: string,
+  variant: SchemaVariant,
+): JsonObject {
   const named = context.ir.schemas[schemaId];
   const strict =
     variant === "input" &&
@@ -212,7 +229,12 @@ function scalarSchema(
 
   if (use.content !== undefined) {
     schema.contentMediaType = use.content.media;
-    schema.contentSchema = typeUseSchema(context, use.content.schema, variant, below(location, "content", "schema"));
+    schema.contentSchema = typeUseSchema(
+      context,
+      use.content.schema,
+      variant,
+      below(location, "content", "schema"),
+    );
   }
 
   return schema;
@@ -316,7 +338,12 @@ export function namedSchemaComponent(
   const location = schemaLocation(schemaId);
 
   if (named === undefined) {
-    refuseInconsistent(context, "schema.missing", `The schema '${schemaId}' is not declared`, location);
+    refuseInconsistent(
+      context,
+      "schema.missing",
+      `The schema '${schemaId}' is not declared`,
+      location,
+    );
 
     return {};
   }
@@ -378,7 +405,9 @@ export function objectSchema(
 
   schema.properties = properties;
 
-  const required = named.properties.filter((property) => !property.optional).map((property) => property.name);
+  const required = named.properties
+    .filter((property) => !property.optional)
+    .map((property) => property.name);
 
   if (required.length > 0) schema.required = required;
 
@@ -402,10 +431,13 @@ export function propertySchema(
 
   writeDocs(schema, property.docs);
 
-  if (property.default !== undefined) schema.default = wireValue(context, property.type, property.default);
+  if (property.default !== undefined)
+    schema.default = wireValue(context, property.type, property.default);
 
   if (property.examples !== undefined) {
-    schema.examples = property.examples.map((example) => wireValue(context, property.type, example));
+    schema.examples = property.examples.map((example) =>
+      wireValue(context, property.type, example),
+    );
   }
 
   if (property.deprecated) schema.deprecated = true;
@@ -439,14 +471,19 @@ function mapSchema(
     schema.propertyNames = typeUseSchema(context, named.keys, variant, below(location, "keys"));
   }
 
-  schema.additionalProperties = typeUseSchema(context, named.values, variant, below(location, "values"));
+  schema.additionalProperties = typeUseSchema(
+    context,
+    named.values,
+    variant,
+    below(location, "values"),
+  );
 
   return schema;
 }
 
-// A body-tagged variant holds no tag property (ADR 0004 section 5), so each branch adds it as a constant; the
-// branches then exclude each other without a `discriminator`, whose mapping could only name the untagged
-// components. A header-tagged union names its header and its variants in `x-seampact-discriminator`.
+// A body-tagged variant holds no tag property (ADR 0004 section 5): each branch adds it as a required constant
+// inside the union only, and the discriminator maps each tag to its variant (ADR 0003 section 3). A header-tagged
+// union names its header in `x-seampact-discriminator`.
 function unionSchema(
   context: EmitContext,
   named: UnionSchema,
@@ -472,7 +509,11 @@ function unionSchema(
         ? {
             allOf: [
               reference,
-              { type: "object", properties: { [tag.property]: { const: unionVariant.tag } }, required: [tag.property] },
+              {
+                type: "object",
+                properties: { [tag.property]: { const: unionVariant.tag } },
+                required: [tag.property],
+              },
             ],
           }
         : reference;
@@ -485,16 +526,20 @@ function unionSchema(
   schema.oneOf = branches.map(({ branch }) => branch);
 
   if (tag.in === "header") {
-    const mapping: JsonObject = {};
+    writeExtension(context, schema, "discriminator", { in: "header", name: tag.name });
 
-    named.variants.forEach((unionVariant, index) => {
-      const reference = branches[index]?.reference.$ref;
-
-      if (typeof reference === "string") mapping[unionVariant.tag] = reference;
-    });
-
-    writeExtension(context, schema, "discriminator", { header: tag.name, mapping });
+    return schema;
   }
+
+  const mapping: JsonObject = {};
+
+  named.variants.forEach((unionVariant, index) => {
+    const reference = branches[index]?.reference.$ref;
+
+    if (typeof reference === "string") mapping[unionVariant.tag] = reference;
+  });
+
+  schema.discriminator = { propertyName: tag.property, mapping };
 
   return schema;
 }

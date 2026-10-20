@@ -1,6 +1,11 @@
 import { below, type IrLocation } from "@seampact/codegen-core";
 import { isKnownVariant, type Operation, type Requirement } from "@seampact/spec/ir";
-import { type EmitContext, refuseUnknown, writeConsumerExtensions, writeExtension } from "./emit-context.js";
+import {
+  type EmitContext,
+  refuseUnknown,
+  writeConsumerExtensions,
+  writeExtension,
+} from "./emit-context.js";
 import { valueSourceText } from "./ir-text.js";
 import { copyOptional, type JsonObject, setDefined } from "./json-value.js";
 
@@ -36,7 +41,12 @@ export function writeOperationRights(
   }
 
   if (operation.scopes.length > 0) {
-    writeExtension(context, target, "scopes", operation.scopes.map((scope) => scopeItem(context, scope)));
+    writeExtension(
+      context,
+      target,
+      "scopes",
+      operation.scopes.map((scope) => scopeItem(context, scope)),
+    );
   }
 
   const requirements = operation.requires.flatMap((requirement, index) => {
@@ -69,7 +79,8 @@ export function writeOperationRights(
     );
   }
 
-  if (operation.filteredBy !== undefined) writeExtension(context, target, "filtered-by", operation.filteredBy);
+  if (operation.filteredBy !== undefined)
+    writeExtension(context, target, "filtered-by", operation.filteredBy);
 }
 
 function scopeItem(context: EmitContext, scope: Operation["scopes"][number]): JsonObject {

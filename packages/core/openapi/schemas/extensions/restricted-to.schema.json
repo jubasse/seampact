@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/restricted-to.schema.json",
+  "title": "x-seampact-restricted-to",
+  "description": "The field rights of the operation.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "schema": {
+        "type": "string",
+        "minLength": 1
+      },
+      "pointer": {
+        "type": "string"
+      },
+      "right": {
+        "type": "string",
+        "minLength": 1
+      },
+      "params": {},
+      "direction": {
+        "type": "string",
+        "minLength": 1
+      },
+      "input": {
+        "type": "string",
+        "minLength": 1
+      },
+      "always": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": ["schema", "pointer", "right", "direction"],
+    "additionalProperties": false
+  }
+}

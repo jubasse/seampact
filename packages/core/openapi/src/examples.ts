@@ -17,7 +17,11 @@ export interface ExampleSet {
   responses: { name: string; status: number; example: OperationExample; location: IrLocation }[];
 }
 
-export function collectExamples(context: EmitContext, operation: Operation, location: IrLocation): ExampleSet {
+export function collectExamples(
+  context: EmitContext,
+  operation: Operation,
+  location: IrLocation,
+): ExampleSet {
   const set: ExampleSet = { responses: [] };
   const defaultStatus = operation.responses[0]?.status;
 
@@ -38,7 +42,12 @@ export function collectExamples(context: EmitContext, operation: Operation, loca
     const status = example.status ?? defaultStatus;
 
     if (status === undefined) {
-      refuseNotEmitted(context, "example.status", "An example without a success response", exampleLocation);
+      refuseNotEmitted(
+        context,
+        "example.status",
+        "An example without a success response",
+        exampleLocation,
+      );
       continue;
     }
 
@@ -64,7 +73,12 @@ export function responseExamples(
 
   if (shape === undefined || shape === "page") {
     for (const entry of own) {
-      refuseNotEmitted(context, "example.shape", `An example of a '${response.shape}' response`, entry.location);
+      refuseNotEmitted(
+        context,
+        "example.shape",
+        `An example of a '${response.shape}' response`,
+        entry.location,
+      );
     }
 
     return undefined;
@@ -74,7 +88,12 @@ export function responseExamples(
 
   for (const entry of own) {
     const values = new Map<string, JsonValue>([[PAYLOAD_SLOT, copyJsonValue(entry.example.value)]]);
-    const rendered = renderTemplate(context, format.success[shape].body, values, below(location, "examples"));
+    const rendered = renderTemplate(
+      context,
+      format.success[shape].body,
+      values,
+      below(location, "examples"),
+    );
 
     if (rendered !== undefined) examples[entry.name] = { value: rendered };
   }

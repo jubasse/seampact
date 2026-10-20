@@ -27,7 +27,9 @@ export function operationParameters(
     params.forEach((param, index) => {
       if (place === "header" && writtenBySecurity(param)) return;
 
-      parameters.push(parameterObject(context, operation, place, param, below(location, "params", place, index)));
+      parameters.push(
+        parameterObject(context, operation, place, param, below(location, "params", place, index)),
+      );
     });
   }
 
@@ -35,7 +37,10 @@ export function operationParameters(
 }
 
 function writtenBySecurity(param: Param): boolean {
-  return param.derivedFrom !== undefined && SCHEME_HEADER_DERIVATIONS.includes(param.derivedFrom.derivation);
+  return (
+    param.derivedFrom !== undefined &&
+    SCHEME_HEADER_DERIVATIONS.includes(param.derivedFrom.derivation)
+  );
 }
 
 function parameterObject(
@@ -82,7 +87,8 @@ function identityHeaderSemantic(context: EmitContext, headerName: string): strin
   for (const header of Object.values(context.ir.headers)) {
     const requestName = header.semantic === "versionToken" ? header.request : header.name;
 
-    if (requestName?.toLowerCase() === lowerName && header.in !== "response") return header.semantic;
+    if (requestName?.toLowerCase() === lowerName && header.in !== "response")
+      return header.semantic;
   }
 
   return undefined;

@@ -7,7 +7,10 @@ import { EXTENSION_NAMES, type ExtensionName, isExtensionName } from "./extensio
 export const ALL_EXTENSIONS = "all";
 export const NO_EXTENSIONS = "none";
 
-export type ExtensionSelection = typeof ALL_EXTENSIONS | typeof NO_EXTENSIONS | readonly ExtensionName[];
+export type ExtensionSelection =
+  | typeof ALL_EXTENSIONS
+  | typeof NO_EXTENSIONS
+  | readonly ExtensionName[];
 
 export type ReasonsOption = "include" | "omit";
 
@@ -45,7 +48,13 @@ export function parseEmitterOptions(raw: unknown): ParsedEmitterOptions {
   if (raw === undefined) return { status: "parsed", options: DEFAULT_EMITTER_OPTIONS };
 
   if (!isRecord(raw)) {
-    return refusedWith(optionRefusal("", "The OpenAPI options must be a mapping.", "Write the options as a mapping."));
+    return refusedWith(
+      optionRefusal(
+        "",
+        "The OpenAPI options must be a mapping.",
+        "Write the options as a mapping.",
+      ),
+    );
   }
 
   const refusals: Refusal[] = [];
@@ -53,14 +62,24 @@ export function parseEmitterOptions(raw: unknown): ParsedEmitterOptions {
   for (const key of Object.keys(raw)) {
     if (!OPTION_KEYS.includes(key)) {
       refusals.push(
-        optionRefusal(`/${key}`, `'${key}' is not an OpenAPI option.`, `Use one of ${OPTION_KEYS.join(", ")}.`),
+        optionRefusal(
+          `/${key}`,
+          `'${key}' is not an OpenAPI option.`,
+          `Use one of ${OPTION_KEYS.join(", ")}.`,
+        ),
       );
     }
   }
 
   const options: EmitterOptions = {
     extensions: parseExtensions(raw.extensions, refusals),
-    reasons: parseChoice(raw.reasons, "reasons", REASONS_VALUES, DEFAULT_EMITTER_OPTIONS.reasons, refusals),
+    reasons: parseChoice(
+      raw.reasons,
+      "reasons",
+      REASONS_VALUES,
+      DEFAULT_EMITTER_OPTIONS.reasons,
+      refusals,
+    ),
     inputSchemas: parseChoice(
       raw.inputSchemas,
       "inputSchemas",
@@ -140,7 +159,13 @@ function parseServers(raw: unknown, refusals: Refusal[]): ServerOption[] {
   if (raw === undefined) return [];
 
   if (!Array.isArray(raw)) {
-    refusals.push(optionRefusal("/servers", "'servers' must be a list.", "Write a list of { url, description }."));
+    refusals.push(
+      optionRefusal(
+        "/servers",
+        "'servers' must be a list.",
+        "Write a list of { url, description }.",
+      ),
+    );
 
     return [];
   }
@@ -177,7 +202,9 @@ function parseServer(raw: unknown): ServerOption | undefined {
 
   if (raw.description === undefined) return { url: raw.url };
 
-  return typeof raw.description === "string" ? { url: raw.url, description: raw.description } : undefined;
+  return typeof raw.description === "string"
+    ? { url: raw.url, description: raw.description }
+    : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

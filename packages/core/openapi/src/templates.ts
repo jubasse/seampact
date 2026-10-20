@@ -42,7 +42,12 @@ export function templateSchema(
       return objectTemplateSchema(context, template, slots, absent, location);
     case "array":
     case "each":
-      refuseNotEmitted(context, `template.${template.kind}`, `A '${template.kind}' template`, location);
+      refuseNotEmitted(
+        context,
+        `template.${template.kind}`,
+        `A '${template.kind}' template`,
+        location,
+      );
 
       return undefined;
   }
@@ -56,7 +61,12 @@ function slotSchema(
   location: IrLocation,
 ): SlotValue | undefined {
   if (path.length > 0) {
-    refuseNotEmitted(context, "template.slot-path", `The slot member '$${slot}.${path.join(".")}'`, location);
+    refuseNotEmitted(
+      context,
+      "template.slot-path",
+      `The slot member '$${slot}.${path.join(".")}'`,
+      location,
+    );
 
     return undefined;
   }
@@ -85,12 +95,23 @@ function objectTemplateSchema(
     const memberLocation = below(location, "members", index);
 
     if (!isKnownVariant("MemberName", member.name) || member.name.kind !== "text") {
-      refuseNotEmitted(context, "template.member-name", "A member named by a slot", below(memberLocation, "name"));
+      refuseNotEmitted(
+        context,
+        "template.member-name",
+        "A member named by a slot",
+        below(memberLocation, "name"),
+      );
 
       return;
     }
 
-    const value = templateSchema(context, member.value, slots, absent, below(memberLocation, "value"));
+    const value = templateSchema(
+      context,
+      member.value,
+      slots,
+      absent,
+      below(memberLocation, "value"),
+    );
 
     if (value === undefined) return;
 
@@ -137,7 +158,9 @@ export function membersWritingSlot(template: Template, slot: string): string[] {
     const writesSlot =
       value.kind === "slot" && "slot" in value && value.slot === slot && value.path.length === 0;
 
-    return writesSlot && member.name.kind === "text" && "text" in member.name ? [member.name.text] : [];
+    return writesSlot && member.name.kind === "text" && "text" in member.name
+      ? [member.name.text]
+      : [];
   });
 }
 
@@ -159,17 +182,28 @@ export function renderTemplate(
       const value = template.path.length === 0 ? values.get(template.slot) : undefined;
 
       if (value === undefined) {
-        refuseNotEmitted(context, "example.slot", `An example through the slot '$${template.slot}'`, location);
+        refuseNotEmitted(
+          context,
+          "example.slot",
+          `An example through the slot '$${template.slot}'`,
+          location,
+        );
       }
 
       return value;
     }
+
     case "literal":
       return copyJsonValue(template.value);
     case "object":
       return renderObjectTemplate(context, template, values, location);
     default:
-      refuseNotEmitted(context, "example.template", `An example through a '${template.kind}' template`, location);
+      refuseNotEmitted(
+        context,
+        "example.template",
+        `An example through a '${template.kind}' template`,
+        location,
+      );
 
       return undefined;
   }
@@ -191,12 +225,22 @@ function renderObjectTemplate(
 
   template.members.forEach((member, index) => {
     if (member.name.kind !== "text" || !("text" in member.name)) {
-      refuseNotEmitted(context, "example.member-name", "An example through a member named by a slot", location);
+      refuseNotEmitted(
+        context,
+        "example.member-name",
+        "An example through a member named by a slot",
+        location,
+      );
 
       return;
     }
 
-    const value = renderTemplate(context, member.value, values, below(location, "members", index, "value"));
+    const value = renderTemplate(
+      context,
+      member.value,
+      values,
+      below(location, "members", index, "value"),
+    );
 
     if (value !== undefined) rendered[member.name.text] = value;
   });
