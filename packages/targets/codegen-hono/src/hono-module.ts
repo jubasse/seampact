@@ -30,7 +30,7 @@ export function honoModuleSource(
     "",
     "const boundary = createHonoBoundary<SeampactHooks, ContractHandlers, OperationName>(CONTRACT_API, GENERATED_SETTINGS, HANDLER_BINDINGS);",
     "",
-    "/** Registers the api on the app that serves: `registerRoutes(app, { handlers, hooks })`; runs the boot check. */",
+    "/** Registers the api on the app that serves: `registerRoutes(app, { handlers, hooks })`, where `handlers` holds one object per handler interface, keyed by its name (`{ NotesEndpoints: { ... } }`); runs the boot check. */",
     "export const registerRoutes = boundary.registerRoutes;",
     "/** The framework-route boot check: call it with the app once every route is added, before it serves. */",
     "export const checkFrameworkRoutes = boundary.checkFrameworkRoutes;",

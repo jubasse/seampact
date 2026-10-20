@@ -19,6 +19,9 @@ export type InstalledVersionOutcome =
   | { status: "installed"; installed: InstalledVersion }
   | { status: "refused"; problem: CliProblem };
 
+/** The code of the problem for a package that is not installed in the project. */
+export const FRAMEWORK_MISSING_CODE = "config.matrix.framework-missing";
+
 const MAJOR_PATTERN = /^v?(0|[1-9][0-9]*)\./;
 
 const NODE_MODULES = "node_modules";
@@ -86,7 +89,7 @@ function missingPackageProblem(
   }
 
   return {
-    code: "config.matrix.framework-missing",
+    code: FRAMEWORK_MISSING_CODE,
     message: `The framework package '${packageName}' is not installed in the project of the entry's output directory (${lookupDirectory}), so its version cannot be checked against the compatibility matrix; the generated code imports it.`,
     fix: installFix(lookupDirectory, packageName, "runtime"),
     where,

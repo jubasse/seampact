@@ -286,3 +286,53 @@ test("refuses a docs library that is not installed, naming the install command",
     { code: "config.matrix.framework-missing", fix: expect.stringContaining("web-docs-library") },
   ]);
 });
+
+const OWN_VALIDATORS_MATRIX: readonly TargetCompatibility[] = MATRIX.map((record) => ({
+  ...record,
+  ownValidators: [{ id: "own", library: "own-validators-library" }],
+}));
+
+const OWN_VALIDATORS_ARTEFACTS = [
+  { id: "boundary", defaultOn: true },
+  { id: "validators", defaultOn: true },
+] as const;
+
+function ownValidatorsCheck(entry: TargetEntry, installLibrary: boolean): CompatibilityOutcome {
+  const root = writeConfigTree({
+    "app/seampact.config.yaml": "",
+    "app/node_modules/web-framework/package.json": JSON.stringify({ version: "5.0.0" }),
+    ...(installLibrary
+      ? {
+          "app/node_modules/own-validators-library/package.json": JSON.stringify({
+            version: "8.0.0",
+          }),
+        }
+      : {}),
+  });
+  const targets = new Map([["server", stubTarget(SERVER_PACKAGE, OWN_VALIDATORS_ARTEFACTS)]]);
+
+  return checkAppCompatibility(docsLibraryConfig(root, entry), targets, OWN_VALIDATORS_MATRIX);
+}
+
+test("refuses a target's own validators library that is not installed, naming the install command", () => {
+  const entry: TargetEntry = { id: "server", use: SERVER_PACKAGE, api: "tasks" };
+
+  expect(ownValidatorsCheck(entry, false).problems).toMatchObject([
+    {
+      code: "config.own-validators.library-missing",
+      fix: expect.stringContaining("own-validators-library"),
+    },
+  ]);
+  expect(ownValidatorsCheck(entry, true)).toEqual({ problems: [], warnings: [] });
+});
+
+test("reads no own validators library when the entry links a validators provider", () => {
+  const entry: TargetEntry = {
+    id: "server",
+    use: SERVER_PACKAGE,
+    api: "tasks",
+    link: { validators: "zod" },
+  };
+
+  expect(ownValidatorsCheck(entry, false)).toEqual({ problems: [], warnings: [] });
+});

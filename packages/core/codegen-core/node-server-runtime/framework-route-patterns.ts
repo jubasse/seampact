@@ -58,6 +58,28 @@ export function unlistedFrameworkRoutes(
   return unlisted;
 }
 
+/** The boot check's one problem for every unlisted route; none when every listed route is allowed. */
+export function unlistedFrameworkRoutesProblem(
+  check: FrameworkRouteCheck,
+  listed: readonly ListedRoute[],
+): { readonly problem: string; readonly fix: string } | undefined {
+  const keys = unlistedFrameworkRoutes(check, listed).map((route) =>
+    routeKey(route.method, route.path),
+  );
+
+  if (keys.length === 0) return undefined;
+
+  const named = keys.map((key) => `'${key}'`).join(", ");
+
+  return {
+    problem:
+      keys.length === 1
+        ? `the framework route ${named} is outside the contract and not allow-listed`
+        : `${keys.length} framework routes are outside the contract and not allow-listed: ${named}`,
+    fix: "allow-list each with a reason in the target entry's 'frameworkRoutes' of seampact.config.yaml, or remove the route",
+  };
+}
+
 /** A route as the boot check names it: `'<METHOD> <path>'`. */
 export function routeKey(method: string, path: string): string {
   return `${method} ${path}`;

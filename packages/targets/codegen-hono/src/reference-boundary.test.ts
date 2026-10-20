@@ -3,7 +3,9 @@ import { join } from "node:path";
 import {
   GENERATE_TIMEOUT_MILLISECONDS,
   generateReferenceProject,
+  hooksRequirementErrors,
   projectDirectory,
+  publicTasksApi,
   REFERENCE_COMPILER_OPTIONS,
   readGoldenIr,
   referenceLinks,
@@ -117,4 +119,33 @@ describe("a path the router cannot read as written is refused by name", () => {
       ],
     });
   });
+});
+
+describe("an api with only public operations asks for no hooks", () => {
+  test(
+    "it registers without hooks, and an api that needs hooks still requires them",
+    async () => {
+      const project = projectDirectory(import.meta.url, "public-api");
+      const files = await generateReferenceProject(project, honoTarget, {}, publicTasksApi);
+      const errors = hooksRequirementErrors(project, files, {
+        publicTasks: [
+          'import type { Hono } from "hono";',
+          "declare const app: Hono;",
+          'declare const handlers: Parameters<typeof Tasks.registerRoutes>[1]["handlers"];',
+          "Tasks.registerRoutes(app, { handlers });",
+        ].join("\n"),
+        guardedService: [
+          'import type { Hono } from "hono";',
+          "declare const app: Hono;",
+          'declare const handlers: Parameters<typeof Service.registerRoutes>[1]["handlers"];',
+          "Service.registerRoutes(app, { handlers });",
+        ].join("\n"),
+      });
+
+      expect(errors.publicTasks).toEqual([]);
+      expect(errors.guardedService).toHaveLength(1);
+      expect(errors.guardedService[0]).toContain("hooks");
+    },
+    GENERATE_TIMEOUT_MILLISECONDS + TYPE_CHECK_TIMEOUT_MILLISECONDS,
+  );
 });

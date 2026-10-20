@@ -21,7 +21,10 @@ import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
+  type HooksRequirement,
   hookBootProblems,
+  type RegisteredHooks,
+  resolvedHooks,
 } from "./node-server/boundary-hooks.js";
 import {
   ContractError,
@@ -87,12 +90,12 @@ export interface OperationReplyOptions {
 
 /** What `registerRoutes` takes (ADR 0019 "Registration"). */
 export interface RouteRegistration<
-  Hooks extends BoundaryHooks,
+  Hooks extends RegisteredHooks,
   Controllers extends object,
   Operation extends string,
 > {
   readonly controllers: Controllers;
-  readonly hooks: Hooks;
+  readonly hooks?: Hooks;
   readonly responses?: ResponsesMode;
   readonly bodyValidation?: boolean;
   readonly operations?: { readonly [Name in Operation]?: OperationReplyOptions };
@@ -264,7 +267,7 @@ function undecodedRequestOf(ctx: HttpContext): ContractRequest {
 
 /** The AdonisJS boundary of one api. */
 export function createAdonisBoundary<
-  Hooks extends BoundaryHooks,
+  Hooks extends RegisteredHooks,
   Controllers extends object,
   Operation extends string,
 >(api: ContractApi, options: AdonisBoundaryOptions, entries: readonly AdonisOperationEntry[]) {
@@ -548,12 +551,13 @@ export function createAdonisBoundary<
   /** Adds the api's routes and runs the boot check (ADR 0019 "The boot check"). */
   function registerRoutes(
     router: Router,
-    registration: RouteRegistration<Hooks, Controllers, Operation>,
+    registration: RouteRegistration<Hooks, Controllers, Operation> & HooksRequirement<Hooks>,
   ): void {
+    const hooks = resolvedHooks(registration.hooks);
     const problems = [
-      ...hookBootProblems(api, registration.hooks),
+      ...hookBootProblems(api, hooks),
       ...controllerProblems(registration.controllers),
-      ...bodyValidationProblems(registration),
+      ...bodyValidationProblems(registration, hooks),
       ...unknownOperationProblems(registration),
       ...bodyparserProblems(api),
       ...repeatedRegistrationProblems(router),
@@ -561,7 +565,7 @@ export function createAdonisBoundary<
 
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
 
-    registered.hooks = registration.hooks;
+    registered.hooks = hooks;
     registered.router = router;
     registerBasePathClaim(router, api);
     registeredApis.set(router, new Set([...(registeredApis.get(router) ?? []), api.id]));
@@ -570,7 +574,7 @@ export function createAdonisBoundary<
     if (app.isReady) checkFrameworkRoutes(router);
     else void app.ready(() => checkFrameworkRoutes(router));
 
-    const replyOptions = replyOptionsOf(registration);
+    const replyOptions = replyOptionsOf(registration, hooks);
     const controllers = controllerLoader(registration.controllers, entries);
 
     for (const route of api.routes) {
@@ -605,9 +609,10 @@ export function createAdonisBoundary<
   // Operation, then registration, then target option.
   function replyOptionsOf(
     registration: RouteRegistration<Hooks, Controllers, Operation>,
+    hooks: BoundaryHooks,
   ): ReplyOptionsOf {
     return {
-      hooks: registration.hooks,
+      hooks,
       replyOptionsOf(route) {
         const operation = operationOptions(registration, entryOf(route.id).operation);
 
@@ -674,10 +679,11 @@ export function createAdonisBoundary<
   // The item validators exist only when the target was generated with `bodyValidation: true`.
   function bodyValidationProblems(
     registration: RouteRegistration<Hooks, Controllers, Operation>,
+    hooks: BoundaryHooks,
   ): BootProblem[] {
     if (options.bodyValidation) return [];
 
-    const replyOptions = replyOptionsOf(registration);
+    const replyOptions = replyOptionsOf(registration, hooks);
 
     return api.routes
       .filter((route) => replyOptions.replyOptionsOf(route).bodyValidation)

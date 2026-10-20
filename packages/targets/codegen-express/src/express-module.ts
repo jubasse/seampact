@@ -27,7 +27,7 @@ export function expressModuleSource(
     "",
     "const boundary = createExpressBoundary<SeampactHooks, ContractHandlers>(CONTRACT_API, GENERATED_SETTINGS, HANDLER_BINDINGS);",
     "",
-    "/** The api's router: `app.use(router({ handlers, hooks }))`, at the app's root; runs the boot check. */",
+    "/** The api's router: `app.use(router({ handlers, hooks }))`, at the app's root; `handlers` holds one object per handler interface, keyed by its name (`{ NotesEndpoints: { ... } }`); runs the boot check. */",
     "export const router = boundary.router<OperationName>;",
     "/** The framework-route boot check: call it with the app once every route is mounted, before it listens. */",
     "export const checkFrameworkRoutes = boundary.checkFrameworkRoutes;",
