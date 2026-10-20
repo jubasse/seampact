@@ -1028,6 +1028,7 @@ interface HooklessAppModule {
     warn(...parts: unknown[]): void;
     error(...parts: unknown[]): void;
   }): unknown;
+  makeRouterWithDoubleClaim(): unknown;
 }
 
 describe("the hook boot check level on Express 5", () => {
@@ -1076,6 +1077,18 @@ describe("the hook boot check level on Express 5", () => {
       } finally {
         consoleWarn.mockRestore();
       }
+    },
+    SETUP_TIMEOUT_MILLISECONDS,
+  );
+
+  test.each(["warn", "off"] as const)(
+    "hooks %s still refuses a right claimed by two deciders",
+    async (level) => {
+      const hookless = await hooklessModule(level);
+
+      expect(() => hookless.makeRouterWithDoubleClaim()).toThrow(
+        /two deciders claim 'tasks.double'/,
+      );
     },
     SETUP_TIMEOUT_MILLISECONDS,
   );

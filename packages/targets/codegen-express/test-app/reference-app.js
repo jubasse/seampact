@@ -211,6 +211,22 @@ export function makeRouterWithoutHooks(logger) {
   return TasksExpress.router({ handlers, hooks: {}, logger });
 }
 
+/** Makes the `tasks` router with two deciders claiming one right, to see that no hook level lets it boot. */
+export function makeRouterWithDoubleClaim(logger) {
+  const decider = { decide: () => ({ allow: true }) };
+
+  return TasksExpress.router({
+    handlers,
+    hooks: {
+      deciders: [
+        { names: ["tasks.double"], decider },
+        { names: ["tasks.double"], decider },
+      ],
+    },
+    logger,
+  });
+}
+
 async function listen(app) {
   const server = await new Promise((resolve) => {
     const listening = app.listen(0, "127.0.0.1", () => resolve(listening));

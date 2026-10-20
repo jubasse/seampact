@@ -4,6 +4,7 @@ import {
   type Operation,
   type Param,
   type Principal,
+  type Template,
   type TypeUse,
   type WireFormat,
 } from "@seampact/spec/ir";
