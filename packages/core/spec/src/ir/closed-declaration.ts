@@ -30,8 +30,8 @@ const MAX_UNKNOWN_VALUE_LENGTH = 64;
 
 const ELLIPSIS = "...";
 
-// A string cut to the bound; any other value replaced by its kind.
-function boundedUnknownValue(value: unknown): string {
+/** A string cut to the bound; any other value replaced by its kind. */
+export function boundedUnknownValue(value: unknown): string {
   if (typeof value === "string")
     return value.length <= MAX_UNKNOWN_VALUE_LENGTH
       ? value

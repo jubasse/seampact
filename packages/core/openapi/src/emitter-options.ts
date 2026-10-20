@@ -1,4 +1,5 @@
 import type { Refusal } from "@seampact/codegen-core";
+import { boundedUnknownValue } from "@seampact/spec/ir";
 import { EXTENSION_NAMES, type ExtensionName, isExtensionName } from "./extension-names.js";
 
 // The emitter options of A40 (ADR 0011): which `x-seampact-*` extensions a document keeps, whether it keeps their
@@ -219,18 +220,9 @@ function refusedWith(...refusals: Refusal[]): ParsedEmitterOptions {
   return { status: "refused", refusals };
 }
 
-const MAX_SHOWN_VALUE_LENGTH = 64;
-
 // A config value as a message starts with it: a string quoted and cut to the bound, any other value by its kind.
 function optionValueText(value: unknown): string {
-  if (typeof value === "string") {
-    const shown =
-      value.length <= MAX_SHOWN_VALUE_LENGTH
-        ? value
-        : `${value.slice(0, MAX_SHOWN_VALUE_LENGTH)}...`;
-
-    return `'${shown}'`;
-  }
+  if (typeof value === "string") return `'${boundedUnknownValue(value)}'`;
 
   if (value === null) return "Null";
 
