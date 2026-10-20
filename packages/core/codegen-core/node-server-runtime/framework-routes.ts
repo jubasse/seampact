@@ -5,8 +5,7 @@ import type { BootProblem } from "./boundary-hooks.js";
 import {
   type FrameworkRouteCheck,
   type ListedRoute,
-  routeKey,
-  unlistedFrameworkRoutes,
+  unlistedFrameworkRoutesProblem,
 } from "./framework-route-patterns.js";
 
 // One registry for every api's copy of this module, so an api's check skips what another api's boundary added.
@@ -45,21 +44,7 @@ export function frameworkRouteProblems(
   check: FrameworkRouteCheck,
   listed: readonly ListedRoute[],
 ): BootProblem[] {
-  const keys = unlistedFrameworkRoutes(check, listed).map((route) =>
-    routeKey(route.method, route.path),
-  );
+  const problem = unlistedFrameworkRoutesProblem(check, listed);
 
-  if (keys.length === 0) return [];
-
-  const named = keys.map((key) => `'${key}'`).join(", ");
-
-  return [
-    {
-      problem:
-        keys.length === 1
-          ? `the framework route ${named} is outside the contract and not allow-listed`
-          : `${keys.length} framework routes are outside the contract and not allow-listed: ${named}`,
-      fix: "allow-list each with a reason in the target entry's 'frameworkRoutes' of seampact.config.yaml, or remove the route",
-    },
-  ];
+  return problem === undefined ? [] : [problem];
 }

@@ -1,25 +1,24 @@
 import { expect, test } from "vitest";
-import { frameworkRouteProblems } from "../../node-server-runtime/framework-routes.js";
+import { unlistedFrameworkRoutesProblem } from "../../node-server-runtime/framework-route-patterns.js";
 
 const CHECK_ON = { status: "on", allowed: [] } as const;
 
 test("many unlisted framework routes are one problem naming each of them", () => {
-  const problems = frameworkRouteProblems(CHECK_ON, [
+  const problem = unlistedFrameworkRoutesProblem(CHECK_ON, [
     { method: "GET", path: "/" },
     { method: "POST", path: "/signup" },
     { method: "POST", path: "/login" },
   ]);
 
-  expect(problems).toHaveLength(1);
-  expect(problems[0]?.problem).toContain("3 framework routes");
-  expect(problems[0]?.problem).toContain("'GET /'");
-  expect(problems[0]?.problem).toContain("'POST /login'");
+  expect(problem?.problem).toContain("3 framework routes");
+  expect(problem?.problem).toContain("'GET /'");
+  expect(problem?.problem).toContain("'POST /login'");
 });
 
 test("one unlisted framework route keeps its own wording", () => {
-  const problems = frameworkRouteProblems(CHECK_ON, [{ method: "GET", path: "/docs" }]);
+  const problem = unlistedFrameworkRoutesProblem(CHECK_ON, [{ method: "GET", path: "/docs" }]);
 
-  expect(problems.map((problem) => problem.problem)).toEqual([
+  expect(problem?.problem).toBe(
     "the framework route 'GET /docs' is outside the contract and not allow-listed",
-  ]);
+  );
 });
