@@ -27,8 +27,10 @@ test("the offered pairs are zod and yup on every server target and major, class-
     "@seampact/codegen-fastify@5+ajv",
     "@seampact/codegen-adonis@6+zod",
     "@seampact/codegen-adonis@6+yup",
+    "@seampact/codegen-adonis@6+vinejs",
     "@seampact/codegen-adonis@7+zod",
     "@seampact/codegen-adonis@7+yup",
+    "@seampact/codegen-adonis@7+vinejs",
     "@seampact/codegen-hono@4+zod",
     "@seampact/codegen-hono@4+yup",
   ]);
@@ -53,9 +55,14 @@ test("offers each target's own validators", () => {
   const ownValidatorIds = SERVER_TARGETS.flatMap((target) =>
     target.ownValidators.map((validator) => `${target.package}+${validator.id}`),
   );
-  const ownPairs = offeredValidatorPairs().filter((pair) => pair.validator === "ajv");
+  const ownPairs = offeredValidatorPairs().filter(
+    (pair) => pair.validator === "ajv" || pair.validator === "vinejs",
+  );
 
-  expect(ownValidatorIds).toEqual(["@seampact/codegen-fastify+ajv"]);
+  expect(ownValidatorIds).toEqual([
+    "@seampact/codegen-fastify+ajv",
+    "@seampact/codegen-adonis+vinejs",
+  ]);
   expect(ownPairs).toEqual([
     {
       target: "@seampact/codegen-fastify",
@@ -65,6 +72,13 @@ test("offers each target's own validators", () => {
       validator: "ajv",
       validatorPackage: "@seampact/codegen-fastify",
     },
+    ...[6, 7].map((frameworkMajor) => ({
+      target: "@seampact/codegen-adonis",
+      framework: "@adonisjs/core",
+      frameworkMajor,
+      validator: "vinejs",
+      validatorPackage: "@seampact/codegen-adonis",
+    })),
   ]);
 });
 

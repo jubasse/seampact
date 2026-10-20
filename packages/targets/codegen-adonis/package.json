@@ -1,6 +1,6 @@
 {
   "name": "@seampact/codegen-adonis",
-  "description": "Generates the AdonisJS boundary around your controllers: the routes of each api with their checking middleware, the reply path, the error helpers for your exception handler and a boot check, validating with zod.",
+  "description": "Generates the AdonisJS boundary around your controllers: the routes of each api with their checking middleware, the reply path, the error helpers for your exception handler and a boot check, validating with the zod or yup link you give or with VineJS validators it generates.",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -41,6 +41,7 @@
     "@seampact/codegen-core": "workspace:*",
     "@seampact/spec": "workspace:*",
     "@types/node": "24.19.1",
+    "@vinejs/vine": "4.4.0",
     "typescript": "6.0.3",
     "zod": "4.6.7"
   }
