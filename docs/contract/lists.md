@@ -1,0 +1,67 @@
+# Lists
+
+A list is a route that returns many records. It needs a paging style, so a client always knows how to ask for the next page.
+
+## Declare a paging style
+
+A style says which query parameters a client sends and how the page comes back. It lives under `pagings`.
+
+```yaml
+pagings:
+  cursor:
+    request:
+      cursor: { query: cursor }
+      limit: { query: limit }
+      sort: { query: sort, style: signed }
+    response:
+      body: $items
+      links: { next: $next }
+```
+
+Here the client sends `?cursor=...&limit=20`, the body is the array of records, and the next page is a `Link` header.
+
+## Use it on a list
+
+```yaml
+notes:
+  kind: collection
+  id: { noteId: NoteId }
+  item: Note
+  ops:
+    list:
+      paging: { cursor: { maxLimit: 50, defaultLimit: 20 } }
+      sortable: [createdAt, title]
+```
+
+- `maxLimit` is required for a style with a `limit`. A larger `limit` answers `400`.
+- `defaultLimit` is the page size when the client sends none.
+- `sortable` lists the fields a client may sort by: `?sort=-createdAt,title`. It needs a `sort` in the style.
+
+To use one style on every list, set it once. Then a list writes no `paging`.
+
+```yaml
+conventions:
+  paging: { default: cursor, maxLimit: 50 }
+```
+
+## Serve the whole list
+
+For a short list that never grows, skip paging.
+
+```yaml
+ops:
+  list: { paging: none }
+```
+
+## Use `item`, not `output`
+
+On a route that is not an `op`, write `item: Note` to make it a list. `output` is always the whole body. An array `output` on a `GET` is refused with this fix.
+
+## Ready-made styles
+
+Format packs bring styles for JSON:API, HAL, Laravel, Spring and API Platform. Add one under `packs` instead of writing your own. See [Convention packs](../grammar/15-first-party-pack-presets.md).
+
+## What is next
+
+- Every paging role and example: [Paging styles](../grammar/14-paging-styles.md).
+- List settings (`cache`, `filteredBy`, `budget`): [Lists, cache and lifecycle](../grammar/10-lists-cache-and-lifecycle.md).

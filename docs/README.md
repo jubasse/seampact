@@ -10,6 +10,17 @@
 - [Project layout](getting-started/project-layout.md): what each file is.
 - [Work with an AI agent](getting-started/ai-agents.md): guard rails for an agent.
 
+## Contract
+
+- [Contract](contract/README.md): how to write the contract, one task per page.
+- [The shape of a contract](contract/basics.md): api, surfaces, collections and routes.
+- [Types and references](contract/types-and-refs.md): schemas, enums, split files.
+- [Errors](contract/errors.md): declare, attach and rename codes.
+- [Access](contract/access.md): public routes, identities and rights.
+- [Lists](contract/lists.md): paging styles and sorting.
+- [Versioning and change](contract/versioning.md): version, maturity, deprecation.
+- [Advanced](contract/advanced.md): uploads, lost updates, cache.
+
 ## Backend
 
 - [NestJS](backend/nestjs.md)
