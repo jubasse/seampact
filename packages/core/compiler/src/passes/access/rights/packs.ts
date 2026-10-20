@@ -274,16 +274,10 @@ function derivedSubject(
     return { subject: { kind: "none" } };
   const innermost = scopes[scopes.length - 1];
 
-  if (innermost !== undefined) return { subject: { kind: "scope", scope: innermost.scope } };
+  // ADR 0008: the innermost scope when the route has one, none otherwise.
+  if (innermost === undefined) return { subject: { kind: "none" } };
 
-  reporter.error({
-    rule: "pack-right",
-    message: `the entry derives a right on the innermost scope of route '${route.id}', which resolves no scope`,
-    fix: "enter a scope above the route, or narrow the entry's selector",
-    pointer,
-  });
-
-  return undefined;
+  return { subject: { kind: "scope", scope: innermost.scope } };
 }
 
 // The item schema of the collection with its member id (ADR 0002 section 2, `subject.member: resource`).

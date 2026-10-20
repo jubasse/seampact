@@ -1,5 +1,5 @@
 # A pack whose entries a route cannot take: a template over {resource} on a route of no resource, and a right
-# on the innermost scope of a route that resolves none.
+# whose subject differs from the right the contract declares.
 pack: { name: odd, version: 1.0.0, extends: [] }
 derive:
   - entry: reads
@@ -7,4 +7,4 @@ derive:
     require: { right: '{resource}.read' }
   - entry: lists
     select: { op: [list] }
-    declareRight: { name: '{resource}.{op}', subject: { collection: innermostScope } }
+    declareRight: { name: items.edit, subject: { collection: innermostScope } }

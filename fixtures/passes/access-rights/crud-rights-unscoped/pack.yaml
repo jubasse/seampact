@@ -1,0 +1,10 @@
+# The CRUD rights entry alone (ADR 0008): a collection right takes the innermost scope, none when the route has no scope.
+pack: { name: crud-rights, version: 1.0.0, extends: [] }
+
+derive:
+  - entry: crud
+    select: { op: [list, get, create, update, delete, batch] }
+    declareRight:
+      name: '{resource}.{op}'
+      subject: { member: resource, collection: innermostScope }
+    require: { right: '{resource}.{op}' }
