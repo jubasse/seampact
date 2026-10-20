@@ -38,6 +38,7 @@ const NODE_MODULES = "/node_modules/";
 const VALIDATOR_PACKAGES = [
   "/node_modules/zod/",
   "/node_modules/ajv/",
+  "/node_modules/@vinejs/",
   "/node_modules/yup/",
   "/node_modules/class-validator/",
   "/node_modules/class-transformer/",
