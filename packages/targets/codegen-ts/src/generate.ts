@@ -13,7 +13,9 @@ import {
   refuseUnknownValueAt,
 } from "@seampact/codegen-core";
 import type { ContractIR, Operation } from "@seampact/spec/ir";
+import { apiConstantsSource } from "./api-constants.js";
 import {
+  API_CONSTANTS_MODULE,
   INDEX_MODULE,
   MODULE_EXTENSION,
   OPERATION_ERRORS_MODULE,
@@ -47,7 +49,7 @@ const OPERATION_MODULES: readonly { module: string; declaration: OperationDeclar
   { module: OPERATION_ERRORS_MODULE, declaration: operationErrorsDeclaration },
 ];
 
-// The schemas module and the three operation modules, or every refusal at once: a form the slice does not use
+// The schemas module, the three operation modules and the api constants, or every refusal at once: a form the slice does not use
 // is refused by name, never approximated (A47).
 export function generateTypes(
   input: GenerateInput<NoOptions, TypesArtefact, never>,
@@ -66,6 +68,7 @@ export function generateTypes(
   const files = [
     ...schemasFile(ir, planned.layout, refusals),
     ...(ir.operations.length === 0 ? [] : operationFiles(ir, planned.layout, refusals)),
+    ...apiConstantsFile(ir, refusals),
   ];
 
   if (refusals.length > 0) return { status: "refused", refusals };
@@ -97,8 +100,8 @@ function schemasFile(ir: ContractIR, layout: TypesLayout, refusals: Refusal[]): 
   return [{ path: `${SCHEMAS_MODULE}${MODULE_EXTENSION}`, contents: `${source}\n` }];
 }
 
-// The api index: the schemas under `schemas`, the three operation modules flat, so `import type * as Tasks from
-// "<out>/index.js"` reaches every name.
+// The api index: the schemas under `schemas`, the operation modules and the constants flat, so `import * as
+// Tasks from "<out>/index.js"` reaches every name.
 function indexFile(files: readonly GeneratedFile[]): GeneratedFile[] {
   if (files.length === 0) return [];
 
@@ -121,4 +124,16 @@ function operationFiles(ir: ContractIR, layout: TypesLayout, refusals: Refusal[]
 
     return { path: `${module}${MODULE_EXTENSION}`, contents: `${contents}\n` };
   });
+}
+
+// The `Status` and `ErrorCode` constants, once the api has an operation or an error code to name.
+function apiConstantsFile(ir: ContractIR, refusals: Refusal[]): GeneratedFile[] {
+  if (ir.operations.length === 0 && Object.keys(ir.errors).length === 0) return [];
+
+  return [
+    {
+      path: `${API_CONSTANTS_MODULE}${MODULE_EXTENSION}`,
+      contents: `${apiConstantsSource(ir, refusals)}\n`,
+    },
+  ];
 }

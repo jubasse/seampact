@@ -12,7 +12,7 @@ import { REFUSED_TYPE, type TypeContext, typeExpression } from "./type-expressio
 const JSON_MEDIA = "application/json";
 
 // The 304 that `cache.etag` derives is answered by the boundary, never by the handler.
-const ETAG_DERIVATION = "cache.etag";
+export const ETAG_DERIVATION = "cache.etag";
 const NOT_GENERATED_SHAPES: readonly string[] = ["list", "binary", "redirect"];
 
 // The members a handler returns beside a page's items, by paging style `handlerResult` value (ADR 0002

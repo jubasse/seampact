@@ -195,3 +195,49 @@ test("a response header the route writes itself is refused by name", async () =>
     ],
   });
 });
+
+test("two error codes whose words give one ErrorCode key are refused by name", async () => {
+  const ir = readGoldenIr("tasks");
+  const notFound = ir.errors["api.not_found"];
+
+  if (notFound === undefined) throw new Error("the golden tasks api lost api.not_found");
+
+  ir.errors["api.notFound"] = structuredClone(notFound);
+
+  const outcome = await generateTypes(ir);
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    refusals: [
+      {
+        code: "errorCode.key.duplicate",
+        message:
+          "The error codes 'api.not_found' and 'api.notFound' both give the key 'ApiNotFound' of the ErrorCode constant.",
+        member: "/errors/api.notFound",
+      },
+    ],
+  });
+});
+
+test("a status without a registered reason phrase is refused by name", async () => {
+  const ir = readGoldenIr("tasks");
+  const operationIndex = ir.operations.findIndex((operation) => operation.id === "getTask");
+  const [success] = ir.operations[operationIndex]?.responses ?? [];
+
+  if (success === undefined) throw new Error("the golden getTask has no response");
+
+  success.status = 299;
+
+  const outcome = await generateTypes(ir);
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    refusals: [
+      {
+        code: "status.reasonPhrase.unknown",
+        member: `/operations/${operationIndex}/responses/0/status`,
+        operation: "getTask",
+      },
+    ],
+  });
+});
