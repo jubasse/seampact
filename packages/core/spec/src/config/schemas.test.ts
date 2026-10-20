@@ -110,6 +110,26 @@ describe("the DSL parity walk", () => {
       schema: { type: "null" },
       violation: ": a null value, which only YAML writes",
     },
+    {
+      name: "an object open to any key",
+      schema: { type: "object", additionalProperties: true },
+      violation: ": an object open to any key",
+    },
+    {
+      name: "properties without a type",
+      schema: { properties: { a: { type: "string" } } },
+      violation: ": properties on a value that is not typed an object",
+    },
+    {
+      name: "a keyword the walk does not check",
+      schema: { allOf: [{ oneOf: [{ type: "integer" }, { type: "string" }] }] },
+      violation: ": the keyword 'allOf', which the parity walk does not check",
+    },
+    {
+      name: "an enum of several JSON types",
+      schema: { enum: ["1", 1] },
+      violation: ": an enum of several JSON types",
+    },
   ])("refuses $name", ({ schema, violation }) => {
     expect(dslParityViolations(schema)).toContain(violation);
   });

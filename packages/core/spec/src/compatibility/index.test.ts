@@ -119,6 +119,16 @@ test("each server target records its framework id, its tested majors with their 
   ]);
 });
 
+test("no framework major is both tested and incompatible", () => {
+  const contradictions = SERVER_TARGETS.flatMap(({ package: targetPackage, framework }) =>
+    framework.tested
+      .filter((tested) => framework.incompatible.some(({ major }) => major === tested.major))
+      .map((tested) => `${targetPackage}@${tested.major}`),
+  );
+
+  expect(contradictions).toEqual([]);
+});
+
 test("every pair carries the consumer overlay of its framework major", () => {
   const consumers = new Set(
     offeredValidatorPairs().map((pair) => `${pair.target}@${pair.frameworkMajor}:${pair.consumer}`),

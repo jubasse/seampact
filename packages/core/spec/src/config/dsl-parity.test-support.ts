@@ -7,9 +7,6 @@ import { ENTRY_ID_PATTERN } from "./config-schema-parts.js";
 // schema, so every form the schema accepts must have a DSL form: fixed keys are identifiers, user-named keys are
 // map keys under a name pattern, and alternatives are told apart by JSON type or by a required key.
 
-// A key the schema fixes: a Kotlin property and a Maven element name.
-export const FIXED_KEY_PATTERN = "^[a-z][A-Za-z0-9]*$";
-
 // The key patterns of a map: user names (sources, apis, documents, links) and artefact ids.
 const MAP_KEY_PATTERNS: readonly string[] = [ENTRY_ID_PATTERN, ARTEFACT_ID_PATTERN];
 
@@ -20,6 +17,34 @@ const OPAQUE_OBJECT_POINTERS: readonly string[] = ["/$defs/targetEntry/propertie
 const DISCRIMINATING_KINDS: readonly string[] = ["string", "boolean", "array", "object"];
 
 const NESTED_SCHEMA_KEYS = ["items", "additionalProperties", "propertyNames"] as const;
+
+// The keywords the walk checks or that only narrow a value; any other keyword is a violation, so a form the walk
+// cannot judge never passes. `not` only narrows, so its content is not walked.
+const KNOWN_KEYWORDS: ReadonlySet<string> = new Set([
+  "$defs",
+  "$id",
+  "$ref",
+  "$schema",
+  "title",
+  "type",
+  "const",
+  "enum",
+  "properties",
+  "required",
+  "additionalProperties",
+  "propertyNames",
+  "patternProperties",
+  "minProperties",
+  "items",
+  "minItems",
+  "uniqueItems",
+  "minLength",
+  "maxLength",
+  "pattern",
+  "oneOf",
+  "anyOf",
+  "not",
+]);
 
 // Every place `schema` breaks the rule, as `<JSON pointer>: <what>`; empty when every form has a DSL form.
 export function dslParityViolations(schema: JsonSchema): string[] {
@@ -32,12 +57,28 @@ function violationsAt(schema: unknown, pointer: string, parentKind: string | und
   const kind = kindOf(schema) ?? parentKind;
 
   return [
+    ...keywordViolations(schema, pointer),
     ...typeViolations(schema, pointer),
+    ...enumViolations(schema, pointer),
     ...propertyViolations(schema, pointer),
     ...objectFormViolations(schema, pointer, kind),
     ...alternativeViolations(schema, pointer, kind),
     ...nestedViolations(schema, pointer),
   ];
+}
+
+function keywordViolations(schema: JsonSchema, pointer: string): string[] {
+  return Object.keys(schema)
+    .filter((keyword) => !KNOWN_KEYWORDS.has(keyword))
+    .map((keyword) => `${pointer}: the keyword '${keyword}', which the parity walk does not check`);
+}
+
+function enumViolations(schema: JsonSchema, pointer: string): string[] {
+  if (!Array.isArray(schema.enum)) return [];
+
+  return new Set(schema.enum.map(jsonKindOf)).size > 1
+    ? [`${pointer}: an enum of several JSON types`]
+    : [];
 }
 
 function typeViolations(schema: JsonSchema, pointer: string): string[] {
@@ -51,7 +92,8 @@ function typeViolations(schema: JsonSchema, pointer: string): string[] {
 function propertyViolations(schema: JsonSchema, pointer: string): string[] {
   if (!isSchemaObject(schema.properties)) return [];
 
-  const fixedKeyPattern = new RegExp(FIXED_KEY_PATTERN);
+  // A fixed key is a Kotlin property and a Maven element name: an identifier, the form of an artefact id.
+  const fixedKeyPattern = new RegExp(ARTEFACT_ID_PATTERN);
 
   return Object.entries(schema.properties).flatMap(([key, value]) => [
     ...(fixedKeyPattern.test(key)
@@ -71,7 +113,15 @@ function objectFormViolations(
     return [`${pointer}: keys told apart by pattern (patternProperties)`];
   }
 
-  if (schema.type !== "object" || OPAQUE_OBJECT_POINTERS.includes(pointer)) return [];
+  if (OPAQUE_OBJECT_POINTERS.includes(pointer)) return [];
+
+  if (schema.additionalProperties === true) return [`${pointer}: an object open to any key`];
+
+  if (schema.properties !== undefined && kind !== "object") {
+    return [`${pointer}: properties on a value that is not typed an object`];
+  }
+
+  if (schema.type !== "object") return [];
 
   if (kind === "object" && schema.additionalProperties === undefined) {
     return [`${pointer}: an object that neither fixes its keys nor is a map`];
