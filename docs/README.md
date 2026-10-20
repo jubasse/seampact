@@ -41,12 +41,15 @@
 - [OpenAPI and docs](configuration/openapi-and-docs.md): OpenAPI documents and Swagger.
 - [Checks](configuration/checks.md): what `check` fails on.
 - [Monorepo](configuration/monorepo.md): one config for several apps.
+- [Config reference](configuration/reference.md): every key, its type and default.
 
 ## Features
 
 - [Diff](features/diff.md): see what a contract edit breaks.
 - [Check in CI](features/check-in-ci.md): fail the build on drift.
 - [Sharing contracts](features/sharing-contracts.md): publish a contract to other repositories.
+- [Lint](features/lint.md): run lint, change a rule level, allow a case, write a rule.
+- [Convention packs](features/convention-packs.md): add a pack, what each brings.
 
 ## Concepts
 
@@ -55,7 +58,17 @@
 
 ## Troubleshooting
 
-- [Troubleshooting](troubleshooting/README.md): errors and fixes.
+- [Troubleshooting](troubleshooting/README.md): find an error by its code.
+- [Config errors](troubleshooting/config.md): `config.*`.
+- [Monorepo and OpenAPI errors](troubleshooting/config-root.md): `config.root.*`, `config.apps.*`, `config.openapi.*`.
+- [Link errors](troubleshooting/link.md): `link.*`.
+- [Check errors](troubleshooting/check.md): `check.*`, `writer.*`.
+- [Contract file errors](troubleshooting/load.md): `seampact/load/*`.
+- [Contract key errors](troubleshooting/validate.md): `seampact/validate/*`.
+- [Contract content errors](troubleshooting/tree.md): `seampact/tree/*`.
+- [Access and error code errors](troubleshooting/access-and-errors.md): `seampact/access/*`, `seampact/derive/*`.
+- [Boot errors](troubleshooting/boot.md): the server refuses to start.
+- [CLI errors](troubleshooting/cli.md): `cli.*`, `lint.*`, `diff.*`.
 
 ## Project
 
