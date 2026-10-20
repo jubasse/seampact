@@ -1,6 +1,8 @@
 import { createConfig, lintFromString } from "@redocly/openapi-core";
 import { describe, expect, it } from "vitest";
+import { parse } from "yaml";
 import { emitDocuments } from "./documents.js";
+import { DEFAULT_EMITTER_OPTIONS } from "./emitter-options.js";
 import {
   EXTENSION_NAMES,
   EXTENSION_PREFIX,
@@ -16,6 +18,7 @@ import {
   goldenIrNames,
   readGoldenIr,
 } from "./golden-documents.test-support.js";
+import { mergeDocuments } from "./merge/index.js";
 
 // The committed golden documents, which `scripts/golden --check` keeps equal to the emitter's output: each passes
 // the OAS 3.1 schema, Redocly's recommended rules and the extension schemas.
@@ -112,8 +115,19 @@ describe("golden documents", () => {
   });
 
   it("every extension schema is exercised", () => {
+    const mergedReference = mergeDocuments(
+      [{ ir: readGoldenIr("reference/tasks") }, { ir: readGoldenIr("reference/tasksService") }],
+      { name: "reference", prefix: { tasksService: "service" }, emitter: DEFAULT_EMITTER_OPTIONS },
+    );
+
+    expect(mergedReference.status).toBe("merged");
+
+    const mergedDocuments =
+      mergedReference.status === "merged" ? [parse(mergedReference.text)] : [];
     const used = new Set(
-      DOCUMENTS.flatMap(({ document }) => extensionMembers(document).map((member) => member.key)),
+      [...DOCUMENTS.map(({ document }) => document), ...mergedDocuments].flatMap((document) =>
+        extensionMembers(document).map((member) => member.key),
+      ),
     );
 
     expect(EXTENSION_NAMES.filter((name) => !used.has(`${EXTENSION_PREFIX}${name}`))).toEqual([]);

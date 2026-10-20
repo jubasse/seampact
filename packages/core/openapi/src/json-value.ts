@@ -31,6 +31,13 @@ export function isJsonObject(value: unknown): value is JsonObject {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/** The object a member holds, or an empty object when the member is absent or not an object. */
+export function objectMember(object: JsonObject, member: string): JsonObject {
+  const value = object[member];
+
+  return isJsonObject(value) ? value : {};
+}
+
 /** A copy of an optional IR value. */
 export function copyOptional(value: unknown): JsonValue | undefined {
   return value === undefined ? undefined : copyJsonValue(value);
