@@ -8,7 +8,9 @@ import { type CliProblem, entryWhere } from "../cli-problem.js";
 
 // The artefacts a target entry generates (ADR 0009 "Artefacts and the compatibility matrix", ADR 0011 "The app
 // config"): each artefact the target declares, at its declared default unless the entry's `artefacts` switches it.
-// `nativeDocs` has no default of its own: it is off unless the target declares it on.
+// `nativeDocs` has no default of its own: it is off unless the target declares it on. A target that declares tunable
+// boot checks (`metadata.bootChecks`) without a `bootCheck` artefact takes `bootCheck` as a boolean too: `false` turns
+// those checks off, read by the boot check itself.
 
 export type ArtefactSelection =
   | { status: "selected"; artefacts: ReadonlySet<string> }
@@ -19,7 +21,7 @@ const NATIVE_DOCS_ARTEFACT = "nativeDocs";
 export function selectArtefacts(entry: TargetEntry, target: Target): ArtefactSelection {
   const declared = target.metadata.artefacts;
   const switches = booleanSwitchesOf(entry.artefacts);
-  const unknown = unknownSwitchProblems(entry, declared, switches);
+  const unknown = unknownSwitchProblems(entry, target, switches);
 
   if (unknown.length > 0) return { status: "refused", problems: unknown };
 
@@ -65,13 +67,15 @@ function booleanSwitchesOf(artefacts: ArtefactSwitches | undefined): ReadonlyMap
 
 function unknownSwitchProblems(
   entry: TargetEntry,
-  declared: readonly ArtefactDeclaration[],
+  target: Target,
   switches: ReadonlyMap<string, boolean>,
 ): CliProblem[] {
-  const declaredIds = declared.map((artefact) => artefact.id);
+  const declaredIds = target.metadata.artefacts.map((artefact) => artefact.id);
+  const tunesBootChecks = (target.metadata.bootChecks?.length ?? 0) > 0;
 
   return [...switches.keys()]
     .filter((id) => !declaredIds.includes(id))
+    .filter((id) => !(id === BOOT_CHECK_ARTEFACT && tunesBootChecks))
     .map((id) => ({
       code: "config.artefacts.unknown",
       message: `The target '${entry.use}' declares no artefact '${id}'; it declares ${quotedList(declaredIds)}.`,

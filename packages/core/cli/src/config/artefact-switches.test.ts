@@ -1,5 +1,6 @@
 import type { ArtefactDeclaration } from "@seampact/codegen-core";
 import type { ArtefactSwitches } from "@seampact/spec/config";
+import { target as expressTarget } from "@seampact/codegen-express";
 import { expect, test } from "vitest";
 import { selectArtefacts } from "./artefact-switches.js";
 import { stubTarget } from "./target-stub.test-support.js";
@@ -60,6 +61,30 @@ test("switches the boot check off as a boolean", () => {
   ]);
 
   expect(outcome).toEqual({ status: "selected", artefacts: new Set(["boundary"]) });
+});
+
+test.each([false, true])(
+  "takes the boot check as a boolean for a target that declares boot checks (bootCheck: %s)",
+  (bootCheck) => {
+    const entry = {
+      id: "server",
+      use: "@seampact/codegen-express",
+      api: "tasks",
+      artefacts: { bootCheck },
+    };
+
+    expect(selectArtefacts(entry, expressTarget)).toEqual({
+      status: "selected",
+      artefacts: new Set(["boundary"]),
+    });
+  },
+);
+
+test("refuses the boot check as a boolean for a target that declares no boot check", () => {
+  expect(select({ bootCheck: false }, [{ id: "boundary", defaultOn: true }])).toMatchObject({
+    status: "refused",
+    problems: [{ code: "config.artefacts.unknown" }],
+  });
 });
 
 test("refuses a switch the target does not declare, naming the declared artefacts", () => {
