@@ -22,6 +22,9 @@
       }
     }
   },
+  "dependencies": {
+    "@seampact/spec": "workspace:*"
+  },
   "seampact": {
     "role": "tool"
   },

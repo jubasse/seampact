@@ -1,5 +1,5 @@
 // The shared black-box HTTP suite (ADR 0015): the JSON case format and its shipped cases, the sample app's control
-// routes and the script a sample app answers from, a runner against a base URL, the boot variants and their runner,
+// routes and the script a sample app answers from, a runner against a base URL, the format readers of the pack profiles, the boot variants and their runner,
 // and the report keyed by checklist id.
 export {
   type BootAttempt,
@@ -24,7 +24,14 @@ export {
   readLogLines,
   SCRIPT_ROUTE,
 } from "./control-routes.js";
+export {
+  type FormatReader,
+  FormatReaderError,
+  formatReaderOf,
+  type ReadBody,
+} from "./format-reader.js";
 export { CASES_DIRECTORY, loadSuiteCases } from "./load-cases.js";
+export { type PackProfile, packProfileName, packProfileOf } from "./pack-profile.js";
 export { STRIPE_V1_SCHEME, signRequestBody } from "./request-signature.js";
 export {
   authenticateHookName,
@@ -49,6 +56,7 @@ export {
   parseSuiteCase,
   type RecordedHookCall,
   type RequestSignature,
+  runsInProfile,
   type StepExpectation,
   type StepRequest,
   type SuiteCase,

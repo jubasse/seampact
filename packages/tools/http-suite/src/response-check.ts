@@ -110,7 +110,7 @@ function mismatch(pointer: string, expected: JsonValue, actual: JsonValue): stri
   return `body at '${pointer}' is ${JSON.stringify(actual)}, expected ${JSON.stringify(expected)}`;
 }
 
-function isJsonObject(value: JsonValue): value is { readonly [member: string]: JsonValue } {
+export function isJsonObject(value: JsonValue): value is { readonly [member: string]: JsonValue } {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 

@@ -1,9 +1,17 @@
 // Runs cases against a sample app at a base URL, one step after another, and answers the suite report.
 import { BOOT_PROFILE } from "./boot-variant.js";
 import { loadScript, readHookCalls } from "./control-routes.js";
+import type { FormatReader } from "./format-reader.js";
 import { signRequestBody } from "./request-signature.js";
 import { checkResponse, type ReceivedResponse, readPointer } from "./response-check.js";
-import type { CaptureSource, JsonValue, SuiteCase, SuiteProfile, SuiteStep } from "./suite-case.js";
+import {
+  type CaptureSource,
+  type JsonValue,
+  runsInProfile,
+  type SuiteCase,
+  type SuiteProfile,
+  type SuiteStep,
+} from "./suite-case.js";
 import { type CaseResult, type SuiteReport, suiteReportOf } from "./suite-report.js";
 import { TemplateError, TemplateScope } from "./template.js";
 
@@ -29,6 +37,8 @@ export interface SuiteRunOptions {
   readonly profile: SuiteProfile;
   readonly credentials: SuiteCredentials;
   readonly cases: readonly SuiteCase[];
+  /** A `pack:<name>` profile's reader: the `default` cases read their responses through it. */
+  readonly reader?: FormatReader;
   /** Cases the sample app does not run, by case id, with the reason the report names. */
   readonly refusals?: Readonly<Record<string, string>>;
   readonly requestTimeoutMs?: number;
@@ -42,6 +52,7 @@ interface RunContext {
   readonly baseUrl: string;
   readonly variables: Readonly<Record<string, JsonValue>>;
   readonly requestTimeoutMs: number;
+  readonly reader: FormatReader | undefined;
 }
 
 export async function runSuite(options: SuiteRunOptions): Promise<SuiteReport> {
@@ -54,12 +65,14 @@ export async function runSuite(options: SuiteRunOptions): Promise<SuiteReport> {
   }
 
   refuseForeignCases(options.cases, options.profile);
+  refuseMisplacedReader(options.reader, options.profile);
   refuseUnknownRefusals(options.cases, refusals);
 
   const context: RunContext = {
     baseUrl: options.baseUrl.replace(/\/+$/, ""),
     variables: variablesOf(options.credentials),
     requestTimeoutMs: options.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
+    reader: options.reader,
   };
   const results: CaseResult[] = [];
 
@@ -76,11 +89,26 @@ export async function runSuite(options: SuiteRunOptions): Promise<SuiteReport> {
 
 /** Throws when a case does not run in `profile`. */
 export function refuseForeignCases(cases: readonly SuiteCase[], profile: SuiteProfile): void {
-  const foreign = cases.filter((suiteCase) => !suiteCase.profiles.includes(profile));
+  const foreign = cases.filter((suiteCase) => !runsInProfile(suiteCase, profile));
 
   if (foreign.length > 0) {
     throw new Error(
       `http-suite: the cases ${foreign.map((suiteCase) => suiteCase.id).join(", ")} do not run in the '${profile}' profile`,
+    );
+  }
+}
+
+/** Throws when a format reader is given to a profile that is no pack's, or a pack profile has none. */
+function refuseMisplacedReader(reader: FormatReader | undefined, profile: SuiteProfile): void {
+  const isPackProfile = profile.startsWith("pack:");
+
+  if (isPackProfile && reader === undefined) {
+    throw new Error(`http-suite: the '${profile}' profile reads responses through a format reader`);
+  }
+
+  if (!isPackProfile && reader !== undefined) {
+    throw new Error(
+      `http-suite: the '${profile}' profile reads bare responses and takes no format reader`,
     );
   }
 }
@@ -121,6 +149,7 @@ export function caseHeader(suiteCase: SuiteCase): Pick<CaseResult, "id" | "title
 async function runCase(suiteCase: SuiteCase, context: RunContext): Promise<CaseResult> {
   const scope = new TemplateScope(context.variables);
   const failures: string[] = [];
+  const reader = suiteCase.profiles.includes("default") ? context.reader : undefined;
 
   try {
     await loadScript(context.baseUrl, suiteCase.script ?? {}, timeoutSignal(context));
@@ -129,7 +158,7 @@ async function runCase(suiteCase: SuiteCase, context: RunContext): Promise<CaseR
       const label = `step ${index} (${step.title ?? `${step.request.method} ${step.request.path}`})`;
 
       failures.push(
-        ...(await runStep(step, scope, context)).map((failure) => `${label}: ${failure}`),
+        ...(await runStep(step, scope, context, reader)).map((failure) => `${label}: ${failure}`),
       );
     }
 
@@ -159,9 +188,10 @@ async function runStep(
   step: SuiteStep,
   scope: TemplateScope,
   context: RunContext,
+  reader: FormatReader | undefined,
 ): Promise<string[]> {
-  const response = await send(step, scope, context);
-  const failures: string[] = [];
+  const { response, readFailures } = readThroughFormat(await send(step, scope, context), reader);
+  const failures: string[] = [...readFailures];
 
   for (const [name, source] of Object.entries(step.capture ?? {})) {
     const value = capturedValue(source, response);
@@ -179,6 +209,18 @@ async function runStep(
 
     return [...failures, error.message];
   }
+}
+
+// A case written in bare terms sees a pack's response as the bare format would have written it.
+function readThroughFormat(
+  response: ReceivedResponse,
+  reader: FormatReader | undefined,
+): { response: ReceivedResponse; readFailures: readonly string[] } {
+  if (reader === undefined || response.json === undefined) return { response, readFailures: [] };
+
+  const read = reader.read(response.status, response.json);
+
+  return { response: { ...response, json: read.json }, readFailures: read.failures };
 }
 
 function capturedValue(source: CaptureSource, response: ReceivedResponse): JsonValue | undefined {

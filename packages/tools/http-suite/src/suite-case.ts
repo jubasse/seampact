@@ -13,6 +13,7 @@ import {
   stringMapAt,
 } from "./json-reader.js";
 import { readSampleAppScript, type SampleAppScript } from "./sample-app-script.js";
+import { WHOLE_PLACEHOLDER } from "./template.js";
 
 export type JsonValue =
   | null
@@ -134,6 +135,13 @@ export interface SuiteCase {
 export interface RecordedHookCall {
   readonly hook: string;
   readonly operation: string;
+}
+
+/** Whether a case runs in a profile: a pack profile also runs the `default` cases, read through the pack's format. */
+export function runsInProfile(suiteCase: SuiteCase, profile: SuiteProfile): boolean {
+  if (suiteCase.profiles.includes(profile)) return true;
+
+  return profile.startsWith("pack:") && suiteCase.profiles.includes("default");
 }
 
 export const CASE_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -371,7 +379,10 @@ function readRequest(reader: JsonReader, value: unknown, pointer: string): StepR
   const object = objectAt(reader, value, pointer, REQUEST_MEMBERS);
   const path = stringAt(reader, object.path, `${pointer}/path`);
 
-  if (!path.startsWith("/")) reader.fail(`${pointer}/path`, "a path starts with '/'");
+  // A path that is one placeholder holds a URL path a response linked (`{{nextPage}}`).
+  if (!path.startsWith("/") && !WHOLE_PLACEHOLDER.test(path)) {
+    reader.fail(`${pointer}/path`, "a path starts with '/' or is one placeholder");
+  }
 
   if (object.body !== undefined && object.bodyText !== undefined) {
     reader.fail(pointer, "a request sends either `body` or `bodyText`, not both");

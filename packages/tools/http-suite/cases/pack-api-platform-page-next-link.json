@@ -1,0 +1,43 @@
+{
+  "id": "pack-api-platform-page-next-link",
+  "title": "A page is fetched with the api-platform request names and its next link is followed",
+  "checks": ["CHK-107"],
+  "profiles": ["pack:api-platform"],
+  "steps": [
+    {
+      "title": "first page",
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "query": {
+          "itemsPerPage": 2,
+          "page": 1
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "capture": {
+        "nextPage": {
+          "body": "/view/next"
+        }
+      },
+      "expect": {
+        "status": 200
+      }
+    },
+    {
+      "title": "the next link",
+      "request": {
+        "method": "GET",
+        "path": "{{nextPage}}",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200
+      }
+    }
+  ]
+}
