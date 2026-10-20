@@ -2,6 +2,7 @@ import { basename, dirname, join } from "node:path";
 import {
   commitGeneratedWrite,
   type PlannedWrite,
+  type PlanWriteOptions,
   planGeneratedWrite,
   type Refusal,
   readManifest,
@@ -54,6 +55,7 @@ export async function planWrites(
   outputs: readonly GeneratedOutput[],
   documents: readonly EmittedDocument[],
   swept: readonly SweptDirectory[],
+  options: PlanWriteOptions,
 ): Promise<PlannedWrites> {
   const entries: EntryWrite[] = [];
   const documentWrites: DocumentDirectoryWrite[] = [];
@@ -61,7 +63,7 @@ export async function planWrites(
   for (const output of outputs) {
     entries.push({
       output,
-      check: await checkWrite(output.root, output.entryId, output.files),
+      check: await checkWrite(output.root, output.entryId, output.files, options),
     });
   }
 
@@ -77,6 +79,7 @@ export async function planWrites(
           path: basename(document.file),
           contents: document.text,
         })),
+        options,
       ),
     });
   }
@@ -88,8 +91,9 @@ async function checkWrite(
   directory: string,
   owner: string,
   files: Parameters<typeof planGeneratedWrite>[2],
+  options: PlanWriteOptions,
 ): Promise<WriteCheck> {
-  const planned = await planGeneratedWrite(directory, owner, files);
+  const planned = await planGeneratedWrite(directory, owner, files, options);
 
   return planned.status === "refused"
     ? { status: "refused", refusals: planned.refusals }

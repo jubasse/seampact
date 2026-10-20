@@ -2,6 +2,7 @@ import type { ArtefactDeclaration, Target } from "@seampact/codegen-core";
 import {
   type ArtefactSwitches,
   BOOT_CHECK_ARTEFACT,
+  type HookBootCheckLevel,
   type TargetEntry,
 } from "@seampact/spec/config";
 import { type CliProblem, entryWhere } from "../cli-problem.js";
@@ -31,6 +32,8 @@ export function selectArtefacts(entry: TargetEntry, target: Target): ArtefactSel
       .map((artefact) => artefact.id),
   );
 
+  dropUnwrittenWithoutNeeds(declared, switches, artefacts);
+
   if (declared.length > 0 && artefacts.size === 0) {
     return { status: "refused", problems: [noArtefactProblem(entry, declared)] };
   }
@@ -49,6 +52,21 @@ export function frameworkRoutesSwitchOf(
   const bootCheck = artefacts?.[BOOT_CHECK_ARTEFACT];
 
   return typeof bootCheck === "object" ? bootCheck.frameworkRoutes : undefined;
+}
+
+// The `bootCheck.hooks` level an entry writes in `bootCheck`'s object form.
+export function hookCheckSwitchOf(
+  artefacts: ArtefactSwitches | undefined,
+): HookBootCheckLevel | undefined {
+  const bootCheck = artefacts?.[BOOT_CHECK_ARTEFACT];
+
+  return typeof bootCheck === "object" ? bootCheck.hooks : undefined;
+}
+
+// `error` unless the entry writes a level. The boolean form of `bootCheck` leaves it at `error`: a missing hook is
+// never silenced by accident.
+export function hookCheckLevelOf(artefacts: ArtefactSwitches | undefined): HookBootCheckLevel {
+  return hookCheckSwitchOf(artefacts) ?? "error";
 }
 
 // Off when the entry switches the whole boot check off, or its framework-route check alone.
@@ -90,6 +108,22 @@ function unknownSwitchFix(id: string): string {
   }
 
   return `Remove '${id}' from the entry's \`artefacts\`, or switch one of the artefacts the target declares.`;
+}
+
+// An artefact that only follows its needs (`leftOffWithoutNeeds`) and that the entry does not write is left off
+// when a need is off; one the entry writes on stays, and is refused by `neededArtefactProblems`.
+function dropUnwrittenWithoutNeeds(
+  declared: readonly ArtefactDeclaration[],
+  switches: ReadonlyMap<string, boolean>,
+  artefacts: Set<string>,
+): void {
+  for (const artefact of declared) {
+    if (!artefact.leftOffWithoutNeeds || switches.has(artefact.id)) continue;
+
+    if ((artefact.needs ?? []).some((need) => !artefacts.has(need))) {
+      artefacts.delete(artefact.id);
+    }
+  }
 }
 
 // Each generated artefact needing one that stays off, named with it.

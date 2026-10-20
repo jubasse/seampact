@@ -4,6 +4,7 @@
 
 export {
   type ArtefactSelection,
+  hookCheckLevelOf,
   NATIVE_DOCS_ARTEFACT,
   selectArtefacts,
 } from "./artefact-switches.js";

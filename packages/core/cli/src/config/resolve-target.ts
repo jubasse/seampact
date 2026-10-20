@@ -142,6 +142,7 @@ function isArtefactDeclaration(value: unknown): boolean {
     isRecord(value) &&
     typeof value.id === "string" &&
     typeof value.defaultOn === "boolean" &&
+    (value.leftOffWithoutNeeds === undefined || typeof value.leftOffWithoutNeeds === "boolean") &&
     (value.needs === undefined ||
       (Array.isArray(value.needs) && value.needs.every((need) => typeof need === "string")))
   );

@@ -93,7 +93,7 @@ async function reportedForms(
     ir,
     options: {},
     links: await referenceLinks(PROJECT, api),
-    artefacts: new Set(["boundary"]),
+    artefacts: new Set(["boundary", "index"]),
   });
 
   return (outcome.status === "generated" ? outcome.warnings : outcome.refusals) ?? [];

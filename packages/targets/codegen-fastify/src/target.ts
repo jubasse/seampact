@@ -17,6 +17,7 @@ export const target: Target = nodeServerTarget({
     runtimeModule: "fastify-boundary",
     runtimeSourceUrl: new URL("../runtime/fastify-boundary.ts", import.meta.url),
     frameworkModule: "fastify",
+    compressesReplies: true,
     frameworkSource: fastifyModuleSource,
     nativeDocs: { docsModule: "fastify-docs", docsSource: fastifyDocsModuleSource },
     ownValidators: ajvOwnValidators,

@@ -11,6 +11,7 @@ import {
   isPlainObject,
   unexpectedError,
 } from "./contract-error.js";
+import { runtimeLog } from "./runtime-logger.js";
 import { sha256Hex } from "./sha256.js";
 
 const IN_PROGRESS_ROLE = "idempotencyInProgress";
@@ -105,7 +106,7 @@ export async function settleIdempotency(
     else
       await store.complete(key, { status: reply.status, headers: reply.headers, body: reply.body });
   } catch (error) {
-    console.error(
+    runtimeLog.error(
       "seampact: the idempotency store failed to record a reply; a retry with the same key may run again. Check the store's backend.",
       error,
     );

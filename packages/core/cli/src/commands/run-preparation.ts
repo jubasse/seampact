@@ -1,4 +1,5 @@
 import { dirname } from "node:path";
+import type { PlanWriteOptions } from "@seampact/codegen-core";
 import type { CliIo } from "../cli-io.js";
 import { type CliProblem, inApp } from "../cli-problem.js";
 import { type LoadedAppConfig, type LoadedWorkspace, readRunConfig } from "../config/index.js";
@@ -10,6 +11,8 @@ import { type GeneratedOutput, generateEntries } from "./entry-generation.js";
 import { emitMergedDocuments } from "./merged-documents.js";
 import type { Step } from "./step.js";
 import { type PlannedWrites, planWrites, type SweptDirectory } from "./write-plan.js";
+
+const REFUSE_HAND_EDITS: PlanWriteOptions = { onHandEdit: "refuse" };
 
 // One app of a run: its name in a root's `apps`, absent when the run is on one app's config.
 interface RunApp {
@@ -23,12 +26,14 @@ interface RunApp {
 export async function prepareRun(
   location: ConfigLocation,
   io: CliIo,
+  writeOptions: PlanWriteOptions = REFUSE_HAND_EDITS,
 ): Promise<Step<PlannedWrites>> {
   const read = await readRunConfig(location.file, location.displayName);
 
   if (read.status === "refused") return read;
 
-  if (read.run.kind === "app") return prepareApps([{ config: read.run.config }], undefined, io);
+  if (read.run.kind === "app")
+    return prepareApps([{ config: read.run.config }], undefined, io, writeOptions);
 
   const { workspace } = read.run;
 
@@ -36,6 +41,7 @@ export async function prepareRun(
     workspace.apps.map(({ app, config }) => ({ name: app.name, config })),
     workspace,
     io,
+    writeOptions,
   );
 }
 
@@ -43,6 +49,7 @@ async function prepareApps(
   apps: readonly RunApp[],
   workspace: LoadedWorkspace | undefined,
   io: CliIo,
+  writeOptions: PlanWriteOptions,
 ): Promise<Step<PlannedWrites>> {
   const plans = await planEachApp(apps, io);
 
@@ -93,7 +100,7 @@ async function prepareApps(
     });
   }
 
-  return { status: "done", value: await planWrites(outputs, documents, swept) };
+  return { status: "done", value: await planWrites(outputs, documents, swept, writeOptions) };
 }
 
 interface PlannedApp {

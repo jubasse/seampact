@@ -15,6 +15,7 @@ import {
 } from "./error-reply.js";
 import { settleIdempotency } from "./idempotency.js";
 import { BODY_HEADERS, groupedHeaders, mergedVary, VARY_HEADER } from "./reply-headers.js";
+import { runtimeLog } from "./runtime-logger.js";
 
 /** Turns a contract reply into the one written on a response, after its idempotency record keeps it as rendered. */
 export type ReplyEncoder = (reply: ContractReply) => ContractReply;
@@ -43,7 +44,7 @@ export async function writeContractReply(
   if (context !== undefined) context.boundaryWriting = true;
 
   if (response.headersSent) {
-    console.error(
+    runtimeLog.error(
       `seampact: a reply of operation '${context?.route.id ?? "(none)"}' was already sent; the boundary's ${reply.status} is dropped.`,
     );
 

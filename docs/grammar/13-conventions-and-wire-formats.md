@@ -50,9 +50,12 @@ conventions:
 | `degradedHeader` | the header listing degraded parts | unset: required for a `degradable` route whose format has no `degraded` meta field |
 | `urls` | `relative` or `absolute`: how the URL slots and roles are written (section 13) | `relative` |
 | `rights.pattern` | a pattern every right name must also match (section 2) | unset: the core pattern only (A20) |
+| `service.allowPublic` | `true`: a service api (`api.kind: service`, section 2) may declare `public` or `optionalAuth` routes, which then run without the caller identity; `false` refuses them | `false` |
+| `access.guestRule` | `refuse` or `allow`: a right required on a public or optional-auth route needs a `guest` reason (section 2); with `allow` it needs none | `refuse` |
 | `errors.pattern` | a pattern every error code must also match, the dotted `family.name` form for example (`'^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$'`) | unset: the core pattern only (A36) |
 | `errors.every` | codes attached to every operation (section 11) | empty |
 | `errors.reach` | `subtree` or `resource`: how far a code attached on a node reaches (section 11) | `subtree` (A35) |
+| `errors.requireCode` | `false`: a format error body may write no `$code` (section 11); `true` refuses it | `true`; the server targets and the fetch client refuse a codeless format by name until one models it |
 | `errors.derived` | role bindings (section 11) | the default codes of ADR 0006 section 6 (A34) |
 
 The core imposes no wire format (A30). `format: bare`, the default, is itself written as format data below: every success body is the bare payload, and an error is an RFC 9457 `application/problem+json` body whose members are fixed in ADR 0006 section 7. `bare` has no paging style, because the core imposes no page shape either (A31, section 14). Every other format (a house envelope, JSON:API, HAL, JSON-LD and Hydra, Laravel resources and paginators, Spring Page and ProblemDetail) is declared in `formats`, usually by a convention pack, and selected with `conventions.format`; each target maps it onto its framework's own mechanism (FR-42, SCN-048, SCN-100).
@@ -82,7 +85,7 @@ formats:
 | `absent` | what a slot with no value writes: `omit` (default) or `null` |
 | `success.item`, `success.table`, `success.list`, `success.page` | one per response shape: `{ body, headers }`. `body` is a template, `$payload` by default (`$items` for `page`); `headers` maps a header name to a template. `item` is one record or any non-list body, `table` the id-keyed object of a `batch` read, `list` an unpaged list, `page` a paged list, whose paging style adds members to it or replaces its body (section 14) |
 | `meta` | the meta fields, each `{ fill, schema }`: `fill` is `now`, `traceId`, `degraded`, a `principal.<field>` source, or `handler`; `handler` and `principal.<field>` then need `schema` |
-| `error` | `{ media, body, headers }`; `media` defaults to the format's. A format without `error` uses the `bare` error. The body must write `$code`, as a member or inside a text template (`'https://errors.acme.com/${code}'`), so a client can tell the code; a format whose error writes no `$code` is a compile error naming the format |
+| `error` | `{ media, body, headers }`; `media` defaults to the format's. A format without `error` uses the `bare` error. The body must write `$code`, as a member or inside a text template (`'https://errors.acme.com/${code}'`), so a client can tell the code; a format whose error writes no `$code` is a compile error naming the format, unless `conventions.errors.requireCode` is `false` |
 
 A shape left out uses its default (`body: $payload`, or `$items` for a page, and no headers), so `bare` writes only its error.
 

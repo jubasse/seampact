@@ -91,7 +91,7 @@ You see no output.
 
 ## Wiring reference
 
-Every server target takes two options: `bodyValidation` (check request bodies, off by default) and `responses`, which decides what happens when your handler answers something the contract does not declare: `strict` (the default) replaces the reply with a 500 in the api's format, `warn` lets it through and logs it.
+Every server target takes four options: `bodyValidation` (check request bodies, off by default), `frameworkEtag` (`strip` by default removes an ETag the framework adds to a reply your code wrote outside the contract; `keep` leaves it), `catchAll` (`true` by default answers the api's 404 for a path under its base path that no route serves, or a method it does not serve; `false` leaves those requests to your app) and `responses`, which decides what happens when your handler answers something the contract does not declare: `strict` (the default) replaces the reply with a 500 in the api's format, `warn` lets it through and logs it.
 
 Install `@nestjs/platform-express` (the Fastify platform is refused at boot), `reflect-metadata` and `rxjs`, and set `experimentalDecorators` in `tsconfig.json`. Import the generated module with your hooks, start the app with `rawBody: true` so signed routes see the bytes that were signed, and register `preRoutingFilter`. Without the filter, malformed JSON and unknown routes under the api's prefix answer with NestJS's own error body instead of the contract's format.
 

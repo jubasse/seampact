@@ -570,6 +570,29 @@ surfaces:
   expect(located(diagnostics)).toEqual([["format-error-code", "/formats/headless/error"]]);
 });
 
+test("formats and paging styles: conventions.errors.requireCode false accepts an error body without $code", () => {
+  const source = (conventions: string) => `
+api: { name: a, version: 1, kind: product }
+${conventions}
+formats:
+  codeless:
+    error: { body: { message: '\${title}' } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      health: { method: get, output: Note }
+`;
+  const uses = { [`${ROUTES}/health/output`]: ref("Note") };
+
+  expect(
+    located(run(source("conventions: { errors: { requireCode: true } }"), uses).diagnostics),
+  ).toEqual([["format-error-code", "/formats/codeless/error"]]);
+  expect(
+    located(run(source("conventions: { errors: { requireCode: false } }"), uses).diagnostics),
+  ).toEqual([]);
+});
+
 test("formats and paging styles: a merge inside $as is checked against the record, without its id member", () => {
   const { diagnostics } = run(
     `

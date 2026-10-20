@@ -2,7 +2,7 @@ import { ARTEFACT_ID_PATTERN } from "@seampact/spec/config";
 import type { ContractIR } from "@seampact/spec/ir";
 import type { DescriptorSet, LinkKind } from "./descriptors.js";
 import { finishFiles } from "./finish-files.js";
-import { DEFAULT_FRAMEWORK_ROUTE_CHECK } from "./framework-route-check.js";
+import { DEFAULT_FRAMEWORK_ROUTE_CHECK, DEFAULT_HOOK_BOOT_CHECK } from "./framework-route-check.js";
 import { checkGeneratedPaths } from "./generated-paths.js";
 import { refuseUnsupportedIr } from "./ir-support-refusal.js";
 import { meetsEveryNeed, refuseUnmetLinks } from "./link-check.js";
@@ -58,6 +58,7 @@ export function defineTarget<
       links,
       artefacts,
       frameworkRoutes: structuredClone(request.frameworkRoutes ?? DEFAULT_FRAMEWORK_ROUTE_CHECK),
+      hookCheck: request.hookCheck ?? DEFAULT_HOOK_BOOT_CHECK,
       ...(request.nativeDocsDocument === undefined
         ? {}
         : { nativeDocsDocument: structuredClone(request.nativeDocsDocument) }),

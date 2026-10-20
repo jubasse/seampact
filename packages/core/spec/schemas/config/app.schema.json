@@ -58,6 +58,20 @@
         }
       }
     },
+    "warnings": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ignore": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      }
+    },
     "diff": {
       "type": "object",
       "additionalProperties": false,
@@ -438,6 +452,9 @@
                   "properties": {
                     "frameworkRoutes": {
                       "type": "boolean"
+                    },
+                    "hooks": {
+                      "enum": ["error", "warn", "off"]
                     }
                   }
                 }

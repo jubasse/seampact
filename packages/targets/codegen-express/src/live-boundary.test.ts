@@ -8,11 +8,11 @@ import {
   emitProject,
   generateReferenceProject,
   problemBody,
-  referenceErrorTitle,
   projectDirectory,
   type RawReply,
   type ReferenceIrChange,
   referenceChanges,
+  referenceErrorTitle,
   referenceNoStoreCode,
   referenceNoStoreOperation,
   referenceUnpagedList,
@@ -1021,3 +1021,159 @@ function linkExpress(project: string, expressPackage: string): void {
     "dir",
   );
 }
+
+interface HooklessAppModule {
+  startAppWithoutHooks(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  makeRouterWithoutHooks(logger?: {
+    warn(...parts: unknown[]): void;
+    error(...parts: unknown[]): void;
+  }): unknown;
+  makeRouterWithDoubleClaim(): unknown;
+}
+
+describe("the hook boot check level on Express 5", () => {
+  const expressPackage = "express";
+  const path = `/v1/channels/${CHANNEL}/tasks/${TASK}`;
+
+  async function hooklessModule(hookCheck?: "off" | "warn"): Promise<HooklessAppModule> {
+    const project = projectDirectory(import.meta.url, `live-hookless-${hookCheck ?? "error"}`);
+    const files = await generateReferenceProject(
+      project,
+      expressTarget,
+      {},
+      undefined,
+      undefined,
+      hookCheck === undefined ? {} : { hookCheck },
+    );
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+    linkExpress(project, expressPackage);
+
+    return import(copyTestApp(build, APP_SOURCE));
+  }
+
+  test(
+    "by default an api with no hook registered refuses to boot",
+    async () => {
+      const hookless = await hooklessModule();
+
+      expect(() => hookless.makeRouterWithoutHooks()).toThrow(/no authenticate hook/);
+    },
+    SETUP_TIMEOUT_MILLISECONDS,
+  );
+
+  test(
+    "hooks warn boots it and logs the missing hook through the registered logger",
+    async () => {
+      const hookless = await hooklessModule("warn");
+      const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const logger = { warn: vi.fn(), error: vi.fn() };
+
+      try {
+        expect(() => hookless.makeRouterWithoutHooks(logger)).not.toThrow();
+        expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("no authenticate hook"));
+        expect(consoleWarn).not.toHaveBeenCalled();
+      } finally {
+        consoleWarn.mockRestore();
+      }
+    },
+    SETUP_TIMEOUT_MILLISECONDS,
+  );
+
+  test.each(["warn", "off"] as const)(
+    "hooks %s still refuses a right claimed by two deciders",
+    async (level) => {
+      const hookless = await hooklessModule(level);
+
+      expect(() => hookless.makeRouterWithDoubleClaim()).toThrow(
+        /two deciders claim 'tasks.double'/,
+      );
+    },
+    SETUP_TIMEOUT_MILLISECONDS,
+  );
+
+  test(
+    "hooks off boots it, and a protected route answers 500 at request time",
+    async () => {
+      const hookless = await hooklessModule("off");
+      const app = await hookless.startAppWithoutHooks();
+      const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+      try {
+        const refused = await sendRawRequest(app, "GET", path, { headers: BEARER });
+
+        expect(refused.status).toBe(500);
+      } finally {
+        logged.mockRestore();
+        await app.close();
+      }
+    },
+    SETUP_TIMEOUT_MILLISECONDS,
+  );
+});
+
+describe("the frameworkEtag option on Express 5", () => {
+  const project = projectDirectory(import.meta.url, "live-framework-etag");
+  let app: ReferenceAppModule;
+  let server: Awaited<ReturnType<ReferenceAppModule["startReferenceApp"]>>;
+
+  beforeAll(async () => {
+    const files = await generateReferenceProject(project, expressTarget, {
+      frameworkEtag: "keep",
+    });
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+    linkExpress(project, "express");
+    app = await import(copyTestApp(build, APP_SOURCE));
+    server = await app.startReferenceApp();
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  afterAll(async () => {
+    await server?.close();
+  });
+
+  test("keep leaves the ETag an app writes on a reply the boundary did not write", async () => {
+    app.resetScenario();
+    app.scenario.answers.getTask = () => {
+      throw new app.AppReply(404, PROBLEM_MEDIA, problemBody("api.not_found", 404), "writeHead");
+    };
+
+    const reply = await sendRawRequest(server, "GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+      headers: BEARER,
+    });
+
+    expect(reply.status).toBe(404);
+    expect(reply.headers.etag).toBe('"app-etag"');
+  });
+});
+
+describe("the catchAll option on Express 5", () => {
+  const project = projectDirectory(import.meta.url, "live-catch-all");
+  let app: ReferenceAppModule;
+  let server: Awaited<ReturnType<ReferenceAppModule["startReferenceApp"]>>;
+
+  beforeAll(async () => {
+    const files = await generateReferenceProject(project, expressTarget, { catchAll: false });
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+    linkExpress(project, "express");
+    app = await import(copyTestApp(build, APP_SOURCE));
+    server = await app.startReferenceApp();
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  afterAll(async () => {
+    await server?.close();
+  });
+
+  test("false leaves an unknown path under the base path to the app, not the api's 404", async () => {
+    app.resetScenario();
+
+    const reply = await sendRawRequest(server, "GET", "/v1/unknown", { headers: BEARER });
+
+    expect(reply.status).toBe(404);
+    expect(reply.headers["content-type"] ?? "").not.toContain(PROBLEM_MEDIA);
+  });
+});

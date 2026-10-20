@@ -10,6 +10,7 @@ import {
   unexpectedError,
 } from "./contract-error.js";
 import { type ContractApi, type ContractRoute, matchesContractPath } from "./contract-route.js";
+import { runtimeLog } from "./runtime-logger.js";
 
 /** The status of a request the api does not serve. */
 export const NOT_FOUND_STATUS = 404;
@@ -45,7 +46,7 @@ export async function reportContractError(
   };
 
   if (hooks?.onUnexpectedError === undefined) {
-    console.error(
+    runtimeLog.error(
       `seampact: unexpected failure on operation '${where.operation ?? "(none)"}'`,
       error.unexpectedCause,
     );
@@ -133,5 +134,5 @@ export function clientStatusError(
 
 /** Logs a failure of a reply the boundary writes outside a framework's error path; nothing else can answer it. */
 export function logWriteFailure(api: ContractApi, error: unknown): void {
-  console.error(`seampact: writing a reply of api '${api.id}' failed`, error);
+  runtimeLog.error(`seampact: writing a reply of api '${api.id}' failed`, error);
 }

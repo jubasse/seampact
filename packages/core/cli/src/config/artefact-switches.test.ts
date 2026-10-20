@@ -90,10 +90,24 @@ test.each([false, true])(
 
     expect(selectArtefacts(entry, NODE_SERVER_TARGET)).toEqual({
       status: "selected",
-      artefacts: new Set(["boundary"]),
+      artefacts: new Set(["boundary", "index"]),
     });
   },
 );
+
+test("switches the api index off for a Node server target", () => {
+  const entry = {
+    id: "server",
+    use: "@seampact/codegen-express",
+    api: "tasks",
+    artefacts: { index: false },
+  };
+
+  expect(selectArtefacts(entry, NODE_SERVER_TARGET)).toEqual({
+    status: "selected",
+    artefacts: new Set(["boundary"]),
+  });
+});
 
 test("refuses the boot check as a boolean for a target that declares no boot check", () => {
   expect(select({ bootCheck: false }, [{ id: "boundary", defaultOn: true }])).toMatchObject({
@@ -158,5 +172,20 @@ test("refuses an entry with every artefact off", () => {
         where: "entry 'server'",
       },
     ],
+  });
+});
+
+test("leaves an artefact that follows its needs off with them, unless the entry writes it on", () => {
+  const declared: readonly ArtefactDeclaration[] = [
+    { id: "boundary", defaultOn: true },
+    { id: "validators", defaultOn: true },
+    { id: "index", defaultOn: true, needs: ["boundary"], leftOffWithoutNeeds: true },
+  ];
+  const selection = select({ boundary: false }, declared);
+
+  expect(selection.status === "selected" && [...selection.artefacts]).toEqual(["validators"]);
+  expect(select({ boundary: false, index: true }, declared)).toMatchObject({
+    status: "refused",
+    problems: [{ code: "config.artefacts.needed" }],
   });
 });

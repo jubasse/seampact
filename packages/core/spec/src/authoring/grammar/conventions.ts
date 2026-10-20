@@ -194,6 +194,30 @@ export function conventionsDefs(): Record<string, JsonSchema> {
             },
           }),
         ),
+        service: kw(
+          S,
+          object({
+            props: {
+              allowPublic: kw(
+                S,
+                { type: "boolean" },
+                "true: a service api may declare public or optional-auth routes; false (the default) refuses them.",
+              ),
+            },
+          }),
+        ),
+        access: kw(
+          S,
+          object({
+            props: {
+              guestRule: kw(
+                S,
+                oneOfValues("refuse", "allow"),
+                "allow: a right required on a public or optional-auth route needs no guest reason; refuse (the default) requires one.",
+              ),
+            },
+          }),
+        ),
         errors: kw(
           A2(11),
           object({
@@ -201,6 +225,11 @@ export function conventionsDefs(): Record<string, JsonSchema> {
               pattern: kw(S, str({ minLength: 1 }), "A pattern every error code must also match."),
               every: kw(A2(11), ref("common", "errorCodes"), "Codes attached to every operation."),
               reach: kw(A2(11), oneOfValues("subtree", "resource")),
+              requireCode: kw(
+                A2(11),
+                { type: "boolean" },
+                "false: a format error body may omit $code; true (the default) refuses one that writes none.",
+              ),
               derived: kw(
                 A2(11),
                 map({

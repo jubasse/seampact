@@ -10,7 +10,7 @@ import type { GeneratedFile } from "./target.js";
 const BYTE_ORDER_MARK = "﻿";
 
 const HAND_EDIT_FIX =
-  "Move the hand-written code next to the generated files, then delete the edited file and generate again.";
+  "Move the hand-written code next to the generated files, then delete the edited file and generate again, or run `seampact generate --force` to overwrite it.";
 
 export interface WrittenFiles {
   status: "written";
@@ -30,6 +30,16 @@ export interface PlannedWrite {
   readonly removable: readonly string[];
 }
 
+// What the writer does with a generated file that was edited by hand since it was written: refuse the whole
+// write (the default), or write over it.
+export type HandEditPolicy = "refuse" | "overwrite";
+
+export interface PlanWriteOptions {
+  readonly onHandEdit: HandEditPolicy;
+}
+
+const REFUSE_HAND_EDITS: PlanWriteOptions = { onHandEdit: "refuse" };
+
 export type PlanWriteOutcome = { status: "planned"; write: PlannedWrite } | Refused;
 
 interface PlannedFile {
@@ -47,8 +57,9 @@ export async function writeGeneratedFiles(
   outDir: string,
   owner: string,
   files: readonly GeneratedFile[],
+  options: PlanWriteOptions = REFUSE_HAND_EDITS,
 ): Promise<WriteOutcome> {
-  const planned = await planGeneratedWrite(outDir, owner, files);
+  const planned = await planGeneratedWrite(outDir, owner, files, options);
 
   if (planned.status === "refused") return planned;
 
@@ -61,6 +72,7 @@ export async function planGeneratedWrite(
   outDir: string,
   owner: string,
   files: readonly GeneratedFile[],
+  options: PlanWriteOptions = REFUSE_HAND_EDITS,
 ): Promise<PlanWriteOutcome> {
   const checked = checkGeneratedPaths(files);
 
@@ -101,7 +113,12 @@ export async function planGeneratedWrite(
   const removable: string[] = [];
 
   for (const file of planned) {
-    const state = await existingFileState(rootDir, file.path, manifest.hashByPath.get(file.path));
+    const state = await existingFileState(
+      rootDir,
+      file.path,
+      manifest.hashByPath.get(file.path),
+      options,
+    );
 
     if (state.status === "refused") refusals.push(state.refusal);
 
@@ -109,7 +126,7 @@ export async function planGeneratedWrite(
   }
 
   for (const path of stalePaths) {
-    const state = await existingFileState(rootDir, path, manifest.hashByPath.get(path));
+    const state = await existingFileState(rootDir, path, manifest.hashByPath.get(path), options);
 
     if (state.status === "refused") refusals.push(state.refusal);
 
@@ -201,6 +218,7 @@ async function existingFileState(
   rootDir: string,
   path: string,
   recordedSha256: string | undefined,
+  options: PlanWriteOptions,
 ): Promise<ExistingFileState> {
   const filePath = join(rootDir, path);
 
@@ -234,7 +252,7 @@ async function existingFileState(
 
   const sha256 = sha256Of(await readFile(filePath));
 
-  if (sha256 !== recordedSha256) {
+  if (sha256 !== recordedSha256 && options.onHandEdit === "refuse") {
     return refusedState(
       "writer.file.edited",
       `'${filePath}' was edited by hand since it was generated, so it is not overwritten or removed.`,

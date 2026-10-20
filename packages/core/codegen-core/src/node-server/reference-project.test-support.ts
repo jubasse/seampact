@@ -9,7 +9,7 @@ import type {
   Template,
 } from "@seampact/spec/ir";
 import ts from "typescript";
-import type { FrameworkRouteCheck } from "../framework-route-check.js";
+import type { FrameworkRouteCheck, HookBootCheck } from "../framework-route-check.js";
 import type { NativeDocsDocument } from "../native-docs-document.js";
 import type { GeneratedFile, Target } from "../target.js";
 
@@ -358,10 +358,11 @@ export function referenceChanges(...changes: readonly ReferenceIrChange[]): Refe
 /** What a test adds to the server target's request: its artefacts, and the document `nativeDocs` follows per api. */
 export interface ReferenceServerRequest {
   readonly artefacts?: ReadonlySet<string>;
+  readonly hookCheck?: HookBootCheck;
   readonly nativeDocsDocument?: (api: string) => NativeDocsDocument;
 }
 
-const BOUNDARY_ONLY: ReadonlySet<string> = new Set(["boundary"]);
+const BOUNDARY_ONLY: ReadonlySet<string> = new Set(["boundary", "index"]);
 
 /**
  * Writes both reference apis' generated trees into a fresh project; returns every file written. The framework-route
@@ -551,6 +552,7 @@ async function generateApi(
         links: linksOf(providers, ir, api),
         artefacts: serverRequest.artefacts ?? BOUNDARY_ONLY,
         frameworkRoutes,
+        ...(serverRequest.hookCheck === undefined ? {} : { hookCheck: serverRequest.hookCheck }),
         ...(serverRequest.nativeDocsDocument === undefined
           ? {}
           : { nativeDocsDocument: serverRequest.nativeDocsDocument(api) }),

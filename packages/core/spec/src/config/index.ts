@@ -23,6 +23,8 @@ export {
   FRAMEWORK_DOCS_SWITCHES,
   type FrameworkDocsSwitch,
   type GitBundleSource,
+  HOOK_BOOT_CHECK_LEVELS,
+  type HookBootCheckLevel,
   type OperationsFilter,
   type PackageBundleSource,
   type PathSource,
@@ -56,3 +58,4 @@ export {
   ROOT_CONFIG_SCHEMA,
   type RootConfig,
 } from "./root-config.js";
+export type { AppWarnings } from "./warnings-config.js";

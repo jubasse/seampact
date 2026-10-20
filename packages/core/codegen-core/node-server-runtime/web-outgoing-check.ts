@@ -5,6 +5,7 @@
 // the Web-standard server targets as is.
 import type { BoundaryContext } from "./boundary-context.js";
 import { type ContractReply, renderContractReply, unexpectedError } from "./contract-error.js";
+import type { ContractApi } from "./contract-route.js";
 import type { ReportedRequest } from "./error-reply.js";
 import { settleIdempotency } from "./idempotency.js";
 import {
@@ -27,6 +28,7 @@ import {
   ETAG_HEADER,
   WEAK_ETAG_PREFIX,
 } from "./reply-headers.js";
+import { runtimeLog } from "./runtime-logger.js";
 import { IDENTITY_ENCODING } from "./transport-checks.js";
 import {
   type ByteStream,
@@ -87,7 +89,7 @@ export async function checkOutgoingResponse(
   const outgoing: OutgoingReply = {
     status: response.status,
     statusText: response.statusText,
-    headers: appReplyHeaders(response, own),
+    headers: appReplyHeaders(response, own, context.api.frameworkEtag),
   };
 
   // Hono rebuilds the boundary's `Response` around the same body when a middleware sets a header after `next()`.
@@ -118,11 +120,17 @@ export async function checkOutgoingResponse(
 // The app's headers with a foreign ETag stripped and the boundary's own names set again, `Vary` merged. The
 // boundary's ETag made weak stays: a compressing middleware (`hono/compress`) weakens it for the encoded body, and
 // the boundary's If-None-Match check accepts the weak form.
-function appReplyHeaders(response: Response, own: BoundaryResponse | undefined): Headers {
+function appReplyHeaders(
+  response: Response,
+  own: BoundaryResponse | undefined,
+  frameworkEtag: ContractApi["frameworkEtag"],
+): Headers {
   const headers = new Headers(response.headers);
   const ownEtag = own?.response.headers.get(ETAG_HEADER) ?? null;
 
-  if (!isOwnEtag(headers.get(ETAG_HEADER), ownEtag)) headers.delete(ETAG_HEADER);
+  if (frameworkEtag === "strip" && !isOwnEtag(headers.get(ETAG_HEADER), ownEtag)) {
+    headers.delete(ETAG_HEADER);
+  }
 
   if (own !== undefined) restoreReplyNames(headers, own.reply.headers);
 
@@ -254,7 +262,7 @@ async function settleFromStream(
       recordedReply(outgoing, read.kind === "complete" ? read.bytes : read.held),
     );
   } catch (error) {
-    console.error(
+    runtimeLog.error(
       `seampact: the reply of operation '${context.route.id}' could not be read for its idempotency record; the key is released.`,
       error,
     );

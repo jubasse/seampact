@@ -25,8 +25,8 @@ import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
+  enforcedHookBootProblems,
   type HooksRequirement,
-  hookBootProblems,
   type RegisteredHooks,
   resolvedHooks,
 } from "./node-server/boundary-hooks.js";
@@ -73,6 +73,7 @@ import {
   ownBodyParserRefusal,
   reportedRequest,
 } from "./node-server/node-request.js";
+import { runtimeLog, useRuntimeLogger } from "./node-server/runtime-logger.js";
 import {
   bodySizeRefusal,
   mediaTypeRefusal,
@@ -108,9 +109,11 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
   function router<Operation extends string>(
     options: RegistrationOptions<Hooks, Handlers, Operation> & HooksRequirement<Hooks>,
   ): Router {
+    useRuntimeLogger(options.logger);
+
     const hooks = resolvedHooks(options.hooks);
     const problems = [
-      ...hookBootProblems(api, hooks),
+      ...enforcedHookBootProblems(api, hooks),
       ...registrationProblems(api, bindings, options, generated),
     ];
 
@@ -133,11 +136,14 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
       );
     }
 
-    for (const path of new Set(api.routes.map((route) => route.path))) {
-      contractRouter.all(routePattern(path), unservedMethod(path, hooks));
+    if (api.catchAll) {
+      for (const path of new Set(api.routes.map((route) => route.path))) {
+        contractRouter.all(routePattern(path), unservedMethod(path, hooks));
+      }
+
+      contractRouter.use(unservedBasePath(hooks));
     }
 
-    contractRouter.use(unservedBasePath(hooks));
     registerBasePathClaim(contractRouter, api);
 
     contractRouter.use(contractErrorMiddleware);
@@ -285,7 +291,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
 
       if (!warnedGlobalParser.has(route.id)) {
         warnedGlobalParser.add(route.id);
-        console.warn(
+        runtimeLog.warn(
           `seampact: an app-wide body parser read the body of '${route.id}' before the router of api '${api.id}'; mount the router before it, or give it verify: keepRawBody and limit: LARGEST_BODY_LIMIT.`,
         );
       }
@@ -356,7 +362,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
         `${bootProblemsMessage(api, problems)}\nThe check ran on the first request, since the app did not call checkFrameworkRoutes(app) before listening; every request answers 500 until the app restarts.`,
       );
 
-      console.error(cause.message);
+      runtimeLog.error(cause.message);
       respondDetached(response, hooks, route, unexpectedError(route, cause), reported);
     };
   }
@@ -444,7 +450,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
       `seampact: the router of api '${api.id}' is mounted under '${request.baseUrl}', which differs from the contract's empty mount; mount it at the app's root with app.use(router).`,
     );
 
-    console.error(cause.message);
+    runtimeLog.error(cause.message);
     respondDetached(response, hooks, route, unexpectedError(route, cause), reported);
   }
 
@@ -484,7 +490,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
 
     if (routersMade.count === 1) return routersMade.lastHooks;
 
-    console.error(noOwningRouterMessage(api, routersMade.count));
+    runtimeLog.error(noOwningRouterMessage(api, routersMade.count));
 
     return undefined;
   }
@@ -538,6 +544,8 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
       error === undefined &&
       claimsAlone(api, Reflect.get(request, "app"), reported.path)
     ) {
+      if (!api.catchAll) return false;
+
       respondUnserved(response, owningHooks(request), reported);
 
       return true;
@@ -549,6 +557,8 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
       error === undefined &&
       matchContractRoute(api, reported.method, reported.path) === undefined
     ) {
+      if (!api.catchAll) return false;
+
       respondUnserved(response, owningHooks(request), reported);
 
       return true;

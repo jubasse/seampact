@@ -40,13 +40,17 @@ export const OWN_VALIDATORS_ARTEFACT = "validators";
 /** The artefact of a target whose framework writes an OpenAPI document of its own, completed with the contract. */
 export const NATIVE_DOCS_ARTEFACT = "nativeDocs";
 
+/** The artefact of the api `index` module, which re-exports the framework module, the handlers and the hooks. */
+export const INDEX_ARTEFACT = "index";
+
 export type NodeServerArtefact =
   | BoundaryArtefact
+  | typeof INDEX_ARTEFACT
   | typeof OWN_VALIDATORS_ARTEFACT
   | typeof NATIVE_DOCS_ARTEFACT;
 
 /** The boot checks a Node server target generates that its app config entry may tune. */
-export const NODE_SERVER_BOOT_CHECKS: readonly TunableBootCheck[] = ["frameworkRoutes"];
+export const NODE_SERVER_BOOT_CHECKS: readonly TunableBootCheck[] = ["frameworkRoutes", "hooks"];
 
 /** The validators a target writes itself: files relative to the validators directory, and what they provide. */
 export interface OwnValidators {
@@ -79,6 +83,8 @@ export interface NodeServerPlacement {
   ): string;
   /** The docs of the framework's own OpenAPI generator, written when the `nativeDocs` artefact is on; absent when it has none. */
   readonly nativeDocs?: NativeDocsPlacement;
+  /** True for a placement that compresses its own replies, which takes the `compression` option. */
+  readonly compressesReplies?: boolean;
   /** The shared runtime the placement imports: `node` (the default) or `web` for a Web-standard placement. */
   readonly runtimeProfile?: ServerRuntimeProfile;
   /**
@@ -135,6 +141,12 @@ export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target
       },
       artefacts: [
         { id: BOUNDARY_ARTEFACT, defaultOn: true },
+        {
+          id: INDEX_ARTEFACT,
+          defaultOn: true,
+          needs: [BOUNDARY_ARTEFACT],
+          leftOffWithoutNeeds: true,
+        },
         ...(ownLibrary === undefined
           ? []
           : [{ id: OWN_VALIDATORS_ARTEFACT, defaultOn: true } as const]),
@@ -156,7 +168,10 @@ export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target
       provides: {},
     },
     format: targetPackage.format,
-    parseOptions: parseNodeServerOptions,
+    parseOptions: (raw) =>
+      parseNodeServerOptions(raw, {
+        compression: targetPackage.placement.compressesReplies === true,
+      }),
     generate: (input) => nodeServerBoundaryFiles(input, targetPackage.placement),
   });
 }
@@ -286,6 +301,10 @@ function boundaryFiles(
       runtimeModule: `./${runtimeDirectory}/contract-route.js`,
       withItemValidators: options.bodyValidation,
       frameworkRoutes: input.frameworkRoutes,
+      hookCheck: input.hookCheck,
+      compression: options.compression,
+      frameworkEtag: options.frameworkEtag,
+      catchAll: options.catchAll,
     },
     refusals,
     warnings,
@@ -321,17 +340,21 @@ function boundaryFiles(
     { path: moduleFile(HOOKS_MODULE), contents: hooks },
     { path: moduleFile(placement.frameworkModule), contents: framework },
     ...docs,
-    {
-      path: moduleFile(INDEX_MODULE),
-      contents: apiIndexSource([
-        { module: placement.frameworkModule },
-        ...(docs.length === 0 || placement.nativeDocs === undefined
-          ? []
-          : [{ module: placement.nativeDocs.docsModule }]),
-        { module: HANDLERS_MODULE },
-        { module: HOOKS_MODULE },
-      ]),
-    },
+    ...(input.artefacts.has(INDEX_ARTEFACT)
+      ? [
+          {
+            path: moduleFile(INDEX_MODULE),
+            contents: apiIndexSource([
+              { module: placement.frameworkModule },
+              ...(docs.length === 0 || placement.nativeDocs === undefined
+                ? []
+                : [{ module: placement.nativeDocs.docsModule }]),
+              { module: HANDLERS_MODULE },
+              { module: HOOKS_MODULE },
+            ]),
+          },
+        ]
+      : []),
   ];
 
   return { status: "generated", files, warnings };

@@ -4,6 +4,7 @@ import {
   type AppChecks,
   type AppConfig,
   type AppOpenApi,
+  type AppWarnings,
   DEFAULT_OUT_DIR,
   type DiffConfig,
   ROOT_CONFIG_MARKER_KEY,
@@ -46,6 +47,8 @@ export interface LoadedAppConfig {
   checks?: AppChecks;
   // The app's `diff` settings as it writes them; absent when the app does not write the key.
   diff?: DiffConfig;
+  // The app's `warnings` as it writes them; absent when the app does not write the key.
+  warnings?: AppWarnings;
   // The root config folded in, for an app its root lists.
   rootFile?: string;
 }
@@ -152,6 +155,8 @@ function resolveAppConfig(file: string, parsed: ParsedConfig, config: AppConfig)
   const openapi = config.openapi === undefined ? {} : { openapi: structuredClone(config.openapi) };
   const checks = config.checks === undefined ? {} : { checks: structuredClone(config.checks) };
   const diff = config.diff === undefined ? {} : { diff: structuredClone(config.diff) };
+  const warnings =
+    config.warnings === undefined ? {} : { warnings: structuredClone(config.warnings) };
   const loaded: LoadedAppConfig = {
     file,
     outDir,
@@ -161,6 +166,7 @@ function resolveAppConfig(file: string, parsed: ParsedConfig, config: AppConfig)
     ...openapi,
     ...checks,
     ...diff,
+    ...warnings,
   };
 
   return { status: "read", app: { parsed, config, loaded } };

@@ -21,7 +21,7 @@ export interface RootConfig {
 export const ROOT_CONFIG_MARKER_KEY = "apps";
 
 // The keys of an app config a root config never takes: they belong to one app.
-export const APP_ONLY_KEYS = ["outDir", "targets", "diff"] as const;
+export const APP_ONLY_KEYS = ["outDir", "targets", "diff", "warnings"] as const;
 
 export const ROOT_CONFIG_SCHEMA: JsonSchema = {
   $schema: JSON_SCHEMA_DIALECT,

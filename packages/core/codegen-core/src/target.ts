@@ -1,17 +1,23 @@
 import type { ContractIR, IrSupport } from "@seampact/spec/ir";
 import type { DescriptorSet, LinkKind, ProvidedDescriptors } from "./descriptors.js";
-import type { FrameworkRouteCheck, TunableBootCheck } from "./framework-route-check.js";
+import type {
+  FrameworkRouteCheck,
+  HookBootCheck,
+  TunableBootCheck,
+} from "./framework-route-check.js";
 import type { GenerateWarning } from "./generate-warning.js";
 import type { LinkNeeds, LinkOffers, LinkSet, Links } from "./links.js";
 import type { NativeDocsDocument } from "./native-docs-document.js";
 import type { Refused } from "./refusal.js";
 
 // One artefact a target can emit, whether it is emitted when the app config does not switch it, and the artefacts
-// it cannot be emitted without (the app config cannot switch those off while it is on).
+// it cannot be emitted without (the app config cannot switch those off while it is on). With `leftOffWithoutNeeds`,
+// an artefact the app config does not write is left off, not refused, when a need is off.
 export interface ArtefactDeclaration<Artefact extends string = string> {
   id: Artefact;
   defaultOn: boolean;
   needs?: readonly Artefact[];
+  leftOffWithoutNeeds?: boolean;
 }
 
 // What a target generates for an app: a server serves the contract's routes, a client calls them, a provider gives
@@ -61,6 +67,7 @@ export interface GenerateInput<
   links: Links<Consumed, Optional>;
   artefacts: ReadonlySet<Artefact>;
   frameworkRoutes: FrameworkRouteCheck;
+  hookCheck: HookBootCheck;
   /** The api's document the framework's docs follow; present exactly when the `nativeDocs` artefact is on. */
   nativeDocsDocument?: NativeDocsDocument;
 }
@@ -132,6 +139,8 @@ export interface GenerateRequest {
   artefacts: ReadonlySet<string>;
   /** The entry's framework-route check; the default check when absent. */
   frameworkRoutes?: FrameworkRouteCheck;
+  /** The entry's hook boot check level; `error` when absent. */
+  hookCheck?: HookBootCheck;
   /** The parsed seampact document the `nativeDocs` artefact follows; the target refuses `nativeDocs` without it. */
   nativeDocsDocument?: NativeDocsDocument;
 }

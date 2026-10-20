@@ -22,8 +22,10 @@ export type {
 } from "./descriptors.js";
 export {
   DEFAULT_FRAMEWORK_ROUTE_CHECK,
+  DEFAULT_HOOK_BOOT_CHECK,
   type FrameworkRouteAllowance,
   type FrameworkRouteCheck,
+  type HookBootCheck,
   type TunableBootCheck,
 } from "./framework-route-check.js";
 export { type GenerateWarning, warnLeftToHandler } from "./generate-warning.js";
@@ -70,7 +72,9 @@ export { TARGET_ROLES } from "./target.js";
 export { refuseUnknownValue } from "./unknown-value.js";
 export {
   commitGeneratedWrite,
+  type HandEditPolicy,
   type PlannedWrite,
+  type PlanWriteOptions,
   type PlanWriteOutcome,
   planGeneratedWrite,
   type WriteOutcome,

@@ -41,7 +41,8 @@ One entry per name. Write the keys of one form.
 | `link` | map | none | The entries this one builds on: `validators: validators`. |
 | `options` | map | none | The target's own settings. |
 | `operations.include`, `operations.exclude` | list of strings | all operations | Keep or drop operations by tag or operation id. |
-| `artefacts` | map of booleans | the target's own | Switch each generated part on or off. `bootCheck` also takes `{ frameworkRoutes: false }`. |
+| `artefacts` | map of booleans | the target's own | Switch each generated part on or off. `bootCheck` also takes `{ frameworkRoutes: false }`. `index: false` skips the api `index` module of a Node server target. |
+| `artefacts.bootCheck.hooks` | `error`, `warn`, `off` | `error` | What a Node server does at boot when a hook the contract needs is not registered: refuse to start, log and start, or start silently. A route whose hook is missing answers 500 on every request, whatever the level; an output field right with a missing decider runs the handler first, then answers 500. A right claimed by two deciders always refuses to start. `bootCheck: false` does not change it. |
 | `allowUntested` | list of strings | none | Accept a framework major that is not tested: `nestjs@13`. |
 | `frameworkRoutes` | list | none | Server targets. Routes outside the contract that the boot check accepts: `path`, `reason`, optional `method`. |
 | `frameworkDocs` | `keep` or `off` | `keep` | Server targets. `off` drops the framework's own document. |
@@ -69,6 +70,12 @@ An api that declares `documents` maps each document id to a path or to these opt
 | `checks.generated` | `error`, `warning`, `disabled` | `error` | Generated files that differ from the contract. |
 | `checks.openapi` | `error`, `warning`, `disabled` | `error` | OpenAPI documents that differ. |
 | `checks.matrix` | `error`, `warning` | `warning` | A framework version seampact has not tested. |
+
+## Warnings
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `warnings.ignore` | list of strings | none | Generate warnings to silence, by form, such as `paging.sortKeys`. A warning is also silenced by its full code (`paging.sortKeys.handler`). The code of a warning is printed with it. It covers the warnings a target writes, not the compatibility warnings; an entry that matches no warning is ignored. |
 
 ## Diff
 

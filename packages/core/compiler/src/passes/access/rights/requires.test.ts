@@ -174,6 +174,20 @@ describe("requirements shared by several routes", () => {
     ]);
   });
 
+  test("conventions.access.guestRule: allow accepts a right without guest reason on a public route", () => {
+    const { draft, diagnostics } = run(
+      `    access: { public: The shop is open. }
+    requires: [{ right: shop.open }]
+    routes:
+      first: { method: get }
+`,
+      "conventions: { access: { guestRule: allow } }\n",
+    );
+
+    expect(diagnostics).toEqual([]);
+    expect(draft.operations[0]?.requires?.[0]).toMatchObject({ kind: "right", right: "shop.open" });
+  });
+
   test("absent params and empty params are the same requirement", () => {
     const { diagnostics } = run(`    routes:
       refund: { method: post, requires: [{ rule: note }, { rule: note, params: {} }] }

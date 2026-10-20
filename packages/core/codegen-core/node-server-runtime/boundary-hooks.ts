@@ -13,6 +13,7 @@ import type {
 } from "@seampact/hooks";
 import { ContractError, unexpectedError } from "./contract-error.js";
 import type { ContractApi, ContractRoute } from "./contract-route.js";
+import { runtimeLog } from "./runtime-logger.js";
 
 export type AnyAuthenticateHook = AuthenticateHook<
   AuthenticateRequest<object, object>,
@@ -122,7 +123,7 @@ export async function reportUnexpected(
   try {
     await hook(exceptionOrReply, context);
   } catch (error) {
-    console.error(
+    runtimeLog.error(
       `seampact: onUnexpectedError failed for operation '${context.operation ?? "(none)"}' of api '${context.api}'`,
       error,
     );
@@ -136,9 +137,50 @@ export interface BootProblem {
   readonly fix: string;
 }
 
-/** Every missing or doubly claimed hook of the api, listed at once. */
-export function hookBootProblems(api: ContractApi, hooks: BoundaryHooks): BootProblem[] {
-  const problems: BootProblem[] = [...duplicateClaims(hooks)];
+/** The part of an api the hook boot check reads. */
+export interface HookCheckedApi {
+  readonly id: string;
+  readonly hookCheck: ContractApi["hookCheck"];
+  readonly routes: readonly HookCheckedRoute[];
+}
+
+interface HookCheckedRoute {
+  readonly id: string;
+  readonly access:
+    | { readonly kind: "public" }
+    | { readonly kind: "identity"; readonly identity: string };
+  readonly requires: readonly { readonly name: string }[];
+  readonly fieldRights: readonly { readonly right: string }[];
+  readonly scopes: readonly { readonly scope: string }[];
+  readonly idempotency?: unknown;
+}
+
+/**
+ * The problems that stop the boot, by the api's `hookCheck`. A doubly claimed right is refused at every level, as
+ * which decider authorizes it would depend on registration order. A missing hook stops the boot at `error`; at `warn`
+ * it is logged and at `off` ignored, and a route whose hook is missing then answers the derived unexpected-error reply.
+ */
+export function enforcedHookBootProblems(api: HookCheckedApi, hooks: BoundaryHooks): BootProblem[] {
+  const claims = withoutRepeatedProblems(duplicateClaims(hooks));
+
+  if (api.hookCheck === "off") return claims;
+
+  const missing = missingHookProblems(api, hooks);
+
+  if (api.hookCheck === "error") return [...claims, ...missing];
+
+  if (missing.length > 0) {
+    runtimeLog.warn(bootProblemsMessage(api, missing, HOOKS_WARN_HEADING));
+  }
+
+  return claims;
+}
+
+const HOOKS_WARN_HEADING =
+  "starts with hooks missing ('artefacts.bootCheck.hooks: warn'); the routes that need them answer 500:";
+
+function missingHookProblems(api: HookCheckedApi, hooks: BoundaryHooks): BootProblem[] {
+  const problems: BootProblem[] = [];
 
   for (const route of api.routes) {
     if (
@@ -184,7 +226,7 @@ export function hookBootProblems(api: ContractApi, hooks: BoundaryHooks): BootPr
   return withoutRepeatedProblems(problems);
 }
 
-function requirementNames(route: ContractRoute): string[] {
+function requirementNames(route: HookCheckedRoute): string[] {
   return [
     ...route.requires.map((requirement) => requirement.name),
     ...route.fieldRights.map((fieldRight) => fieldRight.right),
@@ -239,11 +281,15 @@ function withoutRepeatedProblems(problems: readonly BootProblem[]): BootProblem[
 }
 
 /** The boot check's message: every problem with its operation and fix. */
-export function bootProblemsMessage(api: ContractApi, problems: readonly BootProblem[]): string {
+export function bootProblemsMessage(
+  api: Pick<ContractApi, "id">,
+  problems: readonly BootProblem[],
+  heading = "cannot start:",
+): string {
   const lines = problems.map(
     (problem) =>
       `- ${problem.operation === undefined ? "" : `operation '${problem.operation}': `}${problem.problem}; fix: ${problem.fix}.`,
   );
 
-  return `seampact: the api '${api.id}' cannot start:\n${lines.join("\n")}`;
+  return `seampact: the api '${api.id}' ${heading}\n${lines.join("\n")}`;
 }

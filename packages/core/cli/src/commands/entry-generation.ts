@@ -6,7 +6,11 @@ import type {
 } from "@seampact/codegen-core";
 import type { CheckLevel, TargetEntry } from "@seampact/spec/config";
 import { type CliProblem, entryWhere, problemFromRefusal } from "../cli-problem.js";
-import { NATIVE_DOCS_ARTEFACT, type PlannedAppDocument } from "../config/index.js";
+import {
+  hookCheckLevelOf,
+  NATIVE_DOCS_ARTEFACT,
+  type PlannedAppDocument,
+} from "../config/index.js";
 import type { AppPlan } from "./app-plan.js";
 import { DEFAULT_DRIFT_CHECK_LEVEL } from "./drift-level.js";
 import { linksOf, type PlannedApi, type PlannedEntry, pairedApi } from "./entry-links.js";
@@ -51,6 +55,7 @@ export async function generateEntries(
         describe,
         entryArtefacts(artefacts, consumer.entry.id),
         appDocuments,
+        plan.config.warnings?.ignore ?? [],
       );
 
       if (generated.status === "refused") problems.push(...generated.problems);
@@ -68,6 +73,7 @@ async function generateApi(
   describe: Describe,
   artefacts: ReadonlySet<string>,
   appDocuments: readonly PlannedAppDocument[],
+  ignoredWarningForms: readonly string[],
 ): Promise<Step<GeneratedApi>> {
   const { entry, target } = consumer;
   const links = buildLinks(consumer, plannedApi, byId, describe);
@@ -86,6 +92,7 @@ async function generateApi(
     links: links.value,
     artefacts: new Set(artefacts),
     frameworkRoutes: frameworkRouteCheckOf(entry),
+    hookCheck: hookCheckLevelOf(entry.artefacts),
     ...(nativeDocs === undefined ? {} : { nativeDocsDocument: nativeDocs.value }),
   });
 
@@ -105,9 +112,16 @@ async function generateApi(
       api: plannedApi.api,
       root: plannedApi.root,
       files: outcome.files,
-      warnings: outcome.warnings ?? [],
+      warnings: (outcome.warnings ?? []).filter(
+        (warning) => !isIgnoredWarning(warning, ignoredWarningForms),
+      ),
     },
   };
+}
+
+// A warning is silenced by its code or by its form: the code without the `.handler` its writer appends.
+function isIgnoredWarning(warning: GenerateWarning, ignoredForms: readonly string[]): boolean {
+  return ignoredForms.some((form) => warning.code === form || warning.code === `${form}.handler`);
 }
 
 function entryArtefacts(

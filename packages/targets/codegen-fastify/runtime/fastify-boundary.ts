@@ -28,8 +28,8 @@ import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
+  enforcedHookBootProblems,
   type HooksRequirement,
-  hookBootProblems,
   type RegisteredHooks,
   resolvedHooks,
 } from "./node-server/boundary-hooks.js";
@@ -86,6 +86,7 @@ import {
   pathnameOf,
   reportedRequest,
 } from "./node-server/node-request.js";
+import { runtimeLog, useRuntimeLogger } from "./node-server/runtime-logger.js";
 import {
   bodySizeRefusal,
   charsetRefusal,
@@ -151,9 +152,11 @@ export function createFastifyBoundary<
     fastify,
     options: PluginOptions,
   ): Promise<void> => {
+    useRuntimeLogger(options.logger);
+
     const hooks = resolvedHooks(options.hooks);
     const problems = [
-      ...hookBootProblems(api, hooks),
+      ...enforcedHookBootProblems(api, hooks),
       ...registrationProblems(api, bindings, options, generated),
       ...instanceProblems(fastify),
     ];
@@ -173,7 +176,7 @@ export function createFastifyBoundary<
 
     for (const route of api.routes) registerRoute(fastify, route, options, hooks);
 
-    registerUnservedBasePaths(fastify, hooks);
+    if (api.catchAll) registerUnservedBasePaths(fastify, hooks);
   };
 
   // Every method under each base path, below the contract routes, which find-my-way matches first: a path no route
@@ -291,7 +294,7 @@ export function createFastifyBoundary<
 
     if (unbounded.length === 0) return;
 
-    console.warn(
+    runtimeLog.warn(
       `seampact: the path params ${[...new Set(unbounded)].join(", ")} of api '${api.id}' declare no maxLength and are not uuids, so a value longer than the router's maxParamLength answers 414; route it through renderPreRoutingError in frameworkErrors to answer it in the api's format.`,
     );
   }
@@ -599,11 +602,12 @@ export function createFastifyBoundary<
 
     reply.hijack();
 
-    if (compressingServers.has(reply.server.server)) {
+    if (api.compression !== "off" && compressingServers.has(reply.server.server)) {
+      const { thresholdBytes } = api.compression;
       const acceptEncoding = headerValue(reply.request.headers, ACCEPT_ENCODING_HEADER);
 
       encodeBoundaryReplies(reply.raw, (contractReply) =>
-        compressedReply(contractReply, acceptEncoding),
+        compressedReply(contractReply, acceptEncoding, thresholdBytes),
       );
     }
 
@@ -691,6 +695,8 @@ export function createFastifyBoundary<
       error === undefined &&
       claimsBasePathAlone(api, basePathClaimsOf(request.server.server), reported.path)
     ) {
+      if (!api.catchAll) return false;
+
       respondUnserved(reply, registered.hooks, reported);
 
       return true;
@@ -702,6 +708,8 @@ export function createFastifyBoundary<
       error === undefined &&
       matchContractRoute(api, reported.method, reported.path) === undefined
     ) {
+      if (!api.catchAll) return false;
+
       respondUnserved(reply, registered.hooks, reported);
 
       return true;

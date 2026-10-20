@@ -8,6 +8,7 @@ import {
   SOURCES_SCHEMA,
 } from "./config-schema-parts.js";
 import { APP_OPENAPI_SCHEMA, APP_OPENAPI_SCHEMA_DEFS, type AppOpenApi } from "./openapi-config.js";
+import { APP_WARNINGS_SCHEMA, type AppWarnings } from "./warnings-config.js";
 
 // The app config, `seampact.config.yaml` (ADR 0011 "The app config"), in the keys the Node CLI reads today. The
 // other keys of ADR 0011 are refused by name by the CLI until the lane that brings them lands.
@@ -27,6 +28,8 @@ export interface AppConfig {
   openapi?: AppOpenApi;
   checks?: AppChecks;
   diff?: DiffConfig;
+  // The generate warnings the app silences, by form.
+  warnings?: AppWarnings;
 }
 
 // How `seampact diff` gates a release under `compat.policy: additive-only` (FR-13); the contract never sets it.
@@ -118,7 +121,13 @@ export interface ArtefactSwitches {
 
 export interface BootCheckSwitches {
   frameworkRoutes?: boolean;
+  // How the boot check treats a hook the contract needs and the app did not register; `error` when absent.
+  hooks?: HookBootCheckLevel;
 }
+
+export const HOOK_BOOT_CHECK_LEVELS = ["error", "warn", "off"] as const;
+
+export type HookBootCheckLevel = (typeof HOOK_BOOT_CHECK_LEVELS)[number];
 
 // The key `bootCheck` takes in its object form.
 export const BOOT_CHECK_ARTEFACT = "bootCheck";
@@ -162,6 +171,7 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
     targets: { type: "array", items: { $ref: "#/$defs/targetEntry" } },
     openapi: APP_OPENAPI_SCHEMA,
     checks: APP_CHECKS_SCHEMA,
+    warnings: APP_WARNINGS_SCHEMA,
     diff: {
       type: "object",
       additionalProperties: false,
@@ -216,7 +226,10 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
                 {
                   type: "object",
                   additionalProperties: false,
-                  properties: { frameworkRoutes: { type: "boolean" } },
+                  properties: {
+                    frameworkRoutes: { type: "boolean" },
+                    hooks: { enum: [...HOOK_BOOT_CHECK_LEVELS] },
+                  },
                 },
               ],
             },
