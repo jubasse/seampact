@@ -129,6 +129,24 @@ describe("with no validators link the target writes its own Ajv validators", () 
     if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
 
     expect(outcome.files.filter((file) => file.path.startsWith("validators/"))).toEqual([]);
+    expect(outcome.warnings).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "validators.artefact.ignored" })]),
+    );
+  });
+
+  test("warns that the validators artefact is ignored when it is the only one and a link is given", async () => {
+    const outcome = await fastifyTarget.generate({
+      ir: readGoldenIr("tasks"),
+      options: { bodyValidation: true },
+      links: await referenceLinks(PROJECT, "tasks"),
+      artefacts: new Set(["validators"]),
+    });
+
+    expect(outcome).toMatchObject({
+      status: "generated",
+      files: [],
+      warnings: [{ code: "validators.artefact.ignored" }],
+    });
   });
 
   test("refuses the validators artefact turned off while the boundary has no link", async () => {
@@ -143,6 +161,38 @@ describe("with no validators link the target writes its own Ajv validators", () 
       status: "refused",
       refusals: [{ code: "artefact.validators.needed" }],
     });
+  });
+
+  test("a rule broken on the Ajv validators reads with the message of the validator plan", async () => {
+    const outcome = await fastifyTarget.generate({
+      ir: readGoldenIr("tasks"),
+      options: { bodyValidation: true },
+      links: await typesLinkOnly(),
+      artefacts: new Set(["boundary", "validators"]),
+    });
+
+    if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
+
+    const written = outcome.files
+      .filter((file) => file.path.startsWith("validators/"))
+      .map((file) => {
+        const path = join(PROJECT, "generated/own-messages/tasks", file.path);
+
+        mkdirSync(dirname(path), { recursive: true });
+        writeFileSync(path, file.contents);
+
+        return path;
+      });
+    const schemasPath = written.find((path) => path.endsWith("schemas/input.ts"));
+
+    if (schemasPath === undefined) throw new Error("no validators/schemas/input.ts written");
+
+    const { CreateTaskSchema } = await import(schemasPath);
+    const result = await CreateTaskSchema["~standard"].validate({ title: "x".repeat(201) });
+
+    expect(result.issues).toEqual([
+      expect.objectContaining({ message: "Expected at most 200 characters." }),
+    ]);
   });
 
   test("the generated Ajv validators type-check with the plugin", async () => {

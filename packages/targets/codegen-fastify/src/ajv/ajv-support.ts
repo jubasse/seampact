@@ -5,6 +5,11 @@ import { UUID_LAYOUT, WIRE_CHECKS_MODULE } from "@seampact/codegen-core/validato
 // convention a server boundary renders (`code: "custom"` with `params.rule`, `unrecognized_keys` with `keys`).
 export const AJV_SUPPORT_MODULE = "ajv-support";
 
+// The keywords the module registers beyond Ajv's own: the plan's messages, and the exact multiple of an integer.
+export const MESSAGES_KEYWORD = "seampactMessages";
+
+export const INTEGER_MULTIPLE_KEYWORD = "seampactIntegerMultipleOf";
+
 export const AJV_STANDARD_SCHEMA = "ajvStandardSchema";
 
 export const AJV_IMPORT = `import { Ajv2020, type ErrorObject, type SchemaObject } from "ajv/dist/2020.js";`;
@@ -16,7 +21,6 @@ export const AJV_SUPPORT_SOURCE = `${AJV_IMPORT}
 import { isDateTime } from "./${WIRE_CHECKS_MODULE}.js";
 
 const UNKNOWN_KEYS_CODE = "unrecognized_keys";
-const FALLBACK_RULE = "invalid";
 const UUID_FORMAT = new RegExp(${JSON.stringify(UUID_LAYOUT)});
 
 // Ajv keyword to contract rule: the same name, except \`not\` (a null where a value is required), a type.
@@ -34,12 +38,14 @@ const RULE_OF_KEYWORD: ReadonlyMap<string, string> = new Map([
 ["exclusiveMinimum", "exclusiveMinimum"],
 ["exclusiveMaximum", "exclusiveMaximum"],
 ["multipleOf", "multipleOf"],
+[${JSON.stringify(INTEGER_MULTIPLE_KEYWORD)}, "multipleOf"],
 ["minItems", "minItems"],
 ["maxItems", "maxItems"],
 ]);
 
 const ajv = new Ajv2020({
 allErrors: true,
+verbose: true,
 coerceTypes: false,
 removeAdditional: false,
 useDefaults: false,
@@ -48,6 +54,40 @@ unicodeRegExp: true,
 ownProperties: true,
 multipleOfPrecision: 12,
 formats: { uuid: UUID_FORMAT, "date-time": isDateTime },
+});
+
+// The plan's message of a check, kept beside its keyword: Ajv's own text is only the fallback for a keyword the plan
+// words no message for.
+ajv.addKeyword({ keyword: ${JSON.stringify(MESSAGES_KEYWORD)}, schemaType: "object" });
+
+// An integer is a multiple of a decimal step when it is a multiple of the reduced integer step; the remainder is
+// exact, where Ajv's own \`multipleOf\` divides in floating point.
+interface IntegerStep {
+readonly literal: string;
+readonly step: string;
+}
+
+interface IntegerMultipleCheck {
+(schema: IntegerStep, data: number): boolean;
+errors?: Partial<ErrorObject>[];
+}
+
+const isIntegerMultiple: IntegerMultipleCheck = (schema, data) => {
+if (!Number.isInteger(data) || BigInt(data) % BigInt(schema.step) === 0n) return true;
+
+isIntegerMultiple.errors = [
+{ keyword: ${JSON.stringify(INTEGER_MULTIPLE_KEYWORD)}, message: \`must be multiple of \${schema.literal}\`, params: { literal: schema.literal } },
+];
+
+return false;
+};
+
+ajv.addKeyword({
+keyword: ${JSON.stringify(INTEGER_MULTIPLE_KEYWORD)},
+type: "number",
+schemaType: "object",
+errors: true,
+validate: isIntegerMultiple,
 });
 
 export interface InputIssue {
@@ -97,6 +137,13 @@ if (instancePath === "") return [];
 return instancePath.slice(1).split("/").map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"));
 }
 
+function messageOf(error: ErrorObject): string | undefined {
+const messages: unknown = Reflect.get(error.parentSchema ?? {}, ${JSON.stringify(MESSAGES_KEYWORD)});
+const planned: unknown = isRecord(messages) ? messages[error.keyword] : undefined;
+
+return typeof planned === "string" ? planned : error.message;
+}
+
 function issueOf(error: ErrorObject): InputIssue {
 const path = pathOf(error.instancePath);
 
@@ -109,10 +156,15 @@ keys: [String(Reflect.get(error.params, "additionalProperty"))],
 };
 }
 
-const rule = RULE_OF_KEYWORD.get(error.keyword) ?? FALLBACK_RULE;
+const rule = RULE_OF_KEYWORD.get(error.keyword);
+
+if (rule === undefined) {
+throw new Error(\`codegen-fastify: the Ajv keyword '\${error.keyword}' has no contract rule; this is a renderer bug.\`);
+}
+
 const missing = error.keyword === "required" ? [String(Reflect.get(error.params, "missingProperty"))] : [];
 
-return { message: error.message ?? rule, path: [...path, ...missing], code: "custom", params: { rule } };
+return { message: messageOf(error) ?? rule, path: [...path, ...missing], code: "custom", params: { rule } };
 }
 
 // A value of the wrong type reports its type alone: the other rules of Ajv's keywords read a value of the right type.
@@ -138,7 +190,7 @@ if (validate(value)) return { value: declaredValue(schema, value) };
 const issues = issuesOf(validate.errors ?? []);
 
 if (issues.length === 0) {
-return { issues: [{ message: "Invalid value.", path: [], code: "custom", params: { rule: FALLBACK_RULE } }] };
+throw new Error("codegen-fastify: Ajv refused a value and reported no error; this is a renderer bug.");
 }
 
 return { issues };

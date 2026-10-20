@@ -166,7 +166,12 @@ export function nodeServerBoundaryFiles(
 
   const ownFiles = own === undefined ? [] : own.files;
 
-  if (!boundaryOn) return { status: "generated", files: ownFiles };
+  const ignoredArtefactWarnings =
+    givenLink !== undefined && ownValidatorsOn ? [ignoredValidatorsArtefact()] : [];
+
+  if (!boundaryOn) {
+    return { status: "generated", files: ownFiles, warnings: ignoredArtefactWarnings };
+  }
 
   const validators = givenLink ?? own?.link;
 
@@ -180,7 +185,19 @@ export function nodeServerBoundaryFiles(
 
   if (boundary.status === "refused") return boundary;
 
-  return { ...boundary, files: [...ownFiles, ...boundary.files] };
+  return {
+    ...boundary,
+    files: [...ownFiles, ...boundary.files],
+    warnings: [...(boundary.warnings ?? []), ...ignoredArtefactWarnings],
+  };
+}
+
+function ignoredValidatorsArtefact(): GenerateWarning {
+  return {
+    code: "validators.artefact.ignored",
+    message: `The '${OWN_VALIDATORS_ARTEFACT}' artefact is listed and a validators link is given: the linked validators are used and none are written.`,
+    fix: `Drop '${OWN_VALIDATORS_ARTEFACT}' from the artefacts, or drop the validators link to write the target's own validators.`,
+  };
 }
 
 function validatorsArtefactNeeded(): Refusal {

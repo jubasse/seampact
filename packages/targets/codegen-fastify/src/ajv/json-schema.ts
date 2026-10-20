@@ -7,6 +7,7 @@ import type {
   SchemaPlan,
   TypePlan,
 } from "@seampact/codegen-core/validators";
+import { INTEGER_MULTIPLE_KEYWORD, MESSAGES_KEYWORD } from "./ajv-support.js";
 
 // The JSON Schema 2020-12 (Ajv strict mode) of each planned validator. A referenced schema is written inline, which
 // the plan allows since a recursive schema is refused; the generated schemas stay readable and need no `$ref`.
@@ -122,14 +123,24 @@ function scalarSchema(plan: ScalarPlan): JsonObject {
   const checks = plan.base === "integer" ? withoutBounds(plan.checks) : plan.checks;
   const bounds = plan.base === "integer" ? safeIntegerBounds(plan.checks) : [];
 
+  const messages = checkMessages(checks);
+
   return Object.fromEntries([
     ["type", JSON_TYPES[plan.base]],
-    ...checks.map((check) => scalarRule(check)),
+    ...checks.map((check) => scalarRule(check, plan.base)),
     ...bounds,
+    ...(Object.keys(messages).length === 0 ? [] : [[MESSAGES_KEYWORD, messages]]),
   ]);
 }
 
-function scalarRule(check: ScalarCheck): [string, JsonValue] {
+// The plan's message of each check that words one, by Ajv keyword, for the adapter to report.
+function checkMessages(checks: readonly ScalarCheck[]): JsonObject {
+  return Object.fromEntries(
+    checks.flatMap((check) => ("message" in check ? [[check.rule, check.message]] : [])),
+  );
+}
+
+function scalarRule(check: ScalarCheck, base: ScalarBase): [string, JsonValue] {
   switch (check.rule) {
     case "format":
       return ["format", check.format];
@@ -138,13 +149,43 @@ function scalarRule(check: ScalarCheck): [string, JsonValue] {
       return [check.rule, check.limit];
     case "pattern":
       return ["pattern", check.normalized];
+    case "multipleOf":
+      return base === "integer"
+        ? [INTEGER_MULTIPLE_KEYWORD, { literal: check.literal, step: integerStep(check.literal) }]
+        : [check.rule, Number(check.literal)];
     case "minimum":
     case "maximum":
     case "exclusiveMinimum":
     case "exclusiveMaximum":
-    case "multipleOf":
       return [check.rule, Number(check.literal)];
   }
+}
+
+const DECIMAL_LITERAL = /^(\d*)\.?(\d*)(?:[eE]([+-]?\d+))?$/;
+
+// An integer is a multiple of `p / 10^d` exactly when it is a multiple of `p / gcd(p, 10^d)`: the exact integer step
+// the adapter checks with a remainder, where Ajv's own `multipleOf` divides in floating point.
+function integerStep(literal: string): string {
+  const parts = DECIMAL_LITERAL.exec(literal);
+
+  if (parts === null || (parts[1] ?? "") + (parts[2] ?? "") === "") {
+    throw new Error(`codegen-fastify: '${literal}' is not a decimal literal of a multipleOf step.`);
+  }
+
+  const digits = BigInt((parts[1] ?? "") + (parts[2] ?? ""));
+  const scale = (parts[2] ?? "").length - Number(parts[3] ?? "0");
+
+  if (digits === 0n) {
+    throw new Error(`codegen-fastify: the multipleOf step '${literal}' is zero.`);
+  }
+
+  if (scale <= 0) return String(digits * 10n ** BigInt(-scale));
+
+  return String(digits / greatestCommonDivisor(digits, 10n ** BigInt(scale)));
+}
+
+function greatestCommonDivisor(first: bigint, second: bigint): bigint {
+  return second === 0n ? first : greatestCommonDivisor(second, first % second);
 }
 
 function withoutBounds(checks: readonly ScalarCheck[]): ScalarCheck[] {
