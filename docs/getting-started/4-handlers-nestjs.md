@@ -63,7 +63,7 @@ import { NotesController } from "./notes-controller.js";
 export class AppModule {}
 ```
 
-Create `src/main.ts`. The body parser limit and the filter make malformed JSON and unknown routes under `/v1` answer in the contract's error format. Without the filter they answer with NestJS's own error body.
+Create `src/main.ts`. The body parser and the filter make bad JSON and unknown routes answer in the contract's error format.
 
 ```ts
 import "reflect-metadata";

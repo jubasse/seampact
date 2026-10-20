@@ -36,8 +36,6 @@ sources:
     integrity: sha256-...
 ```
 
-You can also pin a tarball (`release: { url: https://... }`) or a git tag (`git: { url: ..., tag: v1.2.0 }`). To refuse local `path` sources on shared branches, set `allowLocal: false`.
-
 ## Add a target
 
 Each target generates one kind of code.
