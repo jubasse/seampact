@@ -4,7 +4,7 @@ Declare API semantics once. Derive framework-native boundaries from them.
 
 seampact is a contract system for HTTP APIs. You describe an API in plain YAML files: its endpoints, schemas, errors, who may call each route and what each route requires. seampact compiles them into a canonical intermediate representation (IR), and everything else is derived from it: an OpenAPI 3.1 document, lint, a compatibility diff between two versions, and generated code for the frameworks you use.
 
-**Status: development phase.** The reference contract already runs end to end on NestJS, Express 4 and 5, Fastify 5, AdonisJS 6 and 7 and Hono 4, with the TypeScript types, zod validators and the `fetch` client. No package is published to npm, Maven Central or Packagist yet, and nothing can be installed. The design decisions are recorded in [`docs/adr/`](docs/adr/).
+**Status: development phase.** The reference contract already runs end to end on NestJS, Express 4 and 5, Fastify 5, AdonisJS 6 and 7 and Hono 4, with the TypeScript types, zod validators and the `fetch` client. No package is published to npm, Maven Central or Packagist yet; [`docs/getting-started.md`](docs/getting-started.md) installs them from your checkout and runs a NestJS app. The design decisions are recorded in [`docs/adr/`](docs/adr/).
 
 ## What seampact generates, and what it leaves to you
 
@@ -31,7 +31,7 @@ Already running end to end today: the core, `codegen-ts`, `codegen-zod`, `codege
 
 | Package | What it does |
 |---|---|
-| `@seampact/cli` | the `seampact` command: `init`, `compile`, `check`, `lint`, `diff`, `generate`, `bundle`, and `explain`, which prints one operation whole with where each part comes from |
+| `@seampact/cli` | the `seampact` command: `compile`, `check`, `lint`, `diff` and `generate`; `init`, `bundle` and `explain` (which prints one operation whole with where each part comes from) are planned |
 | `@seampact/compiler` | reads the YAML, reports errors with file, line and column, and produces the IR |
 | `@seampact/spec` | the JSON Schemas of the YAML files, one per file and fragment kind for your editor, and of the IR, with their TypeScript types |
 | `@seampact/openapi` | writes the OpenAPI 3.1 documents your configs ask for (one per api or declared document, or one merged across a monorepo's apps), with what OpenAPI cannot say as published `x-seampact-*` extensions |
@@ -59,7 +59,7 @@ Each app of a repository (frontend, backend, service) has its own `seampact.conf
 
 ### Java and PHP
 
-These run with no Node.js installed. The standalone compiler binary runs `init`, `compile`, `check`, `lint` (core rules), `diff`, `explain` and `bundle`, so a Java or PHP team can own a contract repository without Node.js. The Gradle and Maven plugins read `seampact.config.yaml` or the same keys in their own DSL.
+These run with no Node.js installed. The standalone compiler binary (planned) runs `init`, `compile`, `check`, `lint` (core rules), `diff`, `explain` and `bundle`, so a Java or PHP team can own a contract repository without Node.js. The Gradle and Maven plugins read `seampact.config.yaml` or the same keys in their own DSL.
 
 | Framework | Install |
 |---|---|
@@ -112,13 +112,36 @@ targets:
       validators: validators
 ```
 
-**NestJS.** Import the generated module with your hooks, and start the app with `rawBody: true` so signed routes see the bytes that were signed.
+**NestJS.** Install `@nestjs/platform-express` (the Fastify platform is refused at boot), `reflect-metadata` and `rxjs`, and set `experimentalDecorators` in `tsconfig.json`. Import the generated module with your hooks, start the app with `rawBody: true` so signed routes see the bytes that were signed, and register `preRoutingFilter`. Without the filter, malformed JSON and unknown routes under the api's prefix answer with NestJS's own error body instead of the contract's format.
 
 ```ts
 @Module({ imports: [TasksNest.SeampactModule.forRoot(tasksHooks())], controllers: [TasksController] })
 export class AppModule {}
 
-const app = await NestFactory.create(AppModule, { rawBody: true });
+const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
+
+app.useBodyParser("json", { limit: TasksNest.LARGEST_BODY_LIMIT, strict: false });
+app.useGlobalFilters(TasksNest.preRoutingFilter);
+```
+
+To complete `@nestjs/swagger`'s own document, install `@nestjs/swagger`, turn `artefacts: { nativeDocs: true }` on in the server entry, and wrap the config and the document. The boot check refuses routes the contract does not know, so list the ones Swagger adds under `frameworkRoutes`.
+
+```ts
+const config = TasksNest.withContractComponents(
+  new DocumentBuilder().setTitle("Tasks").setOpenAPIVersion("3.1.0").build(),
+);
+const document = SwaggerModule.createDocument(app, config);
+
+TasksNest.assertContractComponents(document);
+SwaggerModule.setup("docs", app, document);
+```
+
+```yaml
+    frameworkRoutes:
+      - { path: "/docs", reason: "Swagger UI." }
+      - { path: "/docs/**", reason: "Swagger UI assets." }
+      - { path: "/docs-json", reason: "Swagger JSON." }
+      - { path: "/docs-yaml", reason: "Swagger YAML." }
 ```
 
 **Express 4 and 5.** Mount the generated router, then its error middleware for requests refused before a route matched. The router keeps the raw bytes of signed routes itself; a JSON parser you mount app-wide before it must use the generated `keepRawBody`.
