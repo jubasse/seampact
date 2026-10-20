@@ -37,6 +37,9 @@ const BATCH_SUFFIX = ["batch"];
 // The id parameter suffix the singular drops (`taskId` gives `task`).
 const ID_SUFFIX = "Id";
 
+// An id parameter with no noun in it.
+const BARE_ID_PARAM = "id";
+
 // The ops whose noun is the plural; the others take the singular.
 const PLURAL_OPS: readonly string[] = ["list", "batch"];
 
@@ -82,6 +85,17 @@ function singularWords(collection: TreeNode, schemas: TreeNodesRawSchemas): stri
       : idParam;
 
   return splitName(stem);
+}
+
+/** Whether the singular of a collection is the bare id parameter `id`, which reads `getId` in an operation id. */
+export function treeNodesSingularIsBareId(
+  collection: TreeNode,
+  schemas: TreeNodesRawSchemas,
+): boolean {
+  return (
+    treeNodesText(collection, "singular") === undefined &&
+    treeNodesIdParam(collection, schemas) === BARE_ID_PARAM
+  );
 }
 
 export const TREE_NODES_LIST_OP: IrWriter.OpShorthand = "list";

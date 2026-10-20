@@ -126,6 +126,10 @@ export function treeNodesError(options: TreeNodesDiagnosticOptions): Diagnostic 
   };
 }
 
+export function treeNodesWarning(options: TreeNodesDiagnosticOptions): Diagnostic {
+  return { ...treeNodesError(options), severity: "warning" };
+}
+
 /** Reports a diagnostic the first time its key is seen in a run of the half, and drops it after that. */
 export type TreeNodesReportOnce = (key: string, diagnostic: Diagnostic) => void;
 

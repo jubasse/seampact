@@ -949,9 +949,10 @@ function pagingEntry(
 ): SourceValue {
   const paging = operation.paging;
 
-  if (paging === undefined) return undefined;
+  // `paging: none` has no style: the list answers a bare array and takes no cursor or limit.
+  if (paging === undefined || paging.style === undefined) return undefined;
 
-  const style = paging.style === undefined ? undefined : ir.pagings[paging.style];
+  const style = ir.pagings[paging.style];
   const cursor = style?.request.find((role) => role.role === CURSOR_ROLE);
   const nextCursor = style?.handlerResult[0];
 
@@ -964,7 +965,7 @@ function pagingEntry(
     refusals.push(
       refuseNotGeneratedYet(
         "paging.style",
-        `The paging style '${paging.style ?? "(none)"}'`,
+        `The paging style '${paging.style}'`,
         below(location, "paging"),
       ),
     );

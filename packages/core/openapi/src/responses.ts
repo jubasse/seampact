@@ -24,7 +24,7 @@ const SUCCESS_STATUS_LIMIT = 300;
 const REDIRECT_STATUS_LIMIT = 400;
 
 // Shapes the IR knows that the emitter does not write yet (A47); any other shape is an unknown value.
-const KNOWN_UNEMITTED_SHAPES: readonly string[] = ["list", "binary"];
+const KNOWN_UNEMITTED_SHAPES: readonly string[] = ["binary"];
 
 const NOT_MODIFIED_STATUS = 304;
 
@@ -173,8 +173,7 @@ function responseBodySchema(
   }
 
   const slots = successSlots(context, operation, response.status, response.body);
-  const payloadSchema =
-    shape === "table" ? { type: "object", additionalProperties: payload } : payload;
+  const payloadSchema = payloadSchemaOf(shape, payload);
 
   slots.set(PAYLOAD_SLOT, { schema: payloadSchema, presence: "always" });
 
@@ -184,6 +183,15 @@ function responseBodySchema(
 
   return templateSchema(context, format.success[shape].body, slots, format.absent, formatLocation)
     ?.schema;
+}
+
+// A table is an object keyed by item id, a list a bare array of items.
+function payloadSchemaOf(shape: "item" | "table" | "list", payload: JsonObject): JsonObject {
+  if (shape === "table") return { type: "object", additionalProperties: payload };
+
+  if (shape === "list") return { type: "array", items: payload };
+
+  return payload;
 }
 
 function responseHeaders(

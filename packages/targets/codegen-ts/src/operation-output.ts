@@ -13,7 +13,7 @@ const JSON_MEDIA = "application/json";
 
 // The 304 that `cache.etag` derives is answered by the boundary, never by the handler.
 export const ETAG_DERIVATION = "cache.etag";
-const NOT_GENERATED_SHAPES: readonly string[] = ["list", "binary", "redirect"];
+const NOT_GENERATED_SHAPES: readonly string[] = ["binary", "redirect"];
 
 // The members a handler returns beside a page's items, by paging style `handlerResult` value (ADR 0002
 // section 14); the cursor is absent at the last page.
@@ -65,6 +65,8 @@ function responseVariant(
       return payloadVariant(response, "table", operation, location, context);
     case "page":
       return payloadVariant(response, "page", operation, location, context);
+    case "list":
+      return payloadVariant(response, "list", operation, location, context);
     default:
       context.refusals.push(
         NOT_GENERATED_SHAPES.includes(response.shape)
@@ -101,7 +103,7 @@ function refuseHandlerHeaders(
 
 function payloadVariant(
   response: Response,
-  shape: "item" | "table" | "page",
+  shape: "item" | "table" | "list" | "page",
   operation: Operation,
   location: IrLocation,
   context: TypeContext,
@@ -133,6 +135,8 @@ function payloadVariant(
       return `{ ${status} body: ${payload}; }`;
     case "table":
       return `{ ${status} body: Record<string, ${payload}>; }`;
+    case "list":
+      return `{ ${status} body: ${payload}[]; }`;
     case "page":
       return `{ ${status} body: ${pageResult(payload, operation, location, context)}; }`;
   }

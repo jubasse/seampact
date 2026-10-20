@@ -76,7 +76,7 @@ export function unlistedFrameworkRoutesProblem(
       keys.length === 1
         ? `the framework route ${named} is outside the contract and not allow-listed`
         : `${keys.length} framework routes are outside the contract and not allow-listed: ${named}`,
-    fix: "allow-list each with a reason in the target entry's 'frameworkRoutes' of seampact.config.yaml, or remove the route",
+    fix: "allow-list each with a reason in the target entry's 'frameworkRoutes' of seampact.config.yaml, or remove the route; after editing frameworkRoutes, run seampact generate again",
   };
 }
 

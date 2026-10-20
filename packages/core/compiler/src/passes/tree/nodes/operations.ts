@@ -13,6 +13,7 @@ import { treeNodesDegradable } from "./degradable.js";
 import {
   type TreeNodesReportOnce,
   treeNodesError,
+  treeNodesWarning,
   treeNodesNodeOrigin,
   treeNodesReportOnce,
 } from "./diagnostics.js";
@@ -38,6 +39,7 @@ import {
   treeNodesIsOperation,
   treeNodesOperationName,
   treeNodesOpShorthand,
+  treeNodesSingularIsBareId,
   treeNodesSingularOwner,
 } from "./names.js";
 import { treeNodesPaging } from "./paging.js";
@@ -109,6 +111,8 @@ export function treeNodesOperations(
       reportNoSingular(node, once);
       continue;
     }
+
+    warnBareIdSingular(node, context, once);
 
     const site: TreeNodesSite = { node, operationId: name.id, draft, context, once };
     const operation =
@@ -393,6 +397,32 @@ function resourceOf(
   }
 
   return undefined;
+}
+
+// A collection whose id parameter is `id` and sets no `singular` names its member operations `getId`, `createId`.
+// Warned once per collection, at its first operation that takes the singular.
+function warnBareIdSingular(
+  node: TreeNode,
+  context: TreeNodesContext,
+  once: TreeNodesReportOnce,
+): void {
+  const collection = treeNodesSingularOwner(node);
+
+  if (
+    collection === undefined ||
+    !treeNodesSingularIsBareId(collection, context.raw.merged.schemas)
+  )
+    return;
+
+  once(
+    `collection-singular-bare-id:${collection.pointer}`,
+    treeNodesWarning({
+      rule: "collection-singular",
+      origin: treeNodesNodeOrigin(collection.origin),
+      message: `The collection ${collection.name} has the id parameter id and no singular, so its operation ids read getId and createId.`,
+      fix: "Set singular on the collection (the noun of its operation ids), or name its id parameter with the noun, as in productId.",
+    }),
+  );
 }
 
 // ADR 0002 section 6: the singular comes from `singular` or `id` only. Reported once per collection, at its first

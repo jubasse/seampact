@@ -468,3 +468,33 @@ surfaces:
     },
   ]);
 });
+
+test("a collection whose id parameter is id and sets no singular warns, once, with the fix singular", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: shop, version: 1, kind: product }
+schemas:
+  Product: { type: object, required: [id], properties: { id: { type: string } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      products:
+        kind: collection
+        id: { id: { type: string } }
+        item: Product
+        ops: [get, delete]
+`);
+  const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas,
+  });
+
+  expect(draft.operations.map(({ id }) => id)).toEqual(["getId", "deleteId"]);
+  expect(diagnostics).toMatchObject([
+    {
+      severity: "warning",
+      rule: "seampact/tree/collection-singular",
+      origin: { layer: "api", pointer: "/surfaces/app/routes/products" },
+      fix: expect.stringContaining("Set singular"),
+    },
+  ]);
+});

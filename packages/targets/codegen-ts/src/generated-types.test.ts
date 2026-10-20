@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { GenerateOutcome } from "@seampact/codegen-core";
+import { referenceUnpagedList } from "@seampact/codegen-core/node-server/test-support";
 import { type ContractIR, isKnownVariant } from "@seampact/spec/ir";
 import { afterAll, expect, test } from "vitest";
 import { readGoldenIr, typeErrorsOf } from "./generated-project.test-support.js";
@@ -240,4 +241,21 @@ test("a status without a registered reason phrase is refused by name", async () 
       },
     ],
   });
+});
+
+test("a paging none list is handed back as a bare array of its items", async () => {
+  const outcome = await generateTypes(
+    referenceUnpagedList("listChannels")(readGoldenIr("tasks"), "tasks"),
+  );
+
+  if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
+
+  const probe = [
+    'import type { ListChannelsOutput } from "./generated/operations/output.js";',
+    "export const bareArray: ListChannelsOutput = { status: 200, body: [] };",
+    "// @ts-expect-error a paging none list has no page members",
+    "export const page: ListChannelsOutput = { status: 200, body: { items: [] } };",
+  ].join("\n");
+
+  expect(typeErrorsOf(join(temporaryRoot, "unpaged"), outcome.files, probe)).toEqual([]);
 });

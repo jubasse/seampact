@@ -15,7 +15,7 @@ node ~/src/seampact/scripts/consumers/install-into.ts .
 pnpm install
 ```
 
-You see `install-into: 21 packages in .../vendor/seampact`. `package.json` and `pnpm-workspace.yaml` changed: check the diff. Add `vendor` to `.gitignore`.
+You see `install-into: 21 packages in .../vendor/seampact`. `package.json`, `pnpm-workspace.yaml` and `.gitignore` changed: check the diff.
 
 ## Describe the routes you move
 
@@ -28,15 +28,6 @@ api:
   kind: product
   maturity: provisional
   summary: The shop api.
-
-pagings:
-  cursor:
-    request:
-      cursor: { query: cursor }
-      limit: { query: limit }
-    response:
-      body: $items
-      links: { next: $next }
 
 schemas:
   ProductId: { type: string, format: uuid }
@@ -66,14 +57,14 @@ surfaces:
         id: { id: ProductId }
         item: Product
         ops:
-          list: { paging: { cursor: { maxLimit: 100 } } }
+          list: { paging: none }
           get: {}
           create: { input: CreateProduct }
 ```
 
 - `pathVersion: none` and `prefix: ""` keep your paths: `/products`, not `/v1/products`.
 - `singular: product` names the operations `getProduct` and `createProduct`. Without it, an id param named `id` gives `getId`.
-- A list names a paging style. The reply stays a bare array.
+- `paging: none` keeps the list a bare array, as your clients expect.
 
 ```sh
 npx seampact lint
@@ -120,7 +111,7 @@ Delete the DTO classes: the generated class-validator classes replace them. Impl
 ```ts
 import { Controller } from "@nestjs/common";
 import * as ShopNest from "../__generated__/server/shop/index.js";
-import type * as Shop from "../__generated__/types/shop/index.js";
+import * as Shop from "../__generated__/types/shop/index.js";
 
 @Controller()
 export class ProductsController implements ShopNest.ProductsEndpoints {
@@ -128,14 +119,14 @@ export class ProductsController implements ShopNest.ProductsEndpoints {
   getProduct(@ShopNest.getProduct.input() input: Shop.GetProductInput) {
     const product = products.get(input.path.id);
 
-    if (product === undefined) return { status: 404 as const, code: "api.not_found" as const };
+    if (product === undefined) return { status: Shop.Status.NotFound, code: Shop.ErrorCode.ApiNotFound };
 
-    return { status: 200 as const, body: product };
+    return { status: Shop.Status.Ok, body: product };
   }
 }
 ```
 
-A list handler returns `{ status: 200, body: { items } }`; the client still receives a bare array.
+A list handler returns the array: `{ status: Shop.Status.Ok, body: [...products.values()] }`.
 
 Controllers for routes outside the contract stay as they are.
 
