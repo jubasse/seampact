@@ -28,21 +28,19 @@ export type UsedSourcesOutcome =
   | { status: "used"; names: string[] }
   | { status: "refused"; problems: CliProblem[] };
 
-// The sources the targets use: each source an `api` names, or every source when one names an api alone, since
-// only the compiled sources tell where that api lives.
-export function usedSources(config: LoadedAppConfig): UsedSourcesOutcome {
+// The sources the targets and `extraRefs` (the apis an `openapi` key names) use: each source a `<source>/<api>`
+// names and, for an api named alone, each source that may hold it (see `sourcesHoldingRefs`).
+export async function usedSources(
+  config: LoadedAppConfig,
+  extraRefs: readonly string[],
+): Promise<UsedSourcesOutcome> {
   const problems = unknownSourceProblems(config);
 
   if (problems.length > 0) return { status: "refused", problems };
 
-  const refs = entryApiRefs(config).map(parseApiRef);
-
-  if (refs.some((ref) => ref.source === undefined))
-    return { status: "used", names: [...config.sources.keys()] };
-
   return {
     status: "used",
-    names: [...new Set(refs.flatMap((ref) => (ref.source === undefined ? [] : [ref.source])))],
+    names: await sourcesHoldingRefs(config, [...entryApiRefs(config), ...extraRefs]),
   };
 }
 
@@ -146,4 +144,25 @@ export function resolveEntryApis(
   }
 
   return problems.length > 0 ? { status: "refused", problems } : { status: "resolved", apis };
+}
+
+// A source that fails only because an api is named alone is fetched for it: naming the api `<source>/<api>` leaves
+// the other sources unfetched, which the fix says.
+export function addQualifyFix(
+  problems: readonly CliProblem[],
+  refs: readonly string[],
+): CliProblem[] {
+  const named = new Set(refs.flatMap((ref) => parseApiRef(ref).source ?? []));
+  const bareRefs = refs.filter((ref) => parseApiRef(ref).source === undefined);
+
+  return problems.map((problem) => {
+    const source = /^source '([^']+)'/.exec(problem.where ?? "")?.[1];
+
+    if (source === undefined || named.has(source) || bareRefs.length === 0) return problem;
+
+    return {
+      ...problem,
+      fix: `${problem.fix} The source is read because an api is named alone (${bareRefs.map((ref) => `'${ref}'`).join(", ")}); name each as \`<source>/<api>\` and only that source is read.`,
+    };
+  });
 }

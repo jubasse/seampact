@@ -44,3 +44,18 @@ export function problemFromRefusal(refusal: Refusal, where: string): CliProblem 
 
   return { code: refusal.code, message: `${message}${at}`, fix: refusal.fix, where };
 }
+
+// A problem of one app of a root run names the app before its own place.
+export function inApp(app: string, problem: CliProblem): CliProblem {
+  return {
+    ...problem,
+    where: problem.where === undefined ? `app '${app}'` : `app '${app}', ${problem.where}`,
+  };
+}
+
+// The entry and api an output belongs to, with its app in a root run.
+export function appEntryWhere(app: string | undefined, entryId: string, api?: string): string {
+  const where = entryWhere(entryId, api);
+
+  return app === undefined ? where : `app '${app}', ${where}`;
+}

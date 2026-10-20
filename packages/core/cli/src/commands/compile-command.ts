@@ -3,8 +3,8 @@ import { join, resolve } from "node:path";
 import { finalizeSerializeJson } from "@seampact/compiler";
 import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS, printProblems } from "../cli-io.js";
 import type { CliProblem } from "../cli-problem.js";
-import { readAppConfig } from "../config/index.js";
-import { usedSources } from "./api-refs.js";
+import { openApiApiNames, readAppConfig } from "../config/index.js";
+import { addQualifyFix, entryApiRefs, usedSources } from "./api-refs.js";
 import type { CompiledApi } from "./compile-sources.js";
 import { compileSources } from "./compile-sources.js";
 import type { ConfigLocation } from "./config-location.js";
@@ -22,13 +22,19 @@ export async function compileCommand(
 
   if (read.status === "refused") return refuse(io, read.problems);
 
-  const used = usedSources(read.config);
+  const extraRefs = openApiApiNames(read.config);
+  const used = await usedSources(read.config, extraRefs);
 
   if (used.status === "refused") return refuse(io, used.problems);
 
   const compiled = await compileSources(read.config, used.names, io);
 
-  if (compiled.failed) return refuse(io, compiled.problems);
+  if (compiled.failed) {
+    return refuse(
+      io,
+      addQualifyFix(compiled.problems, [...entryApiRefs(read.config), ...extraRefs]),
+    );
+  }
 
   if (irOutDir === undefined) {
     io.stdout(`Compiled ${compiled.apis.length} api(s) without error.\n`);

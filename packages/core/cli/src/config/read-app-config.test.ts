@@ -194,17 +194,6 @@ test.each([
   });
 });
 
-test("refuses the diff settings by name until the diff command reads them", async () => {
-  const outcome = await readConfigText(
-    "diff: { gate: both }\ntargets:\n  - { id: t, use: x, api: a }\n",
-  );
-
-  expect(outcome).toMatchObject({
-    status: "refused",
-    problems: [{ code: "config.key.waits", message: expect.stringContaining("`diff` command") }],
-  });
-});
-
 test("refuses a package source that is not an npm package name", async () => {
   const outcome = await readConfigText(
     "sources:\n  contracts: { package: ../../x, version: 1.0.0 }\ntargets:\n  - { id: t, use: x, api: a }\n",
@@ -380,10 +369,6 @@ test("refuses an api's documents that are neither a path, a placed document nor 
 });
 
 test.each([
-  ["a command run on a root config", "apps: [api]\n", "on the monorepo root config"],
-  ["the OpenAPI drift check", "checks: { openapi: warning }\n", "'openapi'"],
-  ["the generated files' drift check", "checks: { generated: disabled }\n", "'generated'"],
-  ["the diff settings", "diff: { gate: both }\n", "'diff'"],
   ["a mount", `${SERVER_ENTRY_HEAD}    mount: /api\n`, "'mount'"],
   ["native access", `${SERVER_ENTRY_HEAD}    access: { native: "Spring Security." }\n`, "'access'"],
   [
@@ -408,19 +393,30 @@ test.each([
   });
 });
 
-test("names the app to run in when a command is run on a root config", async () => {
+test("names the app to run in when an app-level command is run on a root config", async () => {
   expect(
     await readConfigText("apps: [api]\nopenapi: { all: { path: all.yaml, apps: [api] } }\n"),
   ).toEqual({
     status: "refused",
     problems: [
       {
-        code: "config.key.waits",
+        code: "config.root.not-an-app",
         message:
-          "Running a command on the monorepo root config, with its merged `openapi` documents and `checks` is not available yet; it comes with root runs of `generate` and `check` (p3-cli, p3-openapi).",
+          "This file is a monorepo root config (it holds `apps`), and the command runs on one app's config.",
         fix: "Run the command in one of the apps the root config lists, or pass that app's config with `--config`.",
         where: "seampact.config.yaml:1:1 apps",
       },
     ],
+  });
+});
+
+test("reads the checks and diff settings of an app", async () => {
+  expect(
+    await readConfigText(
+      "checks: { openapi: warning, generated: disabled }\ndiff: { gate: both }\n",
+    ),
+  ).toMatchObject({
+    status: "read",
+    config: { checks: { openapi: "warning", generated: "disabled" }, diff: { gate: "both" } },
   });
 });

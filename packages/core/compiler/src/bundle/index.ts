@@ -25,6 +25,7 @@ export {
   type WorkspaceImportsResult,
 } from "./imports.js";
 export { bundleIntegrity, bundleSha256Hex } from "./integrity.js";
+export { isContractIr } from "./ir-check.js";
 export { findLocalPackageSources, type LocalPackageSource } from "./local-packages.js";
 export {
   ALLOW_LOCAL_VARIABLE,

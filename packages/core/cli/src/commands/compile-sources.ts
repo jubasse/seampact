@@ -13,8 +13,9 @@ import {
   localSourceRefusalReason,
   printDiagnostics,
 } from "@seampact/compiler";
+import type { LintDeclared } from "@seampact/lint";
 import type { BundleSource } from "@seampact/spec/config";
-import type { ContractIR } from "@seampact/spec/ir";
+import type { ContractIR, SourceMap } from "@seampact/spec/ir";
 import type { CliIo } from "../cli-io.js";
 import type { CliProblem } from "../cli-problem.js";
 import type { LoadedAppConfig } from "../config/index.js";
@@ -24,6 +25,8 @@ export interface CompiledApi {
   source: string;
   api: string;
   ir: ContractIR;
+  // What `lint` reads besides the IR; absent for an api taken from a bundle, which no compiler ran on.
+  lintInput?: { declared: readonly LintDeclared[]; locations: SourceMap["locations"] };
 }
 
 export interface CompiledSources {
@@ -150,8 +153,14 @@ async function compileSource(name: string, directory: string, run: SourceRun): P
   if (diagnostics.some((diagnostic) => diagnostic.severity === "error")) compiled.failed = true;
 
   for (const api of result.apis) {
-    if (api.ir !== undefined)
-      compiled.apis.push({ source: name, api: api.api, ir: finalizeCanonicalIr(api.ir) });
+    if (api.ir === undefined) continue;
+
+    compiled.apis.push({
+      source: name,
+      api: api.api,
+      ir: finalizeCanonicalIr(api.ir),
+      lintInput: { declared: api.declared ?? [], locations: api.locations },
+    });
   }
 }
 

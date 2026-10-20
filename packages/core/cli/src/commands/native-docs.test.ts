@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { expect, test } from "vitest";
 import { parse } from "yaml";
 import { EXIT_REFUSED, EXIT_SUCCESS } from "../cli-io.js";
-import { type FakeTarget, generateOutput, makeApp } from "./generate-app.test-support.js";
+import { type FakeTarget, generateOutput, makeApp } from "./fake-app.test-support.js";
 
 const BOUNDARY = { id: "boundary", defaultOn: true };
 const NATIVE_DOCS = { id: "nativeDocs", defaultOn: false, needs: ["boundary"] };
