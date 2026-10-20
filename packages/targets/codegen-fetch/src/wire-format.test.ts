@@ -30,6 +30,8 @@ describe("refuseFormatForms", () => {
   test("a list envelope is refused when a list operation uses the format", () => {
     const refusals = refuseFormatForms(goldenFormatWithListEnvelope(), true);
 
-    expect(refusals.map((refusal) => refusal.code)).toEqual(["format.success.envelope.unsupported"]);
+    expect(refusals.map((refusal) => refusal.code)).toEqual([
+      "format.success.envelope.unsupported",
+    ]);
   });
 });
