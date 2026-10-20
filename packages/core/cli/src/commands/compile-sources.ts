@@ -6,6 +6,7 @@ import {
   compileWorkspaceWithImports,
   type Diagnostic,
   fetchBundle,
+  finalizeSerializeIr,
   type LocalSourcePolicy,
   loadFsReader,
   localSourcePolicy,
@@ -150,8 +151,17 @@ async function compileSource(name: string, directory: string, run: SourceRun): P
   if (diagnostics.some((diagnostic) => diagnostic.severity === "error")) compiled.failed = true;
 
   for (const api of result.apis) {
-    if (api.ir !== undefined) compiled.apis.push({ source: name, api: api.api, ir: api.ir });
+    if (api.ir !== undefined)
+      compiled.apis.push({ source: name, api: api.api, ir: canonicalIr(api.ir) });
   }
+}
+
+// The IR as its file holds it, members in the serialised order: a target then generates the same files from a
+// compiled workspace as from a bundle's or `compile --out`'s IR file, whatever order the passes wrote members in.
+function canonicalIr(ir: ContractIR): ContractIR {
+  const canonical: ContractIR = JSON.parse(finalizeSerializeIr(ir));
+
+  return canonical;
 }
 
 function fetchOptions(baseDirectory: string, run: SourceRun): BundleFetchOptions {

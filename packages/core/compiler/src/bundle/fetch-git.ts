@@ -39,27 +39,54 @@ const REMOTE_PROTOCOLS = "https:ssh";
 const LOCAL_PROTOCOL = "file";
 
 export type GitFetch =
-  | { readonly ok: true; readonly directory: string }
+  | { readonly ok: true; readonly directory: string; readonly remove: () => void }
   | { readonly ok: false; readonly failure: BundleSourceFailure };
 
-/** The bundle directory of the tag's tree, written into a new temporary directory the caller removes. */
+/** Why the source cannot be fetched before any git command runs: its URL, its tag, its directory. */
+export function gitSourceProblem(
+  source: GitBundleSource,
+  localSources: LocalSourcePolicy,
+): BundleSourceFailure | undefined {
+  const url = source.git.url;
+  const scheme = URL_SCHEME.exec(url)?.[1]?.toLowerCase();
+
+  if (scheme !== undefined && !["https", "ssh", LOCAL_PROTOCOL].includes(scheme))
+    return {
+      code: "bundle.git-url",
+      message: `The git URL ${quote(url)} uses '${scheme}:'; a bundle is fetched over https: or ssh only.`,
+      fix: "Name the repository by its https: or ssh URL.",
+    };
+
+  if (isLocalRepository(url) && localSources === "refuse")
+    return {
+      code: "bundle.source-local",
+      message: `The git repository ${quote(url)} is local, and local sources are refused here.`,
+      fix: "Name the repository by its https: or ssh URL.",
+    };
+
+  if (bundleDirectoryPrefix(source.git.directory) === undefined)
+    return badDirectory(source.git.directory);
+
+  if (source.git.tag.startsWith("-") || source.git.tag.includes(".."))
+    return badTag(source.git.tag);
+
+  return undefined;
+}
+
+/** The bundle directory of the tag's tree, written into a new temporary directory; `remove` deletes it. */
 export async function fetchGitBundle(
   source: GitBundleSource,
   baseDirectory: string,
   localSources: LocalSourcePolicy,
 ): Promise<GitFetch> {
-  const url = repositoryUrl(source.git.url, baseDirectory, localSources);
+  const problem = gitSourceProblem(source, localSources);
 
-  if (typeof url !== "string") return { ok: false, failure: url };
+  if (problem !== undefined) return { ok: false, failure: problem };
 
-  const directory = bundleDirectoryPrefix(source.git.directory);
-
-  if (directory === undefined) return { ok: false, failure: badDirectory(source.git.directory) };
-
-  if (source.git.tag.startsWith("-") || source.git.tag.includes(".."))
-    return { ok: false, failure: badTag(source.git.tag) };
-
+  const url = repositoryUrl(source.git.url, baseDirectory);
+  const prefix = bundleDirectoryPrefix(source.git.directory) ?? "";
   const temporary = mkdtempSync(join(tmpdir(), TEMPORARY_PREFIX));
+  const remove = () => rmSync(temporary, { recursive: true, force: true });
   const git = gitRunner(join(temporary, REPOSITORY), localSources);
 
   try {
@@ -75,49 +102,33 @@ export async function fetchGitBundle(
       `refs/tags/${source.git.tag}`,
     ]);
 
-    const written = await writeTree(git, directory, join(temporary, FILES));
+    const written = await writeTree(git, prefix, join(temporary, FILES));
 
     if (written !== undefined) {
-      rmSync(temporary, { recursive: true, force: true });
+      remove();
 
       return { ok: false, failure: written };
     }
   } catch (error) {
-    rmSync(temporary, { recursive: true, force: true });
+    remove();
 
     return { ok: false, failure: gitFailed(source, error) };
   }
 
-  rmSync(join(temporary, REPOSITORY), { recursive: true, force: true });
-
-  return { ok: true, directory: join(temporary, FILES) };
+  return { ok: true, directory: join(temporary, FILES), remove };
 }
 
-function repositoryUrl(
-  url: string,
-  baseDirectory: string,
-  localSources: LocalSourcePolicy,
-): string | BundleSourceFailure {
+function isLocalRepository(url: string): boolean {
   const scheme = URL_SCHEME.exec(url)?.[1]?.toLowerCase();
-  const isLocal =
-    scheme === LOCAL_PROTOCOL ||
-    (scheme === undefined && (DRIVE_PATH.test(url) || !SCP_LIKE.test(url)));
 
-  if (scheme !== undefined && !["https", "ssh", LOCAL_PROTOCOL].includes(scheme))
-    return {
-      code: "bundle.git-url",
-      message: `The git URL ${quote(url)} uses '${scheme}:'; a bundle is fetched over https: or ssh only.`,
-      fix: "Name the repository by its https: or ssh URL.",
-    };
+  if (scheme !== undefined) return scheme === LOCAL_PROTOCOL;
 
-  if (isLocal && localSources === "refuse")
-    return {
-      code: "bundle.source-local",
-      message: `The git repository ${quote(url)} is local, and local sources are refused here.`,
-      fix: "Name the repository by its https: or ssh URL.",
-    };
+  return DRIVE_PATH.test(url) || !SCP_LIKE.test(url);
+}
 
-  if (!isLocal || scheme === LOCAL_PROTOCOL) return url;
+// A local path as a `file:` URL, relative to the base directory; any other URL as written.
+function repositoryUrl(url: string, baseDirectory: string): string {
+  if (!isLocalRepository(url) || URL_SCHEME.test(url)) return url;
 
   return pathToFileURL(isAbsolute(url) ? url : resolve(baseDirectory, url)).href;
 }

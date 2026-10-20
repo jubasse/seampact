@@ -4,7 +4,7 @@ import type { BundleSource, ReleaseBundleSource } from "@seampact/spec/config";
 import type { ContractIR } from "@seampact/spec/ir";
 import { bundleCacheDirectory, bundleCacheEntry, storeBundleCacheEntry } from "./cache.js";
 import type { BundleSourceFailure } from "./fetch-failure.js";
-import { fetchGitBundle } from "./fetch-git.js";
+import { fetchGitBundle, gitSourceProblem } from "./fetch-git.js";
 import { installedBundlePackage } from "./fetch-package.js";
 import { downloadReleaseTarball } from "./fetch-release.js";
 import type { LocalSourcePolicy } from "./local-sources.js";
@@ -53,6 +53,10 @@ export async function fetchBundle(
   }
 
   const channel: BundleChannel = "release" in source ? "release" : "git";
+  const problem = "git" in source ? gitSourceProblem(source, options.localSources) : undefined;
+
+  if (problem !== undefined) return { ok: false, failures: [problem] };
+
   const cacheEntry =
     source.integrity === undefined
       ? undefined
@@ -79,12 +83,12 @@ export async function fetchBundle(
 
     return verified;
   } finally {
-    rmSync(fetched.directory, { recursive: true, force: true });
+    fetched.remove();
   }
 }
 
 type Fetched =
-  | { readonly ok: true; readonly directory: string }
+  | { readonly ok: true; readonly directory: string; readonly remove: () => void }
   | { readonly ok: false; readonly failure: BundleSourceFailure };
 
 async function fetchRelease(source: ReleaseBundleSource): Promise<Fetched> {
@@ -96,7 +100,9 @@ async function fetchRelease(source: ReleaseBundleSource): Promise<Fetched> {
 
   if (!extracted.ok) return { ok: false, failure: firstFailure(extracted.failures) };
 
-  return { ok: true, directory: extracted.directory };
+  const directory = extracted.directory;
+
+  return { ok: true, directory, remove: () => rmSync(directory, { recursive: true, force: true }) };
 }
 
 // The archive reader refuses a tarball on its first problem.

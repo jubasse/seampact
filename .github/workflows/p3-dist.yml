@@ -1,9 +1,11 @@
-name: Bundle tarball determinism
+name: Contract bundles
 
 # Writes the reference contract's bundle tarball on Linux, macOS and Windows, under other time zones and locales,
 # and checks the three SHA-256 values are one (ADR 0011: the same sources and compiler give the same tarball bytes
 # on every machine). The checkout keeps LF line endings on Windows, so the job measures the writer, not autocrlf.
-# `bundle-determinism` is the check to require.
+# `channel-smoke` serves a bundle of the reference contract through a loopback npm registry, a loopback HTTPS
+# server and a local bare git repository, and runs the Node CLI against each (ADR 0011 "Channel smoke tests").
+# `bundle-determinism` and `channel-smoke` are the checks to require.
 
 on:
   push:
@@ -78,3 +80,19 @@ jobs:
           for file in tarballs/*/reference.tgz; do sha256sum "$file"; done
           test "$(cat tarballs/*/*.sha256 | sort -u | wc -l)" = 1
           test "$(sha256sum tarballs/*/reference.tgz | cut -d ' ' -f 1 | sort -u | wc -l)" = 1
+
+  channel-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Fetch, check and generate from each channel
+        run: pnpm vitest run scripts/dist-smoke
