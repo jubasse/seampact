@@ -28,7 +28,13 @@ import {
   writeExtension,
 } from "./emit-context.js";
 import type { ExtensionName } from "./extension-names.js";
-import { copyJsonValue, type JsonObject, type JsonValue, setDefined } from "./json-value.js";
+import {
+  copyJsonValue,
+  isJsonObject,
+  type JsonObject,
+  type JsonValue,
+  setDefined,
+} from "./json-value.js";
 
 // The schema rows of ADR 0004 section 12: a type use as a JSON Schema, the named schemas and enums as components,
 // and their marks (sensitive, opaque, open enums, header-tagged unions, int64 and decimal refinements).
@@ -503,20 +509,11 @@ function unionSchema(
   }
 
   const branches = named.variants.map((unionVariant) => {
-    const reference = schemaReference(context, unionVariant.schema, variant);
-    const branch: JsonObject =
+    const reference = schemaReference(context, unionVariant.schema, "shared");
+    const branch =
       tag.in === "body"
-        ? {
-            allOf: [
-              reference,
-              {
-                type: "object",
-                properties: { [tag.property]: { const: unionVariant.tag } },
-                required: [tag.property],
-              },
-            ],
-          }
-        : reference;
+        ? bodyTaggedBranch(context, unionVariant.schema, tag.property, unionVariant.tag, variant)
+        : schemaReference(context, unionVariant.schema, variant);
 
     setDefined(branch, "description", unionVariant.docs?.description ?? unionVariant.docs?.summary);
 
@@ -542,4 +539,41 @@ function unionSchema(
   schema.discriminator = { propertyName: tag.property, mapping };
 
   return schema;
+}
+
+// A branch of a body-tagged union: the variant and its tag. A strict input twin writes the variant in place with the
+// tag among its properties, since the variant's own twin refuses every key it does not declare.
+function bodyTaggedBranch(
+  context: EmitContext,
+  schemaId: string,
+  tagProperty: string,
+  tagValue: string,
+  variant: SchemaVariant,
+): JsonObject {
+  const tagSchema: JsonObject = { const: tagValue };
+  const named = context.ir.schemas[schemaId];
+  const strict = variant === "input" && context.options.inputSchemas === "strict";
+
+  if (
+    !strict ||
+    named === undefined ||
+    !isKnownVariant("Schema", named) ||
+    named.kind !== "object"
+  ) {
+    return {
+      allOf: [
+        schemaReference(context, schemaId, variant),
+        { type: "object", properties: { [tagProperty]: tagSchema }, required: [tagProperty] },
+      ],
+    };
+  }
+
+  const inline = objectSchema(context, named, "input", schemaLocation(schemaId));
+  const properties = isJsonObject(inline.properties) ? inline.properties : {};
+  const required = Array.isArray(inline.required) ? inline.required : [];
+
+  inline.properties = { [tagProperty]: tagSchema, ...properties };
+  inline.required = [tagProperty, ...required];
+
+  return inline;
 }
