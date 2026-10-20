@@ -78,8 +78,10 @@ function goldenIr(): ContractIR {
 }
 
 beforeAll(async () => {
-  ({ standardSchemaOf, operationInputs, inputSchemas, outputSchemas } =
-    await generateAndImport(goldenIr(), "generated-root"));
+  ({ standardSchemaOf, operationInputs, inputSchemas, outputSchemas } = await generateAndImport(
+    goldenIr(),
+    "generated-root",
+  ));
 });
 
 afterAll(() => rmSync(temporaryRoot, { recursive: true, force: true }));
