@@ -45,9 +45,9 @@ const servedAt = defineLintPlugin({
   ],
 });
 
-test("a house rule runs beside the core rules, takes lint.rules and lint.allow", () => {
+test("a house rule runs beside the core rules, takes lint.rules and lint.allow", async () => {
   const api = compiledFixtureApi("plugin");
-  const diagnostics = runLint(lintInputOf(api, [servedAt]));
+  const diagnostics = await runLint(lintInputOf(api, [servedAt]));
 
   expect(rulesOf(diagnostics)).toEqual([
     "warning seampact/credential-name",
@@ -58,10 +58,10 @@ test("a house rule runs beside the core rules, takes lint.rules and lint.allow",
   );
 });
 
-test("without the plugin the core rules still run and the house settings are reported as ignored", () => {
+test("without the plugin the core rules still run and the house settings are reported as ignored", async () => {
   const api = compiledFixtureApi("plugin");
 
-  expect(rulesOf(runLint(lintInputOf(api)))).toEqual([
+  expect(rulesOf(await runLint(lintInputOf(api)))).toEqual([
     "warning seampact/lint/unclaimed-rule",
     "warning seampact/credential-name",
     "warning seampact/lint/unclaimed-rule",

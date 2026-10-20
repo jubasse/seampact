@@ -17,7 +17,8 @@ const CREDENTIAL_WORDS: ReadonlySet<string> = new Set([
 // The last two words (`apiKey`, `private_key`).
 const CREDENTIAL_PAIRS: ReadonlySet<string> = new Set(["api key", "private key"]);
 
-function looksLikeCredential(name: string): boolean {
+/** Whether a property name ends in a credential word or pair, in any case style. */
+export function looksLikeCredential(name: string): boolean {
   const words = splitName(name);
   const last = words.at(-1);
 

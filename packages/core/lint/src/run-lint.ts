@@ -7,7 +7,14 @@ import {
 import type { ContractIR, Origin, SourceMap } from "@seampact/spec/ir";
 import { describeError } from "./describe-error.js";
 import { LINT_RESERVED_RULE_IDS, seampactCorePlugin } from "./core/plugin.js";
-import { type LintDeclared, type LintFinding, type LintPlugin, lintRuleId } from "./plugin.js";
+import {
+  type LintDeclared,
+  type LintFinding,
+  type LintPlugin,
+  type LintRuleContext,
+  type LintRuleDefinition,
+  lintRuleId,
+} from "./plugin.js";
 import {
   diagnosticOriginOf,
   lintIsAllowed,
@@ -28,9 +35,10 @@ export interface RunLintInput {
 
 /**
  * Lints one api (ADR 0006 section 4): each rule not `disabled` reads the IR, a finding an allow covers is dropped,
- * the rest becomes a diagnostic with its resolved severity. The result is sorted; printing is the caller's.
+ * the rest becomes a diagnostic with its resolved severity. A rule's check may be async; one that rejects is an
+ * error naming it. The result is sorted; printing is the caller's.
  */
-export function runLint(input: RunLintInput): Diagnostic[] {
+export async function runLint(input: RunLintInput): Promise<Diagnostic[]> {
   const plugins = [seampactCorePlugin, ...input.plugins];
 
   refuseDuplicatePlugins(plugins);
@@ -46,15 +54,15 @@ export function runLint(input: RunLintInput): Diagnostic[] {
 
       if (severity === "disabled") continue;
       const findings: LintFinding[] = [];
+      const rejection = await checkRule(id, rule, {
+        ir: input.ir,
+        declared: input.declared,
+        report: (finding) => findings.push(finding),
+      });
 
-      try {
-        rule.check({
-          ir: input.ir,
-          declared: input.declared,
-          report: (finding) => findings.push(finding),
-        });
-      } catch (cause) {
-        throw new Error(`the lint rule '${id}' threw: ${describeError(cause)}`, { cause });
+      if (rejection !== undefined) {
+        diagnostics.push(rejectedRuleDiagnostic(plugin, id, rejection, input));
+        continue;
       }
 
       for (const finding of findings) {
@@ -65,6 +73,50 @@ export function runLint(input: RunLintInput): Diagnostic[] {
   }
 
   return diagnosticSort(diagnostics, input.locations);
+}
+
+interface LintRejection {
+  cause: unknown;
+}
+
+// A check that throws is a defect of the rule and is rethrown; the rejection of an async one is returned.
+async function checkRule(
+  id: string,
+  rule: LintRuleDefinition,
+  context: LintRuleContext,
+): Promise<LintRejection | undefined> {
+  let checked: void | Promise<void>;
+
+  try {
+    checked = rule.check(context);
+  } catch (cause) {
+    throw new Error(`the lint rule '${id}' threw: ${describeError(cause)}`, { cause });
+  }
+
+  try {
+    await checked;
+  } catch (cause) {
+    return { cause };
+  }
+
+  return undefined;
+}
+
+// Located at the api header: a rejection has no place in the contract.
+function rejectedRuleDiagnostic(
+  plugin: LintPlugin,
+  id: string,
+  rejection: LintRejection,
+  input: RunLintInput,
+): Diagnostic {
+  return {
+    severity: "error",
+    rule: id,
+    message: `The lint rule '${id}' of plugin '${plugin.name}' failed: ${describeError(rejection.cause)}`,
+    fix: `Fix the rule in plugin '${plugin.name}', or set '${id}' to disabled in lint.rules.`,
+    origin: findingOrigin(id, input.ir.api.origin, input.locations),
+    related: [],
+  };
 }
 
 function refuseDuplicatePlugins(plugins: readonly LintPlugin[]): void {

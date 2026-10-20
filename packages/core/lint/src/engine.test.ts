@@ -5,6 +5,7 @@ import {
   type LintFinding,
   type LintPlugin,
   type LintRuleDefinition,
+  lintAssertPlugin,
 } from "./plugin.js";
 import { runLint } from "./run-lint.js";
 import { compiledFixtureApi, lintInputOf, rulesOf } from "./test-support.js";
@@ -73,72 +74,74 @@ const ruleAt = (severity: "disabled" | "warning" | "error", origin = SURFACE) =>
 });
 
 describe("severity", () => {
-  test("a rule reports at its default severity", () => {
-    expect(rulesOf(lintedWith(NO_LINT, probePlugin([ALPHA])))).toEqual(["warning test/probe"]);
+  test("a rule reports at its default severity", async () => {
+    expect(rulesOf(await lintedWith(NO_LINT, probePlugin([ALPHA])))).toEqual([
+      "warning test/probe",
+    ]);
   });
 
-  test("lint.rules sets the severity", () => {
+  test("lint.rules sets the severity", async () => {
     const lint: Lint = { rules: { "test/probe": ruleAt("error") }, allows: [] };
 
-    expect(rulesOf(lintedWith(lint, probePlugin([ALPHA])))).toEqual(["error test/probe"]);
+    expect(rulesOf(await lintedWith(lint, probePlugin([ALPHA])))).toEqual(["error test/probe"]);
   });
 
-  test("a disabled rule is not run", () => {
+  test("a disabled rule is not run", async () => {
     const check = vi.fn();
     const lint: Lint = { rules: { "test/probe": ruleAt("disabled") }, allows: [] };
 
-    expect(lintedWith(lint, probePlugin([ALPHA], check))).toEqual([]);
+    expect(await lintedWith(lint, probePlugin([ALPHA], check))).toEqual([]);
     expect(check).not.toHaveBeenCalled();
   });
 });
 
 describe("allows", () => {
-  test("an allow at the exact place silences the finding there only", () => {
+  test("an allow at the exact place silences the finding there only", async () => {
     const lint: Lint = { rules: {}, allows: [allowAt(ALPHA, false)] };
-    const diagnostics = lintedWith(lint, probePlugin([ALPHA, BETA]));
+    const diagnostics = await lintedWith(lint, probePlugin([ALPHA, BETA]));
 
     expect(diagnostics.map((diagnostic) => diagnostic.origin.pointer)).toEqual([BETA.pointer]);
   });
 
-  test("an allow in another layer silences nothing", () => {
+  test("an allow in another layer silences nothing", async () => {
     const lint: Lint = {
       rules: {},
       allows: [allowAt({ layer: "shared", pointer: ALPHA.pointer }, true)],
     };
 
-    expect(lintedWith(lint, probePlugin([ALPHA]))).toHaveLength(1);
+    expect(await lintedWith(lint, probePlugin([ALPHA]))).toHaveLength(1);
   });
 
-  test("a subtree allow reaches a place below it", () => {
+  test("a subtree allow reaches a place below it", async () => {
     const lint: Lint = { rules: {}, allows: [allowAt(SURFACE, true)] };
 
-    expect(lintedWith(lint, probePlugin([ALPHA, BETA]))).toEqual([]);
+    expect(await lintedWith(lint, probePlugin([ALPHA, BETA]))).toEqual([]);
   });
 
-  test("an allow that is not a subtree allow holds at its own place only (CHK-121)", () => {
+  test("an allow that is not a subtree allow holds at its own place only (CHK-121)", async () => {
     const lint: Lint = { rules: {}, allows: [allowAt(SURFACE, false)] };
 
-    expect(lintedWith(lint, probePlugin([ALPHA, SURFACE])).map((d) => d.origin.pointer)).toEqual([
-      ALPHA.pointer,
-    ]);
+    expect(
+      (await lintedWith(lint, probePlugin([ALPHA, SURFACE]))).map((d) => d.origin.pointer),
+    ).toEqual([ALPHA.pointer]);
   });
 
-  test("a path that merely starts like the allow's place is not below it", () => {
+  test("a path that merely starts like the allow's place is not below it", async () => {
     const lint: Lint = {
       rules: {},
       allows: [allowAt({ layer: "api", pointer: "/surfaces/ap" }, true)],
     };
 
-    expect(lintedWith(lint, probePlugin([ALPHA]))).toHaveLength(1);
+    expect(await lintedWith(lint, probePlugin([ALPHA]))).toHaveLength(1);
   });
 
-  test("an allow on a catalogue entry silences the finding on it (CHK-137)", () => {
+  test("an allow on a catalogue entry silences the finding on it (CHK-137)", async () => {
     const lint: Lint = { rules: {}, allows: [allowAt(SCHEME, false)] };
 
-    expect(lintedWith(lint, probePlugin([SCHEME]))).toEqual([]);
+    expect(await lintedWith(lint, probePlugin([SCHEME]))).toEqual([]);
   });
 
-  test("a finding is silenced by any place of allowAt", () => {
+  test("a finding is silenced by any place of allowAt", async () => {
     const plugin = defineLintPlugin({
       name: "test",
       rules: [
@@ -153,17 +156,17 @@ describe("allows", () => {
     });
     const lint: Lint = { rules: {}, allows: [allowAt(SURFACE, false)] };
 
-    expect(lintedWith(lint, plugin)).toEqual([]);
+    expect(await lintedWith(lint, plugin)).toEqual([]);
   });
 });
 
 describe("unknown rule ids", () => {
-  test("an unknown id under the core prefix is an error naming the core ids", () => {
+  test("an unknown id under the core prefix is an error naming the core ids", async () => {
     const lint: Lint = {
       rules: { "seampact/credential-nam": ruleAt("error") },
       allows: [],
     };
-    const [diagnostic, ...rest] = lintedWith(lint, probePlugin([]));
+    const [diagnostic, ...rest] = await lintedWith(lint, probePlugin([]));
 
     expect(rest).toEqual([]);
     expect(diagnostic).toMatchObject({
@@ -175,17 +178,17 @@ describe("unknown rule ids", () => {
     expect(diagnostic?.fix).toContain("seampact/credential-name");
   });
 
-  test("an unknown allow of a loaded plugin is an error at the allow", () => {
+  test("an unknown allow of a loaded plugin is an error at the allow", async () => {
     const lint: Lint = { rules: {}, allows: [allowAt(ALPHA, true, "test/missing")] };
-    const [diagnostic] = lintedWith(lint, probePlugin([]));
+    const [diagnostic] = await lintedWith(lint, probePlugin([]));
 
     expect(diagnostic).toMatchObject({ rule: "seampact/lint/unknown-rule", origin: ALPHA });
     expect(diagnostic?.message).toContain("lint.allow");
   });
 
-  test("an id no loaded plugin owns is a warning and the setting is ignored", () => {
+  test("an id no loaded plugin owns is a warning and the setting is ignored", async () => {
     const lint: Lint = { rules: { "acme/served-at": ruleAt("error") }, allows: [] };
-    const [diagnostic, ...rest] = lintedWith(lint, probePlugin([]));
+    const [diagnostic, ...rest] = await lintedWith(lint, probePlugin([]));
 
     expect(rest).toEqual([]);
     expect(diagnostic).toMatchObject({ severity: "warning", rule: "seampact/lint/unclaimed-rule" });
@@ -193,16 +196,16 @@ describe("unknown rule ids", () => {
     expect(diagnostic?.message).toContain("ignored");
   });
 
-  test("the reserved core id is accepted", () => {
+  test("the reserved core id is accepted", async () => {
     const lint: Lint = {
       rules: { "seampact/field-right-unresolved": ruleAt("disabled") },
       allows: [],
     };
 
-    expect(lintedWith(lint, probePlugin([]))).toEqual([]);
+    expect(await lintedWith(lint, probePlugin([]))).toEqual([]);
   });
 
-  test("the unknown-rule error has no severity setting and no allow", () => {
+  test("the unknown-rule error has no severity setting and no allow", async () => {
     const lint: Lint = {
       rules: {
         "seampact/nope": ruleAt("warning"),
@@ -210,7 +213,7 @@ describe("unknown rule ids", () => {
       },
       allows: [allowAt(SURFACE, true, "seampact/lint/unknown-rule")],
     };
-    const diagnostics = lintedWith(lint, probePlugin([]));
+    const diagnostics = await lintedWith(lint, probePlugin([]));
 
     expect(diagnostics.filter((d) => d.rule === "seampact/lint/unknown-rule").length).toBe(3);
     expect(diagnostics.every((d) => d.severity === "error")).toBe(true);
@@ -238,13 +241,15 @@ describe("plugins", () => {
     expect(() => defineLintPlugin({ name: "acme", rules: [rule, rule] })).toThrow(/'probe' twice/);
   });
 
-  test("a plugin given twice is refused", () => {
+  test("a plugin given twice is refused", async () => {
     const plugin = probePlugin([]);
 
-    expect(() => runLint(lintInputOf(api, [plugin, plugin]))).toThrow(/'test' is given twice/);
+    await expect(runLint(lintInputOf(api, [plugin, plugin]))).rejects.toThrow(
+      /'test' is given twice/,
+    );
   });
 
-  test("a rule that throws is rethrown with its id and the cause", () => {
+  test("a rule that throws is rethrown with its id and the cause", async () => {
     const cause = new Error("boom");
     const plugin = defineLintPlugin({
       name: "test",
@@ -263,7 +268,7 @@ describe("plugins", () => {
     let thrown: unknown;
 
     try {
-      runLint(lintInputOf(api, [plugin]));
+      await runLint(lintInputOf(api, [plugin]));
     } catch (error) {
       thrown = error;
     }
@@ -273,24 +278,76 @@ describe("plugins", () => {
     expect(thrown.cause).toBe(cause);
   });
 
-  test("a finding the side table cannot locate is a defect of the rule", () => {
+  test("an async rule's findings are reported once it settles", async () => {
+    const plugin = defineLintPlugin({
+      name: "test",
+      rules: [
+        {
+          ...probeRule(),
+          async check({ report }) {
+            await Promise.resolve();
+            report(findingAt(ALPHA));
+          },
+        },
+      ],
+    });
+
+    expect(rulesOf(await lintedWith(NO_LINT, plugin))).toEqual(["warning test/probe"]);
+  });
+
+  test("a rule whose check rejects is an error naming the plugin and the rule", async () => {
+    const plugin = defineLintPlugin({
+      name: "test",
+      rules: [
+        {
+          ...probeRule(),
+          async check() {
+            await Promise.resolve();
+
+            throw new Error("the registry is down");
+          },
+        },
+      ],
+    });
+    const [diagnostic, ...others] = await lintedWith(NO_LINT, plugin);
+
+    expect(others).toEqual([]);
+    expect(diagnostic).toEqual({
+      severity: "error",
+      rule: "test/probe",
+      message: "The lint rule 'test/probe' of plugin 'test' failed: the registry is down",
+      fix: "Fix the rule in plugin 'test', or set 'test/probe' to disabled in lint.rules.",
+      origin: api.ir.api.origin,
+      related: [],
+    });
+  });
+
+  test("a default severity outside the three values is refused", () => {
+    const rule = { ...probeRule(), defaultSeverity: "warn" };
+
+    expect(() => lintAssertPlugin({ name: "acme", rules: [rule] })).toThrow(
+      /'probe' of plugin 'acme' has the default severity 'warn'/,
+    );
+  });
+
+  test("a finding the side table cannot locate is a defect of the rule", async () => {
     const missing: Origin = { layer: "api", pointer: "/surfaces/nowhere" };
 
-    expect(() => lintedWith(NO_LINT, probePlugin([missing]))).toThrow(
+    await expect(lintedWith(NO_LINT, probePlugin([missing]))).rejects.toThrow(
       /'test\/probe'.*'api#\/surfaces\/nowhere'.*lacks/,
     );
   });
 
-  test("a finding at a core origin or a relay copy is refused", () => {
+  test("a finding at a core origin or a relay copy is refused", async () => {
     const core: Origin = { layer: "core", pointer: "/errors/api.not_found" };
     const relayed: Origin = { ...ALPHA, api: "other" };
 
-    expect(() => lintedWith(NO_LINT, probePlugin([core]))).toThrow(/core origin/);
-    expect(() => lintedWith(NO_LINT, probePlugin([relayed]))).toThrow(/relay copy/);
+    await expect(lintedWith(NO_LINT, probePlugin([core]))).rejects.toThrow(/core origin/);
+    await expect(lintedWith(NO_LINT, probePlugin([relayed]))).rejects.toThrow(/relay copy/);
   });
 
-  test("diagnostics are sorted by file, line, column and rule", () => {
-    const diagnostics = lintedWith(NO_LINT, probePlugin([BETA, ALPHA, SCHEME]));
+  test("diagnostics are sorted by file, line, column and rule", async () => {
+    const diagnostics = await lintedWith(NO_LINT, probePlugin([BETA, ALPHA, SCHEME]));
 
     expect(diagnostics.map((d) => d.origin.pointer)).toEqual([
       SCHEME.pointer,

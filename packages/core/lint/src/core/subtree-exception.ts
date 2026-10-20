@@ -8,6 +8,10 @@ import {
   lintRoutesNamed,
 } from "./origins.js";
 
+// The tree of grammar 08: an exception written elsewhere, as the api-wide `conventions.query.unknownKeys`, is a
+// convention, not a node, so the rule never reads it.
+const TREE_PREFIX = "/surfaces/";
+
 // A surface root is `/surfaces/<name>`; the one place above a route an exception is meant for.
 const SURFACE_ROOT = /^\/surfaces\/[^/]+$/;
 
@@ -21,7 +25,8 @@ interface Exception {
 function exceptionsOf(operation: Operation): Exception[] {
   const found: Exception[] = [];
   const add = (written: string, origin: Origin) => {
-    if (lintOwnsOrigin(origin)) found.push({ written, origin, operation });
+    if (lintOwnsOrigin(origin) && origin.pointer.startsWith(TREE_PREFIX))
+      found.push({ written, origin, operation });
   };
 
   const { access, csrf, idempotency, unknownQuery } = operation;

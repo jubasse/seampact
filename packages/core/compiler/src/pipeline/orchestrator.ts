@@ -50,11 +50,11 @@ export interface PipelineApiResult {
   readonly diagnostics: readonly Diagnostic[];
   /** The api's side table, which locates its diagnostics. */
   readonly locations: SourceMap["locations"];
-  /** Every catalogue entry the api's layers declare, which finalize prunes from the IR when nothing reaches it. */
-  readonly declared: readonly PipelineDeclared[];
   /** The finalized IR and its side table, when finalize produced them. */
   readonly ir?: ContractIR;
   readonly sourceMap?: SourceMap;
+  /** With the IR: every catalogue entry the api's layers declare, and whether the contract reaches it. */
+  readonly declared?: readonly PipelineDeclared[];
 }
 
 export interface PipelineResult {
@@ -120,8 +120,13 @@ export function compileWorkspace(options: PipelineOptions): PipelineResult {
       api: raw.name,
       diagnostics: diagnosticSort(diagnostics, raw.locations),
       locations: raw.locations,
-      declared: pipelineDeclared(raw),
-      ...(finalized === undefined ? {} : { ir: finalized.ir, sourceMap: finalized.sourceMap }),
+      ...(finalized === undefined
+        ? {}
+        : {
+            ir: finalized.ir,
+            sourceMap: finalized.sourceMap,
+            declared: pipelineDeclared(raw, finalized.ir),
+          }),
     })),
   });
   const viewed = <T>(value: T, source: "raw" | "workspace" | "imported"): T =>

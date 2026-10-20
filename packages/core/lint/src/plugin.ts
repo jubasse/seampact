@@ -21,6 +21,8 @@ export interface LintDeclared {
   catalogue: string;
   id: string;
   origin: Origin;
+  /** Whether an operation, an identity or a convention reaches it, as the compiler found. */
+  reached: boolean;
 }
 
 export interface LintRuleContext {
@@ -37,7 +39,8 @@ export interface LintRuleDefinition {
   reports: string;
   /** Where an allow silences it. */
   silencedOn: string;
-  check(context: LintRuleContext): void;
+  /** May be async: the runner waits for it, and a rejection is an error diagnostic naming the rule. */
+  check(context: LintRuleContext): void | Promise<void>;
 }
 
 export interface LintPlugin {
@@ -48,14 +51,25 @@ export interface LintPlugin {
 
 export const CORE_PLUGIN_NAME = "seampact";
 
+/** The version of this plugin API; a plugin built against another one is refused by the loader. */
+export const LINT_PLUGIN_API_VERSION = 1;
+
 const NAME_PATTERN = /^[a-z][a-z0-9-]*$/;
 
-// A registry symbol, so a plugin package holding its own copy of this package is still recognised.
+const SEVERITIES: ReadonlySet<unknown> = new Set<LintSeverity>(["disabled", "warning", "error"]);
+
+// A registry symbol, so a plugin package holding its own copy of this package is still recognised. Its value is
+// the plugin API version the plugin was built against.
 const DEFINED_BRAND = Symbol.for("seampact.lint.definedPlugin");
 
-/** Whether a value is a result of `defineLintPlugin`. */
+/** Whether a value carries the brand `defineLintPlugin` puts on its result, of any API version. */
 export function isDefinedLintPlugin(value: unknown): value is LintPlugin {
   return typeof value === "object" && value !== null && Object.hasOwn(value, DEFINED_BRAND);
+}
+
+/** The plugin API version a branded plugin was built against, as its brand holds it. */
+export function lintPluginApiVersion(plugin: LintPlugin): unknown {
+  return Reflect.get(plugin, DEFINED_BRAND);
 }
 
 /** The full id of a rule. */
@@ -82,29 +96,74 @@ export function defineCoreLintPlugin(plugin: LintPlugin): LintPlugin {
 }
 
 function frozenPlugin(plugin: LintPlugin): LintPlugin {
-  if (!NAME_PATTERN.test(plugin.name))
-    throw new Error(
-      `the lint plugin name '${plugin.name}' is not kebab case: use lowercase letters, digits and '-', starting with a letter`,
-    );
-
-  const seen = new Set<string>();
-
-  for (const rule of plugin.rules) {
-    if (!NAME_PATTERN.test(rule.name))
-      throw new Error(
-        `the lint rule name '${rule.name}' of plugin '${plugin.name}' is not kebab case: use lowercase letters, digits and '-', starting with a letter`,
-      );
-
-    if (seen.has(rule.name))
-      throw new Error(
-        `the lint plugin '${plugin.name}' declares the rule '${rule.name}' twice: rename one`,
-      );
-    seen.add(rule.name);
-  }
+  lintAssertPlugin(plugin);
 
   return Object.freeze({
     name: plugin.name,
     rules: Object.freeze(plugin.rules.map((rule) => Object.freeze({ ...rule }))),
-    [DEFINED_BRAND]: true,
+    [DEFINED_BRAND]: LINT_PLUGIN_API_VERSION,
   });
+}
+
+/**
+ * Checks a value is a plugin as `defineLintPlugin` accepts it, for `defineLintPlugin` and for a loaded package
+ * alike; throws the first problem found.
+ */
+export function lintAssertPlugin(value: unknown): asserts value is LintPlugin {
+  const name = memberOf(value, "name");
+
+  if (typeof name !== "string" || !NAME_PATTERN.test(name))
+    throw new Error(
+      `the lint plugin name '${String(name)}' is not kebab case: use lowercase letters, digits and '-', starting with a letter`,
+    );
+
+  const rules = memberOf(value, "rules");
+
+  if (!Array.isArray(rules))
+    throw new Error(`the lint plugin '${name}' has no rules list: give 'rules' an array`);
+  const seen = new Set<string>();
+
+  for (const rule of rules) {
+    const ruleName = assertRule(name, rule);
+
+    if (seen.has(ruleName))
+      throw new Error(
+        `the lint plugin '${name}' declares the rule '${ruleName}' twice: rename one`,
+      );
+    seen.add(ruleName);
+  }
+}
+
+// Checks one rule of plugin `pluginName` and returns its name.
+function assertRule(pluginName: string, rule: unknown): string {
+  const name = memberOf(rule, "name");
+
+  if (typeof name !== "string" || !NAME_PATTERN.test(name))
+    throw new Error(
+      `the lint rule name '${String(name)}' of plugin '${pluginName}' is not kebab case: use lowercase letters, digits and '-', starting with a letter`,
+    );
+
+  const severity = memberOf(rule, "defaultSeverity");
+
+  if (!SEVERITIES.has(severity))
+    throw new Error(
+      `the lint rule '${name}' of plugin '${pluginName}' has the default severity '${String(severity)}': use disabled, warning or error`,
+    );
+
+  if (typeof memberOf(rule, "check") !== "function")
+    throw new Error(
+      `the lint rule '${name}' of plugin '${pluginName}' has no check function: give it 'check'`,
+    );
+
+  for (const text of ["reports", "silencedOn"])
+    if (typeof memberOf(rule, text) !== "string")
+      throw new Error(
+        `the lint rule '${name}' of plugin '${pluginName}' has no '${text}' sentence: give it one`,
+      );
+
+  return name;
+}
+
+function memberOf(value: unknown, member: string): unknown {
+  return typeof value === "object" && value !== null ? Reflect.get(value, member) : undefined;
 }

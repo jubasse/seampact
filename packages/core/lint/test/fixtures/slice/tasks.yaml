@@ -2,12 +2,17 @@
 api: { name: tasks, version: 1, maturity: provisional }
 packs: [./pack.yaml]
 
+conventions:
+  query:
+    unknownKeys: { ignore: "Gateways add tracking parameters." }
+
 schemas:
+  TaskId: { type: string, format: uuid }
   Task:
     type: object
     required: [id, title, password]
     properties:
-      id: { type: string }
+      id: TaskId
       title: { type: string }
       password: { type: string }
       tokenType: { type: string }
@@ -25,7 +30,7 @@ surfaces:
     routes:
       tasks:
         kind: collection
-        id: { taskId: { type: string } }
+        id: { taskId: TaskId }
         idProperty: id
         item: Task
         access: { optionalAuth: "Visitors may read and tidy tasks as anonymous." }

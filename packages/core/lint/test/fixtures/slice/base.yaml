@@ -18,3 +18,4 @@ schemas:
     type: object
     required: [userId]
     properties: { userId: { type: string } }
+  SharedSpare: { type: object, properties: { note: { type: string } } }

@@ -46,3 +46,35 @@ test("every failing package is reported, none is skipped", async () => {
     "not-a-plugin",
   ]);
 });
+
+test("a hand-branded plugin is checked like defineLintPlugin checks it", async () => {
+  const outcome = await loadLintPlugins(["forged-lint"], PROJECT);
+
+  expect(outcome).toEqual({
+    status: "refused",
+    problems: [
+      {
+        package: "forged-lint",
+        message:
+          "The lint plugin package 'forged-lint' exports an invalid plugin: the lint rule name 'Bad Name' of plugin 'forged' is not kebab case: use lowercase letters, digits and '-', starting with a letter",
+        fix: "Build the plugin with defineLintPlugin and fix what the message names.",
+      },
+    ],
+  });
+});
+
+test("a plugin built against another plugin API version is refused", async () => {
+  const outcome = await loadLintPlugins(["stale-lint"], PROJECT);
+
+  expect(outcome).toEqual({
+    status: "refused",
+    problems: [
+      {
+        package: "stale-lint",
+        message:
+          "The lint plugin package 'stale-lint' was built against another lint plugin API than version 1.",
+        fix: "Rebuild the plugin against this CLI: update its @seampact/lint dependency and publish it again.",
+      },
+    ],
+  });
+});

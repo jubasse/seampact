@@ -2,10 +2,17 @@ import { createRequire } from "node:module";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { describeError } from "./describe-error.js";
-import { isDefinedLintPlugin, type LintPlugin } from "./plugin.js";
+import {
+  isDefinedLintPlugin,
+  LINT_PLUGIN_API_VERSION,
+  type LintPlugin,
+  lintAssertPlugin,
+  lintPluginApiVersion,
+} from "./plugin.js";
 
 // The loader of house plugins for the CLI: each package is resolved from the project that names it, never from
-// this package's install, and its default export must be what `defineLintPlugin` returned.
+// this package's install, and its default export must be what `defineLintPlugin` returned: branded with this
+// plugin API version, and checked again as `defineLintPlugin` checks it, since a brand can be written by hand.
 
 export interface LintPluginProblem {
   /** The package name as written. */
@@ -51,15 +58,7 @@ async function loadOne(
     const exported =
       typeof module === "object" && module !== null ? Reflect.get(module, "default") : undefined;
 
-    if (isDefinedLintPlugin(exported)) return { plugin: exported };
-
-    return {
-      problem: {
-        package: packageName,
-        message: `The package '${packageName}' has no default export made by defineLintPlugin.`,
-        fix: "Point the setting at a seampact lint plugin package; its main module default-exports the value `defineLintPlugin` returns.",
-      },
-    };
+    return checkedPlugin(packageName, exported);
   } catch (error) {
     return {
       problem: {
@@ -69,6 +68,43 @@ async function loadOne(
       },
     };
   }
+}
+
+function checkedPlugin(
+  packageName: string,
+  exported: unknown,
+): { plugin: LintPlugin } | { problem: LintPluginProblem } {
+  if (!isDefinedLintPlugin(exported))
+    return {
+      problem: {
+        package: packageName,
+        message: `The package '${packageName}' has no default export made by defineLintPlugin.`,
+        fix: "Point the setting at a seampact lint plugin package; its main module default-exports the value `defineLintPlugin` returns.",
+      },
+    };
+
+  if (lintPluginApiVersion(exported) !== LINT_PLUGIN_API_VERSION)
+    return {
+      problem: {
+        package: packageName,
+        message: `The lint plugin package '${packageName}' was built against another lint plugin API than version ${LINT_PLUGIN_API_VERSION}.`,
+        fix: "Rebuild the plugin against this CLI: update its @seampact/lint dependency and publish it again.",
+      },
+    };
+
+  try {
+    lintAssertPlugin(exported);
+  } catch (error) {
+    return {
+      problem: {
+        package: packageName,
+        message: `The lint plugin package '${packageName}' exports an invalid plugin: ${describeError(error)}`,
+        fix: "Build the plugin with defineLintPlugin and fix what the message names.",
+      },
+    };
+  }
+
+  return { plugin: exported };
 }
 
 function resolveFrom(
