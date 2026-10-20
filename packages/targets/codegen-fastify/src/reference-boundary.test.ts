@@ -2,11 +2,13 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { LinkSet } from "@seampact/codegen-core";
 import {
+  GENERATE_TIMEOUT_MILLISECONDS,
   generateReferenceProject,
   projectDirectory,
   REFERENCE_COMPILER_OPTIONS,
   readGoldenIr,
   referenceLinks,
+  TYPE_CHECK_TIMEOUT_MILLISECONDS,
   typeErrorsOf,
 } from "@seampact/codegen-core/node-server/test-support";
 import { beforeAll, describe, expect, test } from "vitest";
@@ -23,11 +25,6 @@ const FIXED_EXPORTS = [
   "MAX_CHECKED_ERROR_BODY_BYTES",
   "MAX_RENDERED_ISSUES",
 ];
-
-// Generating the reference project outruns vitest's default 10 s hook limit on a loaded machine.
-const GENERATE_TIMEOUT_MILLISECONDS = 60_000;
-// Type-checking both apis takes tens of seconds on a busy machine.
-const TYPE_CHECK_TIMEOUT_MILLISECONDS = 120_000;
 
 let files: string[] = [];
 
