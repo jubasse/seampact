@@ -30,10 +30,8 @@ npx seampact generate
 
 You see one line per target, and the files appear in `src/__generated__` and `openapi/notes.yaml`. Commit them: `seampact check` fails later if they drift from the contract.
 
-Using Fastify instead of NestJS? Use the `targets` of [4. Write the handlers (Fastify)](4-handlers-fastify.md#dependencies-and-config).
-
 Every config key is in [configuration](configuration.md).
 
-Using Express? Put `@seampact/codegen-express` in `use` of the `server` target instead of `@seampact/codegen-nestjs`.
+Not on NestJS? Each handlers page shows its own `server` target and dependencies.
 
-Next: [4. Write the handlers](4-handlers-nestjs.md), or [for Express](4-handlers-express.md)
+Next: 4. Write the handlers for [NestJS](4-handlers-nestjs.md), [Express](4-handlers-express.md), [Fastify](4-handlers-fastify.md), [AdonisJS](4-handlers-adonis.md) or [Hono](4-handlers-hono.md)
