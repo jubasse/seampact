@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -55,6 +55,8 @@ export interface Verdict {
 export interface ProviderValidators {
   id: string;
   verdictOf(row: AgreementRow, payload: unknown): Promise<Verdict>;
+  /** Removes the temporary project the validators were generated into. */
+  removeProject(): void;
 }
 
 interface GeneratedFile {
@@ -312,6 +314,23 @@ export async function loadProviderValidators(
   providerId: string,
   ir: object,
 ): Promise<ProviderValidators> {
+  const projectRoot = mkdtempSync(join(tmpdir(), `seampact-agreement-${providerId}-`));
+  const removeProject = () => rmSync(projectRoot, { recursive: true, force: true });
+
+  try {
+    return { ...(await loadIntoProject(providerId, ir, projectRoot)), removeProject };
+  } catch (error) {
+    removeProject();
+
+    throw error;
+  }
+}
+
+async function loadIntoProject(
+  providerId: string,
+  ir: object,
+  projectRoot: string,
+): Promise<Omit<ProviderValidators, "removeProject">> {
   const provider = await providerTarget(providerId);
   const { packageName, packageDirectory, libraries, validatorsDirectory } = provider;
   const core = codegenCoreOf(await importModule(CODEGEN_CORE_ENTRY));
@@ -321,7 +340,6 @@ export async function loadProviderValidators(
     throw new Error(`${providerId}: ${JSON.stringify(outcome.refusals)}`);
   }
 
-  const projectRoot = mkdtempSync(join(tmpdir(), `seampact-agreement-${providerId}-`));
   const outputDirectory = join(projectRoot, GENERATED_ROOT);
   const validatorsRoot = join(outputDirectory, validatorsDirectory);
   const written = await core.writeGeneratedFiles(outputDirectory, packageName, outcome.files);

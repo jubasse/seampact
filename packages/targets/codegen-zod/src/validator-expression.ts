@@ -3,6 +3,7 @@ import {
   CODE_POINT_LENGTH,
   type FieldPlan,
   IS_DATE_TIME,
+  IS_INTEGER_MULTIPLE,
   type ObjectPlan,
   type ScalarBase,
   type ScalarCheck,
@@ -81,7 +82,8 @@ function scalarValidator(plan: ScalarPlan, context: ZodRenderContext): string {
 }
 
 // String lengths count Unicode code points through the generated counter: zod's own `min` and `max` count UTF-16
-// units. zod's `uuid()` also checks the RFC 9562 version and variant digits, so the layout is a regex.
+// units. zod's `uuid()` also checks the RFC 9562 version and variant digits, so the layout is a regex. zod's own
+// `multipleOf` scales both numbers to integers in floating point, wrong past 2^53 / 10^d.
 function scalarCheck(check: ScalarCheck, context: ZodRenderContext): string {
   switch (check.rule) {
     case "format":
@@ -115,7 +117,11 @@ function scalarCheck(check: ScalarCheck, context: ZodRenderContext): string {
     case "exclusiveMaximum":
       return `.lt(${check.literal})`;
     case "multipleOf":
-      return `.multipleOf(${check.literal})`;
+      return customCheck(
+        `(value) => ${context.wireCheck(IS_INTEGER_MULTIPLE)}(value, ${JSON.stringify(check.integerStep)})`,
+        check.message,
+        check.rule,
+      );
   }
 }
 

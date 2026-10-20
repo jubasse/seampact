@@ -9,7 +9,7 @@ import {
   registerDecorator,
   ValidateIf,
 } from "class-validator";
-import { codePointLength, isDateTime } from "./wire-checks.js";
+import { codePointLength, isDateTime, isIntegerMultiple } from "./wire-checks.js";
 
 /** One contract rule on one value: its name, the message it reports and its test. */
 export interface ContractCheck {
@@ -138,25 +138,12 @@ export function exclusiveMaximumCheck(limit: number): ContractCheck {
   };
 }
 
-function decimalPlaces(value: number): number {
-  const [mantissa = "", exponent = "0"] = String(value).split("e");
-  const fraction = (mantissa.split(".")[1] ?? "").length;
-
-  return Math.max(0, fraction - Number(exponent));
-}
-
-// A remainder that holds for decimal steps: both numbers are scaled to integers first, since `3 % 0.1` is not 0.
-export function isMultipleOf(value: number, step: number): boolean {
-  const scale = 10 ** Math.max(decimalPlaces(value), decimalPlaces(step));
-
-  return Math.round(value * scale) % Math.round(step * scale) === 0;
-}
-
-export function multipleOfCheck(divisor: number): ContractCheck {
+// The step is the plan's exact integer step of the contract's decimal step: the remainder is exact on any integer.
+export function multipleOfCheck(integerStep: string, message: string): ContractCheck {
   return {
     rule: "multipleOf",
-    message: `Expected a multiple of ${divisor}.`,
-    test: onNumbers((value) => isMultipleOf(value, divisor)),
+    message,
+    test: onNumbers((value) => isIntegerMultiple(value, integerStep)),
   };
 }
 
@@ -250,8 +237,8 @@ export function ExclusiveMaximum(limit: number): PropertyDecorator {
   return Satisfies(exclusiveMaximumCheck(limit));
 }
 
-export function MultipleOf(divisor: number): PropertyDecorator {
-  return Satisfies(multipleOfCheck(divisor));
+export function MultipleOf(integerStep: string, message: string): PropertyDecorator {
+  return Satisfies(multipleOfCheck(integerStep, message));
 }
 
 // Each item of a list against its checks, the type check first. class-validator's `each` reports a failing item

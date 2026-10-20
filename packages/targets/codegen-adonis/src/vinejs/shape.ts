@@ -4,6 +4,7 @@ import {
   type ScalarCheck,
   type ScalarPlan,
   type SchemaPlan,
+  type SchemasById,
   type TypePlan,
   UUID_LAYOUT,
 } from "@seampact/codegen-core/validators";
@@ -42,9 +43,6 @@ export interface ShapeField {
   readonly optional: boolean;
   readonly type: Shape;
 }
-
-// The schemas of one direction by id, to write a reference inline.
-export type SchemasById = ReadonlyMap<string, SchemaPlan>;
 
 export function typeShape(plan: TypePlan, schemas: SchemasById): Shape {
   switch (plan.kind) {

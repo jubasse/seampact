@@ -167,7 +167,7 @@ function scalarCheckDecorator(check: ScalarCheck, context: DtoRenderContext): st
     case "exclusiveMaximum":
       return `@${CONTRACT}.ExclusiveMaximum(${check.literal})`;
     case "multipleOf":
-      return `@${CONTRACT}.MultipleOf(${check.literal})`;
+      return `@${CONTRACT}.MultipleOf(${JSON.stringify(check.integerStep)}, ${JSON.stringify(check.message)})`;
   }
 }
 
@@ -190,7 +190,7 @@ function itemCheck(check: ScalarCheck): string {
     case "exclusiveMaximum":
       return `${CONTRACT}.exclusiveMaximumCheck(${check.literal})`;
     case "multipleOf":
-      return `${CONTRACT}.multipleOfCheck(${check.literal})`;
+      return `${CONTRACT}.multipleOfCheck(${JSON.stringify(check.integerStep)}, ${JSON.stringify(check.message)})`;
   }
 }
 

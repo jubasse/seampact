@@ -4,7 +4,7 @@
 // with `params.rule`, `unrecognized_keys` with `keys`). The app's global VineJS settings never reach it.
 import { errors, SimpleMessagesProvider, Vine } from "@vinejs/vine";
 import type { FieldContext, SchemaTypes } from "@vinejs/vine/types";
-import { codePointLength, isDateTime } from "./wire-checks.js";
+import { codePointLength, isDateTime, isIntegerMultiple } from "./wire-checks.js";
 
 const UNKNOWN_KEYS_CODE = "unrecognized_keys";
 const UNKNOWN_KEYS_RULE = "unknownKeys";
@@ -18,9 +18,8 @@ const LITERAL_CHARACTERS: Readonly<Record<string, string>> = {
   backslash: "\\",
   openingBrace: "{",
 };
-const DECIMAL_LITERAL = /^(\d*)\.?(\d*)(?:[eE]([+-]?\d+))?$/;
 
-type NumericRule = "minimum" | "maximum" | "exclusiveMinimum" | "exclusiveMaximum" | "multipleOf";
+type BoundRule = "minimum" | "maximum" | "exclusiveMinimum" | "exclusiveMaximum";
 
 type ShapeCheck =
   | {
@@ -31,7 +30,13 @@ type ShapeCheck =
     }
   | { readonly rule: "minLength" | "maxLength"; readonly limit: number; readonly message: string }
   | { readonly rule: "pattern"; readonly normalized: string; readonly message: string }
-  | { readonly rule: NumericRule; readonly literal: string };
+  | { readonly rule: BoundRule; readonly literal: string }
+  | {
+      readonly rule: "multipleOf";
+      readonly literal: string;
+      readonly integerStep: string;
+      readonly message: string;
+    };
 
 interface ShapeField {
   readonly key: string;
@@ -277,10 +282,10 @@ function numericSchema(shape: Extract<Shape, { kind: "scalar" }>) {
     : vine.number({ strict: true });
   const rules = integer
     ? [
-        ...shape.checks.filter((check) => !isBound(check)).map(numericRule(true)),
+        ...shape.checks.filter((check) => !isBound(check)).map(numericRule),
         ...safeIntegerRules(shape.checks),
       ]
-    : shape.checks.map(numericRule(false));
+    : shape.checks.map(numericRule);
 
   return rules.reduce((schema, rule) => schema.use(rule), base.bail(false));
 }
@@ -343,7 +348,7 @@ function safeIntegerRules(checks: readonly ShapeCheck[]) {
   const declared = (rule: "minimum" | "maximum"): number | undefined => {
     const check = checks.find((candidate) => candidate.rule === rule);
 
-    return check !== undefined && "literal" in check ? Number(check.literal) : undefined;
+    return check?.rule === rule ? Number(check.literal) : undefined;
   };
 
   const minimum = Math.max(declared("minimum") ?? -SAFE_INTEGER_LIMIT, -SAFE_INTEGER_LIMIT);
@@ -363,82 +368,38 @@ function safeIntegerRules(checks: readonly ShapeCheck[]) {
   ];
 }
 
-function numericRule(integer: boolean) {
-  return (check: ShapeCheck) => {
-    if (!("literal" in check)) {
-      throw new Error(
-        "codegen-adonis: the rule '" +
-          check.rule +
-          "' is not a numeric check; this is a renderer bug.",
-      );
-    }
-
-    const limit = Number(check.literal);
-    const message = `The {{ field }} field must satisfy ${check.rule} ${check.literal}`;
-
-    switch (check.rule) {
-      case "minimum":
-        return checkRule(
-          check.rule,
-          message,
-          (value) => typeof value !== "number" || value >= limit,
-        );
-      case "maximum":
-        return checkRule(
-          check.rule,
-          message,
-          (value) => typeof value !== "number" || value <= limit,
-        );
-      case "exclusiveMinimum":
-        return checkRule(
-          check.rule,
-          message,
-          (value) => typeof value !== "number" || value > limit,
-        );
-      case "exclusiveMaximum":
-        return checkRule(
-          check.rule,
-          message,
-          (value) => typeof value !== "number" || value < limit,
-        );
-      case "multipleOf":
-        return checkRule(check.rule, message, multipleOfTest(check.literal, integer));
-    }
-  };
-}
-
-// ADR 0003 refuses `multipleOf` on a number, where floating point would make targets disagree.
-function multipleOfTest(literal: string, integer: boolean): (value: unknown) => boolean {
-  if (!integer) {
-    throw new Error(
-      "codegen-adonis: a multipleOf step on a number is refused by the contract; this is a renderer bug.",
+// A step is the plan's: an integer's step reduced to an exact integer, which the shared check tests with an exact
+// remainder; the plan refuses a step on a number.
+function numericRule(check: ShapeCheck) {
+  if (check.rule === "multipleOf") {
+    return checkRule(
+      check.rule,
+      literalMessage(check.message),
+      (value) => typeof value !== "number" || isIntegerMultiple(value, check.integerStep),
     );
   }
 
-  const { digits, scale } = decimalParts(literal);
-
-  // An integer n is a multiple of digits / 10^scale exactly when n * 10^scale is a multiple of digits.
-  return (value) =>
-    typeof value !== "number" ||
-    !Number.isInteger(value) ||
-    (BigInt(value) * 10n ** scale) % digits === 0n;
-}
-
-function decimalParts(literal: string): { digits: bigint; scale: bigint } {
-  const parts = DECIMAL_LITERAL.exec(literal);
-  const written = (parts?.[1] ?? "") + (parts?.[2] ?? "");
-
-  if (parts === null || written === "" || BigInt(written) === 0n) {
+  if (!("literal" in check)) {
     throw new Error(
-      `codegen-adonis: '${literal}' is not a nonzero decimal literal of a multipleOf step.`,
+      "codegen-adonis: the rule '" +
+        check.rule +
+        "' is not a numeric check; this is a renderer bug.",
     );
   }
 
-  const scale = (parts[2] ?? "").length - Number(parts[3] ?? "0");
+  const limit = Number(check.literal);
+  const message = `The {{ field }} field must satisfy ${check.rule} ${check.literal}`;
 
-  return scale >= 0
-    ? { digits: BigInt(written), scale: BigInt(scale) }
-    : { digits: BigInt(written) * 10n ** BigInt(-scale), scale: 0n };
+  switch (check.rule) {
+    case "minimum":
+      return checkRule(check.rule, message, (value) => typeof value !== "number" || value >= limit);
+    case "maximum":
+      return checkRule(check.rule, message, (value) => typeof value !== "number" || value <= limit);
+    case "exclusiveMinimum":
+      return checkRule(check.rule, message, (value) => typeof value !== "number" || value > limit);
+    case "exclusiveMaximum":
+      return checkRule(check.rule, message, (value) => typeof value !== "number" || value < limit);
+  }
 }
 
 // The value a handler receives: a copy holding the declared keys only, with VineJS's conversions never applied.

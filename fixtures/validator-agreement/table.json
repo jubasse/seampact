@@ -2485,6 +2485,26 @@
       "rule": "adr0003/1/multiple-of"
     },
     {
+      "id": "Bounds.seventh-step-largest-safe-multiple",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "seventh": 9007199254740988
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/multiple-of"
+    },
+    {
+      "id": "Bounds.seventh-step-large-not-a-multiple",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "seventh": 9007199254740987
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/multiple-of"
+    },
+    {
       "id": "Bounds.hundred-thousandth-step-integer",
       "schema": "Bounds",
       "direction": "input",

@@ -26,6 +26,9 @@ export interface SchemaPlan {
   readonly object: ObjectPlan;
 }
 
+// The schemas of one direction by id, for a renderer that writes a reference inline.
+export type SchemasById = ReadonlyMap<string, SchemaPlan>;
+
 interface PlannedSchema {
   readonly plan: SchemaPlan;
   readonly dependencies: ReadonlySet<string>;

@@ -16,7 +16,7 @@ export {
 } from "./layout.js";
 export { type ModuleSource, moduleContents, modulePath } from "./module-source.js";
 export type { BodyPlan, OperationInputPlan } from "./operation-input-plan.js";
-export type { SchemaPlan } from "./schema-plan.js";
+export type { SchemaPlan, SchemasById } from "./schema-plan.js";
 export type {
   FieldPlan,
   ObjectPlan,
@@ -32,9 +32,11 @@ export {
   planValidatorsCollectingRefusals,
   type ValidatorsPlan,
 } from "./validators-plan.js";
+export { planValidatorsWithinWireNames, type WireNameLimit } from "./wire-name-check.js";
 export {
   CODE_POINT_LENGTH,
   IS_DATE_TIME,
+  IS_INTEGER_MULTIPLE,
   UUID_LAYOUT,
   WIRE_CHECKS_SOURCE,
   type WireCheck,
