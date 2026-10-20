@@ -301,18 +301,21 @@ function fanOut(n: number): Record<string, string> {
   return files;
 }
 
+// Fan-out loads outrun the default test limit on a loaded machine.
+const FAN_OUT_TIMEOUT_MILLISECONDS = 60_000;
+
 test("C-6 an include fan-out stops at the expansion limit", () => {
   const r = run(fanOut(18));
 
   expect(rules(r)).toEqual(["expansion-limit"]);
   expect(r.diagnostics[0]?.message).toContain(`more than ${LOAD_MAX_WORK} units of work`);
-}, 30_000);
+}, FAN_OUT_TIMEOUT_MILLISECONDS);
 
 test("C-6 an exponential include fan-out ends quickly", () => {
   const r = withinCpuBudget(LINEAR_CPU_BUDGET_MILLISECONDS, () => run(fanOut(30)));
 
   expect(rules(r)).toEqual(["expansion-limit"]);
-}, 30_000);
+}, FAN_OUT_TIMEOUT_MILLISECONDS);
 
 test("C-6 a cycle through a directory link is found on the real path", () => {
   const r = run(

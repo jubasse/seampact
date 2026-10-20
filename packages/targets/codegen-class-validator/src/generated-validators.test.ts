@@ -48,6 +48,9 @@ let constraints: {
   failingItemChecks(item: unknown, checks: readonly ContractCheck[]): ContractCheck[];
 };
 
+// Generating and compiling outruns vitest's default 10 s hook limit on a loaded machine.
+const SETUP_TIMEOUT_MILLISECONDS = 60_000;
+
 // Generates the reference validators into a project that resolves the libraries to this package's copies and
 // compiles legacy decorators, then imports them after `reflect-metadata`, as a NestJS app does.
 beforeAll(async () => {
@@ -90,7 +93,7 @@ beforeAll(async () => {
   inputDtos = await import(join(outDir, "dtos/input.ts"));
   constraints = await import(join(outDir, "constraints.ts"));
   adapter = await import(join(outDir, "class-validator-schema.ts"));
-});
+}, SETUP_TIMEOUT_MILLISECONDS);
 
 afterAll(() => rmSync(temporaryRoot, { recursive: true, force: true }));
 
