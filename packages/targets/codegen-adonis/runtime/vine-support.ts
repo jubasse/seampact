@@ -2,7 +2,7 @@
 // Standard Schema that builds a VineJS schema from a generated shape, validates without conversion, keeps the declared
 // keys only and names each issue by its contract rule, the convention a server boundary renders (`code: "custom"`
 // with `params.rule`, `unrecognized_keys` with `keys`). The app's global VineJS settings never reach it.
-import { errors, Vine } from "@vinejs/vine";
+import { errors, SimpleMessagesProvider, Vine } from "@vinejs/vine";
 import type { FieldContext, SchemaTypes } from "@vinejs/vine/types";
 import { codePointLength, isDateTime } from "./wire-checks.js";
 
@@ -12,7 +12,12 @@ const UNKNOWN_KEYS_RULE = "unknownKeys";
 // the same name (`maxLength`) never replaces the plan's.
 const CONTRACT_RULE_PREFIX = "contract.";
 const SAFE_INTEGER_LIMIT = Number.MAX_SAFE_INTEGER;
-const FLOAT_MULTIPLE_PRECISION = 1e-12;
+// VineJS fills every `{{ name }}` of a message, and drops a backslash before one: a plan message carries its
+// backslashes and opening braces as these placeholders, which VineJS fills back with the characters.
+const LITERAL_CHARACTERS: Readonly<Record<string, string>> = {
+  backslash: "\\",
+  openingBrace: "{",
+};
 const DECIMAL_LITERAL = /^(\d*)\.?(\d*)(?:[eE]([+-]?\d+))?$/;
 
 type NumericRule = "minimum" | "maximum" | "exclusiveMinimum" | "exclusiveMaximum" | "multipleOf";
@@ -74,6 +79,13 @@ export interface InputStandardSchema {
 
 const vine = new Vine();
 
+// The default provider looks a field's label up in a plain object, so a member named `valueOf` would read with the
+// source of `Object.prototype.valueOf`: no custom message and no label, the field reads with its own name.
+vine.messagesProvider = new SimpleMessagesProvider(
+  Object.setPrototypeOf({}, null),
+  Object.setPrototypeOf({}, null),
+);
+
 // VineJS's own rules to the contract rule; a missing value is told from a null one by the candidate.
 const RULE_OF_VINE_RULE: ReadonlyMap<string, string> = new Map([
   ["required", "required"],
@@ -92,12 +104,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+// A plan message as VineJS reports it unchanged.
+function literalMessage(planMessage: string): string {
+  return planMessage.replace(/[\\{]/g, (character) =>
+    character === "{" ? "{{ openingBrace }}" : "{{ backslash }}",
+  );
+}
+
 // A rule over one value: `holds` is false for a value the rule refuses. A value of another type is left to the
 // type check.
 function checkRule(rule: string, message: string, holds: (value: unknown) => boolean) {
   return vine.createRule(
     (value: unknown, _options: undefined, field: FieldContext) => {
-      if (!holds(value)) field.report(message, CONTRACT_RULE_PREFIX + rule, field);
+      if (!holds(value))
+        field.report(message, CONTRACT_RULE_PREFIX + rule, field, LITERAL_CHARACTERS);
     },
     { name: rule },
   )();
@@ -274,13 +294,13 @@ function stringRule(check: ShapeCheck) {
     case "minLength":
       return checkRule(
         check.rule,
-        check.message,
+        literalMessage(check.message),
         (value) => typeof value !== "string" || codePointLength(value) >= check.limit,
       );
     case "maxLength":
       return checkRule(
         check.rule,
-        check.message,
+        literalMessage(check.message),
         (value) => typeof value !== "string" || codePointLength(value) <= check.limit,
       );
     case "pattern": {
@@ -288,13 +308,13 @@ function stringRule(check: ShapeCheck) {
 
       return checkRule(
         check.rule,
-        check.message,
+        literalMessage(check.message),
         (value) => typeof value !== "string" || pattern.test(value),
       );
     }
 
     case "format":
-      return checkRule(check.rule, check.message, formatTest(check));
+      return checkRule(check.rule, literalMessage(check.message), formatTest(check));
     default:
       throw new Error(
         "codegen-adonis: the string rule '" +
@@ -387,17 +407,12 @@ function numericRule(integer: boolean) {
   };
 }
 
+// ADR 0003 refuses `multipleOf` on a number, where floating point would make targets disagree.
 function multipleOfTest(literal: string, integer: boolean): (value: unknown) => boolean {
   if (!integer) {
-    const step = Number(literal);
-
-    return (value) => {
-      if (typeof value !== "number") return true;
-
-      const quotient = value / step;
-
-      return Math.abs(Math.round(quotient) - quotient) <= FLOAT_MULTIPLE_PRECISION;
-    };
+    throw new Error(
+      "codegen-adonis: a multipleOf step on a number is refused by the contract; this is a renderer bug.",
+    );
   }
 
   const { digits, scale } = decimalParts(literal);
@@ -526,6 +541,20 @@ function issuesOf(
   );
 }
 
+// VineJS reads `value[key]`, so a member named `toString` would be read from `Object.prototype` when absent: the
+// candidate is validated as a copy whose objects have no prototype.
+function withoutPrototypes(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(withoutPrototypes);
+
+  if (!isRecord(value)) return value;
+
+  const copy: Record<string, unknown> = Object.setPrototypeOf({}, null);
+
+  for (const [key, member] of Object.entries(value)) copy[key] = withoutPrototypes(member);
+
+  return copy;
+}
+
 // Compiled once, when the module loads.
 export function vineStandardSchema(shape: Shape): InputStandardSchema {
   const validator = vine.create(build(shape, "required"));
@@ -534,7 +563,9 @@ export function vineStandardSchema(shape: Shape): InputStandardSchema {
     "~standard": {
       version: 1,
       vendor: "vinejs",
-      async validate(candidate) {
+      async validate(value) {
+        const candidate = withoutPrototypes(value);
+
         try {
           await validator.validate(candidate);
         } catch (error) {
@@ -543,7 +574,7 @@ export function vineStandardSchema(shape: Shape): InputStandardSchema {
           return { issues: issuesOf(shape, candidate, error.messages) };
         }
 
-        return { value: declaredValue(shape, candidate) };
+        return { value: declaredValue(shape, value) };
       },
     },
   };

@@ -8,7 +8,7 @@ import {
   referenceLinks,
   typeErrorsOf,
 } from "@seampact/codegen-core/node-server/test-support";
-import { isKnownVariant } from "@seampact/spec/ir";
+import { type ContractIR, isKnownVariant, type Property } from "@seampact/spec/ir";
 import { beforeAll, describe, expect, test } from "vitest";
 import { type AdonisMajor, generateAdonisProject } from "./adonis-major.test-support.js";
 import { target as adonisTarget } from "./index.js";
@@ -17,6 +17,8 @@ import { target as adonisTarget } from "./index.js";
 const COMPILE_TIMEOUT_MILLISECONDS = 60_000;
 const MAJORS: readonly AdonisMajor[] = [7, 6];
 const INDEX_PROJECT = projectDirectory(import.meta.url, "reference-index");
+// A pattern whose plan message holds VineJS's placeholder syntax, one of them behind a backslash.
+const BRACES_PATTERN = "^[{{field}}]\\{{2}$";
 
 let indexFiles: string[] = [];
 
@@ -74,9 +76,9 @@ describe("with no validators link the target writes its own VineJS validators", 
     return { ...(types === undefined ? {} : { types }) };
   }
 
-  async function writeOwnValidators(directory: string): Promise<string[]> {
+  async function writeOwnValidators(directory: string, ir: ContractIR): Promise<string[]> {
     const outcome = await adonisTarget.generate({
-      ir: readGoldenIr("tasks"),
+      ir,
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
       artefacts: new Set(["boundary", "validators"]),
@@ -121,7 +123,7 @@ describe("with no validators link the target writes its own VineJS validators", 
   });
 
   test("a rule broken on the VineJS validators reads with the message of the validator plan", async () => {
-    const written = await writeOwnValidators("generated/own-messages/tasks");
+    const written = await writeOwnValidators("generated/own-messages/tasks", readGoldenIr("tasks"));
     const schemasPath = written.find((path) => path.endsWith("schemas/input.ts"));
 
     if (schemasPath === undefined) throw new Error("no validators/schemas/input.ts written");
@@ -137,7 +139,7 @@ describe("with no validators link the target writes its own VineJS validators", 
   test(
     "the generated VineJS validators type-check",
     async () => {
-      const written = await writeOwnValidators("generated/own/tasks");
+      const written = await writeOwnValidators("generated/own/tasks", readGoldenIr("tasks"));
       const types = indexFiles.filter((file) => file.includes("/types/"));
 
       expect(
@@ -147,17 +149,46 @@ describe("with no validators link the target writes its own VineJS validators", 
     COMPILE_TIMEOUT_MILLISECONDS,
   );
 
-  test("refuses a wire name VineJS paths cannot carry", async () => {
-    const ir = readGoldenIr("tasks");
+  // The golden IR's CreateTask members: `title`, a required string, then `effort`, an optional integer.
+  function createTaskProperties(ir: ContractIR): Property[] {
     const schema = ir.schemas.CreateTask;
-    const property =
+    const properties =
       schema !== undefined && isKnownVariant("Schema", schema) && schema.kind === "object"
-        ? schema.properties[0]
-        : undefined;
+        ? schema.properties
+        : [];
 
-    if (property === undefined) throw new Error("the golden IR has no CreateTask property");
+    if (properties.length < 2) throw new Error("the golden IR has no CreateTask properties");
 
-    property.name = "ti.tle";
+    return properties;
+  }
+
+  async function createTaskSchemaOf(directory: string, ir: ContractIR) {
+    const written = await writeOwnValidators(directory, ir);
+    const schemasPath = written.find((path) => path.endsWith("schemas/input.ts"));
+
+    if (schemasPath === undefined) throw new Error("no validators/schemas/input.ts written");
+
+    const { CreateTaskSchema } = await import(schemasPath);
+
+    return CreateTaskSchema;
+  }
+
+  test.each([
+    ["a dot", "ti.tle"],
+    ["a bracket", "ti[tle"],
+    ["a single quote", "ti'tle"],
+    ["a double quote", 'ti"tle'],
+    ["a backslash", "ti\\tle"],
+    ["a line feed", "ti\ntle"],
+    ["a carriage return", "ti\rtle"],
+    ["a line separator", "ti\u2028tle"],
+    ["another control character", "ti\u0001tle"],
+    ["text that would run as code", "x'+(seampactProbe=1)+'"],
+  ])("refuses a wire name holding %s, which VineJS cannot hold", async (_kind, name) => {
+    const ir = readGoldenIr("tasks");
+    const [title] = createTaskProperties(ir);
+
+    if (title !== undefined) title.name = name;
 
     const outcome = await adonisTarget.generate({
       ir,
@@ -170,5 +201,49 @@ describe("with no validators link the target writes its own VineJS validators", 
       status: "refused",
       refusals: [{ code: "wire.name.vinePath.unsupported" }],
     });
+  });
+
+  test("a member named after an Object.prototype member is read from the payload only", async () => {
+    const ir = readGoldenIr("tasks");
+    const [title, effort] = createTaskProperties(ir);
+
+    if (title !== undefined) title.name = "toString";
+
+    if (effort !== undefined) effort.name = "valueOf";
+
+    const CreateTaskSchema = await createTaskSchemaOf("generated/own-prototype/tasks", ir);
+
+    expect(await CreateTaskSchema["~standard"].validate({ toString: "x" })).toEqual({
+      value: { toString: "x" },
+    });
+
+    const missing = await CreateTaskSchema["~standard"].validate({});
+
+    expect(missing.issues).toEqual([
+      expect.objectContaining({ path: ["toString"], params: { rule: "required" } }),
+    ]);
+    expect(missing.issues[0].message).not.toContain("native code");
+  });
+
+  test("a plan message holding braces and a backslash reads as written", async () => {
+    const ir = readGoldenIr("tasks");
+    const [title] = createTaskProperties(ir);
+
+    if (
+      title === undefined ||
+      !isKnownVariant("TypeUse", title.type) ||
+      title.type.kind !== "scalar"
+    ) {
+      throw new Error("the golden IR's CreateTask title is not a scalar");
+    }
+
+    title.type.refinements = { pattern: { source: BRACES_PATTERN, normalized: BRACES_PATTERN } };
+
+    const CreateTaskSchema = await createTaskSchemaOf("generated/own-braces/tasks", ir);
+    const result = await CreateTaskSchema["~standard"].validate({ title: "x" });
+
+    expect(result.issues).toEqual([
+      expect.objectContaining({ message: `Expected a value matching ${BRACES_PATTERN}.` }),
+    ]);
   });
 });
