@@ -14,7 +14,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/diff` | `packages/core/diff` | core | Classifies the changes between two contract versions as additive or breaking, per direction. |
 | `@seampact/lint` | `packages/core/lint` | core | Lint rules over the IR, and the API to write your own. |
 | `@seampact/openapi` | `packages/core/openapi` | core | Writes the OpenAPI 3.1 documents from the IR, with what OpenAPI cannot say as x-seampact-* extensions. |
-| `@seampact/spec` | `packages/core/spec` | core | The JSON Schemas of the YAML files and of the IR, with their TypeScript types, and the naming vectors. |
+| `@seampact/spec` | `packages/core/spec` | core | The JSON Schemas of the YAML files and of the IR, with their TypeScript types, the naming vectors and the bundle vectors. |
 | `@seampact/hooks` | `packages/runtime/hooks` | hooks | The neutral hook interfaces and idempotency store interface every generated Node server boundary types against. |
 | `@seampact/idempotency-memory` | `packages/runtime/idempotency-memory` | helper | An in-memory idempotency store for one process, for development and tests. |
 | `@seampact/signed-webhooks` | `packages/runtime/signed-webhooks` | helper | Verifies a template-signed webhook (HMAC, timestamp tolerance, secret rotation) inside an authenticate hook. |
@@ -61,7 +61,7 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/compiler`
 
 - `packages/core/compiler/src`: Reads the YAML contract, reports errors with file, line and column, and produces the IR.
-- `packages/core/compiler/src/bundle`: Contract bundles in the compiler: reserved, no export yet.
+- `packages/core/compiler/src/bundle`: Contract bundles in the compiler (ADR 0011): the workspace bundled and written as a directory or a reproducible tarball, the tarball reader, and the pinned-bundle check.
 - `packages/core/compiler/src/derivations`: The derivation table and the derivation roles of ADR 0006 sections 5 and 6, held as data.
 - `packages/core/compiler/src/diagnostics`: Located diagnostics: the diagnostic type, its sort order and the printer.
 - `packages/core/compiler/src/finalize`: The finalize stage (ADR 0006 section 1): pruning, canonical ids and ordering, the id collision check, IR validation and serialisation.
@@ -92,10 +92,10 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/spec`
 
-- `packages/core/spec/src`: The JSON Schemas of the YAML files and of the IR, with their TypeScript types, and the naming vectors.
+- `packages/core/spec/src`: The JSON Schemas of the YAML files and of the IR, with their TypeScript types, the naming vectors and the bundle vectors.
 - `packages/core/spec/src/authoring`: The authoring grammar: the JSON Schemas of the YAML files (ADR 0002), their schema keywords and markers.
 - `packages/core/spec/src/authoring/grammar`: The grammar modules the authoring JSON Schemas are generated from, one per file and fragment kind (ADR 0002 and 0003).
-- `packages/core/spec/src/bundle`: Contract bundles (`@seampact/spec/bundle`): reserved, no export yet.
+- `packages/core/spec/src/bundle`: Contract bundles (`@seampact/spec/bundle`, ADR 0011): the manifest types and JSON Schema, the portable-path rule, the canonical file list the integrity hashes, the manifest rules beyond the schema and the failure codes.
 - `packages/core/spec/src/compatibility`: The compatibility matrix (`@seampact/spec/compatibility`): the first-party providers, and per server target the framework majors it supports and the validator styles it accepts.
 - `packages/core/spec/src/config`: The app config, `seampact.config.yaml` (`@seampact/spec/config`): its types and its JSON Schema.
 - `packages/core/spec/src/ir`: The IR (ADR 0004 and 0005): its JSON Schemas, generated types, writer view, validation and invariants.

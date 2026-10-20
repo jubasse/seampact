@@ -1,13 +1,14 @@
 {
   "name": "@seampact/spec",
-  "description": "The JSON Schemas of the YAML files and of the IR, with their TypeScript types, and the naming vectors.",
+  "description": "The JSON Schemas of the YAML files and of the IR, with their TypeScript types, the naming vectors and the bundle vectors.",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "files": [
     "dist",
     "schemas",
-    "vectors/naming"
+    "vectors/naming",
+    "vectors/bundle"
   ],
   "main": "./src/index.ts",
   "scripts": {
@@ -25,7 +26,8 @@
     "./naming/vectors.json": "./vectors/naming/vectors.json",
     "./naming/vectors.schema.json": "./vectors/naming/vectors.schema.json",
     "./naming/reserved-words.json": "./vectors/naming/reserved-words.json",
-    "./naming/reserved-words.schema.json": "./vectors/naming/reserved-words.schema.json"
+    "./naming/reserved-words.schema.json": "./vectors/naming/reserved-words.schema.json",
+    "./bundle/vectors/*.json": "./vectors/bundle/*.json"
   },
   "publishConfig": {
     "main": "./dist/index.js",
@@ -63,7 +65,8 @@
       "./naming/vectors.json": "./vectors/naming/vectors.json",
       "./naming/vectors.schema.json": "./vectors/naming/vectors.schema.json",
       "./naming/reserved-words.json": "./vectors/naming/reserved-words.json",
-      "./naming/reserved-words.schema.json": "./vectors/naming/reserved-words.schema.json"
+      "./naming/reserved-words.schema.json": "./vectors/naming/reserved-words.schema.json",
+      "./bundle/vectors/*.json": "./vectors/bundle/*.json"
     }
   },
   "seampact": {
