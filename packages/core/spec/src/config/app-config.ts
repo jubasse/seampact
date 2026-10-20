@@ -14,7 +14,32 @@ export interface AppConfig {
   outDir?: string;
   sources?: Record<string, AppSource>;
   targets?: TargetEntry[];
+  diff?: DiffConfig;
 }
+
+// How `seampact diff` gates a release under `compat.policy: additive-only` (FR-13); the contract never sets it.
+export interface DiffConfig {
+  // `clients` fails on changes that break clients, `both` on those that break clients or servers.
+  gate?: DiffGateScope;
+  // The breaking changes reported but not gated; both when absent.
+  exempt?: DiffExemption[];
+}
+
+export const DIFF_GATE_SCOPES = ["clients", "both"] as const;
+
+export type DiffGateScope = (typeof DIFF_GATE_SCOPES)[number];
+
+// `experimental`: a change on an operation experimental in the baseline; `sunsetPassed`: removing an operation
+// whose sunset is on or before today.
+export const DIFF_EXEMPTIONS = ["experimental", "sunsetPassed"] as const;
+
+export type DiffExemption = (typeof DIFF_EXEMPTIONS)[number];
+
+// Changes breaking servers only are reported but pass: the producer's regenerated server catches them at type
+// check; `both` suits contracts other teams implement.
+export const DEFAULT_DIFF_GATE: DiffGateScope = "clients";
+
+export const DEFAULT_DIFF_EXEMPTIONS: readonly DiffExemption[] = DIFF_EXEMPTIONS;
 
 export type AppSource = PathSource | BundleSource;
 
@@ -128,6 +153,14 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
       additionalProperties: { $ref: "#/$defs/source" },
     },
     targets: { type: "array", items: { $ref: "#/$defs/targetEntry" } },
+    diff: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        gate: { enum: [...DIFF_GATE_SCOPES] },
+        exempt: { type: "array", items: { enum: [...DIFF_EXEMPTIONS] }, uniqueItems: true },
+      },
+    },
   },
   $defs: {
     frameworkRoute: {
