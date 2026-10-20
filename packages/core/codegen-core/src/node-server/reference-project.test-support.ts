@@ -32,10 +32,12 @@ const LINKED_PACKAGES = {
 
 /** The consumer's compiler options: strict, NodeNext, and the legacy decorators NestJS needs. */
 export const REFERENCE_COMPILER_OPTIONS: ts.CompilerOptions = {
-  target: ts.ScriptTarget.ES2024,
+  target: ts.ScriptTarget.ESNext,
   module: ts.ModuleKind.NodeNext,
   moduleResolution: ts.ModuleResolutionKind.NodeNext,
   strict: true,
+  noUnusedLocals: true,
+  noUnusedParameters: true,
   noUncheckedIndexedAccess: true,
   exactOptionalPropertyTypes: true,
   verbatimModuleSyntax: true,
@@ -154,6 +156,60 @@ export function referenceNoStoreOperation(operationId: string): ReferenceIrChang
           : operation,
       ),
     };
+  };
+}
+
+/** Makes every operation of the `tasks` api public, with no right, rule, scope or idempotency: an api that needs no hook. */
+export const publicTasksApi: ReferenceIrChange = (ir, api) => {
+  if (api !== "tasks") return ir;
+
+  return {
+    ...ir,
+    operations: ir.operations.map(({ idempotency: _idempotency, ...operation }) => ({
+      ...operation,
+      access: { kind: "public" },
+      requires: [],
+      fieldRights: [],
+      scopes: [],
+    })),
+  };
+};
+
+/** A source that registers an api with no hooks: `Tasks` is the public `tasks` api, `Service` the `tasksService` one. */
+export interface HooksRequirementUsage {
+  readonly publicTasks: string;
+  readonly guardedService: string;
+}
+
+/**
+ * The type errors of registering the public api without hooks (none expected), and of registering one that needs
+ * hooks without them (the missing `hooks` expected), in the files of a project generated with `publicTasksApi`.
+ */
+export function hooksRequirementErrors(
+  project: string,
+  files: readonly string[],
+  usage: HooksRequirementUsage,
+): { readonly publicTasks: string[]; readonly guardedService: string[] } {
+  const importOf = (name: string, directory: string): string =>
+    `import * as ${name} from "./generated/server/${directory}/index.js";\n\n`;
+  const checks = {
+    publicTasks: join(project, "public-tasks.check.ts"),
+    guardedService: join(project, "guarded-service.check.ts"),
+  };
+
+  writeFileSync(checks.publicTasks, `${importOf("Tasks", "tasks")}${usage.publicTasks}\n`);
+  writeFileSync(
+    checks.guardedService,
+    `${importOf("Service", "tasksService")}${usage.guardedService}\n`,
+  );
+
+  return {
+    publicTasks: typeErrorsOf(project, [...files, checks.publicTasks], REFERENCE_COMPILER_OPTIONS),
+    guardedService: typeErrorsOf(
+      project,
+      [...files, checks.guardedService],
+      REFERENCE_COMPILER_OPTIONS,
+    ),
   };
 }
 

@@ -28,7 +28,10 @@ import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
+  type HooksRequirement,
   hookBootProblems,
+  type RegisteredHooks,
+  resolvedHooks,
 } from "./node-server/boundary-hooks.js";
 import {
   ContractError,
@@ -125,7 +128,7 @@ interface ReadBody {
 
 /** The Fastify boundary of one api. */
 export function createFastifyBoundary<
-  Hooks extends BoundaryHooks,
+  Hooks extends RegisteredHooks,
   Handlers,
   Operation extends string,
 >(api: ContractApi, generated: ResponseSettings, bindings: HandlerBindings) {
@@ -142,12 +145,15 @@ export function createFastifyBoundary<
   // compresses its own replies there.
   const compressingServers = new WeakSet<object>();
 
-  const plugin: FastifyPluginAsync<RegistrationOptions<Hooks, Handlers, Operation>> = async (
+  type PluginOptions = RegistrationOptions<Hooks, Handlers, Operation> & HooksRequirement<Hooks>;
+
+  const plugin: FastifyPluginAsync<PluginOptions> = async (
     fastify,
-    options: RegistrationOptions<Hooks, Handlers, Operation>,
+    options: PluginOptions,
   ): Promise<void> => {
+    const hooks = resolvedHooks(options.hooks);
     const problems = [
-      ...hookBootProblems(api, options.hooks),
+      ...hookBootProblems(api, hooks),
       ...registrationProblems(api, bindings, options, generated),
       ...instanceProblems(fastify),
     ];
@@ -159,15 +165,15 @@ export function createFastifyBoundary<
     if (fastify.hasReplyDecorator(COMPRESS_REPLY_DECORATOR)) compressingServers.add(fastify.server);
     registerBasePathClaim(fastify.server, api);
     warnUnboundedParams();
-    registered.hooks = options.hooks;
+    registered.hooks = hooks;
     replaceJsonParsers(fastify);
-    fastify.setErrorHandler(contractErrorHandler(options));
+    fastify.setErrorHandler(contractErrorHandler(options, hooks));
     fastify.addHook("onRoute", (routeOptions) => markBoundaryRoute(routeOptions));
     fastify.addHook("onReady", async () => checkFrameworkRoutes(fastify.server));
 
-    for (const route of api.routes) registerRoute(fastify, route, options);
+    for (const route of api.routes) registerRoute(fastify, route, options, hooks);
 
-    registerUnservedBasePaths(fastify, options.hooks);
+    registerUnservedBasePaths(fastify, hooks);
   };
 
   // Every method under each base path, below the contract routes, which find-my-way matches first: a path no route
@@ -356,6 +362,7 @@ export function createFastifyBoundary<
     fastify: FastifyInstance,
     route: ContractRoute,
     options: RegistrationOptions<Hooks, Handlers, string>,
+    hooks: BoundaryHooks,
   ): void {
     const settings = settingsOf(route, bindings, options, generated);
     const binding = bindings[route.id];
@@ -381,7 +388,7 @@ export function createFastifyBoundary<
       ...(route.input === undefined ? {} : { bodyLimit: route.input.limitBytes }),
       config: { [operationConfigKey]: route.id },
       onRequest: (request, reply, done) => {
-        enterRoute(route, settings, options.hooks, request, reply, done);
+        enterRoute(route, settings, hooks, request, reply, done);
       },
       preParsing: async (request, _reply, payload) => decodedPayload(request, payload),
       preValidation: async (request) => {
@@ -544,9 +551,10 @@ export function createFastifyBoundary<
 
   // A contract error, a refusal of the route's body read, or a 401, 403 or 429 is answered; anything else is
   // rethrown to the app's error handler, with the outgoing check installed so its reply is checked.
-  function contractErrorHandler(options: RegistrationOptions<Hooks, Handlers, string>) {
-    const hooks = options.hooks;
-
+  function contractErrorHandler(
+    options: RegistrationOptions<Hooks, Handlers, string>,
+    hooks: BoundaryHooks,
+  ) {
     return async (error: FastifyError, request: FastifyRequest, reply: FastifyReply) => {
       let context = contexts.get(request.raw);
       const route = context?.route ?? configuredRoute(request);
@@ -799,7 +807,7 @@ const COLLECTED_ROUTES_KEY = Symbol.for("seampact.fastify.collected-routes");
 // What `printRoutes()` answers for an app that holds no route yet.
 const EMPTY_ROUTE_TREE = "(empty tree)";
 
-type CollectedRoutes = WeakMap<object, RouteOptions[]>;
+type CollectedRoutes = WeakMap<WeakKey, RouteOptions[]>;
 
 function collectedRoutesRegistry(): CollectedRoutes {
   const existing: unknown = Reflect.get(globalThis, COLLECTED_ROUTES_KEY);

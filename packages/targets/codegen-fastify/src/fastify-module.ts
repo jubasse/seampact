@@ -29,7 +29,7 @@ export function fastifyModuleSource(
     "",
     "const boundary = createFastifyBoundary<SeampactHooks, ContractHandlers, OperationName>(CONTRACT_API, GENERATED_SETTINGS, HANDLER_BINDINGS);",
     "",
-    "/** The api's plugin: `await app.register(plugin, { handlers, hooks })`, without a prefix; runs the boot check. */",
+    "/** The api's plugin: `await app.register(plugin, { handlers, hooks })`, without a prefix; `handlers` holds one object per handler interface, keyed by its name (`{ NotesEndpoints: { ... } }`); runs the boot check. */",
     "export const plugin = boundary.plugin;",
     "/** Collects the app's routes for the framework-route boot check: call it right after `Fastify()`, before any route. */",
     "export const collectFrameworkRoutes = boundary.collectFrameworkRoutes;",

@@ -56,6 +56,26 @@ export interface BoundaryHooks {
   readonly onUnexpectedError?: UnexpectedErrorHook;
 }
 
+/** What an app registers: every member optional, as an api with only public operations asks for none. */
+export type RegisteredHooks = Partial<BoundaryHooks>;
+
+/** The `hooks` option's type: required unless an app can register none (every member of `Hooks` optional). */
+export type HooksRequirement<Hooks> =
+  Partial<Hooks> extends Hooks ? unknown : { readonly hooks: Hooks };
+
+/** The arguments of a call that registers hooks: none when an app can register none. */
+export type HooksArgument<Hooks> = Partial<Hooks> extends Hooks ? [hooks?: Hooks] : [hooks: Hooks];
+
+/** The hooks an app registered, with each missing member empty; the boot check then names what a route lacks. */
+export function resolvedHooks(registered: RegisteredHooks | undefined): BoundaryHooks {
+  return {
+    ...registered,
+    authenticate: registered?.authenticate ?? {},
+    deciders: registered?.deciders ?? [],
+    scopeResolvers: registered?.scopeResolvers ?? {},
+  };
+}
+
 /** How the framework placement recognizes its own denial exceptions thrown inside a decide hook. */
 export type FrameworkDenialTest = (error: unknown) => boolean;
 

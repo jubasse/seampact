@@ -4,7 +4,9 @@ import type { LinkSet } from "@seampact/codegen-core";
 import {
   GENERATE_TIMEOUT_MILLISECONDS,
   generateReferenceProject,
+  hooksRequirementErrors,
   projectDirectory,
+  publicTasksApi,
   REFERENCE_COMPILER_OPTIONS,
   readGoldenIr,
   referenceLinks,
@@ -273,4 +275,33 @@ describe("with no validators link the target writes its own Ajv validators", () 
       ),
     ).toEqual([]);
   });
+});
+
+describe("an api with only public operations asks for no hooks", () => {
+  test(
+    "it registers without hooks, and an api that needs hooks still requires them",
+    async () => {
+      const project = projectDirectory(import.meta.url, "public-api");
+      const files = await generateReferenceProject(project, fastifyTarget, {}, publicTasksApi);
+      const errors = hooksRequirementErrors(project, files, {
+        publicTasks: [
+          'import type { FastifyInstance } from "fastify";',
+          "declare const app: FastifyInstance;",
+          'declare const handlers: Parameters<typeof Tasks.plugin>[1]["handlers"];',
+          "export const registered = app.register(Tasks.plugin, { handlers });",
+        ].join("\n"),
+        guardedService: [
+          'import type { FastifyInstance } from "fastify";',
+          "declare const app: FastifyInstance;",
+          'declare const handlers: Parameters<typeof Service.plugin>[1]["handlers"];',
+          "export const registered = app.register(Service.plugin, { handlers });",
+        ].join("\n"),
+      });
+
+      expect(errors.publicTasks).toEqual([]);
+      expect(errors.guardedService).toHaveLength(1);
+      expect(errors.guardedService[0]).toContain("hooks");
+    },
+    GENERATE_TIMEOUT_MILLISECONDS + TYPE_CHECK_TIMEOUT_MILLISECONDS,
+  );
 });

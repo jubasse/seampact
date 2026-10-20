@@ -54,7 +54,10 @@ import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
+  type HooksArgument,
   hookBootProblems,
+  type RegisteredHooks,
+  resolvedHooks,
 } from "./node-server/boundary-hooks.js";
 import {
   ContractError,
@@ -179,12 +182,12 @@ function isOperationHandler(handler: unknown): boolean {
 // a contract path is still listed.
 const MIDDLEWARE_ROUTES_KEY = Symbol.for("seampact.nestjs.middleware-routes");
 
-function middlewareRouteRegistry(): WeakMap<object, string[]> {
+function middlewareRouteRegistry(): WeakMap<WeakKey, string[]> {
   const existing: unknown = Reflect.get(globalThis, MIDDLEWARE_ROUTES_KEY);
 
   if (existing instanceof WeakMap) return existing;
 
-  const created = new WeakMap<object, string[]>();
+  const created = new WeakMap<WeakKey, string[]>();
 
   Reflect.set(globalThis, MIDDLEWARE_ROUTES_KEY, created);
 
@@ -255,7 +258,7 @@ function requireContext(): BoundaryContext {
 }
 
 /** The NestJS boundary of one api. */
-export function createNestBoundary<Hooks extends BoundaryHooks>(
+export function createNestBoundary<Hooks extends RegisteredHooks>(
   api: ContractApi,
   options: NestBoundaryOptions,
 ) {
@@ -596,11 +599,11 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
     @Inject(DiscoveryService) private readonly discovery!: DiscoveryService;
     @Inject(HttpAdapterHost) private readonly adapterHost!: HttpAdapterHost;
 
-    static forRoot(hooks: Hooks): DynamicModule {
+    static forRoot(...[hooks]: HooksArgument<Hooks>): DynamicModule {
       return {
         module: SeampactModule,
         imports: [DiscoveryModule],
-        providers: [{ provide: HOOKS, useValue: hooks }],
+        providers: [{ provide: HOOKS, useValue: resolvedHooks(hooks) }],
       };
     }
 

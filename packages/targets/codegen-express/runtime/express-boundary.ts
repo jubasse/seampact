@@ -25,7 +25,10 @@ import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
+  type HooksRequirement,
   hookBootProblems,
+  type RegisteredHooks,
+  resolvedHooks,
 } from "./node-server/boundary-hooks.js";
 import { ContractError, unexpectedError } from "./node-server/contract-error.js";
 import {
@@ -87,7 +90,7 @@ const NO_MOUNT = "";
 type ContinueOrStop = "continue" | "stop";
 
 /** The Express boundary of one api. */
-export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
+export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
   api: ContractApi,
   generated: ResponseSettings,
   bindings: HandlerBindings,
@@ -103,10 +106,11 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
   const frameworkRouteResults = new WeakMap<object, readonly BootProblem[]>();
 
   function router<Operation extends string>(
-    options: RegistrationOptions<Hooks, Handlers, Operation>,
+    options: RegistrationOptions<Hooks, Handlers, Operation> & HooksRequirement<Hooks>,
   ): Router {
+    const hooks = resolvedHooks(options.hooks);
     const problems = [
-      ...hookBootProblems(api, options.hooks),
+      ...hookBootProblems(api, hooks),
       ...registrationProblems(api, bindings, options, generated),
     ];
 
@@ -114,23 +118,26 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
 
     const contractRouter = express.Router();
 
-    routerHooks.set(contractRouter, options.hooks);
+    routerHooks.set(contractRouter, hooks);
     routersMade.count += 1;
-    routersMade.lastHooks = options.hooks;
+    routersMade.lastHooks = hooks;
 
     if (api.frameworkRoutes.status === "on") {
-      contractRouter.use(uncheckedFrameworkRoutesGuard(options.hooks));
+      contractRouter.use(uncheckedFrameworkRoutesGuard(hooks));
     }
 
     for (const route of api.routes) {
-      contractRouter[methodOf(route)](routePattern(route.path), ...routeMiddleware(route, options));
+      contractRouter[methodOf(route)](
+        routePattern(route.path),
+        ...routeMiddleware(route, options, hooks),
+      );
     }
 
     for (const path of new Set(api.routes.map((route) => route.path))) {
-      contractRouter.all(routePattern(path), unservedMethod(path, options.hooks));
+      contractRouter.all(routePattern(path), unservedMethod(path, hooks));
     }
 
-    contractRouter.use(unservedBasePath(options.hooks));
+    contractRouter.use(unservedBasePath(hooks));
     registerBasePathClaim(contractRouter, api);
 
     contractRouter.use(contractErrorMiddleware);
@@ -141,11 +148,12 @@ export function createExpressBoundary<Hooks extends BoundaryHooks, Handlers>(
   function routeMiddleware(
     route: ContractRoute,
     options: RegistrationOptions<Hooks, Handlers, string>,
+    hooks: BoundaryHooks,
   ): RequestHandler[] {
     const settings = settingsOf(route, bindings, options, generated);
     const binding = bindings[route.id];
     const enter: RequestHandler = (request, response, next) => {
-      enterRoute(route, settings, options.hooks, request, response, next);
+      enterRoute(route, settings, hooks, request, response, next);
     };
 
     const access = step(async (request, _response, context) => {

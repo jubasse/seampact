@@ -188,11 +188,10 @@ export function hookTypesSource(
     (operation) => operation.idempotency !== undefined && operation.idempotency.kind !== "exempt",
   );
 
-  return [
-    `import type { AuthenticateHook, AuthenticateRequest, DecideHook, IdempotencyStore, RequirementRequest, ResolvedScope, ResolveScopeHook, ResolveScopeRequest } from "${HOOKS_PACKAGE}";`,
-    `import type { DeciderRegistration, UnexpectedErrorHook } from "${runtimeModule}";`,
-    ...imports.lines(),
-    "",
+  // A member no operation needs is optional, so an api with none asks the app for no hooks at all.
+  const optionalWhenEmpty = (members: readonly unknown[]): string =>
+    members.length === 0 ? "?" : "";
+  const body = [
     "/** The authenticate hook of each identity an operation uses. */",
     `export type AuthenticateHooks = {\n${authenticate.join("\n")}\n};`,
     "",
@@ -205,16 +204,44 @@ export function hookTypesSource(
     "/** The resolver of each scope kind an operation uses. */",
     `export type ScopeResolvers = {\n${scopes.join("\n")}\n};`,
     "",
-    "/** Every hook the api's boundary calls, as `SeampactModule.forRoot` takes them. */",
+    "/** Every hook the api's boundary calls, as the app registers them; none when every operation is public. */",
     "export type SeampactHooks = {",
-    "  readonly authenticate: AuthenticateHooks;",
-    "  readonly deciders: readonly DeciderEntry[];",
-    "  readonly scopeResolvers: ScopeResolvers;",
+    `  readonly authenticate${optionalWhenEmpty(authenticate)}: AuthenticateHooks;`,
+    `  readonly deciders${optionalWhenEmpty(deciders)}: readonly DeciderEntry[];`,
+    `  readonly scopeResolvers${optionalWhenEmpty(scopes)}: ScopeResolvers;`,
     `  readonly idempotencyStore${idempotent ? "" : "?"}: IdempotencyStore;`,
     "  readonly onUnexpectedError?: UnexpectedErrorHook;",
     "};",
     "",
   ].join("\n");
+
+  return [
+    importLine(
+      [
+        "AuthenticateHook",
+        "AuthenticateRequest",
+        "DecideHook",
+        "IdempotencyStore",
+        "RequirementRequest",
+        "ResolvedScope",
+        "ResolveScopeHook",
+        "ResolveScopeRequest",
+      ],
+      HOOKS_PACKAGE,
+      body,
+    ),
+    importLine(["DeciderRegistration", "UnexpectedErrorHook"], runtimeModule, body),
+    ...imports.lines(),
+    "",
+    body,
+  ].join("\n");
+}
+
+// An import of the names the body uses, so a strict consumer's `noUnusedLocals` finds none unused.
+function importLine(names: readonly string[], from: string, body: string): string {
+  const used = names.filter((name) => new RegExp(`\\b${name}\\b`).test(body));
+
+  return `import type { ${used.join(", ")} } from "${from}";`;
 }
 
 function unauthenticatedCodes(ir: ContractIR, identityId: string): string[] {

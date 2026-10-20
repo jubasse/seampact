@@ -12,7 +12,7 @@ export interface BasePathClaim {
 // One key for every copy of this module, so two apis generated apart still see each other.
 const REGISTRY_KEY = Symbol.for("seampact.node-server.base-path-claims");
 
-type ClaimRegistry = WeakMap<object, Map<string, BasePathClaim>>;
+type ClaimRegistry = WeakMap<WeakKey, Map<string, BasePathClaim>>;
 
 function claimRegistry(): ClaimRegistry {
   const existing: unknown = Reflect.get(globalThis, REGISTRY_KEY);

@@ -1,7 +1,9 @@
 import {
   GENERATE_TIMEOUT_MILLISECONDS,
   generateReferenceProject,
+  hooksRequirementErrors,
   projectDirectory,
+  publicTasksApi,
   REFERENCE_COMPILER_OPTIONS,
   readGoldenIr,
   referenceLinks,
@@ -96,3 +98,23 @@ async function reportedForms(
 
   return (outcome.status === "generated" ? outcome.warnings : outcome.refusals) ?? [];
 }
+
+describe("an api with only public operations asks for no hooks", () => {
+  test(
+    "it registers without hooks, and an api that needs hooks still requires them",
+    async () => {
+      const project = projectDirectory(import.meta.url, "public-api");
+      const files = await generateReferenceProject(project, nestjsTarget, {}, publicTasksApi);
+      const errors = hooksRequirementErrors(project, files, {
+        publicTasks: ["export const module = Tasks.SeampactModule.forRoot();"].join("\n"),
+        guardedService: ["export const module = Service.SeampactModule.forRoot();"].join("\n"),
+      });
+
+      expect(errors.publicTasks).toEqual([]);
+      expect(errors.guardedService).toHaveLength(1);
+      // forRoot takes the hooks as its one argument.
+      expect(errors.guardedService[0]).toContain("Expected 1 arguments");
+    },
+    GENERATE_TIMEOUT_MILLISECONDS + TYPE_CHECK_TIMEOUT_MILLISECONDS,
+  );
+});

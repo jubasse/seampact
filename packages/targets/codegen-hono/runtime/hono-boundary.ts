@@ -16,7 +16,10 @@ import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
+  type HooksRequirement,
   hookBootProblems,
+  type RegisteredHooks,
+  resolvedHooks,
 } from "./web-server/boundary-hooks.js";
 import {
   ContractError,
@@ -91,11 +94,11 @@ export interface HonoRegistrationOptions<Hooks, Handlers, Operation extends stri
 }
 
 /** The Hono boundary of one api. */
-export function createHonoBoundary<Hooks extends BoundaryHooks, Handlers, Operation extends string>(
-  api: ContractApi,
-  generated: ResponseSettings,
-  bindings: HandlerBindings,
-) {
+export function createHonoBoundary<
+  Hooks extends RegisteredHooks,
+  Handlers,
+  Operation extends string,
+>(api: ContractApi, generated: ResponseSettings, bindings: HandlerBindings) {
   // The context of this api's contract request in each request slot, for `renderContractError`.
   const contexts = new WeakMap<RequestSlot, BoundaryContext>();
   // The hooks of the last registration, for the replies written outside a contract request.
@@ -108,10 +111,11 @@ export function createHonoBoundary<Hooks extends BoundaryHooks, Handlers, Operat
   /** Registers the api's routes on the app that serves, wraps its `fetch` once; runs the boot check. */
   function registerRoutes<E extends Env, S extends Schema, BasePath extends string>(
     app: Hono<E, S, BasePath>,
-    options: HonoRegistrationOptions<Hooks, Handlers, Operation, E>,
+    options: HonoRegistrationOptions<Hooks, Handlers, Operation, E> & HooksRequirement<Hooks>,
   ): void {
+    const hooks = resolvedHooks(options.hooks);
     const problems = [
-      ...hookBootProblems(api, options.hooks),
+      ...hookBootProblems(api, hooks),
       ...registrationProblems(api, bindings, options, generated),
       ...optionProblems(options),
     ];
@@ -131,7 +135,7 @@ export function createHonoBoundary<Hooks extends BoundaryHooks, Handlers, Operat
       const settings = settingsOf(route, bindings, options, generated);
 
       app.on(route.method.toUpperCase(), honoPath(route.path), (c, next) =>
-        serveContractRoute(app, c, next, route, settings, options),
+        serveContractRoute(app, c, next, route, settings, options, hooks),
       );
     }
 
@@ -146,7 +150,7 @@ export function createHonoBoundary<Hooks extends BoundaryHooks, Handlers, Operat
 
     registeredApps.add(app);
     registerBasePathClaim(app, api);
-    registered.hooks = options.hooks;
+    registered.hooks = hooks;
 
     if (claimFetchWrap(app)) {
       const servedFetch = app.fetch;
@@ -220,6 +224,7 @@ export function createHonoBoundary<Hooks extends BoundaryHooks, Handlers, Operat
     route: ContractRoute,
     settings: ResponseSettings,
     options: HonoRegistrationOptions<Hooks, Handlers, Operation, E>,
+    hooks: BoundaryHooks,
   ): Promise<Response | undefined> {
     const reported = webReportedRequest(c.req.raw);
     const matched = matchContractRoute(api, reported.method, reported.path);
@@ -229,13 +234,13 @@ export function createHonoBoundary<Hooks extends BoundaryHooks, Handlers, Operat
     if (matched === undefined) return unservedOrNext(app, c.req.raw, next);
 
     if (!frameworkRoutesReady(app)) {
-      return uncheckedFrameworkRoutesResponse(options.hooks, matched.route, reported);
+      return uncheckedFrameworkRoutesResponse(hooks, matched.route, reported);
     }
 
     if (matched.route.id !== route.id) {
       return errorResponse(
         undefined,
-        options.hooks,
+        hooks,
         api,
         matched.route,
         notFoundError(matched.route),
@@ -249,7 +254,7 @@ export function createHonoBoundary<Hooks extends BoundaryHooks, Handlers, Operat
     if (slot === undefined) {
       return errorResponse(
         undefined,
-        options.hooks,
+        hooks,
         api,
         route,
         unexpectedError(
@@ -266,7 +271,7 @@ export function createHonoBoundary<Hooks extends BoundaryHooks, Handlers, Operat
       api,
       route,
       pathParams: matched.pathParams,
-      hooks: options.hooks,
+      hooks,
       bodyValidation: settings.bodyValidation,
       mode: settings.responses,
       boundaryWriting: false,

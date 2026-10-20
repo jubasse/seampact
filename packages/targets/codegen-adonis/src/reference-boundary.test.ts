@@ -2,10 +2,15 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import type { LinkSet } from "@seampact/codegen-core";
 import {
+  GENERATE_TIMEOUT_MILLISECONDS,
+  generateReferenceProject,
+  hooksRequirementErrors,
   projectDirectory,
+  publicTasksApi,
   REFERENCE_COMPILER_OPTIONS,
   readGoldenIr,
   referenceLinks,
+  TYPE_CHECK_TIMEOUT_MILLISECONDS,
   typeErrorsOf,
 } from "@seampact/codegen-core/node-server/test-support";
 import { type ContractIR, isKnownVariant, type Property } from "@seampact/spec/ir";
@@ -246,4 +251,33 @@ describe("with no validators link the target writes its own VineJS validators", 
       expect.objectContaining({ message: `Expected a value matching ${BRACES_PATTERN}.` }),
     ]);
   });
+});
+
+describe("an api with only public operations asks for no hooks", () => {
+  test(
+    "it registers without hooks, and an api that needs hooks still requires them",
+    async () => {
+      const project = projectDirectory(import.meta.url, "public-api");
+      const files = await generateAdonisProject(project, 7, {}, publicTasksApi);
+      const errors = hooksRequirementErrors(project, files, {
+        publicTasks: [
+          'import type { Router } from "@adonisjs/core/http";',
+          "declare const router: Router;",
+          'declare const controllers: Parameters<typeof Tasks.registerRoutes>[1]["controllers"];',
+          "Tasks.registerRoutes(router, { controllers });",
+        ].join("\n"),
+        guardedService: [
+          'import type { Router } from "@adonisjs/core/http";',
+          "declare const router: Router;",
+          'declare const controllers: Parameters<typeof Service.registerRoutes>[1]["controllers"];',
+          "Service.registerRoutes(router, { controllers });",
+        ].join("\n"),
+      });
+
+      expect(errors.publicTasks).toEqual([]);
+      expect(errors.guardedService).toHaveLength(1);
+      expect(errors.guardedService[0]).toContain("hooks");
+    },
+    GENERATE_TIMEOUT_MILLISECONDS + TYPE_CHECK_TIMEOUT_MILLISECONDS,
+  );
 });
