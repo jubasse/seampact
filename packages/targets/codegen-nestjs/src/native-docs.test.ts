@@ -7,6 +7,8 @@ import {
   nativeDocsDisagreements,
   nativeGoldenComparison,
   projectDirectory,
+  readGoldenIr,
+  referenceLinks,
   referenceNativeDocsDocument,
 } from "@seampact/codegen-core/node-server/test-support";
 import { beforeAll, describe, expect, test } from "vitest";
@@ -106,5 +108,45 @@ describe("the NestJS native document", () => {
 
   test("a framework document that says openapi 3.0.0 is refused with the fix", async () => {
     await expect(app.nativeDocument([tasks], "3.0.0")).rejects.toThrow(/openapi: '3\.1\.0'/);
+  });
+
+  test("nativeDocs off generates nothing for the framework document", async () => {
+    const outcome = await nestjsTarget.generate({
+      ir: readGoldenIr("tasks"),
+      options: { bodyValidation: true },
+      links: await referenceLinks(PROJECT, "tasks"),
+      artefacts: new Set(["boundary"]),
+    });
+
+    if (outcome.status !== "generated") throw new Error("the target refused the reference api");
+
+    expect(
+      outcome.files.map((file) => file.path).filter((path) => /docs|native/.test(path)),
+    ).toEqual([]);
+    expect(
+      outcome.files.filter((file) => /from "@(nestjs|fastify)\/swagger"/.test(file.contents)),
+    ).toEqual([]);
+  });
+
+  test.each([
+    ["no document", undefined, "nativeDocs.document.missing"],
+    [
+      "a document without the operations",
+      { document: { paths: {} } },
+      "nativeDocs.operation.missing",
+    ],
+  ])("nativeDocs with %s is refused by name", async (_label, nativeDocsDocument, code) => {
+    const outcome = await nestjsTarget.generate({
+      ir: readGoldenIr("tasks"),
+      options: { bodyValidation: true },
+      links: await referenceLinks(PROJECT, "tasks"),
+      artefacts: new Set(["boundary", "nativeDocs"]),
+      ...(nativeDocsDocument === undefined ? {} : { nativeDocsDocument }),
+    });
+
+    expect(outcome).toMatchObject({
+      status: "refused",
+      refusals: expect.arrayContaining([expect.objectContaining({ code })]),
+    });
   });
 });

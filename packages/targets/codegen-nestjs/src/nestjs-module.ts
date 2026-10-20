@@ -29,9 +29,18 @@ const FIXED_EXPORTS = [
 const LOCAL_NAMES = ["boundary", "createNestBoundary", "CONTRACT_API", "SeampactHooks"] as const;
 
 // The exports of the docs module, which the index re-exports beside the operation decorators.
-const DOCS_EXPORTS = ["contractDocs", "withContractComponents"] as const;
+const DOCS_EXPORTS = ["documentedOperation", "withContractComponents"] as const;
 
 const RESERVED_SUFFIX = "_";
+
+// The operation's decorator: the boundary's, wrapped by the docs module when `nativeDocs` is on.
+function operationSource(operationId: string, docsModule: string | undefined): string {
+  const boundaryOperation = `boundary.operation(${JSON.stringify(operationId)})`;
+
+  return docsModule === undefined
+    ? boundaryOperation
+    : `documentedOperation(${boundaryOperation}, ${JSON.stringify(operationId)})`;
+}
 
 export function nestjsModuleSource(
   ir: ContractIR,
@@ -45,24 +54,22 @@ export function nestjsModuleSource(
     ...LOCAL_NAMES,
     ...(docsModule === undefined ? [] : DOCS_EXPORTS),
   ];
-  const operationArguments = (id: string): string =>
-    docsModule === undefined
-      ? JSON.stringify(id)
-      : `${JSON.stringify(id)}, () => contractDocs(${JSON.stringify(id)})`;
   const decorators = ir.operations.map((operation, index) => {
     const identifier = operationIdentifier(operation);
     const name = reserved.includes(identifier) ? `${identifier}${RESERVED_SUFFIX}` : identifier;
 
     names.claim(name, operationLocation(index, operation.id), refusals);
 
-    return `/** The route of '${operation.id}'; \`${name}.input()\` is its validated input. */\nexport const ${name} = boundary.operation(${operationArguments(operation.id)});`;
+    return `/** The route of '${operation.id}'; \`${name}.input()\` is its validated input. */\nexport const ${name} = ${operationSource(operation.id, docsModule)};`;
   });
 
   return [
     'import { createNestBoundary } from "./nestjs-boundary.js";',
     'import type { SeampactHooks } from "./hooks.js";',
     'import { CONTRACT_API } from "./routes.js";',
-    ...(docsModule === undefined ? [] : [`import { contractDocs } from "./${docsModule}.js";`]),
+    ...(docsModule === undefined
+      ? []
+      : [`import { documentedOperation } from "./${docsModule}.js";`]),
     "",
     'export { MAX_CHECKED_ERROR_BODY_BYTES } from "./node-server/outgoing-verdict.js";',
     'export { MAX_RENDERED_ISSUES } from "./node-server/contract-error.js";',
