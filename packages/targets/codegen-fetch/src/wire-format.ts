@@ -24,7 +24,7 @@ export function refuseFormatForms(format: WireFormat): Refusal[] {
   const location = below({ member: "" }, "formats", format.id);
   const refusals: Refusal[] = [];
 
-  for (const shape of ["item", "table"] as const) {
+  for (const shape of ["item", "table", "list"] as const) {
     refuseEnvelope(
       format.success[shape].body,
       PAYLOAD_SLOT,
@@ -40,7 +40,7 @@ export function refuseFormatForms(format: WireFormat): Refusal[] {
     refusals,
   );
 
-  for (const shape of ["item", "table", "page"] as const) {
+  for (const shape of ["item", "table", "list", "page"] as const) {
     if (format.success[shape].headers.length > 0) {
       refusals.push(
         refuseNotGeneratedYet(
