@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { REPO_ROOT } from "../golden/repo-root.ts";
 import { currentCommit, type PackedTarballs, packOnce, prepareProject } from "./bench-project.ts";
+import { isMemoryServers, MEMORY_SERVERS, type MemoryOptions, memoryPair } from "./memory.ts";
 import { type BenchPair, benchPairs, selectPairs, withoutBodyValidation } from "./pairs.ts";
 import {
   defaultParallelism,
@@ -12,6 +13,7 @@ import {
   tasksetAvailable,
 } from "./pinning.ts";
 import { profilePair } from "./profile.ts";
+import { ratioPair } from "./ratio.ts";
 import type { BenchResults, PairMeasurement } from "./results.ts";
 import { type MeasureOptions, measurePair, probePair } from "./run-pair.ts";
 import { compareTable, summaryTable } from "./summary.ts";
@@ -21,13 +23,14 @@ import { compareTable, summaryTable } from "./summary.ts";
 // proves both servers answer alike, then runs load on both. Results are written under `--out`, never committed.
 // node scripts/bench/cli.ts --target <overlay> --validators <id> [--route <id>] [--duration <s>] [--out <dir>]
 // node scripts/bench/cli.ts --all [--check] | --profile --target <overlay> --validators <id> --route <id>
+// node scripts/bench/cli.ts --target <overlay> --validators <id> --ratio | --memory [--requests <n>] [--batches <n>] [--servers <s>]
 
 const EXIT_OK = 0;
 const EXIT_FAILED = 1;
 const EXIT_USAGE = 2;
 
 const USAGE =
-  "usage: node scripts/bench/cli.ts (--all | --target <overlay> --validators <id>) [--check] [--body-off] [--latency] [--thorough] [--parallel <n>] [--profile] [--route <ids>] [--duration <s>] [--warmup <s>] [--repeats <n>] [--connections <n>] [--out <dir>] [--work <dir>] [--fresh] [--compare <results.json>]";
+  "usage: node scripts/bench/cli.ts (--all | --target <overlay> --validators <id>) [--check] [--body-off] [--latency] [--thorough] [--parallel <n>] [--profile] [--route <ids>] [--duration <s>] [--warmup <s>] [--repeats <n>] [--connections <n>] [--out <dir>] [--work <dir>] [--fresh] [--compare <results.json>] [--ratio] [--memory [--requests <n>] [--batches <n>] [--servers seampact|baseline|both]]";
 const CONSUMERS_ROOT = join(REPO_ROOT, "scripts/consumers");
 const DEFAULT_OUT = join(REPO_ROOT, ".bench-output/latest");
 // Outside /tmp: a full run fills the inodes of a tmpfs.
@@ -48,6 +51,8 @@ const THOROUGH_DURATION_SECONDS = 10;
 const THOROUGH_WARMUP_SECONDS = 3;
 const DEFAULT_REPEATS = 3;
 const DEFAULT_CONNECTIONS = 10;
+const DEFAULT_MEMORY_REQUESTS = 20_000;
+const DEFAULT_MEMORY_BATCHES = 2;
 
 interface Invocation {
   readonly all: boolean;
@@ -61,6 +66,8 @@ interface Invocation {
   readonly out: string;
   readonly work: string;
   readonly compare?: string;
+  readonly ratio: boolean;
+  readonly memory?: MemoryOptions;
   readonly measure: MeasureOptions;
 }
 
@@ -87,6 +94,11 @@ function parseInvocation(argv: string[]): Invocation | string {
         thorough: { type: "boolean", default: false },
         parallel: { type: "string" },
         compare: { type: "string" },
+        ratio: { type: "boolean", default: false },
+        memory: { type: "boolean", default: false },
+        requests: { type: "string", default: String(DEFAULT_MEMORY_REQUESTS) },
+        batches: { type: "string", default: String(DEFAULT_MEMORY_BATCHES) },
+        servers: { type: "string", default: "both" },
       },
     });
 
@@ -114,10 +126,24 @@ function parseInvocation(argv: string[]): Invocation | string {
       ),
       repeats: positiveNumber("--repeats", values.repeats),
       connections: positiveNumber("--connections", values.connections),
+      requests: positiveNumber("--requests", values.requests),
+      batches: positiveNumber("--batches", values.batches),
     };
     const failed = Object.values(numbers).find((value) => typeof value === "string");
 
     if (typeof failed === "string") return failed;
+
+    const servers = values.servers;
+
+    if (!isMemoryServers(servers)) {
+      return `--servers '${servers}' is not one of ${MEMORY_SERVERS.join(", ")}.`;
+    }
+
+    const modes = [values.check, values.profile, values.ratio, values.memory].filter(Boolean);
+
+    if (modes.length > 1) return "pass one of --check, --profile, --ratio and --memory";
+
+    const routeIds = values.route === undefined ? DEFAULT_ROUTES : values.route.split(",");
 
     return {
       all: values.all,
@@ -131,8 +157,20 @@ function parseInvocation(argv: string[]): Invocation | string {
       out: resolve(values.out ?? DEFAULT_OUT),
       work: resolve(values.work ?? DEFAULT_WORK),
       ...(values.compare === undefined ? {} : { compare: resolve(values.compare) }),
+      ratio: values.ratio,
+      ...(values.memory
+        ? {
+            memory: {
+              routeIds,
+              requestsPerBatch: Number(numbers.requests),
+              batches: Number(numbers.batches),
+              connections: Number(numbers.connections),
+              servers,
+            },
+          }
+        : {}),
       measure: {
-        routeIds: values.route === undefined ? DEFAULT_ROUTES : values.route.split(","),
+        routeIds,
         durationSeconds: Number(numbers.durationSeconds),
         warmupSeconds: Number(numbers.warmupSeconds),
         repeats: Number(numbers.repeats),
@@ -249,6 +287,25 @@ async function measuredInParallel(
   return measured.filter((entry): entry is PairMeasurement => entry !== undefined);
 }
 
+// `--ratio` and `--memory` run each selected pair alone, one after the other.
+async function runEachPairAlone(
+  invocation: Invocation,
+  run: (pair: BenchPair, directory: string) => Promise<void>,
+): Promise<number> {
+  const tarballs = packedOnDemand(invocation.work);
+
+  console.log(`bench: load average ${loadavg()[0]?.toFixed(2)} at the start.`);
+
+  for (const pair of selectedPairs(invocation)) {
+    await run(
+      pair,
+      prepareProject({ pair, workDirectory: invocation.work, tarballs, fresh: invocation.fresh }),
+    );
+  }
+
+  return EXIT_OK;
+}
+
 async function runMeasurements(invocation: Invocation): Promise<number> {
   const pairs = measuredPairs(invocation);
   const tarballs = packedOnDemand(invocation.work);
@@ -298,6 +355,18 @@ async function main(argv: string[]): Promise<number> {
       return await profilePair(
         { ...invocation, measure: invocation.measure },
         selectedPairs(invocation),
+      );
+
+    const memory = invocation.memory;
+
+    if (memory !== undefined)
+      return await runEachPairAlone(invocation, (pair, directory) =>
+        memoryPair(pair, directory, memory),
+      );
+
+    if (invocation.ratio)
+      return await runEachPairAlone(invocation, (pair, directory) =>
+        ratioPair(pair, directory, invocation.measure),
       );
 
     return invocation.check ? await checkPairs(invocation) : await runMeasurements(invocation);

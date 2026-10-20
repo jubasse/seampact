@@ -14,6 +14,8 @@ interface LoadArguments {
   readonly connections: number;
   /** Requests per second across connections; absent for a saturation run. */
   readonly overallRate?: number;
+  /** A fixed number of requests in place of the duration, for a memory batch. */
+  readonly amount?: number;
 }
 
 const PIPELINING = 1;
@@ -34,12 +36,12 @@ else throw new Error(`bench: load-driver takes 'probe' or 'load', not '${command
 async function load(options: LoadArguments): Promise<unknown> {
   const route = routeById(options.routeId);
   let serial = 0;
-  const run = (durationSeconds: number, overallRate: number | undefined) =>
+  const run = (durationSeconds: number, overallRate: number | undefined, amount?: number) =>
     autocannon({
       url: options.baseUrl,
       connections: options.connections,
       pipelining: PIPELINING,
-      duration: durationSeconds,
+      ...(amount === undefined ? { duration: durationSeconds } : { amount }),
       ...(overallRate === undefined ? {} : { overallRate }),
       requests: [
         {
@@ -50,7 +52,7 @@ async function load(options: LoadArguments): Promise<unknown> {
 
   if (options.warmupSeconds > 0) await run(options.warmupSeconds, undefined);
 
-  const result = await run(options.durationSeconds, options.overallRate);
+  const result = await run(options.durationSeconds, options.overallRate, options.amount);
 
   return {
     requestsPerSecond: result.requests.average,

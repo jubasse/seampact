@@ -11,6 +11,23 @@ export interface MemoryReading {
   readonly peakHeapUsed: number;
 }
 
+/** The server's memory after a forced GC: `anonymousRss` minus `heapTotal` is its off-heap memory. */
+export interface SettledMemoryReading {
+  readonly rss: number;
+  readonly heapUsed: number;
+  readonly heapTotal: number;
+  readonly anonymousRss: number;
+}
+
+interface SettledMemoryMessage extends SettledMemoryReading {
+  readonly type: "settled-memory";
+}
+
+interface CpuMessage {
+  readonly type: "cpu";
+  readonly microseconds: number;
+}
+
 interface ReadyMessage {
   readonly type: "ready";
   readonly baseUrl: string;
@@ -85,6 +102,28 @@ export class ServerProcess {
     const reply = nextMessage<MemoryMessage>(this.child, "memory", MEMORY_TIMEOUT_MS);
 
     this.child.send({ type: "memory-read" });
+
+    return reply;
+  }
+
+  /** The CPU time the server process used so far, user and system, in microseconds. */
+  async readCpuMicroseconds(): Promise<number> {
+    const reply = nextMessage<CpuMessage>(this.child, "cpu", MEMORY_TIMEOUT_MS);
+
+    this.child.send({ type: "cpu-read" });
+
+    return (await reply).microseconds;
+  }
+
+  /** Forces a full GC in the server, which must run with `--expose-gc`, then reads its memory. */
+  async readSettledMemory(): Promise<SettledMemoryReading> {
+    const reply = nextMessage<SettledMemoryMessage>(
+      this.child,
+      "settled-memory",
+      SHUTDOWN_TIMEOUT_MS,
+    );
+
+    this.child.send({ type: "settled-memory-read" });
 
     return reply;
   }

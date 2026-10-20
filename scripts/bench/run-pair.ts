@@ -25,7 +25,7 @@ const FIXED_RATE_SHARE = 0.7;
 // A fixed-rate run whose achieved rate falls short of the rate sent by more than this share is not at equal load.
 const RATE_SHORTFALL_TOLERANCE = 0.05;
 const SETTLE_MS = 500;
-const KINDS: readonly ServerKind[] = ["seampact", "baseline"];
+export const KINDS: readonly ServerKind[] = ["seampact", "baseline"];
 
 interface LoadResult {
   readonly requestsPerSecond: number;
@@ -58,7 +58,7 @@ export async function probePair(
   }
 }
 
-async function probeServers(
+export async function probeServers(
   servers: Record<ServerKind, ServerProcess>,
   projectDirectory: string,
   placement?: Placement,
@@ -110,7 +110,7 @@ export async function measurePair(
   }
 }
 
-async function startServers(
+export async function startServers(
   pair: BenchPair,
   projectDirectory: string,
   placement?: Placement,
@@ -131,7 +131,7 @@ async function startServers(
   return { seampact, baseline };
 }
 
-async function stopServers(servers: Record<ServerKind, ServerProcess>): Promise<void> {
+export async function stopServers(servers: Record<ServerKind, ServerProcess>): Promise<void> {
   await Promise.all(KINDS.map((kind) => servers[kind].stop()));
 }
 
