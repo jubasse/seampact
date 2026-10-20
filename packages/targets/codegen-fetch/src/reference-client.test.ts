@@ -79,24 +79,8 @@ function readGoldenIr(name: string): ContractIR {
   );
 }
 
-// A compiled `paging: none` list carries no `Link` header, which only a page response derives.
 function unpagedTasksIr(): ContractIR {
-  const ir = referenceUnpagedList("listChannels")(readGoldenIr("tasks"), "tasks");
-
-  return {
-    ...ir,
-    operations: ir.operations.map((operation) =>
-      operation.id === "listChannels"
-        ? {
-            ...operation,
-            responses: operation.responses.map((response) => ({
-              ...response,
-              headers: response.headers.filter((header) => header.name !== "Link"),
-            })),
-          }
-        : operation,
-    ),
-  };
+  return referenceUnpagedList("listChannels")(readGoldenIr("tasks"), "tasks");
 }
 
 function writeFiles(directory: string, files: readonly GeneratedFile[]): string[] {

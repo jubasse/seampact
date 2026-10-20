@@ -4,9 +4,9 @@ import type { CliProblem } from "../cli-problem.js";
 import { isRecord } from "../is-record.js";
 import { installFix } from "./package-manager.js";
 
-// The version of a framework or validator library package installed in a project, read from its `package.json` in the `node_modules`
-// directories from a lookup directory up, as Node's ESM resolution searches them (it reads no global folder). The
-// file is read directly, not resolved, since a package's `exports` may hide its `package.json`.
+// The version of a framework or validator library package installed in a project, read from its `package.json` in
+// the `node_modules` directories from a lookup directory up, as Node's ESM resolution searches them (it reads no
+// global folder). The file is read directly, not resolved, since a package's `exports` may hide its `package.json`.
 
 export interface InstalledVersion {
   packageName: string;

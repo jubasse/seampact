@@ -213,7 +213,7 @@ export function hooksRequirementErrors(
   };
 }
 
-/** Makes one paged list of the `tasks` api a `paging: none` list: a bare array, no cursor or limit parameter. */
+/** Makes one paged list of the `tasks` api a `paging: none` list: a bare array, no cursor or limit parameter and no paged `Link` header. */
 export function referenceUnpagedList(operationId: string): ReferenceIrChange {
   return (ir, api) => {
     if (api !== "tasks") return ir;
@@ -239,7 +239,11 @@ export function referenceUnpagedList(operationId: string): ReferenceIrChange {
               (param) => param.name !== "cursor" && param.name !== "limit",
             ),
           },
-          responses: operation.responses.map((response) => ({ ...response, shape: "list" })),
+          responses: operation.responses.map((response) => ({
+            ...response,
+            shape: "list",
+            headers: response.headers.filter((header) => header.name !== "Link"),
+          })),
         };
       }),
     };

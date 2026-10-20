@@ -75,7 +75,7 @@ async function withDocsApp(apis, shadowSchemaName, write) {
   const app = await NestFactory.create(DocsModule, { logger: false });
 
   try {
-    return write(app);
+    return await write(app);
   } finally {
     await app.close();
   }

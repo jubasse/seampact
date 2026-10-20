@@ -114,7 +114,13 @@ function refuseApiForms(ir: ContractIR, refusals: Refusal[]): void {
       continue;
     }
 
-    refusals.push(...refuseFormatForms(format));
+    const listShapeUsed = ir.operations.some(
+      (operation) =>
+        operation.format === formatId &&
+        operation.responses.some((response) => response.shape === "list"),
+    );
+
+    refusals.push(...refuseFormatForms(format, listShapeUsed));
   }
 }
 
