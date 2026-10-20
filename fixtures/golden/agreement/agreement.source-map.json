@@ -32,7 +32,7 @@
     "api#/schemas/Bounds": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 105,
+      "endLine": 107,
       "file": "schemas.yaml",
       "line": 95
     },
@@ -53,9 +53,16 @@
     "api#/schemas/Bounds/properties/fraction": {
       "column": 5,
       "endColumn": 73,
-      "endLine": 103,
+      "endLine": 105,
       "file": "schemas.yaml",
-      "line": 103
+      "line": 105
+    },
+    "api#/schemas/Bounds/properties/hundredThousandth": {
+      "column": 5,
+      "endColumn": 62,
+      "endLine": 104,
+      "file": "schemas.yaml",
+      "line": 104
     },
     "api#/schemas/Bounds/properties/hundredth": {
       "column": 5,
@@ -67,9 +74,16 @@
     "api#/schemas/Bounds/properties/plain": {
       "column": 5,
       "endColumn": 28,
-      "endLine": 104,
+      "endLine": 106,
       "file": "schemas.yaml",
-      "line": 104
+      "line": 106
+    },
+    "api#/schemas/Bounds/properties/seventh": {
+      "column": 5,
+      "endColumn": 49,
+      "endLine": 103,
+      "file": "schemas.yaml",
+      "line": 103
     },
     "api#/schemas/Bounds/properties/step": {
       "column": 5,
@@ -88,114 +102,114 @@
     "api#/schemas/Comment": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 164,
+      "endLine": 166,
       "file": "schemas.yaml",
-      "line": 158
+      "line": 160
     },
     "api#/schemas/Comment/properties/replies": {
       "column": 5,
       "endColumn": 45,
-      "endLine": 163,
+      "endLine": 165,
       "file": "schemas.yaml",
-      "line": 163
+      "line": 165
     },
     "api#/schemas/Comment/properties/text": {
       "column": 5,
       "endColumn": 27,
-      "endLine": 162,
+      "endLine": 164,
       "file": "schemas.yaml",
-      "line": 162
+      "line": 164
     },
     "api#/schemas/Counts": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 168,
+      "endLine": 170,
       "file": "schemas.yaml",
-      "line": 164
+      "line": 166
     },
     "api#/schemas/Day": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 113,
+      "endLine": 115,
       "file": "schemas.yaml",
-      "line": 109
+      "line": 111
     },
     "api#/schemas/Day/properties/day": {
       "column": 17,
       "endColumn": 52,
-      "endLine": 112,
+      "endLine": 114,
       "file": "schemas.yaml",
-      "line": 112
+      "line": 114
     },
     "api#/schemas/Envelope": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 119,
+      "endLine": 121,
       "file": "schemas.yaml",
-      "line": 113
+      "line": 115
     },
     "api#/schemas/Envelope/properties/data": {
       "column": 5,
       "endColumn": 71,
-      "endLine": 118,
+      "endLine": 120,
       "file": "schemas.yaml",
-      "line": 118
+      "line": 120
     },
     "api#/schemas/Envelope/properties/id": {
       "column": 5,
       "endColumn": 25,
-      "endLine": 117,
+      "endLine": 119,
       "file": "schemas.yaml",
-      "line": 117
+      "line": 119
     },
     "api#/schemas/Formats": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 150,
+      "endLine": 152,
       "file": "schemas.yaml",
-      "line": 141
+      "line": 143
     },
     "api#/schemas/Formats/properties/amount": {
       "column": 5,
       "endColumn": 58,
-      "endLine": 149,
+      "endLine": 151,
       "file": "schemas.yaml",
-      "line": 149
+      "line": 151
     },
     "api#/schemas/Formats/properties/big": {
       "column": 5,
       "endColumn": 42,
-      "endLine": 148,
+      "endLine": 150,
       "file": "schemas.yaml",
-      "line": 148
+      "line": 150
     },
     "api#/schemas/Formats/properties/email": {
       "column": 5,
       "endColumn": 43,
-      "endLine": 144,
+      "endLine": 146,
       "file": "schemas.yaml",
-      "line": 144
+      "line": 146
     },
     "api#/schemas/Formats/properties/id": {
+      "column": 5,
+      "endColumn": 39,
+      "endLine": 149,
+      "file": "schemas.yaml",
+      "line": 149
+    },
+    "api#/schemas/Formats/properties/uri": {
       "column": 5,
       "endColumn": 39,
       "endLine": 147,
       "file": "schemas.yaml",
       "line": 147
     },
-    "api#/schemas/Formats/properties/uri": {
-      "column": 5,
-      "endColumn": 39,
-      "endLine": 145,
-      "file": "schemas.yaml",
-      "line": 145
-    },
     "api#/schemas/Formats/properties/uriReference": {
       "column": 5,
       "endColumn": 58,
-      "endLine": 146,
+      "endLine": 148,
       "file": "schemas.yaml",
-      "line": 146
+      "line": 148
     },
     "api#/schemas/IgnoreChild": {
       "column": 1,
@@ -242,16 +256,16 @@
     "api#/schemas/Instant": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 109,
+      "endLine": 111,
       "file": "schemas.yaml",
-      "line": 105
+      "line": 107
     },
     "api#/schemas/Instant/properties/at": {
       "column": 17,
       "endColumn": 56,
-      "endLine": 108,
+      "endLine": 110,
       "file": "schemas.yaml",
-      "line": 108
+      "line": 110
     },
     "api#/schemas/KeepChild": {
       "column": 1,
@@ -312,16 +326,16 @@
     "api#/schemas/Member": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 135,
+      "endLine": 137,
       "file": "schemas.yaml",
-      "line": 131
+      "line": 133
     },
     "api#/schemas/Member/properties/role": {
       "column": 17,
       "endColumn": 37,
-      "endLine": 134,
+      "endLine": 136,
       "file": "schemas.yaml",
-      "line": 134
+      "line": 136
     },
     "api#/schemas/Notice": {
       "column": 1,
@@ -375,51 +389,51 @@
     "api#/schemas/OpaqueItems": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 131,
+      "endLine": 133,
       "file": "schemas.yaml",
-      "line": 124
+      "line": 126
     },
     "api#/schemas/OpaqueItems/properties/items": {
       "column": 5,
       "endColumn": 1,
-      "endLine": 131,
+      "endLine": 133,
       "file": "schemas.yaml",
-      "line": 128
+      "line": 130
     },
     "api#/schemas/OpaqueItems/properties/items/items": {
       "column": 7,
       "endColumn": 73,
-      "endLine": 130,
+      "endLine": 132,
       "file": "schemas.yaml",
-      "line": 130
+      "line": 132
     },
     "api#/schemas/OptionalEnvelope": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 124,
+      "endLine": 126,
       "file": "schemas.yaml",
-      "line": 119
+      "line": 121
     },
     "api#/schemas/OptionalEnvelope/properties/data": {
       "column": 5,
       "endColumn": 87,
-      "endLine": 123,
+      "endLine": 125,
       "file": "schemas.yaml",
-      "line": 123
+      "line": 125
     },
     "api#/schemas/Owner": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 141,
+      "endLine": 143,
       "file": "schemas.yaml",
-      "line": 135
+      "line": 137
     },
     "api#/schemas/Owner/properties/role": {
       "column": 5,
       "endColumn": 1,
-      "endLine": 141,
+      "endLine": 143,
       "file": "schemas.yaml",
-      "line": 139
+      "line": 141
     },
     "api#/schemas/PatchArticle": {
       "column": 1,
@@ -445,44 +459,44 @@
     "api#/schemas/Patterns": {
       "column": 1,
       "endColumn": 1,
-      "endLine": 158,
+      "endLine": 160,
       "file": "schemas.yaml",
-      "line": 150
+      "line": 152
     },
     "api#/schemas/Patterns/properties/brace": {
       "column": 5,
       "endColumn": 49,
-      "endLine": 157,
+      "endLine": 159,
       "file": "schemas.yaml",
-      "line": 157
+      "line": 159
     },
     "api#/schemas/Patterns/properties/dash": {
       "column": 5,
       "endColumn": 49,
-      "endLine": 156,
+      "endLine": 158,
       "file": "schemas.yaml",
-      "line": 156
+      "line": 158
     },
     "api#/schemas/Patterns/properties/dot": {
-      "column": 5,
-      "endColumn": 44,
-      "endLine": 153,
-      "file": "schemas.yaml",
-      "line": 153
-    },
-    "api#/schemas/Patterns/properties/end": {
       "column": 5,
       "endColumn": 44,
       "endLine": 155,
       "file": "schemas.yaml",
       "line": 155
     },
+    "api#/schemas/Patterns/properties/end": {
+      "column": 5,
+      "endColumn": 44,
+      "endLine": 157,
+      "file": "schemas.yaml",
+      "line": 157
+    },
     "api#/schemas/Patterns/properties/space": {
       "column": 5,
       "endColumn": 47,
-      "endLine": 154,
+      "endLine": 156,
       "file": "schemas.yaml",
-      "line": 154
+      "line": 156
     },
     "api#/schemas/Percent": {
       "column": 1,

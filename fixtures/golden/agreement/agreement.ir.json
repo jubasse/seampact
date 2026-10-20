@@ -5614,6 +5614,46 @@
           "deprecated": false,
           "docs": {},
           "extensions": {},
+          "name": "seventh",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Bounds/properties/seventh"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "multipleOf": "0.07"
+            },
+            "type": "integer"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
+          "name": "hundredThousandth",
+          "nullable": false,
+          "optional": true,
+          "origin": {
+            "layer": "api",
+            "pointer": "/schemas/Bounds/properties/hundredThousandth"
+          },
+          "sensitive": false,
+          "type": {
+            "kind": "scalar",
+            "refinements": {
+              "multipleOf": "0.00001"
+            },
+            "type": "integer"
+          }
+        },
+        {
+          "deprecated": false,
+          "docs": {},
+          "extensions": {},
           "name": "fraction",
           "nullable": false,
           "optional": true,
