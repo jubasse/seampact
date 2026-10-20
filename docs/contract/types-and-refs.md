@@ -53,7 +53,7 @@ Note:
     noteId: NoteId
 ```
 
-`$include` pastes the file in place. Paths are relative to the file that holds them and stay inside the contract folder.
+`$include` pastes the file in place. Paths are relative to the file that holds them and stay inside the workspace root (the folder of `workspace.yaml`, or of the api file when there is none).
 
 Share one base between several apis with `extends`.
 

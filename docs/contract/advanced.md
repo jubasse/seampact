@@ -51,6 +51,11 @@ notes:
 ## Cache a read
 
 ```yaml
+conventions:
+  cache: { families: { minute: 60s } }
+```
+
+```yaml
 cache: { freshness: minute, etag: true }
 ```
 

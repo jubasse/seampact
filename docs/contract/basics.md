@@ -60,7 +60,7 @@ notes:
   kind: collection
   id: { noteId: NoteId }
   item: Note
-  ops: [list, get]
+  ops: [get]
   member:
     routes:
       pin:
