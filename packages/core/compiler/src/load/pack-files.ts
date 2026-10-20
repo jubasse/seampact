@@ -1,10 +1,17 @@
 // A file of a package resolved from a `node_modules` at or above the workspace root (the loader's pack walk): the
 // package directory, then the path inside the package.
+import { BUNDLE_PACKS_DIRECTORY, BUNDLE_SOURCES_DIRECTORY } from "@seampact/spec/bundle";
+
 export const PACK_FILE = /^((?:\.\.\/)*node_modules\/(?:@[^/]+\/)?[^/]+)\/(.+)$/u;
+
+// The bundle's packs directory below its sources directory: `.packs`.
+const PACKS_DIRECTORY_IN_SOURCES = BUNDLE_PACKS_DIRECTORY.slice(
+  `${BUNDLE_SOURCES_DIRECTORY}/`.length,
+);
 
 /** The directory that holds a pack's files wherever the package manager installed it: `.packs/<name>@<version>`. */
 export function packVendoredDirectory(name: string, version: string): string {
-  return `.packs/${name}@${version}`;
+  return `${PACKS_DIRECTORY_IN_SOURCES}/${name}@${version}`;
 }
 
 /** The package name and the path inside the package of a pack file, or undefined for a file in no pack package. */

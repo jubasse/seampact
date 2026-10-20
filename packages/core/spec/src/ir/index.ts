@@ -7,7 +7,7 @@ export type {
   IrClosedDefinition,
   IrClosedUnknown,
 } from "./closed-declaration.js";
-export { checkIrClosedDeclaration } from "./closed-declaration.js";
+export { boundedUnknownValue, checkIrClosedDeclaration } from "./closed-declaration.js";
 export type { IrInstanceNode, IrUnknowns } from "./instance-walk.js";
 export { listIrUnknowns, walkIrInstance } from "./instance-walk.js";
 export type { IrInvariantId, IrInvariantViolation } from "./invariants.js";

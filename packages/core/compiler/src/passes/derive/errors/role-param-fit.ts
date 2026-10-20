@@ -109,7 +109,7 @@ const nestedReason = (
   reason: DeriveErrorsMisfitReason,
 ): DeriveErrorsMisfitReason => ({ kind: reason.kind, text: `${prefix}${reason.text}` });
 
-export function deriveErrorsKindsOf(schemas: Schemas, typed: DeriveErrorsTyped): DeriveErrorsKinds {
+export function deriveErrorsKindsOf(typed: DeriveErrorsTyped): DeriveErrorsKinds {
   const { use } = typed;
   const useNullable = "nullable" in use && use.nullable === true;
   const kinds = new Set<DeriveErrorsJsonKind>(typed.nullable || useNullable ? ["null"] : []);
@@ -157,8 +157,8 @@ function typedMisfit(
   accepted: DeriveErrorsTyped,
   seen: Set<string>,
 ): DeriveErrorsMisfitReason | undefined {
-  const renderedKinds = deriveErrorsKindsOf(fit.schemas, rendered);
-  const acceptedKinds = deriveErrorsKindsOf(fit.schemas, accepted);
+  const renderedKinds = deriveErrorsKindsOf(rendered);
+  const acceptedKinds = deriveErrorsKindsOf(accepted);
 
   if (!deriveErrorsKindsFit(renderedKinds, acceptedKinds))
     return deriveErrorsMisfitReason(

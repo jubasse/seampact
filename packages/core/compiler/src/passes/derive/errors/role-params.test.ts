@@ -236,6 +236,7 @@ errors:
         related: [],
       },
     ]);
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: the authored text holds a literal placeholder
     expect(located(keyed("'by ${key.nothing}'"))).toEqual([
       {
         rule: "seampact/derive/role-param-type",
