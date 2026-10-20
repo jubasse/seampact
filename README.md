@@ -78,7 +78,7 @@ Every generator renders the default format and every format and paging style you
 | `codegen-zod`, `codegen-yup` | validators (Standard Schema) | provides `validators` | not applicable: payloads only |
 | `codegen-class-validator` | DTO classes with decorators | provides `validators` | not applicable: payloads only |
 | `codegen-fetch` | typed client | provides `client` | the client's response readers |
-| `codegen-nestjs` | per-operation decorators, guard, interceptor and input decorators around your controllers | `validators`: zod, yup or class-validator | exception filters and interceptors |
+| `codegen-nestjs` | per-operation decorators, guard, handler wrapper and input decorators around your controllers | `validators`: zod, yup or class-validator | exception filters and the handler wrapper |
 | `codegen-fastify` | server boundary | `validators`: zod or yup, or Ajv without a link | route hooks |
 | `codegen-express` | server boundary for Express 4 and 5 | `validators`: zod or yup | middleware |
 | `codegen-adonis` | server boundary for AdonisJS 6 and 7 | `validators`: zod or yup (VineJS planned) | middleware and exception handler |
