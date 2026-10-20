@@ -89,6 +89,7 @@ const CURSOR_LINKS = [
   { linkRole: "previous", cursorRole: "previousCursor", requestRoles: ["cursor", "before"] },
 ] as const;
 const QUERY_PLACEMENT = "query";
+const LINK_SOURCE = "link";
 
 type SlotVisitor = (slot: SlotTemplate, path: string[], location: IrLocation) => void;
 
@@ -143,7 +144,10 @@ export function pageReaderOf(
     // A role written twice holds one value: the first place read is enough.
     if (facts.some((fact) => fact.role === role)) return;
 
-    facts.push({ role, ...reading, source });
+    // Real servers leave a `Link` relation out at an end of the list (GitHub has no `first` on page 1).
+    const required = reading.required && source.from !== LINK_SOURCE;
+
+    facts.push({ role, value: reading.value, required, source });
   };
 
   const visitRoles: SlotVisitor = (slot, path, location) => {
@@ -261,19 +265,22 @@ function headerFact(
   if (roleParts.length === 0) return;
 
   const [onlyPart] = value.parts;
+  const isOnlySlot = value.parts.length === 1 && onlyPart !== undefined && "slot" in onlyPart;
 
-  if (value.parts.length === 1 && onlyPart !== undefined && "slot" in onlyPart) {
-    if (onlyPart.path.length === 0) {
-      addFact(onlyPart.slot, source, location);
+  if (isOnlySlot && onlyPart.path.length === 0) {
+    addFact(onlyPart.slot, source, location);
 
-      return;
-    }
+    return;
   }
+
+  const unreadForm = isOnlySlot
+    ? { form: "paging.response.headers.member", description: "with a member of its role's slot" }
+    : { form: "paging.response.headers.text", description: "with text around its role" };
 
   refusals.push(
     refuseNotGeneratedYet(
-      "paging.response.headers.text",
-      `The header '${header.name}', with text around its role,`,
+      unreadForm.form,
+      `The header '${header.name}', ${unreadForm.description},`,
       valueLocation,
     ),
   );

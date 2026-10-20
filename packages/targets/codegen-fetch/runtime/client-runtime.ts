@@ -190,8 +190,7 @@ type Answer =
 const NOT_MODIFIED = 304;
 const JSON_MEDIA = "application/json";
 const LINK_HEADER = "link";
-const LINK_VALUE = /<([^>]*)>([^,<]*)/g;
-const RELATION_PARAMETER = /;\s*rel\s*=\s*"?([^";]*)"?/i;
+const RELATION_PARAMETER = "rel";
 
 // Resolves a relative `Link` target; only its query is read.
 const LINK_BASE = "http://link.invalid";
@@ -571,12 +570,15 @@ function factValue(fact: PageFact, body: unknown, headers: Headers): unknown {
 }
 
 const JSON_TYPE_OF_FACT = { number: "number", text: "string", boolean: "boolean" } as const;
-const BOOLEAN_TEXTS: Readonly<Record<string, boolean>> = { true: true, false: false };
+const BOOLEAN_TEXTS: ReadonlyMap<string, boolean> = new Map([
+  ["true", true],
+  ["false", false],
+]);
 
 function factFromText(value: PageFact["value"], text: string): unknown {
   if (value === "text") return text;
 
-  if (value === "boolean") return BOOLEAN_TEXTS[text.toLowerCase()];
+  if (value === "boolean") return BOOLEAN_TEXTS.get(text.toLowerCase());
 
   const number = text === "" ? Number.NaN : Number(text);
 
@@ -601,17 +603,105 @@ function isTable(body: unknown): body is Record<string, unknown> {
   return typeof body === "object" && body !== null && !Array.isArray(body);
 }
 
-// The target of the first `Link` value whose relations hold `rel`; absent at either end of the list.
+// The target of the first `Link` value whose relations hold `rel`; absent at either end of the list. Relation
+// types compare case-insensitively (RFC 8288 section 2.1.1).
 function linkTargetOf(link: string | null, rel: string): string | undefined {
   if (link === null) return undefined;
 
-  for (const [, target = "", parameters = ""] of link.matchAll(LINK_VALUE)) {
-    const relations = RELATION_PARAMETER.exec(parameters)?.[1]?.split(/\s+/) ?? [];
+  const wantedRelation = rel.toLowerCase();
 
-    if (relations.includes(rel)) return target;
+  return linkValuesOf(link).find((value) => value.relations.includes(wantedRelation))?.target;
+}
+
+interface LinkValue {
+  readonly target: string;
+  readonly relations: readonly string[];
+}
+
+// Splits a `Link` header into its `<target>; param=value` link-values; a quoted string may hold `,`, `;` or `<`.
+function linkValuesOf(link: string): LinkValue[] {
+  const values: LinkValue[] = [];
+  let position = link.indexOf("<");
+
+  while (position !== -1) {
+    const targetEnd = link.indexOf(">", position);
+
+    if (targetEnd === -1) break;
+
+    const target = link.slice(position + 1, targetEnd);
+    const { parameters, end } = linkParametersOf(link, targetEnd + 1);
+    const relations = parameters.get(RELATION_PARAMETER)?.toLowerCase().split(/\s+/) ?? [];
+
+    values.push({ target, relations: relations.filter((relation) => relation !== "") });
+    position = link.indexOf("<", end);
   }
 
-  return undefined;
+  return values;
+}
+
+// The parameters of one link-value from `start` to the `,` ending it; the first occurrence of a name wins.
+function linkParametersOf(
+  link: string,
+  start: number,
+): { parameters: Map<string, string>; end: number } {
+  const parameters = new Map<string, string>();
+  let position = start;
+
+  while (position < link.length && link[position] !== ",") {
+    if (link[position] !== ";") {
+      position += 1;
+
+      continue;
+    }
+
+    const nameEnd = endOfToken(link, position + 1, "=;,");
+    const name = link
+      .slice(position + 1, nameEnd)
+      .trim()
+      .toLowerCase();
+    const { value, end } =
+      link[nameEnd] === "=" ? parameterValueOf(link, nameEnd + 1) : { value: "", end: nameEnd };
+
+    if (!parameters.has(name)) parameters.set(name, value);
+
+    position = end;
+  }
+
+  return { parameters, end: position };
+}
+
+function parameterValueOf(link: string, start: number): { value: string; end: number } {
+  let position = start;
+
+  while (link[position] === " " || link[position] === "\t") position += 1;
+
+  if (link[position] !== '"') {
+    const end = endOfToken(link, position, ";,");
+
+    return { value: link.slice(position, end).trim(), end };
+  }
+
+  let value = "";
+
+  position += 1;
+
+  while (position < link.length && link[position] !== '"') {
+    // A quoted-pair keeps the next character as is.
+    if (link[position] === "\\") position += 1;
+
+    value += link[position] ?? "";
+    position += 1;
+  }
+
+  return { value, end: position + 1 };
+}
+
+function endOfToken(link: string, start: number, stops: string): number {
+  let position = start;
+
+  while (position < link.length && !stops.includes(link[position] ?? "")) position += 1;
+
+  return position;
 }
 
 // `URL.canParse` is missing on some platforms (Hermes), so an unparsable target is caught instead.

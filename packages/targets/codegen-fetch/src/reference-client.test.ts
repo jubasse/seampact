@@ -33,6 +33,8 @@ const META_PAGE_API = "tasksMetaPage";
 const FLAT_PAGE_API = "tasksFlatPage";
 const HEADER_PAGE_API = "tasksHeaderPage";
 const LARAVEL_API = "laravelTasks";
+const LARAVEL_UNPAGED_API = "laravelTasksUnpaged";
+const SINCE_PAGE_API = "tasksSincePage";
 const RESULT_CLIENT = "client";
 const THROW_CLIENT = "clientThrow";
 const PROBE_FILE = "probe.ts";
@@ -141,8 +143,16 @@ function headerPageIr(): ContractIR {
     response: {
       body: slot("items"),
       meta: [],
-      headers: [{ name: "X-Total-Count", value: slot("total") }],
-      links: [{ rel: "next", role: "next" }],
+      headers: [
+        { name: "X-Total-Count", value: slot("total") },
+        { name: "X-More", value: slot("more") },
+      ],
+      links: [
+        { rel: "first", role: "first" },
+        { rel: "prev", role: "previous" },
+        { rel: "next", role: "next" },
+        { rel: "last", role: "last" },
+      ],
     },
     handlerResult: ["nextCursor", "total"],
   })(readGoldenIr("tasks"), "tasks");
@@ -160,6 +170,29 @@ function withTypedHandlerResults(ir: ContractIR): ContractIR {
       ]),
     ),
   };
+}
+
+// A since style: the page tells where the next sync starts and whether the feed is complete.
+function sincePageIr(): ContractIR {
+  const ir = referencePageShape({
+    styleId: "cursor",
+    response: {
+      body: object({
+        data: slot("items"),
+        next_since: slot("nextSince"),
+        complete: slot("complete"),
+      }),
+      meta: [],
+      headers: [],
+      links: [],
+    },
+    handlerResult: ["nextCursor"],
+  })(readGoldenIr("tasks"), "tasks");
+  const { cursor } = ir.pagings;
+
+  if (cursor === undefined) throw new Error("the tasks api has no cursor paging style");
+
+  return { ...ir, pagings: { ...ir.pagings, cursor: { ...cursor, position: "since" } } };
 }
 
 function unpagedTasksIr(): ContractIR {
@@ -393,6 +426,11 @@ beforeAll(async () => {
       generateApi(FLAT_PAGE_API, flatPageIr()),
       generateApi(HEADER_PAGE_API, headerPageIr()),
       generateApi(LARAVEL_API, readGoldenIr("tasks", "pack-laravel")),
+      generateApi(
+        LARAVEL_UNPAGED_API,
+        referenceUnpagedList("listChannels")(readGoldenIr("tasks", "pack-laravel"), "tasks"),
+      ),
+      generateApi(SINCE_PAGE_API, sincePageIr()),
     ])
   ).flat();
 
@@ -1001,6 +1039,7 @@ describe("the generated client reads every page shape of its paging style", () =
       body: tasks,
       headers: {
         "x-total-count": "7",
+        "x-more": "true",
         link: '</v1/channels/c1/tasks?cursor=cursor-2>; rel="next"',
       },
     });
@@ -1010,11 +1049,16 @@ describe("the generated client reads every page shape of its paging style", () =
     expect(page.body).toEqual({
       items: tasks,
       total: 7,
+      more: true,
       next: "/v1/channels/c1/tasks?cursor=cursor-2",
       nextCursor: "cursor-2",
     });
 
-    canned.answerNext({ status: 200, body: tasks, headers: { "x-total-count": "many" } });
+    canned.answerNext({
+      status: 200,
+      body: tasks,
+      headers: { "x-total-count": "many", "x-more": "false" },
+    });
 
     await expect(call(client, "listTasks")({ path: { channelId: "c1" } })).resolves.toMatchObject({
       ok: false,
@@ -1062,5 +1106,135 @@ describe("the generated client reads every page shape of its paging style", () =
       to: 4,
       total: 7,
     });
+  });
+
+  test("pack-laravel: data-wrapped list and table payloads", async () => {
+    const tableClient = await cannedClient(LARAVEL_API, canned);
+    const batch = { a: { taskId: "a" }, b: { taskId: "b" } };
+
+    canned.answerNext({ status: 200, body: { data: batch } });
+
+    await expect(
+      call(tableClient, "getTasksBatch")({ path: { channelId: "c1" }, body: { ids: ["a", "b"] } }),
+    ).resolves.toMatchObject({ ok: true, body: batch });
+
+    const listClient = await cannedClient(LARAVEL_UNPAGED_API, canned);
+    const channels = [{ channelId: "c1" }];
+
+    canned.answerNext({ status: 200, body: { data: channels } });
+
+    const list = await call(listClient, "listChannels")();
+
+    expect(list).toMatchObject({ ok: true, status: 200 });
+    expect(list.body).toEqual(channels);
+  });
+
+  test("a since page reads its next start and whether the feed is complete", async () => {
+    const client = await cannedClient(SINCE_PAGE_API, canned);
+
+    canned.answerNext({
+      status: 200,
+      body: { data: tasks, next_since: "2026-10-21T10:00:00Z", complete: false },
+    });
+
+    const page = await call(client, "listTasks")({ path: { channelId: "c1" } });
+
+    expect(page.body).toEqual({ items: tasks, nextSince: "2026-10-21T10:00:00Z", complete: false });
+
+    canned.answerNext({ status: 200, body: { data: tasks, next_since: "2026-10-21T10:00:00Z" } });
+
+    await expect(call(client, "listTasks")({ path: { channelId: "c1" } })).resolves.toMatchObject({
+      ok: false,
+      unexpected: true,
+    });
+  });
+
+  test("a Link page without first or last relation, and its previous cursor", async () => {
+    const client = await cannedClient(HEADER_PAGE_API, canned);
+
+    canned.answerNext({
+      status: 200,
+      body: tasks,
+      headers: {
+        "x-total-count": "7",
+        "x-more": "false",
+        link: '</p?cursor=c1>; rel="prev"',
+      },
+    });
+
+    const page = await call(client, "listTasks")({ path: { channelId: "c1" } });
+
+    expect(page.body).toEqual({
+      items: tasks,
+      total: 7,
+      more: false,
+      previous: "/p?cursor=c1",
+      previousCursor: "c1",
+    });
+  });
+
+  test("a boolean header outside true and false makes the page unexpected", async () => {
+    const client = await cannedClient(HEADER_PAGE_API, canned);
+
+    canned.answerNext({
+      status: 200,
+      body: tasks,
+      headers: { "x-total-count": "7", "x-more": "constructor" },
+    });
+
+    await expect(call(client, "listTasks")({ path: { channelId: "c1" } })).resolves.toMatchObject({
+      ok: false,
+      unexpected: true,
+    });
+  });
+
+  test.each([
+    {
+      name: "a quoted title holding a comma",
+      link: '</p?cursor=c2>; title="a, b"; rel="next"',
+      facts: { next: "/p?cursor=c2", nextCursor: "c2" },
+    },
+    {
+      name: "a quoted title holding a target",
+      link: '</p?cursor=c2>; title="<a>"; rel="next"',
+      facts: { next: "/p?cursor=c2", nextCursor: "c2" },
+    },
+    {
+      name: "a quoted title holding a rel parameter",
+      link: '</p?cursor=c1>; title="x;rel=next"; rel="prev", </p?cursor=c3>; rel="next"',
+      facts: {
+        previous: "/p?cursor=c1",
+        previousCursor: "c1",
+        next: "/p?cursor=c3",
+        nextCursor: "c3",
+      },
+    },
+    {
+      name: "an uppercase relation type",
+      link: '</p?cursor=c2>; rel="Next"',
+      facts: { next: "/p?cursor=c2", nextCursor: "c2" },
+    },
+    {
+      name: "a value with several relations",
+      link: '</p?cursor=c4>; rel="next last", </p?cursor=c0>; rel=first',
+      facts: {
+        first: "/p?cursor=c0",
+        next: "/p?cursor=c4",
+        last: "/p?cursor=c4",
+        nextCursor: "c4",
+      },
+    },
+  ])("a Link header with $name", async ({ link, facts }) => {
+    const client = await cannedClient(HEADER_PAGE_API, canned);
+
+    canned.answerNext({
+      status: 200,
+      body: tasks,
+      headers: { "x-total-count": "7", "x-more": "true", link },
+    });
+
+    const page = await call(client, "listTasks")({ path: { channelId: "c1" } });
+
+    expect(page.body).toEqual({ items: tasks, total: 7, more: true, ...facts });
   });
 });
