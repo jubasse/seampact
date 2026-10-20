@@ -1,13 +1,12 @@
 import { existsSync, readFileSync } from "node:fs";
-import { createRequire } from "node:module";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import type { CliProblem } from "../cli-problem.js";
 import { isRecord } from "../is-record.js";
 import { installFix } from "./package-manager.js";
 
-// The version of a framework package installed in the app's project, read from its `package.json` found through
-// Node's lookup paths from the config file's directory. The file is read directly, not resolved, since a package's
-// `exports` may hide its `package.json`.
+// The version of a framework package installed in a project, read from its `package.json` in the `node_modules`
+// directories from a lookup directory up, as Node's ESM resolution searches them (it reads no global folder). The
+// file is read directly, not resolved, since a package's `exports` may hide its `package.json`.
 
 export interface InstalledVersion {
   packageName: string;
@@ -22,23 +21,19 @@ export type InstalledVersionOutcome =
 
 const MAJOR_PATTERN = /^v?(0|[1-9][0-9]*)\./;
 
+const NODE_MODULES = "node_modules";
+
+const PNP_FILES: readonly string[] = [".pnp.cjs", ".pnp.js"];
+
 export function readInstalledVersion(
-  configFile: string,
+  lookupDirectory: string,
   packageName: string,
   where: string,
 ): InstalledVersionOutcome {
-  const packageJsonFile = findPackageJson(configFile, packageName);
+  const packageJsonFile = findPackageJson(lookupDirectory, packageName);
 
   if (packageJsonFile === undefined) {
-    return {
-      status: "refused",
-      problem: {
-        code: "config.matrix.framework-missing",
-        message: `The framework package '${packageName}' is not installed in the app's project, so its version cannot be checked against the compatibility matrix; the generated code imports it.`,
-        fix: installFix(configFile, packageName, "runtime"),
-        where,
-      },
-    };
+    return { status: "refused", problem: missingPackageProblem(lookupDirectory, packageName, where) };
   }
 
   const declared = declaredMajor(packageJsonFile);
@@ -61,12 +56,44 @@ export function readInstalledVersion(
   };
 }
 
-function findPackageJson(configFile: string, packageName: string): string | undefined {
-  const lookupDirectories = createRequire(configFile).resolve.paths(packageName) ?? [];
-
-  return lookupDirectories
-    .map((directory) => join(directory, packageName, "package.json"))
+function findPackageJson(lookupDirectory: string, packageName: string): string | undefined {
+  return ancestorsOf(lookupDirectory)
+    .filter((directory) => basename(directory) !== NODE_MODULES)
+    .map((directory) => join(directory, NODE_MODULES, packageName, "package.json"))
     .find((file) => existsSync(file));
+}
+
+// A Plug'n'Play install has no `node_modules`, so a missing package there is the install mode, not the package.
+function missingPackageProblem(
+  lookupDirectory: string,
+  packageName: string,
+  where: string,
+): CliProblem {
+  const pnpFile = ancestorsOf(lookupDirectory)
+    .flatMap((directory) => PNP_FILES.map((file) => join(directory, file)))
+    .find((file) => existsSync(file));
+
+  if (pnpFile !== undefined) {
+    return {
+      code: "config.matrix.pnp-unsupported",
+      message: `The project around ${lookupDirectory} installs its packages with Yarn Plug'n'Play (${pnpFile}), which the CLI cannot read the version of '${packageName}' from.`,
+      fix: "Set `nodeLinker: node-modules` in the project's `.yarnrc.yml`, then run `yarn install`.",
+      where,
+    };
+  }
+
+  return {
+    code: "config.matrix.framework-missing",
+    message: `The framework package '${packageName}' is not installed in the project of the entry's output directory (${lookupDirectory}), so its version cannot be checked against the compatibility matrix; the generated code imports it.`,
+    fix: installFix(lookupDirectory, packageName, "runtime"),
+    where,
+  };
+}
+
+function ancestorsOf(directory: string): string[] {
+  const parent = dirname(directory);
+
+  return parent === directory ? [directory] : [directory, ...ancestorsOf(parent)];
 }
 
 type DeclaredMajor =

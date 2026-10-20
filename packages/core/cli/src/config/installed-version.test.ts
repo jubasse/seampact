@@ -1,5 +1,5 @@
-import { afterEach, expect, test } from "vitest";
 import { join } from "node:path";
+import { afterEach, expect, test } from "vitest";
 import { removeConfigTrees, writeConfigTree } from "./config-test-tree.test-support.js";
 import { readInstalledVersion } from "./installed-version.js";
 
@@ -18,7 +18,7 @@ test("reads a package.json the package's exports hide", () => {
   });
 
   expect(
-    readInstalledVersion(join(root, "app/seampact.config.yaml"), "web-framework", WHERE),
+    readInstalledVersion(join(root, "app"), "web-framework", WHERE),
   ).toEqual({
     status: "installed",
     installed: { packageName: "web-framework", version: "5.2.1", major: 5 },
@@ -32,7 +32,7 @@ test("finds a package hoisted above the app, and counts a pre-release by its maj
   });
 
   expect(
-    readInstalledVersion(join(root, "apps/web/seampact.config.yaml"), "@acme/framework", WHERE),
+    readInstalledVersion(join(root, "apps/web"), "@acme/framework", WHERE),
   ).toEqual({
     status: "installed",
     installed: { packageName: "@acme/framework", version: "6.0.0-beta.2", major: 6 },
@@ -46,13 +46,13 @@ test("refuses a missing package with the runtime install command of the app's pa
   });
 
   expect(
-    readInstalledVersion(join(root, "seampact.config.yaml"), "web-framework-absent", WHERE),
+    readInstalledVersion(root, "web-framework-absent", WHERE),
   ).toEqual({
     status: "refused",
     problem: {
       code: "config.matrix.framework-missing",
       message:
-        "The framework package 'web-framework-absent' is not installed in the app's project, so its version cannot be checked against the compatibility matrix; the generated code imports it.",
+        `The framework package 'web-framework-absent' is not installed in the project of the entry's output directory (${root}), so its version cannot be checked against the compatibility matrix; the generated code imports it.`,
       fix: "Install it: `pnpm add web-framework-absent`.",
       where: WHERE,
     },
@@ -66,9 +66,27 @@ test("refuses an installed package without a readable version", () => {
   });
 
   expect(
-    readInstalledVersion(join(root, "seampact.config.yaml"), "web-framework", WHERE),
+    readInstalledVersion(root, "web-framework", WHERE),
   ).toMatchObject({
     status: "refused",
     problem: { code: "config.matrix.version-unreadable" },
+  });
+});
+
+test("refuses a Plug'n'Play project by name, with the node-modules linker as the fix", () => {
+  const root = writeConfigTree({
+    "app/seampact.config.yaml": "",
+    ".pnp.cjs": "",
+    "yarn.lock": "",
+  });
+
+  expect(readInstalledVersion(join(root, "app"), "web-framework", WHERE)).toEqual({
+    status: "refused",
+    problem: {
+      code: "config.matrix.pnp-unsupported",
+      message: `The project around ${join(root, "app")} installs its packages with Yarn Plug'n'Play (${join(root, ".pnp.cjs")}), which the CLI cannot read the version of 'web-framework' from.`,
+      fix: "Set `nodeLinker: node-modules` in the project's `.yarnrc.yml`, then run `yarn install`.",
+      where: WHERE,
+    },
   });
 });

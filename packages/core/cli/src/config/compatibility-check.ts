@@ -26,32 +26,33 @@ export interface CompatibilityInput {
   entries: readonly TargetEntry[];
   // The resolved target of each entry, by entry id.
   targets: ReadonlyMap<string, Target>;
-  // The installed version of each framework package the matrix records for the entries' targets, by package.
+  // The installed version of the framework package the matrix records for each entry's target, by entry id.
   installedVersions: ReadonlyMap<string, InstalledVersion>;
   matrix: readonly TargetCompatibility[];
   level: MatrixCheckLevel;
 }
 
-// Reads the installed framework versions from the app's project, then checks the app against the matrix.
+// Reads each entry's installed framework version from its output directory, where the generated code resolves its
+// imports, then checks the app against the matrix.
 export function checkAppCompatibility(
   config: LoadedAppConfig,
   targets: ReadonlyMap<string, Target>,
   matrix: readonly TargetCompatibility[] = SERVER_TARGETS,
 ): CompatibilityOutcome {
   const entries = config.entries.map(({ entry }) => entry);
+  const outputRoots = new Map(config.entries.map(({ entry, root }) => [entry.id, root]));
   const installedVersions = new Map<string, InstalledVersion>();
-  const readPackages = new Set<string>();
   const problems: CliProblem[] = [];
 
   for (const { entry, framework } of recordedEntries(entries, targets, matrix)) {
-    if (readPackages.has(framework.package)) continue;
+    const root = outputRoots.get(entry.id);
 
-    readPackages.add(framework.package);
+    if (root === undefined) throw new Error(`no output root for the entry ${entry.id}`);
 
-    const read = readInstalledVersion(config.file, framework.package, entryWhere(entry.id));
+    const read = readInstalledVersion(root, framework.package, entryWhere(entry.id));
 
     if (read.status === "refused") problems.push(read.problem);
-    else installedVersions.set(framework.package, read.installed);
+    else installedVersions.set(entry.id, read.installed);
   }
 
   if (problems.length > 0) return { problems, warnings: [] };
@@ -77,7 +78,7 @@ export function checkCompatibility(input: CompatibilityInput): CompatibilityOutc
       continue;
     }
 
-    const installed = input.installedVersions.get(record.framework.package);
+    const installed = input.installedVersions.get(entry.id);
 
     if (installed === undefined) {
       throw new Error(
@@ -169,7 +170,7 @@ function testedMajorWarnings(
 
 // A target the matrix does not record gets no framework check, so `allowUntested` would silence nothing.
 function unrecordedTargetProblems(entry: TargetEntry): CliProblem[] {
-  if (entry.allowUntested === undefined) return [];
+  if ((entry.allowUntested?.length ?? 0) === 0) return [];
 
   return [
     {

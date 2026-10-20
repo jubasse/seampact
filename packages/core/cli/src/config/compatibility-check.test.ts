@@ -1,11 +1,19 @@
 import type { Target } from "@seampact/codegen-core";
 import type { TargetCompatibility } from "@seampact/spec/compatibility";
 import type { MatrixCheckLevel, TargetEntry } from "@seampact/spec/config";
-import { expect, test } from "vitest";
-import { type CompatibilityOutcome, checkCompatibility } from "./compatibility-check.js";
+import { join } from "node:path";
+import { afterEach, expect, test } from "vitest";
+import {
+  type CompatibilityOutcome,
+  checkAppCompatibility,
+  checkCompatibility,
+} from "./compatibility-check.js";
+import { removeConfigTrees, writeConfigTree } from "./config-test-tree.test-support.js";
 import { stubTarget } from "./target-stub.test-support.js";
 
 const SERVER_PACKAGE = "@acme/codegen-server";
+
+afterEach(removeConfigTrees);
 
 // A matrix whose framework is tested on 4 and 5 and known broken on 3.
 const MATRIX: readonly TargetCompatibility[] = [
@@ -47,7 +55,7 @@ function check({
   const targets = new Map<string, Target>([["server", stubTarget(use)]]);
   const installedVersions = new Map([
     [
-      "web-framework",
+      "server",
       { packageName: "web-framework", version: `${installedMajor}.1.0`, major: installedMajor },
     ],
   ]);
@@ -156,4 +164,31 @@ test("checks no framework for a target the matrix does not record, and refuses a
     ],
     warnings: [],
   });
+});
+
+test("accepts an empty allowUntested on a target the matrix does not record", () => {
+  expect(check({ installedMajor: 6, use: "@acme/codegen-client", allowUntested: [] })).toEqual({
+    problems: [],
+    warnings: [],
+  });
+});
+
+test("reads the framework from the project of the entry's output directory, where the generated code imports it", () => {
+  const root = writeConfigTree({
+    "app/seampact.config.yaml": "",
+    "app/node_modules/web-framework/package.json": JSON.stringify({ version: "3.0.0" }),
+    "server/node_modules/web-framework/package.json": JSON.stringify({ version: "5.0.0" }),
+  });
+  const entry: TargetEntry = { id: "server", use: SERVER_PACKAGE, api: "tasks" };
+  const config = {
+    file: join(root, "app/seampact.config.yaml"),
+    outDir: join(root, "server"),
+    sources: new Map(),
+    entries: [{ entry, root: join(root, "server/src/generated") }],
+    checks: { matrix: "error" as const },
+  };
+
+  expect(
+    checkAppCompatibility(config, new Map([["server", stubTarget(SERVER_PACKAGE)]]), MATRIX),
+  ).toEqual({ problems: [], warnings: [] });
 });

@@ -32,14 +32,14 @@ export function installCommand(
   return `${INSTALL_COMMANDS[kind][findPackageManager(directory)]} ${packageName}`;
 }
 
-// The fix of a package missing from the app's project: its install command, or why none could be told.
-export function installFix(configFile: string, packageName: string, kind: DependencyKind): string {
+// The fix of a package missing from the project around `directory`: its install command, or why none could be told.
+export function installFix(directory: string, packageName: string, kind: DependencyKind): string {
   try {
-    return `Install it: \`${installCommand(dirname(configFile), packageName, kind)}\`.`;
+    return `Install it: \`${installCommand(directory, packageName, kind)}\`.`;
   } catch (error) {
     if (!(error instanceof SyntaxError)) throw error;
 
-    return `Install it with your package manager; a \`package.json\` above the config is not valid JSON (${error.message}).`;
+    return `Install it with your package manager; a \`package.json\` above ${directory} is not valid JSON (${error.message}).`;
   }
 }
 

@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 import { TARGET_ROLES, type Target } from "@seampact/codegen-core";
 import type { CliProblem } from "../cli-problem.js";
@@ -63,7 +64,7 @@ function resolveFromConfig(configFile: string, use: string, where: string): stri
       return {
         code: "config.target.missing",
         message: `The target package '${use}' is not installed in the app's project.`,
-        fix: installFix(configFile, use, "dev"),
+        fix: installFix(dirname(configFile), use, "dev"),
         where,
       };
     }
