@@ -1,6 +1,6 @@
 {
   "name": "@seampact/codegen-fastify",
-  "description": "Generates a Fastify plugin per api that registers each contract route with its access, validation and reply checks around your handler map, on Fastify 5, validating with zod.",
+  "description": "Generates a Fastify plugin per api that registers each contract route with its access, validation and reply checks around your handler map, on Fastify 5, validating with the zod or yup link you give or with Ajv validators it generates.",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -39,6 +39,7 @@
     "@seampact/codegen-core": "workspace:*",
     "@seampact/spec": "workspace:*",
     "@types/node": "24.19.1",
+    "ajv": "8.20.0",
     "fastify": "5.12.7",
     "typescript": "6.0.3",
     "zod": "4.6.7"

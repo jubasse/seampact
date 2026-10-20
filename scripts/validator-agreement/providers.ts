@@ -2,7 +2,10 @@ import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { FIRST_PARTY_PROVIDERS } from "../../packages/core/spec/src/compatibility/index.ts";
+import {
+  FIRST_PARTY_PROVIDERS,
+  SERVER_TARGETS,
+} from "../../packages/core/spec/src/compatibility/index.ts";
 import type { AgreementRow } from "../golden/agreement.ts";
 
 // Like the golden scripts, the runner imports the target packages by path: the root TypeScript project forbids
@@ -23,7 +26,12 @@ const PROVIDER_LIBRARIES: Readonly<Record<string, readonly string[]>> = {
   zod: ["zod"],
   yup: ["yup"],
   "class-validator": ["class-validator", "class-transformer", "reflect-metadata"],
+  ajv: ["ajv"],
 };
+
+const TYPES_PROVIDER_ID = "ts";
+const OWN_VALIDATORS_DIRECTORY = "validators";
+const TYPES_LOCATION = { kind: "relative", path: "types" };
 
 // The providers whose schema modules export plain library schemas that a support module wraps into a Standard Schema.
 const WRAPS_STANDARD_SCHEMA: ReadonlySet<string> = new Set(["yup"]);
@@ -65,6 +73,7 @@ interface Target {
     links: object;
     artefacts: Set<string>;
   }): Promise<Outcome>;
+  describe(ir: object, options: object): { status: string; descriptors?: { types?: object } };
 }
 
 interface CodegenCore {
@@ -84,7 +93,9 @@ async function importModule(path: string): Promise<Record<string, unknown>> {
 }
 
 function isTarget(value: unknown): value is Target {
-  return isRecord(value) && typeof value.generate === "function";
+  return (
+    isRecord(value) && typeof value.generate === "function" && typeof value.describe === "function"
+  );
 }
 
 function targetOf(module: Record<string, unknown>, path: string): Target {
@@ -107,11 +118,34 @@ function codegenCoreOf(module: Record<string, unknown>): CodegenCore {
   return module;
 }
 
-/** The ids of the validators providers of the compatibility matrix; the runner covers each or fails by name. */
+/**
+ * The ids of the validators of the compatibility matrix, the first-party providers then the validators a target
+ * generates itself; the runner covers each or fails by name.
+ */
 export function validatorProviderIds(): string[] {
-  return FIRST_PARTY_PROVIDERS.filter((provider) => provider.kind === "validators").map(
-    (provider) => provider.id,
+  const providerIds = FIRST_PARTY_PROVIDERS.filter(
+    (provider) => provider.kind === "validators",
+  ).map((provider) => provider.id);
+  const ownIds = SERVER_TARGETS.flatMap((target) =>
+    target.ownValidators.map((validator) => validator.id),
   );
+
+  return [...providerIds, ...ownIds];
+}
+
+// The target package that offers a validators id: the provider's own package, or the target that generates it.
+function offeringPackage(providerId: string): string | undefined {
+  const provider = FIRST_PARTY_PROVIDERS.find((candidate) => candidate.id === providerId);
+
+  if (provider !== undefined) return provider.package;
+
+  return SERVER_TARGETS.find((target) =>
+    target.ownValidators.some((validator) => validator.id === providerId),
+  )?.package;
+}
+
+function isOwnValidators(providerId: string): boolean {
+  return !FIRST_PARTY_PROVIDERS.some((provider) => provider.id === providerId);
 }
 
 async function yupStandardSchemaOf(
@@ -190,39 +224,81 @@ function linkLibraries(
 }
 
 interface ProviderTarget {
-  provider: (typeof FIRST_PARTY_PROVIDERS)[number];
+  packageName: string;
   packageDirectory: string;
   libraries: readonly string[];
   target: Target;
+  // Where the validators land below the generated root: a provider writes at the root, a server target below
+  // `validators/`.
+  validatorsDirectory: string;
+  linksFor(ir: object): object;
 }
 
 async function providerTarget(providerId: string): Promise<ProviderTarget> {
-  const provider = FIRST_PARTY_PROVIDERS.find((candidate) => candidate.id === providerId);
+  const packageName = offeringPackage(providerId);
   const libraries = PROVIDER_LIBRARIES[providerId];
 
-  if (provider === undefined || libraries === undefined) {
+  if (packageName === undefined || libraries === undefined) {
     throw new Error(`the agreement runner has no library list for the provider ${providerId}`);
   }
 
-  const packageDirectory = join(TARGETS_DIRECTORY, provider.package.slice(PACKAGE_SCOPE.length));
-  const entry = join(REPO_ROOT, packageDirectory, "src/index.ts");
+  const own = isOwnValidators(providerId);
+  const typesTarget = own ? await typesProviderTarget() : undefined;
 
   return {
-    provider,
-    packageDirectory,
+    packageName,
+    packageDirectory: join(TARGETS_DIRECTORY, packageName.slice(PACKAGE_SCOPE.length)),
     libraries,
-    target: targetOf(await importModule(entry), entry),
+    target: await packageTarget(packageName),
+    validatorsDirectory: own ? OWN_VALIDATORS_DIRECTORY : "",
+    linksFor: (ir) => (typesTarget === undefined ? {} : typesLinkOf(typesTarget, ir)),
   };
 }
 
-function generateValidators(target: Target, ir: object): Promise<Outcome> {
-  return target.generate({ ir, options: {}, links: {}, artefacts: new Set(["validators"]) });
+async function packageTarget(packageName: string): Promise<Target> {
+  const entry = join(
+    REPO_ROOT,
+    TARGETS_DIRECTORY,
+    packageName.slice(PACKAGE_SCOPE.length),
+    "src/index.ts",
+  );
+
+  return targetOf(await importModule(entry), entry);
+}
+
+async function typesProviderTarget(): Promise<Target> {
+  const provider = FIRST_PARTY_PROVIDERS.find((candidate) => candidate.id === TYPES_PROVIDER_ID);
+
+  if (provider === undefined) {
+    throw new Error(`the matrix has no '${TYPES_PROVIDER_ID}' provider`);
+  }
+
+  return packageTarget(provider.package);
+}
+
+// A server target needs a `types` link even when only its validators are generated; the types are not written.
+function typesLinkOf(typesTarget: Target, ir: object): object {
+  const described = typesTarget.describe(ir, {});
+
+  if (described.status !== "described" || described.descriptors?.types === undefined) {
+    throw new Error(`the types provider does not describe the agreement contract`);
+  }
+
+  return { types: { descriptor: described.descriptors.types, location: TYPES_LOCATION } };
+}
+
+function generateValidators(provider: ProviderTarget, ir: object): Promise<Outcome> {
+  return provider.target.generate({
+    ir,
+    options: {},
+    links: provider.linksFor(ir),
+    artefacts: new Set(["validators"]),
+  });
 }
 
 /** The IR locations a provider refuses to generate, such as `/schemas/Counts`; empty when it generates all. */
 export async function refusedMembers(providerId: string, ir: object): Promise<string[]> {
-  const { target } = await providerTarget(providerId);
-  const outcome = await generateValidators(target, ir);
+  const outcome = await generateValidators(await providerTarget(providerId), ir);
 
   if (outcome.status === "generated") return [];
 
@@ -234,9 +310,10 @@ export async function loadProviderValidators(
   providerId: string,
   ir: object,
 ): Promise<ProviderValidators> {
-  const { provider, packageDirectory, libraries, target } = await providerTarget(providerId);
+  const provider = await providerTarget(providerId);
+  const { packageName, packageDirectory, libraries, validatorsDirectory } = provider;
   const core = codegenCoreOf(await importModule(CODEGEN_CORE_ENTRY));
-  const outcome = await generateValidators(target, ir);
+  const outcome = await generateValidators(provider, ir);
 
   if (outcome.status !== "generated") {
     throw new Error(`${providerId}: ${JSON.stringify(outcome.refusals)}`);
@@ -244,7 +321,8 @@ export async function loadProviderValidators(
 
   const projectRoot = mkdtempSync(join(tmpdir(), `seampact-agreement-${providerId}-`));
   const outputDirectory = join(projectRoot, GENERATED_ROOT);
-  const written = await core.writeGeneratedFiles(outputDirectory, provider.package, outcome.files);
+  const validatorsRoot = join(outputDirectory, validatorsDirectory);
+  const written = await core.writeGeneratedFiles(outputDirectory, packageName, outcome.files);
 
   if (written.status !== "written")
     throw new Error(`${providerId}: ${JSON.stringify(written.refusals)}`);
@@ -263,11 +341,11 @@ export async function loadProviderValidators(
 
   // yup's schema modules export plain yup schemas; its support module wraps them into the contract's Standard Schema.
   const standardSchemaOf = WRAPS_STANDARD_SCHEMA.has(providerId)
-    ? await yupStandardSchemaOf(outputDirectory)
+    ? await yupStandardSchemaOf(validatorsRoot)
     : undefined;
   const modules = {
-    input: await importModule(join(outputDirectory, "schemas/input.ts")),
-    output: await importModule(join(outputDirectory, "schemas/output.ts")),
+    input: await importModule(join(validatorsRoot, "schemas/input.ts")),
+    output: await importModule(join(validatorsRoot, "schemas/output.ts")),
   };
 
   const nameIssues = await boundaryIssueNamer();

@@ -1,9 +1,9 @@
 import { firstPartyPackagesOfStyle } from "@seampact/spec/compatibility";
 import type { LinkKind, LinkStyle } from "./descriptors.js";
-import type { LinkNeeds, LinkSet, Links } from "./links.js";
+import type { LinkNeeds, LinkSet, Links, OptionalNeed } from "./links.js";
 import type { Refusal } from "./refusal.js";
 
-// One refusal per consumed kind whose link is missing, of another kind or of a style the target does not read,
+// One refusal per consumed kind whose link is missing (unless the kind is optional), of another kind or of a style the target does not read,
 // naming the kind and both styles (the CLI adds the app config entry ids).
 export function refuseUnmetLinks(needs: Partial<LinkNeeds>, links: LinkSet): Refusal[] {
   return Object.values(linkCheckByKind).flatMap((checkKind) => checkKind(needs, links));
@@ -18,22 +18,24 @@ const linkCheckByKind: {
 };
 
 // True when every consumed kind has a link the link check accepts.
-export function meetsEveryNeed<Consumed extends LinkKind>(
+export function meetsEveryNeed<Consumed extends LinkKind, Optional extends Consumed = never>(
   links: LinkSet,
   needs: LinkNeeds<Consumed>,
-): links is LinkSet & Links<Consumed> {
+): links is LinkSet & Links<Consumed, Optional> {
   return refuseUnmetLinks(needs, links).length === 0;
 }
 
 function refuseUnmetLink<Kind extends LinkKind>(
   kind: Kind,
-  need: { styles: readonly LinkStyle<Kind>[] } | undefined,
+  need: { styles: readonly LinkStyle<Kind>[]; optional?: OptionalNeed } | undefined,
   link: { descriptor: { kind: LinkKind; style: string } } | undefined,
 ): Refusal[] {
   if (need === undefined) return [];
 
   const accepted = need.styles.join(", ");
   const providers = providerList(need.styles);
+
+  if (link === undefined && need.optional !== undefined) return [];
 
   if (link === undefined) {
     return [
@@ -62,7 +64,7 @@ function refuseUnmetLink<Kind extends LinkKind>(
       {
         code: "link.style.unsupported",
         message: `The '${kind}' link provides style '${descriptor.style}'; this target reads ${accepted}.`,
-        fix: `Link ${providers}.`,
+        fix: `Link ${providers}${noLinkAlternative(kind, need)}.`,
       },
     ];
   }
@@ -70,14 +72,22 @@ function refuseUnmetLink<Kind extends LinkKind>(
   return [];
 }
 
+function noLinkAlternative(kind: LinkKind, need: { optional?: OptionalNeed }): string {
+  if (need.optional === undefined) return "";
+
+  return `, or no \`${kind}\` link to use the target's own ${need.optional.ownLibrary} validators`;
+}
+
 // The first-party packages of every accepted style, read from the compatibility matrix, such as
 // "`@seampact/codegen-zod` or `@seampact/codegen-yup`".
 function providerList(styles: readonly LinkStyle[]): string {
-  const packageNames = styles
-    .flatMap((style) => firstPartyPackagesOfStyle(style))
-    .map((name) => `\`${name}\``);
+  return listOf(
+    styles.flatMap((style) => firstPartyPackagesOfStyle(style)).map((name) => `\`${name}\``),
+  );
+}
 
-  if (packageNames.length <= 1) return packageNames.join("");
+function listOf(items: readonly string[]): string {
+  if (items.length <= 1) return items.join("");
 
-  return `${packageNames.slice(0, -1).join(", ")} or ${packageNames.at(-1)}`;
+  return `${items.slice(0, -1).join(", ")} or ${items.at(-1)}`;
 }

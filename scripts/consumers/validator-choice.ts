@@ -1,11 +1,13 @@
 // The validator libraries a test consumer can generate its validators with: each id is a validator provider of the
 // compatibility matrix, naming the provider package written into the template's `validators` entry and the
-// dependencies its generated code imports.
+// dependencies its generated code imports. A validator the target generates itself names no package: the consumer
+// has no `validators` entry and link, and only adds the library.
 
-import { FIRST_PARTY_PROVIDERS } from "@seampact/spec/compatibility";
+import { FIRST_PARTY_PROVIDERS, SERVER_TARGETS } from "@seampact/spec/compatibility";
 
 export interface ValidatorChoice {
-  readonly package: string;
+  // Absent for a validator the target generates itself.
+  readonly package: string | undefined;
   readonly dependencies: Readonly<Record<string, string>>;
 }
 
@@ -16,15 +18,26 @@ const VALIDATOR_DEPENDENCIES: Readonly<Record<string, Readonly<Record<string, st
   zod: { zod: "4.6.7" },
   yup: { yup: "1.7.1" },
   "class-validator": { "class-validator": "0.15.1", "class-transformer": "0.5.1" },
+  ajv: { ajv: "8.20.0" },
 };
 
-// One choice per validator provider of the compatibility matrix, under its provider id.
-export const VALIDATOR_CHOICES: Readonly<Record<string, ValidatorChoice>> = Object.fromEntries(
-  FIRST_PARTY_PROVIDERS.filter((provider) => provider.kind === "validators").map((provider) => [
+// The ids a target generates itself, which no provider package serves.
+const OWN_VALIDATOR_IDS: ReadonlySet<string> = new Set(
+  SERVER_TARGETS.flatMap((target) => target.ownValidators.map((validator) => validator.id)),
+);
+
+// One choice per validator of the compatibility matrix, under its id: the first-party providers, then the
+// validators the targets generate themselves.
+export const VALIDATOR_CHOICES: Readonly<Record<string, ValidatorChoice>> = Object.fromEntries([
+  ...FIRST_PARTY_PROVIDERS.filter((provider) => provider.kind === "validators").map((provider) => [
     provider.id,
     { package: provider.package, dependencies: validatorDependencies(provider.id) },
   ]),
-);
+  ...[...OWN_VALIDATOR_IDS].map((id) => [
+    id,
+    { package: undefined, dependencies: validatorDependencies(id) },
+  ]),
+]);
 
 refuseDependenciesWithoutProvider();
 

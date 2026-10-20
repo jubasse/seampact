@@ -1516,6 +1516,12 @@ components:
         hundredth:
           type: integer
           multipleOf: 0.01
+        seventh:
+          type: integer
+          multipleOf: 0.07
+        hundredThousandth:
+          type: integer
+          multipleOf: 0.00001
         fraction:
           type: number
           exclusiveMinimum: 0

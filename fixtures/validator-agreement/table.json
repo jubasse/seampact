@@ -600,7 +600,7 @@
       "schema": "Labelled",
       "direction": "input",
       "payload": {
-        "label": "\ud83d\ude00\ud83d\ude00\ud83d\ude00"
+        "label": "😀😀😀"
       },
       "expected": "accept",
       "rule": "adr0003/1/maxLength-code-points"
@@ -610,7 +610,7 @@
       "schema": "Labelled",
       "direction": "input",
       "payload": {
-        "label": "\ud83d\ude00\ud83d\ude00\ud83d\ude00\ud83d\ude00"
+        "label": "😀😀😀😀"
       },
       "expected": "reject",
       "rule": "adr0003/1/maxLength-code-points"
@@ -621,7 +621,7 @@
       "schema": "Labelled",
       "direction": "input",
       "payload": {
-        "label": "ab\ufe0f"
+        "label": "ab️"
       },
       "expected": "accept",
       "rule": "adr0003/1/maxLength-code-points"
@@ -632,7 +632,7 @@
       "schema": "Labelled",
       "direction": "input",
       "payload": {
-        "label": "abc\ufe0f"
+        "label": "abc️"
       },
       "expected": "reject",
       "rule": "adr0003/1/maxLength-code-points"
@@ -643,7 +643,7 @@
       "schema": "Labelled",
       "direction": "input",
       "payload": {
-        "label": "\ufe0f\ufe0f\ufe0f\ufe0f"
+        "label": "️️️️"
       },
       "expected": "reject",
       "rule": "adr0003/1/maxLength-code-points"
@@ -654,7 +654,7 @@
       "schema": "Labelled",
       "direction": "input",
       "payload": {
-        "label": "\ufe0f"
+        "label": "️"
       },
       "expected": "accept",
       "rule": "adr0003/1/minLength-code-points"
@@ -664,7 +664,7 @@
       "schema": "Labelled",
       "direction": "input",
       "payload": {
-        "label": "e\u0301e\u0301"
+        "label": "éé"
       },
       "expected": "reject",
       "rule": "adr0003/1/maxLength-code-points"
@@ -1408,7 +1408,7 @@
       "schema": "Formats",
       "direction": "input",
       "payload": {
-        "email": "\u00e4@example.com"
+        "email": "ä@example.com"
       },
       "expected": "reject",
       "rule": "adr0003/8/email"
@@ -1518,7 +1518,7 @@
       "schema": "Formats",
       "direction": "input",
       "payload": {
-        "uri": "https://ex\u00e4mple.com"
+        "uri": "https://exämple.com"
       },
       "expected": "reject",
       "rule": "adr0003/8/uri"
@@ -1584,7 +1584,7 @@
       "schema": "Formats",
       "direction": "input",
       "payload": {
-        "uriReference": "/t\u00e2ches"
+        "uriReference": "/tâches"
       },
       "expected": "reject",
       "rule": "adr0003/8/uri-reference"
@@ -1836,7 +1836,7 @@
       "schema": "Patterns",
       "direction": "input",
       "payload": {
-        "dot": "a\ud83d\ude00b"
+        "dot": "a😀b"
       },
       "expected": "accept",
       "rule": "adr0003/9/dot"
@@ -1847,7 +1847,7 @@
       "schema": "Patterns",
       "direction": "input",
       "payload": {
-        "dot": "a\u0085b"
+        "dot": "ab"
       },
       "expected": "reject",
       "rule": "adr0003/9/dot"
@@ -1858,7 +1858,7 @@
       "schema": "Patterns",
       "direction": "input",
       "payload": {
-        "dot": "a\u2028b"
+        "dot": "a b"
       },
       "expected": "reject",
       "rule": "adr0003/9/dot"
@@ -1869,7 +1869,7 @@
       "schema": "Patterns",
       "direction": "input",
       "payload": {
-        "dot": "a\u2029b"
+        "dot": "a b"
       },
       "expected": "reject",
       "rule": "adr0003/9/dot"
@@ -1935,7 +1935,7 @@
       "schema": "Patterns",
       "direction": "input",
       "payload": {
-        "space": "a\u00a0b"
+        "space": "a b"
       },
       "expected": "reject",
       "rule": "adr0003/9/space"
@@ -1946,7 +1946,7 @@
       "schema": "Patterns",
       "direction": "input",
       "payload": {
-        "space": "a\u2028b"
+        "space": "a b"
       },
       "expected": "reject",
       "rule": "adr0003/9/space"
@@ -2463,6 +2463,36 @@
       },
       "expected": "accept",
       "rule": "adr0003/1/finite-number"
+    },
+    {
+      "id": "Bounds.seventh-step-multiple",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "seventh": 9114
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/multiple-of"
+    },
+    {
+      "id": "Bounds.seventh-step-not-a-multiple",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "seventh": 9113
+      },
+      "expected": "reject",
+      "rule": "adr0003/1/multiple-of"
+    },
+    {
+      "id": "Bounds.hundred-thousandth-step-integer",
+      "schema": "Bounds",
+      "direction": "input",
+      "payload": {
+        "hundredThousandth": 16
+      },
+      "expected": "accept",
+      "rule": "adr0003/1/multiple-of"
     }
   ]
 }

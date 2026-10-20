@@ -39,6 +39,12 @@ const CONTRACT_DIRECTORY = "contract";
 // The template config's `use:` value of its `validators` entry, replaced by the chosen provider package.
 const VALIDATORS_PLACEHOLDER = "{{validators}}";
 
+// The template's `validators` entry and the `validators` link lines of an overlay, which a validator the target
+// generates itself leaves out.
+const VALIDATORS_ENTRY_START = "  - id: validators";
+const ENTRY_START = "  - id:";
+const VALIDATORS_LINK_LINE = /^\s*validators: validators\s*$/;
+
 // pnpm 11 and later read `overrides` from the workspace file only, not from the `pnpm` field of package.json.
 const PNPM_SETTINGS_FILE = "pnpm-workspace.yaml";
 
@@ -98,12 +104,19 @@ export function assembleConsumer(options: {
   cpSync(join(consumersRoot, "template"), directory, { recursive: true });
   useValidators(options.validators, directory);
 
+  const overlayEntries =
+    options.validators.package === undefined ? withoutValidatorsLinks : keepAsWritten;
+
   for (const overlay of overlays) {
     cpSync(overlay, directory, {
       recursive: true,
       filter: (source) => !OVERLAY_FILES.some((file) => source.endsWith(file)),
     });
-    appendConfigEntries(join(overlay, CONFIG_ENTRIES_FILE), join(directory, CONFIG_FILE));
+    appendConfigEntries(
+      join(overlay, CONFIG_ENTRIES_FILE),
+      join(directory, CONFIG_FILE),
+      overlayEntries,
+    );
     addPackageEntries(join(overlay, PACKAGE_ENTRIES_FILE), join(directory, PACKAGE_FILE));
   }
 
@@ -131,8 +144,28 @@ function useValidators(choice: ValidatorChoice, directory: string): void {
     );
   }
 
-  writeFileSync(configFile, config.replace(VALIDATORS_PLACEHOLDER, choice.package));
+  writeFileSync(
+    configFile,
+    choice.package === undefined
+      ? withoutValidatorsEntry(config)
+      : config.replace(VALIDATORS_PLACEHOLDER, choice.package),
+  );
   addDependencies(join(directory, PACKAGE_FILE), choice.dependencies);
+}
+
+// The config without the `validators` entry: its lines up to the next entry.
+function withoutValidatorsEntry(config: string): string {
+  let inValidatorsEntry = false;
+
+  return config
+    .split("\n")
+    .filter((line) => {
+      if (line.startsWith(VALIDATORS_ENTRY_START)) inValidatorsEntry = true;
+      else if (line.startsWith(ENTRY_START)) inValidatorsEntry = false;
+
+      return !inValidatorsEntry;
+    })
+    .join("\n");
 }
 
 // The target's overlay, after the overlay it names as its base, if any.
@@ -165,12 +198,28 @@ function overlayChain(targetsRoot: string, target: string): string[] {
 }
 
 // The template config ends with its `targets` list, so the overlay's items extend it.
-function appendConfigEntries(entriesFile: string, configFile: string): void {
+function appendConfigEntries(
+  entriesFile: string,
+  configFile: string,
+  adapt: (entries: string) => string,
+): void {
   if (!existsSync(entriesFile)) return;
 
   const config = readFileSync(configFile, "utf8").trimEnd();
+  const entries = readFileSync(entriesFile, "utf8").trimEnd();
 
-  writeFileSync(configFile, `${config}\n${readFileSync(entriesFile, "utf8").trimEnd()}\n`);
+  writeFileSync(configFile, `${config}\n${adapt(entries)}\n`);
+}
+
+function keepAsWritten(entries: string): string {
+  return entries;
+}
+
+function withoutValidatorsLinks(entries: string): string {
+  return entries
+    .split("\n")
+    .filter((line) => !VALIDATORS_LINK_LINE.test(line))
+    .join("\n");
 }
 
 function addPackageEntries(entriesFile: string, manifestFile: string): void {

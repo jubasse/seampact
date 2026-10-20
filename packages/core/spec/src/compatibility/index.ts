@@ -15,8 +15,8 @@ export interface FirstPartyProvider {
   readonly style: ProviderStyle;
 }
 
-// A validator a target generates itself, with no link, recorded before it ships so its pairs are known.
-export interface PlannedValidator {
+// A validator a target generates itself when its entry gives no `validators` link; the library is an app dependency.
+export interface OwnValidator {
   readonly id: string;
   readonly library: string;
 }
@@ -30,7 +30,7 @@ export interface TargetCompatibility {
   readonly package: string;
   readonly framework: FrameworkSupport;
   readonly validatorStyles: readonly ValidatorStyle[];
-  readonly plannedValidators: readonly PlannedValidator[];
+  readonly ownValidators: readonly OwnValidator[];
 }
 
 // One offered combination of a target, a framework major and a validator provider.
@@ -60,31 +60,31 @@ export const SERVER_TARGETS: readonly TargetCompatibility[] = [
     package: "@seampact/codegen-nestjs",
     framework: { package: "@nestjs/core", supportedMajors: [12] },
     validatorStyles: ["standard-schema", "class-validator"],
-    plannedValidators: [],
+    ownValidators: [],
   },
   {
     package: "@seampact/codegen-express",
     framework: { package: "express", supportedMajors: [4, 5] },
     validatorStyles: ["standard-schema"],
-    plannedValidators: [],
+    ownValidators: [],
   },
   {
     package: "@seampact/codegen-fastify",
     framework: { package: "fastify", supportedMajors: [5] },
     validatorStyles: ["standard-schema"],
-    plannedValidators: [{ id: "ajv", library: "ajv" }],
+    ownValidators: [{ id: "ajv", library: "ajv" }],
   },
   {
     package: "@seampact/codegen-adonis",
     framework: { package: "@adonisjs/core", supportedMajors: [6, 7] },
     validatorStyles: ["standard-schema"],
-    plannedValidators: [{ id: "vinejs", library: "@vinejs/vine" }],
+    ownValidators: [],
   },
   {
     package: "@seampact/codegen-hono",
     framework: { package: "hono", supportedMajors: [4] },
     validatorStyles: ["standard-schema"],
-    plannedValidators: [],
+    ownValidators: [],
   },
 ];
 
@@ -110,11 +110,11 @@ export function firstPartyPackagesOfStyle(style: ProviderStyle): readonly string
   );
 }
 
-// Every offered target, framework major and validator provider combination; planned validators are not offered.
+// Every offered target, framework major and validator provider combination; a target's own validators have the target package as their validator package.
 export function offeredValidatorPairs(): readonly ValidatorPair[] {
   return SERVER_TARGETS.flatMap((target) =>
     target.framework.supportedMajors.flatMap((frameworkMajor) =>
-      validatorProvidersOf(target).map((provider) => ({
+      validatorPackagesOf(target).map((provider) => ({
         target: target.package,
         framework: target.framework.package,
         frameworkMajor,
@@ -123,6 +123,21 @@ export function offeredValidatorPairs(): readonly ValidatorPair[] {
       })),
     ),
   );
+}
+
+interface OfferedValidatorPackage {
+  readonly id: string;
+  readonly package: string;
+}
+
+// The linkable providers of the accepted styles, then the target's own validators.
+function validatorPackagesOf(target: TargetCompatibility): readonly OfferedValidatorPackage[] {
+  const own = target.ownValidators.map((validator) => ({
+    id: validator.id,
+    package: target.package,
+  }));
+
+  return [...validatorProvidersOf(target), ...own];
 }
 
 function validatorProvidersOf(target: TargetCompatibility): readonly FirstPartyProvider[] {

@@ -36,6 +36,30 @@ describe("foldProfile", () => {
     expect(byId("step 6")?.microseconds).toBe(0);
   });
 
+  test("maps the target's own validators and Ajv to the validators row", () => {
+    const own: CpuProfile = {
+      nodes: [
+        frame(1, "(root)", "", [2, 4]),
+        frame(
+          2,
+          "validate",
+          "file:///project/generated/server/tasks/validators/ajv-support.ts",
+          [3],
+        ),
+        frame(
+          3,
+          "validate",
+          "file:///project/node_modules/.pnpm/ajv@8.20.0/node_modules/ajv/dist/x.js",
+        ),
+        frame(4, "handler", "file:///project/src/handlers.mts"),
+      ],
+      samples: [2, 3, 4],
+      timeDeltas: [10, 20, 5],
+    };
+
+    expect(foldProfile(own, 1).find((row) => row.id === "validators")?.microseconds).toBe(30);
+  });
+
   test("counts the handler and leaves idle time out of the shares", () => {
     expect(byId("handler")?.microseconds).toBe(20);
     expect(byId("step 2")?.share).toBeCloseTo(30 / 80);

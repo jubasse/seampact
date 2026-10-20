@@ -32,9 +32,12 @@ export interface FoldedRow {
 const GENERATED_RUNTIME = "/generated/server/";
 const RUNTIME_DIRECTORY = "/node-server/";
 const GENERATED_VALIDATORS = "/generated/validators/";
+// The validators a server target writes itself, below the api's directory of the generated server.
+const OWN_VALIDATORS = /\/generated\/server\/[^/]+\/validators\//;
 const NODE_MODULES = "/node_modules/";
 const VALIDATOR_PACKAGES = [
   "/node_modules/zod/",
+  "/node_modules/ajv/",
   "/node_modules/yup/",
   "/node_modules/class-validator/",
   "/node_modules/class-transformer/",
@@ -64,7 +67,7 @@ function claimOf(functionName: string, url: string): Claim {
 
   if (url.includes(NODE_MODULES)) return claimOfPackage(url);
 
-  if (url.includes(GENERATED_VALIDATORS)) return { row: "validators" };
+  if (url.includes(GENERATED_VALIDATORS) || OWN_VALIDATORS.test(url)) return { row: "validators" };
 
   if (url.includes(GENERATED_RUNTIME)) return claimOfGenerated(functionName, url);
 

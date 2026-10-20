@@ -12,7 +12,7 @@ function pairName(pair: ValidatorPair): string {
   return `${pair.target}@${pair.frameworkMajor}+${pair.validator}`;
 }
 
-test("the offered pairs are zod and yup on every server target and major, and class-validator on nestjs", () => {
+test("the offered pairs are zod and yup on every server target and major, class-validator on nestjs and the own validators", () => {
   expect(offeredValidatorPairs().map(pairName)).toEqual([
     "@seampact/codegen-nestjs@12+zod",
     "@seampact/codegen-nestjs@12+yup",
@@ -23,6 +23,7 @@ test("the offered pairs are zod and yup on every server target and major, and cl
     "@seampact/codegen-express@5+yup",
     "@seampact/codegen-fastify@5+zod",
     "@seampact/codegen-fastify@5+yup",
+    "@seampact/codegen-fastify@5+ajv",
     "@seampact/codegen-adonis@6+zod",
     "@seampact/codegen-adonis@6+yup",
     "@seampact/codegen-adonis@7+zod",
@@ -46,18 +47,22 @@ test("a pair names the framework package and the validator package", () => {
   });
 });
 
-test("the validators a target generates itself are planned, never offered", () => {
-  const plannedValidatorIds = SERVER_TARGETS.flatMap((target) =>
-    target.plannedValidators.map((validator) => `${target.package}+${validator.id}`),
+test("offers each target's own validators", () => {
+  const ownValidatorIds = SERVER_TARGETS.flatMap((target) =>
+    target.ownValidators.map((validator) => `${target.package}+${validator.id}`),
   );
-  const offeredValidatorIds = new Set(offeredValidatorPairs().map((pair) => pair.validator));
+  const ownPairs = offeredValidatorPairs().filter((pair) => pair.validator === "ajv");
 
-  expect(plannedValidatorIds).toEqual([
-    "@seampact/codegen-fastify+ajv",
-    "@seampact/codegen-adonis+vinejs",
+  expect(ownValidatorIds).toEqual(["@seampact/codegen-fastify+ajv"]);
+  expect(ownPairs).toEqual([
+    {
+      target: "@seampact/codegen-fastify",
+      framework: "fastify",
+      frameworkMajor: 5,
+      validator: "ajv",
+      validatorPackage: "@seampact/codegen-fastify",
+    },
   ]);
-  expect(offeredValidatorIds).not.toContain("ajv");
-  expect(offeredValidatorIds).not.toContain("vinejs");
 });
 
 test("the packages of a style keep the matrix order", () => {
