@@ -67,7 +67,7 @@ export const notesEndpoints: NotesHono.NotesEndpoints = {
 
 Types come from `types/notes`. The handlers interface and `registerRoutes` come from `server/notes`.
 
-Create `src/main.ts`. The empty hooks are enough because this api is public. `onError` makes a failing handler answer in the contract's error format. `checkFrameworkRoutes` must run after the last route is added and before the app serves.
+Create `src/main.ts`. A public api needs no hooks. `onError` makes a failing handler answer in the contract's error format. `checkFrameworkRoutes` must run after the last route is added and before the app serves.
 
 ```ts
 import { serve } from "@hono/node-server";
@@ -79,10 +79,7 @@ const app = new Hono();
 
 app.onError((error, c) => NotesHono.renderContractError(c, error));
 
-NotesHono.registerRoutes(app, {
-  handlers: { NotesEndpoints: notesEndpoints },
-  hooks: { authenticate: {}, deciders: [], scopeResolvers: {} },
-});
+NotesHono.registerRoutes(app, { handlers: { NotesEndpoints: notesEndpoints } });
 
 NotesHono.checkFrameworkRoutes(app);
 

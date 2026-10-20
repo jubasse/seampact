@@ -83,7 +83,7 @@ Types come from `types/notes`. The handler interface and the plugin come from `s
 
 ## The app
 
-Create `src/main.ts`. The empty hooks are enough because this api is public. `collectFrameworkRoutes` must come right after `Fastify()`: the plugin uses it at startup to find routes you add outside the contract. The not-found handler answers unknown routes in the contract's error format.
+Create `src/main.ts`. A public api needs no hooks. `collectFrameworkRoutes` must come right after `Fastify()`: the plugin uses it at startup to find routes you add outside the contract. The not-found handler answers unknown routes in the contract's error format.
 
 ```ts
 import Fastify from "fastify";
@@ -94,10 +94,7 @@ const app = Fastify();
 
 NotesFastify.collectFrameworkRoutes(app);
 
-await app.register(NotesFastify.plugin, {
-  handlers: { NotesEndpoints: notesHandlers },
-  hooks: { authenticate: {}, deciders: [], scopeResolvers: {} },
-});
+await app.register(NotesFastify.plugin, { handlers: { NotesEndpoints: notesHandlers } });
 
 app.setNotFoundHandler((request, reply) => {
   if (NotesFastify.renderPreRoutingError(request, reply)) return;

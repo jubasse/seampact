@@ -50,7 +50,7 @@ export class NotesController implements NotesNest.NotesEndpoints {
 
 Types come from `types/notes`. Decorators and handlers come from `server/notes`.
 
-Create `src/app-module.ts`. The empty hooks are enough because this api is public.
+Create `src/app-module.ts`. A public api needs no hooks.
 
 ```ts
 import { Module } from "@nestjs/common";
@@ -58,7 +58,7 @@ import * as NotesNest from "./__generated__/server/notes/index.js";
 import { NotesController } from "./notes-controller.js";
 
 @Module({
-  imports: [NotesNest.SeampactModule.forRoot({ authenticate: {}, deciders: [], scopeResolvers: {} })],
+  imports: [NotesNest.SeampactModule.forRoot()],
   controllers: [NotesController],
 })
 export class AppModule {}

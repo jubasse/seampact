@@ -127,7 +127,7 @@ Types come from `types/notes`. The routes come from `server/notes`.
 
 ## Register the routes
 
-The starter's own routes (`/`, signup, login) are not in the contract, and the boot check refuses them. Replace `start/routes.ts`. The empty hooks are enough because this api is public.
+The starter's own routes (`/`, signup, login) are not in the contract, and the boot check refuses them. Replace `start/routes.ts`. A public api needs no hooks.
 
 ```ts
 import router from '@adonisjs/core/services/router'
@@ -135,7 +135,6 @@ import * as NotesAdonis from '../src/__generated__/server/notes/index.js'
 
 NotesAdonis.registerRoutes(router, {
   controllers: { NotesEndpoints: () => import('#controllers/notes_controller') },
-  hooks: { authenticate: {}, deciders: [], scopeResolvers: {} },
 })
 ```
 

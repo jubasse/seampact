@@ -54,7 +54,7 @@ export const notesHandlers: NotesExpress.NotesEndpoints = {
 
 Types come from `types/notes`. The handlers interface and the router come from `server/notes`.
 
-Create `src/main.ts`. The empty hooks are enough because this api is public. Mount the router at the root of the app, without a path: the contract paths already start with `/v1`.
+Create `src/main.ts`. A public api needs no hooks. Mount the router at the root of the app, without a path: the contract paths already start with `/v1`.
 
 ```ts
 import express from "express";
@@ -63,12 +63,7 @@ import { notesHandlers } from "./notes-handlers.js";
 
 const app = express();
 
-app.use(
-  NotesExpress.router({
-    handlers: { NotesEndpoints: notesHandlers },
-    hooks: { authenticate: {}, deciders: [], scopeResolvers: {} },
-  }),
-);
+app.use(NotesExpress.router({ handlers: { NotesEndpoints: notesHandlers } }));
 app.use(NotesExpress.preRoutingErrorHandler);
 
 app.listen(3000);
