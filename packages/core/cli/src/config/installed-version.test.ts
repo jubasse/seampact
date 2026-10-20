@@ -17,9 +17,7 @@ test("reads a package.json the package's exports hide", () => {
     }),
   });
 
-  expect(
-    readInstalledVersion(join(root, "app"), "web-framework", WHERE),
-  ).toEqual({
+  expect(readInstalledVersion(join(root, "app"), "web-framework", WHERE)).toEqual({
     status: "installed",
     installed: { packageName: "web-framework", version: "5.2.1", major: 5 },
   });
@@ -31,9 +29,7 @@ test("finds a package hoisted above the app, and counts a pre-release by its maj
     "node_modules/@acme/framework/package.json": JSON.stringify({ version: "6.0.0-beta.2" }),
   });
 
-  expect(
-    readInstalledVersion(join(root, "apps/web"), "@acme/framework", WHERE),
-  ).toEqual({
+  expect(readInstalledVersion(join(root, "apps/web"), "@acme/framework", WHERE)).toEqual({
     status: "installed",
     installed: { packageName: "@acme/framework", version: "6.0.0-beta.2", major: 6 },
   });
@@ -45,14 +41,11 @@ test("refuses a missing package with the runtime install command of the app's pa
     "pnpm-lock.yaml": "lockfileVersion: '9.0'\n",
   });
 
-  expect(
-    readInstalledVersion(root, "web-framework-absent", WHERE),
-  ).toEqual({
+  expect(readInstalledVersion(root, "web-framework-absent", WHERE)).toEqual({
     status: "refused",
     problem: {
       code: "config.matrix.framework-missing",
-      message:
-        `The framework package 'web-framework-absent' is not installed in the project of the entry's output directory (${root}), so its version cannot be checked against the compatibility matrix; the generated code imports it.`,
+      message: `The framework package 'web-framework-absent' is not installed in the project of the entry's output directory (${root}), so its version cannot be checked against the compatibility matrix; the generated code imports it.`,
       fix: "Install it: `pnpm add web-framework-absent`.",
       where: WHERE,
     },
@@ -65,9 +58,7 @@ test("refuses an installed package without a readable version", () => {
     "node_modules/web-framework/package.json": JSON.stringify({ version: "latest" }),
   });
 
-  expect(
-    readInstalledVersion(root, "web-framework", WHERE),
-  ).toMatchObject({
+  expect(readInstalledVersion(root, "web-framework", WHERE)).toMatchObject({
     status: "refused",
     problem: { code: "config.matrix.version-unreadable" },
   });

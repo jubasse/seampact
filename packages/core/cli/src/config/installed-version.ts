@@ -33,7 +33,10 @@ export function readInstalledVersion(
   const packageJsonFile = findPackageJson(lookupDirectory, packageName);
 
   if (packageJsonFile === undefined) {
-    return { status: "refused", problem: missingPackageProblem(lookupDirectory, packageName, where) };
+    return {
+      status: "refused",
+      problem: missingPackageProblem(lookupDirectory, packageName, where),
+    };
   }
 
   const declared = declaredMajor(packageJsonFile);
