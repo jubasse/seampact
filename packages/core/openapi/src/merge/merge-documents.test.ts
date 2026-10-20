@@ -17,6 +17,8 @@ import { type MergeInput, type MergeOutcome, mergeDocuments } from "./merge-docu
 const TASKS = readGoldenIr("reference/tasks");
 const TASKS_SERVICE = readGoldenIr("reference/tasksService");
 const NOTES = readGoldenIr("bodies/notes");
+const LEDGER = readGoldenIr("every-default/ledger");
+const STUDIO = readGoldenIr("extensions/studio");
 const SERVICE_PREFIX = { tasksService: "svc" };
 const SCHEMA_REFERENCE_START = "#/components/schemas/";
 
@@ -76,6 +78,40 @@ function requirementSchemes(operation: JsonObject): string[] {
 
 function renamedApi(ir: ContractIR, id: string): ContractIR {
   return { ...structuredClone(ir), api: { ...structuredClone(ir.api), id } };
+}
+
+function narrowed(ir: ContractIR, operationIds: readonly string[]): ContractIR {
+  const copy = structuredClone(ir);
+
+  copy.operations = copy.operations.filter((operation) => operationIds.includes(operation.id));
+
+  return copy;
+}
+
+// The api's single operation answering `method` at `path`, its path parameter `from` renamed `to`.
+function movedOperation(ir: ContractIR, method: string, from: string, to: string): ContractIR {
+  const copy = structuredClone(ir);
+
+  for (const operation of copy.operations) {
+    operation.method = method;
+    operation.path = operation.path.replace(`{${from}}`, `{${to}}`);
+
+    for (const parameter of operation.params.path) {
+      if (parameter.name === from) parameter.name = to;
+    }
+  }
+
+  return copy;
+}
+
+function objectsHolding(value: JsonValue, name: string): JsonObject[] {
+  if (Array.isArray(value)) return value.flatMap((item) => objectsHolding(item, name));
+
+  if (!isJsonObject(value)) return [];
+
+  const nested = Object.values(value).flatMap((item) => objectsHolding(item, name));
+
+  return value[name] === undefined ? nested : [value, ...nested];
 }
 
 describe("merged document", () => {
@@ -161,11 +197,12 @@ describe("merged document", () => {
 
     expect(document[`${EXTENSION_PREFIX}api`]).toBeUndefined();
     expect(document[`${EXTENSION_PREFIX}apis`]).toEqual([
-      { name: "tasks", kind: "product" },
+      { name: "tasks", kind: "product", version: "1", summary: "Tasks shared inside channels." },
       {
         name: "tasksService",
         kind: "service",
         caller: { identity: "service", right: "callerService" },
+        version: "1",
       },
     ]);
 
@@ -244,5 +281,131 @@ describe("merged document", () => {
         (operation) => operation[`${EXTENSION_PREFIX}internal`] !== undefined,
       ),
     ).toEqual([]);
+  });
+
+  it("refuses two apis answering one route under different parameter names", () => {
+    const draft = narrowed(TASKS, ["getDraft"]);
+    const sameMethod = renamedApi(movedOperation(draft, "get", "draftId", "id"), "drafts");
+    const otherMethod = renamedApi(movedOperation(draft, "put", "draftId", "id"), "drafts");
+
+    for (const other of [sameMethod, otherMethod]) {
+      const outcome = merge([{ ir: draft }, { ir: other }], { drafts: "d" });
+
+      expect([...new Set(refusalCodes(outcome))]).toEqual(["openapi.merge.route-clash"]);
+    }
+  });
+
+  it("refuses one api in two versions, whatever the order of its inputs", () => {
+    const later = structuredClone(TASKS);
+
+    later.api.version = { kind: "path", number: 9 };
+
+    const forward = merge([{ ir: TASKS }, { ir: later }]);
+    const backward = merge([{ ir: later }, { ir: TASKS }]);
+
+    expect(refusalCodes(forward)).toContain("openapi.merge.api-versions");
+    expect(backward.status).toBe("refused");
+  });
+
+  it("carries each api's version, docs and root consumer extensions in its apis item", () => {
+    const document = mergedObject(merge([{ ir: TASKS }, { ir: STUDIO }], { studio: "s" }));
+    const items = Array.isArray(document[`${EXTENSION_PREFIX}apis`])
+      ? document[`${EXTENSION_PREFIX}apis`]
+      : [];
+
+    expect(document["x-acme-owner-team"]).toBeUndefined();
+    expect(items).toEqual([
+      expect.objectContaining({ name: "studio", version: "1", "x-acme-owner-team": "studio" }),
+      expect.objectContaining({
+        name: "tasks",
+        version: "1",
+        summary: "Tasks shared inside channels.",
+      }),
+    ]);
+    expect(document.info).toEqual({ title: "platform", version: "studio 1, tasks 1" });
+  });
+
+  it("writes the union of two narrowed contributions of one api", () => {
+    const whole = mergedObject(merge([{ ir: narrowed(TASKS, ["getTask", "listTasks"]) }]));
+    const union = mergedObject(
+      merge([{ ir: narrowed(TASKS, ["getTask"]) }, { ir: narrowed(TASKS, ["listTasks"]) }]),
+    );
+
+    expect(union).toEqual(whole);
+  });
+
+  it("states the most-used format at the root, a tie going to the first id", () => {
+    const tie = mergedObject(
+      merge(
+        [
+          { ir: narrowed(NOTES, [NOTES.operations[0]?.id ?? ""]) },
+          { ir: narrowed(LEDGER, [LEDGER.operations[0]?.id ?? ""]) },
+        ],
+        {
+          ledger: "l",
+        },
+      ),
+    );
+    const formats = operationsOf(tie).map((operation) => operation[`${EXTENSION_PREFIX}format`]);
+
+    expect(tie[`${EXTENSION_PREFIX}format`]).toBe("bare");
+    expect(formats.sort()).toEqual(["house", undefined].sort());
+    expect(
+      mergedObject(merge([{ ir: NOTES }, { ir: LEDGER }], { ledger: "l" }))[
+        `${EXTENSION_PREFIX}format`
+      ],
+    ).toBe("house");
+  });
+
+  it("maps each error code of a prefixed api to its prefixed component", () => {
+    const document = mergedObject(merge([{ ir: TASKS }], { tasks: "p" }));
+    const schemaKeys = Object.keys(member(member(document, "components"), "schemas"));
+    const forbidden = member(
+      member(
+        member(
+          member(member(member(document, "paths"), "/v1/channels/{channelId}/tasks"), "post"),
+          "responses",
+        ),
+        "403",
+      ),
+      "content",
+    );
+    const discriminators = objectsHolding(document, "discriminator");
+
+    expect(JSON.stringify(forbidden)).toContain(
+      '"api.forbidden":"#/components/schemas/p.api.forbidden"',
+    );
+    expect(discriminators.length).toBeGreaterThan(0);
+
+    for (const schema of discriminators) {
+      const mapping = member(schema.discriminator, "mapping");
+      const references = (Array.isArray(schema.oneOf) ? schema.oneOf : []).flatMap((branch) =>
+        isJsonObject(branch) && typeof branch.$ref === "string" ? [branch.$ref] : [],
+      );
+
+      for (const reference of references) expect(Object.values(mapping)).toContain(reference);
+
+      for (const reference of Object.values(mapping)) {
+        expect(schemaKeys).toContain(String(reference).slice(SCHEMA_REFERENCE_START.length));
+      }
+    }
+  });
+
+  it("names a prefixed schema in each field right", () => {
+    const document = mergedObject(
+      merge([{ ir: TASKS }, { ir: NOTES }], { tasks: "p", notes: "n" }),
+    );
+    const schemaKeys = Object.keys(member(member(document, "components"), "schemas"));
+    const restrictedSchemas = objectsHolding(document, `${EXTENSION_PREFIX}restricted-to`).flatMap(
+      (holder) => {
+        const items = holder[`${EXTENSION_PREFIX}restricted-to`];
+
+        return Array.isArray(items) ? items.map((item) => member({ item }, "item").schema) : [];
+      },
+    );
+
+    expect(restrictedSchemas.length).toBeGreaterThan(0);
+
+    for (const schema of restrictedSchemas) expect(schemaKeys).toContain(schema);
   });
 });

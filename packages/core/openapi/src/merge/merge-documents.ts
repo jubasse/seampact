@@ -7,7 +7,6 @@ import {
   unsupportedIrRefusals,
 } from "../documents.js";
 import type { EmitterOptions } from "../emitter-options.js";
-import type { JsonObject } from "../json-value.js";
 import { serializeDocument } from "../serialize.js";
 import { type ApiSource, assembleMergedDocument } from "./merged-document.js";
 import { isValidPrefix, prefixDocument } from "./prefix-document.js";
@@ -137,7 +136,7 @@ function buildInputDocument(
   const prefix = options.prefix[api];
   const document = prefix === undefined ? built.document : prefixDocument(built.document, prefix);
 
-  return { status: "built", source: { api, header: apiHeader(ir), document } };
+  return { status: "built", source: { api, apiValue: apiExtensionValue(ir), document } };
 }
 
 function inputSelection(input: MergeInput): ApiDocument | undefined {
@@ -146,9 +145,4 @@ function inputSelection(input: MergeInput): ApiDocument | undefined {
   const selection = input.ir.api.documents[input.document];
 
   return selection === undefined ? undefined : structuredClone(selection);
-}
-
-// An `x-seampact-apis` item: the api's name with what `x-seampact-api` says of a single api.
-function apiHeader(ir: ContractIR): JsonObject {
-  return { name: ir.api.id, ...apiExtensionValue(ir) };
 }

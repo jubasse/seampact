@@ -1,6 +1,6 @@
 import { isDeepStrictEqual } from "node:util";
 import { compareCodeUnits, type Refusal } from "@seampact/codegen-core";
-import { methodRank, mostUsedFormat, OPENAPI_VERSION } from "../documents.js";
+import { mostUsedFormat, OPENAPI_VERSION, pathsByRoute, serversArray } from "../documents.js";
 import { isExtensionSelected } from "../emit-context.js";
 import { EXTENSION_PREFIX } from "../extension-names.js";
 import { isJsonObject, type JsonObject, type JsonValue, objectMember } from "../json-value.js";
@@ -9,10 +9,10 @@ import type { MergeOptions } from "./merge-documents.js";
 // The api documents of a merged document written as one: an element two apis write identically is kept once, two
 // different elements under one name are refused with the `prefix` fix, and a method and path is always one api's.
 
-/** One api's document, mapped and prefixed, with its `x-seampact-apis` item. */
+/** One api's document, mapped and prefixed, with what `x-seampact-api` says of the api. */
 export interface ApiSource {
   api: string;
-  header: JsonObject;
+  apiValue: JsonObject;
   document: JsonObject;
 }
 
@@ -44,13 +44,16 @@ interface PlacedOperation extends Placed {
   method: string;
 }
 
-type ClashKind = "name" | "route" | "extension";
+type ClashKind = "name" | "route" | "path";
+
+// A path template with its parameter names blanked: two paths of one shape are one path (OAS 3.1).
+const PATH_PARAMETER = /\{[^{}]+\}/g;
 
 interface Assembly {
   refusals: Refusal[];
   tags: Map<string, Placed>;
   headers: Map<string, Placed>;
-  rootExtensions: Map<string, Placed>;
+  pathSpellings: Map<string, Placed>;
   routes: Map<string, PlacedOperation>;
   operationIds: Map<string, Placed>;
   components: Map<string, Map<string, Placed>>;
@@ -64,7 +67,7 @@ export function assembleMergedDocument(
     refusals: [],
     tags: new Map(),
     headers: new Map(),
-    rootExtensions: new Map(),
+    pathSpellings: new Map(),
     routes: new Map(),
     operationIds: new Map(),
     components: new Map(COMPONENT_SECTIONS.map((section) => [section, new Map()])),
@@ -72,7 +75,7 @@ export function assembleMergedDocument(
 
   for (const source of sources) placeSource(assembly, source);
 
-  return { document: mergedDocument(assembly, sources, options), refusals: assembly.refusals };
+  return { document: mergedDocument(assembly, options), refusals: assembly.refusals };
 }
 
 function placeSource(assembly: Assembly, source: ApiSource): void {
@@ -80,7 +83,9 @@ function placeSource(assembly: Assembly, source: ApiSource): void {
 
   for (const member of Object.keys(document)) {
     if (!MERGED_ROOT_MEMBERS.includes(member) && !isConsumerExtension(member)) {
-      throw new Error(`the merge does not know the document member '${member}' of the api ${api}`);
+      throw new Error(
+        `the merge does not know the document member '${member}' of the api ${api}: give it a merge rule beside its table row`,
+      );
     }
   }
 
@@ -88,26 +93,14 @@ function placeSource(assembly: Assembly, source: ApiSource): void {
     assembly,
     assembly.headers,
     api,
-    { api, label: `the api '${api}'`, value: source.header },
+    { api, label: `the api '${api}'`, value: apiHeader(source) },
     "name",
   );
 
   for (const tag of arrayMember(document, "tags")) {
-    const name = isJsonObject(tag) ? String(tag.name) : String(tag);
+    const name = stringMember(tag, "name", `a tag of the api ${api}`);
 
     place(assembly, assembly.tags, name, { api, label: `the tag '${name}'`, value: tag }, "name");
-  }
-
-  for (const [member, value] of Object.entries(document)) {
-    if (!isConsumerExtension(member)) continue;
-
-    place(
-      assembly,
-      assembly.rootExtensions,
-      member,
-      { api, label: `the root '${member}'`, value },
-      "extension",
-    );
   }
 
   placeComponents(assembly, api, objectMember(document, "components"));
@@ -120,7 +113,7 @@ function placeComponents(assembly: Assembly, api: string, components: JsonObject
 
     if (placed === undefined) {
       throw new Error(
-        `the merge does not know the component section '${section}' of the api ${api}`,
+        `the merge does not know the component section '${section}' of the api ${api}: give it a merge rule beside its table row`,
       );
     }
 
@@ -154,13 +147,21 @@ function placeOperations(assembly: Assembly, api: string, document: JsonObject):
       }
 
       const route = `${method.toUpperCase()} ${path}`;
-      const operationId = String(operation.operationId);
+      const operationId = stringMember(operation, "operationId", `the operation ${route}`);
       const label = `the operation '${operationId}' (${route})`;
+      const pathShape = path.replace(PATH_PARAMETER, "{}");
 
       place(
         assembly,
+        assembly.pathSpellings,
+        pathShape,
+        { api, label: `the path '${path}'`, value: path },
+        "path",
+      );
+      place(
+        assembly,
         assembly.routes,
-        JSON.stringify([path, method]),
+        JSON.stringify([pathShape, method]),
         { api, label, value: placedOperation, path, method },
         "route",
       );
@@ -200,7 +201,7 @@ function clashRefusal(first: Placed, second: Placed, kind: ClashKind): Refusal {
     return {
       code: "openapi.merge.api-versions",
       message: `${message} differ: two apps give different versions of the api.`,
-      fix: `Build every app the merged document covers from the same version of the api '${first.api}'.`,
+      fix: `Build every app the merged document covers from the same version of the api '${first.api}', or give two different apis distinct api ids.`,
     };
   }
 
@@ -212,11 +213,11 @@ function clashRefusal(first: Placed, second: Placed, kind: ClashKind): Refusal {
     };
   }
 
-  if (kind === "extension") {
+  if (kind === "path") {
     return {
-      code: "openapi.merge.extension-clash",
-      message: `${message} hold different values.`,
-      fix: "Give the key the same value in both apis, or write the apis in separate merged documents.",
+      code: "openapi.merge.route-clash",
+      message: `${message} are one path under different parameter names.`,
+      fix: "Give the path parameters the same names in both contracts, or write the apis in separate merged documents.",
     };
   }
 
@@ -227,26 +228,14 @@ function clashRefusal(first: Placed, second: Placed, kind: ClashKind): Refusal {
   };
 }
 
-function mergedDocument(
-  assembly: Assembly,
-  sources: readonly ApiSource[],
-  options: MergeOptions,
-): JsonObject {
+function mergedDocument(assembly: Assembly, options: MergeOptions): JsonObject {
   const { emitter } = options;
   const document: JsonObject = {
     openapi: OPENAPI_VERSION,
-    info: { title: options.name, version: mergedVersion(sources) },
+    info: { title: options.name, version: mergedVersion(assembly) },
   };
 
-  if (emitter.servers.length > 0) {
-    document.servers = emitter.servers.map((server) => {
-      const serverObject: JsonObject = { url: server.url };
-
-      if (server.description !== undefined) serverObject.description = server.description;
-
-      return serverObject;
-    });
-  }
+  if (emitter.servers.length > 0) document.servers = serversArray(emitter);
 
   const tags = sortedValues(assembly.tags);
 
@@ -266,9 +255,6 @@ function mergedDocument(
   );
 
   if (format !== undefined) document[FORMAT_EXTENSION] = format;
-
-  for (const [member, { value }] of sortedEntries(assembly.rootExtensions))
-    document[member] = value;
 
   document.paths = mergedPaths(
     assembly,
@@ -290,20 +276,33 @@ function mergedDocument(
   return document;
 }
 
-// `info.version` is required: each api's version, by api name.
-function mergedVersion(sources: readonly ApiSource[]): string {
-  const versions = new Map<string, string>();
+// `info.version` is required: each api's version, by api name. One api in two versions is refused before.
+function mergedVersion(assembly: Assembly): string {
+  return sortedEntries(assembly.headers)
+    .map(([api, { value }]) => `${api} ${stringMember(value, "version", `the api ${api}`)}`)
+    .join(", ");
+}
 
-  for (const { api, document } of sources) {
-    const info = objectMember(document, "info");
+// An `x-seampact-apis` item: what `x-seampact-api` says of the api, with its version, docs and root consumer
+// extensions, which the merged document's root cannot hold for each api.
+function apiHeader(source: ApiSource): JsonObject {
+  const { api, apiValue, document } = source;
+  const info = objectMember(document, "info");
+  const header: JsonObject = {
+    name: api,
+    ...apiValue,
+    version: stringMember(info, "version", `the info of the api ${api}`),
+  };
 
-    versions.set(api, String(info.version));
+  if (info.summary !== undefined) header.summary = info.summary;
+
+  if (info.description !== undefined) header.description = info.description;
+
+  for (const [member, value] of Object.entries(document)) {
+    if (isConsumerExtension(member)) header[member] = value;
   }
 
-  return [...versions.entries()]
-    .sort(([left], [right]) => compareCodeUnits(left, right))
-    .map(([api, version]) => `${api} ${version}`)
-    .join(", ");
+  return header;
 }
 
 function mergedPaths(
@@ -311,31 +310,11 @@ function mergedPaths(
   documentFormat: string | undefined,
   writeSourceApi: boolean,
 ): JsonObject {
-  const byPath = new Map<string, PlacedOperation[]>();
-
-  for (const placed of assembly.routes.values()) {
-    const methods = byPath.get(placed.path) ?? [];
-
-    methods.push(placed);
-    byPath.set(placed.path, methods);
-  }
-
-  const paths: JsonObject = {};
-
-  for (const path of [...byPath.keys()].sort(compareCodeUnits)) {
-    const pathItem: JsonObject = {};
-    const methods = [...(byPath.get(path) ?? [])].sort(
-      (left, right) => methodRank(left.method) - methodRank(right.method),
-    );
-
-    for (const placed of methods) {
-      pathItem[placed.method] = mergedOperation(placed, documentFormat, writeSourceApi);
-    }
-
-    paths[path] = pathItem;
-  }
-
-  return paths;
+  return pathsByRoute(
+    [...assembly.routes.values()],
+    (placed) => placed,
+    (placed) => mergedOperation(placed, documentFormat, writeSourceApi),
+  );
 }
 
 function mergedOperation(
@@ -368,4 +347,17 @@ function arrayMember(object: JsonObject, member: string): JsonValue[] {
   const value = object[member];
 
   return Array.isArray(value) ? value : [];
+}
+
+// A string member the api's document always holds; a missing one is a mapping defect, never a key.
+function stringMember(value: JsonValue, member: string, holder: string): string {
+  const memberValue = isJsonObject(value) ? value[member] : undefined;
+
+  if (typeof memberValue !== "string") {
+    throw new Error(
+      `the merge reads no string '${member}' in ${holder}: the api's document mapping must write it`,
+    );
+  }
+
+  return memberValue;
 }

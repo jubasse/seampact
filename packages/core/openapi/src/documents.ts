@@ -161,15 +161,7 @@ function buildDocument(context: EmitContext, selection: ApiDocument): JsonObject
   const securitySchemes = securitySchemesComponent(context);
   const document: JsonObject = { openapi: OPENAPI_VERSION, info: infoObject(context) };
 
-  if (context.options.servers.length > 0) {
-    document.servers = context.options.servers.map((server) => {
-      const serverObject: JsonObject = { url: server.url };
-
-      setDefined(serverObject, "description", server.description);
-
-      return serverObject;
-    });
-  }
+  if (context.options.servers.length > 0) document.servers = serversArray(context.options);
 
   const tags = [...new Set(selected.flatMap(({ operation }) => operation.tags))].sort(
     compareCodeUnits,
@@ -248,26 +240,49 @@ function pathsObject(
   selected: readonly { operation: Operation; index: number }[],
   documentFormat: string | undefined,
 ): JsonObject {
-  const byPath = new Map<string, { operation: Operation; index: number }[]>();
+  return pathsByRoute(
+    selected,
+    ({ operation }) => operation,
+    ({ operation, index }) => operationObject(context, operation, index, documentFormat),
+  );
+}
 
-  for (const entry of selected) {
-    const entries = byPath.get(entry.operation.path) ?? [];
+/** The `servers` array of the `servers` option. */
+export function serversArray(options: EmitterOptions): JsonObject[] {
+  return options.servers.map((server) => {
+    const serverObject: JsonObject = { url: server.url };
 
-    entries.push(entry);
-    byPath.set(entry.operation.path, entries);
+    setDefined(serverObject, "description", server.description);
+
+    return serverObject;
+  });
+}
+
+/** The `paths` object: a path item per path in code-unit order, each with its operations in method order. */
+export function pathsByRoute<Entry>(
+  entries: readonly Entry[],
+  routeOf: (entry: Entry) => { path: string; method: string },
+  operationObjectOf: (entry: Entry) => JsonObject,
+): JsonObject {
+  const byPath = new Map<string, Entry[]>();
+
+  for (const entry of entries) {
+    const { path } = routeOf(entry);
+    const pathEntries = byPath.get(path) ?? [];
+
+    pathEntries.push(entry);
+    byPath.set(path, pathEntries);
   }
 
   const paths: JsonObject = {};
 
   for (const path of [...byPath.keys()].sort(compareCodeUnits)) {
     const pathItem: JsonObject = {};
-    const entries = [...(byPath.get(path) ?? [])].sort(
-      (left, right) => methodRank(left.operation.method) - methodRank(right.operation.method),
+    const pathEntries = [...(byPath.get(path) ?? [])].sort(
+      (left, right) => methodRank(routeOf(left).method) - methodRank(routeOf(right).method),
     );
 
-    for (const { operation, index } of entries) {
-      pathItem[operation.method] = operationObject(context, operation, index, documentFormat);
-    }
+    for (const entry of pathEntries) pathItem[routeOf(entry).method] = operationObjectOf(entry);
 
     paths[path] = pathItem;
   }
@@ -275,7 +290,7 @@ function pathsObject(
   return paths;
 }
 
-export function methodRank(method: string): number {
+function methodRank(method: string): number {
   const rank = METHOD_ORDER.indexOf(method);
 
   return rank === -1 ? METHOD_ORDER.length : rank;
