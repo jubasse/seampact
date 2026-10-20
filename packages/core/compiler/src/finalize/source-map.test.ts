@@ -1,6 +1,9 @@
 import { type ContractIR, IR_REVISION, walkIrInstance } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
+import { PACK_CONTRACT } from "../bundle/bundle.test-support.js";
 import { diagnosticLocationKey } from "../diagnostics/print.js";
+import { loadMemoryReader } from "../load/reader.js";
+import { compileWorkspace } from "../pipeline/orchestrator.js";
 import {
   finalizeCompleteDraft,
   finalizeExpectIr,
@@ -113,5 +116,29 @@ describe("side table covers every origin", () => {
         locations: { "core#/formats/bare": location },
       }),
     ).toThrow("finalize built an invalid side table for api 'tasks'");
+  });
+
+  test("a pack installed above the workspace root compiles, its files written as the bundle vendors them", () => {
+    const lifted = Object.fromEntries(
+      Object.entries(PACK_CONTRACT).map(([file, text]) => [
+        file.startsWith("node_modules/") ? `../${file}` : file,
+        text,
+      ]),
+    );
+    const result = compileWorkspace({
+      reader: loadMemoryReader(lifted),
+      entry: "api.yaml",
+      guard: true,
+    });
+    const sourceMap = result.apis[0]?.sourceMap;
+
+    expect(result.diagnostics).toEqual([]);
+
+    const packFiles = Object.entries(sourceMap?.locations ?? {})
+      .filter(([key]) => key.startsWith("pack:@acme/pack-a#"))
+      .map(([, location]) => location.file);
+
+    expect(packFiles.length).toBeGreaterThan(0);
+    expect(new Set(packFiles)).toEqual(new Set([".packs/@acme/pack-a@1.2.0/lib/pack.yaml"]));
   });
 });
