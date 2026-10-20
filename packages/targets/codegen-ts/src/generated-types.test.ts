@@ -259,3 +259,29 @@ test("a paging none list is handed back as a bare array of its items", async () 
 
   expect(typeErrorsOf(join(temporaryRoot, "unpaged"), outcome.files, probe)).toEqual([]);
 });
+
+test("a page style's handler results are typed beside the items", async () => {
+  const ir = readGoldenIr("tasks");
+  const cursor = ir.pagings.cursor;
+
+  if (cursor === undefined) throw new Error("the reference tasks contract lost its cursor style");
+
+  const outcome = await generateTypes({
+    ...ir,
+    pagings: {
+      ...ir.pagings,
+      cursor: { ...cursor, handlerResult: ["nextCursor", "previousCursor", "total", "more"] },
+    },
+  });
+
+  if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
+
+  const probe = [
+    'import type { ListChannelsOutput } from "./generated/operations/output.js";',
+    "export const lastPage: ListChannelsOutput = { status: 200, body: { items: [], total: 0, more: false } };",
+    "// @ts-expect-error the total is always returned",
+    "export const noTotal: ListChannelsOutput = { status: 200, body: { items: [], more: false } };",
+  ].join("\n");
+
+  expect(typeErrorsOf(join(temporaryRoot, "page-results"), outcome.files, probe)).toEqual([]);
+});
