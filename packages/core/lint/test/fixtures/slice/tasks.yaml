@@ -1,0 +1,47 @@
+# tasks.yaml: the api of the slice (SCN-018, SCN-087, SCN-109)
+api: { name: tasks, version: 1, maturity: provisional }
+packs: [./pack.yaml]
+
+schemas:
+  Task:
+    type: object
+    required: [id, title, password]
+    properties:
+      id: { type: string }
+      title: { type: string }
+      password: { type: string }
+      tokenType: { type: string }
+  Legacy:
+    type: object
+    properties: { id: { type: string } }
+
+rights:
+  tasks.archive:
+    subject: { resource: Task, id: { type: string } }
+
+surfaces:
+  app:
+    identity: user
+    routes:
+      tasks:
+        kind: collection
+        id: { taskId: { type: string } }
+        idProperty: id
+        item: Task
+        access: { optionalAuth: "Visitors may read and tidy tasks as anonymous." }
+        ops: [get, delete]
+        member:
+          routes:
+            assign: { method: post, output: Task }
+            reopen: { method: post, output: Task }
+            close: { method: post, output: Task }
+      exportTasks:
+        method: post
+        output: Task
+        maturity: provisional
+        csrf: { exempt: "The export is triggered from a signed link." }
+      pages:
+        method: get
+        identity: reader
+        maturity: { level: provisional, reason: "Pages follow the api." }
+        output: Task

@@ -84,7 +84,8 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/lint`
 
-- `packages/core/lint/src`: Lint rules over the IR, and the API to write your own.
+- `packages/core/lint/src`: The lint plugin API, the core rules (plugin `seampact`) and the runner that applies `lint.rules` and `lint.allow`.
+- `packages/core/lint/src/core`: The core lint rules of the plugin `seampact`, one file per rule, and the plugin that lists them.
 
 ### `@seampact/openapi`
 

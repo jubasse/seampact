@@ -1,0 +1,5 @@
+# workspace.yaml: one api over a shared base and a house pack
+workspace:
+  apis:
+    tasks: ./tasks.yaml
+  shared: ./base.yaml

@@ -248,7 +248,14 @@ importers:
 
   packages/core/diff: {}
 
-  packages/core/lint: {}
+  packages/core/lint:
+    dependencies:
+      '@seampact/compiler':
+        specifier: workspace:*
+        version: link:../compiler
+      '@seampact/spec':
+        specifier: workspace:*
+        version: link:../spec
 
   packages/core/openapi:
     dependencies:

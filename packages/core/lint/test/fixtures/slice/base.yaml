@@ -1,0 +1,20 @@
+# base.yaml: the workspace's shared file
+schemes:
+  bearer: { kind: bearer }
+  csrfToken: { kind: header, name: X-Csrf-Token }
+  session: { kind: cookie, name: __Host-session, csrf: csrfToken }
+  pageSession: { kind: cookie, name: page-session }
+
+identities:
+  user:
+    schemes: { read: [bearer, session], write: [bearer, session] }
+    principal: UserPrincipal
+  reader:
+    schemes: { read: [pageSession], write: [pageSession] }
+    principal: UserPrincipal
+
+schemas:
+  UserPrincipal:
+    type: object
+    required: [userId]
+    properties: { userId: { type: string } }

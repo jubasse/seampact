@@ -6,7 +6,7 @@ type Locations = SourceMap["locations"];
 /**
  * ADR 0004 section 11: the side table key is `"<layer>#<pointer>"`, the serialised form of an
  * origin. The table names the api (each api has its own), so `api` is never part of the key: an
- * origin copied from another api is looked up in that api's table. Internal to the compiler.
+ * origin copied from another api is looked up in that api's table.
  */
 export function diagnosticLocationKey(origin: Origin): string {
   return `${origin.layer}#${origin.pointer}`;

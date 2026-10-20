@@ -1,0 +1,4 @@
+# workspace.yaml: the small api the engine tests lint
+workspace:
+  apis:
+    demo: ./api.yaml
