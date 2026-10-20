@@ -27,7 +27,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/codegen-adonis` | `packages/targets/codegen-adonis` | target | Generates the AdonisJS boundary around your controllers: the routes of each api with their checking middleware, the reply path, the error helpers for your exception handler and a boot check, validating with zod. |
 | `@seampact/codegen-class-validator` | `packages/targets/codegen-class-validator` | target | Generates decorated class-validator DTO classes per schema and direction, with Standard Schema adapters for the NestJS target. |
 | `@seampact/codegen-express` | `packages/targets/codegen-express` | target | Generates an Express router per api that serves each contract route behind its access, validation and reply checks around your handler map, on Express 4 and 5, validating with zod. |
-| `@seampact/codegen-fastify` | `packages/targets/codegen-fastify` | target | Generates a Fastify plugin per api that registers each contract route with its access, validation and reply checks around your handler map, on Fastify 5, validating with zod. |
+| `@seampact/codegen-fastify` | `packages/targets/codegen-fastify` | target | Generates a Fastify plugin per api that registers each contract route with its access, validation and reply checks around your handler map, on Fastify 5, validating with the zod or yup link you give or with Ajv validators it generates. |
 | `@seampact/codegen-fetch` | `packages/targets/codegen-fetch` | target | Generates a typed fetch client with one method per operation, returning its success and error responses as typed results. |
 | `@seampact/codegen-hono` | `packages/targets/codegen-hono` | target | Generates a registerRoutes function per api that adds each contract route to a Hono 4 app with its access, validation and reply checks around your handler map, validating with zod. |
 | `@seampact/codegen-nestjs` | `packages/targets/codegen-nestjs` | target | Generates the NestJS boundary around your controllers: a decorator per operation, the access and validation guard, a handler wrapper that writes the checked reply, an input decorator, the error filter and a boot check, validating with zod. |
@@ -140,7 +140,8 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/codegen-fastify`
 
-- `packages/targets/codegen-fastify/src`: The Fastify server target: an encapsulated plugin per api that places the shared Node request checks of codegen-core around the app's handler map, on Fastify 5, validating with zod.
+- `packages/targets/codegen-fastify/src`: The Fastify server target: an encapsulated plugin per api that places the shared Node request checks of codegen-core around the app's handler map, on Fastify 5, validating with a validators link or with Ajv.
+- `packages/targets/codegen-fastify/src/ajv`: The Ajv validators the Fastify target writes itself when its entry gives no `validators` link: the JSON Schema rendered from the shared validator plan, and the Standard Schema adapter that names issues by contract rule.
 
 ### `@seampact/codegen-fetch`
 
