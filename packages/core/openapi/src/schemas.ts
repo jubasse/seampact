@@ -444,6 +444,9 @@ function mapSchema(
   return schema;
 }
 
+// A body-tagged variant holds no tag property (ADR 0004 section 5), so each branch adds it as a constant; the
+// branches then exclude each other without a `discriminator`, whose mapping could only name the untagged
+// components. A header-tagged union names its header and its variants in `x-seampact-discriminator`.
 function unionSchema(
   context: EmitContext,
   named: UnionSchema,
@@ -454,16 +457,6 @@ function unionSchema(
 
   writeDocs(schema, named.docs);
 
-  const variants = named.variants.map((unionVariant) => {
-    const reference = schemaReference(context, unionVariant.schema, variant);
-
-    setDefined(reference, "description", unionVariant.docs?.description ?? unionVariant.docs?.summary);
-
-    return reference;
-  });
-
-  schema.oneOf = variants;
-
   const tag = named.tag;
 
   if (!isKnownVariant("UnionTag", tag)) {
@@ -472,17 +465,34 @@ function unionSchema(
     return schema;
   }
 
-  const mapping: JsonObject = {};
+  const branches = named.variants.map((unionVariant) => {
+    const reference = schemaReference(context, unionVariant.schema, variant);
+    const branch: JsonObject =
+      tag.in === "body"
+        ? {
+            allOf: [
+              reference,
+              { type: "object", properties: { [tag.property]: { const: unionVariant.tag } }, required: [tag.property] },
+            ],
+          }
+        : reference;
 
-  named.variants.forEach((unionVariant, index) => {
-    const reference = variants[index];
+    setDefined(branch, "description", unionVariant.docs?.description ?? unionVariant.docs?.summary);
 
-    if (reference !== undefined && typeof reference.$ref === "string") mapping[unionVariant.tag] = reference.$ref;
+    return { branch, reference };
   });
 
-  if (tag.in === "body") {
-    schema.discriminator = { propertyName: tag.property, mapping };
-  } else {
+  schema.oneOf = branches.map(({ branch }) => branch);
+
+  if (tag.in === "header") {
+    const mapping: JsonObject = {};
+
+    named.variants.forEach((unionVariant, index) => {
+      const reference = branches[index]?.reference.$ref;
+
+      if (typeof reference === "string") mapping[unionVariant.tag] = reference;
+    });
+
     writeExtension(context, schema, "discriminator", { header: tag.name, mapping });
   }
 

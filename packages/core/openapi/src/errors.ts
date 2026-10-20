@@ -169,7 +169,7 @@ function errorCodeComponent(context: EmitContext, format: WireFormat, declared: 
   const maybe = (schema: JsonObject): SlotValue => ({ schema, presence: "maybe" });
   const params =
     declared.params === undefined
-      ? maybe({ type: "object" })
+      ? { schema: {}, presence: "never" as const }
       : always(schemaReference(context, declared.params, "shared"));
   const slots = new Map<string, SlotValue>([
     [CODE_SLOT, always({ type: "string", const: declared.code })],

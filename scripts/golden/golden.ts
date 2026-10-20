@@ -1,10 +1,11 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { GoldenCompiler } from "./compiler.ts";
+import { type GoldenOpenApi, goldenOpenApiFiles } from "./openapi.ts";
 import { generateScaleFiles, SCALE_DIRECTORY } from "./scale.ts";
 
 // The golden checker: compiles every case, writes each api's IR and side table as `finalizeSerializeJson` gives
-// them, and compares the result with the committed files byte for byte. A file nobody generates is stale.
+// them and the OpenAPI documents of each IR, and compares the result with the committed files byte for byte. A file nobody generates is stale.
 
 export const GOLDEN_DIRECTORY = "fixtures/golden";
 
@@ -85,17 +86,19 @@ export function goldenFiles(
   return { files, problems };
 }
 
-/** Every file the generators write: the golden files of the cases and the generated part of the scale fixture. */
+/** Every file the generators write: the golden files of the cases, their OpenAPI documents and the generated part of the scale fixture. */
 export function allGeneratedFiles(
   root: string,
   compiler: GoldenCompiler,
+  openApi: GoldenOpenApi,
   cases: readonly GoldenCase[] = GOLDEN_CASES,
 ): GoldenFiles {
   const golden = goldenFiles(root, cases, compiler);
+  const documents = goldenOpenApiFiles(golden.files, openApi);
 
   return {
-    files: new Map([...generateScaleFiles(), ...golden.files]),
-    problems: golden.problems,
+    files: new Map([...generateScaleFiles(), ...golden.files, ...documents.files]),
+    problems: [...golden.problems, ...documents.problems],
   };
 }
 

@@ -7,8 +7,8 @@ import { nullableSchema } from "./schemas.js";
 // A template of ADR 0002 sections 13 and 14 written out as the JSON Schema of the body it renders, from the schema
 // of each slot it reads; and a route example rendered through the same template.
 
-/** Whether a slot always has a value, or may have none (omitted, or `null` under `absent: null`). */
-export type SlotPresence = "always" | "maybe";
+/** Whether a slot always has a value, may have none, or never has one here (omitted, or `null` under `absent: null`). */
+export type SlotPresence = "always" | "maybe" | "never";
 
 export interface SlotValue {
   schema: JsonObject;
@@ -94,6 +94,15 @@ function objectTemplateSchema(
 
     if (value === undefined) return;
 
+    if (value.presence === "never") {
+      if (absent === "null") {
+        properties[member.name.text] = { type: "null" };
+        required.push(member.name.text);
+      }
+
+      return;
+    }
+
     if (value.presence === "always") presence = "always";
 
     const nullWhenAbsent = value.presence === "maybe" && absent === "null";
@@ -111,7 +120,7 @@ function objectTemplateSchema(
 
   const merged = slotSchema(context, template.merge, [], slots, below(location, "merge"));
 
-  if (merged === undefined) return { schema, presence };
+  if (merged === undefined || merged.presence === "never") return { schema, presence };
 
   return {
     schema: { allOf: [schema, merged.schema] },
