@@ -1,7 +1,10 @@
 # The slice consumer: the reference contract's types, validators and fetch client for both apis. The harness
 # writes the validators package of the chosen library into the placeholder; an overlay appends its own entries to
-# `targets`, which stays the last key.
+# `targets`, which stays the last key. An untested framework major fails the run, so each consumer proves the
+# compatibility matrix row it tests.
 outDir: generated
+checks:
+  matrix: error
 sources:
   reference:
     path: ./contract
