@@ -28,7 +28,10 @@ let recordingHookCalls = false;
 const hookCalls: RecordedHookCall[] = [];
 const logLines: string[] = [];
 
-/** `PUT /__seampact/script`: loads the script, empties the recorded calls and log lines, and records hook calls from then on. */
+/**
+ * `PUT /__seampact/script`: loads the script, empties the recorded calls and log lines, and records hook calls from
+ * then on.
+ */
 export function loadScriptReply(body: unknown): ControlReply {
   try {
     loadedScript = parseSampleAppScript(body);

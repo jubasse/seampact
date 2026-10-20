@@ -1,6 +1,7 @@
 // The NestJS placement of the shared request checks (ADR 0016): the module middleware, the per-operation composite
 // and input decorators, the guard, the handler wrapper, the narrow filter, the dynamic module with its boot check (the
-// framework-route check included), and the exported helpers. Each api's generated module calls `createNestBoundary` once with its route table.
+// framework-route check included), and the exported helpers. Each api's generated module calls `createNestBoundary`
+// once with its route table.
 import { ServerResponse } from "node:http";
 import {
   type ArgumentsHost,

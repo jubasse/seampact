@@ -23,7 +23,8 @@ import { compareTable, summaryTable } from "./summary.ts";
 // proves both servers answer alike, then runs load on both. Results are written under `--out`, never committed.
 // node scripts/bench/cli.ts --target <overlay> --validators <id> [--route <id>] [--duration <s>] [--out <dir>]
 // node scripts/bench/cli.ts --all [--check] | --profile --target <overlay> --validators <id> --route <id>
-// node scripts/bench/cli.ts --target <overlay> --validators <id> --ratio | --memory [--requests <n>] [--batches <n>] [--servers <s>]
+// node scripts/bench/cli.ts --target <overlay> --validators <id> --ratio [--route <ids>]
+// node scripts/bench/cli.ts --target <overlay> --validators <id> --memory [--requests <n>] [--batches <n>] [--servers <s>]
 
 const EXIT_OK = 0;
 const EXIT_FAILED = 1;
