@@ -117,9 +117,17 @@ interface OperationMetadata {
   readonly access: string;
 }
 
+interface DiscoveredContractMethod {
+  readonly prototype: object;
+  readonly name: string;
+  readonly method: object;
+  readonly metadata: OperationMetadata;
+}
+
 // NestJS's own metadata keys and route param types, read through `Reflector` (public decorators write them).
 const ROUTE_ARGS_METADATA = "__routeArguments__";
 const GUARDS_METADATA = "__guards__";
+const INTERCEPTORS_METADATA = "__interceptors__";
 const REDIRECT_METADATA = "__redirect__";
 const RENDER_METADATA = "__renderTemplate__";
 const SSE_METADATA = "__sse__";
@@ -384,9 +392,6 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
     }
   }
 
-  // The contract methods of this api's composites, wrapped; the module moves the seampact guard last on each.
-  const contractMethods = new Set<ContractMethod>();
-
   // Replaces the controller method in place (`applyDecorators` ignores a returned descriptor): on its own operation's
   // request it runs the idempotency claim or replay, the method, step 10 and the write, and returns no value, so
   // NestJS needs no interceptor on the route. Anywhere else it is the method itself.
@@ -412,7 +417,6 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       };
 
       copyMethodIdentity(method, wrapped);
-      contractMethods.add(wrapped);
       Reflect.set(descriptor, "value", wrapped);
     };
 
@@ -466,15 +470,63 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
     );
   }
 
+  // The controller methods NestJS registers for this api's operations: the composite's wrapper, or the function a
+  // decorator above the composite put in its place with the composite's metadata copied (a tracing `@Span()`).
+  function discoveredContractMethods(discovery: DiscoveryService): DiscoveredContractMethod[] {
+    const discovered: DiscoveredContractMethod[] = [];
+
+    for (const wrapper of discovery.getControllers()) {
+      const instance: unknown = wrapper.instance;
+
+      if (!isPlainObject(instance) && typeof instance !== "object") continue;
+
+      const prototype: unknown = Object.getPrototypeOf(instance);
+
+      if (prototype === null || typeof prototype !== "object") continue;
+
+      for (const name of Object.getOwnPropertyNames(prototype)) {
+        const method: unknown = Reflect.get(prototype, name);
+
+        if (typeof method !== "function") continue;
+
+        const metadata = reflector.get<OperationMetadata | undefined>(OPERATION_METADATA, method);
+
+        if (metadata?.api === api.id) discovered.push({ prototype, name, method, metadata });
+      }
+    }
+
+    return discovered;
+  }
+
   // NestJS appends route guards in decorator order, bottom-up, so an app guard written above the composite comes
   // after the seampact guard; every app guard of the route runs first once it is moved last. NestJS reads the guards
-  // when it registers the routes, after every module's `configure`.
-  function moveContractGuardLast(): void {
-    for (const method of contractMethods) {
-      const guards = reflector.get<unknown[] | undefined>(GUARDS_METADATA, method) ?? [];
-      const appGuards = guards.filter((guard) => guard !== ContractGuard);
+  // of the function it registers when it registers the routes, after every module's `configure`.
+  function moveContractGuardLast(methods: readonly DiscoveredContractMethod[]): void {
+    for (const { method } of methods) {
+      const appGuards = metadataList(GUARDS_METADATA, method).filter(
+        (guard) => guard !== ContractGuard,
+      );
 
       Reflect.defineMetadata(GUARDS_METADATA, [...appGuards, ContractGuard], method);
+    }
+  }
+
+  // The method writes the reply before NestJS's interceptors see the result, so a route or controller interceptor
+  // of the app observes that reply and the value it maps is dropped: said once per route at boot.
+  function warnIgnoredInterceptorMappings(methods: readonly DiscoveredContractMethod[]): void {
+    for (const { prototype, method, metadata } of methods) {
+      const interceptors = [
+        ...metadataList(INTERCEPTORS_METADATA, prototype.constructor),
+        ...metadataList(INTERCEPTORS_METADATA, method),
+      ];
+
+      if (interceptors.length === 0) continue;
+
+      const route = routeOf(metadata.id);
+
+      console.warn(
+        `seampact: the route ${methodOf(route).toUpperCase()} ${route.path} of '${metadata.id}' carries the app interceptors ${interceptors.map(interceptorName).join(", ")}; they observe the reply seampact wrote and a value they map is ignored. Shape the reply in the handler instead.`,
+      );
     }
   }
 
@@ -555,7 +607,12 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
     configure(consumer: MiddlewareConsumer): void {
       platform.adapterHost = this.adapterHost;
       platform.hooks = this.hooks;
-      moveContractGuardLast();
+
+      const contractMethods = discoveredContractMethods(this.discovery);
+
+      moveContractGuardLast(contractMethods);
+      warnIgnoredInterceptorMappings(contractMethods);
+
       // Claimed before any api's boot check runs, so each check sees every api's routes.
       const adapter: object | undefined = this.adapterHost.httpAdapter;
 
@@ -588,27 +645,11 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
       const bound = new Set<string>();
       const problems: BootProblem[] = [];
 
-      for (const wrapper of this.discovery.getControllers()) {
-        const instance: unknown = wrapper.instance;
-
-        if (!isPlainObject(instance) && typeof instance !== "object") continue;
-
-        const prototype: unknown = Object.getPrototypeOf(instance);
-
-        if (prototype === null || typeof prototype !== "object") continue;
-
-        for (const name of Object.getOwnPropertyNames(prototype)) {
-          const method: unknown = Reflect.get(prototype, name);
-
-          if (typeof method !== "function") continue;
-
-          const metadata = reflector.get<OperationMetadata | undefined>(OPERATION_METADATA, method);
-
-          if (metadata?.api !== api.id) continue;
-
-          bound.add(metadata.id);
-          problems.push(...writerProblems(metadata.id, prototype, name, method));
-        }
+      for (const { prototype, name, method, metadata } of discoveredContractMethods(
+        this.discovery,
+      )) {
+        bound.add(metadata.id);
+        problems.push(...writerProblems(metadata.id, prototype, name, method));
       }
 
       for (const route of api.routes) {
@@ -804,6 +845,22 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
     renderPreRoutingError,
     preRoutingFilter: new PreRoutingFilter(),
   };
+}
+
+// The guards or interceptors NestJS's decorators recorded on a method or a class.
+function metadataList(key: string, target: object): readonly unknown[] {
+  const list: unknown = Reflect.getMetadata(key, target);
+
+  return Array.isArray(list) ? list : [];
+}
+
+// An interceptor is bound as its class or as an instance.
+function interceptorName(interceptor: unknown): string {
+  if (typeof interceptor === "function") return interceptor.name;
+
+  if (typeof interceptor === "object" && interceptor !== null) return interceptor.constructor.name;
+
+  return String(interceptor);
 }
 
 function methodOf(route: ContractRoute): keyof typeof ROUTE_DECORATORS {

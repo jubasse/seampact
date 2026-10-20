@@ -48,6 +48,7 @@ interface ReferenceAppModule {
     readonly handled: string[];
     readonly unexpected: UnexpectedCall[];
     readonly loggedErrors: string[];
+    readonly events: string[];
   };
   readonly scenario: {
     answers: Record<
@@ -66,6 +67,7 @@ interface ReferenceAppModule {
   resetScenario(): void;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
   bootTwice(): Promise<void>;
+  bootWithAppInterceptors(): Promise<void>;
 }
 
 let app: ReferenceAppModule;
@@ -390,6 +392,21 @@ describe("the operation composite", () => {
     expect([handler?.name, handler?.length]).toEqual(["handle", 1]);
   });
 
+  test("an app guard above a decorator that rewraps the composite runs before authentication", async () => {
+    const authenticate = app.scenario.authenticate;
+
+    app.scenario.authenticate = (request) => {
+      app.calls.events.push("authenticate");
+
+      return authenticate(request);
+    };
+
+    const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, { headers: BEARER });
+
+    expect(reply.status).toBe(200);
+    expect(app.calls.events).toEqual(["app guard", "authenticate"]);
+  });
+
   test("a contract method called outside a request returns its handler's result", () => {
     const controller = new app.TasksController();
 
@@ -417,5 +434,19 @@ describe("the operation composite", () => {
 describe("the boot check", () => {
   test("a second registration of the api in one app stops the boot", async () => {
     await expect(app.bootTwice()).rejects.toThrow(/registered twice/);
+  });
+
+  test("each contract route with app interceptors warns once that a mapping they return is ignored", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    await app.bootWithAppInterceptors();
+
+    const warnings = warn.mock.calls.map((call) => String(call[0]));
+    const healthWarnings = warnings.filter((warning) => warning.includes("'health'"));
+
+    expect(warnings).toHaveLength(17);
+    expect(healthWarnings).toEqual([
+      "seampact: the route GET /v1/health of 'health' carries the app interceptors ControllerWideInterceptor, PassThroughInterceptor; they observe the reply seampact wrote and a value they map is ignored. Shape the reply in the handler instead.",
+    ]);
   });
 });
