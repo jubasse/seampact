@@ -13,6 +13,7 @@ const CONSUMER_WORKFLOWS = [
   "p5-fastify-express.yml",
   "p5-hono.yml",
   "p5-adonis.yml",
+  "validators-2.yml",
 ];
 
 // The server target package and framework major each consumer target id tests, by its overlay under `targets/`.
