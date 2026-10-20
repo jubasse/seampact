@@ -70,7 +70,9 @@ export { TARGET_ROLES } from "./target.js";
 export { refuseUnknownValue } from "./unknown-value.js";
 export {
   commitGeneratedWrite,
+  type HandEditPolicy,
   type PlannedWrite,
+  type PlanWriteOptions,
   type PlanWriteOutcome,
   planGeneratedWrite,
   type WriteOutcome,

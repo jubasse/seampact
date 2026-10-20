@@ -15,7 +15,7 @@ const USAGE = `Usage: seampact <command> [options]
 
 Commands:
   compile [--config <path>] [--out <dir>]  Compile the contract sources the app config's targets use.
-  generate [--config <path>]               Generate every target entry of the app config, or of every app a root config lists.
+  generate [--config <path>] [--force]     Generate every target entry of the app config, or of every app a root config lists; --force overwrites a generated file edited by hand.
   check [--config <path>]                  Fail when the committed generated files or documents differ from a fresh run.
   lint [--config <path>]                   Run the core lint rules over each contract source.
   diff --against <path> [--config <path>]  Classify the changes since the IRs at <path> (an IR file, or a directory of <api>.ir.json that "compile --out <dir>" writes).
@@ -77,11 +77,13 @@ async function runCompile(args: readonly string[], io: CliIo): Promise<number> {
 }
 
 async function runGenerate(args: readonly string[], io: CliIo): Promise<number> {
-  const parsed = parseCommandArgs(args, { config: { type: "string" } });
+  const parsed = parseCommandArgs(args, { config: { type: "string" }, force: { type: "boolean" } });
 
   if (parsed.status === "refused") return usageError(io, parsed.message);
 
-  return generateCommand(configLocation(io.cwd, stringOption(parsed.values.config)), io);
+  return generateCommand(configLocation(io.cwd, stringOption(parsed.values.config)), io, {
+    onHandEdit: parsed.values.force === true ? "overwrite" : "refuse",
+  });
 }
 
 async function runCheck(args: readonly string[], io: CliIo): Promise<number> {
@@ -115,7 +117,7 @@ async function runDiff(args: readonly string[], io: CliIo): Promise<number> {
   return diffCommand(configLocation(io.cwd, stringOption(parsed.values.config)), against, io);
 }
 
-type OptionSpec = Record<string, { type: "string" }>;
+type OptionSpec = Record<string, { type: "string" | "boolean" }>;
 
 type ParsedArgs =
   | { status: "parsed"; values: Record<string, string | boolean | undefined> }

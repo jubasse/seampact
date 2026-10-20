@@ -61,6 +61,25 @@ test("check passes after generate and names a hand-edited generated file", async
   expect(edited.err).toContain("Fix: Move the hand-written code next to the generated files");
 });
 
+test("generate refuses a hand-edited file, and --force overwrites it", async () => {
+  const app = makeServerApp();
+  const file = join(app, "__generated__/server/a.ts");
+
+  expect((await run(app, ["generate"])).exitCode).toBe(EXIT_SUCCESS);
+
+  writeFileSync(file, "export const a = 2;\n");
+
+  const refused = await run(app, ["generate"]);
+
+  expect(refused.exitCode).toBe(EXIT_REFUSED);
+  expect(refused.err).toContain("writer.file.edited");
+  expect(readFileSync(file, "utf8")).toBe("export const a = 2;\n");
+
+  expect((await run(app, ["generate", "--force"])).exitCode).toBe(EXIT_SUCCESS);
+  expect(readFileSync(file, "utf8")).not.toContain("a = 2");
+  expect(await run(app, ["check"])).toMatchObject({ exitCode: EXIT_SUCCESS });
+});
+
 test("a source holding one api.yaml and no workspace.yaml compiles as a single-api workspace", async () => {
   const app = makeApp(
     "sources:\n  solo: { path: ./solo }\ntargets:\n  - { id: server, use: fake-server, api: solo }\n",
