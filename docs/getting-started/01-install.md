@@ -42,7 +42,7 @@ node ~/src/seampact/scripts/consumers/install-into.ts ~/src/notes-app
 cd ~/src/notes-app && pnpm install
 ```
 
-You see `install-into: 21 packages in .../vendor/seampact`, then pnpm installs them.
+You see `install-into: 27 packages and packs in .../vendor/seampact`, then pnpm installs them.
 
 Create `tsconfig.json`. NestJS decorators need `experimentalDecorators`.
 

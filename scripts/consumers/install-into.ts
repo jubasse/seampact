@@ -7,7 +7,7 @@ import { useTarballs, VENDOR_DIRECTORY } from "./consumer-project.ts";
 import { ignoreVendorDirectory } from "./ignore-vendor.ts";
 import { StepFailure, type StepOutput } from "./run-step.ts";
 
-// Builds and packs this checkout's seampact packages into `<app>/vendor/seampact` and lists them in the app's
+// Builds and packs this checkout's seampact packages and first-party convention packs into `<app>/vendor/seampact` and lists them in the app's
 // package.json and pnpm overrides, so `pnpm install` resolves them without npm (ADR 0011 "Unpublished installs
 // for test consumers"). The app already holds a package.json.
 // node scripts/consumers/install-into.ts <app-dir>
@@ -58,7 +58,7 @@ function main(argv: string[]): number {
     useTarballs(directory, tarballs);
     ignoreVendorDirectory(directory);
     console.log(
-      `install-into: ${tarballs.size} packages in ${join(directory, VENDOR_DIRECTORY)}, listed in package.json. Run pnpm install.`,
+      `install-into: ${tarballs.size} packages and packs in ${join(directory, VENDOR_DIRECTORY)}, listed in package.json. Run pnpm install.`,
     );
   } catch (error) {
     if (error instanceof StepFailure) {

@@ -6,7 +6,7 @@ A pack is a set of conventions you reuse: a response format, a paging style, or 
 packs: ["@seampact/pack-hal"]
 ```
 
-Write it at the top level of `api.yaml`, or of the shared file to give it to every api. The package must be installed in your app, next to `package.json`. A pack is data, not code.
+Write it at the top level of `api.yaml`, or of the shared file to give it to every api. `install-into.ts` installs the packs with the other seampact packages. A pack is data, not code.
 
 ## What each pack brings
 
@@ -21,13 +21,20 @@ Write it at the top level of `api.yaml`, or of the shared file to give it to eve
 
 A format or paging pack sets it as the default for the api. You can still choose another on a route.
 
-## No package? Use a file
+## What generates today
 
-Copy the pack's `pack.yaml` into your contract and use its path.
+All six packs load. Types, validators and a NestJS server were tried with each one.
 
-```yaml
-packs: [./packs/hal.yaml]
-```
+| Pack | Generates today |
+|---|---|
+| `@seampact/pack-spring` | Yes. |
+| `@seampact/pack-crud-rights` | Yes, on routes with an identity. |
+| `@seampact/pack-laravel` | Loads; code generation planned. `format.success.envelope.unsupported`. |
+| `@seampact/pack-hal` | Loads; code generation planned. `format.success.envelope.unsupported`, `response.media.unsupported`. |
+| `@seampact/pack-jsonapi` | Loads; code generation planned. `format.success.envelope.unsupported`, `format.template.unsupported`. |
+| `@seampact/pack-api-platform` | Loads; code generation planned. `format.success.envelope.unsupported`, `format.template.unsupported`. |
+
+The refusal names the form and how to fix it. Nothing is generated half way.
 
 ## Your own pack
 

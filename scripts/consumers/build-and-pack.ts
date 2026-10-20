@@ -1,6 +1,6 @@
 import { readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { BUILD_CONFIG, BUILD_DIRECTORY, PACKED_PACKAGES } from "./packed-packages.ts";
+import { BUILD_CONFIG, BUILD_DIRECTORY, PACKED_PACKAGES, PACKED_PACKS } from "./packed-packages.ts";
 import { runStep, type StepOutput } from "./run-step.ts";
 
 const TYPESCRIPT_COMPILER = "node_modules/.bin/tsc";
@@ -22,7 +22,7 @@ export function buildPackages(repositoryRoot: string, output: StepOutput = "inhe
   }
 }
 
-// Packs each package into `destination` and answers the tarball file names, by package name.
+// Packs each package and each convention pack into `destination` and answers the tarball file names, by package name.
 export function packPackages(
   repositoryRoot: string,
   destination: string,
@@ -30,7 +30,7 @@ export function packPackages(
 ): Map<string, string> {
   rmSync(destination, { recursive: true, force: true });
 
-  for (const directory of PACKED_PACKAGES) {
+  for (const directory of [...PACKED_PACKAGES, ...PACKED_PACKS]) {
     runStep({
       title: `pack ${directory}`,
       output,
