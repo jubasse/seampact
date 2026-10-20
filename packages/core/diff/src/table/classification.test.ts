@@ -5,12 +5,7 @@ import type {
   ScalarTypeUse,
   UnionSchema,
 } from "@seampact/spec/ir";
-import {
-  editedIr,
-  knownSchemaOf,
-  objectSchemaOf,
-  operationOf,
-} from "../test-support.js";
+import { knownSchemaOf, objectSchemaOf, operationOf } from "../test-support.js";
 import { type RowCase, testRowCases } from "./row-case.test-support.js";
 
 // One case per row, case and position of the classification table (CHK-175, CHK-176), each a golden IR pair:
