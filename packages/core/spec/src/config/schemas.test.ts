@@ -2,8 +2,16 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { describe, expect, test } from "vitest";
 import type { JsonSchema } from "../authoring/schemas.js";
+import { APP_CONFIG_SCHEMA } from "./app-config.js";
 import { dslParityViolations } from "./dsl-parity.test-support.js";
-import { CONFIG_SCHEMA_FILES } from "./schema-files.js";
+import { ROOT_CONFIG_SCHEMA } from "./root-config.js";
+
+// The committed config schemas under `schemas/config/`, by file name: the definition every runner validates, the
+// Gradle and Maven DSLs included (A42), each written from its TypeScript constant.
+const CONFIG_SCHEMA_FILES: Readonly<Record<string, JsonSchema>> = {
+  "app.schema.json": APP_CONFIG_SCHEMA,
+  "root.schema.json": ROOT_CONFIG_SCHEMA,
+};
 
 const SCHEMA_DIRECTORY = new URL("../../schemas/config/", import.meta.url);
 

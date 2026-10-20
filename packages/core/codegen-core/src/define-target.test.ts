@@ -125,9 +125,9 @@ test.each(unsupportedIrCases)(
   },
 );
 
-function targetDeclaring(artefacts: readonly ArtefactDeclaration<"types" | "docs">[]) {
+function targetDeclaring(artefacts: readonly ArtefactDeclaration[]) {
   return () =>
-    defineTarget<object, "types" | "docs">({
+    defineTarget<object, string>({
       metadata: {
         packageName: PACKAGE_NAME,
         packageVersion: PACKAGE_VERSION,
@@ -163,6 +163,11 @@ test.each([
     message: "'types' is on by default and needs 'docs', which is off by default.",
   },
   {
+    name: "an id no app config can switch",
+    artefacts: [{ id: "Docs", defaultOn: true }],
+    message: "'Docs' is no id an app config can switch (^[a-z][A-Za-z0-9]*$).",
+  },
+  {
     name: "a duplicate id",
     artefacts: [
       { id: "types", defaultOn: true },
@@ -172,7 +177,7 @@ test.each([
   },
 ] satisfies {
   name: string;
-  artefacts: ArtefactDeclaration<"types" | "docs">[];
+  artefacts: ArtefactDeclaration[];
   message: string;
 }[])("defineTarget throws on $name", ({ artefacts, message }) => {
   expect(targetDeclaring(artefacts)).toThrow(

@@ -1,3 +1,4 @@
+import { ARTEFACT_ID_PATTERN } from "@seampact/spec/config";
 import type { ContractIR } from "@seampact/spec/ir";
 import type { DescriptorSet, LinkKind } from "./descriptors.js";
 import { finishFiles } from "./finish-files.js";
@@ -128,7 +129,7 @@ function isDeclaredArtefactSet<Artefact extends string>(
   return refuseUndeclaredArtefacts(requested, declared).length === 0;
 }
 
-// Unique ids, each need a declared artefact other than itself, and no artefact on by default that needs one off by
+// Ids an app config can switch, unique, each need a declared artefact other than itself, and no artefact on by default that needs one off by
 // default, which would refuse every app config that leaves both alone.
 function assertArtefactDeclarations(
   packageName: string,
@@ -151,6 +152,9 @@ function artefactDeclarationProblems(
   const duplicate = earlier.some((other) => other.id === artefact.id)
     ? [`'${artefact.id}' is declared twice.`]
     : [];
+  const unswitchable = new RegExp(ARTEFACT_ID_PATTERN).test(artefact.id)
+    ? []
+    : [`'${artefact.id}' is no id an app config can switch (${ARTEFACT_ID_PATTERN}).`];
   const needProblems = (artefact.needs ?? []).flatMap((need) => {
     const needed = declared.find((other) => other.id === need);
 
@@ -165,5 +169,5 @@ function artefactDeclarationProblems(
     return [];
   });
 
-  return [...duplicate, ...needProblems];
+  return [...unswitchable, ...duplicate, ...needProblems];
 }
