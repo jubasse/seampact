@@ -103,6 +103,11 @@ function sourceForm(required: readonly string[], allowed: readonly string[]): Js
   };
 }
 
+// An npm package name, scoped or not (npm's rules for new packages): a source's package is resolved under
+// `node_modules`, so a path such as `../x` is refused here rather than found outside it.
+const NPM_PACKAGE_NAME_PATTERN = "^(?:@[a-z0-9~-][a-z0-9._~-]*/)?[a-z0-9~-][a-z0-9._~-]*$";
+const NPM_PACKAGE_NAME_LENGTH_MAX = 214;
+
 const nameList = { type: "array", items: nonEmptyString, uniqueItems: true };
 
 // A path from the root whose segments are literal, `*` or `**`; a star never sits inside a segment.
@@ -140,7 +145,11 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
       additionalProperties: false,
       properties: {
         path: nonEmptyString,
-        package: nonEmptyString,
+        package: {
+          type: "string",
+          pattern: NPM_PACKAGE_NAME_PATTERN,
+          maxLength: NPM_PACKAGE_NAME_LENGTH_MAX,
+        },
         version: nonEmptyString,
         release: {
           type: "object",

@@ -25,18 +25,21 @@ export function bundleCacheDirectory(
   platform: NodeJS.Platform = process.platform,
   home: string = homedir(),
 ): string {
-  const configured = env[CACHE_DIRECTORY_VARIABLE];
+  const configured = nonEmpty(env[CACHE_DIRECTORY_VARIABLE]);
 
-  if (configured !== undefined && configured !== "") return configured;
+  if (configured !== undefined) return configured;
 
   if (platform === "win32")
-    return join(env.LOCALAPPDATA ?? join(home, "AppData", "Local"), CACHE_NAME, "Cache");
+    return join(nonEmpty(env.LOCALAPPDATA) ?? join(home, "AppData", "Local"), CACHE_NAME, "Cache");
 
   if (platform === "darwin") return join(home, "Library", "Caches", CACHE_NAME);
 
-  const xdg = env.XDG_CACHE_HOME;
+  return join(nonEmpty(env.XDG_CACHE_HOME) ?? join(home, ".cache"), CACHE_NAME);
+}
 
-  return join(xdg !== undefined && xdg !== "" ? xdg : join(home, ".cache"), CACHE_NAME);
+// An empty variable counts as unset, as the XDG base directory rules say.
+function nonEmpty(value: string | undefined): string | undefined {
+  return value === "" ? undefined : value;
 }
 
 /** The entry directory of `integrity` under `cacheDirectory`, or undefined when the value is not a SHA-256 one. */
@@ -59,16 +62,16 @@ export function storeBundleCacheEntry(directory: string, entry: string): void {
   );
 
   mkdirSync(parent, { recursive: true });
-  cpSync(directory, incoming, { recursive: true });
 
   try {
+    cpSync(directory, incoming, { recursive: true });
     renameSync(incoming, entry);
   } catch (error) {
     rmSync(incoming, { recursive: true, force: true });
 
     if (!existsSync(entry))
       throw new Error(
-        `bundle: moving the cache entry into '${entry}' failed: ${String(error)}. Check that ${CACHE_DIRECTORY_VARIABLE} or the user cache directory is writable.`,
+        `bundle: storing the cache entry '${entry}' failed: ${String(error)}. Check that ${CACHE_DIRECTORY_VARIABLE} or the user cache directory is writable.`,
       );
   }
 }

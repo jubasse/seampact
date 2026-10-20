@@ -16,6 +16,14 @@ export function finalizeSerializeIr(ir: ContractIR): string {
   return finalizeSerializeJson(ir);
 }
 
+/**
+ * The IR as its file holds it, members in the serialised order, so a consumer that walks members in insertion
+ * order sees the IR file's order. The parse is a round trip of this serialiser's own output, so it is an IR.
+ */
+export function finalizeCanonicalIr(ir: ContractIR): ContractIR {
+  return JSON.parse(finalizeSerializeIr(ir));
+}
+
 /** Any JSON document written as the IR is, such as its side table (ADR 0004 section 11). */
 export function finalizeSerializeJson(value: unknown): string {
   return `${serializedValue(value, "", "")}\n`;

@@ -188,7 +188,8 @@ Relays (FR-8) may point at an api in a pinned bundle, named in `workspace.import
 
 `allowLocal` (in the root or the app config, the app's winning) defaults to `true`. When it is `false`:
 - a `path` source fails `compile`, `generate` and `check` with a diagnostic naming the source and the fix (use a pinned bundle);
-- a `package` source that the package manager resolved from a local path (`file:`, `link:` or a workspace link) fails `check`.
+- a `package` source that the package manager resolved from a local path (`file:`, `link:` or a workspace link) fails `check`;
+- a `git` source whose URL is a `file:` URL or a local path fails `compile`, `generate` and `check` as `bundle.source-local`, even when its bundle is cached.
 
 The environment variable `SEAMPACT_ALLOW_LOCAL=false` forces the refusal regardless of the file, and can never turn it off. CI sets it on shared branches; a developer keeps local sources on a feature branch.
 

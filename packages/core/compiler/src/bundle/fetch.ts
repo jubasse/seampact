@@ -6,7 +6,7 @@ import { bundleCacheDirectory, bundleCacheEntry, storeBundleCacheEntry } from ".
 import type { BundleSourceFailure } from "./fetch-failure.js";
 import { fetchGitBundle, gitSourceProblem } from "./fetch-git.js";
 import { installedBundlePackage } from "./fetch-package.js";
-import { downloadReleaseTarball } from "./fetch-release.js";
+import { downloadReleaseTarball, releaseSourceProblem } from "./fetch-release.js";
 import type { LocalSourcePolicy } from "./local-sources.js";
 import { extractBundleTarball } from "./tarball-read.js";
 import { type BundleChannel, verifyBundle } from "./verify.js";
@@ -53,7 +53,8 @@ export async function fetchBundle(
   }
 
   const channel: BundleChannel = "release" in source ? "release" : "git";
-  const problem = "git" in source ? gitSourceProblem(source, options.localSources) : undefined;
+  const problem =
+    "git" in source ? gitSourceProblem(source, options.localSources) : releaseSourceProblem(source);
 
   if (problem !== undefined) return { ok: false, failures: [problem] };
 
@@ -87,6 +88,9 @@ export async function fetchBundle(
   }
 }
 
+// The codes of the pinned-bundle check's step 3 (`bundle.ir-version`, `bundle.ir-revision`...).
+const IR_CHECK_CODE_PREFIX = "bundle.ir-";
+
 type Fetched =
   | { readonly ok: true; readonly directory: string; readonly remove: () => void }
   | { readonly ok: false; readonly failure: BundleSourceFailure };
@@ -115,7 +119,8 @@ function firstFailure(failures: readonly BundleSourceFailure[]): BundleSourceFai
   return failure;
 }
 
-// A cache entry is checked again on every read; one that fails names itself, since only removing it heals it.
+// A cache entry is checked again on every read; one whose files fail (steps 1-2) names itself, since only removing
+// it heals it. An IR check failure (step 3) is on bytes that match the pin, so refetching gives the same failure.
 function readCacheEntry(
   entry: string,
   integrity: string | undefined,
@@ -124,6 +129,9 @@ function readCacheEntry(
   const verified = verifyBundle(entry, integrity, { channel });
 
   if (verified.ok) return verified;
+
+  if (verified.failures.every((failure) => failure.code.startsWith(IR_CHECK_CODE_PREFIX)))
+    return verified;
 
   return {
     ...verified,

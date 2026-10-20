@@ -129,3 +129,17 @@ test("refuses by name the artefact switches that wait, beside the read boot chec
   });
   expect(outcome.status === "refused" ? outcome.problems : []).toHaveLength(2);
 });
+
+test("refuses a package source that is not an npm package name", async () => {
+  const outcome = await readConfigText(
+    "sources:\n  contracts: { package: ../../x, version: 1.0.0 }\ntargets:\n  - { id: t, use: x, api: a }\n",
+  );
+
+  const scoped = await readConfigText(
+    "sources:\n  contracts: { package: '@acme/tasks.contract', version: 1.0.0 }\ntargets:\n  - { id: t, use: x, api: a }\n",
+  );
+
+  expect(outcome).toMatchObject({ status: "refused" });
+  expect(JSON.stringify(outcome)).toContain("sources.contracts");
+  expect(scoped).toMatchObject({ status: "read" });
+});

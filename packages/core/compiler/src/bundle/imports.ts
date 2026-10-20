@@ -14,8 +14,8 @@ import { type BundleSourceFailure, bundleSourceText } from "./fetch-failure.js";
 // A workspace compiled with the apis it imports from pinned bundles (`workspace.imports`, ADR 0002 section 1, ADR
 // 0011): each entry's bundle is fetched and put through the pinned-bundle check, its `api` looked up in the
 // manifest, and the IR passed to `compileWorkspace` as the `imports` option under the entry's name, so a relay
-// reads it as it reads a sibling api (FR-8). An entry the workspace schema refuses is not fetched: the
-// compilation reports it.
+// reads it as it reads a sibling api (FR-8). An entry the workspace schema refuses (no source form, or more than one)
+// is not fetched: the compilation reports it.
 
 export interface WorkspaceImportsOptions extends PipelineOptions {
   /** How the bundles are fetched: `baseDirectory` is the workspace root. */
@@ -74,7 +74,7 @@ async function importedIr(
 
   if (ir !== undefined) return { ir };
 
-  const apis = fetched.manifest.apis.map((api) => `'${api.name}'`).join(", ");
+  const apis = fetched.manifest.apis.map((api) => quote(api.name)).join(", ");
 
   return {
     failures: [
@@ -86,6 +86,9 @@ async function importedIr(
     ],
   };
 }
+
+// The key that names each source form; an entry holds exactly one.
+const SOURCE_FORM_KEYS = ["path", "package", "release", "git"] as const;
 
 // The entries of `workspace.imports` whose shape the workspace schema accepts, in declaration order.
 function declaredImports(imports: unknown): DeclaredImport[] {
@@ -101,6 +104,8 @@ function declaredImports(imports: unknown): DeclaredImport[] {
 }
 
 function bundleSourceOf(entry: Record<string, unknown>): BundleSource | undefined {
+  if (SOURCE_FORM_KEYS.filter((key) => key in entry).length !== 1) return undefined;
+
   const integrity = typeof entry.integrity === "string" ? { integrity: entry.integrity } : {};
   const { release, git } = entry;
 

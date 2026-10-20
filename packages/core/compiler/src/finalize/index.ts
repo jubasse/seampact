@@ -2,4 +2,4 @@
 
 export { FINALIZE_ID_COLLISION_RULE } from "./collisions.js";
 export { finalizeIr } from "./finalize.js";
-export { finalizeSerializeIr, finalizeSerializeJson } from "./serialize.js";
+export { finalizeCanonicalIr, finalizeSerializeIr, finalizeSerializeJson } from "./serialize.js";

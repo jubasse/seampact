@@ -147,6 +147,21 @@ test(
     expect((await runSeampact(["generate"], app, env)).exitCode).toBe(0);
     expect(channels.release.requestCount(RELEASE_PATH)).toBe(1);
 
+    // A URL a clean machine would refuse is refused before the cache is read.
+    const insecureUrl = channels.release.url.replace(/^https:/u, "http:");
+
+    writeSmokeApp(
+      app,
+      smokeConfig(
+        `{ release: { url: "${insecureUrl}${RELEASE_PATH}" }, integrity: "${integrity}" }`,
+      ),
+    );
+    const insecure = await runSeampact(["generate"], app, env);
+
+    expect(insecure.exitCode).toBe(1);
+    expect(insecure.stderr).toContain("bundle.release-url");
+    writeSmokeApp(app, smokeConfig(releaseSource(RELEASE_PATH, integrity)));
+
     // The cache entry is checked again on every read.
     const [entry = ""] = readdirSync(join(env.SEAMPACT_CACHE_DIR, "bundles"));
 
