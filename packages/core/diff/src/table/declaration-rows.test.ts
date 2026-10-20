@@ -489,6 +489,189 @@ const ROW_CASES: RowCase[] = [
       entry(ir.pagings, "cursor").absent = "null";
     },
   },
+  {
+    kind: "scope",
+    case: "within",
+    position: "output",
+    expected: "CS",
+    after: (ir) => {
+      entry(ir.scopes, "channel").within = "channel";
+    },
+  },
+  {
+    kind: "right",
+    case: "subject",
+    position: "output",
+    expected: "CS",
+    after: (ir) => {
+      entry(ir.rights, "tasks.read").subject = { kind: "none" };
+    },
+  },
+  {
+    kind: "right",
+    case: "guestAdded",
+    position: "output",
+    expected: "S",
+    after: (ir) => {
+      entry(ir.rights, "tasks.read").guest = "public channels";
+    },
+  },
+  {
+    kind: "right",
+    case: "guestRemoved",
+    position: "output",
+    expected: "C",
+    base: (ir) => {
+      entry(ir.rights, "tasks.read").guest = "public channels";
+    },
+    after: (ir) => {
+      delete entry(ir.rights, "tasks.read").guest;
+    },
+  },
+  {
+    kind: "identity",
+    case: "kind",
+    position: "input",
+    expected: "CS",
+    after: (ir) => {
+      const { schemes: _schemes, ...user } = credentialIdentity(ir, "user");
+
+      ir.identities.user = { ...user, kind: "signed", signed: "stripeSignature" };
+    },
+  },
+  {
+    kind: "identity",
+    case: "schemeAdded",
+    position: "none",
+    expected: "info",
+    after: (ir) => {
+      credentialIdentity(ir, "service").schemes.read.push("bearer");
+    },
+  },
+  {
+    kind: "header",
+    case: "semantic",
+    position: "input",
+    expected: "CS",
+    base: (ir) => addActorHeader(ir, false),
+    after: (ir) => {
+      entry(ir.headers, "actorSurface").semantic = "deadline";
+    },
+  },
+  {
+    kind: "error",
+    case: "status",
+    position: "none",
+    expected: "info",
+    base: (ir) => {
+      ir.errors["api.gone"] = {
+        ...structuredClone(entry(ir.errors, "api.not_found")),
+        code: "api.gone",
+      };
+    },
+    after: (ir) => {
+      entry(ir.errors, "api.gone").http.status = 410;
+    },
+  },
+  {
+    kind: "format",
+    case: "success",
+    position: "output",
+    expected: "CS",
+    after: (ir) => {
+      entry(ir.formats, "bare").success.item.headers.push({
+        name: "X-Kind",
+        value: { kind: "literal", value: "item" },
+      });
+    },
+  },
+  {
+    kind: "format",
+    case: "meta",
+    position: "output",
+    expected: "CS",
+    after: (ir) => {
+      entry(ir.formats, "bare").meta.servedAt = {
+        type: { kind: "scalar", type: "string", refinements: {} },
+        fill: "now",
+      };
+    },
+  },
+  {
+    kind: "format",
+    case: "error",
+    position: "output",
+    expected: "CS",
+    after: (ir) => {
+      entry(ir.formats, "bare").error.media = "application/json";
+    },
+  },
+  {
+    kind: "pagingStyle",
+    case: "position",
+    position: "input",
+    expected: "CS",
+    after: (ir) => {
+      entry(ir.pagings, "cursor").position = "offset";
+    },
+  },
+  {
+    kind: "pagingStyle",
+    case: "response",
+    position: "output",
+    expected: "CS",
+    after: (ir) => {
+      entry(ir.pagings, "cursor").response.links.push({ rel: "first", role: "first" });
+    },
+  },
+  {
+    kind: "property.removed",
+    case: "required",
+    position: "none",
+    expected: "info",
+    note: " for a schema no operation reaches",
+    after: (ir) => {
+      objectSchemaOf(ir, "ServicePrincipal").properties.pop();
+    },
+  },
+  {
+    kind: "nullable",
+    case: "added",
+    position: "none",
+    expected: "info",
+    note: " for a schema no operation reaches",
+    after: (ir) => {
+      const [property] = objectSchemaOf(ir, "ServicePrincipal").properties;
+
+      if (property !== undefined) property.nullable = true;
+    },
+  },
+  {
+    kind: "type.changed",
+    case: "kind",
+    position: "none",
+    expected: "info",
+    note: " for a schema no operation reaches",
+    after: (ir) => {
+      const [property] = objectSchemaOf(ir, "ServicePrincipal").properties;
+
+      if (property !== undefined)
+        property.type = { kind: "scalar", type: "string", refinements: {} };
+    },
+  },
+  {
+    kind: "refinement",
+    case: "tightened",
+    position: "none",
+    expected: "info",
+    note: " for a schema no operation reaches",
+    after: (ir) => {
+      const userId = objectSchemaOf(ir, "ServicePrincipal").properties[1];
+
+      if (userId?.type.kind === "scalar" && "refinements" in userId.type)
+        userId.type.refinements.maxLength = 36;
+    },
+  },
 ];
 
 testRowCases("the declaration rows", ROW_CASES);

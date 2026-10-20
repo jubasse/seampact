@@ -181,7 +181,8 @@ export const DIFF_TABLE = {
     added: { input: "S" },
     removed: { input: "C" },
   },
-  principalRequirement: REQUEST_REQUIREMENT,
+  // A principal field the caller must hold, matched by name.
+  principalRequirement: { added: { input: "C" }, removed: { input: "S" } },
   scope: { ...REQUEST_REQUIREMENT, within: BOTH_POSITIONS_CS },
   requirement: REQUEST_REQUIREMENT,
   binding: REQUEST_REQUIREMENT,

@@ -340,6 +340,18 @@ const ROW_CASES: RowCase[] = [
       taskRef(ir).unknownKeys = { policy: "refuse" };
     },
   },
+  {
+    kind: "unknownKeys",
+    case: "ignored",
+    position: "output",
+    expected: "-",
+    base: (ir) => {
+      taskRef(ir).unknownKeys = { policy: "keep", reason: "passthrough" };
+    },
+    after: (ir) => {
+      taskRef(ir).unknownKeys = { policy: "ignore", reason: "strict output" };
+    },
+  },
 ];
 
 testRowCases("the response rows", ROW_CASES);

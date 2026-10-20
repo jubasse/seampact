@@ -693,6 +693,59 @@ const ROW_CASES: RowCase[] = [
       operationOf(ir, "searchTasks").safe = !operationOf(ir, "searchTasks").safe;
     },
   },
+  {
+    kind: "binding",
+    case: "removed",
+    position: "input",
+    expected: "S",
+    base: (ir) => {
+      operationOf(ir, "getTask").bindings.push({
+        from: { in: "principal", name: "userId" },
+        to: { in: "query", name: "owner" },
+        origin: ORIGIN,
+      });
+    },
+    after: (ir) => {
+      operationOf(ir, "getTask").bindings = [];
+    },
+  },
+  {
+    kind: "fieldRight",
+    case: "added",
+    position: "input",
+    expected: "C",
+    after: (ir) => {
+      const right = operationOf(ir, "createTask").fieldRights.find(
+        (candidate) => candidate.direction === "input",
+      );
+
+      if (right !== undefined)
+        operationOf(ir, "createTask").fieldRights.push({ ...right, pointer: "/title" });
+    },
+  },
+  {
+    kind: "owner",
+    case: "changed",
+    position: "input",
+    expected: "CS",
+    after: (ir) => {
+      const owner = operationOf(ir, "getDraft").owner;
+
+      if (owner !== undefined) owner.kind = "team";
+    },
+  },
+  {
+    kind: "paging",
+    case: "style",
+    position: "input",
+    expected: "CS",
+    after: (ir) => {
+      const cursor = ir.pagings.cursor;
+
+      if (cursor !== undefined) ir.pagings.offset = { ...structuredClone(cursor), id: "offset" };
+      listPaging(ir).style = "offset";
+    },
+  },
 ];
 
 testRowCases("the request rows", ROW_CASES);
