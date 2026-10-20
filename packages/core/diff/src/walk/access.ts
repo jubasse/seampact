@@ -185,6 +185,15 @@ function compareAccess(
   compareMembers(context, site, ACCESS_DEFINITIONS[after.kind], pointer, before, after, {
     kind: ranked,
     onRefused: ranked,
+    // Read here, as the after kind may not hold it.
+    reason: (memberPointer, beforeValue, afterValue) =>
+      emitAt(context, site, {
+        kind: "annotation",
+        case: "reason",
+        pointer: memberPointer,
+        before: beforeValue,
+        after: afterValue,
+      }),
     // A public access holds neither: the rank change says it all.
     identity: (memberPointer, beforeValue, afterValue) => {
       if (credentials === undefined) return;
