@@ -44,7 +44,9 @@ surfaces:
         ops: { get: {} }
 ```
 
-Your NestJS handler, typed from it:
+One contract. The handler in your framework:
+
+<details open><summary>NestJS</summary>
 
 ```ts
 @Controller()
@@ -59,6 +61,85 @@ export class NotesController implements NotesNest.NotesEndpoints {
     return { status: Notes.Status.Ok, body: note };
   }
 }
+```
+
+</details>
+
+<details><summary>Express</summary>
+
+```ts
+export const notesHandlers: NotesExpress.NotesEndpoints = {
+  getNote(input) {
+    const note = notes.get(input.path.noteId);
+
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
+
+    return { status: Notes.Status.Ok, body: note };
+  },
+};
+```
+
+</details>
+
+<details><summary>Fastify</summary>
+
+```ts
+export const notesHandlers: NotesFastify.NotesEndpoints = {
+  getNote(input) {
+    const note = notes.get(input.path.noteId);
+
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
+
+    return { status: Notes.Status.Ok, body: note };
+  },
+};
+```
+
+</details>
+
+<details><summary>AdonisJS</summary>
+
+```ts
+export default class NotesController implements NotesAdonis.NotesEndpoints {
+  getNote(input: Notes.GetNoteInput) {
+    const note = notes.get(input.path.noteId)
+
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound }
+
+    return { status: Notes.Status.Ok, body: note }
+  }
+}
+```
+
+</details>
+
+<details><summary>Hono</summary>
+
+```ts
+export const notesEndpoints: NotesHono.NotesEndpoints = {
+  getNote(input) {
+    const note = notes.get(input.path.noteId);
+
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
+
+    return { status: Notes.Status.Ok, body: note };
+  },
+};
+```
+
+</details>
+
+And the client:
+
+```ts
+const client = NotesClient.createClient({ baseUrl: "http://localhost:3000" });
+const reply = await client.getNote({ path: { noteId } });
+
+if (reply.ok) console.log(reply.body.title);
 ```
 
 The full walk-through is in [Get started](docs/getting-started/README.md).
