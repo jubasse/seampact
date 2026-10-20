@@ -9,6 +9,7 @@ import type { ContractApi, ContractRoute, ResponsesMode } from "./contract-route
 import { handlerReply } from "./handler-reply.js";
 import { beginIdempotency } from "./idempotency.js";
 import { checkRestrictedInput, validateRequestInput } from "./input-checks.js";
+import { loggerProblems, type RuntimeLogger } from "./runtime-logger.js";
 
 const RESPONSES_MODES: readonly string[] = ["strict", "warn"];
 
@@ -39,6 +40,8 @@ export interface RegistrationOptions<Hooks, Handlers, Operation extends string =
   readonly hooks?: Hooks;
   readonly responses?: ResponsesMode;
   readonly bodyValidation?: boolean;
+  /** Where the boundary writes its warnings and unexpected failures; the console when absent. */
+  readonly logger?: RuntimeLogger;
   readonly operations?: Partial<Readonly<Record<Operation, OperationSettings>>>;
 }
 
@@ -52,6 +55,7 @@ export function registrationProblems(
   const problems: BootProblem[] = [
     ...settingsProblems(options, "the registration"),
     ...handlerProblems(api, bindings, options.handlers),
+    ...loggerProblems(options.logger),
   ];
   const overrideKeys = new Set(Object.values(bindings).map((binding) => binding.method));
   const operations: unknown = options.operations ?? {};

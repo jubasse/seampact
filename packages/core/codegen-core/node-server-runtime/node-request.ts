@@ -17,6 +17,7 @@ import {
   matchContractRoute,
 } from "./contract-route.js";
 import { clientStatusError, type ReportedRequest } from "./error-reply.js";
+import { runtimeLog } from "./runtime-logger.js";
 
 const PAYLOAD_TOO_LARGE = 413;
 const FIRST_CLIENT_ERROR_STATUS = 400;
@@ -194,7 +195,7 @@ function payloadTooLargeError(route: ContractRoute, exception: unknown): Contrac
   const routeLimit = route.input?.limitBytes;
 
   if (typeof parserLimit === "number" && routeLimit !== undefined && parserLimit < routeLimit) {
-    console.error(
+    runtimeLog.error(
       `seampact: the JSON parser's limit (${parserLimit} bytes) is below the limit of '${route.id}' (${routeLimit} bytes); set the parser limit to the generated LARGEST_BODY_LIMIT.`,
     );
 

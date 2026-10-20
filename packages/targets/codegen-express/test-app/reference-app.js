@@ -206,9 +206,9 @@ export async function startAppWithoutHooks() {
   return listen(app);
 }
 
-/** Makes the `tasks` router with no hook registered, to see whether the boot check refuses it. */
-export function makeRouterWithoutHooks() {
-  return TasksExpress.router({ handlers, hooks: {} });
+/** Makes the `tasks` router with no hook registered and the given logger, to see how the boot check answers. */
+export function makeRouterWithoutHooks(logger) {
+  return TasksExpress.router({ handlers, hooks: {}, logger });
 }
 
 async function listen(app) {

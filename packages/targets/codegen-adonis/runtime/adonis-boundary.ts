@@ -62,6 +62,12 @@ import {
   writeContractReply,
 } from "./node-server/node-reply.js";
 import { announcesBody, DEFAULT_METHOD, requestTarget } from "./node-server/node-request.js";
+import {
+  loggerProblems,
+  type RuntimeLogger,
+  runtimeLog,
+  useRuntimeLogger,
+} from "./node-server/runtime-logger.js";
 import { type PlatformFixes, transportRefusal } from "./node-server/transport-checks.js";
 
 /** The target options this api was generated with. */
@@ -98,6 +104,8 @@ export interface RouteRegistration<
   readonly hooks?: Hooks;
   readonly responses?: ResponsesMode;
   readonly bodyValidation?: boolean;
+  /** Where the boundary writes its warnings and unexpected failures; the console when absent. */
+  readonly logger?: RuntimeLogger;
   readonly operations?: { readonly [Name in Operation]?: OperationReplyOptions };
 }
 
@@ -558,6 +566,8 @@ export function createAdonisBoundary<
     router: Router,
     registration: RouteRegistration<Hooks, Controllers, Operation> & HooksRequirement<Hooks>,
   ): void {
+    useRuntimeLogger(registration.logger);
+
     const hooks = resolvedHooks(registration.hooks);
     const problems = [
       ...enforcedHookBootProblems(api, hooks),
@@ -566,6 +576,7 @@ export function createAdonisBoundary<
       ...unknownOperationProblems(registration),
       ...bodyparserProblems(api),
       ...repeatedRegistrationProblems(router),
+      ...loggerProblems(registration.logger),
     ];
 
     if (problems.length > 0) throw new Error(bootProblemsMessage(api, problems));
@@ -880,7 +891,7 @@ async function loadController(
     .filter((method) => typeof Reflect.get(controller.prototype, method) !== "function");
 
   if (missingMethods.length > 0) {
-    console.error(
+    runtimeLog.error(
       `seampact: the controller of '${endpoints}' lacks the methods ${missingMethods.join(", ")}; every route of it answers 500. Implement each method of ${endpoints}.`,
     );
   }

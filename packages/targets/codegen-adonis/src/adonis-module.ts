@@ -9,6 +9,7 @@ import {
   handlerInterfaceName,
   type NodeServerOptions,
   operationIdentifier,
+  responseSettingsOf,
 } from "@seampact/codegen-core/node-server";
 import type { ContractIR, Operation, TypeUse } from "@seampact/spec/ir";
 
@@ -99,7 +100,7 @@ export function adonisModuleSource(
     "",
     `const OPERATIONS = ${JSON.stringify(entries)} as const;`,
     "",
-    `const boundary = createAdonisBoundary<SeampactHooks, Controllers, OperationName>(CONTRACT_API, ${JSON.stringify(options)}, OPERATIONS);`,
+    `const boundary = createAdonisBoundary<SeampactHooks, Controllers, OperationName>(CONTRACT_API, ${JSON.stringify(responseSettingsOf(options))}, OPERATIONS);`,
     "",
     "/** Adds the api's routes to the router and runs the boot check; call it from start/routes.ts. */",
     "export const registerRoutes = boundary.registerRoutes;",

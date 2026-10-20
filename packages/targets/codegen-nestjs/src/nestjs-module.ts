@@ -3,6 +3,7 @@ import {
   largestBodyLimit,
   type NodeServerOptions,
   operationIdentifier,
+  responseSettingsOf,
 } from "@seampact/codegen-core/node-server";
 import type { ContractIR } from "@seampact/spec/ir";
 
@@ -79,7 +80,7 @@ export function nestjsModuleSource(
     'export { MAX_CHECKED_ERROR_BODY_BYTES } from "./node-server/outgoing-verdict.js";',
     'export { MAX_RENDERED_ISSUES } from "./node-server/contract-error.js";',
     "",
-    `const boundary = createNestBoundary<SeampactHooks>(CONTRACT_API, ${JSON.stringify(options)});`,
+    `const boundary = createNestBoundary<SeampactHooks>(CONTRACT_API, ${JSON.stringify(responseSettingsOf(options))});`,
     "",
     "/** The api's dynamic module: `SeampactModule.forRoot(hooks)`. */",
     "export const SeampactModule = boundary.SeampactModule;",

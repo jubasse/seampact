@@ -1024,7 +1024,10 @@ function linkExpress(project: string, expressPackage: string): void {
 
 interface HooklessAppModule {
   startAppWithoutHooks(): Promise<{ host: string; port: number; close(): Promise<void> }>;
-  makeRouterWithoutHooks(): unknown;
+  makeRouterWithoutHooks(logger?: {
+    warn(...parts: unknown[]): void;
+    error(...parts: unknown[]): void;
+  }): unknown;
 }
 
 describe("the hook boot check level on Express 5", () => {
@@ -1060,16 +1063,18 @@ describe("the hook boot check level on Express 5", () => {
   );
 
   test(
-    "hooks warn boots it and logs the missing hook",
+    "hooks warn boots it and logs the missing hook through the registered logger",
     async () => {
       const hookless = await hooklessModule("warn");
-      const warned = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      const logger = { warn: vi.fn(), error: vi.fn() };
 
       try {
-        expect(() => hookless.makeRouterWithoutHooks()).not.toThrow();
-        expect(warned).toHaveBeenCalledWith(expect.stringContaining("no authenticate hook"));
+        expect(() => hookless.makeRouterWithoutHooks(logger)).not.toThrow();
+        expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("no authenticate hook"));
+        expect(consoleWarn).not.toHaveBeenCalled();
       } finally {
-        warned.mockRestore();
+        consoleWarn.mockRestore();
       }
     },
     SETUP_TIMEOUT_MILLISECONDS,

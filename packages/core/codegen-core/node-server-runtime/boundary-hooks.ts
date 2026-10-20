@@ -13,6 +13,7 @@ import type {
 } from "@seampact/hooks";
 import { ContractError, unexpectedError } from "./contract-error.js";
 import type { ContractApi, ContractRoute } from "./contract-route.js";
+import { runtimeLog } from "./runtime-logger.js";
 
 export type AnyAuthenticateHook = AuthenticateHook<
   AuthenticateRequest<object, object>,
@@ -122,7 +123,7 @@ export async function reportUnexpected(
   try {
     await hook(exceptionOrReply, context);
   } catch (error) {
-    console.error(
+    runtimeLog.error(
       `seampact: onUnexpectedError failed for operation '${context.operation ?? "(none)"}' of api '${context.api}'`,
       error,
     );
@@ -166,7 +167,7 @@ export function enforcedHookBootProblems(api: HookCheckedApi, hooks: BoundaryHoo
   if (api.hookCheck === "error") return problems;
 
   if (problems.length > 0) {
-    console.warn(
+    runtimeLog.warn(
       bootProblemsMessage(api, problems).replace(
         "cannot start:",
         "starts with hooks missing ('artefacts.bootCheck.hooks: warn'); the routes that need them answer 500:",

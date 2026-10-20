@@ -25,6 +25,11 @@ export interface NodeServerOptions {
 /** The settings the registration may override; the rest of the options are fixed at generation. */
 export type ResponseSettingsOptions = Pick<NodeServerOptions, "responses" | "bodyValidation">;
 
+/** The options the generated settings object carries; the registration may override them. */
+export function responseSettingsOf(options: NodeServerOptions): ResponseSettingsOptions {
+  return { responses: options.responses, bodyValidation: options.bodyValidation };
+}
+
 /** What a target's placement lets its entry's `options` name beyond the options every Node server target takes. */
 export interface AcceptedNodeServerOptions {
   readonly compression: boolean;

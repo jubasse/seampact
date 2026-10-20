@@ -73,6 +73,7 @@ import {
   ownBodyParserRefusal,
   reportedRequest,
 } from "./node-server/node-request.js";
+import { runtimeLog, useRuntimeLogger } from "./node-server/runtime-logger.js";
 import {
   bodySizeRefusal,
   mediaTypeRefusal,
@@ -108,6 +109,8 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
   function router<Operation extends string>(
     options: RegistrationOptions<Hooks, Handlers, Operation> & HooksRequirement<Hooks>,
   ): Router {
+    useRuntimeLogger(options.logger);
+
     const hooks = resolvedHooks(options.hooks);
     const problems = [
       ...enforcedHookBootProblems(api, hooks),
@@ -285,7 +288,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
 
       if (!warnedGlobalParser.has(route.id)) {
         warnedGlobalParser.add(route.id);
-        console.warn(
+        runtimeLog.warn(
           `seampact: an app-wide body parser read the body of '${route.id}' before the router of api '${api.id}'; mount the router before it, or give it verify: keepRawBody and limit: LARGEST_BODY_LIMIT.`,
         );
       }
@@ -356,7 +359,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
         `${bootProblemsMessage(api, problems)}\nThe check ran on the first request, since the app did not call checkFrameworkRoutes(app) before listening; every request answers 500 until the app restarts.`,
       );
 
-      console.error(cause.message);
+      runtimeLog.error(cause.message);
       respondDetached(response, hooks, route, unexpectedError(route, cause), reported);
     };
   }
@@ -444,7 +447,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
       `seampact: the router of api '${api.id}' is mounted under '${request.baseUrl}', which differs from the contract's empty mount; mount it at the app's root with app.use(router).`,
     );
 
-    console.error(cause.message);
+    runtimeLog.error(cause.message);
     respondDetached(response, hooks, route, unexpectedError(route, cause), reported);
   }
 
@@ -484,7 +487,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
 
     if (routersMade.count === 1) return routersMade.lastHooks;
 
-    console.error(noOwningRouterMessage(api, routersMade.count));
+    runtimeLog.error(noOwningRouterMessage(api, routersMade.count));
 
     return undefined;
   }

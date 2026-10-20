@@ -56,6 +56,7 @@ import {
   runInputSteps,
   settingsOf,
 } from "./web-server/handler-map.js";
+import { runtimeLog, useRuntimeLogger } from "./web-server/runtime-logger.js";
 import { mediaTypeRefusal, type PlatformFixes } from "./web-server/transport-checks.js";
 import { checkOutgoingResponse, recordBoundaryResponse } from "./web-server/web-outgoing-check.js";
 import {
@@ -113,6 +114,8 @@ export function createHonoBoundary<
     app: Hono<E, S, BasePath>,
     options: HonoRegistrationOptions<Hooks, Handlers, Operation, E> & HooksRequirement<Hooks>,
   ): void {
+    useRuntimeLogger(options.logger);
+
     const hooks = resolvedHooks(options.hooks);
     const problems = [
       ...enforcedHookBootProblems(api, hooks),
@@ -212,7 +215,7 @@ export function createHonoBoundary<
       `seampact: the framework-route check of api '${api.id}' has not run on the app that serves it; call checkFrameworkRoutes(app) once every route is added, before serving, or switch it off with 'artefacts.bootCheck.frameworkRoutes: false'.`,
     );
 
-    console.error(cause.message);
+    runtimeLog.error(cause.message);
 
     return errorResponse(undefined, hooks, api, route, unexpectedError(route, cause), reported);
   }

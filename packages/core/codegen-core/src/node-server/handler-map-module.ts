@@ -2,7 +2,7 @@ import type { ContractIR } from "@seampact/spec/ir";
 import { operationLocation } from "../ir-location.js";
 import { ExportNames } from "../planned-names.js";
 import type { Refusal } from "../refusal.js";
-import type { NodeServerOptions } from "./options.js";
+import { type NodeServerOptions, responseSettingsOf } from "./options.js";
 import { SERVER_RUNTIME_DIRECTORIES, type ServerRuntimeProfile } from "./runtime-files.js";
 import { handlerInterfaceName, operationIdentifier } from "./server-types.js";
 
@@ -50,7 +50,7 @@ export function handlerMapDeclarations(
     ...bindings,
     "};",
     "",
-    `const GENERATED_SETTINGS: ResponseSettings = ${JSON.stringify({ responses: options.responses, bodyValidation: options.bodyValidation })};`,
+    `const GENERATED_SETTINGS: ResponseSettings = ${JSON.stringify(responseSettingsOf(options))};`,
   ];
 }
 

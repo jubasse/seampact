@@ -6,6 +6,7 @@ import { reportUnexpected } from "./boundary-hooks.js";
 import { type ContractReply, isPlainObject } from "./contract-error.js";
 import type { ReportedRequest } from "./error-reply.js";
 import { NO_STORE_DIRECTIVE } from "./reply-headers.js";
+import { runtimeLog } from "./runtime-logger.js";
 
 /** The longest error body the check holds to read its code; a longer one is a violation. */
 export const MAX_CHECKED_ERROR_BODY_BYTES = 65536;
@@ -65,7 +66,7 @@ export function statusVerdict(
 
 /** Logs a violation that goes out as written under `responses: warn`; the check logs it once per reply. */
 export function warnViolation(context: BoundaryContext, reason: string): void {
-  console.warn(
+  runtimeLog.warn(
     `seampact: contract violation on operation '${context.route.id}': ${reason}; sent as written (responses: warn).`,
   );
 }
@@ -85,7 +86,7 @@ export async function reportViolation(
     context.unclaimedException ?? ({ ...reply, violation: reason } satisfies ViolatingReply);
 
   if (context.hooks.onUnexpectedError === undefined) {
-    console.error(
+    runtimeLog.error(
       `seampact: contract violation on operation '${context.route.id}': ${reason}; replaced by a 500 (responses: strict).`,
       context.unclaimedException ?? "",
     );

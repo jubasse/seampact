@@ -28,6 +28,7 @@ import {
   ETAG_HEADER,
   WEAK_ETAG_PREFIX,
 } from "./reply-headers.js";
+import { runtimeLog } from "./runtime-logger.js";
 import { IDENTITY_ENCODING } from "./transport-checks.js";
 import {
   type ByteStream,
@@ -261,7 +262,7 @@ async function settleFromStream(
       recordedReply(outgoing, read.kind === "complete" ? read.bytes : read.held),
     );
   } catch (error) {
-    console.error(
+    runtimeLog.error(
       `seampact: the reply of operation '${context.route.id}' could not be read for its idempotency record; the key is released.`,
       error,
     );

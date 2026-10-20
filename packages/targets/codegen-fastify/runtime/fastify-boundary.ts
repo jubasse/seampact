@@ -86,6 +86,7 @@ import {
   pathnameOf,
   reportedRequest,
 } from "./node-server/node-request.js";
+import { runtimeLog, useRuntimeLogger } from "./node-server/runtime-logger.js";
 import {
   bodySizeRefusal,
   charsetRefusal,
@@ -151,6 +152,8 @@ export function createFastifyBoundary<
     fastify,
     options: PluginOptions,
   ): Promise<void> => {
+    useRuntimeLogger(options.logger);
+
     const hooks = resolvedHooks(options.hooks);
     const problems = [
       ...enforcedHookBootProblems(api, hooks),
@@ -291,7 +294,7 @@ export function createFastifyBoundary<
 
     if (unbounded.length === 0) return;
 
-    console.warn(
+    runtimeLog.warn(
       `seampact: the path params ${[...new Set(unbounded)].join(", ")} of api '${api.id}' declare no maxLength and are not uuids, so a value longer than the router's maxParamLength answers 414; route it through renderPreRoutingError in frameworkErrors to answer it in the api's format.`,
     );
   }
