@@ -1,4 +1,9 @@
-import { operationLocation, type Refusal, withoutRepeats } from "@seampact/codegen-core";
+import {
+  compareCodeUnits,
+  operationLocation,
+  type Refusal,
+  withoutRepeats,
+} from "@seampact/codegen-core";
 import {
   type ApiDocument,
   type ContractIR,
@@ -21,7 +26,7 @@ import {
 import { DEFAULT_EMITTER_OPTIONS, type EmitterOptions } from "./emitter-options.js";
 import { errorResponses } from "./errors.js";
 import { collectExamples } from "./examples.js";
-import { compareCodeUnits, type JsonObject, setDefined } from "./json-value.js";
+import { type JsonObject, setDefined } from "./json-value.js";
 import { writeOperationMarks } from "./operation-marks.js";
 import { writePaging } from "./paging.js";
 import { operationParameters } from "./parameters.js";

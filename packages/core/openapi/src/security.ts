@@ -1,4 +1,4 @@
-import { below, type IrLocation } from "@seampact/codegen-core";
+import { below, compareCodeUnits, type IrLocation } from "@seampact/codegen-core";
 import {
   isKnownVariant,
   type KnownScheme,
@@ -14,7 +14,7 @@ import {
   refuseUnknown,
   writeExtension,
 } from "./emit-context.js";
-import { compareCodeUnits, copyJsonValue, type JsonObject, setDefined } from "./json-value.js";
+import { copyJsonValue, type JsonObject, setDefined } from "./json-value.js";
 import { valueSourceText } from "./ir-text.js";
 
 // The security rows of ADR 0004 section 12: `schemes` as `components.securitySchemes`, and an operation's access,

@@ -2,6 +2,7 @@
 // steps around a target's generate (IR support and link checks, header, formatting, file writer), and the
 // helpers targets share (IR locations, located refusals, planned names, property keys).
 export { apiIndexSource, type IndexedModule } from "./api-index.js";
+export { compareCodeUnits } from "./code-unit-order.js";
 export { defineTarget } from "./define-target.js";
 export type {
   Descriptor,

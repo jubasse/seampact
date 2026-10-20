@@ -40,10 +40,3 @@ export function copyOptional(value: unknown): JsonValue | undefined {
 export function setDefined(target: JsonObject, member: string, value: JsonValue | undefined): void {
   if (value !== undefined) target[member] = value;
 }
-
-/** Compares two strings by code unit, the same in every locale. */
-export function compareCodeUnits(left: string, right: string): number {
-  if (left === right) return 0;
-
-  return left < right ? -1 : 1;
-}

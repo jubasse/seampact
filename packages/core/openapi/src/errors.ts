@@ -1,4 +1,4 @@
-import { below, type IrLocation } from "@seampact/codegen-core";
+import { below, compareCodeUnits, type IrLocation } from "@seampact/codegen-core";
 import type { ErrorDecl, Operation, OperationError, WireFormat } from "@seampact/spec/ir";
 import {
   type EmitContext,
@@ -8,7 +8,7 @@ import {
   writeExtension,
 } from "./emit-context.js";
 import { originKey } from "./ir-text.js";
-import { compareCodeUnits, type JsonObject, setDefined } from "./json-value.js";
+import { type JsonObject, setDefined } from "./json-value.js";
 import { schemaReference, writeDocs } from "./schemas.js";
 import { membersWritingSlot, type SlotValue, templateSchema } from "./templates.js";
 

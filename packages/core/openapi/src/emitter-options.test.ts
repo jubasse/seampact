@@ -1,4 +1,4 @@
-import type { ContractIR } from "@seampact/spec/ir";
+import { type ContractIR, isKnownVariant } from "@seampact/spec/ir";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
@@ -222,11 +222,14 @@ describe("strict input still accepts proofs", () => {
 
   it("accepts an unknown key beside the proofs when the input ignores unknown keys", () => {
     const ir = readGoldenIr("extensions/studio");
-    const profileInput = ir.operations.find((operation) => operation.id === "profileStudio")?.input;
+    const inputUse = ir.operations.find((operation) => operation.id === "profileStudio")?.input
+      ?.schema;
 
-    if (profileInput?.schema.kind !== "ref") throw new Error("profileStudio reads a named input");
+    if (inputUse === undefined || !isKnownVariant("TypeUse", inputUse) || inputUse.kind !== "ref") {
+      throw new Error("profileStudio reads a named input");
+    }
 
-    profileInput.schema.unknownKeys = { policy: "ignore", reason: "Older clients send it." };
+    inputUse.unknownKeys = { policy: "ignore", reason: "Older clients send it." };
 
     const accepts = bodyValidator(ir, "/v1/studios/{studioId}/profile", "patch");
     const profileId = "0b6e3c1a-5f2d-4e8b-9c7a-1d2e3f4a5b6c";
