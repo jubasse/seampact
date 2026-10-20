@@ -182,7 +182,7 @@ export const DIFF_TABLE = {
     removed: { input: "C" },
   },
   principalRequirement: REQUEST_REQUIREMENT,
-  scope: { ...REQUEST_REQUIREMENT, within: INPUT_CS },
+  scope: { ...REQUEST_REQUIREMENT, within: BOTH_POSITIONS_CS },
   requirement: REQUEST_REQUIREMENT,
   binding: REQUEST_REQUIREMENT,
   csrf: REQUEST_REQUIREMENT,
@@ -250,6 +250,7 @@ export const DIFF_TABLE = {
     meta: OUTPUT_CS,
     error: OUTPUT_CS,
   },
+  // Read at the input for its request params, at the output for its page body and handler result.
   pagingStyle: {
     position: BOTH_POSITIONS_CS,
     absent: OUTPUT_CS,
@@ -275,10 +276,11 @@ export const DIFF_TABLE = {
     headerRemoved: { input: "S", none: UNREACHED },
     headerChanged: INPUT_CS,
   },
+  // A right guards requests (input) and the fields and list items it filters (output).
   right: {
-    subject: INPUT_CS,
-    guestAdded: { input: "S", none: UNREACHED },
-    guestRemoved: { input: "C", none: UNREACHED },
+    subject: BOTH_POSITIONS_CS,
+    guestAdded: { input: "S", output: "S", none: UNREACHED },
+    guestRemoved: { input: "C", output: "C", none: UNREACHED },
   },
   rule: {
     takesBucket: INPUT_CS,

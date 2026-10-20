@@ -5,6 +5,7 @@ import {
   isKnownVariant,
   type Principal,
 } from "@seampact/spec/ir";
+import type { DiffPosition } from "../result.js";
 import {
   type ChangeSite,
   compareMembers,
@@ -88,6 +89,23 @@ export function compareDeclarations(context: WalkContext, catalogue: Declaration
       ),
       origin: originOf(afterEntry),
     };
+
+    // A tagged entry of another kind holds other members: the kind change says it all.
+    if (
+      typeof CATALOGUE_DEFINITIONS[catalogue] !== "string" &&
+      beforeEntry.kind !== afterEntry.kind
+    ) {
+      compareMembers(
+        context,
+        site,
+        definitionOf(catalogue, afterEntry),
+        pointer,
+        { kind: beforeEntry.kind },
+        { kind: afterEntry.kind },
+        {},
+      );
+      continue;
+    }
 
     compareMembers(
       context,
@@ -173,9 +191,30 @@ function entryComparisons(
       };
     case "identities":
       return identityComparisons(context, site, before.identities[id], after.identities[id]);
+    case "pagings":
+      return pagingStyleComparisons(context, site);
     default:
       return {};
   }
+}
+
+// A paging style's request roles are read on input, its page body, absent policy and handler result on output.
+function pagingStyleComparisons(context: WalkContext, site: ChangeSite): MemberComparisons {
+  const at =
+    (memberCase: string, positions: readonly DiffPosition[]) =>
+    (pointer: string, before: unknown, after: unknown) =>
+      emitAt(
+        context,
+        { ...site, reaches: site.reaches.filter((reach) => positions.includes(reach.position)) },
+        { kind: "pagingStyle", case: memberCase, pointer, before, after },
+      );
+
+  return {
+    request: at("request", ["input", "none"]),
+    response: at("response", ["output", "none"]),
+    absent: at("absent", ["output", "none"]),
+    handlerResult: at("handlerResult", ["output", "none"]),
+  };
 }
 
 // A reason edit keeps guests admitted.
