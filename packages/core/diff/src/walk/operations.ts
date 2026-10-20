@@ -1,18 +1,24 @@
 import type {
   Deprecation,
+  InputField,
+  InputProof,
   Operation,
   OperationInput,
   OperationMaturity,
   Param,
   Params,
   Response,
+  ResponseHeader,
 } from "@seampact/spec/ir";
 import type { DiffPosition } from "../result.js";
 import type { DiffFact } from "../table/rows.js";
+import { accessComparisons } from "./access.js";
+import { behaviourComparisons } from "./behaviour.js";
 import { emitDefaultChange } from "./catalogue.js";
 import {
   type ChangeSite,
   compareKeptOrder,
+  compareKeyedList,
   compareMembers,
   emitAt,
   refuseUnknownValue,
@@ -21,7 +27,7 @@ import {
 import { compareText, pointerJoin } from "./json.js";
 import { compareMaturityLevel } from "./maturity.js";
 import type { ElementOrigin } from "./sink.js";
-import { compareTypeUse } from "./type-use.js";
+import { compareBound, compareTypeUse } from "./type-use.js";
 
 // The operations, matched by id: added, removed, or compared member by member with their params and body at
 // the input position and their success responses at the output position.
@@ -106,6 +112,8 @@ function compareOperation(
       });
 
   compareMembers(context, site, "Operation", pointer, before, after, {
+    ...accessComparisons(context, before, after),
+    ...behaviourComparisons(context, before, after),
     surface: route("surface"),
     method: route("method"),
     path: route("path"),
@@ -218,6 +226,14 @@ function compareParamList(
         compareTypeUse(context, paramSite, memberPointer, param.type, afterParam.type),
       default: (memberPointer) =>
         emitDefaultChange(context, paramSite, memberPointer, param.default, afterParam.default),
+      required: (memberPointer) =>
+        emitAt(context, paramSite, {
+          kind: "param.required",
+          case: afterParam.required ? "optionalToRequired" : "requiredToOptional",
+          pointer: memberPointer,
+          before: param.required,
+          after: afterParam.required,
+        }),
     });
   });
 
@@ -259,6 +275,75 @@ function compareBody(
       }),
     schema: (memberPointer) =>
       compareTypeUse(context, site, memberPointer, before.schema, after.schema),
+    bodyLimitBytes: (memberPointer) =>
+      compareBound(
+        context,
+        site,
+        memberPointer,
+        "upper",
+        before.bodyLimitBytes,
+        after.bodyLimitBytes,
+      ),
+    fields: (memberPointer) =>
+      compareInputFields(context, site, memberPointer, before.fields ?? [], after.fields ?? []),
+    proofs: (memberPointer) =>
+      compareProofs(context, site, memberPointer, before.proofs ?? [], after.proofs ?? []),
+  });
+}
+
+// A form field follows a top-level body property, whose rows classify it added or removed.
+function compareInputFields(
+  context: WalkContext,
+  site: ChangeSite,
+  pointer: string,
+  before: readonly InputField[],
+  after: readonly InputField[],
+): void {
+  const followsProperty = (entryPointer: string, field: InputField) =>
+    emitAt(context, site, {
+      kind: "annotation",
+      case: "fields",
+      pointer: entryPointer,
+      after: field.name,
+    });
+
+  compareKeyedList(pointer, before, after, {
+    keyOf: (field) => field.name,
+    added: followsProperty,
+    removed: followsProperty,
+    kept: (entryPointer, beforeField, afterField) =>
+      compareMembers(context, site, "InputField", entryPointer, beforeField, afterField, {}),
+  });
+}
+
+function compareProofs(
+  context: WalkContext,
+  site: ChangeSite,
+  pointer: string,
+  before: readonly InputProof[],
+  after: readonly InputProof[],
+): void {
+  compareKeyedList(pointer, before, after, {
+    keyOf: (proof) => proof.name,
+    added: (entryPointer, proof) =>
+      emitAt(context, site, {
+        kind: "proof",
+        case: "added",
+        pointer: entryPointer,
+        after: proof.name,
+      }),
+    removed: (entryPointer, proof) =>
+      emitAt(context, site, {
+        kind: "proof",
+        case: "removed",
+        pointer: entryPointer,
+        before: proof.name,
+      }),
+    kept: (entryPointer, beforeProof, afterProof) =>
+      compareMembers(context, site, "InputProof", entryPointer, beforeProof, afterProof, {
+        schema: (memberPointer) =>
+          compareTypeUse(context, site, memberPointer, beforeProof.schema, afterProof.schema),
+      }),
   });
 }
 
@@ -364,6 +449,58 @@ function compareResponse(
 
       compareTypeUse(context, site, memberPointer, before.body, after.body);
     },
+    headers: (memberPointer) =>
+      compareResponseHeaders(context, site, memberPointer, before.headers, after.headers),
+  });
+}
+
+// Response headers act as output properties: a client reads the required ones, a handler must send them.
+function compareResponseHeaders(
+  context: WalkContext,
+  site: ChangeSite,
+  pointer: string,
+  before: readonly ResponseHeader[],
+  after: readonly ResponseHeader[],
+): void {
+  const requiredCase = (header: ResponseHeader) => (header.required ? "required" : "optional");
+
+  compareKeyedList(pointer, before, after, {
+    keyOf: (header) => header.name.toLowerCase(),
+    added: (entryPointer, header) =>
+      emitAt(context, site, {
+        kind: "responseHeader.added",
+        case: requiredCase(header),
+        pointer: entryPointer,
+        after: header.name,
+      }),
+    removed: (entryPointer, header) =>
+      emitAt(context, site, {
+        kind: "responseHeader.removed",
+        case: requiredCase(header),
+        pointer: entryPointer,
+        before: header.name,
+      }),
+    kept: (entryPointer, beforeHeader, afterHeader) =>
+      compareMembers(context, site, "ResponseHeader", entryPointer, beforeHeader, afterHeader, {
+        name: (memberPointer) =>
+          emitAt(context, site, {
+            kind: "annotation",
+            case: "name",
+            pointer: memberPointer,
+            before: beforeHeader.name,
+            after: afterHeader.name,
+          }),
+        type: (memberPointer) =>
+          compareTypeUse(context, site, memberPointer, beforeHeader.type, afterHeader.type),
+        required: (memberPointer) =>
+          emitAt(context, site, {
+            kind: "responseHeader.required",
+            case: afterHeader.required ? "optionalToRequired" : "requiredToOptional",
+            pointer: memberPointer,
+            before: beforeHeader.required,
+            after: afterHeader.required,
+          }),
+      }),
   });
 }
 

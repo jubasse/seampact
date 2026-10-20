@@ -1,6 +1,6 @@
 import type { ContractIR } from "@seampact/spec/ir";
 import { deprecationReport } from "./deprecation/deprecation.js";
-import { applyGate, appliedPolicy } from "./gate/gate.js";
+import { appliedPolicy, applyGate } from "./gate/gate.js";
 import { type DiffOptions, resolveDiffOptions } from "./options.js";
 import type { DiffResult, DiffSide } from "./result.js";
 import { compareText } from "./walk/json.js";

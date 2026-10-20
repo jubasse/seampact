@@ -5,45 +5,12 @@ import type {
   ScalarTypeUse,
   UnionSchema,
 } from "@seampact/spec/ir";
-import { describe, expect, test } from "vitest";
-import type { DiffPosition } from "../result.js";
-import {
-  changesOf,
-  editedIr,
-  goldenIr,
-  knownSchemaOf,
-  objectSchemaOf,
-  operationOf,
-} from "../test-support.js";
-import type { DiffKind } from "./rows.js";
+import { knownSchemaOf, objectSchemaOf, operationOf } from "../test-support.js";
+import { type RowCase, testRowCases } from "./row-case.test-support.js";
 
 // One case per row, case and position of the classification table (CHK-175, CHK-176), each a golden IR pair:
 // `CreateTask` is reached from the input of createTask, `Task` from the output of getTask and the other task
 // operations, `TaskState` from the input of searchTasks and from the output through `Task`.
-
-type Edit = (ir: ContractIR) => void;
-
-type Expected = "C" | "S" | "CS" | "-" | "info";
-
-interface RowCase {
-  kind: DiffKind;
-  case: string;
-  position: DiffPosition;
-  expected: Expected;
-  note?: string;
-  /** Picks the change whose pointer holds this fragment, when the same row is also reported elsewhere. */
-  pointerFragment?: string;
-  base?: Edit;
-  after: Edit;
-}
-
-const EXPECTED_OUTCOMES: Record<Expected, { breaks: string[]; classification: string }> = {
-  C: { breaks: ["clients"], classification: "breaking" },
-  S: { breaks: ["servers"], classification: "breaking" },
-  CS: { breaks: ["clients", "servers"], classification: "breaking" },
-  "-": { breaks: [], classification: "additive" },
-  info: { breaks: [], classification: "informative" },
-};
 
 const ORIGIN = { layer: "api" as const, pointer: "/test" };
 
@@ -1027,21 +994,14 @@ const ROW_CASES: RowCase[] = [
   },
   {
     kind: "unclassified",
-    case: "Operation.errors",
-    position: "none",
+    case: "Enum.fallback",
+    position: "input",
     expected: "CS",
-    after: (ir) => operationOf(ir, "getTask").errors.pop(),
-  },
-  {
-    kind: "unclassified",
-    case: "Right.subject",
-    position: "none",
-    expected: "CS",
-    note: " for a catalogue with no row yet",
+    note: " for a member with no row",
     after: (ir) => {
-      const right = Object.values(ir.rights)[0];
+      const taskState = ir.enums.TaskState;
 
-      if (right !== undefined) right.subject = { kind: "none" };
+      if (taskState !== undefined) taskState.fallback = "open";
     },
   },
 ];
@@ -1057,32 +1017,4 @@ function addResponse(ir: ContractIR, status: number): void {
   if (response !== undefined) operation.responses.push({ ...structuredClone(response), status });
 }
 
-describe("the classification table", () => {
-  test.each(
-    ROW_CASES.map((rowCase) => ({
-      ...rowCase,
-      name: `${rowCase.kind} ${rowCase.case} at ${rowCase.position}${rowCase.note ?? ""}`,
-    })),
-  )("classifies $name", (rowCase) => {
-    const base = rowCase.base === undefined ? goldenIr() : editedIr(rowCase.base);
-    const after = editedIr(rowCase.after, base);
-    const changes = changesOf(base, after);
-    const change = changes.find(
-      (candidate) =>
-        candidate.kind === rowCase.kind &&
-        candidate.case === rowCase.case &&
-        candidate.position === rowCase.position &&
-        candidate.pointer.includes(rowCase.pointerFragment ?? ""),
-    );
-
-    const unclassified = changes.filter(
-      (candidate) => candidate.kind === "unclassified" && rowCase.kind !== "unclassified",
-    );
-
-    expect(change, `no ${rowCase.kind} ${rowCase.case} at ${rowCase.position}`).toBeDefined();
-    expect(unclassified).toEqual([]);
-    expect({ breaks: change?.breaks, classification: change?.classification }).toEqual(
-      EXPECTED_OUTCOMES[rowCase.expected],
-    );
-  });
-});
+testRowCases("the classification table", ROW_CASES);

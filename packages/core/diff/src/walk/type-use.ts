@@ -7,11 +7,13 @@ import {
   type JsonContent,
   type KnownTypeUse,
   type Pattern,
-  type RefTypeUse,
   type Refinements,
+  type RefTypeUse,
   type ScalarTypeUse,
   type TypeUse,
+  type UnknownKeys,
 } from "@seampact/spec/ir";
+import type { DiffPosition } from "../result.js";
 import type { DiffFact } from "../table/rows.js";
 import {
   type ChangeSite,
@@ -30,7 +32,20 @@ import { isSameWireEnum, isSameWireSchema } from "./same-wire.js";
 
 type RefinementCase = "tightened" | "loosened";
 
-type BoundSide = "lower" | "upper";
+export type BoundSide = "lower" | "upper";
+
+// The policy of a reference without `unknownKeys`: refused on input, left out on output.
+const DEFAULT_UNKNOWN_KEYS: Readonly<Record<DiffPosition, string>> = {
+  input: "refuse",
+  output: "ignore",
+  none: "refuse",
+};
+
+const UNKNOWN_KEYS_CASES: Readonly<Record<string, string>> = {
+  refuse: "refused",
+  ignore: "ignored",
+  keep: "kept",
+};
 
 export function compareTypeUse(
   context: WalkContext,
@@ -139,18 +154,67 @@ function compareRefUse(
 ): void {
   compareMembers(context, site, "RefTypeUse", pointer, before, after, {
     nullable,
-    schema: (memberPointer) => {
-      const sameWire = isSameWireSchema(context.before, before.schema, context.after, after.schema);
-
-      emitAt(context, site, {
-        kind: sameWire ? "name" : "type.changed",
-        case: sameWire ? "schema" : "ref",
-        pointer: memberPointer,
-        before: before.schema,
-        after: after.schema,
-      });
-    },
+    schema: (memberPointer) =>
+      compareSchemaRef(context, site, memberPointer, before.schema, after.schema),
+    unknownKeys: (memberPointer) =>
+      compareUnknownKeys(context, site, memberPointer, before.unknownKeys, after.unknownKeys),
   });
+}
+
+/** A reference moved to another schema: `name` when both have the same wire, else `type.changed`. */
+export function compareSchemaRef(
+  context: WalkContext,
+  site: ChangeSite,
+  pointer: string,
+  before: string | undefined,
+  after: string | undefined,
+): void {
+  const sameWire =
+    before !== undefined &&
+    after !== undefined &&
+    isSameWireSchema(context.before, before, context.after, after);
+
+  emitAt(context, site, {
+    kind: sameWire ? "name" : "type.changed",
+    case: sameWire ? "schema" : "ref",
+    pointer,
+    before,
+    after,
+  });
+}
+
+// The policy is read per position, an absent one being that position's default.
+function compareUnknownKeys(
+  context: WalkContext,
+  site: ChangeSite,
+  pointer: string,
+  before: UnknownKeys | undefined,
+  after: UnknownKeys | undefined,
+): void {
+  for (const reach of site.reaches) {
+    const reachSite: ChangeSite = { ...site, reaches: [reach] };
+    const beforePolicy = before?.policy ?? DEFAULT_UNKNOWN_KEYS[reach.position];
+    const afterPolicy = after?.policy ?? DEFAULT_UNKNOWN_KEYS[reach.position];
+    const policyCase = UNKNOWN_KEYS_CASES[afterPolicy];
+
+    if (beforePolicy === afterPolicy) {
+      emitAt(context, reachSite, { kind: "annotation", case: "unknownKeys", pointer });
+      continue;
+    }
+
+    if (policyCase === undefined) {
+      refuseUnknownValue(context, reachSite, pointerJoin(pointer, "policy"), afterPolicy);
+      continue;
+    }
+
+    emitAt(context, reachSite, {
+      kind: "unknownKeys",
+      case: policyCase,
+      pointer,
+      before: beforePolicy,
+      after: afterPolicy,
+    });
+  }
 }
 
 function compareFileUse(
@@ -404,7 +468,7 @@ function numericText(value: Refinements[keyof Refinements]): string | undefined 
 }
 
 // A bound added or moved inwards tightens; removed or moved outwards loosens.
-function compareBound(
+export function compareBound(
   context: WalkContext,
   site: ChangeSite,
   pointer: string,

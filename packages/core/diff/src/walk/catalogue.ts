@@ -251,6 +251,29 @@ function compareProperty(
       compareNullable(context, site, memberPointer, before.nullable, after.nullable),
     default: (memberPointer) =>
       emitDefaultChange(context, site, memberPointer, before.default, after.default),
+    restrictedTo: (memberPointer) => {
+      if (before.restrictedTo === undefined || after.restrictedTo === undefined) {
+        emitAt(context, site, {
+          kind: "fieldRight",
+          case: before.restrictedTo === undefined ? "added" : "removed",
+          pointer: memberPointer,
+          before: before.restrictedTo?.right,
+          after: after.restrictedTo?.right,
+        });
+
+        return;
+      }
+
+      compareMembers(
+        context,
+        site,
+        "FieldRestriction",
+        memberPointer,
+        before.restrictedTo,
+        after.restrictedTo,
+        {},
+      );
+    },
     deprecated: (memberPointer) => {
       if ((before.deprecated === true) === (after.deprecated === true)) return;
 

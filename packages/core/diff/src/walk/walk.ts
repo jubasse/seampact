@@ -12,7 +12,11 @@ import {
   type MemberComparison,
   type WalkContext,
 } from "./context.js";
-import { compareWholeEntries, WHOLE_ENTRY_CATALOGUES } from "./declarations.js";
+import {
+  compareDeclarations,
+  DECLARATION_CATALOGUES,
+  isDeclarationCatalogue,
+} from "./declarations.js";
 import { compareOperations } from "./operations.js";
 import { buildReachIndex } from "./reach.js";
 import { ChangeSink, NO_POSITION } from "./sink.js";
@@ -35,16 +39,13 @@ export function walkContracts(before: ContractIR, after: ContractIR): WalkOutcom
     sink,
   };
   const site: ChangeSite = { reaches: NO_POSITION };
-  const wholeEntryComparisons = Object.fromEntries(
-    Object.keys(WHOLE_ENTRY_CATALOGUES).map((catalogue) => [
-      catalogue,
-      (_pointer: string, beforeValue: unknown, afterValue: unknown) =>
-        compareWholeEntries(context, catalogue, recordOf(beforeValue), recordOf(afterValue)),
-    ]),
+  const catalogues = Object.keys(DECLARATION_CATALOGUES).filter(isDeclarationCatalogue);
+  const declarationComparisons = Object.fromEntries(
+    catalogues.map((catalogue) => [catalogue, () => compareDeclarations(context, catalogue)]),
   ) satisfies Record<string, MemberComparison>;
 
   compareMembers(context, site, "ContractIR", "", before, after, {
-    ...wholeEntryComparisons,
+    ...declarationComparisons,
     irVersion: () => undefined,
     irRevision: () => undefined,
     api: () => compareApi(context),
@@ -56,8 +57,4 @@ export function walkContracts(before: ContractIR, after: ContractIR): WalkOutcom
   });
 
   return { changes: sink.sortedChanges(), refusals: sink.refusals };
-}
-
-function recordOf(value: unknown): Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null ? { ...value } : {};
 }

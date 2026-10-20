@@ -1,6 +1,6 @@
 import { breaksText } from "../gate/gate.js";
-import { apiVersionText } from "../walk/refusals.js";
 import type { DeprecationEntry, DiffChange, DiffResult, DiffValue } from "../result.js";
+import { apiVersionText } from "../walk/refusals.js";
 
 // The text form of a diff report: one line per change, then the deprecations, then each gate failure in the
 // CLI's diagnostic form (`<code>: <message> Fix: <fix>`), then the gate outcome. A refused diff prints its
