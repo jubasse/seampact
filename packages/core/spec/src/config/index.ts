@@ -56,3 +56,4 @@ export {
   ROOT_CONFIG_SCHEMA,
   type RootConfig,
 } from "./root-config.js";
+export type { AppWarnings } from "./warnings-config.js";

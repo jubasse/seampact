@@ -70,6 +70,12 @@ An api that declares `documents` maps each document id to a path or to these opt
 | `checks.openapi` | `error`, `warning`, `disabled` | `error` | OpenAPI documents that differ. |
 | `checks.matrix` | `error`, `warning` | `warning` | A framework version seampact has not tested. |
 
+## Warnings
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `warnings.ignore` | list of strings | none | Generate warnings to silence, by form, such as `paging.sortKeys`. A warning is also silenced by its full code (`paging.sortKeys.handler`). The code of a warning is printed with it. |
+
 ## Diff
 
 | Key | Type | Default | Meaning |

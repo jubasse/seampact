@@ -51,6 +51,7 @@ export async function generateEntries(
         describe,
         entryArtefacts(artefacts, consumer.entry.id),
         appDocuments,
+        plan.config.warnings?.ignore ?? [],
       );
 
       if (generated.status === "refused") problems.push(...generated.problems);
@@ -68,6 +69,7 @@ async function generateApi(
   describe: Describe,
   artefacts: ReadonlySet<string>,
   appDocuments: readonly PlannedAppDocument[],
+  ignoredWarningForms: readonly string[],
 ): Promise<Step<GeneratedApi>> {
   const { entry, target } = consumer;
   const links = buildLinks(consumer, plannedApi, byId, describe);
@@ -105,9 +107,16 @@ async function generateApi(
       api: plannedApi.api,
       root: plannedApi.root,
       files: outcome.files,
-      warnings: outcome.warnings ?? [],
+      warnings: (outcome.warnings ?? []).filter(
+        (warning) => !isIgnoredWarning(warning, ignoredWarningForms),
+      ),
     },
   };
+}
+
+// A warning is silenced by its code or by its form: the code without the `.handler` its writer appends.
+function isIgnoredWarning(warning: GenerateWarning, ignoredForms: readonly string[]): boolean {
+  return ignoredForms.some((form) => warning.code === form || warning.code === `${form}.handler`);
 }
 
 function entryArtefacts(

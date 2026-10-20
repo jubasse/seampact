@@ -109,6 +109,23 @@ test("prints a target's warnings and still writes its files", async () => {
   );
 });
 
+test("warnings.ignore silences a warning by its form and keeps the others", async () => {
+  const warning = (code: string) => ({
+    code,
+    message: "Not enforced by the generated boundary.",
+    fix: "Handle it in the handler.",
+  });
+  const app = makeApp(
+    "warnings: { ignore: [owner] }\nsources:\n  a: { path: ./a }\ntargets:\n  - { id: server, use: fake-server, api: tasks }\n",
+    [{ name: "fake-server", warnings: [warning("owner.handler"), warning("sortKeys.handler")] }],
+  );
+  const { exitCode, output } = await generateErrors(app);
+
+  expect(exitCode).toBe(EXIT_SUCCESS);
+  expect(output).not.toContain("owner.handler");
+  expect(output).toContain("sortKeys.handler");
+});
+
 test("writes the documents an OpenAPI-only app lists, with no target package installed", async () => {
   const app = makeApp(
     "sources:\n  a: { path: ./a }\nopenapi:\n  tasksService: { path: docs/service.yaml, extensions: none }\n",
