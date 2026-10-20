@@ -47,11 +47,23 @@ function usePagingStyle(style: string): TextEdit[] {
 /** A paging style with no sort role cannot send the sort keys the tasks list declares. */
 const DROP_LIST_SORT: TextEdit = { file: TASKS_FILE, find: TASKS_LIST_SORTABLE, replace: "" };
 
+/** The search example would render `$self`, `$resource` and a merge, which the examples do not generate yet. */
+const DROP_SEARCH_EXAMPLES: TextEdit = {
+  file: "tasks/routes/tasks/search.yaml",
+  find: "examples:\n  firstPage: { status: 200, value: { $file: ../../examples/search-200.json } }\n",
+  replace: "",
+};
+
 export const PACK_VARIANTS: readonly PackVariant[] = [
   { name: "crud-rights", edits: [listPack("crud-rights")] },
   {
     name: "laravel",
     edits: [listPack("laravel"), ...usePagingStyle("laravelPages"), DROP_LIST_SORT],
+  },
+  { name: "hal", edits: [listPack("hal"), ...usePagingStyle("halPages"), DROP_SEARCH_EXAMPLES] },
+  {
+    name: "api-platform",
+    edits: [listPack("api-platform"), ...usePagingStyle("hydra"), DROP_SEARCH_EXAMPLES],
   },
   { name: "spring", edits: [listPack("spring"), ...usePagingStyle("springPage")] },
 ];

@@ -1,5 +1,5 @@
 import { below, type IrLocation } from "@seampact/codegen-core";
-import type { Operation, WireFormat } from "@seampact/spec/ir";
+import type { Operation, TypeUse, WireFormat } from "@seampact/spec/ir";
 import { addMetaSlot, successSlots, urlSchema } from "./body-slots.js";
 import {
   type EmitContext,
@@ -8,6 +8,7 @@ import {
   writeExtension,
 } from "./emit-context.js";
 import { valueSourceText } from "./ir-text.js";
+import { elementSlots, recordSlots } from "./item-slots.js";
 import { copyOptional, type JsonObject, type JsonValue, setDefined } from "./json-value.js";
 import { type SlotValue, templateSchema } from "./templates.js";
 
@@ -111,6 +112,7 @@ export function pageBodySchema(
   context: EmitContext,
   operation: Operation,
   format: WireFormat,
+  itemUse: TypeUse,
   itemSchema: JsonObject,
   status: number,
   location: IrLocation,
@@ -134,11 +136,23 @@ export function pageBodySchema(
   }
 
   const roleSlots = pagingRoleSlots(context, operation.paging?.token);
-  const slots = successSlots(context, operation, status);
+  const slots = successSlots(context, operation, status, itemUse);
 
   for (const [slot, value] of roleSlots) slots.set(slot, value);
 
-  slots.set(ITEMS_SLOT, { schema: { type: "array", items: itemSchema }, presence: "always" });
+  const record: SlotValue = { schema: itemSchema, presence: "always" };
+  const memberUrl: SlotValue = { schema: urlSchema(context), presence: "always" };
+
+  slots.set(ITEMS_SLOT, {
+    schema: { type: "array", items: itemSchema },
+    presence: "always",
+    element: elementSlots(
+      slots,
+      record,
+      recordSlots(context, operation, itemUse, below(location, "body")),
+      memberUrl,
+    ),
+  });
 
   const styleLocation = below({ member: "" }, "pagings", style.id, "response");
   const body = style.response.body;

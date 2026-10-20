@@ -1,0 +1,1195 @@
+{
+  "irRevision": 6,
+  "locations": {
+    "api#/api": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 12,
+      "file": "tasks/api.yaml",
+      "line": 2
+    },
+    "api#/api/maturity": {
+      "column": 3,
+      "endColumn": 24,
+      "endLine": 6,
+      "file": "tasks/api.yaml",
+      "line": 6
+    },
+    "api#/api/version": {
+      "column": 3,
+      "endColumn": 13,
+      "endLine": 4,
+      "file": "tasks/api.yaml",
+      "line": 4
+    },
+    "api#/schemas/ArchiveTask": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 24,
+      "file": "tasks/schemas.yaml",
+      "line": 19
+    },
+    "api#/schemas/ArchiveTask/properties/reason": {
+      "column": 5,
+      "endColumn": 59,
+      "endLine": 23,
+      "file": "tasks/schemas.yaml",
+      "line": 23
+    },
+    "api#/schemas/Channel": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 12,
+      "file": "tasks/schemas.yaml",
+      "line": 6
+    },
+    "api#/schemas/Channel/properties/channelId": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 10,
+      "file": "tasks/schemas.yaml",
+      "line": 10
+    },
+    "api#/schemas/Channel/properties/name": {
+      "column": 5,
+      "endColumn": 57,
+      "endLine": 11,
+      "file": "tasks/schemas.yaml",
+      "line": 11
+    },
+    "api#/schemas/CreateTask": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 16,
+      "file": "tasks/schemas.yaml",
+      "line": 12
+    },
+    "api#/schemas/CreateTask/properties/effort/restrictedTo": {
+      "column": 15,
+      "endColumn": 75,
+      "endLine": 15,
+      "file": "tasks/schemas.yaml",
+      "line": 15
+    },
+    "api#/schemas/Draft": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 40,
+      "file": "tasks/schemas.yaml",
+      "line": 34
+    },
+    "api#/schemas/Draft/properties/body": {
+      "column": 5,
+      "endColumn": 45,
+      "endLine": 39,
+      "file": "tasks/schemas.yaml",
+      "line": 39
+    },
+    "api#/schemas/Draft/properties/draftId": {
+      "column": 5,
+      "endColumn": 21,
+      "endLine": 38,
+      "file": "tasks/schemas.yaml",
+      "line": 38
+    },
+    "api#/schemas/Health": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 6,
+      "file": "tasks/schemas.yaml",
+      "line": 2
+    },
+    "api#/schemas/Health/properties/status": {
+      "column": 17,
+      "endColumn": 41,
+      "endLine": 5,
+      "file": "tasks/schemas.yaml",
+      "line": 5
+    },
+    "api#/schemas/PaymentEvent": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 47,
+      "file": "tasks/schemas.yaml",
+      "line": 40
+    },
+    "api#/schemas/PaymentEvent/properties/data": {
+      "column": 5,
+      "endColumn": 87,
+      "endLine": 46,
+      "file": "tasks/schemas.yaml",
+      "line": 46
+    },
+    "api#/schemas/PaymentEvent/properties/id": {
+      "column": 5,
+      "endColumn": 25,
+      "endLine": 44,
+      "file": "tasks/schemas.yaml",
+      "line": 44
+    },
+    "api#/schemas/PaymentEvent/properties/type": {
+      "column": 5,
+      "endColumn": 27,
+      "endLine": 45,
+      "file": "tasks/schemas.yaml",
+      "line": 45
+    },
+    "api#/schemas/Preferences": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 30,
+      "file": "tasks/schemas.yaml",
+      "line": 24
+    },
+    "api#/schemas/Preferences/properties/digest": {
+      "column": 5,
+      "endColumn": 30,
+      "endLine": 29,
+      "file": "tasks/schemas.yaml",
+      "line": 29
+    },
+    "api#/schemas/Preferences/properties/locale": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 28,
+      "file": "tasks/schemas.yaml",
+      "line": 28
+    },
+    "api#/schemas/TaskQuery": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 52,
+      "file": "tasks/schemas.yaml",
+      "line": 47
+    },
+    "api#/schemas/TaskQuery/properties/states": {
+      "column": 5,
+      "endColumn": 69,
+      "endLine": 51,
+      "file": "tasks/schemas.yaml",
+      "line": 51
+    },
+    "api#/schemas/TaskQuery/properties/text": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 50,
+      "file": "tasks/schemas.yaml",
+      "line": 50
+    },
+    "api#/schemas/TaskSearchResult": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 58,
+      "file": "tasks/schemas.yaml",
+      "line": 52
+    },
+    "api#/schemas/TaskSearchResult/properties/items": {
+      "column": 5,
+      "endColumn": 40,
+      "endLine": 56,
+      "file": "tasks/schemas.yaml",
+      "line": 56
+    },
+    "api#/schemas/TaskSearchResult/properties/total": {
+      "column": 5,
+      "endColumn": 41,
+      "endLine": 57,
+      "file": "tasks/schemas.yaml",
+      "line": 57
+    },
+    "api#/schemas/UpdatePreferences": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 33,
+      "file": "tasks/schemas.yaml",
+      "line": 30
+    },
+    "api#/schemas/UpdateTask": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 19,
+      "file": "tasks/schemas.yaml",
+      "line": 16
+    },
+    "api#/surfaces/app": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 97,
+      "file": "tasks/api.yaml",
+      "line": 21
+    },
+    "api#/surfaces/app/identity": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 23,
+      "file": "tasks/api.yaml",
+      "line": 23
+    },
+    "api#/surfaces/app/routes/channels/id/channelId": {
+      "column": 15,
+      "endColumn": 35,
+      "endLine": 31,
+      "file": "tasks/api.yaml",
+      "line": 31
+    },
+    "api#/surfaces/app/routes/channels/item": {
+      "column": 9,
+      "endColumn": 22,
+      "endLine": 32,
+      "file": "tasks/api.yaml",
+      "line": 32
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search": {
+      "column": 19,
+      "endColumn": 67,
+      "endLine": 57,
+      "file": "tasks/api.yaml",
+      "line": 57
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/idempotency": {
+      "column": 1,
+      "endColumn": 73,
+      "endLine": 4,
+      "file": "tasks/routes/tasks/search.yaml",
+      "line": 4
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/input": {
+      "column": 1,
+      "endColumn": 17,
+      "endLine": 6,
+      "file": "tasks/routes/tasks/search.yaml",
+      "line": 6
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/output": {
+      "column": 1,
+      "endColumn": 25,
+      "endLine": 7,
+      "file": "tasks/routes/tasks/search.yaml",
+      "line": 7
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/collection/routes/search/requires/0": {
+      "column": 12,
+      "endColumn": 33,
+      "endLine": 5,
+      "file": "tasks/routes/tasks/search.yaml",
+      "line": 5
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/concurrency": {
+      "column": 15,
+      "endColumn": 77,
+      "endLine": 41,
+      "file": "tasks/api.yaml",
+      "line": 41
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/concurrency/version": {
+      "column": 30,
+      "endColumn": 59,
+      "endLine": 41,
+      "file": "tasks/api.yaml",
+      "line": 41
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/id/taskId": {
+      "column": 21,
+      "endColumn": 35,
+      "endLine": 39,
+      "file": "tasks/api.yaml",
+      "line": 39
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/item": {
+      "column": 15,
+      "endColumn": 25,
+      "endLine": 40,
+      "file": "tasks/api.yaml",
+      "line": 40
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive": {
+      "column": 19,
+      "endColumn": 1,
+      "endLine": 74,
+      "file": "tasks/api.yaml",
+      "line": 68
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/concurrency": {
+      "column": 21,
+      "endColumn": 41,
+      "endLine": 70,
+      "file": "tasks/api.yaml",
+      "line": 70
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/input": {
+      "column": 21,
+      "endColumn": 39,
+      "endLine": 71,
+      "file": "tasks/api.yaml",
+      "line": 71
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/member/routes/archive/output": {
+      "column": 21,
+      "endColumn": 33,
+      "endLine": 72,
+      "file": "tasks/api.yaml",
+      "line": 72
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign": {
+      "column": 19,
+      "endColumn": 1,
+      "endLine": 68,
+      "file": "tasks/api.yaml",
+      "line": 60
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/input": {
+      "column": 21,
+      "endColumn": 1,
+      "endLine": 67,
+      "file": "tasks/api.yaml",
+      "line": 63
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/input/properties/userId": {
+      "column": 37,
+      "endColumn": 51,
+      "endLine": 66,
+      "file": "tasks/api.yaml",
+      "line": 66
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/output": {
+      "column": 21,
+      "endColumn": 33,
+      "endLine": 67,
+      "file": "tasks/api.yaml",
+      "line": 67
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/member/routes/assign/requires/0": {
+      "column": 32,
+      "endColumn": 45,
+      "endLine": 62,
+      "file": "tasks/api.yaml",
+      "line": 62
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge": {
+      "column": 19,
+      "endColumn": 1,
+      "endLine": 79,
+      "file": "tasks/api.yaml",
+      "line": 74
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/requires/0": {
+      "column": 32,
+      "endColumn": 84,
+      "endLine": 76,
+      "file": "tasks/api.yaml",
+      "line": 76
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/member/routes/purge/responses/204": {
+      "column": 23,
+      "endColumn": 30,
+      "endLine": 78,
+      "file": "tasks/api.yaml",
+      "line": 78
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/ops/batch": {
+      "column": 17,
+      "endColumn": 39,
+      "endLine": 54,
+      "file": "tasks/api.yaml",
+      "line": 54
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/ops/batch/maxIds": {
+      "column": 26,
+      "endColumn": 37,
+      "endLine": 54,
+      "file": "tasks/api.yaml",
+      "line": 54
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/ops/create": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 51,
+      "file": "tasks/api.yaml",
+      "line": 48
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/ops/create/input": {
+      "column": 19,
+      "endColumn": 36,
+      "endLine": 49,
+      "file": "tasks/api.yaml",
+      "line": 49
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/0": {
+      "column": 30,
+      "endColumn": 43,
+      "endLine": 50,
+      "file": "tasks/api.yaml",
+      "line": 50
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/ops/create/requires/1": {
+      "column": 45,
+      "endColumn": 58,
+      "endLine": 50,
+      "file": "tasks/api.yaml",
+      "line": 50
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/ops/get": {
+      "column": 17,
+      "endColumn": 24,
+      "endLine": 47,
+      "file": "tasks/api.yaml",
+      "line": 47
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/ops/list": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 47,
+      "file": "tasks/api.yaml",
+      "line": 43
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/ops/list/paging": {
+      "column": 19,
+      "endColumn": 54,
+      "endLine": 44,
+      "file": "tasks/api.yaml",
+      "line": 44
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/ops/list/sortable/0": {
+      "column": 30,
+      "endColumn": 39,
+      "endLine": 45,
+      "file": "tasks/api.yaml",
+      "line": 45
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/ops/update": {
+      "column": 17,
+      "endColumn": 1,
+      "endLine": 54,
+      "file": "tasks/api.yaml",
+      "line": 51
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/ops/update/input": {
+      "column": 19,
+      "endColumn": 36,
+      "endLine": 52,
+      "file": "tasks/api.yaml",
+      "line": 52
+    },
+    "api#/surfaces/app/routes/channels/member/routes/tasks/ops/update/requires/0": {
+      "column": 30,
+      "endColumn": 53,
+      "endLine": 53,
+      "file": "tasks/api.yaml",
+      "line": 53
+    },
+    "api#/surfaces/app/routes/channels/member/scopes/channel": {
+      "column": 21,
+      "endColumn": 44,
+      "endLine": 35,
+      "file": "tasks/api.yaml",
+      "line": 35
+    },
+    "api#/surfaces/app/routes/channels/ops/0": {
+      "column": 15,
+      "endColumn": 19,
+      "endLine": 33,
+      "file": "tasks/api.yaml",
+      "line": 33
+    },
+    "api#/surfaces/app/routes/channels/ops/1": {
+      "column": 21,
+      "endColumn": 24,
+      "endLine": 33,
+      "file": "tasks/api.yaml",
+      "line": 33
+    },
+    "api#/surfaces/app/routes/health": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 29,
+      "file": "tasks/api.yaml",
+      "line": 25
+    },
+    "api#/surfaces/app/routes/health/access": {
+      "column": 9,
+      "endColumn": 69,
+      "endLine": 27,
+      "file": "tasks/api.yaml",
+      "line": 27
+    },
+    "api#/surfaces/app/routes/health/output": {
+      "column": 9,
+      "endColumn": 23,
+      "endLine": 28,
+      "file": "tasks/api.yaml",
+      "line": 28
+    },
+    "api#/surfaces/app/routes/me/routes/drafts/id/draftId": {
+      "column": 19,
+      "endColumn": 35,
+      "endLine": 91,
+      "file": "tasks/api.yaml",
+      "line": 91
+    },
+    "api#/surfaces/app/routes/me/routes/drafts/item": {
+      "column": 13,
+      "endColumn": 24,
+      "endLine": 92,
+      "file": "tasks/api.yaml",
+      "line": 92
+    },
+    "api#/surfaces/app/routes/me/routes/drafts/ops/delete": {
+      "column": 15,
+      "endColumn": 40,
+      "endLine": 96,
+      "file": "tasks/api.yaml",
+      "line": 96
+    },
+    "api#/surfaces/app/routes/me/routes/drafts/ops/delete/output": {
+      "column": 25,
+      "endColumn": 38,
+      "endLine": 96,
+      "file": "tasks/api.yaml",
+      "line": 96
+    },
+    "api#/surfaces/app/routes/me/routes/drafts/ops/get": {
+      "column": 15,
+      "endColumn": 22,
+      "endLine": 95,
+      "file": "tasks/api.yaml",
+      "line": 95
+    },
+    "api#/surfaces/app/routes/me/routes/drafts/owner": {
+      "column": 13,
+      "endColumn": 26,
+      "endLine": 93,
+      "file": "tasks/api.yaml",
+      "line": 93
+    },
+    "api#/surfaces/app/routes/me/routes/preferences/item": {
+      "column": 13,
+      "endColumn": 30,
+      "endLine": 85,
+      "file": "tasks/api.yaml",
+      "line": 85
+    },
+    "api#/surfaces/app/routes/me/routes/preferences/ops/get": {
+      "column": 15,
+      "endColumn": 64,
+      "endLine": 87,
+      "file": "tasks/api.yaml",
+      "line": 87
+    },
+    "api#/surfaces/app/routes/me/routes/preferences/ops/get/cache": {
+      "column": 22,
+      "endColumn": 62,
+      "endLine": 87,
+      "file": "tasks/api.yaml",
+      "line": 87
+    },
+    "api#/surfaces/app/routes/me/routes/preferences/ops/update": {
+      "column": 15,
+      "endColumn": 51,
+      "endLine": 88,
+      "file": "tasks/api.yaml",
+      "line": 88
+    },
+    "api#/surfaces/app/routes/me/routes/preferences/ops/update/input": {
+      "column": 25,
+      "endColumn": 49,
+      "endLine": 88,
+      "file": "tasks/api.yaml",
+      "line": 88
+    },
+    "api#/surfaces/app/routes/me/routes/preferences/owner": {
+      "column": 13,
+      "endColumn": 26,
+      "endLine": 84,
+      "file": "tasks/api.yaml",
+      "line": 84
+    },
+    "api#/surfaces/hooks": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 106,
+      "file": "tasks/api.yaml",
+      "line": 97
+    },
+    "api#/surfaces/hooks/identity": {
+      "column": 5,
+      "endColumn": 21,
+      "endLine": 99,
+      "file": "tasks/api.yaml",
+      "line": 99
+    },
+    "api#/surfaces/hooks/routes/payments": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 106,
+      "file": "tasks/api.yaml",
+      "line": 101
+    },
+    "api#/surfaces/hooks/routes/payments/input": {
+      "column": 9,
+      "endColumn": 28,
+      "endLine": 103,
+      "file": "tasks/api.yaml",
+      "line": 103
+    },
+    "api#/surfaces/hooks/routes/payments/responses/204": {
+      "column": 11,
+      "endColumn": 18,
+      "endLine": 105,
+      "file": "tasks/api.yaml",
+      "line": 105
+    },
+    "pack:@seampact/pack-api-platform#/conventions/format": {
+      "column": 3,
+      "endColumn": 17,
+      "endLine": 41,
+      "file": ".packs/@seampact/pack-api-platform@0.0.0/pack.yaml",
+      "line": 41
+    },
+    "pack:@seampact/pack-api-platform#/conventions/paging/default": {
+      "column": 13,
+      "endColumn": 27,
+      "endLine": 42,
+      "file": ".packs/@seampact/pack-api-platform@0.0.0/pack.yaml",
+      "line": 42
+    },
+    "pack:@seampact/pack-api-platform#/formats/jsonld": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 24,
+      "file": ".packs/@seampact/pack-api-platform@0.0.0/pack.yaml",
+      "line": 8
+    },
+    "pack:@seampact/pack-api-platform#/pagings/hydra": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 39,
+      "file": ".packs/@seampact/pack-api-platform@0.0.0/pack.yaml",
+      "line": 26
+    },
+    "shared#/buckets/write": {
+      "column": 3,
+      "endColumn": 60,
+      "endLine": 66,
+      "file": "shared/base.yaml",
+      "line": 66
+    },
+    "shared#/conventions/batch/bodyLimit": {
+      "column": 25,
+      "endColumn": 40,
+      "endLine": 94,
+      "file": "shared/base.yaml",
+      "line": 94
+    },
+    "shared#/conventions/batch/maxIds": {
+      "column": 12,
+      "endColumn": 23,
+      "endLine": 94,
+      "file": "shared/base.yaml",
+      "line": 94
+    },
+    "shared#/conventions/bodyLimit": {
+      "column": 3,
+      "endColumn": 18,
+      "endLine": 93,
+      "file": "shared/base.yaml",
+      "line": 93
+    },
+    "shared#/conventions/cache/families": {
+      "column": 12,
+      "endColumn": 50,
+      "endLine": 95,
+      "file": "shared/base.yaml",
+      "line": 95
+    },
+    "shared#/conventions/cache/families/minute": {
+      "column": 24,
+      "endColumn": 35,
+      "endLine": 95,
+      "file": "shared/base.yaml",
+      "line": 95
+    },
+    "shared#/conventions/errors/derived": {
+      "column": 5,
+      "endColumn": 1,
+      "endLine": 104,
+      "file": "shared/base.yaml",
+      "line": 100
+    },
+    "shared#/conventions/errors/derived/schemaInvalid": {
+      "column": 7,
+      "endColumn": 1,
+      "endLine": 104,
+      "file": "shared/base.yaml",
+      "line": 101
+    },
+    "shared#/conventions/errors/every": {
+      "column": 5,
+      "endColumn": 26,
+      "endLine": 99,
+      "file": "shared/base.yaml",
+      "line": 99
+    },
+    "shared#/conventions/errors/every/0": {
+      "column": 13,
+      "endColumn": 25,
+      "endLine": 99,
+      "file": "shared/base.yaml",
+      "line": 99
+    },
+    "shared#/conventions/idempotency": {
+      "column": 3,
+      "endColumn": 94,
+      "endLine": 92,
+      "file": "shared/base.yaml",
+      "line": 92
+    },
+    "shared#/conventions/idempotency/header": {
+      "column": 18,
+      "endColumn": 41,
+      "endLine": 92,
+      "file": "shared/base.yaml",
+      "line": 92
+    },
+    "shared#/conventions/idempotency/lifetime": {
+      "column": 79,
+      "endColumn": 92,
+      "endLine": 92,
+      "file": "shared/base.yaml",
+      "line": 92
+    },
+    "shared#/conventions/idempotency/replayHeader": {
+      "column": 43,
+      "endColumn": 77,
+      "endLine": 92,
+      "file": "shared/base.yaml",
+      "line": 92
+    },
+    "shared#/conventions/paging/maxLimit": {
+      "column": 13,
+      "endColumn": 26,
+      "endLine": 91,
+      "file": "shared/base.yaml",
+      "line": 91
+    },
+    "shared#/conventions/rateLimit/header": {
+      "column": 16,
+      "endColumn": 35,
+      "endLine": 97,
+      "file": "shared/base.yaml",
+      "line": 97
+    },
+    "shared#/conventions/rateLimit/param": {
+      "column": 37,
+      "endColumn": 56,
+      "endLine": 97,
+      "file": "shared/base.yaml",
+      "line": 97
+    },
+    "shared#/conventions/rateLimit/unit": {
+      "column": 58,
+      "endColumn": 65,
+      "endLine": 97,
+      "file": "shared/base.yaml",
+      "line": 97
+    },
+    "shared#/conventions/restrictedInput": {
+      "column": 3,
+      "endColumn": 26,
+      "endLine": 96,
+      "file": "shared/base.yaml",
+      "line": 96
+    },
+    "shared#/enums/ReauthIntent": {
+      "column": 3,
+      "endColumn": 94,
+      "endLine": 110,
+      "file": "shared/base.yaml",
+      "line": 110
+    },
+    "shared#/enums/Role": {
+      "column": 3,
+      "endColumn": 88,
+      "endLine": 106,
+      "file": "shared/base.yaml",
+      "line": 106
+    },
+    "shared#/enums/Service": {
+      "column": 3,
+      "endColumn": 88,
+      "endLine": 109,
+      "file": "shared/base.yaml",
+      "line": 109
+    },
+    "shared#/enums/Surface": {
+      "column": 3,
+      "endColumn": 76,
+      "endLine": 108,
+      "file": "shared/base.yaml",
+      "line": 108
+    },
+    "shared#/enums/TaskState": {
+      "column": 3,
+      "endColumn": 91,
+      "endLine": 107,
+      "file": "shared/base.yaml",
+      "line": 107
+    },
+    "shared#/errors/api.rate_limited": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 78,
+      "file": "shared/base.yaml",
+      "line": 74
+    },
+    "shared#/errors/api.rate_limited/params": {
+      "column": 5,
+      "endColumn": 87,
+      "endLine": 76,
+      "file": "shared/base.yaml",
+      "line": 76
+    },
+    "shared#/errors/api.rate_limited/params/retryAfterMs": {
+      "column": 15,
+      "endColumn": 85,
+      "endLine": 76,
+      "file": "shared/base.yaml",
+      "line": 76
+    },
+    "shared#/errors/api.reauthentication_required": {
+      "column": 3,
+      "endColumn": 49,
+      "endLine": 78,
+      "file": "shared/base.yaml",
+      "line": 78
+    },
+    "shared#/errors/api.schema_invalid": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 74,
+      "file": "shared/base.yaml",
+      "line": 69
+    },
+    "shared#/errors/api.schema_invalid/params": {
+      "column": 5,
+      "endColumn": 31,
+      "endLine": 72,
+      "file": "shared/base.yaml",
+      "line": 72
+    },
+    "shared#/errors/api.schema_invalid/params/issues": {
+      "column": 15,
+      "endColumn": 29,
+      "endLine": 72,
+      "file": "shared/base.yaml",
+      "line": 72
+    },
+    "shared#/headers/actorSurface": {
+      "column": 3,
+      "endColumn": 79,
+      "endLine": 21,
+      "file": "shared/base.yaml",
+      "line": 21
+    },
+    "shared#/headers/deadline": {
+      "column": 3,
+      "endColumn": 66,
+      "endLine": 19,
+      "file": "shared/base.yaml",
+      "line": 19
+    },
+    "shared#/headers/trace": {
+      "column": 3,
+      "endColumn": 68,
+      "endLine": 20,
+      "file": "shared/base.yaml",
+      "line": 20
+    },
+    "shared#/identities/service": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 34,
+      "file": "shared/base.yaml",
+      "line": 27
+    },
+    "shared#/identities/service/headers/actorSurface": {
+      "column": 7,
+      "endColumn": 79,
+      "endLine": 33,
+      "file": "shared/base.yaml",
+      "line": 33
+    },
+    "shared#/identities/service/headers/deadline": {
+      "column": 7,
+      "endColumn": 45,
+      "endLine": 31,
+      "file": "shared/base.yaml",
+      "line": 31
+    },
+    "shared#/identities/service/headers/trace": {
+      "column": 7,
+      "endColumn": 26,
+      "endLine": 32,
+      "file": "shared/base.yaml",
+      "line": 32
+    },
+    "shared#/identities/stripe": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 38,
+      "file": "shared/base.yaml",
+      "line": 34
+    },
+    "shared#/identities/user": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 27,
+      "file": "shared/base.yaml",
+      "line": 24
+    },
+    "shared#/rights/roles": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 46,
+      "file": "shared/base.yaml",
+      "line": 43
+    },
+    "shared#/rights/roles/params": {
+      "column": 5,
+      "endColumn": 77,
+      "endLine": 44,
+      "file": "shared/base.yaml",
+      "line": 44
+    },
+    "shared#/rights/roles/params/allowed": {
+      "column": 15,
+      "endColumn": 75,
+      "endLine": 44,
+      "file": "shared/base.yaml",
+      "line": 44
+    },
+    "shared#/rights/tasks.read": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 48,
+      "file": "shared/base.yaml",
+      "line": 46
+    },
+    "shared#/rights/tasks.seeEffort": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 53,
+      "file": "shared/base.yaml",
+      "line": 51
+    },
+    "shared#/rights/tasks.update": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 51,
+      "file": "shared/base.yaml",
+      "line": 48
+    },
+    "shared#/rules/recentAuth": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 64,
+      "file": "shared/base.yaml",
+      "line": 60
+    },
+    "shared#/rules/recentAuth/params": {
+      "column": 5,
+      "endColumn": 47,
+      "endLine": 61,
+      "file": "shared/base.yaml",
+      "line": 61
+    },
+    "shared#/rules/recentAuth/params/intent": {
+      "column": 15,
+      "endColumn": 45,
+      "endLine": 61,
+      "file": "shared/base.yaml",
+      "line": 61
+    },
+    "shared#/rules/recentAuth/proof": {
+      "column": 5,
+      "endColumn": 64,
+      "endLine": 62,
+      "file": "shared/base.yaml",
+      "line": 62
+    },
+    "shared#/rules/throttle": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 60,
+      "file": "shared/base.yaml",
+      "line": 57
+    },
+    "shared#/schemas/Issues/items": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 23,
+      "file": "shared/schemas.yaml",
+      "line": 19
+    },
+    "shared#/schemas/Issues/items/properties/pointer": {
+      "column": 19,
+      "endColumn": 44,
+      "endLine": 22,
+      "file": "shared/schemas.yaml",
+      "line": 22
+    },
+    "shared#/schemas/Issues/items/properties/rule": {
+      "column": 46,
+      "endColumn": 68,
+      "endLine": 22,
+      "file": "shared/schemas.yaml",
+      "line": 22
+    },
+    "shared#/schemas/ServicePrincipal": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 13,
+      "file": "shared/schemas.yaml",
+      "line": 9
+    },
+    "shared#/schemas/ServicePrincipal/properties/service": {
+      "column": 17,
+      "endColumn": 43,
+      "endLine": 12,
+      "file": "shared/schemas.yaml",
+      "line": 12
+    },
+    "shared#/schemas/ServicePrincipal/properties/userId": {
+      "column": 45,
+      "endColumn": 59,
+      "endLine": 12,
+      "file": "shared/schemas.yaml",
+      "line": 12
+    },
+    "shared#/schemas/Task": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 33,
+      "file": "shared/schemas.yaml",
+      "line": 23
+    },
+    "shared#/schemas/Task/properties/createdAt": {
+      "column": 5,
+      "endColumn": 51,
+      "endLine": 32,
+      "file": "shared/schemas.yaml",
+      "line": 32
+    },
+    "shared#/schemas/Task/properties/effort": {
+      "column": 5,
+      "endColumn": 73,
+      "endLine": 30,
+      "file": "shared/schemas.yaml",
+      "line": 30
+    },
+    "shared#/schemas/Task/properties/effort/restrictedTo": {
+      "column": 42,
+      "endColumn": 71,
+      "endLine": 30,
+      "file": "shared/schemas.yaml",
+      "line": 30
+    },
+    "shared#/schemas/Task/properties/state": {
+      "column": 5,
+      "endColumn": 31,
+      "endLine": 29,
+      "file": "shared/schemas.yaml",
+      "line": 29
+    },
+    "shared#/schemas/Task/properties/taskId": {
+      "column": 5,
+      "endColumn": 19,
+      "endLine": 27,
+      "file": "shared/schemas.yaml",
+      "line": 27
+    },
+    "shared#/schemas/Task/properties/title": {
+      "column": 5,
+      "endColumn": 58,
+      "endLine": 28,
+      "file": "shared/schemas.yaml",
+      "line": 28
+    },
+    "shared#/schemas/Task/properties/version": {
+      "column": 5,
+      "endColumn": 43,
+      "endLine": 31,
+      "file": "shared/schemas.yaml",
+      "line": 31
+    },
+    "shared#/schemas/UserPrincipal": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 9,
+      "file": "shared/schemas.yaml",
+      "line": 5
+    },
+    "shared#/schemas/UserPrincipal/properties/userId": {
+      "column": 17,
+      "endColumn": 31,
+      "endLine": 8,
+      "file": "shared/schemas.yaml",
+      "line": 8
+    },
+    "shared#/schemas/WebhookCaller": {
+      "column": 1,
+      "endColumn": 1,
+      "endLine": 17,
+      "file": "shared/schemas.yaml",
+      "line": 13
+    },
+    "shared#/schemas/WebhookCaller/properties/account": {
+      "column": 17,
+      "endColumn": 42,
+      "endLine": 16,
+      "file": "shared/schemas.yaml",
+      "line": 16
+    },
+    "shared#/schemes/bearer": {
+      "column": 3,
+      "endColumn": 27,
+      "endLine": 6,
+      "file": "shared/base.yaml",
+      "line": 6
+    },
+    "shared#/schemes/csrfToken": {
+      "column": 3,
+      "endColumn": 50,
+      "endLine": 5,
+      "file": "shared/base.yaml",
+      "line": 5
+    },
+    "shared#/schemes/internalToken": {
+      "column": 3,
+      "endColumn": 53,
+      "endLine": 7,
+      "file": "shared/base.yaml",
+      "line": 7
+    },
+    "shared#/schemes/sessionCookie": {
+      "column": 3,
+      "endColumn": 73,
+      "endLine": 4,
+      "file": "shared/base.yaml",
+      "line": 4
+    },
+    "shared#/schemes/stripeSignature": {
+      "column": 3,
+      "endColumn": 1,
+      "endLine": 17,
+      "file": "shared/base.yaml",
+      "line": 8
+    },
+    "shared#/scopes/channel": {
+      "column": 3,
+      "endColumn": 54,
+      "endLine": 40,
+      "file": "shared/base.yaml",
+      "line": 40
+    }
+  }
+}

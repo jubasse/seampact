@@ -511,7 +511,9 @@ function checkItemCollectionSlot(check: PayloadCheck, written: WrittenTemplate):
 
   if (shape !== "item" || operation.resource !== undefined) return;
 
-  const used = treeNodesTemplateSlots(written.template).find(({ slot }) => slot === COLLECTION_SLOT);
+  const used = treeNodesTemplateSlots(written.template).find(
+    ({ slot }) => slot === COLLECTION_SLOT,
+  );
 
   if (used === undefined) return;
 
@@ -638,7 +640,7 @@ function checkMerge(
 }
 
 interface PayloadFault {
-  readonly rule: "format-id" | "format-merge" | "format-each";
+  readonly rule: "format-id" | "format-merge" | "format-each" | "template-slot";
   readonly message: string;
   readonly fix: string;
 }

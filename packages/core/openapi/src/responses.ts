@@ -161,10 +161,18 @@ function responseBodySchema(
   const payload = typeUseSchema(context, response.body, "shared", below(location, "body"));
 
   if (shape === "page") {
-    return pageBodySchema(context, operation, format, payload, response.status, location);
+    return pageBodySchema(
+      context,
+      operation,
+      format,
+      response.body,
+      payload,
+      response.status,
+      location,
+    );
   }
 
-  const slots = successSlots(context, operation, response.status);
+  const slots = successSlots(context, operation, response.status, response.body);
   const payloadSchema =
     shape === "table" ? { type: "object", additionalProperties: payload } : payload;
 

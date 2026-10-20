@@ -9,4 +9,4 @@
 "@seampact/openapi": patch
 ---
 
-Add the six first-party convention packs as data (CRUD rights, API Platform, Laravel, Spring, JSON:API, HAL), let a CRUD right on an unscoped route take no subject, and let the OpenAPI emitter name a template member after the collection.
+Add the six first-party convention packs as data (CRUD rights, API Platform, Laravel, Spring, JSON:API, HAL), let a CRUD right on an unscoped route take no subject, let the OpenAPI emitter write `$each`, `$resource` and a member named after the collection, and let a format read `$collection` in an item and `$self` on a route whose item has no id.

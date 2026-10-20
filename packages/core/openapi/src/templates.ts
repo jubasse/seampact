@@ -18,6 +18,8 @@ export type SlotPresence = "always" | "maybe" | "never";
 export interface SlotValue {
   schema: JsonObject;
   presence: SlotPresence;
+  /** For an array slot: the slots visible inside `$each` over it. */
+  element?: SlotSchemas;
 }
 
 export type SlotSchemas = ReadonlyMap<string, SlotValue>;
@@ -45,17 +47,49 @@ export function templateSchema(
       return { schema: { const: copyJsonValue(template.value) }, presence: "always" };
     case "object":
       return objectTemplateSchema(context, template, slots, absent, location);
-    case "array":
     case "each":
-      refuseNotEmitted(
-        context,
-        `template.${template.kind}`,
-        `A '${template.kind}' template`,
-        location,
-      );
+      return eachSchema(context, template, slots, absent, location);
+    case "array":
+      refuseNotEmitted(context, "template.array", "An 'array' template", location);
 
       return undefined;
   }
+}
+
+// `$each` over an array slot: an array of `$as` read with the slots of the element.
+function eachSchema(
+  context: EmitContext,
+  template: Extract<Template, { kind: "each" }>,
+  slots: SlotSchemas,
+  absent: Absent,
+  location: IrLocation,
+): SlotValue | undefined {
+  const array = slotSchema(context, template.of, [], slots, below(location, "of"));
+
+  if (array === undefined) return undefined;
+
+  if (array.element === undefined) {
+    refuseNotEmitted(
+      context,
+      "template.each",
+      `The slot '$${template.of}' read by '$each' in this place`,
+      below(location, "of"),
+    );
+
+    return undefined;
+  }
+
+  const rendered = templateSchema(
+    context,
+    template.as,
+    array.element,
+    absent,
+    below(location, "as"),
+  );
+
+  if (rendered === undefined || rendered.presence === "never") return undefined;
+
+  return { schema: { type: "array", items: rendered.schema }, presence: "always" };
 }
 
 function slotSchema(
