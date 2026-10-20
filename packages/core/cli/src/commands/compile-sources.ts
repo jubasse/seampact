@@ -18,8 +18,7 @@ import type { ContractIR } from "@seampact/spec/ir";
 import type { CliIo } from "../cli-io.js";
 import type { CliProblem } from "../cli-problem.js";
 import type { LoadedAppConfig } from "../config/index.js";
-
-const WORKSPACE_ENTRY = "workspace.yaml";
+import { WORKSPACE_ENTRY } from "./workspace-api-names.js";
 
 export interface CompiledApi {
   source: string;

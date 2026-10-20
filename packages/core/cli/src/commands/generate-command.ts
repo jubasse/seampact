@@ -1,17 +1,36 @@
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import {
+  commitGeneratedWrite,
   type DescribeOutcome,
   type DescriptorSet,
   type GeneratedFile,
   type GenerateWarning,
+  type PlannedWrite,
+  planGeneratedWrite,
+  type Refusal,
+  readManifest,
   type Target,
-  writeGeneratedFiles,
 } from "@seampact/codegen-core";
-import type { TargetEntry } from "@seampact/spec/config";
+import { type EmitOutcome, emitDocuments, parseEmitterOptions } from "@seampact/openapi";
+import type { OperationsFilter, TargetEntry } from "@seampact/spec/config";
+import type { ContractIR } from "@seampact/spec/ir";
 import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS, printProblems, printWarnings } from "../cli-io.js";
 import { type CliProblem, entryWhere, problemFromRefusal } from "../cli-problem.js";
-import { type LoadedAppConfig, readAppConfig, resolveTarget } from "../config/index.js";
-import { resolveEntryApis, usedSources } from "./api-refs.js";
+import {
+  defaultDocumentDirectory,
+  type LoadedAppConfig,
+  openApiApiNames,
+  type PlannedAppDocument,
+  planAppDocuments,
+  readAppConfig,
+  resolveTarget,
+} from "../config/index.js";
+import {
+  entryApiRefs,
+  resolveEntryApis,
+  sourcesHoldingRefs,
+  unknownSourceProblems,
+} from "./api-refs.js";
 import { type CompiledApi, compileSources } from "./compile-sources.js";
 import type { ConfigLocation } from "./config-location.js";
 import {
@@ -38,13 +57,50 @@ interface GeneratedOutput {
   warnings: readonly GenerateWarning[];
 }
 
+// One seampact OpenAPI document of the app, with the compiled IR of its api.
+interface PlannedDocument {
+  planned: PlannedAppDocument;
+  ir: ContractIR;
+}
+
+// One document's text, rendered in memory before anything is written.
+interface EmittedAppDocument {
+  name: string;
+  file: string;
+  text: string;
+}
+
+interface GeneratePlan {
+  entries: PlannedEntry[];
+  documents: PlannedDocument[];
+  // Where the app's default documents go: a document seampact wrote there and the config dropped is removed.
+  defaultDocumentDirectory: string;
+}
+
+// The writer's owner of a document directory's manifest.
+const DOCUMENT_OWNER = "openapi";
+
+// The documents of one directory, written by one writer call under the `openapi` owner.
+interface DocumentDirectoryWrite {
+  directory: string;
+  documents: EmittedAppDocument[];
+  write: PlannedWrite;
+}
+
+// Every write of the run, each checked, nothing written yet.
+interface PlannedWrites {
+  entries: { output: GeneratedOutput; write: PlannedWrite }[];
+  documents: DocumentDirectoryWrite[];
+}
+
 type Step<Value> = { status: "done"; value: Value } | { status: "refused"; problems: CliProblem[] };
 
 // `seampact generate`: reads the app config, resolves each target from the app's project, compiles the sources the
-// targets use, keeps each entry's operations, runs every provider's `describe` and every target's `generate` in
-// memory, then writes each entry's files only when nothing was refused (ADR 0009, ADR 0011, ADR 0015).
+// targets and the `openapi` key use, keeps each entry's operations, runs every provider's `describe`, every target's
+// `generate` and the OpenAPI emitter in memory, then writes each entry's files and the app's documents only when
+// nothing was refused and every write's checks passed (ADR 0009, ADR 0011, ADR 0015).
 export async function generateCommand(location: ConfigLocation, io: CliIo): Promise<number> {
-  const planned = await planEntries(location, io);
+  const planned = await planGenerate(location, io);
 
   if (planned.status === "refused") {
     printProblems(io, planned.problems);
@@ -52,18 +108,33 @@ export async function generateCommand(location: ConfigLocation, io: CliIo): Prom
     return EXIT_REFUSED;
   }
 
-  const generated = await generateEntries(planned.value);
+  const generated = await generateEntries(planned.value.entries);
+  const emitted = emitAppDocuments(planned.value.documents);
+  const problems = [
+    ...(generated.status === "refused" ? generated.problems : []),
+    ...(emitted.status === "refused" ? emitted.problems : []),
+  ];
 
-  if (generated.status === "refused") {
-    printProblems(io, generated.problems);
+  if (generated.status === "refused" || emitted.status === "refused") {
+    printProblems(io, problems);
 
     return EXIT_REFUSED;
   }
 
-  return writeOutputs(generated.value, io);
+  const writes = await planWrites(generated.value, emitted.value, planned.value);
+
+  if (writes.status === "refused") {
+    printProblems(io, writes.problems);
+
+    return EXIT_REFUSED;
+  }
+
+  await commitWrites(writes.value, io);
+
+  return EXIT_SUCCESS;
 }
 
-async function planEntries(location: ConfigLocation, io: CliIo): Promise<Step<PlannedEntry[]>> {
+async function planGenerate(location: ConfigLocation, io: CliIo): Promise<Step<GeneratePlan>> {
   const read = await readAppConfig(location.file, location.displayName);
 
   if (read.status === "refused") return read;
@@ -82,11 +153,15 @@ async function planEntries(location: ConfigLocation, io: CliIo): Promise<Step<Pl
 
   if (targets.status === "refused") return targets;
 
-  const used = usedSources(config);
+  const unknownSources = unknownSourceProblems(config);
 
-  if (used.status === "refused") return used;
+  if (unknownSources.length > 0) return { status: "refused", problems: unknownSources };
 
-  const compiled = await compileSources(config, used.names, io);
+  const sourceNames = await sourcesHoldingRefs(config, [
+    ...entryApiRefs(config),
+    ...openApiApiNames(config),
+  ]);
+  const compiled = await compileSources(config, sourceNames, io);
 
   if (compiled.failed) return { status: "refused", problems: compiled.problems };
 
@@ -102,10 +177,91 @@ async function planEntries(location: ConfigLocation, io: CliIo): Promise<Step<Pl
 
   if (linkProblems.length > 0) return { status: "refused", problems: linkProblems };
 
+  const documents = planDocuments(config, targets.value, compiled.apis);
+
+  if (documents.status === "refused") return documents;
+
   return {
     status: "done",
-    value: ordered.entries.map((entry) => plannedEntry(planned.value, entry.id)),
+    value: {
+      entries: ordered.entries.map((entry) => plannedEntry(planned.value, entry.id)),
+      documents: documents.value,
+      defaultDocumentDirectory: defaultDocumentDirectory(config),
+    },
   };
+}
+
+// The app's documents (A43), each with the compiled IR of its api.
+function planDocuments(
+  config: LoadedAppConfig,
+  targets: ReadonlyMap<string, Target>,
+  compiled: readonly CompiledApi[],
+): Step<PlannedDocument[]> {
+  const roles = new Map([...targets].map(([entryId, target]) => [entryId, target.metadata.role]));
+  const apiDocuments = compiled.map(({ source, api, ir }) => ({
+    source,
+    api,
+    documents: Object.keys(ir.api.documents),
+  }));
+  const plan = planAppDocuments(config, roles, apiDocuments);
+
+  if (plan.status === "refused") return plan;
+
+  const documents: PlannedDocument[] = [];
+  const problems: CliProblem[] = [];
+
+  for (const planned of plan.documents) {
+    const served = servedIr(compiledIr(compiled, planned), planned.servedOperations);
+
+    if (served.status === "refused") {
+      problems.push(
+        ...served.problems.map((problem) => ({
+          ...problem,
+          where: `openapi document '${documentName(planned)}'`,
+        })),
+      );
+    } else {
+      documents.push({ planned, ir: served.value });
+    }
+  }
+
+  return problems.length > 0
+    ? { status: "refused", problems }
+    : { status: "done", value: documents };
+}
+
+// The api's IR with the operations its server entries keep: the union of each entry's `operations`.
+function servedIr(
+  ir: ContractIR,
+  servedOperations: readonly OperationsFilter[] | undefined,
+): Step<ContractIR> {
+  if (servedOperations === undefined) return { status: "done", value: ir };
+
+  const keptIds = new Set<string>();
+
+  for (const operations of servedOperations) {
+    const filtered = filterOperations(ir, { operations });
+
+    if (filtered.status === "refused") return filtered;
+
+    for (const operation of filtered.ir.operations) keptIds.add(operation.id);
+  }
+
+  return {
+    status: "done",
+    value: {
+      ...structuredClone(ir),
+      operations: structuredClone(ir.operations.filter((operation) => keptIds.has(operation.id))),
+    },
+  };
+}
+
+function compiledIr(compiled: readonly CompiledApi[], planned: PlannedAppDocument): ContractIR {
+  const found = compiled.find((each) => each.source === planned.source && each.api === planned.api);
+
+  if (found === undefined) throw new Error(`no compiled api ${planned.source}/${planned.api}`);
+
+  return found.ir;
 }
 
 function plannedEntry(planned: ReadonlyMap<string, PlannedEntry>, entryId: string): PlannedEntry {
@@ -330,20 +486,149 @@ function memoizedDescribe(): Describe {
   };
 }
 
-// Writes entry by entry, each all-or-nothing, and stops at the first writer refusal; prints each entry's warnings.
-async function writeOutputs(outputs: readonly GeneratedOutput[], io: CliIo): Promise<number> {
+// Each planned document rendered by the OpenAPI emitter with its options; an api is emitted once per set of options.
+function emitAppDocuments(documents: readonly PlannedDocument[]): Step<EmittedAppDocument[]> {
+  const emittedApis = new Map<string, EmitOutcome>();
+  const emitted: EmittedAppDocument[] = [];
+  const problems: CliProblem[] = [];
+
+  for (const { planned, ir } of documents) {
+    const name = documentName(planned);
+    const where = `openapi document '${name}' (${planned.file})`;
+    const options = parseEmitterOptions(structuredClone(planned.options));
+
+    if (options.status === "refused") {
+      problems.push(...options.refusals.map((refusal) => problemFromRefusal(refusal, where)));
+      continue;
+    }
+
+    const key = JSON.stringify([
+      planned.source,
+      planned.api,
+      planned.servedOperations ?? null,
+      options.options,
+    ]);
+    const outcome = emittedApis.get(key) ?? emitDocuments(ir, options.options);
+
+    emittedApis.set(key, outcome);
+
+    if (outcome.status === "refused") {
+      problems.push(...outcome.refusals.map((refusal) => problemFromRefusal(refusal, where)));
+      continue;
+    }
+
+    const document = outcome.documents.find((each) => each.name === planned.document);
+
+    if (document === undefined) throw new Error(`the emitter wrote no document ${name}`);
+
+    emitted.push({ name, file: planned.file, text: document.text });
+  }
+
+  return problems.length > 0 ? { status: "refused", problems } : { status: "done", value: emitted };
+}
+
+function documentName(planned: PlannedAppDocument): string {
+  return planned.document === undefined ? planned.api : `${planned.api}.${planned.document}`;
+}
+
+// Every write checked before the first one: each entry's output directory, then each document directory, and the
+// default document directory when it holds documents seampact wrote and the config no longer plans there.
+async function planWrites(
+  outputs: readonly GeneratedOutput[],
+  documents: readonly EmittedAppDocument[],
+  plan: GeneratePlan,
+): Promise<Step<PlannedWrites>> {
+  const entries: PlannedWrites["entries"] = [];
+  const documentWrites: DocumentDirectoryWrite[] = [];
+  const problems: CliProblem[] = [];
+
   for (const output of outputs) {
-    const written = await writeGeneratedFiles(output.root, output.entryId, output.files);
+    const planned = await planGeneratedWrite(output.root, output.entryId, output.files);
     const where = entryWhere(output.entryId, output.api);
 
-    if (written.status === "refused") {
-      printProblems(
-        io,
-        written.refusals.map((refusal) => problemFromRefusal(refusal, where)),
-      );
+    if (planned.status === "refused")
+      problems.push(...planned.refusals.map((refusal) => problemFromRefusal(refusal, where)));
+    else entries.push({ output, write: planned.write });
+  }
 
-      return EXIT_REFUSED;
+  for (const [directory, directoryDocuments] of await documentDirectories(documents, plan)) {
+    const planned = await planGeneratedWrite(
+      directory,
+      DOCUMENT_OWNER,
+      directoryDocuments.map((document) => ({
+        path: basename(document.file),
+        contents: document.text,
+      })),
+    );
+
+    if (planned.status === "refused")
+      problems.push(...planned.refusals.map(documentProblem(directory)));
+    else documentWrites.push({ directory, documents: directoryDocuments, write: planned.write });
+  }
+
+  return problems.length > 0
+    ? { status: "refused", problems }
+    : { status: "done", value: { entries, documents: documentWrites } };
+}
+
+// The documents by directory, with the default directory's previous documents swept when none is planned there.
+async function documentDirectories(
+  documents: readonly EmittedAppDocument[],
+  plan: GeneratePlan,
+): Promise<Map<string, EmittedAppDocument[]>> {
+  const byDirectory = new Map<string, EmittedAppDocument[]>();
+
+  for (const document of documents) {
+    const directory = dirname(document.file);
+
+    byDirectory.set(directory, [...(byDirectory.get(directory) ?? []), document]);
+  }
+
+  const swept = plan.defaultDocumentDirectory;
+
+  if (!byDirectory.has(swept) && (await holdsWrittenDocuments(swept))) byDirectory.set(swept, []);
+
+  return byDirectory;
+}
+
+async function holdsWrittenDocuments(directory: string): Promise<boolean> {
+  const manifest = await readManifest(directory);
+
+  return manifest.status === "read" && manifest.owner === DOCUMENT_OWNER;
+}
+
+// A writer refusal in a document directory, with the fixes an app has for its documents.
+function documentProblem(directory: string): (refusal: Refusal) => CliProblem {
+  const where = `openapi documents in ${directory}`;
+
+  return (refusal) => {
+    if (refusal.code === "writer.file.not-generated") {
+      return {
+        code: "openapi.document.not-generated",
+        message: refusal.message,
+        fix: "Move or rename that file, write `openapi: none` in the app config to write no seampact document, or give the document another path in `openapi`.",
+        where,
+      };
     }
+
+    if (refusal.code === "writer.file.edited") {
+      return {
+        code: "openapi.document.edited",
+        message: refusal.message,
+        fix: "Delete the edited document so that `generate` writes it again, or give the document another path in `openapi`.",
+        where,
+      };
+    }
+
+    return problemFromRefusal(refusal, where);
+  };
+}
+
+// Writes entry by entry, then each document directory, every write already checked; prints each entry's warnings.
+async function commitWrites(writes: PlannedWrites, io: CliIo): Promise<void> {
+  for (const { output, write } of writes.entries) {
+    const written = await commitGeneratedWrite(write);
+    const where = entryWhere(output.entryId, output.api);
 
     io.stdout(
       `${where}: ${written.written.length} written, ${written.unchanged.length} unchanged, ${written.removed.length} removed (${output.root}).\n`,
@@ -354,5 +639,16 @@ async function writeOutputs(outputs: readonly GeneratedOutput[], io: CliIo): Pro
     );
   }
 
-  return EXIT_SUCCESS;
+  for (const { directory, documents, write } of writes.documents) {
+    const written = await commitGeneratedWrite(write);
+
+    for (const document of documents) {
+      const state = written.written.includes(basename(document.file)) ? "written" : "unchanged";
+
+      io.stdout(`openapi document '${document.name}': ${state} (${document.file}).\n`);
+    }
+
+    for (const removed of written.removed)
+      io.stdout(`openapi document ${join(directory, removed)}: removed.\n`);
+  }
 }

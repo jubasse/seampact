@@ -22,6 +22,7 @@ function stubTarget() {
     metadata: {
       packageName: PACKAGE_NAME,
       packageVersion: PACKAGE_VERSION,
+      role: "provider",
       irSupport: {
         irVersions: [IR_VERSION],
         irRevision: IR_REVISION,

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { mkdir, readdir, readFile, realpath, rmdir, unlink, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { lstatIfPresent } from "./file-presence.js";
 import { checkGeneratedPaths, MANIFEST_FILE_NAME } from "./generated-paths.js";
 import { readManifest, serializeManifest } from "./manifest.js";
@@ -12,9 +12,25 @@ const BYTE_ORDER_MARK = "﻿";
 const HAND_EDIT_FIX =
   "Move the hand-written code next to the generated files, then delete the edited file and generate again.";
 
-export type WriteOutcome =
-  | { status: "written"; written: string[]; unchanged: string[]; removed: string[] }
-  | Refused;
+export interface WrittenFiles {
+  status: "written";
+  written: string[];
+  unchanged: string[];
+  removed: string[];
+}
+
+export type WriteOutcome = WrittenFiles | Refused;
+
+// A write whose checks all passed, not yet done: what `commitGeneratedWrite` writes, keeps and removes.
+export interface PlannedWrite {
+  readonly rootDir: string;
+  readonly owner: string;
+  readonly files: readonly PlannedFile[];
+  readonly unchanged: readonly string[];
+  readonly removable: readonly string[];
+}
+
+export type PlanWriteOutcome = { status: "planned"; write: PlannedWrite } | Refused;
 
 interface PlannedFile {
   path: string;
@@ -32,13 +48,25 @@ export async function writeGeneratedFiles(
   owner: string,
   files: readonly GeneratedFile[],
 ): Promise<WriteOutcome> {
+  const planned = await planGeneratedWrite(outDir, owner, files);
+
+  if (planned.status === "refused") return planned;
+
+  return commitGeneratedWrite(planned.write);
+}
+
+// Every check of `writeGeneratedFiles`, with nothing written, so a caller writing
+// several directories checks them all before the first write.
+export async function planGeneratedWrite(
+  outDir: string,
+  owner: string,
+  files: readonly GeneratedFile[],
+): Promise<PlanWriteOutcome> {
   const checked = checkGeneratedPaths(files);
 
   if (checked.status === "refused") return checked;
 
-  await mkdir(resolve(outDir), { recursive: true });
-
-  const rootDir = await realpath(resolve(outDir));
+  const rootDir = await realpathOfMissing(resolve(outDir));
   const manifestRefusal = await manifestFileRefusal(rootDir);
 
   if (manifestRefusal !== undefined) return refused([manifestRefusal]);
@@ -90,6 +118,15 @@ export async function writeGeneratedFiles(
 
   if (refusals.length > 0) return refused(refusals);
 
+  return { status: "planned", write: { rootDir, owner, files: planned, unchanged, removable } };
+}
+
+// Writes a planned write: the changed files, the removal of the stale ones, then the manifest.
+export async function commitGeneratedWrite(write: PlannedWrite): Promise<WrittenFiles> {
+  const { rootDir, owner, files: planned, unchanged, removable } = write;
+
+  await mkdir(rootDir, { recursive: true });
+
   const unchangedPaths = new Set(unchanged);
   const toWrite = planned.filter((file) => !unchangedPaths.has(file.path));
 
@@ -112,9 +149,21 @@ export async function writeGeneratedFiles(
   return {
     status: "written",
     written: toWrite.map((file) => file.path),
-    unchanged,
-    removed: removable,
+    unchanged: [...unchanged],
+    removed: [...removable],
   };
+}
+
+// The real path `directory` has or will have once created: its deepest existing ancestor's real path, then the
+// rest of it, so planning a write creates nothing.
+async function realpathOfMissing(directory: string): Promise<string> {
+  if ((await lstatIfPresent(directory)) !== undefined) return realpath(directory);
+
+  const parent = dirname(directory);
+
+  if (parent === directory) return directory;
+
+  return join(await realpathOfMissing(parent), basename(directory));
 }
 
 // The manifest is the writer's own file: a link or a directory in its place is never read or written through.
@@ -204,7 +253,12 @@ function refusedState(code: string, message: string, fix: string): ExistingFileS
 async function leavesRoot(rootDir: string, filePath: string): Promise<boolean> {
   let directory = dirname(filePath);
 
-  while ((await lstatIfPresent(directory)) === undefined) directory = dirname(directory);
+  while ((await lstatIfPresent(directory)) === undefined) {
+    // The output directory itself is not created yet, so nothing below it is a link.
+    if (directory === rootDir) return false;
+
+    directory = dirname(directory);
+  }
 
   return isOutside(rootDir, await realpath(directory));
 }

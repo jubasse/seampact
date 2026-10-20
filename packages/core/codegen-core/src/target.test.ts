@@ -24,6 +24,7 @@ const noFiles = (): GenerateOutcome => ({ status: "generated", files: [] });
 const validatorsMetadata: TargetMetadata<"schemas", never, "validators"> = {
   packageName: "@seampact/validators-example",
   packageVersion: "0.0.0",
+  role: "provider",
   irSupport,
   artefacts: [{ id: "schemas", defaultOn: true }],
   consumes: {},

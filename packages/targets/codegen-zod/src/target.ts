@@ -11,6 +11,7 @@ export const target: Target = defineTarget<NoOptions, ValidatorsArtefact, never,
   metadata: {
     packageName: packageJson.name,
     packageVersion: packageJson.version,
+    role: "provider",
     irSupport: {
       irVersions: [IR_VERSION],
       irRevision: IR_REVISION,

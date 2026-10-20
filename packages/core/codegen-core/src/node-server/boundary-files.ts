@@ -99,6 +99,7 @@ export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target
     metadata: {
       packageName: targetPackage.packageName,
       packageVersion: targetPackage.packageVersion,
+      role: "server",
       irSupport: {
         irVersions: [IR_VERSION],
         irRevision: IR_REVISION,

@@ -11,7 +11,15 @@ export interface ArtefactDeclaration<Artefact extends string = string> {
   defaultOn: boolean;
 }
 
-// What the CLI reads before it calls the target (ADR 0009): its package, the IR it reads, its artefacts and links.
+// What a target generates for an app: a server serves the contract's routes, a client calls them, a provider gives
+// other targets descriptors through links (types, validators). The app's default OpenAPI documents and the merged
+// documents' contributions follow the server targets (A43).
+export const TARGET_ROLES = ["server", "client", "provider"] as const;
+
+export type TargetRole = (typeof TARGET_ROLES)[number];
+
+// What the CLI reads before it calls the target (ADR 0009): its package, its role, the IR it reads, its artefacts
+// and links.
 export interface TargetMetadata<
   Artefact extends string = string,
   Consumed extends LinkKind = LinkKind,
@@ -19,6 +27,7 @@ export interface TargetMetadata<
 > {
   packageName: string;
   packageVersion: string;
+  role: TargetRole;
   irSupport: IrSupport;
   artefacts: readonly ArtefactDeclaration<Artefact>[];
   consumes: LinkNeeds<Consumed>;
