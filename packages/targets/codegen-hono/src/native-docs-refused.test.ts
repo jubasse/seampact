@@ -13,7 +13,7 @@ describe("the hono target and nativeDocs", () => {
       ir: readGoldenIr("tasks"),
       options: {},
       links: {},
-      artefacts: new Set(["boundary", "nativeDocs"]),
+      artefacts: new Set(["boundary", "index", "nativeDocs"]),
     });
 
     expect(outcome).toMatchObject({

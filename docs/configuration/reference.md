@@ -41,7 +41,7 @@ One entry per name. Write the keys of one form.
 | `link` | map | none | The entries this one builds on: `validators: validators`. |
 | `options` | map | none | The target's own settings. |
 | `operations.include`, `operations.exclude` | list of strings | all operations | Keep or drop operations by tag or operation id. |
-| `artefacts` | map of booleans | the target's own | Switch each generated part on or off. `bootCheck` also takes `{ frameworkRoutes: false }`. |
+| `artefacts` | map of booleans | the target's own | Switch each generated part on or off. `bootCheck` also takes `{ frameworkRoutes: false }`. `index: false` skips the api `index` module of a Node server target. |
 | `allowUntested` | list of strings | none | Accept a framework major that is not tested: `nestjs@13`. |
 | `frameworkRoutes` | list | none | Server targets. Routes outside the contract that the boot check accepts: `path`, `reason`, optional `method`. |
 | `frameworkDocs` | `keep` or `off` | `keep` | Server targets. `off` drops the framework's own document. |

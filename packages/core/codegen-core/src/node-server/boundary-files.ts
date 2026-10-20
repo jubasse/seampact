@@ -40,8 +40,12 @@ export const OWN_VALIDATORS_ARTEFACT = "validators";
 /** The artefact of a target whose framework writes an OpenAPI document of its own, completed with the contract. */
 export const NATIVE_DOCS_ARTEFACT = "nativeDocs";
 
+/** The artefact of the api `index` module, which re-exports the framework module, the handlers and the hooks. */
+export const INDEX_ARTEFACT = "index";
+
 export type NodeServerArtefact =
   | BoundaryArtefact
+  | typeof INDEX_ARTEFACT
   | typeof OWN_VALIDATORS_ARTEFACT
   | typeof NATIVE_DOCS_ARTEFACT;
 
@@ -135,6 +139,7 @@ export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target
       },
       artefacts: [
         { id: BOUNDARY_ARTEFACT, defaultOn: true },
+        { id: INDEX_ARTEFACT, defaultOn: true, needs: [BOUNDARY_ARTEFACT] },
         ...(ownLibrary === undefined
           ? []
           : [{ id: OWN_VALIDATORS_ARTEFACT, defaultOn: true } as const]),
@@ -321,17 +326,21 @@ function boundaryFiles(
     { path: moduleFile(HOOKS_MODULE), contents: hooks },
     { path: moduleFile(placement.frameworkModule), contents: framework },
     ...docs,
-    {
-      path: moduleFile(INDEX_MODULE),
-      contents: apiIndexSource([
-        { module: placement.frameworkModule },
-        ...(docs.length === 0 || placement.nativeDocs === undefined
-          ? []
-          : [{ module: placement.nativeDocs.docsModule }]),
-        { module: HANDLERS_MODULE },
-        { module: HOOKS_MODULE },
-      ]),
-    },
+    ...(input.artefacts.has(INDEX_ARTEFACT)
+      ? [
+          {
+            path: moduleFile(INDEX_MODULE),
+            contents: apiIndexSource([
+              { module: placement.frameworkModule },
+              ...(docs.length === 0 || placement.nativeDocs === undefined
+                ? []
+                : [{ module: placement.nativeDocs.docsModule }]),
+              { module: HANDLERS_MODULE },
+              { module: HOOKS_MODULE },
+            ]),
+          },
+        ]
+      : []),
   ];
 
   return { status: "generated", files, warnings };

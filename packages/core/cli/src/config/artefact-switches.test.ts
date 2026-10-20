@@ -90,10 +90,24 @@ test.each([false, true])(
 
     expect(selectArtefacts(entry, NODE_SERVER_TARGET)).toEqual({
       status: "selected",
-      artefacts: new Set(["boundary"]),
+      artefacts: new Set(["boundary", "index"]),
     });
   },
 );
+
+test("switches the api index off for a Node server target", () => {
+  const entry = {
+    id: "server",
+    use: "@seampact/codegen-express",
+    api: "tasks",
+    artefacts: { index: false },
+  };
+
+  expect(selectArtefacts(entry, NODE_SERVER_TARGET)).toEqual({
+    status: "selected",
+    artefacts: new Set(["boundary"]),
+  });
+});
 
 test("refuses the boot check as a boolean for a target that declares no boot check", () => {
   expect(select({ bootCheck: false }, [{ id: "boundary", defaultOn: true }])).toMatchObject({

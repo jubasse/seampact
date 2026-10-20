@@ -361,7 +361,7 @@ export interface ReferenceServerRequest {
   readonly nativeDocsDocument?: (api: string) => NativeDocsDocument;
 }
 
-const BOUNDARY_ONLY: ReadonlySet<string> = new Set(["boundary"]);
+const BOUNDARY_ONLY: ReadonlySet<string> = new Set(["boundary", "index"]);
 
 /**
  * Writes both reference apis' generated trees into a fresh project; returns every file written. The framework-route

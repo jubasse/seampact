@@ -75,7 +75,7 @@ describe("a path the router cannot read as written is refused by name", () => {
       ir: mixedSegmentIr,
       options: { bodyValidation: true },
       links: await referenceLinks(PROJECT, "tasks"),
-      artefacts: new Set(["boundary"]),
+      artefacts: new Set(["boundary", "index"]),
     });
 
     expect(outcome).toMatchObject({
@@ -103,7 +103,7 @@ describe("with no validators link the target writes its own Ajv validators", () 
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
-      artefacts: new Set(["boundary", "validators"]),
+      artefacts: new Set(["boundary", "index", "validators"]),
     });
 
     if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
@@ -129,7 +129,7 @@ describe("with no validators link the target writes its own Ajv validators", () 
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await referenceLinks(PROJECT, "tasks"),
-      artefacts: new Set(["boundary", "validators"]),
+      artefacts: new Set(["boundary", "index", "validators"]),
     });
 
     if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
@@ -138,6 +138,27 @@ describe("with no validators link the target writes its own Ajv validators", () 
     expect(outcome.warnings).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "validators.artefact.ignored" })]),
     );
+  });
+
+  test("writes the api index only when the index artefact is on", async () => {
+    const generate = (artefacts: string[]) =>
+      referenceLinks(PROJECT, "tasks").then((links) =>
+        fastifyTarget.generate({
+          ir: readGoldenIr("tasks"),
+          options: { bodyValidation: true },
+          links,
+          artefacts: new Set(artefacts),
+        }),
+      );
+    const withIndex = await generate(["boundary", "index", "validators"]);
+    const withoutIndex = await generate(["boundary", "validators"]);
+
+    if (withIndex.status !== "generated" || withoutIndex.status !== "generated")
+      throw new Error("the reference api was refused");
+
+    expect(withIndex.files.map((file) => file.path)).toContain("index.ts");
+    expect(withoutIndex.files.map((file) => file.path)).not.toContain("index.ts");
+    expect(withoutIndex.files.map((file) => file.path)).toContain("fastify.ts");
   });
 
   test("warns that the validators artefact is ignored when it is the only one and a link is given", async () => {
@@ -160,7 +181,7 @@ describe("with no validators link the target writes its own Ajv validators", () 
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
-      artefacts: new Set(["boundary"]),
+      artefacts: new Set(["boundary", "index"]),
     });
 
     expect(outcome).toMatchObject({
@@ -174,7 +195,7 @@ describe("with no validators link the target writes its own Ajv validators", () 
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
-      artefacts: new Set(["boundary", "validators"]),
+      artefacts: new Set(["boundary", "index", "validators"]),
     });
 
     if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
@@ -220,7 +241,7 @@ describe("with no validators link the target writes its own Ajv validators", () 
       ir,
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
-      artefacts: new Set(["boundary", "validators"]),
+      artefacts: new Set(["boundary", "index", "validators"]),
     });
 
     if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
@@ -253,7 +274,7 @@ describe("with no validators link the target writes its own Ajv validators", () 
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
-      artefacts: new Set(["boundary", "validators"]),
+      artefacts: new Set(["boundary", "index", "validators"]),
     });
 
     if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));

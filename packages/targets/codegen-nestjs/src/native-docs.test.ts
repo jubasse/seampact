@@ -57,7 +57,7 @@ beforeAll(async () => {
     undefined,
     undefined,
     {
-      artefacts: new Set(["boundary", "nativeDocs"]),
+      artefacts: new Set(["boundary", "index", "nativeDocs"]),
       nativeDocsDocument: referenceNativeDocsDocument,
     },
   );
@@ -140,7 +140,7 @@ describe("the NestJS native document", () => {
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await referenceLinks(PROJECT, "tasks"),
-      artefacts: new Set(["boundary"]),
+      artefacts: new Set(["boundary", "index"]),
     });
 
     if (outcome.status !== "generated") throw new Error("the target refused the reference api");
@@ -165,7 +165,7 @@ describe("the NestJS native document", () => {
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await referenceLinks(PROJECT, "tasks"),
-      artefacts: new Set(["boundary", "nativeDocs"]),
+      artefacts: new Set(["boundary", "index", "nativeDocs"]),
       ...(nativeDocsDocument === undefined ? {} : { nativeDocsDocument }),
     });
 

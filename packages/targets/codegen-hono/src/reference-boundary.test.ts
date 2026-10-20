@@ -73,7 +73,7 @@ describe("a path the router cannot read as written is refused by name", () => {
       ir: mixedSegmentIr,
       options: { bodyValidation: true },
       links: await referenceLinks(PROJECT, "tasks"),
-      artefacts: new Set(["boundary"]),
+      artefacts: new Set(["boundary", "index"]),
     });
 
     expect(outcome).toMatchObject({
@@ -105,7 +105,7 @@ describe("a path the router cannot read as written is refused by name", () => {
       ir: literalSegmentIr,
       options: { bodyValidation: true },
       links: await referenceLinks(PROJECT, "tasks"),
-      artefacts: new Set(["boundary"]),
+      artefacts: new Set(["boundary", "index"]),
     });
 
     expect(outcome).toMatchObject({

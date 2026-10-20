@@ -66,7 +66,7 @@ describe("the generated reference boundary compiles", () => {
         ir: readGoldenIr(api),
         options: {},
         links: await referenceLinks(INDEX_PROJECT, api),
-        artefacts: new Set(["boundary"]),
+        artefacts: new Set(["boundary", "index"]),
       });
 
       expect(outcome.status).toBe("generated");
@@ -86,7 +86,7 @@ describe("with no validators link the target writes its own VineJS validators", 
       ir,
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
-      artefacts: new Set(["boundary", "validators"]),
+      artefacts: new Set(["boundary", "index", "validators"]),
     });
 
     if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
@@ -106,7 +106,7 @@ describe("with no validators link the target writes its own VineJS validators", 
       ir: readGoldenIr("tasks"),
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
-      artefacts: new Set(["boundary", "validators"]),
+      artefacts: new Set(["boundary", "index", "validators"]),
     });
 
     if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
@@ -199,7 +199,7 @@ describe("with no validators link the target writes its own VineJS validators", 
       ir,
       options: { bodyValidation: true },
       links: await typesLinkOnly(),
-      artefacts: new Set(["boundary", "validators"]),
+      artefacts: new Set(["boundary", "index", "validators"]),
     });
 
     expect(outcome).toMatchObject({
