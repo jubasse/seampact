@@ -1,4 +1,4 @@
-# 4. Write the handlers (NestJS)
+# Write the handlers (NestJS)
 
 The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows; `Notes.Status` and `Notes.ErrorCode` name them. Create `src/notes-controller.ts`.
 
@@ -89,4 +89,22 @@ npx tsc -p .
 
 You see no output.
 
-Next: [5. Run it](5-run.md)
+## Wiring reference
+
+Every server target takes two options: `bodyValidation` (check request bodies, off by default) and `responses`, which decides what happens when your handler answers something the contract does not declare: `strict` (the default) replaces the reply with a 500 in the api's format, `warn` lets it through and logs it.
+
+Install `@nestjs/platform-express` (the Fastify platform is refused at boot), `reflect-metadata` and `rxjs`, and set `experimentalDecorators` in `tsconfig.json`. Import the generated module with your hooks, start the app with `rawBody: true` so signed routes see the bytes that were signed, and register `preRoutingFilter`. Without the filter, malformed JSON and unknown routes under the api's prefix answer with NestJS's own error body instead of the contract's format.
+
+```ts
+@Module({ imports: [TasksNest.SeampactModule.forRoot(tasksHooks())], controllers: [TasksController] })
+export class AppModule {}
+
+const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
+
+app.useBodyParser("json", { limit: TasksNest.LARGEST_BODY_LIMIT, strict: false });
+app.useGlobalFilters(TasksNest.preRoutingFilter);
+```
+
+To complete `@nestjs/swagger`, see [OpenAPI and docs](../configuration/openapi-and-docs.md).
+
+Next: [run it](../getting-started/generate-and-run.md#run-it).

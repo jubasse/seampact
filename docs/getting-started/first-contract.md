@@ -1,4 +1,4 @@
-# 2. Write the contract
+# Write the contract
 
 The contract describes one collection, `notes`, with four operations. Run the commands in the app folder. Create `contract/api.yaml`.
 
@@ -62,4 +62,4 @@ npx seampact lint
 
 You see `Linted 1 api(s): 0 error(s), 0 warning(s).`
 
-Next: [3. Generate the code](3-generate.md)
+Next: [generate the code and run it](generate-and-run.md)

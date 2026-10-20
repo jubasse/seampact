@@ -1,8 +1,8 @@
-# 4. Write the handlers (Hono)
+# Write the handlers (Hono)
 
-This page replaces the NestJS page. Two earlier steps change when you use Hono 4 on Node.
+This page replaces the NestJS page. Two earlier pages change when you use Hono 4 on Node.
 
-In step 1, use these dependencies in `package.json`. You do not need `experimentalDecorators` in `tsconfig.json`.
+In [Install](../getting-started/install.md), use these dependencies in `package.json`. You do not need `experimentalDecorators` in `tsconfig.json`.
 
 ```json
   "dependencies": {
@@ -12,7 +12,7 @@ In step 1, use these dependencies in `package.json`. You do not need `experiment
   },
 ```
 
-In step 3, the `server` target uses `@seampact/codegen-hono`. It has no `bodyValidation` option.
+In [Generate](../getting-started/generate-and-run.md), the `server` target uses `@seampact/codegen-hono`. It has no `bodyValidation` option.
 
 ```yaml
   - id: server
@@ -94,4 +94,19 @@ npx tsc -p .
 
 You see no output.
 
-Next: [5. Run it](5-run.md)
+## Wiring reference
+
+Every server target takes two options: `bodyValidation` (check request bodies, off by default) and `responses`, which decides what happens when your handler answers something the contract does not declare: `strict` (the default) replaces the reply with a 500 in the api's format, `warn` lets it through and logs it.
+
+Register the routes on the app that serves, and pass the client address your runtime gives (here `@hono/node-server`). The boundary reads the raw bytes of signed routes itself; render refusals raised before a route ran from your `onError`.
+
+```ts
+TasksHono.registerRoutes(app, {
+  handlers: { TasksEndpoints: tasksHandlers },
+  hooks: tasksHooks(),
+  clientAddress: (c) => getConnInfo(c).remote.address,
+});
+app.onError(async (error, c) => (await TasksHono.renderPreRoutingError(c, error)) ?? c.text("error", 500));
+```
+
+Next: [run it](../getting-started/generate-and-run.md#run-it).

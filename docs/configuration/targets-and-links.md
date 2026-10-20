@@ -1,4 +1,25 @@
-# Which generators combine
+# Targets and links
+
+A target generates one kind of code. A link says which other target it builds on.
+
+## Add a target
+
+Each target generates one kind of code.
+
+```yaml
+targets:
+  - id: types
+    use: "@seampact/codegen-ts"
+    apis: [notes]
+```
+
+- `id` names the entry and its folder.
+- `use` is the target's package.
+- `apis` lists the contracts it covers (`api: notes` for one).
+- `link` names the entries it builds on: `types: types`, `validators: validators`.
+- `options` holds the target's own settings, for example `bodyValidation: true` on the NestJS server.
+
+## Which generators combine
 
 Every generator renders the default format and every format and paging style your contract or a pack declares, including your own page shapes: formats are data in the contract, not code in a generator. What differs is how each one plugs into its framework and what it links to. Supported framework versions are listed per release in `@seampact/spec`'s `compatibility/matrix.json`, and the CLI refuses a combination the matrix records as incompatible, and warns on a framework version it has not tested.
 
@@ -23,4 +44,3 @@ Every generator renders the default format and every format and paging style you
 | `seampact/api-platform` | resource metadata, DTOs, a listener and a decorated provider around your providers and processors | nothing | API Platform's serializer, JSON-LD and Hydra |
 
 In an app config, a link names the other entry's `id`: `link: { validators: validators }` for a server, `link: { client: client }` for React or Vue.
-
