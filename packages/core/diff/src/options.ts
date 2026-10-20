@@ -1,4 +1,3 @@
-import { isIrCalendarDate } from "@seampact/spec/ir";
 import {
   DEFAULT_DIFF_EXEMPTIONS,
   DEFAULT_DIFF_GATE,
@@ -7,6 +6,7 @@ import {
   type DiffExemption,
   type DiffGateScope,
 } from "@seampact/spec/config";
+import { isIrCalendarDate } from "@seampact/spec/ir";
 
 export type { DiffExemption, DiffGateScope };
 

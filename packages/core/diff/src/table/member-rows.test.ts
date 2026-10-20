@@ -1,4 +1,4 @@
-import { IR_SCHEMA_DOCUMENTS, SOURCE_MAP_SCHEMA_ID, type SchemaNode } from "@seampact/spec/ir";
+import { IR_SCHEMA_DOCUMENTS, type SchemaNode, SOURCE_MAP_SCHEMA_ID } from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import { MEMBER_ROWS } from "./member-rows.js";
 

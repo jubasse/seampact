@@ -21,7 +21,22 @@ export type DiffCell = "C" | "S" | "CS" | "-" | "info" | ConditionalCell;
 
 export type DiffCaseCells = { readonly [position in DiffPosition]?: DiffCell };
 
-const BOTH_POSITIONS_CS: DiffCaseCells = { input: "CS", output: "CS" };
+// A schema or declaration reached by no operation in either IR changes no request or response: `info` at `none`.
+const UNREACHED = "info";
+
+const BOTH_POSITIONS_CS: DiffCaseCells = { input: "CS", output: "CS", none: UNREACHED };
+
+const INPUT_CS: DiffCaseCells = { input: "CS", none: UNREACHED };
+
+const OUTPUT_CS: DiffCaseCells = { output: "CS", none: UNREACHED };
+
+// A request requirement: adding one refuses requests `before` clients send, removing one lets handlers receive
+// requests they were written to never see.
+const REQUEST_REQUIREMENT = {
+  added: { input: "C" },
+  removed: { input: "S" },
+  changed: { input: "CS" },
+} as const satisfies Record<string, DiffCaseCells>;
 
 export const DIFF_TABLE = {
   "operation.added": { added: { none: "-" } },
@@ -32,26 +47,29 @@ export const DIFF_TABLE = {
     surface: { none: "CS" },
     surfacePrefix: { none: "CS" },
     pathVersion: { none: "CS" },
+    // Whether the request may be retried and cached as a read.
+    safe: { none: "CS" },
   },
   "operation.format": { changed: { none: "CS" } },
   "property.added": {
-    optional: { input: "-", output: "-" },
-    required: { input: "C", output: "S" },
+    optional: { input: "-", output: "-", none: UNREACHED },
+    required: { input: "C", output: "S", none: UNREACHED },
   },
   "property.removed": {
-    required: { input: "CS", output: "C" },
+    required: { input: "CS", output: "C", none: UNREACHED },
     optional: {
       input: { when: "afterRefusesUnknownKeys", holds: "C", otherwise: "-" },
       output: "-",
+      none: UNREACHED,
     },
   },
   "property.required": {
-    optionalToRequired: { input: "C", output: "S" },
-    requiredToOptional: { input: "S", output: "C" },
+    optionalToRequired: { input: "C", output: "S", none: UNREACHED },
+    requiredToOptional: { input: "S", output: "C", none: UNREACHED },
   },
   nullable: {
-    added: { input: "S", output: "C" },
-    removed: { input: "C", output: "S" },
+    added: { input: "S", output: "C", none: UNREACHED },
+    removed: { input: "C", output: "S", none: UNREACHED },
   },
   "type.changed": {
     kind: BOTH_POSITIONS_CS,
@@ -66,10 +84,12 @@ export const DIFF_TABLE = {
     int64Wire: BOTH_POSITIONS_CS,
     outputEnums: BOTH_POSITIONS_CS,
     urls: BOTH_POSITIONS_CS,
+    // A query param's or a form field's wire form (style, explode, brackets).
+    wire: BOTH_POSITIONS_CS,
   },
   refinement: {
-    tightened: { input: "C", output: "S" },
-    loosened: { input: "S", output: "C" },
+    tightened: { input: "C", output: "S", none: UNREACHED },
+    loosened: { input: "S", output: "C", none: UNREACHED },
     // A multipleOf neither a multiple nor a divisor of the old one: values both gained and lost.
     changed: BOTH_POSITIONS_CS,
   },
@@ -78,18 +98,19 @@ export const DIFF_TABLE = {
     added: {
       input: "S",
       output: { when: "outputEnumsOpenInBoth", holds: "-", otherwise: "C" },
+      none: UNREACHED,
     },
-    removed: { input: "C", output: "S" },
+    removed: { input: "C", output: "S", none: UNREACHED },
   },
   "union.variant": {
-    added: { input: "S", output: "C" },
-    removed: { input: "C", output: "S" },
+    added: { input: "S", output: "C", none: UNREACHED },
+    removed: { input: "C", output: "S", none: UNREACHED },
   },
   "union.tag": { changed: BOTH_POSITIONS_CS },
   "default.changed": {
-    added: { input: "C", output: "info" },
-    changed: { input: "C", output: "info" },
-    removed: { input: "C", output: "info" },
+    added: { input: "C", output: "info", none: UNREACHED },
+    changed: { input: "C", output: "info", none: UNREACHED },
+    removed: { input: "C", output: "info", none: UNREACHED },
   },
   "param.added": {
     optional: { input: "-" },
@@ -99,17 +120,174 @@ export const DIFF_TABLE = {
     required: { input: "CS" },
     optional: { input: { when: "afterRefusesUnknownQuery", holds: "C", otherwise: "-" } },
   },
+  "param.required": {
+    optionalToRequired: { input: "C" },
+    requiredToOptional: { input: "S" },
+  },
+  // The policy for undeclared query keys.
+  unknownQuery: {
+    refused: { input: "C" },
+    ignored: { input: "-" },
+  },
+  // The policy for undeclared keys of a referenced object, absent read as `refuse` on input and `ignore` on output.
+  unknownKeys: {
+    refused: { input: "C", output: "S", none: UNREACHED },
+    ignored: { input: "-", output: "-", none: UNREACHED },
+    kept: { input: "S", output: "C", none: UNREACHED },
+  },
   // A body has one media type: a change removes the one a client sends.
   body: {
     added: { input: "C" },
     removed: { input: "CS" },
     mediaRemoved: { input: "C" },
+    // The handler reads the raw bytes, or stops getting them.
+    rawBody: { input: "S" },
+  },
+  // A body rule proof (a field or header the rule checks).
+  proof: {
+    added: { input: "C" },
+    removed: { input: "CS" },
   },
   response: {
     added: { output: "C" },
     removed: { output: "S" },
     changed: { output: "CS" },
     mediaChanged: { output: "CS" },
+    // The format shape (item, list, page, empty...) that wraps the payload.
+    shape: { output: "CS" },
+  },
+  "responseHeader.added": {
+    optional: { output: "-" },
+    required: { output: "S" },
+  },
+  "responseHeader.removed": {
+    required: { output: "C" },
+    optional: { output: "-" },
+  },
+  "responseHeader.required": {
+    optionalToRequired: { output: "S" },
+    requiredToOptional: { output: "C" },
+  },
+  "responseHeader.semantic": { changed: { output: "CS" } },
+  // Access ranks public, optional with a refused credential read as anonymous, optional rejecting it, identity.
+  access: {
+    tightened: { input: "C" },
+    loosened: { input: "S" },
+    identity: { input: "CS" },
+    schemeAdded: { input: "-" },
+    schemeRemoved: { input: "C" },
+  },
+  callerKind: {
+    added: { input: "S" },
+    removed: { input: "C" },
+  },
+  principalRequirement: REQUEST_REQUIREMENT,
+  scope: { ...REQUEST_REQUIREMENT, within: INPUT_CS },
+  requirement: REQUEST_REQUIREMENT,
+  binding: REQUEST_REQUIREMENT,
+  csrf: REQUEST_REQUIREMENT,
+  owner: REQUEST_REQUIREMENT,
+  concurrency: REQUEST_REQUIREMENT,
+  // A field right restricts a field: an input one refuses or strips it, an output one leaves it out.
+  fieldRight: {
+    added: { input: "C", output: "C", none: UNREACHED },
+    removed: { input: "S", output: "-", none: UNREACHED },
+    changed: { input: "CS", output: "CS", none: UNREACHED },
+  },
+  // The right filtering a list's items.
+  filteredBy: {
+    added: { output: "C" },
+    removed: { output: "S" },
+    changed: { output: "CS" },
+  },
+  idempotency: {
+    addedRequired: { input: "C" },
+    addedOptional: { input: "-" },
+    removed: { input: "S" },
+    optionalToRequired: { input: "C" },
+    requiredToOptional: { input: "S" },
+    header: { input: "CS" },
+    replayHeader: { output: "C" },
+    lifetimeShortened: { input: "S" },
+    lifetimeLengthened: { input: "-" },
+    enforceDropped: { input: "S" },
+    enforceAdded: { input: "-" },
+  },
+  paging: {
+    added: { input: "CS" },
+    removed: { input: "CS" },
+    style: { input: "CS" },
+    token: { input: "CS" },
+    defaultLimit: { input: "CS" },
+    overLimitRejected: { input: "C" },
+    overLimitClamped: { input: "-" },
+    sortKeyAdded: { input: "S" },
+    sortKeyRemoved: { input: "C" },
+    sortKeyChanged: { input: "CS" },
+  },
+  // An error code the operation answers, then its declaration, classified at the operations answering it.
+  error: {
+    added: { output: "C" },
+    removed: { output: "S" },
+    roles: { output: "CS" },
+    retryHeaderAdded: { output: "-" },
+    retryHeaderRemoved: { output: "C" },
+    retryHeaderChanged: { output: "CS" },
+    status: OUTPUT_CS,
+    nature: { output: "C", none: UNREACHED },
+    family: { output: "C", none: UNREACHED },
+  },
+  // Declarations, classified at the operations using them; a catalogue entry added or removed is classified
+  // where an operation starts or stops naming it.
+  declaration: {
+    added: { none: UNREACHED },
+    removed: { none: UNREACHED },
+  },
+  format: {
+    media: OUTPUT_CS,
+    absent: OUTPUT_CS,
+    success: OUTPUT_CS,
+    meta: OUTPUT_CS,
+    error: OUTPUT_CS,
+  },
+  pagingStyle: {
+    position: BOTH_POSITIONS_CS,
+    absent: OUTPUT_CS,
+    request: INPUT_CS,
+    response: OUTPUT_CS,
+    handlerResult: { output: "S", none: UNREACHED },
+  },
+  scheme: {
+    kind: { input: "C", none: UNREACHED },
+    name: { input: "C", none: UNREACHED },
+    csrf: { input: "C", none: UNREACHED },
+    signature: INPUT_CS,
+  },
+  identity: {
+    kind: INPUT_CS,
+    schemeAdded: { input: "-", none: UNREACHED },
+    schemeRemoved: { input: "C", none: UNREACHED },
+    schemeRoles: INPUT_CS,
+    principal: INPUT_CS,
+    unknownKeys: INPUT_CS,
+    headerAddedRequired: { input: "C", none: UNREACHED },
+    headerAddedOptional: { input: "-", none: UNREACHED },
+    headerRemoved: { input: "S", none: UNREACHED },
+    headerChanged: INPUT_CS,
+  },
+  right: {
+    subject: INPUT_CS,
+    guestAdded: { input: "S", none: UNREACHED },
+    guestRemoved: { input: "C", none: UNREACHED },
+  },
+  rule: {
+    takesBucket: INPUT_CS,
+    proof: INPUT_CS,
+  },
+  bucket: { key: INPUT_CS },
+  header: {
+    semantic: INPUT_CS,
+    name: INPUT_CS,
   },
   maturity: {
     lowered: { none: "C" },
@@ -135,6 +313,8 @@ export const DIFF_TABLE = {
     values: { input: "info", output: "info", none: "info" },
     params: { input: "info" },
     packs: { none: "info" },
+    scopes: { input: "info" },
+    requires: { input: "info" },
   },
   name: { any: { input: "info", output: "info", none: "info" } },
   annotation: { any: { input: "info", output: "info", none: "info" } },

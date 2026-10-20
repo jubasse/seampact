@@ -1,9 +1,11 @@
 import { type ContractIR, isKnownVariant, type Operation, type TypeUse } from "@seampact/spec/ir";
 import { type ChangeReach, NO_POSITION } from "./sink.js";
 
-// Which operations reach each named schema, enum and scalar, and from which position: input is the path, query
-// and header params and the request body, output the success responses, their headers and the error params.
-// A catalogue entry's change is classified once per position, for the operations reaching it there in both IRs.
+// Which operations reach each named schema, enum, scalar and declaration, and from which position: input is the
+// path, query and header params, the request body and what admits a request (identity, schemes, rights, rules,
+// scopes, buckets and their schemas), output the success responses, their headers, the error codes and params and
+// the wire format. A catalogue entry's change is classified once per position, for the operations reaching it
+// there in both IRs.
 
 type ReachPosition = "input" | "output";
 
@@ -14,7 +16,10 @@ interface ReachEntry {
   readonly refusesUnknownKeys: boolean;
 }
 
-/** Entries by reach key (`schemas/<id>`, `enums/<id>`, `scalars/<id>`, `wire/int64`, `wire/outputEnums`). */
+/**
+ * Entries by reach key (`schemas/<id>`, `enums/<id>`, `scalars/<id>`, `<declaration catalogue>/<id>`,
+ * `wire/int64`, `wire/outputEnums`).
+ */
 export type ReachIndex = ReadonlyMap<string, ReadonlyMap<string, ReachEntry>>;
 
 const UNKNOWN_KEYS_REFUSE = "refuse";
@@ -29,6 +34,11 @@ export function enumReachKey(id: string): string {
 
 export function scalarReachKey(id: string): string {
   return `scalars/${id}`;
+}
+
+/** The reach key of an entry of a declaration catalogue (`errors`, `identities`, `formats`...). */
+export function declarationReachKey(catalogue: string, id: string): string {
+  return `${catalogue}/${id}`;
 }
 
 export const INT64_REACH_KEY = "wire/int64";
@@ -132,10 +142,169 @@ function visitOperation(
   }
 
   for (const error of operation.errors) {
-    const params = ir.errors[error.code]?.params;
+    const declaration = ir.errors[error.code];
 
-    if (params !== undefined) visitSchema(ir, params, output, index);
+    addReach(index, declarationReachKey("errors", error.code), output);
+
+    if (declaration?.natureName !== undefined)
+      addReach(index, declarationReachKey("natures", declaration.natureName), output);
+
+    if (declaration?.params !== undefined) visitSchema(ir, declaration.params, output, index);
   }
+
+  visitOperationDeclarations(ir, operation, input, output, index);
+}
+
+function visitOperationDeclarations(
+  ir: ContractIR,
+  operation: Operation,
+  input: ReachEntry,
+  output: ReachEntry,
+  index: Map<string, Map<string, ReachEntry>>,
+): void {
+  addReach(index, declarationReachKey("formats", operation.format), output);
+
+  if (operation.paging?.style !== undefined) {
+    addReach(index, declarationReachKey("pagings", operation.paging.style), input);
+    addReach(index, declarationReachKey("pagings", operation.paging.style), output);
+  }
+
+  if (isKnownVariant("Access", operation.access) && operation.access.kind !== "public") {
+    visitIdentity(ir, operation.access.identity, input, index);
+
+    for (const scheme of operation.access.schemes) visitScheme(ir, scheme, input, index);
+  }
+
+  for (const requirement of operation.requires) {
+    if (!isKnownVariant("Requirement", requirement)) continue;
+
+    if (requirement.kind === "right") {
+      visitRight(ir, requirement.right, input, index);
+      continue;
+    }
+
+    visitRule(ir, requirement.rule, input, index);
+
+    if (requirement.bucket !== undefined)
+      addReach(index, declarationReachKey("buckets", requirement.bucket), input);
+  }
+
+  for (const fieldRight of operation.fieldRights)
+    visitRight(ir, fieldRight.right, fieldRight.direction === "output" ? output : input, index);
+
+  for (const sortKey of operation.paging?.sortKeys ?? [])
+    if (sortKey.right !== undefined) visitRight(ir, sortKey.right, input, index);
+
+  if (operation.filteredBy !== undefined) visitRight(ir, operation.filteredBy, output, index);
+
+  for (const scope of operation.scopes) visitScope(ir, scope.scope, input, index);
+}
+
+function visitIdentity(
+  ir: ContractIR,
+  id: string,
+  entry: ReachEntry,
+  index: Map<string, Map<string, ReachEntry>>,
+): void {
+  const identity = ir.identities[id];
+
+  if (!addReach(index, declarationReachKey("identities", id), entry)) return;
+
+  if (identity === undefined || !isKnownVariant("Identity", identity)) return;
+
+  const schemes =
+    identity.kind === "signed"
+      ? [identity.signed]
+      : [...identity.schemes.read, ...identity.schemes.write, ...identity.schemes.optionalRead];
+
+  for (const scheme of schemes) visitScheme(ir, scheme, entry, index);
+
+  if (isKnownVariant("Principal", identity.principal)) {
+    const principalSchemas =
+      identity.principal.kind === "schema"
+        ? [identity.principal.schema]
+        : Object.values(identity.principal.variants);
+
+    for (const schema of principalSchemas) visitSchema(ir, schema, entry, index);
+  }
+
+  for (const header of identity.headers) {
+    const declaration = ir.headers[header.header];
+
+    addReach(index, declarationReachKey("headers", header.header), entry);
+
+    if (header.schema !== undefined) visitTypeUse(ir, header.schema, entry, index);
+
+    if (declaration?.schema !== undefined) visitTypeUse(ir, declaration.schema, entry, index);
+  }
+}
+
+function visitScheme(
+  ir: ContractIR,
+  id: string,
+  entry: ReachEntry,
+  index: Map<string, Map<string, ReachEntry>>,
+): void {
+  if (!addReach(index, declarationReachKey("schemes", id), entry)) return;
+
+  const scheme = ir.schemes[id];
+
+  if (scheme !== undefined && isKnownVariant("Scheme", scheme) && scheme.kind === "cookie") {
+    if (scheme.csrf !== undefined) visitScheme(ir, scheme.csrf, entry, index);
+  }
+}
+
+function visitRight(
+  ir: ContractIR,
+  id: string,
+  entry: ReachEntry,
+  index: Map<string, Map<string, ReachEntry>>,
+): void {
+  if (!addReach(index, declarationReachKey("rights", id), entry)) return;
+
+  const right = ir.rights[id];
+
+  if (right === undefined) return;
+
+  if (right.params !== undefined) visitSchema(ir, right.params, entry, index);
+
+  if (!isKnownVariant("RightSubject", right.subject)) return;
+
+  if (right.subject.kind === "resource") visitTypeUse(ir, right.subject.idSchema, entry, index);
+
+  if (right.subject.kind === "scope") visitScope(ir, right.subject.scope, entry, index);
+}
+
+function visitRule(
+  ir: ContractIR,
+  id: string,
+  entry: ReachEntry,
+  index: Map<string, Map<string, ReachEntry>>,
+): void {
+  if (!addReach(index, declarationReachKey("rules", id), entry)) return;
+
+  const rule = ir.rules[id];
+
+  if (rule?.params !== undefined) visitSchema(ir, rule.params, entry, index);
+
+  if (rule?.proof !== undefined) visitTypeUse(ir, rule.proof.schema, entry, index);
+}
+
+function visitScope(
+  ir: ContractIR,
+  id: string,
+  entry: ReachEntry,
+  index: Map<string, Map<string, ReachEntry>>,
+): void {
+  if (!addReach(index, declarationReachKey("scopes", id), entry)) return;
+
+  const scope = ir.scopes[id];
+
+  if (scope === undefined) return;
+
+  visitTypeUse(ir, scope.idSchema, entry, index);
+
+  if (scope.within !== undefined) visitScope(ir, scope.within, entry, index);
 }
 
 function visitTypeUse(

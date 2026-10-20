@@ -1,8 +1,8 @@
 import type { ContractIR } from "@seampact/spec/ir";
 import { DIFF_CODES } from "../diff-codes.js";
 import type { DiffRefusal } from "../result.js";
-import type { DiffKind } from "../table/rows.js";
 import { memberRow } from "../table/member-rows.js";
+import type { DiffKind } from "../table/rows.js";
 import { isSameJson, pointerJoin, scalarValue } from "./json.js";
 import type { ReachIndex } from "./reach.js";
 import type { ChangeReach, ChangeSink, ElementOrigin, RawChange } from "./sink.js";
@@ -40,8 +40,8 @@ export function emitAt(
 
 /**
  * Compares the members of two values of `definition`. A member equal in both is skipped; one with a comparison
- * runs it; any other reports its row when that row is `name` or `annotation`, else `unclassified` naming the
- * member, so no difference goes unreported.
+ * runs it; any other reports its fixed case, its row when that row is `name` or `annotation`, else
+ * `unclassified` naming the member, so no difference goes unreported.
  */
 export function compareMembers(
   context: WalkContext,
@@ -71,6 +71,18 @@ export function compareMembers(
     }
 
     const row = memberRow(definition, member);
+
+    if (typeof row === "object") {
+      emitAt(context, site, {
+        kind: row.kind,
+        case: row.case,
+        pointer: memberPointer,
+        before: beforeValue,
+        after: afterValue,
+      });
+      continue;
+    }
+
     const informative = INFORMATIVE_MEMBER_ROWS.has(row);
 
     emitAt(context, site, {
@@ -135,4 +147,42 @@ export function compareKeptOrder(
   if (keptBefore.join("\u0000") === keptAfter.join("\u0000")) return;
 
   emitAt(context, site, { kind: "order", case: orderCase, pointer });
+}
+
+/** How one list of entries matched by key is compared: each added, removed or changed kept entry is reported. */
+export interface KeyedListComparison<Entry> {
+  readonly keyOf: (entry: Entry, index: number, list: readonly Entry[]) => string;
+  readonly added: (pointer: string, entry: Entry) => void;
+  readonly removed: (pointer: string, entry: Entry) => void;
+  readonly kept: (pointer: string, before: Entry, after: Entry) => void;
+}
+
+/** Matches the entries of two lists by key; pointers of added and kept entries are into `after`. */
+export function compareKeyedList<Entry>(
+  pointer: string,
+  before: readonly Entry[],
+  after: readonly Entry[],
+  comparison: KeyedListComparison<Entry>,
+): void {
+  const beforeKeys = before.map(comparison.keyOf);
+  const afterKeys = after.map(comparison.keyOf);
+
+  after.forEach((entry, index) => {
+    if (!beforeKeys.includes(afterKeys[index] ?? ""))
+      comparison.added(pointerJoin(pointer, index), entry);
+  });
+
+  before.forEach((entry, index) => {
+    const kept = afterKeys.indexOf(beforeKeys[index] ?? "");
+    const afterEntry = after[kept];
+
+    if (afterEntry === undefined) {
+      comparison.removed(pointerJoin(pointer, index), entry);
+
+      return;
+    }
+
+    if (!isSameJson(entry, afterEntry))
+      comparison.kept(pointerJoin(pointer, kept), entry, afterEntry);
+  });
 }
