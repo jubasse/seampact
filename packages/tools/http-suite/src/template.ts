@@ -2,8 +2,9 @@
 import { randomUUID } from "node:crypto";
 import type { JsonValue } from "./suite-case.js";
 
+export const WHOLE_PLACEHOLDER = /^\{\{([^{}]+)\}\}$/;
+
 const PLACEHOLDER = /\{\{([^{}]+)\}\}/g;
-const WHOLE_PLACEHOLDER = /^\{\{([^{}]+)\}\}$/;
 const UUID_PREFIX = "uuid:";
 const DEADLINE_PREFIX = "deadline:";
 const DEADLINE_MS = /^-?\d+$/;

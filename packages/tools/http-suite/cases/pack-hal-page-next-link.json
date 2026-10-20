@@ -1,0 +1,60 @@
+{
+  "id": "pack-hal-page-next-link",
+  "title": "A page is fetched with the hal request names and its next link is followed",
+  "checks": ["CHK-107"],
+  "profiles": ["pack:hal"],
+  "steps": [
+    {
+      "title": "first page",
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "query": {
+          "size": 2,
+          "page": 0
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "capture": {
+        "nextPage": {
+          "body": "/_links/next/href"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "page": {
+            "size": 2,
+            "number": 0
+          }
+        }
+      }
+    },
+    {
+      "title": "the next link",
+      "request": {
+        "method": "GET",
+        "path": "{{nextPage}}",
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "_links": {
+            "self": {
+              "href": "{{nextPage}}"
+            }
+          },
+          "page": {
+            "size": 2,
+            "number": 1
+          }
+        }
+      }
+    }
+  ]
+}

@@ -42,7 +42,7 @@ export function templateSchema(
     case "slot":
       return slotSchema(context, template.slot, template.path, slots, location);
     case "text":
-      return { schema: { type: "string" }, presence: "always" };
+      return textTemplateSchema(template, slots);
     case "literal":
       return { schema: { const: copyJsonValue(template.value) }, presence: "always" };
     case "object":
@@ -54,6 +54,44 @@ export function templateSchema(
 
       return undefined;
   }
+}
+
+// A text whose slots are all constants (`/contexts/${resource}`) is that one constant; any other text is a string.
+function textTemplateSchema(
+  template: Extract<Template, { kind: "text" }>,
+  slots: SlotSchemas,
+): SlotValue {
+  const constant = constantText(template, slots);
+
+  return {
+    schema: constant === undefined ? { type: "string" } : { const: constant },
+    presence: "always",
+  };
+}
+
+function constantText(
+  template: Extract<Template, { kind: "text" }>,
+  slots: SlotSchemas,
+): string | undefined {
+  let text = "";
+
+  for (const part of template.parts) {
+    if (!isKnownVariant("TextPart", part)) return undefined;
+
+    if (part.kind === "text") {
+      text += part.text;
+      continue;
+    }
+
+    const slot = part.path.length === 0 ? slots.get(part.slot) : undefined;
+    const constant = slot?.presence === "always" ? slot.schema.const : undefined;
+
+    if (typeof constant !== "string") return undefined;
+
+    text += constant;
+  }
+
+  return text;
 }
 
 // `$each` over an array slot: an array of `$as` read with the slots of the element.

@@ -65,6 +65,12 @@ async function answer(request: IncomingMessage, response: ServerResponse): Promi
     json(200, [1], { link: `</items?cursor=${NEXT_CURSOR}>; rel="next"` });
   } else if (url.pathname === "/items") {
     json(200, { cursor: url.searchParams.get("cursor"), limit: url.searchParams.get("limit") });
+  } else if (url.pathname === "/links") {
+    json(200, {
+      offsite: "@evil.example/x",
+      schemeRelative: "//evil.example/x",
+      self: "/items?cursor=a",
+    });
   } else if (url.pathname === "/echo") {
     json(201, {
       body: JSON.parse(body),
@@ -74,14 +80,16 @@ async function answer(request: IncomingMessage, response: ServerResponse): Promi
   } else if (url.pathname === "/raw") {
     json(200, { text: body, signatureAgeSeconds: signatureAgeSeconds(request) });
   } else if (url.pathname === "/signed") {
-    json(200, { valid: request.headers["stripe-signature"] === stripeV1(body) });
+    const signature = String(request.headers["stripe-signature"]);
+
+    json(200, { valid: signature === stripeV1(body, signedTimestampOf(signature)) });
   } else {
     json(404, { code: "api.not_found" });
   }
 }
 
-function stripeV1(body: string): string {
-  const timestamp = String(Math.floor(Date.now() / 1000));
+// Like a real verifier, the double signs with the header's timestamp, so a request that crosses a second still matches.
+function stripeV1(body: string, timestamp: string): string {
   const mac = createHmac("sha256", CREDENTIALS.stripeSecret)
     .update(`${timestamp}.${body}`)
     .digest("hex");
@@ -89,8 +97,12 @@ function stripeV1(body: string): string {
   return `t=${timestamp},v1=${mac}`;
 }
 
+function signedTimestampOf(signature: string): string {
+  return /^t=(\d+),/.exec(signature)?.[1] ?? "";
+}
+
 function signatureAgeSeconds(request: IncomingMessage): number {
-  const timestamp = /^t=(\d+),/.exec(String(request.headers["stripe-signature"]))?.[1];
+  const timestamp = signedTimestampOf(String(request.headers["stripe-signature"]));
 
   return Math.floor(Date.now() / 1000) - Number(timestamp);
 }
@@ -337,6 +349,49 @@ describe("runSuite", () => {
       expect.stringContaining("capture 'taskId'"),
       expect.stringContaining("status 404, expected 200"),
     ]);
+  });
+
+  test.each(["offsite", "schemeRelative"])(
+    "fails a path filled from the %s link, which leaves the target",
+    async (link) => {
+      const report = await run([
+        suiteCase("leaves-target", {
+          steps: [
+            {
+              request: { method: "GET", path: "/links" },
+              capture: { link: { body: `/${link}` } },
+              expect: { status: 200 },
+            },
+            { request: { method: "GET", path: "{{link}}" }, expect: { status: 200 } },
+          ],
+        }),
+      ]);
+
+      expect(report.cases[0]?.failures).toEqual([
+        expect.stringContaining("the path '{{link}}' fills to '"),
+      ]);
+      expect(report.cases[0]?.failures[0]).toContain("which does not start with one '/'");
+    },
+  );
+
+  test("appends a step's query to a filled path that already holds one", async () => {
+    const report = await run([
+      suiteCase("filled-query", {
+        steps: [
+          {
+            request: { method: "GET", path: "/links" },
+            capture: { self: { body: "/self" } },
+            expect: { status: 200 },
+          },
+          {
+            request: { method: "GET", path: "{{self}}", query: { limit: 2 } },
+            expect: { status: 200, body: { cursor: "a", limit: "2" } },
+          },
+        ],
+      }),
+    ]);
+
+    expect(report.cases[0]).toMatchObject({ outcome: "passed", failures: [] });
   });
 
   test("checks that a body member is absent and that array pointers take indexes only", async () => {

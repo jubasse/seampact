@@ -1,0 +1,54 @@
+{
+  "id": "pack-spring-page-by-number",
+  "title": "A page and the next one are fetched by number with the spring request names",
+  "checks": ["CHK-107"],
+  "profiles": ["pack:spring"],
+  "steps": [
+    {
+      "title": "first page",
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "query": {
+          "size": 2,
+          "page": 0
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "page": {
+            "size": 2,
+            "number": 0
+          }
+        }
+      }
+    },
+    {
+      "title": "second page",
+      "request": {
+        "method": "GET",
+        "path": "/v1/channels/10000000-0000-4000-8000-000000000001/tasks",
+        "query": {
+          "size": 2,
+          "page": 1
+        },
+        "headers": {
+          "authorization": "Bearer {{userToken}}"
+        }
+      },
+      "expect": {
+        "status": 200,
+        "body": {
+          "page": {
+            "size": 2,
+            "number": 1
+          }
+        }
+      }
+    }
+  ]
+}
