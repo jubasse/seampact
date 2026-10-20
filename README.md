@@ -98,6 +98,15 @@ Pre-1.0. The reference contract runs end to end on every server above. Nothing i
 - [Roadmap after 1.0](docs/roadmap.md)
 - [Design decisions](docs/design-decisions.md)
 
+## Roadmap
+
+- [x] Node servers: NestJS, Express, Fastify, AdonisJS, Hono
+- [x] CLI: `generate`, `check`, `lint`, `diff`
+- [ ] Frontend: React and Vue hooks, Angular, MSW mocks
+- [ ] Java: Spring Boot. PHP: Laravel, Symfony, API Platform
+- [ ] Standalone binary, docs site, 1.0 on npm
+- Later: Next.js, Bun, Deno, Workers, Kotlin, Swift, Dart, Python, Go, .NET, Rust ([full list](docs/roadmap.md))
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
