@@ -16,17 +16,15 @@ export const ETAG_DERIVATION = "cache.etag";
 const NOT_GENERATED_SHAPES: readonly string[] = ["binary", "redirect"];
 
 // The members a handler returns beside a page's items, by paging style `handlerResult` value (ADR 0002
-// section 14); the cursor is absent at the last page.
+// section 14): a cursor is absent at its end of the list, every other member is always returned.
 const HANDLER_RESULT_MEMBERS: ReadonlyMap<string, string> = new Map([
   ["nextCursor", "nextCursor?: string;"],
+  ["previousCursor", "previousCursor?: string;"],
+  ["total", "total: number;"],
+  ["more", "more: boolean;"],
+  ["nextSince", "nextSince: string;"],
+  ["complete", "complete: boolean;"],
 ]);
-const NOT_GENERATED_HANDLER_RESULTS: readonly string[] = [
-  "previousCursor",
-  "total",
-  "more",
-  "nextSince",
-  "complete",
-];
 
 // The handler-side union of the operation's responses, `{ status, body }` with the unwrapped payload; the
 // boundary adds the envelope and the derived headers, and answers the derived 304.
@@ -169,15 +167,7 @@ function pageResult(
 
     if (declaration !== undefined) return declaration;
 
-    context.refusals.push(
-      NOT_GENERATED_HANDLER_RESULTS.includes(member)
-        ? refuseNotGeneratedYet(
-            "paging.handlerResult",
-            `The handler result '${member}'`,
-            memberLocation,
-          )
-        : refuseUnknownValueAt(memberLocation, member),
-    );
+    context.refusals.push(refuseUnknownValueAt(memberLocation, member));
 
     return "";
   });

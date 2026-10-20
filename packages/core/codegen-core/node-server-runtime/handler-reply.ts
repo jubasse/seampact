@@ -6,6 +6,7 @@ import {
   ContractError,
   type ContractReply,
   isPlainObject,
+  renderTemplate,
   unexpectedError,
 } from "./contract-error.js";
 import {
@@ -16,15 +17,16 @@ import {
 } from "./contract-route.js";
 import { CACHE_CONTROL_HEADER, NO_STORE_DIRECTIVE, WEAK_ETAG_PREFIX } from "./reply-headers.js";
 import { sha256Base64Url } from "./sha256.js";
-import { withQueryMember } from "./wire-decoding.js";
+import { handlerPage, renderedPage } from "./page-reply.js";
 
 const JSON_MEDIA = "application/json";
 const NOT_MODIFIED = 304;
 
-/** The reply of a handler's result, or the contract error it names. */
+/** The reply of a handler's result, or the contract error it names; `input` is the validated request it answers. */
 export async function handlerReply(
   state: CheckState,
   grant: AccessGrant,
+  input: unknown,
   result: unknown,
 ): Promise<ContractReply> {
   const { route } = state;
@@ -44,7 +46,7 @@ export async function handlerReply(
     );
   }
 
-  return successReply(state, grant, response, result.body);
+  return successReply(state, grant, input, response, result.body);
 }
 
 function declaredHandlerError(
@@ -69,6 +71,7 @@ function declaredHandlerError(
 async function successReply(
   state: CheckState,
   grant: AccessGrant,
+  input: unknown,
   response: ResponseEntry,
   handlerBody: unknown,
 ): Promise<ContractReply> {
@@ -79,9 +82,10 @@ async function successReply(
     return { status: response.status, headers, body: new Uint8Array() };
   }
 
-  const payload = response.shape === "page" ? pageItems(state, handlerBody, headers) : handlerBody;
-  const projected = await projectPayload(state, grant, response, response.body, payload);
-  const body = new TextEncoder().encode(JSON.stringify(projected));
+  const rendered = await renderedBody(state, grant, input, response, response.body, handlerBody);
+  const body = new TextEncoder().encode(JSON.stringify(rendered.body));
+
+  headers.push(...rendered.headers);
 
   headers.unshift(["content-type", JSON_MEDIA]);
   appendCacheHeaders(route, grant, headers);
@@ -104,27 +108,30 @@ async function successReply(
   return { status: response.status, headers, body };
 }
 
-// A page result `{ items, nextCursor? }`: the body is its items, the next page is linked by its cursor.
-function pageItems(state: CheckState, handlerBody: unknown, headers: [string, string][]): unknown {
-  const paging = state.route.paging;
+// The projected payload in its format's envelope, or a page with the body and headers of its paging style.
+async function renderedBody(
+  state: CheckState,
+  grant: AccessGrant,
+  input: unknown,
+  response: ResponseEntry,
+  itemShape: ValueShape,
+  handlerBody: unknown,
+): Promise<{ readonly body: unknown; readonly headers: readonly [string, string][] }> {
+  if (response.shape === "page") {
+    const page = handlerPage(state, handlerBody);
+    const items = await projectPayload(state, grant, response, itemShape, page.items);
 
-  if (!isPlainObject(handlerBody) || !Array.isArray(handlerBody.items) || paging === undefined) {
-    throw unexpectedError(
-      state.route,
-      new Error(`the handler of '${state.route.id}' returned no page { items }`),
-    );
+    return renderedPage(state, input, page, Array.isArray(items) ? items : [], response.status);
   }
 
-  const nextCursor = handlerBody[paging.nextCursorMember];
+  const projected = await projectPayload(state, grant, response, itemShape, handlerBody);
+  const envelope = response.envelope;
 
-  if (typeof nextCursor === "string") {
-    // The other members keep their raw form, so a comma list and its encoded commas reach the next page as sent.
-    const query = withQueryMember(state.request.rawQuery, paging.cursorParam, nextCursor);
+  if (envelope === undefined) return { body: projected, headers: [] };
 
-    headers.push(["link", `<${state.request.path}?${query}>; rel="next"`]);
-  }
+  const slots = { payload: projected, status: response.status, path: state.request.path };
 
-  return handlerBody.items;
+  return { body: renderTemplate(envelope.body, slots, envelope.absent), headers: [] };
 }
 
 function appendCacheHeaders(

@@ -242,7 +242,7 @@ export async function handlerResultReply(
 
   const result: unknown = await Reflect.apply(method, owner, [context.input]);
 
-  return handlerReply(state, requireGrant(context), result);
+  return handlerReply(state, requireGrant(context), context.input, result);
 }
 
 function requireGrant(context: BoundaryContext): AccessGrant {

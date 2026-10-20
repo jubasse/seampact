@@ -4,7 +4,6 @@ import {
   type Operation,
   type Param,
   type Principal,
-  type Template,
   type TypeUse,
   type WireFormat,
 } from "@seampact/spec/ir";
@@ -20,7 +19,17 @@ import {
   refuseUnknownValueAt,
 } from "../located-refusals.js";
 import type { Refusal } from "../refusal.js";
+import { pageBodyTemplate, pagingEntry } from "./paging-entry.js";
 import { compareRouteSpecificity } from "./route-order.js";
+import {
+  isSlot,
+  jsonValue,
+  SourceExpression,
+  type SourceValue,
+  sourceOf,
+  template,
+} from "./route-table-source.js";
+import { successEnvelope } from "./success-envelope.js";
 
 // The route table module of one api: every operation as the node-server runtime reads it (`ContractApi`), with
 // the validators link's input validator per operation. A form the runtime does not serve is refused by name.
@@ -37,10 +46,6 @@ export interface RouteTableOptions {
 const API_LOCATION: IrLocation = { member: "" };
 const JSON_MEDIA = "application/json";
 const BOUNDARY_ENFORCEMENT = "boundary";
-const CURSOR_ROLE = "cursor";
-const LIMIT_ROLE = "limit";
-const SORT_ROLE = "sort";
-const SIGNED_SORT_STYLE = "signed";
 
 // The validators link's descriptor and the module's imports of its validators.
 interface ValidatorLink {
@@ -62,20 +67,6 @@ function frameworkRoutesValue(check: FrameworkRouteCheck): SourceValue {
     })),
   };
 }
-
-class SourceExpression {
-  constructor(readonly text: string) {}
-}
-
-type SourceValue =
-  | SourceExpression
-  | string
-  | number
-  | boolean
-  | undefined
-  | null
-  | readonly SourceValue[]
-  | { readonly [member: string]: SourceValue };
 
 /**
  * The route table module source, or the refusals of every form it cannot serve; `warnings` gets each form the
@@ -271,6 +262,7 @@ function routeEntry(
         response.shape === "table"
           ? tableKeyProperty(operation, below(location, "resource", "idProperty"), refusals)
           : undefined,
+      ...successEnvelope(ir, operation, response, pageBodyTemplate(ir, operation), refusals),
     })),
     errors: Object.fromEntries(
       operation.errors.map((error, index) => [
@@ -941,68 +933,6 @@ function errorEntry(
   };
 }
 
-function pagingEntry(
-  ir: ContractIR,
-  operation: Operation,
-  location: IrLocation,
-  refusals: Refusal[],
-): SourceValue {
-  const paging = operation.paging;
-
-  // `paging: none` has no style: the list answers a bare array and takes no cursor or limit.
-  if (paging === undefined || paging.style === undefined) return undefined;
-
-  const style = ir.pagings[paging.style];
-  const cursor = style?.request.find((role) => role.role === CURSOR_ROLE);
-  const nextCursor = style?.handlerResult[0];
-
-  if (
-    style === undefined ||
-    style.position !== CURSOR_ROLE ||
-    cursor === undefined ||
-    nextCursor === undefined
-  ) {
-    refusals.push(
-      refuseNotGeneratedYet(
-        "paging.style",
-        `The paging style '${paging.style}'`,
-        below(location, "paging"),
-      ),
-    );
-
-    return undefined;
-  }
-
-  const sort = style.request.find((role) => role.role === SORT_ROLE);
-
-  if (sort !== undefined && (sort.style ?? SIGNED_SORT_STYLE) !== SIGNED_SORT_STYLE) {
-    refusals.push(
-      refuseNotGeneratedYet(
-        "paging.sort.style",
-        `The sort style '${sort.style ?? ""}'`,
-        below(location, "paging"),
-      ),
-    );
-  }
-
-  if (sort !== undefined && sort.in !== "query") {
-    refusals.push(
-      refuseNotGeneratedYet(
-        "paging.sort.in",
-        `A sort role in '${sort.in}'`,
-        below(location, "paging"),
-      ),
-    );
-  }
-
-  return {
-    cursorParam: cursor.name,
-    nextCursorMember: nextCursor,
-    limitParam: style.request.find((role) => role.role === LIMIT_ROLE)?.name,
-    defaultLimit: paging.defaultLimit,
-  };
-}
-
 function errorFormat(ir: ContractIR, refusals: Refusal[]): SourceValue {
   const formatIds = [...new Set(ir.operations.map((operation) => operation.format))];
   const formatId = formatIds[0];
@@ -1035,25 +965,6 @@ function errorFormat(ir: ContractIR, refusals: Refusal[]): SourceValue {
     );
   }
 
-  for (const [shape, success] of Object.entries(format.success)) {
-    const body = success.body;
-
-    if (
-      success.headers.length > 0 ||
-      !isKnownVariant("Template", body) ||
-      body.kind !== "slot" ||
-      body.path.length > 0
-    ) {
-      refusals.push(
-        refuseNotGeneratedYet(
-          "format.success.envelope",
-          "A success envelope",
-          below(location, "success", shape),
-        ),
-      );
-    }
-  }
-
   const body = template(format.error.body, below(location, "error", "body"), refusals);
   const members =
     isKnownVariant("Template", format.error.body) && format.error.body.kind === "object"
@@ -1076,58 +987,6 @@ function errorFormat(ir: ContractIR, refusals: Refusal[]): SourceValue {
       format.error.body.kind === "object" &&
       format.error.body.merge === "params",
   };
-}
-
-function isSlot(value: Template, slot: string): boolean {
-  return isKnownVariant("Template", value) && value.kind === "slot" && value.slot === slot;
-}
-
-function template(node: Template, location: IrLocation, refusals: Refusal[]): SourceValue {
-  if (isKnownVariant("Template", node)) {
-    if (node.kind === "slot") return { kind: "slot", slot: node.slot, path: node.path };
-
-    if (node.kind === "literal") return { kind: "literal", value: jsonValue(node.value) ?? null };
-
-    if (node.kind === "each") {
-      return {
-        kind: "each",
-        of: node.of,
-        as: template(node.as, below(location, "as"), refusals),
-      };
-    }
-
-    if (node.kind === "object") {
-      return {
-        kind: "object",
-        members: node.members.flatMap((member, index) => {
-          if (!isKnownVariant("MemberName", member.name) || member.name.kind !== "text") {
-            refusals.push(
-              refuseNotGeneratedYet(
-                "format.memberName",
-                "A computed member name",
-                below(location, "members", String(index)),
-              ),
-            );
-
-            return [];
-          }
-
-          return [
-            {
-              name: member.name.text,
-              value: template(member.value, below(location, "members", String(index)), refusals),
-            },
-          ];
-        }),
-      };
-    }
-  }
-
-  refusals.push(
-    refuseNotGeneratedYet("format.template", `A '${node.kind}' error format template`, location),
-  );
-
-  return { kind: "text", text: "" };
 }
 
 function valueShape(type: TypeUse, location: IrLocation, refusals: Refusal[]): SourceValue {
@@ -1226,25 +1085,4 @@ function itemValidator(
     : undefined;
 
   return ref === undefined ? undefined : imports.expression(ref.module, ref.export);
-}
-
-// IR values such as a requirement's params are JSON, written as is.
-function jsonValue(value: unknown): SourceValue {
-  if (value === undefined) return undefined;
-
-  return new SourceExpression(JSON.stringify(value));
-}
-
-function sourceOf(value: SourceValue): string {
-  if (value instanceof SourceExpression) return value.text;
-
-  if (value === null || typeof value !== "object") return JSON.stringify(value) ?? "undefined";
-
-  if (Array.isArray(value)) return `[${value.map(sourceOf).join(", ")}]`;
-
-  const members = Object.entries(value)
-    .filter(([, member]) => member !== undefined)
-    .map(([name, member]) => `${JSON.stringify(name)}: ${sourceOf(member)}`);
-
-  return `{ ${members.join(", ")} }`;
 }

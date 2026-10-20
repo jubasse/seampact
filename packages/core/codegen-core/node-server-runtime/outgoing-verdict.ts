@@ -163,7 +163,7 @@ export async function successBodyViolation(
 
   if (response === undefined || validator === undefined) return undefined;
 
-  const parsed = parseJson(body);
+  const parsed = payloadAt(parseJson(body), response.payloadPath);
   const items = bodyItems(parsed, response.shape);
 
   if (typeof items === "string") return `a ${status} ${response.shape} body that is not ${items}`;
@@ -180,6 +180,14 @@ export async function successBodyViolation(
   }
 
   return undefined;
+}
+
+// The payload, or a page's items, under the members of the format's envelope or the paging style's body.
+function payloadAt(parsed: unknown, payloadPath: readonly string[]): unknown {
+  return payloadPath.reduce<unknown>(
+    (value, member) => (isPlainObject(value) ? value[member] : undefined),
+    parsed,
+  );
 }
 
 // The items a body holds by its shape: a list or page is a JSON array, a table a JSON object keyed by item id

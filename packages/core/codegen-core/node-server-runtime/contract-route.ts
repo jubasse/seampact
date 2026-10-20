@@ -46,6 +46,9 @@ export type FormatTemplate =
   /** Each element of an array slot, rendered with `as` where the slot `item` holds it. */
   | { readonly kind: "each"; readonly of: string; readonly as: FormatTemplate };
 
+/** How a template writes a slot without a value: the member is omitted, or written `null` (IR section 7). */
+export type AbsentRendering = "omit" | "null";
+
 export interface ErrorFormat {
   readonly media: string;
   readonly body: FormatTemplate;
@@ -163,6 +166,39 @@ export interface ResponseEntry {
   readonly itemValidator?: StandardValidator;
   /** On a table: the item property each key of the body equals. */
   readonly tableKeyProperty?: string;
+  /** The format's envelope of an item, list or table body, its `$payload` slot the handler's body; absent when bare. */
+  readonly envelope?: { readonly body: FormatTemplate; readonly absent: AbsentRendering };
+  /** The members leading from the body to its payload, or a page's items; empty when the body is the payload. */
+  readonly payloadPath: readonly string[];
+}
+
+/** A template the page writes under a name: a `meta` member or a response header. */
+export interface NamedPageTemplate {
+  readonly name: string;
+  readonly value: FormatTemplate;
+}
+
+/** A paging style as the boundary renders it (ADR 0002 section 14). */
+export interface PagingEntry {
+  readonly position: "cursor" | "page" | "offset" | "since";
+  /** The query member of the position: the cursor, page, offset or since token; with `after` and `before`, `after`. */
+  readonly positionParam: string;
+  /** With `after` and `before`: the query member the previous page's cursor travels in. */
+  readonly beforeParam?: string;
+  /** The number of the first page, on a page position. */
+  readonly base: number;
+  /** The limit query member and the value the handler receives when the client sends none. */
+  readonly limitParam?: string;
+  readonly defaultLimit?: number;
+  /** The members the handler returns beside the items: `total`, `more`, `nextCursor`, ... */
+  readonly handlerResult: readonly string[];
+  readonly absent: AbsentRendering;
+  /** The page body: the style's own, or the format's page with the style's `meta` in its `$meta`. */
+  readonly body: FormatTemplate;
+  readonly meta: readonly NamedPageTemplate[];
+  readonly headers: readonly NamedPageTemplate[];
+  /** The relations of the `Link` header, each a URL role. */
+  readonly links: readonly { readonly rel: string; readonly role: string }[];
 }
 
 export interface ContractRoute {
@@ -194,13 +230,7 @@ export interface ContractRoute {
   };
   readonly responses: readonly ResponseEntry[];
   readonly errors: Readonly<Record<string, ErrorEntry>>;
-  readonly paging?: {
-    readonly cursorParam: string;
-    readonly nextCursorMember: string;
-    /** The limit query member and the value the handler receives when the client sends none. */
-    readonly limitParam?: string;
-    readonly defaultLimit?: number;
-  };
+  readonly paging?: PagingEntry;
   readonly cache?: {
     readonly etag: boolean;
     /** The `Cache-Control` value per caller kind, `identified` or `anonymous`. */

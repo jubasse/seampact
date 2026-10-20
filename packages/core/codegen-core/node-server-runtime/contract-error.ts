@@ -1,6 +1,12 @@
 // The contract's refusals and their rendering in the api's error format: the exception every check step throws,
 // and the reply it becomes. Copied into the generated tree as is.
-import type { ContractApi, ContractRoute, ErrorEntry, FormatTemplate } from "./contract-route.js";
+import type {
+  AbsentRendering,
+  ContractApi,
+  ContractRoute,
+  ErrorEntry,
+  FormatTemplate,
+} from "./contract-route.js";
 import { CACHE_CONTROL_HEADER, NO_STORE_DIRECTIVE } from "./reply-headers.js";
 
 /** The longest issues list rendered into a `schemaInvalid` error's params. */
@@ -64,7 +70,7 @@ export function roleParams(entry: ErrorEntry, role: string, data: unknown): unkn
 
   if (template === undefined) return undefined;
 
-  return renderTemplate(template, isPlainObject(data) ? data : {}) ?? {};
+  return renderTemplate(template, isPlainObject(data) ? data : {}, "omit") ?? {};
 }
 
 /** The code of the operation's `undeclaredStatus` role, the api-wide 500. */
@@ -105,7 +111,7 @@ export function renderContractReply(
     status: entry.status,
     nature: entry.nature,
   };
-  const rendered = renderTemplate(api.format.body, slots) ?? {};
+  const rendered = renderTemplate(api.format.body, slots, "omit") ?? {};
   const body =
     api.format.mergeParams && isPlainObject(rendered) && isPlainObject(params)
       ? { ...rendered, ...params }
@@ -143,10 +149,14 @@ function retryHeaderOf(entry: ErrorEntry, params: unknown): [string, string] | u
   return [header.name.toLowerCase(), String(headerValue)];
 }
 
-// A slot, member or item without a value is omitted, and an object left with no member has none (IR section 7).
-function renderTemplate(
+/**
+ * A template rendered over its slots. Under `omit`, a slot, member or item without a value is omitted, and an object
+ * left with no member has none; under `null`, a member without a value is written `null`.
+ */
+export function renderTemplate(
   template: FormatTemplate,
   slots: Readonly<Record<string, unknown>>,
+  absent: AbsentRendering,
 ): unknown {
   switch (template.kind) {
     case "text":
@@ -164,7 +174,7 @@ function renderTemplate(
       if (!Array.isArray(items)) return undefined;
 
       return items
-        .map((item) => renderTemplate(template.as, { ...slots, item }))
+        .map((item) => renderTemplate(template.as, { ...slots, item }, absent))
         .filter((value) => value !== undefined);
     }
 
@@ -172,9 +182,10 @@ function renderTemplate(
       const rendered: Record<string, unknown> = {};
 
       for (const member of template.members) {
-        const value = renderTemplate(member.value, slots);
+        const value = renderTemplate(member.value, slots, absent);
 
         if (value !== undefined) rendered[member.name] = value;
+        else if (absent === "null") rendered[member.name] = null;
       }
 
       return Object.keys(rendered).length > 0 ? rendered : undefined;

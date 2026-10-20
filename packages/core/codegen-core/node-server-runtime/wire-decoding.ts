@@ -106,10 +106,20 @@ function queryEncodedPair(pair: string): string {
 
 /** The raw query string with the member `name` set to `value`, every other pair kept as received, made link-safe. */
 export function withQueryMember(rawQuery: string, name: string, value: string): string {
-  const keptPairs = rawQuery
-    .split("&")
-    .filter((pair) => pair !== "" && formDecoded(rawPairName(pair)) !== name)
-    .map(queryEncodedPair);
+  return [
+    ...keptQueryPairs(rawQuery, [name]),
+    `${encodeURIComponent(name)}=${encodeURIComponent(value)}`,
+  ].join("&");
+}
 
-  return [...keptPairs, `${encodeURIComponent(name)}=${encodeURIComponent(value)}`].join("&");
+/** The raw query string without the members `names`, every other pair kept as received, made link-safe. */
+export function withoutQueryMembers(rawQuery: string, names: readonly string[]): string {
+  return keptQueryPairs(rawQuery, names).join("&");
+}
+
+function keptQueryPairs(rawQuery: string, names: readonly string[]): string[] {
+  return rawQuery
+    .split("&")
+    .filter((pair) => pair !== "" && !names.includes(formDecoded(rawPairName(pair))))
+    .map(queryEncodedPair);
 }
