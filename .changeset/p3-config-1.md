@@ -10,4 +10,4 @@
 "@seampact/codegen-zod": patch
 ---
 
-A monorepo root `seampact.config.yaml` now lists its apps and shares its sources and `allowLocal` with them, and `generate` writes each app's OpenAPI documents, by default those of the apis its server targets serve, or the ones its `openapi` key lists, so an app with no targets generates documents only.
+A monorepo root `seampact.config.yaml` now lists its apps and shares its sources and `allowLocal` with them, and `generate` writes each app's OpenAPI documents, by default those of the apis its server targets serve, or the ones its `openapi` key lists, so an app with no targets generates documents only, and it never replaces a document file it did not write.
