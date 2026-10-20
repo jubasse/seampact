@@ -44,7 +44,8 @@ const OUTPUT_DIRECTION = "output";
 const INPUT_COMPONENT_SUFFIX = ".input";
 const INT64_FORMAT = "int64";
 const DECIMAL_FORMAT = "decimal";
-const PASSWORD_FORMAT = "password";
+
+export const PASSWORD_FORMAT = "password";
 const INT64_PATTERN = "^-?(0|[1-9][0-9]*)$";
 const DECIMAL_PATTERN = "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$";
 const INTEGER_LITERAL = /^-?[0-9]+$/;

@@ -8,7 +8,7 @@ import {
   parseEmitterOptions,
 } from "./emitter-options.js";
 import { EXTENSION_PREFIX } from "./extension-names.js";
-import { goldenIrNames, readGoldenIr } from "./golden-documents.test-support.js";
+import { goldenIrNames, pointerToken, readGoldenIr } from "./golden-documents.test-support.js";
 import { isJsonObject, type JsonValue } from "./json-value.js";
 
 // The emitter options of A40 (CHK-136): each changes only what it names, and the defaults give the committed
@@ -47,7 +47,7 @@ function differences(left: unknown, right: unknown, pointer = ""): string[] {
     const members = [...new Set([...Object.keys(left), ...Object.keys(right)])];
 
     return members.flatMap((member) =>
-      differences(left[member], right[member], `${pointer}/${escapeToken(member)}`),
+      differences(left[member], right[member], `${pointer}/${pointerToken(member)}`),
     );
   }
 
@@ -56,10 +56,6 @@ function differences(left: unknown, right: unknown, pointer = ""): string[] {
   }
 
   return JSON.stringify(left) === JSON.stringify(right) ? [] : [pointer];
-}
-
-function escapeToken(member: string): string {
-  return member.replaceAll("~", "~0").replaceAll("/", "~1");
 }
 
 function withoutExtensions(value: unknown, kept: readonly string[]): unknown {
@@ -184,7 +180,7 @@ describe("strict input still accepts proofs", () => {
     const document = documentsOf(irName, parsed({ inputSchemas: "strict" }))[0];
     const ajv = new Ajv2020({ strict: false, validateFormats: false });
     const documentId = "https://seampact.dev/test/document.json";
-    const escapedPath = path.replaceAll("~", "~0").replaceAll("/", "~1");
+    const escapedPath = pointerToken(path);
 
     ajv.addSchema({ $id: documentId, ...(isJsonObject(document) ? document : {}) });
 

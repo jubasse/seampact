@@ -17,7 +17,7 @@ import {
 } from "./emit-context.js";
 import { derivedFromValue } from "./ir-text.js";
 import type { JsonObject } from "./json-value.js";
-import { objectSchema, schemaReference, typeUseSchema } from "./schemas.js";
+import { objectSchema, PASSWORD_FORMAT, schemaReference, typeUseSchema } from "./schemas.js";
 
 // The `input` row of ADR 0004 section 12: the request body with its media type, its form and multipart encoding,
 // its rule proofs, its unknown-key policy and its raw-body mark.
@@ -26,7 +26,6 @@ const JSON_MEDIA = "application/json";
 const FORM_MEDIA = "application/x-www-form-urlencoded";
 const MULTIPART_MEDIA = "multipart/form-data";
 const EMPTY_BODY_SCHEMA_ID = "ApiEmptyBody";
-const PASSWORD_FORMAT = "password";
 const ENCODED_FIELD_KINDS: readonly string[] = ["list", "object"];
 
 export function requestBody(

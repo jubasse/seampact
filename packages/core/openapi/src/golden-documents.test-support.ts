@@ -125,6 +125,16 @@ export function createExtensionValidators(): Map<ExtensionName, (value: unknown)
   return validators;
 }
 
+/** A member name as a JSON Pointer token (RFC 6901). */
+export function pointerToken(member: string): string {
+  return member.replaceAll("~", "~0").replaceAll("/", "~1");
+}
+
+/** The schema files the package publishes under `schemas/extensions`. */
+export function extensionSchemaFiles(): string[] {
+  return readdirSync(EXTENSIONS_DIRECTORY).sort();
+}
+
 /** Every `x-<key>` member of a document, with its JSON Pointer. */
 export function extensionMembers(
   value: unknown,
@@ -136,7 +146,7 @@ export function extensionMembers(
   if (!isJsonObject(value)) return [];
 
   return Object.entries(value).flatMap(([member, memberValue]) => {
-    const memberPointer = `${pointer}/${member.replaceAll("~", "~0").replaceAll("/", "~1")}`;
+    const memberPointer = `${pointer}/${pointerToken(member)}`;
     const own = member.startsWith("x-")
       ? [{ key: member, value: memberValue, pointer: memberPointer }]
       : [];

@@ -1,11 +1,17 @@
 import { createConfig, lintFromString } from "@redocly/openapi-core";
 import { describe, expect, it } from "vitest";
 import { emitDocuments } from "./documents.js";
-import { EXTENSION_NAMES, EXTENSION_PREFIX, isExtensionName } from "./extension-names.js";
+import {
+  EXTENSION_NAMES,
+  EXTENSION_PREFIX,
+  extensionSchemaPath,
+  isExtensionName,
+} from "./extension-names.js";
 import {
   createExtensionValidators,
   createOasValidator,
   extensionMembers,
+  extensionSchemaFiles,
   goldenDocuments,
   goldenIrNames,
   readGoldenIr,
@@ -111,6 +117,11 @@ describe("golden documents", () => {
     );
 
     expect(EXTENSION_NAMES.filter((name) => !used.has(`${EXTENSION_PREFIX}${name}`))).toEqual([]);
+    expect(extensionSchemaFiles()).toEqual(
+      EXTENSION_NAMES.map((name) =>
+        extensionSchemaPath(name).slice("schemas/extensions/".length),
+      ).sort(),
+    );
   });
 
   it("documents are byte-stable", () => {
