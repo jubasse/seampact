@@ -1,5 +1,6 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { isContractIr } from "@seampact/compiler";
 import { type ContractIR, createIrValidator, type IrValidationReport } from "@seampact/spec/ir";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import type { CliProblem } from "../cli-problem.js";
@@ -78,11 +79,6 @@ async function readIrFile(file: string): Promise<Step<ContractIR>> {
   if (!isContractIr(document, report)) return refused(invalidMessage(file, report));
 
   return { status: "done", value: document };
-}
-
-// The open schema's verdict is what makes the document a ContractIR.
-function isContractIr(document: unknown, report: IrValidationReport): document is ContractIR {
-  return report.valid && typeof document === "object" && document !== null;
 }
 
 function invalidMessage(file: string, report: IrValidationReport): string {

@@ -142,6 +142,9 @@ function reportProblems(report: IrValidationReport): string[] {
 }
 
 // The open schema's verdict is what makes the document a ContractIR.
-function isContractIr(document: unknown, report: IrValidationReport): document is ContractIR {
+export function isContractIr(
+  document: unknown,
+  report: IrValidationReport,
+): document is ContractIR {
   return report.valid && typeof document === "object" && document !== null;
 }
