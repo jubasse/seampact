@@ -40,6 +40,7 @@ function writeTargetPackage(appDirectory: string, target: FakeTarget): void {
   metadata: {
     packageName: ${JSON.stringify(target.name)},
     packageVersion: "0.0.0",
+    role: "client",
     irSupport: {},
     artefacts: [],
     consumes: ${kinds(target.consumes)},

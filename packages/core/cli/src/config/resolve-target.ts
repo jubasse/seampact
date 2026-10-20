@@ -1,7 +1,7 @@
 import { createRequire } from "node:module";
 import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { Target } from "@seampact/codegen-core";
+import { TARGET_ROLES, type Target } from "@seampact/codegen-core";
 import type { CliProblem } from "../cli-problem.js";
 import { errorCode } from "../error-code.js";
 import { isRecord } from "../is-record.js";
@@ -36,6 +36,18 @@ export async function resolveTarget(
         code: "config.target.not-a-target",
         message: `The package '${use}' has no export named \`target\` holding a seampact target.`,
         fix: "Point `use` at a seampact target package; its main module exports `target`, the value `defineTarget` returns.",
+        where,
+      },
+    };
+  }
+
+  if (!TARGET_ROLES.some((role) => role === exported.metadata.role)) {
+    return {
+      status: "refused",
+      problem: {
+        code: "config.target.role-missing",
+        message: `The target package '${use}' declares no \`metadata.role\` among ${TARGET_ROLES.join(", ")}.`,
+        fix: "Install a version of the target built for this CLI, or ask its maintainers to declare its role.",
         where,
       },
     };

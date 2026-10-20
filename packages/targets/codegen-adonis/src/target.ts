@@ -33,6 +33,7 @@ export const target: Target = defineTarget<
   metadata: {
     packageName: packageJson.name,
     packageVersion: packageJson.version,
+    role: "server",
     irSupport: {
       irVersions: [IR_VERSION],
       irRevision: IR_REVISION,

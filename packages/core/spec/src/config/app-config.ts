@@ -1,4 +1,13 @@
 import { JSON_SCHEMA_DIALECT, type JsonSchema } from "../authoring/schemas.js";
+import { type AppChecks, APP_CHECKS_SCHEMA } from "./checks-config.js";
+import {
+  ENTRY_ID_PATTERN,
+  NAME_LIST,
+  NON_EMPTY_STRING,
+  SOURCE_SCHEMA,
+  SOURCES_SCHEMA,
+} from "./config-schema-parts.js";
+import { APP_OPENAPI_SCHEMA, APP_OPENAPI_SCHEMA_DEFS, type AppOpenApi } from "./openapi-config.js";
 
 // The app config, `seampact.config.yaml` (ADR 0011 "The app config"), in the keys the Node CLI reads today. The
 // other keys of ADR 0011 are refused by name by the CLI until the lane that brings them lands.
@@ -14,6 +23,9 @@ export interface AppConfig {
   outDir?: string;
   sources?: Record<string, AppSource>;
   targets?: TargetEntry[];
+  // The seampact OpenAPI documents the app writes; absent, those of A43's default.
+  openapi?: AppOpenApi;
+  checks?: AppChecks;
   diff?: DiffConfig;
 }
 
@@ -111,30 +123,6 @@ export interface OperationsFilter {
   exclude?: string[];
 }
 
-const ENTRY_ID_PATTERN = "^[A-Za-z][A-Za-z0-9_-]*$";
-
-const nonEmptyString = { type: "string", minLength: 1 };
-
-const SOURCE_KEYS = ["path", "package", "version", "release", "git", "integrity"] as const;
-
-// One source form, with no key of another: `path`, or `package` with `version`, `release` or `git` with an optional
-// `integrity`.
-function sourceForm(required: readonly string[], allowed: readonly string[]): JsonSchema {
-  const others = SOURCE_KEYS.filter((key) => !allowed.includes(key));
-
-  return {
-    required: [...required],
-    not: { anyOf: others.map((key) => ({ required: [key] })) },
-  };
-}
-
-// An npm package name, scoped or not (npm's rules for new packages): a source's package is resolved under
-// `node_modules`, so a path such as `../x` is refused here rather than found outside it.
-const NPM_PACKAGE_NAME_PATTERN = "^(?:@[a-z0-9~-][a-z0-9._~-]*/)?[a-z0-9~-][a-z0-9._~-]*$";
-const NPM_PACKAGE_NAME_LENGTH_MAX = 214;
-
-const nameList = { type: "array", items: nonEmptyString, uniqueItems: true };
-
 // A path from the root whose segments are literal, `*` or `**`; a star never sits inside a segment.
 const FRAMEWORK_ROUTE_PATH_PATTERN = "^/(?:(?:[^/*]+|\\*|\\*\\*)(?:/(?:[^/*]+|\\*|\\*\\*))*)?$";
 
@@ -146,13 +134,11 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
   additionalProperties: false,
   properties: {
     allowLocal: { type: "boolean" },
-    outDir: nonEmptyString,
-    sources: {
-      type: "object",
-      propertyNames: { pattern: ENTRY_ID_PATTERN },
-      additionalProperties: { $ref: "#/$defs/source" },
-    },
+    outDir: NON_EMPTY_STRING,
+    sources: SOURCES_SCHEMA,
     targets: { type: "array", items: { $ref: "#/$defs/targetEntry" } },
+    openapi: APP_OPENAPI_SCHEMA,
+    checks: APP_CHECKS_SCHEMA,
     diff: {
       type: "object",
       additionalProperties: false,
@@ -163,6 +149,7 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
     },
   },
   $defs: {
+    ...APP_OPENAPI_SCHEMA_DEFS,
     frameworkRoute: {
       type: "object",
       additionalProperties: false,
@@ -170,52 +157,21 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
       properties: {
         method: { enum: [...HTTP_METHODS] },
         path: { type: "string", pattern: FRAMEWORK_ROUTE_PATH_PATTERN },
-        reason: nonEmptyString,
+        reason: NON_EMPTY_STRING,
       },
     },
-    source: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        path: nonEmptyString,
-        package: {
-          type: "string",
-          pattern: NPM_PACKAGE_NAME_PATTERN,
-          maxLength: NPM_PACKAGE_NAME_LENGTH_MAX,
-        },
-        version: nonEmptyString,
-        release: {
-          type: "object",
-          additionalProperties: false,
-          required: ["url"],
-          properties: { url: nonEmptyString },
-        },
-        git: {
-          type: "object",
-          additionalProperties: false,
-          required: ["url", "tag"],
-          properties: { url: nonEmptyString, tag: nonEmptyString, directory: nonEmptyString },
-        },
-        integrity: { type: "string", pattern: "^sha256-" },
-      },
-      oneOf: [
-        sourceForm(["path"], ["path"]),
-        sourceForm(["package", "version"], ["package", "version", "integrity"]),
-        sourceForm(["release"], ["release", "integrity"]),
-        sourceForm(["git"], ["git", "integrity"]),
-      ],
-    },
+    source: SOURCE_SCHEMA,
     targetEntry: {
       type: "object",
       additionalProperties: false,
       required: ["id", "use"],
       properties: {
         id: { type: "string", pattern: ENTRY_ID_PATTERN },
-        use: nonEmptyString,
-        api: nonEmptyString,
-        apis: { ...nameList, minItems: 1 },
-        document: nonEmptyString,
-        out: nonEmptyString,
+        use: NON_EMPTY_STRING,
+        api: NON_EMPTY_STRING,
+        apis: { ...NAME_LIST, minItems: 1 },
+        document: NON_EMPTY_STRING,
+        out: NON_EMPTY_STRING,
         link: {
           type: "object",
           additionalProperties: { type: "string", pattern: ENTRY_ID_PATTERN },
@@ -224,7 +180,7 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
         operations: {
           type: "object",
           additionalProperties: false,
-          properties: { include: nameList, exclude: nameList },
+          properties: { include: NAME_LIST, exclude: NAME_LIST },
         },
         artefacts: {
           type: "object",

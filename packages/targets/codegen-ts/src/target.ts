@@ -10,6 +10,7 @@ export const target: Target = defineTarget<NoOptions, TypesArtefact, never, "typ
   metadata: {
     packageName: packageJson.name,
     packageVersion: packageJson.version,
+    role: "provider",
     irSupport: {
       irVersions: [IR_VERSION],
       irRevision: IR_REVISION,

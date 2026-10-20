@@ -58,6 +58,8 @@ export type {
   Target,
   TargetDefinition,
   TargetMetadata,
+  TargetRole,
 } from "./target.js";
+export { TARGET_ROLES } from "./target.js";
 export { refuseUnknownValue } from "./unknown-value.js";
 export { type WriteOutcome, writeGeneratedFiles } from "./writer.js";
