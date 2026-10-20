@@ -1,98 +1,77 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import {
-  copyTestApp,
-  emitProject,
-  generateReferenceProject,
+  answerPage,
+  type BootedPages,
+  bootPages,
+  laravelOffsetChannels,
+  objectOf,
+  PAGE_CHANNEL as CHANNEL,
+  PAGE_CHANNELS as CHANNELS,
+  packIr,
   projectDirectory,
-  type RawReply,
-  sendRawRequest,
+  queryRole,
+  referenceLinks,
+  requirePaging,
+  slot,
+  withRequestStyle,
+  withStyle,
 } from "@seampact/codegen-core/node-server/test-support";
-import type { ContractIR, Operation, PagingStyle, Template } from "@seampact/spec/ir";
+import type { ContractIR, Operation, PagingStyle } from "@seampact/spec/ir";
 import { afterAll, beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { target as honoTarget } from "./index.js";
 
 // Boots the generated tasks api under the Laravel and Spring packs, each with one more paging style of its own,
-// and reads the pages their styles write: the handler's total, the counted pages and the page URLs.
+// and on offset, after/before cursor and since styles, and reads the pages their styles write: the handler's
+// facts, the counted pages and the page URLs.
 
 const APP_SOURCE = new URL("../test-app/reference-app.js", import.meta.url);
-const GOLDEN = new URL("../../../../fixtures/golden/", import.meta.url);
 // Generating and compiling both apis outruns vitest's default 10 s hook limit on a loaded machine.
 const SETUP_TIMEOUT_MILLISECONDS = 120_000;
 
-const USER = "55555555-5555-4555-8555-555555555555";
-const CHANNEL = "11111111-1111-4111-8111-111111111111";
-const BEARER = { authorization: `Bearer user-${USER}` };
-const CHANNELS = [
-  { channelId: CHANNEL, name: "General" },
-  { channelId: "22222222-2222-4222-8222-222222222222", name: "Random" },
-];
-
-interface PagesAppModule {
-  readonly scenario: { answers: Record<string, (input: unknown) => unknown> };
-  resetScenario(): void;
-  startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+function pagesProject(name: string) {
+  return { testFileUrl: import.meta.url, name, target: honoTarget, appSource: APP_SOURCE };
 }
 
-interface BootedPages {
-  app: PagesAppModule;
-  send(path: string): Promise<RawReply>;
-  close(): Promise<void>;
-}
-
-function packIr(pack: string, api: string): ContractIR {
-  return JSON.parse(readFileSync(new URL(`${pack}/${api}.ir.json`, GOLDEN), "utf8"));
-}
-
-function slot(name: string): Template {
-  return { kind: "slot", slot: name, path: [] };
-}
-
-function objectOf(members: Record<string, Template>): Template {
-  return {
-    kind: "object",
-    members: Object.entries(members).map(([name, value]) => ({
-      name: { kind: "text", text: name },
-      value,
-    })),
-  };
-}
-
-function withStyle(ir: ContractIR, operationId: string, style: PagingStyle): ContractIR {
-  return {
-    ...ir,
-    pagings: { ...ir.pagings, [style.id]: style },
-    operations: ir.operations.map((operation): Operation => {
-      if (operation.id !== operationId || operation.paging === undefined) return operation;
-
-      return { ...operation, paging: { ...operation.paging, style: style.id } };
-    }),
-  };
-}
-
-function requirePaging(ir: ContractIR, styleId: string): PagingStyle {
-  const style = ir.pagings[styleId];
-
-  if (style === undefined) throw new Error(`the pack golden lost its paging style '${styleId}'`);
-
-  return style;
-}
-
-// The Laravel tasks api, its task list on a style whose body holds the total beside the items.
+// The Laravel tasks api, its task list on a since style whose own body holds the next since token's URL.
 function laravelIr(api: string): ContractIR {
   const ir = packIr("pack-laravel", api);
 
   if (api !== "tasks") return ir;
 
-  const laravelPages = requirePaging(ir, "laravelPages");
-
-  return withStyle(ir, "listTasks", {
-    ...laravelPages,
-    id: "flatPages",
+  return withRequestStyle(ir, "listTasks", {
+    ...requirePaging(ir, "laravelPages"),
+    id: "sincePages",
+    position: "since",
     absent: "omit",
-    handlerResult: ["total"],
+    request: [queryRole("since", "since")],
+    handlerResult: ["nextSince", "complete"],
     response: {
-      body: objectOf({ items: slot("items"), total: slot("total"), next: slot("next") }),
+      body: objectOf({ items: slot("items"), complete: slot("complete"), next: slot("next") }),
+      meta: [],
+      headers: [],
+      links: [],
+    },
+  });
+}
+
+// The Laravel tasks api, its channel list on an offset style and its task list on an after/before cursor style.
+function positionsIr(api: string): ContractIR {
+  const withOffset = laravelOffsetChannels(api);
+
+  if (api !== "tasks") return withOffset;
+
+  return withRequestStyle(withOffset, "listTasks", {
+    ...requirePaging(withOffset, "laravelPages"),
+    id: "afterBeforePages",
+    position: "cursor",
+    absent: "omit",
+    request: [
+      queryRole("after", "after"),
+      queryRole("before", "before"),
+      queryRole("limit", "limit"),
+    ],
+    handlerResult: ["nextCursor", "previousCursor"],
+    response: {
+      body: objectOf({ items: slot("items"), next: slot("next"), previous: slot("previous") }),
       meta: [],
       headers: [],
       links: [],
@@ -162,43 +141,11 @@ function springIr(api: string): ContractIR {
   });
 }
 
-async function bootPages(
-  name: string,
-  changeIr: (api: string) => ContractIR,
-): Promise<BootedPages> {
-  const project = projectDirectory(import.meta.url, name);
-  const build = join(project, "build");
-  const files = await generateReferenceProject(
-    project,
-    honoTarget,
-    { bodyValidation: true },
-    (_ir, api) => changeIr(api),
-  );
-
-  expect(emitProject(project, files, build)).toEqual([]);
-
-  const app: PagesAppModule = await import(copyTestApp(build, APP_SOURCE));
-  const server = await app.startReferenceApp();
-
-  return {
-    app,
-    send: (path) => sendRawRequest(server, "GET", path, { headers: BEARER }),
-    close: () => server.close(),
-  };
-}
-
-function answerPage(booted: BootedPages, operationId: string, total: number): void {
-  booted.app.scenario.answers[operationId] = () => ({
-    status: 200,
-    body: { items: CHANNELS, total },
-  });
-}
-
 describe("pages under the Laravel pack", () => {
   let laravel: BootedPages;
 
   beforeAll(async () => {
-    laravel = await bootPages("live-pages-laravel", laravelIr);
+    laravel = await bootPages(pagesProject("live-pages-laravel"), laravelIr);
   }, SETUP_TIMEOUT_MILLISECONDS);
 
   afterAll(async () => {
@@ -210,7 +157,7 @@ describe("pages under the Laravel pack", () => {
   });
 
   test("a length-aware page counts its pages and links them, a missing link written null", async () => {
-    answerPage(laravel, "listChannels", 5);
+    answerPage(laravel, "listChannels", { total: 5 });
 
     const reply = await laravel.send("/v1/channels?page=2&per_page=2");
 
@@ -236,7 +183,7 @@ describe("pages under the Laravel pack", () => {
   });
 
   test("the last page has no next link, written null as the style's absent says", async () => {
-    answerPage(laravel, "listChannels", 4);
+    answerPage(laravel, "listChannels", { total: 4 });
 
     const reply = await laravel.send("/v1/channels?page=2&per_page=2");
 
@@ -249,16 +196,111 @@ describe("pages under the Laravel pack", () => {
     expect(JSON.parse(reply.text)).toEqual({ data: { channelId: CHANNEL, name: "General" } });
   });
 
-  test("a style's flat body writes the total beside the items", async () => {
-    answerPage(laravel, "listTasks", 3);
+  test("a format's page headers and a page header written from an object are refused by name, once", async () => {
+    const ir = laravelIr("tasks");
+    const [format] = Object.values(ir.formats);
+    const laravelPages = requirePaging(ir, "laravelPages");
 
-    const reply = await laravel.send(`/v1/channels/${CHANNEL}/tasks?per_page=2`);
+    if (format === undefined) throw new Error("the Laravel golden lost its format");
+
+    format.success.page.headers = [{ name: "X-Page", value: slot("status") }];
+    laravelPages.response.headers = [{ name: "X-Meta", value: slot("meta") }];
+
+    const outcome = await honoTarget.generate({
+      ir,
+      options: {},
+      links: await referenceLinks(projectDirectory(import.meta.url, "live-pages-laravel"), "tasks"),
+      artefacts: new Set(["boundary"]),
+    });
+    const codes =
+      outcome.status === "refused" ? outcome.refusals.map((refusal) => refusal.code) : [];
+
+    expect(codes.filter((code) => code === "format.success.headers.unsupported")).toHaveLength(1);
+    expect(codes.filter((code) => code === "paging.response.header.unsupported")).toHaveLength(1);
+  });
+
+  test("a since style's own body links the next token and says whether the list is complete", async () => {
+    answerPage(laravel, "listTasks", { nextSince: "t2", complete: false });
+
+    const reply = await laravel.send(`/v1/channels/${CHANNEL}/tasks?since=t1`);
 
     expect(reply.status).toBe(200);
-    expect(JSON.parse(reply.text)).toMatchObject({
-      total: 3,
-      next: `/v1/channels/${CHANNEL}/tasks?per_page=2&page=2`,
+    expect(JSON.parse(reply.text)).toEqual({
+      items: expect.any(Array),
+      complete: false,
+      next: `/v1/channels/${CHANNEL}/tasks?since=t2`,
     });
+  });
+});
+
+describe("pages on offset and after/before cursor positions", () => {
+  let positions: BootedPages;
+
+  beforeAll(async () => {
+    positions = await bootPages(pagesProject("live-pages-positions"), positionsIr);
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  afterAll(async () => {
+    await positions?.close();
+  });
+
+  beforeEach(() => {
+    positions.app.resetScenario();
+  });
+
+  test("an offset off a page start links the next page one limit further", async () => {
+    answerPage(positions, "listChannels", { total: 30 });
+
+    const reply = await positions.send("/v1/channels?offset=5&limit=10");
+
+    expect(reply.status).toBe(200);
+    expect(JSON.parse(reply.text)).toEqual({
+      items: CHANNELS,
+      total: 30,
+      offset: 5,
+      from: 6,
+      to: 7,
+      next: "/v1/channels?limit=10&offset=15",
+      previous: "/v1/channels?limit=10&offset=0",
+    });
+  });
+
+  test("an offset whose page reaches the total has no next link", async () => {
+    answerPage(positions, "listChannels", { total: 25 });
+
+    const reply = await positions.send("/v1/channels?offset=15&limit=10");
+
+    expect(JSON.parse(reply.text).next).toBeUndefined();
+    expect(reply.headers.link).toBe('</v1/channels?limit=10&offset=5>; rel="prev"');
+  });
+
+  test("a total that is not a record count is a 500", async () => {
+    answerPage(positions, "listChannels", { total: 2.5 });
+
+    const reply = await positions.send("/v1/channels?offset=0&limit=10");
+
+    expect(reply.status).toBe(500);
+  });
+
+  test("an after/before cursor page links the handler's cursors in their own params", async () => {
+    answerPage(positions, "listTasks", { nextCursor: "c3", previousCursor: "c2" });
+
+    const reply = await positions.send(`/v1/channels/${CHANNEL}/tasks?after=c1&limit=2`);
+
+    expect(reply.status).toBe(200);
+    expect(JSON.parse(reply.text)).toEqual({
+      items: expect.any(Array),
+      next: `/v1/channels/${CHANNEL}/tasks?limit=2&after=c3`,
+      previous: `/v1/channels/${CHANNEL}/tasks?limit=2&before=c2`,
+    });
+  });
+
+  test("the last cursor page has no next link", async () => {
+    answerPage(positions, "listTasks", { previousCursor: "c2" });
+
+    const reply = await positions.send(`/v1/channels/${CHANNEL}/tasks?after=c1&limit=2`);
+
+    expect(JSON.parse(reply.text).next).toBeUndefined();
   });
 });
 
@@ -266,7 +308,7 @@ describe("pages under the Spring pack", () => {
   let spring: BootedPages;
 
   beforeAll(async () => {
-    spring = await bootPages("live-pages-spring", springIr);
+    spring = await bootPages(pagesProject("live-pages-spring"), springIr);
   }, SETUP_TIMEOUT_MILLISECONDS);
 
   afterAll(async () => {
@@ -278,7 +320,7 @@ describe("pages under the Spring pack", () => {
   });
 
   test("a Spring page counts its pages from zero", async () => {
-    answerPage(spring, "listTasks", 5);
+    answerPage(spring, "listTasks", { total: 5 });
 
     const reply = await spring.send(`/v1/channels/${CHANNEL}/tasks?page=1&size=2`);
 
@@ -289,7 +331,7 @@ describe("pages under the Spring pack", () => {
   });
 
   test("a style's meta members join the format's meta, and its header and links are written", async () => {
-    answerPage(spring, "listChannels", 5);
+    answerPage(spring, "listChannels", { total: 5 });
 
     const reply = await spring.send("/v1/channels?page=1&size=2");
 

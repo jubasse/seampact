@@ -38,6 +38,9 @@ const POSITION_ROLES: Readonly<Record<string, string>> = {
   since: "since",
 };
 
+// The page slots whose value is an array or an object, never a header value.
+const STRUCTURED_PAGE_SLOTS: readonly string[] = [ITEMS_SLOT, "meta"];
+
 const ABSENT_RENDERINGS: readonly string[] = ["omit", "null"];
 
 // The slots a page template may write that the boundary fills: the response roles, the request path and status,
@@ -120,7 +123,7 @@ export function pagingEntry(
     );
   }
 
-  const body = pageBody(ir, operation, style, styleLocation, refusals);
+  const body = pageBody(ir, operation, style, refusals);
   const responseLocation = below(styleLocation, "response");
 
   return {
@@ -137,7 +140,12 @@ export function pagingEntry(
       pageTemplate(style, member, below(responseLocation, "meta", String(index)), refusals),
     ),
     headers: style.response.headers.map((header, index) =>
-      pageTemplate(style, header, below(responseLocation, "headers", String(index)), refusals),
+      pageHeaderTemplate(
+        style,
+        header,
+        below(responseLocation, "headers", String(index)),
+        refusals,
+      ),
     ),
     links: style.response.links.map((link) => ({ rel: link.rel, role: link.role })),
   };
@@ -210,18 +218,27 @@ export function pageBodyTemplate(ir: ContractIR, operation: Operation): Template
     : undefined;
 }
 
+/** Where the page body of a list is written: the style's own body, or the format's page body. */
+export function pageBodyLocation(ir: ContractIR, operation: Operation): IrLocation {
+  const styleId = operation.paging?.style;
+  const style =
+    styleId !== undefined && Object.hasOwn(ir.pagings, styleId) ? ir.pagings[styleId] : undefined;
+
+  if (style?.response.body !== undefined) {
+    return below(API_LOCATION, "pagings", style.id, "response", "body");
+  }
+
+  return below(API_LOCATION, "formats", operation.format, "success", "page", "body");
+}
+
 function pageBody(
   ir: ContractIR,
   operation: Operation,
   style: PagingStyle,
-  styleLocation: IrLocation,
   refusals: Refusal[],
 ): SourceValue {
   const body = pageBodyTemplate(ir, operation);
-  const location =
-    style.response.body === undefined
-      ? below(API_LOCATION, "formats", operation.format, "success", "page", "body")
-      : below(styleLocation, "response", "body");
+  const location = pageBodyLocation(ir, operation);
 
   if (body === undefined) {
     refusals.push(
@@ -250,26 +267,61 @@ function pageTemplate(
   };
 }
 
+// A header is written as text: a template that renders an object or an array has no header value.
+function pageHeaderTemplate(
+  style: PagingStyle,
+  header: { readonly name: string; readonly value: Template },
+  location: IrLocation,
+  refusals: Refusal[],
+): SourceValue {
+  if (!isScalarTemplate(header.value)) {
+    refusals.push(
+      refuseNotGeneratedYet(
+        "paging.response.header",
+        `The header '${header.name}' of the paging style '${style.id}', written from an object or an array,`,
+        below(location, "value"),
+      ),
+    );
+  }
+
+  return pageTemplate(style, header, location, refusals);
+}
+
+function isScalarTemplate(node: Template): boolean {
+  if (!isKnownVariant("Template", node)) return false;
+
+  switch (node.kind) {
+    case "text":
+      return true;
+    case "literal":
+      return node.value === null || typeof node.value !== "object";
+    case "slot":
+      return node.path.length > 0 || !STRUCTURED_PAGE_SLOTS.includes(node.slot);
+    default:
+      return false;
+  }
+}
+
 function pageTemplateValue(
   style: PagingStyle,
   node: Template,
   location: IrLocation,
   refusals: Refusal[],
 ): SourceValue {
-  for (const slot of templateSlots(node)) {
-    // An offset kind has no page number of its own: its base is not declared.
-    const unrendered =
-      !RENDERED_PAGE_SLOTS.includes(slot) || (slot === PAGE_SLOT && style.position === "offset");
+  // An offset kind has no page number of its own: its base is not declared.
+  const unrenderedSlots = [...new Set(templateSlots(node))].filter(
+    (slot) =>
+      !RENDERED_PAGE_SLOTS.includes(slot) || (slot === PAGE_SLOT && style.position === "offset"),
+  );
 
-    if (unrendered) {
-      refusals.push(
-        refuseNotGeneratedYet(
-          "paging.response.slot",
-          `The page slot '$${slot}' of the paging style '${style.id}'`,
-          location,
-        ),
-      );
-    }
+  if (unrenderedSlots.length > 0) {
+    refusals.push(
+      refuseNotGeneratedYet(
+        "paging.response.slot",
+        `The page slots ${unrenderedSlots.map((slot) => `'$${slot}'`).join(", ")} of the paging style '${style.id}'`,
+        location,
+      ),
+    );
   }
 
   return template(node, location, refusals);

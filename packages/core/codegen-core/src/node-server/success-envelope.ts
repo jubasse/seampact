@@ -2,7 +2,7 @@ import type { ContractIR, Operation, Response, Template } from "@seampact/spec/i
 import { below, type IrLocation } from "../ir-location.js";
 import { refuseInconsistentIr, refuseNotGeneratedYet } from "../located-refusals.js";
 import type { Refusal } from "../refusal.js";
-import { absentRendering, slotPath, templateSlots } from "./paging-entry.js";
+import { absentRendering, pageBodyLocation, slotPath, templateSlots } from "./paging-entry.js";
 import { type SourceValue, template } from "./route-table-source.js";
 
 // The success body around a handler's payload (ADR 0002 section 13): an item, list or table response written in its
@@ -43,8 +43,6 @@ export function successEnvelope(
     );
   }
 
-  if (response.shape === "page") return pageItemsPath(pageBody, formatLocation, refusals);
-
   const shapeLocation = below(formatLocation, "success", response.shape);
   const shape = shapeOf(format.success, response.shape);
 
@@ -70,6 +68,10 @@ export function successEnvelope(
     );
   }
 
+  if (response.shape === "page") {
+    return pageItemsPath(pageBody, pageBodyLocation(ir, operation), refusals);
+  }
+
   return envelopeOf(
     shape.body,
     absentRendering(format.absent, below(formatLocation, "absent"), refusals),
@@ -86,6 +88,8 @@ function shapeOf(success: ContractIR["formats"][string]["success"], shape: strin
       return success.table;
     case "list":
       return success.list;
+    case "page":
+      return success.page;
     default:
       return undefined;
   }
@@ -130,7 +134,7 @@ function envelopeOf(
 
 function pageItemsPath(
   pageBody: Template | undefined,
-  formatLocation: IrLocation,
+  bodyLocation: IrLocation,
   refusals: Refusal[],
 ): { readonly payloadPath: readonly string[] } {
   const itemsPath = pageBody === undefined ? undefined : slotPath(pageBody, ITEMS_SLOT);
@@ -141,7 +145,7 @@ function pageItemsPath(
     refuseNotGeneratedYet(
       "paging.response.items",
       "A page body that does not write `$items` under named members",
-      below(formatLocation, "success", "page"),
+      bodyLocation,
     ),
   );
 

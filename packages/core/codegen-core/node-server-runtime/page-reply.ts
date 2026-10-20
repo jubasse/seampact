@@ -17,6 +17,7 @@ const HANDLER_FACT_TYPES: Readonly<Record<string, "string" | "number" | "boolean
 };
 const OPTIONAL_HANDLER_FACTS: readonly string[] = ["nextCursor", "previousCursor"];
 const MORE_FACT = "more";
+const TOTAL_FACT = "total";
 const FIRST_OFFSET = 0;
 
 /** A handler's page: its items, and the members its paging style asks for beside them. */
@@ -48,6 +49,15 @@ export function handlerPage(state: CheckState, handlerBody: unknown): HandlerPag
         state.route,
         new Error(
           `the handler of '${state.route.id}' returned a page whose '${member}' is not a ${HANDLER_FACT_TYPES[member] ?? "known member"}`,
+        ),
+      );
+    }
+
+    if (member === TOTAL_FACT && !isRecordCount(value)) {
+      throw unexpectedError(
+        state.route,
+        new Error(
+          `the handler of '${state.route.id}' returned a page whose 'total' is not a non-negative integer`,
         ),
       );
     }
@@ -86,8 +96,16 @@ export function renderedPage(
   for (const header of paging.headers) {
     const value = renderTemplate(header.value, slots, "omit");
 
-    if (value !== undefined && value !== null)
-      headers.push([header.name.toLowerCase(), String(value)]);
+    if (value === undefined || value === null) continue;
+
+    if (typeof value === "object") {
+      throw unexpectedError(
+        state.route,
+        new Error(`the page header '${header.name}' of '${state.route.id}' is not a text value`),
+      );
+    }
+
+    headers.push([header.name.toLowerCase(), String(value)]);
   }
 
   const relations = paging.links.flatMap((link) =>
@@ -157,17 +175,19 @@ function numberedPageSlots(
   const offset =
     pageNumber === undefined ? (sentPosition ?? FIRST_OFFSET) : (pageNumber - paging.base) * limit;
   const pageIndex = Math.floor(offset / limit);
+  const nextOffset = offset + limit;
+  const total = numberOrUndefined(page.facts.total);
   const hasNext = paging.handlerResult.includes(MORE_FACT)
     ? page.facts.more === true
-    : totalPages !== undefined && pageIndex + 1 < totalPages;
+    : total !== undefined && nextOffset < total;
   // The position value of the page at an index, as the request writes it.
   const positionAt = (index: number): string =>
     String(isPagePosition ? paging.base + index : index * limit);
-  const urlAt = (index: number): string =>
-    pageUrl(
-      state,
-      withQueryMember(state.request.rawQuery, paging.positionParam, positionAt(index)),
-    );
+  const urlWithPosition = (position: string): string =>
+    pageUrl(state, withQueryMember(state.request.rawQuery, paging.positionParam, position));
+  const urlAt = (index: number): string => urlWithPosition(positionAt(index));
+  // An offset the client chose need not fall on a page start: the next page starts one limit further.
+  const nextUrl = isPagePosition ? urlAt(pageIndex + 1) : urlWithPosition(String(nextOffset));
   const hasItems = page.items.length > 0;
 
   return {
@@ -177,7 +197,7 @@ function numberedPageSlots(
     to: hasItems ? offset + page.items.length : undefined,
     first: urlAt(0),
     previous: offset > FIRST_OFFSET ? pagePreviousUrl(state, paging, offset, limit) : undefined,
-    next: hasNext ? urlAt(pageIndex + 1) : undefined,
+    next: hasNext ? nextUrl : undefined,
     last: totalPages === undefined ? undefined : urlAt(Math.max(totalPages - 1, 0)),
   };
 }
@@ -231,6 +251,10 @@ function tokenPageSlots(
 
 function pageUrl(state: CheckState, query: string): string {
   return query === "" ? state.request.path : `${state.request.path}?${query}`;
+}
+
+function isRecordCount(value: unknown): boolean {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
 }
 
 function numberOrUndefined(value: unknown): number | undefined {
