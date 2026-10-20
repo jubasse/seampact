@@ -16,6 +16,8 @@ import { type SlotValue, templateSchema } from "./templates.js";
 
 const LIMIT_ROLE = "limit";
 const ITEMS_SLOT = "items";
+const ITEM_SLOT = "item";
+const ITEM_SELF_SLOT = "itemSelf";
 const INSTANT_TOKEN = "instant";
 
 export function writePaging(
@@ -142,8 +144,8 @@ export function pageBodySchema(
   // Inside `$each` over the records: the record and its member URL (`$itemId` and `$itemFields` wait for a consumer).
   const element = new Map(slots);
 
-  element.set("item", { schema: itemSchema, presence: "always" });
-  element.set("itemSelf", { schema: urlSchema(context), presence: "always" });
+  element.set(ITEM_SLOT, { schema: itemSchema, presence: "always" });
+  element.set(ITEM_SELF_SLOT, { schema: urlSchema(context), presence: "always" });
 
   slots.set(ITEMS_SLOT, {
     schema: { type: "array", items: itemSchema },
@@ -159,6 +161,7 @@ export function pageBodySchema(
     slots,
     format,
     body === undefined ? style.response.meta : [],
+    style.absent,
     roleSlots,
     styleLocation,
   );
@@ -169,7 +172,10 @@ export function pageBodySchema(
       ? below({ member: "" }, "formats", format.id, "success", "page", "body")
       : below(styleLocation, "body");
 
-  return templateSchema(context, template, slots, format.absent, templateLocation)?.schema;
+  // The style's own body and meta follow the style's `absent`; the format's page shape follows the format's.
+  const absent = body === undefined ? format.absent : style.absent;
+
+  return templateSchema(context, template, slots, absent, templateLocation)?.schema;
 }
 
 // The response roles of section 14, each the slot of its name.

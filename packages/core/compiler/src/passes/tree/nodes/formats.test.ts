@@ -742,3 +742,30 @@ surfaces:
 
   expect(located(diagnostics).filter(([rule]) => rule === "format-id")).toEqual([]);
 });
+
+test("formats: a literal member named like the resource and a $collection member are refused as one member written twice", () => {
+  const { diagnostics } = run(
+    `
+api: { name: a, version: 1, kind: product }
+formats:
+  doubled:
+    success: { item: { body: { notes: $self, $collection: $payload } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      notes:
+        kind: collection
+        format: doubled
+        id: { noteId: { type: string } }
+        item: Note
+        ops: [get]
+`,
+    {
+      [`${ROUTES}/notes/id/noteId`]: text,
+      [`${ROUTES}/notes/item`]: ref("Note"),
+    },
+  );
+
+  expect(diagnostics.map(({ rule }) => rule)).toEqual(["seampact/tree/format-member"]);
+});

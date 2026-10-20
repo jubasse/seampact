@@ -9,4 +9,4 @@
 "@seampact/openapi": patch
 ---
 
-Add the six first-party convention packs as data (CRUD rights, API Platform, Laravel, Spring, JSON:API, HAL) with golden contracts for all but JSON:API, let a CRUD right on an unscoped route take no subject, let the OpenAPI emitter write `$each`, `$resource` and a member named after the collection, and let a format read `$collection` in an item and `$self` on a route whose item has no id.
+Add the six first-party convention packs as data (CRUD rights, API Platform, Laravel, Spring, JSON:API, HAL) with golden contracts for all but JSON:API, let a CRUD right on an unscoped route take no subject, let the OpenAPI emitter write `$each`, `$resource` and a member named after the collection, and let a format read `$collection` in an item, `$self` on a route whose item has no id, and a paging style's own `absent`, and refuse a member written twice.

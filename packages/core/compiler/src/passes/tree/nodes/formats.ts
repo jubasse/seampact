@@ -422,6 +422,7 @@ export function treeNodesCheckPayloads(draft: DraftIR, context: TreeNodesContext
       for (const written of writtenTemplates(draft, operation, format, response.shape)) {
         checkIdSlots(check, written);
         checkItemCollectionSlot(check, written);
+        checkMemberNames(check, written);
         checkSlotValues(check, written, written.template, undefined);
       }
     }
@@ -522,6 +523,65 @@ function checkItemCollectionSlot(check: PayloadCheck, written: WrittenTemplate):
     message: `The template of ${written.owner.name} writes $${COLLECTION_SLOT} in an item, but ${operation.id} belongs to no collection or single.`,
     fix: "Set format: bare (or another format) on the route, or move it under a collection or single.",
   });
+}
+
+// A member name written twice in one object would be one member in the document: `$collection` names a member by the
+// resource type the operation fixes, so a literal member of that name collides with it.
+function checkMemberNames(check: PayloadCheck, written: WrittenTemplate): void {
+  const duplicate = duplicateMemberName(written.template, check.operation.resource?.type);
+
+  if (duplicate === undefined) return;
+
+  reportPayload(check, written.owner, {
+    rule: "format-member",
+    message: `The template of ${written.owner.name} writes the member ${quote(duplicate)} twice in ${check.operation.id}.`,
+    fix: "Rename one of the members, or stop naming a member with $collection where a literal member has the resource's name.",
+  });
+}
+
+function duplicateMemberName(
+  template: IrWriter.Template,
+  resourceType: string | undefined,
+): string | undefined {
+  switch (template.kind) {
+    case "object": {
+      const seen = new Set<string>();
+
+      for (const member of template.members) {
+        const name = memberNameText(member.name, resourceType);
+
+        if (name !== undefined && seen.has(name)) return name;
+
+        if (name !== undefined) seen.add(name);
+      }
+
+      for (const member of template.members) {
+        const nested = duplicateMemberName(member.value, resourceType);
+
+        if (nested !== undefined) return nested;
+      }
+
+      return undefined;
+    }
+
+    case "array":
+      return template.items
+        .map((item) => duplicateMemberName(item, resourceType))
+        .find((name) => name !== undefined);
+    case "each":
+      return duplicateMemberName(template.as, resourceType);
+    default:
+      return undefined;
+  }
+}
+
+function memberNameText(
+  name: IrWriter.ObjectTemplateMember["name"],
+  resourceType: string | undefined,
+): string | undefined {
+  if (name.kind === "text") return name.text;
+
+  return name.slot === COLLECTION_SLOT ? resourceType : undefined;
 }
 
 const hasProperty = (schema: IrWriter.ObjectSchema, name: string): boolean =>
@@ -640,7 +700,7 @@ function checkMerge(
 }
 
 interface PayloadFault {
-  readonly rule: "format-id" | "format-merge" | "format-each" | "template-slot";
+  readonly rule: "format-id" | "format-merge" | "format-each" | "format-member" | "template-slot";
   readonly message: string;
   readonly fix: string;
 }

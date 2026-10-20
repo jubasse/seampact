@@ -1,5 +1,6 @@
 import { below, type IrLocation } from "@seampact/codegen-core";
 import {
+  type Absent,
   isKnownVariant,
   type NamedTemplate,
   type Operation,
@@ -17,6 +18,7 @@ import { type SlotSchemas, type SlotValue, templateSchema } from "./templates.js
 
 const META_SLOT = "meta";
 const COLLECTION_SLOT = "collection";
+const RESOURCE_SLOT = "resource";
 const ALWAYS_FILLED_META: readonly string[] = ["now", "handler"];
 
 /** The response shapes the emitter writes through the format: `list` waits for a consumer (A47). */
@@ -58,7 +60,7 @@ export function successSlots(
   const resource = resourceName(context, item);
 
   if (resource !== undefined)
-    slots.set("resource", { schema: { const: resource }, presence: "always" });
+    slots.set(RESOURCE_SLOT, { schema: { const: resource }, presence: "always" });
 
   return slots;
 }
@@ -81,6 +83,7 @@ export function addMetaSlot(
   slots: Map<string, SlotValue>,
   format: WireFormat,
   styleMeta: readonly NamedTemplate[],
+  styleAbsent: Absent,
   roleSlots: SlotSchemas,
   location: IrLocation,
 ): void {
@@ -103,7 +106,7 @@ export function addMetaSlot(
       context,
       member.value,
       roleSlots,
-      format.absent,
+      styleAbsent,
       below(location, "meta", index),
     );
 

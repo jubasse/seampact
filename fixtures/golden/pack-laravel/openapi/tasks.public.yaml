@@ -51,14 +51,20 @@ paths:
                         type: string
                         format: uri-reference
                       prev:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: uri-reference
                       next:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: uri-reference
                     required:
                       - first
                       - last
+                      - prev
+                      - next
                   meta:
                     type: object
                     properties:
@@ -252,14 +258,20 @@ paths:
                         type: string
                         format: uri-reference
                       prev:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: uri-reference
                       next:
-                        type: string
+                        type:
+                          - string
+                          - "null"
                         format: uri-reference
                     required:
                       - first
                       - last
+                      - prev
+                      - next
                   meta:
                     type: object
                     properties:

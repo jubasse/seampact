@@ -87,7 +87,18 @@ function eachSchema(
     below(location, "as"),
   );
 
-  if (rendered === undefined || rendered.presence === "never") return undefined;
+  if (rendered === undefined) return undefined;
+
+  if (rendered.presence === "never") {
+    refuseNotEmitted(
+      context,
+      "template.each",
+      "A '$each' whose '$as' is never written",
+      below(location, "as"),
+    );
+
+    return undefined;
+  }
 
   return { schema: { type: "array", items: rendered.schema }, presence: "always" };
 }
@@ -156,6 +167,17 @@ function objectTemplateSchema(
     const memberName = memberNameOf(context, member.name, slots, below(memberLocation, "name"));
 
     if (memberName === undefined) return;
+
+    if (memberName in properties) {
+      refuseNotEmitted(
+        context,
+        "template.member-repeated",
+        `The member '${memberName}' written twice in one object`,
+        below(memberLocation, "name"),
+      );
+
+      return;
+    }
 
     const value = templateSchema(
       context,

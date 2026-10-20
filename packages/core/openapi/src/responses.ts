@@ -180,7 +180,7 @@ function responseBodySchema(
 
   const formatLocation = below({ member: "" }, "formats", format.id, "success", shape, "body");
 
-  addMetaSlot(context, slots, format, [], new Map(), formatLocation);
+  addMetaSlot(context, slots, format, [], format.absent, new Map(), formatLocation);
 
   return templateSchema(context, format.success[shape].body, slots, format.absent, formatLocation)
     ?.schema;

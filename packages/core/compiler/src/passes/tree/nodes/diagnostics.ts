@@ -64,6 +64,7 @@ export type TreeNodesRule =
   | "format-id"
   | "format-merge"
   | "format-each"
+  | "format-member"
   | "template-slot"
   | "template-syntax"
   | "template-merge"

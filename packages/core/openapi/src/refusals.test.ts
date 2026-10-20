@@ -130,3 +130,26 @@ describe("writes the collection name slot", () => {
     expect(JSON.stringify(response)).toContain(`"${listTasks.resource?.type}":`);
   });
 });
+
+describe("a member written twice in one object", () => {
+  it("is refused by name, not overwritten", () => {
+    const ir = readGoldenIr("reference/tasks");
+    const getTask = operationOf(ir, "getTask");
+    const format = ir.formats[getTask.format ?? ""];
+
+    if (format === undefined) throw new Error("getTask has no format");
+
+    const twice = { kind: "text" as const, text: "data" };
+    const value = { kind: "slot" as const, slot: "payload", path: [] };
+
+    format.success.item.body = {
+      kind: "object",
+      members: [
+        { name: twice, value },
+        { name: twice, value },
+      ],
+    };
+
+    expect(refusalCodes(ir)).toContain("openapi.template.member-repeated.unsupported");
+  });
+});
