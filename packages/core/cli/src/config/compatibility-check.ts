@@ -1,4 +1,5 @@
 import type { Target } from "@seampact/codegen-core";
+import { OWN_VALIDATORS_ARTEFACT } from "@seampact/codegen-core/node-server";
 import {
   type LibrarySupport,
   SERVER_TARGETS,
@@ -12,7 +13,12 @@ import {
 } from "@seampact/spec/config";
 import { type CliProblem, entryWhere } from "../cli-problem.js";
 import { selectArtefacts } from "./artefact-switches.js";
-import { type InstalledVersion, readInstalledVersion } from "./installed-version.js";
+import {
+  FRAMEWORK_MISSING_CODE,
+  type InstalledVersion,
+  readInstalledVersion,
+} from "./installed-version.js";
+import { installFix } from "./package-manager.js";
 import type { LoadedAppConfig } from "./read-app-config.js";
 
 // The compatibility matrix check (ADR 0009 "Artefacts and the compatibility matrix", ADR 0011 "The app config"):
@@ -70,6 +76,7 @@ export function checkAppCompatibility(
     }
 
     installedLibraries.set(entry.id, libraries);
+    problems.push(...ownValidatorsLibraryProblems(entry, targets, record, root));
   }
 
   if (problems.length > 0) return { problems, warnings: [] };
@@ -276,6 +283,43 @@ function librariesInUse(
   if (selection.status === "refused") return [];
 
   return (record.libraries ?? []).filter((library) => selection.artefacts.has(library.artefact));
+}
+
+// The library the target's own validators import, when the entry writes them: no linked validators provider, and the
+// `validators` artefact on. Only its presence is checked; the matrix records no tested major for it.
+function ownValidatorsLibraryProblems(
+  entry: TargetEntry,
+  targets: ReadonlyMap<string, Target>,
+  record: TargetCompatibility,
+  root: string,
+): CliProblem[] {
+  const [ownValidator] = record.ownValidators;
+  const target = targets.get(entry.id);
+
+  if (ownValidator === undefined || target === undefined) return [];
+
+  if (entry.link?.validators !== undefined) return [];
+
+  const selection = selectArtefacts(entry, target);
+
+  if (selection.status === "refused" || !selection.artefacts.has(OWN_VALIDATORS_ARTEFACT))
+    return [];
+
+  const where = entryWhere(entry.id);
+  const read = readInstalledVersion(root, ownValidator.library, where);
+
+  if (read.status === "installed") return [];
+
+  if (read.problem.code !== FRAMEWORK_MISSING_CODE) return [read.problem];
+
+  return [
+    {
+      code: "config.own-validators.library-missing",
+      message: `The target '${entry.use}' writes its own validators, which import '${ownValidator.library}', and it is not installed in the project of the entry's output directory (${root}).`,
+      fix: installFix(root, ownValidator.library, "runtime"),
+      where,
+    },
+  ];
 }
 
 // The ids `allowUntested` may name: the framework and each library of the target.
