@@ -213,9 +213,17 @@ function schemaErrorProblems(
     .filter(
       (error) => !(error.schemaPath.includes("/oneOf/") && oneOfPaths.has(error.instancePath)),
     )
+    .filter(
+      (error) => !(error.keyword === "oneOf" && hasDeeperPath(error.instancePath, oneOfPaths)),
+    )
     .map((error) => schemaErrorProblem(parsed, error))
     .filter(({ keyPath }) => !isAtOrUnder(keyPath, reportedPaths))
     .map(({ problem }) => problem);
+}
+
+// An outer `oneOf` fails because an inner one did; the inner one names the value to correct.
+function hasDeeperPath(instancePath: string, paths: ReadonlySet<string>): boolean {
+  return [...paths].some((path) => path.startsWith(`${instancePath}/`));
 }
 
 function isAtOrUnder(keyPath: string, reportedPaths: ReadonlySet<string>): boolean {

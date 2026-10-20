@@ -83,22 +83,24 @@ const OPTION_PROPERTIES: Record<(typeof OPENAPI_DOCUMENT_OPTION_KEYS)[number], J
   },
 };
 
+// A document's path with its emitter options.
+const PLACED_DOCUMENT_SCHEMA: JsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["path"],
+  properties: { path: NON_EMPTY_STRING, ...OPTION_PROPERTIES },
+};
+
 // The `$defs` the app's `openapi` refers to. A placed document is told from a document mapping by its required
-// `path`.
+// `path`; the placed form is written inline in each `oneOf`, so that a refusal names the branch it failed.
 export const APP_OPENAPI_SCHEMA_DEFS: Record<string, JsonSchema> = {
-  placedDocument: {
-    type: "object",
-    additionalProperties: false,
-    required: ["path"],
-    properties: { path: NON_EMPTY_STRING, ...OPTION_PROPERTIES },
-  },
   documentPlacement: {
-    oneOf: [NON_EMPTY_STRING, { $ref: "#/$defs/placedDocument" }],
+    oneOf: [NON_EMPTY_STRING, PLACED_DOCUMENT_SCHEMA],
   },
   apiDocuments: {
     oneOf: [
       NON_EMPTY_STRING,
-      { $ref: "#/$defs/placedDocument" },
+      PLACED_DOCUMENT_SCHEMA,
       {
         type: "object",
         not: { required: ["path"] },

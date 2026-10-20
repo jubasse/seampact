@@ -229,6 +229,9 @@ importers:
       '@seampact/compiler':
         specifier: workspace:*
         version: link:../compiler
+      '@seampact/openapi':
+        specifier: workspace:*
+        version: link:../openapi
       '@seampact/spec':
         specifier: workspace:*
         version: link:../spec
