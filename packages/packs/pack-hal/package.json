@@ -1,0 +1,14 @@
+{
+  "name": "@seampact/pack-hal",
+  "version": "0.0.0",
+  "private": true,
+  "description": "HAL items and pages with _links, _embedded and Spring HATEOAS's page object.",
+  "seampact": {
+    "role": "pack",
+    "pack": "pack.yaml"
+  },
+  "files": [
+    "pack.yaml",
+    "README.md"
+  ]
+}

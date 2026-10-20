@@ -1,0 +1,42 @@
+# JSON-LD items, Hydra collections and the iri-reference format for API Platform.
+pack: { name: '@seampact/pack-api-platform', version: 0.0.0, extends: [] }
+
+scalars:
+  iri-reference: { type: string, description: "An IRI reference, such as the '@id' of a JSON-LD node." }
+
+formats:
+  jsonld:
+    media: application/ld+json
+    success:
+      item:
+        body: { '@context': '/contexts/${resource}', '@id': $self, '@type': $resource, $merge: $payload }
+    error:
+      body:
+        '@context': /contexts/Error
+        '@id': '/errors/${status}'
+        '@type': Error
+        type: '/errors/${status}'
+        title: $title
+        detail: $detail
+        status: $status
+        code: $code
+        $merge: $params
+
+pagings:
+  hydra:
+    request:
+      page: { query: page }
+      limit: { query: itemsPerPage }
+      sort: { query: 'order[{key}]', style: keyed }
+    response:
+      body:
+        '@context': '/contexts/${resource}'
+        '@id': $path
+        '@type': Collection
+        totalItems: $total
+        member: { $each: $items, $as: { '@id': $itemSelf, '@type': $resource, $merge: $item } }
+        view: { '@id': $self, '@type': PartialCollectionView, first: $first, last: $last, previous: $previous, next: $next }
+
+conventions:
+  format: jsonld
+  paging: { default: hydra }

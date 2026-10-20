@@ -44,7 +44,7 @@ conventions:
 | Key | Meaning |
 |---|---|
 | `select` | criteria a route must all match, each a list of accepted values: `op` (`list`, `get`, `create`, `update`, `delete`, `batch`: the `ops` name the route came from), `access` (`read` for a safe route, `write` otherwise), `apiKind` (`product`, `service`), `identity`, `tag` |
-| `declareRight` | `{ name, subject, errors }`: declares the right the `name` template gives. `subject.member` (on member routes) is `resource`, the item schema with the member id, or `none`; `subject.collection` (on other routes) is `innermostScope` or `none`. When the catalogue already declares that name, the declared right is used and its subject must be the one the entry would give |
+| `declareRight` | `{ name, subject, errors }`: declares the right the `name` template gives. `subject.member` (on member routes) is `resource`, the item schema with the member id, or `none`; `subject.collection` (on other routes) is `innermostScope` or `none`; `innermostScope` on a route with no scope above it gives `none`. When the catalogue already declares that name, the declared right is used and its subject must be the one the entry would give |
 | `require` | `{ right: <template> }` or `{ rule, params, bucket }`: a requirement attached to the route (section 8 gives its position) |
 | `attachErrors` | codes attached to the route |
 

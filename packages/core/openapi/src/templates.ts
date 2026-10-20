@@ -1,5 +1,10 @@
 import { below, type IrLocation } from "@seampact/codegen-core";
-import { type Absent, isKnownVariant, type Template } from "@seampact/spec/ir";
+import {
+  type Absent,
+  isKnownVariant,
+  type ObjectTemplateMember,
+  type Template,
+} from "@seampact/spec/ir";
 import { type EmitContext, refuseNotEmitted, refuseUnknown } from "./emit-context.js";
 import { copyJsonValue, type JsonObject, type JsonValue } from "./json-value.js";
 import { nullableSchema } from "./schemas.js";
@@ -13,6 +18,8 @@ export type SlotPresence = "always" | "maybe" | "never";
 export interface SlotValue {
   schema: JsonObject;
   presence: SlotPresence;
+  /** For an array slot: the slots visible inside `$each` over it. */
+  element?: SlotSchemas;
 }
 
 export type SlotSchemas = ReadonlyMap<string, SlotValue>;
@@ -40,17 +47,60 @@ export function templateSchema(
       return { schema: { const: copyJsonValue(template.value) }, presence: "always" };
     case "object":
       return objectTemplateSchema(context, template, slots, absent, location);
-    case "array":
     case "each":
-      refuseNotEmitted(
-        context,
-        `template.${template.kind}`,
-        `A '${template.kind}' template`,
-        location,
-      );
+      return eachSchema(context, template, slots, absent, location);
+    case "array":
+      refuseNotEmitted(context, "template.array", "An 'array' template", location);
 
       return undefined;
   }
+}
+
+// `$each` over an array slot: an array of `$as` read with the slots of the element.
+function eachSchema(
+  context: EmitContext,
+  template: Extract<Template, { kind: "each" }>,
+  slots: SlotSchemas,
+  absent: Absent,
+  location: IrLocation,
+): SlotValue | undefined {
+  const array = slotSchema(context, template.of, [], slots, below(location, "of"));
+
+  if (array === undefined) return undefined;
+
+  if (array.element === undefined) {
+    refuseNotEmitted(
+      context,
+      "template.each",
+      `The slot '$${template.of}' read by '$each' in this place`,
+      below(location, "of"),
+    );
+
+    return undefined;
+  }
+
+  const rendered = templateSchema(
+    context,
+    template.as,
+    array.element,
+    absent,
+    below(location, "as"),
+  );
+
+  if (rendered === undefined) return undefined;
+
+  if (rendered.presence === "never") {
+    refuseNotEmitted(
+      context,
+      "template.each",
+      "A '$each' whose '$as' is never written",
+      below(location, "as"),
+    );
+
+    return undefined;
+  }
+
+  return { schema: { type: "array", items: rendered.schema }, presence: "always" };
 }
 
 function slotSchema(
@@ -80,6 +130,26 @@ function slotSchema(
   return value;
 }
 
+/** The text a member name writes: its own text, or the value of the one name slot, `$collection` (ADR 0002 section 13). */
+function memberNameOf(
+  context: EmitContext,
+  name: ObjectTemplateMember["name"],
+  slots: SlotSchemas,
+  location: IrLocation,
+): string | undefined {
+  if (isKnownVariant("MemberName", name) && name.kind === "text") return name.text;
+
+  const slotValue =
+    isKnownVariant("MemberName", name) && name.kind === "slot" ? slots.get(name.slot) : undefined;
+  const text = slotValue?.schema.const;
+
+  if (typeof text === "string") return text;
+
+  refuseNotEmitted(context, "template.member-name", "A member named by a slot", location);
+
+  return undefined;
+}
+
 function objectTemplateSchema(
   context: EmitContext,
   template: Extract<Template, { kind: "object" }>,
@@ -94,11 +164,15 @@ function objectTemplateSchema(
   template.members.forEach((member, index) => {
     const memberLocation = below(location, "members", index);
 
-    if (!isKnownVariant("MemberName", member.name) || member.name.kind !== "text") {
+    const memberName = memberNameOf(context, member.name, slots, below(memberLocation, "name"));
+
+    if (memberName === undefined) return;
+
+    if (memberName in properties) {
       refuseNotEmitted(
         context,
-        "template.member-name",
-        "A member named by a slot",
+        "template.member-repeated",
+        `The member '${memberName}' written twice in one object`,
         below(memberLocation, "name"),
       );
 
@@ -117,8 +191,8 @@ function objectTemplateSchema(
 
     if (value.presence === "never") {
       if (absent === "null") {
-        properties[member.name.text] = { type: "null" };
-        required.push(member.name.text);
+        properties[memberName] = { type: "null" };
+        required.push(memberName);
       }
 
       return;
@@ -128,9 +202,9 @@ function objectTemplateSchema(
 
     const nullWhenAbsent = value.presence === "maybe" && absent === "null";
 
-    properties[member.name.text] = nullWhenAbsent ? nullableSchema(value.schema) : value.schema;
+    properties[memberName] = nullWhenAbsent ? nullableSchema(value.schema) : value.schema;
 
-    if (value.presence === "always" || nullWhenAbsent) required.push(member.name.text);
+    if (value.presence === "always" || nullWhenAbsent) required.push(memberName);
   });
 
   const schema: JsonObject = { type: "object", properties };

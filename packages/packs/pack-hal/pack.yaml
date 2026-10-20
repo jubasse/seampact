@@ -1,0 +1,24 @@
+# HAL items and pages with _links, _embedded and Spring HATEOAS's page object.
+pack: { name: '@seampact/pack-hal', version: 0.0.0, extends: [] }
+
+formats:
+  hal:
+    media: application/hal+json
+    success:
+      item: { body: { $merge: $payload, _links: { self: { href: $self } } } }
+
+pagings:
+  halPages:
+    request:
+      page: { query: page, base: 0 }
+      limit: { query: size }
+      sort: { query: sort, style: pair }
+    response:
+      body:
+        _embedded: { $collection: { $each: $items, $as: { $merge: $item, _links: { self: { href: $itemSelf } } } } }
+        _links: { self: { href: $self }, first: { href: $first }, prev: { href: $previous }, next: { href: $next }, last: { href: $last } }
+        page: { size: $limit, totalElements: $total, totalPages: $totalPages, number: $page }
+
+conventions:
+  format: hal
+  paging: { default: halPages }

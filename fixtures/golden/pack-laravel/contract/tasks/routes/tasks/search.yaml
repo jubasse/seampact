@@ -1,0 +1,10 @@
+# tasks/routes/tasks/search.yaml
+method: post
+summary: Search the channel's tasks with a structured query.
+idempotency: { exempt: "A read with a body; replaying it is harmless." }
+requires: [{ right: tasks.read }]
+input: TaskQuery
+output: TaskSearchResult
+budget: 300ms
+examples:
+  firstPage: { status: 200, value: { $file: ../../examples/search-200.json } }

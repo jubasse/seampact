@@ -172,6 +172,24 @@ importers:
       '@changesets/cli':
         specifier: 3.0.3
         version: 3.0.3
+      '@seampact/pack-api-platform':
+        specifier: workspace:*
+        version: link:packages/packs/pack-api-platform
+      '@seampact/pack-crud-rights':
+        specifier: workspace:*
+        version: link:packages/packs/pack-crud-rights
+      '@seampact/pack-hal':
+        specifier: workspace:*
+        version: link:packages/packs/pack-hal
+      '@seampact/pack-jsonapi':
+        specifier: workspace:*
+        version: link:packages/packs/pack-jsonapi
+      '@seampact/pack-laravel':
+        specifier: workspace:*
+        version: link:packages/packs/pack-laravel
+      '@seampact/pack-spring':
+        specifier: workspace:*
+        version: link:packages/packs/pack-spring
       '@seampact/spec':
         specifier: workspace:*
         version: link:packages/core/spec
@@ -281,6 +299,18 @@ importers:
       ajv:
         specifier: 8.20.0
         version: 8.20.0
+
+  packages/packs/pack-api-platform: {}
+
+  packages/packs/pack-crud-rights: {}
+
+  packages/packs/pack-hal: {}
+
+  packages/packs/pack-jsonapi: {}
+
+  packages/packs/pack-laravel: {}
+
+  packages/packs/pack-spring: {}
 
   packages/runtime/hooks: {}
 

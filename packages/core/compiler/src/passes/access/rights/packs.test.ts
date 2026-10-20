@@ -132,25 +132,40 @@ describe("pack-derived rights", () => {
     ).toEqual(expected("operations"));
   });
 
+  test("a collection or single route with no scope above it derives a right with no subject", () => {
+    const { draft, diagnostics } = accessRightsRunContract(
+      accessRightsLoadFixture("crud-rights-unscoped"),
+    );
+
+    expect(diagnostics).toEqual([]);
+    expect(
+      Object.fromEntries(Object.entries(draft.rights).map(([id, right]) => [id, right.subject])),
+    ).toEqual({
+      "notes.list": { kind: "none" },
+      "notes.create": { kind: "none" },
+      "settings.get": { kind: "none" },
+      "settings.update": { kind: "none" },
+    });
+  });
+
   test("templates, subjects, names and targets an entry cannot give a route are errors at the entry", () => {
     const { draft, diagnostics } = accessRightsRunContract(
       accessRightsLoadFiles({ "api.yaml": REFUSED_API, "pack.yaml": REFUSED_PACK }),
     );
 
     expect(diagnostics.map(({ rule, origin }) => [rule, origin.layer, origin.pointer])).toEqual([
-      ["seampact/access/pack-right", "pack:odd", "/derive/2/declareRight"],
       ["seampact/access/right-pattern", "pack:odd", "/derive/3/declareRight"],
       ["seampact/access/pack-right", "pack:odd", "/derive/1/declareRight"],
       ["seampact/access/pack-template", "pack:odd", "/derive/0/require/right"],
       ["seampact/access/requirement-target", "pack:odd", "/derive/0/require/right"],
     ]);
-    expect(diagnostics[2]?.related).toEqual([
+    expect(diagnostics[1]?.related).toEqual([
       {
         origin: { layer: "api", pointer: "/rights/items.get" },
         message: "the right is declared here",
       },
     ]);
-    expect(Object.keys(draft.rights)).toEqual(["items.get"]);
+    expect(Object.keys(draft.rights)).toEqual(["items.get", "items.list"]);
   });
 
   test("a refused derived right, a derived requirement twice and a derived right on a public route", () => {

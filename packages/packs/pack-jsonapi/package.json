@@ -1,0 +1,14 @@
+{
+  "name": "@seampact/pack-jsonapi",
+  "version": "0.0.0",
+  "private": true,
+  "description": "JSON:API resource objects, page[number] paging and the errors array.",
+  "seampact": {
+    "role": "pack",
+    "pack": "pack.yaml"
+  },
+  "files": [
+    "pack.yaml",
+    "README.md"
+  ]
+}

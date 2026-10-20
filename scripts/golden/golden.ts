@@ -1,7 +1,8 @@
-import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join, posix } from "node:path";
 import type { GoldenCompiler } from "./compiler.ts";
 import { type GoldenOpenApi, goldenOpenApiFiles } from "./openapi.ts";
+import { PACK_VARIANTS, packVariantFiles } from "./pack-variants.ts";
 import { generateScaleFiles, SCALE_DIRECTORY } from "./scale.ts";
 
 // The golden checker: compiles every case, writes each api's IR and side table as `finalizeSerializeJson` gives
@@ -32,10 +33,17 @@ export const GOLDEN_CASES: GoldenCase[] = [
     source: `${GOLDEN_DIRECTORY}/extensions/contract`,
     entry: "workspace.yaml",
   },
+  ...PACK_VARIANTS.map(({ name }) => ({
+    name: `pack-${name}`,
+    source: `${GOLDEN_DIRECTORY}/pack-${name}/contract`,
+    entry: "workspace.yaml",
+  })),
 ];
 
-/** The directory of a case that holds its contract source; the generators leave it alone. */
-const CONTRACT_SOURCE_DIRECTORY = /^fixtures\/golden\/[^/]+\/contract\//;
+const REFERENCE_DIRECTORY = "fixtures/reference";
+
+/** The directory of a hand-written case that holds its contract source; the generators leave it alone. A pack variant's is generated whole. */
+const CONTRACT_SOURCE_DIRECTORY = /^fixtures\/golden\/(?!pack-)[^/]+\/contract\//;
 
 /** Directories the generators own whole: a file there that they do not write is stale. */
 export const GENERATED_DIRECTORIES = [
@@ -102,9 +110,26 @@ export function allGeneratedFiles(
   const documents = goldenOpenApiFiles(golden.files, openApi);
 
   return {
-    files: new Map([...generateScaleFiles(), ...golden.files, ...documents.files]),
+    files: new Map([
+      ...generateScaleFiles(),
+      ...packVariantContracts(root),
+      ...golden.files,
+      ...documents.files,
+    ]),
     problems: [...golden.problems, ...documents.problems],
   };
+}
+
+/** The pack variant contracts, generated from the reference as it is on disk. */
+export function packVariantContracts(root: string): Map<string, string> {
+  const reference = new Map(
+    filesBelow(root, REFERENCE_DIRECTORY).map((path) => [
+      posix.relative(REFERENCE_DIRECTORY, path),
+      readFileSync(join(root, path), "utf8"),
+    ]),
+  );
+
+  return packVariantFiles(reference, GOLDEN_DIRECTORY);
 }
 
 function filesBelow(root: string, directory: string): string[] {

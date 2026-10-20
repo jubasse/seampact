@@ -1,5 +1,5 @@
 import { below, type IrLocation } from "@seampact/codegen-core";
-import type { Operation, WireFormat } from "@seampact/spec/ir";
+import type { Operation, TypeUse, WireFormat } from "@seampact/spec/ir";
 import { addMetaSlot, successSlots, urlSchema } from "./body-slots.js";
 import {
   type EmitContext,
@@ -16,6 +16,8 @@ import { type SlotValue, templateSchema } from "./templates.js";
 
 const LIMIT_ROLE = "limit";
 const ITEMS_SLOT = "items";
+const ITEM_SLOT = "item";
+const ITEM_SELF_SLOT = "itemSelf";
 const INSTANT_TOKEN = "instant";
 
 export function writePaging(
@@ -111,6 +113,7 @@ export function pageBodySchema(
   context: EmitContext,
   operation: Operation,
   format: WireFormat,
+  itemUse: TypeUse,
   itemSchema: JsonObject,
   status: number,
   location: IrLocation,
@@ -134,11 +137,21 @@ export function pageBodySchema(
   }
 
   const roleSlots = pagingRoleSlots(context, operation.paging?.token);
-  const slots = successSlots(context, status);
+  const slots = successSlots(context, operation, status, itemUse);
 
   for (const [slot, value] of roleSlots) slots.set(slot, value);
 
-  slots.set(ITEMS_SLOT, { schema: { type: "array", items: itemSchema }, presence: "always" });
+  // Inside `$each` over the records: the record and its member URL (`$itemId` and `$itemFields` wait for a consumer).
+  const element = new Map(slots);
+
+  element.set(ITEM_SLOT, { schema: itemSchema, presence: "always" });
+  element.set(ITEM_SELF_SLOT, { schema: urlSchema(context), presence: "always" });
+
+  slots.set(ITEMS_SLOT, {
+    schema: { type: "array", items: itemSchema },
+    presence: "always",
+    element,
+  });
 
   const styleLocation = below({ member: "" }, "pagings", style.id, "response");
   const body = style.response.body;
@@ -148,6 +161,7 @@ export function pageBodySchema(
     slots,
     format,
     body === undefined ? style.response.meta : [],
+    style.absent,
     roleSlots,
     styleLocation,
   );
@@ -158,7 +172,10 @@ export function pageBodySchema(
       ? below({ member: "" }, "formats", format.id, "success", "page", "body")
       : below(styleLocation, "body");
 
-  return templateSchema(context, template, slots, format.absent, templateLocation)?.schema;
+  // The style's own body and meta follow the style's `absent`; the format's page shape follows the format's.
+  const absent = body === undefined ? format.absent : style.absent;
+
+  return templateSchema(context, template, slots, absent, templateLocation)?.schema;
 }
 
 // The response roles of section 14, each the slot of its name.

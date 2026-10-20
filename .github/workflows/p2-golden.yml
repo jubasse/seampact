@@ -48,6 +48,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # .gitattributes keeps the fixtures LF, so autocrlf cannot give them CRLF: convert every case source here.
+      # The pack-* contracts are generated copies of the reference, compared byte for byte: they stay LF.
       - name: Convert every case source to CRLF on Windows
         if: runner.os == 'Windows'
         shell: bash
@@ -56,7 +57,7 @@ jobs:
             import { readdirSync, readFileSync, writeFileSync } from "node:fs";
             import { join } from "node:path";
             const caseDirectories = ["fixtures/reference", "fixtures/validator-agreement",
-              ...readdirSync("fixtures/golden").map((name) => join("fixtures/golden", name, "contract"))];
+              ...readdirSync("fixtures/golden").filter((name) => !name.startsWith("pack-")).map((name) => join("fixtures/golden", name, "contract"))];
             let convertedCount = 0;
             for (const directory of caseDirectories) {
               let entries;

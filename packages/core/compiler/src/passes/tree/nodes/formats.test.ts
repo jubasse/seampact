@@ -29,6 +29,7 @@ const member = (name: string, value: IrWriter.Template): IrWriter.ObjectTemplate
   value,
 });
 const NOTE = treeNodesObjectSchema("Note", "/schemas/Note", { noteId: text, text });
+const FOUND = treeNodesObjectSchema("Found", "/schemas/Found", { count: text });
 
 function run(
   apiYaml: string,
@@ -39,7 +40,7 @@ function run(
 
   return treeNodesRun(treeNodesApiOf(workspace), workspace, {
     treeSchemas: treeNodesUnansweredAt(treeNodesStubService({ typeUses: uses }), ...unanswered),
-    draft: treeNodesDraftWith(structuredClone(NOTE)),
+    draft: treeNodesDraftWith(structuredClone(NOTE), structuredClone(FOUND)),
   });
 }
 
@@ -603,7 +604,7 @@ surfaces:
   ]);
 });
 
-test("formats and paging styles: $self on a collection item reads its id, and a fault two responses share is reported once", () => {
+test("formats and paging styles: a fault two responses share is reported once, and $self never reads the id", () => {
   const { diagnostics } = run(
     `
 api: { name: a, version: 1, kind: product }
@@ -640,7 +641,6 @@ surfaces:
 
   expect(located(diagnostics).filter(([rule]) => rule === "format-id")).toEqual([
     ["format-id", `${ROUTES}/twice`],
-    ["format-id", `${ROUTES}/notes/ops/0`],
   ]);
 });
 
@@ -681,4 +681,91 @@ surfaces:
       .map(({ shape }) => shape)
       .sort(),
   ).toEqual(["item", "table"]);
+});
+
+test("formats: $collection in an item names its collection, and a route outside any collection refuses it", () => {
+  const { diagnostics } = run(
+    `
+api: { name: a, version: 1, kind: product }
+formats:
+  typed:
+    success: { item: { body: { type: $collection, data: $payload } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      health: { method: get, output: Note, format: typed }
+      notes:
+        kind: collection
+        format: typed
+        id: { noteId: { type: string } }
+        item: Note
+        ops: [get]
+`,
+    {
+      [`${ROUTES}/health/output`]: ref("Note"),
+      [`${ROUTES}/notes/id/noteId`]: text,
+      [`${ROUTES}/notes/item`]: ref("Note"),
+    },
+  );
+
+  expect(located(diagnostics)).toEqual([["template-slot", `${ROUTES}/health`]]);
+});
+
+test("formats: $self on a collection route whose output lacks the id property is the request URL, not a format-id fault", () => {
+  const { diagnostics } = run(
+    `
+api: { name: a, version: 1, kind: product }
+formats:
+  selfed:
+    success: { item: { body: { href: $self, data: $payload } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      notes:
+        kind: collection
+        format: selfed
+        id: { noteId: { type: string } }
+        item: Note
+        ops: [get]
+        routes:
+          search: { method: post, input: Note, output: Found }
+`,
+    {
+      [`${ROUTES}/notes/id/noteId`]: text,
+      [`${ROUTES}/notes/item`]: ref("Note"),
+      [`${ROUTES}/notes/routes/search/input`]: ref("Note"),
+      [`${ROUTES}/notes/routes/search/output`]: ref("Found"),
+    },
+  );
+
+  expect(located(diagnostics).filter(([rule]) => rule === "format-id")).toEqual([]);
+});
+
+test("formats: a literal member named like the resource and a $collection member are refused as one member written twice", () => {
+  const { diagnostics } = run(
+    `
+api: { name: a, version: 1, kind: product }
+formats:
+  doubled:
+    success: { item: { body: { notes: $self, $collection: $payload } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      notes:
+        kind: collection
+        format: doubled
+        id: { noteId: { type: string } }
+        item: Note
+        ops: [get]
+`,
+    {
+      [`${ROUTES}/notes/id/noteId`]: text,
+      [`${ROUTES}/notes/item`]: ref("Note"),
+    },
+  );
+
+  expect(diagnostics.map(({ rule }) => rule)).toEqual(["seampact/tree/format-member"]);
 });

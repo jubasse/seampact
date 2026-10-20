@@ -161,10 +161,18 @@ function responseBodySchema(
   const payload = typeUseSchema(context, response.body, "shared", below(location, "body"));
 
   if (shape === "page") {
-    return pageBodySchema(context, operation, format, payload, response.status, location);
+    return pageBodySchema(
+      context,
+      operation,
+      format,
+      response.body,
+      payload,
+      response.status,
+      location,
+    );
   }
 
-  const slots = successSlots(context, response.status);
+  const slots = successSlots(context, operation, response.status, response.body);
   const payloadSchema =
     shape === "table" ? { type: "object", additionalProperties: payload } : payload;
 
@@ -172,7 +180,7 @@ function responseBodySchema(
 
   const formatLocation = below({ member: "" }, "formats", format.id, "success", shape, "body");
 
-  addMetaSlot(context, slots, format, [], new Map(), formatLocation);
+  addMetaSlot(context, slots, format, [], format.absent, new Map(), formatLocation);
 
   return templateSchema(context, format.success[shape].body, slots, format.absent, formatLocation)
     ?.schema;

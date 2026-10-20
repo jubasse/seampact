@@ -59,9 +59,10 @@ const META_TYPES: Readonly<Record<string, IrWriter.TypeUse>> = {
 const HANDLER_FILL = "handler";
 const PRINCIPAL_PREFIX = "principal.";
 
-// The slots that read the item's id property (ADR 0002 section 13); `$self` too on a collection's item.
+// The slots that read the item's id property (ADR 0002 section 13). `$self` is not one: it is the member URL when the
+// item has the id property, the request URL otherwise.
 const ID_SLOTS: readonly string[] = ["id", "fields", "itemId", "itemFields", "itemSelf"];
-const SELF_SLOT = "self";
+const COLLECTION_SLOT = "collection";
 // The slots that hold the record without its id member.
 const IDLESS_SLOTS: readonly string[] = ["fields", "itemFields"];
 
@@ -420,6 +421,8 @@ export function treeNodesCheckPayloads(draft: DraftIR, context: TreeNodesContext
 
       for (const written of writtenTemplates(draft, operation, format, response.shape)) {
         checkIdSlots(check, written);
+        checkItemCollectionSlot(check, written);
+        checkMemberNames(check, written);
         checkSlotValues(check, written, written.template, undefined);
       }
     }
@@ -485,10 +488,8 @@ function writtenTemplates(
 }
 
 function checkIdSlots(check: PayloadCheck, written: WrittenTemplate): void {
-  const { draft, operation, shape, record } = check;
-  const idSlots =
-    shape === "item" && isCollectionItem(operation) ? [...ID_SLOTS, SELF_SLOT] : ID_SLOTS;
-  const used = treeNodesTemplateSlots(written.template).find(({ slot }) => idSlots.includes(slot));
+  const { draft, operation, record } = check;
+  const used = treeNodesTemplateSlots(written.template).find(({ slot }) => ID_SLOTS.includes(slot));
 
   if (used === undefined) return;
 
@@ -505,9 +506,83 @@ function checkIdSlots(check: PayloadCheck, written: WrittenTemplate): void {
   });
 }
 
-// `$self` is a collection item's member URL, built from its id; elsewhere it is the request URL.
-const isCollectionItem = (operation: DraftOperation): boolean =>
-  operation.resource?.idProperty !== undefined || operation.resource?.idParam !== undefined;
+// `$collection` in an item names the collection or single the operation belongs to; outside one it has no value.
+function checkItemCollectionSlot(check: PayloadCheck, written: WrittenTemplate): void {
+  const { operation, shape } = check;
+
+  if (shape !== "item" || operation.resource !== undefined) return;
+
+  const used = treeNodesTemplateSlots(written.template).find(
+    ({ slot }) => slot === COLLECTION_SLOT,
+  );
+
+  if (used === undefined) return;
+
+  reportPayload(check, written.owner, {
+    rule: "template-slot",
+    message: `The template of ${written.owner.name} writes $${COLLECTION_SLOT} in an item, but ${operation.id} belongs to no collection or single.`,
+    fix: "Set format: bare (or another format) on the route, or move it under a collection or single.",
+  });
+}
+
+// A member name written twice in one object would be one member in the document: `$collection` names a member by the
+// resource type the operation fixes, so a literal member of that name collides with it.
+function checkMemberNames(check: PayloadCheck, written: WrittenTemplate): void {
+  const duplicate = duplicateMemberName(written.template, check.operation.resource?.type);
+
+  if (duplicate === undefined) return;
+
+  reportPayload(check, written.owner, {
+    rule: "format-member",
+    message: `The template of ${written.owner.name} writes the member ${quote(duplicate)} twice in ${check.operation.id}.`,
+    fix: "Rename one of the members, or stop naming a member with $collection where a literal member has the resource's name.",
+  });
+}
+
+function duplicateMemberName(
+  template: IrWriter.Template,
+  resourceType: string | undefined,
+): string | undefined {
+  switch (template.kind) {
+    case "object": {
+      const seen = new Set<string>();
+
+      for (const member of template.members) {
+        const name = memberNameText(member.name, resourceType);
+
+        if (name !== undefined && seen.has(name)) return name;
+
+        if (name !== undefined) seen.add(name);
+      }
+
+      for (const member of template.members) {
+        const nested = duplicateMemberName(member.value, resourceType);
+
+        if (nested !== undefined) return nested;
+      }
+
+      return undefined;
+    }
+
+    case "array":
+      return template.items
+        .map((item) => duplicateMemberName(item, resourceType))
+        .find((name) => name !== undefined);
+    case "each":
+      return duplicateMemberName(template.as, resourceType);
+    default:
+      return undefined;
+  }
+}
+
+function memberNameText(
+  name: IrWriter.ObjectTemplateMember["name"],
+  resourceType: string | undefined,
+): string | undefined {
+  if (name.kind === "text") return name.text;
+
+  return name.slot === COLLECTION_SLOT ? resourceType : undefined;
+}
 
 const hasProperty = (schema: IrWriter.ObjectSchema, name: string): boolean =>
   schema.properties.some((property) => property.name === name);
@@ -625,7 +700,7 @@ function checkMerge(
 }
 
 interface PayloadFault {
-  readonly rule: "format-id" | "format-merge" | "format-each";
+  readonly rule: "format-id" | "format-merge" | "format-each" | "format-member" | "template-slot";
   readonly message: string;
   readonly fix: string;
 }

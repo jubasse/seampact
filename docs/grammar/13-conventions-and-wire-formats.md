@@ -98,7 +98,7 @@ A template describes a JSON value the boundary writes. The same language serves 
 | `$$` | a literal `$` (`$$ref` writes `$ref`) |
 | a mapping | an object; each key is a member name, written literally |
 | the key `$merge: <slot>` | spreads an object slot's members beside the others; a member defined twice is a compile error naming both |
-| a key that is a name slot (`$collection`) | the member name is the slot's value |
+| a key that is a name slot (`$collection`) | the member name is the slot's value; a literal member of the same name in that object is a compile error naming both |
 | `{ $each: <slot>, $as: <template> }` | an array: `$as` applied to each element of an array slot; inside it, `$item` is the element |
 | a sequence | an array of templates |
 | any other scalar | a literal |
@@ -113,10 +113,10 @@ The slots are a closed set:
 | `$meta` | the object of the format's `meta` fields; in `success.page`, joined by the `meta` members of the paging style (section 14) | success shapes, paging styles |
 | `$items` | the page's records, as the handler returns them | `success.page`, paging styles |
 | `$status` | the HTTP status | everywhere |
-| `$self` | the URL of what the body describes: the member URL of a collection item (built from `$id`), the current page of a paged list, the request URL otherwise | everywhere |
+| `$self` | the URL of what the body describes: the member URL (built from `$id`) when the body is the collection's item, which has the id property; the current page of a paged list, the request URL otherwise | everywhere |
 | `$path` | the request path, without the query | everywhere |
 | `$resource` | the item schema's `typeName` (ADR 0003 section 6), or its name (`Task`) | success shapes, paging styles |
-| `$collection` | the collection's or single's `resourceType`, or its node name (`tasks`); also a member name | `table`, `list`, paging styles |
+| `$collection` | the collection's or single's `resourceType`, or its node name (`tasks`); also a member name; in `item`, only on an operation that belongs to a collection or single | `item`, `table`, `list`, paging styles |
 | `$id`, `$fields` | the record's id, and the record without its id member | `item` |
 | `$item`, `$itemId`, `$itemFields`, `$itemSelf` | inside `$as`: the element, its id, the element without its id member, its member URL | `$as` |
 | `$code`, `$nature`, `$title`, `$detail`, `$instance`, `$traceId`, `$params` | the error's code, nature, title (or code), optional text, optional occurrence reference, optional trace id, and its params object | `error` |

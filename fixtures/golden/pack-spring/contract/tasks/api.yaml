@@ -1,0 +1,105 @@
+# tasks/api.yaml
+api:
+  name: tasks
+  version: 1
+  kind: product
+  maturity: provisional
+  summary: Tasks shared inside channels.
+  compat: { policy: additive-only }
+  documents:
+    public: { surfaces: [app], internal: exclude }
+    full: {}
+
+schemas:
+  $include: ./schemas.yaml
+
+requirements:
+  channelEditor: { right: roles, params: { allowed: [owner, editor] } }
+  writeThrottle: { rule: throttle, bucket: write }
+
+surfaces:
+  app:
+    prefix: /v{version}
+    identity: user
+    routes:
+      health:
+        method: get
+        access: { public: "Probes call it before any user exists." }
+        output: Health
+      channels:
+        kind: collection
+        id: { channelId: ChannelId }
+        item: Channel
+        ops: [list, get]
+        member:
+          scopes: { channel: path.channelId }
+          routes:
+            tasks:
+              kind: collection
+              id: { taskId: TaskId }
+              item: Task
+              concurrency: { version: body.expectedVersion, field: version }
+              ops:
+                list:
+                  paging: { springPage: { maxLimit: 50 } }
+                  sortable: [createdAt]
+                  filteredBy: tasks.read
+                get: {}
+                create:
+                  input: CreateTask
+                  requires: [writeThrottle, channelEditor]
+                update:
+                  input: UpdateTask
+                  requires: [{ right: tasks.update }]
+                batch: { maxIds: 200 }
+              collection:
+                routes:
+                  search: { $include: ./routes/tasks/search.yaml }
+              member:
+                routes:
+                  assign:
+                    method: post
+                    requires: [channelEditor]
+                    input:
+                      type: object
+                      required: [userId]
+                      properties: { userId: UserId }
+                    output: Task
+                  archive:
+                    method: post
+                    concurrency: inherit
+                    input: ArchiveTask
+                    output: Task
+                    internal: true
+                  purge:
+                    method: post
+                    requires: [{ rule: recentAuth, params: { intent: purge_task } }]
+                    responses:
+                      204: {}
+      me:
+        kind: single
+        routes:
+          preferences:
+            kind: single
+            owner: caller
+            item: Preferences
+            ops:
+              get: { cache: { freshness: minute, etag: true } }
+              update: { input: UpdatePreferences }
+          drafts:
+            kind: collection
+            id: { draftId: DraftId }
+            item: Draft
+            owner: caller
+            ops:
+              get: {}
+              delete: { output: Draft }
+  hooks:
+    prefix: /v{version}/hooks
+    identity: stripe
+    routes:
+      payments:
+        method: post
+        input: PaymentEvent
+        responses:
+          204: {}

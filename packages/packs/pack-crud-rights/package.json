@@ -1,0 +1,14 @@
+{
+  "name": "@seampact/pack-crud-rights",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Derives a <resource>.<op> right for every list, get, create, update, delete and batch route and requires it first.",
+  "seampact": {
+    "role": "pack",
+    "pack": "pack.yaml"
+  },
+  "files": [
+    "pack.yaml",
+    "README.md"
+  ]
+}
