@@ -1,11 +1,10 @@
 // The NestJS placement of the shared request checks (ADR 0016): the module middleware, the per-operation composite
-// and input decorators, the guard, the interceptor, the narrow filter, the dynamic module with its boot check (the framework-route check included), and
-// the exported helpers. Each api's generated module calls `createNestBoundary` once with its route table.
-import type { ServerResponse } from "node:http";
+// and input decorators, the guard, the handler wrapper, the narrow filter, the dynamic module with its boot check (the
+// framework-route check included), and the exported helpers. Each api's generated module calls `createNestBoundary` once with its route table.
+import { ServerResponse } from "node:http";
 import {
   type ArgumentsHost,
   applyDecorators,
-  type CallHandler,
   type CanActivate,
   Catch,
   createParamDecorator,
@@ -20,7 +19,6 @@ import {
   Injectable,
   type MiddlewareConsumer,
   Module,
-  type NestInterceptor,
   type NestModule,
   NotFoundException,
   type OnApplicationBootstrap,
@@ -33,7 +31,6 @@ import {
   UnauthorizedException,
   UseFilters,
   UseGuards,
-  UseInterceptors,
   VERSION_NEUTRAL,
   Version,
 } from "@nestjs/common";
@@ -45,7 +42,6 @@ import {
   HttpAdapterHost,
   Reflector,
 } from "@nestjs/core";
-import { from, mergeMap, type Observable, switchMap } from "rxjs";
 import { authorizeRequest, type CheckState } from "./node-server/access-checks.js";
 import {
   basePathClaimsOf,
@@ -112,6 +108,8 @@ export interface NestBoundaryOptions {
   readonly bodyValidation: boolean;
 }
 
+type ContractMethod = (this: unknown, ...args: unknown[]) => unknown;
+
 interface OperationMetadata {
   readonly api: string;
   readonly id: string;
@@ -120,6 +118,7 @@ interface OperationMetadata {
 
 // NestJS's own metadata keys and route param types, read through `Reflector` (public decorators write them).
 const ROUTE_ARGS_METADATA = "__routeArguments__";
+const GUARDS_METADATA = "__guards__";
 const REDIRECT_METADATA = "__redirect__";
 const RENDER_METADATA = "__renderTemplate__";
 const SSE_METADATA = "__sse__";
@@ -370,68 +369,112 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
           execution.getHandler(),
           execution.getClass(),
         ]) ?? context.mode;
-      context.grant = await authorizeRequest(
-        checkState(context, execution.switchToHttp().getRequest()),
-      );
+      const request: ExpressRequest = execution.switchToHttp().getRequest();
+      const state = checkState(context, request);
+      const grant = await authorizeRequest(state);
+
+      context.grant = grant;
+
+      const validated = await validateRequestInput(state, grant);
+
+      context.input = await checkRestrictedInput(state, grant, validated);
 
       return true;
     }
   }
 
-  @Injectable()
-  class ContractInterceptor implements NestInterceptor {
-    intercept(execution: ExecutionContext, next: CallHandler): Observable<unknown> {
-      const context = requireContext();
-      const request: ExpressRequest = execution.switchToHttp().getRequest();
-      const response: ServerResponse = execution.switchToHttp().getResponse();
+  // The contract methods of this api's composites, wrapped; the module moves the seampact guard last on each.
+  const contractMethods = new Set<ContractMethod>();
 
-      return from(beforeHandler(context, request)).pipe(
-        switchMap((replay) =>
-          replay === undefined
-            ? next
-                .handle()
-                .pipe(
-                  mergeMap((result: unknown) =>
-                    from(afterHandler(context, request, response, result)),
-                  ),
-                )
-            : from(writeContractReply(response, context, replay)),
-        ),
-      );
-    }
-  }
+  // Replaces the controller method in place (`applyDecorators` ignores a returned descriptor): on its own operation's
+  // request it runs the idempotency claim or replay, the method, step 10 and the write, and returns no value, so
+  // NestJS needs no interceptor on the route. Anywhere else it is the method itself.
+  const contractHandler =
+    (id: string): MethodDecorator =>
+    (_target, _key, descriptor) => {
+      const method: unknown = descriptor.value;
 
-  async function beforeHandler(context: BoundaryContext, request: ExpressRequest) {
+      if (typeof method !== "function") {
+        throw new Error(`seampact: @${id}() decorates a method only.`);
+      }
+
+      const wrapped: ContractMethod = function (this: unknown, ...args: unknown[]): unknown {
+        const context = boundaryContext.getStore();
+
+        if (context?.api.id !== api.id || context.route.id !== id || context.handlerStarted) {
+          return method.apply(this, args);
+        }
+
+        context.handlerStarted = true;
+
+        return serveContractRequest(context, wrapped, args, () => method.apply(this, args));
+      };
+
+      copyMethodIdentity(method, wrapped);
+      contractMethods.add(wrapped);
+      Reflect.set(descriptor, "value", wrapped);
+    };
+
+  async function serveContractRequest(
+    context: BoundaryContext,
+    wrapped: object,
+    args: readonly unknown[],
+    callMethod: () => unknown,
+  ): Promise<undefined> {
+    const response = handledResponse(context, wrapped, args);
     const grant = context.grant;
 
     if (grant === undefined)
       throw unexpectedError(context.route, new Error("seampact: the guard did not run"));
 
-    const state = checkState(context, request);
-    const validated = await validateRequestInput(state, grant);
-    const input = await checkRestrictedInput(state, grant, validated);
+    const state = checkState(context, response.req);
+    const started = await beginIdempotency(state, grant, context.input);
 
-    context.input = input;
+    if (started?.outcome === "replay") {
+      await writeContractReply(response, context, started.reply);
 
-    const started = await beginIdempotency(state, grant, input);
-
-    if (started?.outcome === "replay") return started.reply;
+      return undefined;
+    }
 
     if (started?.outcome === "started") context.idempotencyKey = started.key;
+
+    const result: unknown = await callMethod();
+    const reply = await handlerReply(state, grant, result);
+
+    await writeContractReply(response, context, reply);
 
     return undefined;
   }
 
-  async function afterHandler(
+  // The response NestJS passes at the index the composite marked with `Res()`.
+  function handledResponse(
     context: BoundaryContext,
-    request: ExpressRequest,
-    response: ServerResponse,
-    result: unknown,
-  ): Promise<void> {
-    const grant = context.grant ?? { principal: null, scopes: [] };
-    const reply = await handlerReply(checkState(context, request), grant, result);
+    wrapped: object,
+    args: readonly unknown[],
+  ): ServerResponse {
+    const index: unknown = Reflect.getMetadata(RESPONSE_INDEX_METADATA, wrapped);
+    const response = typeof index === "number" ? args[index] : undefined;
 
-    await writeContractReply(response, context, reply);
+    if (response instanceof ServerResponse) return response;
+
+    throw unexpectedError(
+      context.route,
+      new Error(
+        `seampact: the handler of '${context.route.id}' received no response at its marked parameter.`,
+      ),
+    );
+  }
+
+  // NestJS appends route guards in decorator order, bottom-up, so an app guard written above the composite comes
+  // after the seampact guard; every app guard of the route runs first once it is moved last. NestJS reads the guards
+  // when it registers the routes, after every module's `configure`.
+  function moveContractGuardLast(): void {
+    for (const method of contractMethods) {
+      const guards = reflector.get<unknown[] | undefined>(GUARDS_METADATA, method) ?? [];
+      const appGuards = guards.filter((guard) => guard !== ContractGuard);
+
+      Reflect.defineMetadata(GUARDS_METADATA, [...appGuards, ContractGuard], method);
+    }
   }
 
   @Catch(ContractError, UnauthorizedException, ForbiddenException, TooManyRequestsRefusal)
@@ -475,6 +518,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
     const route = routeOf(id);
     const composite = (): MethodDecorator =>
       applyDecorators(
+        contractHandler(id),
         ROUTE_DECORATORS[methodOf(route)](nestPath(route.path)),
         Version(VERSION_NEUTRAL),
         SetMetadata(OPERATION_METADATA, {
@@ -483,7 +527,6 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
           access: route.access.kind,
         } satisfies OperationMetadata),
         UseGuards(ContractGuard),
-        UseInterceptors(ContractInterceptor),
         UseFilters(ContractFilter),
         markResponseHandled,
       );
@@ -511,6 +554,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
     configure(consumer: MiddlewareConsumer): void {
       platform.adapterHost = this.adapterHost;
       platform.hooks = this.hooks;
+      moveContractGuardLast();
       // Claimed before any api's boot check runs, so each check sees every api's routes.
       const adapter: object | undefined = this.adapterHost.httpAdapter;
 
@@ -800,6 +844,20 @@ function markResponseHandled(
   Res()(target, key, index);
 
   if (typeof method === "function") Reflect.defineMetadata(RESPONSE_INDEX_METADATA, index, method);
+}
+
+// The wrapper keeps the method's name and arity (`markResponseHandled` reads `length`) and every metadata a decorator
+// written below the composite set on it (an app `@Public()`, `@Header`, `@Redirect`, which the boot check reads).
+function copyMethodIdentity(
+  method: { readonly name: string; readonly length: number },
+  wrapped: object,
+): void {
+  Object.defineProperty(wrapped, "name", { value: method.name });
+  Object.defineProperty(wrapped, "length", { value: method.length });
+
+  for (const key of Reflect.getOwnMetadataKeys(method)) {
+    Reflect.defineMetadata(key, Reflect.getOwnMetadata(key, method), wrapped);
+  }
 }
 
 function asContractError(route: ContractRoute, error: unknown): ContractError {

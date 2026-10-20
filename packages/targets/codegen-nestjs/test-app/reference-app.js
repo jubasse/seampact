@@ -4,11 +4,23 @@
 // compiled generated tree, so it imports the generated modules by relative path. Decorators are applied by call.
 import "reflect-metadata";
 import { gzipSync } from "node:zlib";
-import { Body, Catch, Controller, Get, Module, Post, UseFilters } from "@nestjs/common";
+import {
+  Body,
+  Catch,
+  Controller,
+  Get,
+  Module,
+  Post,
+  SetMetadata,
+  UseFilters,
+} from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import * as TasksNest from "../generated/server/tasks/nestjs.js";
 
 export const ALLOWED_ORIGIN = "https://app.example";
+
+/** A metadata key the app sets on `health` below its composite, as an app's `@Public()` does. */
+export const APP_MARKER = "app:marker";
 
 const TASK_OPERATIONS = [
   "archiveTask",
@@ -123,42 +135,48 @@ const DEFAULT_ANSWERS = {
   createTask: () => ({ status: 201, body: sampleTask("33333333-3333-4333-8333-333333333333") }),
 };
 
-function answer(operation, input) {
+function answer(operation, input, controller) {
   calls.handled.push(operation);
 
   const handler = scenario.answers[operation] ?? DEFAULT_ANSWERS[operation];
 
   if (handler === undefined) throw new Error(`the test app has no answer for '${operation}'`);
 
-  return handler(input);
+  return handler(input, controller);
 }
 
-class TasksController {}
+// Applies method decorators as TypeScript does: the last written first, then the descriptor they edited defined.
+function decorateMethod(prototype, name, ...decorators) {
+  const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
+
+  for (const decorator of decorators.reverse()) decorator(prototype, name, descriptor);
+
+  Object.defineProperty(prototype, name, descriptor);
+}
+
+export class TasksController {}
 
 for (const operation of TASK_OPERATIONS) {
   const prototype = TasksController.prototype;
 
   Object.defineProperty(prototype, operation, {
     value: function handle(input) {
-      return answer(operation, input);
+      return answer(operation, input, this);
     },
     writable: true,
     configurable: true,
   });
 
   TasksNest[operation].input()(prototype, operation, 0);
-  TasksNest[operation]()(
+  decorateMethod(
     prototype,
     operation,
-    Object.getOwnPropertyDescriptor(prototype, operation),
+    TasksNest[operation](),
+    ...(operation === "health" ? [SetMetadata(APP_MARKER, "below")] : []),
   );
 }
 
-TasksNest.responses("warn")(
-  TasksController.prototype,
-  "getChannel",
-  Object.getOwnPropertyDescriptor(TasksController.prototype, "getChannel"),
-);
+decorateMethod(TasksController.prototype, "getChannel", TasksNest.responses("warn"));
 Controller()(TasksController);
 UseFilters(new AppReplyFilter())(TasksController);
 

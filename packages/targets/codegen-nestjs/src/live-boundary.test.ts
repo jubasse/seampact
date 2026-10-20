@@ -40,6 +40,8 @@ interface UnexpectedCall {
 
 interface ReferenceAppModule {
   readonly ALLOWED_ORIGIN: string;
+  readonly APP_MARKER: string;
+  readonly TasksController: new () => Record<string, (...args: unknown[]) => unknown>;
   readonly calls: {
     readonly scopeIds: unknown[];
     readonly handled: string[];
@@ -47,7 +49,10 @@ interface ReferenceAppModule {
     readonly loggedErrors: string[];
   };
   readonly scenario: {
-    answers: Record<string, (input: unknown) => unknown>;
+    answers: Record<
+      string,
+      (input: unknown, controller: Record<string, (...args: unknown[]) => unknown>) => unknown
+    >;
     authenticate: (request: unknown) => unknown;
     decide: (request: { name: string; purpose: { direction?: string } }) => unknown;
   };
@@ -367,6 +372,44 @@ describe("validation", () => {
 
     expect(reply.status).toBe(200);
     expect(received).toMatchObject({ query: { limit: 50 } });
+  });
+});
+
+describe("the operation composite", () => {
+  test("the operation composite registers no interceptor", () => {
+    expect(Reflect.getMetadata("__interceptors__", app.TasksController.prototype.health)).toBe(
+      undefined,
+    );
+  });
+
+  test("metadata set below the composite reaches the handler NestJS registers", () => {
+    const handler = app.TasksController.prototype.health;
+
+    expect(Reflect.getMetadata(app.APP_MARKER, handler)).toBe("below");
+    expect([handler?.name, handler?.length]).toEqual(["handle", 1]);
+  });
+
+  test("a contract method called outside a request returns its handler's result", () => {
+    const controller = new app.TasksController();
+
+    expect(controller.health?.(undefined)).toEqual({ status: 200, body: { status: "ok" } });
+  });
+
+  test("a contract method called by another handler writes no reply", async () => {
+    let inner: unknown;
+
+    app.scenario.answers.getChannel = (_input, controller) => {
+      inner = controller.health?.(undefined);
+
+      return { status: 200, body: { channelId: CHANNEL, name: "General" } };
+    };
+
+    const reply = await send("GET", `/v1/channels/${CHANNEL}`, { headers: BEARER });
+
+    expect(reply.status).toBe(200);
+    expect(JSON.parse(reply.text)).toEqual({ channelId: CHANNEL, name: "General" });
+    expect(inner).toEqual({ status: 200, body: { status: "ok" } });
+    expect(app.calls.handled).toEqual(["getChannel", "health"]);
   });
 });
 
