@@ -5,6 +5,8 @@ export interface CliIo {
   cwd: string;
   stdout(text: string): void;
   stderr(text: string): void;
+  // Today as `YYYY-MM-DD`, the diff's only time input; the system date when absent.
+  today?(): string;
 }
 
 export const EXIT_SUCCESS = 0;

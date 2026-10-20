@@ -2,15 +2,18 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { buildBundle, bundleEntries, loadFsReader } from "@seampact/compiler";
-import { expect, test } from "vitest";
+import { afterEach, expect, test } from "vitest";
 import { EXIT_REFUSED, EXIT_SUCCESS } from "../cli-io.js";
 import {
   generateErrors,
   generateOutput,
   makeApp,
   REFERENCE_WORKSPACE,
-  temporaryDirectories,
-} from "./generate-app.test-support.js";
+  removeTemporaryDirectories,
+  trackTemporaryDirectory,
+} from "./fake-app.test-support.js";
+
+afterEach(removeTemporaryDirectories);
 
 test("refuses two apis items of one entry that resolve to the same api name", async () => {
   const app = makeApp(
@@ -211,7 +214,7 @@ test("does not resolve a root path source the app never uses under allowLocal: f
   const root = mkdtempSync(join(tmpdir(), "seampact-cli-"));
   const app = join(root, "apps/api");
 
-  temporaryDirectories.push(root);
+  trackTemporaryDirectory(root);
   mkdirSync(join(root, ".git"));
   mkdirSync(join(root, "devonly"));
   mkdirSync(app, { recursive: true });

@@ -1,25 +1,28 @@
 import { parseArgs } from "node:util";
 import { type CliIo, EXIT_USAGE, printProblems } from "./cli-io.js";
 import type { CliProblem } from "./cli-problem.js";
-import { compileCommand, configLocation, generateCommand } from "./commands/index.js";
+import {
+  checkCommand,
+  compileCommand,
+  configLocation,
+  diffCommand,
+  generateCommand,
+  lintCommand,
+} from "./commands/index.js";
 import { errorCode } from "./error-code.js";
 
 const USAGE = `Usage: seampact <command> [options]
 
 Commands:
   compile [--config <path>] [--out <dir>]  Compile the contract sources the app config's targets use.
-  generate [--config <path>]               Generate every target entry of the app config.
+  generate [--config <path>]               Generate every target entry of the app config, or of every app a root config lists.
+  check [--config <path>]                  Fail when the committed generated files or documents differ from a fresh run.
+  lint [--config <path>]                   Run the core lint rules over each contract source.
+  diff --against <path> [--config <path>]  Classify the changes since the IRs at <path> (an IR file or a directory of <api>.ir.json).
 `;
 
 // The commands and flags of the CLI design that are not available yet; each answers with exit code 2.
-const WAITING_COMMANDS: ReadonlySet<string> = new Set([
-  "init",
-  "check",
-  "lint",
-  "diff",
-  "bundle",
-  "explain",
-]);
+const WAITING_COMMANDS: ReadonlySet<string> = new Set(["init", "bundle", "explain"]);
 const WAITING_FLAGS: ReadonlySet<string> = new Set([
   "--watch",
   "--strict",
@@ -54,6 +57,12 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
 
   if (command === "generate") return runGenerate(rest, io);
 
+  if (command === "check") return runCheck(rest, io);
+
+  if (command === "lint") return runLint(rest, io);
+
+  if (command === "diff") return runDiff(rest, io);
+
   return usageError(io, `Unknown command '${command}'.`);
 }
 
@@ -73,6 +82,37 @@ async function runGenerate(args: readonly string[], io: CliIo): Promise<number> 
   if (parsed.status === "refused") return usageError(io, parsed.message);
 
   return generateCommand(configLocation(io.cwd, stringOption(parsed.values.config)), io);
+}
+
+async function runCheck(args: readonly string[], io: CliIo): Promise<number> {
+  const parsed = parseCommandArgs(args, { config: { type: "string" } });
+
+  if (parsed.status === "refused") return usageError(io, parsed.message);
+
+  return checkCommand(configLocation(io.cwd, stringOption(parsed.values.config)), io);
+}
+
+async function runLint(args: readonly string[], io: CliIo): Promise<number> {
+  const parsed = parseCommandArgs(args, { config: { type: "string" } });
+
+  if (parsed.status === "refused") return usageError(io, parsed.message);
+
+  return lintCommand(configLocation(io.cwd, stringOption(parsed.values.config)), io);
+}
+
+async function runDiff(args: readonly string[], io: CliIo): Promise<number> {
+  const parsed = parseCommandArgs(args, {
+    config: { type: "string" },
+    against: { type: "string" },
+  });
+
+  if (parsed.status === "refused") return usageError(io, parsed.message);
+
+  const against = stringOption(parsed.values.against);
+
+  if (against === undefined) return usageError(io, "`diff` needs `--against <path>`.");
+
+  return diffCommand(configLocation(io.cwd, stringOption(parsed.values.config)), against, io);
 }
 
 type OptionSpec = Record<string, { type: "string" }>;
@@ -127,7 +167,7 @@ function notAvailable(io: CliIo, subject: string): number {
     {
       code: "cli.not-available",
       message: `${subject} is not available yet.`,
-      fix: "Use `seampact compile` or `seampact generate`.",
+      fix: "Use `seampact compile`, `generate`, `check`, `lint` or `diff`.",
     },
   ]);
 

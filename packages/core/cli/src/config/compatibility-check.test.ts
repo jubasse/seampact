@@ -1,7 +1,7 @@
+import { join } from "node:path";
 import type { Target } from "@seampact/codegen-core";
 import type { TargetCompatibility } from "@seampact/spec/compatibility";
 import type { MatrixCheckLevel, TargetEntry } from "@seampact/spec/config";
-import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import {
   type CompatibilityOutcome,

@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -11,7 +12,7 @@ import {
   useTarballs,
   VENDOR_DIRECTORY,
 } from "./consumer-project.ts";
-import { runLocalStep, runStep, StepFailure } from "./run-step.ts";
+import { runLocalStep, runStep, runStepExpectingFailure, StepFailure } from "./run-step.ts";
 import {
   DEFAULT_VALIDATOR_CHOICE,
   isValidatorChoice,
@@ -106,10 +107,51 @@ function runConsumer({ target, validators, directory }: RunOptions): void {
   for (const [title, args] of [
     ["install", ["install", "--no-frozen-lockfile"]],
     ["generate", ["exec", "seampact", "generate"]],
+    ["check", ["exec", "seampact", "check"]],
     ["typecheck", ["exec", "tsc", "--noEmit"]],
     ["test", ["exec", "vitest", "run"]],
   ] as const) {
     runStep({ title, command: "pnpm", args, cwd: directory });
+  }
+
+  checkNamesHandEdit(directory);
+}
+
+// The directory whose generated files the hand edit changes, and its manifest (ADR 0015 "Writing files").
+const EDITED_OUTPUT_DIRECTORY = "generated/types/tasks";
+const MANIFEST_FILE = ".seampact-manifest.json";
+
+interface OutputManifest {
+  files: { path: string }[];
+}
+
+// A generated file edited by hand makes `check` fail naming the file; the file is restored afterwards.
+function checkNamesHandEdit(directory: string): void {
+  const outputDirectory = join(directory, EDITED_OUTPUT_DIRECTORY);
+  const manifest: OutputManifest = JSON.parse(
+    readFileSync(join(outputDirectory, MANIFEST_FILE), "utf8"),
+  );
+  const [first] = manifest.files;
+
+  if (first === undefined) throw new Error(`consumers: ${EDITED_OUTPUT_DIRECTORY} lists no file`);
+
+  const file = join(outputDirectory, first.path);
+  const original = readFileSync(file, "utf8");
+
+  writeFileSync(file, `${original}// edited by hand\n`);
+
+  try {
+    runStepExpectingFailure(
+      {
+        title: "check after a hand edit",
+        command: "pnpm",
+        args: ["exec", "seampact", "check"],
+        cwd: directory,
+      },
+      first.path,
+    );
+  } finally {
+    writeFileSync(file, original);
   }
 }
 

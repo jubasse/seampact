@@ -38,3 +38,31 @@ export function runLocalStep(title: string, action: () => void): void {
   console.log(`\n> ${title}`);
   action();
 }
+
+// Runs the step, which must fail with an error output naming `expectedText`: the proof that a check catches what it
+// should. Throws a `StepFailure` when it passes, or fails without naming it.
+export function runStepExpectingFailure(step: StepCommand, expectedText: string): void {
+  console.log(
+    `\n> ${step.title} (must fail): ${[step.command, ...step.args].join(" ")} (in ${step.cwd})`,
+  );
+
+  const result = spawnSync(step.command, step.args, {
+    cwd: step.cwd,
+    stdio: ["inherit", "inherit", "pipe"],
+    encoding: "utf8",
+  });
+
+  process.stderr.write(result.stderr);
+
+  if (result.error !== undefined) {
+    console.error(`consumers: '${step.title}' did not start: ${result.error.message}`);
+
+    throw new StepFailure(step.title, EXIT_NOT_STARTED);
+  }
+
+  if (result.status === 0 || !result.stderr.includes(expectedText)) {
+    console.error(`consumers: '${step.title}' must fail naming '${expectedText}'`);
+
+    throw new StepFailure(step.title, result.status ?? EXIT_NOT_STARTED);
+  }
+}

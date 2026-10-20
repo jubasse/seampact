@@ -33,6 +33,8 @@
   "dependencies": {
     "@seampact/codegen-core": "workspace:*",
     "@seampact/compiler": "workspace:*",
+    "@seampact/diff": "workspace:*",
+    "@seampact/lint": "workspace:*",
     "@seampact/openapi": "workspace:*",
     "@seampact/spec": "workspace:*",
     "ajv": "8.20.0",

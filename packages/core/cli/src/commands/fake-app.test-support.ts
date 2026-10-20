@@ -1,22 +1,25 @@
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach } from "vitest";
 import type { CliIo } from "../cli-io.js";
 import { runCli } from "../run-cli.js";
 
-// Test support of the `generate` command: an app directory holding the reference workspace as sources, a fake target
-// package of plain CommonJS and the command run on it.
+// Temporary apps for the command tests: a copy of the reference workspace per source, fake target packages in the
+// app's `node_modules`, and an app config; removed by `removeTemporaryDirectories`.
 
 export const REFERENCE_WORKSPACE = new URL("../../../../../fixtures/reference", import.meta.url)
   .pathname;
 
-export const temporaryDirectories: string[] = [];
+const temporaryDirectories: string[] = [];
 
-afterEach(() => {
+export function trackTemporaryDirectory(directory: string): void {
+  temporaryDirectories.push(directory);
+}
+
+export function removeTemporaryDirectories(): void {
   for (const directory of temporaryDirectories.splice(0))
     rmSync(directory, { recursive: true, force: true });
-});
+}
 
 export interface FakeTarget {
   name: string;
@@ -27,12 +30,21 @@ export interface FakeTarget {
   packageJson?: string;
   // What the fake's `generate` returns as `warnings`.
   warnings?: object[];
+  // The files the fake's `generate` returns.
+  files?: { path: string; contents: string }[];
   // The artefacts the fake declares; none when absent.
   artefacts?: object[];
   // The fix the fake's metadata states for `frameworkDocs: off`.
   frameworkDocsOffFix?: string;
   // The fake's `generate` writes the document it receives for `nativeDocs` to `native-document.json`.
   echoNativeDocsDocument?: boolean;
+}
+
+// The JavaScript expression of the files the fake's `generate` returns.
+function generatedFilesSource(target: FakeTarget): string {
+  if (target.echoNativeDocsDocument !== true) return JSON.stringify(target.files ?? []);
+
+  return `request.nativeDocsDocument === undefined ? [] : [{ path: "native-document.json", contents: JSON.stringify(request.nativeDocsDocument) }]`;
 }
 
 // A target package of plain CommonJS: the refusals below happen before `generate` is called.
@@ -60,7 +72,7 @@ function writeTargetPackage(appDirectory: string, target: FakeTarget): void {
     provides: ${kinds(target.provides)},
   },
   parseOptions: (raw) => ({ status: "parsed", options: raw }),
-  generate: async (request) => ({ status: "generated", files: ${target.echoNativeDocsDocument === true ? `request.nativeDocsDocument === undefined ? [] : [{ path: "native-document.json", contents: JSON.stringify(request.nativeDocsDocument) }]` : "[]"}, warnings: ${JSON.stringify(target.warnings ?? [])} }),
+  generate: async (request) => ({ status: "generated", files: ${generatedFilesSource(target)}, warnings: ${JSON.stringify(target.warnings ?? [])} }),
   describe: () => ({ status: "described", descriptors: {} }),
 };\n`,
   );
@@ -73,7 +85,7 @@ export function makeApp(
 ): string {
   const appDirectory = mkdtempSync(join(tmpdir(), "seampact-cli-"));
 
-  temporaryDirectories.push(appDirectory);
+  trackTemporaryDirectory(appDirectory);
 
   for (const name of sourceNames)
     cpSync(REFERENCE_WORKSPACE, join(appDirectory, name), { recursive: true });

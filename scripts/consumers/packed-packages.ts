@@ -6,6 +6,8 @@ export const PACKED_PACKAGES: readonly string[] = [
   "packages/runtime/hooks",
   "packages/core/codegen-core",
   "packages/core/compiler",
+  "packages/core/lint",
+  "packages/core/diff",
   "packages/core/openapi",
   "packages/core/cli",
   "packages/targets/codegen-ts",

@@ -5,6 +5,7 @@ import {
   type AppConfig,
   type AppOpenApi,
   DEFAULT_OUT_DIR,
+  type DiffConfig,
   ROOT_CONFIG_MARKER_KEY,
   type TargetEntry,
 } from "@seampact/spec/config";
@@ -43,6 +44,8 @@ export interface LoadedAppConfig {
   openapi?: AppOpenApi;
   // The app's `checks` as it writes them; absent when the app does not write the key.
   checks?: AppChecks;
+  // The app's `diff` settings as it writes them; absent when the app does not write the key.
+  diff?: DiffConfig;
   // The root config folded in, for an app its root lists.
   rootFile?: string;
 }
@@ -105,9 +108,9 @@ async function readAppConfigAlone(file: string, displayName: string): Promise<Re
   const { parsed, value } = parsedFile;
   const keyProblems = waitProblems(parsed, findConfigWaits(value));
 
-  // A root config waits as a whole; its keys are not the app config's to check.
+  // A root config is not read as an app's: a command that runs on a root reads it with `readRunConfig`.
   if (isRecord(value) && Object.hasOwn(value, ROOT_CONFIG_MARKER_KEY)) {
-    return { status: "refused", problems: keyProblems.map(({ problem }) => problem) };
+    return { status: "refused", problems: [rootConfigProblem(parsed)] };
   }
 
   const validated = validateConfig<AppConfig>(parsed, value, APP_CONFIG_SCHEMA, keyProblems);
@@ -115,6 +118,15 @@ async function readAppConfigAlone(file: string, displayName: string): Promise<Re
   if (validated.status === "refused") return validated;
 
   return resolveAppConfig(file, parsed, validated.config);
+}
+
+function rootConfigProblem(parsed: ParsedConfig): CliProblem {
+  return {
+    code: "config.root.not-an-app",
+    message: `This file is a monorepo root config (it holds \`${ROOT_CONFIG_MARKER_KEY}\`), and the command runs on one app's config.`,
+    fix: "Run the command in one of the apps the root config lists, or pass that app's config with `--config`.",
+    where: whereOf(parsed, [ROOT_CONFIG_MARKER_KEY]),
+  };
 }
 
 function resolveAppConfig(file: string, parsed: ParsedConfig, config: AppConfig): ReadAloneOutcome {
@@ -139,6 +151,7 @@ function resolveAppConfig(file: string, parsed: ParsedConfig, config: AppConfig)
   const allowLocal = config.allowLocal === undefined ? {} : { allowLocal: config.allowLocal };
   const openapi = config.openapi === undefined ? {} : { openapi: structuredClone(config.openapi) };
   const checks = config.checks === undefined ? {} : { checks: structuredClone(config.checks) };
+  const diff = config.diff === undefined ? {} : { diff: structuredClone(config.diff) };
   const loaded: LoadedAppConfig = {
     file,
     outDir,
@@ -147,6 +160,7 @@ function resolveAppConfig(file: string, parsed: ParsedConfig, config: AppConfig)
     entries,
     ...openapi,
     ...checks,
+    ...diff,
   };
 
   return { status: "read", app: { parsed, config, loaded } };

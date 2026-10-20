@@ -34,6 +34,7 @@ export {
   readRootConfig,
   type WorkspaceApp,
 } from "./read-root-config.js";
+export { type ReadRunConfigOutcome, type RunConfig, readRunConfig } from "./read-run-config.js";
 export {
   type LoadedWorkspace,
   type LoadedWorkspaceApp,
