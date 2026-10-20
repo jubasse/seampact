@@ -1,4 +1,4 @@
-# 1. Install
+# Install
 
 Create the app and install seampact from your checkout.
 
@@ -63,4 +63,4 @@ Create `tsconfig.json`. NestJS decorators need `experimentalDecorators`.
 }
 ```
 
-Next: [2. Write the contract](2-contract.md)
+Next: [write the contract](first-contract.md)

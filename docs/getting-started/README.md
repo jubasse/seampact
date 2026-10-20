@@ -2,15 +2,17 @@
 
 You write a contract in YAML. seampact generates the types, the zod validators and the NestJS routes. You write the handlers. At the end, a notes API runs on port 3000.
 
-You need Node.js 24 or later, pnpm, and a checkout of this repository. Nothing is published to npm yet, so step 1 installs seampact from your checkout.
+You need Node.js 24 or later, pnpm, and a checkout of this repository. Nothing is published to npm yet, so [Install](install.md) installs seampact from your checkout.
 
-1. [Install](1-install.md)
-2. [Write the contract](2-contract.md)
-3. [Generate the code](3-generate.md)
-4. Write the handlers: [NestJS](4-handlers-nestjs.md), [Express](4-handlers-express.md), [Fastify](4-handlers-fastify.md), [AdonisJS](4-handlers-adonis.md) or [Hono](4-handlers-hono.md)
-5. [Run it](5-run.md)
-6. [Check a change](6-check-a-change.md)
+1. [Install](install.md)
+2. [Write the contract](first-contract.md)
+3. [Generate the code and run it](generate-and-run.md), with the handlers for [NestJS](../backend/nestjs.md), [Express](../backend/express.md), [Fastify](../backend/fastify.md), [AdonisJS](../backend/adonisjs.md) or [Hono](../backend/hono.md)
+4. [Diff a change](../features/diff.md) and [check it in CI](../features/check-in-ci.md)
 
-Every key of `seampact.config.yaml`: [configuration](configuration.md).
+Also:
 
-Something fails? See [troubleshooting](troubleshooting.md).
+- [Add seampact to an existing NestJS app](existing-project.md)
+- [Project layout](project-layout.md)
+- [Work with an AI agent](ai-agents.md)
+- Every key of `seampact.config.yaml`: [the config file](../configuration/config-file.md)
+- Something fails: [troubleshooting](../troubleshooting/README.md)

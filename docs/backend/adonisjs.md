@@ -1,10 +1,10 @@
-# 4. Write the handlers (AdonisJS 7)
+# Write the handlers (AdonisJS 7)
 
-Use this page instead of [4. Write the handlers (NestJS)](4-handlers-nestjs.md). Steps 1 and 3 change a little for AdonisJS, so start with three set-up changes. Steps 2, 5 and 6 stay the same, except that the app listens on port 3333 unless you change it (below).
+Use this page instead of [the NestJS page](nestjs.md). [Install](../getting-started/install.md) and [Generate](../getting-started/generate-and-run.md) change a little for AdonisJS, so start with three set-up changes. The contract, the run and the checks stay the same, except that the app listens on port 3333 unless you change it (below).
 
 ## Set up the app
 
-Step 1: create the app with the AdonisJS API starter instead of the `package.json` of step 1. Answer the prompts with the defaults.
+Install: create the app with the AdonisJS API starter instead of the `package.json` of [Install](../getting-started/install.md). Answer the prompts with the defaults.
 
 ```sh
 mkdir -p ~/src && cd ~/src
@@ -12,7 +12,7 @@ npm init adonisjs@latest notes-app -- --kit=api --pkg=pnpm
 cd notes-app
 ```
 
-Install seampact from your checkout, as in step 1. Replace `~/src/seampact` with the path of your checkout.
+Install seampact from your checkout, as in [Install](../getting-started/install.md). Replace `~/src/seampact` with the path of your checkout.
 
 ```sh
 cd ~/src/seampact && pnpm install --frozen-lockfile
@@ -35,7 +35,7 @@ pnpm install
 
 The starter already depends on `@vinejs/vine`. The generated server validates with it, so you need no validators entry.
 
-Step 1, `tsconfig.json`: the generated code does not compile with the starter's `lib` and unused-variable checks. Replace `tsconfig.json`.
+Install, `tsconfig.json`: the generated code does not compile with the starter's `lib` and unused-variable checks. Replace `tsconfig.json`.
 
 ```json
 {
@@ -51,9 +51,9 @@ Step 1, `tsconfig.json`: the generated code does not compile with the starter's 
 }
 ```
 
-Step 2: write `contract/api.yaml` as in [2. Write the contract](2-contract.md).
+Contract: write `contract/api.yaml` as in [Write the contract](../getting-started/first-contract.md).
 
-Step 3: create `seampact.config.yaml`. There is no `validators` entry, and the server target is `@seampact/codegen-adonis`.
+Generate: create `seampact.config.yaml`. There is no `validators` entry, and the server target is `@seampact/codegen-adonis`.
 
 ```yaml
 outDir: src/__generated__
@@ -158,7 +158,7 @@ import * as NotesAdonis from '../../src/__generated__/server/notes/index.js'
 
 ## Pick the port
 
-AdonisJS listens on port 3333. Step 5 uses 3000. In `.env`, set `PORT=3000`.
+AdonisJS listens on port 3333. The run step uses 3000. In `.env`, set `PORT=3000`.
 
 ## Typecheck
 
@@ -172,4 +172,27 @@ You see no output.
 
 Nothing in this page: the same generated code and the same files run on AdonisJS 6. Only the starter you create differs.
 
-Next: [5. Run it](5-run.md). Start the app with `node ace serve` instead of `npx tsx src/main.ts`.
+## Wiring reference
+
+Every server target takes two options: `bodyValidation` (check request bodies, off by default) and `responses`, which decides what happens when your handler answers something the contract does not declare: `strict` (the default) replaces the reply with a 500 in the api's format, `warn` lets it through and logs it.
+
+Register `@adonisjs/core/bodyparser_middleware` as router middleware and list the route's media type in `json.types` of the body parser config: without it every route that takes a body answers 500, failing closed. Register the routes from `start/routes`, one `controllers` entry per generated `*Endpoints` interface, each a lazy import of a module whose default export is your controller class implementing that interface. Signed routes read the raw body through the body parser.
+
+```ts
+TasksAdonis.registerRoutes(router, {
+  controllers: { TasksEndpoints: () => import("#controllers/tasks_controller") },
+  hooks: tasksHooks(),
+});
+```
+
+In `app/exceptions/handler`, call the generated helper first, once per api:
+
+```ts
+override async handle(error: unknown, ctx: HttpContext) {
+  if (await TasksAdonis.renderPreRoutingError(error, ctx)) return undefined;
+
+  return super.handle(error, ctx);
+}
+```
+
+Next: [run it](../getting-started/generate-and-run.md#run-it). Start the app with `node ace serve` instead of `npx tsx src/main.ts`.

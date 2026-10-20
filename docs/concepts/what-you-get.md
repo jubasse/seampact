@@ -16,3 +16,10 @@ Access is checked through three generated, typed hooks: authenticate, decide and
 seampact imposes nothing: not a wire format, a page shape, error codes, header names, a versioning scheme, a permission model, a validator, a client library or a code style. Where it needs a value to work, it has a default you can rename; everything else comes from your contract or from opt-in packs. What it does demand is explicitness: every route states who may call it, and every exception states its reason.
 
 By default a response is the bare payload and an error is an RFC 9457 `application/problem+json` body, with default error codes you can rename or replace with your own (`TASK_NOT_FOUND` works). Paged lists declare their own parameter names and page shape, or take them from a pack. Bodies are JSON, forms or multipart uploads, responses may be file downloads or redirects, and a value a third party shapes freely can be declared opaque. Envelopes, JSON:API, HAL, JSON-LD and Hydra, Laravel resources and paginators, Spring `Page`, or your own house format come from opt-in convention packs.
+
+## What seampact does not do
+
+- Generate business logic, persistence, an authentication check or an authorization decision.
+- Provide a server framework, or a TypeScript API to write contracts: YAML is the only way to declare one. An importer from an existing OpenAPI document is planned for v3.
+- Impose right names, roles, a permission model, a tenancy scheme, a wire format or a code style.
+- Model WebSocket, Server-Sent Events, gRPC or GraphQL. The IR leaves room for them; see [ADR 0014](../adr/0014-room-for-real-time-and-rpc.md).

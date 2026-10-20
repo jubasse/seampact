@@ -4,8 +4,8 @@
 
 [![CI](https://img.shields.io/github/actions/workflow/status/jubasse/seampact/ci.yml?branch=develop&label=CI)](https://github.com/jubasse/seampact/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Node >= 24](https://img.shields.io/badge/node-%3E%3D24-339933.svg)](docs/getting-started/1-install.md)
-[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6.svg?logo=typescript&logoColor=white)](docs/packages.md)
+[![Node >= 24](https://img.shields.io/badge/node-%3E%3D24-339933.svg)](docs/getting-started/install.md)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6.svg?logo=typescript&logoColor=white)](docs/concepts/packages.md)
 ![Status: pre-1.0, not on npm yet](https://img.shields.io/badge/status-pre--1.0%2C%20not%20on%20npm%20yet-orange.svg)
 
 ## Why seampact
@@ -160,9 +160,9 @@ Java and PHP: planned.
 
 ## Get started
 
-- [Getting started](docs/getting-started/README.md): a notes API on NestJS, in six steps.
-- [Configuration](docs/getting-started/configuration.md): every key of `seampact.config.yaml`.
-- [Troubleshooting](docs/getting-started/troubleshooting.md).
+- [Getting started](docs/getting-started/README.md): a notes API on NestJS, in four steps.
+- [Configuration](docs/configuration/config-file.md): every key of `seampact.config.yaml`.
+- [Troubleshooting](docs/troubleshooting/README.md).
 
 ## Status
 
@@ -170,14 +170,7 @@ Pre-1.0. The reference contract runs end to end on every server above. Nothing i
 
 ## More docs
 
-- [What seampact generates, and what it leaves to you](docs/overview.md)
-- [Package map](docs/packages.md)
-- [Which generators combine](docs/combining-generators.md)
-- [Setting up a server target](docs/server-targets.md)
-- [Mobile and Capacitor](docs/mobile-and-capacitor.md)
-- [Sharing a contract between repositories](docs/sharing-a-contract.md)
-- [What seampact does not do](docs/scope.md)
-- [Roadmap after 1.0](docs/roadmap.md)
+Every page is listed in [docs/README.md](docs/README.md).
 
 ## Roadmap
 

@@ -1,6 +1,6 @@
-# 4. Write the handlers (Express)
+# Write the handlers (Express)
 
-The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows; `Notes.Status` and `Notes.ErrorCode` name them. You need the Express target from step 3: `@seampact/codegen-express`.
+The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows; `Notes.Status` and `Notes.ErrorCode` name them. You need the Express target from [Generate](../getting-started/generate-and-run.md): `@seampact/codegen-express`.
 
 Add Express to the app.
 
@@ -8,7 +8,7 @@ Add Express to the app.
 pnpm add express@5 && pnpm add -D @types/express@5
 ```
 
-You see pnpm add both packages. The NestJS packages from step 1 stay unused; `pnpm remove @nestjs/common @nestjs/core @nestjs/platform-express reflect-metadata rxjs` drops them.
+You see pnpm add both packages. The NestJS packages from [Install](../getting-started/install.md) stay unused; `pnpm remove @nestjs/common @nestjs/core @nestjs/platform-express reflect-metadata rxjs` drops them.
 
 Create `src/notes-handlers.ts`.
 
@@ -83,4 +83,15 @@ You see no output.
 
 Install `express@4` and `@types/express@4` instead. The generated code and the handlers are the same.
 
-Next: [5. Run it](5-run.md)
+## Wiring reference
+
+Every server target takes two options: `bodyValidation` (check request bodies, off by default) and `responses`, which decides what happens when your handler answers something the contract does not declare: `strict` (the default) replaces the reply with a 500 in the api's format, `warn` lets it through and logs it.
+
+Mount the generated router, then its error middleware for requests refused before a route matched. The router keeps the raw bytes of signed routes itself; a JSON parser you mount app-wide before it must use the generated `keepRawBody`.
+
+```ts
+app.use(TasksExpress.router({ handlers: { TasksEndpoints: tasksHandlers }, hooks: tasksHooks() }));
+app.use(TasksExpress.preRoutingErrorHandler);
+```
+
+Next: [run it](../getting-started/generate-and-run.md#run-it).
