@@ -1,6 +1,6 @@
 // The OpenAPI 3.1 emitter: an api's documents written from the IR through the table of ADR 0004 section 12, the
-// emitter options of A40, the drift check of a committed document, and the `x-seampact-*` extension names whose
-// JSON Schemas the package publishes.
+// merged document of several apis, the emitter options of A40, the drift check of a committed document, and the
+// `x-seampact-*` extension names whose JSON Schemas the package publishes.
 
 export {
   type EmitOutcome,
@@ -28,3 +28,9 @@ export {
   extensionSchemaPath,
   isExtensionName,
 } from "./extension-names.js";
+export {
+  type MergeInput,
+  type MergeOptions,
+  type MergeOutcome,
+  mergeDocuments,
+} from "./merge/index.js";

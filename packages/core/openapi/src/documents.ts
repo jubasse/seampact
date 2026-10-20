@@ -68,41 +68,19 @@ export function emitDocuments(
   ir: ContractIR,
   options: EmitterOptions = DEFAULT_EMITTER_OPTIONS,
 ): EmitOutcome {
-  const unsupported = checkIrSupport(ir, {
-    irVersions: [IR_VERSION],
-    irRevision: IR_REVISION,
-    kinds: [HTTP_OPERATION_KIND],
-    features: [],
-  });
+  const unsupported = unsupportedIrRefusals(ir);
 
-  if (unsupported.length > 0) {
-    return {
-      status: "refused",
-      refusals: unsupported.map((mismatch) => ({
-        code: mismatch.code,
-        message: mismatch.message,
-        fix: "Use the @seampact/openapi release built for the IR this seampact version writes.",
-        member: mismatch.member,
-        ...(mismatch.operation === undefined ? {} : { operation: mismatch.operation }),
-      })),
-    };
-  }
+  if (unsupported.length > 0) return { status: "refused", refusals: unsupported };
 
   const refusals: Refusal[] = [];
   const documents: EmittedDocument[] = [];
-  const declared = Object.entries(ir.api.documents);
-  const plans: { name?: DocumentId; selection: ApiDocument }[] =
-    declared.length === 0
-      ? [{ selection: { surfaces: Object.keys(ir.api.surfaces), internal: "include" } }]
-      : declared.map(([name, selection]) => ({ name, selection }));
 
-  for (const plan of plans) {
-    const context = createEmitContext(ir, options);
-    const document = buildDocument(context, plan.selection);
+  for (const plan of documentPlans(ir)) {
+    const built = buildPlannedDocument(ir, options, plan.selection);
 
-    refusals.push(...context.refusals);
+    refusals.push(...built.refusals);
 
-    const emitted: EmittedDocument = { text: serializeDocument(document) };
+    const emitted: EmittedDocument = { text: serializeDocument(built.document) };
 
     if (plan.name !== undefined) emitted.name = plan.name;
 
@@ -112,6 +90,56 @@ export function emitDocuments(
   if (refusals.length > 0) return { status: "refused", refusals: withoutRepeats(refusals) };
 
   return { status: "emitted", documents };
+}
+
+interface DocumentPlan {
+  /** The `api.documents` key, or absent for the one document holding every surface. */
+  name?: DocumentId;
+  selection: ApiDocument;
+}
+
+/** One plan per `api.documents` entry, or one holding every surface with internal routes kept. */
+function documentPlans(ir: ContractIR): DocumentPlan[] {
+  const declared = Object.entries(ir.api.documents);
+
+  return declared.length === 0
+    ? [{ selection: everySurfaceSelection(ir) }]
+    : declared.map(([name, selection]) => ({ name, selection }));
+}
+
+/** The selection of an api's one document when it declares none: every surface, internal routes kept. */
+export function everySurfaceSelection(ir: ContractIR): ApiDocument {
+  return { surfaces: Object.keys(ir.api.surfaces), internal: "include" };
+}
+
+/** The refusals of an IR this emitter cannot read: another IR version or revision, or an unknown kind. */
+export function unsupportedIrRefusals(ir: ContractIR): Refusal[] {
+  const unsupported = checkIrSupport(ir, {
+    irVersions: [IR_VERSION],
+    irRevision: IR_REVISION,
+    kinds: [HTTP_OPERATION_KIND],
+    features: [],
+  });
+
+  return unsupported.map((mismatch) => ({
+    code: mismatch.code,
+    message: mismatch.message,
+    fix: "Use the @seampact/openapi release built for the IR this seampact version writes.",
+    member: mismatch.member,
+    ...(mismatch.operation === undefined ? {} : { operation: mismatch.operation }),
+  }));
+}
+
+/** One document of an api as a JSON object, with the refusals its mapping raised. */
+export function buildPlannedDocument(
+  ir: ContractIR,
+  options: EmitterOptions,
+  selection: ApiDocument,
+): { document: JsonObject; refusals: readonly Refusal[] } {
+  const context = createEmitContext(ir, options);
+  const document = buildDocument(context, selection);
+
+  return { document, refusals: context.refusals };
 }
 
 function selectedOperations(
@@ -133,15 +161,7 @@ function buildDocument(context: EmitContext, selection: ApiDocument): JsonObject
   const securitySchemes = securitySchemesComponent(context);
   const document: JsonObject = { openapi: OPENAPI_VERSION, info: infoObject(context) };
 
-  if (context.options.servers.length > 0) {
-    document.servers = context.options.servers.map((server) => {
-      const serverObject: JsonObject = { url: server.url };
-
-      setDefined(serverObject, "description", server.description);
-
-      return serverObject;
-    });
-  }
+  if (context.options.servers.length > 0) document.servers = serversArray(context.options);
 
   const tags = [...new Set(selected.flatMap(({ operation }) => operation.tags))].sort(
     compareCodeUnits,
@@ -149,15 +169,7 @@ function buildDocument(context: EmitContext, selection: ApiDocument): JsonObject
 
   if (tags.length > 0) document.tags = tags.map((name) => ({ name }));
 
-  const apiValue: JsonObject = { kind: ir.api.kind };
-
-  setDefined(apiValue, "role", ir.api.role);
-
-  if (ir.api.caller !== undefined) {
-    apiValue.caller = { identity: ir.api.caller.identity, right: ir.api.caller.right };
-  }
-
-  writeExtension(context, document, "api", apiValue);
+  writeExtension(context, document, "api", apiExtensionValue(ir));
 
   if (documentFormat !== undefined) writeExtension(context, document, "format", documentFormat);
 
@@ -173,6 +185,19 @@ function buildDocument(context: EmitContext, selection: ApiDocument): JsonObject
   if (Object.keys(components).length > 0) document.components = components;
 
   return document;
+}
+
+/** What `x-seampact-api` says of an api: its kind, role and caller. */
+export function apiExtensionValue(ir: ContractIR): JsonObject {
+  const apiValue: JsonObject = { kind: ir.api.kind };
+
+  setDefined(apiValue, "role", ir.api.role);
+
+  if (ir.api.caller !== undefined) {
+    apiValue.caller = { identity: ir.api.caller.identity, right: ir.api.caller.right };
+  }
+
+  return apiValue;
 }
 
 function infoObject(context: EmitContext): JsonObject {
@@ -198,7 +223,7 @@ function apiVersionText(context: EmitContext): string {
 }
 
 // The format most operations use is the document's; ties go to the first id in code-unit order.
-function mostUsedFormat(formats: readonly string[]): string | undefined {
+export function mostUsedFormat(formats: readonly string[]): string | undefined {
   const counts = new Map<string, number>();
 
   for (const format of formats) counts.set(format, (counts.get(format) ?? 0) + 1);
@@ -215,26 +240,49 @@ function pathsObject(
   selected: readonly { operation: Operation; index: number }[],
   documentFormat: string | undefined,
 ): JsonObject {
-  const byPath = new Map<string, { operation: Operation; index: number }[]>();
+  return pathsByRoute(
+    selected,
+    ({ operation }) => operation,
+    ({ operation, index }) => operationObject(context, operation, index, documentFormat),
+  );
+}
 
-  for (const entry of selected) {
-    const entries = byPath.get(entry.operation.path) ?? [];
+/** The `servers` array of the `servers` option. */
+export function serversArray(options: EmitterOptions): JsonObject[] {
+  return options.servers.map((server) => {
+    const serverObject: JsonObject = { url: server.url };
 
-    entries.push(entry);
-    byPath.set(entry.operation.path, entries);
+    setDefined(serverObject, "description", server.description);
+
+    return serverObject;
+  });
+}
+
+/** The `paths` object: a path item per path in code-unit order, each with its operations in method order. */
+export function pathsByRoute<Entry>(
+  entries: readonly Entry[],
+  routeOf: (entry: Entry) => { path: string; method: string },
+  operationObjectOf: (entry: Entry) => JsonObject,
+): JsonObject {
+  const byPath = new Map<string, Entry[]>();
+
+  for (const entry of entries) {
+    const { path } = routeOf(entry);
+    const pathEntries = byPath.get(path) ?? [];
+
+    pathEntries.push(entry);
+    byPath.set(path, pathEntries);
   }
 
   const paths: JsonObject = {};
 
   for (const path of [...byPath.keys()].sort(compareCodeUnits)) {
     const pathItem: JsonObject = {};
-    const entries = [...(byPath.get(path) ?? [])].sort(
-      (left, right) => methodRank(left.operation.method) - methodRank(right.operation.method),
+    const pathEntries = [...(byPath.get(path) ?? [])].sort(
+      (left, right) => methodRank(routeOf(left).method) - methodRank(routeOf(right).method),
     );
 
-    for (const { operation, index } of entries) {
-      pathItem[operation.method] = operationObject(context, operation, index, documentFormat);
-    }
+    for (const entry of pathEntries) pathItem[routeOf(entry).method] = operationObjectOf(entry);
 
     paths[path] = pathItem;
   }

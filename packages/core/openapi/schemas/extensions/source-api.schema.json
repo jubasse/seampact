@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/source-api.schema.json",
+  "title": "x-seampact-source-api",
+  "description": "The api an operation of a merged document comes from.",
+  "type": "string",
+  "minLength": 1
+}

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/apis.schema.json",
+  "title": "x-seampact-apis",
+  "description": "The apis a merged document holds, each with its name, kind, role, caller, version, docs and root consumer extensions.",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "minLength": 1
+      },
+      "kind": {
+        "type": "string",
+        "minLength": 1
+      },
+      "role": {
+        "type": "string",
+        "minLength": 1
+      },
+      "caller": {
+        "type": "object",
+        "properties": {
+          "identity": {
+            "type": "string",
+            "minLength": 1
+          },
+          "right": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["identity", "right"],
+        "additionalProperties": false
+      },
+      "version": {
+        "type": "string"
+      },
+      "summary": {
+        "type": "string"
+      },
+      "description": {
+        "type": "string"
+      }
+    },
+    "patternProperties": {
+      "^x-": true
+    },
+    "required": ["name", "kind", "version"],
+    "additionalProperties": false
+  }
+}

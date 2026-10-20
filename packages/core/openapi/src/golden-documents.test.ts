@@ -1,6 +1,8 @@
 import { createConfig, lintFromString } from "@redocly/openapi-core";
 import { describe, expect, it } from "vitest";
+import { parse } from "yaml";
 import { emitDocuments } from "./documents.js";
+import { DEFAULT_EMITTER_OPTIONS } from "./emitter-options.js";
 import {
   EXTENSION_NAMES,
   EXTENSION_PREFIX,
@@ -16,11 +18,23 @@ import {
   goldenIrNames,
   readGoldenIr,
 } from "./golden-documents.test-support.js";
+import { mergeDocuments } from "./merge/index.js";
 
 // The committed golden documents, which `scripts/golden --check` keeps equal to the emitter's output: each passes
 // the OAS 3.1 schema, Redocly's recommended rules and the extension schemas.
 
 const DOCUMENTS = goldenDocuments();
+
+// A merged document of the reference workspace, linted like the golden documents; no golden document holds the two
+// merged-only extensions.
+const MERGED_REFERENCE = mergeDocuments(
+  [{ ir: readGoldenIr("reference/tasks") }, { ir: readGoldenIr("reference/tasksService") }],
+  { name: "reference", prefix: { tasksService: "service" }, emitter: DEFAULT_EMITTER_OPTIONS },
+);
+const MERGED_TEXTS =
+  MERGED_REFERENCE.status === "merged"
+    ? [{ path: "merged/reference.yaml", text: MERGED_REFERENCE.text }]
+    : [];
 
 // Recommended rules a golden document breaks for a reason of the contract, not of the emitter.
 const REDOCLY_RULES_OFF: Record<string, string> = {
@@ -74,7 +88,9 @@ describe("golden documents", () => {
       rules: Object.fromEntries(Object.keys(REDOCLY_RULES_OFF).map((rule) => [rule, "off"])),
     });
 
-    for (const { path, text } of DOCUMENTS) {
+    expect(MERGED_REFERENCE.status).toBe("merged");
+
+    for (const { path, text } of [...DOCUMENTS, ...MERGED_TEXTS]) {
       const problems = await lintFromString({ source: text, absoluteRef: `/${path}`, config });
       const unexpected = problems
         .filter(
@@ -112,8 +128,13 @@ describe("golden documents", () => {
   });
 
   it("every extension schema is exercised", () => {
+    expect(MERGED_REFERENCE.status).toBe("merged");
+
+    const mergedDocuments = MERGED_TEXTS.map(({ text }) => parse(text));
     const used = new Set(
-      DOCUMENTS.flatMap(({ document }) => extensionMembers(document).map((member) => member.key)),
+      [...DOCUMENTS.map(({ document }) => document), ...mergedDocuments].flatMap((document) =>
+        extensionMembers(document).map((member) => member.key),
+      ),
     );
 
     expect(EXTENSION_NAMES.filter((name) => !used.has(`${EXTENSION_PREFIX}${name}`))).toEqual([]);

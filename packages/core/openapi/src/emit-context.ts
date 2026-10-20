@@ -5,7 +5,7 @@ import {
   refuseUnknownValueAt,
 } from "@seampact/codegen-core";
 import type { ContractIR, Extensions, SchemeId } from "@seampact/spec/ir";
-import type { EmitterOptions } from "./emitter-options.js";
+import type { EmitterOptions, ExtensionSelection } from "./emitter-options.js";
 import { ALL_EXTENSIONS, NO_EXTENSIONS } from "./emitter-options.js";
 import { EXTENSION_PREFIX, type ExtensionName } from "./extension-names.js";
 import { copyJsonValue, type JsonObject, type JsonValue } from "./json-value.js";
@@ -65,13 +65,16 @@ export function writeExtension(
   name: ExtensionName,
   value: JsonValue,
 ): void {
-  const selection = context.options.extensions;
-
-  if (selection === NO_EXTENSIONS) return;
-
-  if (selection !== ALL_EXTENSIONS && !selection.includes(name)) return;
+  if (!isExtensionSelected(context.options.extensions, name)) return;
 
   target[`${EXTENSION_PREFIX}${name}`] = value;
+}
+
+/** Whether the `extensions` option keeps `x-seampact-<name>`. */
+export function isExtensionSelected(selection: ExtensionSelection, name: ExtensionName): boolean {
+  if (selection === NO_EXTENSIONS) return false;
+
+  return selection === ALL_EXTENSIONS || selection.includes(name);
 }
 
 /** A reason as an extension writes it: the text, or `true` under `reasons: omit`, so the member keeps its meaning. */

@@ -6,6 +6,7 @@ export const EXTENSION_PREFIX = "x-seampact-";
 export const EXTENSION_NAMES = [
   "access",
   "api",
+  "apis",
   "bindings",
   "budget-ms",
   "cache-control",
@@ -41,6 +42,7 @@ export const EXTENSION_NAMES = [
   "scopes",
   "semantic",
   "signature",
+  "source-api",
   "unknown-keys",
   "unknown-query",
   "upstream",

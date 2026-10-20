@@ -100,7 +100,8 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/openapi`
 
-- `packages/core/openapi/src`: The OpenAPI 3.1 emitter: an api's documents written from the IR through the table of ADR 0004 section 12, the emitter options of A40, the drift check of a committed document, and the `x-seampact-*` extension names whose JSON Schemas the package publishes.
+- `packages/core/openapi/src`: The OpenAPI 3.1 emitter: an api's documents written from the IR through the table of ADR 0004 section 12, the merged document of several apis, the emitter options of A40, the drift check of a committed document, and the `x-seampact-*` extension names whose JSON Schemas the package publishes.
+- `packages/core/openapi/src/merge`: The merged document of a monorepo root: several apis' documents written as one, with each api's `prefix`, the identical elements kept once and every clash refused with its fix.
 
 ### `@seampact/spec`
 
