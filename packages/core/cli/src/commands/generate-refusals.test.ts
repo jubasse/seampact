@@ -1,4 +1,12 @@
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
@@ -16,6 +24,8 @@ afterEach(() => {
 
 interface FakeTarget {
   name: string;
+  // The role the fake declares; a client when absent.
+  role?: string;
   consumes?: string[];
   provides?: string[];
   packageJson?: string;
@@ -40,7 +50,7 @@ function writeTargetPackage(appDirectory: string, target: FakeTarget): void {
   metadata: {
     packageName: ${JSON.stringify(target.name)},
     packageVersion: "0.0.0",
-    role: "client",
+    role: ${JSON.stringify(target.role ?? "client")},
     irSupport: {},
     artefacts: [],
     consumes: ${kinds(target.consumes)},
@@ -168,4 +178,49 @@ test("prints a target's warnings and still writes its files", async () => {
   expect(output).toBe(
     "warning: owner.handler: entry 'server', api 'tasks': The caller ownership is not enforced by the generated boundary. (operation 'getDraft') Fix: Scope the handler's reads and writes to the authenticated principal.\n",
   );
+});
+
+async function generateOutput(appDirectory: string): Promise<{ exitCode: number; output: string }> {
+  const lines: string[] = [];
+  const io: CliIo = {
+    cwd: appDirectory,
+    stdout: (text) => lines.push(text),
+    stderr: (text) => lines.push(text),
+  };
+  const exitCode = await runCli(["generate"], io);
+
+  return { exitCode, output: lines.join("") };
+}
+
+test("writes the documents an OpenAPI-only app lists, with no target package installed", async () => {
+  const app = makeApp(
+    "sources:\n  a: { path: ./a }\nopenapi:\n  tasksService: { path: docs/service.yaml, extensions: none }\n",
+    [],
+  );
+  const first = await generateOutput(app);
+  const document = readFileSync(join(app, "docs/service.yaml"), "utf8");
+
+  expect(first).toEqual({
+    exitCode: EXIT_SUCCESS,
+    output: `openapi document 'tasksService': written (${join(app, "docs/service.yaml")}).\n`,
+  });
+  expect(document).toMatch(/^openapi: 3\.1\.0\n/);
+  expect(document).not.toContain("x-seampact-");
+
+  const second = await generateOutput(app);
+
+  expect(second.output).toContain("'tasksService': unchanged");
+});
+
+test("writes each document of the api a server target serves by default, and none for a client target", async () => {
+  const app = makeApp(
+    "sources:\n  a: { path: ./a }\ntargets:\n  - { id: server, use: fake-server, api: tasks }\n  - { id: client, use: fake-client, api: tasksService }\n",
+    [{ name: "fake-server", role: "server" }, { name: "fake-client" }],
+  );
+  const { exitCode } = await generateOutput(app);
+
+  expect(exitCode).toBe(EXIT_SUCCESS);
+  expect(existsSync(join(app, "openapi/tasks.public.yaml"))).toBe(true);
+  expect(existsSync(join(app, "openapi/tasks.full.yaml"))).toBe(true);
+  expect(existsSync(join(app, "openapi/tasksService.yaml"))).toBe(false);
 });

@@ -290,11 +290,7 @@ test("refuses an api's documents that are neither a path, a placed document nor 
 });
 
 test.each([
-  [
-    "a command run on a root config",
-    "apps: [api]\n",
-    "on the monorepo root config",
-  ],
+  ["a command run on a root config", "apps: [api]\n", "on the monorepo root config"],
   ["the OpenAPI drift check", "checks: { openapi: warning }\n", "'openapi'"],
   ["the generated files' drift check", "checks: { generated: disabled }\n", "'generated'"],
   ["the matrix check level", "checks: { matrix: error }\n", "'matrix'"],
