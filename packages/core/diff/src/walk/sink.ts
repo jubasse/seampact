@@ -3,8 +3,8 @@ import { classifyCell, type DiffFact, type DiffKind } from "../table/rows.js";
 import { compareText, scalarValue } from "./json.js";
 
 // Collects the walk's changes: each raw change is classified once per reach (a position and the operations
-// reaching it there), changes of one member at one position are merged, and the result sorts the same way for the
-// same pair of IRs.
+// reaching it there), changes of one member at one position with one outcome are merged, and the result sorts the
+// same way for the same pair of IRs.
 
 /** A position and the operations that reach a member there, with the facts true for that reach. */
 export interface ChangeReach {
@@ -53,7 +53,7 @@ export class ChangeSink {
     return this.#refusals;
   }
 
-  /** The changes, sorted by first operation id, pointer, kind, case and position. */
+  /** The changes, sorted by first operation id, pointer, kind, case, position and breaks. */
   sortedChanges(): DiffChange[] {
     return [...this.#changes.values()].sort(compareChanges);
   }
@@ -67,11 +67,16 @@ export class ChangeSink {
       breaks: [...BREAK_ORDER],
       classification: "breaking",
     };
-    const key = [kind, caseName, raw.pointer, reach.position].join("\u0000");
+    // Reaches whose facts resolve the cell differently stay apart, so a break names only the operations it breaks.
+    const key = [kind, caseName, raw.pointer, reach.position, classification, ...breaks].join(
+      "\u0000",
+    );
     const existing = this.#changes.get(key);
 
     if (existing !== undefined) {
-      mergeInto(existing, reach.operations, breaks);
+      existing.operations = [...new Set([...existing.operations, ...reach.operations])].sort(
+        compareText,
+      );
 
       return;
     }
@@ -107,25 +112,13 @@ export class ChangeSink {
   }
 }
 
-function mergeInto(
-  change: DiffChange,
-  operations: readonly string[],
-  breaks: readonly DiffBreak[],
-): void {
-  change.operations = [...new Set([...change.operations, ...operations])].sort(compareText);
-  change.breaks = BREAK_ORDER.filter(
-    (side) => change.breaks.includes(side) || breaks.includes(side),
-  );
-
-  if (change.breaks.length > 0) change.classification = "breaking";
-}
-
 function compareChanges(left: DiffChange, right: DiffChange): number {
   return (
     compareText(left.operations[0] ?? "", right.operations[0] ?? "") ||
     compareText(left.pointer, right.pointer) ||
     compareText(left.kind, right.kind) ||
     compareText(left.case, right.case) ||
-    compareText(left.position, right.position)
+    compareText(left.position, right.position) ||
+    compareText(left.breaks.join(), right.breaks.join())
   );
 }
