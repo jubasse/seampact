@@ -2,13 +2,13 @@
 // emitter options of A40, the drift check of a committed document, and the `x-seampact-*` extension names whose
 // JSON Schemas the package publishes.
 
-export { findDocumentDrift, type DocumentDrift } from "./drift.js";
 export {
-  emitDocuments,
   type EmitOutcome,
   type EmittedDocument,
+  emitDocuments,
   OPENAPI_VERSION,
 } from "./documents.js";
+export { type DocumentDrift, findDocumentDrift } from "./drift.js";
 export {
   ALL_EXTENSIONS,
   DEFAULT_EMITTER_OPTIONS,

@@ -14,8 +14,8 @@ import {
   refuseUnknown,
   writeExtension,
 } from "./emit-context.js";
-import { copyJsonValue, type JsonObject, setDefined } from "./json-value.js";
 import { valueSourceText } from "./ir-text.js";
+import { copyJsonValue, type JsonObject, setDefined } from "./json-value.js";
 
 // The security rows of ADR 0004 section 12: `schemes` as `components.securitySchemes`, and an operation's access,
 // CSRF check or exemption as its `security` list and the `x-seampact-access` and `x-seampact-csrf` extensions.

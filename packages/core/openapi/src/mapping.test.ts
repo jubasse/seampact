@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { emitDocuments } from "./documents.js";
-import { extensionMembers, goldenDocument, readGoldenIr } from "./golden-documents.test-support.js";
+import {
+  at,
+  extensionMembers,
+  goldenDocument,
+  readGoldenIr,
+} from "./golden-documents.test-support.js";
 import { isJsonObject, type JsonObject, type JsonValue } from "./json-value.js";
 import { nullableSchema } from "./schemas.js";
 
@@ -15,18 +20,6 @@ const NOTES = goldenDocument("bodies/openapi/notes.yaml").document;
 const STUDIO = goldenDocument("extensions/openapi/studio.yaml").document;
 const AGREEMENT = goldenDocument("agreement/openapi/agreement.yaml").document;
 const HTTP_METHODS = ["get", "put", "post", "delete", "patch"];
-
-function at(value: JsonValue | undefined, ...path: (string | number)[]): JsonValue | undefined {
-  let current = value;
-
-  for (const step of path) {
-    if (Array.isArray(current) && typeof step === "number") current = current[step];
-    else if (isJsonObject(current) && typeof step === "string") current = current[step];
-    else return undefined;
-  }
-
-  return current;
-}
 
 function operations(document: JsonValue): Map<string, JsonObject> {
   const found = new Map<string, JsonObject>();

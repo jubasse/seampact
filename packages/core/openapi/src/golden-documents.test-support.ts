@@ -154,3 +154,19 @@ export function extensionMembers(
     return [...own, ...extensionMembers(memberValue, memberPointer)];
   });
 }
+
+/** The value at a path of members and indexes, or undefined when a step is missing. */
+export function at(
+  value: JsonValue | undefined,
+  ...path: (string | number)[]
+): JsonValue | undefined {
+  let current = value;
+
+  for (const step of path) {
+    if (Array.isArray(current) && typeof step === "number") current = current[step];
+    else if (isJsonObject(current) && typeof step === "string") current = current[step];
+    else return undefined;
+  }
+
+  return current;
+}

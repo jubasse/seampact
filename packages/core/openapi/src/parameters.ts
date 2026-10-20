@@ -1,9 +1,9 @@
 import { below, type IrLocation } from "@seampact/codegen-core";
 import type { Operation, Param } from "@seampact/spec/ir";
 import { type EmitContext, writeExtension } from "./emit-context.js";
+import { type JsonObject, setDefined } from "./json-value.js";
 import { pagingLimitDefault } from "./paging.js";
 import { typeUseSchema, wireValue } from "./schemas.js";
-import { type JsonObject, setDefined } from "./json-value.js";
 
 // The path, query and header parameters of an operation. Credential and CSRF headers are stated by the security
 // schemes, never as parameters; an identity header carries its `x-seampact-semantic`.

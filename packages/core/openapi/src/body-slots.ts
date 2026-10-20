@@ -1,9 +1,9 @@
 import { below, type IrLocation } from "@seampact/codegen-core";
 import type { NamedTemplate, SuccessShapes, WireFormat } from "@seampact/spec/ir";
 import type { EmitContext } from "./emit-context.js";
+import type { JsonObject } from "./json-value.js";
 import { typeUseSchema } from "./schemas.js";
 import { type SlotSchemas, type SlotValue, templateSchema } from "./templates.js";
-import type { JsonObject } from "./json-value.js";
 
 // The slots every success body may read (ADR 0002 section 13): the status, the request path, the URL of what the
 // body describes, and `$meta`, the format's `meta` fields joined by a paging style's `meta` members.

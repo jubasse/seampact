@@ -9,7 +9,7 @@ import {
   parseEmitterOptions,
 } from "./emitter-options.js";
 import { EXTENSION_PREFIX } from "./extension-names.js";
-import { goldenIrNames, pointerToken, readGoldenIr } from "./golden-documents.test-support.js";
+import { at, goldenIrNames, pointerToken, readGoldenIr } from "./golden-documents.test-support.js";
 import { isJsonObject, type JsonValue } from "./json-value.js";
 
 // The emitter options of A40 (CHK-136): each changes only what it names, and the defaults give the committed
@@ -164,6 +164,57 @@ describe("emitter options change only what they name", () => {
     const studio = documentsOf("extensions/studio", parsed({ inputSchemas: "strict" }))[0];
 
     expect(JSON.stringify(studio)).toContain('"$ref":"#/components/schemas/StreamEvent.input"');
+  });
+
+  it("closes an open enum at its input uses under inputSchemas: strict", () => {
+    const ir = readGoldenIr("extensions/studio");
+    const streamState = ir.enums.StreamState;
+    const profile = ir.schemas.Profile;
+    const updateProfile = ir.schemas.UpdateProfile;
+
+    if (
+      streamState === undefined ||
+      profile === undefined ||
+      updateProfile === undefined ||
+      !isKnownVariant("Schema", profile) ||
+      !isKnownVariant("Schema", updateProfile) ||
+      profile.kind !== "object" ||
+      updateProfile.kind !== "object"
+    ) {
+      throw new Error("the extensions case declares StreamState, Profile and UpdateProfile");
+    }
+
+    const stateProperty = profile.properties.find((property) => property.type.kind === "enum");
+
+    if (stateProperty === undefined) throw new Error("Profile has an enum property");
+
+    streamState.directions = ["input", "output"];
+    updateProfile.properties.push(structuredClone(stateProperty));
+
+    const [shared] = documentsOfIr(structuredClone(ir), DEFAULT_EMITTER_OPTIONS);
+    const [strict] = documentsOfIr(ir, parsed({ inputSchemas: "strict" }));
+    const stateSchema = (document: JsonValue | undefined, ...toObject: (string | number)[]) =>
+      at(document, ...toObject, "properties", stateProperty.name);
+    // The profile body has a proof, so strict input writes the input object in place in the body.
+    const strictBodyObject = [
+      "paths",
+      "/v1/studios/{studioId}/profile",
+      "patch",
+      "requestBody",
+      "content",
+      "application/json",
+      "schema",
+      "allOf",
+      0,
+    ];
+
+    expect(stateSchema(shared, "components", "schemas", "UpdateProfile")).toEqual({
+      $ref: "#/components/schemas/StreamState",
+    });
+    expect(stateSchema(strict, ...strictBodyObject)).toEqual({
+      $ref: "#/components/schemas/StreamState",
+      enum: [...streamState.values],
+    });
   });
 
   it("refuses an unknown option or extension name by name", () => {

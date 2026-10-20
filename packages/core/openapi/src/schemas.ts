@@ -10,8 +10,8 @@ import {
   type MapSchema,
   type ObjectSchema,
   type Property,
-  type RefTypeUse,
   type Refinements,
+  type RefTypeUse,
   type ScalarTypeUse,
   type TypeUse,
   type UnionSchema,
@@ -95,7 +95,7 @@ function knownUseSchema(
     case "file":
       return fileSchema(context, use.media, use.maxSizeBytes);
     case "enum":
-      return enumUseSchema(context, use, location);
+      return enumUseSchema(context, use, variant, location);
     case "scalar":
       return scalarSchema(context, use, variant, location);
     case "array":
@@ -179,7 +179,12 @@ export function schemaReference(
   });
 }
 
-function enumUseSchema(context: EmitContext, use: EnumTypeUse, location: IrLocation): JsonObject {
+function enumUseSchema(
+  context: EmitContext,
+  use: EnumTypeUse,
+  variant: SchemaVariant,
+  location: IrLocation,
+): JsonObject {
   const declared = context.ir.enums[use.enum];
 
   if (declared === undefined) {
@@ -193,16 +198,28 @@ function enumUseSchema(context: EmitContext, use: EnumTypeUse, location: IrLocat
     build: (buildContext) => enumComponent(buildContext, declared),
   });
 
-  if (use.narrowedTo === undefined) return reference;
+  if (use.narrowedTo !== undefined) return { ...reference, enum: [...use.narrowedTo.values] };
 
-  return { ...reference, enum: [...use.narrowedTo.values] };
+  // Strict input closes an open enum at its input uses, as the boundary refuses an unknown value there.
+  const strictInput = variant === "input" && context.options.inputSchemas === "strict";
+
+  if (strictInput && isOpenEnum(context, declared)) {
+    return { ...reference, enum: [...declared.values] };
+  }
+
+  return reference;
+}
+
+function isOpenEnum(context: EmitContext, declared: Enum): boolean {
+  return (
+    context.ir.api.wire.outputEnums === "open" && declared.directions.includes(OUTPUT_DIRECTION)
+  );
 }
 
 /** An enum component: closed, or open with its fallback under `api.wire.outputEnums: open`. */
 function enumComponent(context: EmitContext, declared: Enum): JsonObject {
   const schema: JsonObject = { type: "string" };
-  const open =
-    context.ir.api.wire.outputEnums === "open" && declared.directions.includes(OUTPUT_DIRECTION);
+  const open = isOpenEnum(context, declared);
 
   if (open) {
     writeExtension(context, schema, "enum", [...declared.values]);
