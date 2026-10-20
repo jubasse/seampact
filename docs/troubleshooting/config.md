@@ -1,0 +1,59 @@
+# Config errors
+
+Codes that start with `config.` come from `seampact.config.yaml`. Each line names the file, the line and the key. Run the command again after the fix.
+
+## The file
+
+| You see | Do |
+|---|---|
+| `config.file.missing` | Create `seampact.config.yaml` in the app folder, or pass its path with `--config`. |
+| `config.yaml.syntax` | Fix the YAML at the line and column the message gives. |
+| `config.schema ... 'colour' is not a key the app config takes here` | Remove the key or fix its spelling. |
+| `config.schema ... The key 'id' is required here` | Add the key it names. |
+| `config.schema ... A source takes one form` | Keep the keys of one form: `path`, or `package` with `version`, or `release`, or `git`. `integrity` goes with the last three only. |
+| `config.key.waits` | The key is not read yet. Remove it from the config. |
+| `config.key.unsupported` | `frameworkRoutes` and `frameworkDocs` belong to a server target. Remove them from this entry. |
+| `config.key.conflict` | You set two keys that cancel each other, such as `frameworkRoutes` with `artefacts.bootCheck: false`. Keep one. |
+
+## Sources
+
+| You see | Do |
+|---|---|
+| `config.source.no-workspace` | The `path` folder holds neither `workspace.yaml` nor `api.yaml`. Point it at the contract folder. |
+| `config.source.local` | Local sources are refused (`allowLocal: false` or `SEAMPACT_ALLOW_LOCAL=false`). Use a pinned `package`, `release` or `git` source. |
+| `config.source.duplicate` | The same source name is in the app config and in the root config. Keep one. |
+
+## Targets and apis
+
+| You see | Do |
+|---|---|
+| `config.target.missing` | Install the package that `use` names. The message gives the command. |
+| `config.target.not-a-target` | `use` must name a seampact target package, not another library. |
+| `config.target.load-failed` | Reinstall the package, or match its version to the CLI. |
+| `config.target.duplicate-id` | Give each entry of `targets` its own `id`. |
+| `config.api.unknown` | `api` or `apis` names an api that no source holds. Use a name from `workspace.yaml`. |
+| `config.api.ambiguous` | Two sources hold that api. Write it as `<source>/<api>`. |
+| `config.api.unknown-source` | The part before the `/` is not a key of `sources`. |
+
+## Output and artefacts
+
+| You see | Do |
+|---|---|
+| `config.out.outside` | `out` must stay inside `outDir`. |
+| `config.out.overlap` | Two entries write to the same folder. Give each its own `out`. |
+| `config.artefacts.unknown` | The target has no such artefact. The message lists the ones it has. |
+| `config.artefacts.needed` | An artefact needs one you switched off. Switch it on, or switch both off. |
+| `config.artefacts.none` | Every artefact of the entry is off, so it would generate nothing. Remove the entry. |
+
+## Framework versions
+
+| You see | Do |
+|---|---|
+| `config.matrix.untested` | Your framework version is not tested. Accept it with `allowUntested: [nestjs@13]` on the entry, or install a tested one. With `checks.matrix: error` it fails. |
+| `config.matrix.incompatible` | Install a framework version the message lists. |
+| `config.matrix.unknown-framework` | Write the `allowUntested` item as `<framework>@<major>` for the framework this target serves. |
+| `config.matrix.allowed-tested` | That major is tested, so the item does nothing. Remove it. |
+| `config.matrix.pnp-unsupported` | Yarn Plug'n'Play hides the versions. Set `nodeLinker: node-modules` in `.yarnrc.yml`, run `yarn install`. |
+| `config.own-validators.library-missing` | Install the validator library the message names. |
+
+See also [Link errors](link.md), [Monorepo and OpenAPI errors](config-root.md) and the [config reference](../configuration/reference.md).
