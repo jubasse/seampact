@@ -8,7 +8,6 @@ import {
   writeExtension,
 } from "./emit-context.js";
 import { valueSourceText } from "./ir-text.js";
-import { elementSlots, recordSlots } from "./item-slots.js";
 import { copyOptional, type JsonObject, type JsonValue, setDefined } from "./json-value.js";
 import { type SlotValue, templateSchema } from "./templates.js";
 
@@ -140,18 +139,16 @@ export function pageBodySchema(
 
   for (const [slot, value] of roleSlots) slots.set(slot, value);
 
-  const record: SlotValue = { schema: itemSchema, presence: "always" };
-  const memberUrl: SlotValue = { schema: urlSchema(context), presence: "always" };
+  // Inside `$each` over the records: the record and its member URL (`$itemId` and `$itemFields` wait for a consumer).
+  const element = new Map(slots);
+
+  element.set("item", { schema: itemSchema, presence: "always" });
+  element.set("itemSelf", { schema: urlSchema(context), presence: "always" });
 
   slots.set(ITEMS_SLOT, {
     schema: { type: "array", items: itemSchema },
     presence: "always",
-    element: elementSlots(
-      slots,
-      record,
-      recordSlots(context, operation, itemUse, below(location, "body")),
-      memberUrl,
-    ),
+    element,
   });
 
   const styleLocation = below({ member: "" }, "pagings", style.id, "response");
