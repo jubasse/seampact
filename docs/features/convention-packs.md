@@ -21,6 +21,21 @@ Write it at the top level of `api.yaml`, or of the shared file to give it to eve
 
 A format or paging pack sets it as the default for the api. You can still choose another on a route.
 
+## What generates today
+
+All six packs load. Types, validators and a NestJS server were tried with each one.
+
+| Pack | Generates today |
+|---|---|
+| `@seampact/pack-spring` | Yes. |
+| `@seampact/pack-crud-rights` | Yes, on routes with an identity. |
+| `@seampact/pack-laravel` | Loads; code generation planned. `format.success.envelope.unsupported`. |
+| `@seampact/pack-hal` | Loads; code generation planned. `format.success.envelope.unsupported`, `response.media.unsupported`. |
+| `@seampact/pack-jsonapi` | Loads; code generation planned. `format.success.envelope.unsupported`, `format.template.unsupported`. |
+| `@seampact/pack-api-platform` | Loads; code generation planned. `format.success.envelope.unsupported`, `format.template.unsupported`. |
+
+The refusal names the form and how to fix it. Nothing is generated half way.
+
 ## Your own pack
 
 A pack file in your contract works the same way. See [Grammar 2](../grammar/02-composition-extends-packs-include.md) for its keys.
