@@ -1,6 +1,7 @@
 import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { buildBundle, bundleEntries, loadFsReader } from "@seampact/compiler";
 import type { CliIo } from "../cli-io.js";
 import { runCli } from "../run-cli.js";
 
@@ -30,7 +31,7 @@ export interface FakeTarget {
   packageJson?: string;
   // What the fake's `generate` returns as `warnings`.
   warnings?: object[];
-  // The files the fake's `generate` returns.
+  // The files the fake's `generate` returns; a `files.json` next to its `index.cjs` replaces them at call time.
   files?: { path: string; contents: string }[];
   // The artefacts the fake declares; none when absent.
   artefacts?: object[];
@@ -42,7 +43,10 @@ export interface FakeTarget {
 
 // The JavaScript expression of the files the fake's `generate` returns.
 function generatedFilesSource(target: FakeTarget): string {
-  if (target.echoNativeDocsDocument !== true) return JSON.stringify(target.files ?? []);
+  const staticFiles = JSON.stringify(target.files ?? []);
+  const replaceableFiles = `require("node:fs").existsSync(__dirname + "/files.json") ? JSON.parse(require("node:fs").readFileSync(__dirname + "/files.json", "utf8")) : ${staticFiles}`;
+
+  if (target.echoNativeDocsDocument !== true) return replaceableFiles;
 
   return `request.nativeDocsDocument === undefined ? [] : [{ path: "native-document.json", contents: JSON.stringify(request.nativeDocsDocument) }]`;
 }
@@ -119,4 +123,38 @@ export async function generateOutput(
   const exitCode = await runCli(["generate"], io);
 
   return { exitCode, output: lines.join("") };
+}
+
+// The reference contract as an installed bundle package, the way a release pipeline publishes it.
+export function installReferenceBundle(appDirectory: string): string {
+  const built = buildBundle({
+    reader: loadFsReader(REFERENCE_WORKSPACE),
+    entry: "workspace.yaml",
+    contract: REFERENCE_BUNDLE,
+  });
+
+  if (!built.ok)
+    throw new Error(`the reference bundle was refused: ${JSON.stringify(built.failures)}`);
+
+  const directory = join(appDirectory, "node_modules", REFERENCE_BUNDLE.name);
+
+  for (const entry of bundleEntries(built.contents)) {
+    mkdirSync(dirname(join(directory, entry.path)), { recursive: true });
+    writeFileSync(join(directory, entry.path), entry.bytes);
+  }
+
+  writeFileSync(join(directory, "package.json"), JSON.stringify(REFERENCE_BUNDLE));
+
+  return built.contents.manifest.integrity;
+}
+
+export const REFERENCE_BUNDLE = { name: "@seampact-fixtures/reference", version: "1.0.0" } as const;
+
+// Makes the fake `name` generate `files` from the next run on, which the module cache would hide from a rewrite.
+export function changeFakeFiles(
+  appDirectory: string,
+  name: string,
+  files: { path: string; contents: string }[],
+): void {
+  writeFileSync(join(appDirectory, "node_modules", name, "files.json"), JSON.stringify(files));
 }

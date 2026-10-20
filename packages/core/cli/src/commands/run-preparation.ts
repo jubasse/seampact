@@ -1,3 +1,4 @@
+import { dirname } from "node:path";
 import type { CliIo } from "../cli-io.js";
 import { type CliProblem, inApp } from "../cli-problem.js";
 import { type LoadedAppConfig, type LoadedWorkspace, readRunConfig } from "../config/index.js";
@@ -83,6 +84,14 @@ async function prepareApps(
     directory: plan.defaultDocumentDirectory,
     level: app.config.checks?.openapi ?? DEFAULT_DRIFT_CHECK_LEVEL,
   }));
+
+  // A merged document dropped from the root's `openapi` leaves its file in the root's directory.
+  if (workspace !== undefined) {
+    swept.push({
+      directory: dirname(workspace.root.file),
+      level: workspace.root.checks.openapi ?? DEFAULT_DRIFT_CHECK_LEVEL,
+    });
+  }
 
   return { status: "done", value: await planWrites(outputs, documents, swept) };
 }

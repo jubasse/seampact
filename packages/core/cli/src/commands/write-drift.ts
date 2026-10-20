@@ -56,8 +56,6 @@ interface DriftKind {
 }
 
 async function addDrift(drift: WriteDrift, check: WriteCheck, kind: DriftKind): Promise<void> {
-  if (kind.level === "disabled") return;
-
   const items = await driftItems(check);
 
   if (items.status === "unreadable") {
@@ -66,7 +64,8 @@ async function addDrift(drift: WriteDrift, check: WriteCheck, kind: DriftKind): 
     return;
   }
 
-  if (items.items.length === 0) return;
+  // A disabled level looks for no drift, but a directory `generate` refuses is refused here too.
+  if (kind.level === "disabled" || items.items.length === 0) return;
 
   const problem: CliProblem = {
     code: kind.code,

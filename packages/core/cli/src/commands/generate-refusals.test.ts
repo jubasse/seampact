@@ -1,14 +1,14 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { buildBundle, bundleEntries, loadFsReader } from "@seampact/compiler";
+import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { EXIT_REFUSED, EXIT_SUCCESS } from "../cli-io.js";
 import {
   generateErrors,
   generateOutput,
+  installReferenceBundle,
   makeApp,
-  REFERENCE_WORKSPACE,
+  REFERENCE_BUNDLE,
   removeTemporaryDirectories,
   trackTemporaryDirectory,
 } from "./fake-app.test-support.js";
@@ -184,31 +184,6 @@ test("removes a document it wrote once the config drops it", async () => {
   expect(existsSync(join(app, "openapi/tasks.full.yaml"))).toBe(false);
   expect(existsSync(join(app, "openapi/tasks.public.yaml"))).toBe(false);
 });
-
-// The reference contract as an installed bundle package, the way a release pipeline publishes it.
-function installReferenceBundle(appDirectory: string): string {
-  const built = buildBundle({
-    reader: loadFsReader(REFERENCE_WORKSPACE),
-    entry: "workspace.yaml",
-    contract: REFERENCE_BUNDLE,
-  });
-
-  if (!built.ok)
-    throw new Error(`the reference bundle was refused: ${JSON.stringify(built.failures)}`);
-
-  const directory = join(appDirectory, "node_modules", REFERENCE_BUNDLE.name);
-
-  for (const entry of bundleEntries(built.contents)) {
-    mkdirSync(dirname(join(directory, entry.path)), { recursive: true });
-    writeFileSync(join(directory, entry.path), entry.bytes);
-  }
-
-  writeFileSync(join(directory, "package.json"), JSON.stringify(REFERENCE_BUNDLE));
-
-  return built.contents.manifest.integrity;
-}
-
-const REFERENCE_BUNDLE = { name: "@seampact-fixtures/reference", version: "1.0.0" } as const;
 
 test("does not resolve a root path source the app never uses under allowLocal: false", async () => {
   const root = mkdtempSync(join(tmpdir(), "seampact-cli-"));
