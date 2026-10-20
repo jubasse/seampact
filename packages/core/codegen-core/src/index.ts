@@ -35,6 +35,7 @@ export {
   refuseNotGeneratedYet,
   refuseUnknownValueAt,
 } from "./located-refusals.js";
+export { type ManifestRead, readManifest } from "./manifest.js";
 export { type NoOptions, parseNoOptions } from "./no-options.js";
 export {
   declaredTypeIdentifier,
@@ -62,4 +63,12 @@ export type {
 } from "./target.js";
 export { TARGET_ROLES } from "./target.js";
 export { refuseUnknownValue } from "./unknown-value.js";
-export { type WriteOutcome, writeGeneratedFiles } from "./writer.js";
+export {
+  commitGeneratedWrite,
+  type PlannedWrite,
+  type PlanWriteOutcome,
+  planGeneratedWrite,
+  type WriteOutcome,
+  type WrittenFiles,
+  writeGeneratedFiles,
+} from "./writer.js";

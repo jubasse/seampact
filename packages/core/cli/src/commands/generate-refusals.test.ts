@@ -8,7 +8,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { buildBundle, bundleEntries, loadFsReader } from "@seampact/compiler";
 import { afterEach, expect, test } from "vitest";
 import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS } from "../cli-io.js";
 import { runCli } from "../run-cli.js";
@@ -223,4 +224,103 @@ test("writes each document of the api a server target serves by default, and non
   expect(existsSync(join(app, "openapi/tasks.public.yaml"))).toBe(true);
   expect(existsSync(join(app, "openapi/tasks.full.yaml"))).toBe(true);
   expect(existsSync(join(app, "openapi/tasksService.yaml"))).toBe(false);
+});
+
+test("refuses to replace a document seampact did not write, and writes nothing", async () => {
+  const app = makeApp(
+    "sources:\n  a: { path: ./a }\ntargets:\n  - { id: server, use: fake-server, api: tasks }\n",
+    [{ name: "fake-server", role: "server" }],
+  );
+  const handWritten = "openapi: 3.1.0\ninfo: { title: exported by the framework }\n";
+
+  mkdirSync(join(app, "openapi"));
+  writeFileSync(join(app, "openapi/tasks.full.yaml"), handWritten);
+
+  const { exitCode, output } = await generateOutput(app);
+
+  expect(exitCode).toBe(EXIT_REFUSED);
+  expect(output).toContain("openapi.document.not-generated");
+  expect(output).toContain(join(app, "openapi/tasks.full.yaml"));
+  expect(output).toContain("`openapi: none`");
+  expect(readFileSync(join(app, "openapi/tasks.full.yaml"), "utf8")).toBe(handWritten);
+  expect(existsSync(join(app, "openapi/tasks.public.yaml"))).toBe(false);
+  expect(existsSync(join(app, "__generated__/server"))).toBe(false);
+});
+
+test("removes a document it wrote once the config drops it", async () => {
+  const app = makeApp(
+    "sources:\n  a: { path: ./a }\ntargets:\n  - { id: server, use: fake-server, api: tasks }\n",
+    [{ name: "fake-server", role: "server" }],
+  );
+
+  expect((await generateOutput(app)).exitCode).toBe(EXIT_SUCCESS);
+  expect(existsSync(join(app, "openapi/tasks.full.yaml"))).toBe(true);
+
+  writeFileSync(
+    join(app, "seampact.config.yaml"),
+    "sources:\n  a: { path: ./a }\ntargets:\n  - { id: server, use: fake-server, api: tasks }\nopenapi: none\n",
+  );
+
+  const { exitCode, output } = await generateOutput(app);
+
+  expect(exitCode).toBe(EXIT_SUCCESS);
+  expect(output).toContain("removed");
+  expect(existsSync(join(app, "openapi/tasks.full.yaml"))).toBe(false);
+  expect(existsSync(join(app, "openapi/tasks.public.yaml"))).toBe(false);
+});
+
+// The reference contract as an installed bundle package, the way a release pipeline publishes it.
+function installReferenceBundle(appDirectory: string): string {
+  const built = buildBundle({
+    reader: loadFsReader(REFERENCE_WORKSPACE),
+    entry: "workspace.yaml",
+    contract: REFERENCE_BUNDLE,
+  });
+
+  if (!built.ok)
+    throw new Error(`the reference bundle was refused: ${JSON.stringify(built.failures)}`);
+
+  const directory = join(appDirectory, "node_modules", REFERENCE_BUNDLE.name);
+
+  for (const entry of bundleEntries(built.contents)) {
+    mkdirSync(dirname(join(directory, entry.path)), { recursive: true });
+    writeFileSync(join(directory, entry.path), entry.bytes);
+  }
+
+  writeFileSync(join(directory, "package.json"), JSON.stringify(REFERENCE_BUNDLE));
+
+  return built.contents.manifest.integrity;
+}
+
+const REFERENCE_BUNDLE = { name: "@seampact-fixtures/reference", version: "1.0.0" } as const;
+
+test("does not resolve a root path source the app never uses under allowLocal: false", async () => {
+  const root = mkdtempSync(join(tmpdir(), "seampact-cli-"));
+  const app = join(root, "apps/api");
+
+  temporaryDirectories.push(root);
+  mkdirSync(join(root, ".git"));
+  mkdirSync(join(root, "devonly"));
+  mkdirSync(app, { recursive: true });
+  writeFileSync(
+    join(root, "devonly/workspace.yaml"),
+    "workspace:\n  apis:\n    drafts: ./drafts.yaml\n",
+  );
+  writeFileSync(
+    join(root, "seampact.config.yaml"),
+    "apps: [apps/api]\nsources:\n  devonly: { path: ./devonly }\n",
+  );
+
+  const integrity = installReferenceBundle(app);
+
+  writeFileSync(
+    join(app, "seampact.config.yaml"),
+    `allowLocal: false\nsources:\n  contract: { package: '${REFERENCE_BUNDLE.name}', version: ${REFERENCE_BUNDLE.version}, integrity: '${integrity}' }\nopenapi:\n  tasksService: docs/service.yaml\n`,
+  );
+
+  const { exitCode, output } = await generateOutput(app);
+
+  expect(output).not.toContain("config.source.local");
+  expect(exitCode).toBe(EXIT_SUCCESS);
+  expect(existsSync(join(app, "docs/service.yaml"))).toBe(true);
 });

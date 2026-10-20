@@ -1,7 +1,8 @@
 import type { TargetEntry } from "@seampact/spec/config";
 import { type CliProblem, entryWhere } from "../cli-problem.js";
-import type { LoadedAppConfig } from "../config/index.js";
+import type { LoadedAppConfig, ResolvedSource } from "../config/index.js";
 import type { CompiledApi } from "./compile-sources.js";
+import { workspaceApiNames } from "./workspace-api-names.js";
 
 // An entry's `api` or `apis` item: the api's name alone, or `<source>/<api>` (ADR 0011).
 export interface ApiRef {
@@ -30,28 +31,66 @@ export type UsedSourcesOutcome =
 // The sources the targets use: each source an `api` names, or every source when one names an api alone, since
 // only the compiled sources tell where that api lives.
 export function usedSources(config: LoadedAppConfig): UsedSourcesOutcome {
-  const refs = config.entries.flatMap(({ entry }) =>
-    apiRefsOf(entry).map((text) => ({ entry, ref: parseApiRef(text) })),
-  );
-
-  const problems = refs
-    .filter(({ ref }) => ref.source !== undefined && !config.sources.has(ref.source))
-    .map(({ entry, ref }) => ({
-      code: "config.api.unknown-source",
-      message: `The app config has no source '${ref.source}' (${[...config.sources.keys()].join(", ") || "none"}).`,
-      fix: "Name one of the app config's `sources` before the '/', or add the source.",
-      where: entryWhere(entry.id, ref.api),
-    }));
+  const problems = unknownSourceProblems(config);
 
   if (problems.length > 0) return { status: "refused", problems };
 
-  if (refs.some(({ ref }) => ref.source === undefined))
+  const refs = entryApiRefs(config).map(parseApiRef);
+
+  if (refs.some((ref) => ref.source === undefined))
     return { status: "used", names: [...config.sources.keys()] };
 
   return {
     status: "used",
-    names: [...new Set(refs.flatMap(({ ref }) => (ref.source === undefined ? [] : [ref.source])))],
+    names: [...new Set(refs.flatMap((ref) => (ref.source === undefined ? [] : [ref.source])))],
   };
+}
+
+// Each `<source>/<api>` of a target entry whose source the app config does not define.
+export function unknownSourceProblems(config: LoadedAppConfig): CliProblem[] {
+  return config.entries.flatMap(({ entry }) =>
+    apiRefsOf(entry)
+      .map(parseApiRef)
+      .filter((ref) => ref.source !== undefined && !config.sources.has(ref.source))
+      .map((ref) => ({
+        code: "config.api.unknown-source",
+        message: `The app config has no source '${ref.source}' (${[...config.sources.keys()].join(", ") || "none"}).`,
+        fix: "Name one of the app config's `sources` before the '/', or add the source.",
+        where: entryWhere(entry.id, ref.api),
+      })),
+  );
+}
+
+export function entryApiRefs(config: LoadedAppConfig): string[] {
+  return config.entries.flatMap(({ entry }) => apiRefsOf(entry));
+}
+
+// The sources `refs` use (ADR 0011: a source no ref uses is never resolved): the source each `<source>/<api>`
+// names and, for an api named alone, each source that may hold it: a `path` source whose `workspace.yaml` lists
+// it or cannot be read (its compile then says why), and every bundle source, whose apis only its manifest tells.
+export async function sourcesHoldingRefs(
+  config: LoadedAppConfig,
+  refs: readonly string[],
+): Promise<string[]> {
+  const parsed = refs.map(parseApiRef);
+  const bareApis = new Set(parsed.flatMap((ref) => (ref.source === undefined ? [ref.api] : [])));
+  const named = new Set(parsed.flatMap((ref) => (ref.source === undefined ? [] : [ref.source])));
+  const used: string[] = [];
+
+  for (const [name, source] of config.sources) {
+    if (named.has(name) || (bareApis.size > 0 && (await mayHoldAny(source, bareApis))))
+      used.push(name);
+  }
+
+  return used;
+}
+
+async function mayHoldAny(source: ResolvedSource, apis: ReadonlySet<string>): Promise<boolean> {
+  if (source.kind === "bundle") return true;
+
+  const names = await workspaceApiNames(source.directory);
+
+  return names === undefined || names.some((name) => apis.has(name));
 }
 
 export type EntryApisOutcome =

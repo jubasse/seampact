@@ -3,10 +3,11 @@
 // from the app's own project.
 
 export {
+  defaultDocumentDirectory,
   type MergedContribution,
+  openApiApiNames,
   type PlannedAppDocument,
   type PlannedMergedDocument,
-  openApiSourceNames,
   planAppDocuments,
   planMergedDocuments,
 } from "./document-plan.js";
@@ -23,3 +24,4 @@ export {
   readWorkspaceConfigs,
 } from "./read-workspace-configs.js";
 export { resolveTarget } from "./resolve-target.js";
+export type { ResolvedSource } from "./resolved-source.js";

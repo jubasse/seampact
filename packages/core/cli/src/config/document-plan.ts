@@ -37,6 +37,9 @@ export interface PlannedAppDocument {
   document?: string;
   file: string;
   options: OpenApiDocumentOptions;
+  // The `operations` of each server entry serving the api, whose union the document holds; absent when one of them
+  // serves the whole api, or when `openapi` lists the document.
+  servedOperations?: OperationsFilter[];
 }
 
 export type AppDocumentPlan =
@@ -66,13 +69,13 @@ export type MergedDocumentPlan =
   | { status: "planned"; documents: PlannedMergedDocument[] }
   | { status: "refused"; problems: CliProblem[] };
 
-// The sources the `openapi` key uses: an api is named alone there, so every source may hold it.
-export function openApiSourceNames(config: LoadedAppConfig): string[] {
+// The apis the `openapi` key names, each alone: `<source>/<api>` is not a key the config takes.
+export function openApiApiNames(config: LoadedAppConfig): string[] {
   const { openapi } = config;
 
   if (openapi === undefined || openapi === NO_OPENAPI_DOCUMENTS) return [];
 
-  return Object.keys(openapi).length === 0 ? [] : [...config.sources.keys()];
+  return Object.keys(openapi);
 }
 
 // The app's documents: those its `openapi` lists, none for `none`, and without the key every document of every api
@@ -99,13 +102,24 @@ export function planAppDocuments(
   return problems.length > 0 ? { status: "refused", problems } : planned;
 }
 
+// The directory of an app's default documents, beside its config file.
+export function defaultDocumentDirectory(config: Pick<LoadedAppConfig, "file">): string {
+  return join(dirname(config.file), DEFAULT_DOCUMENT_DIRECTORY);
+}
+
+// An api a server entry serves, with the `operations` of each entry serving it (undefined once one serves it all).
+interface ServedApi {
+  api: ApiDocuments;
+  operations: OperationsFilter[] | undefined;
+}
+
 function defaultDocuments(
   config: LoadedAppConfig,
   entryRoles: ReadonlyMap<string, TargetRole>,
   apiDocuments: readonly ApiDocuments[],
 ): AppDocumentPlan {
-  const directory = join(dirname(config.file), DEFAULT_DOCUMENT_DIRECTORY);
-  const served = new Map<string, ApiDocuments>();
+  const directory = defaultDocumentDirectory(config);
+  const served = new Map<string, ServedApi>();
   const problems: CliProblem[] = [];
 
   for (const { entry } of config.entries) {
@@ -115,32 +129,56 @@ function defaultDocuments(
       const found = findApi(apiDocuments, text, `entry '${entry.id}'`);
 
       if (found.status === "refused") problems.push(found.problem);
-      else served.set(JSON.stringify([found.api.source, found.api.api]), found.api);
+      else addServedApi(served, found.api, entry.operations);
     }
   }
 
   if (problems.length > 0) return { status: "refused", problems };
 
-  const documents = [...served.values()].flatMap((api): PlannedAppDocument[] =>
-    api.documents.length === 0
-      ? [
-          {
-            source: api.source,
-            api: api.api,
-            file: join(directory, `${api.api}${DOCUMENT_EXTENSION}`),
-            options: {},
-          },
-        ]
-      : api.documents.map((document) => ({
+  const documents = [...served.values()].flatMap(({ api, operations }): PlannedAppDocument[] => {
+    const servedOperations =
+      operations === undefined ? {} : { servedOperations: structuredClone(operations) };
+
+    if (api.documents.length === 0) {
+      return [
+        {
           source: api.source,
           api: api.api,
-          document,
-          file: join(directory, `${api.api}.${document}${DOCUMENT_EXTENSION}`),
+          file: join(directory, `${api.api}${DOCUMENT_EXTENSION}`),
           options: {},
-        })),
-  );
+          ...servedOperations,
+        },
+      ];
+    }
+
+    return api.documents.map((document) => ({
+      source: api.source,
+      api: api.api,
+      document,
+      file: join(directory, `${api.api}.${document}${DOCUMENT_EXTENSION}`),
+      options: {},
+      ...servedOperations,
+    }));
+  });
 
   return { status: "planned", documents };
+}
+
+function addServedApi(
+  served: Map<string, ServedApi>,
+  api: ApiDocuments,
+  operations: OperationsFilter | undefined,
+): void {
+  const key = JSON.stringify([api.source, api.api]);
+  const known = served.get(key);
+
+  if (operations === undefined || (known !== undefined && known.operations === undefined)) {
+    served.set(key, { api, operations: undefined });
+
+    return;
+  }
+
+  served.set(key, { api, operations: [...(known?.operations ?? []), operations] });
 }
 
 function listedDocuments(
@@ -264,7 +302,7 @@ function findApi(apiDocuments: readonly ApiDocuments[], text: string, where: str
       problem: {
         code: "config.openapi.ambiguous-api",
         message: `The api '${api}' exists in the sources ${candidates.map((each) => `'${each.source}'`).join(", ")}, and 'openapi' names an api alone.`,
-        fix: "Keep one source holding the api in this app config, or rename the api in one of them.",
+        fix: "An `openapi` key names an api alone: rename the api in the `workspace.yaml` of one of these sources, or remove one of them from the config that defines it (this app config or its root config).",
         where,
       },
     };
