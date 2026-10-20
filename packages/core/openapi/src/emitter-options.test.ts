@@ -1,3 +1,4 @@
+import type { ContractIR } from "@seampact/spec/ir";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
@@ -26,7 +27,11 @@ const REASON_MEMBERS = [
 const INPUT_SUFFIX = ".input";
 
 function documentsOf(irName: string, options: EmitterOptions): JsonValue[] {
-  const outcome = emitDocuments(readGoldenIr(irName), options);
+  return documentsOfIr(readGoldenIr(irName), options);
+}
+
+function documentsOfIr(ir: ContractIR, options: EmitterOptions): JsonValue[] {
+  const outcome = emitDocuments(ir, options);
 
   if (outcome.status !== "emitted") throw new Error(JSON.stringify(outcome.refusals));
 
@@ -176,8 +181,8 @@ describe("emitter options change only what they name", () => {
 });
 
 describe("strict input still accepts proofs", () => {
-  function bodyValidator(irName: string, path: string, method: string): (body: unknown) => boolean {
-    const document = documentsOf(irName, parsed({ inputSchemas: "strict" }))[0];
+  function bodyValidator(ir: ContractIR, path: string, method: string): (body: unknown) => boolean {
+    const document = documentsOfIr(ir, parsed({ inputSchemas: "strict" }))[0];
     const ajv = new Ajv2020({ strict: false, validateFormats: false });
     const documentId = "https://seampact.dev/test/document.json";
     const escapedPath = pointerToken(path);
@@ -192,7 +197,11 @@ describe("strict input still accepts proofs", () => {
   }
 
   it("accepts a body with its proofs and refuses an unknown key beside them", () => {
-    const accepts = bodyValidator("extensions/studio", "/v1/studios/{studioId}/profile", "patch");
+    const accepts = bodyValidator(
+      readGoldenIr("extensions/studio"),
+      "/v1/studios/{studioId}/profile",
+      "patch",
+    );
     const profileId = "0b6e3c1a-5f2d-4e8b-9c7a-1d2e3f4a5b6c";
 
     expect(accepts({ profileId, displayName: "Ada", reauthToken: "token" })).toBe(true);
@@ -202,12 +211,27 @@ describe("strict input still accepts proofs", () => {
 
   it("accepts a proof-only body and refuses an unknown key", () => {
     const accepts = bodyValidator(
-      "reference/tasks",
+      readGoldenIr("reference/tasks"),
       "/v1/channels/{channelId}/tasks/{taskId}/purge",
       "post",
     );
 
     expect(accepts({ reauthToken: "token" })).toBe(true);
     expect(accepts({ reauthToken: "token", force: true })).toBe(false);
+  });
+
+  it("accepts an unknown key beside the proofs when the input ignores unknown keys", () => {
+    const ir = readGoldenIr("extensions/studio");
+    const profileInput = ir.operations.find((operation) => operation.id === "profileStudio")?.input;
+
+    if (profileInput?.schema.kind !== "ref") throw new Error("profileStudio reads a named input");
+
+    profileInput.schema.unknownKeys = { policy: "ignore", reason: "Older clients send it." };
+
+    const accepts = bodyValidator(ir, "/v1/studios/{studioId}/profile", "patch");
+    const profileId = "0b6e3c1a-5f2d-4e8b-9c7a-1d2e3f4a5b6c";
+
+    expect(accepts({ profileId, reauthToken: "token", nickname: "ada" })).toBe(true);
+    expect(accepts({ profileId, displayName: "Ada" })).toBe(false);
   });
 });

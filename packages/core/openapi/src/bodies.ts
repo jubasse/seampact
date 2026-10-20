@@ -17,7 +17,13 @@ import {
 } from "./emit-context.js";
 import { derivedFromValue } from "./ir-text.js";
 import type { JsonObject } from "./json-value.js";
-import { objectSchema, PASSWORD_FORMAT, schemaReference, typeUseSchema } from "./schemas.js";
+import {
+  objectSchema,
+  PASSWORD_FORMAT,
+  refusesUnknownKeys,
+  schemaReference,
+  typeUseSchema,
+} from "./schemas.js";
 
 // The `input` row of ADR 0004 section 12: the request body with its media type, its form and multipart encoding,
 // its rule proofs, its unknown-key policy and its raw-body mark.
@@ -26,6 +32,12 @@ const JSON_MEDIA = "application/json";
 const FORM_MEDIA = "application/x-www-form-urlencoded";
 const MULTIPART_MEDIA = "multipart/form-data";
 const EMPTY_BODY_SCHEMA_ID = "ApiEmptyBody";
+const SHARED_TOP_LEVEL = "shared";
+const STRICT_TOP_LEVEL = "strict";
+
+/** How a proof body writes its input: through the input's own schema, or in place under the strict wrapper. */
+type InputTopLevel = typeof SHARED_TOP_LEVEL | typeof STRICT_TOP_LEVEL;
+
 const ENCODED_FIELD_KINDS: readonly string[] = ["list", "object"];
 
 export function requestBody(
@@ -109,7 +121,8 @@ function bodySchema(context: EmitContext, input: OperationInput, location: IrLoc
   if (proofs.length === 0)
     return typeUseSchema(context, input.schema, "input", below(location, "schema"));
 
-  const strict = context.options.inputSchemas === "strict";
+  // An input that ignores or keeps unknown keys reads the shared top level even under strict input.
+  const strict = context.options.inputSchemas === "strict" && refusesUnknownKeys(input.schema);
   const proofObject = proofsSchema(context, proofs, below(location, "proofs"));
   const inputSchemaId =
     input.schema.kind === "ref" && "schema" in input.schema ? input.schema.schema : undefined;
@@ -121,7 +134,16 @@ function bodySchema(context: EmitContext, input: OperationInput, location: IrLoc
   }
 
   const wrapper: JsonObject = {
-    allOf: [inputTopLevel(context, input, inputSchemaId, location), proofObject],
+    allOf: [
+      inputTopLevel(
+        context,
+        input,
+        inputSchemaId,
+        strict ? STRICT_TOP_LEVEL : SHARED_TOP_LEVEL,
+        location,
+      ),
+      proofObject,
+    ],
   };
 
   if (strict) wrapper.unevaluatedProperties = false;
@@ -135,6 +157,7 @@ function inputTopLevel(
   context: EmitContext,
   input: OperationInput,
   inputSchemaId: string | undefined,
+  topLevel: InputTopLevel,
   location: IrLocation,
 ): JsonObject {
   const named = inputSchemaId === undefined ? undefined : context.ir.schemas[inputSchemaId];
@@ -155,18 +178,18 @@ function inputTopLevel(
     return {};
   }
 
-  if (context.options.inputSchemas !== "strict") {
+  if (topLevel === SHARED_TOP_LEVEL) {
     return typeUseSchema(context, input.schema, "input", below(location, "schema"));
   }
 
   // The shared component stays in the document, as without the option.
   schemaReference(context, inputSchemaId, "shared");
 
-  const topLevel = objectSchema(context, named, "input", schemaLocation(inputSchemaId));
+  const inPlace = objectSchema(context, named, "input", schemaLocation(inputSchemaId));
 
-  delete topLevel.additionalProperties;
+  delete inPlace.additionalProperties;
 
-  return topLevel;
+  return inPlace;
 }
 
 function proofsSchema(

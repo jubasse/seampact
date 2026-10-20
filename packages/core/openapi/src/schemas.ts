@@ -138,14 +138,18 @@ function refSchema(
   }
 
   // An ignoring or keeping use accepts unknown keys, so it reads the shared component even under strict input.
-  const policy = use.unknownKeys?.policy;
-  const refusesUnknownKeys = policy === undefined || policy === "refuse";
-
   return schemaReference(
     context,
     use.schema,
-    variant === "input" && refusesUnknownKeys ? "input" : "shared",
+    variant === "input" && refusesUnknownKeys(use) ? "input" : "shared",
   );
+}
+
+/** Whether a type use refuses unknown keys: any use but a reference that ignores or keeps them. */
+export function refusesUnknownKeys(use: TypeUse): boolean {
+  const policy = use.kind === "ref" && "unknownKeys" in use ? use.unknownKeys?.policy : undefined;
+
+  return policy === undefined || policy === "refuse";
 }
 
 /** A `$ref` to a named schema, the strict twin when the schema is an input. */
