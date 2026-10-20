@@ -51,6 +51,7 @@ Lint is the contract's to tune (A36, FR-12, SCN-018). `lint.rules` on the api, i
 | `seampact/field-right-unresolved` | warning | an output field always absent on a route, its subject not found (ADR 0003 section 6) | the property, or the node |
 | `seampact/credential-name` | warning | a property named like a credential and not `sensitive` (ADR 0003 section 6) | the property or schema |
 | `seampact/unused-declaration` | warning | a declaration no operation, identity or convention reaches (ADR 0004 section 2) | the catalogue entry |
+| `seampact/not-found-role` | warning | a declared 404 code beside the derived notFound code on a route (section 11) | the catalogue entry |
 
 ```yaml
 # shared/base.yaml (excerpt)

@@ -1,0 +1,35 @@
+# api.yaml: a collection whose member routes list a declared 404 code
+api: { name: notes, version: 1 }
+
+schemes:
+  bearer: { kind: bearer }
+
+identities:
+  user:
+    schemes: { read: [bearer], write: [bearer] }
+    principal: Principal
+
+schemas:
+  NoteId: { type: string }
+  Principal:
+    type: object
+    required: [userId]
+    properties: { userId: { type: string } }
+  Note:
+    type: object
+    required: [id]
+    properties: { id: NoteId }
+
+surfaces:
+  app:
+    identity: user
+    routes:
+      notes:
+        kind: collection
+        id: { noteId: NoteId }
+        idProperty: id
+        item: Note
+        errors:
+          notes.not_found: { status: 404, title: No such note. }
+        ops: [get]
+

@@ -1,6 +1,7 @@
 import { CORE_PLUGIN_NAME, defineCoreLintPlugin } from "../plugin.js";
 import { cookieWithoutCsrf } from "./cookie-without-csrf.js";
 import { credentialName } from "./credential-name.js";
+import { notFoundRole } from "./not-found-role.js";
 import { redundantMaturity } from "./redundant-maturity.js";
 import { subtreeException } from "./subtree-exception.js";
 import { unusedDeclaration } from "./unused-declaration.js";
@@ -14,6 +15,7 @@ export const seampactCorePlugin = defineCoreLintPlugin({
     redundantMaturity,
     credentialName,
     unusedDeclaration,
+    notFoundRole,
   ],
 });
 
