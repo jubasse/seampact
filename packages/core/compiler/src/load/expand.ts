@@ -1,4 +1,5 @@
 import { isAlias, isMap, isScalar, isSeq, type Node, type Pair, Scalar, type YAMLMap } from "yaml";
+import { mappingKeysHint } from "../diagnostics/mapping-keys.js";
 import { diagnosticInert } from "../diagnostics/print.js";
 import {
   type ApiLayerId,
@@ -14,6 +15,7 @@ import { escapePointer } from "@seampact/spec/json";
 import { pointerSegments } from "./paths.js";
 import {
   admitsInteger,
+  expectedKeys,
   expectedTypes,
   type MapView,
   NOT_SCALAR,
@@ -444,11 +446,15 @@ export class Expander {
         ? "a null (no value, '~' or null)"
         : `'${shown}' is ${type === "integer" ? "an integer" : `a ${type}`}`;
     const quotable = expected.includes("a string") && type !== "null";
+    const keysHint =
+      scope.pos !== undefined && expected.includes("a mapping")
+        ? mappingKeysHint(expectedKeys(scope.pos))
+        : "";
 
     this.rep.report({
       rule: "scalar-type",
       message: `${got} where the schema expects ${wants} (P6)`,
-      fix: quotable ? `quote it ('${shown}') to write a string` : `write ${wants}`,
+      fix: quotable ? `quote it ('${shown}') to write a string` : `write ${wants}${keysHint}`,
       at: nodeSite(scope.file, node),
     });
   }

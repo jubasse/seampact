@@ -1,5 +1,4 @@
-import { existsSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import {
   type BundleFetchOptions,
   type BundleSourceFailure,
@@ -19,7 +18,7 @@ import type { ContractIR, SourceMap } from "@seampact/spec/ir";
 import type { CliIo } from "../cli-io.js";
 import type { CliProblem } from "../cli-problem.js";
 import type { LoadedAppConfig } from "../config/index.js";
-import { WORKSPACE_ENTRY } from "./workspace-api-names.js";
+import { SINGLE_API_ENTRY, sourceEntryFile, WORKSPACE_ENTRY } from "./workspace-api-names.js";
 
 export interface CompiledApi {
   source: string;
@@ -109,12 +108,14 @@ async function compileSource(name: string, directory: string, run: SourceRun): P
     return;
   }
 
-  if (!existsSync(join(directory, WORKSPACE_ENTRY))) {
+  const entry = sourceEntryFile(directory);
+
+  if (entry === undefined) {
     compiled.failed = true;
     compiled.problems.push({
       code: "config.source.no-workspace",
-      message: `The source '${name}' (${directory}) holds no \`${WORKSPACE_ENTRY}\`.`,
-      fix: `Point the source's \`path\` at a contract workspace directory, the one holding \`${WORKSPACE_ENTRY}\`.`,
+      message: `The directory ${directory} holds neither \`${WORKSPACE_ENTRY}\` nor \`${SINGLE_API_ENTRY}\`.`,
+      fix: `Point the source's \`path\` at the contract directory: the one holding \`${WORKSPACE_ENTRY}\`, or \`${SINGLE_API_ENTRY}\` for a single api.`,
       where: `source '${name}'`,
     });
 
@@ -123,7 +124,7 @@ async function compileSource(name: string, directory: string, run: SourceRun): P
 
   const outcome = await compileWorkspaceWithImports({
     reader: loadFsReader(directory),
-    entry: WORKSPACE_ENTRY,
+    entry,
     fetch: fetchOptions(directory, run),
   });
 

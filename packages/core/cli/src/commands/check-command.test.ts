@@ -57,6 +57,41 @@ test("check passes after generate and names a hand-edited generated file", async
   expect(edited.exitCode).toBe(EXIT_REFUSED);
   expect(edited.err).toContain("check.generated.drift");
   expect(edited.err).toContain(file);
+  expect(edited.err).not.toContain("..");
+  expect(edited.err).toContain("Fix: Move the hand-written code next to the generated files");
+});
+
+test("a source holding one api.yaml and no workspace.yaml compiles as a single-api workspace", async () => {
+  const app = makeApp(
+    "sources:\n  solo: { path: ./solo }\ntargets:\n  - { id: server, use: fake-server, api: solo }\n",
+    [{ name: "fake-server", role: "server", files: [GENERATED_FILE] }],
+    [],
+  );
+
+  mkdirSync(join(app, "solo"));
+  writeFileSync(
+    join(app, "solo/api.yaml"),
+    "api:\n  name: solo\n  version: 1\n  kind: product\n  maturity: provisional\n  summary: One api.\n",
+  );
+
+  expect(await run(app, ["generate"])).toMatchObject({ exitCode: EXIT_SUCCESS });
+  expect(await run(app, ["check"])).toMatchObject({ exitCode: EXIT_SUCCESS });
+});
+
+test("a source with neither workspace.yaml nor api.yaml is refused naming both", async () => {
+  const app = makeApp(
+    "sources:\n  solo: { path: ./solo }\ntargets:\n  - { id: server, use: fake-server, api: solo }\n",
+    [{ name: "fake-server", role: "server", files: [GENERATED_FILE] }],
+    [],
+  );
+
+  mkdirSync(join(app, "solo"));
+
+  const refused = await run(app, ["check"]);
+
+  expect(refused.exitCode).toBe(EXIT_REFUSED);
+  expect(refused.err).toContain("config.source.no-workspace");
+  expect(refused.err).toContain("api.yaml");
 });
 
 test("check names a missing generated file, before and after a generate", async () => {

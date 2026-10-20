@@ -270,3 +270,17 @@ describe("data positions in lists", () => {
     expect(r.result.files).not.toContain("x.yaml");
   });
 });
+
+describe("the fix for a mapping names its keys", () => {
+  test("a number where a paging style's mapping goes", () => {
+    const { printed } = load({
+      "api.yaml":
+        "api: { name: t }\nsurfaces:\n  app:\n    routes:\n      notes:\n        kind: collection\n        ops:\n          list: { paging: { limit: 20 } }\n",
+    });
+
+    expect(printed).toContain("where the schema expects a mapping");
+    expect(printed).toContain(
+      "write a mapping with the keys defaultLimit, maxLimit, overLimit, token",
+    );
+  });
+});

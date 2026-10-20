@@ -19,6 +19,8 @@ const HAND_EDIT_CODES: ReadonlySet<string> = new Set([
   "writer.file.not-generated",
 ]);
 
+const TRAILING_PERIODS = /\.+$/;
+
 export async function findWriteDrift(writes: PlannedWrites): Promise<WriteDrift> {
   const drift: WriteDrift = { errors: [], warnings: [] };
 
@@ -70,7 +72,7 @@ async function addDrift(drift: WriteDrift, check: WriteCheck, kind: DriftKind): 
   const problem: CliProblem = {
     code: kind.code,
     message: `${kind.subject} differ from the committed files: ${items.items.join("; ")}.`,
-    fix: kind.fix,
+    fix: items.fix ?? kind.fix,
     where: kind.where,
   };
 
@@ -79,7 +81,8 @@ async function addDrift(drift: WriteDrift, check: WriteCheck, kind: DriftKind): 
 }
 
 type DriftItems =
-  | { status: "listed"; items: string[] }
+  // `fix` is set when the writer's own fix applies: a hand-edited file is not cured by generating again.
+  | { status: "listed"; items: string[]; fix?: string | undefined }
   | { status: "unreadable"; refusals: readonly Refusal[] };
 
 // A hand-edited file is drift, named by the writer's message; any other refusal says the check cannot compare.
@@ -91,7 +94,11 @@ async function driftItems(check: WriteCheck): Promise<DriftItems> {
 
   if (other.length > 0) return { status: "unreadable", refusals: other };
 
-  return { status: "listed", items: check.refusals.map((refusal) => refusal.message) };
+  return {
+    status: "listed",
+    items: check.refusals.map((refusal) => refusal.message.replace(TRAILING_PERIODS, "")),
+    fix: check.refusals[0]?.fix,
+  };
 }
 
 function refusalProblem(refusal: Refusal, where: string): CliProblem {
