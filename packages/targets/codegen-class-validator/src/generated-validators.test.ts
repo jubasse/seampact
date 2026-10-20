@@ -44,7 +44,7 @@ let adapter: Adapter;
 let constraints: {
   scalarTypeCheck(type: "integer"): ContractCheck;
   safeIntegerChecks(): ContractCheck[];
-  multipleOfCheck(divisor: number): ContractCheck;
+  multipleOfCheck(integerStep: string, message: string): ContractCheck;
   failingItemChecks(item: unknown, checks: readonly ContractCheck[]): ContractCheck[];
 };
 

@@ -87,6 +87,7 @@ describe("the plan of a multipleOf step", () => {
   test.each([
     ["0.07", "7"],
     ["0.00001", "1"],
+    ["0.0000001", "1"],
     ["2.5", "5"],
     ["5", "5"],
   ])("an integer step %s checks the exact integer step %s", (literal, integerStep) => {
@@ -108,6 +109,6 @@ describe("the plan of a multipleOf step", () => {
   test("a zero step is refused by name", () => {
     const { refusals } = planWithRefusals(steppedScalar("integer", "0"));
 
-    expect(refusals.map((refusal) => refusal.code)).toEqual(["scalar.multipleOf.zero"]);
+    expect(refusals.map((refusal) => refusal.code)).toEqual(["scalar.multipleOf.notPositive"]);
   });
 });

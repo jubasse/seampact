@@ -458,14 +458,12 @@ function multipleOfChecks(
     return [];
   }
 
-  if (!isExactLiteral(literal, location, refusals)) return [];
-
   const integerStep = reducedIntegerStep(literal);
 
   if (integerStep === undefined) {
     refusals.push(
       refuseInconsistentIr(
-        "scalar.multipleOf.zero",
+        "scalar.multipleOf.notPositive",
         `The multipleOf step '${literal}', not above zero,`,
         location,
       ),

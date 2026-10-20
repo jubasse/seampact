@@ -42,7 +42,6 @@ const RULE_OF_KEYWORD: ReadonlyMap<string, string> = new Map([
 ["maximum", "maximum"],
 ["exclusiveMinimum", "exclusiveMinimum"],
 ["exclusiveMaximum", "exclusiveMaximum"],
-["multipleOf", "multipleOf"],
 [${JSON.stringify(INTEGER_MULTIPLE_KEYWORD)}, "multipleOf"],
 ["minItems", "minItems"],
 ["maxItems", "maxItems"],
@@ -57,7 +56,6 @@ useDefaults: false,
 strict: true,
 unicodeRegExp: true,
 ownProperties: true,
-multipleOfPrecision: 12,
 formats: { uuid: UUID_FORMAT, "date-time": ${IS_DATE_TIME} },
 });
 
