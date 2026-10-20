@@ -26,6 +26,8 @@ const FIXED_EXPORTS = [
 
 // Generating the reference project outruns vitest's default 10 s hook limit on a loaded machine.
 const GENERATE_TIMEOUT_MILLISECONDS = 60_000;
+// Type-checking both apis takes tens of seconds on a busy machine.
+const TYPE_CHECK_TIMEOUT_MILLISECONDS = 120_000;
 
 let files: string[] = [];
 
@@ -45,11 +47,15 @@ beforeAll(async () => {
 }, GENERATE_TIMEOUT_MILLISECONDS);
 
 describe("the generated reference plugin compiles", () => {
-  test("both apis' types, validators and Fastify plugin type-check together", () => {
-    expect(
-      typeErrorsOf(PROJECT, [...files, join(PROJECT, INDEX_CHECK)], REFERENCE_COMPILER_OPTIONS),
-    ).toEqual([]);
-  });
+  test(
+    "both apis' types, validators and Fastify plugin type-check together",
+    () => {
+      expect(
+        typeErrorsOf(PROJECT, [...files, join(PROJECT, INDEX_CHECK)], REFERENCE_COMPILER_OPTIONS),
+      ).toEqual([]);
+    },
+    TYPE_CHECK_TIMEOUT_MILLISECONDS,
+  );
 });
 
 describe("a path the router cannot read as written is refused by name", () => {

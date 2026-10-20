@@ -14,6 +14,8 @@ const PROJECT = projectDirectory(import.meta.url, "reference-boundary");
 
 // Generating the reference project outruns vitest's default 10 s hook limit on a loaded machine.
 const GENERATE_TIMEOUT_MILLISECONDS = 60_000;
+// Type-checking both apis takes tens of seconds on a busy machine.
+const TYPE_CHECK_TIMEOUT_MILLISECONDS = 120_000;
 
 let files: string[] = [];
 
@@ -22,9 +24,13 @@ beforeAll(async () => {
 }, GENERATE_TIMEOUT_MILLISECONDS);
 
 describe("the generated reference boundary compiles", () => {
-  test("both apis' types, validators and NestJS boundary type-check together", () => {
-    expect(typeErrorsOf(PROJECT, files, REFERENCE_COMPILER_OPTIONS)).toEqual([]);
-  });
+  test(
+    "both apis' types, validators and NestJS boundary type-check together",
+    () => {
+      expect(typeErrorsOf(PROJECT, files, REFERENCE_COMPILER_OPTIONS)).toEqual([]);
+    },
+    TYPE_CHECK_TIMEOUT_MILLISECONDS,
+  );
 
   test("an unknown option is refused by name", () => {
     expect(nestjsTarget.parseOptions({ responses: "loose", extra: true })).toMatchObject({
