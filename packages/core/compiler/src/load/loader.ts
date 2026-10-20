@@ -17,6 +17,7 @@ import { asObject, isReservedKey, showValue } from "./json.js";
 import { LOAD_MAX_DEPTH } from "./limits.js";
 import { isInside, joinPath, loadNormalizePath, pointerEscape } from "./paths.js";
 import { entryRootPosition } from "./positions.js";
+import { packLayerIdOf } from "./pack-files.js";
 import type { LoadReader } from "./reader.js";
 import { Reporter, type SiteLocation } from "./report.js";
 import { FileStore, nodeSite, type ParsedFile, type PathContext } from "./source.js";
@@ -814,7 +815,7 @@ class Loader {
    * load site's (`<layer>#/~load/...`): it is refused, and the pack is not loaded.
    */
   private packLayerId(name: string, at: () => SiteLocation): ApiLayerId | undefined {
-    if (!name.includes("#")) return `pack:${name}`;
+    if (!name.includes("#")) return packLayerIdOf(name);
     this.rep.report({
       rule: "pack-name",
       message: `the pack name '${diagnosticInert(name)}' holds a '#'`,

@@ -15,7 +15,7 @@ import compilerPackage from "../../package.json" with { type: "json" };
 import { finalizeSerializeIr } from "../finalize/serialize.js";
 import type { LoadReader } from "../load/index.js";
 import { LOAD_MAX_FILE_BYTES } from "../load/limits.js";
-import { PACK_FILE, packVendoredDirectory } from "../load/pack-files.js";
+import { PACK_FILE, packageNameOf, packVendoredDirectory } from "../load/pack-files.js";
 import type { LoadText } from "../load/reader.js";
 import { compileWorkspace, type PipelineResult } from "../pipeline/orchestrator.js";
 import { quote } from "../validate/diagnostics.js";
@@ -330,9 +330,7 @@ function bundlePathOf(
 
 // `sources/.packs/<name>@<version>`, the version read from the package's own package.json.
 function vendoredDirectory(reader: LoadReader, packageDirectory: string): string | BundleFailure {
-  const name = packageDirectory.slice(
-    packageDirectory.lastIndexOf("node_modules/") + "node_modules/".length,
-  );
+  const name = packageNameOf(packageDirectory);
   const manifestFile = `${packageDirectory}/${PACKAGE_MANIFEST}`;
   const manifest = readPackageManifest(reader, manifestFile);
   const version = typeof manifest === "object" ? manifest.version : undefined;

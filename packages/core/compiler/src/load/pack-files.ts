@@ -6,3 +6,33 @@ export const PACK_FILE = /^((?:\.\.\/)*node_modules\/(?:@[^/]+\/)?[^/]+)\/(.+)$/
 export function packVendoredDirectory(name: string, version: string): string {
   return `.packs/${name}@${version}`;
 }
+
+/** The package name and the path inside the package of a pack file, or undefined for a file in no pack package. */
+export function packFileParts(file: string): { name: string; inside: string } | undefined {
+  const match = PACK_FILE.exec(file);
+
+  if (match === null) return undefined;
+
+  const [, packageDirectory = "", inside = ""] = match;
+
+  return { name: packageNameOf(packageDirectory), inside };
+}
+
+/** The package name of a pack package directory (`../node_modules/@acme/pack-a` gives `@acme/pack-a`). */
+export function packageNameOf(packageDirectory: string): string {
+  return packageDirectory.slice(
+    packageDirectory.lastIndexOf("node_modules/") + "node_modules/".length,
+  );
+}
+
+/** A pack file as the bundle vendors it and the side table names it: `.packs/<name>@<version>/<inside>`. */
+export function packVendoredFile(name: string, version: string, inside: string): string {
+  return `${packVendoredDirectory(name, version)}/${inside}`;
+}
+
+export const PACK_LAYER_PREFIX = "pack:";
+
+/** A pack's layer id, `pack:<name>`. */
+export function packLayerIdOf(name: string): `pack:${string}` {
+  return `${PACK_LAYER_PREFIX}${name}`;
+}

@@ -118,27 +118,53 @@ describe("side table covers every origin", () => {
     ).toThrow("finalize built an invalid side table for api 'tasks'");
   });
 
-  test("a pack installed above the workspace root compiles, its files written as the bundle vendors them", () => {
-    const lifted = Object.fromEntries(
-      Object.entries(PACK_CONTRACT).map(([file, text]) => [
+  const PACK_FILE_OF_NAME = ".packs/@acme/pack-a@1.2.0/lib/pack.yaml";
+
+  function packFilesOf(files: Record<string, string>, layer: string): string[] {
+    const result = compileWorkspace({
+      reader: loadMemoryReader(files),
+      entry: "api.yaml",
+      guard: true,
+    });
+
+    expect(result.diagnostics).toEqual([]);
+
+    return Object.entries(result.apis[0]?.sourceMap?.locations ?? {})
+      .filter(([key]) => key.startsWith(`${layer}#`))
+      .map(([, location]) => location.file)
+      .sort();
+  }
+
+  const liftedPack = (files: Record<string, string>): Record<string, string> =>
+    Object.fromEntries(
+      Object.entries(files).map(([file, text]) => [
         file.startsWith("node_modules/") ? `../${file}` : file,
         text,
       ]),
     );
-    const result = compileWorkspace({
-      reader: loadMemoryReader(lifted),
-      entry: "api.yaml",
-      guard: true,
-    });
-    const sourceMap = result.apis[0]?.sourceMap;
 
-    expect(result.diagnostics).toEqual([]);
+  test("a pack installed in the workspace and one hoisted above it give the same side table", () => {
+    const inside = packFilesOf(PACK_CONTRACT, "pack:@acme/pack-a");
+    const above = packFilesOf(liftedPack(PACK_CONTRACT), "pack:@acme/pack-a");
 
-    const packFiles = Object.entries(sourceMap?.locations ?? {})
-      .filter(([key]) => key.startsWith("pack:@acme/pack-a#"))
-      .map(([, location]) => location.file);
+    expect(inside.length).toBeGreaterThan(0);
+    expect(new Set(inside)).toEqual(new Set([PACK_FILE_OF_NAME]));
+    expect(above).toEqual(inside);
+  });
 
-    expect(packFiles.length).toBeGreaterThan(0);
-    expect(new Set(packFiles)).toEqual(new Set([".packs/@acme/pack-a@1.2.0/lib/pack.yaml"]));
+  const EXTENDING_CONTRACT = {
+    ...PACK_CONTRACT,
+    "node_modules/@acme/pack-a/lib/pack.yaml": `pack: { name: '@acme/pack-a', version: 1.2.0, extends: ['./base.yaml'] }\n`,
+    "node_modules/@acme/pack-a/lib/base.yaml":
+      "pack: { name: 'house:base', version: 0.1.0 }\nconventions:\n  paging: { default: cursor }\n",
+  };
+
+  test.each([
+    ["in the workspace", EXTENDING_CONTRACT],
+    ["above the workspace", liftedPack(EXTENDING_CONTRACT)],
+  ])("a path pack inside a package pack is named in its package, %s", (_where, files) => {
+    expect(packFilesOf(files, "pack:house:base")).toEqual(
+      expect.arrayContaining([".packs/@acme/pack-a@1.2.0/lib/base.yaml"]),
+    );
   });
 });
