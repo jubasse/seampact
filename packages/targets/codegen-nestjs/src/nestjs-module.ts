@@ -28,28 +28,41 @@ const FIXED_EXPORTS = [
 // The module's own local names, which an operation decorator must not shadow either.
 const LOCAL_NAMES = ["boundary", "createNestBoundary", "CONTRACT_API", "SeampactHooks"] as const;
 
+// The exports of the docs module, which the index re-exports beside the operation decorators.
+const DOCS_EXPORTS = ["contractDocs", "withContractComponents"] as const;
+
 const RESERVED_SUFFIX = "_";
 
 export function nestjsModuleSource(
   ir: ContractIR,
   options: NodeServerOptions,
   refusals: Refusal[],
+  docsModule?: string,
 ): string {
   const names = new ExportNames(NESTJS_MODULE);
-  const reserved: readonly string[] = [...FIXED_EXPORTS, ...LOCAL_NAMES];
+  const reserved: readonly string[] = [
+    ...FIXED_EXPORTS,
+    ...LOCAL_NAMES,
+    ...(docsModule === undefined ? [] : DOCS_EXPORTS),
+  ];
+  const operationArguments = (id: string): string =>
+    docsModule === undefined
+      ? JSON.stringify(id)
+      : `${JSON.stringify(id)}, () => contractDocs(${JSON.stringify(id)})`;
   const decorators = ir.operations.map((operation, index) => {
     const identifier = operationIdentifier(operation);
     const name = reserved.includes(identifier) ? `${identifier}${RESERVED_SUFFIX}` : identifier;
 
     names.claim(name, operationLocation(index, operation.id), refusals);
 
-    return `/** The route of '${operation.id}'; \`${name}.input()\` is its validated input. */\nexport const ${name} = boundary.operation(${JSON.stringify(operation.id)});`;
+    return `/** The route of '${operation.id}'; \`${name}.input()\` is its validated input. */\nexport const ${name} = boundary.operation(${operationArguments(operation.id)});`;
   });
 
   return [
     'import { createNestBoundary } from "./nestjs-boundary.js";',
     'import type { SeampactHooks } from "./hooks.js";',
     'import { CONTRACT_API } from "./routes.js";',
+    ...(docsModule === undefined ? [] : [`import { contractDocs } from "./${docsModule}.js";`]),
     "",
     'export { MAX_CHECKED_ERROR_BODY_BYTES } from "./node-server/outgoing-verdict.js";',
     'export { MAX_RENDERED_ISSUES } from "./node-server/contract-error.js";',

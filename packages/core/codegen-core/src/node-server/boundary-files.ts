@@ -357,7 +357,9 @@ function nativeDocsFiles(
   refusals: Refusal[],
 ): GeneratedFile[] {
   if (placement.nativeDocs === undefined) {
-    throw new Error("A target that declares the nativeDocs artefact must give a nativeDocs placement.");
+    throw new Error(
+      "A target that declares the nativeDocs artefact must give a nativeDocs placement.",
+    );
   }
 
   const contract = readNativeDocsDocument(input.nativeDocsDocument, input.ir, refusals);

@@ -26,7 +26,9 @@ export function mergeComponents(
   const merged: ComponentSections = held === undefined ? {} : structuredClone(held);
 
   for (const [section, entries] of Object.entries(added)) {
-    const target = (merged[section] ??= {});
+    const target = merged[section] ?? {};
+
+    merged[section] = target;
 
     for (const [name, value] of Object.entries(entries)) {
       if (!(name in target)) {

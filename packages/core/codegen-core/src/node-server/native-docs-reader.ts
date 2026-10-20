@@ -33,7 +33,8 @@ export function readNativeDocsDocument(
   if (given === undefined) {
     refusals.push({
       code: MISSING_CODE,
-      message: "The `nativeDocs` artefact is on and the request carries no document of the api to follow.",
+      message:
+        "The `nativeDocs` artefact is on and the request carries no document of the api to follow.",
       fix: "Generate through the seampact CLI, which emits the api's OpenAPI document and passes it, or drop `nativeDocs` from the artefacts.",
     });
 

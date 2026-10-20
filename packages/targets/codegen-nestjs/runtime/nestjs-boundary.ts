@@ -567,7 +567,8 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
   }
 
   // The composite of one operation (ADR 0016 "Placement"), and its `input` param decorator.
-  const operation = (id: string) => {
+  // `docs` is the operation's `@nestjs/swagger` decorator, given by the api's docs module when `nativeDocs` is on.
+  const operation = (id: string, docs?: () => MethodDecorator) => {
     const route = routeOf(id);
     const composite = (): MethodDecorator =>
       applyDecorators(
@@ -582,6 +583,7 @@ export function createNestBoundary<Hooks extends BoundaryHooks>(
         UseGuards(ContractGuard),
         UseFilters(ContractFilter),
         markResponseHandled,
+        ...(docs === undefined ? [] : [docs()]),
       );
 
     return Object.assign(composite, { input: inputDecorator });
