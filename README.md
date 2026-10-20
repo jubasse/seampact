@@ -23,6 +23,7 @@ The contract:
 
 ```yaml
 schemas:
+  NoteId: { type: string, format: uuid }
   Note:
     type: object
     required: [noteId, title, createdAt]
@@ -40,10 +41,10 @@ surfaces:
         kind: collection
         id: { noteId: NoteId }
         item: Note
-        ops: { get: {}, create: { input: CreateNote } }
+        ops: { get: {} }
 ```
 
-The typed NestJS handler it generates the interface for:
+Your NestJS handler, typed from it:
 
 ```ts
 @Controller()
