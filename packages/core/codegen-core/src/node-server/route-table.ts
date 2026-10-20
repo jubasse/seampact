@@ -20,6 +20,7 @@ import {
 } from "../located-refusals.js";
 import type { Refusal } from "../refusal.js";
 import { pageBodyTemplate, pagingEntry } from "./paging-entry.js";
+import type { CompressionOption, FrameworkEtagMode } from "./options.js";
 import { compareRouteSpecificity } from "./route-order.js";
 import {
   isSlot,
@@ -43,6 +44,9 @@ export interface RouteTableOptions {
   readonly frameworkRoutes: FrameworkRouteCheck;
   /** The entry's hook boot check level, read by the boot check of the hooks. */
   readonly hookCheck: HookBootCheck;
+  /** The entry's `compression` and `frameworkEtag` options, read by the outgoing reply. */
+  readonly compression: CompressionOption;
+  readonly frameworkEtag: FrameworkEtagMode;
 }
 
 const API_LOCATION: IrLocation = { member: "" };
@@ -127,6 +131,8 @@ export function routeTableSource(
     shapes,
     frameworkRoutes,
     hookCheck: options.hookCheck,
+    compression: options.compression,
+    frameworkEtag: options.frameworkEtag,
   };
 
   return [

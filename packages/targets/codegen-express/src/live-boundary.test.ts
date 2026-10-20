@@ -1094,3 +1094,39 @@ describe("the hook boot check level on Express 5", () => {
     SETUP_TIMEOUT_MILLISECONDS,
   );
 });
+
+describe("the frameworkEtag option on Express 5", () => {
+  const project = projectDirectory(import.meta.url, "live-framework-etag");
+  let app: ReferenceAppModule;
+  let server: Awaited<ReturnType<ReferenceAppModule["startReferenceApp"]>>;
+
+  beforeAll(async () => {
+    const files = await generateReferenceProject(project, expressTarget, {
+      frameworkEtag: "keep",
+    });
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+    linkExpress(project, "express");
+    app = await import(copyTestApp(build, APP_SOURCE));
+    server = await app.startReferenceApp();
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  afterAll(async () => {
+    await server?.close();
+  });
+
+  test("keep leaves the ETag an app writes on a reply the boundary did not write", async () => {
+    app.resetScenario();
+    app.scenario.answers.getTask = () => {
+      throw new app.AppReply(404, PROBLEM_MEDIA, problemBody("api.not_found", 404), "writeHead");
+    };
+
+    const reply = await sendRawRequest(server, "GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, {
+      headers: BEARER,
+    });
+
+    expect(reply.status).toBe(404);
+    expect(reply.headers.etag).toBe('"app-etag"');
+  });
+});

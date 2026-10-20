@@ -252,6 +252,10 @@ export interface ContractApi {
   readonly frameworkRoutes: FrameworkRouteCheck;
   /** The app config's level for the boot check of the hooks: `error` refuses to boot, `warn` logs, `off` is silent. */
   readonly hookCheck: "error" | "warn" | "off";
+  /** Fastify only: `off` leaves the reply uncompressed even when `@fastify/compress` is registered. */
+  readonly compression: "off" | { readonly thresholdBytes: number };
+  /** `strip` removes an ETag the framework added to a reply the boundary did not write; `keep` leaves it. */
+  readonly frameworkEtag: "strip" | "keep";
 }
 
 /** The request as every check step sees it, whatever the framework. */

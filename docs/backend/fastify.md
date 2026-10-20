@@ -115,7 +115,7 @@ You see no output.
 
 ## Wiring reference
 
-Every server target takes two options: `bodyValidation` (check request bodies, off by default) and `responses`, which decides what happens when your handler answers something the contract does not declare: `strict` (the default) replaces the reply with a 500 in the api's format, `warn` lets it through and logs it.
+Every server target takes three options: `bodyValidation` (check request bodies, off by default), `frameworkEtag` (`strip` by default removes an ETag the framework adds to a reply your code wrote outside the contract; `keep` leaves it) and `responses`, which decides what happens when your handler answers something the contract does not declare: `strict` (the default) replaces the reply with a 500 in the api's format, `warn` lets it through and logs it. Fastify also takes `compression`: when `@fastify/compress` is registered, replies of 1024 bytes or more are compressed; `compression: off` never compresses them, and `compression: { thresholdBytes: 4096 }` moves the threshold.
 
 Register the generated plugin. It keeps the raw bytes of signed routes itself.
 

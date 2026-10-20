@@ -64,6 +64,16 @@ describe("the generated reference router compiles", () => {
     expect(hooks).not.toContain("SeampactModule");
   });
 
+  test("the compression option is Fastify's: Express refuses it by name", () => {
+    expect(expressTarget.parseOptions({ compression: "off" })).toMatchObject({
+      status: "refused",
+      refusals: [{ code: "options.unknown" }],
+    });
+    expect(expressTarget.parseOptions({ frameworkEtag: "keep" })).toMatchObject({
+      status: "parsed",
+    });
+  });
+
   test("the route table lists a static segment before a param at the same place", () => {
     const routes = readFileSync(join(PROJECT, "generated/server/tasks/routes.ts"), "utf8");
     const firstParamTask = routes.indexOf('"/v1/channels/{channelId}/tasks/{taskId}');

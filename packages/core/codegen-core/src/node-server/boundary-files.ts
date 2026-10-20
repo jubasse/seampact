@@ -83,6 +83,8 @@ export interface NodeServerPlacement {
   ): string;
   /** The docs of the framework's own OpenAPI generator, written when the `nativeDocs` artefact is on; absent when it has none. */
   readonly nativeDocs?: NativeDocsPlacement;
+  /** True for a placement that compresses its own replies, which takes the `compression` option. */
+  readonly compressesReplies?: boolean;
   /** The shared runtime the placement imports: `node` (the default) or `web` for a Web-standard placement. */
   readonly runtimeProfile?: ServerRuntimeProfile;
   /**
@@ -161,7 +163,10 @@ export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target
       provides: {},
     },
     format: targetPackage.format,
-    parseOptions: parseNodeServerOptions,
+    parseOptions: (raw) =>
+      parseNodeServerOptions(raw, {
+        compression: targetPackage.placement.compressesReplies === true,
+      }),
     generate: (input) => nodeServerBoundaryFiles(input, targetPackage.placement),
   });
 }
@@ -292,6 +297,8 @@ function boundaryFiles(
       withItemValidators: options.bodyValidation,
       frameworkRoutes: input.frameworkRoutes,
       hookCheck: input.hookCheck,
+      compression: options.compression,
+      frameworkEtag: options.frameworkEtag,
     },
     refusals,
     warnings,

@@ -5,6 +5,7 @@
 // the Web-standard server targets as is.
 import type { BoundaryContext } from "./boundary-context.js";
 import { type ContractReply, renderContractReply, unexpectedError } from "./contract-error.js";
+import type { ContractApi } from "./contract-route.js";
 import type { ReportedRequest } from "./error-reply.js";
 import { settleIdempotency } from "./idempotency.js";
 import {
@@ -87,7 +88,7 @@ export async function checkOutgoingResponse(
   const outgoing: OutgoingReply = {
     status: response.status,
     statusText: response.statusText,
-    headers: appReplyHeaders(response, own),
+    headers: appReplyHeaders(response, own, context.api.frameworkEtag),
   };
 
   // Hono rebuilds the boundary's `Response` around the same body when a middleware sets a header after `next()`.
@@ -118,11 +119,17 @@ export async function checkOutgoingResponse(
 // The app's headers with a foreign ETag stripped and the boundary's own names set again, `Vary` merged. The
 // boundary's ETag made weak stays: a compressing middleware (`hono/compress`) weakens it for the encoded body, and
 // the boundary's If-None-Match check accepts the weak form.
-function appReplyHeaders(response: Response, own: BoundaryResponse | undefined): Headers {
+function appReplyHeaders(
+  response: Response,
+  own: BoundaryResponse | undefined,
+  frameworkEtag: ContractApi["frameworkEtag"],
+): Headers {
   const headers = new Headers(response.headers);
   const ownEtag = own?.response.headers.get(ETAG_HEADER) ?? null;
 
-  if (!isOwnEtag(headers.get(ETAG_HEADER), ownEtag)) headers.delete(ETAG_HEADER);
+  if (frameworkEtag === "strip" && !isOwnEtag(headers.get(ETAG_HEADER), ownEtag)) {
+    headers.delete(ETAG_HEADER);
+  }
 
   if (own !== undefined) restoreReplyNames(headers, own.reply.headers);
 

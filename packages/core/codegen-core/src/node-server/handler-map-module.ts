@@ -50,7 +50,7 @@ export function handlerMapDeclarations(
     ...bindings,
     "};",
     "",
-    `const GENERATED_SETTINGS: ResponseSettings = ${JSON.stringify(options)};`,
+    `const GENERATED_SETTINGS: ResponseSettings = ${JSON.stringify({ responses: options.responses, bodyValidation: options.bodyValidation })};`,
   ];
 }
 

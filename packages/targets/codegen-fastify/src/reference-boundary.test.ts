@@ -140,6 +140,27 @@ describe("with no validators link the target writes its own Ajv validators", () 
     );
   });
 
+  test("the compression option reaches the route table, and its default is 1024 bytes", async () => {
+    const routesFor = async (options: Record<string, unknown>) => {
+      const outcome = await fastifyTarget.generate({
+        ir: readGoldenIr("tasks"),
+        options,
+        links: await referenceLinks(PROJECT, "tasks"),
+        artefacts: new Set(["boundary", "index", "validators"]),
+      });
+
+      if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
+
+      return outcome.files.find((file) => file.path === "routes.ts")?.contents ?? "";
+    };
+
+    expect(await routesFor({})).toMatch(/compression: \{\s*thresholdBytes: 1024\s*\}/);
+    expect(await routesFor({ compression: "off" })).toContain('compression: "off"');
+    expect(await routesFor({ compression: { thresholdBytes: 4096 } })).toMatch(
+      /thresholdBytes: 4096/,
+    );
+  });
+
   test("writes the api index only when the index artefact is on", async () => {
     const generate = (artefacts: string[]) =>
       referenceLinks(PROJECT, "tasks").then((links) =>

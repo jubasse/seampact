@@ -11,7 +11,7 @@ import {
   WEAK_ETAG_PREFIX,
 } from "./reply-headers.js";
 
-/** The smallest body the boundary compresses, the default threshold of `@fastify/compress`. */
+/** The smallest body the boundary compresses by default, the default threshold of `@fastify/compress`. */
 export const COMPRESSION_THRESHOLD_BYTES = 1024;
 
 const ACCEPT_ENCODING = "Accept-Encoding";
@@ -33,8 +33,9 @@ type Encoder = (typeof ENCODERS)[number];
 export function compressedReply(
   reply: ContractReply,
   acceptEncoding: string | undefined,
+  thresholdBytes: number,
 ): ContractReply {
-  if (representedBytes(reply) < COMPRESSION_THRESHOLD_BYTES) return reply;
+  if (representedBytes(reply) < thresholdBytes) return reply;
 
   if (reply.headers.some(([name]) => name.toLowerCase() === CONTENT_ENCODING_HEADER)) return reply;
 

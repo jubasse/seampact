@@ -114,7 +114,7 @@ export function installOutgoingCheck(
     }
 
     // Express's weak ETag, on any status the boundary did not write (ADR 0012 step 10).
-    response.removeHeader(ETAG_HEADER);
+    if (context.api.frameworkEtag === "strip") response.removeHeader(ETAG_HEADER);
 
     const verdict = statusVerdict(context, status, cacheControlOf(response));
 

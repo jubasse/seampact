@@ -599,11 +599,12 @@ export function createFastifyBoundary<
 
     reply.hijack();
 
-    if (compressingServers.has(reply.server.server)) {
+    if (api.compression !== "off" && compressingServers.has(reply.server.server)) {
+      const { thresholdBytes } = api.compression;
       const acceptEncoding = headerValue(reply.request.headers, ACCEPT_ENCODING_HEADER);
 
       encodeBoundaryReplies(reply.raw, (contractReply) =>
-        compressedReply(contractReply, acceptEncoding),
+        compressedReply(contractReply, acceptEncoding, thresholdBytes),
       );
     }
 
