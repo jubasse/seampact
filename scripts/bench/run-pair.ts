@@ -16,6 +16,8 @@ export interface MeasureOptions {
   readonly latency: boolean;
   /** The cores the pair's servers and load driver are pinned to; unpinned when absent. */
   readonly placement?: Placement;
+  /** Aborted when another pair failed: this pair stops at its next run and stops its servers. */
+  readonly signal?: AbortSignal;
 }
 
 // The share of the lower of the two servers' saturation rates the fixed-rate runs send, so neither server queues.
@@ -205,6 +207,8 @@ async function alternatingRuns(
     const order = repeat % 2 === 0 ? KINDS : [...KINDS].reverse();
 
     for (const kind of order) {
+      options.signal?.throwIfAborted();
+
       samples[kind].push(
         await runOnce({
           pair,

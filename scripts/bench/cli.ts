@@ -214,10 +214,11 @@ async function measuredInParallel(
 ): Promise<PairMeasurement[]> {
   const measured: (PairMeasurement | undefined)[] = pairs.map(() => undefined);
   const pinned = tasksetAvailable();
+  const failure = new AbortController();
   let next = 0;
 
   async function work(slot: number): Promise<void> {
-    for (let index = next++; index < pairs.length; index = next++) {
+    for (let index = next++; index < pairs.length && !failure.signal.aborted; index = next++) {
       const pair = pairs[index];
       const directory = directories[index];
 
@@ -226,15 +227,24 @@ async function measuredInParallel(
       console.log(`\nbench: measuring ${pair.id} (load average ${loadavg()[0]?.toFixed(2)})`);
       measured[index] = await measurePair(pair, directory, {
         ...invocation.measure,
-        ...(pinned ? { placement: placementForSlot(slot) } : {}),
+        signal: failure.signal,
+        ...(pinned ? { placement: placementForSlot(slot, invocation.parallel) } : {}),
       });
       console.log(`bench: ${pair.id} done (load average ${loadavg()[0]?.toFixed(2)})`);
     }
   }
 
-  await Promise.all(
-    Array.from({ length: Math.min(invocation.parallel, pairs.length) }, (_, slot) => work(slot)),
+  const workers = Array.from({ length: Math.min(invocation.parallel, pairs.length) }, (_, slot) =>
+    work(slot).catch((error: unknown) => {
+      failure.abort(error);
+
+      throw error;
+    }),
   );
+  const settled = await Promise.allSettled(workers);
+  const rejected = settled.find((outcome) => outcome.status === "rejected");
+
+  if (rejected !== undefined) throw rejected.reason;
 
   return measured.filter((entry): entry is PairMeasurement => entry !== undefined);
 }

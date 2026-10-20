@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { buildPackages, packPackages } from "../consumers/build-and-pack.ts";
@@ -28,6 +29,7 @@ const INSTALL_WITHOUT_BUILD_SCRIPT_CHECK = "--config.strictDepBuilds=false";
 
 // Written last, once install and generate succeeded: a project without it is stale.
 const READY_FILE = ".bench-ready";
+const KEYED_PATHS = ["packages", "scripts/consumers", "scripts/bench/project"];
 const CONFIG_FILE = "seampact.config.yaml";
 const BODY_VALIDATION_ON = "bodyValidation: true";
 const BODY_VALIDATION_OFF = "bodyValidation: false";
@@ -67,7 +69,9 @@ export function prepareProject(options: {
   const directory = join(options.workDirectory, options.pair.id);
   const commit = currentCommit();
 
-  if (!options.fresh && !packagesChanged() && isProjectOfCommit(directory, commit)) {
+  const sourceKey = cacheKey(commit);
+
+  if (!options.fresh && isProjectOfKey(directory, sourceKey)) {
     cpSync(BENCH_SOURCES, join(directory, BENCH_DIRECTORY), { recursive: true });
 
     return directory;
@@ -107,15 +111,15 @@ export function prepareProject(options: {
     args: ["exec", "seampact", "generate"],
     cwd: directory,
   });
-  writeFileSync(join(directory, READY_FILE), `${commit}\n`);
+  writeFileSync(join(directory, READY_FILE), `${sourceKey}\n`);
 
   return directory;
 }
 
-function isProjectOfCommit(directory: string, commit: string): boolean {
+function isProjectOfKey(directory: string, key: string): boolean {
   const marker = join(directory, READY_FILE);
 
-  return existsSync(marker) && readFileSync(marker, "utf8").trim() === commit;
+  return existsSync(marker) && readFileSync(marker, "utf8").trim() === key;
 }
 
 // The consumer config of every target turns the outgoing body check on; the second row of a pair turns it off.
@@ -130,13 +134,21 @@ function switchBodyValidationOff(directory: string): void {
   writeFileSync(file, config.replaceAll(BODY_VALIDATION_ON, BODY_VALIDATION_OFF));
 }
 
-// A cached project keeps the packages packed from its own commit, so uncommitted changes would not be measured.
-function packagesChanged(): boolean {
-  const changed = execFileSync("git", ["status", "--porcelain", "--", "packages"], {
-    cwd: REPO_ROOT,
-  })
-    .toString()
-    .trim();
+// What a project is built from: the commit plus every uncommitted change (tracked diff and untracked file
+// contents) under the packages, the consumer template and overlays, and the bench sources.
+function cacheKey(commit: string): string {
+  const hash = createHash("sha256").update(commit);
+  const git = (args: string[]) =>
+    execFileSync("git", args, { cwd: REPO_ROOT, maxBuffer: 256 * 1024 * 1024 });
 
-  return changed !== "";
+  hash.update(git(["diff", "HEAD", "--", ...KEYED_PATHS]));
+
+  const untracked = git(["ls-files", "-o", "--exclude-standard", "-z", "--", ...KEYED_PATHS])
+    .toString()
+    .split("\0")
+    .filter((file) => file !== "");
+
+  for (const file of untracked) hash.update(file).update(readFileSync(join(REPO_ROOT, file)));
+
+  return `${commit}:${hash.digest("hex")}`;
 }

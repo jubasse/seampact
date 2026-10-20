@@ -21,7 +21,12 @@ function samples(requestsPerSecond: number, latencyP99Ms: number): SamplesByServ
   };
 }
 
-function results(latencyP99Ms: number, rateHeld: boolean): BenchResults {
+function results(
+  latencyP99Ms: number,
+  rateHeld: boolean,
+  routeId = "route",
+  withLatency = true,
+): BenchResults {
   return {
     commit: "abcdef0123",
     node: "v24",
@@ -34,13 +39,17 @@ function results(latencyP99Ms: number, rateHeld: boolean): BenchResults {
         idleRssBytes: { seampact: 1, baseline: 1 },
         routes: [
           {
-            routeId: "route",
+            routeId,
             saturation: samples(100, 1),
-            fixedRate: {
-              overallRate: 70,
-              samples: samples(70, latencyP99Ms),
-              reached: rateHeld,
-            },
+            ...(withLatency
+              ? {
+                  fixedRate: {
+                    overallRate: 70,
+                    samples: samples(70, latencyP99Ms),
+                    reached: rateHeld,
+                  },
+                }
+              : {}),
           },
         ],
       },
@@ -58,5 +67,19 @@ describe("compareTable", () => {
 
     expect(table).toContain("| 10.0 | invalid (rate not held) |  |");
     expect(table).not.toContain("+4900");
+  });
+
+  test("keeps the header's cell count on a route missing from the earlier run", () => {
+    const lines = compareTable(results(10, true), results(5, true, "other")).split("\n");
+    const cells = (line: string) => line.split("|").length;
+
+    expect(lines.map(cells)).toEqual(lines.map(() => cells(lines[0] ?? "")));
+  });
+
+  test("marks runs without a latency measurement as not measured", () => {
+    const table = compareTable(results(10, true, "route", false), results(5, true, "route", false));
+
+    expect(table).toContain("not measured (--latency)");
+    expect(table).not.toContain("invalid");
   });
 });

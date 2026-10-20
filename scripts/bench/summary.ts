@@ -73,7 +73,7 @@ export function summaryTable(results: BenchResults): string {
   return [caption, "", ...HEADER, ...rows].join("\n");
 }
 
-function keyedRates(results: BenchResults): Map<string, { rate: number; p99: number | undefined }> {
+function keyedRates(results: BenchResults): Map<string, { rate: number; p99: number | string }> {
   return new Map(
     results.pairs.flatMap((pair) =>
       pair.routes.map(
@@ -83,9 +83,11 @@ function keyedRates(results: BenchResults): Map<string, { rate: number; p99: num
             {
               rate: medianOf(route.saturation.seampact, (s) => s.requestsPerSecond),
               p99:
-                route.fixedRate?.reached === true
-                  ? medianOf(route.fixedRate.samples.seampact, (s) => s.latencyP99Ms)
-                  : undefined,
+                route.fixedRate === undefined
+                  ? NOT_MEASURED
+                  : route.fixedRate.reached
+                    ? medianOf(route.fixedRate.samples.seampact, (s) => s.latencyP99Ms)
+                    : INVALID_MARK,
             },
           ] as const,
       ),
@@ -106,7 +108,7 @@ export function compareTable(before: BenchResults, after: BenchResults): string 
 
     if (then === undefined) {
       lines.push(
-        `| ${key} | not in the earlier run | ${now.rate.toFixed(0)} | | ${p99Cell(now.p99)} | |`,
+        `| ${key} | not in the earlier run | ${now.rate.toFixed(0)} | | | ${p99Cell(now.p99)} | |`,
       );
       continue;
     }
@@ -125,11 +127,13 @@ function percentChange(before: number, after: number): string {
   return `${change >= 0 ? "+" : ""}${change.toFixed(1)}%`;
 }
 
-function p99Cell(p99: number | undefined): string {
-  return p99 === undefined ? INVALID_MARK : p99.toFixed(1);
+function p99Cell(p99: number | string): string {
+  return typeof p99 === "number" ? p99.toFixed(1) : p99;
 }
 
-// No ratio when either side's latencies are marked invalid.
-function p99Change(before: number | undefined, after: number | undefined): string {
-  return before === undefined || after === undefined ? "" : percentChange(before, after);
+// No ratio when either side's latencies are marked invalid or not measured.
+function p99Change(before: number | string, after: number | string): string {
+  return typeof before === "number" && typeof after === "number"
+    ? percentChange(before, after)
+    : "";
 }

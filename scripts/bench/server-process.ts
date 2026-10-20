@@ -24,6 +24,17 @@ const BOOT_TIMEOUT_MS = 60_000;
 const MEMORY_TIMEOUT_MS = 5_000;
 const SHUTDOWN_TIMEOUT_MS = 15_000;
 
+// A server that cannot be pinned must not keep running unpinned, nor stay behind when the run stops.
+function pinOrKill(child: ChildProcess, cpu: number): void {
+  try {
+    if (child.pid !== undefined) pinProcess(child.pid, cpu);
+  } catch (error) {
+    child.kill("SIGKILL");
+
+    throw error;
+  }
+}
+
 // One server of a pair, running in a forked child of the bench project so its memory and CPU are its own.
 export class ServerProcess {
   readonly baseUrl: string;
@@ -59,7 +70,7 @@ export class ServerProcess {
       },
     );
 
-    if (options.cpu !== undefined && child.pid !== undefined) pinProcess(child.pid, options.cpu);
+    if (options.cpu !== undefined && child.pid !== undefined) pinOrKill(child, options.cpu);
 
     const ready = await nextMessage<ReadyMessage>(child, "ready", BOOT_TIMEOUT_MS);
 

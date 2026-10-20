@@ -12,8 +12,12 @@ const CORES_PER_PAIR = 2;
 // Pairs per core group of three: two cores each, one left for the orchestrating process and the system.
 const CORES_PER_PARALLEL_PAIR = 3;
 
-export function placementForSlot(slot: number): Placement {
-  return { serverCpu: slot * CORES_PER_PAIR, driverCpu: slot * CORES_PER_PAIR + 1 };
+// Core 0 stays free for the orchestrating process when the machine has a core to spare for it.
+export function placementForSlot(slot: number, parallel: number): Placement {
+  const first = parallel * CORES_PER_PAIR < availableParallelism() ? 1 : 0;
+  const serverCpu = first + slot * CORES_PER_PAIR;
+
+  return { serverCpu, driverCpu: serverCpu + 1 };
 }
 
 export function tasksetAvailable(): boolean {
