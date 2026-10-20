@@ -4,6 +4,7 @@ import { loadScript } from "./control-routes.js";
 import type { SampleAppScript } from "./sample-app-script.js";
 
 const NOT_FOUND = 404;
+const SCRIPT_LOAD_TIMEOUT_MS = 10_000;
 
 test("loadScript throws when the app answers the script PUT with something other than 204", async () => {
   const server = createServer((_request, response) => {
@@ -21,7 +22,11 @@ test("loadScript throws when the app answers the script PUT with something other
 
   try {
     await expect(
-      loadScript(`http://127.0.0.1:${address.port}`, script, AbortSignal.timeout(10_000)),
+      loadScript(
+        `http://127.0.0.1:${address.port}`,
+        script,
+        AbortSignal.timeout(SCRIPT_LOAD_TIMEOUT_MS),
+      ),
     ).rejects.toThrow("answered 404, expected 204");
   } finally {
     server.close();
