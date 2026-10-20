@@ -30,6 +30,14 @@ export type SuccessResult<Output, Extra> = Output extends unknown
   ? Output & { readonly ok: true; readonly headers: Headers } & Extra
   : never;
 
+/** A page success as the client reads it: the items, and the page facts its paging style declares. */
+export type PagedOutput<Output, PageStatus, Facts> = Output extends {
+  readonly status: PageStatus;
+  readonly body: { readonly items: infer Items };
+}
+  ? Omit<Output, "body"> & { readonly body: { readonly items: Items } & Facts }
+  : Output;
+
 /** The derived 304 of an operation with an ETag: the cached copy is still current. */
 export interface NotModifiedResult {
   readonly ok: true;
@@ -130,8 +138,34 @@ export interface QueryPlan {
 }
 
 export type SuccessPlan =
-  | { readonly status: number; readonly shape: "empty" | "item" | "table" | "list" }
-  | { readonly status: number; readonly shape: "page"; readonly cursorParam: string };
+  | { readonly status: number; readonly shape: "empty" }
+  | {
+      readonly status: number;
+      readonly shape: "item" | "table" | "list";
+
+      /** The member path of the payload in the body; empty for the bare payload. */
+      readonly payload: readonly string[];
+    }
+  | {
+      readonly status: number;
+      readonly shape: "page";
+      readonly items: readonly string[];
+      readonly facts: readonly PageFact[];
+    };
+
+/** One page fact, named after its paging response role, and where the response carries it. */
+export interface PageFact {
+  readonly role: string;
+  readonly value: "number" | "text" | "boolean";
+
+  /** A required fact missing from the response makes the answer unexpected; an optional one is left out. */
+  readonly required: boolean;
+  readonly source:
+    | { readonly from: "body"; readonly path: readonly string[] }
+    | { readonly from: "header"; readonly header: string }
+    | { readonly from: "link"; readonly rel: string }
+    | { readonly from: "linkParam"; readonly rel: string; readonly param: string };
+}
 
 export interface ErrorPlan {
   readonly code: string;
@@ -156,9 +190,7 @@ type Answer =
 const NOT_MODIFIED = 304;
 const JSON_MEDIA = "application/json";
 const LINK_HEADER = "link";
-const NEXT_RELATION = "next";
-const LINK_VALUE = /<([^>]*)>([^,<]*)/g;
-const RELATION_PARAMETER = /;\s*rel\s*=\s*"?([^";]*)"?/i;
+const RELATION_PARAMETER = "rel";
 
 // Resolves a relative `Link` target; only its query is read.
 const LINK_BASE = "http://link.invalid";
@@ -475,26 +507,95 @@ function successAnswer(
 
   if (success.shape === "empty") return { ok: true, status, headers, ...replay };
 
-  if (success.shape === "table") {
-    return isTable(body) ? { ok: true, status, headers, body, ...replay } : undefined;
+  if (success.shape === "page") {
+    const page = pageOf(success, body, headers);
+
+    return page === undefined ? undefined : { ok: true, status, headers, body: page, ...replay };
   }
 
-  if (success.shape === "list") {
-    return Array.isArray(body) ? { ok: true, status, headers, body, ...replay } : undefined;
+  const payload = memberAt(body, success.payload);
+  const isPayload =
+    success.shape === "table"
+      ? isTable(payload)
+      : success.shape === "list"
+        ? Array.isArray(payload)
+        : payload !== undefined && payload !== null;
+
+  return isPayload ? { ok: true, status, headers, body: payload, ...replay } : undefined;
+}
+
+// The items and every fact the paging style declares; undefined when the items or a required fact is missing.
+function pageOf(
+  success: Extract<SuccessPlan, { shape: "page" }>,
+  body: unknown,
+  headers: Headers,
+): Record<string, unknown> | undefined {
+  const items = memberAt(body, success.items);
+
+  if (!Array.isArray(items)) return undefined;
+
+  const page: Record<string, unknown> = { items };
+
+  for (const fact of success.facts) {
+    const value = factValue(fact, body, headers);
+
+    if (value === undefined && fact.required) return undefined;
+
+    if (value !== undefined) page[fact.role] = value;
   }
 
-  if (success.shape !== "page") {
-    return body === undefined || body === null
-      ? undefined
-      : { ok: true, status, headers, body, ...replay };
+  return page;
+}
+
+// A missing or `null` fact, or one of another JSON type, reads as undefined.
+function factValue(fact: PageFact, body: unknown, headers: Headers): unknown {
+  const { source } = fact;
+
+  if (source.from === "body") {
+    const value = memberAt(body, source.path);
+
+    return typeof value === JSON_TYPE_OF_FACT[fact.value] ? value : undefined;
   }
 
-  if (!Array.isArray(body)) return undefined;
+  const text =
+    source.from === "header"
+      ? headers.get(source.header)
+      : linkTargetOf(headers.get(LINK_HEADER), source.rel);
 
-  const nextCursor = nextCursorOf(headers.get(LINK_HEADER), success.cursorParam);
-  const page = nextCursor === undefined ? { items: body } : { items: body, nextCursor };
+  if (text === null || text === undefined) return undefined;
 
-  return { ok: true, status, headers, body: page, ...replay };
+  if (source.from === "linkParam") return queryParamOf(text, source.param);
+
+  return factFromText(fact.value, text.trim());
+}
+
+const JSON_TYPE_OF_FACT = { number: "number", text: "string", boolean: "boolean" } as const;
+const BOOLEAN_TEXTS: ReadonlyMap<string, boolean> = new Map([
+  ["true", true],
+  ["false", false],
+]);
+
+function factFromText(value: PageFact["value"], text: string): unknown {
+  if (value === "text") return text;
+
+  if (value === "boolean") return BOOLEAN_TEXTS.get(text.toLowerCase());
+
+  const number = text === "" ? Number.NaN : Number(text);
+
+  return Number.isFinite(number) ? number : undefined;
+}
+
+// The member at `path`, or undefined when a step is not a JSON object member.
+function memberAt(body: unknown, path: readonly string[]): unknown {
+  let value = body;
+
+  for (const member of path) {
+    if (!isTable(value) || !Object.hasOwn(value, member)) return undefined;
+
+    value = value[member];
+  }
+
+  return value;
 }
 
 // A table is a JSON object keyed by item id; an array or a scalar is outside the contract.
@@ -502,25 +603,111 @@ function isTable(body: unknown): body is Record<string, unknown> {
   return typeof body === "object" && body !== null && !Array.isArray(body);
 }
 
-// The cursor query param of the `Link` target whose relation is `next`; absent at the last page.
-function nextCursorOf(link: string | null, cursorParam: string): string | undefined {
+// The target of the first `Link` value whose relations hold `rel`; absent at either end of the list. Relation
+// types compare case-insensitively (RFC 8288 section 2.1.1).
+function linkTargetOf(link: string | null, rel: string): string | undefined {
   if (link === null) return undefined;
 
-  for (const [, target = "", parameters = ""] of link.matchAll(LINK_VALUE)) {
-    const relations = RELATION_PARAMETER.exec(parameters)?.[1]?.split(/\s+/) ?? [];
+  const wantedRelation = rel.toLowerCase();
 
-    if (!relations.includes(NEXT_RELATION)) continue;
+  return linkValuesOf(link).find((value) => value.relations.includes(wantedRelation))?.target;
+}
 
-    return cursorOfTarget(target, cursorParam);
+interface LinkValue {
+  readonly target: string;
+  readonly relations: readonly string[];
+}
+
+// Splits a `Link` header into its `<target>; param=value` link-values; a quoted string may hold `,`, `;` or `<`.
+function linkValuesOf(link: string): LinkValue[] {
+  const values: LinkValue[] = [];
+  let position = link.indexOf("<");
+
+  while (position !== -1) {
+    const targetEnd = link.indexOf(">", position);
+
+    if (targetEnd === -1) break;
+
+    const target = link.slice(position + 1, targetEnd);
+    const { parameters, end } = linkParametersOf(link, targetEnd + 1);
+    const relations = parameters.get(RELATION_PARAMETER)?.toLowerCase().split(/\s+/) ?? [];
+
+    values.push({ target, relations: relations.filter((relation) => relation !== "") });
+    position = link.indexOf("<", end);
   }
 
-  return undefined;
+  return values;
+}
+
+// The parameters of one link-value from `start` to the `,` ending it; the first occurrence of a name wins.
+function linkParametersOf(
+  link: string,
+  start: number,
+): { parameters: Map<string, string>; end: number } {
+  const parameters = new Map<string, string>();
+  let position = start;
+
+  while (position < link.length && link[position] !== ",") {
+    if (link[position] !== ";") {
+      position += 1;
+
+      continue;
+    }
+
+    const nameEnd = endOfToken(link, position + 1, "=;,");
+    const name = link
+      .slice(position + 1, nameEnd)
+      .trim()
+      .toLowerCase();
+    const { value, end } =
+      link[nameEnd] === "=" ? parameterValueOf(link, nameEnd + 1) : { value: "", end: nameEnd };
+
+    if (!parameters.has(name)) parameters.set(name, value);
+
+    position = end;
+  }
+
+  return { parameters, end: position };
+}
+
+function parameterValueOf(link: string, start: number): { value: string; end: number } {
+  let position = start;
+
+  while (link[position] === " " || link[position] === "\t") position += 1;
+
+  if (link[position] !== '"') {
+    const end = endOfToken(link, position, ";,");
+
+    return { value: link.slice(position, end).trim(), end };
+  }
+
+  let value = "";
+
+  position += 1;
+
+  while (position < link.length && link[position] !== '"') {
+    // A quoted-pair keeps the next character as is.
+    if (link[position] === "\\") position += 1;
+
+    value += link[position] ?? "";
+    position += 1;
+  }
+
+  return { value, end: position + 1 };
+}
+
+function endOfToken(link: string, start: number, stops: string): number {
+  let position = start;
+
+  while (position < link.length && !stops.includes(link[position] ?? "")) position += 1;
+
+  return position;
 }
 
 // `URL.canParse` is missing on some platforms (Hermes), so an unparsable target is caught instead.
-function cursorOfTarget(target: string, cursorParam: string): string | undefined {
+function queryParamOf(target: string, param: string): string | undefined {
   try {
-    return new URL(target, LINK_BASE).searchParams.get(cursorParam) ?? undefined;
+    return new URL(target, LINK_BASE).searchParams.get(param) ?? undefined;
   } catch {
     // A target the URL parser refuses carries no cursor: the page is the last one for this client.
     return undefined;
