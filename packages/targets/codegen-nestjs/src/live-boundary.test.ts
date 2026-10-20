@@ -1,3 +1,4 @@
+import "reflect-metadata";
 import { randomUUID } from "node:crypto";
 import { copyFileSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -40,14 +41,20 @@ interface UnexpectedCall {
 
 interface ReferenceAppModule {
   readonly ALLOWED_ORIGIN: string;
+  readonly APP_MARKER: string;
+  readonly TasksController: new () => Record<string, (...args: unknown[]) => unknown>;
   readonly calls: {
     readonly scopeIds: unknown[];
     readonly handled: string[];
     readonly unexpected: UnexpectedCall[];
     readonly loggedErrors: string[];
+    readonly events: string[];
   };
   readonly scenario: {
-    answers: Record<string, (input: unknown) => unknown>;
+    answers: Record<
+      string,
+      (input: unknown, controller: Record<string, (...args: unknown[]) => unknown>) => unknown
+    >;
     authenticate: (request: unknown) => unknown;
     decide: (request: { name: string; purpose: { direction?: string } }) => unknown;
   };
@@ -60,6 +67,7 @@ interface ReferenceAppModule {
   resetScenario(): void;
   startReferenceApp(): Promise<{ host: string; port: number; close(): Promise<void> }>;
   bootTwice(): Promise<void>;
+  bootWithAppInterceptors(): Promise<void>;
 }
 
 let app: ReferenceAppModule;
@@ -370,8 +378,75 @@ describe("validation", () => {
   });
 });
 
+describe("the operation composite", () => {
+  test("the operation composite registers no interceptor", () => {
+    expect(Reflect.getMetadata("__interceptors__", app.TasksController.prototype.health)).toBe(
+      undefined,
+    );
+  });
+
+  test("metadata set below the composite reaches the handler NestJS registers", () => {
+    const handler = app.TasksController.prototype.health;
+
+    expect(Reflect.getMetadata(app.APP_MARKER, handler)).toBe("below");
+    expect([handler?.name, handler?.length]).toEqual(["handle", 1]);
+  });
+
+  test("an app guard above a decorator that rewraps the composite runs before authentication", async () => {
+    const authenticate = app.scenario.authenticate;
+
+    app.scenario.authenticate = (request) => {
+      app.calls.events.push("authenticate");
+
+      return authenticate(request);
+    };
+
+    const reply = await send("GET", `/v1/channels/${CHANNEL}/tasks/${TASK}`, { headers: BEARER });
+
+    expect(reply.status).toBe(200);
+    expect(app.calls.events).toEqual(["app guard", "authenticate"]);
+  });
+
+  test("a contract method called outside a request returns its handler's result", () => {
+    const controller = new app.TasksController();
+
+    expect(controller.health?.(undefined)).toEqual({ status: 200, body: { status: "ok" } });
+  });
+
+  test("a contract method called by another handler writes no reply", async () => {
+    let inner: unknown;
+
+    app.scenario.answers.getChannel = (_input, controller) => {
+      inner = controller.health?.(undefined);
+
+      return { status: 200, body: { channelId: CHANNEL, name: "General" } };
+    };
+
+    const reply = await send("GET", `/v1/channels/${CHANNEL}`, { headers: BEARER });
+
+    expect(reply.status).toBe(200);
+    expect(JSON.parse(reply.text)).toEqual({ channelId: CHANNEL, name: "General" });
+    expect(inner).toEqual({ status: 200, body: { status: "ok" } });
+    expect(app.calls.handled).toEqual(["getChannel", "health"]);
+  });
+});
+
 describe("the boot check", () => {
   test("a second registration of the api in one app stops the boot", async () => {
     await expect(app.bootTwice()).rejects.toThrow(/registered twice/);
+  });
+
+  test("each contract route with app interceptors warns once that a mapping they return is ignored", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    await app.bootWithAppInterceptors();
+
+    const warnings = warn.mock.calls.map((call) => String(call[0]));
+    const healthWarnings = warnings.filter((warning) => warning.includes("'health'"));
+
+    expect(warnings).toHaveLength(17);
+    expect(healthWarnings).toEqual([
+      "seampact: the route GET /v1/health of 'health' carries the app interceptors ControllerWideInterceptor, PassThroughInterceptor; they observe the reply seampact wrote and a value they map is ignored. Shape the reply in the handler instead.",
+    ]);
   });
 });

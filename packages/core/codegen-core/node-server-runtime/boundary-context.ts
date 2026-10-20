@@ -15,6 +15,9 @@ export interface BoundaryContext {
   mode: ResponsesMode;
   /** True while the boundary writes its own reply, which skips the contract checks. */
   boundaryWriting: boolean;
+  /** NestJS only: true once the handler wrapper took the request, so a contract method the handler calls runs as a
+   * plain call. */
+  handlerStarted?: boolean;
   idempotencyKey?: string;
   grant?: AccessGrant;
   input?: unknown;

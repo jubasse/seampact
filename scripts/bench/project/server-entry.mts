@@ -1,12 +1,16 @@
 // Starts one server of a pair in this process and answers the parent over IPC: `ready` with its base URL, then
-// the process memory on request, with the peak since the last reset sampled every 250 ms, and a CPU profile of
-// the window between `profile-start` and `profile-stop`.
+// the process memory on request, with the peak since the last reset sampled every 250 ms, its CPU time, its memory
+// after a forced GC (started with `--expose-gc`), and a CPU profile of the window between `profile-start` and
+// `profile-stop`.
 // usage: node --import tsx bench/server-entry.mts <seampact|baseline> <framework>
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { Session } from "node:inspector/promises";
 
 const SAMPLE_INTERVAL_MS = 250;
 const PROFILE_INTERVAL_MICROSECONDS = 200;
+const KIB = 1024;
+// The resident anonymous memory of this process, in kB, as Linux reports it.
+const ANONYMOUS_RSS_LINE = /^RssAnon:\s+(\d+) kB$/m;
 const [kind, framework] = process.argv.slice(2);
 
 interface RunningServer {
@@ -58,6 +62,34 @@ async function stopProfile(file: string): Promise<void> {
   await writeFile(file, JSON.stringify(profile));
 }
 
+// The memory left once a full GC ran: what the server keeps, apart from what it has not yet collected.
+async function settledMemory(): Promise<object> {
+  const collect: unknown = Reflect.get(globalThis, "gc");
+
+  if (typeof collect !== "function") {
+    throw new Error("bench: a settled memory reading needs the server started with --expose-gc.");
+  }
+
+  collect();
+
+  const { rss, heapUsed, heapTotal } = process.memoryUsage();
+
+  return { rss, heapUsed, heapTotal, anonymousRss: await anonymousRss() };
+}
+
+async function anonymousRss(): Promise<number> {
+  const status = await readFile("/proc/self/status", "utf8").catch((error: unknown) => {
+    throw new Error(
+      `bench: the off-heap reading needs Linux's /proc/self/status (${String(error)}); run --memory on Linux.`,
+    );
+  });
+  const kibibytes = ANONYMOUS_RSS_LINE.exec(status)?.[1];
+
+  if (kibibytes === undefined) throw new Error("bench: /proc/self/status has no RssAnon line.");
+
+  return Number(kibibytes) * KIB;
+}
+
 process.on("message", async (message: { type: string; file?: string }) => {
   if (message.type === "profile-start") {
     await startProfile();
@@ -84,6 +116,20 @@ process.on("message", async (message: { type: string; file?: string }) => {
     const current = sample();
 
     send({ type: "memory", ...current, peakRss: peak.rss, peakHeapUsed: peak.heapUsed });
+
+    return;
+  }
+
+  if (message.type === "cpu-read") {
+    const { user, system } = process.cpuUsage();
+
+    send({ type: "cpu", microseconds: user + system });
+
+    return;
+  }
+
+  if (message.type === "settled-memory-read") {
+    send({ type: "settled-memory", ...(await settledMemory()) });
 
     return;
   }

@@ -66,6 +66,8 @@ function rawPairName(pair: string): string {
 
 // One form-encoded component decoded by the platform's form parser: `+` is a space, a malformed escape stays.
 function formDecoded(rawComponent: string): string {
+  if (!rawComponent.includes("%") && !rawComponent.includes("+")) return rawComponent;
+
   return new URLSearchParams(`=${rawComponent}`).get("") ?? "";
 }
 

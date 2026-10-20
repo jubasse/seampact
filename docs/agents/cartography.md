@@ -24,7 +24,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/codegen-fastify` | `packages/targets/codegen-fastify` | target | Generates a Fastify plugin per api that registers each contract route with its access, validation and reply checks around your handler map, on Fastify 5, validating with zod. |
 | `@seampact/codegen-fetch` | `packages/targets/codegen-fetch` | target | Generates a typed fetch client with one method per operation, returning its success and error responses as typed results. |
 | `@seampact/codegen-hono` | `packages/targets/codegen-hono` | target | Generates a registerRoutes function per api that adds each contract route to a Hono 4 app with its access, validation and reply checks around your handler map, validating with zod. |
-| `@seampact/codegen-nestjs` | `packages/targets/codegen-nestjs` | target | Generates the NestJS boundary around your controllers: a decorator per operation, the access guard, the validation and response interceptor, an input decorator, the error filter and a boot check, validating with zod. |
+| `@seampact/codegen-nestjs` | `packages/targets/codegen-nestjs` | target | Generates the NestJS boundary around your controllers: a decorator per operation, the access and validation guard, a handler wrapper that writes the checked reply, an input decorator, the error filter and a boot check, validating with zod. |
 | `@seampact/codegen-ts` | `packages/targets/codegen-ts` | target | Generates a named TypeScript type per schema and each operation's input, output and error union. |
 | `@seampact/codegen-yup` | `packages/targets/codegen-yup` | target | Generates Standard Schema yup validators per schema and direction, and one input validator per operation. |
 | `@seampact/codegen-zod` | `packages/targets/codegen-zod` | target | Generates Standard Schema zod validators per schema and direction, and one input validator per operation. |
@@ -139,7 +139,7 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/codegen-nestjs`
 
-- `packages/targets/codegen-nestjs/src`: The NestJS server target: the boundary around the app's controllers for each api, placing the shared Node request checks of codegen-core in NestJS's middleware, guard, interceptor and filter, validating with zod.
+- `packages/targets/codegen-nestjs/src`: The NestJS server target: the boundary around the app's controllers for each api, placing the shared Node request checks of codegen-core in NestJS's middleware, guard, a handler wrapper and filter, validating with zod.
 
 ### `@seampact/codegen-ts`
 

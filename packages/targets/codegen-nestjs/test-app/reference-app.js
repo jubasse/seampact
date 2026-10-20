@@ -4,11 +4,25 @@
 // compiled generated tree, so it imports the generated modules by relative path. Decorators are applied by call.
 import "reflect-metadata";
 import { gzipSync } from "node:zlib";
-import { Body, Catch, Controller, Get, Module, Post, UseFilters } from "@nestjs/common";
+import {
+  Body,
+  Catch,
+  Controller,
+  Get,
+  Module,
+  Post,
+  SetMetadata,
+  UseFilters,
+  UseGuards,
+  UseInterceptors,
+} from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import * as TasksNest from "../generated/server/tasks/nestjs.js";
 
 export const ALLOWED_ORIGIN = "https://app.example";
+
+/** A metadata key the app sets on `health` below its composite, as an app's `@Public()` does. */
+export const APP_MARKER = "app:marker";
 
 const TASK_OPERATIONS = [
   "archiveTask",
@@ -33,7 +47,7 @@ const TASK_OPERATIONS = [
 const USER_TOKEN_PREFIX = "user-";
 
 /** What the hooks and handlers saw, read by the test. */
-export const calls = { scopeIds: [], handled: [], unexpected: [], loggedErrors: [] };
+export const calls = { scopeIds: [], handled: [], unexpected: [], loggedErrors: [], events: [] };
 
 /** How the hooks and handlers answer; the test replaces members and calls `resetScenario` between tests. */
 export const scenario = {};
@@ -46,6 +60,7 @@ export function resetScenario() {
   calls.handled.length = 0;
   calls.unexpected.length = 0;
   calls.loggedErrors.length = 0;
+  calls.events.length = 0;
 }
 
 /** Thrown by a handler to make the app's own filter write a reply, with Express's `send`, Node's `writeHead`, or a body
@@ -123,42 +138,90 @@ const DEFAULT_ANSWERS = {
   createTask: () => ({ status: 201, body: sampleTask("33333333-3333-4333-8333-333333333333") }),
 };
 
-function answer(operation, input) {
+function answer(operation, input, controller) {
   calls.handled.push(operation);
 
   const handler = scenario.answers[operation] ?? DEFAULT_ANSWERS[operation];
 
   if (handler === undefined) throw new Error(`the test app has no answer for '${operation}'`);
 
-  return handler(input);
+  return handler(input, controller);
 }
 
-class TasksController {}
+// Applies method decorators as TypeScript does: the last written first, then the descriptor they edited defined.
+function decorateMethod(prototype, name, ...decorators) {
+  const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
 
-for (const operation of TASK_OPERATIONS) {
-  const prototype = TasksController.prototype;
+  for (const decorator of decorators.reverse()) decorator(prototype, name, descriptor);
 
-  Object.defineProperty(prototype, operation, {
-    value: function handle(input) {
-      return answer(operation, input);
-    },
-    writable: true,
-    configurable: true,
-  });
-
-  TasksNest[operation].input()(prototype, operation, 0);
-  TasksNest[operation]()(
-    prototype,
-    operation,
-    Object.getOwnPropertyDescriptor(prototype, operation),
-  );
+  Object.defineProperty(prototype, name, descriptor);
 }
 
-TasksNest.responses("warn")(
-  TasksController.prototype,
-  "getChannel",
-  Object.getOwnPropertyDescriptor(TasksController.prototype, "getChannel"),
-);
+// Replaces the method with a function of its own and copies the method's metadata onto it, as a tracing
+// decorator such as nestjs-otel's `@Span()` does.
+function rewrapMethod(_prototype, _name, descriptor) {
+  const original = descriptor.value;
+  const rewrapped = function traced(...args) {
+    return original.apply(this, args);
+  };
+
+  for (const key of Reflect.getMetadataKeys(original)) {
+    Reflect.defineMetadata(key, Reflect.getMetadata(key, original), rewrapped);
+  }
+
+  descriptor.value = rewrapped;
+}
+
+class RecordingGuard {
+  canActivate() {
+    calls.events.push("app guard");
+
+    return true;
+  }
+}
+
+class PassThroughInterceptor {
+  intercept(_execution, next) {
+    return next.handle();
+  }
+}
+
+class ControllerWideInterceptor extends PassThroughInterceptor {}
+
+// Every operation bound on one controller class; `aboveComposite` lists the app decorators written above an
+// operation's composite.
+function tasksController(aboveComposite = {}) {
+  class TasksController {}
+
+  for (const operation of TASK_OPERATIONS) {
+    const prototype = TasksController.prototype;
+
+    Object.defineProperty(prototype, operation, {
+      value: function handle(input) {
+        return answer(operation, input, this);
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    TasksNest[operation].input()(prototype, operation, 0);
+    decorateMethod(
+      prototype,
+      operation,
+      ...(aboveComposite[operation] ?? []),
+      TasksNest[operation](),
+      ...(operation === "health" ? [SetMetadata(APP_MARKER, "below")] : []),
+    );
+  }
+
+  return TasksController;
+}
+
+export const TasksController = tasksController({
+  getTask: [UseGuards(RecordingGuard), rewrapMethod],
+});
+
+decorateMethod(TasksController.prototype, "getChannel", TasksNest.responses("warn"));
 Controller()(TasksController);
 UseFilters(new AppReplyFilter())(TasksController);
 
@@ -268,6 +331,35 @@ export async function bootTwice() {
   })(TwiceModule);
 
   const app = await NestFactory.create(TwiceModule, { rawBody: true, logger: recordingLogger });
+
+  try {
+    await app.init();
+  } finally {
+    await app.close();
+  }
+}
+
+/** Boots an app whose controller carries a controller interceptor, and a route interceptor on `health`; resolves
+ * once initialised. */
+export async function bootWithAppInterceptors() {
+  const InterceptedController = tasksController({
+    health: [UseInterceptors(PassThroughInterceptor)],
+  });
+
+  Controller()(InterceptedController);
+  UseInterceptors(new ControllerWideInterceptor())(InterceptedController);
+
+  class InterceptedModule {}
+
+  Module({
+    imports: [TasksNest.SeampactModule.forRoot(hooks)],
+    controllers: [InterceptedController],
+  })(InterceptedModule);
+
+  const app = await NestFactory.create(InterceptedModule, {
+    rawBody: true,
+    logger: recordingLogger,
+  });
 
   try {
     await app.init();

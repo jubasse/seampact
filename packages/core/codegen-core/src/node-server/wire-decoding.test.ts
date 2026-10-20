@@ -24,6 +24,13 @@ describe("query decoding", () => {
     });
   });
 
+  test("a component without escapes or plus decodes as the form parser does", () => {
+    const rawQuery = "plain=abc&equals=a=b&accented=été&empty=&=nameless";
+    const formParsed = Object.fromEntries(new URLSearchParams(rawQuery));
+
+    expect(decodeQueryMembers([], rawQuery)).toEqual(formParsed);
+  });
+
   test("an empty list is no item, a repeated member is the list of its values", () => {
     expect(decodeQueryMembers(RULES, "sort=&limit=1&limit=2")).toEqual({ sort: [], limit: [1, 2] });
   });
