@@ -250,6 +250,8 @@ export interface ContractApi {
   readonly shapes: Readonly<Record<string, ValueShape>>;
   /** The app config's check of the app's routes outside the contract, run by the boot check. */
   readonly frameworkRoutes: FrameworkRouteCheck;
+  /** The app config's level for the boot check of the hooks: `error` refuses to boot, `warn` logs, `off` is silent. */
+  readonly hookCheck: "error" | "warn" | "off";
 }
 
 /** The request as every check step sees it, whatever the framework. */

@@ -8,11 +8,11 @@ import {
   emitProject,
   generateReferenceProject,
   problemBody,
-  referenceErrorTitle,
   projectDirectory,
   type RawReply,
   type ReferenceIrChange,
   referenceChanges,
+  referenceErrorTitle,
   referenceNoStoreCode,
   referenceNoStoreOperation,
   referenceUnpagedList,
@@ -1021,3 +1021,76 @@ function linkExpress(project: string, expressPackage: string): void {
     "dir",
   );
 }
+
+interface HooklessAppModule {
+  startAppWithoutHooks(): Promise<{ host: string; port: number; close(): Promise<void> }>;
+  makeRouterWithoutHooks(): unknown;
+}
+
+describe("the hook boot check level on Express 5", () => {
+  const expressPackage = "express";
+  const path = `/v1/channels/${CHANNEL}/tasks/${TASK}`;
+
+  async function hooklessModule(hookCheck?: "off" | "warn"): Promise<HooklessAppModule> {
+    const project = projectDirectory(import.meta.url, `live-hookless-${hookCheck ?? "error"}`);
+    const files = await generateReferenceProject(
+      project,
+      expressTarget,
+      {},
+      undefined,
+      undefined,
+      hookCheck === undefined ? {} : { hookCheck },
+    );
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+    linkExpress(project, expressPackage);
+
+    return import(copyTestApp(build, APP_SOURCE));
+  }
+
+  test(
+    "by default an api with no hook registered refuses to boot",
+    async () => {
+      const hookless = await hooklessModule();
+
+      expect(() => hookless.makeRouterWithoutHooks()).toThrow(/no authenticate hook/);
+    },
+    SETUP_TIMEOUT_MILLISECONDS,
+  );
+
+  test(
+    "hooks warn boots it and logs the missing hook",
+    async () => {
+      const hookless = await hooklessModule("warn");
+      const warned = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+      try {
+        expect(() => hookless.makeRouterWithoutHooks()).not.toThrow();
+        expect(warned).toHaveBeenCalledWith(expect.stringContaining("no authenticate hook"));
+      } finally {
+        warned.mockRestore();
+      }
+    },
+    SETUP_TIMEOUT_MILLISECONDS,
+  );
+
+  test(
+    "hooks off boots it, and a protected route answers 500 at request time",
+    async () => {
+      const hookless = await hooklessModule("off");
+      const app = await hookless.startAppWithoutHooks();
+      const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+      try {
+        const refused = await sendRawRequest(app, "GET", path, { headers: BEARER });
+
+        expect(refused.status).toBe(500);
+      } finally {
+        logged.mockRestore();
+        await app.close();
+      }
+    },
+    SETUP_TIMEOUT_MILLISECONDS,
+  );
+});

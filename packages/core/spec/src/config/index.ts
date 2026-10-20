@@ -23,6 +23,8 @@ export {
   FRAMEWORK_DOCS_SWITCHES,
   type FrameworkDocsSwitch,
   type GitBundleSource,
+  HOOK_BOOT_CHECK_LEVELS,
+  type HookBootCheckLevel,
   type OperationsFilter,
   type PackageBundleSource,
   type PathSource,

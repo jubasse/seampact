@@ -50,7 +50,7 @@ export type NodeServerArtefact =
   | typeof NATIVE_DOCS_ARTEFACT;
 
 /** The boot checks a Node server target generates that its app config entry may tune. */
-export const NODE_SERVER_BOOT_CHECKS: readonly TunableBootCheck[] = ["frameworkRoutes"];
+export const NODE_SERVER_BOOT_CHECKS: readonly TunableBootCheck[] = ["frameworkRoutes", "hooks"];
 
 /** The validators a target writes itself: files relative to the validators directory, and what they provide. */
 export interface OwnValidators {
@@ -291,6 +291,7 @@ function boundaryFiles(
       runtimeModule: `./${runtimeDirectory}/contract-route.js`,
       withItemValidators: options.bodyValidation,
       frameworkRoutes: input.frameworkRoutes,
+      hookCheck: input.hookCheck,
     },
     refusals,
     warnings,

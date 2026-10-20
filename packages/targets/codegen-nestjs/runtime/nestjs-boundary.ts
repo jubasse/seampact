@@ -54,8 +54,8 @@ import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
+  enforcedHookBootProblems,
   type HooksArgument,
-  hookBootProblems,
   type RegisteredHooks,
   resolvedHooks,
 } from "./node-server/boundary-hooks.js";
@@ -634,7 +634,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
 
     onApplicationBootstrap(): void {
       const problems = [
-        ...hookBootProblems(api, this.hooks),
+        ...enforcedHookBootProblems(api, this.hooks),
         ...this.handlerProblems(),
         ...this.platformProblems(),
         ...this.repeatedRegistrationProblems(),

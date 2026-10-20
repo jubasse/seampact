@@ -42,6 +42,7 @@ One entry per name. Write the keys of one form.
 | `options` | map | none | The target's own settings. |
 | `operations.include`, `operations.exclude` | list of strings | all operations | Keep or drop operations by tag or operation id. |
 | `artefacts` | map of booleans | the target's own | Switch each generated part on or off. `bootCheck` also takes `{ frameworkRoutes: false }`. `index: false` skips the api `index` module of a Node server target. |
+| `artefacts.bootCheck.hooks` | `error`, `warn`, `off` | `error` | What a Node server does at boot when a hook the contract needs is not registered: refuse to start, log and start, or start silently. A route whose hook is missing answers 500 on every request, whatever the level. `bootCheck: false` does not change it. |
 | `allowUntested` | list of strings | none | Accept a framework major that is not tested: `nestjs@13`. |
 | `frameworkRoutes` | list | none | Server targets. Routes outside the contract that the boot check accepts: `path`, `reason`, optional `method`. |
 | `frameworkDocs` | `keep` or `off` | `keep` | Server targets. `off` drops the framework's own document. |

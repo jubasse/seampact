@@ -8,7 +8,7 @@ import {
   type WireFormat,
 } from "@seampact/spec/ir";
 import type { ValidatorsDescriptor } from "../descriptors.js";
-import type { FrameworkRouteCheck } from "../framework-route-check.js";
+import type { FrameworkRouteCheck, HookBootCheck } from "../framework-route-check.js";
 import { type GenerateWarning, warnLeftToHandler } from "../generate-warning.js";
 import { importSpecifier } from "../import-specifier.js";
 import { below, type IrLocation, operationLocation } from "../ir-location.js";
@@ -41,6 +41,8 @@ export interface RouteTableOptions {
   readonly withItemValidators: boolean;
   /** The entry's framework-route check, read by the boot check of the app's routes outside the contract. */
   readonly frameworkRoutes: FrameworkRouteCheck;
+  /** The entry's hook boot check level, read by the boot check of the hooks. */
+  readonly hookCheck: HookBootCheck;
 }
 
 const API_LOCATION: IrLocation = { member: "" };
@@ -117,7 +119,15 @@ export function routeTableSource(
 
   const basePaths = [...new Set(Object.values(ir.api.surfaces).map((surface) => surface.prefix))];
   const frameworkRoutes = frameworkRoutesValue(options.frameworkRoutes);
-  const table: SourceValue = { id: ir.api.id, basePaths, format, routes, shapes, frameworkRoutes };
+  const table: SourceValue = {
+    id: ir.api.id,
+    basePaths,
+    format,
+    routes,
+    shapes,
+    frameworkRoutes,
+    hookCheck: options.hookCheck,
+  };
 
   return [
     `import type { ContractApi } from "${options.runtimeModule}";`,

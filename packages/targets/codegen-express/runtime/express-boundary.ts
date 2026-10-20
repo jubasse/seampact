@@ -25,8 +25,8 @@ import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
+  enforcedHookBootProblems,
   type HooksRequirement,
-  hookBootProblems,
   type RegisteredHooks,
   resolvedHooks,
 } from "./node-server/boundary-hooks.js";
@@ -110,7 +110,7 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
   ): Router {
     const hooks = resolvedHooks(options.hooks);
     const problems = [
-      ...hookBootProblems(api, hooks),
+      ...enforcedHookBootProblems(api, hooks),
       ...registrationProblems(api, bindings, options, generated),
     ];
 

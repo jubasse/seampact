@@ -121,7 +121,13 @@ export interface ArtefactSwitches {
 
 export interface BootCheckSwitches {
   frameworkRoutes?: boolean;
+  // How the boot check treats a hook the contract needs and the app did not register; `error` when absent.
+  hooks?: HookBootCheckLevel;
 }
+
+export const HOOK_BOOT_CHECK_LEVELS = ["error", "warn", "off"] as const;
+
+export type HookBootCheckLevel = (typeof HOOK_BOOT_CHECK_LEVELS)[number];
 
 // The key `bootCheck` takes in its object form.
 export const BOOT_CHECK_ARTEFACT = "bootCheck";
@@ -220,7 +226,10 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
                 {
                   type: "object",
                   additionalProperties: false,
-                  properties: { frameworkRoutes: { type: "boolean" } },
+                  properties: {
+                    frameworkRoutes: { type: "boolean" },
+                    hooks: { enum: [...HOOK_BOOT_CHECK_LEVELS] },
+                  },
                 },
               ],
             },

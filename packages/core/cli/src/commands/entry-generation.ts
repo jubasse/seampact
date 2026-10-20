@@ -6,7 +6,11 @@ import type {
 } from "@seampact/codegen-core";
 import type { CheckLevel, TargetEntry } from "@seampact/spec/config";
 import { type CliProblem, entryWhere, problemFromRefusal } from "../cli-problem.js";
-import { NATIVE_DOCS_ARTEFACT, type PlannedAppDocument } from "../config/index.js";
+import {
+  hookCheckLevelOf,
+  NATIVE_DOCS_ARTEFACT,
+  type PlannedAppDocument,
+} from "../config/index.js";
 import type { AppPlan } from "./app-plan.js";
 import { DEFAULT_DRIFT_CHECK_LEVEL } from "./drift-level.js";
 import { linksOf, type PlannedApi, type PlannedEntry, pairedApi } from "./entry-links.js";
@@ -88,6 +92,7 @@ async function generateApi(
     links: links.value,
     artefacts: new Set(artefacts),
     frameworkRoutes: frameworkRouteCheckOf(entry),
+    hookCheck: hookCheckLevelOf(entry.artefacts),
     ...(nativeDocs === undefined ? {} : { nativeDocsDocument: nativeDocs.value }),
   });
 

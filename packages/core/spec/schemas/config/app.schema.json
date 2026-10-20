@@ -557,6 +557,13 @@
                   "properties": {
                     "frameworkRoutes": {
                       "type": "boolean"
+                    },
+                    "hooks": {
+                      "enum": [
+                        "error",
+                        "warn",
+                        "off"
+                      ]
                     }
                   }
                 }

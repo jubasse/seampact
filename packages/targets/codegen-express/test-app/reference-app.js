@@ -195,6 +195,22 @@ export async function startUncheckedApp({ withUnlistedRoute }) {
   return listen(app);
 }
 
+/** Builds an app serving the `tasks` router with no hook registered at all; listens on a free port. */
+export async function startAppWithoutHooks() {
+  resetScenario();
+
+  const app = express();
+
+  app.use(TasksExpress.router({ handlers, hooks: {} }));
+
+  return listen(app);
+}
+
+/** Makes the `tasks` router with no hook registered, to see whether the boot check refuses it. */
+export function makeRouterWithoutHooks() {
+  return TasksExpress.router({ handlers, hooks: {} });
+}
+
 async function listen(app) {
   const server = await new Promise((resolve) => {
     const listening = app.listen(0, "127.0.0.1", () => resolve(listening));

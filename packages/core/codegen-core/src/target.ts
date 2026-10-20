@@ -1,6 +1,10 @@
 import type { ContractIR, IrSupport } from "@seampact/spec/ir";
 import type { DescriptorSet, LinkKind, ProvidedDescriptors } from "./descriptors.js";
-import type { FrameworkRouteCheck, TunableBootCheck } from "./framework-route-check.js";
+import type {
+  FrameworkRouteCheck,
+  HookBootCheck,
+  TunableBootCheck,
+} from "./framework-route-check.js";
 import type { GenerateWarning } from "./generate-warning.js";
 import type { LinkNeeds, LinkOffers, LinkSet, Links } from "./links.js";
 import type { NativeDocsDocument } from "./native-docs-document.js";
@@ -61,6 +65,7 @@ export interface GenerateInput<
   links: Links<Consumed, Optional>;
   artefacts: ReadonlySet<Artefact>;
   frameworkRoutes: FrameworkRouteCheck;
+  hookCheck: HookBootCheck;
   /** The api's document the framework's docs follow; present exactly when the `nativeDocs` artefact is on. */
   nativeDocsDocument?: NativeDocsDocument;
 }
@@ -132,6 +137,8 @@ export interface GenerateRequest {
   artefacts: ReadonlySet<string>;
   /** The entry's framework-route check; the default check when absent. */
   frameworkRoutes?: FrameworkRouteCheck;
+  /** The entry's hook boot check level; `error` when absent. */
+  hookCheck?: HookBootCheck;
   /** The parsed seampact document the `nativeDocs` artefact follows; the target refuses `nativeDocs` without it. */
   nativeDocsDocument?: NativeDocsDocument;
 }

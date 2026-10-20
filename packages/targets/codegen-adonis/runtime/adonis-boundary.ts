@@ -21,8 +21,8 @@ import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
+  enforcedHookBootProblems,
   type HooksRequirement,
-  hookBootProblems,
   type RegisteredHooks,
   resolvedHooks,
 } from "./node-server/boundary-hooks.js";
@@ -560,7 +560,7 @@ export function createAdonisBoundary<
   ): void {
     const hooks = resolvedHooks(registration.hooks);
     const problems = [
-      ...hookBootProblems(api, hooks),
+      ...enforcedHookBootProblems(api, hooks),
       ...controllerProblems(registration.controllers),
       ...bodyValidationProblems(registration, hooks),
       ...unknownOperationProblems(registration),

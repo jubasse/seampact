@@ -136,8 +136,49 @@ export interface BootProblem {
   readonly fix: string;
 }
 
+/** The part of an api the hook boot check reads. */
+export interface HookCheckedApi {
+  readonly id: string;
+  readonly hookCheck: ContractApi["hookCheck"];
+  readonly routes: readonly HookCheckedRoute[];
+}
+
+interface HookCheckedRoute {
+  readonly id: string;
+  readonly access:
+    | { readonly kind: "public" }
+    | { readonly kind: "identity"; readonly identity: string };
+  readonly requires: readonly { readonly name: string }[];
+  readonly fieldRights: readonly { readonly right: string }[];
+  readonly scopes: readonly { readonly scope: string }[];
+  readonly idempotency?: unknown;
+}
+
+/**
+ * The problems that stop the boot, by the api's `hookCheck`: every one at `error`; none at `warn`, which logs them
+ * instead; none at `off`. A route whose hook is missing then answers the derived unexpected-error reply.
+ */
+export function enforcedHookBootProblems(api: HookCheckedApi, hooks: BoundaryHooks): BootProblem[] {
+  if (api.hookCheck === "off") return [];
+
+  const problems = hookBootProblems(api, hooks);
+
+  if (api.hookCheck === "error") return problems;
+
+  if (problems.length > 0) {
+    console.warn(
+      bootProblemsMessage(api, problems).replace(
+        "cannot start:",
+        "starts with hooks missing ('artefacts.bootCheck.hooks: warn'); the routes that need them answer 500:",
+      ),
+    );
+  }
+
+  return [];
+}
+
 /** Every missing or doubly claimed hook of the api, listed at once. */
-export function hookBootProblems(api: ContractApi, hooks: BoundaryHooks): BootProblem[] {
+export function hookBootProblems(api: HookCheckedApi, hooks: BoundaryHooks): BootProblem[] {
   const problems: BootProblem[] = [...duplicateClaims(hooks)];
 
   for (const route of api.routes) {
@@ -184,7 +225,7 @@ export function hookBootProblems(api: ContractApi, hooks: BoundaryHooks): BootPr
   return withoutRepeatedProblems(problems);
 }
 
-function requirementNames(route: ContractRoute): string[] {
+function requirementNames(route: HookCheckedRoute): string[] {
   return [
     ...route.requires.map((requirement) => requirement.name),
     ...route.fieldRights.map((fieldRight) => fieldRight.right),
@@ -239,7 +280,10 @@ function withoutRepeatedProblems(problems: readonly BootProblem[]): BootProblem[
 }
 
 /** The boot check's message: every problem with its operation and fix. */
-export function bootProblemsMessage(api: ContractApi, problems: readonly BootProblem[]): string {
+export function bootProblemsMessage(
+  api: Pick<ContractApi, "id">,
+  problems: readonly BootProblem[],
+): string {
   const lines = problems.map(
     (problem) =>
       `- ${problem.operation === undefined ? "" : `operation '${problem.operation}': `}${problem.problem}; fix: ${problem.fix}.`,

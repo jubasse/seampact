@@ -2,6 +2,7 @@ import type { ArtefactDeclaration, Target } from "@seampact/codegen-core";
 import {
   type ArtefactSwitches,
   BOOT_CHECK_ARTEFACT,
+  type HookBootCheckLevel,
   type TargetEntry,
 } from "@seampact/spec/config";
 import { type CliProblem, entryWhere } from "../cli-problem.js";
@@ -49,6 +50,21 @@ export function frameworkRoutesSwitchOf(
   const bootCheck = artefacts?.[BOOT_CHECK_ARTEFACT];
 
   return typeof bootCheck === "object" ? bootCheck.frameworkRoutes : undefined;
+}
+
+// The `bootCheck.hooks` level an entry writes in `bootCheck`'s object form.
+export function hookCheckSwitchOf(
+  artefacts: ArtefactSwitches | undefined,
+): HookBootCheckLevel | undefined {
+  const bootCheck = artefacts?.[BOOT_CHECK_ARTEFACT];
+
+  return typeof bootCheck === "object" ? bootCheck.hooks : undefined;
+}
+
+// `error` unless the entry writes a level. The boolean form of `bootCheck` leaves it at `error`: a missing hook is
+// never silenced by accident.
+export function hookCheckLevelOf(artefacts: ArtefactSwitches | undefined): HookBootCheckLevel {
+  return hookCheckSwitchOf(artefacts) ?? "error";
 }
 
 // Off when the entry switches the whole boot check off, or its framework-route check alone.

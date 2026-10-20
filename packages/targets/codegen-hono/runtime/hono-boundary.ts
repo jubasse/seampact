@@ -16,8 +16,8 @@ import {
   type BootProblem,
   type BoundaryHooks,
   bootProblemsMessage,
+  enforcedHookBootProblems,
   type HooksRequirement,
-  hookBootProblems,
   type RegisteredHooks,
   resolvedHooks,
 } from "./web-server/boundary-hooks.js";
@@ -115,7 +115,7 @@ export function createHonoBoundary<
   ): void {
     const hooks = resolvedHooks(options.hooks);
     const problems = [
-      ...hookBootProblems(api, hooks),
+      ...enforcedHookBootProblems(api, hooks),
       ...registrationProblems(api, bindings, options, generated),
       ...optionProblems(options),
     ];
