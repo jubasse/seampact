@@ -378,14 +378,21 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
     };
   }
 
-  // A path under the api's base path that no route serves exactly (a trailing slash, `//`, a percent-encoded
-  // static segment, an unknown sub-path): the api's 404. Any other path is the app's, and so is a path that another
-  // api's router mounted on the app also claims, which may serve it.
+  // A router mounted under a path answers 500 for any request it receives. Otherwise a path under the api's base path
+  // that no route serves exactly (a trailing slash, `//`, a percent-encoded static segment, an unknown sub-path) is
+  // the api's 404; any other path is the app's, and so is a path that another api's router mounted on the app also
+  // claims, which may serve it.
   function unservedBasePath(hooks: BoundaryHooks): RequestHandler {
     return (request, response, next) => {
       const reported = reportedRequest(request);
 
-      if (request.baseUrl !== NO_MOUNT || !claimsAlone(api, request.app, reported.path)) {
+      if (request.baseUrl !== NO_MOUNT) {
+        respondMounted(request, response, undefined, hooks, reported);
+
+        return;
+      }
+
+      if (!claimsAlone(api, request.app, reported.path)) {
         next();
 
         return;

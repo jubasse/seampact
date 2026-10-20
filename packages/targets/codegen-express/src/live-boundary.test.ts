@@ -439,6 +439,14 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
     expect(error).toHaveBeenCalledWith(expect.stringContaining("mounted under '/mounted'"));
   });
 
+  test("a request under the mount that no route of the router serves answers 500 with the same log, not the app's 404", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const reply = await send("GET", "/mounted/health");
+
+    expect(reply.status).toBe(500);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("mounted under '/mounted'"));
+  });
+
   test("an error rendered outside a request context reports to the router that serves the app, not the last made", async () => {
     const reply = await send("GET", "/own/render-error");
 
