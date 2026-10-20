@@ -5,8 +5,8 @@ import { expect, test } from "vitest";
 import { temporaryDirectory } from "./bundle.test-support.js";
 import { bundleIntegrity, bundleSha256Hex } from "./integrity.js";
 import { readBundleTarball } from "./tarball-read.js";
-import { verifyBundle } from "./verify.js";
 import { type BundleVectors, bundleVectors, VECTORS_FILE } from "./vectors.test-support.js";
+import { verifyBundle } from "./verify.js";
 
 const WRITE = process.env.SEAMPACT_WRITE_BUNDLE_VECTORS === "1";
 
