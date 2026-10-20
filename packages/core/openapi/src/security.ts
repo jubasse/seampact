@@ -10,6 +10,7 @@ import {
   type EmitContext,
   reasonValue,
   refuseInconsistent,
+  refuseNotEmitted,
   refuseUnknown,
   writeExtension,
 } from "./emit-context.js";
@@ -171,13 +172,26 @@ function securityScheme(
     case "basic":
       return { type: "http", scheme: "basic" };
     case "bearer":
-      return bearerScheme(scheme.bearer);
+      return bearerScheme(context, scheme.bearer, location);
     case "signature":
       return signatureScheme(context, scheme.name, scheme.signature, below(location, "signature"));
   }
 }
 
-function bearerScheme(facts: Extract<KnownScheme, { kind: "bearer" }>["bearer"]): JsonObject {
+function bearerScheme(
+  context: EmitContext,
+  facts: Extract<KnownScheme, { kind: "bearer" }>["bearer"],
+  location: IrLocation,
+): JsonObject {
+  if (facts?.oauth2 !== undefined && facts.openIdConnectUrl !== undefined) {
+    refuseNotEmitted(
+      context,
+      "scheme.bearer",
+      "A bearer scheme with both OAuth 2 flows and an OpenID Connect URL",
+      location,
+    );
+  }
+
   if (facts?.oauth2 !== undefined) {
     return { type: "oauth2", flows: copyJsonValue(facts.oauth2.flows) };
   }

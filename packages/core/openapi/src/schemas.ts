@@ -90,6 +90,7 @@ function knownUseSchema(
 
       return schema;
     }
+
     case "file":
       return fileSchema(context, use.media, use.maxSizeBytes);
     case "enum":

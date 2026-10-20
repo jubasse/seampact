@@ -6,6 +6,7 @@ import {
   type DocumentId,
   IR_REVISION,
   IR_VERSION,
+  isKnownVariant,
   type Operation,
 } from "@seampact/spec/ir";
 import { requestBody } from "./bodies.js";
@@ -13,6 +14,7 @@ import {
   createEmitContext,
   type EmitContext,
   refuseInconsistent,
+  refuseUnknown,
   writeConsumerExtensions,
   writeExtension,
 } from "./emit-context.js";
@@ -124,7 +126,7 @@ function buildDocument(context: EmitContext, selection: ApiDocument): JsonObject
   const paths = pathsObject(context, selected, documentFormat);
   const schemas = drainSchemaComponents(context);
   const securitySchemes = securitySchemesComponent(context);
-  const document: JsonObject = { openapi: OPENAPI_VERSION, info: infoObject(ir) };
+  const document: JsonObject = { openapi: OPENAPI_VERSION, info: infoObject(context) };
 
   if (context.options.servers.length > 0) {
     document.servers = context.options.servers.map((server) => {
@@ -168,26 +170,26 @@ function buildDocument(context: EmitContext, selection: ApiDocument): JsonObject
   return document;
 }
 
-function infoObject(ir: ContractIR): JsonObject {
-  const version = ir.api.version;
-  const info: JsonObject = {
-    title: ir.api.id,
-    version:
-      version.kind === "path" && "number" in version
-        ? String(version.number)
-        : versionLabel(version),
-  };
+function infoObject(context: EmitContext): JsonObject {
+  const { api } = context.ir;
+  const info: JsonObject = { title: api.id, version: apiVersionText(context) };
 
-  setDefined(info, "summary", ir.api.docs.summary);
-  setDefined(info, "description", ir.api.docs.description);
+  setDefined(info, "summary", api.docs.summary);
+  setDefined(info, "description", api.docs.description);
 
   return info;
 }
 
-function versionLabel(version: ContractIR["api"]["version"]): string {
-  return "label" in version && typeof version.label === "string"
-    ? version.label
-    : String(version.kind);
+function apiVersionText(context: EmitContext): string {
+  const version = context.ir.api.version;
+
+  if (!isKnownVariant("ApiVersion", version)) {
+    refuseUnknown(context, { member: "/api/version/kind" }, version.kind);
+
+    return "";
+  }
+
+  return version.kind === "path" ? String(version.number) : version.label;
 }
 
 // The format most operations use is the document's; ties go to the first id in code-unit order.

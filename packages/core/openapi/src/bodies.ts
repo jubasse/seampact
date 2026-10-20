@@ -11,6 +11,7 @@ import {
   type EmitContext,
   reasonValue,
   refuseInconsistent,
+  refuseNotEmitted,
   refuseUnknown,
   writeExtension,
 } from "./emit-context.js";
@@ -36,7 +37,18 @@ export function requestBody(
 ): JsonObject | undefined {
   const input = operation.input;
 
-  if (input === undefined) return undefined;
+  if (input === undefined) {
+    if (examples !== undefined) {
+      refuseNotEmitted(
+        context,
+        "example.request",
+        "A request example on an operation without input",
+        location,
+      );
+    }
+
+    return undefined;
+  }
 
   const inputLocation = below(location, "input");
   const mediaObject: JsonObject = { schema: bodySchema(context, input, inputLocation) };

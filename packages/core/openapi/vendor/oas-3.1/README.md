@@ -1,0 +1,1 @@
+The OpenAPI 3.1 JSON Schemas of 2022-10-07, copied unchanged but for formatting from https://spec.openapis.org/oas/3.1/ (`schema`, `schema-base`, `dialect/base`, `meta/base`), which the tests validate every golden document against.

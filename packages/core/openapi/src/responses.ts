@@ -53,10 +53,28 @@ export function successResponses(
       const mediaObject = content[response.media];
 
       if (isJsonObject(mediaObject)) mediaObject.examples = statusExamples;
+    } else if (statusExamples !== undefined) {
+      refuseNotEmitted(
+        context,
+        "example.empty",
+        "An example of a response without a body",
+        responseLocation,
+      );
     }
 
     responses.set(response.status, responseObject);
   });
+
+  for (const entry of examples.responses) {
+    if (!responses.has(entry.status)) {
+      refuseNotEmitted(
+        context,
+        "example.status",
+        `An example of the status ${entry.status}, which no response has,`,
+        entry.location,
+      );
+    }
+  }
 
   return responses;
 }
