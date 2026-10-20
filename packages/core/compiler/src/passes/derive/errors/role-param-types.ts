@@ -305,7 +305,7 @@ function checkText(
       continue;
     }
 
-    const rendered = deriveErrorsKindsOf(check.site.schemas, { ...value.typed, nullable: false });
+    const rendered = deriveErrorsKindsOf({ ...value.typed, nullable: false });
 
     if (rendered === DERIVE_ERRORS_ANY_KIND || rendered.has("object") || rendered.has("array"))
       refuseType(
@@ -333,7 +333,7 @@ function checkObjectValue(
       position,
       "an object",
       deriveErrorsMisfitReason(
-        `the param's type (${deriveErrorsDescribeKinds(deriveErrorsKindsOf(check.site.schemas, accepted))}) is no object schema to check its members against`,
+        `the param's type (${deriveErrorsDescribeKinds(deriveErrorsKindsOf(accepted))}) is no object schema to check its members against`,
       ),
     );
 
@@ -368,7 +368,7 @@ function checkArrayValue(
   accepted: DeriveErrorsTyped,
   position: Position,
 ): void {
-  const kinds = deriveErrorsKindsOf(check.site.schemas, accepted);
+  const kinds = deriveErrorsKindsOf(accepted);
   const what = template.kind === "array" ? "an array" : `$each over $${template.of}`;
 
   if (!deriveErrorsKindsFit(new Set(["array"]), kinds)) {

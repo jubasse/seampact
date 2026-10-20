@@ -45,7 +45,7 @@ describe("error registry", () => {
     expect(Object.keys(accepted.draft.errors)).toEqual(
       expect.arrayContaining(["TASK_NOT_FOUND", "E1042", "404-gone"]),
     );
-    expect(accepted.draft.errors["E1042"]?.family).toBeUndefined();
+    expect(accepted.draft.errors.E1042?.family).toBeUndefined();
 
     const refused = deriveErrorsRunContract(deriveErrorsLoadFixture("registry-refused"));
 
@@ -363,7 +363,7 @@ describe("default codes", () => {
 
   test("a layer declaring a default code replaces it, with its own params or the core ones", () => {
     const { draft } = deriveErrorsRunContract(deriveErrorsLoadFixture("registry"));
-    const rateLimited = draft.schemas["ApiRateLimitedParams"];
+    const rateLimited = draft.schemas.ApiRateLimitedParams;
 
     expect(draft.errors["api.rate_limited"]?.origin).toEqual({
       layer: "api",
@@ -376,7 +376,7 @@ describe("default codes", () => {
       origin: { layer: "api" },
       default: "payloadTooLarge",
     });
-    expect(draft.schemas["ApiPayloadTooLargeParams"]?.origin.layer).toBe("core");
+    expect(draft.schemas.ApiPayloadTooLargeParams?.origin.layer).toBe("core");
   });
 });
 
