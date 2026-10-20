@@ -156,31 +156,31 @@ interface HookCheckedRoute {
 }
 
 /**
- * The problems that stop the boot, by the api's `hookCheck`: every one at `error`; none at `warn`, which logs them
- * instead; none at `off`. A route whose hook is missing then answers the derived unexpected-error reply.
+ * The problems that stop the boot, by the api's `hookCheck`. A doubly claimed right is refused at every level, as
+ * which decider authorizes it would depend on registration order. A missing hook stops the boot at `error`; at `warn`
+ * it is logged and at `off` ignored, and a route whose hook is missing then answers the derived unexpected-error reply.
  */
 export function enforcedHookBootProblems(api: HookCheckedApi, hooks: BoundaryHooks): BootProblem[] {
-  if (api.hookCheck === "off") return [];
+  const claims = withoutRepeatedProblems(duplicateClaims(hooks));
 
-  const problems = hookBootProblems(api, hooks);
+  if (api.hookCheck === "off") return claims;
 
-  if (api.hookCheck === "error") return problems;
+  const missing = missingHookProblems(api, hooks);
 
-  if (problems.length > 0) {
-    runtimeLog.warn(
-      bootProblemsMessage(api, problems).replace(
-        "cannot start:",
-        "starts with hooks missing ('artefacts.bootCheck.hooks: warn'); the routes that need them answer 500:",
-      ),
-    );
+  if (api.hookCheck === "error") return [...claims, ...missing];
+
+  if (missing.length > 0) {
+    runtimeLog.warn(bootProblemsMessage(api, missing, HOOKS_WARN_HEADING));
   }
 
-  return [];
+  return claims;
 }
 
-/** Every missing or doubly claimed hook of the api, listed at once. */
-export function hookBootProblems(api: HookCheckedApi, hooks: BoundaryHooks): BootProblem[] {
-  const problems: BootProblem[] = [...duplicateClaims(hooks)];
+const HOOKS_WARN_HEADING =
+  "starts with hooks missing ('artefacts.bootCheck.hooks: warn'); the routes that need them answer 500:";
+
+function missingHookProblems(api: HookCheckedApi, hooks: BoundaryHooks): BootProblem[] {
+  const problems: BootProblem[] = [];
 
   for (const route of api.routes) {
     if (
@@ -284,11 +284,12 @@ function withoutRepeatedProblems(problems: readonly BootProblem[]): BootProblem[
 export function bootProblemsMessage(
   api: Pick<ContractApi, "id">,
   problems: readonly BootProblem[],
+  heading = "cannot start:",
 ): string {
   const lines = problems.map(
     (problem) =>
       `- ${problem.operation === undefined ? "" : `operation '${problem.operation}': `}${problem.problem}; fix: ${problem.fix}.`,
   );
 
-  return `seampact: the api '${api.id}' cannot start:\n${lines.join("\n")}`;
+  return `seampact: the api '${api.id}' ${heading}\n${lines.join("\n")}`;
 }

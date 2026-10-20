@@ -234,6 +234,12 @@ export function createHonoBoundary<
 
     // A path only Hono's decoding or relaxed routing leads here: the raw path is not this operation's, so no
     // handler runs under another operation's access and input.
+    if (matched === undefined && !api.catchAll) {
+      await next();
+
+      return undefined;
+    }
+
     if (matched === undefined) return unservedOrNext(app, c.req.raw, next);
 
     if (!frameworkRoutesReady(app)) {

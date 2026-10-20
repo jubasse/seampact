@@ -544,6 +544,8 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
       error === undefined &&
       claimsAlone(api, Reflect.get(request, "app"), reported.path)
     ) {
+      if (!api.catchAll) return false;
+
       respondUnserved(response, owningHooks(request), reported);
 
       return true;
@@ -555,6 +557,8 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
       error === undefined &&
       matchContractRoute(api, reported.method, reported.path) === undefined
     ) {
+      if (!api.catchAll) return false;
+
       respondUnserved(response, owningHooks(request), reported);
 
       return true;

@@ -695,6 +695,8 @@ export function createFastifyBoundary<
       error === undefined &&
       claimsBasePathAlone(api, basePathClaimsOf(request.server.server), reported.path)
     ) {
+      if (!api.catchAll) return false;
+
       respondUnserved(reply, registered.hooks, reported);
 
       return true;
@@ -706,6 +708,8 @@ export function createFastifyBoundary<
       error === undefined &&
       matchContractRoute(api, reported.method, reported.path) === undefined
     ) {
+      if (!api.catchAll) return false;
+
       respondUnserved(reply, registered.hooks, reported);
 
       return true;
