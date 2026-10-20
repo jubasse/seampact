@@ -252,8 +252,8 @@ function pointerValue(document: unknown, reference: string): unknown {
   return path
     .split("/")
     .reduce<unknown>(
-      (current, segment) => Reflect.get(Object(current), segment),
-      Object(Reflect.get(Object(document), "components")),
+      (current, segment) => memberAt(current, segment),
+      memberAt(document, "components"),
     );
 }
 
