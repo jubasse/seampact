@@ -11,13 +11,14 @@ import {
   moduleContents,
   modulePath,
   OPERATION_INPUT_MODULE,
+  planValidatorsWithinWireNames,
   SCHEMA_MODULES,
   WIRE_CHECKS_MODULE,
   WIRE_CHECKS_SOURCE,
 } from "@seampact/codegen-core/validators";
 import { YUP_IMPORT } from "./layout.js";
 import { operationInputModuleSource } from "./operation-input.js";
-import { planYupValidators } from "./path-keys.js";
+import { YUP_WIRE_NAME_LIMIT } from "./path-keys.js";
 import { schemaModuleSource } from "./schema-module.js";
 import { YUP_SUPPORT_MODULE, YUP_SUPPORT_SOURCE } from "./yup-support.js";
 
@@ -32,7 +33,7 @@ export function generateValidators(
 ): GenerateOutcome {
   if (!input.artefacts.has(VALIDATORS_ARTEFACT)) return { status: "generated", files: [] };
 
-  const planned = planYupValidators(input.ir);
+  const planned = planValidatorsWithinWireNames(input.ir, YUP_WIRE_NAME_LIMIT);
 
   if (planned.status === "refused") return planned;
 

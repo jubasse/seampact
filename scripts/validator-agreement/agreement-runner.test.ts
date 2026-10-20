@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it } from "vitest";
 import {
   AGREEMENT_DIRECTORY,
   AGREEMENT_ENTRY,
@@ -43,6 +43,10 @@ const rows = tableRows.filter((row) => Object.hasOwn(subset.schemas, row.schema)
 const providers = await Promise.all(
   validatorProviderIds().map((id) => loadProviderValidators(id, subset.ir)),
 );
+
+afterAll(() => {
+  for (const provider of providers) provider.removeProject();
+});
 
 function payloadOf(row: AgreementRow): unknown {
   return row.payloadText === undefined ? row.payload : JSON.parse(row.payloadText);

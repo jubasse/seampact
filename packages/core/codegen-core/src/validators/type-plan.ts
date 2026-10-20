@@ -15,6 +15,7 @@ import {
 } from "../located-refusals.js";
 import { requireName } from "../planned-names.js";
 import type { Refusal } from "../refusal.js";
+import { reducedIntegerStep } from "./integer-step.js";
 import type { ValidatorsLayout } from "./layout.js";
 
 // What every validator library checks for one type use, whatever its syntax: the kind, each check under its
@@ -43,16 +44,10 @@ export interface ScalarPlan {
   readonly checks: readonly ScalarCheck[];
 }
 
-// The numeric refinements of an integer or a number, each the exact decimal literal of the contract.
-const NUMERIC_RULES = [
-  "minimum",
-  "maximum",
-  "exclusiveMinimum",
-  "exclusiveMaximum",
-  "multipleOf",
-] as const;
+// The numeric bounds of an integer or a number, each the exact decimal literal of the contract.
+const BOUND_RULES = ["minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum"] as const;
 
-export type NumericRule = (typeof NUMERIC_RULES)[number];
+type BoundRule = (typeof BOUND_RULES)[number];
 
 export type StringFormat = "uuid" | "date-time";
 
@@ -62,7 +57,15 @@ export type ScalarCheck =
   | { readonly rule: "format"; readonly format: StringFormat; readonly message: string }
   | { readonly rule: "minLength" | "maxLength"; readonly limit: number; readonly message: string }
   | { readonly rule: "pattern"; readonly normalized: string; readonly message: string }
-  | { readonly rule: NumericRule; readonly literal: string };
+  | { readonly rule: BoundRule; readonly literal: string }
+  // A step of an integer only (ADR 0003 refuses one on a number): `integerStep` is the decimal step reduced to the
+  // exact integer step, which every validator checks with an integer remainder, never a floating-point division.
+  | {
+      readonly rule: "multipleOf";
+      readonly literal: string;
+      readonly integerStep: string;
+      readonly message: string;
+    };
 
 // One member of an object, parameter set or proof list: its key as written on the wire, its type and whether
 // it may be absent.
@@ -398,13 +401,13 @@ function boundChecks(
 ): ScalarCheck[] {
   const refinements = typeUse.refinements;
   const refinementsLocation = below(location, "refinements");
-  const written = NUMERIC_RULES.flatMap((rule) => {
+  const written = BOUND_RULES.flatMap((rule) => {
     const literal = refinements[rule];
 
     return literal === undefined ? [] : [{ rule, literal }];
   });
 
-  if (written.length === 0) return [];
+  if (written.length === 0 && refinements.multipleOf === undefined) return [];
 
   if (!NUMERIC_TYPES.includes(typeUse.type)) {
     refusals.push(
@@ -418,21 +421,76 @@ function boundChecks(
     return [];
   }
 
-  return written.flatMap(({ rule, literal }): ScalarCheck[] => {
-    if (!isExactNumberLiteral(literal)) {
-      refusals.push(
-        refuseNotGeneratedYet(
-          "scalar.bound.inexact",
-          `The bound '${literal}', which a JavaScript number does not hold exactly,`,
-          below(refinementsLocation, rule),
-        ),
-      );
+  const checks = written.flatMap(({ rule, literal }): ScalarCheck[] =>
+    isExactLiteral(literal, below(refinementsLocation, rule), refusals) ? [{ rule, literal }] : [],
+  );
 
-      return [];
-    }
+  if (refinements.multipleOf === undefined) return checks;
 
-    return [{ rule, literal }];
-  });
+  return [
+    ...checks,
+    ...multipleOfChecks(
+      typeUse,
+      refinements.multipleOf,
+      below(refinementsLocation, "multipleOf"),
+      refusals,
+    ),
+  ];
+}
+
+// A step on a number is refused by the compiler, where floating point would make validators disagree; a hand-built
+// IR that holds one is refused here too.
+function multipleOfChecks(
+  typeUse: ScalarTypeUse,
+  literal: string,
+  location: IrLocation,
+  refusals: Refusal[],
+): ScalarCheck[] {
+  if (typeUse.type !== "integer") {
+    refusals.push(
+      refuseInconsistentIr(
+        "scalar.multipleOf.misplaced",
+        `A multipleOf step on a ${typeUse.type}`,
+        location,
+      ),
+    );
+
+    return [];
+  }
+
+  if (!isExactLiteral(literal, location, refusals)) return [];
+
+  const integerStep = reducedIntegerStep(literal);
+
+  if (integerStep === undefined) {
+    refusals.push(
+      refuseInconsistentIr(
+        "scalar.multipleOf.zero",
+        `The multipleOf step '${literal}', not above zero,`,
+        location,
+      ),
+    );
+
+    return [];
+  }
+
+  return [
+    { rule: "multipleOf", literal, integerStep, message: `Expected a multiple of ${literal}.` },
+  ];
+}
+
+function isExactLiteral(literal: string, location: IrLocation, refusals: Refusal[]): boolean {
+  if (isExactNumberLiteral(literal)) return true;
+
+  refusals.push(
+    refuseNotGeneratedYet(
+      "scalar.bound.inexact",
+      `The bound '${literal}', which a JavaScript number does not hold exactly,`,
+      location,
+    ),
+  );
+
+  return false;
 }
 
 // True when the decimal literal reads back unchanged from the nearest double, as a JSON decoder would read it

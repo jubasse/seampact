@@ -1,7 +1,7 @@
-import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { expect, test } from "vitest";
+import { expect, onTestFinished, test } from "vitest";
 import { printDiagnostics } from "../diagnostics/print.js";
 import { must } from "./golden.js";
 import { type LoadReader, loadFsReader, loadWorkspace } from "./index.js";
@@ -68,6 +68,9 @@ test("path escapes refused", () => {
 
 test("path escapes refused on disk: ../ and a symlink out of the root", () => {
   const base = mkdtempSync(join(tmpdir(), "seampact-loader-"));
+
+  onTestFinished(() => rmSync(base, { recursive: true, force: true }));
+
   const root = join(base, "ws");
 
   mkdirSync(root);

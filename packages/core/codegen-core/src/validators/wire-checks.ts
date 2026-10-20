@@ -1,14 +1,22 @@
-// The generated checks the validators share: the code point counter and the `date-time` check.
+// The generated checks the validators share: the code point counter, the `date-time` check and the exact integer
+// `multipleOf` check.
 export const CODE_POINT_LENGTH = "codePointLength";
 export const IS_DATE_TIME = "isDateTime";
+export const IS_INTEGER_MULTIPLE = "isIntegerMultiple";
 
-export type WireCheck = typeof CODE_POINT_LENGTH | typeof IS_DATE_TIME;
+export type WireCheck = typeof CODE_POINT_LENGTH | typeof IS_DATE_TIME | typeof IS_INTEGER_MULTIPLE;
 
 // The checks module. A JavaScript string's `length` counts UTF-16 units, JSON Schema's lengths code points.
 // `date-time` follows ADR 0003 section 8: `T` and `Z` in either case, a fraction of 1 to 9 digits, a required
-// offset, a real calendar date, and no leap second. `setUTCFullYear` keeps the years 0 to 99 as written.
+// offset, a real calendar date, and no leap second. `setUTCFullYear` keeps the years 0 to 99 as written. An integer
+// step is the plan's reduced `integerStep`: the remainder is exact on every integer a JavaScript number holds, where a
+// floating-point division is not; a value that is no integer is the integer check's issue.
 export const WIRE_CHECKS_SOURCE = `export function ${CODE_POINT_LENGTH}(value: string): number {
 return Array.from(value).length;
+}
+
+export function ${IS_INTEGER_MULTIPLE}(value: number, integerStep: string): boolean {
+return !Number.isInteger(value) || BigInt(value) % BigInt(integerStep) === 0n;
 }
 
 const DATE_TIME =

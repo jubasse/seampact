@@ -22,6 +22,7 @@ export {
   type NativeDocsContract,
   readNativeDocsDocument,
 } from "./native-docs-reader.js";
+export { type OwnValidatorsLibrary, ownValidatorsFiles } from "./own-validators-files.js";
 export { type NodeServerOptions, parseNodeServerOptions, type ResponsesMode } from "./options.js";
 export { literalSegmentRefusals, mixedSegmentRefusals } from "./path-segment-refusals.js";
 export { compareRouteSpecificity } from "./route-order.js";

@@ -391,17 +391,3 @@ describe("a subclass of a DTO keeps its checks (A45)", () => {
     ]);
   });
 });
-
-describe("the multiple-of check of the runtime", () => {
-  test.each([
-    [3, 0.1, true],
-    [0.07, 0.01, true],
-    [0.075, 0.01, false],
-    [0.3, 0.1, true],
-    [10, 5, true],
-    [7, 5, false],
-    [-9, 3, true],
-  ])("%s is a multiple of %s: %s", (value, step, expected) => {
-    expect(constraints.multipleOfCheck(step).test(value)).toBe(expected);
-  });
-});

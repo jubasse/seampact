@@ -1,11 +1,14 @@
 import { defineTarget, type NoOptions, parseNoOptions, type Target } from "@seampact/codegen-core";
-import { validatorsDescriptor } from "@seampact/codegen-core/validators";
+import {
+  planValidatorsWithinWireNames,
+  validatorsDescriptor,
+} from "@seampact/codegen-core/validators";
 import { IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { format } from "prettier";
 import packageJson from "../package.json" with { type: "json" };
 import { generateValidators, VALIDATORS_ARTEFACT, type ValidatorsArtefact } from "./generate.js";
 import { YUP_VALIDATOR_STYLE } from "./layout.js";
-import { planYupValidators } from "./path-keys.js";
+import { YUP_WIRE_NAME_LIMIT } from "./path-keys.js";
 
 // The yup validators target, as the CLI loads it.
 export const target: Target = defineTarget<NoOptions, ValidatorsArtefact, never, "validators">({
@@ -27,7 +30,7 @@ export const target: Target = defineTarget<NoOptions, ValidatorsArtefact, never,
   parseOptions: parseNoOptions,
   generate: generateValidators,
   describe(ir) {
-    const planned = planYupValidators(ir);
+    const planned = planValidatorsWithinWireNames(ir, YUP_WIRE_NAME_LIMIT);
 
     if (planned.status === "refused") return planned;
 

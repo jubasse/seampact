@@ -1,4 +1,9 @@
-import { UUID_LAYOUT, WIRE_CHECKS_MODULE } from "@seampact/codegen-core/validators";
+import {
+  IS_DATE_TIME,
+  IS_INTEGER_MULTIPLE,
+  UUID_LAYOUT,
+  WIRE_CHECKS_MODULE,
+} from "@seampact/codegen-core/validators";
 
 // The generated module the Ajv validators share: the one boundary-owned Ajv instance, and the Standard Schema that
 // validates without conversion, keeps the declared keys only and names each issue by its contract rule, the
@@ -18,7 +23,7 @@ export const AJV_IMPORT = `import { Ajv2020, type ErrorObject, type SchemaObject
 // reach it. Formats come from the generated checks, never from a library of formats; lengths count code points
 // (Ajv's own count); `ownProperties` ignores inherited members.
 export const AJV_SUPPORT_SOURCE = `${AJV_IMPORT}
-import { isDateTime } from "./${WIRE_CHECKS_MODULE}.js";
+import { ${IS_DATE_TIME}, ${IS_INTEGER_MULTIPLE} } from "./${WIRE_CHECKS_MODULE}.js";
 
 const UNKNOWN_KEYS_CODE = "unrecognized_keys";
 const UUID_FORMAT = new RegExp(${JSON.stringify(UUID_LAYOUT)});
@@ -53,15 +58,15 @@ strict: true,
 unicodeRegExp: true,
 ownProperties: true,
 multipleOfPrecision: 12,
-formats: { uuid: UUID_FORMAT, "date-time": isDateTime },
+formats: { uuid: UUID_FORMAT, "date-time": ${IS_DATE_TIME} },
 });
 
 // The plan's message of a check, kept beside its keyword: Ajv's own text is only the fallback for a keyword the plan
 // words no message for.
 ajv.addKeyword({ keyword: ${JSON.stringify(MESSAGES_KEYWORD)}, schemaType: "object" });
 
-// An integer is a multiple of a decimal step when it is a multiple of the reduced integer step; the remainder is
-// exact, where Ajv's own \`multipleOf\` divides in floating point.
+// An integer is a multiple of a decimal step when it is a multiple of the plan's reduced integer step: the shared
+// check's remainder is exact, where Ajv's own \`multipleOf\` divides in floating point.
 interface IntegerStep {
 readonly literal: string;
 readonly step: string;
@@ -72,10 +77,10 @@ interface IntegerMultipleCheck {
 errors?: Partial<ErrorObject>[];
 }
 
-const isIntegerMultiple: IntegerMultipleCheck = (schema, data) => {
-if (!Number.isInteger(data) || BigInt(data) % BigInt(schema.step) === 0n) return true;
+const validateIntegerMultiple: IntegerMultipleCheck = (schema, data) => {
+if (${IS_INTEGER_MULTIPLE}(data, schema.step)) return true;
 
-isIntegerMultiple.errors = [
+validateIntegerMultiple.errors = [
 { keyword: ${JSON.stringify(INTEGER_MULTIPLE_KEYWORD)}, message: \`must be multiple of \${schema.literal}\`, params: { literal: schema.literal } },
 ];
 
@@ -87,7 +92,7 @@ keyword: ${JSON.stringify(INTEGER_MULTIPLE_KEYWORD)},
 type: "number",
 schemaType: "object",
 errors: true,
-validate: isIntegerMultiple,
+validate: validateIntegerMultiple,
 });
 
 export interface InputIssue {
