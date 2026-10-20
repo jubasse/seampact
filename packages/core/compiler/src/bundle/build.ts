@@ -1,7 +1,6 @@
 import {
   BUNDLE_FORMAT_VERSION,
   BUNDLE_IR_DIRECTORY,
-  BUNDLE_PACKS_DIRECTORY,
   BUNDLE_SOURCES_DIRECTORY,
   type BundleApi,
   type BundleFailure,
@@ -16,6 +15,7 @@ import compilerPackage from "../../package.json" with { type: "json" };
 import { finalizeSerializeIr } from "../finalize/serialize.js";
 import type { LoadReader } from "../load/index.js";
 import { LOAD_MAX_FILE_BYTES } from "../load/limits.js";
+import { PACK_FILE, packageNameOf, packVendoredDirectory } from "../load/pack-files.js";
 import type { LoadText } from "../load/reader.js";
 import { compileWorkspace, type PipelineResult } from "../pipeline/orchestrator.js";
 import { quote } from "../validate/diagnostics.js";
@@ -47,9 +47,6 @@ export type BundleBuildResult =
     };
 
 const PACKAGE_MANIFEST = "package.json";
-
-// A file of a package resolved from a `node_modules` at or above the workspace root (the loader's pack walk).
-const PACK_FILE = /^((?:\.\.\/)*node_modules\/(?:@[^/]+\/)?[^/]+)\/(.+)$/u;
 
 const COMPILER: BundleNamedVersion = {
   name: compilerPackage.name,
@@ -333,15 +330,13 @@ function bundlePathOf(
 
 // `sources/.packs/<name>@<version>`, the version read from the package's own package.json.
 function vendoredDirectory(reader: LoadReader, packageDirectory: string): string | BundleFailure {
-  const name = packageDirectory.slice(
-    packageDirectory.lastIndexOf("node_modules/") + "node_modules/".length,
-  );
+  const name = packageNameOf(packageDirectory);
   const manifestFile = `${packageDirectory}/${PACKAGE_MANIFEST}`;
   const manifest = readPackageManifest(reader, manifestFile);
   const version = typeof manifest === "object" ? manifest.version : undefined;
 
   if (typeof version === "string" && version !== "")
-    return `${BUNDLE_PACKS_DIRECTORY}/${name}@${version}`;
+    return `${BUNDLE_SOURCES_DIRECTORY}/${packVendoredDirectory(name, version)}`;
 
   const problem =
     typeof manifest === "string" ? manifest : `'${manifestFile}' holds no version string`;
