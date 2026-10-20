@@ -56,6 +56,7 @@ describe("seampact/not-found-role", () => {
   });
 
   test("does not fire when the route has one 404 code", async () => {
-    expect(await notFoundRuleOf("engine")).toEqual([]);
+    // A collection route holds only parent ids, so it derives no notFound code.
+    expect(await notFoundRuleOf("not-found-single")).toEqual([]);
   });
 });
