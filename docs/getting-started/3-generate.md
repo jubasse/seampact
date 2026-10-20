@@ -32,4 +32,6 @@ You see one line per target, and the files appear in `src/__generated__` and `op
 
 Every config key is in [configuration](configuration.md).
 
-Next: [4. Write the handlers](4-handlers-nestjs.md)
+Not on NestJS? Each handlers page shows its own `server` target and dependencies.
+
+Next: 4. Write the handlers for [NestJS](4-handlers-nestjs.md), [Express](4-handlers-express.md), [Fastify](4-handlers-fastify.md), [AdonisJS](4-handlers-adonis.md) or [Hono](4-handlers-hono.md)

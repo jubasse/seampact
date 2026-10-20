@@ -1,0 +1,99 @@
+# 4. Write the handlers (Hono)
+
+This page replaces the NestJS page. Two earlier steps change when you use Hono 4 on Node.
+
+In step 1, use these dependencies in `package.json`. You do not need `experimentalDecorators` in `tsconfig.json`.
+
+```json
+  "dependencies": {
+    "@hono/node-server": "2.1.5",
+    "hono": "4.13.13",
+    "zod": "4.6.7"
+  },
+```
+
+In step 3, the `server` target uses `@seampact/codegen-hono`. It has no `bodyValidation` option.
+
+```yaml
+  - id: server
+    use: "@seampact/codegen-hono"
+    apis: [notes]
+    link:
+      types: types
+      validators: validators
+```
+
+The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows, written `as const`. Create `src/notes-handlers.ts`.
+
+```ts
+import { randomUUID } from "node:crypto";
+import type * as NotesHono from "./__generated__/server/notes/index.js";
+import type * as Notes from "./__generated__/types/notes/index.js";
+
+const notes = new Map<string, Notes.schemas.Note>();
+
+export const notesEndpoints: NotesHono.NotesEndpoints = {
+  listNotes() {
+    return { status: 200 as const, body: { items: [...notes.values()] } };
+  },
+
+  getNote(input) {
+    const note = notes.get(input.path.noteId);
+
+    if (note === undefined) return { status: 404 as const, code: "api.not_found" as const };
+
+    return { status: 200 as const, body: note };
+  },
+
+  createNote(input) {
+    const note = { noteId: randomUUID(), createdAt: new Date().toISOString(), ...input.body };
+
+    notes.set(note.noteId, note);
+
+    return { status: 201 as const, body: note };
+  },
+
+  deleteNote(input) {
+    if (!notes.delete(input.path.noteId))
+      return { status: 404 as const, code: "api.not_found" as const };
+
+    return { status: 204 as const };
+  },
+};
+```
+
+`listNotes` returns every note; a real app reads `input.query.cursor` to page through them.
+
+Types come from `types/notes`. The handlers interface and `registerRoutes` come from `server/notes`.
+
+Create `src/main.ts`. The empty hooks are enough because this api is public. `onError` makes a failing handler answer in the contract's error format. `checkFrameworkRoutes` must run after the last route is added and before the app serves.
+
+```ts
+import { serve } from "@hono/node-server";
+import { Hono } from "hono";
+import * as NotesHono from "./__generated__/server/notes/index.js";
+import { notesEndpoints } from "./notes-handlers.js";
+
+const app = new Hono();
+
+app.onError((error, c) => NotesHono.renderContractError(c, error));
+
+NotesHono.registerRoutes(app, {
+  handlers: { NotesEndpoints: notesEndpoints },
+  hooks: { authenticate: {}, deciders: [], scopeResolvers: {} },
+});
+
+NotesHono.checkFrameworkRoutes(app);
+
+serve({ fetch: app.fetch, port: 3000 });
+```
+
+Typecheck.
+
+```sh
+npx tsc -p .
+```
+
+You see no output.
+
+Next: [5. Run it](5-run.md)
