@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { buildPackages, packPackages } from "../consumers/build-and-pack.ts";
 import {
   assembleConsumer,
-  COMMIT_FILE,
   prepareConsumerDirectory,
   useTarballs,
   VENDOR_DIRECTORY,
@@ -13,6 +12,7 @@ import { runStep } from "../consumers/run-step.ts";
 import { validatorChoice } from "../consumers/validator-choice.ts";
 import { REPO_ROOT } from "../golden/repo-root.ts";
 import type { BenchPair } from "./pairs.ts";
+import { checkTarballContents } from "./tarball-check.ts";
 
 const CONSUMERS_ROOT = join(REPO_ROOT, "scripts/consumers");
 const BENCH_SOURCES = join(REPO_ROOT, "scripts/bench/project");
@@ -26,6 +26,8 @@ const BENCH_DEPENDENCIES = { autocannon: "8.0.0", tsx: "4.23.15" } as const;
 // tsx depends on esbuild, whose install script pnpm refuses unless it is approved; esbuild runs without it.
 const INSTALL_WITHOUT_BUILD_SCRIPT_CHECK = "--config.strictDepBuilds=false";
 
+// Written last, once install and generate succeeded: a project without it is stale.
+const READY_FILE = ".bench-ready";
 const CONFIG_FILE = "seampact.config.yaml";
 const BODY_VALIDATION_ON = "bodyValidation: true";
 const BODY_VALIDATION_OFF = "bodyValidation: false";
@@ -45,7 +47,11 @@ export function packOnce(workDirectory: string): PackedTarballs {
 
   buildPackages(REPO_ROOT);
 
-  return { directory, byPackage: packPackages(REPO_ROOT, directory) };
+  const byPackage = packPackages(REPO_ROOT, directory);
+
+  for (const file of byPackage.values()) checkTarballContents(join(directory, file));
+
+  return { directory, byPackage };
 }
 
 // The assembled project of a pair, installed and generated. A project of an earlier run on the same commit is
@@ -101,18 +107,15 @@ export function prepareProject(options: {
     args: ["exec", "seampact", "generate"],
     cwd: directory,
   });
+  writeFileSync(join(directory, READY_FILE), `${commit}\n`);
 
   return directory;
 }
 
 function isProjectOfCommit(directory: string, commit: string): boolean {
-  const marker = join(directory, COMMIT_FILE);
+  const marker = join(directory, READY_FILE);
 
-  return (
-    existsSync(marker) &&
-    existsSync(join(directory, "node_modules")) &&
-    readFileSync(marker, "utf8").trim() === commit
-  );
+  return existsSync(marker) && readFileSync(marker, "utf8").trim() === commit;
 }
 
 // The consumer config of every target turns the outgoing body check on; the second row of a pair turns it off.

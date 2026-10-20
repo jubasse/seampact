@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { loadavg, tmpdir } from "node:os";
+import { homedir, loadavg } from "node:os";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { REPO_ROOT } from "../golden/repo-root.ts";
@@ -30,7 +30,8 @@ const USAGE =
   "usage: node scripts/bench/cli.ts (--all | --target <overlay> --validators <id>) [--check] [--body-off] [--latency] [--thorough] [--parallel <n>] [--profile] [--route <ids>] [--duration <s>] [--warmup <s>] [--repeats <n>] [--connections <n>] [--out <dir>] [--work <dir>] [--fresh] [--compare <results.json>]";
 const CONSUMERS_ROOT = join(REPO_ROOT, "scripts/consumers");
 const DEFAULT_OUT = join(REPO_ROOT, ".bench-output/latest");
-const DEFAULT_WORK = join(tmpdir(), "seampact-bench");
+// Outside /tmp: a full run fills the inodes of a tmpfs.
+const DEFAULT_WORK = join(homedir(), ".cache/seampact-bench");
 const DEFAULT_ROUTES = [
   "health",
   "getChannel",
