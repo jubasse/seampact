@@ -18,4 +18,5 @@ export const target: Target = nodeServerTarget({
     frameworkSource: expressModuleSource,
   },
   validatorStyles: serverTargetCompatibility(packageJson.name).validatorStyles,
+  frameworkDocsOffFix: "this framework writes no document of its own; remove the key",
 });

@@ -20,4 +20,5 @@ export const target: Target = nodeServerTarget({
     ownValidators: ajvOwnValidators,
   },
   validatorStyles: serverTargetCompatibility(packageJson.name).validatorStyles,
+  frameworkDocsOffFix: "remove the `@fastify/swagger` registration",
 });

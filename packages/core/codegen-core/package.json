@@ -6,6 +6,7 @@
   "type": "module",
   "files": [
     "dist",
+    "native-docs-runtime",
     "node-server-runtime"
   ],
   "main": "./src/index.ts",

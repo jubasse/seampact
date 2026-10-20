@@ -3,6 +3,7 @@ import type { DescriptorSet, LinkKind, ProvidedDescriptors } from "./descriptors
 import type { FrameworkRouteCheck, TunableBootCheck } from "./framework-route-check.js";
 import type { GenerateWarning } from "./generate-warning.js";
 import type { LinkNeeds, LinkOffers, LinkSet, Links } from "./links.js";
+import type { NativeDocsDocument } from "./native-docs-document.js";
 import type { Refused } from "./refusal.js";
 
 // One artefact a target can emit, whether it is emitted when the app config does not switch it, and the artefacts
@@ -36,6 +37,11 @@ export interface TargetMetadata<
   provides: LinkOffers<Provided>;
   /** The boot checks the app config entry may tune; none when absent. */
   bootChecks?: readonly TunableBootCheck[];
+  /**
+   * The fix the CLI states when the app config sets `frameworkDocs: off`, for a target that knows no switch for its
+   * framework's own docs; absent when the target has no such docs or a switch the CLI can write.
+   */
+  frameworkDocsOffFix?: string;
 }
 
 // The metadata of any target, as the CLI reads it: each kind is present when the target consumes or provides it.
@@ -55,6 +61,8 @@ export interface GenerateInput<
   links: Links<Consumed, Optional>;
   artefacts: ReadonlySet<Artefact>;
   frameworkRoutes: FrameworkRouteCheck;
+  /** The api's document the framework's docs follow; present exactly when the `nativeDocs` artefact is on. */
+  nativeDocsDocument?: NativeDocsDocument;
 }
 
 // One file a target writes. `path` is a POSIX path relative to the target's output root.
@@ -124,6 +132,8 @@ export interface GenerateRequest {
   artefacts: ReadonlySet<string>;
   /** The entry's framework-route check; the default check when absent. */
   frameworkRoutes?: FrameworkRouteCheck;
+  /** The parsed seampact document the `nativeDocs` artefact follows; the target refuses `nativeDocs` without it. */
+  nativeDocsDocument?: NativeDocsDocument;
 }
 
 // The target as the CLI sees it, whatever its options, artefacts and links.

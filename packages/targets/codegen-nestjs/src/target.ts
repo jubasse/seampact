@@ -19,4 +19,5 @@ export const target: Target = nodeServerTarget({
     frameworkSource: nestjsModuleSource,
   },
   validatorStyles: serverTargetCompatibility(packageJson.name).validatorStyles,
+  frameworkDocsOffFix: "remove the `SwaggerModule.setup` call",
 });

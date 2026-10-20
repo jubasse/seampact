@@ -10,10 +10,17 @@ export {
   type NodeServerPlacement,
   type NodeServerTargetPackage,
   nodeServerBoundaryFiles,
+  NATIVE_DOCS_ARTEFACT,
+  type NativeDocsPlacement,
   nodeServerTarget,
   OWN_VALIDATORS_ARTEFACT,
   type OwnValidators,
 } from "./boundary-files.js";
+export {
+  type DocumentedOperation,
+  type NativeDocsContract,
+  readNativeDocsDocument,
+} from "./native-docs-reader.js";
 export { handlerMapDeclarations, largestBodyLimit } from "./handler-map-module.js";
 export { type NodeServerOptions, parseNodeServerOptions, type ResponsesMode } from "./options.js";
 export { literalSegmentRefusals, mixedSegmentRefusals } from "./path-segment-refusals.js";

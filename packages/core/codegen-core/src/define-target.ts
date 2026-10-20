@@ -58,6 +58,9 @@ export function defineTarget<
       links,
       artefacts,
       frameworkRoutes: structuredClone(request.frameworkRoutes ?? DEFAULT_FRAMEWORK_ROUTE_CHECK),
+      ...(request.nativeDocsDocument === undefined
+        ? {}
+        : { nativeDocsDocument: structuredClone(request.nativeDocsDocument) }),
     });
 
     if (generated.status === "refused") return generated;

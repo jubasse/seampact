@@ -19,4 +19,5 @@ export const target: Target = nodeServerTarget({
     runtimeProfile: "web",
   },
   validatorStyles: serverTargetCompatibility(packageJson.name).validatorStyles,
+  frameworkDocsOffFix: "this framework writes no document of its own; remove the key",
 });
