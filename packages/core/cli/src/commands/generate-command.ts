@@ -20,6 +20,7 @@ import {
   checkAppCompatibility,
   defaultDocumentDirectory,
   type LoadedAppConfig,
+  NATIVE_DOCS_ARTEFACT,
   openApiApiNames,
   type PlannedAppDocument,
   planAppDocuments,
@@ -47,8 +48,10 @@ import {
   unprovidedKindProblems,
 } from "./entry-links.js";
 import { filterOperations } from "./filter-operations.js";
+import { frameworkDocsProblems } from "./framework-docs.js";
 import { frameworkRouteCheckOf, unreadFrameworkRouteKeyProblems } from "./framework-route-check.js";
 import { addLink, isLinkKind, type MutableLinkSet, relativeLocation } from "./link-set.js";
+import { nativeDocsDocumentOf } from "./native-docs-document.js";
 
 // The files of one entry and api, generated in memory before anything is written.
 interface GeneratedOutput {
@@ -112,7 +115,11 @@ export async function generateCommand(location: ConfigLocation, io: CliIo): Prom
     return EXIT_REFUSED;
   }
 
-  const generated = await generateEntries(planned.value.entries, planned.value.artefacts);
+  const generated = await generateEntries(
+    planned.value.entries,
+    planned.value.artefacts,
+    planned.value.documents.map(({ planned: appDocument }) => appDocument),
+  );
   const emitted = emitAppDocuments(planned.value.documents);
   const problems = [
     ...(generated.status === "refused" ? generated.problems : []),
@@ -345,7 +352,7 @@ function planEachEntry(
     const unreadKeyProblems = unreadFrameworkRouteKeyProblems(entry, target);
     const apis = planEntryApis(entry, root, compiled);
 
-    problems.push(...unreadKeyProblems);
+    problems.push(...unreadKeyProblems, ...frameworkDocsProblems(entry, target));
 
     if (apis.status === "refused") problems.push(...apis.problems);
     else planned.set(entry.id, { entry, target, apis: apis.value });
@@ -393,6 +400,7 @@ function planEntryApis(
 async function generateEntries(
   planned: readonly PlannedEntry[],
   artefacts: ReadonlyMap<string, ReadonlySet<string>>,
+  appDocuments: readonly PlannedAppDocument[],
 ): Promise<Step<GeneratedOutput[]>> {
   const byId = new Map(planned.map((each) => [each.entry.id, each]));
   const describe = memoizedDescribe();
@@ -407,6 +415,7 @@ async function generateEntries(
         byId,
         describe,
         entryArtefacts(artefacts, consumer.entry.id),
+        appDocuments,
       );
 
       if (generated.status === "refused") problems.push(...generated.problems);
@@ -423,11 +432,18 @@ async function generateApi(
   byId: ReadonlyMap<string, PlannedEntry>,
   describe: Describe,
   artefacts: ReadonlySet<string>,
+  appDocuments: readonly PlannedAppDocument[],
 ): Promise<Step<GeneratedOutput>> {
   const { entry, target } = consumer;
   const links = buildLinks(consumer, plannedApi, byId, describe);
 
   if (links.status === "refused") return links;
+
+  const nativeDocs = artefacts.has(NATIVE_DOCS_ARTEFACT)
+    ? nativeDocsDocumentOf(entry, plannedApi, appDocuments)
+    : undefined;
+
+  if (nativeDocs?.status === "refused") return nativeDocs;
 
   const outcome = await target.generate({
     ir: plannedApi.ir,
@@ -435,6 +451,7 @@ async function generateApi(
     links: links.value,
     artefacts: new Set(artefacts),
     frameworkRoutes: frameworkRouteCheckOf(entry),
+    ...(nativeDocs === undefined ? {} : { nativeDocsDocument: nativeDocs.value }),
   });
 
   if (outcome.status === "refused") {

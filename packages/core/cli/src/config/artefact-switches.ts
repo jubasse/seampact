@@ -16,7 +16,7 @@ export type ArtefactSelection =
   | { status: "selected"; artefacts: ReadonlySet<string> }
   | { status: "refused"; problems: CliProblem[] };
 
-const NATIVE_DOCS_ARTEFACT = "nativeDocs";
+export const NATIVE_DOCS_ARTEFACT = "nativeDocs";
 
 export function selectArtefacts(entry: TargetEntry, target: Target): ArtefactSelection {
   const declared = target.metadata.artefacts;

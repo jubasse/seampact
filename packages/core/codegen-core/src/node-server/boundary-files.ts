@@ -7,6 +7,7 @@ import type { ValidatorStyle, ValidatorsDescriptor } from "../descriptors.js";
 import type { TunableBootCheck } from "../framework-route-check.js";
 import type { GenerateWarning } from "../generate-warning.js";
 import type { Link } from "../links.js";
+import type { NativeDocsDocument } from "../native-docs-document.js";
 import { type Refusal, withoutRepeats } from "../refusal.js";
 import type {
   GeneratedFile,
@@ -15,6 +16,8 @@ import type {
   SourceFormat,
   Target,
 } from "../target.js";
+import { type NativeDocsContract, readNativeDocsDocument } from "./native-docs-reader.js";
+import { nativeDocsRuntimeFile } from "./native-docs-runtime-file.js";
 import { type NodeServerOptions, parseNodeServerOptions } from "./options.js";
 import { routeTableSource } from "./route-table.js";
 import {
@@ -34,7 +37,13 @@ export type BoundaryArtefact = typeof BOUNDARY_ARTEFACT;
 /** The artefact of a target that generates its own validators when its entry gives no `validators` link. */
 export const OWN_VALIDATORS_ARTEFACT = "validators";
 
-export type NodeServerArtefact = BoundaryArtefact | typeof OWN_VALIDATORS_ARTEFACT;
+/** The artefact of a target whose framework writes an OpenAPI document of its own, completed with the contract. */
+export const NATIVE_DOCS_ARTEFACT = "nativeDocs";
+
+export type NodeServerArtefact =
+  | BoundaryArtefact
+  | typeof OWN_VALIDATORS_ARTEFACT
+  | typeof NATIVE_DOCS_ARTEFACT;
 
 /** The boot checks a Node server target generates that its app config entry may tune. */
 export const NODE_SERVER_BOOT_CHECKS: readonly TunableBootCheck[] = ["frameworkRoutes"];
@@ -45,6 +54,14 @@ export interface OwnValidators {
   readonly descriptor: ValidatorsDescriptor;
 }
 
+/** The docs a placement writes for its framework's own OpenAPI generator, from seampact's document of the api. */
+export interface NativeDocsPlacement {
+  /** The module name of the api's docs module, such as `nestjs-docs`, re-exported by the index. */
+  readonly docsModule: string;
+  /** The docs module source; pushes its refusals. It imports the guards from `./native-docs/contract-document.js`. */
+  docsSource(ir: ContractIR, contract: NativeDocsContract, refusals: Refusal[]): string;
+}
+
 /** What a Node server target adds to the shared files. */
 export interface NodeServerPlacement {
   /** The module name of the static placement file, such as `nestjs-boundary`. */
@@ -53,7 +70,15 @@ export interface NodeServerPlacement {
   readonly runtimeSourceUrl: URL;
   /** The module name of the api's framework module, such as `nestjs`, re-exported by the index first. */
   readonly frameworkModule: string;
-  frameworkSource(ir: ContractIR, options: NodeServerOptions, refusals: Refusal[]): string;
+  /** `docsModule` is the name of the docs module when `nativeDocs` is on, for the framework module to use. */
+  frameworkSource(
+    ir: ContractIR,
+    options: NodeServerOptions,
+    refusals: Refusal[],
+    docsModule?: string,
+  ): string;
+  /** The docs of the framework's own OpenAPI generator, written when the `nativeDocs` artefact is on; absent when it has none. */
+  readonly nativeDocs?: NativeDocsPlacement;
   /** The shared runtime the placement imports: `node` (the default) or `web` for a Web-standard placement. */
   readonly runtimeProfile?: ServerRuntimeProfile;
   /**
@@ -71,6 +96,8 @@ export interface NodeServerTargetPackage {
   readonly placement: NodeServerPlacement;
   /** The validator styles the target reads through its `validators` link. */
   readonly validatorStyles: readonly ValidatorStyle[];
+  /** The fix for `frameworkDocs: off`, for a target that knows no switch for its framework's docs. */
+  readonly frameworkDocsOffFix?: string;
 }
 
 const OWN_VALIDATORS_DIRECTORY = "validators";
@@ -111,8 +138,14 @@ export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target
         ...(ownLibrary === undefined
           ? []
           : [{ id: OWN_VALIDATORS_ARTEFACT, defaultOn: true } as const]),
+        ...(targetPackage.placement.nativeDocs === undefined
+          ? []
+          : [{ id: NATIVE_DOCS_ARTEFACT, defaultOn: false, needs: [BOUNDARY_ARTEFACT] } as const]),
       ],
       bootChecks: NODE_SERVER_BOOT_CHECKS,
+      ...(targetPackage.frameworkDocsOffFix === undefined
+        ? {}
+        : { frameworkDocsOffFix: targetPackage.frameworkDocsOffFix }),
       consumes: {
         types: { styles: ["typescript"] },
         validators: {
@@ -265,7 +298,15 @@ function boundaryFiles(
     `./${runtimeDirectory}/boundary-hooks.js`,
     refusals,
   );
-  const framework = placement.frameworkSource(ir, options, refusals);
+  const docs = input.artefacts.has(NATIVE_DOCS_ARTEFACT)
+    ? nativeDocsFiles(input, placement, refusals)
+    : [];
+  const framework = placement.frameworkSource(
+    ir,
+    options,
+    refusals,
+    docs.length === 0 ? undefined : placement.nativeDocs?.docsModule,
+  );
 
   if (refusals.length > 0) return { status: "refused", refusals: withoutRepeats(refusals) };
 
@@ -279,10 +320,14 @@ function boundaryFiles(
     { path: moduleFile(HANDLERS_MODULE), contents: handlers },
     { path: moduleFile(HOOKS_MODULE), contents: hooks },
     { path: moduleFile(placement.frameworkModule), contents: framework },
+    ...docs,
     {
       path: moduleFile(INDEX_MODULE),
       contents: apiIndexSource([
         { module: placement.frameworkModule },
+        ...(docs.length === 0 || placement.nativeDocs === undefined
+          ? []
+          : [{ module: placement.nativeDocs.docsModule }]),
         { module: HANDLERS_MODULE },
         { module: HOOKS_MODULE },
       ]),
@@ -290,6 +335,31 @@ function boundaryFiles(
   ];
 
   return { status: "generated", files, warnings };
+}
+
+// The docs module of the framework's own generator and the guards it imports; none (and a refusal pushed) when the
+// target has no docs placement or the document cannot be read.
+function nativeDocsFiles(
+  input: { ir: ContractIR; nativeDocsDocument?: NativeDocsDocument },
+  placement: NodeServerPlacement,
+  refusals: Refusal[],
+): GeneratedFile[] {
+  if (placement.nativeDocs === undefined) {
+    throw new Error(
+      "A target that declares the nativeDocs artefact must give a nativeDocs placement.",
+    );
+  }
+
+  const contract = readNativeDocsDocument(input.nativeDocsDocument, input.ir, refusals);
+
+  if (contract === undefined) return [];
+
+  const source = placement.nativeDocs.docsSource(input.ir, contract, refusals);
+
+  return [
+    nativeDocsRuntimeFile(),
+    { path: moduleFile(placement.nativeDocs.docsModule), contents: source },
+  ];
 }
 
 function moduleFile(module: string): string {

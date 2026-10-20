@@ -4,6 +4,7 @@ import { serverTargetCompatibility } from "@seampact/spec/compatibility";
 import { format } from "prettier";
 import packageJson from "../package.json" with { type: "json" };
 import { ajvOwnValidators } from "./ajv/index.js";
+import { fastifyDocsModuleSource } from "./fastify-docs-module.js";
 import { fastifyModuleSource } from "./fastify-module.js";
 
 // The Fastify target, as the CLI loads it. Its placement is a checked source of this package one directory above both
@@ -17,7 +18,9 @@ export const target: Target = nodeServerTarget({
     runtimeSourceUrl: new URL("../runtime/fastify-boundary.ts", import.meta.url),
     frameworkModule: "fastify",
     frameworkSource: fastifyModuleSource,
+    nativeDocs: { docsModule: "fastify-docs", docsSource: fastifyDocsModuleSource },
     ownValidators: ajvOwnValidators,
   },
   validatorStyles: serverTargetCompatibility(packageJson.name).validatorStyles,
+  frameworkDocsOffFix: "remove the `@fastify/swagger` registration",
 });

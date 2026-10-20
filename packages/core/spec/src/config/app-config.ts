@@ -1,5 +1,5 @@
 import { JSON_SCHEMA_DIALECT, type JsonSchema } from "../authoring/schemas.js";
-import { type AppChecks, APP_CHECKS_SCHEMA } from "./checks-config.js";
+import { APP_CHECKS_SCHEMA, type AppChecks } from "./checks-config.js";
 import {
   ENTRY_ID_PATTERN,
   NAME_LIST,
@@ -102,7 +102,13 @@ export interface TargetEntry {
   allowUntested?: string[];
   // The server's routes outside the contract the boot check accepts (ADR 0011, ADR 0012).
   frameworkRoutes?: FrameworkRouteEntry[];
+  // `off` asks the target to switch its framework's own OpenAPI document off; `keep` when absent (ADR 0011).
+  frameworkDocs?: FrameworkDocsSwitch;
 }
+
+export const FRAMEWORK_DOCS_SWITCHES = ["keep", "off"] as const;
+
+export type FrameworkDocsSwitch = (typeof FRAMEWORK_DOCS_SWITCHES)[number];
 
 // By artefact id; `bootCheck` also takes its checks apart (ADR 0012), its object form leaving the artefact on.
 export interface ArtefactSwitches {
@@ -223,6 +229,7 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
           uniqueItems: true,
         },
         frameworkRoutes: { type: "array", items: { $ref: "#/$defs/frameworkRoute" } },
+        frameworkDocs: { enum: [...FRAMEWORK_DOCS_SWITCHES] },
       },
       oneOf: [
         { required: ["api"], not: { required: ["apis"] } },

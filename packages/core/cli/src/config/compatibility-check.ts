@@ -1,5 +1,6 @@
 import type { Target } from "@seampact/codegen-core";
 import {
+  type LibrarySupport,
   SERVER_TARGETS,
   supportedMajorsOf,
   type TargetCompatibility,
@@ -10,6 +11,7 @@ import {
   type TargetEntry,
 } from "@seampact/spec/config";
 import { type CliProblem, entryWhere } from "../cli-problem.js";
+import { selectArtefacts } from "./artefact-switches.js";
 import { type InstalledVersion, readInstalledVersion } from "./installed-version.js";
 import type { LoadedAppConfig } from "./read-app-config.js";
 
@@ -28,6 +30,8 @@ export interface CompatibilityInput {
   targets: ReadonlyMap<string, Target>;
   // The installed version of the framework package the matrix records for each entry's target, by entry id.
   installedVersions: ReadonlyMap<string, InstalledVersion>;
+  // The installed version of each library the entry's switched-on artefacts import, by entry id.
+  installedLibraries?: ReadonlyMap<string, readonly InstalledVersion[]>;
   matrix: readonly TargetCompatibility[];
   level: MatrixCheckLevel;
 }
@@ -42,17 +46,30 @@ export function checkAppCompatibility(
   const entries = config.entries.map(({ entry }) => entry);
   const outputRoots = new Map(config.entries.map(({ entry, root }) => [entry.id, root]));
   const installedVersions = new Map<string, InstalledVersion>();
+  const installedLibraries = new Map<string, readonly InstalledVersion[]>();
   const problems: CliProblem[] = [];
 
-  for (const { entry, framework } of recordedEntries(entries, targets, matrix)) {
+  for (const { entry, record } of recordedEntries(entries, targets, matrix)) {
     const root = outputRoots.get(entry.id);
 
     if (root === undefined) throw new Error(`no output root for the entry ${entry.id}`);
 
-    const read = readInstalledVersion(root, framework.package, entryWhere(entry.id));
+    const where = entryWhere(entry.id);
+    const read = readInstalledVersion(root, record.framework.package, where);
 
     if (read.status === "refused") problems.push(read.problem);
     else installedVersions.set(entry.id, read.installed);
+
+    const libraries: InstalledVersion[] = [];
+
+    for (const library of librariesInUse(entry, targets, record)) {
+      const readLibrary = readInstalledVersion(root, library.package, where);
+
+      if (readLibrary.status === "refused") problems.push(readLibrary.problem);
+      else libraries.push(readLibrary.installed);
+    }
+
+    installedLibraries.set(entry.id, libraries);
   }
 
   if (problems.length > 0) return { problems, warnings: [] };
@@ -61,6 +78,7 @@ export function checkAppCompatibility(
     entries,
     targets,
     installedVersions,
+    installedLibraries,
     matrix,
     level: config.checks?.matrix ?? DEFAULT_MATRIX_CHECK_LEVEL,
   });
@@ -87,6 +105,10 @@ export function checkCompatibility(input: CompatibilityInput): CompatibilityOutc
     }
 
     checkEntry(entry, record, installed, input.level, outcome);
+
+    for (const library of input.installedLibraries?.get(entry.id) ?? []) {
+      checkLibrary(entry, record, library, input.level, outcome);
+    }
   }
 
   return outcome;
@@ -102,7 +124,9 @@ function checkEntry(
   const { framework } = record;
   const allowed = entry.allowUntested ?? [];
 
-  outcome.problems.push(...foreignFrameworkProblems(entry, framework.id, allowed));
+  outcome.problems.push(
+    ...foreignFrameworkProblems(entry, knownIds(record), framework.id, allowed),
+  );
   outcome.warnings.push(...testedMajorWarnings(entry, record, allowed));
 
   const incompatible = framework.incompatible.find((each) => each.major === installed.major);
@@ -118,14 +142,50 @@ function checkEntry(
     return;
   }
 
-  const isTested = supportedMajorsOf(record).includes(installed.major);
-  const allowItem = `${framework.id}@${installed.major}`;
+  reportUntestedMajor(
+    entry,
+    { id: framework.id, testedMajors: supportedMajorsOf(record) },
+    installed,
+    level,
+    outcome,
+  );
+}
 
-  if (isTested || allowed.includes(allowItem)) return;
+// A library the entry's artefact imports: tested majors only, no incompatible record.
+function checkLibrary(
+  entry: TargetEntry,
+  record: TargetCompatibility,
+  installed: InstalledVersion,
+  level: MatrixCheckLevel,
+  outcome: CompatibilityOutcome,
+): void {
+  const library = record.libraries?.find((each) => each.package === installed.packageName);
+
+  if (library === undefined) {
+    throw new Error(`no library record ${installed.packageName} for the entry ${entry.id}`);
+  }
+
+  reportUntestedMajor(entry, library, installed, level, outcome);
+}
+
+// An installed major the matrix does not test is a warning, an error under `checks.matrix: error`, and nothing when
+// the entry accepts it in `allowUntested`.
+function reportUntestedMajor(
+  entry: TargetEntry,
+  subject: { id: string; testedMajors: readonly number[] },
+  installed: InstalledVersion,
+  level: MatrixCheckLevel,
+  outcome: CompatibilityOutcome,
+): void {
+  const allowItem = `${subject.id}@${installed.major}`;
+
+  if (subject.testedMajors.includes(installed.major)) return;
+
+  if ((entry.allowUntested ?? []).includes(allowItem)) return;
 
   const untested = {
     code: "config.matrix.untested",
-    message: `${framework.package} ${installed.version} is installed, and the target '${entry.use}' is tested on ${framework.id} ${testedMajorsText(record)} only.`,
+    message: `${installed.packageName} ${installed.version} is installed, and the target '${entry.use}' is tested on ${subject.id} ${subject.testedMajors.join(", ")} only.`,
     fix: `Install a tested major, or accept this one with \`allowUntested: [${allowItem}]\` on the entry.`,
     where: entryWhere(entry.id),
   };
@@ -137,11 +197,12 @@ function checkEntry(
 // Each `allowUntested` item naming another framework than the one the target serves.
 function foreignFrameworkProblems(
   entry: TargetEntry,
+  knownFrameworkIds: readonly string[],
   frameworkId: string,
   allowed: readonly string[],
 ): CliProblem[] {
   return allowed
-    .filter((item) => frameworkIdOf(item) !== frameworkId)
+    .filter((item) => !knownFrameworkIds.includes(frameworkIdOf(item)))
     .map((item) => ({
       code: "config.matrix.unknown-framework",
       message: `The \`allowUntested\` item '${item}' names the framework '${frameworkIdOf(item)}', and the target '${entry.use}' serves '${frameworkId}'.`,
@@ -156,7 +217,12 @@ function testedMajorWarnings(
   record: TargetCompatibility,
   allowed: readonly string[],
 ): CliProblem[] {
-  const testedItems = supportedMajorsOf(record).map((major) => `${record.framework.id}@${major}`);
+  const testedItems = [
+    ...supportedMajorsOf(record).map((major) => `${record.framework.id}@${major}`),
+    ...(record.libraries ?? []).flatMap((library) =>
+      library.testedMajors.map((major) => `${library.id}@${major}`),
+    ),
+  ];
 
   return allowed
     .filter((item) => testedItems.includes(item))
@@ -186,12 +252,35 @@ function recordedEntries(
   entries: readonly TargetEntry[],
   targets: ReadonlyMap<string, Target>,
   matrix: readonly TargetCompatibility[],
-): { entry: TargetEntry; framework: TargetCompatibility["framework"] }[] {
+): { entry: TargetEntry; record: TargetCompatibility }[] {
   return entries.flatMap((entry) => {
     const record = matrixRecordOf(entry, targets, matrix);
 
-    return record === undefined ? [] : [{ entry, framework: record.framework }];
+    return record === undefined ? [] : [{ entry, record }];
   });
+}
+
+// The libraries of the record whose artefact the entry generates; an entry whose artefacts are refused is reported
+// by the artefact selection, so it imports none here.
+function librariesInUse(
+  entry: TargetEntry,
+  targets: ReadonlyMap<string, Target>,
+  record: TargetCompatibility,
+): readonly LibrarySupport[] {
+  const target = targets.get(entry.id);
+
+  if (target === undefined) throw new Error(`no resolved target for the entry ${entry.id}`);
+
+  const selection = selectArtefacts(entry, target);
+
+  if (selection.status === "refused") return [];
+
+  return (record.libraries ?? []).filter((library) => selection.artefacts.has(library.artefact));
+}
+
+// The ids `allowUntested` may name: the framework and each library of the target.
+function knownIds(record: TargetCompatibility): readonly string[] {
+  return [record.framework.id, ...(record.libraries ?? []).map((library) => library.id)];
 }
 
 function matrixRecordOf(

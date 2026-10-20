@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import type { ContractIR } from "@seampact/spec/ir";
 import ts from "typescript";
 import type { FrameworkRouteCheck } from "../framework-route-check.js";
+import type { NativeDocsDocument } from "../native-docs-document.js";
 import type { GeneratedFile, Target } from "../target.js";
 
 // Test support of the Node server targets: generates the reference contract's types, validators and a server
@@ -161,9 +162,18 @@ export function referenceChanges(...changes: readonly ReferenceIrChange[]): Refe
   return (ir, api) => changes.reduce((changed, change) => change(changed, api), ir);
 }
 
+/** What a test adds to the server target's request: its artefacts, and the document `nativeDocs` follows per api. */
+export interface ReferenceServerRequest {
+  readonly artefacts?: ReadonlySet<string>;
+  readonly nativeDocsDocument?: (api: string) => NativeDocsDocument;
+}
+
+const BOUNDARY_ONLY: ReadonlySet<string> = new Set(["boundary"]);
+
 /**
  * Writes both reference apis' generated trees into a fresh project; returns every file written. The framework-route
- * check is off unless `frameworkRoutes` turns it on.
+ * check is off unless `frameworkRoutes` turns it on; the server target gets the `boundary` artefact unless
+ * `serverRequest` says otherwise.
  */
 export async function generateReferenceProject(
   project: string,
@@ -171,6 +181,7 @@ export async function generateReferenceProject(
   serverOptions: Readonly<Record<string, unknown>>,
   changeIr: ReferenceIrChange = UNCHANGED_IR,
   frameworkRoutes: FrameworkRouteCheck = FRAMEWORK_ROUTE_CHECK_OFF,
+  serverRequest: ReferenceServerRequest = {},
 ): Promise<string[]> {
   rmSync(project, { recursive: true, force: true });
   mkdirSync(project, { recursive: true });
@@ -188,6 +199,7 @@ export async function generateReferenceProject(
         serverTarget,
         serverOptions,
         frameworkRoutes,
+        serverRequest,
       ),
     ),
   );
@@ -319,6 +331,7 @@ async function generateApi(
   serverTarget: Target,
   serverOptions: Readonly<Record<string, unknown>>,
   frameworkRoutes: FrameworkRouteCheck,
+  serverRequest: ReferenceServerRequest,
 ): Promise<string[]> {
   const providerRequest = { ir, options: {}, links: {} };
 
@@ -343,8 +356,11 @@ async function generateApi(
         ir,
         options: serverOptions,
         links: linksOf(providers, ir, api),
-        artefacts: new Set(["boundary"]),
+        artefacts: serverRequest.artefacts ?? BOUNDARY_ONLY,
         frameworkRoutes,
+        ...(serverRequest.nativeDocsDocument === undefined
+          ? {}
+          : { nativeDocsDocument: serverRequest.nativeDocsDocument(api) }),
       }),
     ),
   ];

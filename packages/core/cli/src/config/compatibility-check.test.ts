@@ -192,3 +192,97 @@ test("reads the framework from the project of the entry's output directory, wher
     checkAppCompatibility(config, new Map([["server", stubTarget(SERVER_PACKAGE)]]), MATRIX),
   ).toEqual({ problems: [], warnings: [] });
 });
+
+const DOCS_MATRIX: readonly TargetCompatibility[] = MATRIX.map((record) => ({
+  ...record,
+  libraries: [
+    { id: "web-docs", package: "web-docs-library", artefact: "nativeDocs", testedMajors: [2] },
+  ],
+}));
+
+const DOCS_ARTEFACTS = [
+  { id: "boundary", defaultOn: true },
+  { id: "nativeDocs", defaultOn: false, needs: ["boundary"] },
+] as const;
+
+function docsLibraryConfig(root: string, entry: TargetEntry) {
+  return {
+    file: join(root, "app/seampact.config.yaml"),
+    outDir: join(root, "app"),
+    sources: new Map(),
+    entries: [{ entry, root: join(root, "app/src/generated") }],
+    checks: { matrix: "error" as const },
+  };
+}
+
+function docsLibraryTree(libraryVersion: string): string {
+  return writeConfigTree({
+    "app/seampact.config.yaml": "",
+    "app/node_modules/web-framework/package.json": JSON.stringify({ version: "5.0.0" }),
+    "app/node_modules/web-docs-library/package.json": JSON.stringify({ version: libraryVersion }),
+  });
+}
+
+test("checks the docs library of a target when its artefact is on, and accepts it in allowUntested", () => {
+  const root = docsLibraryTree("3.0.0");
+  const targets = new Map([["server", stubTarget(SERVER_PACKAGE, DOCS_ARTEFACTS)]]);
+  const entry: TargetEntry = {
+    id: "server",
+    use: SERVER_PACKAGE,
+    api: "tasks",
+    artefacts: { nativeDocs: true },
+  };
+
+  expect(checkAppCompatibility(docsLibraryConfig(root, entry), targets, DOCS_MATRIX)).toEqual({
+    problems: [
+      {
+        code: "config.matrix.untested",
+        message:
+          "web-docs-library 3.0.0 is installed, and the target '@acme/codegen-server' is tested on web-docs 2 only.",
+        fix: "Install a tested major, or accept this one with `allowUntested: [web-docs@3]` on the entry.",
+        where: "entry 'server'",
+      },
+    ],
+    warnings: [],
+  });
+  expect(
+    checkAppCompatibility(
+      docsLibraryConfig(root, { ...entry, allowUntested: ["web-docs@3"] }),
+      targets,
+      DOCS_MATRIX,
+    ),
+  ).toEqual({ problems: [], warnings: [] });
+});
+
+test("reads no docs library while its artefact is off", () => {
+  const root = writeConfigTree({
+    "app/seampact.config.yaml": "",
+    "app/node_modules/web-framework/package.json": JSON.stringify({ version: "5.0.0" }),
+  });
+  const targets = new Map([["server", stubTarget(SERVER_PACKAGE, DOCS_ARTEFACTS)]]);
+  const entry: TargetEntry = { id: "server", use: SERVER_PACKAGE, api: "tasks" };
+
+  expect(checkAppCompatibility(docsLibraryConfig(root, entry), targets, DOCS_MATRIX)).toEqual({
+    problems: [],
+    warnings: [],
+  });
+});
+
+test("refuses a docs library that is not installed, naming the install command", () => {
+  const root = writeConfigTree({
+    "app/seampact.config.yaml": "",
+    "app/node_modules/web-framework/package.json": JSON.stringify({ version: "5.0.0" }),
+  });
+  const targets = new Map([["server", stubTarget(SERVER_PACKAGE, DOCS_ARTEFACTS)]]);
+  const entry: TargetEntry = {
+    id: "server",
+    use: SERVER_PACKAGE,
+    api: "tasks",
+    artefacts: { nativeDocs: true },
+  };
+  const outcome = checkAppCompatibility(docsLibraryConfig(root, entry), targets, DOCS_MATRIX);
+
+  expect(outcome.problems).toMatchObject([
+    { code: "config.matrix.framework-missing", fix: expect.stringContaining("web-docs-library") },
+  ]);
+});

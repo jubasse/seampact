@@ -2,5 +2,7 @@ packages:
   - packages/*/*
 
 # simple-git-hooks installs the hooks through the root `prepare` script; its own postinstall is not needed.
+# @scarf/scarf (pulled by swagger-ui-dist) has a postinstall that only sends install telemetry.
 allowBuilds:
+  "@scarf/scarf": false
   simple-git-hooks: false

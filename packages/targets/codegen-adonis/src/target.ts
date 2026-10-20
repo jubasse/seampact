@@ -20,4 +20,5 @@ export const target: Target = nodeServerTarget({
     ownValidators: vineOwnValidators,
   },
   validatorStyles: serverTargetCompatibility(packageJson.name).validatorStyles,
+  frameworkDocsOffFix: "this framework writes no document of its own; remove the key",
 });

@@ -2,7 +2,11 @@
 // an app belongs to, the OpenAPI documents an app and a root write, the target packages an app names, resolved
 // from the app's own project, the artefacts each entry generates and the compatibility matrix check.
 
-export { type ArtefactSelection, selectArtefacts } from "./artefact-switches.js";
+export {
+  type ArtefactSelection,
+  NATIVE_DOCS_ARTEFACT,
+  selectArtefacts,
+} from "./artefact-switches.js";
 export {
   type CompatibilityInput,
   type CompatibilityOutcome,

@@ -5,6 +5,8 @@
 export {
   BOUNDARY_ARTEFACT,
   type BoundaryArtefact,
+  NATIVE_DOCS_ARTEFACT,
+  type NativeDocsPlacement,
   NODE_SERVER_BOOT_CHECKS,
   type NodeServerArtefact,
   type NodeServerPlacement,
@@ -15,6 +17,11 @@ export {
   type OwnValidators,
 } from "./boundary-files.js";
 export { handlerMapDeclarations, largestBodyLimit } from "./handler-map-module.js";
+export {
+  type DocumentedOperation,
+  type NativeDocsContract,
+  readNativeDocsDocument,
+} from "./native-docs-reader.js";
 export { type NodeServerOptions, parseNodeServerOptions, type ResponsesMode } from "./options.js";
 export { literalSegmentRefusals, mixedSegmentRefusals } from "./path-segment-refusals.js";
 export { compareRouteSpecificity } from "./route-order.js";

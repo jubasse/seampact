@@ -1,91 +1,16 @@
-import {
-  cpSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { buildBundle, bundleEntries, loadFsReader } from "@seampact/compiler";
-import { afterEach, expect, test } from "vitest";
-import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS } from "../cli-io.js";
-import { runCli } from "../run-cli.js";
-
-const REFERENCE_WORKSPACE = new URL("../../../../../fixtures/reference", import.meta.url).pathname;
-
-const temporaryDirectories: string[] = [];
-
-afterEach(() => {
-  for (const directory of temporaryDirectories.splice(0))
-    rmSync(directory, { recursive: true, force: true });
-});
-
-interface FakeTarget {
-  name: string;
-  // The role the fake declares; a client when absent.
-  role?: string;
-  consumes?: string[];
-  provides?: string[];
-  packageJson?: string;
-  // What the fake's `generate` returns as `warnings`.
-  warnings?: object[];
-}
-
-// A target package of plain CommonJS: the refusals below happen before `generate` is called.
-function writeTargetPackage(appDirectory: string, target: FakeTarget): void {
-  const directory = join(appDirectory, "node_modules", target.name);
-  const kinds = (names: string[] = []) =>
-    JSON.stringify(Object.fromEntries(names.map((kind) => [kind, { styles: [], style: "x" }])));
-
-  mkdirSync(directory, { recursive: true });
-  writeFileSync(
-    join(directory, "package.json"),
-    target.packageJson ?? JSON.stringify({ name: target.name, main: "index.cjs" }),
-  );
-  writeFileSync(
-    join(directory, "index.cjs"),
-    `exports.target = {
-  metadata: {
-    packageName: ${JSON.stringify(target.name)},
-    packageVersion: "0.0.0",
-    role: ${JSON.stringify(target.role ?? "client")},
-    irSupport: {},
-    artefacts: [],
-    consumes: ${kinds(target.consumes)},
-    provides: ${kinds(target.provides)},
-  },
-  parseOptions: (raw) => ({ status: "parsed", options: raw }),
-  generate: async () => ({ status: "generated", files: [], warnings: ${JSON.stringify(target.warnings ?? [])} }),
-  describe: () => ({ status: "described", descriptors: {} }),
-};\n`,
-  );
-}
-
-function makeApp(config: string, targets: FakeTarget[], sourceNames: string[] = ["a"]): string {
-  const appDirectory = mkdtempSync(join(tmpdir(), "seampact-cli-"));
-
-  temporaryDirectories.push(appDirectory);
-
-  for (const name of sourceNames)
-    cpSync(REFERENCE_WORKSPACE, join(appDirectory, name), { recursive: true });
-
-  for (const target of targets) writeTargetPackage(appDirectory, target);
-
-  writeFileSync(join(appDirectory, "seampact.config.yaml"), config);
-
-  return appDirectory;
-}
-
-async function generateErrors(appDirectory: string): Promise<{ exitCode: number; output: string }> {
-  const errors: string[] = [];
-  const io: CliIo = { cwd: appDirectory, stdout: () => {}, stderr: (text) => errors.push(text) };
-  const exitCode = await runCli(["generate"], io);
-
-  return { exitCode, output: errors.join("") };
-}
+import { expect, test } from "vitest";
+import { EXIT_REFUSED, EXIT_SUCCESS } from "../cli-io.js";
+import {
+  generateErrors,
+  generateOutput,
+  makeApp,
+  REFERENCE_WORKSPACE,
+  temporaryDirectories,
+} from "./generate-app.test-support.js";
 
 test("refuses two apis items of one entry that resolve to the same api name", async () => {
   const app = makeApp(
@@ -180,18 +105,6 @@ test("prints a target's warnings and still writes its files", async () => {
     "warning: owner.handler: entry 'server', api 'tasks': The caller ownership is not enforced by the generated boundary. (operation 'getDraft') Fix: Scope the handler's reads and writes to the authenticated principal.\n",
   );
 });
-
-async function generateOutput(appDirectory: string): Promise<{ exitCode: number; output: string }> {
-  const lines: string[] = [];
-  const io: CliIo = {
-    cwd: appDirectory,
-    stdout: (text) => lines.push(text),
-    stderr: (text) => lines.push(text),
-  };
-  const exitCode = await runCli(["generate"], io);
-
-  return { exitCode, output: lines.join("") };
-}
 
 test("writes the documents an OpenAPI-only app lists, with no target package installed", async () => {
   const app = makeApp(

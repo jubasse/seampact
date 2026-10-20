@@ -3,6 +3,7 @@ import { nodeServerTarget } from "@seampact/codegen-core/node-server";
 import { serverTargetCompatibility } from "@seampact/spec/compatibility";
 import { format } from "prettier";
 import packageJson from "../package.json" with { type: "json" };
+import { nestjsDocsModuleSource } from "./nestjs-docs-module.js";
 import { nestjsModuleSource } from "./nestjs-module.js";
 
 // The NestJS target, as the CLI loads it. Its placement is a checked source of this package one directory above both
@@ -17,6 +18,8 @@ export const target: Target = nodeServerTarget({
     runtimeSourceUrl: new URL("../runtime/nestjs-boundary.ts", import.meta.url),
     frameworkModule: "nestjs",
     frameworkSource: nestjsModuleSource,
+    nativeDocs: { docsModule: "nestjs-docs", docsSource: nestjsDocsModuleSource },
   },
   validatorStyles: serverTargetCompatibility(packageJson.name).validatorStyles,
+  frameworkDocsOffFix: "remove the `SwaggerModule.setup` call",
 });

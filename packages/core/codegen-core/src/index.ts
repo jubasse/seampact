@@ -36,6 +36,11 @@ export {
   refuseUnknownValueAt,
 } from "./located-refusals.js";
 export { type ManifestRead, readManifest } from "./manifest.js";
+export type {
+  NativeDocsDocument,
+  NativeDocsJson,
+  NativeDocsJsonObject,
+} from "./native-docs-document.js";
 export { type NoOptions, parseNoOptions } from "./no-options.js";
 export {
   declaredTypeIdentifier,
