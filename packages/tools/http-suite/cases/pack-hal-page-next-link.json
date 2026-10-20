@@ -23,7 +23,13 @@
         }
       },
       "expect": {
-        "status": 200
+        "status": 200,
+        "body": {
+          "page": {
+            "size": 2,
+            "number": 0
+          }
+        }
       }
     },
     {
@@ -36,7 +42,18 @@
         }
       },
       "expect": {
-        "status": 200
+        "status": 200,
+        "body": {
+          "_links": {
+            "self": {
+              "href": "{{nextPage}}"
+            }
+          },
+          "page": {
+            "size": 2,
+            "number": 1
+          }
+        }
       }
     }
   ]

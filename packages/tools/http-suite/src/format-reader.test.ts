@@ -30,6 +30,13 @@ const TASKS = [
 const ITEM = { taskId: "t1", title: "first", state: "open" };
 const ERROR_CODE = "api.schema_invalid";
 const ERROR_PARAMS = { issues: [{ pointer: "/title", rule: "minLength" }] };
+const TASK_PATH = "/v1/channels/c1/tasks/t1";
+const TASKS_PATH = "/v1/channels/c1/tasks";
+const ITEM_REQUEST = { method: "GET", path: TASK_PATH };
+const PAGE_REQUEST = { method: "GET", path: `${TASKS_PATH}?page=1` };
+const HAL = "@seampact/pack-hal";
+const API_PLATFORM = "@seampact/pack-api-platform";
+
 const CREDENTIALS: SuiteCredentials = {
   userToken: "u",
   throttledUserToken: "t",
@@ -45,10 +52,18 @@ function required<T>(value: T | undefined): T {
   return value;
 }
 
-function goldenIr(packName: string): ContractIR {
-  const text = readFileSync(new URL(`pack-${packName}/tasks.ir.json`, GOLDEN_DIRECTORY), "utf8");
+function goldenIr(packName: string, contract = "tasks"): ContractIR {
+  const text = readFileSync(
+    new URL(`pack-${packName}/${contract}.ir.json`, GOLDEN_DIRECTORY),
+    "utf8",
+  );
 
   return JSON.parse(text);
+}
+
+// The contracts the sample app serves: the api, then the service it relays to.
+function contractsOf(packName: string): [ContractIR, ContractIR] {
+  return [goldenIr(packName), goldenIr(packName, "tasksService")];
 }
 
 // Test double of what a target writes: the template applied to the values of its slots.
@@ -142,7 +157,7 @@ function slotsOf(extra: Record<string, JsonValue>): Map<string, JsonValue> {
 describe.each(PACKS)("pack %s", (packName) => {
   const ir = goldenIr(packName);
   const packageName = `@seampact/pack-${packName}`;
-  const profile = packProfileOf(ir, packageName);
+  const profile = packProfileOf(contractsOf(packName), packageName);
   const format = required(
     Object.values(ir.formats).find(
       (candidate) => candidate.origin.layer === `pack:${packageName}`,
@@ -153,23 +168,98 @@ describe.each(PACKS)("pack %s", (packName) => {
   test("reads an item back to its payload", () => {
     const body = render(format.success.item.body, slotsOf({ payload: ITEM }));
 
-    expect(profile.reader.read(200, body ?? null).json).toEqual(ITEM);
+    expect(profile.reader.read(200, body ?? null, ITEM_REQUEST).json).toEqual(ITEM);
   });
 
   test("reads a page back to its items", () => {
     const template = paging?.response.body ?? format.success.page.body;
     const body = render(template, slotsOf({ items: TASKS }));
 
-    expect(profile.reader.read(200, body ?? null)).toEqual({ json: TASKS, failures: [] });
+    expect(profile.reader.read(200, body ?? null, PAGE_REQUEST)).toEqual({
+      json: TASKS,
+      failures: [],
+    });
   });
 
   test("reads an error back to its code and params", () => {
     const body = render(format.error.body, slotsOf({ code: ERROR_CODE, params: ERROR_PARAMS }));
 
-    expect(profile.reader.read(422, body ?? null).json).toMatchObject({
+    expect(profile.reader.read(422, body ?? null, ITEM_REQUEST).json).toMatchObject({
       code: ERROR_CODE,
       ...ERROR_PARAMS,
     });
+  });
+});
+
+function readerOf(packName: string) {
+  return packProfileOf(contractsOf(packName), `@seampact/pack-${packName}`).reader;
+}
+
+describe.each(["hal", "api-platform"])("a bare body under pack %s", (packName) => {
+  test("an item without the format's envelope fails", () => {
+    expect(readerOf(packName).read(200, ITEM, ITEM_REQUEST).failures).not.toEqual([]);
+  });
+
+  test("a page without the format's envelope fails", () => {
+    expect(readerOf(packName).read(200, TASKS, PAGE_REQUEST).failures).not.toEqual([]);
+  });
+});
+
+describe("a body that breaks a literal, a text or a slot written twice", () => {
+  const jsonldItem = { ...ITEM, "@context": "/contexts/Task", "@id": TASK_PATH, "@type": "Task" };
+  const jsonldError = {
+    "@context": "/contexts/Error",
+    "@id": "/errors/422",
+    "@type": "Error",
+    type: "/errors/422",
+    title: "Invalid",
+    status: 422,
+    code: ERROR_CODE,
+  };
+  const halError = { type: ERROR_CODE, title: "Invalid", status: 422, code: ERROR_CODE };
+
+  test("the well-formed bodies read clean", () => {
+    expect(readerOf("api-platform").read(200, jsonldItem, ITEM_REQUEST).failures).toEqual([]);
+    expect(readerOf("api-platform").read(422, jsonldError, ITEM_REQUEST).failures).toEqual([]);
+    expect(readerOf("hal").read(422, halError, ITEM_REQUEST).failures).toEqual([]);
+  });
+
+  test("a wrong literal fails", () => {
+    const body = { ...jsonldError, "@type": "NotError" };
+
+    expect(readerOf("api-platform").read(422, body, ITEM_REQUEST).failures).not.toEqual([]);
+  });
+
+  test("a text whose constant part differs fails", () => {
+    const body = { ...jsonldItem, "@context": "/wrong/Task" };
+
+    expect(readerOf("api-platform").read(200, body, ITEM_REQUEST).failures).not.toEqual([]);
+  });
+
+  test("a slot read twice with two values fails", () => {
+    const body = { ...halError, type: "api.other" };
+
+    expect(readerOf("hal").read(422, body, ITEM_REQUEST).failures).not.toEqual([]);
+  });
+
+  test("a text and a slot that disagree fail", () => {
+    const body = { ...jsonldItem, "@type": "Channel" };
+
+    expect(readerOf("api-platform").read(200, body, ITEM_REQUEST).failures).not.toEqual([]);
+  });
+});
+
+describe.each([HAL, API_PLATFORM])("the default cases under %s", (packageName) => {
+  test("expect the format's media on a success", () => {
+    const [ir, service] = contractsOf(packageName.replace("@seampact/pack-", ""));
+    const profile = packProfileOf([ir, service], packageName);
+    const head = profile.cases.find((suiteCase) => suiteCase.id === "head-runs-get-without-body");
+    const media = Object.values(ir.formats).find(
+      (format) => format.origin.layer === `pack:${packageName}`,
+    )?.media;
+
+    expect(profile.refusals).not.toHaveProperty("head-runs-get-without-body");
+    expect(head?.steps[0]?.expect.headers?.["content-type"]?.contains).toEqual([media]);
   });
 });
 
@@ -193,16 +283,84 @@ describe("a template the suite cannot invert", () => {
       members: [{ name: { kind: "text", text: "type" }, value: code }],
     };
 
-    expect(() => formatReaderOf(format(body), undefined)).toThrow(FormatReaderError);
-    expect(() => formatReaderOf(format(body), undefined)).toThrow(
+    expect(() => formatReaderOf(format(body), undefined, [])).toThrow(FormatReaderError);
+    expect(() => formatReaderOf(format(body), undefined, [])).toThrow(
       "format 'acme', error: the member 'type' writes the code only inside a text template",
     );
+  });
+
+  test("refuses a slot written with a member path", () => {
+    const body: Template = {
+      kind: "object",
+      members: [
+        { name: { kind: "text", text: "code" }, value: { kind: "slot", slot: "code", path: [] } },
+        {
+          name: { kind: "text", text: "kind" },
+          value: { kind: "slot", slot: "params", path: ["kind"] },
+        },
+      ],
+    };
+
+    expect(() => formatReaderOf(format(body), undefined, [])).toThrow(
+      "format 'acme', error: the slot '$params.kind' cannot be read back",
+    );
+  });
+
+  test("refuses a member named by a slot beside $merge", () => {
+    const body: Template = {
+      kind: "object",
+      merge: "params",
+      members: [
+        { name: { kind: "slot", slot: "code" }, value: { kind: "slot", slot: "code", path: [] } },
+      ],
+    };
+
+    expect(() => formatReaderOf(format(body), undefined, [])).toThrow(
+      "format 'acme', error: a member named by a slot beside '$merge: $params' cannot be read back",
+    );
+  });
+});
+
+describe("a success the reader cannot place", () => {
+  const reader = readerOf("hal");
+  const item = { ...ITEM, _links: { self: { href: TASK_PATH } } };
+
+  test("reads a service operation's item in the same format", () => {
+    const request = { method: "GET", path: `/internal${TASK_PATH}` };
+
+    expect(reader.read(200, item, request)).toEqual({ json: ITEM, failures: [] });
+  });
+
+  test("fails a request no operation answers", () => {
+    expect(reader.read(200, item, { method: "GET", path: "/v1/unknown" }).failures).toEqual([
+      "no operation of the contract answers GET /v1/unknown, so the suite cannot tell which shape of format 'hal' to read",
+    ]);
+  });
+
+  test("fails a status the operation does not declare", () => {
+    expect(reader.read(202, item, ITEM_REQUEST).failures).toEqual([
+      "the operation 'getTask' declares no 202 response",
+    ]);
+  });
+
+  test("fails an item whose envelope member is absent, naming it", () => {
+    expect(reader.read(200, ITEM, ITEM_REQUEST).failures).toEqual([
+      "the body is no item of format 'hal' (/_links: member is absent)",
+    ]);
+  });
+
+  test("fails a page whose collection member could be either of two", () => {
+    const page = { _embedded: { tasks: TASKS, channels: TASKS }, _links: {}, page: {} };
+
+    expect(reader.read(200, page, PAGE_REQUEST).failures).toEqual([
+      "the body is no page of format 'hal' (/_embedded: the members tasks, channels could each be the one named by $collection)",
+    ]);
   });
 });
 
 describe("the pack profile", () => {
   test("adapts the default cases to the pack's request names and error media", () => {
-    const profile = packProfileOf(goldenIr("hal"), "@seampact/pack-hal");
+    const profile = packProfileOf(contractsOf("hal"), HAL);
     const limitCase = profile.cases.find((suiteCase) => suiteCase.id === "limit-above-max-refused");
 
     expect(profile.profile).toBe("pack:hal");
@@ -212,13 +370,13 @@ describe("the pack profile", () => {
   });
 
   test("reads a default case through the pack's format", async () => {
-    const profile = packProfileOf(goldenIr("hal"), "@seampact/pack-hal");
+    const profile = packProfileOf(contractsOf("hal"), HAL);
     const server: Server = createServer((request, response) => {
       if (request.url === SCRIPT_ROUTE) {
         response.writeHead(204).end();
-      } else if (request.url === "/item") {
+      } else if (request.url === TASK_PATH) {
         response.writeHead(200, { "content-type": "application/hal+json" });
-        response.end(JSON.stringify({ ...ITEM, _links: { self: { href: "/item" } } }));
+        response.end(JSON.stringify({ ...ITEM, _links: { self: { href: TASK_PATH } } }));
       } else {
         response.writeHead(404, { "content-type": "application/problem+json" });
         response.end(JSON.stringify({ type: "api.not_found", status: 404, code: "api.not_found" }));
@@ -233,7 +391,7 @@ describe("the pack profile", () => {
     if (address === null || typeof address === "string") throw new Error("no TCP port");
 
     const steps = [
-      { request: { method: "GET", path: "/item" }, expect: { status: 200, body: ITEM } },
+      { request: ITEM_REQUEST, expect: { status: 200, body: ITEM } },
       {
         request: { method: "GET", path: "/gone" },
         expect: { status: 404, body: { code: "api.not_found" } },

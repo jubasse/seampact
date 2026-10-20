@@ -1,5 +1,5 @@
 // The `pack:<name>` profile of a convention pack (ADR 0015 "Suite profiles"): the reader of the pack's format and
-// paging style, the default cases adapted to the pack's request names and error media, and the pack's own cases.
+// paging style, the default cases adapted to the pack's request names and media types, and the pack's own cases.
 import type { ContractIR, PagingRequestRole, PagingStyle, WireFormat } from "@seampact/spec/ir";
 import { type FormatReader, FormatReaderError, formatReaderOf } from "./format-reader.js";
 import { CASES_DIRECTORY, loadSuiteCases } from "./load-cases.js";
@@ -14,6 +14,8 @@ import type {
 
 const PACK_PACKAGE_NAME = /^@[^/]+\/pack-(.+)$/;
 const PROBLEM_MEDIA = "application/problem+json";
+const JSON_MEDIA = "application/json";
+const ERROR_STATUS_FLOOR = 400;
 const CONTENT_TYPE = "content-type";
 const BARE_FORMAT = "bare";
 const DEFAULT_PAGING_CONVENTION = "paging.default";
@@ -38,12 +40,16 @@ export function packProfileName(packageName: string): SuiteProfile {
   return `pack:${PACK_PACKAGE_NAME.exec(packageName)?.[1] ?? packageName}`;
 }
 
-/** The profile of a pack, from the IR of an api that applies it. */
+/**
+ * The profile of a pack, from the IRs of the contracts the target serves: the format and paging style come from the
+ * first, the api that applies the pack; the operations of all of them tell which shape a response is read with.
+ */
 export function packProfileOf(
-  ir: ContractIR,
+  contracts: readonly [ContractIR, ...ContractIR[]],
   packageName: string,
   directory: string = CASES_DIRECTORY,
 ): PackProfile {
+  const [ir] = contracts;
   const profile = packProfileName(packageName);
   const layer = `pack:${packageName}`;
   const format = formatOfPack(ir, packageName, layer);
@@ -55,14 +61,18 @@ export function packProfileOf(
     );
   }
 
-  const reader = formatReaderOf(format ?? bareFormat(ir), paging);
+  const reader = formatReaderOf(
+    format ?? bareFormat(ir),
+    paging,
+    contracts.flatMap((contract) => contract.operations),
+  );
   const refusals: Record<string, string> = {};
   const defaultCases = loadSuiteCases("default", directory).map((suiteCase) => {
     const refusal = refusalOf(suiteCase, paging);
 
     if (refusal !== undefined) refusals[suiteCase.id] = refusal;
 
-    return adaptCase(suiteCase, limitParameterOf(paging), reader.errorMedia);
+    return adaptCase(suiteCase, limitParameterOf(paging), reader);
   });
 
   return {
@@ -139,18 +149,22 @@ function namesParameter(suiteCase: SuiteCase, name: string): boolean {
   );
 }
 
-function adaptCase(suiteCase: SuiteCase, limitParameter: string, errorMedia: string): SuiteCase {
+function adaptCase(suiteCase: SuiteCase, limitParameter: string, reader: FormatReader): SuiteCase {
   return {
     ...suiteCase,
-    steps: suiteCase.steps.map((step) => adaptStep(step, limitParameter, errorMedia)),
+    steps: suiteCase.steps.map((step) => adaptStep(step, limitParameter, reader)),
   };
 }
 
-function adaptStep(step: SuiteStep, limitParameter: string, errorMedia: string): SuiteStep {
+function adaptStep(step: SuiteStep, limitParameter: string, reader: FormatReader): SuiteStep {
+  const isError = step.expect.status >= ERROR_STATUS_FLOOR;
+
   return {
     ...step,
     request: renameLimit(step.request, limitParameter),
-    expect: replaceProblemMedia(step.expect, errorMedia),
+    expect: isError
+      ? replaceMedia(step.expect, PROBLEM_MEDIA, reader.errorMedia)
+      : replaceMedia(step.expect, JSON_MEDIA, reader.media),
   };
 }
 
@@ -176,19 +190,27 @@ function renameLimit(request: StepRequest, limitParameter: string): StepRequest 
   };
 }
 
-function replaceProblemMedia(expectation: StepExpectation, errorMedia: string): StepExpectation {
+// The default cases expect the bare format's media types; a pack's format writes its own.
+function replaceMedia(
+  expectation: StepExpectation,
+  bareMedia: string,
+  packMedia: string,
+): StepExpectation {
   const contentType = expectation.headers?.[CONTENT_TYPE];
 
-  if (contentType === undefined || errorMedia === PROBLEM_MEDIA) return expectation;
+  if (contentType === undefined || bareMedia === packMedia) return expectation;
 
   const replaced: HeaderExpectation = {
     ...contentType,
+    ...(contentType.equals === undefined
+      ? {}
+      : { equals: contentType.equals.replace(bareMedia, packMedia) }),
     ...(contentType.contains === undefined
       ? {}
-      : { contains: contentType.contains.map((part) => part.replace(PROBLEM_MEDIA, errorMedia)) }),
+      : { contains: contentType.contains.map((part) => part.replace(bareMedia, packMedia)) }),
     ...(contentType.excludes === undefined
       ? {}
-      : { excludes: contentType.excludes.replace(PROBLEM_MEDIA, errorMedia) }),
+      : { excludes: contentType.excludes.replace(bareMedia, packMedia) }),
   };
 
   return { ...expectation, headers: { ...expectation.headers, [CONTENT_TYPE]: replaced } };

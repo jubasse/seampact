@@ -1,6 +1,6 @@
 {
-  "id": "pack-spring-page-next-link",
-  "title": "A page is fetched with the spring request names and its next link is followed",
+  "id": "pack-spring-page-by-number",
+  "title": "A page and the next one are fetched by number with the spring request names",
   "checks": ["CHK-107"],
   "profiles": ["pack:spring"],
   "steps": [

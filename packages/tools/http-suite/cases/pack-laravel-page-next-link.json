@@ -23,7 +23,13 @@
         }
       },
       "expect": {
-        "status": 200
+        "status": 200,
+        "body": {
+          "meta": {
+            "current_page": 1,
+            "per_page": 2
+          }
+        }
       }
     },
     {
@@ -36,7 +42,13 @@
         }
       },
       "expect": {
-        "status": 200
+        "status": 200,
+        "body": {
+          "meta": {
+            "current_page": 2,
+            "per_page": 2
+          }
+        }
       }
     }
   ]
