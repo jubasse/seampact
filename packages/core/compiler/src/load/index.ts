@@ -3,6 +3,6 @@
 // Its trust model, the guarantees it keeps and its non-goals: ADR 0006 section 1.
 
 export { type LoadOptions, type LoadResult, loadWorkspace } from "./loader.js";
-export { pointerEscape } from "./paths.js";
+export { escapePointer as pointerEscape } from "@seampact/spec/json";
 export { type LoadReader, loadFsReader } from "./reader.js";
 export { type LoadWatcher, type LoadWatchOptions, loadWatchFiles } from "./watch.js";

@@ -1,4 +1,5 @@
-import { escapePointer, isSchemaNode } from "./schema-walk.js";
+import { escapePointer } from "../json/pointer.js";
+import { isSchemaNode } from "./schema-walk.js";
 import { IR_SCHEMA_DOCUMENTS, type SchemaNode } from "./schemas.js";
 
 // The known-values annotation of an open enum and the must-act annotation (README.md). Neither validates.

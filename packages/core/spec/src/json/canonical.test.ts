@@ -1,6 +1,5 @@
 import { expect, test } from "vitest";
-import { canonical } from "./canonical.js";
-import * as seam from "./seam.js";
+import { canonicalJson as canonical } from "./canonical.js";
 
 test("two objects written in another key order have one canonical text, at any depth", () => {
   expect(canonical({ b: 1, a: { d: 2, c: 3 } })).toBe(canonical({ a: { c: 3, d: 2 }, b: 1 }));
@@ -15,8 +14,4 @@ test("array order is kept and the objects inside an array are sorted", () => {
 test("scalars and null are their JSON text", () => {
   expect(canonical(null)).toBe("null");
   expect(canonical("x")).toBe('"x"');
-});
-
-test("the seam barrel exports the same function", () => {
-  expect(seam.pipelineCanonical).toBe(canonical);
 });

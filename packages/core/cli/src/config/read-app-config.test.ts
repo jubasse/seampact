@@ -130,6 +130,17 @@ test("refuses by name the artefact switches that wait, beside the read boot chec
   expect(outcome.status === "refused" ? outcome.problems : []).toHaveLength(2);
 });
 
+test("refuses the diff settings by name until the diff command reads them", async () => {
+  const outcome = await readConfigText(
+    "diff: { gate: both }\ntargets:\n  - { id: t, use: x, api: a }\n",
+  );
+
+  expect(outcome).toMatchObject({
+    status: "refused",
+    problems: [{ code: "config.key.waits", message: expect.stringContaining("`diff` command") }],
+  });
+});
+
 test("refuses a package source that is not an npm package name", async () => {
   const outcome = await readConfigText(
     "sources:\n  contracts: { package: ../../x, version: 1.0.0 }\ntargets:\n  - { id: t, use: x, api: a }\n",

@@ -14,6 +14,7 @@ const ROOT_KEY_WAITS: Readonly<Record<string, string>> = {
   apps: "the monorepo root config (p3-config)",
   openapi: "the OpenAPI documents (p3-openapi)",
   checks: "the `check` command and the compatibility matrix (p3-cli, p3-config)",
+  diff: "the `diff` command (p3-cli)",
 };
 
 const SERVER_ENTRY_BRINGER = "the server targets, through a codegen-core seam (p5)";

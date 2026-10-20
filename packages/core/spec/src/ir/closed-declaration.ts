@@ -1,5 +1,5 @@
 import { irDefinition, visitIrUnknown, walkIrInstance } from "./instance-walk.js";
-import { escapePointer } from "./schema-walk.js";
+import { escapePointer } from "../json/pointer.js";
 import type * as IrWriter from "./types.writer.generated.js";
 
 // The declarations a compiler pass may copy from an IR it read in the open form into the IR it writes, by

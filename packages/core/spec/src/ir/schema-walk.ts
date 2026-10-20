@@ -1,3 +1,4 @@
+import { escapePointer } from "../json/pointer.js";
 import type { SchemaNode } from "./schemas.js";
 
 // The keywords of the IR schema files whose values are subschemas, by how they hold them. Every other keyword
@@ -44,6 +45,3 @@ export function walkSchema(
     });
   }
 }
-
-export const escapePointer = (segment: string): string =>
-  segment.replaceAll("~", "~0").replaceAll("/", "~1");

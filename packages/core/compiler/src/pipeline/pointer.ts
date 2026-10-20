@@ -1,4 +1,5 @@
 import type { Origin } from "@seampact/spec/ir";
+import { escapePointer } from "@seampact/spec/json";
 import type { JsonObject, JsonValue, RawApi } from "../raw-tree.js";
 import type { PassReadonly } from "./readonly.js";
 
@@ -13,8 +14,7 @@ export const isJsonObject = (value: Json | undefined): value is PassReadonly<Jso
 export const isJsonList = (value: Json | undefined): value is readonly Json[] =>
   Array.isArray(value);
 
-const escapeSegment = (segment: string | number): string =>
-  `/${String(segment).replaceAll("~", "~0").replaceAll("/", "~1")}`;
+const escapeSegment = (segment: string | number): string => `/${escapePointer(segment)}`;
 
 /** The pointer below `base` through `segments`. */
 export const pointerBelow = (base: string, ...segments: readonly (string | number)[]): string =>

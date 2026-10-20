@@ -10,7 +10,8 @@ import {
 import { type LoadBudget, loadWorkOf } from "./budget.js";
 import { asObject, cloneJson, isReservedKey, jsonObject, setKey } from "./json.js";
 import { LOAD_MAX_DEPTH } from "./limits.js";
-import { pointerEscape, pointerSegments } from "./paths.js";
+import { escapePointer } from "@seampact/spec/json";
+import { pointerSegments } from "./paths.js";
 import {
   admitsInteger,
   expectedTypes,
@@ -263,7 +264,7 @@ export class Expander {
     while (next < queue.length) {
       if (this.budget.exhausted) return;
       const ref = queue[next++] as FileRef;
-      const pointer = `/schemas/${pointerEscape(ref.name)}`;
+      const pointer = `/schemas/${escapePointer(ref.name)}`;
       const elementSite = pairSite(ref.file, ref.pair.key, ref.pair.value);
       const own = Object.hasOwn(asObject(build.tree.schemas) ?? {}, ref.name);
       const other = own
@@ -297,8 +298,8 @@ export class Expander {
         parentKey: ref.name,
         stack: [
           {
-            key: `${this.store.realOf(ref.file.path)}#/${pointerEscape(ref.name)}`,
-            shown: `${ref.file.path}#/${pointerEscape(ref.name)}`,
+            key: `${this.store.realOf(ref.file.path)}#/${escapePointer(ref.name)}`,
+            shown: `${ref.file.path}#/${escapePointer(ref.name)}`,
             at: elementSite,
           },
         ],
@@ -317,7 +318,7 @@ export class Expander {
         const pair = mapIndex(fileRoot).get(use.name);
 
         if (pair) {
-          const nid = `${this.store.realOf(ref.file.path)}#/${pointerEscape(use.name)}`;
+          const nid = `${this.store.realOf(ref.file.path)}#/${escapePointer(use.name)}`;
 
           if (!queued.has(nid)) {
             queued.add(nid);
@@ -591,7 +592,7 @@ export class Expander {
 
       seen.sites.set(key, keySite);
       seen.order.push(key);
-      const child = `${pointer}/${pointerEscape(key)}`;
+      const child = `${pointer}/${escapePointer(key)}`;
       const pos = scope.data ? undefined : stepPosition(here, key, false);
       let value = this.node(build, valueNode, child, {
         ...scope,
@@ -722,10 +723,10 @@ export class Expander {
         const prefix = `${resolved.real}#${resolved.fragment ?? ""}`;
 
         for (const k of seen.order.slice(start)) {
-          const declaredAt = `/schemas/${pointerEscape(k)}`;
+          const declaredAt = `/schemas/${escapePointer(k)}`;
 
           if (!build.sources.has(declaredAt)) {
-            build.sources.set(declaredAt, `${prefix}/${pointerEscape(k)}`);
+            build.sources.set(declaredAt, `${prefix}/${escapePointer(k)}`);
           }
         }
       }
@@ -1025,7 +1026,7 @@ export class Expander {
       return value;
     }
 
-    const id = `${resolved.real}#/${pointerEscape(name)}`;
+    const id = `${resolved.real}#/${escapePointer(name)}`;
 
     if (!build.refs.has(id)) {
       const ref: FileRef = {

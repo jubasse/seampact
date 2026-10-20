@@ -5,7 +5,8 @@ import {
   listIrUnknowns,
   MUST_ACT_KEYWORD,
 } from "./instance-walk.js";
-import { escapePointer, isSchemaNode, walkSchema } from "./schema-walk.js";
+import { escapePointer } from "../json/pointer.js";
+import { isSchemaNode, walkSchema } from "./schema-walk.js";
 import {
   IR_SCHEMA_DOCUMENTS,
   IR_SCHEMA_ID,

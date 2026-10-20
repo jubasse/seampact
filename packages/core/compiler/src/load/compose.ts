@@ -3,7 +3,7 @@ import type { ApiLayerId, JsonObject, JsonValue } from "../raw-tree.js";
 import { type LoadBudget, loadWorkOf } from "./budget.js";
 import type { LayerBuild } from "./expand.js";
 import { asObject, jsonObject, ownValue, setKey } from "./json.js";
-import { pointerEscape } from "./paths.js";
+import { escapePointer } from "@seampact/spec/json";
 import type { Reporter, SiteLocation } from "./report.js";
 import { nodeSite } from "./source.js";
 
@@ -90,7 +90,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
     const obj = asObject(old);
 
     if (obj) {
-      for (const [k, v] of Object.entries(obj)) clear(`${ptr}/${pointerEscape(k)}`, v);
+      for (const [k, v] of Object.entries(obj)) clear(`${ptr}/${escapePointer(k)}`, v);
     } else if (Array.isArray(old)) {
       for (const [i, v] of old.entries()) clear(`${ptr}/${i}`, v);
     }
@@ -102,7 +102,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
 
     if (obj && Object.keys(obj).length > 0) {
       for (const [k, v] of Object.entries(obj)) {
-        record(v, `${mptr}/${pointerEscape(k)}`, layer, `${lptr}/${pointerEscape(k)}`);
+        record(v, `${mptr}/${escapePointer(k)}`, layer, `${lptr}/${escapePointer(k)}`);
       }
     } else {
       winner.set(mptr, { layer, pointer: lptr });
@@ -181,8 +181,8 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
 
       for (const [k, v] of Object.entries(valObj)) {
         if (budget.exhausted) return;
-        const cptr = `${ptr}/${pointerEscape(k)}`;
-        const lcptr = `${lptr}/${pointerEscape(k)}`;
+        const cptr = `${ptr}/${escapePointer(k)}`;
+        const lcptr = `${lptr}/${escapePointer(k)}`;
 
         if (LEAF_MAPS.has(ptr)) {
           clear(cptr, ownValue(curObj, k));
@@ -233,7 +233,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
       if (budget.exhausted) break;
 
       if (DIRECTIVES.has(key)) continue;
-      const ptr = `/${pointerEscape(key)}`;
+      const ptr = `/${escapePointer(key)}`;
 
       here = () => siteAt(b, ptr);
       const section = asObject(value);
@@ -248,7 +248,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
             target,
             name,
             v,
-            `${ptr}/${pointerEscape(name)}`,
+            `${ptr}/${escapePointer(name)}`,
             key === "formats" ? "format" : key,
           );
         }
@@ -257,7 +257,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
 
         for (const [prefix, pv] of Object.entries(section)) {
           if (budget.exhausted) break;
-          const pptr = `${ptr}/${pointerEscape(prefix)}`;
+          const pptr = `${ptr}/${escapePointer(prefix)}`;
           const keys = asObject(pv);
 
           if (keys) {
@@ -265,7 +265,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
 
             for (const [name, v] of Object.entries(keys)) {
               if (budget.exhausted) break;
-              declare(b, inner, name, v, `${pptr}/${pointerEscape(name)}`, `extension '${prefix}'`);
+              declare(b, inner, name, v, `${pptr}/${escapePointer(name)}`, `extension '${prefix}'`);
             }
           } else {
             declare(b, target, prefix, pv, pptr, "extension prefix");
@@ -330,7 +330,7 @@ export function mergeLayers(layers: LayerBuild[], rep: Reporter, budget: LoadBud
     const obj = asObject(value);
 
     if (obj) {
-      for (const [k, v] of Object.entries(obj)) walk(v, `${ptr}/${pointerEscape(k)}`);
+      for (const [k, v] of Object.entries(obj)) walk(v, `${ptr}/${escapePointer(k)}`);
     } else if (Array.isArray(value)) {
       for (const [i, v] of value.entries()) walk(v, `${ptr}/${i}`);
     }

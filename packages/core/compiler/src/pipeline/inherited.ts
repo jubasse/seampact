@@ -1,6 +1,6 @@
 import type { Origin } from "@seampact/spec/ir";
 import type { JsonValue, RawApi } from "../raw-tree.js";
-import { canonical } from "./canonical.js";
+import { canonicalJson } from "@seampact/spec/json";
 import { isJsonList, isJsonObject, jsonAt, pipelineOrigin, pointerBelow } from "./pointer.js";
 import type { PassReadonly } from "./readonly.js";
 import type { TreeNode } from "./tree.js";
@@ -217,7 +217,7 @@ export function pipelineInherited(raw: PassReadonly<RawApi>): InheritedReader {
       return Object.freeze({ shape, entries: Object.freeze(entries) });
     const seen = new Set<string>();
     const union = entries.filter((entry) => {
-      const id = canonical([entry.key ?? null, entry.value]);
+      const id = canonicalJson([entry.key ?? null, entry.value]);
 
       if (seen.has(id)) return false;
       seen.add(id);

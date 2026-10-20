@@ -5,7 +5,7 @@
 // and a value read during that cycle is still in its temporal dead zone. `seam.test.ts` keeps this file
 // free of the orchestrator, the registry and every stage.
 
-export { canonical as pipelineCanonical } from "./canonical.js";
+export { canonicalJson as pipelineCanonical } from "@seampact/spec/json";
 export type { PipelineContextOptions } from "./context.js";
 export { pipelineContext } from "./context.js";
 export type {

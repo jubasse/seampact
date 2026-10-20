@@ -86,7 +86,12 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/diff`
 
-- `packages/core/diff/src`: Classifies the changes between two contract versions as additive or breaking, per direction.
+- `packages/core/diff/src`: The compatibility diff of two contract IRs: the classification table, the release gate and the deprecation report.
+- `packages/core/diff/src/deprecation`: The deprecation report of the operations, schemas and properties.
+- `packages/core/diff/src/gate`: The release gate: the applied compat policy, the exemptions and the stable maturity refusal.
+- `packages/core/diff/src/report`: The text form of a diff report.
+- `packages/core/diff/src/table`: The classification table: one row per change kind with its cell per position, and the row of every IR member.
+- `packages/core/diff/src/walk`: The structural walk of two IRs: reaches, member comparisons, the change sink and the whole-diff refusals.
 
 ### `@seampact/lint`
 
@@ -106,6 +111,7 @@ In pipeline order (ADR 0006 section 1).
 - `packages/core/spec/src/compatibility`: The compatibility matrix (`@seampact/spec/compatibility`): the first-party providers, and per server target the framework majors it supports and the validator styles it accepts.
 - `packages/core/spec/src/config`: The app config, `seampact.config.yaml` (`@seampact/spec/config`): its types and its JSON Schema.
 - `packages/core/spec/src/ir`: The IR (ADR 0004 and 0005): its JSON Schemas, generated types, writer view, validation and invariants.
+- `packages/core/spec/src/json`: JSON helpers every package shares (`@seampact/spec/json`): the canonical text of a value and the JSON Pointer segment escape.
 - `packages/core/spec/src/naming`: ADR 0007: cross-language naming.
 
 ### `@seampact/hooks`

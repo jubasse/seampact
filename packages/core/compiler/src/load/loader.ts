@@ -15,7 +15,8 @@ import { mergeLayers } from "./compose.js";
 import { Expander, type LayerBuild, mapIndex, navigate } from "./expand.js";
 import { asObject, isReservedKey, showValue } from "./json.js";
 import { LOAD_MAX_DEPTH } from "./limits.js";
-import { isInside, joinPath, loadNormalizePath, pointerEscape } from "./paths.js";
+import { escapePointer } from "@seampact/spec/json";
+import { isInside, joinPath, loadNormalizePath } from "./paths.js";
 import { entryRootPosition } from "./positions.js";
 import { packLayerIdOf } from "./pack-files.js";
 import type { LoadReader } from "./reader.js";
@@ -309,7 +310,7 @@ class Loader {
       if (this.budget.exhausted) break;
       // Each api entry is read from workspace.yaml; loading the api before it moved the layer.
       this.rep.layer = entry.layer;
-      const at = site(`/workspace/apis/${pointerEscape(name)}`);
+      const at = site(`/workspace/apis/${escapePointer(name)}`);
 
       if (typeof raw !== "string") {
         this.rep.report({
@@ -476,7 +477,7 @@ class Loader {
           const other = byLayer.get(l);
 
           if (other && Object.hasOwn(asObject(other.tree.schemas) ?? {}, n)) {
-            const at = `/schemas/${pointerEscape(n)}`;
+            const at = `/schemas/${escapePointer(n)}`;
 
             return { site: other.locs.get(at), layer: l, source: other.sources.get(at) };
           }
@@ -523,8 +524,8 @@ class Loader {
           related: [
             {
               at:
-                other.locs.get(`/schemas/${pointerEscape(use.name)}`) ??
-                other.locs.get(`/enums/${pointerEscape(use.name)}`) ??
+                other.locs.get(`/schemas/${escapePointer(use.name)}`) ??
+                other.locs.get(`/enums/${escapePointer(use.name)}`) ??
                 nodeSite(other.parsed, other.parsed.root),
               message: "declared here",
             },
@@ -776,7 +777,7 @@ class Loader {
           rule: "pack-not-data",
           message: `the pack file '${file}' holds '${k}', which is not a pack key; a pack is data only`,
           fix: "keep to the keys of a pack (pack, the catalogues, conventions, formats, extensions, lint, derive)",
-          at: build.locs.get(`/${pointerEscape(k)}`) ?? nodeSite(pf, pf.root),
+          at: build.locs.get(`/${escapePointer(k)}`) ?? nodeSite(pf, pf.root),
         });
       }
     }
