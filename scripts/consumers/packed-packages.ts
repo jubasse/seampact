@@ -28,3 +28,15 @@ export const PACKED_PACKAGES: readonly string[] = [
 export const BUILD_CONFIG = "tsconfig.build.json";
 
 export const BUILD_DIRECTORY = "dist";
+
+// The first-party convention packs: packed as they are (a `pack.yaml`, no build), so a contract naming
+// `packs: ["@seampact/pack-hal"]` compiles in an app right after install. All six ship: they are a few kilobytes
+// each, and reading the app's contracts to pick some would add a parser for no saving.
+export const PACKED_PACKS: readonly string[] = [
+  "packages/packs/pack-api-platform",
+  "packages/packs/pack-crud-rights",
+  "packages/packs/pack-hal",
+  "packages/packs/pack-jsonapi",
+  "packages/packs/pack-laravel",
+  "packages/packs/pack-spring",
+];

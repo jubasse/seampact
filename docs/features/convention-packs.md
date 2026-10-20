@@ -6,7 +6,7 @@ A pack is a set of conventions you reuse: a response format, a paging style, or 
 packs: ["@seampact/pack-hal"]
 ```
 
-Write it at the top level of `api.yaml`, or of the shared file to give it to every api. The package must be installed in your app, next to `package.json`. A pack is data, not code.
+Write it at the top level of `api.yaml`, or of the shared file to give it to every api. `install-into.ts` installs the packs with the other seampact packages. A pack is data, not code.
 
 ## What each pack brings
 
@@ -20,14 +20,6 @@ Write it at the top level of `api.yaml`, or of the shared file to give it to eve
 | `@seampact/pack-crud-rights` | A right `<resource>.<op>` for every list, get, create, update, delete and batch route, required first. Use it on routes with an identity: a public route has no caller to hold the right. |
 
 A format or paging pack sets it as the default for the api. You can still choose another on a route.
-
-## No package? Use a file
-
-Copy the pack's `pack.yaml` into your contract and use its path.
-
-```yaml
-packs: [./packs/hal.yaml]
-```
 
 ## Your own pack
 
