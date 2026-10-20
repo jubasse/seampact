@@ -1,4 +1,10 @@
-import type { ContractIR, Property, ScalarTypeUse, UnionSchema } from "@seampact/spec/ir";
+import type {
+  ContractIR,
+  MapSchema,
+  Property,
+  ScalarTypeUse,
+  UnionSchema,
+} from "@seampact/spec/ir";
 import { describe, expect, test } from "vitest";
 import type { DiffPosition } from "../result.js";
 import {
@@ -117,6 +123,37 @@ function addShapeUnion(ir: ContractIR): void {
       type: { kind: "ref", schema: "Shape" },
     });
   }
+}
+
+function addLabelsMap(ir: ContractIR): void {
+  const labels: MapSchema = {
+    kind: "map",
+    values: { kind: "scalar", type: "string", refinements: {} },
+    id: "Labels",
+    name: { segments: ["labels"], role: "schema" },
+    directions: ["input", "output"],
+    examples: [],
+    docs: {},
+    extensions: {},
+    origin: ORIGIN,
+  };
+
+  ir.schemas.Labels = labels;
+
+  for (const schema of [createSchema(ir), taskSchema(ir)]) {
+    schema.properties.push({
+      ...newProperty("labels", true),
+      type: { kind: "ref", schema: "Labels" },
+    });
+  }
+}
+
+function labelsMap(ir: ContractIR): MapSchema {
+  const labels = knownSchemaOf(ir, "Labels");
+
+  if (labels.kind !== "map") throw new Error("no Labels map in the test IR");
+
+  return labels;
 }
 
 function shapeUnion(ir: ContractIR): UnionSchema {
@@ -466,6 +503,96 @@ const ROW_CASES: RowCase[] = [
       },
     ];
   }),
+  ...(["input", "output"] as const).flatMap((position): RowCase[] => {
+    const schema = position === "input" ? "CreateTask" : "Task";
+
+    return [
+      {
+        kind: "type.changed",
+        case: "keys",
+        position,
+        expected: "CS",
+        base: addLabelsMap,
+        after: (ir) => {
+          labelsMap(ir).keys = { kind: "scalar", type: "string", refinements: { maxLength: 8 } };
+        },
+      },
+      {
+        kind: "type.changed",
+        case: "content",
+        position,
+        expected: "CS",
+        after: (ir) => {
+          scalarOf(ir, schema, "title").content = {
+            media: "application/json",
+            schema: { kind: "scalar", type: "string", refinements: {} },
+          };
+        },
+      },
+      {
+        kind: "type.changed",
+        case: "variantSchema",
+        position,
+        expected: "CS",
+        base: addShapeUnion,
+        after: (ir) => {
+          const [draftVariant] = shapeUnion(ir).variants;
+
+          if (draftVariant !== undefined) draftVariant.schema = "Preferences";
+        },
+      },
+      {
+        kind: "order",
+        case: "values",
+        position,
+        expected: "info",
+        after: (ir) => ir.enums.TaskState?.values.reverse(),
+      },
+      {
+        kind: "order",
+        case: "variants",
+        position,
+        expected: "info",
+        base: addShapeUnion,
+        after: (ir) => shapeUnion(ir).variants.reverse(),
+      },
+    ];
+  }),
+  {
+    kind: "type.changed",
+    case: "enum",
+    position: "input",
+    expected: "CS",
+    after: (ir) => {
+      const states = propertyOf(ir, "TaskQuery", "states").type;
+
+      if (states.kind === "array") states.items = { kind: "enum", enum: "Role" };
+    },
+  },
+  {
+    kind: "default.changed",
+    case: "changed",
+    position: "output",
+    expected: "info",
+    base: (ir) => {
+      propertyOf(ir, "Task", "effort").default = 1;
+    },
+    after: (ir) => {
+      propertyOf(ir, "Task", "effort").default = 2;
+    },
+  },
+  {
+    kind: "default.changed",
+    case: "removed",
+    position: "input",
+    expected: "C",
+    base: (ir) => {
+      propertyOf(ir, "CreateTask", "effort").default = 1;
+    },
+    after: (ir) => {
+      delete propertyOf(ir, "CreateTask", "effort").default;
+    },
+  },
   {
     kind: "enum.value",
     case: "added",
@@ -868,21 +995,6 @@ const ROW_CASES: RowCase[] = [
       },
     }),
   ),
-  {
-    kind: "order",
-    case: "values",
-    position: "output",
-    expected: "info",
-    after: (ir) => ir.enums.TaskState?.values.reverse(),
-  },
-  {
-    kind: "order",
-    case: "variants",
-    position: "output",
-    expected: "info",
-    base: addShapeUnion,
-    after: (ir) => shapeUnion(ir).variants.reverse(),
-  },
   {
     kind: "order",
     case: "packs",
