@@ -2,7 +2,7 @@ import type { SourceMap } from "@seampact/spec/ir";
 import type { Diagnostic, DiagnosticOrigin } from "../diagnostics/diagnostic.js";
 import { diagnosticLocationKey } from "../diagnostics/print.js";
 import type { FileLayerId } from "../raw-tree.js";
-import { pointerEscape } from "./paths.js";
+import { escapePointer } from "@seampact/spec/json";
 
 export type SiteLocation = SourceMap["locations"][string];
 
@@ -23,7 +23,7 @@ export interface PendingDiagnostic {
  * origin still resolves through the side table.
  */
 export function loadSitePointer(site: SiteLocation): string {
-  return `/~load/${pointerEscape(site.file)}/${site.line}/${site.column}`;
+  return `/~load/${escapePointer(site.file)}/${site.line}/${site.column}`;
 }
 
 export class Reporter {

@@ -150,10 +150,6 @@ export function checkCase(
   return mismatch ? { kind: "case", actual: actual.join("/") } : { kind: "ok" };
 }
 
-export function pointerEscape(seg: string): string {
-  return seg.replaceAll("~", "~0").replaceAll("/", "~1");
-}
-
 export function pointerSegments(pointer: string): string[] | undefined {
   if (pointer === "") return [];
 

@@ -13,6 +13,7 @@ import {
   RESERVED_NAMES,
   schemaKeyword,
 } from "@seampact/spec/authoring";
+import { escapePointer } from "@seampact/spec/json";
 import type { ErrorObject } from "ajv";
 import type { Diagnostic } from "../diagnostics/diagnostic.js";
 import type { FileLayerId } from "../raw-tree.js";
@@ -149,10 +150,6 @@ export interface ConvertContext {
   layer: FileLayerId;
   // The pack root refuses code and unknown keys (ADR 0008, SCN-047).
   isPackRoot: boolean;
-}
-
-function escapePointer(segment: string): string {
-  return segment.replaceAll("~", "~0").replaceAll("/", "~1");
 }
 
 function lastSegment(pointer: string): string {

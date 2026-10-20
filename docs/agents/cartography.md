@@ -111,6 +111,7 @@ In pipeline order (ADR 0006 section 1).
 - `packages/core/spec/src/compatibility`: The compatibility matrix (`@seampact/spec/compatibility`): the first-party providers, and per server target the framework majors it supports and the validator styles it accepts.
 - `packages/core/spec/src/config`: The app config, `seampact.config.yaml` (`@seampact/spec/config`): its types and its JSON Schema.
 - `packages/core/spec/src/ir`: The IR (ADR 0004 and 0005): its JSON Schemas, generated types, writer view, validation and invariants.
+- `packages/core/spec/src/json`: JSON helpers every package shares (`@seampact/spec/json`): the canonical text of a value and the JSON Pointer segment escape.
 - `packages/core/spec/src/naming`: ADR 0007: cross-language naming.
 
 ### `@seampact/hooks`

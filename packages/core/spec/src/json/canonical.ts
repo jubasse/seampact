@@ -1,7 +1,7 @@
-// The canonical text of a JSON value, shared by the passes through the seam barrel.
+// The canonical text of a JSON value.
 
 /** A value's text with every object's keys sorted, so two equal values written in another key order are one. */
-export function canonical(value: unknown): string {
+export function canonicalJson(value: unknown): string {
   const sorted = (item: unknown): unknown => {
     if (Array.isArray(item)) return item.map(sorted);
 
