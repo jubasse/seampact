@@ -32,7 +32,7 @@ Create `package.json`.
 }
 ```
 
-Using Fastify instead of NestJS? Use the `dependencies` of [4. Write the handlers (Fastify)](4-handlers-fastify.md#dependencies-and-config).
+Not on NestJS? Your handlers page lists the dependencies to use instead.
 
 Build the seampact packages of your checkout into the app. Replace `~/src/seampact` with the path of your checkout.
 
