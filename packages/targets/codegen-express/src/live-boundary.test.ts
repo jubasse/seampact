@@ -1135,3 +1135,32 @@ describe("the frameworkEtag option on Express 5", () => {
     expect(reply.headers.etag).toBe('"app-etag"');
   });
 });
+
+describe("the catchAll option on Express 5", () => {
+  const project = projectDirectory(import.meta.url, "live-catch-all");
+  let app: ReferenceAppModule;
+  let server: Awaited<ReturnType<ReferenceAppModule["startReferenceApp"]>>;
+
+  beforeAll(async () => {
+    const files = await generateReferenceProject(project, expressTarget, { catchAll: false });
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+    linkExpress(project, "express");
+    app = await import(copyTestApp(build, APP_SOURCE));
+    server = await app.startReferenceApp();
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  afterAll(async () => {
+    await server?.close();
+  });
+
+  test("false leaves an unknown path under the base path to the app, not the api's 404", async () => {
+    app.resetScenario();
+
+    const reply = await sendRawRequest(server, "GET", "/v1/unknown", { headers: BEARER });
+
+    expect(reply.status).toBe(404);
+    expect(reply.headers["content-type"] ?? "").not.toContain(PROBLEM_MEDIA);
+  });
+});

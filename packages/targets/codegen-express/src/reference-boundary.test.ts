@@ -74,6 +74,18 @@ describe("the generated reference router compiles", () => {
     });
   });
 
+  test("catchAll takes a boolean and refuses anything else", () => {
+    expect(expressTarget.parseOptions({ catchAll: false })).toMatchObject({
+      status: "parsed",
+      options: { catchAll: false },
+    });
+    expect(expressTarget.parseOptions({})).toMatchObject({ options: { catchAll: true } });
+    expect(expressTarget.parseOptions({ catchAll: "no" })).toMatchObject({
+      status: "refused",
+      refusals: [{ code: "options.catchAll.invalid" }],
+    });
+  });
+
   test("the route table lists a static segment before a param at the same place", () => {
     const routes = readFileSync(join(PROJECT, "generated/server/tasks/routes.ts"), "utf8");
     const firstParamTask = routes.indexOf('"/v1/channels/{channelId}/tasks/{taskId}');

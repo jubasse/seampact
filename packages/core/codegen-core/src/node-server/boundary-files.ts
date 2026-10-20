@@ -299,6 +299,7 @@ function boundaryFiles(
       hookCheck: input.hookCheck,
       compression: options.compression,
       frameworkEtag: options.frameworkEtag,
+      catchAll: options.catchAll,
     },
     refusals,
     warnings,

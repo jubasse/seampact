@@ -256,6 +256,8 @@ export interface ContractApi {
   readonly compression: "off" | { readonly thresholdBytes: number };
   /** `strip` removes an ETag the framework added to a reply the boundary did not write; `keep` leaves it. */
   readonly frameworkEtag: "strip" | "keep";
+  /** False leaves a request the contract does not serve (an unserved method or path under a base path) to the app. */
+  readonly catchAll: boolean;
 }
 
 /** The request as every check step sees it, whatever the framework. */

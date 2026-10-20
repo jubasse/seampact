@@ -176,7 +176,7 @@ export function createFastifyBoundary<
 
     for (const route of api.routes) registerRoute(fastify, route, options, hooks);
 
-    registerUnservedBasePaths(fastify, hooks);
+    if (api.catchAll) registerUnservedBasePaths(fastify, hooks);
   };
 
   // Every method under each base path, below the contract routes, which find-my-way matches first: a path no route

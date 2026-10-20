@@ -761,6 +761,8 @@ export function createAdonisBoundary<
     const { method, path } = requestLine(ctx);
     const routeNotFound = errorCode(error) === ROUTE_NOT_FOUND_CODE;
 
+    if (routeNotFound && !api.catchAll) return false;
+
     // A path under a base path another api of the app also claims is left to the app's handler.
     const claims = registered.router === undefined ? [] : basePathClaimsOf(registered.router);
 

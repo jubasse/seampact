@@ -142,7 +142,7 @@ export function createHonoBoundary<
       );
     }
 
-    registerCatchAlls(app);
+    if (api.catchAll) registerCatchAlls(app);
 
     const addedRoutes = app.routes.slice(firstAddedRoute);
 

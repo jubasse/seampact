@@ -783,6 +783,8 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     const notServed =
       statusOf(exception) === NOT_FOUND && matchContractRoute(api, method, path) === undefined;
 
+    if (notServed && !api.catchAll) return false;
+
     if (!matchesContractPath(api, path) && !(notServed && claimsBasePathAloneInApp(path))) {
       return false;
     }

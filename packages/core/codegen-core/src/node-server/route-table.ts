@@ -47,6 +47,8 @@ export interface RouteTableOptions {
   /** The entry's `compression` and `frameworkEtag` options, read by the outgoing reply. */
   readonly compression: CompressionOption;
   readonly frameworkEtag: FrameworkEtagMode;
+  /** The entry's `catchAll` option: false leaves a request the contract does not serve to the app. */
+  readonly catchAll: boolean;
 }
 
 const API_LOCATION: IrLocation = { member: "" };
@@ -133,6 +135,7 @@ export function routeTableSource(
     hookCheck: options.hookCheck,
     compression: options.compression,
     frameworkEtag: options.frameworkEtag,
+    catchAll: options.catchAll,
   };
 
   return [

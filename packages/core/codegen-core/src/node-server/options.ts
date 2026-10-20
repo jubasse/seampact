@@ -19,6 +19,8 @@ export interface NodeServerOptions {
   responses: ResponsesMode;
   bodyValidation: boolean;
   frameworkEtag: FrameworkEtagMode;
+  /** False leaves a request the contract does not serve (a 404 or 405 path) to the app. */
+  catchAll: boolean;
   compression: CompressionOption;
 }
 
@@ -38,6 +40,7 @@ export interface AcceptedNodeServerOptions {
 const RESPONSES_KEY = "responses";
 const BODY_VALIDATION_KEY = "bodyValidation";
 const FRAMEWORK_ETAG_KEY = "frameworkEtag";
+const CATCH_ALL_KEY = "catchAll";
 const COMPRESSION_KEY = "compression";
 const THRESHOLD_BYTES_KEY = "thresholdBytes";
 const DEFAULT_COMPRESSION_THRESHOLD_BYTES = 1024;
@@ -46,11 +49,12 @@ const DEFAULT_NODE_SERVER_OPTIONS: NodeServerOptions = {
   responses: "strict",
   bodyValidation: false,
   frameworkEtag: "strip",
+  catchAll: true,
   compression: { thresholdBytes: DEFAULT_COMPRESSION_THRESHOLD_BYTES },
 };
 
 /**
- * Accepts `{}`, `responses: strict | warn`, `bodyValidation: true | false`, `frameworkEtag: strip | keep` and, where
+ * Accepts `{}`, `responses: strict | warn`, `bodyValidation: true | false`, `frameworkEtag: strip | keep`, `catchAll: true | false` and, where
  * accepted, `compression: off` or `compression: { thresholdBytes: <whole number> }`; any other key or value is
  * refused.
  */
@@ -76,6 +80,7 @@ export function parseNodeServerOptions(
     RESPONSES_KEY,
     BODY_VALIDATION_KEY,
     FRAMEWORK_ETAG_KEY,
+    CATCH_ALL_KEY,
     ...(accepted.compression ? [COMPRESSION_KEY] : []),
   ];
   const refusals = Object.keys(raw)
@@ -92,6 +97,7 @@ export function parseNodeServerOptions(
     FRAMEWORK_ETAG_KEY,
     DEFAULT_NODE_SERVER_OPTIONS.frameworkEtag,
   );
+  const catchAll = optionValue(raw, CATCH_ALL_KEY, DEFAULT_NODE_SERVER_OPTIONS.catchAll);
   const compression = optionValue(raw, COMPRESSION_KEY, DEFAULT_NODE_SERVER_OPTIONS.compression);
 
   if (!isResponsesMode(responses)) {
@@ -121,6 +127,15 @@ export function parseNodeServerOptions(
     });
   }
 
+  if (typeof catchAll !== "boolean") {
+    refusals.push({
+      code: "options.catchAll.invalid",
+      message: `The option 'catchAll' is ${JSON.stringify(catchAll)}, not true or false.`,
+      fix: "Set 'catchAll' to true (the default) or false, which leaves an unserved path to the app.",
+      member: `/${CATCH_ALL_KEY}`,
+    });
+  }
+
   if (!isCompressionOption(compression)) {
     refusals.push({
       code: "options.compression.invalid",
@@ -135,6 +150,7 @@ export function parseNodeServerOptions(
     !isResponsesMode(responses) ||
     typeof bodyValidation !== "boolean" ||
     !isFrameworkEtagMode(frameworkEtag) ||
+    typeof catchAll !== "boolean" ||
     !isCompressionOption(compression)
   ) {
     return { status: "refused", refusals };
@@ -146,6 +162,7 @@ export function parseNodeServerOptions(
       responses,
       bodyValidation,
       frameworkEtag,
+      catchAll,
       compression: structuredClone(compression),
     },
   };

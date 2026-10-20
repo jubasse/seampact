@@ -136,11 +136,14 @@ export function createExpressBoundary<Hooks extends RegisteredHooks, Handlers>(
       );
     }
 
-    for (const path of new Set(api.routes.map((route) => route.path))) {
-      contractRouter.all(routePattern(path), unservedMethod(path, hooks));
+    if (api.catchAll) {
+      for (const path of new Set(api.routes.map((route) => route.path))) {
+        contractRouter.all(routePattern(path), unservedMethod(path, hooks));
+      }
+
+      contractRouter.use(unservedBasePath(hooks));
     }
 
-    contractRouter.use(unservedBasePath(hooks));
     registerBasePathClaim(contractRouter, api);
 
     contractRouter.use(contractErrorMiddleware);
