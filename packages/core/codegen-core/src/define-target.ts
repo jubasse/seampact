@@ -23,7 +23,8 @@ export function defineTarget<
   Artefact extends string,
   Consumed extends LinkKind = never,
   Provided extends LinkKind = never,
->(definition: TargetDefinition<Options, Artefact, Consumed, Provided>): Target {
+  Optional extends Consumed = never,
+>(definition: TargetDefinition<Options, Artefact, Consumed, Provided, Optional>): Target {
   const { metadata } = definition;
 
   async function generate(request: GenerateRequest): Promise<GenerateOutcome> {
@@ -38,7 +39,7 @@ export function defineTarget<
     const { links, artefacts } = request;
 
     if (
-      !meetsEveryNeed(links, metadata.consumes) ||
+      !meetsEveryNeed<Consumed, Optional>(links, metadata.consumes) ||
       !isDeclaredArtefactSet(artefacts, metadata.artefacts)
     ) {
       return refused([

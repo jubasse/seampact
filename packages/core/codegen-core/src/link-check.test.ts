@@ -20,6 +20,23 @@ function linksWithValidatorStyle(style: ValidatorStyle): LinkSet {
   };
 }
 
+// A target the matrix records with its own validators (fastify), whose placement writes none here.
+function stubOwnValidatorsTarget() {
+  return nodeServerTarget({
+    packageName: "@seampact/codegen-fastify",
+    packageVersion: "1.2.3",
+    format,
+    placement: {
+      runtimeModule: "stub-boundary",
+      runtimeSourceUrl: new URL("./stub-boundary.ts", import.meta.url),
+      frameworkModule: "stub",
+      frameworkSource: () => "",
+      ownValidators: () => undefined,
+    },
+    validatorStyles: ["standard-schema"],
+  });
+}
+
 function stubNodeServerTarget(validatorStyles: readonly ValidatorStyle[]) {
   return nodeServerTarget({
     packageName: "@seampact/codegen-stub",
@@ -82,4 +99,30 @@ test("a node server target with both styles accepts a class-validator link", () 
   );
 
   expect(refusals).toEqual([]);
+});
+
+test("an optional need accepts no link and refuses a wrong style", () => {
+  const consumer = stubOwnValidatorsTarget();
+  const { consumes } = consumer.metadata;
+
+  expect(refuseUnmetLinks(consumes, { types: TYPES_LINK })).toEqual([]);
+  expect(refuseUnmetLinks(consumes, linksWithValidatorStyle("standard-schema"))).toEqual([]);
+  expect(refuseUnmetLinks(consumes, linksWithValidatorStyle("class-validator"))).toEqual([
+    {
+      code: "link.style.unsupported",
+      message:
+        "The 'validators' link provides style 'class-validator'; this target reads standard-schema.",
+      fix: "Link `@seampact/codegen-zod` or `@seampact/codegen-yup`, or no `validators` link to use the target's own ajv validators.",
+    },
+  ]);
+});
+
+test("a target without own validators keeps the missing validators link", () => {
+  const consumer = stubNodeServerTarget(["standard-schema"]);
+
+  expect(
+    refuseUnmetLinks(consumer.metadata.consumes, { types: TYPES_LINK }).map(
+      (refusal) => refusal.code,
+    ),
+  ).toEqual(["link.missing"]);
 });

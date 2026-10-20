@@ -6,10 +6,13 @@ export {
   BOUNDARY_ARTEFACT,
   type BoundaryArtefact,
   NODE_SERVER_BOOT_CHECKS,
+  type NodeServerArtefact,
   type NodeServerPlacement,
   type NodeServerTargetPackage,
   nodeServerBoundaryFiles,
   nodeServerTarget,
+  OWN_VALIDATORS_ARTEFACT,
+  type OwnValidators,
 } from "./boundary-files.js";
 export { handlerMapDeclarations, largestBodyLimit } from "./handler-map-module.js";
 export { type NodeServerOptions, parseNodeServerOptions, type ResponsesMode } from "./options.js";

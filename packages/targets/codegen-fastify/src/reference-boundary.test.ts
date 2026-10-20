@@ -1,5 +1,6 @@
-import { writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import type { LinkSet } from "@seampact/codegen-core";
 import {
   generateReferenceProject,
   projectDirectory,
@@ -81,5 +82,94 @@ describe("a path the router cannot read as written is refused by name", () => {
         },
       ],
     });
+  });
+});
+
+describe("with no validators link the target writes its own Ajv validators", () => {
+  async function typesLinkOnly(): Promise<LinkSet> {
+    const { types } = await referenceLinks(PROJECT, "tasks");
+
+    return { ...(types === undefined ? {} : { types }) };
+  }
+
+  test("generates its own validators when no validators link is given", async () => {
+    const outcome = await fastifyTarget.generate({
+      ir: readGoldenIr("tasks"),
+      options: { bodyValidation: true },
+      links: await typesLinkOnly(),
+      artefacts: new Set(["boundary", "validators"]),
+    });
+
+    if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
+
+    const paths = outcome.files.map((file) => file.path);
+    const routes = outcome.files.find((file) => file.path === "routes.ts")?.contents ?? "";
+
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        "validators/schemas/input.ts",
+        "validators/schemas/output.ts",
+        "validators/operations/input.ts",
+        "validators/ajv-support.ts",
+        "validators/wire-checks.ts",
+        "routes.ts",
+      ]),
+    );
+    expect(routes).toContain('from "./validators/operations/input.js"');
+  });
+
+  test("writes no validators file when a validators link is given", async () => {
+    const outcome = await fastifyTarget.generate({
+      ir: readGoldenIr("tasks"),
+      options: { bodyValidation: true },
+      links: await referenceLinks(PROJECT, "tasks"),
+      artefacts: new Set(["boundary", "validators"]),
+    });
+
+    if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
+
+    expect(outcome.files.filter((file) => file.path.startsWith("validators/"))).toEqual([]);
+  });
+
+  test("refuses the validators artefact turned off while the boundary has no link", async () => {
+    const outcome = await fastifyTarget.generate({
+      ir: readGoldenIr("tasks"),
+      options: { bodyValidation: true },
+      links: await typesLinkOnly(),
+      artefacts: new Set(["boundary"]),
+    });
+
+    expect(outcome).toMatchObject({
+      status: "refused",
+      refusals: [{ code: "artefact.validators.needed" }],
+    });
+  });
+
+  test("the generated Ajv validators type-check with the plugin", async () => {
+    const outcome = await fastifyTarget.generate({
+      ir: readGoldenIr("tasks"),
+      options: { bodyValidation: true },
+      links: await typesLinkOnly(),
+      artefacts: new Set(["boundary", "validators"]),
+    });
+
+    if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
+
+    const written = outcome.files.map((file) => {
+      const path = join(PROJECT, "generated/own/tasks", file.path);
+
+      mkdirSync(dirname(path), { recursive: true });
+      writeFileSync(path, file.contents);
+
+      return path;
+    });
+
+    expect(
+      typeErrorsOf(
+        PROJECT,
+        [...written, ...files.filter((file) => file.includes("/types/"))],
+        REFERENCE_COMPILER_OPTIONS,
+      ),
+    ).toEqual([]);
   });
 });

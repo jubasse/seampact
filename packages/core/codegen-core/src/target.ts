@@ -33,10 +33,15 @@ export interface AnyTargetMetadata extends Omit<TargetMetadata, "consumes" | "pr
   provides: Partial<LinkOffers>;
 }
 
-export interface GenerateInput<Options, Artefact extends string, Consumed extends LinkKind> {
+export interface GenerateInput<
+  Options,
+  Artefact extends string,
+  Consumed extends LinkKind,
+  Optional extends Consumed = never,
+> {
   ir: ContractIR;
   options: Options;
-  links: Links<Consumed>;
+  links: Links<Consumed, Optional>;
   artefacts: ReadonlySet<Artefact>;
   frameworkRoutes: FrameworkRouteCheck;
 }
@@ -76,11 +81,12 @@ interface TargetDefinitionBase<
   Artefact extends string,
   Consumed extends LinkKind,
   Provided extends LinkKind,
+  Optional extends Consumed,
 > {
   metadata: TargetMetadata<Artefact, Consumed, Provided>;
   format: SourceFormat;
   parseOptions(raw: unknown): ParseOptionsOutcome<Options>;
-  generate(input: GenerateInput<Options, Artefact, Consumed>): GenerateOutcome;
+  generate(input: GenerateInput<Options, Artefact, Consumed, Optional>): GenerateOutcome;
 }
 
 // A provider must describe what it provides; a target that provides nothing has no `describe`.
@@ -88,13 +94,16 @@ type DescribeMember<Options, Provided extends LinkKind> = [Provided] extends [ne
   ? { describe?: never }
   : { describe(ir: ContractIR, options: Options): DescribeOutcome<ProvidedDescriptors<Provided>> };
 
-// What a target package writes: typed by its options, its artefact ids and the link kinds it consumes and provides.
+// What a target package writes: typed by its options, its artefact ids and the link kinds it consumes and provides,
+// and the consumed kinds whose link may be absent.
 export type TargetDefinition<
   Options,
   Artefact extends string,
   Consumed extends LinkKind = never,
   Provided extends LinkKind = never,
-> = TargetDefinitionBase<Options, Artefact, Consumed, Provided> & DescribeMember<Options, Provided>;
+  Optional extends Consumed = never,
+> = TargetDefinitionBase<Options, Artefact, Consumed, Provided, Optional> &
+  DescribeMember<Options, Provided>;
 
 // What the CLI passes to any target: raw options, re-parsed by the target, and the links the link check passed.
 export interface GenerateRequest {

@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs";
+import { serverTargetCompatibility } from "@seampact/spec/compatibility";
 import { type ContractIR, IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { apiIndexSource } from "../api-index.js";
 import { defineTarget } from "../define-target.js";
-import type { ValidatorStyle } from "../descriptors.js";
+import type { ValidatorStyle, ValidatorsDescriptor } from "../descriptors.js";
 import type { TunableBootCheck } from "../framework-route-check.js";
 import type { GenerateWarning } from "../generate-warning.js";
+import type { Link } from "../links.js";
 import { type Refusal, withoutRepeats } from "../refusal.js";
 import type {
   GeneratedFile,
@@ -29,8 +31,19 @@ export const BOUNDARY_ARTEFACT = "boundary";
 
 export type BoundaryArtefact = typeof BOUNDARY_ARTEFACT;
 
+/** The artefact of a target that generates its own validators when its entry gives no `validators` link. */
+export const OWN_VALIDATORS_ARTEFACT = "validators";
+
+export type NodeServerArtefact = BoundaryArtefact | typeof OWN_VALIDATORS_ARTEFACT;
+
 /** The boot checks a Node server target generates that its app config entry may tune. */
 export const NODE_SERVER_BOOT_CHECKS: readonly TunableBootCheck[] = ["frameworkRoutes"];
+
+/** The validators a target writes itself: files relative to the validators directory, and what they provide. */
+export interface OwnValidators {
+  readonly files: readonly GeneratedFile[];
+  readonly descriptor: ValidatorsDescriptor;
+}
 
 /** What a Node server target adds to the shared files. */
 export interface NodeServerPlacement {
@@ -43,6 +56,11 @@ export interface NodeServerPlacement {
   frameworkSource(ir: ContractIR, options: NodeServerOptions, refusals: Refusal[]): string;
   /** The shared runtime the placement imports: `node` (the default) or `web` for a Web-standard placement. */
   readonly runtimeProfile?: ServerRuntimeProfile;
+  /**
+   * The validators in the target's own library, written under `validators/` when the entry gives no `validators`
+   * link; absent when the target needs the link. Pushes its refusals and returns nothing when it refuses.
+   */
+  ownValidators?(ir: ContractIR, refusals: Refusal[]): OwnValidators | undefined;
 }
 
 /** A Node server target package: its name and version, its Prettier and its placement. */
@@ -55,6 +73,7 @@ export interface NodeServerTargetPackage {
   readonly validatorStyles: readonly ValidatorStyle[];
 }
 
+const OWN_VALIDATORS_DIRECTORY = "validators";
 const MODULE_EXTENSION = ".ts";
 const ROUTES_MODULE = "routes";
 const HANDLERS_MODULE = "handlers";
@@ -64,10 +83,19 @@ const DEFAULT_RUNTIME_PROFILE: ServerRuntimeProfile = "node";
 
 /**
  * A Node server target, as the CLI loads it. It reads the operation types through the `types` link and the input
- * validators through the `validators` link, and provides nothing.
+ * validators through the `validators` link, which is optional when the placement writes its own validators, and
+ * provides nothing.
  */
 export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target {
-  return defineTarget<NodeServerOptions, BoundaryArtefact, "types" | "validators">({
+  const ownLibrary = ownValidatorsLibrary(targetPackage);
+
+  return defineTarget<
+    NodeServerOptions,
+    NodeServerArtefact,
+    "types" | "validators",
+    never,
+    "validators"
+  >({
     metadata: {
       packageName: targetPackage.packageName,
       packageVersion: targetPackage.packageVersion,
@@ -77,11 +105,19 @@ export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target
         kinds: ["httpOperation"],
         features: [],
       },
-      artefacts: [{ id: BOUNDARY_ARTEFACT, defaultOn: true }],
+      artefacts: [
+        { id: BOUNDARY_ARTEFACT, defaultOn: true },
+        ...(ownLibrary === undefined
+          ? []
+          : [{ id: OWN_VALIDATORS_ARTEFACT, defaultOn: true } as const]),
+      ],
       bootChecks: NODE_SERVER_BOOT_CHECKS,
       consumes: {
         types: { styles: ["typescript"] },
-        validators: { styles: [...targetPackage.validatorStyles] },
+        validators: {
+          styles: [...targetPackage.validatorStyles],
+          ...(ownLibrary === undefined ? {} : { optional: { ownLibrary } }),
+        },
       },
       provides: {},
     },
@@ -91,13 +127,101 @@ export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target
   });
 }
 
-// Every module of one api's boundary, or every refusal at once (A47).
+// The library of the target's own validators, read from the compatibility matrix; none when the placement writes
+// none.
+function ownValidatorsLibrary(targetPackage: NodeServerTargetPackage): string | undefined {
+  if (targetPackage.placement.ownValidators === undefined) return undefined;
+
+  const [ownValidator] = serverTargetCompatibility(targetPackage.packageName).ownValidators;
+
+  if (ownValidator === undefined) {
+    throw new Error(
+      `${targetPackage.packageName} writes its own validators, and the compatibility matrix records none for it.`,
+    );
+  }
+
+  return ownValidator.library;
+}
+
+// Every module of one api's boundary, or every refusal at once (A47). With no `validators` link, the own
+// validators of the placement are written and read instead, when the `validators` artefact is on.
 export function nodeServerBoundaryFiles(
-  input: GenerateInput<NodeServerOptions, BoundaryArtefact, "types" | "validators">,
+  input: GenerateInput<NodeServerOptions, NodeServerArtefact, "types" | "validators", "validators">,
   placement: NodeServerPlacement,
 ): GenerateOutcome {
-  if (!input.artefacts.has(BOUNDARY_ARTEFACT)) return { status: "generated", files: [] };
+  const boundaryOn = input.artefacts.has(BOUNDARY_ARTEFACT);
+  const ownValidatorsOn = input.artefacts.has(OWN_VALIDATORS_ARTEFACT);
+  const givenLink = input.links.validators;
 
+  if (givenLink === undefined && boundaryOn && !ownValidatorsOn) {
+    return { status: "refused", refusals: [validatorsArtefactNeeded()] };
+  }
+
+  const own =
+    givenLink === undefined && ownValidatorsOn
+      ? writeOwnValidators(input.ir, placement)
+      : undefined;
+
+  if (own?.status === "refused") return own;
+
+  const ownFiles = own === undefined ? [] : own.files;
+
+  if (!boundaryOn) return { status: "generated", files: ownFiles };
+
+  const validators = givenLink ?? own?.link;
+
+  if (validators === undefined) {
+    throw new Error(
+      "A node server target without a validators link must write its own validators.",
+    );
+  }
+
+  const boundary = boundaryFiles(input, placement, validators);
+
+  if (boundary.status === "refused") return boundary;
+
+  return { ...boundary, files: [...ownFiles, ...boundary.files] };
+}
+
+function validatorsArtefactNeeded(): Refusal {
+  return {
+    code: "artefact.validators.needed",
+    message:
+      "The boundary needs validators, and the entry gives no `validators` link and turns the `validators` artefact off.",
+    fix: "Link a validators provider in the target's `link` entry, or add `validators` to its `artefacts`.",
+  };
+}
+
+type OwnValidatorsOutcome =
+  | { status: "written"; files: GeneratedFile[]; link: Link<"validators"> }
+  | { status: "refused"; refusals: Refusal[] };
+
+function writeOwnValidators(ir: ContractIR, placement: NodeServerPlacement): OwnValidatorsOutcome {
+  const refusals: Refusal[] = [];
+  const own = placement.ownValidators?.(ir, refusals);
+
+  if (own === undefined || refusals.length > 0) {
+    return { status: "refused", refusals: withoutRepeats(refusals) };
+  }
+
+  return {
+    status: "written",
+    files: own.files.map((file) => ({
+      path: `${OWN_VALIDATORS_DIRECTORY}/${file.path}`,
+      contents: file.contents,
+    })),
+    link: {
+      descriptor: own.descriptor,
+      location: { kind: "relative", path: OWN_VALIDATORS_DIRECTORY },
+    },
+  };
+}
+
+function boundaryFiles(
+  input: GenerateInput<NodeServerOptions, NodeServerArtefact, "types" | "validators", "validators">,
+  placement: NodeServerPlacement,
+  validators: Link<"validators">,
+): GenerateOutcome {
   const { ir, links, options } = input;
   const refusals: Refusal[] = [];
   const warnings: GenerateWarning[] = [];
@@ -105,7 +229,7 @@ export function nodeServerBoundaryFiles(
   const runtimeDirectory = SERVER_RUNTIME_DIRECTORIES[runtimeProfile];
   const routes = routeTableSource(
     ir,
-    links.validators,
+    validators,
     moduleFile(ROUTES_MODULE),
     {
       runtimeModule: `./${runtimeDirectory}/contract-route.js`,
