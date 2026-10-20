@@ -86,7 +86,12 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/diff`
 
-- `packages/core/diff/src`: Classifies the changes between two contract versions as additive or breaking, per direction.
+- `packages/core/diff/src`: The compatibility diff of two contract IRs: the classification table, the release gate and the deprecation report.
+- `packages/core/diff/src/deprecation`: The deprecation report of the operations, schemas and properties.
+- `packages/core/diff/src/gate`: The release gate: the applied compat policy, the exemptions and the stable maturity refusal.
+- `packages/core/diff/src/report`: The text form of a diff report.
+- `packages/core/diff/src/table`: The classification table: one row per change kind with its cell per position, and the row of every IR member.
+- `packages/core/diff/src/walk`: The structural walk of two IRs: reaches, member comparisons, the change sink and the whole-diff refusals.
 
 ### `@seampact/lint`
 
