@@ -62,7 +62,7 @@ function parameterObject(
     parameter.explode = param.wire.explode;
   }
 
-  const schema = typeUseSchema(context, param.type, "input", below(location, "type"));
+  const schema = typeUseSchema(context, param.type, "shared", below(location, "type"));
   const defaultValue =
     param.default === undefined
       ? pagingLimitDefault(context, operation, place, param.name)

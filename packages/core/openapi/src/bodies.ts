@@ -16,7 +16,7 @@ import {
 } from "./emit-context.js";
 import { derivedFromValue } from "./ir-text.js";
 import type { JsonObject } from "./json-value.js";
-import { objectSchema, typeUseSchema } from "./schemas.js";
+import { objectSchema, schemaReference, typeUseSchema } from "./schemas.js";
 
 // The `input` row of ADR 0004 section 12: the request body with its media type, its form and multipart encoding,
 // its rule proofs, its unknown-key policy and its raw-body mark.
@@ -147,6 +147,9 @@ function inputTopLevel(
   if (context.options.inputSchemas !== "strict") {
     return typeUseSchema(context, input.schema, "input", below(location, "schema"));
   }
+
+  // The shared component stays in the document, as without the option.
+  schemaReference(context, inputSchemaId, "shared");
 
   const topLevel = objectSchema(context, named, "input", schemaLocation(inputSchemaId));
 

@@ -153,6 +153,10 @@ export function schemaReference(
   variant: SchemaVariant,
 ): JsonObject {
   const named = context.ir.schemas[schemaId];
+  const shared = referenceComponent(context, {
+    key: schemaId,
+    build: (buildContext) => namedSchemaComponent(buildContext, schemaId, "shared"),
+  });
   const strict =
     variant === "input" &&
     context.options.inputSchemas === "strict" &&
@@ -160,12 +164,8 @@ export function schemaReference(
     isKnownVariant("Schema", named) &&
     named.directions.includes(INPUT_DIRECTION);
 
-  if (!strict) {
-    return referenceComponent(context, {
-      key: schemaId,
-      build: (buildContext) => namedSchemaComponent(buildContext, schemaId, "shared"),
-    });
-  }
+  // The strict twin is a second component: the shared one stays, as every other option leaves it.
+  if (!strict) return shared;
 
   return referenceComponent(context, {
     key: `${schemaId}${INPUT_COMPONENT_SUFFIX}`,
