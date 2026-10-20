@@ -9,6 +9,7 @@ import {
   type BundleManifest,
 } from "@seampact/spec/bundle";
 import type { ContractIR } from "@seampact/spec/ir";
+import { quote } from "../validate/diagnostics.js";
 import { bundleIntegrity, bundleSha256Hex } from "./integrity.js";
 import { checkBundleIr } from "./ir-check.js";
 import { manifestTooLarge, readBundleManifest } from "./manifest-read.js";
@@ -95,7 +96,13 @@ export function verifyBundle(
   const irFailures: BundleFailure[] = [];
 
   for (const api of manifest.apis) {
-    const checked = checkBundleIr(api, files.get(api.file) ?? new Uint8Array());
+    const bytes = files.get(api.file);
+
+    // The manifest rules list every api's file, and step 1 read every listed file.
+    if (bytes === undefined)
+      throw new Error(`bundle: the checked file '${api.file}' of api '${api.name}' was not read.`);
+
+    const checked = checkBundleIr(api, bytes);
 
     if ("code" in checked) irFailures.push(checked);
     else irs.set(api.name, checked);
@@ -125,7 +132,7 @@ function walkBundle(directory: string): Map<string, number> | BundleFailure {
       if (!entry.isFile())
         return {
           code: "bundle.file-type",
-          message: `'${path}' is a link or a special file; a bundle holds regular files only.`,
+          message: `${quote(path)} is a link or a special file; a bundle holds regular files only.`,
           fix: REFETCH,
           file: path,
         };
@@ -196,7 +203,7 @@ function checkFiles(
     const bytes = new Uint8Array(readFileSync(join(directory, ...file.path.split("/"))));
     const sha256 = bundleSha256Hex(bytes);
 
-    if (sha256 !== file.sha256 || bytes.length !== file.size) {
+    if (sha256 !== file.sha256) {
       failures.push({
         code: "bundle.file-hash",
         message: `'${file.path}' has the SHA-256 ${sha256}; the manifest lists ${file.sha256}.`,
@@ -221,7 +228,7 @@ function checkFiles(
   for (const path of unlisted)
     failures.push({
       code: "bundle.file-unlisted",
-      message: `'${path}' is in the bundle and not listed in the manifest.`,
+      message: `${quote(path)} is in the bundle and not listed in the manifest.`,
       fix: REFETCH,
       file: path,
     });

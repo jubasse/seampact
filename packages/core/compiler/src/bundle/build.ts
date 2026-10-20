@@ -7,6 +7,7 @@ import {
   type BundleFailure,
   type BundleFile,
   type BundleNamedVersion,
+  bundleLabelProblem,
   bundlePathFold,
   bundlePathProblem,
   compareBundlePaths,
@@ -15,7 +16,9 @@ import compilerPackage from "../../package.json" with { type: "json" };
 import { finalizeSerializeIr } from "../finalize/serialize.js";
 import type { LoadReader } from "../load/index.js";
 import { LOAD_MAX_FILE_BYTES } from "../load/limits.js";
+import type { LoadText } from "../load/reader.js";
 import { compileWorkspace, type PipelineResult } from "../pipeline/orchestrator.js";
+import { quote } from "../validate/diagnostics.js";
 import type { BundleContents } from "./contents.js";
 import { bundleIntegrity, bundleSha256Hex } from "./integrity.js";
 import { ustarPathSplit } from "./ustar.js";
@@ -55,7 +58,8 @@ const COMPILER: BundleNamedVersion = {
 
 /** The bundle of the workspace `options.entry` names, or every reason it cannot be made. */
 export function buildBundle(options: BundleBuildOptions): BundleBuildResult {
-  const compiled = compileWorkspace({ reader: options.reader, entry: options.entry });
+  const recording = recordingReader(options.reader);
+  const compiled = compileWorkspace({ reader: recording.reader, entry: options.entry });
   const errorCount = [
     ...compiled.diagnostics,
     ...compiled.apis.flatMap((api) => api.diagnostics),
@@ -64,9 +68,10 @@ export function buildBundle(options: BundleBuildOptions): BundleBuildResult {
   if (errorCount > 0) return { ok: false, failures: [compileFailure(errorCount)], compiled };
 
   const contract = contractOf(options);
-  const sources = sourceFiles(options.reader, compiled.files);
+  const sources = sourceFiles(options.reader, recording.texts, compiled.files);
   const irs = irFiles(compiled);
-  const failures = [...contract.failures, ...sources.failures, ...irs.failures];
+  const labels = labelFailures(contract.value, irs.packs);
+  const failures = [...contract.failures, ...sources.failures, ...irs.failures, ...labels];
 
   if (contract.value === undefined || failures.length > 0) return { ok: false, failures };
 
@@ -90,6 +95,67 @@ export function buildBundle(options: BundleBuildOptions): BundleBuildResult {
       files,
     },
   };
+}
+
+interface RecordingReader {
+  readonly reader: LoadReader;
+  /** The text of every file the load stage read, by root-relative path. */
+  readonly texts: ReadonlyMap<string, string>;
+}
+
+// The reader the compilation uses, keeping each text it returns: the bundle carries the very text the IR was
+// compiled from, never a second read.
+function recordingReader(reader: LoadReader): RecordingReader {
+  const texts = new Map<string, string>();
+
+  return {
+    texts,
+    reader: {
+      ascent: reader.ascent,
+      listDir: (dir) => reader.listDir(dir),
+      realPath: (file) => reader.realPath(file),
+      readText(file, maxBytes): LoadText | undefined {
+        const read = reader.readText(file, maxBytes);
+
+        if (read !== undefined && "text" in read) texts.set(file, read.text);
+
+        return read;
+      },
+    },
+  };
+}
+
+// The manifest's names and versions are printable ASCII (`$defs/label`): refused here rather than written.
+function labelFailures(
+  contract: BundleNamedVersion | undefined,
+  packs: readonly BundleNamedVersion[],
+): BundleFailure[] {
+  const labels = [
+    ...(contract === undefined
+      ? []
+      : [
+          { what: "contract name", value: contract.name },
+          { what: "contract version", value: contract.version },
+        ]),
+    ...packs.flatMap((pack) => [
+      { what: "pack name", value: pack.name },
+      { what: `version of pack ${quote(pack.name)}`, value: pack.version },
+    ]),
+  ];
+
+  return labels.flatMap(({ what, value }) => {
+    const problem = bundleLabelProblem(value);
+
+    return problem === undefined
+      ? []
+      : [
+          {
+            code: "bundle.label-invalid" as const,
+            message: `The ${what} ${quote(value)} ${problem}; the manifest cannot hold it.`,
+            fix: "Give the contract (package.json, or the passed name and version) and its packs names and versions of printable ASCII, at most 214 characters.",
+          },
+        ];
+  });
 }
 
 function compileFailure(errorCount: number): BundleFailure {
@@ -175,20 +241,22 @@ interface GatheredFiles {
   readonly failures: BundleFailure[];
 }
 
-function sourceFiles(reader: LoadReader, loaded: readonly string[]): GatheredFiles {
+function sourceFiles(
+  reader: LoadReader,
+  texts: ReadonlyMap<string, string>,
+  loaded: readonly string[],
+): GatheredFiles {
   const files = new Map<string, Uint8Array>();
   const failures: BundleFailure[] = [];
   const pathByFold = new Map<string, string>();
   const packDirectories = new Map<string, string | BundleFailure>();
 
   for (const source of loaded) {
-    const read = reader.readText(source, LOAD_MAX_FILE_BYTES);
+    const text = texts.get(source);
 
-    // The load stage also lists the files it looked for and did not find.
-    if (read === undefined) continue;
-
-    if (!("text" in read))
-      throw new Error(`bundle: '${source}' grew past the load stage's cap after it compiled.`);
+    // The load stage also lists the files it looked for and did not find (or could not read): the compilation
+    // succeeded without them.
+    if (text === undefined) continue;
 
     const placed = bundlePathOf(reader, source, packDirectories);
 
@@ -205,7 +273,7 @@ function sourceFiles(reader: LoadReader, loaded: readonly string[]): GatheredFil
     }
 
     pathByFold.set(bundlePathFold(placed), placed);
-    files.set(placed, new TextEncoder().encode(read.text));
+    files.set(placed, new TextEncoder().encode(text));
   }
 
   return { files, failures: dedupeFailures(failures) };
@@ -225,7 +293,11 @@ function writablePathProblem(path: string): string | undefined {
 function caseProblem(pathByFold: ReadonlyMap<string, string>, path: string): string | undefined {
   const sameFold = pathByFold.get(bundlePathFold(path));
 
-  return sameFold === undefined ? undefined : `differs from '${sameFold}' only in letter case`;
+  if (sameFold === undefined) return undefined;
+
+  return sameFold === path
+    ? "is also the bundle file of another loaded file (one pack version installed in two places)"
+    : `differs from '${sameFold}' only in letter case`;
 }
 
 // The bundle path of a loaded file, or the failure that keeps it out.

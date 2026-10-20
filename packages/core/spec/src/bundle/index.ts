@@ -3,11 +3,6 @@
 // The vectors every verifier proves itself on are `@seampact/spec/bundle/vectors/*.json`.
 
 export {
-  BUNDLE_INTEGRITY_PREFIX,
-  canonicalBundleFileList,
-  compareBundlePaths,
-} from "./file-list.js";
-export {
   BUNDLE_ARCHIVE_FAILURE_CODES,
   BUNDLE_VERIFY_FAILURE_CODES,
   BUNDLE_WRITE_FAILURE_CODES,
@@ -17,6 +12,18 @@ export {
   type BundleVerifyFailureCode,
   type BundleWriteFailureCode,
 } from "./failure.js";
+export {
+  BUNDLE_INTEGRITY_PREFIX,
+  canonicalBundleFileList,
+  compareBundlePaths,
+} from "./file-list.js";
+export { bundleLabelProblem } from "./label.js";
+export {
+  BUNDLE_ARCHIVE_BYTES_MAX,
+  BUNDLE_ENTRIES_MAX,
+  BUNDLE_EXTRACTED_BYTES_MAX,
+  BUNDLE_MANIFEST_BYTES_MAX,
+} from "./limits.js";
 export {
   BUNDLE_FORMAT_VERSION,
   BUNDLE_IR_DIRECTORY,
@@ -32,14 +39,9 @@ export {
 } from "./manifest.js";
 export { type BundleManifestProblem, bundleManifestRuleProblems } from "./manifest-rules.js";
 export {
+  BUNDLE_PATH_DEVICE_PATTERN,
   BUNDLE_PATH_MAX_LENGTH,
   BUNDLE_PATH_PATTERN,
   bundlePathFold,
   bundlePathProblem,
 } from "./path.js";
-export {
-  BUNDLE_ARCHIVE_BYTES_MAX,
-  BUNDLE_ENTRIES_MAX,
-  BUNDLE_EXTRACTED_BYTES_MAX,
-  BUNDLE_MANIFEST_BYTES_MAX,
-} from "./limits.js";

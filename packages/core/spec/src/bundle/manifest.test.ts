@@ -1,6 +1,7 @@
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { expect, test } from "vitest";
 import BUNDLE_VECTORS from "../../vectors/bundle/vectors.json" with { type: "json" };
+import BUNDLE_VECTORS_SCHEMA from "../../vectors/bundle/vectors.schema.json" with { type: "json" };
 import { canonicalBundleFileList } from "./file-list.js";
 import {
   BUNDLE_MANIFEST_SCHEMA,
@@ -10,7 +11,7 @@ import {
   type BundleNamedVersion,
 } from "./manifest.js";
 import { bundleManifestRuleProblems } from "./manifest-rules.js";
-import { BUNDLE_PATH_PATTERN, bundlePathProblem } from "./path.js";
+import { BUNDLE_PATH_DEVICE_PATTERN, BUNDLE_PATH_PATTERN, bundlePathProblem } from "./path.js";
 
 const validate = new Ajv2020({ allErrors: true, strict: true }).compile<BundleManifest>(
   BUNDLE_MANIFEST_SCHEMA,
@@ -67,6 +68,35 @@ test("manifest schema accepts and refuses by rule", () => {
     "sources/é",
   ])
     expect(problemsOf(withFiles(path)), path).toContain("schema pattern /files/3/path");
+
+  // One file on Windows with another name, or a device there: refused before any Windows reader meets them.
+  for (const path of ["sources/a.", "sources/...", "sources/x./y.yaml"])
+    expect(problemsOf(withFiles(path)), path).toContain("schema pattern /files/3/path");
+
+  for (const path of [
+    "sources/CON.yaml",
+    "sources/nul",
+    "sources/Aux.tar.gz",
+    "sources/com1",
+    "sources/LPT9.yaml",
+    "sources/prn/a.yaml",
+  ])
+    expect(problemsOf(withFiles(path)), path).toContain("schema not /files/3/path");
+
+  for (const path of [
+    "sources/console.yaml",
+    "sources/x.con",
+    "sources/com10.yaml",
+    "sources/.nul",
+  ])
+    expect(bundlePathProblem(path), path).toBeUndefined();
+
+  // Labels are printable ASCII.
+  for (const label of ["", "a b", "caf\u00e9", "x\u001b"])
+    expect(
+      problemsOf({ ...MANIFEST, contract: { name: label, version: "1.0.0" } }).length,
+      label,
+    ).toBeGreaterThan(0);
 
   // Sorted by path, so a duplicate is out of order; case folds are one file on a case-insensitive file system.
   expect(problemsOf(withFiles("sources/workspace.yaml"))).toEqual(["rule /files/3/path"]);
@@ -143,10 +173,20 @@ test("the path rule and the schema pattern agree", () => {
     "sources/a/",
     "x/a",
     "sources/a~b",
+    "sources/a.",
+    "sources/b..",
+    "sources/CON",
+    "sources/con.yaml",
+    "sources/conx.yaml",
+    "sources/COM0.a.b",
+    "sources/LPT",
+    "ir/aux.json",
   ];
 
   for (const path of samples)
-    expect(bundlePathProblem(path) === undefined, path).toBe(BUNDLE_PATH_PATTERN.test(path));
+    expect(bundlePathProblem(path) === undefined, path).toBe(
+      BUNDLE_PATH_PATTERN.test(path) && !BUNDLE_PATH_DEVICE_PATTERN.test(path),
+    );
 });
 
 test("the canonical file list is sorted, one line per file, the last one ended", () => {
@@ -159,11 +199,14 @@ test("the canonical file list is sorted, one line per file, the last one ended",
   ).toBe("a  ir/a\nc  sources/B\nb  sources/b\n");
 });
 
+const TEXT_REFUSALS = ["manifest-not-utf8", "manifest-byte-order-mark", "manifest-duplicate-key"];
+
 test("the schema accepts every vector manifest but the invalid ones", () => {
   for (const vector of BUNDLE_VECTORS.directories) {
     const manifestFile = vector.files.find((file) => file.path === "seampact-bundle.json");
 
-    if (manifestFile === undefined) continue;
+    // Refused before the schema: not UTF-8, a byte order mark, a key given twice.
+    if (manifestFile === undefined || TEXT_REFUSALS.includes(vector.id)) continue;
     const manifest: unknown = JSON.parse(
       Buffer.from(manifestFile.base64, "base64").toString("utf8"),
     );
@@ -173,4 +216,12 @@ test("the schema accepts every vector manifest but the invalid ones", () => {
 
     expect(problemsOf(manifest).length > 0, vector.id).toBe(refused);
   }
+});
+
+test("the vectors follow their schema", () => {
+  const validateVectors = new Ajv2020({ allErrors: true, strict: true }).compile(
+    BUNDLE_VECTORS_SCHEMA,
+  );
+
+  expect(validateVectors(BUNDLE_VECTORS), JSON.stringify(validateVectors.errors)).toBe(true);
 });

@@ -5,8 +5,8 @@ import { loadMemoryReader } from "../load/reader.js";
 import { buildBundle } from "./build.js";
 import {
   builtContents,
-  PACK_CONTRACT,
   GOLDEN_REFERENCE,
+  PACK_CONTRACT,
   REFERENCE,
   REFERENCE_CONTRACT,
   referenceBuildOptions,
@@ -107,9 +107,48 @@ test("a contract with no name or version, or an unportable file name, is refused
     {
       code: "bundle.path-unportable",
       file: "api file.yaml",
-      message: expect.stringContaining('" "'),
+      message: expect.stringContaining("U+0020"),
     },
   ]);
+});
+
+test("a contract label outside printable ASCII is refused before it is written", () => {
+  for (const name of ["", "acme contract"]) {
+    const built = buildBundle({
+      reader: loadMemoryReader(PACK_CONTRACT),
+      entry: "api.yaml",
+      contract: { name },
+    });
+
+    expect(!built.ok && built.failures.map((failure) => failure.code), name).toEqual([
+      "bundle.label-invalid",
+    ]);
+  }
+});
+
+test("the bundle carries the text the IR was compiled from, never a second read", () => {
+  const memory = loadMemoryReader(PACK_CONTRACT);
+  const readCounts = new Map<string, number>();
+  const built = buildBundle({
+    entry: "api.yaml",
+    reader: {
+      ...memory,
+      readText(file, maxBytes) {
+        const count = (readCounts.get(file) ?? 0) + 1;
+        const read = memory.readText(file, maxBytes);
+
+        readCounts.set(file, count);
+
+        // An edit after the load stage read the file.
+        return file === "api.yaml" && count > 1 && read !== undefined && "text" in read
+          ? { text: `${read.text}# edited\n` }
+          : read;
+      },
+    },
+  });
+  const source = built.ok ? built.contents.files.get("sources/api.yaml") : undefined;
+
+  expect(new TextDecoder().decode(source)).toBe(PACK_CONTRACT["api.yaml"]);
 });
 
 test("a directory output must be new or empty", () => {

@@ -7,10 +7,11 @@ import {
   bundleManifestRuleProblems,
 } from "@seampact/spec/bundle";
 import { Ajv2020, type ValidateFunction } from "ajv/dist/2020.js";
-import { parseUntrustedJson, utf8Text } from "./untrusted-json.js";
+import { quote } from "../validate/diagnostics.js";
+import { duplicateKeyPointer, parseUntrustedJson, utf8Text } from "./untrusted-json.js";
 
-// The manifest as a verifier reads it: at most `BUNDLE_MANIFEST_BYTES_MAX` bytes of UTF-8 JSON with no reserved
-// key, valid under `schemas/bundle/manifest.schema.json`, then under the rules no schema states.
+// The manifest as a verifier reads it: at most `BUNDLE_MANIFEST_BYTES_MAX` bytes of UTF-8 JSON with no byte order
+// mark, no reserved key and no key given twice in one object (two readers would read it two ways), valid under `schemas/bundle/manifest.schema.json`, then under the rules no schema states.
 
 // A refusal lists at most this many problems, then how many more there are.
 const LISTED_PROBLEM_LIMIT = 5;
@@ -38,12 +39,17 @@ export function readBundleManifest(bytes: Uint8Array): BundleManifest | BundleFa
 
   if (!parsed.ok) return invalidManifest([parsed.problem]);
 
+  const duplicateAt = duplicateKeyPointer(text);
+
+  if (duplicateAt !== undefined)
+    return invalidManifest([`gives the key at ${quote(duplicateAt)} twice in one object`]);
+
   const validate = validator();
 
   if (!validate(parsed.value))
     return invalidManifest(
       (validate.errors ?? []).map(
-        (error) => `at '${error.instancePath}' ${error.message ?? error.keyword}`,
+        (error) => `at ${quote(error.instancePath)} ${error.message ?? error.keyword}`,
       ),
     );
 
@@ -51,7 +57,9 @@ export function readBundleManifest(bytes: Uint8Array): BundleManifest | BundleFa
   const problems = bundleManifestRuleProblems(manifest);
 
   if (problems.length > 0)
-    return invalidManifest(problems.map((problem) => `at '${problem.pointer}' ${problem.message}`));
+    return invalidManifest(
+      problems.map((problem) => `at ${quote(problem.pointer)} ${problem.message}`),
+    );
 
   return manifest;
 }

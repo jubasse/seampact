@@ -13,6 +13,12 @@ export interface RawEntry {
   readonly path: string;
   readonly type?: string;
   readonly data?: string | Uint8Array;
+  /** The ustar prefix field (GNU headers hold times there). */
+  readonly prefix?: string;
+  /** The magic and version fields as one: `ustar\u000000` unless given. */
+  readonly magic?: string;
+  /** The checksum field, computed unless given. */
+  readonly checksum?: string;
 }
 
 function put(header: Uint8Array, field: UstarField, text: string): void {
@@ -27,9 +33,20 @@ function rawHeader(entry: RawEntry, size: number): Uint8Array {
   put(header, USTAR_FIELDS.size, `${size.toString(8).padStart(11, "0")}\0`);
   put(header, USTAR_FIELDS.mtime, "00000000000\0");
   put(header, USTAR_FIELDS.type, entry.type ?? "0");
-  put(header, USTAR_FIELDS.magic, "ustar\0");
-  put(header, USTAR_FIELDS.version, "00");
-  put(header, USTAR_FIELDS.checksum, `${ustarChecksum(header).toString(8).padStart(6, "0")}\0 `);
+  put(header, USTAR_FIELDS.prefix, entry.prefix ?? "");
+  put(
+    header,
+    {
+      offset: USTAR_FIELDS.magic.offset,
+      length: USTAR_FIELDS.magic.length + USTAR_FIELDS.version.length,
+    },
+    entry.magic ?? "ustar\u000000",
+  );
+  put(
+    header,
+    USTAR_FIELDS.checksum,
+    entry.checksum ?? `${ustarChecksum(header).toString(8).padStart(6, "0")}\0 `,
+  );
 
   return header;
 }

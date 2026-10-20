@@ -35,6 +35,7 @@ export const BUNDLE_ARCHIVE_FAILURE_CODES = [
 export const BUNDLE_WRITE_FAILURE_CODES = [
   "bundle.compile-failed",
   "bundle.contract-missing",
+  "bundle.label-invalid",
   "bundle.file-outside-root",
   "bundle.path-unportable",
   "bundle.pack-unreadable",

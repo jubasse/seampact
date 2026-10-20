@@ -10,8 +10,8 @@ import {
 import { IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { loadMemoryReader } from "../load/reader.js";
 import { builtContents, PACK_CONTRACT } from "./bundle.test-support.js";
-import { bundleEntries } from "./contents.js";
-import { type RawEntry, rawTarball } from "./raw-tarball.test-support.js";
+import { bundleEntries, bundleManifestBytes } from "./contents.js";
+import { paxRecord, type RawEntry, rawTarball } from "./raw-tarball.test-support.js";
 import { type ManifestEdit, resealFiles } from "./reseal.test-support.js";
 import { readBundleTarball } from "./tarball-read.js";
 import { bundleTarball } from "./tarball-write.js";
@@ -100,6 +100,34 @@ function flipFirstByte(files: Files, path: string): void {
   bytes[0] = (bytes[0] ?? 0) ^ 1;
   files.set(path, bytes);
 }
+
+// Edits the manifest's text, with no reseal: the manifest itself is what the case refuses.
+function editManifestText(files: Files, edit: (text: string) => string): void {
+  files.set(BUNDLE_MANIFEST_FILE, text(edit(read(files, BUNDLE_MANIFEST_FILE))));
+}
+
+// Edits the manifest's members, with no reseal.
+function editManifest(files: Files, edit: ManifestEdit): void {
+  files.set(
+    BUNDLE_MANIFEST_FILE,
+    bundleManifestBytes(edit(JSON.parse(read(files, BUNDLE_MANIFEST_FILE)))),
+  );
+}
+
+// The manifest listing one more file (absent from the bundle), at its sorted place.
+function listingAlso(path: string): ManifestEdit {
+  return (manifest) => ({
+    ...manifest,
+    files: [...manifest.files, { path, size: 1, sha256: "0".repeat(64) }].sort((left, right) =>
+      left.path < right.path ? -1 : 1,
+    ),
+  });
+}
+
+const MANIFEST_INVALID = {
+  code: "bundle.manifest-invalid",
+  files: [BUNDLE_MANIFEST_FILE],
+} as const;
 
 const withApi =
   (edit: (api: { irVersion: number; irRevision: number }) => object): ManifestEdit =>
@@ -206,6 +234,112 @@ const DIRECTORY_CASES: readonly DirectoryCase[] = [
     failure: { code: "bundle.manifest-invalid", files: [BUNDLE_MANIFEST_FILE] },
   },
   {
+    id: "manifest-files-unsorted",
+    description: "The manifest's files out of code-unit order.",
+    tamper: (files) =>
+      editManifest(files, (manifest) => ({ ...manifest, files: [...manifest.files].reverse() })),
+    failure: MANIFEST_INVALID,
+  },
+  {
+    id: "manifest-case-duplicate",
+    description: "Two listed paths equal once folded to ASCII lower case.",
+    tamper: (files) => editManifest(files, listingAlso("sources/API.yaml")),
+    failure: MANIFEST_INVALID,
+  },
+  {
+    id: "manifest-api-file-other",
+    description: "An api whose file is not ir/<name>.json.",
+    tamper: (files) =>
+      editManifest(
+        files,
+        withApi(() => ({ file: "ir/other.json" })),
+      ),
+    failure: MANIFEST_INVALID,
+  },
+  {
+    id: "manifest-api-file-unlisted",
+    description: "An api whose file is not in the manifest's files.",
+    tamper: (files) =>
+      editManifest(files, (manifest) => ({
+        ...manifest,
+        files: manifest.files.filter((file) => file.path !== IR_FILE),
+      })),
+    failure: MANIFEST_INVALID,
+  },
+  {
+    id: "manifest-ir-stray",
+    description: "A listed ir/ file that is no api's.",
+    tamper: (files) => editManifest(files, listingAlso("ir/zz.json")),
+    failure: MANIFEST_INVALID,
+  },
+  {
+    id: "manifest-packs-duplicate",
+    description: "A pack listed twice, so out of order.",
+    tamper: (files) =>
+      editManifest(files, (manifest) => ({
+        ...manifest,
+        packs: [...manifest.packs, ...manifest.packs],
+      })),
+    failure: MANIFEST_INVALID,
+  },
+  {
+    id: "manifest-label-not-ascii",
+    description: "A contract name outside printable ASCII.",
+    tamper: (files) =>
+      editManifest(files, (manifest) => ({
+        ...manifest,
+        contract: { ...manifest.contract, name: "caf\u00e9" },
+      })),
+    failure: MANIFEST_INVALID,
+  },
+  {
+    id: "manifest-path-trailing-dot",
+    description:
+      "A listed path whose last segment ends in '.', one file with 'sources/a' on Windows.",
+    tamper: (files) => editManifest(files, listingAlso("sources/a.")),
+    failure: MANIFEST_INVALID,
+  },
+  {
+    id: "manifest-path-device-name",
+    description: "A listed path whose segment is a Windows device name before its first '.'.",
+    tamper: (files) => editManifest(files, listingAlso("sources/CON.yaml")),
+    failure: MANIFEST_INVALID,
+  },
+  {
+    id: "manifest-path-device-name-bare",
+    description: "A listed path whose segment is a Windows device name, in lower case.",
+    tamper: (files) => editManifest(files, listingAlso("sources/com1")),
+    failure: MANIFEST_INVALID,
+  },
+  {
+    id: "manifest-byte-order-mark",
+    description: "A manifest starting with a UTF-8 byte order mark.",
+    tamper: (files) => editManifestText(files, (manifest) => `\uFEFF${manifest}`),
+    failure: MANIFEST_INVALID,
+  },
+  {
+    id: "manifest-not-utf8",
+    description: "A manifest holding a byte that is not UTF-8.",
+    tamper: (files) => {
+      const bytes = files.get(BUNDLE_MANIFEST_FILE) ?? new Uint8Array();
+
+      files.set(
+        BUNDLE_MANIFEST_FILE,
+        new Uint8Array([...bytes.subarray(0, 1), 0xff, ...bytes.subarray(1)]),
+      );
+    },
+    failure: MANIFEST_INVALID,
+  },
+  {
+    id: "manifest-duplicate-key",
+    description: "A manifest giving one key twice in one object.",
+    tamper: (files) =>
+      editManifestText(files, (manifest) =>
+        manifest.replace('"contract": {', '"contract": { "name": "x",'),
+      ),
+    failure: MANIFEST_INVALID,
+  },
+  {
     id: "ir-revision-other",
     description: "An IR of another irRevision, resealed.",
     tamper: (files) =>
@@ -245,54 +379,174 @@ const DIRECTORY_CASES: readonly DirectoryCase[] = [
   },
 ];
 
-const ARCHIVE_CASES: readonly { id: string; description: string; entries: readonly RawEntry[] }[] =
-  [
-    {
-      id: "entry-dot-dot",
-      description: "An entry above the bundle root.",
-      entries: [{ path: "../escape.yaml", data: "x" }],
-    },
-    {
-      id: "entry-absolute",
-      description: "An absolute entry.",
-      entries: [{ path: "/escape.yaml", data: "x" }],
-    },
-    {
-      id: "entry-drive",
-      description: "A Windows drive entry.",
-      entries: [{ path: "C:/escape.yaml", data: "x" }],
-    },
-    {
-      id: "entry-backslash",
-      description: "A backslash in an entry.",
-      entries: [{ path: "sources\\a.yaml", data: "x" }],
-    },
-    {
-      id: "entry-symlink",
-      description: "A symbolic link.",
-      entries: [{ path: "sources/a.yaml", type: "2" }],
-    },
-    {
-      id: "entry-hardlink",
-      description: "A hard link.",
-      entries: [{ path: "sources/a.yaml", type: "1" }],
-    },
-    {
-      id: "entry-device",
-      description: "A character device.",
-      entries: [{ path: "sources/a.yaml", type: "3" }],
-    },
-    {
-      id: "entry-duplicate",
-      description: "One path twice.",
-      entries: [{ path: "sources/a.yaml" }, { path: "sources/a.yaml" }],
-    },
-    {
-      id: "entry-case-duplicate",
-      description: "Two paths one file on a case-insensitive file system.",
-      entries: [{ path: "sources/a.yaml" }, { path: "sources/A.yaml" }],
-    },
-  ];
+interface ArchiveCase {
+  readonly id: string;
+  readonly description: string;
+  readonly entries: readonly RawEntry[];
+  /** The refusal; none when the archive is read. */
+  readonly code?: BundleFailureCode;
+}
+
+const ARCHIVE_CASES: readonly ArchiveCase[] = [
+  {
+    id: "entry-dot-dot",
+    description: "An entry above the bundle root.",
+    entries: [{ path: "../escape.yaml", data: "x" }],
+    code: "bundle.archive-entry-path",
+  },
+  {
+    id: "entry-absolute",
+    description: "An absolute entry.",
+    entries: [{ path: "/escape.yaml", data: "x" }],
+    code: "bundle.archive-entry-path",
+  },
+  {
+    id: "entry-drive",
+    description: "A Windows drive entry.",
+    entries: [{ path: "C:/escape.yaml", data: "x" }],
+    code: "bundle.archive-entry-path",
+  },
+  {
+    id: "entry-backslash",
+    description: "A backslash in an entry.",
+    entries: [{ path: "sources\\a.yaml", data: "x" }],
+    code: "bundle.archive-entry-path",
+  },
+  {
+    id: "entry-symlink",
+    description: "A symbolic link.",
+    entries: [{ path: "sources/a.yaml", type: "2" }],
+    code: "bundle.archive-entry-type",
+  },
+  {
+    id: "entry-hardlink",
+    description: "A hard link.",
+    entries: [{ path: "sources/a.yaml", type: "1" }],
+    code: "bundle.archive-entry-type",
+  },
+  {
+    id: "entry-device",
+    description: "A character device.",
+    entries: [{ path: "sources/a.yaml", type: "3" }],
+    code: "bundle.archive-entry-type",
+  },
+  {
+    id: "entry-duplicate",
+    description: "One path twice.",
+    entries: [{ path: "sources/a.yaml" }, { path: "sources/a.yaml" }],
+    code: "bundle.archive-entry-duplicate",
+  },
+  {
+    id: "entry-case-duplicate",
+    description: "Two paths one file on a case-insensitive file system.",
+    entries: [{ path: "sources/a.yaml" }, { path: "sources/A.yaml" }],
+    code: "bundle.archive-entry-duplicate",
+  },
+  {
+    id: "entry-device-name",
+    description: "A Windows device name: on Windows the write would open the device.",
+    entries: [{ path: "sources/COM1", data: "x" }],
+    code: "bundle.archive-entry-path",
+  },
+  {
+    id: "entry-device-name-extension",
+    description: "A Windows device name before an extension.",
+    entries: [{ path: "sources/aux.yaml", data: "x" }],
+    code: "bundle.archive-entry-path",
+  },
+  {
+    id: "entry-colon",
+    description: "A colon: an alternate data stream on Windows.",
+    entries: [{ path: "sources/a:b", data: "x" }],
+    code: "bundle.archive-entry-path",
+  },
+  {
+    id: "entry-trailing-dot",
+    description: "A segment ending in '.', which Windows drops.",
+    entries: [{ path: "sources/x.", data: "x" }],
+    code: "bundle.archive-entry-path",
+  },
+  {
+    id: "entry-control-character",
+    description: "A control character in a name.",
+    entries: [{ path: "sources/\u001b[31mred", data: "x" }],
+    code: "bundle.archive-entry-path",
+  },
+  {
+    id: "entry-non-ascii",
+    description: "A name outside ASCII.",
+    entries: [{ path: "sources/\u00e9.yaml", data: "x" }],
+    code: "bundle.archive-entry-path",
+  },
+  {
+    id: "entry-outside-tree",
+    description: "A root file that is not the manifest.",
+    entries: [{ path: "evil.sh", data: "x" }],
+    code: "bundle.archive-entry-path",
+  },
+  {
+    id: "entry-file-directory-clash",
+    description: "A path that is both a file and a directory.",
+    entries: [{ path: "sources/a.yaml" }, { path: "sources/a.yaml/b.yaml" }],
+    code: "bundle.archive-entry-path",
+  },
+  {
+    id: "pax-path",
+    description: "A pax path overriding the header name, and a global pax header ignored.",
+    entries: [
+      { path: "PaxGlobal", type: "g", data: paxRecord("comment", "x") },
+      { path: "PaxHeader", type: "x", data: paxRecord("path", "sources/b.yaml") },
+      { path: "sources/ignored.yaml", data: "x" },
+    ],
+  },
+  {
+    id: "pax-path-dot-dot",
+    description: "A pax path above the bundle root.",
+    entries: [
+      { path: "PaxHeader", type: "x", data: paxRecord("path", "../escape.yaml") },
+      { path: "sources/a.yaml", data: "x" },
+    ],
+    code: "bundle.archive-entry-path",
+  },
+  {
+    id: "pax-length-not-decimal",
+    description: "A pax record length that is not decimal digits.",
+    entries: [
+      { path: "PaxHeader", type: "x", data: "0x1b path=sources/bcd.yaml\n" },
+      { path: "sources/a.yaml", data: "x" },
+    ],
+    code: "bundle.archive-invalid",
+  },
+  {
+    id: "prefix-field",
+    description: "A path over 100 characters, split into the prefix field.",
+    entries: [{ path: `${"b".repeat(100)}.yaml`.slice(0, 100), prefix: "sources/long", data: "x" }],
+  },
+  {
+    id: "gnu-magic",
+    description:
+      "A GNU header, whose times sit where ustar holds the prefix: the path is the name only.",
+    entries: [{ path: "sources/a.yaml", magic: "ustar  \u0000", prefix: "14712345670", data: "x" }],
+  },
+  {
+    id: "gnu-long-name",
+    description: "A GNU long-name entry.",
+    entries: [{ path: "././@LongLink", type: "L", data: "sources/a.yaml" }],
+    code: "bundle.archive-entry-type",
+  },
+  {
+    id: "bad-checksum",
+    description: "A header whose checksum does not match.",
+    entries: [{ path: "sources/a.yaml", checksum: "0000000\u0000", data: "x" }],
+    code: "bundle.archive-invalid",
+  },
+  {
+    id: "bad-magic",
+    description: "A header with no ustar magic.",
+    entries: [{ path: "sources/a.yaml", magic: "xxxxx\u000000", data: "x" }],
+    code: "bundle.archive-invalid",
+  },
+];
 
 function base64(bytes: Uint8Array): string {
   return Buffer.from(bytes).toString("base64");
@@ -366,8 +620,17 @@ function directoryVector(base: Files, integrity: string, spec: DirectoryCase): D
   }
 }
 
-function archiveVector(id: string, description: string, tarball: Uint8Array): ArchiveVector {
+function archiveVector(
+  id: string,
+  description: string,
+  tarball: Uint8Array,
+  code?: BundleFailureCode,
+): ArchiveVector {
   const read = readBundleTarball(tarball);
+  const codes = read.ok ? [] : read.failures.map((failure) => failure.code);
+
+  if (JSON.stringify(codes) !== JSON.stringify(code === undefined ? [] : [code]))
+    throw new Error(`vectors: archive case '${id}' gives ${JSON.stringify(codes)}, not ${code}`);
 
   return {
     id,
@@ -398,7 +661,7 @@ export function bundleVectors(): BundleVectors {
         }),
       ),
       ...ARCHIVE_CASES.map((spec) =>
-        archiveVector(spec.id, spec.description, rawTarball(spec.entries)),
+        archiveVector(spec.id, spec.description, rawTarball(spec.entries), spec.code),
       ),
     ],
   };

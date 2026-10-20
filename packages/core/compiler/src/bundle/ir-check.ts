@@ -10,6 +10,7 @@ import {
   type IrValidator,
 } from "@seampact/spec/ir";
 import { Ajv2020 } from "ajv/dist/2020.js";
+import { quote } from "../validate/diagnostics.js";
 import { parseUntrustedJson, utf8Text } from "./untrusted-json.js";
 
 // Step 3 of the pinned-bundle check, for one api: the IR file is JSON with no reserved key, declares the irVersion
@@ -52,7 +53,7 @@ export function checkBundleIr(api: BundleApi, bytes: Uint8Array): ContractIR | B
   if (declared.irVersion !== api.irVersion || declared.irRevision !== api.irRevision)
     return {
       code: "bundle.ir-declaration",
-      message: `'${api.file}' declares irVersion ${String(declared.irVersion)} and irRevision ${String(declared.irRevision)}; the manifest lists ${api.irVersion} and ${api.irRevision}.`,
+      message: `'${api.file}' declares irVersion ${quote(declared.irVersion)} and irRevision ${quote(declared.irRevision)}; the manifest lists ${api.irVersion} and ${api.irRevision}.`,
       fix: FIX,
       file: api.file,
       expected: `${api.irVersion}.${api.irRevision}`,
@@ -88,7 +89,7 @@ function supportFailure(api: BundleApi, document: unknown): BundleFailure | unde
 
     return {
       code,
-      message: `'${api.file}': ${mismatch.message}`,
+      message: `'${api.file}' holds ${quote(mismatch.value)} at ${quote(mismatch.member)}; this reader reads ${mismatch.expected.join(", ")}.`,
       fix: FIX,
       file: api.file,
       expected: mismatch.expected.join(", "),
@@ -128,13 +129,15 @@ function validIr(api: BundleApi, document: unknown): ContractIR | BundleFailure 
 
 function reportProblems(report: IrValidationReport): string[] {
   return [
-    ...report.problems.map((problem) => `at '${problem.pointer}' ${problem.message}`),
+    ...report.problems.map((problem) => `at ${quote(problem.pointer)} ${quote(problem.message)}`),
     ...(report.valid
       ? []
-      : report.unknownKinds.map((kind) => `at '${kind.pointer}' an unknown ${kind.tag}`)),
+      : report.unknownKinds.map(
+          (kind) => `at ${quote(kind.pointer)} an unknown ${quote(kind.tag)}`,
+        )),
     ...(report.valid
       ? []
-      : report.unknownValues.map((value) => `at '${value.pointer}' an unknown value`)),
+      : report.unknownValues.map((value) => `at ${quote(value.pointer)} an unknown value`)),
   ];
 }
 

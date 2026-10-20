@@ -6,8 +6,14 @@ import {
   BUNDLE_ARCHIVE_BYTES_MAX,
   BUNDLE_ENTRIES_MAX,
   BUNDLE_EXTRACTED_BYTES_MAX,
+  BUNDLE_IR_DIRECTORY,
+  BUNDLE_MANIFEST_FILE,
+  BUNDLE_SOURCES_DIRECTORY,
   type BundleFailure,
+  bundlePathFold,
+  bundlePathProblem,
 } from "@seampact/spec/bundle";
+import { quote } from "../validate/diagnostics.js";
 import type { BundleEntry } from "./contents.js";
 import {
   GNU_MAGIC_AND_VERSION,
@@ -27,9 +33,11 @@ import {
 
 // The bundle tarball reader. A tarball comes from the network, so it is read whole in memory and every entry
 // checked before any byte is written: regular files (`0`) and directories (`5`) only, pax extended headers (`x`)
-// for `path` and `size` only, global pax headers (`g`) ignored, every other type refused; no `..` or `.` segment,
-// absolute or drive path, backslash, duplicate (also once folded to lower case) or path that is both a file and a
-// directory; the caps of `@seampact/spec/bundle`. Only then are the files written, into a new temporary directory.
+// for `path` and `size` only, global pax headers (`g`) ignored, every other type refused; a file is the manifest or
+// a portable bundle path (`bundlePathProblem`: no `..`, absolute, drive, backslash, control, non-ASCII, trailing
+// dot or Windows device name), a directory one of their parents; no duplicate (also once folded to ASCII lower
+// case) or path that is both a file and a directory; the caps of `@seampact/spec/bundle`. Only then are the files
+// written, into a new temporary directory. Entry names are untrusted: quoted in messages, kept exact in `file`.
 
 export type BundleArchiveRead =
   | { readonly ok: true; readonly entries: readonly BundleEntry[] }
@@ -41,6 +49,13 @@ export type BundleArchiveExtraction =
 
 const NUL = 0;
 const OCTAL = /^[0-7]+$/u;
+const DECIMAL = /^[0-9]+$/u;
+const BUNDLE_TOP_DIRECTORIES: readonly string[] = [BUNDLE_SOURCES_DIRECTORY, BUNDLE_IR_DIRECTORY];
+// The magic and version fields read as one, as GNU writes them.
+const GNU_MAGIC_FIELD: UstarField = {
+  offset: USTAR_FIELDS.magic.offset,
+  length: USTAR_FIELDS.magic.length + USTAR_FIELDS.version.length,
+};
 const DRIVE_PATH = /^[A-Za-z]:/u;
 const TEMPORARY_PREFIX = "seampact-bundle-";
 const FILE_MODE = 0o644;
@@ -95,7 +110,10 @@ function refused(failure: BundleFailure): BundleArchiveRead {
 
 function gunzipped(tarball: Uint8Array): Uint8Array | BundleFailure {
   try {
-    return new Uint8Array(gunzipSync(tarball, { maxOutputLength: BUNDLE_EXTRACTED_BYTES_MAX }));
+    const archive = gunzipSync(tarball, { maxOutputLength: BUNDLE_EXTRACTED_BYTES_MAX });
+
+    // A view, not a copy: the archive may hold up to the extracted cap.
+    return new Uint8Array(archive.buffer, archive.byteOffset, archive.byteLength);
   } catch (error) {
     if (error instanceof RangeError)
       return {
@@ -131,7 +149,7 @@ class UstarParser {
   private pax: PaxOverrides = {};
   private readonly archive: Uint8Array;
   private readonly files: BundleEntry[] = [];
-  // Paths folded to lower case: of the files, and of every directory (an entry's or a file's parent).
+  // Paths folded to ASCII lower case: of the files, and of every directory (an entry's or a file's parent).
   private readonly fileByFold = new Map<string, string>();
   private readonly directoryFolds = new Set<string>();
 
@@ -206,7 +224,7 @@ class UstarParser {
 
     return {
       code: "bundle.archive-entry-type",
-      message: `The tarball entry '${path}' is of type ${JSON.stringify(type)}; a bundle holds regular files only.`,
+      message: `The tarball entry ${quote(path)} is of type ${quote(type)}; a bundle holds regular files only.`,
       fix: "Rebuild the bundle with `seampact bundle`: it writes no link, device or other special entry.",
       file: path,
     };
@@ -233,25 +251,25 @@ class UstarParser {
 
   private directory(path: string): BundleFailure | undefined {
     const trimmed = path.endsWith("/") ? path.slice(0, -1) : path;
-    const problem = entryPathProblem(trimmed);
+    const problem = directoryPathProblem(trimmed);
 
     if (problem !== undefined) return unsafePath(path, problem);
 
-    if (this.fileByFold.has(trimmed.toLowerCase()))
+    if (this.fileByFold.has(bundlePathFold(trimmed)))
       return unsafePath(path, "is both a file and a directory");
 
     this.addParentDirectories(trimmed);
-    this.directoryFolds.add(trimmed.toLowerCase());
+    this.directoryFolds.add(bundlePathFold(trimmed));
 
     return undefined;
   }
 
   private file(path: string, data: Uint8Array): BundleFailure | undefined {
-    const problem = entryPathProblem(path);
+    const problem = filePathProblem(path);
 
     if (problem !== undefined) return unsafePath(path, problem);
 
-    const folded = path.toLowerCase();
+    const folded = bundlePathFold(path);
     const seen = this.fileByFold.get(folded);
 
     if (seen !== undefined)
@@ -259,8 +277,8 @@ class UstarParser {
         code: "bundle.archive-entry-duplicate",
         message:
           seen === path
-            ? `The tarball holds '${path}' twice.`
-            : `The tarball holds '${path}' and '${seen}', one file on a case-insensitive file system.`,
+            ? `The tarball holds ${quote(path)} twice.`
+            : `The tarball holds ${quote(path)} and ${quote(seen)}, one file on a case-insensitive file system.`,
         fix: "Rebuild the bundle with `seampact bundle`: it writes each file once.",
         file: path,
       };
@@ -269,19 +287,19 @@ class UstarParser {
 
     if (
       this.directoryFolds.has(folded) ||
-      parents.some((parent) => this.fileByFold.has(parent.toLowerCase()))
+      parents.some((parent) => this.fileByFold.has(bundlePathFold(parent)))
     )
       return unsafePath(path, "is both a file and a directory");
 
     this.fileByFold.set(folded, path);
     this.addParentDirectories(path);
-    this.files.push({ path, bytes: new Uint8Array(data) });
+    this.files.push({ path, bytes: data });
 
     return undefined;
   }
 
   private addParentDirectories(path: string): void {
-    for (const parent of parentPaths(path)) this.directoryFolds.add(parent.toLowerCase());
+    for (const parent of parentPaths(path)) this.directoryFolds.add(bundlePathFold(parent));
   }
 }
 
@@ -295,12 +313,27 @@ function parentPaths(path: string): string[] {
 function unsafePath(path: string, problem: string): BundleFailure {
   return {
     code: "bundle.archive-entry-path",
-    message: `The tarball entry ${JSON.stringify(path)} ${problem}; it could be written outside the bundle.`,
-    fix: "Rebuild the bundle with `seampact bundle`: its entries are relative paths under the bundle root.",
+    message: `The tarball entry ${quote(path)} ${problem}; a bundle holds its manifest and portable paths under sources/ and ir/ only.`,
+    fix: "Rebuild the bundle with `seampact bundle`: its entries are the manifest and portable paths under the bundle root.",
     file: path,
   };
 }
 
+// The manifest, or a portable bundle path.
+function filePathProblem(path: string): string | undefined {
+  if (path === BUNDLE_MANIFEST_FILE) return undefined;
+
+  return entryPathProblem(path) ?? bundlePathProblem(path);
+}
+
+// `sources`, `ir`, or a directory a portable bundle path may hold.
+function directoryPathProblem(path: string): string | undefined {
+  if (BUNDLE_TOP_DIRECTORIES.includes(path)) return undefined;
+
+  return entryPathProblem(path) ?? bundlePathProblem(path);
+}
+
+// The unsafe paths, named before the portable rule so the refusal says what makes them unsafe.
 function entryPathProblem(path: string): string | undefined {
   if (path === "") return "has an empty path";
 
@@ -316,9 +349,11 @@ function entryPathProblem(path: string): string | undefined {
   return undefined;
 }
 
+// GNU headers hold times where ustar holds the prefix: their path is the name field only.
 function headerPath(header: Uint8Array): string {
   const name = text(header, USTAR_FIELDS.name);
-  const prefix = text(header, USTAR_FIELDS.prefix);
+  const magicAndVersion = text(header, GNU_MAGIC_FIELD, { keepNul: true });
+  const prefix = magicAndVersion === GNU_MAGIC_AND_VERSION ? "" : text(header, USTAR_FIELDS.prefix);
 
   return prefix === "" ? name : `${prefix}/${name}`;
 }
@@ -347,7 +382,8 @@ function paxOverrides(data: Uint8Array): PaxOverrides | string {
 
   while (offset < data.length) {
     const space = data.indexOf(0x20, offset);
-    const length = space === -1 ? Number.NaN : Number(UTF8.decode(data.subarray(offset, space)));
+    const lengthText = space === -1 ? "" : UTF8.decode(data.subarray(offset, space));
+    const length = DECIMAL.test(lengthText) ? Number(lengthText) : Number.NaN;
 
     if (!Number.isSafeInteger(length) || length <= 0 || offset + length > data.length)
       return "a pax record's length is not a number inside the header";
@@ -363,7 +399,7 @@ function paxOverrides(data: Uint8Array): PaxOverrides | string {
     if (key === "path") overrides.path = value;
 
     if (key === "size") {
-      if (!/^\d+$/u.test(value)) return "a pax size is not a decimal number";
+      if (!DECIMAL.test(value)) return "a pax size is not a decimal number";
       overrides.size = Number(value);
     }
 
