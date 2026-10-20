@@ -28,7 +28,11 @@ interface ApiModules {
 }
 
 interface DocsApp {
-  nativeDocument(apis: readonly ApiModules[], openapi?: string): Promise<{ paths: object }>;
+  nativeDocument(
+    apis: readonly ApiModules[],
+    openapi?: string,
+    shadowSchemaName?: string,
+  ): Promise<{ paths: object }>;
 }
 
 let app: DocsApp;
@@ -108,6 +112,12 @@ describe("the NestJS native document", () => {
 
   test("a framework document that says openapi 3.0.0 is refused with the fix", async () => {
     await expect(app.nativeDocument([tasks], "3.0.0")).rejects.toThrow(/openapi: '3\.1\.0'/);
+  });
+
+  test("an app class named like a contract schema is refused, naming both schemas", async () => {
+    await expect(app.nativeDocument([tasks], "3.1.0", "Task")).rejects.toThrow(
+      /component 'schemas\.Task' of api 'tasks'.*finished document holds/s,
+    );
   });
 
   test("nativeDocs off generates nothing for the framework document", async () => {

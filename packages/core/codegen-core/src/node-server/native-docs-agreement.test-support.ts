@@ -6,8 +6,9 @@ import type { NativeDocsDocument, NativeDocsJsonObject } from "../native-docs-do
 
 // Test support of the `nativeDocs` artefact: the seampact document of a reference api, as the CLI passes it, and the
 // agreement rule between it and the document a framework writes: for every operation of the seampact document, the
-// same operation id at the same method and path, the same response codes, and equal request body and response
-// schemas per media type once `$ref` is resolved in each document. Paths outside the contract are ignored.
+// same operation id at the same method and path, the same response codes, the same parameters with equal schemas, and
+// equal request body and response schemas per media type once `$ref` is resolved in each document. A method on a path
+// the seampact document does not hold is a difference: the framework's own entries for the generated routes.
 
 const GOLDEN_OPENAPI = new URL(
   "../../../../../fixtures/golden/reference/openapi/",
@@ -67,7 +68,26 @@ export function nativeDocsDisagreements(
     );
   }
 
+  differences.push(...extraOperations(seampact, framework));
+
   return differences;
+}
+
+function extraOperations(seampact: unknown, framework: unknown): string[] {
+  const held = new Set(methodPaths(seampact));
+
+  return methodPaths(framework)
+    .filter((methodPath) => !held.has(methodPath))
+    .map((methodPath) => `${methodPath}: not in the seampact document`);
+}
+
+// Every `METHOD path` that carries an operation object.
+function methodPaths(document: unknown): string[] {
+  return Object.entries(recordAt(document, "paths")).flatMap(([path, item]) =>
+    OPERATION_METHODS.filter((method) => memberAt(item, method) !== undefined).map(
+      (method) => `${method.toUpperCase()} ${path}`,
+    ),
+  );
 }
 
 interface FoundOperation {
@@ -112,8 +132,8 @@ function operationDifferences(
     );
   }
 
-  const expectedParameters = parameterKeys(expected);
-  const foundParameters = parameterKeys(found);
+  const expectedParameters = parameterKeys(expected, seampact);
+  const foundParameters = parameterKeys(found, framework);
 
   if (expectedParameters.join() !== foundParameters.join()) {
     differences.push(
@@ -146,8 +166,8 @@ function operationDifferences(
   return differences;
 }
 
-// Each parameter as `in:name:required`, sorted.
-function parameterKeys(operation: Record<string, unknown>): string[] {
+// Each parameter as `in:name:required:schema` (the schema with `$ref` resolved), sorted.
+function parameterKeys(operation: Record<string, unknown>, document: unknown): string[] {
   const parameters: unknown = operation.parameters;
 
   if (!Array.isArray(parameters)) return [];
@@ -155,7 +175,7 @@ function parameterKeys(operation: Record<string, unknown>): string[] {
   return parameters
     .map(
       (parameter) =>
-        `${String(memberAt(parameter, "in"))}:${String(memberAt(parameter, "name"))}:${String(memberAt(parameter, "required"))}`,
+        `${String(memberAt(parameter, "in"))}:${String(memberAt(parameter, "name"))}:${String(memberAt(parameter, "required"))}:${JSON.stringify(resolvedDeep(memberAt(parameter, "schema"), document))}`,
     )
     .sort();
 }

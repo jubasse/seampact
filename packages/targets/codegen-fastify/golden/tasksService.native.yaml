@@ -251,41 +251,6 @@ components:
       scheme: bearer
       bearerFormat: jwt
 paths:
-  /internal/v1/channels/{p1}/tasks/{p2}:
-    get:
-      parameters:
-        - schema:
-            type: string
-          in: path
-          name: p1
-          required: true
-        - schema:
-            type: string
-          in: path
-          name: p2
-          required: true
-      responses:
-        "200":
-          description: Default Response
-  /internal/v1/{*}:
-    get: &a1
-      parameters:
-        - schema:
-            type: string
-          in: path
-          name: "*"
-          required: true
-      responses:
-        "200":
-          description: Default Response
-    head: *a1
-    trace: *a1
-    delete: *a1
-    options: *a1
-    patch: *a1
-    put: *a1
-    post: *a1
-    query: *a1
   /internal/v1/channels/{channelId}/tasks/{taskId}:
     get:
       operationId: getTask

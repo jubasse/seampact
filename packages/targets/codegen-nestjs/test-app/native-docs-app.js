@@ -5,7 +5,7 @@
 import "reflect-metadata";
 import { Controller, Module } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
-import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { ApiOkResponse, ApiProperty, DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 const NO_HOOKS = {};
 
@@ -41,16 +41,38 @@ function controllerOf(apiModule) {
   return ApiController;
 }
 
+// A class of the app named like a contract schema, which a scanned response type makes `createDocument` write.
+function shadowingController(schemaName) {
+  const Shadow = { [schemaName]: class {} }[schemaName];
+
+  ApiProperty({ type: String })(Shadow.prototype, "unrelated");
+
+  class ShadowController {
+    shadowed() {}
+  }
+
+  const descriptor = Object.getOwnPropertyDescriptor(ShadowController.prototype, "shadowed");
+
+  ApiOkResponse({ type: Shadow })(ShadowController.prototype, "shadowed", descriptor);
+  Controller("shadow")(ShadowController);
+
+  return ShadowController;
+}
+
 /**
  * The framework's document of an app that serves the given apis, each `{ nest, docs }`: its `nestjs` module and its
- * `nestjs-docs` module. `openapi` is the version the app's config says.
+ * `nestjs-docs` module. `openapi` is the version the app's config says;
+ * `shadowSchemaName` adds a class of the app with that name, and each api's `assertContractComponents` runs on the result.
  */
-export async function nativeDocument(apis, openapi = "3.1.0") {
+export async function nativeDocument(apis, openapi = "3.1.0", shadowSchemaName = undefined) {
   class DocsModule {}
 
   Module({
     imports: apis.map(({ nest }) => nest.SeampactModule.forRoot(NO_HOOKS)),
-    controllers: apis.map(({ nest }) => controllerOf(nest)),
+    controllers: [
+      ...apis.map(({ nest }) => controllerOf(nest)),
+      ...(shadowSchemaName === undefined ? [] : [shadowingController(shadowSchemaName)]),
+    ],
   })(DocsModule);
 
   const app = await NestFactory.create(DocsModule, { logger: false });
@@ -60,7 +82,11 @@ export async function nativeDocument(apis, openapi = "3.1.0") {
   });
 
   try {
-    return SwaggerModule.createDocument(app, config, { autoTagControllers: false });
+    const document = SwaggerModule.createDocument(app, config, { autoTagControllers: false });
+
+    for (const { docs } of apis) docs.assertContractComponents(document);
+
+    return document;
   } finally {
     await app.close();
   }

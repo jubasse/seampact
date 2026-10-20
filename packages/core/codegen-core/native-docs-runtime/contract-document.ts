@@ -31,7 +31,7 @@ export function mergeComponents(
     merged[section] = target;
 
     for (const [name, value] of Object.entries(entries)) {
-      if (!(name in target)) {
+      if (!Object.hasOwn(target, name)) {
         target[name] = structuredClone(value);
 
         continue;
@@ -46,4 +46,29 @@ export function mergeComponents(
   }
 
   return merged;
+}
+
+/**
+ * Throws when a component of the api is missing from the finished document or held with another value, naming both:
+ * the framework's generator can replace a component by one of its own scan of the same name.
+ */
+export function assertComponentsHeld(
+  document: { components?: object },
+  added: Readonly<Record<string, Readonly<Record<string, unknown>>>>,
+  api: string,
+): void {
+  const held: ComponentSections = Object.fromEntries(Object.entries(document.components ?? {}));
+
+  for (const [section, entries] of Object.entries(added)) {
+    const target = held[section] ?? {};
+
+    for (const [name, value] of Object.entries(entries)) {
+      if (Object.hasOwn(target, name) && JSON.stringify(target[name]) === JSON.stringify(value))
+        continue;
+
+      throw new Error(
+        `seampact: the component '${section}.${name}' of api '${api}' is ${JSON.stringify(value)}, and the finished document holds ${JSON.stringify(Object.hasOwn(target, name) ? target[name] : undefined)}. A class of the app with the same schema name replaced it; rename the class or the schema.`,
+      );
+    }
+  }
 }
