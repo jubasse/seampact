@@ -1,5 +1,11 @@
-import type { Diagnostic, DiagnosticOrigin } from "@seampact/compiler";
-import type { Lint, LintAllow, Origin } from "@seampact/spec/ir";
+import {
+  closestKeyword,
+  type Diagnostic,
+  type DiagnosticOrigin,
+  diagnosticLocationKey,
+  pointerEscape,
+} from "@seampact/compiler";
+import type { Lint, LintAllow, Origin, SourceMap } from "@seampact/spec/ir";
 import {
   CORE_PLUGIN_NAME,
   type LintPlugin,
@@ -67,15 +73,29 @@ interface RuleMention {
   origin: Origin;
 }
 
-function mentionsOf(lint: Lint): RuleMention[] {
+function mentionsOf(lint: Lint, locations: SourceMap["locations"]): RuleMention[] {
   return [
     ...Object.entries(lint.rules).map(
       ([id, rule]): RuleMention => ({ id, where: "lint.rules", origin: rule.origin }),
     ),
     ...lint.allows.map(
-      (allow): RuleMention => ({ id: allow.rule, where: "lint.allow", origin: allow.at }),
+      (allow): RuleMention => ({
+        id: allow.rule,
+        where: "lint.allow",
+        origin: allowEntryOrigin(allow, locations),
+      }),
     ),
   ];
+}
+
+// The `lint.allow` entry that wrote the id, when the side table has it; else the node holding the allow.
+function allowEntryOrigin(allow: LintAllow, locations: SourceMap["locations"]): Origin {
+  const entry = {
+    layer: allow.at.layer,
+    pointer: `${allow.at.pointer}/lint/allow/${pointerEscape(allow.rule)}`,
+  };
+
+  return Object.hasOwn(locations, diagnosticLocationKey(entry)) ? entry : allow.at;
 }
 
 /** The origin of a diagnostic: `core` has no location, and a relay copy is located in the api that wrote it. */
@@ -87,13 +107,17 @@ export function diagnosticOriginOf(origin: Origin): DiagnosticOrigin {
 }
 
 function unknownRuleDiagnostic(mention: RuleMention, owner: LintPlugin): Diagnostic {
-  const known = owner.rules.map((rule) => lintRuleId(owner, rule)).join(", ");
+  const known = owner.rules.map((rule) => lintRuleId(owner, rule));
+  const closest = closestKeyword(mention.id, known);
 
   return {
     severity: "error",
     rule: UNKNOWN_RULE_ID,
     message: `${mention.where} names the lint rule '${mention.id}', which the plugin '${owner.name}' does not have`,
-    fix: `Use one of ${known}, or remove the entry.`,
+    fix:
+      closest === undefined
+        ? `Use one of ${known.join(", ")}, or remove the entry.`
+        : `Use '${closest}', or remove the entry.`,
     origin: diagnosticOriginOf(mention.origin),
     related: [],
   };
@@ -118,6 +142,7 @@ export function lintUnknownRuleDiagnostics(
   lint: Lint,
   plugins: readonly LintPlugin[],
   reservedIds: readonly string[],
+  locations: SourceMap["locations"],
 ): Diagnostic[] {
   const known = new Set([
     ...reservedIds,
@@ -126,7 +151,7 @@ export function lintUnknownRuleDiagnostics(
   const seen = new Set<string>();
   const diagnostics: Diagnostic[] = [];
 
-  for (const mention of mentionsOf(lint)) {
+  for (const mention of mentionsOf(lint, locations)) {
     const key = `${mention.where}\n${mention.id}\n${mention.origin.layer}#${mention.origin.pointer}`;
 
     if (known.has(mention.id) || seen.has(key)) continue;

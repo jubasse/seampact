@@ -186,6 +186,17 @@ describe("unknown rule ids", () => {
     expect(diagnostic?.message).toContain("lint.allow");
   });
 
+  test("a misspelt allow is located at its entry and the fix names the closest id", async () => {
+    const [diagnostic, ...rest] = await lintedWith(api.ir.lint, probePlugin([]));
+
+    expect(rest).toEqual([]);
+    expect(diagnostic).toMatchObject({
+      rule: "seampact/lint/unknown-rule",
+      origin: { layer: "api", pointer: "/surfaces/app/routes/beta/lint/allow/test~1probee" },
+      fix: "Use 'test/probe', or remove the entry.",
+    });
+  });
+
   test("an id no loaded plugin owns is a warning and the setting is ignored", async () => {
     const lint: Lint = { rules: { "acme/served-at": ruleAt("error") }, allows: [] };
     const [diagnostic, ...rest] = await lintedWith(lint, probePlugin([]));
@@ -249,33 +260,29 @@ describe("plugins", () => {
     );
   });
 
-  test("a rule that throws is rethrown with its id and the cause", async () => {
-    const cause = new Error("boom");
+  test("a rule that throws is an error naming the plugin and the rule", async () => {
     const plugin = defineLintPlugin({
       name: "test",
       rules: [
         {
-          name: "probe",
-          defaultSeverity: "warning",
-          reports: "x",
-          silencedOn: "y",
+          ...probeRule(),
           check() {
-            throw cause;
+            throw new Error("boom");
           },
         },
       ],
     });
-    let thrown: unknown;
 
-    try {
-      await runLint(lintInputOf(api, [plugin]));
-    } catch (error) {
-      thrown = error;
-    }
-
-    if (!(thrown instanceof Error)) throw new Error("the rule's error was not rethrown");
-    expect(thrown.message).toBe("the lint rule 'test/probe' threw: boom");
-    expect(thrown.cause).toBe(cause);
+    expect(await lintedWith(NO_LINT, plugin)).toEqual([
+      {
+        severity: "error",
+        rule: "test/probe",
+        message: "The lint rule 'test/probe' of plugin 'test' failed: boom",
+        fix: "Fix the rule in plugin 'test', or set 'test/probe' to disabled in lint.rules.",
+        origin: api.ir.api.origin,
+        related: [],
+      },
+    ]);
   });
 
   test("an async rule's findings are reported once it settles", async () => {

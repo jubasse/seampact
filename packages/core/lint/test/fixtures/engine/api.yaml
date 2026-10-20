@@ -20,4 +20,4 @@ surfaces:
     identity: user
     routes:
       alpha: { method: get, output: Principal }
-      beta: { method: get, output: Principal }
+      beta: { method: get, output: Principal, lint: { allow: { test/probee: "A misspelt id." } } }

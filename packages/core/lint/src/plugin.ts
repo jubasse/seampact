@@ -39,7 +39,7 @@ export interface LintRuleDefinition {
   reports: string;
   /** Where an allow silences it. */
   silencedOn: string;
-  /** May be async: the runner waits for it, and a rejection is an error diagnostic naming the rule. */
+  /** May be async: the runner waits for it; a throw or a rejection is an error diagnostic naming the rule. */
   check(context: LintRuleContext): void | Promise<void>;
 }
 

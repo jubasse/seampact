@@ -36,7 +36,7 @@ export interface RunLintInput {
 /**
  * Lints one api (ADR 0006 section 4): each rule not `disabled` reads the IR, a finding an allow covers is dropped,
  * the rest becomes a diagnostic with its resolved severity. A rule's check may be async; one that rejects is an
- * error naming it. The result is sorted; printing is the caller's.
+ * error naming it, as is one that throws. The result is sorted; printing is the caller's.
  */
 export async function runLint(input: RunLintInput): Promise<Diagnostic[]> {
   const plugins = [seampactCorePlugin, ...input.plugins];
@@ -44,7 +44,7 @@ export async function runLint(input: RunLintInput): Promise<Diagnostic[]> {
   refuseDuplicatePlugins(plugins);
 
   const diagnostics: Diagnostic[] = [
-    ...lintUnknownRuleDiagnostics(input.ir.lint, plugins, LINT_RESERVED_RULE_IDS),
+    ...lintUnknownRuleDiagnostics(input.ir.lint, plugins, LINT_RESERVED_RULE_IDS, input.locations),
   ];
 
   for (const plugin of plugins) {
@@ -54,7 +54,7 @@ export async function runLint(input: RunLintInput): Promise<Diagnostic[]> {
 
       if (severity === "disabled") continue;
       const findings: LintFinding[] = [];
-      const rejection = await checkRule(id, rule, {
+      const rejection = await checkRule(rule, {
         ir: input.ir,
         declared: input.declared,
         report: (finding) => findings.push(finding),
@@ -79,22 +79,13 @@ interface LintRejection {
   cause: unknown;
 }
 
-// A check that throws is a defect of the rule and is rethrown; the rejection of an async one is returned.
+// A check that throws or rejects fails; its cause is returned.
 async function checkRule(
-  id: string,
   rule: LintRuleDefinition,
   context: LintRuleContext,
 ): Promise<LintRejection | undefined> {
-  let checked: void | Promise<void>;
-
   try {
-    checked = rule.check(context);
-  } catch (cause) {
-    throw new Error(`the lint rule '${id}' threw: ${describeError(cause)}`, { cause });
-  }
-
-  try {
-    await checked;
+    await rule.check(context);
   } catch (cause) {
     return { cause };
   }
@@ -102,7 +93,7 @@ async function checkRule(
   return undefined;
 }
 
-// Located at the api header: a rejection has no place in the contract.
+// Located at the api header: a failed check has no place in the contract.
 function rejectedRuleDiagnostic(
   plugin: LintPlugin,
   id: string,
