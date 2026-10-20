@@ -1,3 +1,4 @@
+import { isKnownVariant } from "@seampact/spec/ir";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { emitDocuments } from "./documents.js";
@@ -12,7 +13,8 @@ function contextOfGetTask(typeName: string | undefined): unknown {
   const ir = readGoldenIr("pack-api-platform/tasks");
   const named = ir.schemas[ITEM_SCHEMA];
 
-  if (named === undefined || named.kind !== "object") throw new Error("the golden has no Task");
+  if (named === undefined || !isKnownVariant("Schema", named) || named.kind !== "object")
+    throw new Error("the golden has no Task");
 
   if (typeName === undefined) delete named.typeName;
   else named.typeName = typeName;
