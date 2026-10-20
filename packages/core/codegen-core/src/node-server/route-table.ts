@@ -19,8 +19,8 @@ import {
   refuseUnknownValueAt,
 } from "../located-refusals.js";
 import type { Refusal } from "../refusal.js";
-import { pageBodyTemplate, pagingEntry } from "./paging-entry.js";
 import type { CompressionOption, FrameworkEtagMode } from "./options.js";
+import { pageBodyTemplate, pagingEntry } from "./paging-entry.js";
 import { compareRouteSpecificity } from "./route-order.js";
 import {
   isSlot,
@@ -952,6 +952,33 @@ function errorEntry(
   };
 }
 
+// Whether a template writes the slot anywhere: as a value, a member name, a text part or inside a nested template.
+function templateWritesSlot(node: Template, slot: string): boolean {
+  if (!isKnownVariant("Template", node)) return false;
+
+  if (node.kind === "slot") return node.slot === slot;
+
+  if (node.kind === "text") {
+    return node.parts.some(
+      (part) => isKnownVariant("TextPart", part) && part.kind === "slot" && part.slot === slot,
+    );
+  }
+
+  if (node.kind === "array") return node.items.some((item) => templateWritesSlot(item, slot));
+
+  if (node.kind === "each") return templateWritesSlot(node.as, slot);
+
+  if (node.kind !== "object") return false;
+
+  return node.members.some(
+    (member) =>
+      (isKnownVariant("MemberName", member.name) &&
+        member.name.kind === "slot" &&
+        member.name.slot === slot) ||
+      templateWritesSlot(member.value, slot),
+  );
+}
+
 function errorFormat(ir: ContractIR, refusals: Refusal[]): SourceValue {
   const formatIds = [...new Set(ir.operations.map((operation) => operation.format))];
   const formatId = formatIds[0];
@@ -985,6 +1012,17 @@ function errorFormat(ir: ContractIR, refusals: Refusal[]): SourceValue {
   }
 
   const body = template(format.error.body, below(location, "error", "body"), refusals);
+
+  if (!templateWritesSlot(format.error.body, "code")) {
+    refusals.push(
+      refuseNotGeneratedYet(
+        "format.error.codeless",
+        "An error body that writes no code",
+        below(location, "error", "body"),
+      ),
+    );
+  }
+
   const members =
     isKnownVariant("Template", format.error.body) && format.error.body.kind === "object"
       ? format.error.body.members

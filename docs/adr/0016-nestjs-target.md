@@ -89,7 +89,7 @@ These reach only the global filters: a body the platform's JSON parser cannot pa
 
 ### Target options
 
-`parseOptions` accepts `responses` (`strict`, the default, or `warn`) and `bodyValidation` (`false`, the default, or `true`), and refuses any other key by name.
+`parseOptions` accepts `responses` (`strict`, the default, or `warn`) and `bodyValidation` (`false`, the default, or `true`), and refuses any other key by name. Every Node server target also takes `frameworkEtag` (`strip`, the default, or `keep`) and `catchAll` (`true`, the default, or `false`, which leaves unserved paths under the base path to the app), and Fastify takes `compression` (`off`, or a `thresholdBytes` threshold).
 
 ### Raw body
 

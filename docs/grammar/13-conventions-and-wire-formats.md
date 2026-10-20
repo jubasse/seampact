@@ -55,7 +55,7 @@ conventions:
 | `errors.pattern` | a pattern every error code must also match, the dotted `family.name` form for example (`'^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$'`) | unset: the core pattern only (A36) |
 | `errors.every` | codes attached to every operation (section 11) | empty |
 | `errors.reach` | `subtree` or `resource`: how far a code attached on a node reaches (section 11) | `subtree` (A35) |
-| `errors.requireCode` | `false`: a format error body may write no `$code` (section 11); `true` refuses it | `true` |
+| `errors.requireCode` | `false`: a format error body may write no `$code` (section 11); `true` refuses it | `true`; the server targets and the fetch client refuse a codeless format by name until one models it |
 | `errors.derived` | role bindings (section 11) | the default codes of ADR 0006 section 6 (A34) |
 
 The core imposes no wire format (A30). `format: bare`, the default, is itself written as format data below: every success body is the bare payload, and an error is an RFC 9457 `application/problem+json` body whose members are fixed in ADR 0006 section 7. `bare` has no paging style, because the core imposes no page shape either (A31, section 14). Every other format (a house envelope, JSON:API, HAL, JSON-LD and Hydra, Laravel resources and paginators, Spring Page and ProblemDetail) is declared in `formats`, usually by a convention pack, and selected with `conventions.format`; each target maps it onto its framework's own mechanism (FR-42, SCN-048, SCN-100).

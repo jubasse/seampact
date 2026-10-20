@@ -141,7 +141,12 @@ export function nodeServerTarget(targetPackage: NodeServerTargetPackage): Target
       },
       artefacts: [
         { id: BOUNDARY_ARTEFACT, defaultOn: true },
-        { id: INDEX_ARTEFACT, defaultOn: true, needs: [BOUNDARY_ARTEFACT] },
+        {
+          id: INDEX_ARTEFACT,
+          defaultOn: true,
+          needs: [BOUNDARY_ARTEFACT],
+          leftOffWithoutNeeds: true,
+        },
         ...(ownLibrary === undefined
           ? []
           : [{ id: OWN_VALIDATORS_ARTEFACT, defaultOn: true } as const]),

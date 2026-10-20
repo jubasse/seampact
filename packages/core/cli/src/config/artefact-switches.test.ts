@@ -174,3 +174,18 @@ test("refuses an entry with every artefact off", () => {
     ],
   });
 });
+
+test("leaves an artefact that follows its needs off with them, unless the entry writes it on", () => {
+  const declared: readonly ArtefactDeclaration[] = [
+    { id: "boundary", defaultOn: true },
+    { id: "validators", defaultOn: true },
+    { id: "index", defaultOn: true, needs: ["boundary"], leftOffWithoutNeeds: true },
+  ];
+  const selection = select({ boundary: false }, declared);
+
+  expect(selection.status === "selected" && [...selection.artefacts]).toEqual(["validators"]);
+  expect(select({ boundary: false, index: true }, declared)).toMatchObject({
+    status: "refused",
+    problems: [{ code: "config.artefacts.needed" }],
+  });
+});

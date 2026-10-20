@@ -100,6 +100,8 @@ An app that serves several apis (a public api and a service api in one NestJS ap
 
 ### The boot check
 
+The app config's `artefacts.bootCheck.hooks` sets the level for missing hooks: `error` refuses to start, `warn` logs them and starts, `off` starts silently, and a route whose hook is missing then answers 500; a right claimed by two deciders refuses to start at every level.
+
 Before the application accepts a request, the generated boot check refuses to start, listing every problem at once with the operation id, the name and the fix, when:
 - an identity used by a bound operation has no authenticate hook;
 - a right or rule used by a bound operation has no decider;

@@ -513,3 +513,33 @@ describe("two apis on one base path", () => {
     expect(JSON.parse(reply.text)).toMatchObject({ code: "api.not_found" });
   });
 });
+
+describe("the catchAll option", () => {
+  const project = projectDirectory(import.meta.url, "live-catch-all");
+  const PROBLEM_MEDIA = "application/problem+json";
+  let catchAllApp: ReferenceAppModule;
+  let catchAllServer: Awaited<ReturnType<ReferenceAppModule["startReferenceApp"]>>;
+
+  beforeAll(async () => {
+    const files = await generateReferenceProject(project, fastifyTarget, { catchAll: false });
+    const build = join(project, "build");
+
+    expect(emitProject(project, files, build)).toEqual([]);
+    catchAllApp = await import(copyTestApp(build, APP_SOURCE));
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    catchAllServer = await catchAllApp.startReferenceApp();
+  }, SETUP_TIMEOUT_MILLISECONDS);
+
+  afterAll(async () => {
+    await catchAllServer?.close();
+  });
+
+  test("false leaves an unknown path under the base path to the app, not the api's 404", async () => {
+    catchAllApp.resetScenario();
+
+    const reply = await sendRawRequest(catchAllServer, "GET", "/v1/unknown", { headers: BEARER });
+
+    expect(reply.status).toBe(404);
+    expect(reply.headers["content-type"] ?? "").not.toContain(PROBLEM_MEDIA);
+  });
+});
