@@ -80,14 +80,16 @@ async function answer(request: IncomingMessage, response: ServerResponse): Promi
   } else if (url.pathname === "/raw") {
     json(200, { text: body, signatureAgeSeconds: signatureAgeSeconds(request) });
   } else if (url.pathname === "/signed") {
-    json(200, { valid: request.headers["stripe-signature"] === stripeV1(body) });
+    const signature = String(request.headers["stripe-signature"]);
+
+    json(200, { valid: signature === stripeV1(body, signedTimestampOf(signature)) });
   } else {
     json(404, { code: "api.not_found" });
   }
 }
 
-function stripeV1(body: string): string {
-  const timestamp = String(Math.floor(Date.now() / 1000));
+// Like a real verifier, the double signs with the header's timestamp, so a request that crosses a second still matches.
+function stripeV1(body: string, timestamp: string): string {
   const mac = createHmac("sha256", CREDENTIALS.stripeSecret)
     .update(`${timestamp}.${body}`)
     .digest("hex");
@@ -95,8 +97,12 @@ function stripeV1(body: string): string {
   return `t=${timestamp},v1=${mac}`;
 }
 
+function signedTimestampOf(signature: string): string {
+  return /^t=(\d+),/.exec(signature)?.[1] ?? "";
+}
+
 function signatureAgeSeconds(request: IncomingMessage): number {
-  const timestamp = /^t=(\d+),/.exec(String(request.headers["stripe-signature"]))?.[1];
+  const timestamp = signedTimestampOf(String(request.headers["stripe-signature"]));
 
   return Math.floor(Date.now() / 1000) - Number(timestamp);
 }
