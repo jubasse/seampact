@@ -1,39 +1,25 @@
-import { readFile, stat } from "node:fs/promises";
-import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { dirname, resolve } from "node:path";
 import {
   APP_CONFIG_SCHEMA,
   type AppConfig,
-  type AppSource,
-  type BundleSource,
+  type AppOpenApi,
   DEFAULT_OUT_DIR,
   type TargetEntry,
 } from "@seampact/spec/config";
-import { Ajv2020, type ErrorObject } from "ajv/dist/2020.js";
-import {
-  type Document,
-  isAlias,
-  isMap,
-  isNode,
-  isScalar,
-  LineCounter,
-  parseDocument,
-  visit,
-} from "yaml";
 import type { CliProblem } from "../cli-problem.js";
-import { errorCode } from "../error-code.js";
+import { apiRefsOf, parseApiRef } from "../commands/api-refs.js";
+import {
+  type ParsedConfig,
+  parseConfigFile,
+  validateConfig,
+  waitProblems,
+  whereOf,
+} from "./config-file.js";
 import { findConfigWaits } from "./config-waits.js";
-import { formatKeyPath, type KeyPath } from "./key-path.js";
-
-// The config is trusted (A46), but a stray huge file is refused before it is parsed.
-const MAX_CONFIG_BYTES = 1024 * 1024;
-
-// The names that reach a JavaScript object's prototype, refused wherever the config writes them (A46).
-const RESERVED_KEYS: ReadonlySet<string> = new Set(["__proto__", "constructor", "prototype"]);
-
-// `strictRequired` is off: the schema's `api` or `apis` choice lists required keys in `oneOf` branches.
-const AJV_OPTIONS = { allErrors: true, strict: true, strictRequired: false };
-
-const SCHEMA_FIX = "Correct the value as the app config schema states (ADR 0011 'The app config').";
+import { findRootConfig } from "./find-root-config.js";
+import { isInsideOrEqual, isStrictlyInside } from "./path-containment.js";
+import type { LoadedRootConfig } from "./read-root-config.js";
+import { type ResolvedSource, resolvedSources } from "./resolved-source.js";
 
 // One target entry with its output root: `<outDir>/<out>`, absolute.
 export interface AppConfigEntry {
@@ -41,311 +27,91 @@ export interface AppConfigEntry {
   root: string;
 }
 
-// A `path` source with its absolute workspace directory, or a bundle source as the config writes it.
-export type ResolvedSource =
-  | { kind: "path"; directory: string }
-  | { kind: "bundle"; bundle: BundleSource };
-
 export interface LoadedAppConfig {
   file: string;
   outDir: string;
-  // The config's `allowLocal`, absent when the config does not set it.
+  // The app's `allowLocal`, else its root's; absent when neither sets it.
   allowLocal?: boolean;
+  // The app's own sources and, for an app its root lists, the root's.
   sources: ReadonlyMap<string, ResolvedSource>;
   entries: readonly AppConfigEntry[];
+  // The app's `openapi` as it writes it; absent when the app does not write the key.
+  openapi?: AppOpenApi;
+  // The root config folded in, for an app its root lists.
+  rootFile?: string;
 }
 
 export type ReadAppConfigOutcome =
   | { status: "read"; config: LoadedAppConfig }
   | { status: "refused"; problems: CliProblem[] };
 
-interface ParsedConfig {
-  document: Document.Parsed;
-  lineCounter: LineCounter;
-  displayName: string;
+// The app config as its own file writes it, before its root is folded in.
+interface AppConfigAlone {
+  parsed: ParsedConfig;
+  config: AppConfig;
+  loaded: LoadedAppConfig;
 }
 
+type ReadAloneOutcome =
+  | { status: "read"; app: AppConfigAlone }
+  | { status: "refused"; problems: CliProblem[] };
+
 // Reads `seampact.config.yaml` (ADR 0011 "The app config"): YAML, prototype keys and waiting keys refused, the
-// value checked against the app config schema, paths resolved against the config file's directory. Each problem
-// names the file, the line and column and the key path.
+// value checked against the app config schema, paths resolved against the config file's directory. The app's root
+// config, when one lists it, is then folded in: its sources beside the app's and its `allowLocal` under the app's.
 export async function readAppConfig(
   file: string,
   displayName: string,
 ): Promise<ReadAppConfigOutcome> {
-  const text = await readConfigText(file, displayName);
+  const alone = await readAppConfigAlone(file, displayName);
 
-  if (typeof text !== "string") return text;
+  if (alone.status === "refused") return alone;
 
-  const lineCounter = new LineCounter();
-  const document = parseDocument(text, {
-    schema: "core",
-    lineCounter,
-    merge: false,
-    uniqueKeys: true,
-  });
-  const parsed: ParsedConfig = { document, lineCounter, displayName };
+  const discovery = await findRootConfig(file, displayName);
 
-  const syntaxProblems = yamlProblems(parsed);
+  if (discovery.status === "refused") return discovery;
 
-  if (syntaxProblems.length > 0) return { status: "refused", problems: syntaxProblems };
+  if (discovery.status === "none") return { status: "read", config: alone.app.loaded };
 
-  const reservedProblems = reservedKeyProblems(parsed);
+  if (!discovery.listed) return unlistedAppOutcome(alone.app, discovery.root);
 
-  if (reservedProblems.length > 0) return { status: "refused", problems: reservedProblems };
-
-  const value: unknown = document.toJS();
-  const waits = findConfigWaits(value);
-  const waitProblems: CliProblem[] = waits.map((wait) => ({
-    code: "config.key.waits",
-    message: `${capitalized(wait.what)} is not available yet; it comes with ${wait.bringer}.`,
-    fix: "Remove it from the config for now.",
-    where: whereOf(parsed, wait.path),
-  }));
-  const waitPaths = new Set(waits.map((wait) => formatKeyPath(wait.path)));
-
-  const validate = new Ajv2020(AJV_OPTIONS).compile<AppConfig>(APP_CONFIG_SCHEMA);
-  const isValid = validate(value);
-  const schemaProblems = schemaErrorProblems(parsed, validate.errors ?? [], waitPaths);
-  const problems = [...waitProblems, ...schemaProblems];
-
-  if (problems.length > 0 || !isValid) return { status: "refused", problems };
-
-  return resolveAppConfig(file, parsed, value);
+  return foldRootConfig(alone.app, discovery.root);
 }
 
-async function readConfigText(
+// Reads the app config of an app the root config lists, with that root folded in, whatever root lies nearer.
+export async function readListedAppConfig(
   file: string,
   displayName: string,
-): Promise<string | ReadAppConfigOutcome> {
-  const size = await fileSize(file);
+  root: LoadedRootConfig,
+): Promise<ReadAppConfigOutcome> {
+  const alone = await readAppConfigAlone(file, displayName);
 
-  if (size === undefined) {
-    return refusedWith({
-      code: "config.file.missing",
-      message: `No app config at ${displayName}.`,
-      fix: "Create `seampact.config.yaml` in the app's directory, or pass its path with `--config`.",
-    });
-  }
+  if (alone.status === "refused") return alone;
 
-  if (size > MAX_CONFIG_BYTES) {
-    return refusedWith({
-      code: "config.file.too-large",
-      message: `${displayName} holds ${size} bytes, over the ${MAX_CONFIG_BYTES} bytes an app config may hold.`,
-      fix: "Pass the path of the app config itself with `--config`.",
-    });
-  }
-
-  return readFile(file, "utf8");
+  return foldRootConfig(alone.app, root);
 }
 
-async function fileSize(file: string): Promise<number | undefined> {
-  try {
-    const stats = await stat(file);
+async function readAppConfigAlone(file: string, displayName: string): Promise<ReadAloneOutcome> {
+  const parsedFile = await parseConfigFile(file, displayName, "app config");
 
-    return stats.isFile() ? stats.size : undefined;
-  } catch (error) {
-    if (errorCode(error) === "ENOENT") return undefined;
+  if (parsedFile.status === "refused") return parsedFile;
 
-    throw error;
-  }
-}
-
-function yamlProblems(parsed: ParsedConfig): CliProblem[] {
-  return parsed.document.errors.map((error) => {
-    const position = error.linePos?.[0];
-    const at = position === undefined ? "" : `:${position.line}:${position.col}`;
-
-    return {
-      code: "config.yaml.syntax",
-      message: yamlErrorSentence(error.message),
-      fix: "Correct the YAML at that position.",
-      where: `${parsed.displayName}${at}`,
-    };
-  });
-}
-
-// The first line of a `yaml` error, without the position the problem already prints.
-function yamlErrorSentence(message: string): string {
-  const firstLine = message.split("\n")[0] ?? message;
-
-  return `${firstLine.replace(/ at line \d+, column \d+:?$/, "")}.`;
-}
-
-function reservedKeyProblems(parsed: ParsedConfig): CliProblem[] {
-  const problems: CliProblem[] = [];
-
-  visit(parsed.document, {
-    Pair(_, pair) {
-      const key = isAlias(pair.key) ? pair.key.resolve(parsed.document) : pair.key;
-
-      if (!isScalar(key) || typeof key.value !== "string") return;
-
-      if (!RESERVED_KEYS.has(key.value)) return;
-
-      problems.push({
-        code: "config.key.reserved",
-        message: `The key '${key.value}' is reserved: it would reach a JavaScript object's prototype.`,
-        fix: "Rename or remove the key.",
-        where: `${parsed.displayName}${positionText(parsed, isNode(pair.key) ? pair.key.range?.[0] : undefined)}`,
-      });
-    },
-  });
-
-  return problems;
-}
-
-function schemaErrorProblems(
-  parsed: ParsedConfig,
-  errors: readonly ErrorObject[],
-  waitPaths: ReadonlySet<string>,
-): CliProblem[] {
-  const oneOfPaths = new Set(
-    errors.filter((error) => error.keyword === "oneOf").map((error) => error.instancePath),
+  const { parsed, value } = parsedFile;
+  const validated = validateConfig<AppConfig>(
+    parsed,
+    value,
+    APP_CONFIG_SCHEMA,
+    waitProblems(parsed, findConfigWaits(value)),
   );
 
-  return errors
-    .filter(
-      (error) => !(error.schemaPath.includes("/oneOf/") && oneOfPaths.has(error.instancePath)),
-    )
-    .map((error) => schemaErrorProblem(parsed, error))
-    .filter(({ keyPath }) => !isUnderWait(keyPath, waitPaths))
-    .map(({ problem }) => problem);
+  if (validated.status === "refused") return validated;
+
+  return resolveAppConfig(file, parsed, validated.config);
 }
 
-// A schema error at or under a waiting key repeats the `config.key.waits` problem of that key.
-function isUnderWait(keyPath: string, waitPaths: ReadonlySet<string>): boolean {
-  return [...waitPaths].some(
-    (waitPath) =>
-      keyPath === waitPath ||
-      keyPath.startsWith(`${waitPath}.`) ||
-      keyPath.startsWith(`${waitPath}[`),
-  );
-}
-
-function schemaErrorProblem(
-  parsed: ParsedConfig,
-  error: ErrorObject,
-): { problem: CliProblem; keyPath: string } {
-  const path = instancePathOf(error.instancePath);
-  const keyPath = formatKeyPath(path);
-  const { additionalProperty, missingProperty } = error.params;
-
-  if (error.keyword === "additionalProperties" && typeof additionalProperty === "string") {
-    const keyPathWithKey = [...path, additionalProperty];
-
-    return {
-      keyPath: formatKeyPath(keyPathWithKey),
-      problem: {
-        code: "config.schema",
-        message: `'${additionalProperty}' is not a key the app config takes here.`,
-        fix: "Remove the key, or correct its spelling (ADR 0011 'The app config').",
-        where: whereOf(parsed, keyPathWithKey),
-      },
-    };
-  }
-
-  if (error.keyword === "required" && typeof missingProperty === "string") {
-    return {
-      keyPath,
-      problem: {
-        code: "config.schema",
-        message: `The key '${missingProperty}' is required here.`,
-        fix: `Add '${missingProperty}'.`,
-        where: whereOf(parsed, path),
-      },
-    };
-  }
-
-  if (error.keyword === "oneOf" && path[0] === "sources") {
-    return {
-      keyPath,
-      problem: {
-        code: "config.schema",
-        message:
-          "A source takes one form: 'path', 'package' with 'version', 'release' or 'git'; 'integrity' goes with a bundle form only.",
-        fix: "Keep the keys of one form (ADR 0011 'The app config').",
-        where: whereOf(parsed, path),
-      },
-    };
-  }
-
-  if (error.keyword === "oneOf") {
-    return {
-      keyPath,
-      problem: {
-        code: "config.schema",
-        message: "A target entry takes exactly one of 'api' and 'apis'.",
-        fix: "Name one api with 'api', or several with 'apis'.",
-        where: whereOf(parsed, path),
-      },
-    };
-  }
-
-  return {
-    keyPath,
-    problem: {
-      code: "config.schema",
-      message: `The value ${error.message ?? `fails the schema keyword '${error.keyword}'`}.`,
-      fix: SCHEMA_FIX,
-      where: whereOf(parsed, path),
-    },
-  };
-}
-
-function instancePathOf(instancePath: string): KeyPath {
-  if (instancePath === "") return [];
-
-  return instancePath
-    .slice(1)
-    .split("/")
-    .map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"))
-    .map((segment) => (/^\d+$/.test(segment) ? Number(segment) : segment));
-}
-
-// `<file>:<line>:<column> <key path>`, the position of the key when the path ends at one.
-function whereOf(parsed: ParsedConfig, path: KeyPath): string {
-  const offset = keyOffset(parsed, path);
-  const keyPath = path.length === 0 ? "" : ` ${formatKeyPath(path)}`;
-
-  return `${parsed.displayName}${positionText(parsed, offset)}${keyPath}`;
-}
-
-function keyOffset(parsed: ParsedConfig, path: KeyPath): number | undefined {
-  const last = path.at(-1);
-  const parent = parsed.document.getIn(path.slice(0, -1), true);
-
-  if (typeof last === "string" && isMap(parent)) {
-    const pair = parent.items.find((item) => isScalar(item.key) && item.key.value === last);
-
-    if (pair !== undefined && isNode(pair.key)) return pair.key.range?.[0];
-  }
-
-  const node = parsed.document.getIn(path, true);
-
-  return isNode(node) ? node.range?.[0] : undefined;
-}
-
-function positionText(parsed: ParsedConfig, offset: number | undefined): string {
-  if (offset === undefined) return "";
-
-  const { line, col } = parsed.lineCounter.linePos(offset);
-
-  return `:${line}:${col}`;
-}
-
-function resolveAppConfig(
-  file: string,
-  parsed: ParsedConfig,
-  config: AppConfig,
-): ReadAppConfigOutcome {
+function resolveAppConfig(file: string, parsed: ParsedConfig, config: AppConfig): ReadAloneOutcome {
   const directory = dirname(file);
   const outDir = resolve(directory, config.outDir ?? DEFAULT_OUT_DIR);
-  const sources = new Map(
-    Object.entries(config.sources ?? {}).map(([name, source]) => [
-      name,
-      resolvedSource(directory, source),
-    ]),
-  );
   const targets = config.targets ?? [];
   const entries = targets.map((entry) => ({
     entry: structuredClone(entry),
@@ -362,14 +128,67 @@ function resolveAppConfig(
   if (problems.length > 0) return { status: "refused", problems };
 
   const allowLocal = config.allowLocal === undefined ? {} : { allowLocal: config.allowLocal };
+  const openapi = config.openapi === undefined ? {} : { openapi: structuredClone(config.openapi) };
+  const loaded: LoadedAppConfig = {
+    file,
+    outDir,
+    ...allowLocal,
+    sources: resolvedSources(directory, config.sources),
+    entries,
+    ...openapi,
+  };
 
-  return { status: "read", config: { file, outDir, ...allowLocal, sources, entries } };
+  return { status: "read", app: { parsed, config, loaded } };
 }
 
-function resolvedSource(directory: string, source: AppSource): ResolvedSource {
-  if ("path" in source) return { kind: "path", directory: resolve(directory, source.path) };
+// The root's sources beside the app's, a name in both refused; `allowLocal` as the app writes it, else the root's
+// (ADR 0011 "Refusing local sources on shared branches").
+function foldRootConfig(app: AppConfigAlone, root: LoadedRootConfig): ReadAppConfigOutcome {
+  const problems = [...app.loaded.sources.keys()]
+    .filter((name) => root.sources.has(name))
+    .map((name) => ({
+      code: "config.source.duplicate",
+      message: `The source '${name}' is defined both in this app config and in its root config ${root.displayName}.`,
+      fix: "Remove the app's definition to use the root's source, or rename one of them.",
+      where: whereOf(app.parsed, ["sources", name]),
+    }));
 
-  return { kind: "bundle", bundle: structuredClone(source) };
+  if (problems.length > 0) return { status: "refused", problems };
+
+  const allowLocal = app.config.allowLocal ?? root.allowLocal;
+
+  return {
+    status: "read",
+    config: {
+      ...app.loaded,
+      ...(allowLocal === undefined ? {} : { allowLocal }),
+      sources: new Map([...root.sources, ...app.loaded.sources]),
+      rootFile: root.file,
+    },
+  };
+}
+
+// An app the nearest root does not list stands alone; a source name it takes from that root names the fix.
+function unlistedAppOutcome(app: AppConfigAlone, root: LoadedRootConfig): ReadAppConfigOutcome {
+  const rootOnlySources = [...root.sources.keys()].filter((name) => !app.loaded.sources.has(name));
+  const problems = (app.config.targets ?? []).flatMap((entry, index) =>
+    apiRefsOf(entry)
+      .filter((text) => {
+        const { source } = parseApiRef(text);
+
+        return source !== undefined && rootOnlySources.includes(source);
+      })
+      .map((text) => ({
+        code: "config.app.unlisted",
+        message: `The api '${text}' names a source of the root config ${root.displayName}, whose \`apps\` does not list this app (${dirname(app.loaded.file)}), so the app stands alone.`,
+        fix: "Add the app's directory to the root config's `apps`, or define the source in this app config.",
+        where: whereOf(app.parsed, ["targets", index]),
+      })),
+  );
+
+  if (problems.length > 0) return { status: "refused", problems };
+
+  return { status: "read", config: app.loaded };
 }
 
 function duplicateIdProblems(parsed: ParsedConfig, targets: readonly TargetEntry[]): CliProblem[] {
@@ -438,22 +257,4 @@ function overlappingOutProblems(
         where: whereOf(parsed, ["targets", index]),
       })),
   );
-}
-
-function isStrictlyInside(parent: string, child: string): boolean {
-  return child !== parent && isInsideOrEqual(parent, child);
-}
-
-function isInsideOrEqual(parent: string, child: string): boolean {
-  const path = relative(parent, child);
-
-  return path === "" || (!isAbsolute(path) && path !== ".." && !path.startsWith(`..${sep}`));
-}
-
-function capitalized(text: string): string {
-  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
-}
-
-function refusedWith(problem: CliProblem): ReadAppConfigOutcome {
-  return { status: "refused", problems: [problem] };
 }

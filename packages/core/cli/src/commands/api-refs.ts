@@ -4,14 +4,14 @@ import type { LoadedAppConfig } from "../config/index.js";
 import type { CompiledApi } from "./compile-sources.js";
 
 // An entry's `api` or `apis` item: the api's name alone, or `<source>/<api>` (ADR 0011).
-interface ApiRef {
+export interface ApiRef {
   source?: string;
   api: string;
 }
 
 const SOURCE_SEPARATOR = "/";
 
-function parseApiRef(text: string): ApiRef {
+export function parseApiRef(text: string): ApiRef {
   const separator = text.indexOf(SOURCE_SEPARATOR);
 
   if (separator === -1) return { api: text };

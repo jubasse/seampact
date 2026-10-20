@@ -1,3 +1,4 @@
+import { ROOT_CONFIG_MARKER_KEY } from "@seampact/spec/config";
 import { isRecord } from "../is-record.js";
 import type { KeyPath } from "./key-path.js";
 
@@ -8,13 +9,27 @@ export interface ConfigWait {
   path: KeyPath;
   what: string;
   bringer: string;
+  // The fix when it is not to remove the key.
+  fix?: string;
 }
 
 const ROOT_KEY_WAITS: Readonly<Record<string, string>> = {
-  apps: "the monorepo root config (p3-config)",
-  openapi: "the OpenAPI documents (p3-openapi)",
-  checks: "the `check` command and the compatibility matrix (p3-cli, p3-config)",
   diff: "the `diff` command (p3-cli)",
+};
+
+const CHECKS_KEY_WAITS: Readonly<Record<string, string>> = {
+  openapi: "the `check` command (p3-cli)",
+  generated: "the `check` command (p3-cli)",
+  matrix: "the compatibility matrix (p3-config)",
+};
+
+// A command run on a root config, a file holding `apps`, waits as a whole: the root's merged documents and their
+// drift check are written and checked by root runs only (ADR 0011 "Which OpenAPI documents exist").
+const ROOT_RUN_WAIT: ConfigWait = {
+  path: [ROOT_CONFIG_MARKER_KEY],
+  what: "running a command on the monorepo root config, with its merged `openapi` documents and `checks`",
+  bringer: "root runs of `generate` and `check` (p3-cli, p3-openapi)",
+  fix: "Run the command in one of the apps the root config lists, or pass that app's config with `--config`.",
 };
 
 const SERVER_ENTRY_BRINGER = "the server targets, through a codegen-core seam (p5)";
@@ -32,14 +47,20 @@ const NATIVE_RUNNER_BRINGER = "the native runners, Gradle, Maven and Composer (p
 
 const MODULE_LINK_BRINGER = "links to outputs in other packages (p3-config)";
 
-// Every key or value form of `config` that waits; `config` is the parsed YAML, not yet schema-checked.
+// Every key or value form of an app config that waits; `config` is the parsed YAML, not yet schema-checked. A root
+// config waits as a whole.
 export function findConfigWaits(config: unknown): ConfigWait[] {
   if (!isRecord(config)) return [];
 
+  if (Object.hasOwn(config, ROOT_CONFIG_MARKER_KEY)) return [ROOT_RUN_WAIT];
+
   const rootWaits = waitingKeysOf(config, [], ROOT_KEY_WAITS);
+  const checksWaits = isRecord(config.checks)
+    ? waitingKeysOf(config.checks, ["checks"], CHECKS_KEY_WAITS)
+    : [];
   const targetWaits = Array.isArray(config.targets) ? config.targets.flatMap(targetEntryWaits) : [];
 
-  return [...rootWaits, ...targetWaits];
+  return [...rootWaits, ...checksWaits, ...targetWaits];
 }
 
 function targetEntryWaits(entry: unknown, index: number): ConfigWait[] {
