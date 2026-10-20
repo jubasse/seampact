@@ -8,7 +8,7 @@ import {
   writeSmokeBundles,
 } from "./bundles.ts";
 import { type BundleRepository, createBundleRepository } from "./git-repository.ts";
-import { startReleaseServer, type ReleaseServer } from "./https-server.ts";
+import { type ReleaseServer, startReleaseServer } from "./https-server.ts";
 import type { LoopbackServer } from "./loopback.ts";
 import { packNpmPackage, startRegistry } from "./registry.ts";
 

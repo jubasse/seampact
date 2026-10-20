@@ -2,15 +2,15 @@
 
 export { type BundleBuildOptions, type BundleBuildResult, buildBundle } from "./build.js";
 export {
+  bundleCacheDirectory,
+  CACHE_DIRECTORY_VARIABLE,
+} from "./cache.js";
+export {
   type BundleContents,
   type BundleEntry,
   bundleEntries,
   bundleManifestBytes,
 } from "./contents.js";
-export {
-  bundleCacheDirectory,
-  CACHE_DIRECTORY_VARIABLE,
-} from "./cache.js";
 export { type BundleFetchOptions, type BundleFetchResult, fetchBundle } from "./fetch.js";
 export {
   BUNDLE_FETCH_FAILURE_CODES,
