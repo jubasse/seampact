@@ -3,6 +3,8 @@ import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import {
   APP_CONFIG_SCHEMA,
   type AppConfig,
+  type AppSource,
+  type BundleSource,
   DEFAULT_OUT_DIR,
   type TargetEntry,
 } from "@seampact/spec/config";
@@ -39,11 +41,17 @@ export interface AppConfigEntry {
   root: string;
 }
 
+// A `path` source with its absolute workspace directory, or a bundle source as the config writes it.
+export type ResolvedSource =
+  | { kind: "path"; directory: string }
+  | { kind: "bundle"; bundle: BundleSource };
+
 export interface LoadedAppConfig {
   file: string;
   outDir: string;
-  // Each source name with its absolute workspace directory.
-  sources: ReadonlyMap<string, string>;
+  // The config's `allowLocal`, absent when the config does not set it.
+  allowLocal?: boolean;
+  sources: ReadonlyMap<string, ResolvedSource>;
   entries: readonly AppConfigEntry[];
 }
 
@@ -248,6 +256,19 @@ function schemaErrorProblem(
     };
   }
 
+  if (error.keyword === "oneOf" && path[0] === "sources") {
+    return {
+      keyPath,
+      problem: {
+        code: "config.schema",
+        message:
+          "A source takes one form: 'path', 'package' with 'version', 'release' or 'git'; 'integrity' goes with a bundle form only.",
+        fix: "Keep the keys of one form (ADR 0011 'The app config').",
+        where: whereOf(parsed, path),
+      },
+    };
+  }
+
   if (error.keyword === "oneOf") {
     return {
       keyPath,
@@ -322,7 +343,7 @@ function resolveAppConfig(
   const sources = new Map(
     Object.entries(config.sources ?? {}).map(([name, source]) => [
       name,
-      resolve(directory, source.path),
+      resolvedSource(directory, source),
     ]),
   );
   const targets = config.targets ?? [];
@@ -340,7 +361,15 @@ function resolveAppConfig(
 
   if (problems.length > 0) return { status: "refused", problems };
 
-  return { status: "read", config: { file, outDir, sources, entries } };
+  const allowLocal = config.allowLocal === undefined ? {} : { allowLocal: config.allowLocal };
+
+  return { status: "read", config: { file, outDir, ...allowLocal, sources, entries } };
+}
+
+function resolvedSource(directory: string, source: AppSource): ResolvedSource {
+  if ("path" in source) return { kind: "path", directory: resolve(directory, source.path) };
+
+  return { kind: "bundle", bundle: structuredClone(source) };
 }
 
 function duplicateIdProblems(parsed: ParsedConfig, targets: readonly TargetEntry[]): CliProblem[] {

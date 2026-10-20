@@ -9,14 +9,41 @@ export const APP_CONFIG_FILE_NAME = "seampact.config.yaml";
 export const DEFAULT_OUT_DIR = "__generated__";
 
 export interface AppConfig {
+  // False refuses `path` sources (ADR 0011 "Refusing local sources on shared branches"); true when absent.
+  allowLocal?: boolean;
   outDir?: string;
-  sources?: Record<string, PathSource>;
+  sources?: Record<string, AppSource>;
   targets?: TargetEntry[];
 }
+
+export type AppSource = PathSource | BundleSource;
 
 // A contract workspace directory, relative to the config file.
 export interface PathSource {
   path: string;
+}
+
+// A pinned contract bundle (ADR 0011 "Channels"); `integrity` is optional so that pinning is a copy of the value
+// the check prints.
+export type BundleSource = PackageBundleSource | ReleaseBundleSource | GitBundleSource;
+
+// An npm package installed in the app's project, resolved from the config file's directory.
+export interface PackageBundleSource {
+  package: string;
+  version: string;
+  integrity?: string;
+}
+
+// A bundle tarball served over HTTPS.
+export interface ReleaseBundleSource {
+  release: { url: string };
+  integrity?: string;
+}
+
+// A bundle directory in a git repository at a tag; the repository root when `directory` is absent.
+export interface GitBundleSource {
+  git: { url: string; tag: string; directory?: string };
+  integrity?: string;
 }
 
 export interface TargetEntry {
@@ -63,6 +90,19 @@ const ENTRY_ID_PATTERN = "^[A-Za-z][A-Za-z0-9_-]*$";
 
 const nonEmptyString = { type: "string", minLength: 1 };
 
+const SOURCE_KEYS = ["path", "package", "version", "release", "git", "integrity"] as const;
+
+// One source form, with no key of another: `path`, or `package` with `version`, `release` or `git` with an optional
+// `integrity`.
+function sourceForm(required: readonly string[], allowed: readonly string[]): JsonSchema {
+  const others = SOURCE_KEYS.filter((key) => !allowed.includes(key));
+
+  return {
+    required: [...required],
+    not: { anyOf: others.map((key) => ({ required: [key] })) },
+  };
+}
+
 const nameList = { type: "array", items: nonEmptyString, uniqueItems: true };
 
 // A path from the root whose segments are literal, `*` or `**`; a star never sits inside a segment.
@@ -75,11 +115,12 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
+    allowLocal: { type: "boolean" },
     outDir: nonEmptyString,
     sources: {
       type: "object",
       propertyNames: { pattern: ENTRY_ID_PATTERN },
-      additionalProperties: { $ref: "#/$defs/pathSource" },
+      additionalProperties: { $ref: "#/$defs/source" },
     },
     targets: { type: "array", items: { $ref: "#/$defs/targetEntry" } },
   },
@@ -94,11 +135,33 @@ export const APP_CONFIG_SCHEMA: JsonSchema = {
         reason: nonEmptyString,
       },
     },
-    pathSource: {
+    source: {
       type: "object",
       additionalProperties: false,
-      required: ["path"],
-      properties: { path: nonEmptyString },
+      properties: {
+        path: nonEmptyString,
+        package: nonEmptyString,
+        version: nonEmptyString,
+        release: {
+          type: "object",
+          additionalProperties: false,
+          required: ["url"],
+          properties: { url: nonEmptyString },
+        },
+        git: {
+          type: "object",
+          additionalProperties: false,
+          required: ["url", "tag"],
+          properties: { url: nonEmptyString, tag: nonEmptyString, directory: nonEmptyString },
+        },
+        integrity: { type: "string", pattern: "^sha256-" },
+      },
+      oneOf: [
+        sourceForm(["path"], ["path"]),
+        sourceForm(["package", "version"], ["package", "version", "integrity"]),
+        sourceForm(["release"], ["release", "integrity"]),
+        sourceForm(["git"], ["git", "integrity"]),
+      ],
     },
     targetEntry: {
       type: "object",

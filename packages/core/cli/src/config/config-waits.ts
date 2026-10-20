@@ -12,17 +12,8 @@ export interface ConfigWait {
 
 const ROOT_KEY_WAITS: Readonly<Record<string, string>> = {
   apps: "the monorepo root config (p3-config)",
-  allowLocal: "the local-source check for shared branches (p3-dist)",
   openapi: "the OpenAPI documents (p3-openapi)",
   checks: "the `check` command and the compatibility matrix (p3-cli, p3-config)",
-};
-
-const SOURCE_KEY_WAITS: Readonly<Record<string, string>> = {
-  package: "package and release sources (p3-dist)",
-  release: "package and release sources (p3-dist)",
-  git: "package and release sources (p3-dist)",
-  version: "package and release sources (p3-dist)",
-  integrity: "package and release sources (p3-dist)",
 };
 
 const SERVER_ENTRY_BRINGER = "the server targets, through a codegen-core seam (p5)";
@@ -45,16 +36,9 @@ export function findConfigWaits(config: unknown): ConfigWait[] {
   if (!isRecord(config)) return [];
 
   const rootWaits = waitingKeysOf(config, [], ROOT_KEY_WAITS);
-  const sourceWaits = isRecord(config.sources) ? sourcesWaits(config.sources) : [];
   const targetWaits = Array.isArray(config.targets) ? config.targets.flatMap(targetEntryWaits) : [];
 
-  return [...rootWaits, ...sourceWaits, ...targetWaits];
-}
-
-function sourcesWaits(sources: Record<string, unknown>): ConfigWait[] {
-  return Object.entries(sources).flatMap(([name, source]) =>
-    isRecord(source) ? waitingKeysOf(source, ["sources", name], SOURCE_KEY_WAITS) : [],
-  );
+  return [...rootWaits, ...targetWaits];
 }
 
 function targetEntryWaits(entry: unknown, index: number): ConfigWait[] {
