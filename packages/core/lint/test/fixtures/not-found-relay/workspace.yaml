@@ -1,0 +1,5 @@
+# workspace.yaml: an api with a declared 404 code and a second api that relays its route
+workspace:
+  apis:
+    notes: ./notes/api.yaml
+    notesService: ./service/api.yaml

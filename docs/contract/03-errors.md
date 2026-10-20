@@ -57,6 +57,8 @@ notes:
 
 The role `notFound` is now answered with `notes.not_found` below `member`.
 
+A 404 code you declare without this binding sits beside the built-in one, so the route has two 404 codes: the lint rule `seampact/not-found-role` warns and proposes the `errorRoles` line.
+
 ## Return an error from a handler
 
 The handler returns the status and the code. The generated types reject any other.

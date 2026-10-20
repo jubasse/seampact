@@ -1,0 +1,4 @@
+# workspace.yaml: one api with a 404 code of its own
+workspace:
+  apis:
+    notes: ./api.yaml
