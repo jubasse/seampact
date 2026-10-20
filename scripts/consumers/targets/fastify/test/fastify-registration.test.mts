@@ -90,8 +90,12 @@ function headerOf(reply: ReturnType<typeof compressedReply>, name: string): stri
 
 describe("a 304 under the boundary's compression", () => {
   test("carries the ETag and Vary its encoded 200 has", () => {
-    const encodedOk = compressedReply(okReply(), "gzip");
-    const notModified = compressedReply(notModifiedReply(LARGE_BODY_BYTES), "gzip");
+    const encodedOk = compressedReply(okReply(), "gzip", COMPRESSION_THRESHOLD_BYTES);
+    const notModified = compressedReply(
+      notModifiedReply(LARGE_BODY_BYTES),
+      "gzip",
+      COMPRESSION_THRESHOLD_BYTES,
+    );
 
     expect(headerOf(encodedOk, "content-encoding")).toBe("gzip");
     expect(headerOf(notModified, "etag")).toBe(headerOf(encodedOk, "etag"));
@@ -101,14 +105,22 @@ describe("a 304 under the boundary's compression", () => {
   });
 
   test("keeps the strong ETag when its 200 is not encoded", () => {
-    const notModified = compressedReply(notModifiedReply(LARGE_BODY_BYTES), "identity");
+    const notModified = compressedReply(
+      notModifiedReply(LARGE_BODY_BYTES),
+      "identity",
+      COMPRESSION_THRESHOLD_BYTES,
+    );
 
     expect(headerOf(notModified, "etag")).toBe(STRONG_ETAG);
     expect(headerOf(notModified, "vary")).toBe("Accept-Encoding");
   });
 
   test("is left as is for a 200 below the threshold", () => {
-    const notModified = compressedReply(notModifiedReply(COMPRESSION_THRESHOLD_BYTES - 1), "gzip");
+    const notModified = compressedReply(
+      notModifiedReply(COMPRESSION_THRESHOLD_BYTES - 1),
+      "gzip",
+      COMPRESSION_THRESHOLD_BYTES,
+    );
 
     expect(notModified.headers).toEqual([["etag", STRONG_ETAG]]);
   });
