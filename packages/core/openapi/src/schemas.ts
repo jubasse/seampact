@@ -49,7 +49,7 @@ export const PASSWORD_FORMAT = "password";
 const INT64_PATTERN = "^-?(0|[1-9][0-9]*)$";
 const DECIMAL_PATTERN = "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$";
 const INTEGER_LITERAL = /^-?[0-9]+$/;
-const NULL_SCHEMA: JsonObject = { type: "null" };
+const NULL_TYPE = "null";
 
 /** The schema of a type use; `variant: input` points nested objects at their strict twins. */
 export function typeUseSchema(
@@ -326,8 +326,31 @@ export function wireValue(context: EmitContext, use: TypeUse, value: unknown): J
   return int64Number ? (numberLiteral(value) ?? null) : copyJsonValue(value);
 }
 
+/**
+ * A schema that also accepts `null`, spelled as ADR 0003 states: OpenAPI 3.1's type array, `oneOf` with `null`
+ * around a reference or another schema without one type, and an opaque schema as it is, since it accepts `null`.
+ */
 export function nullableSchema(schema: JsonObject): JsonObject {
-  return { anyOf: [schema, { ...NULL_SCHEMA }] };
+  if (acceptsAnyValue(schema)) return schema;
+
+  if (typeof schema.type === "string" && schema.const === undefined) {
+    const nullable: JsonObject = { ...schema, type: [schema.type, NULL_TYPE] };
+
+    if (Array.isArray(schema.enum)) nullable.enum = [...schema.enum, null];
+
+    return nullable;
+  }
+
+  return { oneOf: [schema, { type: NULL_TYPE }] };
+}
+
+const ANNOTATION_KEYWORDS: readonly string[] = ["title", "description", "examples", "default"];
+
+// A schema with annotations and extensions only asserts nothing, so it already accepts `null`.
+function acceptsAnyValue(schema: JsonObject): boolean {
+  return Object.keys(schema).every(
+    (keyword) => ANNOTATION_KEYWORDS.includes(keyword) || keyword.startsWith("x-"),
+  );
 }
 
 /** A schema's or a use's docs: `title` from the summary, `description` from the description. */

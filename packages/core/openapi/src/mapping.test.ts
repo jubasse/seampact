@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { emitDocuments } from "./documents.js";
 import { extensionMembers, goldenDocument, readGoldenIr } from "./golden-documents.test-support.js";
 import { isJsonObject, type JsonObject, type JsonValue } from "./json-value.js";
+import { nullableSchema } from "./schemas.js";
 
 // What the golden documents state, read from the committed files the golden check keeps current: the mapped members
 // of the reference contract (CHK-120), the public and full documents (CHK-010), sensitive fields (CHK-026) and the
@@ -12,6 +13,7 @@ const PUBLIC = goldenDocument("reference/openapi/tasks.public.yaml").document;
 const SERVICE = goldenDocument("reference/openapi/tasksService.yaml").document;
 const NOTES = goldenDocument("bodies/openapi/notes.yaml").document;
 const STUDIO = goldenDocument("extensions/openapi/studio.yaml").document;
+const AGREEMENT = goldenDocument("agreement/openapi/agreement.yaml").document;
 const HTTP_METHODS = ["get", "put", "post", "delete", "patch"];
 
 function at(value: JsonValue | undefined, ...path: (string | number)[]): JsonValue | undefined {
@@ -245,5 +247,30 @@ describe("consumer extensions under their prefix", () => {
 
   it("reaches about twenty keys over every place", () => {
     expect(new Set(consumerKeys(STUDIO)).size).toBeGreaterThanOrEqual(20);
+  });
+});
+
+describe("nullable values are spelled as ADR 0003 states", () => {
+  const agreementSchema = (...path: string[]) => at(AGREEMENT, "components", "schemas", ...path);
+
+  it("writes a type array for a typed value and leaves an opaque value as it is", () => {
+    expect(agreementSchema("Receipt", "properties", "note")).toEqual({ type: ["string", "null"] });
+    expect(agreementSchema("PatchArticle", "properties", "publishOn")).toEqual({
+      type: ["string", "null"],
+      format: "date",
+    });
+    expect(agreementSchema("OptionalEnvelope", "properties", "data")).toEqual({
+      "x-seampact-opaque": expect.any(String),
+    });
+  });
+
+  it("writes oneOf with null around a reference, and adds null to a closed enum", () => {
+    expect(nullableSchema({ $ref: "#/components/schemas/Role" })).toEqual({
+      oneOf: [{ $ref: "#/components/schemas/Role" }, { type: "null" }],
+    });
+    expect(nullableSchema({ type: "string", enum: ["owner"] })).toEqual({
+      type: ["string", "null"],
+      enum: ["owner", null],
+    });
   });
 });

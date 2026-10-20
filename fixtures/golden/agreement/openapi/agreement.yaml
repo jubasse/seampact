@@ -1707,9 +1707,7 @@ components:
       type: object
       properties:
         data:
-          anyOf:
-            - x-seampact-opaque: The sender's object depends on the event type.
-            - type: "null"
+          x-seampact-opaque: The sender's object depends on the event type.
       required:
         - data
     Owner:
@@ -1728,10 +1726,10 @@ components:
           type: string
           minLength: 1
         publishOn:
-          anyOf:
-            - type: string
-              format: date
-            - type: "null"
+          type:
+            - string
+            - "null"
+          format: date
     Patterns:
       type: object
       properties:
@@ -1791,9 +1789,9 @@ components:
       type: object
       properties:
         note:
-          anyOf:
-            - type: string
-            - type: "null"
+          type:
+            - string
+            - "null"
       required:
         - note
     Role:
