@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import {
   cpSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -209,6 +210,45 @@ test(
 
     expect(refused.exitCode).toBe(1);
     expect(refused.stderr).toContain("bundle.source-local");
+  },
+  SMOKE_TEST_TIMEOUT_MILLISECONDS,
+);
+
+test(
+  "git fetch leaves the repository GIT_DIR names untouched",
+  async () => {
+    // Git exports GIT_DIR to its hooks, so a generate run from a pre-commit hook inherits the user's repository.
+    const app = join(work, "git-dir-app");
+    const userRepository = join(work, "user-repository");
+    const userGitDirectory = join(userRepository, ".git");
+    const git = (...args: string[]) => run("git", ["-C", userRepository, ...args]);
+
+    mkdirSync(userRepository, { recursive: true });
+    await git("init", "--quiet");
+    await git(
+      "-c",
+      "user.name=smoke",
+      "-c",
+      "user.email=smoke@seampact.invalid",
+      "commit",
+      "--quiet",
+      "--allow-empty",
+      "--message",
+      "One.",
+    );
+
+    const source = `{ git: { url: "${channels.git.url}", tag: ${SMOKE_GIT_TAG}, directory: ${SMOKE_GIT_DIRECTORY} }, integrity: "${channels.bundles.integrity}" }`;
+
+    writeSmokeApp(app, smokeConfig(source));
+    const generated = await runSeampact(["generate"], app, {
+      ...cacheEnvironment("git-dir"),
+      GIT_DIR: userGitDirectory,
+    });
+
+    expect(generated.stderr).toBe("");
+    expect(generated.exitCode).toBe(0);
+    expect((await git("rev-parse", "--is-shallow-repository")).stdout.trim()).toBe("false");
+    expect(existsSync(join(userGitDirectory, "FETCH_HEAD"))).toBe(false);
   },
   SMOKE_TEST_TIMEOUT_MILLISECONDS,
 );

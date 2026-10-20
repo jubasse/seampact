@@ -15,12 +15,15 @@ import type { GitBundleSource } from "@seampact/spec/config";
 import { quote } from "../validate/diagnostics.js";
 import type { BundleSourceFailure } from "./fetch-failure.js";
 import type { LocalSourcePolicy } from "./local-sources.js";
+import { printableUrl } from "./printable-url.js";
 
 // The git-tag channel: a shallow fetch of the tag with the system `git` into a new bare repository, then the files
 // of the tag's tree read with `git ls-tree` and `git cat-file`, never through a work tree, so `autocrlf`,
 // attributes, smudge filters and LFS cannot change a byte. Only `https:` and `ssh` repositories are fetched, plus
 // local ones (`file:` or a path) when local sources are allowed; `ext::` is off. The tree is untrusted: a link, a
-// submodule, an unportable path or a case-fold duplicate is refused before anything is written.
+// submodule, an unportable path or a case-fold duplicate is refused before anything is written. Every command
+// names the temporary repository by `--git-dir` and drops the variables that locate a repository, so a run from a
+// git hook (which exports `GIT_DIR`) never touches the user's repository.
 
 const run = promisify(execFile);
 
@@ -37,6 +40,19 @@ const DRIVE_PATH = /^[A-Za-z]:[\\/]/u;
 const SCP_LIKE = /^[^/:]{2,}:/u;
 const REMOTE_PROTOCOLS = "https:ssh";
 const LOCAL_PROTOCOL = "file";
+const FETCH_TIMEOUT_MILLISECONDS = 60_000;
+// ssh would otherwise ask for a host key or a passphrase on the terminal, which `GIT_TERMINAL_PROMPT` does not cover.
+const NON_INTERACTIVE_SSH = "ssh -o BatchMode=yes";
+const REPOSITORY_LOCATING_VARIABLES: readonly string[] = [
+  "GIT_DIR",
+  "GIT_WORK_TREE",
+  "GIT_INDEX_FILE",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_COMMON_DIR",
+  "GIT_NAMESPACE",
+  "GIT_QUARANTINE_PATH",
+];
 
 export type GitFetch =
   | { readonly ok: true; readonly directory: string; readonly remove: () => void }
@@ -53,14 +69,14 @@ export function gitSourceProblem(
   if (scheme !== undefined && !["https", "ssh", LOCAL_PROTOCOL].includes(scheme))
     return {
       code: "bundle.git-url",
-      message: `The git URL ${quote(url)} uses '${scheme}:'; a bundle is fetched over https: or ssh only.`,
+      message: `The git URL ${quote(printableUrl(url))} uses '${scheme}:'; a bundle is fetched over https: or ssh only.`,
       fix: "Name the repository by its https: or ssh URL.",
     };
 
   if (isLocalRepository(url) && localSources === "refuse")
     return {
       code: "bundle.source-local",
-      message: `The git repository ${quote(url)} is local, and local sources are refused here.`,
+      message: `The git repository ${quote(printableUrl(url))} is local, and local sources are refused here.`,
       fix: "Name the repository by its https: or ssh URL.",
     };
 
@@ -90,17 +106,11 @@ export async function fetchGitBundle(
   const git = gitRunner(join(temporary, REPOSITORY), localSources);
 
   try {
-    await run(GIT, ["init", "--quiet", "--bare", join(temporary, REPOSITORY)], git.options);
-    await git.run([
-      "fetch",
-      "--quiet",
-      "--depth",
-      "1",
-      "--no-tags",
-      "--",
-      url,
-      `refs/tags/${source.git.tag}`,
-    ]);
+    await git.run(["init", "--quiet", "--bare"]);
+    await git.run(
+      ["fetch", "--quiet", "--depth", "1", "--no-tags", "--", url, `refs/tags/${source.git.tag}`],
+      FETCH_TIMEOUT_MILLISECONDS,
+    );
 
     const written = await writeTree(git, prefix, join(temporary, FILES));
 
@@ -147,31 +157,41 @@ function bundleDirectoryPrefix(directory: string | undefined): string | undefine
 }
 
 interface GitRunner {
-  readonly options: { env: NodeJS.ProcessEnv; maxBuffer: number };
-  run(args: readonly string[]): Promise<Buffer>;
+  /** Runs git on the temporary repository; `timeout` in milliseconds, none when absent. */
+  run(args: readonly string[], timeout?: number): Promise<Buffer>;
 }
 
 function gitRunner(repository: string, localSources: LocalSourcePolicy): GitRunner {
-  const options = {
-    env: {
-      ...process.env,
-      GIT_ALLOW_PROTOCOL:
-        localSources === "allow" ? `${REMOTE_PROTOCOLS}:${LOCAL_PROTOCOL}` : REMOTE_PROTOCOLS,
-      GIT_TERMINAL_PROMPT: "0",
-    },
-    maxBuffer: GIT_OUTPUT_BYTES_MAX,
-  };
+  const env = gitEnvironment(process.env, localSources);
 
   return {
-    options,
-    run: async (args) => {
-      const done = await run(GIT, ["-c", "protocol.ext.allow=never", "-C", repository, ...args], {
-        ...options,
-        encoding: "buffer",
-      });
+    run: async (args, timeout) => {
+      const done = await run(
+        GIT,
+        ["-c", "protocol.ext.allow=never", `--git-dir=${repository}`, ...args],
+        { env, maxBuffer: GIT_OUTPUT_BYTES_MAX, encoding: "buffer", timeout },
+      );
 
       return done.stdout;
     },
+  };
+}
+
+// The user's environment, less every variable that would point git at another repository.
+function gitEnvironment(
+  inherited: NodeJS.ProcessEnv,
+  localSources: LocalSourcePolicy,
+): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = { ...inherited };
+
+  for (const name of REPOSITORY_LOCATING_VARIABLES) delete env[name];
+
+  return {
+    ...env,
+    GIT_ALLOW_PROTOCOL:
+      localSources === "allow" ? `${REMOTE_PROTOCOLS}:${LOCAL_PROTOCOL}` : REMOTE_PROTOCOLS,
+    GIT_TERMINAL_PROMPT: "0",
+    GIT_SSH_COMMAND: inherited.GIT_SSH_COMMAND ?? NON_INTERACTIVE_SSH,
   };
 }
 
@@ -290,12 +310,19 @@ function badTag(tag: string): BundleSourceFailure {
 }
 
 function gitFailed(source: GitBundleSource, error: unknown): BundleSourceFailure {
-  const stderr =
-    error instanceof Error && "stderr" in error ? String(error.stderr).trim() : String(error);
-
   return {
     code: "bundle.git-failed",
-    message: `Fetching tag '${source.git.tag}' of ${quote(source.git.url)} with git failed: ${quote(stderr)}.`,
+    message: `Fetching tag '${source.git.tag}' of ${quote(printableUrl(source.git.url))} with git failed: ${quote(gitFailureReason(error))}.`,
     fix: "Check the URL, the tag and your access to the repository, and that `git` is on the PATH.",
   };
+}
+
+function gitFailureReason(error: unknown): string {
+  if (!(error instanceof Error)) return String(error);
+
+  // `execFile` kills a command past its timeout and marks the error `killed`.
+  if ("killed" in error && error.killed === true)
+    return `it took over ${FETCH_TIMEOUT_MILLISECONDS} ms`;
+
+  return "stderr" in error ? String(error.stderr).trim() : error.message;
 }
