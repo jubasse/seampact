@@ -1,6 +1,6 @@
 # The shape of a contract
 
-A contract is one YAML file, `api.yaml`. This page shows its parts. The notes contract from [Write the contract](../getting-started/first-contract.md) is the base.
+A contract is one YAML file, `api.yaml`. This page shows its parts. The notes contract from [Write the contract](../getting-started/02-first-contract.md) is the base.
 
 ## The four blocks
 
@@ -43,7 +43,7 @@ notes:
 
 | Op | Route | Success |
 |---|---|---|
-| `list` | `GET /v1/notes` | `200` (needs a paging style: see [Lists](lists.md)) |
+| `list` | `GET /v1/notes` | `200` (needs a paging style: see [Lists](05-lists.md)) |
 | `get` | `GET /v1/notes/{noteId}` | `200` |
 | `create` | `POST /v1/notes` | `201` |
 | `update` | `PATCH /v1/notes/{noteId}` | `200` |
@@ -93,5 +93,5 @@ A query key the route does not declare is refused.
 
 ## What is next
 
-- Types and references: [Types and references](types-and-refs.md).
+- Types and references: [Types and references](02-types-and-refs.md).
 - Every route key: [Routes](../grammar/07-routes.md) and [Surfaces and the tree](../grammar/06-surfaces-and-the-tree.md).

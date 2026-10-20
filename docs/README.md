@@ -3,23 +3,23 @@
 ## Getting started
 
 - [Getting started](getting-started/README.md): a notes API on NestJS, step by step.
-- [Install](getting-started/install.md): install seampact from your checkout.
-- [Write the contract](getting-started/first-contract.md): a notes contract.
-- [Generate the code and run it](getting-started/generate-and-run.md): generate, pick a server, run.
-- [Add seampact to an existing NestJS app](getting-started/existing-project.md): move routes one at a time.
-- [Project layout](getting-started/project-layout.md): what each file is.
-- [Work with an AI agent](getting-started/ai-agents.md): guard rails for an agent.
+- [Install](getting-started/01-install.md): install seampact from your checkout.
+- [Write the contract](getting-started/02-first-contract.md): a notes contract.
+- [Generate the code and run it](getting-started/03-generate-and-run.md): generate, pick a server, run.
+- [Add seampact to an existing NestJS app](getting-started/04-existing-project.md): move routes one at a time.
+- [Project layout](getting-started/05-project-layout.md): what each file is.
+- [Work with an AI agent](getting-started/06-ai-agents.md): guard rails for an agent.
 
 ## Contract
 
 - [Contract](contract/README.md): how to write the contract, one task per page.
-- [The shape of a contract](contract/basics.md): api, surfaces, collections and routes.
-- [Types and references](contract/types-and-refs.md): schemas, enums, split files.
-- [Errors](contract/errors.md): declare, attach and rename codes.
-- [Access](contract/access.md): public routes, identities and rights.
-- [Lists](contract/lists.md): paging styles and sorting.
-- [Versioning and change](contract/versioning.md): version, maturity, deprecation.
-- [Advanced](contract/advanced.md): uploads, lost updates, cache.
+- [The shape of a contract](contract/01-basics.md): api, surfaces, collections and routes.
+- [Types and references](contract/02-types-and-refs.md): schemas, enums, split files.
+- [Errors](contract/03-errors.md): declare, attach and rename codes.
+- [Access](contract/04-access.md): public routes, identities and rights.
+- [Lists](contract/05-lists.md): paging styles and sorting.
+- [Versioning and change](contract/06-versioning.md): version, maturity, deprecation.
+- [Advanced](contract/07-advanced.md): uploads, lost updates, cache.
 
 ## Backend
 

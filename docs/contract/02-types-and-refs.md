@@ -65,5 +65,5 @@ A name defined in both files is an error. Remove the copy.
 
 ## What is next
 
-- Errors: [Errors](errors.md).
+- Errors: [Errors](03-errors.md).
 - The schema language: [ADR 0003](../adr/0003-schema-language.md). Files and references: [Composition](../grammar/02-composition-extends-packs-include.md).

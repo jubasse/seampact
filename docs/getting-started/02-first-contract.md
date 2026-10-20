@@ -62,4 +62,4 @@ npx seampact lint
 
 You see `Linted 1 api(s): 0 error(s), 0 warning(s).`
 
-Next: [generate the code and run it](generate-and-run.md)
+Next: [generate the code and run it](03-generate-and-run.md)

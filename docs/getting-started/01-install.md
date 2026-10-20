@@ -63,4 +63,4 @@ Create `tsconfig.json`. NestJS decorators need `experimentalDecorators`.
 }
 ```
 
-Next: [write the contract](first-contract.md)
+Next: [write the contract](02-first-contract.md)

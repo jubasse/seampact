@@ -2,7 +2,7 @@
 
 This page replaces the NestJS page. Two earlier pages change when you use Hono 4 on Node.
 
-In [Install](../getting-started/install.md), use these dependencies in `package.json`. You do not need `experimentalDecorators` in `tsconfig.json`.
+In [Install](../getting-started/01-install.md), use these dependencies in `package.json`. You do not need `experimentalDecorators` in `tsconfig.json`.
 
 ```json
   "dependencies": {
@@ -12,7 +12,7 @@ In [Install](../getting-started/install.md), use these dependencies in `package.
   },
 ```
 
-In [Generate](../getting-started/generate-and-run.md), the `server` target uses `@seampact/codegen-hono`. It has no `bodyValidation` option.
+In [Generate](../getting-started/03-generate-and-run.md), the `server` target uses `@seampact/codegen-hono`. It has no `bodyValidation` option.
 
 ```yaml
   - id: server
@@ -109,4 +109,4 @@ TasksHono.registerRoutes(app, {
 app.onError(async (error, c) => (await TasksHono.renderPreRoutingError(c, error)) ?? c.text("error", 500));
 ```
 
-Next: [run it](../getting-started/generate-and-run.md#run-it).
+Next: [run it](../getting-started/03-generate-and-run.md#run-it).
