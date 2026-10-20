@@ -48,7 +48,7 @@ const SUCCESS = [...EVERYWHERE, "payload", "meta", "resource"];
 const PAGING = [...EVERYWHERE, "resource", "collection", ...TREE_NODES_RESPONSE_ROLES];
 
 const SLOTS_BY_PLACE: Readonly<Record<TreeNodesTemplatePlace, readonly string[]>> = {
-  item: [...SUCCESS, "id", "fields"],
+  item: [...SUCCESS, "id", "fields", "collection"],
   table: [...SUCCESS, "collection"],
   list: [...SUCCESS, "collection"],
   page: [...SUCCESS, "items"],

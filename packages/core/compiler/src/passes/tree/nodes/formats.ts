@@ -62,6 +62,7 @@ const PRINCIPAL_PREFIX = "principal.";
 // The slots that read the item's id property (ADR 0002 section 13); `$self` too on a collection's item.
 const ID_SLOTS: readonly string[] = ["id", "fields", "itemId", "itemFields", "itemSelf"];
 const SELF_SLOT = "self";
+const COLLECTION_SLOT = "collection";
 // The slots that hold the record without its id member.
 const IDLESS_SLOTS: readonly string[] = ["fields", "itemFields"];
 
@@ -420,6 +421,7 @@ export function treeNodesCheckPayloads(draft: DraftIR, context: TreeNodesContext
 
       for (const written of writtenTemplates(draft, operation, format, response.shape)) {
         checkIdSlots(check, written);
+        checkItemCollectionSlot(check, written);
         checkSlotValues(check, written, written.template, undefined);
       }
     }
@@ -502,6 +504,23 @@ function checkIdSlots(check: PayloadCheck, written: WrittenTemplate): void {
     rule: "format-id",
     message: `The template of ${written.owner.name} writes $${used.slot}, but the item of ${operation.id} has no id property${property === undefined ? "" : ` ${quote(property)}`}.`,
     fix: `Declare ${property === undefined ? "the id property" : quote(property)} on the item (or set idProperty), or use a format that reads no id.`,
+  });
+}
+
+// `$collection` in an item names the collection or single the operation belongs to; outside one it has no value.
+function checkItemCollectionSlot(check: PayloadCheck, written: WrittenTemplate): void {
+  const { operation, shape } = check;
+
+  if (shape !== "item" || operation.resource !== undefined) return;
+
+  const used = treeNodesTemplateSlots(written.template).find(({ slot }) => slot === COLLECTION_SLOT);
+
+  if (used === undefined) return;
+
+  reportPayload(check, written.owner, {
+    rule: "template-slot",
+    message: `The template of ${written.owner.name} writes $${COLLECTION_SLOT} in an item, but ${operation.id} belongs to no collection or single.`,
+    fix: "Set format: bare (or another format) on the route, or move it under a collection or single.",
   });
 }
 

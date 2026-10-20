@@ -682,3 +682,32 @@ surfaces:
       .sort(),
   ).toEqual(["item", "table"]);
 });
+
+test("formats: $collection in an item names its collection, and a route outside any collection refuses it", () => {
+  const { diagnostics } = run(
+    `
+api: { name: a, version: 1, kind: product }
+formats:
+  typed:
+    success: { item: { body: { type: $collection, data: $payload } } }
+surfaces:
+  app:
+    prefix: /v{version}
+    routes:
+      health: { method: get, output: Note, format: typed }
+      notes:
+        kind: collection
+        format: typed
+        id: { noteId: { type: string } }
+        item: Note
+        ops: [get]
+`,
+    {
+      [`${ROUTES}/health/output`]: ref("Note"),
+      [`${ROUTES}/notes/id/noteId`]: text,
+      [`${ROUTES}/notes/item`]: ref("Note"),
+    },
+  );
+
+  expect(located(diagnostics)).toEqual([["template-slot", `${ROUTES}/health`]]);
+});

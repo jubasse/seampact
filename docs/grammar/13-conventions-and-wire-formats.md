@@ -116,7 +116,7 @@ The slots are a closed set:
 | `$self` | the URL of what the body describes: the member URL of a collection item (built from `$id`), the current page of a paged list, the request URL otherwise | everywhere |
 | `$path` | the request path, without the query | everywhere |
 | `$resource` | the item schema's `typeName` (ADR 0003 section 6), or its name (`Task`) | success shapes, paging styles |
-| `$collection` | the collection's or single's `resourceType`, or its node name (`tasks`); also a member name | `table`, `list`, paging styles |
+| `$collection` | the collection's or single's `resourceType`, or its node name (`tasks`); also a member name; in `item`, only on an operation that belongs to a collection or single | `item`, `table`, `list`, paging styles |
 | `$id`, `$fields` | the record's id, and the record without its id member | `item` |
 | `$item`, `$itemId`, `$itemFields`, `$itemSelf` | inside `$as`: the element, its id, the element without its id member, its member URL | `$as` |
 | `$code`, `$nature`, `$title`, `$detail`, `$instance`, `$traceId`, `$params` | the error's code, nature, title (or code), optional text, optional occurrence reference, optional trace id, and its params object | `error` |
