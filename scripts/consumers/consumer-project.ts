@@ -8,6 +8,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { parse, stringify } from "yaml";
 import type { ValidatorChoice } from "./validator-choice.ts";
 
 // The file that marks a directory as a consumer this script made, holding the monorepo commit it was built from.
@@ -50,7 +51,9 @@ const PNPM_SETTINGS_FILE = "pnpm-workspace.yaml";
 
 // pnpm refuses an install whose dependencies have build scripts it was not told about: esbuild, under the tsx that
 // starts the boot processes of the http suite, checks its platform binary in its own.
-const PNPM_BUILD_SETTINGS = "allowBuilds:\n  esbuild: true\n";
+const ALLOWED_BUILDS = { esbuild: true };
+
+type WorkspaceSettings = Record<string, unknown>;
 
 interface ConsumerManifest {
   dependencies?: Record<string, string>;
@@ -264,12 +267,30 @@ export function useTarballs(directory: string, tarballs: ReadonlyMap<string, str
   manifest.dependencies = { ...manifest.dependencies, ...specifiers };
   writeFileSync(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`);
 
-  const overrides = Object.entries(specifiers).map(
-    ([name, specifier]) => `  ${JSON.stringify(name)}: ${JSON.stringify(specifier)}`,
-  );
+  const settingsFile = join(directory, PNPM_SETTINGS_FILE);
+  const existing = existingWorkspaceSettings(settingsFile);
 
+  // Merged into the app's own settings: a starter's `allowBuilds` and overrides stay.
   writeFileSync(
-    join(directory, PNPM_SETTINGS_FILE),
-    `${PNPM_BUILD_SETTINGS}overrides:\n${overrides.join("\n")}\n`,
+    settingsFile,
+    stringify({
+      ...existing,
+      allowBuilds: { ...recordOf(existing.allowBuilds), ...ALLOWED_BUILDS },
+      overrides: { ...recordOf(existing.overrides), ...specifiers },
+    }),
   );
+}
+
+function existingWorkspaceSettings(settingsFile: string): WorkspaceSettings {
+  if (!existsSync(settingsFile)) return {};
+
+  const parsed: unknown = parse(readFileSync(settingsFile, "utf8"));
+
+  return recordOf(parsed);
+}
+
+function recordOf(value: unknown): WorkspaceSettings {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? Object.fromEntries(Object.entries(value))
+    : {};
 }
