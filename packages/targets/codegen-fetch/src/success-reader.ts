@@ -104,6 +104,7 @@ export function payloadPathOf(
     if (slot.slot === PAYLOAD_SLOT) {
       refuseSlotMember(slot, slotLocation, refusals);
       paths.push(path);
+
       return;
     }
 
@@ -135,6 +136,7 @@ export function pageReaderOf(
 
     if (reading === undefined) {
       refusals.push(refuseUnknownValueAt(location, role));
+
       return;
     }
 
@@ -148,6 +150,7 @@ export function pageReaderOf(
     if (slot.slot === ITEMS_SLOT) {
       refuseSlotMember(slot, location, refusals);
       itemPaths.push(path);
+
       return;
     }
 
@@ -155,6 +158,7 @@ export function pageReaderOf(
 
     if (RECORD_PART_SLOTS.includes(slot.slot) || slot.slot === PAYLOAD_SLOT) {
       refuseUnreadSlot(slot, location, refusals);
+
       return;
     }
 
@@ -167,6 +171,7 @@ export function pageReaderOf(
   const visitFormatPage: SlotVisitor = (slot, path, location) => {
     if (slot.slot !== META_SLOT) {
       visitRoles(slot, path, location);
+
       return;
     }
 
@@ -243,6 +248,7 @@ function headerFact(
     if (!RESPONSE_ROLES.has(value.slot)) return;
 
     if (!refuseSlotMember(value, valueLocation, refusals)) addFact(value.slot, source, location);
+
     return;
   }
 
@@ -259,6 +265,7 @@ function headerFact(
   if (value.parts.length === 1 && onlyPart !== undefined && "slot" in onlyPart) {
     if (onlyPart.path.length === 0) {
       addFact(onlyPart.slot, source, location);
+
       return;
     }
   }
@@ -306,6 +313,7 @@ function walkTemplate(
 ): void {
   if (template.kind === "slot" && "slot" in template) {
     visitSlot(template, path, location);
+
     return;
   }
 
@@ -313,6 +321,7 @@ function walkTemplate(
 
   if (template.kind === "text" && "parts" in template) {
     refuseReadSlotInText(template.parts, location, refusals);
+
     return;
   }
 
@@ -334,6 +343,7 @@ function walkTemplate(
             below(memberLocation, "name"),
           ),
         );
+
         return;
       }
 
@@ -345,6 +355,7 @@ function walkTemplate(
         visitSlot,
       );
     });
+
     return;
   }
 
@@ -356,6 +367,7 @@ function walkTemplate(
         location,
       ),
     );
+
     return;
   }
 
