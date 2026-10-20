@@ -19,4 +19,4 @@ notes-app/
 - Commit `src/__generated__` and `openapi/`: `seampact check` compares them with the contract.
 - Add `vendor` and a `baseline` folder (from [diff](../features/diff.md)) to `.gitignore`.
 
-Next: [add seampact to an existing app](existing-project.md) or [work with an AI agent](ai-agents.md).
+Next: [add seampact to an existing app](04-existing-project.md) or [work with an AI agent](06-ai-agents.md).

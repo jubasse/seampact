@@ -1,6 +1,6 @@
 # Write the handlers (Express)
 
-The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows; `Notes.Status` and `Notes.ErrorCode` name them. You need the Express target from [Generate](../getting-started/generate-and-run.md): `@seampact/codegen-express`.
+The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows; `Notes.Status` and `Notes.ErrorCode` name them. You need the Express target from [Generate](../getting-started/03-generate-and-run.md): `@seampact/codegen-express`.
 
 Add Express to the app.
 
@@ -8,7 +8,7 @@ Add Express to the app.
 pnpm add express@5 && pnpm add -D @types/express@5
 ```
 
-You see pnpm add both packages. The NestJS packages from [Install](../getting-started/install.md) stay unused; `pnpm remove @nestjs/common @nestjs/core @nestjs/platform-express reflect-metadata rxjs` drops them.
+You see pnpm add both packages. The NestJS packages from [Install](../getting-started/01-install.md) stay unused; `pnpm remove @nestjs/common @nestjs/core @nestjs/platform-express reflect-metadata rxjs` drops them.
 
 Create `src/notes-handlers.ts`.
 
@@ -94,4 +94,4 @@ app.use(TasksExpress.router({ handlers: { TasksEndpoints: tasksHandlers }, hooks
 app.use(TasksExpress.preRoutingErrorHandler);
 ```
 
-Next: [run it](../getting-started/generate-and-run.md#run-it).
+Next: [run it](../getting-started/03-generate-and-run.md#run-it).

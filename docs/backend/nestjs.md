@@ -111,4 +111,4 @@ For `@nestjs/swagger`, write the document with one call. It adds the contract sc
 const document = TasksNest.createContractDocument(app, config, { autoTagControllers: false });
 ```
 
-Next: [run it](../getting-started/generate-and-run.md#run-it).
+Next: [run it](../getting-started/03-generate-and-run.md#run-it).

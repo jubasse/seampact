@@ -1,10 +1,10 @@
 # Write the handlers (AdonisJS 7)
 
-Use this page instead of [the NestJS page](nestjs.md). [Install](../getting-started/install.md) and [Generate](../getting-started/generate-and-run.md) change a little for AdonisJS, so start with three set-up changes. The contract, the run and the checks stay the same, except that the app listens on port 3333 unless you change it (below).
+Use this page instead of [the NestJS page](nestjs.md). [Install](../getting-started/01-install.md) and [Generate](../getting-started/03-generate-and-run.md) change a little for AdonisJS, so start with three set-up changes. The contract, the run and the checks stay the same, except that the app listens on port 3333 unless you change it (below).
 
 ## Set up the app
 
-Install: create the app with the AdonisJS API starter instead of the `package.json` of [Install](../getting-started/install.md). Answer the prompts with the defaults.
+Install: create the app with the AdonisJS API starter instead of the `package.json` of [Install](../getting-started/01-install.md). Answer the prompts with the defaults.
 
 ```sh
 mkdir -p ~/src && cd ~/src
@@ -12,7 +12,7 @@ npm init adonisjs@latest notes-app -- --kit=api --pkg=pnpm
 cd notes-app
 ```
 
-Install seampact from your checkout, as in [Install](../getting-started/install.md). Replace `~/src/seampact` with the path of your checkout.
+Install seampact from your checkout, as in [Install](../getting-started/01-install.md). Replace `~/src/seampact` with the path of your checkout.
 
 ```sh
 cd ~/src/seampact && pnpm install --frozen-lockfile
@@ -51,7 +51,7 @@ Install, `tsconfig.json`: the generated code does not compile with the starter's
 }
 ```
 
-Contract: write `contract/api.yaml` as in [Write the contract](../getting-started/first-contract.md).
+Contract: write `contract/api.yaml` as in [Write the contract](../getting-started/02-first-contract.md).
 
 Generate: create `seampact.config.yaml`. There is no `validators` entry, and the server target is `@seampact/codegen-adonis`.
 
@@ -195,4 +195,4 @@ override async handle(error: unknown, ctx: HttpContext) {
 }
 ```
 
-Next: [run it](../getting-started/generate-and-run.md#run-it). Start the app with `node ace serve` instead of `npx tsx src/main.ts`.
+Next: [run it](../getting-started/03-generate-and-run.md#run-it). Start the app with `node ace serve` instead of `npx tsx src/main.ts`.

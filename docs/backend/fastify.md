@@ -4,7 +4,7 @@ This page replaces the NestJS page. The generated `NotesEndpoints` interface lis
 
 ## Dependencies and config
 
-Do this in [Install](../getting-started/install.md), before `install-into`. In `package.json`, use these `dependencies` and keep the `devDependencies`.
+Do this in [Install](../getting-started/01-install.md), before `install-into`. In `package.json`, use these `dependencies` and keep the `devDependencies`.
 
 ```json
 {
@@ -17,7 +17,7 @@ Do this in [Install](../getting-started/install.md), before `install-into`. In `
 
 In `tsconfig.json`, leave out `experimentalDecorators`: Fastify has no decorators.
 
-In [Generate](../getting-started/generate-and-run.md), use this `targets` list in `seampact.config.yaml`. The Fastify target checks bodies with Ajv validators it generates, so there is no `validators` entry and no `zod`.
+In [Generate](../getting-started/03-generate-and-run.md), use this `targets` list in `seampact.config.yaml`. The Fastify target checks bodies with Ajv validators it generates, so there is no `validators` entry and no `zod`.
 
 ```yaml
 targets:
@@ -33,7 +33,7 @@ targets:
       types: types
 ```
 
-Then run `npx seampact generate` as in [Generate](../getting-started/generate-and-run.md).
+Then run `npx seampact generate` as in [Generate](../getting-started/03-generate-and-run.md).
 
 ## The handlers
 
@@ -123,4 +123,4 @@ Register the generated plugin. It keeps the raw bytes of signed routes itself.
 await app.register(TasksFastify.plugin, { handlers: { TasksEndpoints: tasksHandlers }, hooks: tasksHooks() });
 ```
 
-Next: [run it](../getting-started/generate-and-run.md#run-it).
+Next: [run it](../getting-started/03-generate-and-run.md#run-it).
