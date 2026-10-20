@@ -1,6 +1,6 @@
 # 4. Write the handlers (Express)
 
-The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows, written `as const`. You need the Express target from step 3: `@seampact/codegen-express`.
+The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows; `Notes.Status` and `Notes.ErrorCode` name them. You need the Express target from step 3: `@seampact/codegen-express`.
 
 Add Express to the app.
 
@@ -15,21 +15,22 @@ Create `src/notes-handlers.ts`.
 ```ts
 import { randomUUID } from "node:crypto";
 import type * as NotesExpress from "./__generated__/server/notes/index.js";
-import type * as Notes from "./__generated__/types/notes/index.js";
+import * as Notes from "./__generated__/types/notes/index.js";
 
 const notes = new Map<string, Notes.schemas.Note>();
 
 export const notesHandlers: NotesExpress.NotesEndpoints = {
   listNotes(input) {
-    return { status: 200 as const, body: { items: [...notes.values()] } };
+    return { status: Notes.Status.Ok, body: { items: [...notes.values()] } };
   },
 
   getNote(input) {
     const note = notes.get(input.path.noteId);
 
-    if (note === undefined) return { status: 404 as const, code: "api.not_found" as const };
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
 
-    return { status: 200 as const, body: note };
+    return { status: Notes.Status.Ok, body: note };
   },
 
   createNote(input) {
@@ -37,14 +38,14 @@ export const notesHandlers: NotesExpress.NotesEndpoints = {
 
     notes.set(note.noteId, note);
 
-    return { status: 201 as const, body: note };
+    return { status: Notes.Status.Created, body: note };
   },
 
   deleteNote(input) {
     if (!notes.delete(input.path.noteId))
-      return { status: 404 as const, code: "api.not_found" as const };
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
 
-    return { status: 204 as const };
+    return { status: Notes.Status.NoContent };
   },
 };
 ```
@@ -53,7 +54,7 @@ export const notesHandlers: NotesExpress.NotesEndpoints = {
 
 Types come from `types/notes`. The handlers interface and the router come from `server/notes`.
 
-Create `src/main.ts`. The empty hooks are enough because this api is public. Mount the router at the root of the app, without a path: the contract paths already start with `/v1`.
+Create `src/main.ts`. A public api needs no hooks. Mount the router at the root of the app, without a path: the contract paths already start with `/v1`.
 
 ```ts
 import express from "express";
@@ -62,12 +63,7 @@ import { notesHandlers } from "./notes-handlers.js";
 
 const app = express();
 
-app.use(
-  NotesExpress.router({
-    handlers: { NotesEndpoints: notesHandlers },
-    hooks: { authenticate: {}, deciders: [], scopeResolvers: {} },
-  }),
-);
+app.use(NotesExpress.router({ handlers: { NotesEndpoints: notesHandlers } }));
 app.use(NotesExpress.preRoutingErrorHandler);
 
 app.listen(3000);

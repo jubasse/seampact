@@ -81,26 +81,27 @@ You see one line per target, and the files appear in `src/__generated__` and `op
 
 ## Write the controller
 
-The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows, written `as const`. An AdonisJS controller is a class with a default export. Create `app/controllers/notes_controller.ts`.
+The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows; `Notes.Status` and `Notes.ErrorCode` name them. An AdonisJS controller is a class with a default export. Create `app/controllers/notes_controller.ts`.
 
 ```ts
 import { randomUUID } from 'node:crypto'
 import type * as NotesAdonis from '../../src/__generated__/server/notes/index.js'
-import type * as Notes from '../../src/__generated__/types/notes/index.js'
+import * as Notes from '../../src/__generated__/types/notes/index.js'
 
 const notes = new Map<string, Notes.schemas.Note>()
 
 export default class NotesController implements NotesAdonis.NotesEndpoints {
   listNotes(input: Notes.ListNotesInput) {
-    return { status: 200 as const, body: { items: [...notes.values()] } }
+    return { status: Notes.Status.Ok, body: { items: [...notes.values()] } }
   }
 
   getNote(input: Notes.GetNoteInput) {
     const note = notes.get(input.path.noteId)
 
-    if (note === undefined) return { status: 404 as const, code: 'api.not_found' as const }
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound }
 
-    return { status: 200 as const, body: note }
+    return { status: Notes.Status.Ok, body: note }
   }
 
   createNote(input: Notes.CreateNoteInput) {
@@ -108,14 +109,14 @@ export default class NotesController implements NotesAdonis.NotesEndpoints {
 
     notes.set(note.noteId, note)
 
-    return { status: 201 as const, body: note }
+    return { status: Notes.Status.Created, body: note }
   }
 
   deleteNote(input: Notes.DeleteNoteInput) {
     if (!notes.delete(input.path.noteId))
-      return { status: 404 as const, code: 'api.not_found' as const }
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound }
 
-    return { status: 204 as const }
+    return { status: Notes.Status.NoContent }
   }
 }
 ```
@@ -126,7 +127,7 @@ Types come from `types/notes`. The routes come from `server/notes`.
 
 ## Register the routes
 
-The starter's own routes (`/`, signup, login) are not in the contract, and the boot check refuses them. Replace `start/routes.ts`. The empty hooks are enough because this api is public.
+The starter's own routes (`/`, signup, login) are not in the contract, and the boot check refuses them. Replace `start/routes.ts`. A public api needs no hooks.
 
 ```ts
 import router from '@adonisjs/core/services/router'
@@ -134,7 +135,6 @@ import * as NotesAdonis from '../src/__generated__/server/notes/index.js'
 
 NotesAdonis.registerRoutes(router, {
   controllers: { NotesEndpoints: () => import('#controllers/notes_controller') },
-  hooks: { authenticate: {}, deciders: [], scopeResolvers: {} },
 })
 ```
 

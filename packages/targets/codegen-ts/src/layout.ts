@@ -24,6 +24,7 @@ export const SCHEMAS_MODULE = "schemas";
 export const OPERATION_INPUT_MODULE = "operations/input";
 export const OPERATION_OUTPUT_MODULE = "operations/output";
 export const OPERATION_ERRORS_MODULE = "operations/errors";
+export const API_CONSTANTS_MODULE = "constants";
 
 export const INDEX_MODULE = "index";
 
