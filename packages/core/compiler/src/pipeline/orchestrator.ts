@@ -6,6 +6,7 @@ import type { RawApi, RawWorkspace } from "../raw-tree.js";
 import { validateWorkspace } from "../validate/index.js";
 import { pipelineContext } from "./context.js";
 import { createDraftIR, type DraftIR } from "./draft.js";
+import { type PipelineDeclared, pipelineDeclared } from "./declared.js";
 import { type GuardedPart, pipelineGuard } from "./guard.js";
 import { pipelineHalves } from "./halves.js";
 import type { PassContext, PassParts, TreeSchemaService, WorkspacePass } from "./pass.js";
@@ -52,6 +53,8 @@ export interface PipelineApiResult {
   /** The finalized IR and its side table, when finalize produced them. */
   readonly ir?: ContractIR;
   readonly sourceMap?: SourceMap;
+  /** With the IR: every catalogue entry the api's layers declare, and whether the contract reaches it. */
+  readonly declared?: readonly PipelineDeclared[];
 }
 
 export interface PipelineResult {
@@ -117,7 +120,13 @@ export function compileWorkspace(options: PipelineOptions): PipelineResult {
       api: raw.name,
       diagnostics: diagnosticSort(diagnostics, raw.locations),
       locations: raw.locations,
-      ...(finalized === undefined ? {} : { ir: finalized.ir, sourceMap: finalized.sourceMap }),
+      ...(finalized === undefined
+        ? {}
+        : {
+            ir: finalized.ir,
+            sourceMap: finalized.sourceMap,
+            declared: pipelineDeclared(raw, finalized.ir),
+          }),
     })),
   });
   const viewed = <T>(value: T, source: "raw" | "workspace" | "imported"): T =>

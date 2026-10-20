@@ -10,5 +10,9 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@seampact/compiler": "workspace:*",
+    "@seampact/spec": "workspace:*"
   }
 }
