@@ -186,15 +186,16 @@ function compareEnumUse(
   after: EnumTypeUse,
   nullable: NullableComparison,
 ): void {
-  const sameEnum = before.enum === after.enum;
+  // Two enums of one wire carry the values of the use, so a narrowing still compares across the move.
+  const sameWireValues =
+    before.enum === after.enum ||
+    isSameWireEnum(context.before, before.enum, context.after, after.enum);
 
   compareMembers(context, site, "EnumTypeUse", pointer, before, after, {
     nullable,
     enum: (memberPointer) => {
-      const sameWire = isSameWireEnum(context.before, before.enum, context.after, after.enum);
-
       emitAt(context, site, {
-        kind: sameWire ? "name" : "type.changed",
+        kind: sameWireValues ? "name" : "type.changed",
         case: "enum",
         pointer: memberPointer,
         before: before.enum,
@@ -203,7 +204,7 @@ function compareEnumUse(
     },
     // A narrowing pins the values of this use: they are compared here, not through the catalogue enum.
     narrowedTo: (memberPointer) => {
-      if (!sameEnum) return;
+      if (!sameWireValues) return;
 
       const beforeValues =
         before.narrowedTo?.values ?? context.before.enums[before.enum]?.values ?? [];
@@ -235,6 +236,14 @@ function compareNarrowingReason(
   });
 }
 
+/** The facts an enum value change holds: output enums open in both IRs make an added output value additive. */
+function enumValueFacts(context: WalkContext): readonly DiffFact[] {
+  const outputEnumsOpenInBoth =
+    context.before.api.wire.outputEnums === "open" && context.after.api.wire.outputEnums === "open";
+
+  return outputEnumsOpenInBoth ? ["outputEnumsOpenInBoth"] : [];
+}
+
 /** Values added and removed, then a reorder of the values both hold. */
 export function compareEnumValues(
   context: WalkContext,
@@ -242,8 +251,9 @@ export function compareEnumValues(
   pointer: string,
   before: readonly string[],
   after: readonly string[],
-  facts: readonly DiffFact[] = [],
 ): void {
+  const facts = enumValueFacts(context);
+
   after.forEach((value, index) => {
     if (before.includes(value)) return;
 

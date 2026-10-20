@@ -51,9 +51,6 @@ export function compareSchemaCatalogue(context: WalkContext): void {
 }
 
 export function compareEnumCatalogue(context: WalkContext): void {
-  const outputEnumsOpen =
-    context.before.api.wire.outputEnums === "open" && context.after.api.wire.outputEnums === "open";
-
   for (const id of commonIds(context.before.enums, context.after.enums)) {
     const before = context.before.enums[id];
     const after = context.after.enums[id];
@@ -68,14 +65,7 @@ export function compareEnumCatalogue(context: WalkContext): void {
 
     compareMembers(context, site, "Enum", pointer, before, after, {
       values: (memberPointer) =>
-        compareEnumValues(
-          context,
-          site,
-          memberPointer,
-          before.values,
-          after.values,
-          outputEnumsOpen ? ["outputEnumsOpenInBoth"] : [],
-        ),
+        compareEnumValues(context, site, memberPointer, before.values, after.values),
     });
   }
 }

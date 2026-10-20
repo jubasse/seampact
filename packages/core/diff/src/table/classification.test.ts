@@ -25,6 +25,8 @@ interface RowCase {
   position: DiffPosition;
   expected: Expected;
   note?: string;
+  /** Picks the change whose pointer holds this fragment, when the same row is also reported elsewhere. */
+  pointerFragment?: string;
   base?: Edit;
   after: Edit;
 }
@@ -476,6 +478,35 @@ const ROW_CASES: RowCase[] = [
     after: (ir) => ir.enums.TaskState?.values.push("blocked"),
   },
   {
+    kind: "enum.value",
+    case: "added",
+    position: "output",
+    expected: "-",
+    note: " on a narrowing when output enums are open in both",
+    pointerFragment: "/narrowedTo/",
+    base: (ir) => {
+      ir.api.wire.outputEnums = "open";
+      narrowTaskState(ir, "TaskState", ["open", "done"]);
+    },
+    after: (ir) => narrowTaskState(ir, "TaskState", ["open", "done", "archived"]),
+  },
+  {
+    kind: "enum.value",
+    case: "added",
+    position: "output",
+    expected: "C",
+    note: " on a narrowing moved to a renamed enum of the same wire",
+    pointerFragment: "/narrowedTo/",
+    base: (ir) => narrowTaskState(ir, "TaskState", ["open", "done"]),
+    after: (ir) => {
+      const taskState = ir.enums.TaskState;
+
+      if (taskState !== undefined) ir.enums.TaskState2 = { ...structuredClone(taskState), id: "TaskState2" };
+
+      narrowTaskState(ir, "TaskState2", ["open", "done", "archived"]);
+    },
+  },
+  {
     kind: "type.changed",
     case: "ref",
     position: "input",
@@ -902,6 +933,10 @@ const ROW_CASES: RowCase[] = [
   },
 ];
 
+function narrowTaskState(ir: ContractIR, enumId: string, values: string[]): void {
+  propertyOf(ir, "Task", "state").type = { kind: "enum", enum: enumId, narrowedTo: { values } };
+}
+
 function addResponse(ir: ContractIR, status: number): void {
   const operation = operationOf(ir, "getTask");
   const [response] = operation.responses;
@@ -910,8 +945,13 @@ function addResponse(ir: ContractIR, status: number): void {
 }
 
 describe("the classification table", () => {
-  test.each(ROW_CASES.map((rowCase) => ({ ...rowCase, note: rowCase.note ?? "" })))(
-    "classifies $kind $case at $position$note",
+  test.each(
+    ROW_CASES.map((rowCase) => ({
+      ...rowCase,
+      name: `${rowCase.kind} ${rowCase.case} at ${rowCase.position}${rowCase.note ?? ""}`,
+    })),
+  )(
+    "classifies $name",
     (rowCase) => {
       const base = rowCase.base === undefined ? goldenIr() : editedIr(rowCase.base);
       const after = editedIr(rowCase.after, base);
@@ -920,7 +960,8 @@ describe("the classification table", () => {
         (candidate) =>
           candidate.kind === rowCase.kind &&
           candidate.case === rowCase.case &&
-          candidate.position === rowCase.position,
+          candidate.position === rowCase.position &&
+          candidate.pointer.includes(rowCase.pointerFragment ?? ""),
       );
 
       const unclassified = changes.filter(
