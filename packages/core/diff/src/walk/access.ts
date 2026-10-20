@@ -455,6 +455,7 @@ function compareFieldRights(
 
     return { ...input, reaches: [{ position, operations }] };
   };
+
   const emitFieldRight = (fieldRightCase: string, entryPointer: string, fieldRight: FieldRight) => {
     const site = siteOf(fieldRight);
 
