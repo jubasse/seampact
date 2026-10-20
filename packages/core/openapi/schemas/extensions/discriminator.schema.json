@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/discriminator.schema.json",
+  "title": "x-seampact-discriminator",
+  "description": "The request header a header-tagged union reads its tag from.",
+  "type": "object",
+  "properties": {
+    "in": {
+      "const": "header"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": ["in", "name"],
+  "additionalProperties": false
+}

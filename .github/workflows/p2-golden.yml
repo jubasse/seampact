@@ -1,6 +1,6 @@
 name: Golden IR determinism
 
-# `scripts/golden --check` on every golden case: it compiles each case and compares the IR and side table byte for
+# `scripts/golden --check` on every golden case: it compiles each case and compares the IR, the side table and the OpenAPI documents byte for
 # byte with the committed files. The matrix runs it on Linux, macOS and Windows, with two time zones and two locales
 # (one of them Turkish, for case mapping), and Windows converts every case source to CRLF before the check. ICU takes its
 # default locale from the OS on Windows, so the Windows `lang` cells vary the time zone only. `golden-determinism` is the check to require.

@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/deprecation.schema.json",
+  "title": "x-seampact-deprecation",
+  "description": "The deprecation dates of an operation and its successor.",
+  "type": "object",
+  "properties": {
+    "since": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sunset": {
+      "type": "string",
+      "minLength": 1
+    },
+    "successor": {
+      "type": "object",
+      "properties": {
+        "api": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operationId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["api", "operationId"],
+      "additionalProperties": false
+    },
+    "successorRel": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": ["since", "sunset"],
+  "additionalProperties": false
+}

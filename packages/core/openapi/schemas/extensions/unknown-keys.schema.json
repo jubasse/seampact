@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/unknown-keys.schema.json",
+  "title": "x-seampact-unknown-keys",
+  "description": "An input that ignores or keeps unknown keys, with its reason.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "ignore": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "const": true
+            }
+          ],
+          "description": "The written reason, or true under `reasons: omit`."
+        }
+      },
+      "required": ["ignore"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "keep": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "const": true
+            }
+          ],
+          "description": "The written reason, or true under `reasons: omit`."
+        }
+      },
+      "required": ["keep"],
+      "additionalProperties": false
+    }
+  ]
+}

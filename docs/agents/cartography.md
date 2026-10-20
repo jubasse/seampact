@@ -88,7 +88,7 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/openapi`
 
-- `packages/core/openapi/src`: Writes the OpenAPI 3.1 documents from the IR, with what OpenAPI cannot say as x-seampact-* extensions.
+- `packages/core/openapi/src`: The OpenAPI 3.1 emitter: an api's documents written from the IR through the table of ADR 0004 section 12, the emitter options of A40, the drift check of a committed document, and the `x-seampact-*` extension names whose JSON Schemas the package publishes.
 
 ### `@seampact/spec`
 

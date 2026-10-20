@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/enum.schema.json",
+  "title": "x-seampact-enum",
+  "description": "The values of an open output enum.",
+  "type": "array",
+  "items": {
+    "type": "string",
+    "minLength": 1
+  },
+  "minItems": 1
+}

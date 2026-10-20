@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/scopes.schema.json",
+  "title": "x-seampact-scopes",
+  "description": "The scopes in resolution order, each with where its id is read; a scope's consumer extensions beside.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "scope": {
+        "type": "string",
+        "minLength": 1
+      },
+      "from": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": ["scope", "from"],
+    "patternProperties": {
+      "^x-": {}
+    },
+    "additionalProperties": false
+  }
+}

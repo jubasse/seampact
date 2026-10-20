@@ -1,0 +1,883 @@
+openapi: 3.1.0
+info:
+  title: ledger
+  version: "2"
+  summary: Entries kept by a bookkeeping product.
+x-seampact-api:
+  kind: product
+x-seampact-format: house
+paths:
+  /entries:
+    get:
+      operationId: entries_list
+      parameters:
+        - name: filter
+          in: query
+          required: true
+          style: deepObject
+          explode: true
+          schema:
+            $ref: "#/components/schemas/EntryFilter"
+        - name: kinds
+          in: query
+          required: true
+          style: form
+          explode: false
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/EntryKind"
+            maxItems: 2
+        - name: p
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: per
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+        - name: order
+          in: query
+          required: false
+          style: form
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              pattern: ^(?:postedAt|amount),(?:asc|desc)$
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Entry"
+                  meta:
+                    type: object
+                    properties:
+                      servedAt:
+                        type: string
+                        format: date-time
+                      page:
+                        type: integer
+                      lastPage:
+                        type: integer
+                      perPage:
+                        type: integer
+                      total:
+                        type: integer
+                    required:
+                      - servedAt
+                      - page
+                      - lastPage
+                      - perPage
+                      - total
+                required:
+                  - data
+                  - meta
+        "400":
+          description: err.bad_input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.bad_input"
+          x-seampact-errors:
+            - code: err.bad_input
+              derivedFrom: input.invalid
+        "401":
+          description: err.unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.unauthenticated"
+          x-seampact-errors:
+            - code: err.unauthenticated
+              derivedFrom: identity.authenticate
+        "500":
+          description: err.internal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.internal"
+          x-seampact-errors:
+            - code: err.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: user
+      x-seampact-paging:
+        style: pages
+        position: page
+        roles:
+          page: query.p
+          limit: query.per
+          sort: query.order
+        maxLimit: 40
+        defaultLimit: 20
+        overLimit: clamp
+        sortKeys:
+          - key: amount
+          - key: postedAt
+      x-seampact-unknown-query:
+        ignore: Gateways add tracking parameters.
+      x-seampact-maturity:
+        level: provisional
+        source: api
+    post:
+      operationId: entry_create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEntry"
+        x-seampact-unknown-keys:
+          ignore: Older clients send fields this version dropped.
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Entry"
+                  meta:
+                    type: object
+                    properties:
+                      servedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - servedAt
+                required:
+                  - data
+                  - meta
+        "400":
+          description: err.bad_input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.bad_input"
+          x-seampact-errors:
+            - code: err.bad_input
+              derivedFrom: input.invalid
+        "401":
+          description: err.unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.unauthenticated"
+          x-seampact-errors:
+            - code: err.unauthenticated
+              derivedFrom: identity.authenticate
+        "413":
+          description: err.too_large
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.too_large"
+          x-seampact-errors:
+            - code: err.too_large
+              derivedFrom: body.limit
+        "415":
+          description: err.media_type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.media_type"
+          x-seampact-errors:
+            - code: err.media_type
+              derivedFrom: body.media
+        "500":
+          description: err.internal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.internal"
+          x-seampact-errors:
+            - code: err.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: user
+      x-seampact-unknown-query:
+        ignore: Gateways add tracking parameters.
+      x-seampact-maturity:
+        level: provisional
+        source: api
+  /entries/lookup:
+    post:
+      operationId: entries_batch_get
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EntriesBatchGetInput"
+        x-seampact-unknown-keys:
+          ignore: Older clients send fields this version dropped.
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    additionalProperties:
+                      $ref: "#/components/schemas/Entry"
+                  meta:
+                    type: object
+                    properties:
+                      servedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - servedAt
+                required:
+                  - data
+                  - meta
+        "400":
+          description: err.bad_input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.bad_input"
+          x-seampact-errors:
+            - code: err.bad_input
+              derivedFrom: input.invalid
+        "401":
+          description: err.unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.unauthenticated"
+          x-seampact-errors:
+            - code: err.unauthenticated
+              derivedFrom: identity.authenticate
+        "413":
+          description: err.too_large
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.too_large"
+          x-seampact-errors:
+            - code: err.too_large
+              derivedFrom: body.limit
+        "415":
+          description: err.media_type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.media_type"
+          x-seampact-errors:
+            - code: err.media_type
+              derivedFrom: body.media
+        "500":
+          description: err.internal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.internal"
+          x-seampact-errors:
+            - code: err.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: user
+      x-seampact-unknown-query:
+        ignore: Gateways add tracking parameters.
+      x-seampact-maturity:
+        level: provisional
+        source: api
+  /entries/{entryId}:
+    get:
+      operationId: entry_get
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success.
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - private, max-age=30, stale-while-revalidate=15, must-revalidate
+              x-seampact-cache-control:
+                identified: private, max-age=30, stale-while-revalidate=15, must-revalidate
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Entry"
+                  meta:
+                    type: object
+                    properties:
+                      servedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - servedAt
+                required:
+                  - data
+                  - meta
+        "400":
+          description: err.bad_input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.bad_input"
+          x-seampact-errors:
+            - code: err.bad_input
+              derivedFrom: input.invalid
+        "401":
+          description: err.unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.unauthenticated"
+          x-seampact-errors:
+            - code: err.unauthenticated
+              derivedFrom: identity.authenticate
+        "404":
+          description: err.missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.missing"
+          x-seampact-errors:
+            - code: err.missing
+              derivedFrom: member.notFound
+        "500":
+          description: err.internal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.internal"
+          x-seampact-errors:
+            - code: err.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: user
+      x-seampact-unknown-query:
+        ignore: Gateways add tracking parameters.
+      x-seampact-maturity:
+        level: provisional
+        source: api
+    put:
+      operationId: entry_update
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplaceEntry"
+        x-seampact-unknown-keys:
+          ignore: Older clients send fields this version dropped.
+      responses:
+        "200":
+          description: Success.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Entry"
+                  meta:
+                    type: object
+                    properties:
+                      servedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - servedAt
+                required:
+                  - data
+                  - meta
+        "400":
+          description: err.bad_input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.bad_input"
+          x-seampact-errors:
+            - code: err.bad_input
+              derivedFrom: input.invalid
+        "401":
+          description: err.unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.unauthenticated"
+          x-seampact-errors:
+            - code: err.unauthenticated
+              derivedFrom: identity.authenticate
+        "404":
+          description: err.missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.missing"
+          x-seampact-errors:
+            - code: err.missing
+              derivedFrom: member.notFound
+        "413":
+          description: err.too_large
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.too_large"
+          x-seampact-errors:
+            - code: err.too_large
+              derivedFrom: body.limit
+        "415":
+          description: err.media_type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.media_type"
+          x-seampact-errors:
+            - code: err.media_type
+              derivedFrom: body.media
+        "500":
+          description: err.internal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.internal"
+          x-seampact-errors:
+            - code: err.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: user
+      x-seampact-unknown-query:
+        ignore: Gateways add tracking parameters.
+      x-seampact-maturity:
+        level: provisional
+        source: api
+    delete:
+      operationId: entry_delete
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Success.
+        "400":
+          description: err.bad_input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.bad_input"
+          x-seampact-errors:
+            - code: err.bad_input
+              derivedFrom: input.invalid
+        "401":
+          description: err.unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.unauthenticated"
+          x-seampact-errors:
+            - code: err.unauthenticated
+              derivedFrom: identity.authenticate
+        "404":
+          description: err.missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.missing"
+          x-seampact-errors:
+            - code: err.missing
+              derivedFrom: member.notFound
+        "500":
+          description: err.internal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.internal"
+          x-seampact-errors:
+            - code: err.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: user
+      x-seampact-unknown-query:
+        ignore: Gateways add tracking parameters.
+      x-seampact-maturity:
+        level: provisional
+        source: api
+  /entries/{entryId}/closing_balance:
+    get:
+      operationId: entry_closing_balance
+      deprecated: true
+      parameters:
+        - name: entryId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Success.
+          headers:
+            X-Deprecated:
+              required: true
+              schema:
+                type: string
+              x-seampact-semantic: deprecation
+            X-Sunset-On:
+              required: true
+              schema:
+                type: string
+              x-seampact-semantic: sunset
+            Link:
+              description: The successor operation, with rel "latest-version".
+              required: true
+              schema:
+                type: string
+              x-seampact-semantic: successorLink
+            Cache-Control:
+              schema:
+                type: string
+                enum:
+                  - private, max-age=3600, immutable
+              x-seampact-cache-control:
+                identified: private, max-age=3600, immutable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/Entry"
+                  meta:
+                    type: object
+                    properties:
+                      servedAt:
+                        type: string
+                        format: date-time
+                    required:
+                      - servedAt
+                required:
+                  - data
+                  - meta
+        "400":
+          description: err.bad_input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.bad_input"
+          x-seampact-errors:
+            - code: err.bad_input
+              derivedFrom: input.invalid
+        "401":
+          description: err.unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.unauthenticated"
+          x-seampact-errors:
+            - code: err.unauthenticated
+              derivedFrom: identity.authenticate
+        "404":
+          description: err.missing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.missing"
+          x-seampact-errors:
+            - code: err.missing
+              derivedFrom: member.notFound
+        "500":
+          description: err.internal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/err.internal"
+          x-seampact-errors:
+            - code: err.internal
+              derivedFrom: response.undeclared
+      security:
+        - bearer: []
+      x-seampact-access:
+        identity: user
+      x-seampact-unknown-query:
+        ignore: Gateways add tracking parameters.
+      x-seampact-maturity:
+        level: provisional
+        source: api
+      x-seampact-deprecation:
+        since: 2026-01-01
+        sunset: 2027-01-01
+        successor:
+          api: ledger
+          operationId: entry_get
+        successorRel: latest-version
+components:
+  schemas:
+    CreateEntry:
+      type: object
+      properties:
+        kind:
+          $ref: "#/components/schemas/EntryKind"
+        amount:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+        - kind
+        - amount
+    EntriesBatchGetInput:
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          maxItems: 25
+      required:
+        - ids
+    Entry:
+      type: object
+      properties:
+        entryId:
+          type: string
+          format: uuid
+        kind:
+          $ref: "#/components/schemas/EntryKind"
+        amount:
+          type: integer
+          format: int64
+          minimum: 0
+        postedAt:
+          type: string
+          format: date-time
+      required:
+        - entryId
+        - kind
+        - amount
+        - postedAt
+    EntryFilter:
+      type: object
+      properties:
+        kind:
+          $ref: "#/components/schemas/EntryKind"
+        since:
+          type: string
+          format: date-time
+    EntryKind:
+      type: string
+      x-seampact-enum:
+        - debit
+        - credit
+    ErrBadInputParams:
+      type: object
+      properties:
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/IssuesItem"
+      required:
+        - issues
+    IssuesItem:
+      type: object
+      properties:
+        pointer:
+          type: string
+        rule:
+          type: string
+      required:
+        - pointer
+        - rule
+    ReplaceEntry:
+      type: object
+      properties:
+        kind:
+          $ref: "#/components/schemas/EntryKind"
+        amount:
+          type: integer
+          format: int64
+          minimum: 0
+      required:
+        - kind
+        - amount
+    err.bad_input:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              const: err.bad_input
+            nature:
+              type: string
+            params:
+              $ref: "#/components/schemas/ErrBadInputParams"
+          required:
+            - code
+            - nature
+            - params
+      required:
+        - error
+      x-seampact-nature:
+        base: refused
+    err.internal:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              const: err.internal
+            nature:
+              type: string
+            params:
+              type: "null"
+          required:
+            - code
+            - nature
+            - params
+      required:
+        - error
+      x-seampact-nature:
+        base: failed
+    err.media_type:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              const: err.media_type
+            nature:
+              type: string
+            params:
+              type: "null"
+          required:
+            - code
+            - nature
+            - params
+      required:
+        - error
+      x-seampact-nature:
+        base: refused
+    err.missing:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              const: err.missing
+            nature:
+              type: string
+            params:
+              type: "null"
+          required:
+            - code
+            - nature
+            - params
+      required:
+        - error
+      x-seampact-nature:
+        base: refused
+    err.too_large:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              const: err.too_large
+            nature:
+              type: string
+            params:
+              type: "null"
+          required:
+            - code
+            - nature
+            - params
+      required:
+        - error
+      x-seampact-nature:
+        base: refused
+    err.unauthenticated:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              const: err.unauthenticated
+            nature:
+              type: string
+            params:
+              type: "null"
+          required:
+            - code
+            - nature
+            - params
+      required:
+        - error
+      x-seampact-nature:
+        base: refused
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer

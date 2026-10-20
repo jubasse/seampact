@@ -4,9 +4,10 @@ import { parseArgs } from "node:util";
 import { findStaleFiles } from "../ir-models/generate.ts";
 import { loadGoldenCompiler } from "./compiler.ts";
 import { allGeneratedFiles, findUnlistedFiles, WRITE_COMMAND } from "./golden.ts";
+import { loadGoldenOpenApi } from "./openapi.ts";
 import { REPO_ROOT } from "./repo-root.ts";
 
-// Writes or checks the golden IR and the generated part of the scale fixture. Run it through the resolve hook, and
+// Writes or checks the golden IR, its OpenAPI documents and the generated part of the scale fixture. Run it through the resolve hook, and
 // with the flag that lets Node read the compiler's parameter properties:
 // node --experimental-transform-types --import ./scripts/ir-models/register.ts scripts/golden/cli.ts (--write | --check)
 
@@ -43,7 +44,11 @@ async function main(argv: string[]): Promise<number> {
     return EXIT_USAGE;
   }
 
-  const { files, problems } = allGeneratedFiles(REPO_ROOT, await loadGoldenCompiler());
+  const { files, problems } = allGeneratedFiles(
+    REPO_ROOT,
+    await loadGoldenCompiler(),
+    await loadGoldenOpenApi(),
+  );
 
   if (problems.length > 0) {
     for (const problem of problems) console.error(`golden: ${problem}`);

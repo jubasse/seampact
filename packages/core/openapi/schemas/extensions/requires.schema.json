@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/requires.schema.json",
+  "title": "x-seampact-requires",
+  "description": "The requirements in order: rights with their params and subject, rules with their params and bucket; a right's or rule's consumer extensions beside.",
+  "type": "array",
+  "items": {
+    "oneOf": [
+      {
+        "type": "object",
+        "properties": {
+          "right": {
+            "type": "string",
+            "minLength": 1
+          },
+          "params": {},
+          "subject": {
+            "type": "string",
+            "minLength": 1
+          },
+          "entry": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["right"],
+        "patternProperties": {
+          "^x-": {}
+        },
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "rule": {
+            "type": "string",
+            "minLength": 1
+          },
+          "params": {},
+          "bucket": {
+            "type": "string",
+            "minLength": 1
+          },
+          "entry": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": ["rule"],
+        "patternProperties": {
+          "^x-": {}
+        },
+        "additionalProperties": false
+      }
+    ]
+  }
+}

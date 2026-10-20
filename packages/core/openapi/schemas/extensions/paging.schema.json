@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seampact.dev/schemas/openapi/extensions/paging.schema.json",
+  "title": "x-seampact-paging",
+  "description": "The paging of a list operation, or none for an unpaged list.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "none": {
+          "const": true
+        }
+      },
+      "required": ["none"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "style": {
+          "type": "string",
+          "minLength": 1
+        },
+        "position": {
+          "type": "string",
+          "minLength": 1
+        },
+        "roles": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "maxLimit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "defaultLimit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "overLimit": {
+          "type": "string",
+          "minLength": 1
+        },
+        "token": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sortKeys": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string",
+                "minLength": 1
+              },
+              "right": {
+                "type": "string",
+                "minLength": 1
+              },
+              "params": {},
+              "subject": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": ["key"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["style", "overLimit", "sortKeys"],
+      "additionalProperties": false
+    }
+  ]
+}
