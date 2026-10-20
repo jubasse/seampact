@@ -117,6 +117,47 @@ surfaces:
   },
 );
 
+test("path versions: an empty prefix under prefix mode warns, with the fix pathVersion none", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: audit, version: 1, kind: product }
+surfaces:
+  app:
+    prefix: ""
+    routes:
+      auditLog: { method: get }
+`);
+  const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas,
+  });
+
+  expect(draft.operations[0]?.path).toBe("/v1/audit-log");
+  expect(diagnostics).toMatchObject([
+    {
+      severity: "warning",
+      rule: "seampact/tree/path-version",
+      fix: expect.stringContaining("pathVersion: none"),
+    },
+  ]);
+});
+
+test("path versions: an empty prefix under pathVersion none is the root, with no warning", () => {
+  const workspace = treeNodesLoadInline(`
+api: { name: audit, version: 1, kind: product }
+surfaces:
+  app:
+    prefix: ""
+    pathVersion: none
+    routes:
+      auditLog: { method: get }
+`);
+  const { draft, diagnostics } = treeNodesRun(treeNodesApiOf(workspace), workspace, {
+    treeSchemas,
+  });
+
+  expect(draft.operations[0]?.path).toBe("/audit-log");
+  expect(diagnostics).toEqual([]);
+});
+
 test("path versions: the api's path version, the version kind and the mismatch stated", () => {
   const written = treeNodesLoadInline(`
 api: { name: audit, version: 3, kind: product }

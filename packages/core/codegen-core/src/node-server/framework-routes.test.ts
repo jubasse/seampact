@@ -22,3 +22,9 @@ test("one unlisted framework route keeps its own wording", () => {
     "the framework route 'GET /docs' is outside the contract and not allow-listed",
   );
 });
+
+test("the fix tells to run generate again after editing frameworkRoutes", () => {
+  const problem = unlistedFrameworkRoutesProblem(CHECK_ON, [{ method: "GET", path: "/docs" }]);
+
+  expect(problem?.fix).toContain("run seampact generate again");
+});

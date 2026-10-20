@@ -4,7 +4,8 @@ import { parseArgs } from "node:util";
 import { REPO_ROOT as REPOSITORY_ROOT } from "../golden/repo-root.ts";
 import { buildPackages, packPackages } from "./build-and-pack.ts";
 import { useTarballs, VENDOR_DIRECTORY } from "./consumer-project.ts";
-import { StepFailure } from "./run-step.ts";
+import { ignoreVendorDirectory } from "./ignore-vendor.ts";
+import { StepFailure, type StepOutput } from "./run-step.ts";
 
 // Builds and packs this checkout's seampact packages into `<app>/vendor/seampact` and lists them in the app's
 // package.json and pnpm overrides, so `pnpm install` resolves them without npm (ADR 0011 "Unpublished installs
@@ -17,6 +18,7 @@ const EXIT_USAGE = 2;
 
 const USAGE = "usage: node scripts/consumers/install-into.ts <app-dir>";
 const PACKAGE_FILE = "package.json";
+const QUIET: StepOutput = "onFailure";
 
 function parseDirectory(argv: string[]): string {
   const { positionals } = parseArgs({ args: argv, allowPositionals: true });
@@ -49,13 +51,14 @@ function main(argv: string[]): number {
   }
 
   try {
-    buildPackages(REPOSITORY_ROOT);
+    buildPackages(REPOSITORY_ROOT, QUIET);
 
-    const tarballs = packPackages(REPOSITORY_ROOT, join(directory, VENDOR_DIRECTORY));
+    const tarballs = packPackages(REPOSITORY_ROOT, join(directory, VENDOR_DIRECTORY), QUIET);
 
     useTarballs(directory, tarballs);
+    ignoreVendorDirectory(directory);
     console.log(
-      `\ninstall-into: ${tarballs.size} packages in ${join(directory, VENDOR_DIRECTORY)}. Run pnpm install.`,
+      `install-into: ${tarballs.size} packages in ${join(directory, VENDOR_DIRECTORY)}, listed in package.json. Run pnpm install.`,
     );
   } catch (error) {
     if (error instanceof StepFailure) {

@@ -1,7 +1,7 @@
 import type { IrWriter, Origin } from "@seampact/spec/ir";
 import { splitName } from "@seampact/spec/naming";
 import { type DraftIR, pipelineCopy } from "../../../pipeline/seam.js";
-import { treeNodesError, treeNodesNodeOrigin } from "./diagnostics.js";
+import { treeNodesError, treeNodesNodeOrigin, treeNodesWarning } from "./diagnostics.js";
 import { treeNodesOwnExtensions } from "./lifecycle.js";
 import {
   TREE_NODES_MATURITIES,
@@ -185,10 +185,14 @@ function surfacesOf(
 
     if (mode === undefined) throw new Error(`the surface ${id} resolves no path version mode`);
 
-    const writtenPrefix = textOf(treeNodesMember(settings, "prefix")) ?? "";
+    const prefixText = textOf(treeNodesMember(settings, "prefix"));
+    const writtenPrefix = prefixText ?? "";
     const prefixOrigin = context.origin(`${pointer}/prefix`) ?? origin;
 
-    checkPrefix({ id, writtenPrefix, mode, version, prefixOrigin }, context);
+    checkPrefix(
+      { id, writtenPrefix, writtenEmpty: prefixText === "", mode, version, prefixOrigin },
+      context,
+    );
 
     if (mode === "prefix") versionedSurfaces.push(id);
 
@@ -219,6 +223,8 @@ function surfacesOf(
 interface PrefixSite {
   readonly id: string;
   readonly writtenPrefix: string;
+  /** The prefix is written, and empty (a missing prefix is not). */
+  readonly writtenEmpty: boolean;
   readonly mode: IrWriter.PathVersionMode;
   readonly version: IrWriter.ApiVersion;
   readonly prefixOrigin: Origin;
@@ -230,6 +236,16 @@ function checkPrefix(site: PrefixSite, context: TreeNodesContext): void {
   const origin = treeNodesNodeOrigin(site.prefixOrigin);
 
   checkPrefixPlaceholders(site, context, origin);
+
+  if (site.writtenEmpty && site.mode === "prefix")
+    context.report(
+      treeNodesWarning({
+        rule: "path-version",
+        origin,
+        message: `The prefix of the surface ${site.id} is empty, but its paths still start with /v{version}.`,
+        fix: "Set pathVersion: none on the surface to keep its paths as written, or write the prefix you want.",
+      }),
+    );
 
   if (site.mode === "none") {
     if (site.writtenPrefix.includes(VERSION_PLACEHOLDER))

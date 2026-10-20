@@ -21,11 +21,11 @@ const COLLECTION_SLOT = "collection";
 const RESOURCE_SLOT = "resource";
 const ALWAYS_FILLED_META: readonly string[] = ["now", "handler"];
 
-/** The response shapes the emitter writes through the format: `list` waits for a consumer (A47). */
-export type EmittedShape = Exclude<keyof SuccessShapes, "list">;
+/** The response shapes the emitter writes through the format. */
+export type EmittedShape = keyof SuccessShapes;
 
 export function emittedShapeOf(shape: string): EmittedShape | undefined {
-  if (shape === "item" || shape === "table" || shape === "page") return shape;
+  if (shape === "item" || shape === "table" || shape === "list" || shape === "page") return shape;
 
   return undefined;
 }

@@ -14,6 +14,7 @@ import {
   referenceChanges,
   referenceNoStoreCode,
   referenceNoStoreOperation,
+  referenceUnpagedList,
   sendRawRequest,
 } from "@seampact/codegen-core/node-server/test-support";
 import type { ContractIR } from "@seampact/spec/ir";
@@ -123,6 +124,7 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
       referenceChanges(
         referenceNoStoreCode(NO_STORE_CODE),
         referenceNoStoreOperation("getPreferences"),
+        referenceUnpagedList("listChannels"),
       ),
     );
 
@@ -662,6 +664,18 @@ describe.each(EXPRESS_MAJORS)("the generated router on %s", (_major, expressPack
 
     expect(reply.status).toBe(204);
     expect(proofs).toEqual(["token"]);
+  });
+
+  test("a list declared paging none answers a bare array, and refuses a cursor it never declared", async () => {
+    app.scenario.answers.listChannels = () => ({ status: 200, body: [{ channelId: CHANNEL }] });
+
+    const reply = await send("GET", "/v1/channels", { headers: BEARER });
+    const withCursor = await send("GET", "/v1/channels?cursor=a", { headers: BEARER });
+
+    expect(reply.status).toBe(200);
+    expect(JSON.parse(reply.text)).toEqual([{ channelId: CHANNEL }]);
+    expect(reply.headers.link).toBeUndefined();
+    expect(withCursor.status).toBe(400);
   });
 
   test("a repeated text query key answers 400 rather than keeping one value", async () => {

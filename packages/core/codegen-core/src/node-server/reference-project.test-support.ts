@@ -213,6 +213,39 @@ export function hooksRequirementErrors(
   };
 }
 
+/** Makes one paged list of the `tasks` api a `paging: none` list: a bare array, no cursor or limit parameter. */
+export function referenceUnpagedList(operationId: string): ReferenceIrChange {
+  return (ir, api) => {
+    if (api !== "tasks") return ir;
+
+    return {
+      ...ir,
+      operations: ir.operations.map((operation) => {
+        if (operation.id !== operationId || operation.paging === undefined) return operation;
+
+        const {
+          style: _style,
+          defaultLimit: _default,
+          maxLimit: _max,
+          ...unpaged
+        } = operation.paging;
+
+        return {
+          ...operation,
+          paging: { ...unpaged, sortKeys: [] },
+          params: {
+            ...operation.params,
+            query: operation.params.query.filter(
+              (param) => param.name !== "cursor" && param.name !== "limit",
+            ),
+          },
+          responses: operation.responses.map((response) => ({ ...response, shape: "list" })),
+        };
+      }),
+    };
+  };
+}
+
 /** Applies each change to the golden IR in order. */
 export function referenceChanges(...changes: readonly ReferenceIrChange[]): ReferenceIrChange {
   return (ir, api) => changes.reduce((changed, change) => change(changed, api), ir);
