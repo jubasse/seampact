@@ -38,7 +38,6 @@ export {
   type ExtensionsOption,
   type MergedDocumentEntry,
   NO_OPENAPI_DOCUMENTS,
-  OPENAPI_DOCUMENT_OPTION_KEYS,
   type OpenApiDocumentOptions,
   type OpenApiServer,
   type PlacedDocument,

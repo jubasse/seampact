@@ -36,12 +36,7 @@ export interface OpenApiServer {
 }
 
 // The emitter option keys, the keys a placed document takes beside `path`.
-export const OPENAPI_DOCUMENT_OPTION_KEYS = [
-  "extensions",
-  "reasons",
-  "inputSchemas",
-  "servers",
-] as const;
+const OPENAPI_DOCUMENT_OPTION_KEYS = ["extensions", "reasons", "inputSchemas", "servers"] as const;
 
 const REASONS_OPTIONS = ["include", "omit"] as const;
 const INPUT_SCHEMAS_OPTIONS = ["shared", "strict"] as const;
