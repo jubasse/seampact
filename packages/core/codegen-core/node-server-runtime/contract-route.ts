@@ -301,18 +301,43 @@ export function isUnderBasePath(api: Pick<ContractApi, "basePaths">, path: strin
 
 /** Whether a path is a contract path under a leading prefix, as a framework's global prefix makes it. */
 export function isUnderPrefix(api: ContractApi, path: string): boolean {
-  return api.routes.some((route) =>
-    new RegExp(`^/.+${templatePattern(route.path, [])}$`).test(path),
-  );
+  return api.routes.some((route) => compiledTemplate(route.path).prefixed.test(path));
 }
 
 function matchPath(template: string, path: string): Record<string, string> | undefined {
-  const names: string[] = [];
-  const match = new RegExp(`^${templatePattern(template, names)}$`).exec(path);
+  const compiled = compiledTemplate(template);
+  const match = compiled.exact.exec(path);
 
   if (match === null) return undefined;
 
-  return Object.fromEntries(names.map((name, index) => [name, match[index + 1] ?? ""]));
+  return Object.fromEntries(compiled.names.map((name, index) => [name, match[index + 1] ?? ""]));
+}
+
+interface CompiledTemplate {
+  readonly exact: RegExp;
+  readonly prefixed: RegExp;
+  readonly names: readonly string[];
+}
+
+// Keyed by a route table's path template, never by request input, so it holds one entry per contract route.
+const compiledTemplates = new Map<string, CompiledTemplate>();
+
+function compiledTemplate(template: string): CompiledTemplate {
+  const cached = compiledTemplates.get(template);
+
+  if (cached !== undefined) return cached;
+
+  const names: string[] = [];
+  const pattern = templatePattern(template, names);
+  const compiled = {
+    exact: new RegExp(`^${pattern}$`),
+    prefixed: new RegExp(`^/.+${pattern}$`),
+    names,
+  };
+
+  compiledTemplates.set(template, compiled);
+
+  return compiled;
 }
 
 // The template as a regular expression source, each param one path segment; collects the param names.

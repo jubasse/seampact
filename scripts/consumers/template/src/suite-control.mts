@@ -23,10 +23,12 @@ const OK = 200;
 const BAD_REQUEST = 400;
 
 let loadedScript: SampleAppScript = {};
+// Off until the suite loads a script, so a run without the suite (the bench) keeps no growing call log.
+let recordingHookCalls = false;
 const hookCalls: RecordedHookCall[] = [];
 const logLines: string[] = [];
 
-/** `PUT /__seampact/script`: loads the script and empties the recorded calls and log lines. */
+/** `PUT /__seampact/script`: loads the script, empties the recorded calls and log lines, and records hook calls from then on. */
 export function loadScriptReply(body: unknown): ControlReply {
   try {
     loadedScript = parseSampleAppScript(body);
@@ -36,6 +38,7 @@ export function loadScriptReply(body: unknown): ControlReply {
     return { status: BAD_REQUEST, body: { message: error.message } };
   }
 
+  recordingHookCalls = true;
   hookCalls.length = 0;
   logLines.length = 0;
 
@@ -53,6 +56,8 @@ export function logLinesReply(): ControlReply {
 }
 
 export function recordHookCall(hook: string, operation: { api: string; id: string }): void {
+  if (!recordingHookCalls) return;
+
   hookCalls.push({ hook, operation: operationKey(operation.api, operation.id) });
 }
 
