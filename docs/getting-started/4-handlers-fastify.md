@@ -1,6 +1,6 @@
 # 4. Write the handlers (Fastify)
 
-This page replaces the NestJS page. The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows. You pass your handlers to the generated Fastify plugin, which checks the access, the input and the reply around them.
+This page replaces the NestJS page. The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows; `Notes.Status` and `Notes.ErrorCode` name them. You pass your handlers to the generated Fastify plugin, which checks the access, the input and the reply around them.
 
 ## Dependencies and config
 
@@ -42,21 +42,22 @@ Create `src/notes-handlers.ts`.
 ```ts
 import { randomUUID } from "node:crypto";
 import * as NotesFastify from "./__generated__/server/notes/index.js";
-import type * as Notes from "./__generated__/types/notes/index.js";
+import * as Notes from "./__generated__/types/notes/index.js";
 
 const notes = new Map<string, Notes.schemas.Note>();
 
 export const notesHandlers: NotesFastify.NotesEndpoints = {
   listNotes() {
-    return { status: 200, body: { items: [...notes.values()] } };
+    return { status: Notes.Status.Ok, body: { items: [...notes.values()] } };
   },
 
   getNote(input) {
     const note = notes.get(input.path.noteId);
 
-    if (note === undefined) return { status: 404, code: "api.not_found" };
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
 
-    return { status: 200, body: note };
+    return { status: Notes.Status.Ok, body: note };
   },
 
   createNote(input) {
@@ -64,13 +65,14 @@ export const notesHandlers: NotesFastify.NotesEndpoints = {
 
     notes.set(note.noteId, note);
 
-    return { status: 201, body: note };
+    return { status: Notes.Status.Created, body: note };
   },
 
   deleteNote(input) {
-    if (!notes.delete(input.path.noteId)) return { status: 404, code: "api.not_found" };
+    if (!notes.delete(input.path.noteId))
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
 
-    return { status: 204 };
+    return { status: Notes.Status.NoContent };
   },
 };
 ```

@@ -23,26 +23,27 @@ In step 3, the `server` target uses `@seampact/codegen-hono`. It has no `bodyVal
       validators: validators
 ```
 
-The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows, written `as const`. Create `src/notes-handlers.ts`.
+The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows; `Notes.Status` and `Notes.ErrorCode` name them. Create `src/notes-handlers.ts`.
 
 ```ts
 import { randomUUID } from "node:crypto";
 import type * as NotesHono from "./__generated__/server/notes/index.js";
-import type * as Notes from "./__generated__/types/notes/index.js";
+import * as Notes from "./__generated__/types/notes/index.js";
 
 const notes = new Map<string, Notes.schemas.Note>();
 
 export const notesEndpoints: NotesHono.NotesEndpoints = {
   listNotes() {
-    return { status: 200 as const, body: { items: [...notes.values()] } };
+    return { status: Notes.Status.Ok, body: { items: [...notes.values()] } };
   },
 
   getNote(input) {
     const note = notes.get(input.path.noteId);
 
-    if (note === undefined) return { status: 404 as const, code: "api.not_found" as const };
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
 
-    return { status: 200 as const, body: note };
+    return { status: Notes.Status.Ok, body: note };
   },
 
   createNote(input) {
@@ -50,14 +51,14 @@ export const notesEndpoints: NotesHono.NotesEndpoints = {
 
     notes.set(note.noteId, note);
 
-    return { status: 201 as const, body: note };
+    return { status: Notes.Status.Created, body: note };
   },
 
   deleteNote(input) {
     if (!notes.delete(input.path.noteId))
-      return { status: 404 as const, code: "api.not_found" as const };
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
 
-    return { status: 204 as const };
+    return { status: Notes.Status.NoContent };
   },
 };
 ```

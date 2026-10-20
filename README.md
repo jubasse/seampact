@@ -53,9 +53,10 @@ export class NotesController implements NotesNest.NotesEndpoints {
   getNote(@NotesNest.getNote.input() input: Notes.GetNoteInput) {
     const note = notes.get(input.path.noteId);
 
-    if (note === undefined) return { status: 404 as const, code: "api.not_found" as const };
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
 
-    return { status: 200 as const, body: note };
+    return { status: Notes.Status.Ok, body: note };
   }
 }
 ```

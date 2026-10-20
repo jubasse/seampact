@@ -1,12 +1,12 @@
 # 4. Write the handlers (NestJS)
 
-The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows, written `as const`. Create `src/notes-controller.ts`.
+The generated `NotesEndpoints` interface lists one method per operation. Each method returns the status and body the contract allows; `Notes.Status` and `Notes.ErrorCode` name them. Create `src/notes-controller.ts`.
 
 ```ts
 import { randomUUID } from "node:crypto";
 import { Controller } from "@nestjs/common";
 import * as NotesNest from "./__generated__/server/notes/index.js";
-import type * as Notes from "./__generated__/types/notes/index.js";
+import * as Notes from "./__generated__/types/notes/index.js";
 
 const notes = new Map<string, Notes.schemas.Note>();
 
@@ -14,16 +14,17 @@ const notes = new Map<string, Notes.schemas.Note>();
 export class NotesController implements NotesNest.NotesEndpoints {
   @NotesNest.listNotes()
   listNotes(@NotesNest.listNotes.input() input: Notes.ListNotesInput) {
-    return { status: 200 as const, body: { items: [...notes.values()] } };
+    return { status: Notes.Status.Ok, body: { items: [...notes.values()] } };
   }
 
   @NotesNest.getNote()
   getNote(@NotesNest.getNote.input() input: Notes.GetNoteInput) {
     const note = notes.get(input.path.noteId);
 
-    if (note === undefined) return { status: 404 as const, code: "api.not_found" as const };
+    if (note === undefined)
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
 
-    return { status: 200 as const, body: note };
+    return { status: Notes.Status.Ok, body: note };
   }
 
   @NotesNest.createNote()
@@ -32,15 +33,15 @@ export class NotesController implements NotesNest.NotesEndpoints {
 
     notes.set(note.noteId, note);
 
-    return { status: 201 as const, body: note };
+    return { status: Notes.Status.Created, body: note };
   }
 
   @NotesNest.deleteNote()
   deleteNote(@NotesNest.deleteNote.input() input: Notes.DeleteNoteInput) {
     if (!notes.delete(input.path.noteId))
-      return { status: 404 as const, code: "api.not_found" as const };
+      return { status: Notes.Status.NotFound, code: Notes.ErrorCode.ApiNotFound };
 
-    return { status: 204 as const };
+    return { status: Notes.Status.NoContent };
   }
 }
 ```
