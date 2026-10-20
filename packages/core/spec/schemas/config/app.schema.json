@@ -48,24 +48,13 @@
       "additionalProperties": false,
       "properties": {
         "openapi": {
-          "enum": [
-            "error",
-            "warning",
-            "disabled"
-          ]
+          "enum": ["error", "warning", "disabled"]
         },
         "generated": {
-          "enum": [
-            "error",
-            "warning",
-            "disabled"
-          ]
+          "enum": ["error", "warning", "disabled"]
         },
         "matrix": {
-          "enum": [
-            "error",
-            "warning"
-          ]
+          "enum": ["error", "warning"]
         }
       }
     },
@@ -88,18 +77,12 @@
       "additionalProperties": false,
       "properties": {
         "gate": {
-          "enum": [
-            "clients",
-            "both"
-          ]
+          "enum": ["clients", "both"]
         },
         "exempt": {
           "type": "array",
           "items": {
-            "enum": [
-              "experimental",
-              "sunsetPassed"
-            ]
+            "enum": ["experimental", "sunsetPassed"]
           },
           "uniqueItems": true
         }
@@ -116,9 +99,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "path"
-          ],
+          "required": ["path"],
           "properties": {
             "path": {
               "type": "string",
@@ -127,10 +108,7 @@
             "extensions": {
               "oneOf": [
                 {
-                  "enum": [
-                    "all",
-                    "none"
-                  ]
+                  "enum": ["all", "none"]
                 },
                 {
                   "type": "array",
@@ -143,25 +121,17 @@
               ]
             },
             "reasons": {
-              "enum": [
-                "include",
-                "omit"
-              ]
+              "enum": ["include", "omit"]
             },
             "inputSchemas": {
-              "enum": [
-                "shared",
-                "strict"
-              ]
+              "enum": ["shared", "strict"]
             },
             "servers": {
               "type": "array",
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "url"
-                ],
+                "required": ["url"],
                 "properties": {
                   "url": {
                     "type": "string",
@@ -186,9 +156,7 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "path"
-          ],
+          "required": ["path"],
           "properties": {
             "path": {
               "type": "string",
@@ -197,10 +165,7 @@
             "extensions": {
               "oneOf": [
                 {
-                  "enum": [
-                    "all",
-                    "none"
-                  ]
+                  "enum": ["all", "none"]
                 },
                 {
                   "type": "array",
@@ -213,25 +178,17 @@
               ]
             },
             "reasons": {
-              "enum": [
-                "include",
-                "omit"
-              ]
+              "enum": ["include", "omit"]
             },
             "inputSchemas": {
-              "enum": [
-                "shared",
-                "strict"
-              ]
+              "enum": ["shared", "strict"]
             },
             "servers": {
               "type": "array",
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": [
-                  "url"
-                ],
+                "required": ["url"],
                 "properties": {
                   "url": {
                     "type": "string",
@@ -248,9 +205,7 @@
         {
           "type": "object",
           "not": {
-            "required": [
-              "path"
-            ]
+            "required": ["path"]
           },
           "minProperties": 1,
           "propertyNames": {
@@ -265,21 +220,10 @@
     "frameworkRoute": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "path",
-        "reason"
-      ],
+      "required": ["path", "reason"],
       "properties": {
         "method": {
-          "enum": [
-            "GET",
-            "HEAD",
-            "POST",
-            "PUT",
-            "PATCH",
-            "DELETE",
-            "OPTIONS"
-          ]
+          "enum": ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
         },
         "path": {
           "type": "string",
@@ -311,9 +255,7 @@
         "release": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "url"
-          ],
+          "required": ["url"],
           "properties": {
             "url": {
               "type": "string",
@@ -324,10 +266,7 @@
         "git": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "url",
-            "tag"
-          ],
+          "required": ["url", "tag"],
           "properties": {
             "url": {
               "type": "string",
@@ -350,118 +289,77 @@
       },
       "oneOf": [
         {
-          "required": [
-            "path"
-          ],
+          "required": ["path"],
           "not": {
             "anyOf": [
               {
-                "required": [
-                  "package"
-                ]
+                "required": ["package"]
               },
               {
-                "required": [
-                  "version"
-                ]
+                "required": ["version"]
               },
               {
-                "required": [
-                  "release"
-                ]
+                "required": ["release"]
               },
               {
-                "required": [
-                  "git"
-                ]
+                "required": ["git"]
               },
               {
-                "required": [
-                  "integrity"
-                ]
+                "required": ["integrity"]
               }
             ]
           }
         },
         {
-          "required": [
-            "package",
-            "version"
-          ],
+          "required": ["package", "version"],
           "not": {
             "anyOf": [
               {
-                "required": [
-                  "path"
-                ]
+                "required": ["path"]
               },
               {
-                "required": [
-                  "release"
-                ]
+                "required": ["release"]
               },
               {
-                "required": [
-                  "git"
-                ]
+                "required": ["git"]
               }
             ]
           }
         },
         {
-          "required": [
-            "release"
-          ],
+          "required": ["release"],
           "not": {
             "anyOf": [
               {
-                "required": [
-                  "path"
-                ]
+                "required": ["path"]
               },
               {
-                "required": [
-                  "package"
-                ]
+                "required": ["package"]
               },
               {
-                "required": [
-                  "version"
-                ]
+                "required": ["version"]
               },
               {
-                "required": [
-                  "git"
-                ]
+                "required": ["git"]
               }
             ]
           }
         },
         {
-          "required": [
-            "git"
-          ],
+          "required": ["git"],
           "not": {
             "anyOf": [
               {
-                "required": [
-                  "path"
-                ]
+                "required": ["path"]
               },
               {
-                "required": [
-                  "package"
-                ]
+                "required": ["package"]
               },
               {
-                "required": [
-                  "version"
-                ]
+                "required": ["version"]
               },
               {
-                "required": [
-                  "release"
-                ]
+                "required": ["release"]
               }
             ]
           }
@@ -471,10 +369,7 @@
     "targetEntry": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "id",
-        "use"
-      ],
+      "required": ["id", "use"],
       "properties": {
         "id": {
           "type": "string",
@@ -559,11 +454,7 @@
                       "type": "boolean"
                     },
                     "hooks": {
-                      "enum": [
-                        "error",
-                        "warn",
-                        "off"
-                      ]
+                      "enum": ["error", "warn", "off"]
                     }
                   }
                 }
@@ -589,31 +480,20 @@
           }
         },
         "frameworkDocs": {
-          "enum": [
-            "keep",
-            "off"
-          ]
+          "enum": ["keep", "off"]
         }
       },
       "oneOf": [
         {
-          "required": [
-            "api"
-          ],
+          "required": ["api"],
           "not": {
-            "required": [
-              "apis"
-            ]
+            "required": ["apis"]
           }
         },
         {
-          "required": [
-            "apis"
-          ],
+          "required": ["apis"],
           "not": {
-            "required": [
-              "api"
-            ]
+            "required": ["api"]
           }
         }
       ]

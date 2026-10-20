@@ -4,9 +4,7 @@
   "title": "seampact root config",
   "type": "object",
   "additionalProperties": false,
-  "required": [
-    "apps"
-  ],
+  "required": ["apps"],
   "properties": {
     "apps": {
       "type": "array",
@@ -43,11 +41,7 @@
       "additionalProperties": false,
       "properties": {
         "openapi": {
-          "enum": [
-            "error",
-            "warning",
-            "disabled"
-          ]
+          "enum": ["error", "warning", "disabled"]
         }
       }
     }
@@ -56,9 +50,7 @@
     "mergedDocument": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "path"
-      ],
+      "required": ["path"],
       "properties": {
         "path": {
           "type": "string",
@@ -86,10 +78,7 @@
         "extensions": {
           "oneOf": [
             {
-              "enum": [
-                "all",
-                "none"
-              ]
+              "enum": ["all", "none"]
             },
             {
               "type": "array",
@@ -102,25 +91,17 @@
           ]
         },
         "reasons": {
-          "enum": [
-            "include",
-            "omit"
-          ]
+          "enum": ["include", "omit"]
         },
         "inputSchemas": {
-          "enum": [
-            "shared",
-            "strict"
-          ]
+          "enum": ["shared", "strict"]
         },
         "servers": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": [
-              "url"
-            ],
+            "required": ["url"],
             "properties": {
               "url": {
                 "type": "string",
@@ -154,9 +135,7 @@
         "release": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "url"
-          ],
+          "required": ["url"],
           "properties": {
             "url": {
               "type": "string",
@@ -167,10 +146,7 @@
         "git": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "url",
-            "tag"
-          ],
+          "required": ["url", "tag"],
           "properties": {
             "url": {
               "type": "string",
@@ -193,118 +169,77 @@
       },
       "oneOf": [
         {
-          "required": [
-            "path"
-          ],
+          "required": ["path"],
           "not": {
             "anyOf": [
               {
-                "required": [
-                  "package"
-                ]
+                "required": ["package"]
               },
               {
-                "required": [
-                  "version"
-                ]
+                "required": ["version"]
               },
               {
-                "required": [
-                  "release"
-                ]
+                "required": ["release"]
               },
               {
-                "required": [
-                  "git"
-                ]
+                "required": ["git"]
               },
               {
-                "required": [
-                  "integrity"
-                ]
+                "required": ["integrity"]
               }
             ]
           }
         },
         {
-          "required": [
-            "package",
-            "version"
-          ],
+          "required": ["package", "version"],
           "not": {
             "anyOf": [
               {
-                "required": [
-                  "path"
-                ]
+                "required": ["path"]
               },
               {
-                "required": [
-                  "release"
-                ]
+                "required": ["release"]
               },
               {
-                "required": [
-                  "git"
-                ]
+                "required": ["git"]
               }
             ]
           }
         },
         {
-          "required": [
-            "release"
-          ],
+          "required": ["release"],
           "not": {
             "anyOf": [
               {
-                "required": [
-                  "path"
-                ]
+                "required": ["path"]
               },
               {
-                "required": [
-                  "package"
-                ]
+                "required": ["package"]
               },
               {
-                "required": [
-                  "version"
-                ]
+                "required": ["version"]
               },
               {
-                "required": [
-                  "git"
-                ]
+                "required": ["git"]
               }
             ]
           }
         },
         {
-          "required": [
-            "git"
-          ],
+          "required": ["git"],
           "not": {
             "anyOf": [
               {
-                "required": [
-                  "path"
-                ]
+                "required": ["path"]
               },
               {
-                "required": [
-                  "package"
-                ]
+                "required": ["package"]
               },
               {
-                "required": [
-                  "version"
-                ]
+                "required": ["version"]
               },
               {
-                "required": [
-                  "release"
-                ]
+                "required": ["release"]
               }
             ]
           }
