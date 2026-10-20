@@ -105,6 +105,10 @@ app.useBodyParser("json", { limit: TasksNest.LARGEST_BODY_LIMIT, strict: false }
 app.useGlobalFilters(TasksNest.preRoutingFilter);
 ```
 
-To complete `@nestjs/swagger`, see [OpenAPI and docs](../configuration/openapi-and-docs.md).
+For `@nestjs/swagger`, write the document with one call. It adds the contract schemas and stops the app if one of your classes replaces one. The setup is in [OpenAPI and docs](../configuration/openapi-and-docs.md).
+
+```ts
+const document = TasksNest.createContractDocument(app, config, { autoTagControllers: false });
+```
 
 Next: [run it](../getting-started/generate-and-run.md#run-it).

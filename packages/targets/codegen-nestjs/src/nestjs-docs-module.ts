@@ -4,7 +4,8 @@ import type { ContractIR } from "@seampact/spec/ir";
 
 // The `nestjs-docs` module of one api: per operation the decorators that give `@nestjs/swagger` seampact's
 // operation object (ADR 0009 "Artefacts and the compatibility matrix"), and the components the app passes to
-// `createDocument`. Operation objects are copied from the api's OpenAPI document, never re-derived.
+// `createDocument`, checked in the document it returns. Operation objects are copied from the api's OpenAPI
+// document, never re-derived.
 
 const RESPONSES_MEMBER = "responses";
 const PARAMETERS_MEMBER = "parameters";
@@ -88,6 +89,7 @@ export function nestjsDocsModuleSource(
     "  type ApiParamOptions,",
     "  ApiResponse,",
     "  type ApiResponseOptions,",
+    "  SwaggerModule,",
     '} from "@nestjs/swagger";',
     'import { assertComponentsHeld, assertOpenApi31, type ComponentSections, mergeComponents } from "./native-docs/contract-document.js";',
     "",
@@ -149,6 +151,23 @@ export function nestjsDocsModuleSource(
     " */",
     "export function assertContractComponents(document: { components?: object }): void {",
     "  assertComponentsHeld(document, CONTRACT_COMPONENTS, API_ID);",
+    "}",
+    "",
+    "/**",
+    " * `SwaggerModule.createDocument` with the api's components added to the config and checked in the finished",
+    " * document: `withContractComponents` and `assertContractComponents` in one call. An app that serves several",
+    " * apis chains each api's `withContractComponents` and calls each `assertContractComponents` instead.",
+    " */",
+    "export function createContractDocument(",
+    "  app: Parameters<typeof SwaggerModule.createDocument>[0],",
+    "  config: Parameters<typeof SwaggerModule.createDocument>[1],",
+    "  options?: Parameters<typeof SwaggerModule.createDocument>[2],",
+    "): ReturnType<typeof SwaggerModule.createDocument> {",
+    "  const document = SwaggerModule.createDocument(app, withContractComponents(config), options);",
+    "",
+    "  assertContractComponents(document);",
+    "",
+    "  return document;",
     "}",
     "",
   ].join("\n");

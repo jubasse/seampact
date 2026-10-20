@@ -59,12 +59,9 @@ function shadowingController(schemaName) {
   return ShadowController;
 }
 
-/**
- * The framework's document of an app that serves the given apis, each `{ nest, docs }`: its `nestjs` module and its
- * `nestjs-docs` module. `openapi` is the version the app's config says;
- * `shadowSchemaName` adds a class of the app with that name, and each api's `assertContractComponents` runs on the result.
- */
-export async function nativeDocument(apis, openapi = "3.1.0", shadowSchemaName = undefined) {
+// An app that serves the given apis, each `{ nest, docs }`: its `nestjs` module and its `nestjs-docs` module;
+// `shadowSchemaName` adds a class of the app with that name. `write` makes the document, and the app closes after.
+async function withDocsApp(apis, shadowSchemaName, write) {
   class DocsModule {}
 
   Module({
@@ -76,18 +73,40 @@ export async function nativeDocument(apis, openapi = "3.1.0", shadowSchemaName =
   })(DocsModule);
 
   const app = await NestFactory.create(DocsModule, { logger: false });
-  const config = apis.reduce((current, { docs }) => docs.withContractComponents(current), {
-    ...new DocumentBuilder().setTitle("app").setVersion("1").build(),
-    openapi,
-  });
 
   try {
+    return write(app);
+  } finally {
+    await app.close();
+  }
+}
+
+function baseConfig(openapi) {
+  return { ...new DocumentBuilder().setTitle("app").setVersion("1").build(), openapi };
+}
+
+/**
+ * The framework's document of an app that serves the given apis: each api's `withContractComponents` adds its
+ * components to the config, and each api's `assertContractComponents` runs on the result. `openapi` is the version
+ * the app's config says.
+ */
+export async function nativeDocument(apis, openapi = "3.1.0", shadowSchemaName = undefined) {
+  return withDocsApp(apis, shadowSchemaName, (app) => {
+    const config = apis.reduce(
+      (current, { docs }) => docs.withContractComponents(current),
+      baseConfig(openapi),
+    );
     const document = SwaggerModule.createDocument(app, config, { autoTagControllers: false });
 
     for (const { docs } of apis) docs.assertContractComponents(document);
 
     return document;
-  } finally {
-    await app.close();
-  }
+  });
+}
+
+/** The framework's document of an app that serves one api, written by that api's `createContractDocument`. */
+export async function contractDocument(api, shadowSchemaName = undefined) {
+  return withDocsApp([api], shadowSchemaName, (app) =>
+    api.docs.createContractDocument(app, baseConfig("3.1.0"), { autoTagControllers: false }),
+  );
 }
