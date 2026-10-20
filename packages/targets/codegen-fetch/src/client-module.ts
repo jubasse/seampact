@@ -89,6 +89,7 @@ const RUNTIME_TYPES: readonly string[] = [
   "ErrorResult",
   "NotModifiedResult",
   "OperationPlan",
+  "PagedOutput",
   "ReplayFlag",
   "SuccessResult",
   "TimedCallArguments",
@@ -132,10 +133,30 @@ function escapeJsdoc(text: string): string {
 function successType(operation: ClientOperation, typeOf: (exportRef: ExportRef) => string): string {
   const { plan } = operation.planned;
   const extra = plan.idempotency === undefined ? "{}" : "ReplayFlag";
-  const success = `SuccessResult<${typeOf(operation.types.output)}, ${extra}>`;
+  const success = `SuccessResult<${outputType(operation, typeOf)}, ${extra}>`;
 
   return plan.notModified ? `${success} | NotModifiedResult` : success;
 }
+
+// A page's handler output, its body replaced by the items and the facts the client reads.
+function outputType(operation: ClientOperation, typeOf: (exportRef: ExportRef) => string): string {
+  const output = typeOf(operation.types.output);
+  const pages = operation.planned.plan.successes.flatMap((success) =>
+    success.shape === "page" ? [success] : [],
+  );
+  const [firstPage] = pages;
+
+  if (firstPage === undefined) return output;
+
+  const statuses = pages.map((page) => String(page.status)).join(" | ");
+  const facts = firstPage.facts.map(
+    (fact) => `${propertyKey(fact.role)}${fact.required ? "" : "?"}: ${FACT_TYPES[fact.value]};`,
+  );
+
+  return `PagedOutput<${output}, ${statuses}, {\n${facts.join("\n")}\n}>`;
+}
+
+const FACT_TYPES = { number: "number", text: "string", boolean: "boolean" } as const;
 
 function argumentsType(planned: PlannedOperation, inputType: string): string {
   const filled = planned.filledHeaderKeys.map((key) => JSON.stringify(key)).join(" | ");

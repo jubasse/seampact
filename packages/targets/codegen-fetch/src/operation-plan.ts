@@ -13,8 +13,9 @@ import {
   type OperationInput,
   type Param,
   type Response,
+  type WireFormat,
 } from "@seampact/spec/ir";
-import { cursorParamOf } from "./wire-format.js";
+import { type PageFact, pageReaderOf, payloadPathOf } from "./success-reader.js";
 
 // What the generated client tells the runtime about one operation; the runtime's `OperationPlan` type checks the
 // generated value.
@@ -36,9 +37,14 @@ const PLANNED_QUERY_WIRES = ["text", "number", "list"] as const;
 
 type QueryWireKind = (typeof PLANNED_QUERY_WIRES)[number];
 
-type SuccessPlan =
-  | { status: number; shape: "empty" | "item" | "table" | "list" }
-  | { status: number; shape: "page"; cursorParam: string };
+const PAYLOAD_SHAPES = ["item", "table", "list"] as const;
+
+type PayloadShape = (typeof PAYLOAD_SHAPES)[number];
+
+export type SuccessPlan =
+  | { status: number; shape: "empty" }
+  | { status: number; shape: PayloadShape; payload: string[] }
+  | { status: number; shape: "page"; items: string[]; facts: PageFact[] };
 
 // The headers the client fills itself, by request key, so the method type makes them optional.
 export interface PlannedOperation {
@@ -55,13 +61,14 @@ const NOT_GENERATED_MEDIA: readonly string[] = [
 ];
 const SIMPLE_TYPE_KINDS: readonly string[] = ["scalar", "enum"];
 const ETAG_DERIVATION = "cache.etag";
-const LINK_HEADER = "link";
 const ETAG_HEADER = "etag";
 const NOT_MODIFIED = 304;
 const FORM_STYLE = "form";
 const KNOWN_QUERY_STYLES: readonly string[] = ["form", "deepObject"];
 const NOT_GENERATED_QUERY_WIRES: readonly string[] = ["boolean", "object"];
 const NOT_GENERATED_SHAPES: readonly string[] = ["binary", "redirect"];
+const PAGING_DERIVATION = "paging.params";
+const KNOWN_POSITIONS: readonly string[] = ["cursor", "page", "offset", "since"];
 
 // The plan of one operation, every form the client cannot send or read refused by name into `refusals`.
 export function planOperation(
@@ -317,6 +324,7 @@ function successPlans(
   });
 }
 
+// The format's success headers carry no paging role (ADR 0002 section 13): they reach the caller through `headers`.
 function successPlan(
   response: Response,
   operation: Operation,
@@ -325,51 +333,60 @@ function successPlan(
   refusals: Refusal[],
 ): SuccessPlan[] {
   const { status, shape } = response;
+  // An undeclared format is refused once for the api, in `generate`.
+  const format = Object.hasOwn(ir.formats, operation.format)
+    ? ir.formats[operation.format]
+    : undefined;
 
-  switch (shape) {
-    case "empty":
-      return [{ status, shape: "empty" }];
-    case "item":
-      refuseNonJsonBody(response, location, refusals);
+  if (shape === "empty") return [{ status, shape: "empty" }];
 
-      return [{ status, shape: "item" }];
-    case "table":
-      refuseNonJsonBody(response, location, refusals);
+  if (isPayloadShape(shape)) {
+    refuseNonJsonBody(response, location, refusals);
 
-      return [{ status, shape: "table" }];
-    case "list":
-      refuseNonJsonBody(response, location, refusals);
+    if (format === undefined) return [];
 
-      return [{ status, shape: "list" }];
-    case "page":
-      refuseNonJsonBody(response, location, refusals);
+    const formatShapeLocation = below({ member: "" }, "formats", format.id, "success", shape);
+    const payload = payloadPathOf(
+      format.success[shape].body,
+      below(formatShapeLocation, "body"),
+      refusals,
+    );
 
-      return pagePlan(response, operation, ir, location, refusals);
-    default:
-      refusals.push(
-        NOT_GENERATED_SHAPES.includes(shape)
-          ? refuseNotGeneratedYet(
-              "response.shape",
-              `A '${shape}' response`,
-              below(location, "shape"),
-            )
-          : refuseUnknownValueAt(below(location, "shape"), shape),
-      );
-
-      return [];
+    return payload === undefined ? [] : [{ status, shape, payload }];
   }
+
+  if (shape === "page") {
+    refuseNonJsonBody(response, location, refusals);
+
+    return format === undefined ? [] : pagePlan(response, operation, ir, format, location, refusals);
+  }
+
+  refusals.push(
+    NOT_GENERATED_SHAPES.includes(shape)
+      ? refuseNotGeneratedYet("response.shape", `A '${shape}' response`, below(location, "shape"))
+      : refuseUnknownValueAt(below(location, "shape"), shape),
+  );
+
+  return [];
+}
+
+function isPayloadShape(shape: string): shape is PayloadShape {
+  return PAYLOAD_SHAPES.some((payloadShape) => payloadShape === shape);
 }
 
 function pagePlan(
   response: Response,
   operation: Operation,
   ir: ContractIR,
+  format: WireFormat,
   location: IrLocation,
   refusals: Refusal[],
 ): SuccessPlan[] {
   const styleId = operation.paging?.style;
+  const style =
+    styleId !== undefined && Object.hasOwn(ir.pagings, styleId) ? ir.pagings[styleId] : undefined;
 
-  if (styleId === undefined || !Object.hasOwn(ir.pagings, styleId)) {
+  if (style === undefined) {
     refusals.push(
       refuseInconsistentIr(
         "response.page.style.missing",
@@ -381,19 +398,17 @@ function pagePlan(
     return [];
   }
 
-  const style = ir.pagings[styleId];
-
-  if (style === undefined) return [];
-
-  const cursor = cursorParamOf(style);
-
-  if ("refusals" in cursor) {
-    refusals.push(...cursor.refusals);
-
-    return [];
+  if (!KNOWN_POSITIONS.includes(style.position)) {
+    refusals.push(
+      refuseUnknownValueAt(below({ member: "" }, "pagings", style.id, "position"), style.position),
+    );
   }
 
-  return [{ status: response.status, shape: "page", cursorParam: cursor.cursorParam }];
+  const reader = pageReaderOf(style, format, refusals);
+
+  if (reader === undefined) return [];
+
+  return [{ status: response.status, shape: "page", items: reader.items, facts: reader.facts }];
 }
 
 function refuseNonJsonBody(response: Response, location: IrLocation, refusals: Refusal[]): void {
@@ -408,7 +423,7 @@ function refuseNonJsonBody(response: Response, location: IrLocation, refusals: R
   );
 }
 
-// The client reads `Link` on a page, and leaves `ETag` and the replay header to the caller through `headers`;
+// The client reads the headers of a page's paging style (`Link` included) through the page plan, and leaves `ETag` and the replay header to the caller through `headers`;
 // typed response headers wait.
 function refuseResponseHeaders(
   response: Response,
@@ -424,7 +439,7 @@ function refuseResponseHeaders(
   response.headers.forEach((header, index) => {
     const name = header.name.toLowerCase();
     const isRead =
-      (name === LINK_HEADER && response.shape === "page") ||
+      (response.shape === "page" && header.derivedFrom?.derivation === PAGING_DERIVATION) ||
       (name === ETAG_HEADER && header.derivedFrom?.derivation === ETAG_DERIVATION) ||
       name === replayHeader;
 
