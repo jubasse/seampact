@@ -101,19 +101,23 @@ interface PlannedApp {
   plan: AppPlan;
 }
 
-// Every app planned, the problems of every app reported together.
+// Every app planned, the problems of every app reported together. An app refused with no problem (its compile
+// diagnostics are already printed) still refuses the run.
 async function planEachApp(apps: readonly RunApp[], io: CliIo): Promise<Step<PlannedApp[]>> {
   const planned: PlannedApp[] = [];
   const problems: CliProblem[] = [];
+  let anyRefused = false;
 
   for (const app of apps) {
     const plan = await planApp(app.config, io);
 
-    if (plan.status === "refused") problems.push(...scoped(app, plan.problems));
-    else planned.push({ app, plan: plan.value });
+    if (plan.status === "refused") {
+      anyRefused = true;
+      problems.push(...scoped(app, plan.problems));
+    } else planned.push({ app, plan: plan.value });
   }
 
-  return problems.length > 0 ? { status: "refused", problems } : { status: "done", value: planned };
+  return anyRefused ? { status: "refused", problems } : { status: "done", value: planned };
 }
 
 function scoped(app: RunApp, problems: readonly CliProblem[]): CliProblem[] {
