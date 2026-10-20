@@ -29,7 +29,7 @@ All six packs load. Types, validators and a NestJS server were tried with each o
 |---|---|
 | `@seampact/pack-spring` | Yes. |
 | `@seampact/pack-crud-rights` | Yes, on routes with an identity. |
-| `@seampact/pack-laravel` | Loads; code generation planned. `format.success.envelope.unsupported`. |
+| `@seampact/pack-laravel` | The fetch client reads its wrapped bodies and pages. Types and servers planned: `paging.handlerResult.unsupported`, `format.success.envelope.unsupported`. |
 | `@seampact/pack-hal` | Loads; code generation planned. `format.success.envelope.unsupported`, `response.media.unsupported`. |
 | `@seampact/pack-jsonapi` | Loads; code generation planned. `format.success.envelope.unsupported`, `format.template.unsupported`. |
 | `@seampact/pack-api-platform` | Loads; code generation planned. `format.success.envelope.unsupported`, `format.template.unsupported`. |
