@@ -300,7 +300,11 @@ const ROW_CASES: RowCase[] = [
       position,
       expected,
       ...(nullableCase === "removed"
-        ? { base: (ir) => void (propertyOf(ir, schema, "title").nullable = true) }
+        ? {
+            base: (ir) => {
+              propertyOf(ir, schema, "title").nullable = true;
+            },
+          }
         : {}),
       after: (ir) => {
         propertyOf(ir, schema, "title").nullable = nullableCase === "added";
@@ -365,7 +369,9 @@ const ROW_CASES: RowCase[] = [
         case: "changed",
         position,
         expected: "CS",
-        base: (ir) => void (scalarOf(ir, schema, "effort").refinements.multipleOf = "0.2"),
+        base: (ir) => {
+          scalarOf(ir, schema, "effort").refinements.multipleOf = "0.2";
+        },
         after: (ir) => {
           scalarOf(ir, schema, "effort").refinements.multipleOf = "0.3";
         },
@@ -375,11 +381,9 @@ const ROW_CASES: RowCase[] = [
         case: "changed",
         position,
         expected: "CS",
-        base: (ir) =>
-          void (scalarOf(ir, schema, "title").refinements.pattern = {
-            source: "^a",
-            normalized: "^a",
-          }),
+        base: (ir) => {
+          scalarOf(ir, schema, "title").refinements.pattern = { source: "^a", normalized: "^a" };
+        },
         after: (ir) => {
           scalarOf(ir, schema, "title").refinements.pattern = { source: "^b", normalized: "^b" };
         },
@@ -521,7 +525,9 @@ const ROW_CASES: RowCase[] = [
     case: "int64Wire",
     position: "output",
     expected: "CS",
-    base: (ir) => void (scalarOf(ir, "Task", "version").format = "int64"),
+    base: (ir) => {
+      scalarOf(ir, "Task", "version").format = "int64";
+    },
     after: (ir) => {
       ir.api.wire.int64 = "number";
     },
@@ -560,7 +566,9 @@ const ROW_CASES: RowCase[] = [
     case: "changed",
     position: "input",
     expected: "C",
-    base: (ir) => void (propertyOf(ir, "CreateTask", "effort").default = 1),
+    base: (ir) => {
+      propertyOf(ir, "CreateTask", "effort").default = 1;
+    },
     after: (ir) => {
       propertyOf(ir, "CreateTask", "effort").default = 2;
     },
@@ -570,7 +578,9 @@ const ROW_CASES: RowCase[] = [
     case: "removed",
     position: "output",
     expected: "info",
-    base: (ir) => void (propertyOf(ir, "Task", "effort").default = 1),
+    base: (ir) => {
+      propertyOf(ir, "Task", "effort").default = 1;
+    },
     after: (ir) => {
       delete propertyOf(ir, "Task", "effort").default;
     },
@@ -713,7 +723,9 @@ const ROW_CASES: RowCase[] = [
     case: "lowered",
     position: "none",
     expected: "C",
-    base: (ir) => void (operationOf(ir, "getTask").maturity.level = "stable"),
+    base: (ir) => {
+      operationOf(ir, "getTask").maturity.level = "stable";
+    },
     after: (ir) => {
       operationOf(ir, "getTask").maturity.level = "provisional";
     },
@@ -815,7 +827,11 @@ const ROW_CASES: RowCase[] = [
       expected: "info",
       ...(beforePacks === undefined
         ? {}
-        : { base: (ir) => void (ir.packs = structuredClone([...beforePacks])) }),
+        : {
+            base: (ir) => {
+              ir.packs = structuredClone([...beforePacks]);
+            },
+          }),
       after: (ir) => {
         ir.packs = structuredClone([...afterPacks]);
       },
