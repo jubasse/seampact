@@ -93,7 +93,8 @@ function targetsWith(bases: Record<string, string | readonly string[] | undefine
   for (const [overlay, base] of Object.entries(bases)) {
     mkdirSync(join(root, overlay));
 
-    if (base !== undefined) writeFileSync(join(root, overlay, "overlay.base"), `${[base].flat().join("\n")}\n`);
+    if (base !== undefined)
+      writeFileSync(join(root, overlay, "overlay.base"), `${[base].flat().join("\n")}\n`);
   }
 
   return root;
