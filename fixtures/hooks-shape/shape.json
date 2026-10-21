@@ -1,0 +1,307 @@
+{
+  "description": "The shape every hooks package shares (@seampact/hooks, io.github.jubasse:seampact-hooks, seampact/hooks): each package's test checks its types against this file. A type or member without `languages` exists in all three; `discriminant` is a literal member npm carries and Java and PHP express as the type itself.",
+  "languages": ["npm", "java", "php"],
+  "types": [
+    { "name": "Awaitable", "kind": "alias", "languages": ["npm"] },
+    {
+      "name": "OperationRef",
+      "kind": "record",
+      "discriminant": { "member": "kind", "value": "httpOperation" },
+      "members": [{ "name": "api" }, { "name": "id" }]
+    },
+    {
+      "name": "RequestView",
+      "kind": "record",
+      "members": [
+        { "name": "method" },
+        { "name": "path" },
+        { "name": "headers" },
+        { "name": "clientAddress", "optional": true }
+      ]
+    },
+    { "name": "ExtensionMetadata", "kind": "alias", "languages": ["npm"] },
+    {
+      "name": "ErrorCodeWithParams",
+      "kind": "interface",
+      "members": [{ "name": "code" }, { "name": "params", "optional": true }]
+    },
+    {
+      "name": "SignatureEncoding",
+      "kind": "enum",
+      "languages": ["java", "php"],
+      "values": ["hex", "base64"]
+    },
+    {
+      "name": "SignatureTemplate",
+      "kind": "record",
+      "members": [
+        { "name": "algorithm" },
+        { "name": "payload" },
+        { "name": "encoding", "enum": "SignatureEncoding" },
+        { "name": "toleranceMs", "optional": true }
+      ]
+    },
+    {
+      "name": "SignedTemplateRequest",
+      "kind": "record",
+      "discriminant": { "member": "verify", "value": "template" },
+      "members": [
+        { "name": "rawBody" },
+        { "name": "timestamp", "optional": true },
+        { "name": "candidateSignatures" },
+        { "name": "keyId" },
+        { "name": "template" }
+      ]
+    },
+    {
+      "name": "SignedApplicationRequest",
+      "kind": "record",
+      "discriminant": { "member": "verify", "value": "application" },
+      "members": [
+        { "name": "rawBody" },
+        { "name": "signatureHeader" },
+        { "name": "headers" },
+        { "name": "keyId", "optional": true }
+      ]
+    },
+    {
+      "name": "SignedRequest",
+      "kind": "union",
+      "languages": ["java", "php"],
+      "arms": [{ "type": "SignedTemplateRequest" }, { "type": "SignedApplicationRequest" }]
+    },
+    {
+      "name": "AuthenticateRequest",
+      "kind": "interface",
+      "members": [
+        { "name": "identity" },
+        { "name": "credentials" },
+        { "name": "csrfToken", "optional": true },
+        { "name": "signature", "optional": true },
+        { "name": "request" },
+        { "name": "operation" },
+        { "name": "extensions" }
+      ]
+    },
+    {
+      "name": "AuthenticateResult",
+      "kind": "union",
+      "arms": [
+        { "name": "Authenticated", "members": [{ "name": "principal" }] },
+        { "name": "Denied", "members": [{ "name": "deny" }] }
+      ]
+    },
+    {
+      "name": "AuthenticateHook",
+      "kind": "hook",
+      "methods": [
+        { "name": "authenticate", "parameters": ["request"], "returns": "AuthenticateResult" }
+      ]
+    },
+    {
+      "name": "Decision",
+      "kind": "union",
+      "arms": [
+        { "name": "Allowed", "discriminant": { "member": "allow", "value": true }, "members": [] },
+        { "name": "Denied", "members": [{ "name": "deny" }] }
+      ]
+    },
+    {
+      "name": "SubjectRef",
+      "kind": "record",
+      "members": [{ "name": "type" }, { "name": "id" }, { "name": "record", "optional": true }]
+    },
+    {
+      "name": "FieldDirection",
+      "kind": "enum",
+      "languages": ["java", "php"],
+      "values": ["input", "output"]
+    },
+    {
+      "name": "Purpose",
+      "kind": "union",
+      "arms": [
+        { "name": "Route", "discriminant": { "member": "kind", "value": "route" }, "members": [] },
+        {
+          "name": "Field",
+          "discriminant": { "member": "kind", "value": "field" },
+          "members": [{ "name": "pointer" }, { "name": "direction", "enum": "FieldDirection" }]
+        },
+        {
+          "name": "SortKey",
+          "discriminant": { "member": "kind", "value": "sortKey" },
+          "members": [{ "name": "key" }]
+        }
+      ]
+    },
+    {
+      "name": "ThrottleBucket",
+      "kind": "record",
+      "members": [
+        { "name": "id" },
+        { "name": "key" },
+        { "name": "values" },
+        { "name": "limit", "optional": true },
+        { "name": "windowMs", "optional": true }
+      ]
+    },
+    {
+      "name": "RequirementKind",
+      "kind": "enum",
+      "languages": ["java", "php"],
+      "values": ["right", "rule"]
+    },
+    {
+      "name": "RequirementRequest",
+      "kind": "interface",
+      "members": [
+        { "name": "kind", "enum": "RequirementKind" },
+        { "name": "name" },
+        { "name": "params", "optional": true },
+        { "name": "principal", "nullable": true },
+        { "name": "subject", "optional": true },
+        { "name": "scopes" },
+        { "name": "proof", "optional": true },
+        { "name": "bucket", "optional": true },
+        { "name": "purpose" },
+        { "name": "operation" },
+        { "name": "request" },
+        { "name": "extensions" },
+        { "name": "deniableCodes", "optional": true, "languages": ["npm"] }
+      ]
+    },
+    {
+      "name": "RequirementRequest.Extensions",
+      "kind": "record",
+      "members": [{ "name": "requirement" }, { "name": "operation" }]
+    },
+    { "name": "DeniableCodes", "kind": "alias", "languages": ["npm"] },
+    {
+      "name": "DecideHook",
+      "kind": "hook",
+      "methods": [{ "name": "decide", "parameters": ["request"], "returns": "Decision" }]
+    },
+    {
+      "name": "ResolvedScope",
+      "kind": "record",
+      "members": [{ "name": "scope" }, { "name": "id" }, { "name": "value", "optional": true }]
+    },
+    {
+      "name": "ScopeIdSource",
+      "kind": "union",
+      "arms": [
+        {
+          "name": "Declared",
+          "discriminant": { "member": "resolver", "value": "declared" },
+          "members": [{ "name": "id" }]
+        },
+        {
+          "name": "Custom",
+          "discriminant": { "member": "resolver", "value": "custom" },
+          "members": [{ "name": "request" }]
+        }
+      ]
+    },
+    {
+      "name": "ResolveScopeRequest",
+      "kind": "interface",
+      "members": [
+        { "name": "scope" },
+        { "name": "source" },
+        { "name": "principal", "nullable": true },
+        { "name": "outerScopes" },
+        { "name": "extensions" }
+      ]
+    },
+    {
+      "name": "ResolveScopeRequest.Extensions",
+      "kind": "record",
+      "members": [{ "name": "scope" }, { "name": "operation" }]
+    },
+    {
+      "name": "ScopeResolution",
+      "kind": "union",
+      "arms": [
+        { "name": "Resolved", "members": [{ "name": "resolved" }] },
+        { "name": "Denied", "members": [{ "name": "deny" }] }
+      ]
+    },
+    {
+      "name": "ResolveScopeHook",
+      "kind": "hook",
+      "methods": [
+        { "name": "resolveScope", "parameters": ["request"], "returns": "ScopeResolution" }
+      ]
+    },
+    {
+      "name": "IdempotencyClaim",
+      "kind": "record",
+      "members": [
+        { "name": "key" },
+        { "name": "fingerprint" },
+        { "name": "lifetimeMs" },
+        { "name": "operation" }
+      ]
+    },
+    {
+      "name": "StoredResponse",
+      "kind": "record",
+      "members": [{ "name": "status" }, { "name": "headers" }, { "name": "body" }]
+    },
+    {
+      "name": "StoredResponse.Header",
+      "kind": "record",
+      "languages": ["java", "php"],
+      "members": [{ "name": "name" }, { "name": "value" }]
+    },
+    {
+      "name": "IdempotencyBegin",
+      "kind": "union",
+      "arms": [
+        {
+          "name": "Started",
+          "discriminant": { "member": "outcome", "value": "started" },
+          "members": []
+        },
+        {
+          "name": "Running",
+          "discriminant": { "member": "outcome", "value": "running" },
+          "members": []
+        },
+        {
+          "name": "Mismatch",
+          "discriminant": { "member": "outcome", "value": "mismatch" },
+          "members": []
+        },
+        {
+          "name": "Replay",
+          "discriminant": { "member": "outcome", "value": "replay" },
+          "members": [{ "name": "response" }]
+        }
+      ]
+    },
+    {
+      "name": "IdempotencyStore",
+      "kind": "hook",
+      "methods": [
+        { "name": "begin", "parameters": ["claim"], "returns": "IdempotencyBegin" },
+        { "name": "complete", "parameters": ["key", "response"], "returns": "void" },
+        { "name": "abandon", "parameters": ["key"], "returns": "void" }
+      ]
+    },
+    {
+      "name": "Field",
+      "kind": "class",
+      "languages": ["java", "php"],
+      "methods": [
+        { "name": "absent", "parameters": [], "static": true },
+        { "name": "ofNull", "parameters": [], "static": true },
+        { "name": "of", "parameters": ["value"], "static": true },
+        { "name": "isAbsent", "parameters": [] },
+        { "name": "isNull", "parameters": [] },
+        { "name": "isPresent", "parameters": [] },
+        { "name": "value", "parameters": [] }
+      ]
+    }
+  ]
+}
