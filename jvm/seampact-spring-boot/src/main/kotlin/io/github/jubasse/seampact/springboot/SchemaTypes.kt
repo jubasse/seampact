@@ -6,6 +6,7 @@ import com.palantir.javapoet.FieldSpec
 import com.palantir.javapoet.MethodSpec
 import com.palantir.javapoet.TypeSpec
 import io.github.jubasse.seampact.ir.model.Enum_
+import io.github.jubasse.seampact.ir.model.Name
 import io.github.jubasse.seampact.ir.model.ObjectSchema
 import io.github.jubasse.seampact.ir.naming.NameSource
 import io.github.jubasse.seampact.ir.naming.NamingRole
@@ -74,7 +75,7 @@ internal fun redactionType(layout: JavaLayout): TypeSpec = TypeSpec.classBuilder
 internal class MemberNames(private val owner: IrPlace, private val refusals: Refusals) {
     private val claimed = HashSet<String>()
 
-    fun claim(wireName: String, codeName: io.github.jubasse.seampact.ir.model.Name?, at: IrPlace): String? {
+    fun claim(wireName: String, codeName: Name?, at: IrPlace): String? {
         val name = memberIdentifier(wireName, codeName)
         if (name == null) {
             refusals.inconsistent("member.no-segment", "The name '$wireName' yields no Java member name", at)

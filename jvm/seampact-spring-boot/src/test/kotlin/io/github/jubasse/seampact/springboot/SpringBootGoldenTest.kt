@@ -1,6 +1,7 @@
 package io.github.jubasse.seampact.springboot
 
 import io.github.jubasse.seampact.ir.model.ContractIR
+import io.github.jubasse.seampact.ir.model.ObjectSchema
 import io.github.jubasse.seampact.ir.read.IrReader
 import io.github.jubasse.seampact.ir.read.IrSupport
 import java.nio.file.Files
@@ -88,9 +89,9 @@ class SpringBootGoldenTest {
     fun refusesTwoTypesOfOnePackageTakingOneName() {
         val api = apis.first()
         val ir = coreView(api)
-        val task = ir.schemas.getValue("Task")
-        val channel = ir.schemas.getValue("Channel") as io.github.jubasse.seampact.ir.model.ObjectSchema
-        val collidingIr = ir.copy(schemas = ir.schemas + ("Channel" to channel.copy(name = (task as io.github.jubasse.seampact.ir.model.ObjectSchema).name)))
+        val task = ir.schemas.getValue("Task") as ObjectSchema
+        val channel = ir.schemas.getValue("Channel") as ObjectSchema
+        val collidingIr = ir.copy(schemas = ir.schemas + ("Channel" to channel.copy(name = task.name)))
 
         val refused = assertFailsWith<SpringBootRefusedException> { SpringBootTarget.generate(collidingIr, entry(api.packageName)) }
 
