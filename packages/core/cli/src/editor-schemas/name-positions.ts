@@ -2,7 +2,7 @@ import type { AuthoringFile } from "@seampact/spec/authoring";
 
 // The positions of the authoring schemas that name a declaration (grammar section 3): each one gets the
 // workspace's names of its catalogue in the editor schemas. Every other position keeps checking keywords only:
-// rule, bucket, scheme, scope, nature, format, upstream, successor, an error family and a role's bound code.
+// rule, bucket, scheme, scope, nature, format, upstream, successor, an error family.
 
 /** The catalogues whose names the editor schemas list. */
 export type EditorCatalogue =
@@ -112,6 +112,8 @@ export const NAME_POSITIONS: readonly NamePosition[] = [
   ...LISTING_CATALOGUES.map((file) => errorCodes(file, "/$defs/entry/properties/errors")),
   errorCode("identities", "/$defs/headerUse/properties/stale"),
   errorCode("node", "/$defs/examples/additionalProperties/properties/error"),
+  errorCode("conventions", "/$defs/roleBinding/then"),
+  errorCode("conventions", "/$defs/roleBinding/else/then/properties/code"),
   errorCodes("pack", "/$defs/entry/properties/declareRight/properties/errors"),
   errorCodes("pack", "/$defs/entry/properties/attachErrors"),
 

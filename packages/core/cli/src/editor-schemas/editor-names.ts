@@ -65,7 +65,16 @@ function declaredSentence(sites: readonly EditorDeclaration[]): string {
     (left, right) => compareText(left.file, right.file) || left.line - right.line,
   );
 
-  return `Declared in ${ordered.map((site) => `${site.file} line ${site.line}`).join("; ")}.`;
+  return `Declared in ${ordered.map(siteDescription).join("; ")}.`;
+}
+
+const PACK_FILE = /(?:^|\/)node_modules\/((?:@[^/]+\/)?[^/]+)\//;
+
+// A pack's file path depends on where node_modules is installed: name the pack instead.
+function siteDescription(site: EditorDeclaration): string {
+  const pack = PACK_FILE.exec(site.file)?.[1];
+
+  return pack === undefined ? `${site.file} line ${site.line}` : `the pack ${pack}`;
 }
 
 const EDITOR_CATALOGUES: ReadonlySet<string> = new Set<EditorCatalogue>([

@@ -1,4 +1,11 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { AUTHORING_FILES, authoringSchemaFileName } from "@seampact/spec/authoring";
 import { Ajv2020 } from "ajv/dist/2020.js";
@@ -11,7 +18,9 @@ import {
   trackTemporaryDirectory,
 } from "../commands/fake-app.test-support.js";
 import { runCli } from "../run-cli.js";
+import { editorNames } from "./editor-names.js";
 import { DEFAULT_EDITOR_SCHEMAS_DIRECTORY } from "./index.js";
+import { editorSchemaFiles } from "./specialise.js";
 
 afterEach(removeTemporaryDirectories);
 
@@ -132,4 +141,66 @@ test("a compile error writes no editor schema", async () => {
 
   expect(result.exitCode).toBe(EXIT_REFUSED);
   expect(existsSync(join(app, "a", DEFAULT_EDITOR_SCHEMAS_DIRECTORY))).toBe(false);
+});
+
+test("a symlinked schema directory is refused and nothing is written outside the root, the IR included", async () => {
+  const app = makeReferenceApp();
+  const outside = join(app, "outside");
+
+  mkdirSync(outside);
+  symlinkSync(outside, join(app, "a", ".seampact"));
+  const result = await run(app, ["compile", "--editor-schemas", "--out", "ir"]);
+
+  expect(result.exitCode).toBe(EXIT_REFUSED);
+  expect(result.err).toContain("compile.editor-schemas.outside");
+  expect(readdirSync(outside)).toEqual([]);
+  expect(existsSync(join(app, "ir"))).toBe(false);
+});
+
+test("a symlinked schema file is refused and its target is left alone", async () => {
+  const app = makeReferenceApp();
+  const target = join(app, "precious.txt");
+  const directory = join(app, "a", DEFAULT_EDITOR_SCHEMAS_DIRECTORY);
+
+  writeFileSync(target, "keep");
+  mkdirSync(directory, { recursive: true });
+  symlinkSync(target, join(directory, "node.schema.json"));
+  const result = await run(app, ["compile", "--editor-schemas"]);
+
+  expect(result.exitCode).toBe(EXIT_REFUSED);
+  expect(result.err).toContain("compile.editor-schemas.outside");
+  expect(readFileSync(target, "utf8")).toBe("keep");
+});
+
+test("a role's bound code is a name position, listing the declared and core codes", async () => {
+  const app = makeReferenceApp();
+  const directory = join(app, "a", DEFAULT_EDITOR_SCHEMAS_DIRECTORY);
+
+  await run(app, ["compile", "--editor-schemas"]);
+  const conventions = JSON.parse(readSchemas(directory).get("conventions.schema.json") ?? "{}");
+  const binding = conventions.$defs.roleBinding;
+
+  expect(binding.then.enum).toContain("api.internal");
+  expect(binding.else.then.properties.code.enum).toContain("api.internal");
+});
+
+test("an empty catalogue leaves its position keyword-only, not an empty enum", () => {
+  const files = editorSchemaFiles(new Map());
+
+  for (const file of files) expect(file.text).not.toContain('"enum": []');
+});
+
+test("a pack's names are described by the pack, not by its install path", () => {
+  const names = editorNames([
+    {
+      catalogue: "rights",
+      name: "page.read",
+      file: "../../node_modules/@seampact/pack-api-platform/pack.yaml",
+      line: 4,
+    },
+  ]);
+
+  expect(names.get("rights")?.get("page.read")).toBe(
+    "Declared in the pack @seampact/pack-api-platform.",
+  );
 });

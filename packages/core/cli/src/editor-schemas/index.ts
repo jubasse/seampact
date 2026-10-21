@@ -3,7 +3,8 @@
 export { type EditorDeclaration, editorDeclarations } from "./editor-names.js";
 export {
   DEFAULT_EDITOR_SCHEMAS_DIRECTORY,
-  type EditorSchemasOutcome,
+  type EditorSchemasPlan,
   type EditorSchemasSource,
+  planEditorSchemas,
   writeEditorSchemas,
 } from "./write-editor-schemas.js";

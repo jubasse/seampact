@@ -28,8 +28,9 @@ export interface CompiledApi {
   ir: ContractIR;
   // What `lint` reads besides the IR; absent for an api taken from a bundle, which no compiler ran on.
   lintInput?: { declared: readonly LintDeclared[]; locations: SourceMap["locations"] };
-  // What the api declares, located by the workspace's own file names; absent for an api taken from a bundle.
-  declarations?: readonly EditorDeclaration[];
+  // What the api declares, located by the workspace's own file names, read only when editor schemas are asked;
+  // absent for an api taken from a bundle.
+  editorDeclarations?: () => EditorDeclaration[];
 }
 
 export interface CompiledSources {
@@ -156,7 +157,7 @@ async function compileSource(name: string, directory: string, run: SourceRun): P
         declared: api.declared ?? [],
         locations: labelledLocations(api.locations, label),
       },
-      declarations: editorDeclarations(api),
+      editorDeclarations: () => editorDeclarations(api),
     });
   }
 }

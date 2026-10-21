@@ -4,7 +4,11 @@ import { finalizeSerializeJson, loadFsReader } from "@seampact/compiler";
 import { type CliIo, EXIT_REFUSED, EXIT_SUCCESS, printProblems } from "../cli-io.js";
 import type { CliProblem } from "../cli-problem.js";
 import { type LoadedAppConfig, openApiApiNames, readAppConfig } from "../config/index.js";
-import { writeEditorSchemas } from "../editor-schemas/index.js";
+import {
+  type EditorSchemasPlan,
+  planEditorSchemas,
+  writeEditorSchemas,
+} from "../editor-schemas/index.js";
 import { addQualifyFix, entryApiRefs, usedSources } from "./api-refs.js";
 import type { CompiledApi } from "./compile-sources.js";
 import { compileSources } from "./compile-sources.js";
@@ -54,18 +58,25 @@ export async function compileCommand(
     return EXIT_SUCCESS;
   }
 
-  if (outputs.irOutDir !== undefined) {
-    const collisions = sameNameProblems(compiled.apis);
+  const collisions = outputs.irOutDir === undefined ? [] : sameNameProblems(compiled.apis);
 
-    if (collisions.length > 0) return refuse(io, collisions);
+  if (collisions.length > 0) return refuse(io, collisions);
 
+  // Every refusal comes before the first write.
+  const planned =
+    outputs.editorSchemas === "write"
+      ? await planSourcesEditorSchemas(read.config, used.names, compiled.apis, io)
+      : { problems: [], plans: [] };
+
+  if (planned.problems.length > 0) return refuse(io, planned.problems);
+
+  if (outputs.irOutDir !== undefined)
     await writeIrFiles(compiled.apis, resolve(io.cwd, outputs.irOutDir), io);
-  }
 
-  if (outputs.editorSchemas === "write") {
-    const problems = await writeSourcesEditorSchemas(read.config, used.names, compiled.apis, io);
+  for (const { name, plan } of planned.plans) {
+    const fileCount = await writeEditorSchemas(plan);
 
-    if (problems.length > 0) return refuse(io, problems);
+    io.stdout(`Wrote ${fileCount} editor schema(s) of source '${name}' to ${plan.directory}.\n`);
   }
 
   return EXIT_SUCCESS;
@@ -85,14 +96,19 @@ async function writeIrFiles(
   io.stdout(`Wrote ${apis.length} IR file(s) to ${directory}.\n`);
 }
 
+interface PlannedEditorSchemas {
+  readonly problems: CliProblem[];
+  readonly plans: { readonly name: string; readonly plan: EditorSchemasPlan }[];
+}
+
 // Each `path` source gets the editor schemas of its workspace; a bundle source holds no file anyone edits.
-async function writeSourcesEditorSchemas(
+async function planSourcesEditorSchemas(
   config: Pick<LoadedAppConfig, "sources">,
   names: readonly string[],
   apis: readonly CompiledApi[],
   io: CliIo,
-): Promise<CliProblem[]> {
-  const problems: CliProblem[] = [];
+): Promise<PlannedEditorSchemas> {
+  const planned: PlannedEditorSchemas = { problems: [], plans: [] };
 
   for (const name of names) {
     const source = config.sources.get(name);
@@ -109,27 +125,21 @@ async function writeSourcesEditorSchemas(
     // compileSources refused a directory without an entry file already.
     if (entry === undefined) throw new Error(`the source ${name} has no entry file`);
 
-    const outcome = await writeEditorSchemas({
+    const outcome = await planEditorSchemas({
       name,
       directory: source.directory,
       entry,
       reader: (io.sourceReader ?? loadFsReader)(source.directory),
       declarations: apis
         .filter((api) => api.source === name)
-        .flatMap((api) => api.declarations ?? []),
+        .flatMap((api) => api.editorDeclarations?.() ?? []),
     });
 
-    if (outcome.status === "refused") {
-      problems.push(outcome.problem);
-      continue;
-    }
-
-    io.stdout(
-      `Wrote ${outcome.fileCount} editor schema(s) of source '${name}' to ${outcome.directory}.\n`,
-    );
+    if (outcome.status === "refused") planned.problems.push(outcome.problem);
+    else planned.plans.push({ name, plan: outcome.plan });
   }
 
-  return problems;
+  return planned;
 }
 
 // Two sources holding an api of the same name would write the same `<api>.ir.json`.

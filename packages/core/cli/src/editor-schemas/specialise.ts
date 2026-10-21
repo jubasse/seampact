@@ -67,6 +67,10 @@ function holdsName(node: JsonSchema, position: NamePosition): boolean {
 function specialise(node: JsonSchema, position: NamePosition, names: EditorNames): void {
   const declared = [...(names.get(position.catalogue) ?? new Map<string, string>())];
   const choices = [...declared, ...Object.entries(position.words ?? {})];
+
+  // An empty enum is refused by strict validators: the position keeps checking keywords only.
+  if (choices.length === 0) return;
+
   const named = {
     enum: choices.map(([name]) => name),
     enumDescriptions: choices.map(([, description]) => description),
