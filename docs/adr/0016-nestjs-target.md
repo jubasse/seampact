@@ -133,10 +133,11 @@ The module runs it in `onApplicationBootstrap`, before the app accepts a request
 - on a contract method, a NestJS decorator that writes after the boundary's reply (`Redirect`, `Render`, `Sse`) or a developer `Res`, `Response` or `Next` parameter, the `passthrough` cookie idiom included, all read through `Reflector`: NestJS would write again after the reply and raise `ERR_HTTP_HEADERS_SENT`;
 - a platform other than Express (`HttpAdapterHost`);
 - a contract method without its operation's input param, read through NestJS's route-argument metadata: no pipe would run steps 6 to 8;
-- a contract method whose guard list does not end with the seampact guard, once, naming the guards after it;
-- an app interceptor in effect on a contract route (global, controller or route) whose `trackBy` function, `@nestjs/cache-manager`'s API read without importing it, returns a key for a request of the route's method and path, or throws: a cache hit would answer without steps 6 to 8 and the idempotency claim for this caller (a request-scoped interceptor has no instance at boot and is not probed);
-- in the interceptor mode, a reply interceptor missing from the app's global interceptors (a lazily loaded module);
+- a contract method whose guard list does not end with the seampact guard (an empty list included), once, naming the guards after it;
+- an app interceptor in effect on a contract route (global, controller or route) whose `trackBy` function, `@nestjs/cache-manager`'s API read without importing it, returns a key for a request of the route's method and path, or throws: a cache hit would answer without steps 6 to 8 and the idempotency claim for this caller (a request-scoped interceptor has no instance at boot and is not probed, so the boot warns naming it);
 - `forRoot` options other than `logger`, or a `logger` without `warn` and `error` functions.
+
+A controller in a lazily loaded module is not checked at boot: NestJS runs no boot hook for it.
 
 It reads the app's global interceptors from NestJS's `ApplicationConfig`, a provider of every module, which lists those of `useGlobalInterceptors` as well as `APP_INTERCEPTOR` providers. The cache probe builds its execution context with NestJS's `ExecutionContextHost`, exported by `@nestjs/core/internal` only; a test of the target fails by name if a NestJS release moves it. It also warns, without stopping the boot: in the default reply mode, once per api naming the app's global interceptors and once per contract route naming its controller and route interceptors, since a value they map is ignored; in the interceptor mode, once naming each app global interceptor still before the reply interceptor after the module moved it first (one another module's `configure` puts in front later), with the fix.
 

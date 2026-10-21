@@ -10,15 +10,17 @@ import {
   Controller,
   Get,
   Inject,
+  Injectable,
   Module,
   Post,
+  Scope,
   SetMetadata,
   UseFilters,
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
 import { APP_INTERCEPTOR, ApplicationConfig, NestFactory } from "@nestjs/core";
-import { catchError, map, of, tap, throwError } from "rxjs";
+import { catchError, map, mergeMap, of, tap, throwError } from "rxjs";
 import * as TasksNest from "../generated/server/tasks/nestjs.js";
 
 export const ALLOWED_ORIGIN = "https://app.example";
@@ -203,6 +205,7 @@ class RecordingInterceptor {
         if (behaviour.failAfter) throw new Error("interceptor failure");
       }),
       map((value) => (behaviour.map === undefined ? value : behaviour.map(value))),
+      mergeMap((value) => (behaviour.emitTwice ? of(value, value) : of(value))),
       catchError((error) => {
         if (behaviour.record) calls.events.push(`interceptor error ${error.constructor.name}`);
 
@@ -435,10 +438,38 @@ export function bootWithCacheInterceptor(skipsContractRoutes) {
   return bootOnce(moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controller]));
 }
 
+/** Boots an app whose `health` route carries a request-scoped interceptor. */
+export function bootWithRequestScopedInterceptor() {
+  class ScopedInterceptor extends PassThroughInterceptor {}
+
+  Injectable({ scope: Scope.REQUEST })(ScopedInterceptor);
+
+  const controller = controllerOf({ health: [UseInterceptors(ScopedInterceptor)] });
+
+  return bootOnce(moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controller]));
+}
+
 /** Boots an app whose `health` method declares no input param. */
 export function bootWithoutInputParam() {
   return bootOnce(
     moduleOf([TasksNest.SeampactModule.forRoot(hooks)], [controllerOf({}, ["health"])]),
+  );
+}
+
+/** Boots an app with a module whose `configure`, after seampact's, empties the guards of `health`. */
+export function bootWithoutGuard() {
+  const controller = controllerOf();
+
+  class ClearGuardsModule {
+    configure() {
+      Reflect.defineMetadata("__guards__", [], controller.prototype.health);
+    }
+  }
+
+  Module({})(ClearGuardsModule);
+
+  return bootOnce(
+    moduleOf([TasksNest.SeampactModule.forRoot(hooks), ClearGuardsModule], [controller]),
   );
 }
 

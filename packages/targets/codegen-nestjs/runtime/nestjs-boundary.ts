@@ -50,7 +50,7 @@ import {
   Reflector,
 } from "@nestjs/core";
 import { ExecutionContextHost } from "@nestjs/core/internal";
-import { mergeMap, type Observable } from "rxjs";
+import { mergeMap, type Observable, takeLast } from "rxjs";
 import {
   type AccessGrant,
   authorizeRequest,
@@ -158,7 +158,10 @@ interface DiscoveredContractMethod {
   readonly method: object;
   readonly metadata: OperationMetadata;
   /** The interceptors the module of the controller instantiated, by the class a decorator bound. */
-  readonly injectables: ReadonlyMap<unknown, { readonly instance: unknown }>;
+  readonly injectables: ReadonlyMap<
+    unknown,
+    { readonly instance: unknown; isDependencyTreeStatic(): boolean }
+  >;
 }
 
 // NestJS's own metadata keys and route param types, read through `Reflector` (public decorators write them).
@@ -563,9 +566,11 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
 
       const response: ServerResponse = execution.switchToHttp().getResponse();
 
-      return next
-        .handle()
-        .pipe(mergeMap((value: unknown) => replyFromInterceptor(context, response, value)));
+      // NestJS replies with the last value a stream emits; the boundary checks and writes that one only.
+      return next.handle().pipe(
+        takeLast(1),
+        mergeMap((value: unknown) => replyFromInterceptor(context, response, value)),
+      );
     }
   }
 
@@ -723,17 +728,36 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     );
   }
 
-  function replyInterceptorProblems(config: ApplicationConfig): BootProblem[] {
-    if (options.reply !== INTERCEPTOR_REPLY) return [];
+  // A request-scoped interceptor has no instance at boot, so the cache probe cannot ask it for a key.
+  function warnUnprobedRequestScopedInterceptors(
+    methods: readonly DiscoveredContractMethod[],
+    config: ApplicationConfig,
+  ): void {
+    const names = new Set<string>(
+      config.getGlobalRequestInterceptors().map((wrapper) => String(wrapper.name)),
+    );
 
-    if (config.getGlobalInterceptors().includes(replyInterceptor)) return [];
+    for (const discovered of methods) {
+      for (const target of [discovered.prototype.constructor, discovered.method]) {
+        for (const binding of metadataList(INTERCEPTORS_METADATA, target)) {
+          if (isRequestScopedBinding(discovered, binding)) {
+            names.add(interceptorName(binding));
+          }
+        }
+      }
+    }
 
-    return [
-      {
-        problem: "the reply interceptor is not among the app's global interceptors",
-        fix: "import the api's SeampactModule.forRoot(...) in the app module, not in a lazily loaded module",
-      },
-    ];
+    if (names.size === 0) return;
+
+    runtimeLog.warn(
+      `seampact: the request-scoped interceptors ${[...names].join(", ")} on the api '${api.id}' cannot be checked at boot; one that answers from a cache would skip the contract's input checks and reply for its callers.`,
+    );
+  }
+
+  function isRequestScopedBinding(discovered: DiscoveredContractMethod, binding: unknown): boolean {
+    if (typeof binding !== "function") return false;
+
+    return discovered.injectables.get(binding)?.isDependencyTreeStatic() !== true;
   }
 
   // An interceptor that answers from a cache never calls the handler, so steps 6 to 8, the idempotency claim and
@@ -820,17 +844,29 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     const guards = metadataList(GUARDS_METADATA, method);
     const index = guards.indexOf(ContractGuard);
 
-    if (index === guards.length - 1 && guards.lastIndexOf(ContractGuard) === index) return [];
+    if (
+      index !== -1 &&
+      index === guards.length - 1 &&
+      guards.lastIndexOf(ContractGuard) === index
+    ) {
+      return [];
+    }
 
     const after = guards.slice(index + 1).filter((guard) => guard !== ContractGuard);
 
     return [
       {
         operation: metadata.id,
-        problem: `the seampact guard is not the last guard of ${name}()${after.length === 0 ? "" : `: ${after.map(interceptorName).join(", ")} run after it`}`,
+        problem: `the seampact guard is not the last guard of ${name}()${guardOrderDetail(index, after)}`,
         fix: "set the route's guards with decorators on the method, not by editing its guard metadata after the app starts",
       },
     ];
+  }
+
+  function guardOrderDetail(index: number, after: readonly unknown[]): string {
+    if (index === -1) return ": the route has no seampact guard";
+
+    return after.length === 0 ? "" : `: ${after.map(interceptorName).join(", ")} run after it`;
   }
 
   // Without the input param no pipe runs steps 6 to 8, and the wrapper answers 500 on every request.
@@ -979,12 +1015,12 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
       const contractMethods = discoveredContractMethods(this.discovery);
 
       warnIgnoredInterceptorMappings(contractMethods, this.applicationConfig);
+      warnUnprobedRequestScopedInterceptors(contractMethods, this.applicationConfig);
 
       const problems = [
         ...enforcedHookBootProblems(api, this.hooks),
         ...moduleOptionsProblems(this.moduleOptions),
         ...this.handlerProblems(contractMethods),
-        ...replyInterceptorProblems(this.applicationConfig),
         ...cacheProblems(contractMethods, this.applicationConfig),
         ...this.platformProblems(),
         ...this.repeatedRegistrationProblems(),

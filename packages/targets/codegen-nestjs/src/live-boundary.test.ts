@@ -64,6 +64,7 @@ interface ReferenceAppModule {
       replaceError?: Error;
       failAfter?: boolean;
       answer?: unknown;
+      emitTwice?: boolean;
     };
   };
   readonly AppReply: new (
@@ -84,6 +85,8 @@ interface ReferenceAppModule {
   bootWithCacheInterceptor(skipsContractRoutes: boolean): Promise<void>;
   bootWithoutInputParam(): Promise<void>;
   bootWithLateGuard(): Promise<void>;
+  bootWithoutGuard(): Promise<void>;
+  bootWithRequestScopedInterceptor(): Promise<void>;
   bootWithLateGlobalInterceptor(): Promise<void>;
   bootWithModuleOptions(moduleOptions: unknown): Promise<void>;
 }
@@ -530,6 +533,20 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       },
     );
 
+    test.runIf(reply === "interceptor")(
+      "an inner interceptor emitting twice gets one reply and no dropped write",
+      async () => {
+        const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+        app.scenario.interceptor.emitTwice = true;
+
+        const served = await send("GET", "/v1/health");
+
+        expect(served.status).toBe(200);
+        expect(error).not.toHaveBeenCalledWith(expect.stringContaining("already sent"));
+      },
+    );
+
     test.runIf(reply === "interceptor")("the reply interceptor is the outermost global", () => {
       expect(server.globalInterceptors).toEqual([
         "ContractReplyInterceptor",
@@ -652,6 +669,22 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
     test("a module that appends a route guard after seampact's configure refuses the boot", async () => {
       await expect(app.bootWithLateGuard()).rejects.toThrow(
         /the seampact guard is not the last guard of health\(\): LateGuard run after it/,
+      );
+    });
+
+    test("a route whose guards were cleared refuses the boot", async () => {
+      await expect(app.bootWithoutGuard()).rejects.toThrow(
+        /the seampact guard is not the last guard of health\(\): the route has no seampact guard/,
+      );
+    });
+
+    test("a request-scoped interceptor on a contract route warns that the cache check skips it", async () => {
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+      await app.bootWithRequestScopedInterceptor();
+
+      expect(warn.mock.calls.map((call) => String(call[0]))).toContainEqual(
+        expect.stringContaining("request-scoped interceptors ScopedInterceptor"),
       );
     });
 
