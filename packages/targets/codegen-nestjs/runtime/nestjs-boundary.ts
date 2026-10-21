@@ -656,7 +656,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
   // In the default reply mode the wrapper writes the reply before NestJS's interceptors see the result, so an app
   // interceptor observes that reply and the value it maps is dropped: said once for the app's global interceptors and
   // once per route for its controller and route ones. In the interceptor mode only a global one placed before the
-  // reply interceptor sees the written reply.
+  // reply interceptor after `moveReplyInterceptorFirst` sees the written reply.
   function warnIgnoredInterceptorMappings(
     methods: readonly DiscoveredContractMethod[],
     config: ApplicationConfig,
@@ -694,7 +694,22 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
     }
   }
 
-  // NestJS adds `APP_INTERCEPTOR` providers in module scanning order, the app module's before an imported one's.
+  // NestJS adds `APP_INTERCEPTOR` providers in module scanning order, the app module's before an imported one's, so
+  // the reply interceptor is moved to the front of the global list in place: `ApplicationConfig` has no setter. NestJS
+  // reads that list when it registers the routes, after every module's `configure`.
+  function moveReplyInterceptorFirst(config: ApplicationConfig): void {
+    if (options.reply !== INTERCEPTOR_REPLY) return;
+
+    const globalInterceptors = config.getGlobalInterceptors();
+    const index = globalInterceptors.indexOf(replyInterceptor);
+
+    if (index <= 0) return;
+
+    globalInterceptors.splice(index, 1);
+    globalInterceptors.unshift(replyInterceptor);
+  }
+
+  // A global an app module's `configure` placed in front after seampact's own still runs outside the reply.
   function warnInterceptorsOutsideReply(config: ApplicationConfig): void {
     const globalInterceptors = config.getGlobalInterceptors();
     const before = appInterceptors(
@@ -942,6 +957,7 @@ export function createNestBoundary<Hooks extends RegisteredHooks>(
       const contractMethods = discoveredContractMethods(this.discovery);
 
       moveContractGuardLast(contractMethods);
+      moveReplyInterceptorFirst(this.applicationConfig);
 
       // Claimed before any api's boot check runs, so each check sees every api's routes.
       const adapter: object | undefined = this.adapterHost.httpAdapter;

@@ -84,6 +84,7 @@ interface ReferenceAppModule {
   bootWithCacheInterceptor(skipsContractRoutes: boolean): Promise<void>;
   bootWithoutInputParam(): Promise<void>;
   bootWithLateGuard(): Promise<void>;
+  bootWithLateGlobalInterceptor(): Promise<void>;
   bootWithModuleOptions(moduleOptions: unknown): Promise<void>;
 }
 
@@ -605,9 +606,7 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       const globalWarnings = warnings.filter((warning) => warning.includes("global interceptors"));
 
       if (reply === "interceptor") {
-        expect(warnings).toEqual([
-          "seampact: the app's global interceptors AppModuleInterceptor run outside the reply interceptor of the api 'tasks'; on its contract routes they observe the reply seampact wrote and a value they map is ignored. Register them with app.useGlobalInterceptors(...), which places them inside it.",
-        ]);
+        expect(warnings).toEqual([]);
 
         return;
       }
@@ -620,6 +619,19 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
         "seampact: the route GET /v1/health of 'health' carries the app interceptors ControllerWideInterceptor, PassThroughInterceptor; they observe the reply seampact wrote and a value they map is ignored. Shape the reply in the handler instead.",
       ]);
     });
+
+    test.runIf(reply === "interceptor")(
+      "a global interceptor placed in front after seampact's configure warns that it runs outside the reply",
+      async () => {
+        const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+        await app.bootWithLateGlobalInterceptor();
+
+        expect(warn.mock.calls.map((call) => String(call[0]))).toEqual([
+          "seampact: the app's global interceptors LateGlobalInterceptor run outside the reply interceptor of the api 'tasks'; on its contract routes they observe the reply seampact wrote and a value they map is ignored. Register them with app.useGlobalInterceptors(...), which places them inside it.",
+        ]);
+      },
+    );
 
     test("a cache interceptor on a contract route refuses the boot", async () => {
       await expect(app.bootWithCacheInterceptor(false)).rejects.toThrow(
@@ -655,7 +667,9 @@ describe.each(REPLY_MODES)("reply: %s", (reply: ReplyMode) => {
       const logger = { warn: (...parts: unknown[]) => logged.push(parts), error: () => undefined };
 
       await app.bootWithModuleOptions({ logger });
-      await app.bootWithAppInterceptors();
+      await (reply === "interceptor"
+        ? app.bootWithLateGlobalInterceptor()
+        : app.bootWithAppInterceptors());
 
       expect(logged.length).toBeGreaterThan(0);
     });

@@ -9,6 +9,7 @@ import {
   Catch,
   Controller,
   Get,
+  Inject,
   Module,
   Post,
   SetMetadata,
@@ -255,6 +256,8 @@ class ControllerWideInterceptor extends PassThroughInterceptor {}
 
 class AppModuleInterceptor extends PassThroughInterceptor {}
 
+class LateGlobalInterceptor extends PassThroughInterceptor {}
+
 // Every operation bound on one controller class; `aboveComposite` lists the app decorators written above an
 // operation's composite, and `withoutInput` the operations whose method declares no input param.
 function tasksController(aboveComposite = {}, withoutInput = []) {
@@ -378,9 +381,11 @@ const hooks = {
 
 class ReferenceModule {}
 
+// The app module provides its global interceptor, which NestJS registers before the imported api's reply interceptor.
 Module({
   imports: [TasksNest.SeampactModule.forRoot(hooks)],
   controllers: [TasksController, OwnController],
+  providers: [{ provide: APP_INTERCEPTOR, useClass: RecordingInterceptor }],
 })(ReferenceModule);
 
 const recordingLogger = {
@@ -457,6 +462,26 @@ export function bootWithLateGuard() {
   );
 }
 
+/** Boots an app with a module whose `configure`, after seampact's, puts a global interceptor in front of the list. */
+export function bootWithLateGlobalInterceptor() {
+  class LateInterceptorModule {
+    constructor(applicationConfig) {
+      this.applicationConfig = applicationConfig;
+    }
+
+    configure() {
+      this.applicationConfig.getGlobalInterceptors().unshift(new LateGlobalInterceptor());
+    }
+  }
+
+  Inject(ApplicationConfig)(LateInterceptorModule, undefined, 0);
+  Module({})(LateInterceptorModule);
+
+  return bootOnce(
+    moduleOf([TasksNest.SeampactModule.forRoot(hooks), LateInterceptorModule], [controllerOf()]),
+  );
+}
+
 /** Boots an app with the given `forRoot` options. */
 export function bootWithModuleOptions(moduleOptions) {
   return bootOnce(
@@ -505,7 +530,6 @@ export async function startReferenceApp() {
   app.useBodyParser("json", { limit: TasksNest.LARGEST_BODY_LIMIT, strict: false });
   app.useGlobalFilters(TasksNest.preRoutingFilter);
   app.useGlobalPipes(new TamperingPipe());
-  app.useGlobalInterceptors(new RecordingInterceptor());
   await app.listen(0, "127.0.0.1");
 
   const { port } = app.getHttpServer().address();
