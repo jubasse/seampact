@@ -250,7 +250,9 @@ export function withTargetOptions(entries: string, targetOptions: readonly Targe
   const document = parseDocument(entries);
 
   if (!isSeq(document.contents)) {
-    throw new Error("consumers: an overlay's config entries must be a YAML list of target entries.");
+    throw new Error(
+      "consumers: an overlay's config entries must be a YAML list of target entries.",
+    );
   }
 
   for (const entry of document.contents.items) {

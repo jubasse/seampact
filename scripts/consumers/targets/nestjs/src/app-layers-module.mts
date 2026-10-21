@@ -161,7 +161,9 @@ class RecordingAppFilter implements ExceptionFilter {
 }
 
 function isHandlerResult(value: unknown): value is { readonly status: number } {
-  return typeof value === "object" && value !== null && typeof Reflect.get(value, "status") === "number";
+  return (
+    typeof value === "object" && value !== null && typeof Reflect.get(value, "status") === "number"
+  );
 }
 
 /** The app's global interceptors, registered as `main.ts` would, inside the seampact reply interceptor. */
