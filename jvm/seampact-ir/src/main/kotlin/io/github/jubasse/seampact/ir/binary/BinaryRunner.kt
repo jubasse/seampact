@@ -77,7 +77,8 @@ public object BinaryRunner {
     }
 
     private fun readIrs(irDirectory: Path, support: IrSupport): List<CompiledApi> {
-        if (!Files.isDirectory(irDirectory)) return emptyList()
+        // `compile --out` creates the directory even for no api; its absence after a success is a binary fault.
+        check(Files.isDirectory(irDirectory)) { "binary: the compile exited 0 and wrote no '$irDirectory'." }
 
         val irFiles = Files.list(irDirectory).use { files -> files.filter { it.name.endsWith(IR_FILE_SUFFIX) }.sorted().toList() }
 
