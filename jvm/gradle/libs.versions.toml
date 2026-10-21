@@ -2,12 +2,19 @@
 kotlin = "2.4.20"
 kotlinx-serialization = "1.11.0"
 junit = "6.1.3"
+javapoet = "0.22.0"
+# The Spring Boot 4 line the spring-boot generator's golden output is compiled against (ADR 0022).
+spring-boot = "4.1.1"
 
 [libraries]
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 junit-bom = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher" }
+javapoet = { module = "com.palantir.javapoet:javapoet", version.ref = "javapoet" }
+spring-boot-dependencies = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
+spring-boot-starter-webmvc = { module = "org.springframework.boot:spring-boot-starter-webmvc" }
+spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
