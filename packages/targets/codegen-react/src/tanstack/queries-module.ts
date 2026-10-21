@@ -11,6 +11,7 @@ import {
   planForms,
   REQUIRED_CALL_TYPE,
   resourceTypeSource,
+  resultExpression,
   settingsTypeSource,
 } from "../shared/operation-sources.js";
 
@@ -156,17 +157,6 @@ function memberSources(
 // The caller options parameter: optional with a default, or required when the method requires a timeout.
 function optionsParameter(operation: QueryOperation, type: string): string {
   return operation.needsTimeout ? `options: WithRequiredCall<${type}>` : `options: ${type} = {}`;
-}
-
-// The client call's result as the query data: the success or a thrown error, or the whole result.
-function resultExpression(
-  operation: QueryOperation,
-  call: string,
-  options: ReactQueryOptions,
-): string {
-  if (options.errors === "data") return `withPlainHeaders(${call})`;
-
-  return `successOrThrow(${call}, (failure) => new ContractError(${JSON.stringify(operation.operationId)}, failure))`;
 }
 
 function staleTimeMember(operation: QueryOperation, options: ReactQueryOptions): string {

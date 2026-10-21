@@ -1,5 +1,6 @@
 import type { NextPageRule, QueryOperation, QueryPlan } from "@seampact/codegen-core";
 import { propertyKey } from "@seampact/codegen-core";
+import type { ReactQueryOptions } from "../options.js";
 
 // The source parts every query library's module shares (ADR 0021 "The generated API", "Keys"): the types each
 // operation reads from the client, the `isContractError` guard, the resource union, the next-page constants and the
@@ -70,6 +71,17 @@ export function operationTypesSource(
 
 export const REQUIRED_CALL_TYPE =
   '/** Options whose `call` is required: the client method requires a timeout. */\nexport type WithRequiredCall<Options extends { readonly call?: unknown }> = Options & { readonly call: NonNullable<Options["call"]> };';
+
+// The client call's result as the query data: the success or a thrown error, or the whole result.
+export function resultExpression(
+  operation: QueryOperation,
+  call: string,
+  options: ReactQueryOptions,
+): string {
+  if (options.errors === "data") return `withPlainHeaders(${call})`;
+
+  return `successOrThrow(${call}, (failure) => new ContractError(${JSON.stringify(operation.operationId)}, failure))`;
+}
 
 /** `<Api>Operations["<op>"]`. */
 export function operationType(operation: QueryOperation, api: string): string {

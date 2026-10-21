@@ -38,8 +38,13 @@ async function refusalCodes(
   return outcome.status === "refused" ? outcome.refusals.map((refusal) => refusal.code) : [];
 }
 
-test("the libraries of the next release are refused by name", async () => {
-  expect(await refusalCodes({ query: "swr" })).toEqual(["options.query.unsupported"]);
+test("SWR and RTK Query refuse `staleTime: contract`, RTK Query `keys.root`, by name", async () => {
+  expect(await refusalCodes({ query: "swr", staleTime: "contract" })).toEqual([
+    "options.staleTime.unsupported",
+  ]);
+  expect(
+    await refusalCodes({ query: "rtk", staleTime: "contract", keys: { root: "app" } }),
+  ).toEqual(["options.staleTime.unsupported", "options.keys.root.unsupported"]);
 });
 
 test("`errors: data` over a throwing client is refused by name, as a throwing client is", async () => {
@@ -67,6 +72,24 @@ test("the reference generates its runtime, queries, hooks and index", async () =
     "queries.ts",
     "query-runtime.ts",
   ]);
+});
+
+test("SWR generates queries and hooks, RTK Query one api module, each beside the runtime and an index", async () => {
+  const pathsOf = async (query: string) => {
+    const outcome = await target.generate({
+      ir,
+      options: { query },
+      links: clientLink("result"),
+      artefacts: new Set(["queries", "hooks"]),
+    });
+
+    if (outcome.status !== "generated") throw new Error(JSON.stringify(outcome.refusals));
+
+    return outcome.files.map((file) => file.path);
+  };
+
+  expect(await pathsOf("swr")).toEqual(["hooks.ts", "index.ts", "queries.ts", "query-runtime.ts"]);
+  expect(await pathsOf("rtk")).toEqual(["api.ts", "index.ts", "query-runtime.ts"]);
 });
 
 test("without hooks and itemsOf the index re-exports the queries and the runtime types only", async () => {

@@ -1,0 +1,31 @@
+  # SWR keys, fetchers and hooks over the fetch client, with the opt-in `itemsOf`.
+  - id: queries
+    use: "@seampact/codegen-react"
+    apis: [tasks, tasksService]
+    options:
+      query: swr
+    artefacts:
+      itemsOf: true
+    link:
+      client: client
+  # The same queries without the refresh after a write and without hooks: the keys and fetchers alone.
+  - id: queriesPlain
+    use: "@seampact/codegen-react"
+    apis: [tasks]
+    options:
+      query: swr
+      invalidate: "off"
+    artefacts:
+      hooks: false
+    link:
+      client: client
+  # Declared errors returned as data, with no "use client" line.
+  - id: queriesData
+    use: "@seampact/codegen-react"
+    apis: [tasks]
+    options:
+      query: swr
+      errors: data
+      useClientDirective: "off"
+    link:
+      client: client
