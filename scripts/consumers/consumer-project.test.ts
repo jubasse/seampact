@@ -4,7 +4,12 @@ import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { parse } from "yaml";
 import { REPO_ROOT } from "../golden/repo-root.ts";
-import { assembleConsumer, overlayChain, useTarballs, withTargetOptions } from "./consumer-project.ts";
+import {
+  assembleConsumer,
+  overlayChain,
+  useTarballs,
+  withTargetOptions,
+} from "./consumer-project.ts";
 import { validatorChoice } from "./validator-choice.ts";
 
 const directories: string[] = [];

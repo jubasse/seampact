@@ -7,9 +7,9 @@ import { REPO_ROOT as REPOSITORY_ROOT } from "../golden/repo-root.ts";
 import { buildPackages, packPackages } from "./build-and-pack.ts";
 import {
   assembleConsumer,
+  parseTargetOptions,
   prepareConsumerDirectory,
   TARGET_ID,
-  parseTargetOptions,
   type TargetOption,
   useTarballs,
   VENDOR_DIRECTORY,
