@@ -39,6 +39,7 @@ export const BUNDLE_WRITE_FAILURE_CODES = [
   "bundle.file-outside-root",
   "bundle.path-unportable",
   "bundle.pack-unreadable",
+  "bundle.imports-unsupported",
   "bundle.output-not-empty",
 ] as const;
 

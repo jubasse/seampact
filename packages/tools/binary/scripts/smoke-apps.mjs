@@ -29,11 +29,10 @@ targets:
 const irFileNames = APIS.map((api) => `${api}.ir.json`);
 const BUNDLE_FILE = "contract.seampact.tgz";
 
-// The files both runs write and the smoke compares byte for byte: each IR file and, for the reference app, the
-// bundle tarball, which is reproducible (ADR 0011). A pack app's bundle waits: the Node CLI reads a pack linked
-// into node_modules at its real path, so its bundle leaves the pack files out while the binary's vendors them.
-export function comparedFileNames(app) {
-  return app.name === SMOKE_APPS[0].name ? [...irFileNames, BUNDLE_FILE] : irFileNames;
+// The files both runs write and the smoke compares byte for byte: each IR file and the bundle tarball, which is
+// reproducible (ADR 0011) and vendors the same pack files whether the pack is linked or embedded.
+export function comparedFileNames() {
+  return [...irFileNames, BUNDLE_FILE];
 }
 
 // Writes the app (config and a copy of the contract) into `directory`.
@@ -91,7 +90,7 @@ export function runSmokeApp({ executable, prefixArguments = [], environment, app
   }
 
   const writtenFiles = Object.fromEntries(
-    comparedFileNames(app).map((file) => [
+    comparedFileNames().map((file) => [
       file,
       readFileSync(join(directory, file === BUNDLE_FILE ? "" : IR_DIRECTORY, file)),
     ]),

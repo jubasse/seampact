@@ -1,7 +1,7 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, sep } from "node:path";
 import { expect, test } from "vitest";
-import { loadMemoryReader } from "../load/reader.js";
+import { loadFsReader, loadMemoryReader } from "../load/reader.js";
 import { buildBundle } from "./build.js";
 import {
   builtContents,
@@ -65,6 +65,63 @@ test("a contract applying an npm pack vendors it", () => {
   expect(contents.manifest.packs).toEqual([{ name: "@acme/pack-a", version: "1.2.0" }]);
 });
 
+function writeFiles(directory: string, files: Record<string, string>): void {
+  for (const [file, text] of Object.entries(files)) {
+    mkdirSync(dirname(join(directory, file)), { recursive: true });
+    writeFileSync(join(directory, file), text);
+  }
+}
+
+test("a pack reached through a node_modules symlink is vendored", () => {
+  // The pnpm layout: the package directory is a link to the pack's real directory, outside the workspace root.
+  const root = temporaryDirectory();
+  const packPrefix = "node_modules/@acme/pack-a/";
+  const contract = join(root, "contract");
+  const pack = join(root, "packs", "pack-a");
+  const entries = Object.entries(PACK_CONTRACT);
+
+  writeFiles(contract, Object.fromEntries(entries.filter(([file]) => !file.startsWith(packPrefix))));
+  writeFiles(
+    pack,
+    Object.fromEntries(
+      entries
+        .filter(([file]) => file.startsWith(packPrefix))
+        .map(([file, text]) => [file.slice(packPrefix.length), text]),
+    ),
+  );
+  mkdirSync(join(contract, "node_modules", "@acme"), { recursive: true });
+  symlinkSync(pack, join(contract, "node_modules", "@acme", "pack-a"), "junction");
+
+  const contents = builtContents({ reader: loadFsReader(contract), entry: "api.yaml" });
+
+  expect([...contents.files.keys()].sort()).toEqual([
+    "ir/t.json",
+    "sources/.packs/@acme/pack-a@1.2.0/lib/pack.yaml",
+    "sources/.packs/@acme/pack-a@1.2.0/package.json",
+    "sources/api.yaml",
+  ]);
+});
+
+test("a workspace importing pinned bundles is refused by name", () => {
+  const built = buildBundle({
+    reader: loadMemoryReader({
+      "workspace.yaml":
+        "workspace:\n  apis: [api.yaml]\n  imports:\n    billing: { package: '@acme/billing', version: 1.0.0, api: billing, integrity: sha256-x }\n",
+      "api.yaml": "api: { name: t, version: 1 }\n",
+    }),
+    entry: "workspace.yaml",
+    contract: REFERENCE_CONTRACT,
+  });
+
+  expect(!built.ok && built.failures).toMatchObject([
+    {
+      code: "bundle.imports-unsupported",
+      file: "workspace.yaml",
+      message: expect.stringContaining("'billing'"),
+    },
+  ]);
+});
+
 test("a compile error writes nothing", () => {
   const output = join(temporaryDirectory(), "bundle");
   const written = writeBundle({
@@ -94,6 +151,7 @@ test("a contract with no name or version, or an unportable file name, is refused
       code: "bundle.contract-missing",
       file: "package.json",
       message: expect.stringContaining("name and version"),
+      fix: expect.stringContaining("--name and --version"),
     },
   ]);
 

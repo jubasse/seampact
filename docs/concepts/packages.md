@@ -8,7 +8,7 @@ Already running end to end today: the core, `codegen-ts`, `codegen-zod`, `codege
 
 | Package | What it does |
 |---|---|
-| `@seampact/cli` | the `seampact` command: `compile`, `check`, `lint`, `diff` and `generate`; `init`, `bundle` and `explain` (which prints one operation whole with where each part comes from) are planned |
+| `@seampact/cli` | the `seampact` command: `compile`, `check`, `lint`, `diff`, `generate`, `bundle` (packs a contract to publish) and `explain` (prints one operation whole with where each part comes from); `init` is planned |
 | `@seampact/compiler` | reads the YAML, reports errors with file, line and column, and produces the IR |
 | `@seampact/spec` | the JSON Schemas of the YAML files, one per file and fragment kind for your editor, and of the IR, with their TypeScript types |
 | `@seampact/openapi` | writes the OpenAPI 3.1 documents your configs ask for (one per api or declared document, or one merged across a monorepo's apps), with what OpenAPI cannot say as published `x-seampact-*` extensions |

@@ -1,5 +1,5 @@
 // Runs one binary on the smoke apps and compares it with the reference the Node CLI produced on Linux: the IR
-// files and the reference bundle byte for byte, and the answers of the commands both carry. The apps are copied outside the repository,
+// files and each app's bundle byte for byte, and the answers of the commands both carry. The apps are copied outside the repository,
 // so a pack can only come from the packs embedded in the binary.
 // Usage: node scripts/smoke.mjs <binary> <reference-dir> [--label <name>]
 // Env: SMOKE_ENV='{"TZ":"Asia/Kolkata","LOG_TOKENS":"1"}' extra environment for the binary.
@@ -81,7 +81,7 @@ for (const app of SMOKE_APPS) {
     `${app.name}: command answers differ from the Node CLI:\n${JSON.stringify(steps)}\n${JSON.stringify(withoutRefusedCommands(referenceSteps))}`,
   );
 
-  for (const file of comparedFileNames(app)) {
+  for (const file of comparedFileNames()) {
     const reference = readFileSync(join(referenceDirectory, app.name, file));
 
     check(

@@ -3,7 +3,7 @@
 | You see | Do |
 |---|---|
 | `cli.usage: Unknown command 'frob'` | Run `seampact help` for the commands and their options. |
-| `cli.not-available: The command 'init' is not available yet` | `init`, `bundle` and `explain` are planned. Use `compile`, `generate`, `check`, `lint` or `diff`. |
+| `cli.not-available: The command 'init' is not available yet` | `init` is planned. Use `compile`, `generate`, `check`, `lint`, `diff`, `bundle` or `explain`. |
 | `lint.no-source` | `lint` reads the contract, so it needs a source with a `path`. Add `{ path: ./contract }` to `sources`. |
 | `diff.against.invalid` | `--against` takes a folder of `<api>.ir.json` files (made by `seampact compile --out`) or one IR file. |
 | `diff.no-api` | The config names no api. Name one in `api` or `apis` of a target entry. |

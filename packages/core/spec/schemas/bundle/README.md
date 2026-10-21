@@ -79,7 +79,7 @@ In order; a step runs only when the steps before it pass:
 | `bundle.archive-entry-type` | an entry type other than a file, a directory or a pax header | the entry |
 | `bundle.archive-entry-duplicate` | a path twice, or twice once folded to ASCII lower case | the entry |
 
-The writer's own codes (`bundle.compile-failed`, `bundle.contract-missing`, `bundle.label-invalid`, `bundle.file-outside-root`, `bundle.path-unportable`, `bundle.pack-unreadable`, `bundle.output-not-empty`) concern Node only.
+The writer's own codes (`bundle.compile-failed`, `bundle.contract-missing`, `bundle.label-invalid`, `bundle.file-outside-root`, `bundle.path-unportable`, `bundle.pack-unreadable`, `bundle.imports-unsupported`, `bundle.output-not-empty`) concern Node only.
 
 ## Vectors
 
