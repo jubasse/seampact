@@ -1,4 +1,0 @@
-base: &base
-  kind: shared
-copy:
-  <<: *base

@@ -11,15 +11,28 @@ import {
 } from "./commands/index.js";
 import { errorCode } from "./error-code.js";
 
-const USAGE = `Usage: seampact <command> [options]
-
-Commands:
-  compile [--config <path>] [--out <dir>]  Compile the contract sources the app config's targets use.
-  generate [--config <path>] [--force]     Generate every target entry of the app config, or of every app a root config lists; --force overwrites, or removes when stale, a generated file edited by hand.
-  check [--config <path>]                  Fail when the committed generated files or documents differ from a fresh run.
-  lint [--config <path>]                   Run the core lint rules over each contract source.
-  diff --against <path> [--config <path>]  Classify the changes since the IRs at <path> (an IR file, or a directory of <api>.ir.json that "compile --out <dir>" writes).
-`;
+const COMMAND_USAGE: ReadonlyMap<string, string> = new Map([
+  [
+    "compile",
+    "  compile [--config <path>] [--out <dir>]  Compile the contract sources the app config's targets use.",
+  ],
+  [
+    "generate",
+    "  generate [--config <path>] [--force]     Generate every target entry of the app config, or of every app a root config lists; --force overwrites, or removes when stale, a generated file edited by hand.",
+  ],
+  [
+    "check",
+    "  check [--config <path>]                  Fail when the committed generated files or documents differ from a fresh run.",
+  ],
+  [
+    "lint",
+    "  lint [--config <path>]                   Run the core lint rules over each contract source.",
+  ],
+  [
+    "diff",
+    '  diff --against <path> [--config <path>]  Classify the changes since the IRs at <path> (an IR file, or a directory of <api>.ir.json that "compile --out <dir>" writes).',
+  ],
+]);
 
 // The commands and flags of the CLI design that are not available yet; each answers with exit code 2.
 const WAITING_COMMANDS: ReadonlySet<string> = new Set(["init", "bundle", "explain"]);
@@ -40,9 +53,17 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
   if (command === undefined) return usageError(io, "No command given.");
 
   if (HELP_ARGUMENTS.has(command)) {
-    io.stdout(USAGE);
+    io.stdout(usageText(io));
 
     return 0;
+  }
+
+  const refusal = io.refusedCommands?.get(command);
+
+  if (refusal !== undefined) {
+    printProblems(io, [refusal]);
+
+    return EXIT_USAGE;
   }
 
   if (WAITING_COMMANDS.has(command)) return notAvailable(io, `The command '${command}'`);
@@ -159,7 +180,7 @@ function usageError(io: CliIo, message: string): number {
   };
 
   printProblems(io, [problem]);
-  io.stderr(USAGE);
+  io.stderr(usageText(io));
 
   return EXIT_USAGE;
 }
@@ -169,9 +190,32 @@ function notAvailable(io: CliIo, subject: string): number {
     {
       code: "cli.not-available",
       message: `${subject} is not available yet.`,
-      fix: "Use `seampact compile`, `generate`, `check`, `lint` or `diff`.",
+      fix: `Use ${listed(quotedCommands(io))}.`,
     },
   ]);
 
   return EXIT_USAGE;
+}
+
+// The commands this run carries: all of them, less the ones the host refuses by name.
+function availableCommands(io: CliIo): string[] {
+  return [...COMMAND_USAGE.keys()].filter((name) => !io.refusedCommands?.has(name));
+}
+
+function usageText(io: CliIo): string {
+  const lines = availableCommands(io).map((name) => COMMAND_USAGE.get(name));
+
+  return `Usage: seampact <command> [options]\n\nCommands:\n${lines.join("\n")}\n`;
+}
+
+// `seampact compile`, then the other names, each in backticks.
+function quotedCommands(io: CliIo): string[] {
+  return availableCommands(io).map(
+    (name) => `\`${name === "compile" ? "seampact compile" : name}\``,
+  );
+}
+
+// `a`, `b` or `c`
+function listed(names: readonly string[]): string {
+  return names.length < 2 ? names.join("") : `${names.slice(0, -1).join(", ")} or ${names.at(-1)}`;
 }

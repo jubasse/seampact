@@ -34,6 +34,7 @@ The workspace packages, the compiler stages and one line per source directory. A
 | `@seampact/codegen-ts` | `packages/targets/codegen-ts` | target | Generates a named TypeScript type per schema and each operation's input, output and error union. |
 | `@seampact/codegen-yup` | `packages/targets/codegen-yup` | target | Generates Standard Schema yup validators per schema and direction, and one input validator per operation. |
 | `@seampact/codegen-zod` | `packages/targets/codegen-zod` | target | Generates Standard Schema zod validators per schema and direction, and one input validator per operation. |
+| `@seampact/binary` | `packages/tools/binary` | tool | The standalone compiler binary: the CLI as a Node single executable application for five platforms, with the first-party packs embedded. |
 | `@seampact/http-suite` | `packages/tools/http-suite` | tool | The shared black-box HTTP suite: JSON case scripts, the sample app's control routes, a runner against a base URL and a report keyed by checklist id. |
 
 ## Compiler stages
@@ -168,6 +169,10 @@ In pipeline order (ADR 0006 section 1).
 ### `@seampact/codegen-zod`
 
 - `packages/targets/codegen-zod/src`: The zod validators target: Standard Schema validators per schema and direction, with object schemas left unrefined so an app can extend them, and one input validator per operation, provided as the `validators` link.
+
+### `@seampact/binary`
+
+- `packages/tools/binary/src`: The standalone compiler binary: the CLI entry the single executable wraps, the commands it refuses, and the reader serving the embedded first-party packs.
 
 ### `@seampact/http-suite`
 

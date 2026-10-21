@@ -1,0 +1,37 @@
+{
+  "name": "@seampact/binary",
+  "description": "The standalone compiler binary: the CLI as a Node single executable application for five platforms, with the first-party packs embedded.",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "seampact": {
+    "role": "tool"
+  },
+  "engines": {
+    "node": "24.21.0"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build": "node scripts/build.mjs",
+    "reference": "node scripts/reference.mjs",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@seampact/cli": "workspace:*",
+    "@seampact/compiler": "workspace:*",
+    "@seampact/pack-api-platform": "workspace:*",
+    "@seampact/pack-crud-rights": "workspace:*",
+    "@seampact/pack-hal": "workspace:*",
+    "@seampact/pack-jsonapi": "workspace:*",
+    "@seampact/pack-laravel": "workspace:*",
+    "@seampact/pack-spring": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "postject": "1.0.0-alpha.6"
+  }
+}

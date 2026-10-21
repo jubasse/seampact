@@ -1,0 +1,233 @@
+# The standalone compiler binary (ADR 0010): five binaries built on one Linux job, the macOS ones re-signed ad hoc
+# on macOS runners, a SHA-256 manifest of the final files, and a smoke on each platform's own runner. Attestations
+# are made by a release-only job; a pull request builds and smokes with read-only tokens.
+name: p3-binary
+
+on:
+  pull_request:
+    paths:
+      - "packages/**"
+      - "fixtures/**"
+      - "pnpm-lock.yaml"
+      - ".nvmrc"
+      - ".github/workflows/p3-binary.yml"
+  # A published release also pushes its tag, so only the release event builds a release, once.
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p3-binary-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: build (linux, five binaries)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the five binaries
+        working-directory: packages/tools/binary
+        run: pnpm build
+      - name: Write the Node CLI reference
+        working-directory: packages/tools/binary
+        run: pnpm reference
+      - name: Record sizes
+        working-directory: packages/tools/binary
+        run: |
+          {
+            echo "### Build (ubuntu-24.04)"
+            echo "Build script: $(cat dist/build-seconds.txt) s. Bytes and gzip level 9 bytes per binary:"
+            echo '```'
+            cat dist/sizes.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: binaries-unsigned
+          path: packages/tools/binary/dist/bin/
+          retention-days: 3
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: reference
+          path: packages/tools/binary/dist/reference/
+          retention-days: 3
+          if-no-files-found: error
+
+  sign-macos:
+    name: sign (${{ matrix.id }})
+    needs: build
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { id: darwin-arm64, runner: macos-15, binary: seampact-darwin-arm64 }
+          - { id: darwin-x64, runner: macos-15-intel, binary: seampact-darwin-x64 }
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: binaries-unsigned
+          path: bin
+      - name: Re-sign ad hoc (the injection leaves no valid signature)
+        run: |
+          # The injected binary may carry no signature to remove, and then the command fails; the strict verify in
+          # the next step is the real gate.
+          codesign --remove-signature "bin/${{ matrix.binary }}" || true
+          codesign --force --sign - "bin/${{ matrix.binary }}"
+      - name: Gate, the signature is valid and present
+        # Hosted macOS runners run an unsigned binary, so a run proves nothing about the signature.
+        run: |
+          codesign --verify --strict --verbose=2 "bin/${{ matrix.binary }}"
+          codesign -dv "bin/${{ matrix.binary }}" 2>&1 | tee signature.txt
+          grep -q '^Signature=adhoc$' signature.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: signed-${{ matrix.id }}
+          path: bin/${{ matrix.binary }}
+          retention-days: 3
+          if-no-files-found: error
+
+  manifest:
+    name: manifest (hash after signing)
+    needs: sign-macos
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: binaries-unsigned
+          path: release
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: signed-*
+          merge-multiple: true
+          path: release
+      - name: Write the manifest of the final files
+        run: node packages/tools/binary/scripts/manifest.mjs write release
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: binaries
+          path: release/
+          retention-days: 7
+          if-no-files-found: error
+
+  smoke:
+    name: smoke (${{ matrix.id }})
+    needs: manifest
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { id: linux-x64, runner: ubuntu-24.04, binary: seampact-linux-x64 }
+          - { id: linux-arm64, runner: ubuntu-24.04-arm, binary: seampact-linux-arm64 }
+          - { id: darwin-arm64, runner: macos-15, binary: seampact-darwin-arm64 }
+          - { id: darwin-x64, runner: macos-15-intel, binary: seampact-darwin-x64 }
+          - { id: win32-x64, runner: windows-2025, binary: seampact-win32-x64.exe }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: binaries
+          path: bin
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: reference
+          path: reference
+      - name: Verify the five binaries against the manifest
+        run: node packages/tools/binary/scripts/manifest.mjs check bin
+      - name: Make the binary executable
+        if: runner.os != 'Windows'
+        run: chmod +x "bin/${{ matrix.binary }}"
+      - name: Check the runner architecture against the matrix id
+        run: |
+          want="${MATRIX_ID#*-}"
+          got="$(node -p process.arch)"
+          machine="$(uname -m)"
+          case "$machine" in
+            x86_64 | AMD64 | amd64 | x64) machine_arch=x64 ;;
+            aarch64 | arm64) machine_arch=arm64 ;;
+            *) machine_arch="$machine" ;;
+          esac
+          if [ "$RUNNER_OS" = macOS ] && [ "$(sysctl -in sysctl.proc_translated 2>/dev/null || echo 0)" = 1 ]; then
+            machine_arch="$machine_arch (Rosetta)"
+          fi
+          echo "runner: ${{ matrix.runner }}, uname -m: $machine, machine arch: $machine_arch, node arch: $got, binary: $want"
+          [ "$got" = "$want" ] || { echo "node architecture $got is not $want"; exit 1; }
+          [ "$machine_arch" = "$want" ] || { echo "machine architecture $machine_arch is not $want"; exit 1; }
+        env:
+          MATRIX_ID: ${{ matrix.id }}
+      - name: macOS, the shipped signature is valid
+        if: runner.os == 'macOS'
+        run: |
+          codesign --verify --strict --verbose=2 "bin/${{ matrix.binary }}"
+          codesign -dv "bin/${{ matrix.binary }}" 2>&1 | grep -q '^Signature=adhoc$'
+      - name: Windows, the PE security directory is empty
+        if: runner.os == 'Windows'
+        run: |
+          # Fail closed: the script must print its verdict line, or the guard did not run.
+          out="$(node packages/tools/binary/scripts/pe.mjs check "bin/${{ matrix.binary }}")"
+          echo "$out"
+          [ "$out" = "pe: security directory offset 0, size 0" ] || { echo "pe check did not confirm an empty security directory"; exit 1; }
+      - name: Smoke
+        run: |
+          {
+            echo "### Smoke ${{ matrix.id }} (${{ matrix.runner }})"
+            echo "| platform | result | size MiB | first launch ms | warm start median of 7 ms |"
+            echo "|---|---|---|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+          node packages/tools/binary/scripts/smoke.mjs "bin/${{ matrix.binary }}" reference --label "${{ matrix.id }}"
+      - name: Smoke with a non-UTC TZ, a non-English LANG and yaml's debug variables set
+        if: matrix.id == 'linux-x64'
+        env:
+          SMOKE_ENV: '{"TZ":"Asia/Kolkata","LANG":"fr_FR.UTF-8","LC_ALL":"fr_FR.UTF-8","LOG_TOKENS":"1","LOG_STREAM":"1"}'
+        run: node packages/tools/binary/scripts/smoke.mjs "bin/${{ matrix.binary }}" reference --label "linux-x64 TZ=Asia/Kolkata LANG=fr_FR.UTF-8 LOG_TOKENS LOG_STREAM"
+
+  attest:
+    name: attest (release only)
+    if: github.event_name == 'release'
+    needs: smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: binaries
+          path: release
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-checksums: release/SHA256SUMS

@@ -1,3 +1,4 @@
+import type { LoadReader } from "@seampact/compiler";
 import { type CliProblem, formatProblem } from "./cli-problem.js";
 
 // What a command reads and writes besides files: the working directory and the two output streams.
@@ -7,6 +8,15 @@ export interface CliIo {
   stderr(text: string): void;
   // Today as `YYYY-MM-DD`, the diff's only time input; the system date when absent.
   today?(): string;
+  // The reader a contract source is loaded through, given the source directory; the file system when absent. The
+  // standalone binary sets it to serve its embedded first-party packs when none is installed (ADR 0010).
+  sourceReader?(directory: string): LoadReader;
+  // The name to print for a file a diagnostic locates, given the path the compiler read it at; the path itself when
+  // absent. The standalone binary names the first-party packs it embeds, which do not exist on disk.
+  diagnosticFileLabel?(file: string): string;
+  // Commands the host does not carry, by name, with the problem to print; help and the not-available fixes leave
+  // them out. The standalone binary refuses the commands that need an npm package (ADR 0010).
+  refusedCommands?: ReadonlyMap<string, CliProblem>;
 }
 
 export const EXIT_SUCCESS = 0;
