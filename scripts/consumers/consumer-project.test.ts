@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
 import { parse } from "yaml";
-import { useTarballs, withTargetOptions } from "./consumer-project.ts";
+import { overlayChain, useTarballs, withTargetOptions } from "./consumer-project.ts";
 
 const directories: string[] = [];
 
@@ -80,4 +80,49 @@ test("writes each target option into every entry's options, read as YAML", () =>
   ]);
   expect(written).toContain("# The variant entry.");
   expect(written.startsWith("  - id: server")).toBe(true);
+});
+
+// A targets directory holding one overlay per entry, each with the base it names, if any.
+function targetsWith(bases: Record<string, string | undefined>): string {
+  const root = mkdtempSync(join(tmpdir(), "consumer-overlays-"));
+
+  directories.push(root);
+
+  for (const [overlay, base] of Object.entries(bases)) {
+    mkdirSync(join(root, overlay));
+
+    if (base !== undefined) writeFileSync(join(root, overlay, "overlay.base"), `${base}\n`);
+  }
+
+  return root;
+}
+
+test("an overlay chain of any depth lists the deepest base first", () => {
+  const root = targetsWith({ hono: undefined, front: "hono", "front-fetch": "front" });
+
+  expect(overlayChain(root, "front-fetch")).toEqual(
+    ["hono", "front", "front-fetch"].map((overlay) => join(root, overlay)),
+  );
+});
+
+test("an overlay chain that comes back to one of its overlays is refused, naming the cycle", () => {
+  const root = targetsWith({ front: "react", react: "front" });
+
+  expect(() => overlayChain(root, "front")).toThrow(
+    "consumers: the overlay bases form a cycle: front -> react -> front",
+  );
+});
+
+test("an overlay naming itself as its base is refused as a cycle", () => {
+  const root = targetsWith({ hono: "hono" });
+
+  expect(() => overlayChain(root, "hono")).toThrow("cycle: hono -> hono");
+});
+
+test("a base that names no overlay is refused with the known targets", () => {
+  const root = targetsWith({ front: "missing" });
+
+  expect(() => overlayChain(root, "front")).toThrow(
+    "consumers: no overlay for target 'missing'; known targets: front.",
+  );
 });

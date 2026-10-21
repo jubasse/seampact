@@ -29,8 +29,9 @@ const CONFIG_ENTRIES_FILE = "seampact.config.entries.yaml";
 // an overlay package.json would replace the template's.
 const PACKAGE_ENTRIES_FILE = "package.entries.json";
 
-// An overlay that runs another overlay on a different dependency set (a framework major) names it in this file,
-// one target id; the base overlay is copied first and its entries apply first.
+// An overlay built on another overlay (a framework major, or the front layers over a server) names it in this file,
+// one target id; the chain of bases may be of any depth, and the deepest base is copied first and its entries
+// apply first.
 const OVERLAY_BASE_FILE = "overlay.base";
 const OVERLAY_FILES = [CONFIG_ENTRIES_FILE, PACKAGE_ENTRIES_FILE, OVERLAY_BASE_FILE];
 const CONFIG_FILE = "seampact.config.yaml";
@@ -108,9 +109,9 @@ export function parseTargetOptions(written: readonly string[]): TargetOption[] |
   return targetOptions;
 }
 
-// The template with the chosen validators, the target overlay copied over it after its base overlay (their config
-// and package entries merged, with the target options), the extras if any, and the reference contract. A pair or an
-// option the target refuses fails at `generate`, naming it.
+// The template with the chosen validators, the target overlay copied over it after its chain of base overlays (their
+// config and package entries merged, with the target options), the extras if any, and the reference contract. A pair or
+// an option the target refuses fails at `generate`, naming it.
 export function assembleConsumer(options: {
   readonly consumersRoot: string;
   readonly repositoryRoot: string;
@@ -200,8 +201,28 @@ function withoutValidatorsEntry(config: string): string {
     .join("\n");
 }
 
-// The target's overlay, after the overlay it names as its base, if any.
-function overlayChain(targetsRoot: string, target: string): string[] {
+// The target's overlay after its bases, the deepest first: each overlay names at most one base, and the chain may
+// not come back to an overlay it already holds.
+export function overlayChain(targetsRoot: string, target: string): string[] {
+  const chain: string[] = [];
+  let current: string | undefined = target;
+
+  while (current !== undefined) {
+    if (chain.includes(current)) {
+      throw new Error(
+        `consumers: the overlay bases form a cycle: ${[...chain, current].join(" -> ")}; make one overlay of the chain name no ${OVERLAY_BASE_FILE}.`,
+      );
+    }
+
+    chain.push(current);
+    current = overlayBase(targetsRoot, current);
+  }
+
+  return chain.reverse().map((overlay) => join(targetsRoot, overlay));
+}
+
+// The target id an overlay's `overlay.base` names, if any.
+function overlayBase(targetsRoot: string, target: string): string | undefined {
   const overlay = join(targetsRoot, target);
 
   if (!existsSync(overlay)) {
@@ -212,21 +233,17 @@ function overlayChain(targetsRoot: string, target: string): string[] {
 
   const baseFile = join(overlay, OVERLAY_BASE_FILE);
 
-  if (!existsSync(baseFile)) return [overlay];
+  if (!existsSync(baseFile)) return undefined;
 
   const base = readFileSync(baseFile, "utf8").trim();
 
-  if (
-    !TARGET_ID.test(base) ||
-    base === target ||
-    existsSync(join(targetsRoot, base, OVERLAY_BASE_FILE))
-  ) {
+  if (!TARGET_ID.test(base)) {
     throw new Error(
-      `consumers: ${baseFile} must name one other target overlay without a base of its own, not '${base}'.`,
+      `consumers: ${baseFile} must name one target overlay id (${TARGET_ID.source}), not '${base}'.`,
     );
   }
 
-  return [...overlayChain(targetsRoot, base), overlay];
+  return base;
 }
 
 // The template config ends with its `targets` list, so the overlay's items extend it.
