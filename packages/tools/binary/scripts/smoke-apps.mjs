@@ -48,6 +48,10 @@ const APP_STEPS = [
 ];
 const GLOBAL_STEPS = [["help"], ["init"], ["bundle"], ["explain"]];
 
+// The commands the binary refuses by name (`binary-refusals.ts`); the Node CLI lists them in `help` and in the
+// not-available fix, so the smoke derives the binary's expected answer from the reference.
+export const BINARY_REFUSED_COMMANDS = ["generate", "check"];
+
 // Runs every shared step with `executable` (`prefixArguments` first) in the app directory; the result holds the
 // answers and the bytes of each IR file `compile` wrote.
 export function runSmokeApp({ executable, prefixArguments = [], environment, app, directory }) {

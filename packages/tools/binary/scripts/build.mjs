@@ -13,7 +13,6 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { builtinModules } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
@@ -22,9 +21,24 @@ import { securityDirectory, stripSignature } from "./pe.mjs";
 
 const NODE_VERSION = "24.21.0";
 const SENTINEL = "NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2";
-// The bundle may require Node built-ins only: every package is bundled in, nothing is looked up in node_modules.
-const BUILTINS = new Set(builtinModules);
-const isBuiltin = (name) => BUILTINS.has(name.replace(/^node:/, ""));
+// The bundle may require these Node built-ins only: every package is bundled in, nothing is looked up in
+// node_modules. A new built-in fails the build, so it gets a decision (another runtime may lack it).
+const ALLOWED_BUILTINS = new Set([
+  "buffer",
+  "child_process",
+  "crypto",
+  "fs",
+  "fs/promises",
+  "https",
+  "module",
+  "os",
+  "path",
+  "process",
+  "url",
+  "util",
+  "zlib",
+]);
+const isBuiltin = (name) => ALLOWED_BUILTINS.has(name.replace(/^node:/, ""));
 // ajv writes `require("ajv/dist/runtime/...")` into the source text of a standalone validator; the CLI compiles
 // its validators in memory, so the text is never run.
 const TOLERATED_REQUIRE_TEXT = "ajv/dist/runtime/";
@@ -108,13 +122,14 @@ for (const input of Object.values(result.metafile.inputs)) {
 
 const extra = [...used].filter((name) => !isBuiltin(name));
 
-if (extra.length > 0) fail(`imports that are not Node built-ins: ${extra.join(", ")}`);
+if (extra.length > 0) fail(`imports outside the allowed Node built-ins: ${extra.join(", ")}`);
 const bundleText = readFileSync(join(dist, "bundle.cjs"), "utf8");
 const required = [...bundleText.matchAll(/require\(\s*["'`]([^"'`]+)["'`]\s*\)/g)]
   .map((match) => match[1])
   .filter((name) => !isBuiltin(name) && !name.startsWith(TOLERATED_REQUIRE_TEXT));
 
-if (required.length > 0) fail(`bundle requires beyond Node built-ins: ${required.join(", ")}`);
+if (required.length > 0)
+  fail(`bundle requires beyond the allowed Node built-ins: ${required.join(", ")}`);
 console.log(`build: bundle ok, built-ins used: ${[...used].sort().join(", ")}`);
 
 // 2. SEA blob: code cache and snapshot off (cross-platform), warning disabled. The paths are

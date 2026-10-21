@@ -9,14 +9,22 @@ export interface EmbeddedPackage {
 
 const NODE_MODULES = "node_modules";
 
+export interface EmbeddedPackReader extends LoadReader {
+  // `embedded:<package>/<file>` for a file this reader served from an embedded package; undefined for any other.
+  embeddedLabel(file: string): string | undefined;
+}
+
+const EMBEDDED_LABEL_PREFIX = "embedded:";
+
 // Wraps a reader so the embedded packages exist as `node_modules/<name>` at the topmost directory the pack walk
 // reaches (ADR 0002 section 2). The walk goes upward from the workspace root, so a pack installed anywhere at or
 // above the root is found first; the embedded copy answers only where the wrapped reader has nothing.
 export function readerWithEmbeddedPacks(
   base: LoadReader,
   packages: readonly EmbeddedPackage[],
-): LoadReader {
+): EmbeddedPackReader {
   const tree = embeddedTree(base.ascent, packages);
+  const served = new Set<string>();
 
   return {
     ascent: base.ascent,
@@ -28,6 +36,8 @@ export function readerWithEmbeddedPacks(
       const text = tree.files.get(normalized(file));
 
       if (text === undefined) return undefined;
+
+      served.add(normalized(file));
 
       return new TextEncoder().encode(text).length > maxBytes ? { tooLarge: true } : { text };
     },
@@ -48,6 +58,11 @@ export function readerWithEmbeddedPacks(
 
       return tree.files.has(key) || tree.directories.has(key) ? key : undefined;
     },
+    embeddedLabel(file) {
+      const key = normalized(file);
+
+      return served.has(key) ? tree.labels.get(key) : undefined;
+    },
   };
 }
 
@@ -56,10 +71,12 @@ interface EmbeddedTree {
   files: Map<string, string>;
   // Root-relative directory path to the names the embedded packages put in it.
   directories: Map<string, Set<string>>;
+  // Root-relative file path to its `embedded:` label.
+  labels: Map<string, string>;
 }
 
 function embeddedTree(ascent: number, packages: readonly EmbeddedPackage[]): EmbeddedTree {
-  const tree: EmbeddedTree = { files: new Map(), directories: new Map() };
+  const tree: EmbeddedTree = { files: new Map(), directories: new Map(), labels: new Map() };
   const top = Array.from({ length: ascent }, () => "..").join("/");
 
   for (const { name, files } of packages) {
@@ -69,6 +86,7 @@ function embeddedTree(ascent: number, packages: readonly EmbeddedPackage[]): Emb
       const file = `${packageDirectory}/${fileName}`;
 
       tree.files.set(file, text);
+      tree.labels.set(file, `${EMBEDDED_LABEL_PREFIX}${name}/${fileName}`);
       addToParents(tree.directories, file, normalized(top));
     }
   }

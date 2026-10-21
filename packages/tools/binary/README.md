@@ -1,8 +1,8 @@
 # @seampact/binary
 
-The standalone compiler binary (ADR 0010): the seampact CLI as a Node single executable application (SEA) on Node 24.21.0, for linux x64 and arm64 (glibc), macOS x64 and arm64 and Windows x64. It runs `compile`, `check`, `lint` (core rules) and `diff` with the first-party packs embedded, and needs no Node.js or `node_modules`.
+The standalone compiler binary (ADR 0010): the seampact CLI as a Node single executable application (SEA) on Node 24.21.0, for linux x64 and arm64 (glibc), macOS x64 and arm64 and Windows x64. It runs `compile`, `lint` (core rules) and `diff` with the first-party packs embedded, and needs no Node.js or `node_modules`.
 
-`generate` is refused by name (`binary.generate-unavailable`): use the npm CLI or the ecosystem plugin. `init`, `bundle` and `explain` answer as the Node CLI does today.
+`generate` and `check` need a codegen target, so they are refused by name (`binary.generate-unavailable`, `binary.check-unavailable`): use the npm CLI or the ecosystem plugin. The binary's `help` lists only its own commands. `init`, `bundle` and `explain` answer as the Node CLI does today.
 
 ## Build
 
@@ -14,7 +14,7 @@ From this directory, on Linux, with Node 24.21.0 (the `.nvmrc` pin), `gpg`, `cur
 4. On a macOS runner: `codesign --force --sign -` then `codesign --verify --strict` (hosted runners run an unsigned binary, so only this gate proves the signature).
 5. `node scripts/manifest.mjs write <dir>` writes `SHA256SUMS` after signing.
 
-The workflow `p3-binary` runs all of this, one smoke job per OS, and attests the binaries on a release or a tag only.
+The workflow `p3-binary` runs all of this, one smoke job per OS, and attests the binaries in a release-only job.
 
 ## Reference: the SEA spike
 

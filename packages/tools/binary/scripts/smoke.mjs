@@ -7,7 +7,13 @@ import { spawnSync } from "node:child_process";
 import { appendFileSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { irFileNames, runSmokeApp, SMOKE_APPS, writeSmokeApp } from "./smoke-apps.mjs";
+import {
+  BINARY_REFUSED_COMMANDS,
+  irFileNames,
+  runSmokeApp,
+  SMOKE_APPS,
+  writeSmokeApp,
+} from "./smoke-apps.mjs";
 
 const [binaryArgument, referenceArgument] = process.argv.slice(2);
 const labelIndex = process.argv.indexOf("--label");
@@ -35,6 +41,32 @@ spawnSync(binary, ["help"], { env: environment, stdio: "ignore" });
 
 const firstLaunchMs = Number(process.hrtime.bigint() - firstStarted) / 1e6;
 
+// The Node CLI's answers, less the commands the binary does not carry: its `help` and the not-available fix list
+// only the binary's own commands.
+function withoutRefusedCommands(referenceSteps) {
+  const steps = structuredClone(referenceSteps);
+
+  if (steps.help !== undefined) {
+    steps.help.stdout = steps.help.stdout
+      .split("\n")
+      .filter(
+        (line) => !BINARY_REFUSED_COMMANDS.some((command) => line.startsWith(`  ${command} `)),
+      )
+      .join("\n");
+  }
+
+  for (const step of ["init", "bundle", "explain"]) {
+    if (steps[step] === undefined) continue;
+
+    steps[step].stderr = steps[step].stderr.replace(
+      "Use `seampact compile`, `generate`, `check`, `lint` or `diff`.",
+      "Use `seampact compile`, `lint` or `diff`.",
+    );
+  }
+
+  return steps;
+}
+
 for (const app of SMOKE_APPS) {
   const directory = join(scratch, app.name);
 
@@ -47,8 +79,8 @@ for (const app of SMOKE_APPS) {
   );
 
   check(
-    JSON.stringify(steps) === JSON.stringify(referenceSteps),
-    `${app.name}: command answers differ from the Node CLI:\n${JSON.stringify(steps)}\n${JSON.stringify(referenceSteps)}`,
+    JSON.stringify(steps) === JSON.stringify(withoutRefusedCommands(referenceSteps)),
+    `${app.name}: command answers differ from the Node CLI:\n${JSON.stringify(steps)}\n${JSON.stringify(withoutRefusedCommands(referenceSteps))}`,
   );
 
   for (const file of irFileNames) {
@@ -61,18 +93,20 @@ for (const app of SMOKE_APPS) {
   }
 }
 
-// `generate` is the one command the binary refuses by name.
-const generate = spawnSync(binary, ["generate"], {
-  cwd: join(scratch, SMOKE_APPS[0].name),
-  env: environment,
-  encoding: "utf8",
-});
+for (const command of BINARY_REFUSED_COMMANDS) {
+  const refused = spawnSync(binary, [command], {
+    cwd: join(scratch, SMOKE_APPS[0].name),
+    env: environment,
+    encoding: "utf8",
+  });
 
-check(generate.status === 2, `generate exited ${generate.status}, not 2`);
-check(
-  generate.stderr.startsWith("binary.generate-unavailable: ") && generate.stderr.includes("Fix: "),
-  `generate did not refuse by name with a fix: ${generate.stderr}`,
-);
+  check(refused.status === 2, `${command} exited ${refused.status}, not 2`);
+  check(
+    refused.stderr.startsWith(`binary.${command}-unavailable: `) &&
+      refused.stderr.includes("Fix: "),
+    `${command} did not refuse by name with a fix: ${refused.stderr}`,
+  );
+}
 
 // Measures (recorded, not gated): size, the first launch and the warm start, the median of 7 further runs of `help`.
 const warmRuns = [];

@@ -3,4 +3,4 @@
 "@seampact/cli": patch
 ---
 
-The compiler is now available as a standalone binary for Linux, macOS and Windows that compiles, lints and diffs a contract with the first-party packs built in and no Node.js install.
+The new `@seampact/binary` package builds the compiler as a standalone binary for Linux, macOS and Windows that compiles, lints and diffs a contract with the first-party packs built in and no Node.js install.

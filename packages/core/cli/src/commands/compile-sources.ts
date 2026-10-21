@@ -142,9 +142,12 @@ async function compileSource(name: string, directory: string, run: SourceRun): P
   }
 
   const result = outcome.compiled;
+  const label = io.diagnosticFileLabel;
   const printed = [
-    printedDiagnostics(result.diagnostics, result.locations),
-    ...result.apis.map((api) => printedDiagnostics(api.diagnostics, api.locations)),
+    printedDiagnostics(result.diagnostics, labelledLocations(result.locations, label)),
+    ...result.apis.map((api) =>
+      printedDiagnostics(api.diagnostics, labelledLocations(api.locations, label)),
+    ),
   ].filter((text) => text !== "");
 
   if (printed.length > 0) io.stderr(`In source '${name}' (${directory}):\n${printed.join("\n")}\n`);
@@ -160,7 +163,10 @@ async function compileSource(name: string, directory: string, run: SourceRun): P
       source: name,
       api: api.api,
       ir: finalizeCanonicalIr(api.ir),
-      lintInput: { declared: api.declared ?? [], locations: api.locations },
+      lintInput: {
+        declared: api.declared ?? [],
+        locations: labelledLocations(api.locations, label),
+      },
     });
   }
 }
@@ -184,4 +190,19 @@ function printedDiagnostics(
   locations: Parameters<typeof printDiagnostics>[1],
 ): string {
   return diagnostics.length === 0 ? "" : printDiagnostics(diagnostics, locations);
+}
+
+// The locations with each file named by `label`; the same table when there is no label.
+function labelledLocations(
+  locations: SourceMap["locations"],
+  label: CliIo["diagnosticFileLabel"],
+): SourceMap["locations"] {
+  if (label === undefined) return locations;
+
+  return Object.fromEntries(
+    Object.entries(locations).map(([key, location]) => [
+      key,
+      { ...location, file: label(location.file) },
+    ]),
+  );
 }

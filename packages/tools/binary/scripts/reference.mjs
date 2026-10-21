@@ -1,7 +1,6 @@
 // Writes the reference output the smoke compares against: the IR of each smoke app, compiled by the Node CLI
 // (the CLI entry bundled for Node, packs resolved from the repository's node_modules).
 // Usage: node scripts/reference.mjs <out-dir>
-import { spawnSync } from "node:child_process";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
