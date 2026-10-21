@@ -72,6 +72,17 @@ test("a contract applying an npm pack vendors it", () => {
   expect(contents.manifest.packs).toEqual([{ name: "@acme/pack-a", version: "1.2.0" }]);
 });
 
+test("a contract checked out with CRLF line ends gives the bundle of its LF checkout", () => {
+  const crlfContract = Object.fromEntries(
+    Object.entries(PACK_CONTRACT).map(([file, text]) => [file, text.replaceAll("\n", "\r\n")]),
+  );
+  const lfContents = builtContents({ reader: loadMemoryReader(PACK_CONTRACT), entry: "api.yaml" });
+  const crlfContents = builtContents({ reader: loadMemoryReader(crlfContract), entry: "api.yaml" });
+
+  expect(crlfContents.manifest.integrity).toBe(lfContents.manifest.integrity);
+  expect(crlfContents.files).toEqual(lfContents.files);
+});
+
 function writeFiles(directory: string, files: Record<string, string>): void {
   for (const [file, text] of Object.entries(files)) {
     mkdirSync(dirname(join(directory, file)), { recursive: true });

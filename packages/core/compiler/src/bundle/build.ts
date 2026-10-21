@@ -324,10 +324,15 @@ function sourceFiles(
     }
 
     pathByFold.set(bundlePathFold(placed), placed);
-    files.set(placed, new TextEncoder().encode(text));
+    files.set(placed, new TextEncoder().encode(withLfLineEnds(text)));
   }
 
   return { files, failures: dedupeFailures(failures) };
+}
+
+// A checkout with CRLF line ends (git's autocrlf on Windows) gives the bundle bytes of its LF checkout.
+function withLfLineEnds(text: string): string {
+  return text.replaceAll("\r\n", "\n");
 }
 
 // The portable-path rule, and the room a tarball header has for a path.
