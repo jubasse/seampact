@@ -20,7 +20,7 @@ val repositoryRoot = rootProject.projectDir.parentFile
 
 // The bundle manifest's JSON Schema, copied into the jar beside the bundle reader, so the schema stays the one
 // source of the manifest's shape.
-val copyBundleManifestSchema by tasks.registering(Sync::class) {
+val copyBundleManifestSchema = tasks.register<Sync>("copyBundleManifestSchema") {
     from(repositoryRoot.resolve("packages/core/spec/schemas/bundle/manifest.schema.json")) {
         into("io/github/jubasse/seampact/ir/bundle")
     }
