@@ -2,12 +2,13 @@ import { defineTarget, type Target } from "@seampact/codegen-core";
 import { IR_REVISION, IR_VERSION } from "@seampact/spec/ir";
 import { format } from "prettier";
 import packageJson from "../package.json" with { type: "json" };
+import { describeClient } from "./describe.js";
 import { CLIENT_ARTEFACT, type ClientArtefact, generateClient } from "./generate.js";
 import { type FetchClientOptions, parseFetchClientOptions } from "./options.js";
 
 // The fetch client target, as the CLI loads it. It reads the operation types through the `types` link and
-// provides nothing: the `client` link kind waits for the targets that consume it.
-export const target: Target = defineTarget<FetchClientOptions, ClientArtefact, "types">({
+// provides the `client` link the front targets consume.
+export const target: Target = defineTarget<FetchClientOptions, ClientArtefact, "types", "client">({
   metadata: {
     packageName: packageJson.name,
     packageVersion: packageJson.version,
@@ -20,9 +21,10 @@ export const target: Target = defineTarget<FetchClientOptions, ClientArtefact, "
     },
     artefacts: [{ id: CLIENT_ARTEFACT, defaultOn: true }],
     consumes: { types: { styles: ["typescript"] } },
-    provides: {},
+    provides: { client: { style: "fetch" } },
   },
   format,
   parseOptions: parseFetchClientOptions,
   generate: generateClient,
+  describe: describeClient,
 });

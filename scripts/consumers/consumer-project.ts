@@ -29,8 +29,9 @@ const CONFIG_ENTRIES_FILE = "seampact.config.entries.yaml";
 // an overlay package.json would replace the template's.
 const PACKAGE_ENTRIES_FILE = "package.entries.json";
 
-// An overlay that runs another overlay on a different dependency set (a framework major) names it in this file,
-// one target id; the base overlay is copied first and its entries apply first.
+// An overlay built on another overlay (a framework major, or the front layers over a server) names it in this file,
+// one target id; the chain of bases may be of any depth, and the deepest base is copied first and its entries
+// apply first.
 const OVERLAY_BASE_FILE = "overlay.base";
 const OVERLAY_FILES = [CONFIG_ENTRIES_FILE, PACKAGE_ENTRIES_FILE, OVERLAY_BASE_FILE];
 const CONFIG_FILE = "seampact.config.yaml";
@@ -108,9 +109,9 @@ export function parseTargetOptions(written: readonly string[]): TargetOption[] |
   return targetOptions;
 }
 
-// The template with the chosen validators, the target overlay copied over it after its base overlay (their config
-// and package entries merged, with the target options), the extras if any, and the reference contract. A pair or an
-// option the target refuses fails at `generate`, naming it.
+// The template with the chosen validators, the target overlay copied over it after its chain of base overlays (their
+// config and package entries merged, with the target options), the extras if any, and the reference contract. A pair or
+// an option the target refuses fails at `generate`, naming it.
 export function assembleConsumer(options: {
   readonly consumersRoot: string;
   readonly repositoryRoot: string;
@@ -200,8 +201,37 @@ function withoutValidatorsEntry(config: string): string {
     .join("\n");
 }
 
-// The target's overlay, after the overlay it names as its base, if any.
-function overlayChain(targetsRoot: string, target: string): string[] {
+// The target's overlay after its bases, each base's own chain first and in the order `overlay.base` lists them. An
+// overlay reached twice is kept once, at its first place; a chain may not come back to an overlay on its current path.
+export function overlayChain(targetsRoot: string, target: string): string[] {
+  const chain: string[] = [];
+
+  addOverlayAfterBases(targetsRoot, target, [], chain);
+
+  return chain.map((overlay) => join(targetsRoot, overlay));
+}
+
+function addOverlayAfterBases(
+  targetsRoot: string,
+  overlay: string,
+  path: readonly string[],
+  chain: string[],
+): void {
+  if (path.includes(overlay)) {
+    throw new Error(
+      `consumers: the overlay bases form a cycle: ${[...path, overlay].join(" -> ")}; make one overlay of the chain name no ${OVERLAY_BASE_FILE}.`,
+    );
+  }
+
+  for (const base of overlayBases(targetsRoot, overlay)) {
+    addOverlayAfterBases(targetsRoot, base, [...path, overlay], chain);
+  }
+
+  if (!chain.includes(overlay)) chain.push(overlay);
+}
+
+// The target ids an overlay's `overlay.base` names, one per line, in order; none without the file.
+function overlayBases(targetsRoot: string, target: string): string[] {
   const overlay = join(targetsRoot, target);
 
   if (!existsSync(overlay)) {
@@ -212,21 +242,22 @@ function overlayChain(targetsRoot: string, target: string): string[] {
 
   const baseFile = join(overlay, OVERLAY_BASE_FILE);
 
-  if (!existsSync(baseFile)) return [overlay];
+  if (!existsSync(baseFile)) return [];
 
-  const base = readFileSync(baseFile, "utf8").trim();
+  const bases = readFileSync(baseFile, "utf8")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line !== "");
 
-  if (
-    !TARGET_ID.test(base) ||
-    base === target ||
-    existsSync(join(targetsRoot, base, OVERLAY_BASE_FILE))
-  ) {
-    throw new Error(
-      `consumers: ${baseFile} must name one other target overlay without a base of its own, not '${base}'.`,
-    );
+  for (const base of bases) {
+    if (!TARGET_ID.test(base)) {
+      throw new Error(
+        `consumers: ${baseFile} must name target overlay ids (${TARGET_ID.source}), one per line, not '${base}'.`,
+      );
+    }
   }
 
-  return [...overlayChain(targetsRoot, base), overlay];
+  return bases;
 }
 
 // The template config ends with its `targets` list, so the overlay's items extend it.

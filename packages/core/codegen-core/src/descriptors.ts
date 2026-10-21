@@ -46,11 +46,37 @@ export interface OperationTypeExports {
   errors: ExportRef;
 }
 
-// The one list of link kinds: each kind, its descriptor, and through it its styles. The `client` kind waits for
-// the target that uses it.
+// How a client hands back a declared error or an unexpected answer: as a result the caller checks, or thrown as
+// its `ContractError`.
+export type ClientErrorStyle = "result" | "throw";
+
+// What a client target provides: the generated client's public exports, the way it hands back errors, and the
+// method of each operation, so a front target calls the client and reads every type through it.
+export interface ClientDescriptor {
+  kind: "client";
+  style: "fetch";
+  errorStyle: ClientErrorStyle;
+  exports: ClientExports;
+  operations: Readonly<Record<OperationId, ClientOperationExports>>;
+}
+
+export interface ClientExports {
+  createClient: ExportRef;
+  Client: ExportRef;
+  ContractError: ExportRef;
+  CallOptions: ExportRef;
+}
+
+export interface ClientOperationExports {
+  // The member of `Client` that calls the operation.
+  method: string;
+}
+
+// The one list of link kinds: each kind, its descriptor, and through it its styles.
 export interface DescriptorByKind {
   validators: ValidatorsDescriptor;
   types: TypesDescriptor;
+  client: ClientDescriptor;
 }
 
 export type LinkKind = keyof DescriptorByKind;

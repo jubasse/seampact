@@ -15,6 +15,7 @@ const linkCheckByKind: {
 } = {
   validators: (needs, links) => refuseUnmetLink("validators", needs.validators, links.validators),
   types: (needs, links) => refuseUnmetLink("types", needs.types, links.types),
+  client: (needs, links) => refuseUnmetLink("client", needs.client, links.client),
 };
 
 // True when every consumed kind has a link the link check accepts.

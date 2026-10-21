@@ -7,9 +7,9 @@ import { REPO_ROOT as REPOSITORY_ROOT } from "../golden/repo-root.ts";
 import { buildPackages, packPackages } from "./build-and-pack.ts";
 import {
   assembleConsumer,
+  parseTargetOptions,
   prepareConsumerDirectory,
   TARGET_ID,
-  parseTargetOptions,
   type TargetOption,
   useTarballs,
   VENDOR_DIRECTORY,
@@ -23,8 +23,8 @@ import {
 } from "./validator-choice.ts";
 
 // Builds and packs the seampact packages, assembles a test consumer from the template and a target overlay, and
-// installs, generates, typechecks and tests it as a user would (ADR 0011 "Unpublished installs for test
-// consumers"). The first failing step ends the run with its exit code.
+// installs (with the Playwright browser when an overlay adds a browser project), generates, typechecks and tests it as
+// a user would (ADR 0011 "Unpublished installs for test consumers"). The first failing step ends the run with its exit code.
 // node scripts/consumers/cli.ts --target <id> [--validators <id>] [--target-option <key>=<value>]... [--dir <path>]
 // A target option is written into the target's config entries; one the target does not know fails `generate`, named.
 
@@ -121,8 +121,23 @@ function runConsumer({ target, validators, targetOptions, directory }: RunOption
     useTarballs(directory, tarballs),
   );
 
+  runStep({
+    title: "install",
+    command: "pnpm",
+    args: ["install", "--no-frozen-lockfile"],
+    cwd: directory,
+  });
+
+  if (hasBrowserProject(directory)) {
+    runStep({
+      title: "install the Playwright Chromium headless shell",
+      command: "pnpm",
+      args: ["exec", "playwright", "install", "--only-shell", "chromium"],
+      cwd: directory,
+    });
+  }
+
   for (const [title, args] of [
-    ["install", ["install", "--no-frozen-lockfile"]],
     ["generate", ["exec", "seampact", "generate"]],
     ["check", ["exec", "seampact", "check"]],
     ["typecheck", ["exec", "tsc", "--noEmit"]],
@@ -132,6 +147,21 @@ function runConsumer({ target, validators, targetOptions, directory }: RunOption
   }
 
   checkNamesHandEdit(directory);
+}
+
+// The package a consumer's overlays add for a Vitest browser project, whose browser the run installs.
+const BROWSER_PROVIDER_PACKAGE = "playwright";
+
+interface ConsumerDependencies {
+  dependencies?: Record<string, string>;
+}
+
+function hasBrowserProject(directory: string): boolean {
+  const manifest: ConsumerDependencies = JSON.parse(
+    readFileSync(join(directory, "package.json"), "utf8"),
+  );
+
+  return Object.hasOwn(manifest.dependencies ?? {}, BROWSER_PROVIDER_PACKAGE);
 }
 
 // The directory whose generated files the hand edit changes, and its manifest (ADR 0015 "Writing files").

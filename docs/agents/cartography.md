@@ -110,7 +110,7 @@ In pipeline order (ADR 0006 section 1).
 - `packages/core/spec/src/authoring`: The authoring grammar: the JSON Schemas of the YAML files (ADR 0002), their schema keywords and markers.
 - `packages/core/spec/src/authoring/grammar`: The grammar modules the authoring JSON Schemas are generated from, one per file and fragment kind (ADR 0002 and 0003).
 - `packages/core/spec/src/bundle`: Contract bundles (`@seampact/spec/bundle`, ADR 0011): the manifest types and JSON Schema, the portable-path rule, the canonical file list the integrity hashes, the manifest rules beyond the schema and the failure codes.
-- `packages/core/spec/src/compatibility`: The compatibility matrix (`@seampact/spec/compatibility`): the first-party providers, and per server target the framework majors it is tested on or refuses and the validator styles it accepts.
+- `packages/core/spec/src/compatibility`: The compatibility matrix (`@seampact/spec/compatibility`): the first-party providers of each link kind, and per server target the framework majors it is tested on or refuses and the validator styles it accepts.
 - `packages/core/spec/src/config`: The app config and the monorepo root config, `seampact.config.yaml` (`@seampact/spec/config`): their types and their JSON Schemas.
 - `packages/core/spec/src/ir`: The IR (ADR 0004 and 0005): its JSON Schemas, generated types, writer view, validation and invariants.
 - `packages/core/spec/src/json`: JSON helpers every package shares (`@seampact/spec/json`): the canonical text of a value and the JSON Pointer segment escape.
@@ -148,7 +148,7 @@ In pipeline order (ADR 0006 section 1).
 
 ### `@seampact/codegen-fetch`
 
-- `packages/targets/codegen-fetch/src`: The fetch client target: one typed method per operation over the platform fetch, reading its request, success and error types from the `types` link.
+- `packages/targets/codegen-fetch/src`: The fetch client target: one typed method per operation over the platform fetch, reading its request, success and error types from the `types` link and providing the `client` link the front targets consume.
 
 ### `@seampact/codegen-hono`
 

@@ -11,11 +11,9 @@ import {
   refuseInconsistentIr,
   refuseNotGeneratedYet,
   refuseUnknownValueAt,
-  typeScriptIdentifier,
   withoutRepeats,
 } from "@seampact/codegen-core";
 import type { ContractIR } from "@seampact/spec/ir";
-import { deriveName } from "@seampact/spec/naming";
 import {
   CLIENT_MODULE,
   type ClientOperation,
@@ -24,6 +22,7 @@ import {
   MODULE_EXTENSION,
   RUNTIME_MODULE,
 } from "./client-module.js";
+import { clientMethodName } from "./describe.js";
 import { planOperation } from "./operation-plan.js";
 import type { FetchClientOptions } from "./options.js";
 import { runtimeModuleSource } from "./runtime-module.js";
@@ -131,7 +130,7 @@ function clientOperations(
 
   return ir.operations.flatMap((operation, index) => {
     const location = operationLocation(index, operation.id);
-    const methodName = typeScriptIdentifier(deriveName(operation.name.segments, "operation"));
+    const methodName = clientMethodName(operation);
     const types = Object.hasOwn(typeExports, operation.id) ? typeExports[operation.id] : undefined;
     const planned = planOperation(operation, ir, location, refusals);
 

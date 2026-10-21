@@ -95,6 +95,7 @@ test("the packages of a style keep the matrix order", () => {
     "@seampact/codegen-class-validator",
   ]);
   expect(firstPartyPackagesOfStyle("typescript")).toEqual(["@seampact/codegen-ts"]);
+  expect(firstPartyPackagesOfStyle("fetch")).toEqual(["@seampact/codegen-fetch"]);
 });
 
 test("provider ids are unique, so a tool can select a provider by id", () => {
