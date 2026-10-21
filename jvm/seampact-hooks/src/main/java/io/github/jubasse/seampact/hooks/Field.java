@@ -1,5 +1,6 @@
 package io.github.jubasse.seampact.hooks;
 
+import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 
@@ -54,7 +55,7 @@ public final class Field<T> {
     /** The value, when present. */
     public T value() {
         if (state != State.PRESENT) {
-            throw new NoSuchElementException("The field is " + state.name().toLowerCase() + "; check isPresent() first.");
+            throw new NoSuchElementException("The field is " + state.name().toLowerCase(Locale.ROOT) + "; check isPresent() first.");
         }
 
         return value;
@@ -72,6 +73,6 @@ public final class Field<T> {
 
     @Override
     public String toString() {
-        return state == State.PRESENT ? "Field[" + value + "]" : "Field[" + state.name().toLowerCase() + "]";
+        return state == State.PRESENT ? "Field[" + value + "]" : "Field[" + state.name().toLowerCase(Locale.ROOT) + "]";
     }
 }

@@ -94,7 +94,7 @@
     {
       "name": "AuthenticateHook",
       "kind": "hook",
-      "methods": [{ "name": "authenticate", "parameters": ["request"] }]
+      "methods": [{ "name": "authenticate", "parameters": ["request"], "returns": "AuthenticateResult" }]
     },
     {
       "name": "Decision",
@@ -177,7 +177,7 @@
     {
       "name": "DecideHook",
       "kind": "hook",
-      "methods": [{ "name": "decide", "parameters": ["request"] }]
+      "methods": [{ "name": "decide", "parameters": ["request"], "returns": "Decision" }]
     },
     {
       "name": "ResolvedScope",
@@ -227,7 +227,7 @@
     {
       "name": "ResolveScopeHook",
       "kind": "hook",
-      "methods": [{ "name": "resolveScope", "parameters": ["request"] }]
+      "methods": [{ "name": "resolveScope", "parameters": ["request"], "returns": "ScopeResolution" }]
     },
     {
       "name": "IdempotencyClaim",
@@ -280,9 +280,9 @@
       "name": "IdempotencyStore",
       "kind": "hook",
       "methods": [
-        { "name": "begin", "parameters": ["claim"] },
-        { "name": "complete", "parameters": ["key", "response"] },
-        { "name": "abandon", "parameters": ["key"] }
+        { "name": "begin", "parameters": ["claim"], "returns": "IdempotencyBegin" },
+        { "name": "complete", "parameters": ["key", "response"], "returns": "void" },
+        { "name": "abandon", "parameters": ["key"], "returns": "void" }
       ]
     },
     {

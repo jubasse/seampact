@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -28,6 +29,8 @@ class RedactedToStringTest {
                 200, List.of(new StoredResponse.Header("set-cookie", SECRET)), SECRET_BYTES);
 
         assertFalse(response.toString().contains(SECRET));
+        assertFalse(response.toString().contains(Arrays.toString(SECRET_BYTES)));
+        assertTrue(response.toString().contains("body=" + Redaction.REDACTED));
         assertTrue(response.toString().contains("set-cookie"));
     }
 
@@ -39,6 +42,21 @@ class RedactedToStringTest {
                 SECRET_BYTES, Optional.of("1"), List.of(SECRET), "key-1", template);
 
         assertFalse(templated.toString().contains(SECRET));
+        assertFalse(templated.toString().contains(Arrays.toString(SECRET_BYTES)));
+        assertTrue(templated.toString().contains("rawBody=" + Redaction.REDACTED));
         assertTrue(templated.toString().contains("key-1"));
+    }
+
+    @Test
+    void signedApplicationRequestHidesBodySignatureAndHeaders() {
+        SignedApplicationRequest application = new SignedApplicationRequest(
+                SECRET_BYTES, SECRET, Map.of("x-signature-extra", SECRET + "-header"), Optional.of("key-2"));
+
+        assertFalse(application.toString().contains(SECRET));
+        assertFalse(application.toString().contains(Arrays.toString(SECRET_BYTES)));
+        assertTrue(application.toString().contains("rawBody=" + Redaction.REDACTED));
+        assertTrue(application.toString().contains("signatureHeader=" + Redaction.REDACTED));
+        assertTrue(application.toString().contains("headers=" + Redaction.REDACTED));
+        assertTrue(application.toString().contains("key-2"));
     }
 }

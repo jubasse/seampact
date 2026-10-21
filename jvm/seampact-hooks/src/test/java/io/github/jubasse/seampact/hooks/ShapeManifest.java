@@ -30,7 +30,7 @@ final class ShapeManifest {
             Optional<Discriminant> discriminant,
             List<Member> members) {}
 
-    record Method(String name, List<String> parameters, boolean isStatic) {}
+    record Method(String name, List<String> parameters, boolean isStatic, Optional<String> returns) {}
 
     record Type(
             String name,
@@ -100,7 +100,11 @@ final class ShapeManifest {
                 .map(entry -> {
                     Map<String, JsonElement> method = JsonElementKt.getJsonObject(entry);
 
-                    return new Method(text(method, "name"), strings(method, "parameters"), flag(method, "static"));
+                    return new Method(
+                            text(method, "name"),
+                            strings(method, "parameters"),
+                            flag(method, "static"),
+                            Optional.ofNullable(method.get("returns")).map(ShapeManifest::content));
                 })
                 .toList();
     }
@@ -135,7 +139,17 @@ final class ShapeManifest {
     private static boolean flag(Map<String, JsonElement> object, String key) {
         JsonElement element = object.get(key);
 
-        return element != null && Boolean.parseBoolean(content(element));
+        if (element == null) {
+            return false;
+        }
+
+        String text = content(element);
+        if (!text.equals("true") && !text.equals("false")) {
+            throw new IllegalStateException(
+                    "The shape manifest entry \"" + key + "\" must be true or false, found \"" + text + "\": " + object);
+        }
+
+        return Boolean.parseBoolean(text);
     }
 
     private static String content(JsonElement element) {

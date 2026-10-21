@@ -10,6 +10,7 @@ const PACKAGE_DIRECTORY = dirname(SOURCE_DIRECTORY);
 const MANIFEST_PATH = join(PACKAGE_DIRECTORY, "../../../fixtures/hooks-shape/shape.json");
 const NPM_LANGUAGE = "npm";
 const NESTED_TYPE_SEPARATOR = ".";
+const AWAITABLE_ALIAS = "Awaitable";
 
 interface ShapeMember {
   readonly name: string;
@@ -34,6 +35,7 @@ interface ShapeArm {
 interface ShapeMethod {
   readonly name: string;
   readonly parameters: readonly string[];
+  readonly returns?: string;
 }
 
 interface ShapeType {
@@ -226,6 +228,25 @@ function checkMembers(
   return problems;
 }
 
+// The declared return type name, with the Awaitable wrapper removed.
+function declaredReturnTypeName(signature: ts.Signature): string | undefined {
+  let returnNode = signature.getDeclaration().type;
+
+  if (
+    returnNode !== undefined &&
+    ts.isTypeReferenceNode(returnNode) &&
+    returnNode.typeName.getText() === AWAITABLE_ALIAS
+  ) {
+    returnNode = returnNode.typeArguments?.[0];
+  }
+
+  if (returnNode === undefined) {
+    return undefined;
+  }
+
+  return ts.isTypeReferenceNode(returnNode) ? returnNode.typeName.getText() : returnNode.getText();
+}
+
 function checkMethods(
   packageTypes: PackageTypes,
   label: string,
@@ -251,6 +272,14 @@ function checkMethods(
     if (parameterNames.join(",") !== method.parameters.join(",")) {
       problems.push(
         `${label}.${method.name}: npm takes (${parameterNames.join(", ")}), the manifest (${method.parameters.join(", ")})`,
+      );
+    }
+
+    const returnName = declaredReturnTypeName(signature);
+
+    if (method.returns !== undefined && returnName !== method.returns) {
+      problems.push(
+        `${label}.${method.name}: npm returns ${returnName}, the manifest ${method.returns}`,
       );
     }
   }
@@ -432,6 +461,21 @@ function withExtraMember(
   };
 }
 
+function withMethodReturns(
+  manifest: ShapeManifest,
+  typeName: string,
+  returns: string,
+): ShapeManifest {
+  return {
+    ...manifest,
+    types: manifest.types.map((type) =>
+      type.name === typeName
+        ? { ...type, methods: (type.methods ?? []).map((method) => ({ ...method, returns })) }
+        : type,
+    ),
+  };
+}
+
 describe("hooks shape", () => {
   it("matches the shape manifest", () => {
     expect(checkHooksShape(readManifest())).toEqual([]);
@@ -441,5 +485,13 @@ describe("hooks shape", () => {
     const manifest = withExtraMember(readManifest(), "SignatureTemplate", "unlistedMember");
 
     expect(checkHooksShape(manifest)).toEqual(["SignatureTemplate.unlistedMember: missing in npm"]);
+  });
+
+  it("names a hook method whose return type differs", () => {
+    const manifest = withMethodReturns(readManifest(), "AuthenticateHook", "Decision");
+
+    expect(checkHooksShape(manifest)).toEqual([
+      "AuthenticateHook.authenticate: npm returns AuthenticateResult, the manifest Decision",
+    ]);
   });
 });

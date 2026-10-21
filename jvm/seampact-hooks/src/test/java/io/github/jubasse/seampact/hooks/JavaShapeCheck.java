@@ -23,6 +23,8 @@ final class JavaShapeCheck {
     private static final String CLASS_SUFFIX = ".class";
     private static final String PACKAGE_INFO = "package-info";
 
+    private static final Set<String> OBJECT_METHOD_NAMES = Set.of("equals", "hashCode", "toString");
+
     private final List<String> problems = new ArrayList<>();
 
     private JavaShapeCheck() {}
@@ -95,6 +97,7 @@ final class JavaShapeCheck {
         RecordComponent[] components = javaType.getRecordComponents();
         compareNames(owner, javaMembers.stream().map(ShapeManifest.Member::name).toList(),
                 Arrays.stream(components).map(RecordComponent::getName).toList());
+        checkNoExtraPublicMethod(owner, javaType, components);
 
         for (ShapeManifest.Member member : javaMembers) {
             if (member.nullable()) {
@@ -106,6 +109,17 @@ final class JavaShapeCheck {
                     .findFirst()
                     .ifPresent(component -> checkMemberType(owner, member, component.getType()));
         }
+    }
+
+    private void checkNoExtraPublicMethod(String owner, Class<?> javaType, RecordComponent[] components) {
+        Set<String> accessorNames = Arrays.stream(components).map(RecordComponent::getName).collect(Collectors.toSet());
+
+        Arrays.stream(javaType.getDeclaredMethods())
+                .filter(method -> Modifier.isPublic(method.getModifiers()) && !method.isSynthetic())
+                .filter(method -> !Modifier.isStatic(method.getModifiers()))
+                .map(Method::getName)
+                .filter(name -> !accessorNames.contains(name) && !OBJECT_METHOD_NAMES.contains(name))
+                .forEach(name -> problems.add(owner + ": public method " + name + " is not in the shape manifest"));
     }
 
     private void checkInterface(String owner, Class<?> javaType, List<ShapeManifest.Member> members) {
@@ -174,6 +188,13 @@ final class JavaShapeCheck {
         if (!names.equals(expected.parameters())) {
             problems.add(owner + "." + expected.name() + ": parameters " + names + ", expected " + expected.parameters());
         }
+
+        expected.returns().ifPresent(returns -> {
+            String found = actual.getReturnType().getSimpleName();
+            if (!found.equals(returns)) {
+                problems.add(owner + "." + expected.name() + ": returns " + found + ", expected " + returns);
+            }
+        });
     }
 
     private void checkUnion(ShapeManifest.Type type, Class<?> javaType, Set<String> expectedNames) {
@@ -231,9 +252,13 @@ final class JavaShapeCheck {
             problems.add(type.name() + ": a class must be final");
         }
 
+        Arrays.stream(javaType.getConstructors())
+                .forEach(constructor -> problems.add(type.name() + ": public constructor " + constructor
+                        + " is not in the shape manifest; the class is built by its static factories"));
+
         List<Method> methods = Arrays.stream(javaType.getDeclaredMethods())
                 .filter(method -> Modifier.isPublic(method.getModifiers()) && !method.isSynthetic())
-                .filter(method -> !Set.of("equals", "hashCode", "toString").contains(method.getName()))
+                .filter(method -> !OBJECT_METHOD_NAMES.contains(method.getName()))
                 .toList();
         compareNames(type.name(), type.methods().stream().map(ShapeManifest.Method::name).toList(),
                 methods.stream().map(Method::getName).toList());
