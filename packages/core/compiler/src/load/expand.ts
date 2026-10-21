@@ -9,6 +9,7 @@ import {
   schemaKindOf,
 } from "../raw-tree.js";
 import { type LoadBudget, loadWorkOf } from "./budget.js";
+import type { LoadFragment } from "./fragments.js";
 import { asObject, cloneJson, isReservedKey, jsonObject, setKey } from "./json.js";
 import { LOAD_MAX_DEPTH } from "./limits.js";
 import { escapePointer } from "@seampact/spec/json";
@@ -21,6 +22,7 @@ import {
   NOT_SCALAR,
   type Position,
   positionAt,
+  positionFragmentKind,
   refinePosition,
   refusesScalar,
   rootPosition,
@@ -97,6 +99,8 @@ interface Scope {
   depth: number;
 }
 
+const SCHEMA_FILE_KIND = "schemas";
+
 const NULL_SPELLINGS = new Set(["", "~", "Null", "NULL"]);
 
 export function keyString(node: Node | null | undefined): string | undefined {
@@ -161,6 +165,8 @@ export function navigate(file: ParsedFile, fragment: string | undefined): Node |
 
 export class Expander {
   private readonly jsonFiles = new Map<string, JsonFile>();
+  /** Every file an `$include` or a file `$ref` brought, in reading order. */
+  readonly fragments: LoadFragment[] = [];
 
   constructor(
     private readonly store: FileStore,
@@ -712,6 +718,12 @@ export class Expander {
         continue;
       }
 
+      this.fragments.push({
+        file: resolved.path,
+        ...(resolved.fragment === undefined ? {} : { pointer: resolved.fragment }),
+        kind: positionFragmentKind(scope.pos),
+        at,
+      });
       const start = seen.order.length;
       const inner: Scope = {
         file: pf,
@@ -1032,6 +1044,13 @@ export class Expander {
       return value;
     }
 
+    // Schema files are name-keyed (ADR 0002 section 2), whatever the $ref sits in.
+    this.fragments.push({
+      file: resolved.path,
+      ...(resolved.fragment === undefined ? {} : { pointer: resolved.fragment }),
+      kind: SCHEMA_FILE_KIND,
+      at,
+    });
     const id = `${resolved.real}#/${escapePointer(name)}`;
 
     if (!build.refs.has(id)) {

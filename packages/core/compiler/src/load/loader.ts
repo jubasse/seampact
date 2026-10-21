@@ -17,6 +17,7 @@ import { asObject, isReservedKey, showValue } from "./json.js";
 import { LOAD_MAX_DEPTH } from "./limits.js";
 import { escapePointer } from "@seampact/spec/json";
 import { isInside, joinPath, loadNormalizePath } from "./paths.js";
+import { type LoadFragment, loadSortFragments } from "./fragments.js";
 import { entryRootPosition } from "./positions.js";
 import { packLayerIdOf } from "./pack-files.js";
 import type { LoadReader } from "./reader.js";
@@ -35,6 +36,8 @@ export interface LoadResult {
   diagnostics: Diagnostic[];
   /** Every file the load read or tried to read, sorted, for the watch primitive. */
   files: string[];
+  /** Every file an include site or a file `$ref` brought, with the kind the site expects, sorted. */
+  fragments: LoadFragment[];
 }
 
 // npm's package-name grammar (validate-npm-package-name, new names): an optional `@scope/`, then
@@ -196,6 +199,7 @@ class Loader {
       workspace,
       diagnostics: diagnosticSort(this.rep.diagnostics, locations),
       files: [...this.store.touched].sort(),
+      fragments: loadSortFragments(this.ex.fragments),
     };
   }
 

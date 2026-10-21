@@ -17,7 +17,7 @@ import { errorCode } from "./error-code.js";
 const COMMAND_USAGE: ReadonlyMap<string, string> = new Map([
   [
     "compile",
-    "  compile [--config <path>] [--out <dir>]  Compile the contract sources the app config's targets use.",
+    "  compile [--config <path>] [--out <dir>] [--editor-schemas]\n                                           Compile the contract sources the app config's targets use; --editor-schemas writes each contract's editor schemas, which check declared names (to workspace.editorSchemas, .seampact/schemas by default).",
   ],
   [
     "generate",
@@ -47,12 +47,7 @@ const COMMAND_USAGE: ReadonlyMap<string, string> = new Map([
 
 // The commands and flags of the CLI design that are not available yet; each answers with exit code 2.
 const WAITING_COMMANDS: ReadonlySet<string> = new Set(["init"]);
-const WAITING_FLAGS: ReadonlySet<string> = new Set([
-  "--watch",
-  "--strict",
-  "--editor-schemas",
-  "--source-map",
-]);
+const WAITING_FLAGS: ReadonlySet<string> = new Set(["--watch", "--strict", "--source-map"]);
 
 const HELP_ARGUMENTS: ReadonlySet<string> = new Set(["help", "--help", "-h"]);
 
@@ -103,13 +98,24 @@ export async function runCli(argv: readonly string[], io: CliIo): Promise<number
 }
 
 async function runCompile(args: readonly string[], io: CliIo): Promise<number> {
-  const parsed = parseCommandArgs(args, { config: { type: "string" }, out: { type: "string" } });
+  const parsed = parseCommandArgs(args, {
+    config: { type: "string" },
+    out: { type: "string" },
+    "editor-schemas": { type: "boolean" },
+  });
 
   if (parsed.status === "refused") return usageError(io, parsed.message);
 
   const { config, out } = parsed.values;
 
-  return compileCommand(configLocation(io.cwd, stringOption(config)), stringOption(out), io);
+  return compileCommand(
+    configLocation(io.cwd, stringOption(config)),
+    {
+      irOutDir: stringOption(out),
+      editorSchemas: parsed.values["editor-schemas"] === true ? "write" : "skip",
+    },
+    io,
+  );
 }
 
 async function runGenerate(args: readonly string[], io: CliIo): Promise<number> {

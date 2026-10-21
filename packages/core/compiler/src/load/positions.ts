@@ -697,6 +697,68 @@ export function positionAt(kind: PositionKind, segments: string[]): Position | u
   return pos;
 }
 
+// The schema nodes that stand for a whole authoring file: its root, and the definition its root
+// references (`node.schema.json` is the `surfaceChild` definition; a tree node an include brings
+// is read through `includedNode`).
+let fileRoots: ReadonlyMap<JsonSchema, AuthoringFile> | undefined;
+
+function fileRootsOf(): ReadonlyMap<JsonSchema, AuthoringFile> {
+  if (fileRoots !== undefined) return fileRoots;
+  const roots = new Map<JsonSchema, AuthoringFile>();
+
+  for (const file of AUTHORING_FILES) {
+    if (file === "common") continue;
+    const root = tagged(schemaFiles()[file], file);
+
+    roots.set(root, file);
+    const target = referenced(root);
+
+    if (target !== undefined) roots.set(target, file);
+  }
+
+  const included = resolveRef("node.schema.json#/$defs/includedNode", "node")?.node;
+
+  if (included !== undefined) roots.set(included, "node");
+  fileRoots = roots;
+
+  return roots;
+}
+
+const KIND_COMBINATORS = ["allOf", "anyOf", "oneOf", "then", "else"] as const;
+
+/**
+ * The authoring file a mapping at `pos` is, read from the schemas: the one file whose root the
+ * position reaches through `$ref` and combinators (ADR 0002 section 3: a fragment's kind is the
+ * one its include site expects). Undefined when it reaches none, or several (an entry file read
+ * as a workspace or an api).
+ */
+export function positionFragmentKind(pos: Position | undefined): AuthoringFile | undefined {
+  if (pos === undefined || pos.data) return undefined;
+  const roots = fileRootsOf();
+  const kinds = new Set<AuthoringFile>();
+  const visited = new Set<JsonSchema>();
+  const pending = [pos.node];
+
+  for (let node = pending.pop(); node !== undefined; node = pending.pop()) {
+    if (visited.has(node)) continue;
+    visited.add(node);
+    const kind = roots.get(node);
+
+    if (kind !== undefined) {
+      kinds.add(kind);
+      continue;
+    }
+
+    const target = referenced(node);
+
+    if (target !== undefined) pending.push(target);
+
+    for (const key of KIND_COMBINATORS) pending.push(...subschemas(node, key));
+  }
+
+  return kinds.size === 1 ? [...kinds][0] : undefined;
+}
+
 /** YAML type of a resolved scalar, the vocabulary of a position's `types`. */
 export function scalarType(value: unknown): ScalarType | undefined {
   if (value === null) return "null";
