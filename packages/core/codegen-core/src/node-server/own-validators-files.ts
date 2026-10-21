@@ -1,7 +1,7 @@
 import type { ContractIR } from "@seampact/spec/ir";
-import type { GeneratedFile } from "../target.js";
 import { relativeModuleSpecifier } from "../import-specifier.js";
 import type { Refusal, Refused } from "../refusal.js";
+import type { GeneratedFile } from "../target.js";
 import { indexFile } from "../validators/index-file.js";
 import {
   OPERATION_INPUT_MODULE,

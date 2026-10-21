@@ -1,11 +1,11 @@
-// The compatibility matrix (`@seampact/spec/compatibility`): the first-party providers, and per server target the framework majors it is tested on or refuses and the validator styles it accepts.
+// The compatibility matrix (`@seampact/spec/compatibility`): the first-party providers of each link kind, and per server target the framework majors it is tested on or refuses and the validator styles it accepts.
 // One file with no relative import, so the repository scripts that Node runs from source can import it.
 
-export type ProviderKind = "validators" | "types";
+export type ProviderKind = "validators" | "types" | "client";
 
 export type ValidatorStyle = "standard-schema" | "class-validator";
 
-export type ProviderStyle = ValidatorStyle | "typescript";
+export type ProviderStyle = ValidatorStyle | "typescript" | "fetch";
 
 export interface FirstPartyProvider {
   // The id a tool selects the provider by, such as the consumer and bench `--validators <id>`.
@@ -81,6 +81,7 @@ export const FIRST_PARTY_PROVIDERS: readonly FirstPartyProvider[] = [
     style: "class-validator",
   },
   { id: "ts", package: "@seampact/codegen-ts", kind: "types", style: "typescript" },
+  { id: "fetch", package: "@seampact/codegen-fetch", kind: "client", style: "fetch" },
 ];
 
 export const SERVER_TARGETS: readonly TargetCompatibility[] = [

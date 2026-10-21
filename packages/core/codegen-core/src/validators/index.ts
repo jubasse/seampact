@@ -32,7 +32,6 @@ export {
   planValidatorsCollectingRefusals,
   type ValidatorsPlan,
 } from "./validators-plan.js";
-export { planValidatorsWithinWireNames, type WireNameLimit } from "./wire-name-check.js";
 export {
   CODE_POINT_LENGTH,
   IS_DATE_TIME,
@@ -41,3 +40,4 @@ export {
   WIRE_CHECKS_SOURCE,
   type WireCheck,
 } from "./wire-checks.js";
+export { planValidatorsWithinWireNames, type WireNameLimit } from "./wire-name-check.js";

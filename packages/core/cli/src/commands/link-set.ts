@@ -26,6 +26,13 @@ const addLinkByKind: { readonly [Kind in LinkKind]: AddLink } = {
 
     return true;
   },
+  client(links, descriptors, location) {
+    if (descriptors.client === undefined) return false;
+
+    links.client = { descriptor: descriptors.client, location };
+
+    return true;
+  },
 };
 
 export function isLinkKind(kind: string): kind is LinkKind {

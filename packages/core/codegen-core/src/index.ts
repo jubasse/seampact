@@ -5,6 +5,10 @@ export { apiIndexSource, type IndexedModule } from "./api-index.js";
 export { compareCodeUnits } from "./code-unit-order.js";
 export { defineTarget } from "./define-target.js";
 export type {
+  ClientDescriptor,
+  ClientErrorStyle,
+  ClientExports,
+  ClientOperationExports,
   Descriptor,
   DescriptorByKind,
   DescriptorSet,

@@ -126,3 +126,37 @@ test("a target without own validators keeps the missing validators link", () => 
     ),
   ).toEqual(["link.missing"]);
 });
+
+const CLIENT_NEEDS = { client: { styles: ["fetch"] } } as const;
+
+test("a missing client link is refused, naming codegen-fetch", () => {
+  expect(refuseUnmetLinks(CLIENT_NEEDS, { types: TYPES_LINK })).toEqual([
+    {
+      code: "link.missing",
+      message: "This target consumes a 'client' link in style fetch, and none is given.",
+      fix: "Link `@seampact/codegen-fetch` in the target's `link` entry.",
+    },
+  ]);
+});
+
+test("a fetch client link meets a client need", () => {
+  const links: LinkSet = {
+    client: {
+      descriptor: {
+        kind: "client",
+        style: "fetch",
+        errorStyle: "result",
+        exports: {
+          createClient: { module: "index", export: "createClient" },
+          Client: { module: "index", export: "Client" },
+          ContractError: { module: "index", export: "ContractError" },
+          CallOptions: { module: "index", export: "CallOptions" },
+        },
+        operations: {},
+      },
+      location: { kind: "relative", path: "../client" },
+    },
+  };
+
+  expect(refuseUnmetLinks(CLIENT_NEEDS, links)).toEqual([]);
+});
