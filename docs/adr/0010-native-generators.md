@@ -70,7 +70,7 @@ In both cases no Node.js installation is involved (CHK-076).
 
 ### The standalone compiler binary
 
-Content: the compiler and every CLI command that needs no target or plugin, `init`, `compile` (with `--editor-schemas`), `check`, `lint` with the core rules, `diff`, `explain` and `bundle`, with the first-party packs embedded (ADR 0008). A Java or PHP team that owns a contract repository therefore runs its release gate (`diff` under `compat.policy: additive-only`), its lint and its editor schemas without Node.js. It carries no codegen target and no `generate`: native consumers generate with their own plugin; and lint plugins, being npm packages, stay with the Node CLI (FR-12).
+Content: the compiler and every CLI command that needs no target or plugin, `init`, `compile` (with `--editor-schemas`), `lint` with the core rules, `diff`, `explain` and `bundle`, with the first-party packs embedded (ADR 0008). A Java or PHP team that owns a contract repository therefore runs its release gate (`diff` under `compat.policy: additive-only`), its lint and its editor schemas without Node.js. It carries no codegen target, so no `generate` and no `check` (which compares the generated files with a fresh run): both are refused by name, `binary.generate-unavailable` and `binary.check-unavailable`, pointing to the npm CLI or the ecosystem plugin. Native consumers generate and check with their own plugin; and lint plugins, being npm packages, stay with the Node CLI (FR-12).
 
 Build: esbuild bundles the compiler and CLI into one file (architecture external dependency), which is wrapped as a Node single executable application on the Node version pinned by ADR 0001. One Linux job builds all five binaries by injecting the same blob into the official Node binaries of each platform, verified against the Node project's signed checksums. Code cache and startup snapshot stay off, since cross-platform builds do not support them.
 
@@ -84,7 +84,7 @@ Smoke tests: on each platform's own CI runner, the binary compiles the reference
 
 A spike runs first: a hello-world compiler built for the five platforms from one Linux job and smoke-run on each OS.
 
-Fallback, if SEA proves unfit (a platform fails, startup or size is unacceptable, or a needed Node API is missing): Bun's `--compile`, which cross-compiles every platform from one host; Deno's `compile` second. To keep the fallback open, the compiler reads files only through an injected reader and uses no Node API beyond `fs`, `path` and `crypto`. The decision (one standalone binary per platform, pinned by hash) does not change with the runtime; the artifact names and the hash manifest stay the same.
+Fallback, if SEA proves unfit (a platform fails, startup or size is unacceptable, or a needed Node API is missing): Bun's `--compile`, which cross-compiles every platform from one host; Deno's `compile` second. To keep the fallback open, the compiler reads files only through an injected reader, and the bundled CLI may require only these Node built-ins: `buffer`, `child_process`, `crypto`, `fs`, `fs/promises`, `https`, `module`, `os`, `path`, `process`, `url`, `util` and `zlib`. The build fails on any other, so a new built-in gets a decision (another runtime may lack it). The decision (one standalone binary per platform, pinned by hash) does not change with the runtime; the artifact names and the hash manifest stay the same.
 
 Distribution and pinning:
 - The binaries and a hash manifest (SHA-256 per platform) are release assets of the seampact repository.
@@ -119,6 +119,28 @@ The generator is a repository tool in `scripts/ir-models`, not a package: `node 
 5. A string, integer, reference or map definition is a type alias: a Kotlin `typealias`, and in PHP the native type with a `@phpstan-type` alias. Every IR integer is a Kotlin `Long`, from -(2^53 - 1) to 2^53 - 1 (ADR 0004 section 10); one outside that range is a read error naming it in both languages. Both read a JSON number literal (RFC 8259 section 6) as the correctly rounded double, as the TypeScript reader does, and refuse other number text the platform would read (`3d`, `0x1.8p1`), so the three accept the same JSON number literals: an integral number written with a fraction (`2.0`), which JSON Schema counts as an integer, reads as that integer, and so does `3.0000000000000000001`, which rounds to 3; a fractional number is a read error naming it. No literal length cap applies, and a message cuts the literal it shows; the nesting limit guards the read, and the embedder bounds the size of the input it reads.
 6. A member name that starts with a NUL character (`"\u0000x"`) cannot be held in a PHP object, so the PHP reader refuses such a document as malformed where the TypeScript and Kotlin readers drop the member as unknown; it is a platform limit, and the shared corpus has no such case. The PHP model also copies every value it stores from its caller (an `Unknown` variant, an opaque value, an extension slot) and returns a copy from `toJson()`, so a read model never changes.
 7. The native readers do not run the invariants of the IR README. They give the TypeScript reader's verdict (validation in the open form, version and support checks, unknown tags and values) on a shared corpus, `packages/core/spec/vectors/ir/`, which records each verdict.
+
+### Amendment 2026-10-21: the JVM channels
+
+The binary and the contract bundle reach a JVM build through its own Maven repositories, so Nexus, proxies, mirrors and offline mode work unchanged, and the build machine needs no Node.js:
+
+- **The binary as classifier artefacts.** Each release publishes `io.github.jubasse:seampact-compiler:<version>` once per platform, as an artefact of type `exe` whose classifier uses protoc's names, which `os-maven-plugin` users already know:
+
+  | Release asset | Classifier |
+  |---|---|
+  | `seampact-linux-x64` | `linux-x86_64` |
+  | `seampact-linux-arm64` | `linux-aarch_64` |
+  | `seampact-darwin-x64` | `osx-x86_64` |
+  | `seampact-darwin-arm64` | `osx-aarch_64` |
+  | `seampact-win32-x64.exe` | `windows-x86_64` |
+
+  Each file is checked against the release `SHA256SUMS` before it is published. The GitHub release assets and their manifest stay the source and the manual-download path.
+- **Resolution.** The Gradle plugin resolves the artefact in a detached configuration on the project's repositories; the Maven plugin through Resolver with the project's remote repositories, which honours `settings.xml` mirrors and `-o`. The JVM has no download URL override: the repository is the mirror.
+- **Pin.** Each plugin jar embeds `seampact-binaries.properties`, the version and one SHA-256 per classifier, written at plugin build time from the release `SHA256SUMS`. A consumer may override, in the build file, the version with all its hashes, or a local path with its hash; an override without a hash is refused (`binary.pin-missing`), and so is a hash that is not 64 lowercase hexadecimal digits or a classifier of no release binary (`binary.pin-invalid`). Before every first use the plugin hashes the resolved file and never runs one whose hash differs (`binary.hash-mismatch`, naming both values). The installed copy lives in a cache directory private to the user: a cache entry that is a link or that other users may write is refused (`binary.cache-unsafe`), and the copy is hashed again right before each start.
+- **Lazy.** The binary is resolved only when an input needs it: a `path` source, or the OpenAPI documents of an app config. A bundle-only app with `openapi: none` never downloads it.
+- **Platforms refused by name** (`binary.platform-unsupported`, naming the detected OS, arch and libc): linux with musl (the C library the JVM itself has mapped, read from `/proc/self/maps`; without `/proc`, an `ld-musl-*` loader under `/lib`), FreeBSD, and any other OS or arch, an arm64 JVM on Windows included. The JVM's own arch decides: an x64 JVM under emulation (Rosetta, Windows on ARM) gets the x64 binary, which runs under the same emulation. The fixes: use a bundle source; build on a glibc image; or point `path` at your own build, with its hash.
+- **Runner.** The plugin runs the binary's `compile` into a temporary directory and reads the IR with the `seampact-ir` reader. A non-zero exit passes the binary's own diagnostics through, unchanged; a compile past its deadline is stopped (`binary.compile-timeout`). The binary starts without any `NODE_*` variable of the build environment, and is built to ignore `NODE_OPTIONS` anyway, so no `--require` of the environment runs inside the pinned code.
+- **The contract bundle as a Maven artefact.** Besides the three channels of ADR 0011, a contract bundle may be published and consumed as a Maven artefact: the plugins resolve its `groupId:artifactId:version` through the same repositories, and run the pinned-bundle check of ADR 0011 on it, with its integrity pinned in the build file.
 
 ## Consequences
 

@@ -1,0 +1,89 @@
+package io.github.jubasse.seampact.ir.binary
+
+import java.nio.file.Files
+import java.nio.file.Path
+import kotlin.io.path.readText
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+
+// Every `os.name`, `os.arch` and libc triple maps to the binary built for it, or to the refusal naming the host.
+class PlatformClassifierTest {
+    private fun classified(osName: String, osArch: String, libc: HostLibc): BinaryPlatform? =
+        when (val classification = PlatformClassifier.classify(HostPlatform(osName, osArch, libc))) {
+            is PlatformClassification.Supported -> classification.platform
+            is PlatformClassification.Unsupported -> {
+                assertEquals(BinaryFailureCode.PLATFORM_UNSUPPORTED, classification.failure.code)
+                assertTrue(classification.failure.message.contains(osName), classification.failure.message)
+                assertTrue(classification.failure.message.contains(osArch), classification.failure.message)
+                assertTrue(classification.failure.message.contains(libc.label), classification.failure.message)
+                null
+            }
+        }
+
+    @Test
+    fun supportedHostsMapToTheirBinary() {
+        assertEquals(BinaryPlatform.LINUX_X64, classified("Linux", "amd64", HostLibc.GLIBC))
+        assertEquals(BinaryPlatform.LINUX_X64, classified("Linux", "x86_64", HostLibc.GLIBC))
+        assertEquals(BinaryPlatform.LINUX_ARM64, classified("Linux", "aarch64", HostLibc.GLIBC))
+        assertEquals(BinaryPlatform.DARWIN_X64, classified("Mac OS X", "x86_64", HostLibc.NONE))
+        assertEquals(BinaryPlatform.DARWIN_ARM64, classified("Mac OS X", "aarch64", HostLibc.NONE))
+        assertEquals(BinaryPlatform.WIN32_X64, classified("Windows 11", "amd64", HostLibc.NONE))
+        assertEquals(BinaryPlatform.WIN32_X64, classified("Windows Server 2025", "amd64", HostLibc.NONE))
+    }
+
+    @Test
+    fun otherHostsAreRefusedByName() {
+        assertEquals(null, classified("Linux", "amd64", HostLibc.MUSL))
+        assertEquals(null, classified("Linux", "aarch64", HostLibc.MUSL))
+        assertEquals(null, classified("FreeBSD", "amd64", HostLibc.NONE))
+        assertEquals(null, classified("Windows 11", "aarch64", HostLibc.NONE))
+        assertEquals(null, classified("Linux", "riscv64", HostLibc.GLIBC))
+        assertEquals(null, classified("Linux", "x86", HostLibc.GLIBC))
+        assertEquals(null, classified("SunOS", "sparcv9", HostLibc.NONE))
+    }
+
+    @Test
+    fun theLibcIsTheOneTheJvmHasMapped() {
+        val work = Files.createTempDirectory("seampact-libc-")
+        try {
+            // A glibc host with the musl package installed: the loader sits under /lib, the JVM maps glibc.
+            val library = Files.createDirectory(work.resolve("lib"))
+            Files.createFile(library.resolve("ld-musl-x86_64.so.1"))
+            val glibcMaps = Files.writeString(work.resolve("glibc-maps"), mapsLine("/usr/lib/x86_64-linux-gnu/libc.so.6"))
+            val muslMaps = Files.writeString(work.resolve("musl-maps"), mapsLine("/lib/ld-musl-x86_64.so.1"))
+            val alpineLibcMaps = Files.writeString(work.resolve("alpine-maps"), mapsLine("/lib/libc.musl-x86_64.so.1"))
+
+            assertEquals(HostLibc.GLIBC, HostPlatform.linuxLibc(glibcMaps, library))
+            assertEquals(HostLibc.MUSL, HostPlatform.linuxLibc(muslMaps, work.resolve("no-lib")))
+            assertEquals(HostLibc.MUSL, HostPlatform.linuxLibc(alpineLibcMaps, work.resolve("no-lib")))
+        } finally {
+            work.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun withoutProcTheMuslLoaderUnderLibDecides() {
+        val library = Files.createTempDirectory("seampact-lib-")
+        val noMaps = library.resolve("no-maps")
+        try {
+            Files.createFile(library.resolve("libc.so.6"))
+            assertEquals(HostLibc.GLIBC, HostPlatform.linuxLibc(noMaps, library))
+
+            Files.createFile(library.resolve("ld-musl-x86_64.so.1"))
+            assertEquals(HostLibc.MUSL, HostPlatform.linuxLibc(noMaps, library))
+        } finally {
+            library.toFile().deleteRecursively()
+        }
+    }
+
+    private fun mapsLine(file: String): String = "7f0000000000-7f0000001000 r-xp 00000000 08:01 1234 $file\n"
+
+    @Test
+    fun theAssetNamesAreTheReleaseBinaries() {
+        val namesScript = Path.of(System.getProperty("seampact.repositoryRoot"), "packages/tools/binary/scripts/binary-names.mjs")
+        val releaseNames = Regex("\"(seampact-[^\"]+)\"").findAll(namesScript.readText()).map { it.groupValues[1] }.toList()
+
+        assertEquals(releaseNames, BinaryPlatform.entries.map { it.assetName })
+    }
+}
