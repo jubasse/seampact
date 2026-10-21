@@ -3,9 +3,9 @@ import { join } from "node:path";
 import type {
   ContractIR,
   Operation,
+  Param,
   PagingRequestRole,
   PagingStyle,
-  Param,
   Template,
 } from "@seampact/spec/ir";
 import type { Target } from "../target.js";
