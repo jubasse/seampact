@@ -15,6 +15,12 @@ export interface QueriesImports {
 
 const TANSTACK_MODULE = "@tanstack/react-query";
 
+// `instanceof ContractError` would widen a query error's `Error` member to `ContractError<any, any>`.
+const CONTRACT_ERROR_GUARD = `/** Narrows a query or mutation error to the client's \`ContractError\` of its operation, keeping its failure type. */
+export function isContractError<Thrown>(error: Thrown): error is Extract<Thrown, ContractError<string, unknown>> {
+return error instanceof ContractError;
+}`;
+
 /** The source of `queries.ts`. */
 export function queriesModuleSource(
   plan: QueryPlan,
@@ -59,6 +65,7 @@ export function queriesModuleSource(
       `import { ${runtimeNames.join(", ")} } from "${imports.runtime}";`,
     ].join("\n"),
     operationTypesSource(api, operations, throwsErrors),
+    ...(throwsErrors ? [CONTRACT_ERROR_GUARD] : []),
     callerOptionTypesSource({ hasQuery, hasInfinite, hasMutation }),
     `/** The factory settings: \`idempotencyKey\` replaces \`crypto.randomUUID\` as the idempotency key generator. */\nexport interface ${api}QueriesSettings {\nreadonly idempotencyKey?: () => string;\n}`,
     `/** The resource types the keys of the api sit under. */\nexport type ${api}Resource = ${resourceUnion(plan.resources)};`,
