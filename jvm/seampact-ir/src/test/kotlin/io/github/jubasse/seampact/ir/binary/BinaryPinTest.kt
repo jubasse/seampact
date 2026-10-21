@@ -7,7 +7,9 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import java.nio.file.attribute.PosixFilePermissions
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.condition.DisabledOnOs
 import org.junit.jupiter.api.condition.OS
@@ -61,6 +63,75 @@ class BinaryPinTest {
 
         assertTrue(Files.exists(marker))
         assertEquals(3, (result as BinaryCompileResult.Failed).exitCode)
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun theBinaryStartsWithoutTheBuildsNodeVariables() {
+        // The Gradle test task sets NODE_OPTIONS, as a build environment may.
+        assertNotNull(System.getenv("NODE_OPTIONS"), "the test task must set NODE_OPTIONS for this test to prove anything")
+        val printsItsEnvironment = Files.writeString(work.resolve("env-stub"), "#!/bin/sh\nenv\nexit 3\n")
+        printsItsEnvironment.toFile().setExecutable(true)
+        val pin = BinaryPin.LocalFile(printsItsEnvironment, BinaryInstaller.sha256Of(printsItsEnvironment))
+        val install = BinaryInstaller.install(printsItsEnvironment, pin, work.resolve("cache"))
+        check(install is BinaryInstall.Installed)
+        val config = Files.writeString(work.resolve("seampact.config.yaml"), "targets: []\n")
+
+        val result = BinaryRunner.compile(install.binary, config, IrSupport.ofModel(emptyList())) as BinaryCompileResult.Failed
+
+        assertTrue(result.stdout.lines().any { it.startsWith("PATH=") })
+        assertEquals(emptyList(), result.stdout.lines().filter { it.uppercase().startsWith("NODE_") })
+    }
+
+    @Test
+    fun nodeVariablesAreRemovedWhateverTheirCase() {
+        val environment = mutableMapOf("NODE_OPTIONS" to "--require x", "node_path" to "/x", "Node_Extra_Ca_Certs" to "/c", "PATH" to "/bin")
+
+        BinaryRunner.removeNodeVariables(environment)
+
+        assertEquals(mapOf("PATH" to "/bin"), environment)
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun aBinaryChangedAfterItsInstallIsNotStarted() {
+        val pin = BinaryPin.LocalFile(stub, BinaryInstaller.sha256Of(stub))
+        val install = BinaryInstaller.install(stub, pin, work.resolve("cache"))
+        check(install is BinaryInstall.Installed)
+        Files.writeString(install.binary.path, "#!/bin/sh\ntouch '$marker'\nexit 4\n")
+        val config = Files.writeString(work.resolve("seampact.config.yaml"), "targets: []\n")
+
+        val result = BinaryRunner.compile(install.binary, config, IrSupport.ofModel(emptyList()))
+
+        assertEquals(BinaryFailureCode.HASH_MISMATCH, (result as BinaryCompileResult.Refused).failure.code)
+        assertFalse(Files.exists(marker))
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun aCacheEntryThatIsALinkIsRefused() {
+        val sha256 = BinaryInstaller.sha256Of(stub)
+        val entry = Files.createDirectories(work.resolve("cache").resolve(sha256))
+        Files.createSymbolicLink(entry.resolve("seampact"), stub)
+
+        val install = BinaryInstaller.install(stub, BinaryPin.LocalFile(stub, sha256), work.resolve("cache"))
+
+        assertEquals(BinaryFailureCode.CACHE_UNSAFE, (install as BinaryInstall.Refused).failure.code)
+    }
+
+    @Test
+    @DisabledOnOs(OS.WINDOWS)
+    fun aCacheEntryOtherUsersMayWriteIsRefusedAndANewOneIsOwnerOnly() {
+        val sha256 = BinaryInstaller.sha256Of(stub)
+        val install = BinaryInstaller.install(stub, BinaryPin.LocalFile(stub, sha256), work.resolve("cache"))
+        check(install is BinaryInstall.Installed)
+        val entry = install.binary.path.parent
+        assertEquals("rwx------", PosixFilePermissions.toString(Files.getPosixFilePermissions(entry)))
+
+        Files.setPosixFilePermissions(entry, PosixFilePermissions.fromString("rwxrwxrwx"))
+        val again = BinaryInstaller.install(stub, BinaryPin.LocalFile(stub, sha256), work.resolve("cache"))
+
+        assertEquals(BinaryFailureCode.CACHE_UNSAFE, (again as BinaryInstall.Refused).failure.code)
     }
 
     @Test

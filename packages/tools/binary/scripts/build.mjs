@@ -158,8 +158,9 @@ if (required.length > 0)
   fail(`bundle requires beyond the allowed Node built-ins: ${required.join(", ")}`);
 console.log(`build: bundle ok, built-ins used: ${[...used].sort().join(", ")}`);
 
-// 2. SEA blob: code cache and snapshot off (cross-platform), warning disabled. The paths are
-// relative to dist/ (cwd of the blob step) so the blob does not depend on the checkout directory.
+// 2. SEA blob: code cache and snapshot off (cross-platform), warning disabled, and `NODE_OPTIONS` ignored so no
+// `--require` of the environment runs inside the pinned binary. The paths are relative to dist/ (cwd of the blob
+// step) so the blob does not depend on the checkout directory.
 const seaConfig = join(dist, "sea-config.json");
 
 writeFileSync(
@@ -171,6 +172,7 @@ writeFileSync(
       disableExperimentalSEAWarning: true,
       useSnapshot: false,
       useCodeCache: false,
+      execArgvExtension: "none",
     },
     null,
     2,

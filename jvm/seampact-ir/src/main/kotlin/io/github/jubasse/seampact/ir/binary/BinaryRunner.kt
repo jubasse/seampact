@@ -20,6 +20,9 @@ public sealed interface BinaryCompileResult {
     /** The binary exited with [exitCode]; its two streams, unchanged, hold its diagnostics. */
     public data class Failed(val exitCode: Int, val stdout: String, val stderr: String) : BinaryCompileResult
 
+    /** The binary changed after it was installed and was not started. */
+    public data class Refused(val failure: BinaryFailure) : BinaryCompileResult
+
     /** The binary did not finish within the deadline and was stopped. */
     public data class TimedOut(val failure: BinaryFailure) : BinaryCompileResult
 }
@@ -28,13 +31,15 @@ public sealed interface BinaryCompileResult {
  * Compiles local YAML sources with the pinned standalone binary (ADR 0010, "How a native plugin gets the IR"): runs
  * `compile --config <app config> --out <temporary directory>` from the app config's directory, then reads each
  * `<api>.ir.json` with [IrReader] under the caller's support. A non-zero exit is passed through with the binary's
- * own diagnostics.
+ * own diagnostics. The binary is hashed again right before it starts, and it starts without any `NODE_*` variable
+ * of the build environment (`NODE_OPTIONS` could make it load foreign code).
  */
 public object BinaryRunner {
     /** How long a compile may take before it is stopped. */
     public val DEFAULT_TIMEOUT: Duration = Duration.ofMinutes(5)
 
     private const val IR_FILE_SUFFIX = ".ir.json"
+    private const val NODE_VARIABLE_PREFIX = "NODE_"
 
     /**
      * @throws io.github.jubasse.seampact.ir.read.IrRefusedException an IR the [support] does not read
@@ -46,6 +51,9 @@ public object BinaryRunner {
         support: IrSupport,
         timeout: Duration = DEFAULT_TIMEOUT,
     ): BinaryCompileResult {
+        val startedSha256 = BinaryInstaller.sha256Of(binary.path)
+        if (startedSha256 != binary.sha256) return BinaryCompileResult.Refused(changedSinceInstall(binary, startedSha256))
+
         val workDirectory = Files.createTempDirectory("seampact-compile-")
         try {
             val irDirectory = workDirectory.resolve("ir")
@@ -53,11 +61,13 @@ public object BinaryRunner {
             val stderr = workDirectory.resolve("stderr.txt")
             val configFile = appConfig.toAbsolutePath()
 
-            val process = ProcessBuilder(binary.path.toString(), "compile", "--config", configFile.toString(), "--out", irDirectory.toString())
+            val processBuilder = ProcessBuilder(binary.path.toString(), "compile", "--config", configFile.toString(), "--out", irDirectory.toString())
                 .directory(configFile.parent.toFile())
                 .redirectOutput(stdout.toFile())
                 .redirectError(stderr.toFile())
-                .start()
+            removeNodeVariables(processBuilder.environment())
+
+            val process = processBuilder.start()
             // The binary reads no input: its standard input is closed at once.
             process.outputStream.close()
 
@@ -87,6 +97,20 @@ public object BinaryRunner {
             CompiledApi(file.name.removeSuffix(IR_FILE_SUFFIX), text, IrReader.read(text, support))
         }
     }
+
+    /** Drops every `NODE_*` variable; Windows names are case-insensitive, so the prefix is too. */
+    internal fun removeNodeVariables(environment: MutableMap<String, String>) {
+        environment.keys.removeIf { name -> name.uppercase().startsWith(NODE_VARIABLE_PREFIX) }
+    }
+
+    private fun changedSinceInstall(binary: VerifiedBinary, actual: String): BinaryFailure = BinaryFailure(
+        code = BinaryFailureCode.HASH_MISMATCH,
+        message = "The binary '${binary.path}' has the SHA-256 $actual since it was installed; the pin is " +
+            "${binary.sha256}. It is not run.",
+        fix = "Check who can write to the binary cache directory, keep it private to your user, and run the build again.",
+        expected = binary.sha256,
+        actual = actual,
+    )
 
     private fun timedOut(timeout: Duration): BinaryFailure = BinaryFailure(
         code = BinaryFailureCode.COMPILE_TIMEOUT,

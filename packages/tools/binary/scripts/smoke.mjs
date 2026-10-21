@@ -4,7 +4,16 @@
 // Usage: node scripts/smoke.mjs <binary> <reference-dir> [--label <name>]
 // Env: SMOKE_ENV='{"TZ":"Asia/Kolkata","LOG_TOKENS":"1"}' extra environment for the binary.
 import { spawnSync } from "node:child_process";
-import { appendFileSync, mkdtempSync, readFileSync, realpathSync, rmSync, statSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
@@ -105,6 +114,37 @@ for (const command of BINARY_REFUSED_COMMANDS) {
     `${command} did not refuse by name with a fix: ${refused.stderr}`,
   );
 }
+
+// The binary ignores `NODE_OPTIONS`: a `--require` there must not run inside it. The same variable given to this
+// Node first proves the injected script runs where the variable is honoured.
+function injectedScriptRuns(executable, args) {
+  const marker = join(scratch, "injected.marker");
+  const script = join(scratch, "inject.cjs");
+
+  rmSync(marker, { force: true });
+  writeFileSync(
+    script,
+    `require("node:fs").writeFileSync(${JSON.stringify(marker)}, "injected");\n`,
+  );
+
+  const nodeOptions = `--require "${script.replaceAll("\\", "/")}"`;
+
+  spawnSync(executable, args, {
+    env: { ...environment, NODE_OPTIONS: nodeOptions },
+    stdio: "ignore",
+  });
+
+  return existsSync(marker);
+}
+
+check(
+  injectedScriptRuns(process.execPath, ["--eval", ""]),
+  "the NODE_OPTIONS probe did not run under Node itself, so it proves nothing",
+);
+check(
+  !injectedScriptRuns(binary, ["help"]),
+  "the binary ran a script NODE_OPTIONS asked it to --require",
+);
 
 // Measures (recorded, not gated): size, the first launch and the warm start, the median of 7 further runs of `help`.
 const warmRuns = [];

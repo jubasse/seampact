@@ -62,6 +62,8 @@ tasks.test {
     inputs.dir(repositoryRoot.resolve("fixtures/golden"))
     inputs.dir(repositoryRoot.resolve("fixtures/reference"))
     inputs.file(repositoryRoot.resolve("packages/tools/binary/scripts/binary-names.mjs"))
+    // A build environment may set NODE_OPTIONS: the runner must not pass it on, and the binary must ignore it.
+    environment("NODE_OPTIONS", "--require ./seampact-test-no-such-module.cjs")
     // `-PseampactBinary=<path>` runs the binary runner test on that standalone compiler binary.
     val seampactBinary = providers.gradleProperty("seampactBinary").orNull
     if (seampactBinary != null) {

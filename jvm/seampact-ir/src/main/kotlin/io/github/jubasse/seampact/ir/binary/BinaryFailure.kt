@@ -6,6 +6,7 @@ public enum class BinaryFailureCode(public val code: String) {
     PIN_MISSING("binary.pin-missing"),
     PIN_INVALID("binary.pin-invalid"),
     HASH_MISMATCH("binary.hash-mismatch"),
+    CACHE_UNSAFE("binary.cache-unsafe"),
     COMPILE_TIMEOUT("binary.compile-timeout"),
 }
 
