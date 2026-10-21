@@ -75,12 +75,13 @@ val stageCompilerBinaries = tasks.register("stageCompilerBinaries") {
             val binary = source.resolve(asset)
             if (!binary.isFile) throw GradleException("'$binary' is missing; $manifestFileName lists it.")
 
-            val actual = sha256Of(binary)
+            // The staged copy is hashed, not the source: the published bytes are the ones checked.
+            val staged = binary.copyTo(target.resolve(asset))
+            val actual = sha256Of(staged)
             val expected = hashes.getValue(asset)
             if (actual != expected) {
-                throw GradleException("'$binary' has the SHA-256 $actual; $manifestFileName lists $expected. It is not published.")
+                throw GradleException("'$binary' has the SHA-256 $actual once staged; $manifestFileName lists $expected. It is not published.")
             }
-            binary.copyTo(target.resolve(asset))
         }
     }
 }
